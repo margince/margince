@@ -42,7 +42,24 @@ func TestOverdueIsNotAState(t *testing.T) {
 // whether the queue should show it.
 func TestTheQueueAsksForEveryUnresolvedState(t *testing.T) {
 	got := unresolvedNoticeStates()
-	want := []string{"open", "queued", "blocked"}
+	// `assigned` is here because somebody having taken a duty is not the same
+	// as having discharged it. A case that left the queue on being claimed
+	// would be owed, worked and invisible — and the only seat that would still
+	// see it is the one that claimed it, which is exactly the wrong place to
+	// put the reminder.
+	//
+	// The two excusing states are NOT here, and that is the decision this test
+	// forced. `provided_elsewhere` and `exempt_with_reason` both END the duty:
+	// one says it was met, the other says it never applied. Keeping either on
+	// the queue would prompt work nobody owes, and an officer who had already
+	// written down why would be asked again tomorrow.
+	// `delivery_failed` is here because a disclosure that did not arrive left
+	// the duty exactly as owed as before it was sent. The subject was not told.
+	// A case resting outside the queue there would be the worst of the eight
+	// states to get wrong: it reads as handled, so nobody looks at it again,
+	// and the duty quietly stops being anybody's — which is the failure the
+	// whole table exists to prevent.
+	want := []string{"open", "assigned", "queued", "delivery_failed", "blocked"}
 	if len(got) != len(want) {
 		t.Fatalf("the queue asks for %v, want %v — a state was added to the vocabulary without "+
 			"deciding whether a case sitting in it is still owed", got, want)

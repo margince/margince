@@ -10,7 +10,7 @@
 // the capture sink or it does not exist. So the seeder had no way in, and the
 // demo had companies, deals, contracts and invoices behind an empty inbox.
 // The reply join, the thread view, "who on our team knows this contact" and
-// every person's timeline sat blank in front of anyone being shown the
+// every contact's timeline sat blank in front of anyone being shown the
 // product.
 //
 // Going through the sink is the point. The threads, participants, attachments,
@@ -56,7 +56,7 @@ const Name = "offline_demo"
 // never updated — so a change to the templates reaches only companies that
 // have not been synced yet.
 // Version 2 re-dates the correspondence BACKWARD from the run. Version 1
-// anchored it on the organization's created_at, which in a fresh installation
+// anchored it on the company's created_at, which in a fresh installation
 // is today — so every message landed in the future, the sink refused them all,
 // and the cursor those runs wrote carries a `through` two months ahead. A
 // version bump is exactly the tool for that: the cursor no longer matches, the
@@ -77,7 +77,7 @@ const Name = "offline_demo"
 const generatorVersion = 3
 
 // Directory is what the connector needs to know about the installation to
-// write plausible mail for it. Implemented in compose, because reading people
+// write plausible mail for it. Implemented in compose, because reading contacts
 // and deals is not capture's business: the connector is a pure generator and
 // this is the only thing it is handed.
 type Directory interface {
@@ -99,30 +99,30 @@ type Mailbox struct {
 // Account is one company the seat owns, with the parties and facts a thread
 // can be written from.
 type Account struct {
-	OrganizationID string
-	Name           string
-	Domain         string
-	Lifecycle      string
+	CompanyID string
+	Name      string
+	Domain    string
+	Lifecycle string
 	// Locale is the dataset's own answer for this company — `de`, `vi`, `ko`
 	// or `en` — carried in from company-locale.json through the auth payload.
 	// Empty when the installation was not seeded from a dataset, and the
 	// domain suffix answers instead.
-	Locale string
-	People []Person
-	Deals  []Deal
+	Locale   string
+	Contacts []Contact
+	Deals    []Deal
 	// ContractEndsInDays is negative for a contract already over. Zero when
 	// the account holds none.
 	ContractEndsInDays int
 	ContractNumber     string
 	// Now is when the sync runs. The correspondence is dated BACKWARD from
 	// it, because a captured message in the future is refused — and the
-	// organization's own created_at is today in a fresh installation, which
+	// company's own created_at is today in a fresh installation, which
 	// is what made the first version generate nothing at all.
 	Now time.Time
 }
 
-// Person is somebody at the account we write to.
-type Person struct {
+// Contact is somebody at the account we write to.
+type Contact struct {
 	Name  string
 	Email string
 	Role  string

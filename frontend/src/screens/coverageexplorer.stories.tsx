@@ -21,14 +21,14 @@ const GRAPH = {
   nodes: [
     {
       id: "o-brandt",
-      kind: "organization",
+      kind: "company",
       label: "Brandt Automotive",
       root: true,
     },
     { id: "u-1", kind: "user", label: "Lars Brandt", root: false },
     { id: "u-2", kind: "user", label: "Dana Kessler", root: false },
-    { id: "p-1", kind: "person", label: "Anna Weber", root: false },
-    { id: "p-2", kind: "person", label: "Otto Fischer", root: false },
+    { id: "p-1", kind: "contact", label: "Anna Weber", root: false },
+    { id: "p-2", kind: "contact", label: "Otto Fischer", root: false },
   ],
   edges: [
     {
@@ -49,12 +49,12 @@ const GRAPH = {
 function story(graph: Record<string, unknown>) {
   return () => {
     installFetchStub({
-      "GET /me": meRoute({ organization: ["read"], person: ["read"] }),
-      "GET /organizations/o-brandt/graph": () => jsonResponse(graph),
+      "GET /me": meRoute({ company: ["read"], contact: ["read"] }),
+      "GET /companies/o-brandt/graph": () => jsonResponse(graph),
     });
     return (
       <StoryProviders>
-        <CoverageExplorer orgId="o-brandt" />
+        <CoverageExplorer companyId="o-brandt" />
       </StoryProviders>
     );
   };

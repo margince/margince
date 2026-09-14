@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -371,7 +371,7 @@ describe("capture activity", () => {
     // still-waiting, so a tense in its label was a claim it could not support
     // and it read "Sent for a verdict" instead. The server now counts a judged
     // sender's message under the answer, so `deferred` IS the waiting — and the
-    // label a person opens this page for is the one it could not say before.
+    // label a human opens this page for is the one it could not say before.
     renderTab(
       windowBody({
         funnel: {
@@ -392,7 +392,7 @@ describe("capture activity", () => {
             reason: null,
             resolution: {
               status: "real",
-              kind: "person",
+              kind: "contact",
               resolved_at: "2026-08-15T09:13:00Z",
             },
           },
@@ -625,7 +625,7 @@ describe("capture activity", () => {
             reason: null,
             resolution: {
               status: "real",
-              kind: "person",
+              kind: "contact",
               resolved_at: "2026-08-15T09:13:00Z",
             },
           },
@@ -681,7 +681,7 @@ describe("capture activity", () => {
       ).toBeInTheDocument();
     }
     // The block list is on this page at all — it used to live two tabs away
-    // under Organization, behind a door most seats cannot open.
+    // under Company, behind a door most seats cannot open.
     expect(await screen.findByText("Keep out of capture")).toBeInTheDocument();
     // And the log is closed, so nothing about one message is on screen until
     // somebody asks for it.

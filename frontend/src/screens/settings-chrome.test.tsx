@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -154,7 +154,7 @@ describe("the scope a settings page publishes", () => {
   }
 
   // `company` is deliberately not among these: its requirement ANDs the
-  // organization write with the `company_context` deployment flag, which the
+  // company write with the `company_context` deployment flag, which the
   // default fixture leaves off, so the page is shut and has no heading to carry
   // a scope. The installation scope is covered by the pure catalog test instead.
   // `account` and `connections` are deliberately NOT here. Both open on

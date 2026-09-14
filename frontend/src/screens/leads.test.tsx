@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   act,
@@ -36,9 +36,9 @@ beforeEach(() => {
 
 // Leads (B-EP09.10a/b, §3.5 segregation): visually SEGREGATED from the
 // contact graph — the ≥60/40–59/<40 score thresholds, eligibility-gated
-// promote, and a lead row navigating to the LEAD detail (never the person
+// promote, and a lead row navigating to the LEAD detail (never the contact
 // screen). Below that: the same P-14/15/16/1 shared-block wiring as contacts
-// (contacts.test.tsx) and companies (organizations.test.tsx) — search/sort/
+// (contacts.test.tsx) and companies (companies.test.tsx) — search/sort/
 // pagination + a status filter, the rich create modal (full_name/email/
 // linkedin_url/company_name), the lead-360 If-Match edit
 // (Promote + badges preserved), and the duplicate_email dedupe link.
@@ -163,7 +163,7 @@ describe("promote eligibility gate", () => {
 });
 
 describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
-  it("names the owner on each row, the way the people and company lists do", async () => {
+  it("names the owner on each row, the way the contacts and company lists do", async () => {
     // The column this replaced rendered "typed by a person" for every
     // human-captured row. The Contacts and Companies lists were corrected
     // while this one kept its own copy of the column: same column, same test.
@@ -274,7 +274,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     });
   });
 
-  it("a lead row navigates to the LEAD detail, not the person screen", async () => {
+  it("a lead row navigates to the LEAD detail, not the contact screen", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (request: Request) =>
@@ -322,7 +322,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     stubFetch(async (url, method, request) => {
       if (method === "POST" && url.includes("/leads/l-1/promote")) {
         promoteBody = JSON.parse(await request.text());
-        return jsonResponse({ person: anna, merged: false, lead_id: "l-1" });
+        return jsonResponse({ contact: anna, merged: false, lead_id: "l-1" });
       }
       return jsonResponse({
         ...lead,
@@ -358,9 +358,9 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     stubFetch(async (url, method, request) => {
       if (method === "POST" && url.includes("/leads/l-1/promote")) {
         promoteBody = JSON.parse(await request.text());
-        return jsonResponse({ person: anna, merged: false, lead_id: "l-1" });
+        return jsonResponse({ contact: anna, merged: false, lead_id: "l-1" });
       }
-      if (url.includes("/people/")) {
+      if (url.includes("/contacts/")) {
         return jsonResponse(anna);
       }
       return jsonResponse(lead);
@@ -396,7 +396,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
       if (method === "POST" && url.includes("/leads/l-1/promote")) {
         promoteBody = JSON.parse(await request.text());
         return jsonResponse({
-          person: anna,
+          contact: anna,
           merged: false,
           lead_id: "l-1",
           deal_id: "d-1",
@@ -487,7 +487,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
             {
               title: "already promoted",
               code: "already_promoted",
-              details: { promoted_person_id: "p-9" },
+              details: { promoted_contact_id: "p-9" },
             },
             409,
           );
@@ -667,7 +667,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     // resolves to that one sentence — a disabled button whose reason is
     // nowhere on the page is a dead button.
     await openLeadActions();
-    for (const testId of ["edit-record", "lead-qualify", "lead-disqualify"]) {
+    for (const testId of ["lead-qualify", "lead-disqualify"]) {
       const control = await screen.findByTestId(testId);
       expect(control.hasAttribute("disabled")).toBe(true);
       expect(
@@ -689,7 +689,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     const promoted = {
       ...lead,
       status: "promoted",
-      promoted_person_id: "p-42",
+      promoted_contact_id: "p-42",
       promoted_at: "2026-06-20T08:00:00Z",
       archived_at: "2026-06-20T08:00:00Z",
     };
@@ -731,13 +731,13 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
 
   it("the promote dialog says what promotion will do before the rep commits", async () => {
     // ADR-0119: merge-into-existing vs create is the difference between
-    // "my prospect is now a person" and "my prospect was already someone we
+    // "my prospect is now a contact" and "my prospect was already someone we
     // knew". The preview runs the same ladder the promotion runs.
     stubFetch(async (url) => {
       if (url.includes("/promote-preview")) {
-        return jsonResponse({ outcome: "merge", person: anna });
+        return jsonResponse({ outcome: "merge", contact: anna });
       }
-      if (url.includes("/people/")) {
+      if (url.includes("/contacts/")) {
         return jsonResponse(anna);
       }
       return jsonResponse(lead);
@@ -750,13 +750,13 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
   });
 
   it("a withheld merge target is never read as 'create'", async () => {
-    // An absent person on a merge means "outside your row scope", not "no
+    // An absent contact on a merge means "outside your row scope", not "no
     // match": promising a new contact here would be the wrong half to guess.
     stubFetch(async (url) => {
       if (url.includes("/promote-preview")) {
         return jsonResponse({
           outcome: "merge",
-          person_withheld: true,
+          contact_withheld: true,
         });
       }
       return jsonResponse(lead);
@@ -776,7 +776,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     const promoted = {
       ...lead,
       status: "promoted",
-      promoted_person_id: "p-42",
+      promoted_contact_id: "p-42",
       promoted_at: "2026-06-20T08:00:00Z",
       archived_at: "2026-06-20T08:00:00Z",
     };
@@ -787,7 +787,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
         return jsonResponse({
           lead: { ...lead, status: "contacted" },
           unwind: "reversed",
-          person_id: "p-42",
+          contact_id: "p-42",
         });
       }
       if (url.includes("/records/lead/")) {
@@ -831,7 +831,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
       return jsonResponse({
         ...lead,
         status: "promoted",
-        promoted_person_id: "p-42",
+        promoted_contact_id: "p-42",
         archived_at: "2026-06-20T08:00:00Z",
       });
     });
@@ -870,7 +870,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
       return jsonResponse({
         ...lead,
         status: "promoted",
-        promoted_person_id: "p-42",
+        promoted_contact_id: "p-42",
         archived_at: "2026-06-20T08:00:00Z",
       });
     });
@@ -895,7 +895,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
       return jsonResponse({
         ...lead,
         status: "promoted",
-        promoted_person_id: "p-42",
+        promoted_contact_id: "p-42",
         archived_at: "2026-06-20T08:00:00Z",
       });
     });
@@ -928,7 +928,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
       const url = String(input);
       if (method === "POST" && url.includes("/promote")) {
         return jsonResponse({
-          person: { id: "p-42", full_name: "Jonas Petersen" },
+          contact: { id: "p-42", full_name: "Jonas Petersen" },
           merged: true,
           lead_id: "l-1",
         });
@@ -992,7 +992,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
       return jsonResponse({
         ...lead,
         status: "promoted",
-        promoted_person_id: "p-42",
+        promoted_contact_id: "p-42",
         archived_at: "2026-06-20T08:00:00Z",
       });
     });
@@ -1487,11 +1487,11 @@ describe("LeadScreen — edit with If-Match (P-1)", () => {
     });
     render(<LeadScreen id="l-1" />);
 
-    await openLeadActions();
-    await userEvent.click(screen.getByTestId("edit-record"));
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Change Title" }),
+    );
     const title = await screen.findByLabelText("Title");
-    await userEvent.type(title, "VP Sales");
-    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    await userEvent.type(title, "VP Sales{Enter}");
 
     await waitFor(() => expect(patchBody).toBeTruthy());
     expect(patchHeader).toBe("1");
@@ -1727,7 +1727,7 @@ describe("LeadScreen — overlay mode write affordances", () => {
     render(<LeadScreen id="l-1" />);
 
     await openLeadActions();
-    expect(screen.getByTestId("edit-record")).toBeTruthy();
+    expect(screen.queryByTestId("edit-record")).toBeNull();
     expect(screen.queryByTestId("lead-disqualify")).toBeNull();
     // The mirror owns the lead's mail, so the header offers no Email verb.
     expect(screen.queryByRole("button", { name: "Email" })).toBeNull();
@@ -1752,12 +1752,12 @@ describe("LeadScreen — overlay mode write affordances", () => {
     });
     render(<LeadScreen id="l-1" />);
 
-    await openLeadActions();
-    await userEvent.click(screen.getByTestId("edit-record"));
-    const fullName = await screen.findByLabelText("Full name *");
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Change Full name" }),
+    );
+    const fullName = await screen.findByRole("textbox", { name: "Full name" });
     await userEvent.clear(fullName);
-    await userEvent.type(fullName, "Jonas Petersen-Berg");
-    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    await userEvent.type(fullName, "Jonas Petersen-Berg{Enter}");
 
     // The saved name now reads in two places — the record header and the
     // inline Details row — which is the point of the grid, not a duplicate.
@@ -1775,8 +1775,9 @@ describe("LeadScreen — overlay mode write affordances", () => {
     });
     render(<LeadScreen id="l-1" />);
 
-    await openLeadActions();
-    await userEvent.click(screen.getByTestId("edit-record"));
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Change Full name" }),
+    );
     expect(
       screen.getByText(/Only the fields HubSpot accepts are written back/),
     ).toBeTruthy();
@@ -1846,7 +1847,7 @@ describe("LeadsScreen — the one ownership dial (DM-VOCAB-OWN-1)", () => {
   it("offers the unowned queue and asks the server for it as unassigned=true", async () => {
     // The lead list once carried its own owner chip with only "mine", because
     // listLeads lacked owner_team_id/unassigned. It binds the SAME dial the
-    // person and company lists use now — the fork is gone.
+    // contact and company lists use now — the fork is gone.
     const user = userEvent.setup();
     const { urls } = stubFetchWithMe(async (url) => {
       if (url.includes("/leads")) {
@@ -2345,7 +2346,7 @@ describe("LeadScreen — History tab", () => {
     );
     // The identity header (name) must stay visible on the History tab, not
     // just the overview — it lives above the tab switch, matching
-    // person/company/deal's persistent RecordView header. Named by ROLE
+    // contact/company/deal's persistent RecordView header. Named by ROLE
     // rather than by text: the rail's details grid sits outside the tab
     // switch too and carries the same name in its editable Full name row,
     // which is the page working as intended and not a second header.
@@ -2357,17 +2358,17 @@ describe("LeadScreen — History tab", () => {
 
 describe("terminalBadge (archived/terminal labelling)", () => {
   it("labels disqualified and promoted distinctly and leaves open leads unbadged", () => {
-    expect(terminalBadge("disqualified")).toEqual({
+    expect(terminalBadge({ status: "disqualified" })).toEqual({
       label: "lead.disqualified",
       tone: "warn",
     });
     // A promoted lead IS archived, but reads "Archived" — never "Disqualified".
-    expect(terminalBadge("promoted")).toEqual({
+    expect(terminalBadge({ status: "promoted" })).toEqual({
       label: "record.archived",
       tone: "warn",
     });
-    expect(terminalBadge("new")).toBeNull();
-    expect(terminalBadge("contacted")).toBeNull();
+    expect(terminalBadge({ status: "new" })).toBeNull();
+    expect(terminalBadge({ status: "contacted" })).toBeNull();
   });
 });
 
@@ -2501,7 +2502,7 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
     // STATE-4a: blocked by state rather than permission means visible and
     // disabled with the reason — hiding the control hides the fact the
     // reader needs. (A PROMOTED lead never reaches this page; it redirects
-    // to the person it became.)
+    // to the contact it became.)
     stubFetchWithMe(async () =>
       jsonResponse({
         ...lead,
@@ -2518,7 +2519,7 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
     );
     const reason = "Disqualified — this lead is now read-only.";
     await openLeadActions();
-    for (const testId of ["edit-record", "lead-disqualify"]) {
+    for (const testId of ["lead-disqualify"]) {
       const control = screen.getByTestId(testId) as HTMLButtonElement;
       expect(control.disabled).toBe(true);
       const describedBy = control.getAttribute("aria-describedby");

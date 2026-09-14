@@ -85,7 +85,7 @@ func FilterWord[I any](set func(*I, *string)) FilterBinding[I] {
 }
 
 // FilterID binds a reference operand, parsed as the kind the field holds so a
-// person id cannot be handed to a pipeline filter.
+// contact id cannot be handed to a pipeline filter.
 func FilterID[K ids.EntityKind, I any](set func(*I, *ids.ID[K])) FilterBinding[I] {
 	return func(in *I, value string) error {
 		id, err := ids.ParseAs[K](value)

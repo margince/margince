@@ -19,18 +19,22 @@ import { UNASSIGNED } from "./worklist.queries";
  * the same gate the Worklist's own board uses. The board is drawn on the tier
  * the server admits it on, so the control and the refusal cannot disagree.
  */
-export function BriefTeamBoard({ offered }: Readonly<{ offered: boolean }>) {
+export function BriefTeamBoard({
+  offered,
+  teamId,
+}: Readonly<{ offered: boolean; teamId?: string }>) {
   if (!offered) {
     return null;
   }
   return (
     <TeamBoard
-      // Whose day, in the address. `#/worklist/<userId>` opens that person's
+      teamId={teamId}
+      // Whose day, in the address. `#/worklist/<userId>` opens that contact's
       // queue directly — without it a row could only reach the Worklist and
-      // leave the reader to pick the same person a second time, which is a row
+      // leave the reader to pick the same contact a second time, which is a row
       // that answers a question by asking it again.
       onOwner={(userId) => navigate({ screen: "worklist", id: userId })}
-      // The unassigned pile has no person to open, so the same segment carries
+      // The unassigned pile has no contact to open, so the same segment carries
       // the scope word instead. Both rows are doors: one to a colleague's day,
       // one to the work that reached nobody.
       onUnassigned={() => navigate({ screen: "worklist", id: UNASSIGNED })}

@@ -292,7 +292,7 @@ export function ExtensionAccessCard() {
   return (
     <div className="ext-stack">
       {/* tone="accent" — the one lead on this tab. Everything else here reports
-          or manages PEOPLE; this is the only surface in the product that can
+          or manages CONTACTS; this is the only surface in the product that can
           grant an extension's RBAC objects at all, and until somebody does, a
           shipped and enabled unit renders "you do not hold access" for every
           seat. It used to be a bare <div> below the roster, with no card and

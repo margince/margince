@@ -28,7 +28,7 @@ import (
 // that merely looks long.
 const maxURLLength = 2048
 
-// registrableURL validates an outward address where a person can still read the
+// registrableURL validates an outward address where a contact can still read the
 // refusal, against what they typed, rather than at the moment something tries
 // to dial it.
 //

@@ -19,8 +19,8 @@ import { beginModelCall, endModelCall } from "./model-inflight";
 // It is a TYPE-ONLY import, so nothing changes at runtime and no bundler alias
 // is needed: `verbatimModuleSyntax` erases the line entirely.
 //
-// One installation serves one organization (A107/ADR-0061): the server
-// resolves its singleton organization itself — the client sends no tenant
+// One installation serves one company (ADR-0061): the server
+// resolves its singleton company itself — the client sends no tenant
 // selector, only the session cookie.
 
 // The reader's language, read from where the shell stores it. Sent on every
@@ -80,7 +80,7 @@ export const REQUEST_TIMEOUT_MS = 360_000;
 //
 // Deliberately its OWN constant rather than raising REQUEST_TIMEOUT_MS itself:
 // this client seam is shared by every route, and a single 30-minute deadline
-// on GET /v1/people would leave a request into a dead socket "pending" for
+// on GET /v1/contacts would leave a request into a dead socket "pending" for
 // half an hour — exactly the eternal-pending state this deadline exists to
 // remove. modelWaitOf (below) is what routes a request to the right one of
 // the two.
@@ -94,7 +94,7 @@ export const MODEL_ROUTE_TIMEOUT_MS = 1_860_000;
  * carrying what the server said, and this one carries the fact that the server
  * said nothing at all. It is deliberately NOT retried (app/queryclient.ts
  * retries only what the server reported as its own fault) — the surface whose
- * read failed offers the reader a retry, which is a person deciding to wait
+ * read failed offers the reader a retry, which is a contact deciding to wait
  * again rather than this client deciding for them.
  */
 export class RequestTimeoutError extends Error {
@@ -178,14 +178,14 @@ const GATEWAY_STATUSES = new Set([502, 503, 504]);
 // TWO readers want this set, for the same reason: duration. A model call runs
 // for tens of seconds, so a proxy giving up on one really does leave work in
 // flight and really does make a retry a second call rather than a repeat
-// (`withGatewayProblem`), and a person who pressed the button really is waiting
+// (`withGatewayProblem`), and a contact who pressed the button really is waiting
 // on the agent for that whole time (`model-inflight.ts`, which is what lights
 // the AI-activity rail the instant the request leaves rather than at its next
 // poll of the feed).
 //
 // `always` is a handler that generates on every call. `on-miss` is one that
 // serves a stored reading and generates only when it has none: the dossier, the
-// growth-fit band, the person brief, the deal status, the morning brief. Those
+// growth-fit band, the contact brief, the deal status, the morning brief. Those
 // answer from the store in well under a second and from the model in many, and
 // the two are told apart by nothing the client can see at the moment the
 // request leaves. So an `on-miss` call is counted as the agent working only
@@ -203,10 +203,10 @@ type ModelWait = "always" | "on-miss";
 const MODEL_ROUTES: Readonly<Record<string, ModelWait>> = {
   "GET /activities/{id}/meeting-brief": "always",
   "GET /deals/{id}/status": "on-miss",
-  "GET /organizations/{id}/brief": "on-miss",
-  "GET /organizations/{id}/dossier": "on-miss",
-  "GET /organizations/{id}/growth-fit": "on-miss",
-  "GET /people/{id}/brief": "on-miss",
+  "GET /companies/{id}/brief": "on-miss",
+  "GET /companies/{id}/dossier": "on-miss",
+  "GET /companies/{id}/growth-fit": "on-miss",
+  "GET /contacts/{id}/brief": "on-miss",
   "POST /activities/{id}/draft-email": "always",
   "POST /brief": "on-miss",
   "POST /coldstart": "always",
@@ -217,16 +217,16 @@ const MODEL_ROUTES: Readonly<Record<string, ModelWait>> = {
   "POST /leads/{id}/draft-email": "always",
   "POST /offers/{id}/regenerate": "always",
   "POST /onboarding/company/messages": "always",
-  "POST /organizations/{id}/ask": "always",
-  "POST /organizations/{id}/brief": "always",
-  "POST /organizations/{id}/dossier": "always",
-  "POST /organizations/{id}/draft-email": "always",
-  "POST /organizations/{id}/enrich": "always",
-  "POST /organizations/{id}/growth-fit": "always",
-  "POST /organizations/{id}/intro-request-draft": "always",
-  "POST /people/{id}/brief": "always",
-  "POST /people/{id}/draft-email": "always",
-  "POST /people/{id}/intro-note-draft": "always",
+  "POST /companies/{id}/ask": "always",
+  "POST /companies/{id}/brief": "always",
+  "POST /companies/{id}/dossier": "always",
+  "POST /companies/{id}/draft-email": "always",
+  "POST /companies/{id}/enrich": "always",
+  "POST /companies/{id}/growth-fit": "always",
+  "POST /companies/{id}/intro-request-draft": "always",
+  "POST /contacts/{id}/brief": "always",
+  "POST /contacts/{id}/draft-email": "always",
+  "POST /contacts/{id}/intro-note-draft": "always",
 };
 
 // How long an `on-miss` request may stay open before it counts as the agent

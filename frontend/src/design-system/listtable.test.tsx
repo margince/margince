@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -714,7 +714,7 @@ describe("a chip with an async search source", () => {
   ): readonly ListChip[] {
     return [
       {
-        key: "org",
+        key: "company",
         label: "Company",
         allLabel: "All companies",
         options: [],

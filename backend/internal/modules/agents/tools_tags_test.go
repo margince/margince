@@ -84,12 +84,12 @@ func (s stubTags) TaggableTypes() []string { return s.taggable }
 // proves the composed wiring serves the store's list; this is the module-local
 // half, that taggingSchema actually reads its argument.
 func TestTheTaggingSchemasAdvertiseTheSeamsVocabulary(t *testing.T) {
-	seam := stubTags{taggable: []string{"person", "project"}}
+	seam := stubTags{taggable: []string{"contact", "project"}}
 	for name, raw := range map[string]json.RawMessage{
 		"apply_tag":  applyTag{tags: seam}.Spec().InputSchema,
 		"remove_tag": removeTag{tags: seam}.Spec().InputSchema,
 	} {
-		if !bytes.Contains(raw, []byte(`"enum":["person","project"]`)) {
+		if !bytes.Contains(raw, []byte(`"enum":["contact","project"]`)) {
 			t.Errorf("%s's record_type enum does not carry the seam's vocabulary: %s", name, raw)
 		}
 	}
@@ -111,6 +111,17 @@ func (s stubTags) FindTag(_ context.Context, name string) (ids.UUID, bool, error
 	return ids.NewV7(), true, nil
 }
 
+// FindTagToRemove answers for a live OR retired name, which is the whole
+// difference from FindTag: removal is the one verb that must reach a word
+// somebody has already retired, because retiring it is what stranded it on the
+// records still carrying it.
+func (s stubTags) FindTagToRemove(_ context.Context, name string) (ids.UUID, bool, error) {
+	if s.ensured != nil {
+		*s.ensured = name
+	}
+	return ids.NewV7(), true, nil
+}
+
 // ResolveTag stands in for a governed vocabulary: it answers for a name the
 // workspace already holds and REFUSES anything else. Returning a fresh id for
 // every name — which the stub it replaced did — would let a test claiming
@@ -124,8 +135,8 @@ func (s stubTags) GetTag(_ context.Context, tagID ids.UUID) (TagDetail, error) {
 		name = given
 	}
 	return TagDetail{
-		Tag:    Tag{TagID: tagID, Name: name, Archived: s.retired[tagID]},
-		People: 2, Companies: 1, Deals: 0,
+		Tag:      Tag{TagID: tagID, Name: name, Archived: s.retired[tagID]},
+		Contacts: 2, Companies: 1, Deals: 0,
 	}, nil
 }
 
@@ -145,7 +156,7 @@ func (s stubTags) RecordTags(_ context.Context, _ string, _ ids.UUID) (RecordTag
 	}}}, nil
 }
 
-func (s stubTags) RecordTagTypes() []string { return []string{"person", "organization", "deal"} }
+func (s stubTags) RecordTagTypes() []string { return []string{"contact", "company", "deal"} }
 
 func (s stubTags) ResolveTag(_ context.Context, name string) (ids.UUID, error) {
 	if s.ensured != nil {
@@ -175,16 +186,16 @@ func (s stubTags) RemoveTag(_ context.Context, tagID ids.UUID, entityType string
 // the shape that made archive_record the only undo: retiring the word for
 // everybody to correct one mistaken tagging.
 func TestApplyAndRemoveReachTheSameTaggingBothWays(t *testing.T) {
-	tag, org := ids.NewV7(), ids.NewV7()
-	args := json.RawMessage(`{"tag_id":"` + tag.String() + `","record_type":"organization",` +
-		`"record_id":"` + org.String() + `"}`)
+	tag, company := ids.NewV7(), ids.NewV7()
+	args := json.RawMessage(`{"tag_id":"` + tag.String() + `","record_type":"company",` +
+		`"record_id":"` + company.String() + `"}`)
 
 	var applied, removed taggingArgs
 	if _, err := (applyTag{tags: stubTags{applied: &applied}}).Handle(context.Background(), args); err != nil {
 		t.Fatalf("applying answered %v", err)
 	}
-	if applied.TagID != tag || applied.RecordType != "organization" || applied.RecordID != org {
-		t.Errorf("apply reached the seam as %+v, want the tag on that organization", applied)
+	if applied.TagID != tag || applied.RecordType != "company" || applied.RecordID != company {
+		t.Errorf("apply reached the seam as %+v, want the tag on that company", applied)
 	}
 	if _, err := (removeTag{tags: stubTags{removed: &removed}}).Handle(context.Background(), args); err != nil {
 		t.Fatalf("removing answered %v", err)
@@ -195,7 +206,7 @@ func TestApplyAndRemoveReachTheSameTaggingBothWays(t *testing.T) {
 }
 
 // A NAME rather than an id is the capture flow's shape: "add tag: Champion" is
-// one act to the person asking. Making them call a lookup verb first, only to
+// one act to the contact asking. Making them call a lookup verb first, only to
 // hand its answer straight back, is a second call that exists for the
 // surface's convenience rather than theirs.
 func TestApplyTagTakesANameAndResolvesTheExistingWord(t *testing.T) {
@@ -203,7 +214,7 @@ func TestApplyTagTakesANameAndResolvesTheExistingWord(t *testing.T) {
 	var applied taggingArgs
 	_, err := (applyTag{tags: stubTags{applied: &applied, ensured: &resolved}}).Handle(
 		context.Background(),
-		json.RawMessage(`{"tag_name":"`+knownTagName+`","record_type":"organization",`+
+		json.RawMessage(`{"tag_name":"`+knownTagName+`","record_type":"company",`+
 			`"record_id":"`+ids.NewV7().String()+`"}`))
 	if err != nil {
 		t.Fatalf("applying by name answered %v, want the tag resolved", err)
@@ -225,7 +236,7 @@ func TestApplyTagRefusesAnUnknownNameRatherThanCoiningIt(t *testing.T) {
 	var applied taggingArgs
 	_, err := (applyTag{tags: stubTags{applied: &applied}}).Handle(
 		context.Background(),
-		json.RawMessage(`{"tag_name":"Champoin","record_type":"organization",`+
+		json.RawMessage(`{"tag_name":"Champoin","record_type":"company",`+
 			`"record_id":"`+ids.NewV7().String()+`"}`))
 	if err == nil {
 		t.Fatal("a typo'd name was accepted; want a refusal, because accepting it creates a second tag nobody chose")
@@ -239,7 +250,7 @@ func TestApplyTagRefusesAnUnknownNameRatherThanCoiningIt(t *testing.T) {
 // of the two to send.
 func TestApplyTagRefusesWithNeitherIDNorName(t *testing.T) {
 	_, err := (applyTag{tags: stubTags{}}).Handle(context.Background(),
-		json.RawMessage(`{"record_type":"organization","record_id":"`+ids.NewV7().String()+`"}`))
+		json.RawMessage(`{"record_type":"company","record_id":"`+ids.NewV7().String()+`"}`))
 	var bad *BadArgsError
 	if !errors.As(err, &bad) {
 		t.Fatalf("answered %v, want a BadArgsError naming tag_id or tag_name", err)
@@ -254,7 +265,7 @@ func TestApplyTagRefusesWithNeitherIDNorName(t *testing.T) {
 func TestApplyTagChecksTheRecordBeforeMintingAWord(t *testing.T) {
 	var ensured string
 	_, err := (applyTag{tags: refusingTaggable{ensured: &ensured}}).Handle(context.Background(),
-		json.RawMessage(`{"tag_name":"K5 Conference 2026","record_type":"organization",`+
+		json.RawMessage(`{"tag_name":"K5 Conference 2026","record_type":"company",`+
 			`"record_id":"`+ids.NewV7().String()+`"}`))
 	if err == nil {
 		t.Fatal("applying to an unreachable record answered success, want the refusal")
@@ -300,7 +311,7 @@ func (r refusingTaggable) RecordTags(_ context.Context, _ string, _ ids.UUID) (R
 }
 
 func (r refusingTaggable) RecordTagTypes() []string {
-	return []string{"person", "organization", "deal"}
+	return []string{"contact", "company", "deal"}
 }
 
 func (r refusingTaggable) ResolveTag(_ context.Context, name string) (ids.UUID, error) {
@@ -323,6 +334,13 @@ var errNoSuchTag = errors.New("no tag by that name exists, and this tool does no
 type noSuchTag struct{ stubTags }
 
 func (noSuchTag) FindTag(context.Context, string) (ids.UUID, bool, error) {
+	return ids.UUID{}, false, nil
+}
+
+// Both doors, or the unknown-name test stops testing an unknown name: the
+// embedded stub answers ok=true for everything, so a removal reaching only the
+// removal lookup would sail past the no-op this double exists to pin.
+func (noSuchTag) FindTagToRemove(context.Context, string) (ids.UUID, bool, error) {
 	return ids.UUID{}, false, nil
 }
 

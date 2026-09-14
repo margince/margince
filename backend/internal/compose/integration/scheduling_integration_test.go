@@ -45,14 +45,14 @@ func TestAvailabilityAndBooking(t *testing.T) {
 	}
 	first := avail.Slots[0]
 
-	// Book it, linked to the person.
+	// Book it, linked to the contact.
 	var booked struct {
 		ID   string `json:"id"`
 		Kind string `json:"kind"`
 	}
 	if status := e.Call(t, "POST", "/v1/bookings", AnyMap{
 		"start": first.Start, "end": first.End, "subject": "Discovery call",
-		"links": []AnyMap{{"entity_type": "person", "entity_id": e.personID}},
+		"links": []AnyMap{{"entity_type": "contact", "entity_id": e.contactID}},
 	}, nil, &booked); status != http.StatusCreated || booked.Kind != "meeting" {
 		t.Fatalf("book → %d %+v", status, booked)
 	}
@@ -63,7 +63,7 @@ func TestAvailabilityAndBooking(t *testing.T) {
 	}
 	if status := e.Call(t, "POST", "/v1/bookings", AnyMap{
 		"start": first.Start, "end": first.End,
-		"links": []AnyMap{{"entity_type": "person", "entity_id": e.personID}},
+		"links": []AnyMap{{"entity_type": "contact", "entity_id": e.contactID}},
 	}, nil, &problem); status != http.StatusConflict || problem.Code != "slot_taken" {
 		t.Fatalf("double-book → %d %q, want 409 slot_taken", status, problem.Code)
 	}
@@ -80,7 +80,7 @@ func TestAvailabilityAndBooking(t *testing.T) {
 	// A link target outside visibility refuses the booking (H1).
 	if status := e.Call(t, "POST", "/v1/bookings", AnyMap{
 		"start": first.Start.Add(3 * time.Hour), "end": first.End.Add(3 * time.Hour),
-		"links": []AnyMap{{"entity_type": "person", "entity_id": "00000000-0000-7000-8000-00000000dead"}},
+		"links": []AnyMap{{"entity_type": "contact", "entity_id": "00000000-0000-7000-8000-00000000dead"}},
 	}, nil, nil); status != http.StatusNotFound {
 		t.Fatalf("booking with invisible link → %d, want 404", status)
 	}

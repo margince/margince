@@ -6,7 +6,7 @@ import { Badge, Button } from "../../design-system/atoms";
 import { StoryProviders } from "../story-utils";
 import { FoundMove, TodayPanel, TodoRow } from "./today";
 
-// WHAT NEEDS A PERSON TODAY, on its own — the pane four record pages draw, so
+// WHAT NEEDS A CONTACT TODAY, on its own — the pane four record pages draw, so
 // what it claims has to be right on all four at once.
 //
 // The claim is authorship: the moves are what the agent found and the drafts

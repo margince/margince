@@ -13,7 +13,7 @@ package meetingbrief
 import (
 	"time"
 
-	"github.com/margince/margince/backend/internal/compose/personcontext"
+	"github.com/margince/margince/backend/internal/compose/contactcontext"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -38,7 +38,7 @@ type Input struct {
 	Attendees []AttendeeIn
 	// Commitments are the room's open promises and questions, ours and theirs,
 	// flattened across attendees because the reader asks "what is outstanding
-	// with these people", not "what is outstanding with each of them".
+	// with these contacts", not "what is outstanding with each of them".
 	Commitments []ClaimIn
 	// Recent is the newest captured conversation with the lead attendee first.
 	Recent []ActIn
@@ -127,9 +127,9 @@ type ProjectIn struct {
 	TargetEndDate *time.Time
 }
 
-// AttendeeIn is one person in the room.
+// AttendeeIn is one contact in the room.
 type AttendeeIn struct {
-	PersonID  string
+	ContactID string
 	FullName  string
 	Title     string
 	DealRole  string
@@ -141,11 +141,11 @@ type AttendeeIn struct {
 // "they promised to send it" and "we promised to send it" are opposite
 // obligations, and the body alone loses which one it was.
 type ClaimIn struct {
-	PersonName string
-	Kind       string
-	Body       string
-	Status     string
-	SourceID   string
+	ContactName string
+	Kind        string
+	Body        string
+	Status      string
+	SourceID    string
 	// SourceLabel names the conversation in prose, so a sentence can say where
 	// the promise was made without pasting a record id into the text.
 	SourceLabel string
@@ -196,7 +196,7 @@ func FromMeeting(room meeting, perAttendee map[ids.UUID][]crmcontracts.Conversat
 	}
 	for _, attendee := range room.Attendees {
 		in.Attendees = append(in.Attendees, AttendeeIn{
-			PersonID:  attendee.PersonID.String(),
+			ContactID: attendee.ContactID.String(),
 			FullName:  attendee.FullName,
 			Title:     attendee.Title,
 			DealRole:  attendee.DealRole,
@@ -204,7 +204,7 @@ func FromMeeting(room meeting, perAttendee map[ids.UUID][]crmcontracts.Conversat
 			FirstTime: attendee.firstTime(),
 		})
 		in.LastTouchAt = latest(in.LastTouchAt, attendee.LastTouch)
-		in.Commitments = append(in.Commitments, foldClaims(attendee.FullName, perAttendee[attendee.PersonID])...)
+		in.Commitments = append(in.Commitments, foldClaims(attendee.FullName, perAttendee[attendee.ContactID])...)
 	}
 	return in
 }
@@ -213,22 +213,22 @@ func FromMeeting(room meeting, perAttendee map[ids.UUID][]crmcontracts.Conversat
 // dismissed ones.
 //
 // A dismissed claim is one a human said was never true. Writing prep from it
-// would resurrect it in front of the person it was wrong about, which is the
+// would resurrect it in front of the contact it was wrong about, which is the
 // worst place for the correction to have been ignored.
-func foldClaims(personName string, found []crmcontracts.ConversationClaim) []ClaimIn {
+func foldClaims(contactName string, found []crmcontracts.ConversationClaim) []ClaimIn {
 	out := make([]ClaimIn, 0, len(found))
 	for _, claim := range found {
 		if claim.Status == crmcontracts.ConversationClaimStatusDismissed {
 			continue
 		}
 		folded := ClaimIn{
-			PersonName: personName,
-			Kind:       string(claim.Kind),
-			Body:       claim.Body,
-			Status:     string(claim.Status),
-			SourceID:   ids.UUID(claim.SourceActivityId).String(),
-			DueAt:      claim.DueAt,
-			OccurredAt: claim.OccurredAt,
+			ContactName: contactName,
+			Kind:        string(claim.Kind),
+			Body:        claim.Body,
+			Status:      string(claim.Status),
+			SourceID:    ids.UUID(claim.SourceActivityId).String(),
+			DueAt:       claim.DueAt,
+			OccurredAt:  claim.OccurredAt,
 		}
 		if claim.SourceLabel != nil {
 			folded.SourceLabel = *claim.SourceLabel
@@ -241,11 +241,11 @@ func foldClaims(personName string, found []crmcontracts.ConversationClaim) []Cla
 // WithCounterpart folds in what the lead attendee's own page already knows:
 // where they work, and what was last said.
 //
-// The 360 is the read the person page itself serves, so anything the brief says
+// The 360 is the read the contact page itself serves, so anything the brief says
 // from it is something the reader could have seen by opening that page. It
 // never OVERRIDES the meeting read — the deal on the invite is the deal this
-// meeting is about, and the person's leading open deal may be a different one.
-func WithCounterpart(in *Input, view crmcontracts.Person360) {
+// meeting is about, and the contact's leading open deal may be a different one.
+func WithCounterpart(in *Input, view crmcontracts.Contact360) {
 	in.Company = currentEmployer(view)
 	if in.Deal == nil {
 		in.Deal = dealFromView(view)
@@ -259,7 +259,7 @@ func WithCounterpart(in *Input, view crmcontracts.Person360) {
 		}
 		// A row outside this caller's audience is kept out of Recent the same
 		// way an unreadable row is kept out of History's citable set — it
-		// reached this read as a date and a count, on the person's own page,
+		// reached this read as a date and a count, on the contact's own page,
 		// and it must not go on to be the model's or the floor's evidence for
 		// a sentence about it. Skipped rather than counted against recentCap,
 		// so a withheld row never costs the section a readable one's slot.
@@ -289,12 +289,12 @@ func WithCounterpart(in *Input, view crmcontracts.Person360) {
 // two-to-three-minute read; a longer window buys nothing a reader will see.
 const recentCap = 10
 
-// dealFromView takes the person's leading open deal when the invite named no
+// dealFromView takes the contact's leading open deal when the invite named no
 // deal at all. A meeting linked to no deal is common — the calendar event was
 // captured before anyone filed it — and refusing to say what is commercially at
-// stake because of that would leave the reader worse informed than the person
+// stake because of that would leave the reader worse informed than the contact
 // page they came from.
-func dealFromView(view crmcontracts.Person360) *DealIn {
+func dealFromView(view crmcontracts.Contact360) *DealIn {
 	if view.Commercial == nil || view.Commercial.Deal == nil {
 		return nil
 	}
@@ -318,7 +318,9 @@ func dealFromView(view crmcontracts.Person360) *DealIn {
 
 // currentEmployer names where the counterpart works now. The 360 sorts the
 // current-primary employment to index zero, so the first row is the answer.
-func currentEmployer(view crmcontracts.Person360) string { return personcontext.CurrentEmployer(view) }
+func currentEmployer(view crmcontracts.Contact360) string {
+	return contactcontext.CurrentEmployer(view)
+}
 
 // latest keeps the newer of two optional instants, treating nil as "nothing
 // captured" rather than as the zero time — the zero time would win every

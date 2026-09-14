@@ -9,7 +9,7 @@ package capture
 import "testing"
 
 func TestASelfSetRecognisesTheSeatsOwnAddressesAndNothingElse(t *testing.T) {
-	// Declared with capitals and a domain, because that is what a person types.
+	// Declared with capitals and a domain, because that is what a human types.
 	self := NewSelfSet([]string{"Lars@Private.Example"}, []string{"other.example"})
 
 	for _, tc := range []struct {

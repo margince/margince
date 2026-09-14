@@ -28,7 +28,7 @@ import { describe, expect, it } from "vitest";
 // identically: `await expect(sections.first()).toBeVisible()` followed by
 // `sections.count()` is correct, and the count alone is not, and no rule over
 // the text tells them apart. Banning them would buy a waiver on every correct
-// site, which is a gate that trains people to waive it.
+// site, which is a gate that trains contacts to waive it.
 //
 // The one shape of theirs worth naming, since this gate cannot: a bare
 // `(await x.count()) === 0` used as a BRANCH condition fails by passing — an

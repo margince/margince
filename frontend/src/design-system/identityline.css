@@ -1,6 +1,6 @@
 /* IdentityLine — the facts under a record's name.
 
-   One sheet for what company360.css and person360.css each spelled: the row,
+   One sheet for what company360.css and contact360.css each spelled: the row,
    its separator, and a fact inside it. The three records that draw this line
    now draw the same one. */
 
@@ -66,7 +66,7 @@
 }
 
 /* A fact that qualifies the record rather than being a way to act on it — who
-   owns it, what buying role a person holds. It sits in the same line as the
+   owns it, what buying role a contact holds. It sits in the same line as the
    handles beside it but does not compete with them for the eye. */
 .identity-fact-quiet {
   color: var(--textMeta);

@@ -50,7 +50,7 @@ Ort, Datum: ________________  Unterschrift: ________________
 
 ## Hinweise für die durchführende Stelle
 
-- **Eine Einwilligung je Person und je Version.** Ändert sich, was das System
+- **Eine Einwilligung je Contact und je Version.** Ändert sich, was das System
   tut, ist erneut einzuholen — eine Einwilligung deckt nur das, worüber sie
   informiert.
 - **Dokumentieren, nicht nur einsammeln.** Art. 7 Abs. 1 DSGVO verlangt den

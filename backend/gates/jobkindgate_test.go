@@ -9,7 +9,7 @@ package gates
 // uses, proven accepted; the shape it exists to reject, proven rejected.
 // Compiled with `go build` rather than asserted by eye, because the claim is
 // specifically about what the COMPILER does — and a gate that blocks a
-// legitimate author gets weakened by the person it stopped, which is the hole
+// legitimate author gets weakened by the contact it stopped, which is the hole
 // the next undeclared job walks back in through.
 //
 // Two halves, and the second is the one that binds. The scratch module below

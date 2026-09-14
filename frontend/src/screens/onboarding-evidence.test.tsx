@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 
 import { cleanup, render as rtlRender, screen } from "@testing-library/react";
@@ -63,7 +63,7 @@ function surplusFacts(
 const READ = {
   id: "11111111-1111-4111-8111-111111111111",
   target_kind: "onboarding",
-  organization_id: null,
+  company_id: null,
   root_url: "https://gradion.com",
   status: "ready",
   status_code: null,
@@ -92,7 +92,7 @@ const READ = {
     ...surplusFacts(FACT_PREVIEW_LIMIT + 1),
   ],
   comparisons: [],
-  people: [],
+  contacts: [],
   legal_entities: [LEGAL_ENTITY],
   warnings: [],
   draft_version: 2,

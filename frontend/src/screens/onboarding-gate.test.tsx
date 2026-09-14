@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 
 import {
@@ -71,7 +71,7 @@ function siteRead(over: Partial<CompanySiteRead> = {}): CompanySiteRead {
   return {
     id: "018f3a1b-0000-7000-8000-0000000000b2",
     target_kind: "onboarding",
-    organization_id: null,
+    company_id: null,
     root_url: "https://gradion.com",
     status: "reading",
     status_code: null,
@@ -102,7 +102,7 @@ function siteRead(over: Partial<CompanySiteRead> = {}): CompanySiteRead {
     profile_fields: [],
     facts: [fact({ value_key: "service:platform" })],
     comparisons: [],
-    people: [],
+    contacts: [],
     warnings: [],
     draft_version: 1,
     proposal_hash: "h1",

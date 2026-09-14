@@ -59,11 +59,11 @@ func TestExactlySixSeededTemplatesWithPinnedNames(t *testing.T) {
 // registeredHandlerNames derives the SAME-package handler-name set this
 // module registers (StarterWorkflows) — a fitness function over the
 // real registry, never a maintained parallel list (CLAUDE.md rule #2).
-// assign_lead_owner's handler lives in the people module, which this
+// assign_lead_owner's handler lives in the contacts module, which this
 // package cannot import (ADR-0054 §9: a module never imports a
 // sibling), so it is named explicitly below rather than derived —
 // compose's own leadrouting_config_test.go proves that exact name
-// resolves against the REAL people.LeadRoutingWorkflow handler, closing
+// resolves against the REAL contacts.LeadRoutingWorkflow handler, closing
 // the loop this package alone cannot.
 func registeredHandlerNames() map[string]bool {
 	names := map[string]bool{}

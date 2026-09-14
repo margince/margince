@@ -19,7 +19,7 @@ import (
 )
 
 // fakeUndoWriters is UndoWriters over a plain map — this package never
-// imports people, so a real archive path is compose's own integration
+// imports contacts, so a real archive path is compose's own integration
 // test (csvimport_integration_test.go); this one proves RunStore.Undo's
 // own SQL: the kept/reversed/errored split, checkpoint paging/resume, and
 // the lifecycle gates.

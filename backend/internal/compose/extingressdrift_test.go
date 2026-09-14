@@ -36,7 +36,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/pkg/extension"
@@ -251,9 +251,9 @@ func TestTheMessageKindVocabulariesAgree(t *testing.T) {
 // matching the lane it was meant to unlock, and a unit that correctly vouched
 // for its addresses would silently have them refused.
 func TestTheMergeKeyVocabulariesAgree(t *testing.T) {
-	if string(extension.MergeKeyEmail) != people.LaneEmail {
+	if string(extension.MergeKeyEmail) != contacts.LaneEmail {
 		t.Errorf("the email merge key: published %q, ladder lane %q — a source declaring the published one would have its addresses refused",
-			extension.MergeKeyEmail, people.LaneEmail)
+			extension.MergeKeyEmail, contacts.LaneEmail)
 	}
 }
 
@@ -355,10 +355,10 @@ func TestAUnitMayNameOnlyItsOwnTransportThroughEitherDoor(t *testing.T) {
 
 // The counterparty BINDING is bounded by the same declaration, and it is a
 // separate gate because it writes a different row. The activity's provider
-// decides where a reply would be sent; this one writes person_channel_identity,
+// decides where a reply would be sent; this one writes contact_channel_identity,
 // which is where the core resolves WHO it is sent to — so a unit able to bind an
 // account under a core connector's provider could attach an account it controls
-// to somebody else's person record and inherit the replies meant for them.
+// to somebody else's contact record and inherit the replies meant for them.
 func TestAUnitMayBindAnAccountOnlyOnItsOwnTransport(t *testing.T) {
 	declaresTransport(t, "mine", extension.Channel{Provider: "mine_chat", CredentialModel: extension.CredentialPerMember})
 
@@ -370,7 +370,7 @@ func TestAUnitMayBindAnAccountOnlyOnItsOwnTransport(t *testing.T) {
 		t.Errorf("a record with no channel identity was refused (%v); it identifies its counterparty by address", err)
 	}
 	if err := refuseUnitIdentity("mine", "telegram"); err == nil {
-		t.Error("a unit bound an account under telegram; the next reply on that person's conversation would go to the unit's account")
+		t.Error("a unit bound an account under telegram; the next reply on that contact's conversation would go to the unit's account")
 	} else if !errors.Is(err, extension.ErrInvalid) {
 		t.Errorf("the refusal is %v, want extension.ErrInvalid", err)
 	}

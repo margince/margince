@@ -16,7 +16,9 @@ package compose
 // against the other.
 
 import (
+	"context"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strconv"
 
@@ -142,14 +144,29 @@ func runAutoExecuted(w http.ResponseWriter, r *http.Request, next http.Handler, 
 func pinAutoExecutedWrite(w http.ResponseWriter, r *http.Request, redemption tokenRedemption, redeemed bool) bool {
 	admitted, gateRead := auth.AutoExecutePin(r.Context())
 	if redemption.pinned {
-		if gateRead && redemption.pin != admitted {
-			httperr.Write(w, r, fmt.Errorf(
-				"the approval released this record at version %d and the tier gate read it at %d — it moved "+
-					"between the two, so neither is the version that was judged; re-read it and retry: %w",
-				redemption.pin, admitted, apperrors.ErrVersionSkew))
+		// NO REFUSAL, though the two can disagree, and the order of events is
+		// why. The redemption commits before this runs, so by the time a
+		// disagreement could be noticed the human's single-use approval is
+		// already spent — and refusing destroys it on a call that never ran and
+		// can never be redeemed again. This branch used to refuse, eighteen
+		// lines above the branch that states the opposite rule for an approval
+		// carrying no pin of its own.
+		//
+		// Forwarding the released pin is no weaker: the store re-checks it
+		// inside the transaction that mutates and refuses there, without
+		// consuming anything. What is not done is staying silent about it.
+		pin, err := auth.ResolveWritePin(auth.WritePinInputs{
+			ReleasedPin:   &redemption.pin,
+			Admitted:      admitted,
+			GateRead:      gateRead,
+			ApprovalSpent: true,
+		})
+		if err != nil {
+			httperr.Write(w, r, err)
 			return false
 		}
-		r.Header.Set(ifMatchHeader, strconv.FormatInt(redemption.pin, 10))
+		reportPinDisagreement(r.Context(), pin, admitted)
+		r.Header.Set(ifMatchHeader, strconv.FormatInt(pin.Version, 10))
 		return true
 	}
 	if !gateRead {
@@ -202,4 +219,30 @@ func pinAutoExecutedWrite(w http.ResponseWriter, r *http.Request, redemption tok
 // had stopped being covered.
 func reachesTheHumanOwnedSplit(pol agentPolicy) bool {
 	return pol.Tool == toolUpdateRecord && !actionShapedUpdateOps[pol.Op]
+}
+
+// reportPinDisagreement leaves the witness for a condition the system believes
+// cannot happen: the approval released this record at one version and the tier
+// gate read it at another.
+//
+// Unreachable through the real stager — a pin is taken server-side only for a
+// concrete, version-checkable target, versions are monotonic, the gate's read
+// precedes the redemption's so admitted ≤ current = released, and a row that
+// genuinely moved fails the redemption's own target re-check first. An
+// unreachable case that quietly becomes reachable is the failure mode with no
+// witness, and this path no longer refuses, so a log line is the only thing
+// that would say it happened.
+//
+// If it ever fires, the fix is to move the comparison BEFORE the redemption
+// commits: a genuine disagreement could then refuse without destroying
+// anything. That is not done now because it reorders the redemption path on
+// both doors for a case nothing can reach.
+func reportPinDisagreement(ctx context.Context, pin auth.WritePin, admitted int64) {
+	if !pin.DisagreedWithAdmitted {
+		return
+	}
+	slog.Default().WarnContext(ctx,
+		"an agent write was pinned at a version the tier gate did not read",
+		"pinned", pin.Version, "admitted", admitted, "source", pin.Source,
+		"approval_spent", true)
 }

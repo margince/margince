@@ -157,7 +157,7 @@ func (p stageEvidencePayload) claims() []stageEvidenceClaim {
 // issue the SHIPPING request rather than a copy of it — a cert that grades a
 // hand-rewritten prompt certifies nothing about what runs.
 //
-//promptvoice:exempt returns claims about named criteria quoted from the conversation; the approval card that renders them is the surface a person reads.
+//promptvoice:exempt returns claims about named criteria quoted from the conversation; the approval card that renders them is the surface a reader reads.
 func stageEvidenceRequest(
 	criteria []stageEvidenceCriterion, spans []stageEvidenceSpan, lang string,
 ) model.Request {

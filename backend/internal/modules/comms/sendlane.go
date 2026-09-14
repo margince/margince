@@ -10,7 +10,7 @@ package comms
 // and differ in three words: which column records that it went wrong, which
 // records when, and which sends count. Written twice they drifted in the ways
 // that matter least and are hardest to see: one capping the subject line and
-// the other not, one carrying the visibility clause on the person join and the
+// the other not, one carrying the visibility clause on the contact join and the
 // other forgetting it.
 //
 // So the statement is written once with those three words named, and each lane
@@ -71,11 +71,11 @@ func (l sendLane) recipientExpr() string {
 
 // laneSend is one send on a lane: the five facts a card is drawn from.
 type laneSend struct {
-	ID       ids.UUID
-	Subject  string
-	Reason   string
-	At       time.Time
-	PersonID ids.UUID
+	ID        ids.UUID
+	Subject   string
+	Reason    string
+	At        time.Time
+	ContactID ids.UUID
 	// Recipient is the address the lane's failure was about, or empty where the
 	// lane names none. Never derived from the send's recipient list: a report
 	// names ONE address, and a send carrying a CC would otherwise blame the
@@ -83,16 +83,16 @@ type laneSend struct {
 	Recipient string
 }
 
-// statement joins each send to the person its activity is filed under.
+// statement joins each send to the contact its activity is filed under.
 // activity_link belongs to the activities module; this read joins it directly
 // rather than through a port for the same reason consent's verdict read and
 // deals' health read do — the link row is shared metadata every module's
 // row-level reads resolve in their own statement. The join carries
 // auth.LinkTargetVisibleClause, the clause the activities module's own link
 // projections ask: owning the send says nothing about the visibility of the
-// people its activity touches, and a person this caller may not read must not
+// contacts its activity touches, and a contact this caller may not read must not
 // reach the wire even as a bare id. LATERAL with LIMIT 1 rather than a plain
-// join: an activity filed under several people must not put the same send on
+// join: an activity filed under several contacts must not put the same send on
 // the lane twice.
 func (l sendLane) statement(ctx context.Context, userID ids.UUID, since time.Time, limit int, args *[]any) (string, error) {
 	// Every placeholder is derived from the arg slice — the visibility clause
@@ -107,13 +107,13 @@ func (l sendLane) statement(ctx context.Context, userID ids.UUID, since time.Tim
 		visible = alwaysVisible
 	}
 	return fmt.Sprintf(`
-SELECT o.id, left(COALESCE(o.subject, ''), %d), COALESCE(o.%s, ''), o.%s, l.person_id,
+SELECT o.id, left(COALESCE(o.subject, ''), %d), COALESCE(o.%s, ''), o.%s, l.contact_id,
        %s
   FROM comms_outbound o
   LEFT JOIN LATERAL (
-    SELECT al.person_id FROM activity_link al
-     WHERE al.activity_id = o.activity_id AND al.entity_type = 'person' AND `+visible+`
-     ORDER BY al.person_id LIMIT 1
+    SELECT al.contact_id FROM activity_link al
+     WHERE al.activity_id = o.activity_id AND al.entity_type = 'contact' AND `+visible+`
+     ORDER BY al.contact_id LIMIT 1
   ) l ON true
  WHERE o.user_id = $%d
    AND %s
@@ -124,10 +124,10 @@ SELECT o.id, left(COALESCE(o.subject, ''), %d), COALESCE(o.%s, ''), o.%s, l.pers
 		arg(userID), l.only, l.atColumn, arg(since), l.atColumn, arg(limit)), nil
 }
 
-// read answers the calling person's own sends on this lane since `since`,
-// newest first, bounded. The person comes from the bound principal and is not
-// a parameter — another person's sends cannot be expressed — and a caller with
-// no person behind it is refused with the permission sentinel, which the
+// read answers the calling contact's own sends on this lane since `since`,
+// newest first, bounded. The contact comes from the bound principal and is not
+// a parameter — another contact's sends cannot be expressed — and a caller with
+// no contact behind it is refused with the permission sentinel, which the
 // attention feed renders as a withheld lane.
 //
 // `what` names the lane in the two errors, so a refusal and a query fault say
@@ -135,11 +135,11 @@ SELECT o.id, left(COALESCE(o.subject, ''), %d), COALESCE(o.%s, ''), o.%s, l.pers
 func (s *Store) readSendLane(ctx context.Context, lane sendLane, what string, since time.Time, limit int) ([]laneSend, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.UserID.IsZero() {
-		return nil, fmt.Errorf("comms: reading your %s needs an authenticated person: %w", what, apperrors.ErrPermissionDenied)
+		return nil, fmt.Errorf("comms: reading your %s needs an authenticated contact: %w", what, apperrors.ErrPermissionDenied)
 	}
 	// A send is an activity, and reading one back — subject line included —
 	// carries the activity read grant like every other timeline read. After
-	// the person check, so a caller with nobody behind it gets the sentinel
+	// the contact check, so a caller with nobody behind it gets the sentinel
 	// the lane withholds on rather than a bare unauthenticated error.
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return nil, err
@@ -159,12 +159,12 @@ func (s *Store) readSendLane(ctx context.Context, lane sendLane, what string, si
 		sends = []laneSend{}
 		for rows.Next() {
 			var send laneSend
-			var person *ids.UUID
-			if scanErr := rows.Scan(&send.ID, &send.Subject, &send.Reason, &send.At, &person, &send.Recipient); scanErr != nil {
+			var contact *ids.UUID
+			if scanErr := rows.Scan(&send.ID, &send.Subject, &send.Reason, &send.At, &contact, &send.Recipient); scanErr != nil {
 				return scanErr
 			}
-			if person != nil {
-				send.PersonID = *person
+			if contact != nil {
+				send.ContactID = *contact
 			}
 			sends = append(sends, send)
 		}

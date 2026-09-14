@@ -26,8 +26,10 @@ import (
 
 // CorrectionReceipt is one applied correction as a reader sees it.
 type CorrectionReceipt struct {
-	DealID   ids.DealID
-	DealName string
+	DealID      ids.DealID
+	DealName    string
+	BeforeClose *string
+	AfterClose  *string
 	// AuditLogID is what an Undo names: the record-history restore route reads
 	// the before-image from it, which is why nothing here copies those values
 	// into a second place.
@@ -104,7 +106,7 @@ func (s *Store) RecentCorrectionsOwnedBy(
 			            THEN coalesce(a.evidence->>'basis', '')
 			            ELSE '' END,
 			       c.applied_at,
-			       c.reversed_at IS NOT NULL, d.version
+			       c.reversed_at IS NOT NULL, d.version, a.before->>'expected_close_date', a.after->>'expected_close_date'
 			  FROM deal_correction c
 			  JOIN deal d ON d.id = c.deal_id
 			  JOIN audit_log a ON a.id = c.audit_log_id
@@ -124,7 +126,7 @@ func (s *Store) RecentCorrectionsOwnedBy(
 			var row CorrectionReceipt
 			if err := rows.Scan(&row.DealID, &row.DealName, &row.AuditLogID,
 				&row.Fields, &row.Basis, &row.AppliedAt, &row.Reversed,
-				&row.Version); err != nil {
+				&row.Version, &row.BeforeClose, &row.AfterClose); err != nil {
 				return err
 			}
 			out = append(out, row)

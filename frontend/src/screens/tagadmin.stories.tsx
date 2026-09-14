@@ -49,11 +49,11 @@ const WORDS = [
 
 const USAGE: Record<
   string,
-  { people: number; companies: number; deals: number }
+  { contacts: number; companies: number; deals: number }
 > = {
-  "t-1": { people: 41, companies: 12, deals: 7 },
-  "t-2": { people: 3, companies: 9, deals: 2 },
-  "t-3": { people: 0, companies: 0, deals: 0 },
+  "t-1": { contacts: 41, companies: 12, deals: 7 },
+  "t-2": { contacts: 3, companies: 9, deals: 2 },
+  "t-3": { contacts: 0, companies: 0, deals: 0 },
 };
 
 function Card({

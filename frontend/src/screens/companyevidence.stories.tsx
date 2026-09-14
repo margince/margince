@@ -21,7 +21,7 @@ type Story = StoryObj;
 type Receipt = components["schemas"]["ClaimEvidence"];
 
 function evidencePath(cited: CitedRecord): string {
-  return `GET /organizations/o-1/evidence/${cited.entityType}/${cited.entityId}`;
+  return `GET /companies/o-1/evidence/${cited.entityType}/${cited.entityId}`;
 }
 
 function Drawer({
@@ -39,7 +39,7 @@ function Drawer({
   return (
     <StoryProviders>
       <EvidenceModal
-        orgId="o-1"
+        companyId="o-1"
         cited={cited}
         onClose={() => {}}
         onStep={onStep}
@@ -56,10 +56,10 @@ function Drawer({
 export const SiteReadUnconfirmed: Story = {
   render: () => (
     <Drawer
-      cited={{ entityType: "organization", entityId: "org-1" }}
+      cited={{ entityType: "company", entityId: "company-1" }}
       receipt={{
-        entity_type: "organization",
-        entity_id: "org-1",
+        entity_type: "company",
+        entity_id: "company-1",
         source_kind: "site_read",
         label: "Industry",
         value: "Automotive",
@@ -73,7 +73,7 @@ export const SiteReadUnconfirmed: Story = {
   ),
 };
 
-// human: a person's own assertion, so `last_verified_at` is set and no
+// human: a contact's own assertion, so `last_verified_at` is set and no
 // confidence prints (a human value never carries a model score). Also the
 // story that exercises the prev/next steps — the ordering belongs to the
 // citing card, not the drawer, so `onStep` is the only thing that turns the
@@ -167,14 +167,14 @@ export const RuleWithGaps: Story = {
 
 function PendingDrawer() {
   installFetchStub({
-    "GET /organizations/o-1/evidence/organization/org-1": () =>
+    "GET /companies/o-1/evidence/company/company-1": () =>
       new Promise<Response>(() => {}),
   });
   return (
     <StoryProviders>
       <EvidenceModal
-        orgId="o-1"
-        cited={{ entityType: "organization", entityId: "org-1" }}
+        companyId="o-1"
+        cited={{ entityType: "company", entityId: "company-1" }}
         onClose={() => {}}
       />
     </StoryProviders>
@@ -192,11 +192,11 @@ export const Pending: Story = {
 // it. The component treats "the server had nothing" and "the request
 // failed" identically here (both leave `shown?.source_kind` unset), so one
 // story stands for both — a claim that was told to be checkable and turns
-// out uncheckable either way should read the same to the person checking it.
+// out uncheckable either way should read the same to the contact checking it.
 export const Unavailable: Story = {
   render: () => (
     <Drawer
-      cited={{ entityType: "organization", entityId: "org-missing" }}
+      cited={{ entityType: "company", entityId: "company-missing" }}
       receipt={undefined}
     />
   ),

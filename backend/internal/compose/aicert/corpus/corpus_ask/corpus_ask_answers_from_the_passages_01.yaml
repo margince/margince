@@ -28,7 +28,7 @@ fixture:
       document: operating-handbook.md
       text: >-
         A captured message is filed against the account it belongs to. Where no
-        account matches, it is held for a person to route by hand.
+        account matches, it is held for a contact to route by hand.
 expect:
   outcome: accepted
   answer: [retention_window]

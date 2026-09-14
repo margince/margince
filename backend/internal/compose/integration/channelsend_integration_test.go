@@ -7,7 +7,7 @@ package integration
 
 // The channel reply over the real composition (telegram-oa design §8.1, §8.5):
 // the 🟡 admission an agent caller meets, the human whose own click IS the
-// approval, the default-deny consent gate, the unreachable person who is refused
+// approval, the default-deny consent gate, the unreachable contact who is refused
 // before anything is staged, and the outbound activity that keeps a sent message
 // on the timeline across a reload.
 //
@@ -45,13 +45,13 @@ const (
 type channelSendEnv struct {
 	*apptest.AppEnv
 	activityID string
-	personID   string
+	contactID  string
 	user       string
 }
 
 // setupChannelSend boots the api composition with the connect registry (so the
 // send pre-flight is wired), then lays down what a captured Telegram
-// conversation leaves behind: a person, their channel identity, the inbound
+// conversation leaves behind: a contact, their channel identity, the inbound
 // activity filed under the chat, and the workspace's bot binding.
 func setupChannelSend(t *testing.T) *channelSendEnv {
 	t.Helper()
@@ -74,13 +74,13 @@ func setupChannelSend(t *testing.T) *channelSendEnv {
 	apptest.BootstrapWorkspaceSession(t, e, "Channel Send E2E", "rep@fable.test", "Admin")
 
 	c := &channelSendEnv{AppEnv: e}
-	var person struct {
+	var contact struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/people", AnyMap{"full_name": "Telegram Buyer"}, nil, &person); status != http.StatusCreated {
-		t.Fatalf("create person → %d", status)
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"full_name": "Telegram Buyer"}, nil, &contact); status != http.StatusCreated {
+		t.Fatalf("create contact → %d", status)
 	}
-	c.personID = person.ID
+	c.contactID = contact.ID
 	if err := apptest.InWorkspace(e, t, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT id FROM app_user WHERE email = $1`, "rep@fable.test").Scan(&c.user)
@@ -94,16 +94,16 @@ func setupChannelSend(t *testing.T) *channelSendEnv {
 	return c
 }
 
-// bindIdentity writes the person_channel_identity row an inbound message binds.
+// bindIdentity writes the contact_channel_identity row an inbound message binds.
 // Written as the table owner because the subject here is what the SEND path
 // reads out of it, not how ingress puts it there.
 func (c *channelSendEnv) bindIdentity(t *testing.T) {
 	t.Helper()
 	if err := apptest.InWorkspace(c.AppEnv, t, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
-			INSERT INTO person_channel_identity (person_id, provider, channel_user_id, username, source, captured_by)
+			INSERT INTO contact_channel_identity (contact_id, provider, channel_user_id, username, source, captured_by)
 			VALUES ($1, 'telegram', $2, 'buyer', 'telegram', 'connector:telegram')`,
-			c.personID, channelSendAccountID)
+			c.contactID, channelSendAccountID)
 		return err
 	}); err != nil {
 		t.Fatalf("binding the channel identity: %v", err)
@@ -111,7 +111,7 @@ func (c *channelSendEnv) bindIdentity(t *testing.T) {
 }
 
 // seedInboundMessage writes the conversation being answered: an inbound telegram
-// activity filed under the chat's thread key and linked to the person, which is
+// activity filed under the chat's thread key and linked to the contact, which is
 // the shape capture leaves behind — including the TRANSPORT that carried it. The
 // reply path resolves the provider from that column, so an anchor seeded without
 // it is not a channel conversation and every reply on it is refused.
@@ -127,8 +127,8 @@ func (c *channelSendEnv) seedInboundMessage(t *testing.T) {
 			return err
 		}
 		if _, err := tx.Exec(ctx, `
-			INSERT INTO activity_link (activity_id, entity_type, person_id)
-			VALUES ($1, 'person', $2)`, c.activityID, c.personID); err != nil {
+			INSERT INTO activity_link (activity_id, entity_type, contact_id)
+			VALUES ($1, 'contact', $2)`, c.activityID, c.contactID); err != nil {
 			return err
 		}
 		// The customer's own authorship, real capture's job everywhere but
@@ -182,7 +182,7 @@ func (c *channelSendEnv) grantConsent(t *testing.T, key string) {
 	if purposeID == "" {
 		t.Fatalf("bootstrap seeded no %q purpose: %+v", key, purposes.Data)
 	}
-	if status := c.Call(t, "POST", "/v1/people/"+c.personID+"/consent", AnyMap{
+	if status := c.Call(t, "POST", "/v1/contacts/"+c.contactID+"/consent", AnyMap{
 		"purpose_id": purposeID, "new_state": "granted", "lawful_basis": "consent",
 		"wording": "Yes, you may contact me about this.",
 	}, nil, nil); status != http.StatusOK {
@@ -325,7 +325,7 @@ func TestSendMessageRefusesAWriteOnlyPassport(t *testing.T) {
 // It used to be refused with approval_required. What changed is the tier, not
 // the gate: the passport carries the granting human's own seat and row scope,
 // and `send` is a cap that human chose to lend, so asking them to confirm again
-// made the agent surface weaker than the person behind it. What still refuses a
+// made the agent surface weaker than the contact behind it. What still refuses a
 // caller is the CAP — a passport never granted `send` cannot reach this at all,
 // which TestOutboundVerbsRequireAnOutboundCap holds.
 func TestSendMessageAcceptsASendScopedPassportWithoutAToken(t *testing.T) {
@@ -342,7 +342,7 @@ func TestSendMessageAcceptsASendScopedPassportWithoutAToken(t *testing.T) {
 }
 
 // A passport its granting human never lent `send` is refused, and that is the
-// boundary that matters: the tier decides whether a person is asked twice, the
+// boundary that matters: the tier decides whether a contact is asked twice, the
 // scope decides whether the act was delegable at all.
 func TestSendMessageRefusesAPassportWithoutTheSendCap(t *testing.T) {
 	c := setupChannelSend(t)
@@ -445,7 +445,7 @@ func TestSendMessageRefusesAnEmptyBody(t *testing.T) {
 	}
 }
 
-// Consent is default-deny PER PURPOSE: the person granted `transactional` and
+// Consent is default-deny PER PURPOSE: the contact granted `transactional` and
 // nothing else, so a reply sent under another purpose is suppressed with the
 // same 409 the mail path answers — the shape the composer relies on to keep the
 // rep's drafted text on screen.
@@ -480,14 +480,14 @@ func TestSendMessageRefusesWithoutConsentForThePurpose(t *testing.T) {
 	}
 }
 
-// A person who blocked the bot cannot be reached, and blocking does NOT archive
+// A contact who blocked the bot cannot be reached, and blocking does NOT archive
 // the identity (D9) — so the conversation is still there, still readable, and the
 // reply must be refused on reachability rather than accepted and parked.
-func TestSendMessageRefusesAnUnreachablePerson(t *testing.T) {
+func TestSendMessageRefusesAnUnreachableContact(t *testing.T) {
 	c := setupChannelSend(t)
 	if err := apptest.InWorkspace(c.AppEnv, t, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
-			`UPDATE person_channel_identity SET blocked_at = now() WHERE channel_user_id = $1`, channelSendAccountID)
+			`UPDATE contact_channel_identity SET blocked_at = now() WHERE channel_user_id = $1`, channelSendAccountID)
 		return err
 	}); err != nil {
 		t.Fatalf("blocking the identity: %v", err)
@@ -495,18 +495,18 @@ func TestSendMessageRefusesAnUnreachablePerson(t *testing.T) {
 
 	status, code, detail := c.sendReply(t, "transactional", "Yes — shipping Monday.", nil)
 
-	if status != http.StatusUnprocessableEntity || code != "person_unreachable" {
-		t.Fatalf("reply to a blocked person → %d %q, want 422 person_unreachable", status, code)
+	if status != http.StatusUnprocessableEntity || code != "contact_unreachable" {
+		t.Fatalf("reply to a blocked contact → %d %q, want 422 contact_unreachable", status, code)
 	}
 	if !strings.Contains(detail, "blocked") {
-		t.Fatalf("refusal detail %q does not say why the person cannot be reached", detail)
+		t.Fatalf("refusal detail %q does not say why the contact cannot be reached", detail)
 	}
 	c.assertNoOutboundEffect(t, "an unreachable recipient")
 }
 
 // Without the outbound activity the UI's optimistic append vanishes the moment
 // the rep reloads, which reads as "my message was lost". So the row is the
-// feature, not bookkeeping: same conversation, same person, the text that was
+// feature, not bookkeeping: same conversation, same contact, the text that was
 // sent.
 func TestSentMessageLandsAsAnOutboundActivity(t *testing.T) {
 	c := setupChannelSend(t)
@@ -525,7 +525,7 @@ func TestSentMessageLandsAsAnOutboundActivity(t *testing.T) {
 		t.Fatalf("logged activity = %+v, want an outbound message carrying the sent text", sent)
 	}
 
-	var threadKey, linkedPerson string
+	var threadKey, linkedContact string
 	var deliveryActivity string
 	if err := apptest.InWorkspace(c.AppEnv, t, func(tx pgx.Tx) error {
 		ctx := context.Background()
@@ -534,8 +534,8 @@ func TestSentMessageLandsAsAnOutboundActivity(t *testing.T) {
 			return err
 		}
 		if err := tx.QueryRow(ctx,
-			`SELECT person_id::text FROM activity_link WHERE activity_id = $1 AND entity_type = 'person'`,
-			sent.ID).Scan(&linkedPerson); err != nil {
+			`SELECT contact_id::text FROM activity_link WHERE activity_id = $1 AND entity_type = 'contact'`,
+			sent.ID).Scan(&linkedContact); err != nil {
 			return err
 		}
 		return tx.QueryRow(ctx,
@@ -549,8 +549,8 @@ func TestSentMessageLandsAsAnOutboundActivity(t *testing.T) {
 	if threadKey != channelSendThreadKey {
 		t.Fatalf("outbound activity thread_key = %q, want the conversation's %q", threadKey, channelSendThreadKey)
 	}
-	if linkedPerson != c.personID {
-		t.Fatalf("outbound activity links person %s, want the conversation's %s", linkedPerson, c.personID)
+	if linkedContact != c.contactID {
+		t.Fatalf("outbound activity links contact %s, want the conversation's %s", linkedContact, c.contactID)
 	}
 	// The delivery names THIS activity: one transaction, one fact, so a receipt
 	// recorded later lands on the row the rep is looking at.

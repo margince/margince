@@ -3,7 +3,7 @@
 
 package compose
 
-// One assembler for the person-graph read surface.
+// One assembler for the contact-graph read surface.
 //
 // The Network tab ranks routes and has no idea which favours have already been
 // asked; the introductions module holds that and refuses a second open ask on
@@ -15,8 +15,8 @@ package compose
 // hand in a test, the introductions reader is the piece most easily left out —
 // and left out it stamps nothing, so every route reads `available` exactly as
 // it did before this seam existed and the test passes over the gap.
-// Held by: TestPersonGraphMarksARouteThatAlreadyHasAnOpenAsk
-// (backend/internal/compose/integration/persongraph_integration_test.go)
+// Held by: TestContactGraphMarksARouteThatAlreadyHasAnOpenAsk
+// (backend/internal/compose/integration/contactgraph_integration_test.go)
 
 import (
 	"time"
@@ -24,14 +24,14 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/network"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/introductions"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/database"
 )
 
-// NewPersonGraphReads assembles the network read surface the way the server
+// NewContactGraphReads assembles the network read surface the way the server
 // does, including the introductions reader that stamps route availability.
-func NewPersonGraphReads(pool *pgxpool.Pool, db *database.DB) network.Reads {
-	return network.NewReads(pool, people.NewStore(db)).
+func NewContactGraphReads(pool *pgxpool.Pool, db *database.DB) network.Reads {
+	return network.NewReads(pool, contacts.NewStore(db)).
 		WithAskedRoutes(introductions.NewStore(db, time.Now))
 }

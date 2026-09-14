@@ -13,7 +13,7 @@ import type { ConversationState } from "./conversation-types";
 import { TeamAct } from "./team-act";
 
 // The team act: the settings invite form inside the setup journey, for a
-// creator who will not work in Margince and names the first person who will.
+// creator who will not work in Margince and names the first contact who will.
 
 const asking: ConversationState = {
   ...initialConversationState,

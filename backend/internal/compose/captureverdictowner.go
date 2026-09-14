@@ -7,7 +7,7 @@ package compose
 //
 // Its own file because the two callers ask it for different reasons and at
 // different moments: judgeOne asks BEFORE spending a model call, because a
-// person who has answered has answered; apply asks again inside its own
+// contact who has answered has answered; apply asks again inside its own
 // transaction, because the first read is minutes old by then and a decision
 // taken in between was being overruled by a stale one.
 
@@ -23,7 +23,7 @@ import (
 // ownerDecided answers whether the mailbox owner already settled this sender,
 // and which kind their decision amounts to.
 //
-// `business` becomes `person`: the owner is saying this is somebody the CRM
+// `business` becomes `contact`: the owner is saying this is somebody the CRM
 // should hold, which is the one kind that creates a record. `keep_out` becomes
 // `spam`, the noise kind whose effects — hide the mail, suppress the domain —
 // are what "keep this out for good" means. Neither invents a new kind: the
@@ -48,12 +48,12 @@ func (e *CounterpartyVerdictEngine) ownerDecided(ctx context.Context, row captur
 // One spelling, because two callers now ask it: judgeOne, deciding whether to
 // spend a model call, and apply, checking whether the answer changed underneath
 // one. A second copy would let those two disagree about what a decision means,
-// and the disagreement would show up as a verdict that contradicts the person
+// and the disagreement would show up as a verdict that contradicts the contact
 // who set it.
 func kindForOverride(decision string) (kind string, decided bool) {
 	switch decision {
 	case capture.OverrideBusiness:
-		return capture.KindPerson, true
+		return capture.KindContact, true
 	case capture.OverrideKeepOut:
 		return capture.KindSpam, true
 	}

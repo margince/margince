@@ -118,7 +118,7 @@ func mergeUnitLocales(locales []unitLocale) (map[string]map[string]string, error
 	for _, l := range locales {
 		prefix := localeKeyPrefix(l.Unit)
 		for _, key := range sortedKeys(l.Keys) {
-			// A unit rewriting `nav.people` would change core copy from a
+			// A unit rewriting `nav.contacts` would change core copy from a
 			// directory, which is not a capability this tier grants.
 			if !strings.HasPrefix(key, prefix) {
 				return nil, fmt.Errorf("extensions/%s: %s/%s/%s.json declares key %q, which is outside its namespace — a unit's keys begin with %q",

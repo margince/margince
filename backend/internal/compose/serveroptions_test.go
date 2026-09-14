@@ -6,7 +6,7 @@ package compose
 // Option's own wiring-only unit-level proof: each Option is a plain
 // field assignment/rebuild that never touches the pool at construction
 // time (the module constructors it calls — approvals.NewService,
-// people.NewStore, briefs.Handlers.WithL2Ranker — all just store the
+// contacts.NewStore, briefs.Handlers.WithL2Ranker — all just store the
 // pool reference for later use), so a nil pool and nil PageFetcher/Brain
 // are safe here: this test never calls the wired handler, only proves
 // the Option actually set what it documents.

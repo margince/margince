@@ -1,0 +1,16 @@
+{
+  "_comment": "The shared corpus for the monthly reading of an annual recurring figure. Read by BOTH sides: values.TestMonthlyEquivalent in Go and monthlyEquivalent.test.ts in the browser bundle. A case added here is answered by both or one of them fails, which is the only arrangement under which the record page and an export can be trusted to print the same number. Figures are minor units; currency is present only to say which minor-unit scale the case is about, and the arithmetic never reads it.",
+  "cases": [
+    {"name": "an exact division leaves nothing over", "currency": "EUR", "annual_minor": 1200000, "monthly_minor": 100000, "approximate": false},
+    {"name": "zero is zero and is exact", "currency": "EUR", "annual_minor": 0, "monthly_minor": 0, "approximate": false},
+    {"name": "one hundred euros a year rounds up from 8.333", "currency": "EUR", "annual_minor": 10000, "monthly_minor": 833, "approximate": true},
+    {"name": "a remainder of exactly six carries, which is what half up means", "currency": "EUR", "annual_minor": 18, "monthly_minor": 2, "approximate": true},
+    {"name": "a remainder of five does not carry", "currency": "EUR", "annual_minor": 17, "monthly_minor": 1, "approximate": true},
+    {"name": "one minor unit a year is not one a month", "currency": "EUR", "annual_minor": 1, "monthly_minor": 0, "approximate": true},
+    {"name": "a currency with no minor unit divides the same way", "currency": "JPY", "annual_minor": 1000000, "monthly_minor": 83333, "approximate": true},
+    {"name": "a three-digit currency divides the same way", "currency": "BHD", "annual_minor": 1200000, "monthly_minor": 100000, "approximate": false},
+    {"name": "a three-digit currency with a remainder", "currency": "BHD", "annual_minor": 100000, "monthly_minor": 8333, "approximate": true},
+    {"name": "the EUR 100.01 round trip the plan names", "currency": "EUR", "annual_minor": 10001, "monthly_minor": 833, "approximate": true},
+    {"name": "a figure near the safe integer bound still divides exactly", "currency": "EUR", "annual_minor": 9007199254740984, "monthly_minor": 750599937895082, "approximate": false}
+  ]
+}

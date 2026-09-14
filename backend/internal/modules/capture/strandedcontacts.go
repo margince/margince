@@ -5,7 +5,7 @@ package capture
 
 // Contacts the capture made and never asked about.
 //
-// A person minted from a message nobody has judged is the mailbox owner's until
+// A contact minted from a message nobody has judged is the mailbox owner's until
 // a verdict says otherwise. The question that reaches that verdict is opened at
 // capture, and it can be refused: the ceiling on open questions is per workspace
 // and per domain, and a refusal writes nothing. The refusal is deliberate — the
@@ -26,9 +26,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// StrandedContact is one such person and the message to ask about them with.
+// StrandedContact is one such contact and the message to ask about them with.
 type StrandedContact struct {
-	PersonID    ids.UUID
+	ContactID   ids.UUID
 	OwnerID     ids.UUID
 	Email       string
 	Domain      string
@@ -36,7 +36,7 @@ type StrandedContact struct {
 	ActivityID  ids.UUID
 }
 
-// StrandedContacts lists the owner-private people an automation made and no
+// StrandedContacts lists the owner-private contacts an automation made and no
 // ledger row has ever been written for — a connector's, and an AGENT's, which
 // are stranded the same way and were previously never asked about at all.
 //
@@ -44,7 +44,7 @@ type StrandedContact struct {
 // message from that very address. A contact known only from a meeting has none —
 // a calendar names no counterparty — and stays owner-private until its owner
 // publishes it or qualifying correspondence arrives. That is deliberate rather
-// than a gap: an invitation is not evidence about whose business a person is,
+// than a gap: an invitation is not evidence about whose business a contact is,
 // and manufacturing a verdict from one would promote a contact on the strength
 // of somebody having been in a room.
 //
@@ -60,21 +60,21 @@ type StrandedContact struct {
 // whole time. Randomising costs a sort the bound already pays for and makes
 // progress a matter of ticks rather than of luck with the ordering.
 //
-// Ownerless rows are excluded rather than repaired. `person.owner_id` is
+// Ownerless rows are excluded rather than repaired. `contact.owner_id` is
 // nullable while `visibility` is independently allowed to say `owner`, and
 // nothing in the schema ties the two; a row with no owner cannot be asked about
 // on anybody's behalf, and quietly picking one would assign somebody else's
 // correspondence to a seat that never saw it.
 //
 // A contact a HUMAN has touched is left alone, on the same evidence
-// people.RetractCaptureOnlyPersonTx uses: an audit row with a human actor. That
-// path deliberately refuses to retract such a contact, so a person kept
+// contacts.RetractCaptureOnlyContactTx uses: an audit row with a human actor. That
+// path deliberately refuses to retract such a contact, so a contact kept
 // owner-private after somebody worked on it is a decision, and asking again
 // would put it in front of a model that can promote it — a transition nothing
 // reverses.
 //
 // One row per ADDRESS, and each is asked about with a message from that
-// address. A person with several addresses can be a business contact at one and
+// address. A contact with several addresses can be a business contact at one and
 // nobody's business at another; grounding both questions in whichever message
 // happened to be newest would judge one address by the other's correspondence.
 func (s *PendingStore) StrandedContacts(ctx context.Context, limit int) ([]StrandedContact, error) {
@@ -87,14 +87,14 @@ func (s *PendingStore) StrandedContacts(ctx context.Context, limit int) ([]Stran
 			       (SELECT a.id
 			          FROM activity_link l
 			          JOIN activity a ON a.id = l.activity_id
-			         WHERE l.entity_type = 'person' AND l.person_id = p.id
+			         WHERE l.entity_type = 'contact' AND l.contact_id = p.id
 			           AND a.captured_by LIKE 'connector:%'
 			           AND lower(btrim(coalesce(a.counterparty_email, ''))) = pe.email
 			           AND a.archived_at IS NULL AND a.restricted_at IS NULL
 			         ORDER BY a.occurred_at DESC, a.id DESC
 			         LIMIT 1)
-			  FROM person p
-			  JOIN person_email pe ON pe.person_id = p.id AND pe.archived_at IS NULL
+			  FROM contact p
+			  JOIN contact_email pe ON pe.contact_id = p.id AND pe.archived_at IS NULL
 			 WHERE p.visibility = 'owner'
 			   AND p.archived_at IS NULL
 			   AND p.merged_into_id IS NULL
@@ -103,11 +103,11 @@ func (s *PendingStore) StrandedContacts(ctx context.Context, limit int) ([]Stran
 			   AND NOT EXISTS (SELECT 1 FROM capture_pending_counterparty q
 			                    WHERE q.email = pe.email)
 			   AND NOT EXISTS (SELECT 1 FROM audit_log al
-			                    WHERE al.entity_type = 'person' AND al.entity_id = p.id
+			                    WHERE al.entity_type = 'contact' AND al.entity_id = p.id
 			                      AND al.actor_type = 'human')
 			   -- The message the projection above looks for, asked here as a
 			   -- FILTER so a contact the engine cannot judge does not consume
-			   -- the page. A person known only from a meeting has no such
+			   -- the page. A contact known only from a meeting has no such
 			   -- message — a calendar names no counterparty — and would
 			   -- otherwise be drawn, discarded after the LIMIT, and drawn
 			   -- again next tick, crowding out the contacts a verdict can
@@ -115,7 +115,7 @@ func (s *PendingStore) StrandedContacts(ctx context.Context, limit int) ([]Stran
 			   AND EXISTS (SELECT 1
 			                 FROM activity_link l
 			                 JOIN activity a ON a.id = l.activity_id
-			                WHERE l.entity_type = 'person' AND l.person_id = p.id
+			                WHERE l.entity_type = 'contact' AND l.contact_id = p.id
 			                  AND a.captured_by LIKE 'connector:%'
 			                  AND lower(btrim(coalesce(a.counterparty_email, ''))) = pe.email
 			                  AND a.archived_at IS NULL AND a.restricted_at IS NULL)
@@ -128,7 +128,7 @@ func (s *PendingStore) StrandedContacts(ctx context.Context, limit int) ([]Stran
 		for rows.Next() {
 			var c StrandedContact
 			var activity *ids.UUID
-			if err := rows.Scan(&c.PersonID, &c.OwnerID, &c.Email,
+			if err := rows.Scan(&c.ContactID, &c.OwnerID, &c.Email,
 				&c.Domain, &c.DisplayName, &activity); err != nil {
 				return err
 			}
@@ -149,12 +149,12 @@ func (s *PendingStore) StrandedContacts(ctx context.Context, limit int) ([]Stran
 	return out, nil
 }
 
-// NoiseJudgedContact is one capture-made person still standing at an address a
+// NoiseJudgedContact is one capture-made contact still standing at an address a
 // settled verdict already called noise.
 type NoiseJudgedContact struct {
-	PersonID ids.PersonID
-	OwnerID  ids.UUID
-	Email    string
+	ContactID ids.ContactID
+	OwnerID   ids.UUID
+	Email     string
 	// Kind is the answer that disowned the address, or "" when what disowns it
 	// is the owner's own keep_out rather than a machine verdict. The sweep
 	// reads it to decide whether correspondence still protects the record:
@@ -163,7 +163,7 @@ type NoiseJudgedContact struct {
 	Kind string
 }
 
-// NoiseJudgedContacts lists the connector-made, owner-private people an
+// NoiseJudgedContacts lists the connector-made, owner-private contacts an
 // already-settled answer has disowned: their address settled as `newsletter`,
 // `transactional` or `spam`, or their owner recorded a standing `keep_out`. A
 // settled sender never re-enters the ledger, so no future verdict reaches
@@ -180,7 +180,7 @@ type NoiseJudgedContact struct {
 //     owner's keep_out is not outranked — the engine itself consults the
 //     override before any model and never writes over it.
 //   - A contact a HUMAN has touched is excluded on the same evidence
-//     people.RetractCaptureOnlyPersonTx refuses it on — an audit row with a
+//     contacts.RetractCaptureOnlyContactTx refuses it on — an audit row with a
 //     human actor. The retraction re-checks; excluding here keeps a page from
 //     filling with rows the retraction will refuse every tick.
 //
@@ -200,15 +200,15 @@ func (s *PendingStore) NoiseJudgedContacts(ctx context.Context, limit int) ([]No
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
 			SELECT p.id, p.owner_id, pe.email, `+noiseJudgedKindSQL("pe.email", "p.owner_id")+`
-			  FROM person p
-			  JOIN person_email pe ON pe.person_id = p.id AND pe.archived_at IS NULL
+			  FROM contact p
+			  JOIN contact_email pe ON pe.contact_id = p.id AND pe.archived_at IS NULL
 			 WHERE p.archived_at IS NULL
 			   AND p.merged_into_id IS NULL
 			   AND p.owner_id IS NOT NULL
 			   AND (p.captured_by LIKE 'connector:%' OR p.captured_by LIKE 'agent:%')
 			   AND `+noiseJudgedStandsSQL("pe.email", "p.owner_id")+`
 			   AND NOT EXISTS (SELECT 1 FROM audit_log al
-			                    WHERE al.entity_type = 'person' AND al.entity_id = p.id
+			                    WHERE al.entity_type = 'contact' AND al.entity_id = p.id
 			                      AND al.actor_type = 'human')
 			 ORDER BY random()
 			 LIMIT $1`, limit)
@@ -218,7 +218,7 @@ func (s *PendingStore) NoiseJudgedContacts(ctx context.Context, limit int) ([]No
 		defer rows.Close()
 		for rows.Next() {
 			var c NoiseJudgedContact
-			if err := rows.Scan(&c.PersonID, &c.OwnerID, &c.Email, &c.Kind); err != nil {
+			if err := rows.Scan(&c.ContactID, &c.OwnerID, &c.Email, &c.Kind); err != nil {
 				return err
 			}
 			out = append(out, c)
@@ -337,10 +337,10 @@ func (s *PendingStore) AskWhoseRecord(ctx context.Context, c StrandedContact) (b
 		// can end in a contact becoming visible to the workspace should not be
 		// the one mutation with nothing recording that it was raised.
 		//
-		// On the PERSON, not the ledger row: "why is this contact suddenly in
-		// front of everybody" is a question asked about the person, and the
+		// On the CONTACT, not the ledger row: "why is this contact suddenly in
+		// front of everybody" is a question asked about the contact, and the
 		// answer has to be findable from them.
-		if _, err := storekit.AuditEvent(ctx, tx, "update", "person", c.PersonID,
+		if _, err := storekit.AuditEvent(ctx, tx, "update", "contact", c.ContactID,
 			map[string]any{"capture_question": "reopened", kindEmail: c.Email}); err != nil {
 			return err
 		}

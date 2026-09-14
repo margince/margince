@@ -3,7 +3,7 @@
 
 package activities
 
-// See people/mapping_reservedsource_test.go: the activity store keys the
+// See contacts/mapping_reservedsource_test.go: the activity store keys the
 // same idempotent replay on (source_system, source_id), so the same
 // boundary is enforced here and asserted the same way.
 
@@ -92,5 +92,14 @@ func TestActivityLogInputAcceptsAnOrdinarySource(t *testing.T) {
 	}
 	if in.Source != "webform" {
 		t.Errorf("Source = %q, want it carried through", in.Source)
+	}
+}
+
+func TestActivityLogInputRefusesInternalRequestProvenance(t *testing.T) {
+	reserved := provenance.EmailRequestSource
+	_, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{Kind: "task", SourceSystem: &reserved, SourceId: strPtr("request-1")})
+	var refused *provenance.ReservedError
+	if !errors.As(err, &refused) {
+		t.Fatalf("internal request source was writable: %v", err)
 	}
 }

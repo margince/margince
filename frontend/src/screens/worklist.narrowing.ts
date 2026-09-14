@@ -14,10 +14,13 @@ import type { Worklist, WorklistFilter } from "./worklist.queries";
  * The per-category figures a narrowing is measured over, or null where they
  * cannot express it.
  *
- * The seven kinds are one category each and `all` is all of them. NEITHER
- * link-only narrowing is a category, and neither can be assembled from these
- * figures:
+ * The seven kinds are one category each and `all` is all of them. NONE of the
+ * three link-only narrowings is a category, and none can be assembled from
+ * these figures:
  *
+ *   - `urgent` is a LEVEL — somebody waiting or a promise breaking — and cuts
+ *     across every category. A customer waiting and an overdue promise are two
+ *     categories and one urgency, so no sum of these figures reaches it.
  *   - `changed_since_brief` cuts across every category on a per-row freshness
  *     the counts do not carry.
  *   - `except_decisions` excludes by SOURCE — the rows a brief draws as cards
@@ -42,7 +45,11 @@ export function countsUnder(
   if (filter === "all") {
     return day.counts;
   }
-  if (filter === "except_decisions" || filter === "changed_since_brief") {
+  if (
+    filter === "urgent" ||
+    filter === "except_decisions" ||
+    filter === "changed_since_brief"
+  ) {
     return null;
   }
   return day.counts.filter((count) => count.category === filter);

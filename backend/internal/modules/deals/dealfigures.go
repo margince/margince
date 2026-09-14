@@ -87,11 +87,13 @@ const dealAmountField = "amount_minor"
 // DealFigures is one deal's commercial face: what it is worth, when it was
 // meant to land, and who answers for it.
 type DealFigures struct {
-	StageID           ids.UUID
-	OwnerID           ids.UUID
-	AmountMinor       *int64
-	Currency          string
-	ExpectedCloseDate *time.Time
+	CloseDateProvisional *bool
+	ForecastCategory     *string
+	StageID              ids.UUID
+	OwnerID              ids.UUID
+	AmountMinor          *int64
+	Currency             string
+	ExpectedCloseDate    *time.Time
 	// CloseOverdue is CloseIsOverdue's own verdict for this deal — the ONE
 	// place that comparison is made (closedate.go), called here rather than
 	// re-spelled. Meaningless where ExpectedCloseDate is nil.
@@ -148,7 +150,7 @@ func (s *Store) Figures(ctx context.Context, dealIDs []ids.UUID) (map[ids.UUID]D
 			return err
 		}
 		query := storekit.SQLf(
-			`SELECT d.id, d.stage_id, d.owner_id, d.amount_minor, d.currency, d.expected_close_date
+			`SELECT d.id, d.stage_id, d.owner_id, d.amount_minor, d.currency, d.expected_close_date, d.close_date_provisional, d.forecast_category
 			   FROM deal d
 			  WHERE d.id = ANY($%d) AND d.archived_at IS NULL`, idsPos,
 		)
@@ -163,17 +165,19 @@ func (s *Store) Figures(ctx context.Context, dealIDs []ids.UUID) (map[ids.UUID]D
 		now := s.clock()
 		for rows.Next() {
 			var (
-				id     ids.UUID
-				stage  *ids.UUID
-				owner  *ids.UUID
-				amount *int64
-				code   *string
-				closes *time.Time
+				id          ids.UUID
+				stage       *ids.UUID
+				owner       *ids.UUID
+				amount      *int64
+				code        *string
+				closes      *time.Time
+				provisional *bool
+				category    *string
 			)
-			if err := rows.Scan(&id, &stage, &owner, &amount, &code, &closes); err != nil {
+			if err := rows.Scan(&id, &stage, &owner, &amount, &code, &closes, &provisional, &category); err != nil {
 				return err
 			}
-			figures := DealFigures{AmountMinor: amount, ExpectedCloseDate: closes}
+			figures := DealFigures{AmountMinor: amount, ExpectedCloseDate: closes, CloseDateProvisional: provisional, ForecastCategory: category}
 			if closes != nil {
 				figures.CloseOverdue = CloseIsOverdue(*closes, now, loc)
 			}

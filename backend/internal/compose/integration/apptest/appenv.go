@@ -177,7 +177,7 @@ func SetupAppWithOriginOptions(t *testing.T, opts func(origin string) []compose.
 	return &AppEnv{TS: ts, Client: client, Owner: owner, Pool: pool, Vault: vault}
 }
 
-// BootstrapWorkspace provisions the organization + admin (the A107 boot
+// BootstrapWorkspace provisions the company + admin (the A107 boot
 // path) and leaves the admin session cookie in the client jar — the
 // first step of every e2e scenario.
 func (e *AppEnv) BootstrapWorkspace(t *testing.T) {
@@ -185,7 +185,7 @@ func (e *AppEnv) BootstrapWorkspace(t *testing.T) {
 	BootstrapWorkspaceSession(t, e, "Fable E2E", "ada@example.com", "Ada Admin")
 }
 
-// SetWorkspaceSeat flips the installation's PEOPLE to a seat type through the
+// SetWorkspaceSeat flips the installation's MEMBERS to a seat type through the
 // owner connection, inside one transaction. Used to drive the read-seat ceiling
 // from a test.
 //
@@ -253,10 +253,10 @@ func (e *AppEnv) Call(t *testing.T, method, path string, body any, headers map[s
 	return resp.StatusCode
 }
 
-// BootstrapWorkspaceSession provisions the installation's organization through
+// BootstrapWorkspaceSession provisions the installation's company through
 // the A107 boot path — configuration-driven, exactly what cmd/api runs at
 // startup — and signs its admin in over HTTP. The arrange step every e2e
-// scenario shares. The login also primes the server's singleton-organization
+// scenario shares. The login also primes the server's singleton-company
 // resolution before a test seeds any cross-tenant rows directly.
 //
 // It lives here rather than with a suite because BootstrapWorkspace above calls

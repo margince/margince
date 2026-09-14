@@ -30,6 +30,13 @@ import (
 // This is the comms faultReason posture (a fixed sentence chosen by what
 // the cause IS, never the cause's own text) applied at the seam every
 // worker shares rather than in one module.
+//
+// The cause may be READ to choose among those sentences, and that is not a
+// crack in the rule — it is the rule working. technicalfault.go inspects a
+// cause's SHAPE (its type, its sentinel, a status integer a typed error
+// carries) and picks one of a closed authored set, so an operator learns that a
+// host did not resolve without the host's name travelling with it. What may
+// never travel is the cause's own TEXT.
 func Fault(err error) error { return FaultContext(context.Background(), err) }
 
 // FaultContext is Fault with the caller's context on the log line, so an
@@ -124,6 +131,20 @@ func faultFor(ctx context.Context, kind string, err error) error {
 		if errors.Is(err, known.sentinel) {
 			return &fault{sentence: known.sentence, cause: err}
 		}
+	}
+	// AFTER the sentinels, because a cause carrying one has already been named
+	// in the product's own terms and that name is the more useful of two true
+	// statements: "the record this job names no longer exists" tells an
+	// operator what to do, "the provider answered with a server error" tells
+	// them where it happened.
+	//
+	// The cause is READ here and never projected — the shape decides, the
+	// sentence is authored (technicalfault.go). An operator whose job failed
+	// because a host did not resolve now reads that, instead of being sent to
+	// a log to find out.
+	if technical, ok := technicalFaultFor(err); ok {
+		slog.ErrorContext(ctx, "jobs: a worker failed", faultLogAttrs(ctx, kind, technical.class, err)...)
+		return &fault{sentence: technical.sentence, cause: err}
 	}
 	// The SAME attributes as the two classified lines above. This is the branch
 	// whose sentence tells an operator the diagnosis is in the process log, so it

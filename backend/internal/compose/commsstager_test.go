@@ -80,7 +80,7 @@ func TestStagingRefusesAnOrdinaryDenialUnderEnforce(t *testing.T) {
 // ONE ENFORCED REFUSAL REFUSES THE MESSAGE, even beside a recipient whose own
 // category is still observed. Whole-message refusal is the shape both
 // authorities already had, and a per-recipient split here would send a message
-// to some of the people it names and quietly drop the rest.
+// to some of the contacts it names and quietly drop the rest.
 func TestOneEnforcedRefusalRefusesTheWholeMessage(t *testing.T) {
 	set := commsauthz.DecisionSet{Decisions: []commsauthz.Decision{
 		{

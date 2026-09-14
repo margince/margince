@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 
 // That a case which leaves `GET /me` unrouted FAILS, rather than warning.
 //

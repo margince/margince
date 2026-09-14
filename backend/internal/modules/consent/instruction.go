@@ -11,15 +11,15 @@ package consent
 // send.
 //
 // THIS IS NOT A CONSENT GRANT AND IS NEVER RECORDED AS ONE. The refusal stays
-// exactly where it is; this row sits beside it saying a person overrode it, who
+// exactly where it is; this row sits beside it saying somebody overrode it, who
 // they were, and what they said their reason was. A subject asking later why
 // they received a message must be shown the refusal AND the decision, not a
 // grant nobody made.
 //
-// WHAT THIS SLICE DOES NOT DO. Nothing executes on an instruction yet. The row
-// can be written and revoked and that is all — the send path that consumes one
-// is its own change, and landing the record first means the authority question
-// is settled before anything can act on the answer.
+// WHAT SPENDS ONE IS ELSEWHERE. This file writes and revokes the row; the act
+// of sending on it lives in instructionconsume.go, reached from staging through
+// Gate.AuthorizeDirectedExecutionTx. The record landed a slice before anything
+// could act on it, so the authority question was settled first.
 
 import (
 	"context"
@@ -41,15 +41,21 @@ import (
 //
 // Its own object rather than a corner of consent_config, because the two are
 // different authorities: consent_config is who may change the RULES, and this
-// is who may act against the answer the rules produced about one person. An
+// is who may act against the answer the rules produced about one contact. An
 // installation that delegates the first has not thereby delegated the second.
 const entityCommunicationException = "communication_exception"
+
+// EntityCommunicationException is the same object, exported because compose
+// decides which action to OFFER a refused caller and that decision turns on
+// this grant. Two spellings would let the offer and the door disagree about
+// who may direct a send.
+const EntityCommunicationException = entityCommunicationException
 
 // The reasons a director may give. CLOSED, because the row is read in an audit
 // and a free-text-only reason cannot be counted — an installation asking "how
 // often do we override, and for what" needs an answer it can group.
 //
-// `other` is present deliberately: a closed list with no escape makes people
+// `other` is present deliberately: a closed list with no escape makes contacts
 // pick the nearest wrong entry, which is worse than one honest bucket whose
 // explanation carries the meaning.
 const (
@@ -87,7 +93,7 @@ const fieldReasonCode = "reason_code"
 // regardless; this is the outer bound on how stale they may be.
 const InstructionValidity = 24 * time.Hour
 
-// DirectInput is what the person directing the send says.
+// DirectInput is what the contact directing the send says.
 type DirectInput struct {
 	ReasonCode  string
 	Explanation string
@@ -115,7 +121,7 @@ type Instruction struct {
 //
 // GATED ON THREE THINGS, and each answers a different question.
 //
-// RequireHuman, because the claim is that a PERSON took responsibility. An
+// RequireHuman, because the claim is that a HUMAN BEING took responsibility. An
 // agent acting under somebody's passport inherits their grants, so without this
 // an agent could mint the very record that says a human decided — which is the
 // one assertion this table exists to make truthfully.
@@ -128,12 +134,17 @@ type Instruction struct {
 // already resolved, superseded or answered is a decision about a message that
 // is no longer waiting on one.
 func (s *Store) DirectSend(ctx context.Context, reviewID ids.UUID, in DirectInput) (Instruction, error) {
-	if err := requireAPersonAtTheKeyboard(ctx); err != nil {
+	if err := requireAHumanAtTheKeyboard(ctx); err != nil {
 		return Instruction{}, err
 	}
 	if err := auth.Require(ctx, entityCommunicationException, principal.ActionCreate); err != nil {
 		return Instruction{}, err
 	}
+	// NORMALISED BEFORE ANYTHING READS IT, so the value checked and the value
+	// stored are one value. Trimming only inside the check let " override-v1 "
+	// pass and then land on the row naming a version nothing serves.
+	in.WarningVersion = strings.TrimSpace(in.WarningVersion)
+	in.Explanation = strings.TrimSpace(in.Explanation)
 	if err := validateDirect(in); err != nil {
 		return Instruction{}, err
 	}
@@ -157,14 +168,53 @@ func (s *Store) DirectSend(ctx context.Context, reviewID ids.UUID, in DirectInpu
 			Status:     InstructionDirected,
 			ValidUntil: time.Now().Add(InstructionValidity),
 		}
+		// THE MESSAGE THEY READ, fingerprinted now. The held row this review
+		// names can be edited afterwards, so a check made later against that
+		// row would compare the message with itself.
+		wording, known, err := acknowledgedWordingTx(ctx, tx, review.IntentID)
+		if err != nil {
+			return err
+		}
+		// A review with no readable held message records no fingerprint rather
+		// than a zero one: an all-zero digest would later compare unequal to
+		// every real message and refuse a send nobody can fix.
+		var acknowledged []byte
+		if known {
+			acknowledged = wording[:]
+		}
+		// ASKED BEFORE THE INSERT, not after it. A unique violation aborts the
+		// transaction, so a query that ran once the key had fired would be
+		// refused by Postgres — the caller would get an opaque fault instead of
+		// the reason their retry cannot work.
+		//
+		// A standing decision is found by the same key that would refuse the
+		// insert, so this is the same question asked while it can still be
+		// answered.
+		if standing, err := standingDecisionOutcome(ctx, tx, reviewID); err != nil {
+			return err
+		} else if standing {
+			return ErrDecisionAlreadyRecorded
+		}
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO communication_instruction
 			  (review_id, directed_by, reason_code, explanation, warning_version,
-			   acknowledged_at, facts_as_of, valid_until)
-			VALUES ($1, $2, $3, $4, $5, now(), $6, $7)
+			   acknowledged_at, facts_as_of, valid_until, acknowledged_wording)
+			VALUES ($1, $2, $3, $4, $5, now(), $6, $7, $8)
 			RETURNING id`,
-			reviewID, director, in.ReasonCode, strings.TrimSpace(in.Explanation),
-			in.WarningVersion, review.OpenedAt, out.ValidUntil).Scan(&out.ID); err != nil {
+			reviewID, director, in.ReasonCode, in.Explanation,
+			in.WarningVersion, review.OpenedAt, out.ValidUntil, acknowledged).Scan(&out.ID); err != nil {
+			// A DECISION ALREADY STANDS ON THIS REVIEW, which is what the
+			// unique key on review_id says. Named rather than reported as a
+			// storage fault: the caller retrying a send whose decision already
+			// committed needs to tell this apart from a real failure, or a
+			// transient hiccup in the send would trap the reviewer behind their
+			// own record.
+			if isDuplicateInstruction(err) {
+				// A decision landed between the read above and this insert.
+				// Whatever it says, the caller's own is not being recorded and
+				// the retry is theirs to make.
+				return ErrDecisionAlreadyRecorded
+			}
 			return fmt.Errorf("consent: recording the decision to send this refused message: %w", err)
 		}
 		// AuditEvent, not Audit: an instruction being given is an occurrence
@@ -202,7 +252,7 @@ func (s *Store) DirectSend(ctx context.Context, reviewID ids.UUID, in DirectInpu
 // decision back would leave a sent message with no recorded authority behind
 // it, which is worse than the decision standing.
 func (s *Store) RevokeInstruction(ctx context.Context, id ids.UUID, reason string) error {
-	if err := requireAPersonAtTheKeyboard(ctx); err != nil {
+	if err := requireAHumanAtTheKeyboard(ctx); err != nil {
 		return err
 	}
 	if err := auth.Require(ctx, entityCommunicationException, principal.ActionDelete); err != nil {
@@ -276,10 +326,25 @@ func validateDirect(in DirectInput) error {
 			Reason: "an explanation is at most 1000 characters",
 		}
 	}
-	if strings.TrimSpace(in.WarningVersion) == "" {
+	// A VERSION THIS BUILD ACTUALLY SERVES, not merely a non-empty string.
+	//
+	// The record's whole claim is that a named human read particular words. A
+	// caller free to name any version could write "v99" onto an instruction and
+	// the record would assert an acknowledgement of text nobody ever wrote —
+	// which is exactly the assertion a dispute about an override turns on.
+	//
+	// The queue card has its own version because a card and a modal are not the
+	// same words: somebody approving from a list read a summary, and recording
+	// them as having read the modal's caution would overstate what they saw.
+	// COMPARED AND STORED AS THE SAME VALUE. Trimming only for the comparison
+	// let " override-v1 " pass the check and land on the row, where it names a
+	// version the served set does not contain — so the record would claim an
+	// acknowledgement of a version nothing publishes.
+	if !servedWarningVersion(in.WarningVersion) {
 		return &ValidationError{
-			Field:  "warning_version",
-			Reason: "a decision records which warning the director was shown",
+			Field: "warning_version",
+			Reason: "a decision records which warning the director was shown, and it must be one " +
+				"this installation serves",
 		}
 	}
 	return nil
@@ -289,6 +354,9 @@ func validateDirect(in DirectInput) error {
 type directableReview struct {
 	State    string
 	OpenedAt time.Time
+	// IntentID is the held message this review is about, so the decision can
+	// fingerprint what the human is looking at.
+	IntentID ids.UUID
 }
 
 // claimReviewForDirectionTx takes the review this decision is about.
@@ -301,10 +369,11 @@ type directableReview struct {
 func claimReviewForDirectionTx(ctx context.Context, tx pgx.Tx, id ids.UUID) (directableReview, error) {
 	var out directableReview
 	err := tx.QueryRow(ctx, `
-		SELECT state, opened_at
+		SELECT state, opened_at,
+		       coalesce(delivery_intent_id, '00000000-0000-0000-0000-000000000000'::uuid)
 		  FROM communication_review
 		 WHERE id = $1 AND resolved_at IS NULL
-		 FOR UPDATE`, id).Scan(&out.State, &out.OpenedAt)
+		 FOR UPDATE`, id).Scan(&out.State, &out.OpenedAt, &out.IntentID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return directableReview{}, apperrors.ErrNotFound
 	}
@@ -314,27 +383,64 @@ func claimReviewForDirectionTx(ctx context.Context, tx pgx.Tx, id ids.UUID) (dir
 	return out, nil
 }
 
-// requireAPersonAtTheKeyboard admits a HUMAN and nothing else.
+// requireAHumanAtTheKeyboard admits a HUMAN and nothing else.
 //
 // auth.RequireHuman is not enough here, and the gap is exact: it refuses buyers
 // and agents, and ADMITS a connector. A connector runs with the granting
 // human's UserID and their whole permission set (capture/registry.go), so an
-// integration would mint a row saying that person decided to send a refused
+// integration would mint a row saying that contact decided to send a refused
 // message — attributing an override to somebody who was not there.
 //
 // Every other human-only surface can live with that, because a connector
 // acting under somebody's authority is doing what they configured it to do.
-// This one cannot: the row's entire content is the claim that a named person
+// This one cannot: the row's entire content is the claim that a named contact
 // took responsibility, and a claim like that must be true of the moment it
 // records.
-func requireAPersonAtTheKeyboard(ctx context.Context) error {
+func requireAHumanAtTheKeyboard(ctx context.Context) error {
 	if err := auth.RequireHuman(ctx); err != nil {
 		return err
 	}
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.Type != principal.PrincipalHuman {
-		return fmt.Errorf("directing a send is a person's own decision: %w",
+		return fmt.Errorf("directing a send is a contact's own decision: %w",
 			apperrors.ErrPermissionDenied)
 	}
 	return nil
 }
+
+// ErrDecisionAlreadyRecorded reports that this review already carries a
+// decision. It is not a failure of the act — somebody decided, and the record
+// of it stands — so a caller whose send failed after the decision committed
+// treats it as "already done" and goes on to the send.
+var ErrDecisionAlreadyRecorded = errors.New("consent: a decision already stands on this review")
+
+// isDuplicateInstruction recognises the unique key on review_id, which is what
+// makes one review carry one decision.
+func isDuplicateInstruction(err error) bool {
+	constraint, ok := storekit.UniqueViolation(err)
+	return ok && strings.Contains(constraint, "review_id")
+}
+
+// servedWarningVersion reports whether this build published the wording a
+// caller says they were shown.
+//
+// TWO, and they are different surfaces rather than two spellings of one. The
+// override warning is the caution in the modal a director reads before sending;
+// the queue-card version names the summary an approver answered from a list.
+// Recording one as the other would say somebody read words they never saw.
+func servedWarningVersion(version string) bool {
+	switch strings.TrimSpace(version) {
+	case OverrideWarningVersion, QueueCardWarningVersion:
+		return true
+	default:
+		return false
+	}
+}
+
+// QueueCardWarningVersion names the summary an approver answers from in the
+// approvals queue, as distinct from the modal's own caution.
+//
+// It lives here rather than in compose so the validator and the effect that
+// writes it read one constant: two spellings would let a version be recorded
+// that the check does not admit.
+const QueueCardWarningVersion = "queue-card-v1"

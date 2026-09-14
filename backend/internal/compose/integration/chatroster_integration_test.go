@@ -51,24 +51,24 @@ func stampRoster(t *testing.T, e *Env, activity ids.ActivityID, attested bool, p
 }
 
 // rosterRow reads back one party stamped by account.
-func rosterRow(t *testing.T, activity ids.ActivityID, account string) (userID, personID *ids.UUID, address *string, found bool) {
+func rosterRow(t *testing.T, activity ids.ActivityID, account string) (userID, contactID *ids.UUID, address *string, found bool) {
 	t.Helper()
 	err := OwnerConn(t).QueryRow(context.Background(), `
-		SELECT user_id, person_id, address FROM activity_participant
-		 WHERE activity_id = $1 AND channel_user_id = $2`, activity, account).Scan(&userID, &personID, &address)
+		SELECT user_id, contact_id, address FROM activity_participant
+		 WHERE activity_id = $1 AND channel_user_id = $2`, activity, account).Scan(&userID, &contactID, &address)
 	if err == pgx.ErrNoRows {
 		return nil, nil, nil, false
 	}
 	if err != nil {
 		t.Fatalf("reading the roster row: %v", err)
 	}
-	return userID, personID, address, true
+	return userID, contactID, address, true
 }
 
 // An attendee with an account and no address anywhere is the case a chat has
 // and mail does not — the third human in a group. Before the account column
-// they were dropped outright, so a four-person conversation was recorded as a
-// two-person one.
+// they were dropped outright, so a four-contact conversation was recorded as a
+// two-contact one.
 func TestAPartyNamedOnlyByAccountIsRecorded(t *testing.T) {
 	e := Setup(t)
 	activity := seedChatMessage(t)
@@ -76,38 +76,38 @@ func TestAPartyNamedOnlyByAccountIsRecorded(t *testing.T) {
 	stampRoster(t, e, activity, false,
 		connector.MessageParticipant{ChannelUserID: "acct-51", DisplayName: "Sam Okonkwo", Role: connector.ParticipantRoleAttendee})
 
-	userID, personID, address, found := rosterRow(t, activity, "acct-51")
+	userID, contactID, address, found := rosterRow(t, activity, "acct-51")
 	if !found {
 		t.Fatal("a party the transport named by account was dropped; being in the room is a fact about the conversation")
 	}
 	if address != nil {
 		t.Errorf("the row carries address %q, and the transport gave none", *address)
 	}
-	if userID != nil || personID != nil {
+	if userID != nil || contactID != nil {
 		t.Error("an account nobody has a binding for resolved to somebody")
 	}
 }
 
-// The one resolution an account CAN do: person_channel_identity already binds
+// The one resolution an account CAN do: contact_channel_identity already binds
 // the account to the outside human, and that binding is what the interaction
 // graph joins on.
 func TestAnAccountResolvesToTheContactItIsBoundTo(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)
 	activity := seedChatMessage(t)
-	person := e.SeedPerson(t, "Priya Raman", &e.Rep1)
-	SeedIDRow(t, owner, `INSERT INTO person_channel_identity (id, person_id, provider, channel_user_id, source, captured_by)
-		VALUES ($1, '`+person.String()+`', '`+rosterProvider+`', 'acct-77', 'capture', 'connector:telegram')`)
+	contact := e.SeedContact(t, "Priya Raman", &e.Rep1)
+	SeedIDRow(t, owner, `INSERT INTO contact_channel_identity (id, contact_id, provider, channel_user_id, source, captured_by)
+		VALUES ($1, '`+contact.String()+`', '`+rosterProvider+`', 'acct-77', 'capture', 'connector:telegram')`)
 
 	stampRoster(t, e, activity, false,
 		connector.MessageParticipant{ChannelUserID: "acct-77", Role: connector.ParticipantRoleAttendee})
 
-	_, personID, _, found := rosterRow(t, activity, "acct-77")
+	_, contactID, _, found := rosterRow(t, activity, "acct-77")
 	if !found {
 		t.Fatal("the bound contact was not recorded at all")
 	}
-	if personID == nil || *personID != person {
-		t.Error("an account the installation has a person binding for did not resolve to them")
+	if contactID == nil || *contactID != contact {
+		t.Error("an account the installation has a contact binding for did not resolve to them")
 	}
 }
 
@@ -118,19 +118,19 @@ func TestAnAccountDoesNotResolveAcrossTransports(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)
 	activity := seedChatMessage(t)
-	person := e.SeedPerson(t, "Somebody Else", &e.Rep1)
-	SeedIDRow(t, owner, `INSERT INTO person_channel_identity (id, person_id, provider, channel_user_id, source, captured_by)
-		VALUES ($1, '`+person.String()+`', 'whatsapp', 'acct-77', 'capture', 'connector:whatsapp')`)
+	contact := e.SeedContact(t, "Somebody Else", &e.Rep1)
+	SeedIDRow(t, owner, `INSERT INTO contact_channel_identity (id, contact_id, provider, channel_user_id, source, captured_by)
+		VALUES ($1, '`+contact.String()+`', 'whatsapp', 'acct-77', 'capture', 'connector:whatsapp')`)
 
 	stampRoster(t, e, activity, false,
 		connector.MessageParticipant{ChannelUserID: "acct-77", Role: connector.ParticipantRoleAttendee})
 
-	_, personID, _, found := rosterRow(t, activity, "acct-77")
+	_, contactID, _, found := rosterRow(t, activity, "acct-77")
 	if !found {
 		t.Fatal("the party was not recorded at all")
 	}
-	if personID != nil {
-		t.Error("an account resolved to a person bound to it on a DIFFERENT transport — the id is the provider's, not a global name")
+	if contactID != nil {
+		t.Error("an account resolved to a contact bound to it on a DIFFERENT transport — the id is the provider's, not a global name")
 	}
 }
 
@@ -195,7 +195,7 @@ func TestARosterRowIsNotDiscoveryEvidence(t *testing.T) {
 	}
 }
 
-// Two parties who differ ONLY by account are two people, and the uniqueness key
+// Two parties who differ ONLY by account are two contacts, and the uniqueness key
 // has to say so. Under the pre-account key they are one row and ON CONFLICT DO
 // NOTHING keeps whichever arrived first — a silent loss with no error anywhere,
 // which is the failure this assertion exists to catch.
@@ -214,7 +214,7 @@ func TestTwoPartiesDifferingOnlyByAccountAreTwoRows(t *testing.T) {
 		t.Fatalf("counting: %v", err)
 	}
 	if rows != 3 {
-		t.Fatalf("a three-person roster left %d row(s); a group recorded short is a group recorded wrong", rows)
+		t.Fatalf("a three-contact roster left %d row(s); a group recorded short is a group recorded wrong", rows)
 	}
 }
 
@@ -241,7 +241,7 @@ func TestStampingTheSameRosterTwiceAddsNothing(t *testing.T) {
 }
 
 // A party carrying BOTH keeps both, because the row records what was actually
-// seen. The address is what person_email and the graph read; the account is what
+// seen. The address is what contact_email and the graph read; the account is what
 // a reply routes on.
 func TestAPartyWithBothKeepsBoth(t *testing.T) {
 	e := Setup(t)
@@ -254,7 +254,7 @@ func TestAPartyWithBothKeepsBoth(t *testing.T) {
 	if !found {
 		t.Fatal("the party was not recorded")
 	}
-	// Lower-cased, because that is how person_email stores an address and a case
+	// Lower-cased, because that is how contact_email stores an address and a case
 	// difference would otherwise read as a different human.
 	if address == nil || *address != "legal@example.net" {
 		t.Errorf("the row's address is %v, want the lower-cased address the transport gave", address)
@@ -262,40 +262,40 @@ func TestAPartyWithBothKeepsBoth(t *testing.T) {
 }
 
 // A party carrying BOTH is filed under the ACCOUNT's human, not the address's.
-// The two can be different people — an address the installation already knows
+// The two can be different contacts — an address the installation already knows
 // and an account bound to somebody else — and the core's own precedence says
 // the channel identity NAMES the human while an address beside it only
-// corroborates. Reversed, one row would name two people, and an erasure keyed
+// corroborates. Reversed, one row would name two contacts, and an erasure keyed
 // on either would reach a record about the other.
 func TestAnAccountOutranksAnAddressWhenBothNameSomebody(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)
 	activity := seedChatMessage(t)
 
-	byAddress := e.SeedPerson(t, "Whoever Holds The Address", &e.Rep1)
-	SeedIDRow(t, owner, `INSERT INTO person_email (id, person_id, email, source, captured_by)
+	byAddress := e.SeedContact(t, "Whoever Holds The Address", &e.Rep1)
+	SeedIDRow(t, owner, `INSERT INTO contact_email (id, contact_id, email, source, captured_by)
 		VALUES ($1, '`+byAddress.String()+`', 'legal@example.net', 'manual', 'human:x')`)
-	byAccount := e.SeedPerson(t, "Whoever Holds The Account", &e.Rep1)
-	SeedIDRow(t, owner, `INSERT INTO person_channel_identity (id, person_id, provider, channel_user_id, source, captured_by)
+	byAccount := e.SeedContact(t, "Whoever Holds The Account", &e.Rep1)
+	SeedIDRow(t, owner, `INSERT INTO contact_channel_identity (id, contact_id, provider, channel_user_id, source, captured_by)
 		VALUES ($1, '`+byAccount.String()+`', '`+rosterProvider+`', 'acct-77', 'capture', 'connector:telegram')`)
 
 	stampRoster(t, e, activity, false,
 		connector.MessageParticipant{ChannelUserID: "acct-77", Email: "legal@example.net", Role: connector.ParticipantRoleAttendee})
 
-	_, personID, _, found := rosterRow(t, activity, "acct-77")
+	_, contactID, _, found := rosterRow(t, activity, "acct-77")
 	if !found {
 		t.Fatal("the party was not recorded at all")
 	}
-	if personID == nil || *personID != byAccount {
-		t.Fatalf("the row filed under %v, want the account's human %s — an address beside an account corroborates, it does not name", personID, byAccount)
+	if contactID == nil || *contactID != byAccount {
+		t.Fatalf("the row filed under %v, want the account's human %s — an address beside an account corroborates, it does not name", contactID, byAccount)
 	}
 }
 
 // One account is one human. A sender who describes the same party twice — once
-// with an address, once without — has named one person, and the uniqueness
+// with an address, once without — has named one contact, and the uniqueness
 // index cannot say so: it separates the two rows on the address, which is right
 // for mail and wrong for a roster. Left to the index the graph counts two
-// people in a two-person room.
+// contacts in a two-contact room.
 func TestARosterNamingOneAccountTwiceLeavesOneRow(t *testing.T) {
 	e := Setup(t)
 	activity := seedChatMessage(t)
@@ -360,7 +360,7 @@ func TestTheAccountDedupeDoesNotReachAnAddressOnlyParty(t *testing.T) {
 
 // One human described once WITH an account and once without is one row. The
 // uniqueness index cannot collapse them — the two differ on the account column,
-// so it keeps both — and the graph would then count one person as two people in
+// so it keeps both — and the graph would then count one contact as two contacts in
 // the room. An entry carrying no account of its own folds into the one that
 // does; two entries carrying DIFFERENT accounts never fold, whatever address
 // they share.

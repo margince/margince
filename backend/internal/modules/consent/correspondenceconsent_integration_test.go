@@ -9,7 +9,7 @@ package consent
 //
 // An integration test because the defect these pin was invisible to every unit
 // test in the tree: the arm READ the wrong table. Only the real query against a
-// real row shows that a `granted` person_consent row now reaches the verdict,
+// real row shows that a `granted` contact_consent row now reaches the verdict,
 // and that a withdrawal still beats it.
 
 import (
@@ -29,7 +29,7 @@ func (e *qualifyingEnv) grant(t *testing.T, state string) {
 	t.Helper()
 	source := "verbal"
 	if _, err := e.store.Record(e.ctx, RecordInput{
-		PersonID:  e.person,
+		ContactID: e.contact,
 		PurposeID: ids.From[ids.PurposeKind](ids.MustParse(e.correspondence.ID)),
 		NewState:  state,
 		Source:    &source,
@@ -44,7 +44,7 @@ func (e *qualifyingEnv) grant(t *testing.T, state string) {
 
 // TestAnExplicitYesAuthorizesCorrespondence is the defect this file exists for.
 //
-// A person who has said in as many words that we may write to them was refused
+// A contact who has said in as many words that we may write to them was refused
 // until they happened to send an inbound message, because the arm read
 // qualifying events and never the recorded answer. Mutation: drop the
 // `granted` branch from correspondenceVerdict and this fails on the first
@@ -53,7 +53,7 @@ func TestAnExplicitYesAuthorizesCorrespondence(t *testing.T) {
 	e := setupQualifying(t)
 
 	// Nothing on the timeline: no inbound, no deal, no recorded exchange. The
-	// ONLY thing that will change is the person's own answer.
+	// ONLY thing that will change is the contact's own answer.
 	if before := e.verdict(t); before.State != VerdictUnknown {
 		t.Fatalf("the starting verdict = %q, want unknown", before.State)
 	}
@@ -76,7 +76,7 @@ func TestAnExplicitYesAuthorizesCorrespondence(t *testing.T) {
 
 // TestAWithdrawalStillBeatsAQualifyingEvent holds the direction the fix must
 // not break. objectionStands runs before the class arms, so reading the grant
-// first must not give a withdrawn person a way back in through the timeline.
+// first must not give a withdrawn contact a way back in through the timeline.
 //
 // Mutation: move the objectionStands call below the class switch and this
 // fails — the inbound message answers instead.
@@ -84,7 +84,7 @@ func TestAWithdrawalStillBeatsAQualifyingEvent(t *testing.T) {
 	e := setupQualifying(t)
 
 	met := time.Now().Add(-48 * time.Hour).Truncate(time.Second)
-	if _, err := e.store.RecordQualifyingEvent(e.ctx, e.person, RecordQualifyingEventInput{
+	if _, err := e.store.RecordQualifyingEvent(e.ctx, e.contact, RecordQualifyingEventInput{
 		Kind:       "in_person",
 		Note:       "Met at the Frankfurt trade fair, stand B12.",
 		OccurredAt: met,
@@ -108,7 +108,7 @@ func TestAWithdrawalStillBeatsAQualifyingEvent(t *testing.T) {
 }
 
 // TestTheTimelineStillAnswersForSomebodyWhoNeverSaid keeps the implied arm
-// reachable. It answers for the overwhelming majority of people, who record no
+// reachable. It answers for the overwhelming majority of contacts, who record no
 // answer either way, and reading the grant first must not have shadowed it.
 //
 // Mutation: return early from correspondenceVerdict on any non-granted state
@@ -117,7 +117,7 @@ func TestTheTimelineStillAnswersForSomebodyWhoNeverSaid(t *testing.T) {
 	e := setupQualifying(t)
 
 	met := time.Now().Add(-24 * time.Hour).Truncate(time.Second)
-	if _, err := e.store.RecordQualifyingEvent(e.ctx, e.person, RecordQualifyingEventInput{
+	if _, err := e.store.RecordQualifyingEvent(e.ctx, e.contact, RecordQualifyingEventInput{
 		Kind:       "in_person",
 		Note:       "They asked for a quote at the stand.",
 		OccurredAt: met,
@@ -138,7 +138,7 @@ func TestTheTimelineStillAnswersForSomebodyWhoNeverSaid(t *testing.T) {
 // message opens broader contact for a bounded window, then it lapses back to
 // needing its own reason.
 //
-// It used to open everything, permanently. A person who asked one question in
+// It used to open everything, permanently. A contact who asked one question in
 // 2024 authorized unrelated outreach in 2026, because the arm read "is there
 // any inbound from them" with no bound at all — which is not what the
 // relationship they started actually says.
@@ -184,7 +184,7 @@ func TestARecordedExchangeLapsesToo(t *testing.T) {
 	e := setupQualifying(t)
 
 	met := time.Now().Add(-60 * 24 * time.Hour).Truncate(time.Second)
-	if _, err := e.store.RecordQualifyingEvent(e.ctx, e.person, RecordQualifyingEventInput{
+	if _, err := e.store.RecordQualifyingEvent(e.ctx, e.contact, RecordQualifyingEventInput{
 		Kind:       "in_person",
 		Note:       "Met at the Frankfurt trade fair, stand B12.",
 		OccurredAt: met,
@@ -232,8 +232,8 @@ func TestAnExplicitYesOutlivesTheWindow(t *testing.T) {
 // it — a preview that is wrong in the permissive direction is worse than none,
 // because the rep only finds out after writing the mail.
 //
-// The pin is that the guard reports the SAME verdict as VerdictForPerson for
-// the same person under the same window, across the lapse boundary. Mutation:
+// The pin is that the guard reports the SAME verdict as VerdictForContact for
+// the same contact under the same window, across the lapse boundary. Mutation:
 // replace the guard's `since` with a zero time and the lapsed case reports
 // allowed while the send path says unknown, failing the second assertion.
 func TestTheGuardAnswersOnTheSameWindowAsTheSend(t *testing.T) {
@@ -242,11 +242,11 @@ func TestTheGuardAnswersOnTheSameWindowAsTheSend(t *testing.T) {
 	// Old enough that the default twelve-month window has closed on it.
 	e.inbound(t, time.Now().Add(-400*24*time.Hour))
 
-	guard, err := e.store.PersonConsentGuard(e.ctx, e.person)
+	guard, err := e.store.ContactConsentGuard(e.ctx, e.contact)
 	if err != nil {
 		t.Fatalf("reading the guard: %v", err)
 	}
-	var entry *crmcontracts.PersonConsentGuardEntry
+	var entry *crmcontracts.ContactConsentGuardEntry
 	for i := range guard.Entries {
 		if guard.Entries[i].PurposeKey == "business_correspondence" {
 			entry = &guard.Entries[i]
@@ -255,7 +255,7 @@ func TestTheGuardAnswersOnTheSameWindowAsTheSend(t *testing.T) {
 	if entry == nil {
 		t.Fatal("the guard has no business_correspondence entry — the fixture's purpose is not reaching it")
 	}
-	if entry.Verdict != crmcontracts.PersonConsentGuardEntryVerdictUnknown {
+	if entry.Verdict != crmcontracts.ContactConsentGuardEntryVerdictUnknown {
 		t.Errorf("the guard reports %q for a 400-day-old inbound, want unknown; the send path refuses it, so the preview would promise a send that is then refused",
 			entry.Verdict)
 	}

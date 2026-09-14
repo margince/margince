@@ -30,9 +30,9 @@ import (
 // AssembleSARForTest returns the serialized Art. 15 package for one subject,
 // through the same assembler the server binds when an object store is present.
 func AssembleSARForTest(
-	ctx context.Context, db *database.DB, blob blobstore.Store, personID ids.UUID,
+	ctx context.Context, db *database.DB, blob blobstore.Store, contactID ids.UUID,
 ) ([]byte, error) {
-	return newSubjectAccessAssembler(db).withBlobstore(blob).AssemblePackage(ctx, personID)
+	return newSubjectAccessAssembler(db).withBlobstore(blob).AssemblePackage(ctx, contactID)
 }
 
 // ExportedRawCapturePayloadsForTest returns the raw_capture payloads the export
@@ -40,9 +40,9 @@ func AssembleSARForTest(
 // back as the empty string, which is how a caller tells "restored" from
 // "listed but unavailable".
 func ExportedRawCapturePayloadsForTest(
-	ctx context.Context, db *database.DB, blob blobstore.Store, personID ids.UUID,
+	ctx context.Context, db *database.DB, blob blobstore.Store, contactID ids.UUID,
 ) ([]string, error) {
-	body, err := AssembleSARForTest(ctx, db, blob, personID)
+	body, err := AssembleSARForTest(ctx, db, blob, contactID)
 	if err != nil {
 		return nil, err
 	}

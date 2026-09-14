@@ -68,7 +68,7 @@ func members(e *teamEnv) []weekly.TeamMember {
 }
 
 // A team snapshot is a team question. An own-scoped seat asking for one would
-// get a page about people whose rows they cannot read.
+// get a page about contacts whose rows they cannot read.
 func TestAnOwnScopedSeatIsRefusedTheTeamWeek(t *testing.T) {
 	e := setupTeamWeekly(t)
 

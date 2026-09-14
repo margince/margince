@@ -74,7 +74,7 @@ type ConnectorAppStatus struct {
 	// their installation is using to check it against the vendor's console.
 	ClientID string
 	// Tenant is the Entra directory a Microsoft app is pinned to, empty for an
-	// app that authorizes any organization and for every Google app.
+	// app that authorizes any company and for every Google app.
 	Tenant string
 }
 
@@ -101,7 +101,7 @@ func (s *ConnectorAppStore) Read(ctx context.Context, p AppProvider) (ConnectorA
 // secret, and the directory it is pinned to.
 //
 // Separate from Read because the two answer different questions and must not be
-// confused: Read tells a person what is configured, this hands the server what it
+// confused: Read tells a contact what is configured, this hands the server what it
 // needs to talk to the vendor. The secret it returns never reaches a response
 // body — the connect transport uses it to exchange an authorization code and
 // nothing serializes it.

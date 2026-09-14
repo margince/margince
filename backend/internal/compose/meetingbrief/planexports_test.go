@@ -37,7 +37,7 @@ func TestTheCertExportsReachTheWholePlan(t *testing.T) {
 		},
 		LikelyAsks: []Ask{{
 			Question: "ask-question", Basis: line("ask-basis", "id-ask"),
-			Relevance: crmcontracts.MeetingPlanTierHigh, Prepare: "ask-prepare",
+			Relevance: crmcontracts.MeetingPlanTierMeetingPlanTierHigh, Prepare: "ask-prepare",
 		}},
 		Questions: []Question{{
 			Ask: "question-ask", Why: "question-why", ListenFor: "question-listen",
@@ -53,7 +53,7 @@ func TestTheCertExportsReachTheWholePlan(t *testing.T) {
 			Fallback: line("fallback-text", "id-fallback"),
 		},
 		Unknowns: []Unknown{{
-			Kind:     crmcontracts.MeetingPlanUnknownNoOpenDeal,
+			Kind:     crmcontracts.MeetingPlanUnknownKindMeetingPlanUnknownNoOpenDeal,
 			Question: "unknown-question",
 		}},
 	}

@@ -146,7 +146,7 @@ func TestATargetWithNoNameRecordsNoLabel(t *testing.T) {
 	}
 	if label != nil {
 		t.Errorf("target_label = %q for an activity, want none: a timeline entry has no name a "+
-			"person calls it by, and inventing one would caption the card with a word its "+
+			"contact calls it by, and inventing one would caption the card with a word its "+
 			"reader never uses", *label)
 	}
 }

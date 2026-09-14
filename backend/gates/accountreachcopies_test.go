@@ -36,8 +36,8 @@ import (
 
 // accountReachFiles are the two files that spell the walk.
 var accountReachFiles = []string{
-	"internal/modules/activities/orgscope.go",
-	"internal/modules/search/graphorgreach.go",
+	"internal/modules/activities/companyscope.go",
+	"internal/modules/search/graphcompanyreach.go",
 }
 
 // accountReachArms are the constants each of those files must spell, and spell
@@ -45,7 +45,7 @@ var accountReachFiles = []string{
 // two of them because one is shared with a producer that stops short of the
 // last arm, and holding only the shared half equal would leave the arm that
 // split them free to drift — which is this gate's whole subject.
-var accountReachArms = []string{"orgArms", "participantEmployerArm"}
+var accountReachArms = []string{"companyArms", "participantEmployerArm"}
 
 func TestTheAccountReachWalkIsOneAnswer(t *testing.T) {
 	t.Parallel()

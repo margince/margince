@@ -22,24 +22,24 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-var personFilterFields = map[string]storekit.Field{
+var contactFilterFields = map[string]storekit.Field{
 	"full_name": {Expr: "t.full_name", Type: storekit.FieldText},
 	"owner_id":  {Expr: "t.owner_id", Type: storekit.FieldID},
 }
 
 func TestPredicateEngineFiltersRealRowsWithinRowScope(t *testing.T) {
 	e := Setup(t)
-	mineMatch := e.SeedPerson(t, "Anna Renewal", &e.Rep1)
-	foreignMatch := e.SeedPerson(t, "Bruno Renewal", &e.Rep3)
-	// A person is readable by every seat with the grant; capture privacy
+	mineMatch := e.SeedContact(t, "Anna Renewal", &e.Rep1)
+	foreignMatch := e.SeedContact(t, "Bruno Renewal", &e.Rep3)
+	// A contact is readable by every seat with the grant; capture privacy
 	// is what keeps this one inside Rep3's row scope alone.
-	e.MakeCapturePrivate(t, "person", foreignMatch, e.Rep3)
-	mineOther := e.SeedPerson(t, "Clara Support", &e.Rep1)
-	mineLiteral := e.SeedPerson(t, "Dora 100% Renewal", &e.Rep1)
+	e.MakeCapturePrivate(t, "contact", foreignMatch, e.Rep3)
+	mineOther := e.SeedContact(t, "Clara Support", &e.Rep1)
+	mineLiteral := e.SeedContact(t, "Dora 100% Renewal", &e.Rep1)
 
 	engine := storekit.Query{
-		Table:     "person",
-		Fields:    personFilterFields,
+		Table:     "contact",
+		Fields:    contactFilterFields,
 		BaseWhere: "t.archived_at IS NULL",
 	}
 	selectIDs := func(ctx context.Context, p storekit.Predicate) map[ids.UUID]bool {
@@ -153,22 +153,22 @@ func TestPredicateEngineFiltersRealRowsWithinRowScope(t *testing.T) {
 // golden string.
 func TestNeqReturnsTheRowsWhoseColumnWasNeverSet(t *testing.T) {
 	e := Setup(t)
-	// Seeded through the real writer, then the column is nulled: CreatePerson
+	// Seeded through the real writer, then the column is nulled: CreateContact
 	// stamps the calling seat as owner when the body names none, so "seed with
 	// no owner" does NOT produce an unset column. A fixture that models the
 	// state by its name rather than its value proves nothing about it.
-	unowned := e.SeedPerson(t, "Nadia Nobody", nil)
-	mine := e.SeedPerson(t, "Owen Owner", &e.Rep1)
-	theirs := e.SeedPerson(t, "Tessa Theirs", &e.Rep3)
+	unowned := e.SeedContact(t, "Nadia Nobody", nil)
+	mine := e.SeedContact(t, "Owen Owner", &e.Rep1)
+	theirs := e.SeedContact(t, "Tessa Theirs", &e.Rep3)
 
 	engine := storekit.Query{
-		Table:     "person",
-		Fields:    personFilterFields,
+		Table:     "contact",
+		Fields:    contactFilterFields,
 		BaseWhere: "t.archived_at IS NULL",
 	}
 	admin := e.As(e.Rep3, []ids.UUID{e.Team1, e.Team2}, AdminPerms)
 	if err := database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
-		_, execErr := tx.Exec(admin, `UPDATE person SET owner_id = NULL WHERE id = $1`, unowned)
+		_, execErr := tx.Exec(admin, `UPDATE contact SET owner_id = NULL WHERE id = $1`, unowned)
 		return execErr
 	}); err != nil {
 		t.Fatalf("nulling the owner: %v", err)
@@ -177,7 +177,7 @@ func TestNeqReturnsTheRowsWhoseColumnWasNeverSet(t *testing.T) {
 	// the writer ever started filling it again, and would be asserting nothing.
 	var stillSet bool
 	if err := database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
-		return tx.QueryRow(admin, `SELECT owner_id IS NOT NULL FROM person WHERE id = $1`, unowned).Scan(&stillSet)
+		return tx.QueryRow(admin, `SELECT owner_id IS NOT NULL FROM contact WHERE id = $1`, unowned).Scan(&stillSet)
 	}); err != nil {
 		t.Fatalf("reading back the owner: %v", err)
 	}

@@ -6,9 +6,9 @@
 package gates_test
 
 // A provider's match rules are checked against IdentifierFields(), so that
-// list has to name every field a person actually carries.
+// list has to name every field a contact actually carries.
 //
-// The failure this holds is the silent-short kind. If PersonIdentifiers gains
+// The failure this holds is the silent-short kind. If ContactIdentifiers gains
 // a field and IdentifierFields() does not, then two things break in the same
 // direction and neither reports anything: the registry stops rejecting a rule
 // that names the new field, and `present` — which switches on the same closed
@@ -51,9 +51,9 @@ func TestEveryIdentifierFieldIsNamedAndUnderstood(t *testing.T) {
 		declared[f] = true
 	}
 
-	shape := reflect.TypeOf(provider.PersonIdentifiers{})
+	shape := reflect.TypeOf(provider.ContactIdentifiers{})
 	if shape.NumField() == 0 {
-		t.Fatal("PersonIdentifiers has no fields, so this gate would pass over an empty subject")
+		t.Fatal("ContactIdentifiers has no fields, so this gate would pass over an empty subject")
 	}
 
 	if len(declared) != shape.NumField() {
@@ -61,7 +61,7 @@ func TestEveryIdentifierFieldIsNamedAndUnderstood(t *testing.T) {
 		for i := range shape.NumField() {
 			carried = append(carried, shape.Field(i).Name)
 		}
-		t.Errorf("PersonIdentifiers carries %d fields (%s) but IdentifierFields() names %d.\n\n"+
+		t.Errorf("ContactIdentifiers carries %d fields (%s) but IdentifierFields() names %d.\n\n"+
 			"A field nobody named cannot be rejected by the registry when a rule misspells it, and a rule "+
 			"that does name it matches nobody — so a provider declaring one looks up no contact at all, "+
 			"with no error anywhere. Add the constant, add it to IdentifierFields(), and teach `present` "+
@@ -79,7 +79,7 @@ func TestEveryNamedIdentifierIsReadable(t *testing.T) {
 	// Every field set to a non-empty value, so a rule on any single one of
 	// them must be satisfied. A field `present` does not know answers false
 	// here even though the subject carries it.
-	full := provider.PersonIdentifiers{
+	full := provider.ContactIdentifiers{
 		LinkedInURL:   "https://www.linkedin.com/in/someone",
 		FirstName:     "Anna",
 		LastName:      "Muster",
@@ -90,7 +90,7 @@ func TestEveryNamedIdentifierIsReadable(t *testing.T) {
 	value := reflect.ValueOf(full)
 	for i := range shape.NumField() {
 		if value.Field(i).String() == "" {
-			t.Fatalf("the fixture leaves PersonIdentifiers.%s empty, so this gate cannot tell a field "+
+			t.Fatalf("the fixture leaves ContactIdentifiers.%s empty, so this gate cannot tell a field "+
 				"`present` does not know from one the fixture forgot", shape.Field(i).Name)
 		}
 	}

@@ -112,7 +112,7 @@ const trailingScanLines = 15
 // EmailBodyTail says what the trimmed part of a body starts with.
 //
 // A signature and a quoted reply are trimmed for different reasons and read
-// differently to a person: the sign-off is the sender still speaking, and the
+// differently to a contact: the sign-off is the sender still speaking, and the
 // quote is an older message. One label for both hid a sender's own name behind
 // "show quoted history" on every message that had no history.
 type EmailBodyTail string

@@ -32,7 +32,7 @@ type Envelope struct {
 	// Register is du or Sie for a German draft, empty elsewhere and empty when
 	// the correspondence does not say. Resolved server-side for the same reason
 	// the language is: asked to work it out per call, a model answers
-	// differently each time, and two consecutive drafts to one person in two
+	// differently each time, and two consecutive drafts to one contact in two
 	// registers read as a machine that does not know who it is writing to.
 	Register string `json:"register,omitempty"`
 	// SilenceDays is whole days since the last message either way, empty at

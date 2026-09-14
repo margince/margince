@@ -40,7 +40,7 @@ const sweepRetryAfter = "1 day"
 // treated it as settled for good, so the card read zero over contacts nobody
 // had looked up.
 //
-// `p` is the person and `r` the run inside the NOT EXISTS.
+// `p` is the contact and `r` the run inside the NOT EXISTS.
 //
 // The no_identifiers arm is what makes the page's own advice work. That skip
 // says the record carried no profile link and no company, and the section
@@ -48,9 +48,9 @@ const sweepRetryAfter = "1 day"
 // telling somebody to do something and then ignoring it until tomorrow.
 //
 // "The record changed since we looked" has two homes, because the two things
-// the page asks for land in different tables. A profile link bumps the person
-// row itself (the social slot is part of the person aggregate). An employer
-// is a relationship row, and linking one moves NOTHING on person — so the
+// the page asks for land in different tables. A profile link bumps the contact
+// row itself (the social slot is part of the contact aggregate). An employer
+// is a relationship row, and linking one moves NOTHING on contact — so the
 // test also watches for an employment edge younger than the run, or a
 // contact whose employer arrived seconds after the skip would wait out the
 // full cooldown the arm exists to lift. Loose on purpose: whether the edge
@@ -65,7 +65,7 @@ const coveredByARun = `
 	             AND (p.updated_at > r.created_at
 	                  OR EXISTS (
 	                      SELECT 1 FROM relationship employer
-	                       WHERE employer.person_id = p.id
+	                       WHERE employer.contact_id = p.id
 	                         AND employer.kind = 'employment'
 	                         AND employer.archived_at IS NULL
 	                         AND employer.updated_at > r.created_at))))`
@@ -78,12 +78,12 @@ const coveredByARun = `
 func (s *Store) uncoveredSubjects(ctx context.Context, tx pgx.Tx, name string, limit int) ([]string, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT p.id::text
-		  FROM person p
+		  FROM contact p
 		 WHERE p.archived_at IS NULL
 		   AND p.merged_into_id IS NULL
 		   AND NOT EXISTS (
 		       SELECT 1 FROM provider_run r
-		        WHERE r.person_id = p.id AND r.provider = $1
+		        WHERE r.contact_id = p.id AND r.provider = $1
 		          AND (`+coveredByARun+`))
 		 ORDER BY p.created_at
 		 LIMIT $2`, name, limit)
@@ -122,7 +122,7 @@ type BacklogCount struct {
 // count: it would report zero while contacts went unenriched.
 //
 // Read under the connection list's own integrations:read gate. It counts
-// PEOPLE, which is a person-table read reached through a different object —
+// CONTACTS, which is a contact-table read reached through a different object —
 // defensible because the answer is one aggregate an ops seat can already
 // derive, and because the card that shows it is the integrations card.
 func (s *Store) backlogInTx(ctx context.Context, tx pgx.Tx, name string) (BacklogCount, error) {
@@ -144,12 +144,12 @@ func (s *Store) backlogInTx(ctx context.Context, tx pgx.Tx, name string) (Backlo
 	out.Paused = !on || !connected || budget == 0
 	err = tx.QueryRow(ctx, `
 			SELECT count(*)
-			  FROM person p
+			  FROM contact p
 			 WHERE p.archived_at IS NULL
 			   AND p.merged_into_id IS NULL
 			   AND NOT EXISTS (
 			       SELECT 1 FROM provider_run r
-			        WHERE r.person_id = p.id AND r.provider = $1
+			        WHERE r.contact_id = p.id AND r.provider = $1
 			          AND (`+coveredByARun+`))`,
 		name).Scan(&out.Remaining)
 	if err != nil {
@@ -173,18 +173,18 @@ func (s *Store) applyStoredPurchases(ctx context.Context, name string) error {
 	if s.applyStoredClaims == nil || s.holdSubject == nil {
 		return nil
 	}
-	type pending struct{ runID, personID string }
+	type pending struct{ runID, contactID string }
 	var due []pending
 	if err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
-		SELECT id::text, person_id::text
+		SELECT id::text, contact_id::text
 		  FROM provider_run
 		 WHERE provider = $1
 		   AND state = 'completed'
 		   AND NOT claims_unwritten
 		   AND applied_at IS NULL
-		   AND subject_kind = 'person'
-		   AND person_id IS NOT NULL
+		   AND subject_kind = 'contact'
+		   AND contact_id IS NOT NULL
 		 ORDER BY completed_at DESC
 		 LIMIT $2`, name, sweepTickBudget)
 		if err != nil {
@@ -193,7 +193,7 @@ func (s *Store) applyStoredPurchases(ctx context.Context, name string) error {
 		defer rows.Close()
 		for rows.Next() {
 			var p pending
-			if err := rows.Scan(&p.runID, &p.personID); err != nil {
+			if err := rows.Scan(&p.runID, &p.contactID); err != nil {
 				return err
 			}
 			due = append(due, p)
@@ -202,12 +202,12 @@ func (s *Store) applyStoredPurchases(ctx context.Context, name string) error {
 	}); err != nil {
 		return fmt.Errorf("integrations: reading the purchases that never reached a record: %w", err)
 	}
-	// One transaction per subject. Holding several people's rows at once is
+	// One transaction per subject. Holding several contacts's rows at once is
 	// what closes a deadlock cycle against the eraser, which takes the subject
 	// first and would be the transaction Postgres kills.
 	for _, p := range due {
 		if err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-			return s.applyOneStored(ctx, tx, p.runID, p.personID)
+			return s.applyOneStored(ctx, tx, p.runID, p.contactID)
 		}); err != nil {
 			return err
 		}
@@ -221,8 +221,8 @@ func (s *Store) applyStoredPurchases(ctx context.Context, name string) error {
 // fill-only: the newest answer reaches an empty field first, so a contact with
 // two purchases keeps what the provider said most recently rather than what it
 // said first.
-func (s *Store) applyOneStored(ctx context.Context, tx pgx.Tx, runID, personID string) error {
-	verdict, err := s.holdSubject(ctx, tx, personID)
+func (s *Store) applyOneStored(ctx context.Context, tx pgx.Tx, runID, contactID string) error {
+	verdict, err := s.holdSubject(ctx, tx, contactID)
 	if err != nil {
 		return err
 	}
@@ -232,7 +232,7 @@ func (s *Store) applyOneStored(ctx context.Context, tx pgx.Tx, runID, personID s
 		// gives for the same reason.
 		return s.discardClaims(ctx, tx, runID)
 	}
-	applied, err := s.applyStoredClaims(ctx, tx, personID, runID)
+	applied, err := s.applyStoredClaims(ctx, tx, contactID, runID)
 	if err != nil {
 		return err
 	}

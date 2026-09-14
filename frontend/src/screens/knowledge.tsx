@@ -569,7 +569,7 @@ function NewDocumentSet() {
         )}
       </Field>
       {/* The topic statement is quoted back verbatim in a refusal, so it is
-          read by a person at their least patient moment. The hint says to write
+          read by a contact at their least patient moment. The hint says to write
           a sentence rather than a label, because "Handbook" tells a reader who
           just got a refusal nothing at all. */}
       <Field

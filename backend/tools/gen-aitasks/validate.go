@@ -7,7 +7,7 @@ package main
 //
 // Its own file because the refusals are the product here: each one names a
 // declaration that would otherwise compile into a binary and be discovered by
-// a person instead — an unknown tier, a mode paired with the wrong budget
+// a contact instead — an unknown tier, a mode paired with the wrong budget
 // posture, a task nobody can name.
 
 import (

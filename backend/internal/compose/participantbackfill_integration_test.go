@@ -138,7 +138,7 @@ func TestTheBackfillAttributesConnectorMailToItsMailboxOwner(t *testing.T) {
 
 func TestTheBackfillRefusesToGuessBetweenTwoMailboxes(t *testing.T) {
 	e := integration.Setup(t)
-	// Two people have connected the same provider. An activity captured as
+	// Two contacts have connected the same provider. An activity captured as
 	// 'connector:gmail' could be either mailbox and the row carries no
 	// evidence that separates them.
 	seedConnection(t, e, e.Rep1)

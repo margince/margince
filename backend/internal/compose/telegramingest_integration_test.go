@@ -80,7 +80,7 @@ const telegramIngestUpdateJSON = `{
 // `from`. A fixture that instead put 556 in new_chat_member.user would agree
 // with a parser reading the identity from there and prove nothing about
 // production, where that field is the bot and the reachability write lands on
-// no Person at all.
+// no Contact at all.
 const telegramIngestKickedJSON = `{
 	"update_id": 200,
 	"my_chat_member": {
@@ -136,13 +136,13 @@ func TestIngestWorkerReestablishesWorkspaceContextFromArgs(t *testing.T) {
 type uniqueViolationSink struct{}
 
 func (uniqueViolationSink) Upsert(context.Context, connector.NormalizedRecord) (datasource.EntityRef, error) {
-	return datasource.EntityRef{}, &pgconn.PgError{Code: "23505", ConstraintName: "uq_person_channel_identity"}
+	return datasource.EntityRef{}, &pgconn.PgError{Code: "23505", ConstraintName: "uq_contact_channel_identity"}
 }
 
 // A unique violation during capture is retryable, never poison (design
 // §6.3): two concurrent first messages from one new sender both resolve to
 // no-match, and the partial unique index breaks the tie exactly as
-// uq_person_email_dedupe does for mail. The loser MUST redeliver so its lane
+// uq_contact_email_dedupe does for mail. The loser MUST redeliver so its lane
 // hits the winner — classifying it as poison (swallowing it, logging and
 // returning nil) would silently drop a customer's message.
 func TestIngestWorkerTreatsAUniqueViolationAsRetryable(t *testing.T) {
@@ -166,7 +166,7 @@ func TestIngestWorkerTreatsAUniqueViolationAsRetryable(t *testing.T) {
 	// errors.Is confirms the SAME error rides the chain, not merely a
 	// same-shaped replacement the worker minted itself.
 	var pgErr *pgconn.PgError
-	if !errors.As(err, &pgErr) || pgErr.ConstraintName != "uq_person_channel_identity" {
+	if !errors.As(err, &pgErr) || pgErr.ConstraintName != "uq_contact_channel_identity" {
 		t.Errorf("got %v, want the original constraint name preserved", err)
 	}
 }
@@ -180,14 +180,14 @@ func TestIngestWorkerAppliesMembershipWithoutCapturingAnActivity(t *testing.T) {
 	connID, _ := telegramIngestFixture(t, e)
 	quiet := slog.New(slog.NewTextHandler(io.Discard, nil))
 
-	// A prior message already bound sender 556 to a person — the
+	// A prior message already bound sender 556 to a contact — the
 	// my_chat_member update below reports THAT account blocking the bot.
-	person := e.SeedPerson(t, "Blocks The Bot", nil)
+	contact := e.SeedContact(t, "Blocks The Bot", nil)
 	e.WsExec(t, `
-		INSERT INTO person_channel_identity (person_id, provider, channel_user_id, username, source, captured_by)
+		INSERT INTO contact_channel_identity (contact_id, provider, channel_user_id, username, source, captured_by)
 		VALUES (
 		        $1, 'telegram', '556', 'blockeduser', 'telegram', 'connector:telegram')`,
-		person)
+		contact)
 
 	rawID := ids.NewV7()
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
@@ -213,10 +213,10 @@ func TestIngestWorkerAppliesMembershipWithoutCapturingAnActivity(t *testing.T) {
 		t.Errorf("%d activity rows after a my_chat_member update, want 0 — it is a reachability signal, never a message", n)
 	}
 	if n := e.WsCount(t, `
-		SELECT count(*) FROM person_channel_identity
+		SELECT count(*) FROM contact_channel_identity
 		 WHERE channel_user_id = '556' AND archived_at IS NULL AND blocked_at IS NOT NULL`); n != 1 {
 		t.Errorf("%d channel identity rows carry blocked_at after a kicked status, want 1 — "+
-			"the update's identity is the private chat's, and the bot's id (42) matches no Person", n)
+			"the update's identity is the private chat's, and the bot's id (42) matches no Contact", n)
 	}
 }
 
@@ -235,7 +235,7 @@ const telegramIngestGroupJSON = `{
 }`
 
 // Group chats are out of scope (design §1) and the worker must ACK the delivery
-// while capturing nothing: a captured group message mints a Person per member
+// while capturing nothing: a captured group message mints a Contact per member
 // the bot's privacy mode happens to show, files the activity under the group's
 // thread, and then routes the rep's reply through the sender's channel identity
 // to their PRIVATE chat — answering somewhere other than where it was read, or
@@ -269,7 +269,7 @@ func TestIngestWorkerCapturesNothingFromAGroupChat(t *testing.T) {
 	if n := e.WsCount(t, `SELECT count(*) FROM activity WHERE source_system = 'telegram'`); n != 0 {
 		t.Errorf("%d activity rows after a group-chat message, want 0", n)
 	}
-	if n := e.WsCount(t, `SELECT count(*) FROM person_channel_identity WHERE channel_user_id = '557'`); n != 0 {
+	if n := e.WsCount(t, `SELECT count(*) FROM contact_channel_identity WHERE channel_user_id = '557'`); n != 0 {
 		t.Errorf("%d channel identities minted for a group member, want 0", n)
 	}
 }

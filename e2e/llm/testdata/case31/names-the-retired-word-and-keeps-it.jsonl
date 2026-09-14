@@ -1,4 +1,4 @@
 {"type": "system", "subtype": "init", "tools": ["mcp__margince__get_record_tags", "mcp__margince__remove_tag"]}
-{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__get_record_tags", "input": {"record_type": "organization"}}]}}
-{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__remove_tag", "input": {"record_type": "organization"}}]}}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__get_record_tags", "input": {"record_type": "company"}}]}}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__remove_tag", "input": {"record_type": "company"}}]}}
 {"type": "result", "subtype": "success", "is_error": false, "result": "Everything sitting on Vorort Systeme KG, retired words included: Strategic Account, and K5 Conference 2025 — which is retired, so the record row does not draw it.\n\nI removed Strategic Account from Vorort Systeme KG. No other tags remain on Vorort apart from the retired K5 Conference 2025.\n\nThe word itself stays: Strategic Account remains in the workspace and the other accounts still carry it.\n\nBesides the retired K5 Conference 2025, no other tags remain. Retired: K5 Conference 2025. No other tags."}

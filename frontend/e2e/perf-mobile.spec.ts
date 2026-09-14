@@ -198,7 +198,7 @@ async function openOneRecord(page: Page): Promise<Open> {
   // through the element the view actually draws — here a table row — so the
   // locator still names one thing when another surface repeats the name. The
   // row stays a substring match, because a row's accessible name is every cell
-  // of it joined and the person's name is a fragment of that by construction.
+  // of it joined and the contact's name is a fragment of that by construction.
   const row = page.getByRole("row", { name: "Anna Weber" });
   await expect(row).toBeVisible();
   // A VISIBLE screen is not yet a settled one, and the difference is the whole

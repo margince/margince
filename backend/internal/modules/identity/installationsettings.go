@@ -27,6 +27,8 @@ type InstallationSettings struct {
 	Timezone     string
 	BaseCurrency string
 	BaseLanguage string
+	DateFormat   string
+	TimeFormat   string
 	// FiscalYearStartMonth is the month the business year begins, 1..12.
 	FiscalYearStartMonth int
 	// DeadWorkBannerHours is how far back the maintenance banner looks before
@@ -60,6 +62,8 @@ type InstallationPatch struct {
 	Timezone               *string
 	BaseCurrency           *string
 	BaseLanguage           *string
+	DateFormat             *string
+	TimeFormat             *string
 	FiscalYearStartMonth   *int
 	DeadWorkBannerHours    *int
 	ForecastForwardMeasure *string
@@ -153,12 +157,16 @@ func (s *InstallationSettingsStore) GetInstallation(ctx context.Context) (Instal
 	if err != nil {
 		return InstallationSettings{}, err
 	}
+	dateFormat, timeFormat, err := s.regionalFormats(ctx)
+	if err != nil {
+		return InstallationSettings{}, err
+	}
 	locked, why, err := s.baseCurrencyLock(ctx)
 	if err != nil {
 		return InstallationSettings{}, err
 	}
 	return InstallationSettings{
-		Name: name, Timezone: zone, BaseCurrency: currency, BaseLanguage: language,
+		Name: name, Timezone: zone, BaseCurrency: currency, BaseLanguage: language, DateFormat: dateFormat, TimeFormat: timeFormat,
 		FiscalYearStartMonth:   fiscalStart,
 		DeadWorkBannerHours:    bannerHours,
 		ForecastForwardMeasure: measure,
@@ -268,7 +276,15 @@ func encodeInstallationPatch(in InstallationPatch) ([]pendingWrite, error) {
 	if err != nil {
 		return nil, err
 	}
-	return []pendingWrite{name, zone, currency, language, fiscal, bannerHours, measure, providers}, nil
+	dateFormat, err := encodePatchField(DateFormat, in.DateFormat)
+	if err != nil {
+		return nil, err
+	}
+	timeFormat, err := encodePatchField(TimeFormat, in.TimeFormat)
+	if err != nil {
+		return nil, err
+	}
+	return []pendingWrite{name, zone, currency, language, fiscal, bannerHours, measure, providers, dateFormat, timeFormat}, nil
 }
 
 // UpdateInstallation applies a sparse patch. Named for the same reason as

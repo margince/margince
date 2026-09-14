@@ -150,7 +150,7 @@ func NewRelinkActivityCall(records datasource.SystemOfRecordProvider, cmd Relink
 // relinking again. Filing under a PROJECT is not: it classifies the activity as
 // commercial correspondence, and that classification is write-once in the
 // database and monotonic in the product — relinking away does not lift it, and
-// removing it takes a named person giving a written reason through the
+// removing it takes a named contact giving a written reason through the
 // controller's release path. An agent that could do that unattended could put a
 // six-year retention floor across a mailbox with nothing to undo it, which is a
 // denial of the subject's Art. 17 right that the controller cannot reverse.
@@ -321,7 +321,7 @@ func requireLinkTarget(entityType string) error {
 	}
 }
 
-// DecideApprovalCommand is one person's answer to one staged proposal,
+// DecideApprovalCommand is one contact's answer to one staged proposal,
 // whichever door asked for it. Approve is the answer itself, and it belongs to
 // the command rather than to the route because the two routes that carry it are
 // one decision with two verdicts.
@@ -350,7 +350,7 @@ func (decideApprovalResolver) Subject(_ context.Context, cmd DecideApprovalComma
 }
 
 // Guards stands down: what may be decided is the approvals engine's own
-// question, answered against the deciding person's grants, the target's row
+// question, answered against the deciding contact's grants, the target's row
 // scope and the caps the credential carries — none of which this module holds.
 // A second answer here would be a weaker copy that drifts.
 func (decideApprovalResolver) Guards(_ context.Context, _ DecideApprovalCommand) error {

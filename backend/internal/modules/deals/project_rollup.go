@@ -33,7 +33,7 @@ import (
 // alone would price every open pipeline at nothing. So an open deal already
 // in the base currency contributes its own amount, and an open deal in
 // another currency contributes nothing until it closes — the same rule the
-// company page's pipeline fold keeps (org360 baseValueOf), spelled in SQL by
+// company page's pipeline fold keeps (company360 baseValueOf), spelled in SQL by
 // OpenDealBaseValueSQL.
 type ProjectDealTotals struct {
 	OpenMinor int64

@@ -143,7 +143,7 @@ func aiWorkItem(run TroubledRun) crmcontracts.AttentionItem {
 // bounceItem draws one hard-bounced send. The subject line is the headline —
 // the name the reader knows the send by — and the receiving side's own reason
 // the supporting line. `open` is offered exactly when the send is filed under
-// a person, because that page is where fixing the address and resending live.
+// a contact, because that page is where fixing the address and resending live.
 func bounceItem(send BouncedSend) crmcontracts.AttentionItem {
 	kind := "hard"
 	occurred := send.BouncedAt
@@ -161,8 +161,8 @@ func bounceItem(send BouncedSend) crmcontracts.AttentionItem {
 	if detail := bounceDetail(send); detail != "" {
 		item.Detail = &detail
 	}
-	if !send.PersonID.IsZero() {
-		item.Subject = subjectOf("person", send.PersonID)
+	if !send.ContactID.IsZero() {
+		item.Subject = subjectOf("contact", send.ContactID)
 		item.Actions = append(item.Actions, actionOpen)
 	}
 	return item
@@ -203,8 +203,8 @@ func parkedItem(send ParkedSend) crmcontracts.AttentionItem {
 		reason := send.Reason
 		item.Detail = &reason
 	}
-	if !send.PersonID.IsZero() {
-		item.Subject = subjectOf("person", send.PersonID)
+	if !send.ContactID.IsZero() {
+		item.Subject = subjectOf("contact", send.ContactID)
 		item.Actions = append(item.Actions, actionOpen)
 	}
 	return item
@@ -276,13 +276,17 @@ func noticeItem(notice UnreadNotice) crmcontracts.AttentionItem {
 	kind := notice.Kind
 	subject := notice.Subject
 	occurred := notice.CreatedAt
+	if notice.Origin != nil {
+		occurred = notice.Origin.OccurredAt
+	}
 	item := crmcontracts.AttentionItem{
-		Id:         notice.ID.String(),
-		Source:     crmcontracts.AttentionItemSource("notice"),
-		Kind:       &kind,
-		Title:      &subject,
-		OccurredAt: &occurred,
-		Actions:    []crmcontracts.AttentionItemActions{crmcontracts.AttentionItemActions("acknowledge")},
+		Id:           notice.ID.String(),
+		NoticeOrigin: notice.Origin,
+		Source:       crmcontracts.AttentionItemSource("notice"),
+		Kind:         &kind,
+		Title:        &subject,
+		OccurredAt:   &occurred,
+		Actions:      []crmcontracts.AttentionItemActions{crmcontracts.AttentionItemActions("acknowledge")},
 	}
 	if notice.TargetType != "" {
 		item.Subject = subjectOf(notice.TargetType, notice.TargetID)
@@ -319,7 +323,7 @@ func introductionItem(ask PendingIntroduction) crmcontracts.AttentionItem {
 		OccurredAt: &requested,
 		DueAt:      &due,
 		Actions:    []crmcontracts.AttentionItemActions{crmcontracts.AttentionItemActions("decide")},
-		Subject:    subjectOf("person", ask.PersonID),
+		Subject:    subjectOf("contact", ask.ContactID),
 	}
 	if ask.Reason != "" {
 		reason := ask.Reason

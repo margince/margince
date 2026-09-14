@@ -50,18 +50,18 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// seedConsentedRecipient creates a person with one address and a granted
+// seedConsentedRecipient creates a contact with one address and a granted
 // transactional purpose — the minimum a send's consent gate demands of an
 // addressee, spelled once because a multi-recipient fixture needs it per head.
 func (p *preflightEnv) seedConsentedRecipient(t *testing.T, name, email string) {
 	t.Helper()
-	var person struct {
+	var contact struct {
 		ID string `json:"id"`
 	}
-	if status := p.Call(t, "POST", "/v1/people", AnyMap{
+	if status := p.Call(t, "POST", "/v1/contacts", AnyMap{
 		"full_name": name,
 		"emails":    []AnyMap{{"email": email}},
-	}, nil, &person); status != http.StatusCreated {
+	}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("create %s → %d", email, status)
 	}
 	var purposes struct {
@@ -82,7 +82,7 @@ func (p *preflightEnv) seedConsentedRecipient(t *testing.T, name, email string) 
 	if transactional == "" {
 		t.Fatalf("bootstrap seeded no transactional purpose: %+v", purposes.Data)
 	}
-	if status := p.Call(t, "POST", "/v1/people/"+person.ID+"/consent", AnyMap{
+	if status := p.Call(t, "POST", "/v1/contacts/"+contact.ID+"/consent", AnyMap{
 		"purpose_id": transactional, "new_state": "granted", "lawful_basis": "contract",
 		"wording": "Yes, you may contact me about this.",
 	}, nil, nil); status != http.StatusOK {
@@ -91,7 +91,7 @@ func (p *preflightEnv) seedConsentedRecipient(t *testing.T, name, email string) 
 }
 
 // privacyAdmin binds the context both privileged privacy paths demand: a HUMAN
-// holding person.delete. Erasure and the subject-access export ask the same
+// holding contact.delete. Erasure and the subject-access export ask the same
 // trust level on purpose — one destroys the data and the other discloses all of
 // it — so the two tests share one spelling of it rather than each inventing a
 // principal that walks past the gates they are supposed to exercise.
@@ -110,7 +110,7 @@ func (p *preflightEnv) privacyAdmin(t *testing.T) context.Context {
 			// so a bounded caller is refused outright.
 			RowScope: principal.RowScopeAll,
 			Objects: map[string]principal.ObjectGrant{
-				"person":   {Create: true, Read: true, Update: true, Delete: true},
+				"contact":  {Create: true, Read: true, Update: true, Delete: true},
 				"activity": {Create: true, Read: true, Update: true, Delete: true},
 			},
 		},
@@ -285,7 +285,7 @@ func (p *preflightEnv) setTransactionalConsent(t *testing.T, state string) {
 	if state == "granted" {
 		body["wording"] = "Yes, you may contact me about this."
 	}
-	if status := p.Call(t, "POST", "/v1/people/"+p.personID+"/consent", body, nil, nil); status != http.StatusOK {
+	if status := p.Call(t, "POST", "/v1/contacts/"+p.contactID+"/consent", body, nil, nil); status != http.StatusOK {
 		t.Fatalf("setting consent to %s → %d", state, status)
 	}
 }
@@ -870,7 +870,7 @@ func TestAScheduledReplyFilesItselfUnderWhatTheComposerNamed(t *testing.T) {
 
 	// A record the anchor does not carry — the shape a project attached to the
 	// deal after the conversation began takes.
-	org := p.seedCompany(t, "Zephyr Freight")
+	company := p.seedCompany(t, "Zephyr Freight")
 
 	var scheduled struct {
 		ID string `json:"id"`
@@ -880,7 +880,7 @@ func TestAScheduledReplyFilesItselfUnderWhatTheComposerNamed(t *testing.T) {
 		"to": []string{"buyer@preflight.test"}, "consent_purpose": "transactional",
 		"scheduled_at": time.Now().Add(2 * time.Hour).UTC().Format(time.RFC3339),
 		"scheduled_tz": "Europe/Berlin",
-		"also_links":   []AnyMap{{"entity_type": "organization", "entity_id": org.String()}},
+		"also_links":   []AnyMap{{"entity_type": "company", "entity_id": company.String()}},
 	}, nil, &scheduled)
 	if status != http.StatusCreated {
 		t.Fatalf("scheduling a reply with also_links → %d, want 201", status)
@@ -897,7 +897,7 @@ func TestAScheduledReplyFilesItselfUnderWhatTheComposerNamed(t *testing.T) {
 		t.Fatalf("firing did not send: %q/%q", st, reason)
 	}
 
-	if got := p.countLinks(t, id, "organization", org); got != 1 {
+	if got := p.countLinks(t, id, "company", company); got != 1 {
 		t.Errorf("the fired reply is filed under the named company %d times, want once — a scheduled reply "+
 			"must file the way the immediate one written beside it does", got)
 	}
@@ -909,7 +909,7 @@ func (p *preflightEnv) seedCompany(t *testing.T, name string) ids.UUID {
 	var created struct {
 		ID string `json:"id"`
 	}
-	if status := p.Call(t, "POST", "/v1/organizations",
+	if status := p.Call(t, "POST", "/v1/companies",
 		AnyMap{"display_name": name}, nil, &created); status != http.StatusCreated {
 		t.Fatalf("seeding %s → %d, want 201", name, status)
 	}
@@ -931,7 +931,7 @@ func (p *preflightEnv) countLinks(t *testing.T, scheduledID ids.UUID, entityType
 			SELECT count(*)
 			  FROM activity_link al
 			  JOIN scheduled_send s ON s.activity_id = al.activity_id
-			 WHERE s.id = $1 AND al.entity_type = $2 AND al.organization_id = $3`,
+			 WHERE s.id = $1 AND al.entity_type = $2 AND al.company_id = $3`,
 			scheduledID, entityType, entity).Scan(&count)
 	}); err != nil {
 		t.Fatalf("counting the fired reply's links: %v", err)

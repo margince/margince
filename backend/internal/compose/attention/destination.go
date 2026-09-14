@@ -27,14 +27,14 @@ import (
 const (
 	// destinationToday is work a seller executes: a reply to write, a task to
 	// finish, a meeting to prepare, a deal to move.
-	destinationToday = crmcontracts.WorklistDestinationToday
+	destinationToday = crmcontracts.WorklistItemDestinationWorklistDestinationToday
 	// destinationReview is a judgement a human makes before work can continue —
 	// an approval, a duplicate pair, an introduction to accept.
-	destinationReview = crmcontracts.WorklistDestinationReview
+	destinationReview = crmcontracts.WorklistItemDestinationWorklistDestinationReview
 	// destinationSystemHealth is a source or an automation an administrator
 	// restores. A seller can rarely act on one, and a queue that asked them to
 	// spent their attention on somebody else's job.
-	destinationSystemHealth = crmcontracts.WorklistDestinationSystemHealth
+	destinationSystemHealth = crmcontracts.WorklistItemDestinationWorklistDestinationSystemHealth
 )
 
 // destinationOfSource is the whole mapping, and the only one.
@@ -60,6 +60,7 @@ var destinationOfSource = map[crmcontracts.WorklistItemSource]crmcontracts.Workl
 	crmcontracts.WorklistItemSourceDealAtRisk:        destinationToday,
 	crmcontracts.WorklistItemSourceMeeting:           destinationToday,
 	crmcontracts.WorklistItemSourceMeetingOutcome:    destinationToday,
+	crmcontracts.WorklistItemSourceWeeklyCommitment:  destinationToday,
 	crmcontracts.WorklistItemSourceTask:              destinationToday,
 	crmcontracts.WorklistItemSourceConversationClaim: destinationToday,
 	crmcontracts.WorklistItemSourceBriefItem:         destinationToday,
@@ -68,13 +69,13 @@ var destinationOfSource = map[crmcontracts.WorklistItemSource]crmcontracts.Workl
 	// judgement about their own week, not a queue of somebody else's.
 	crmcontracts.WorklistItemSourceRelationshipDecay: destinationToday,
 	// A bounced or undelivered message is a customer consequence: this named
-	// person did not receive what was sent to them, and the seller is the one
+	// contact did not receive what was sent to them, and the seller is the one
 	// who notices. The mailbox that carried it may be healthy.
 	crmcontracts.WorklistItemSourceBounce:      destinationToday,
 	crmcontracts.WorklistItemSourceUndelivered: destinationToday,
 	// The rep pressed Accept and believes it happened, and that belief is the
 	// damage. It is classified at the promise level and carried back to the
-	// APPROVER rather than to an administrator, so it is that person's own
+	// APPROVER rather than to an administrator, so it is that contact's own
 	// broken promise — the same shape as the undelivered message beside it, and
 	// not a pipe anybody else can restore.
 	crmcontracts.WorklistItemSourceFailedApproval: destinationToday,
@@ -83,7 +84,7 @@ var destinationOfSource = map[crmcontracts.WorklistItemSource]crmcontracts.Workl
 	// leaves the lane when they do.
 	crmcontracts.WorklistItemSourceNotice: destinationToday,
 
-	// Judgements. Work waits on a person deciding.
+	// Judgements. Work waits on a contact deciding.
 	crmcontracts.WorklistItemSourceApproval:            destinationReview,
 	crmcontracts.WorklistItemSourceDedupeCandidate:     destinationReview,
 	crmcontracts.WorklistItemSourceIntroductionRequest: destinationReview,

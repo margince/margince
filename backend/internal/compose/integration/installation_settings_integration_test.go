@@ -141,7 +141,7 @@ func TestInstallationSettingsRefuseValuesTheOwningModuleRejects(t *testing.T) {
 
 	blank := "   "
 	if _, err := store.UpdateInstallation(admin, identity.InstallationPatch{Name: &blank}); err == nil {
-		t.Error("a whitespace-only organization name was accepted")
+		t.Error("a whitespace-only company name was accepted")
 	}
 
 	notAZone := "Mars/Olympus_Mons"
@@ -238,7 +238,7 @@ func TestInstallationSettingsRoundTripTheFiscalYearStart(t *testing.T) {
 	renamed := "Renamed, fiscal untouched"
 	after, err := store.UpdateInstallation(admin, identity.InstallationPatch{Name: &renamed})
 	if err != nil {
-		t.Fatalf("renaming the organization: %v", err)
+		t.Fatalf("renaming the company: %v", err)
 	}
 	if after.FiscalYearStartMonth != april {
 		t.Errorf("a patch naming only the name moved the fiscal start to %d, want %d",

@@ -45,11 +45,11 @@ const (
 // Derived reasons. These are computed at read time from live product state, and
 // exist so a stage that did NOT run says why rather than rendering as an absence.
 const (
-	// StagePersonCreate. Neither promises a repair: the link_reconcile sweep
-	// links a message once a person EXISTS for its address and never re-runs
+	// StageContactCreate. Neither promises a repair: the link_reconcile sweep
+	// links a message once a contact EXISTS for its address and never re-runs
 	// the resolver, but a channel identity
 	// conflict stages a human-review proposal the resolver will never clear, so
-	// that message stays link-less until a person acts. Copy that said "tonight"
+	// that message stays link-less until a contact acts. Copy that said "tonight"
 	// would be false indefinitely for exactly those.
 	ReasonNotLinkedYet      Reason = "not_linked_yet"
 	ReasonNoContactIntended Reason = "no_contact_intended"
@@ -67,7 +67,7 @@ const (
 	// The verdict itself, one reason per answer. A single `verdict_reached`
 	// told a member that the one fact they opened the panel for exists, and
 	// not what it was — the same failure StatusNotReported's four kinds exist
-	// to avoid, on the rung a person came to read.
+	// to avoid, on the rung a contact came to read.
 	ReasonJudgedReal       Reason = "judged_real"
 	ReasonJudgedNoise      Reason = "judged_noise"
 	ReasonJudgedRejected   Reason = "judged_rejected"

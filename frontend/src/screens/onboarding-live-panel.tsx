@@ -8,7 +8,7 @@ import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { skipReasonText } from "./onboarding";
-import { namedSiteReadKind } from "./sitereadkind";
+import { namedSiteReadKind, stopIsConfigured } from "./sitereadkind";
 import "./onboarding-live-panel.css";
 
 // The coverage card: what a company site read covered and what it could not,
@@ -71,9 +71,11 @@ export function DossierCard({
  * What kind of gap a coverage row is. A page the crawler chose not to fetch is
  * routine housekeeping, a page it could not fetch is a hole in the read, and a
  * warning is a caveat about the read as a whole — three different things a
- * reader must be able to tell apart at a glance.
+ * reader must be able to tell apart at a glance. A note is the fourth: a bound
+ * the read was configured with, which limits coverage without anything having
+ * gone wrong.
  */
-type CoverageKind = "warn" | "skip" | "fail";
+type CoverageKind = "note" | "warn" | "skip" | "fail";
 
 type StoppedReason = NonNullable<
   components["schemas"]["CompanySiteRead"]["stopped_reason"]
@@ -117,11 +119,20 @@ function coverageRows(
   // A read that ran out of budget covered the site as far as it was allowed,
   // not as far as the site goes. Without this the page counts read as a whole
   // site — the same "covered everything" impression a silent skip gives.
+  //
+  // Which of the two it was decides the row's KIND, not whether it appears. A
+  // page or byte cap is the size this read was configured for, reached as
+  // designed, so it is a note about coverage; budget and deadline are something
+  // that got in the way, and a later run may get further.
   if (stoppedReason !== undefined && stoppedReason !== null) {
     rows.push({
       id: `stopped:${stoppedReason}`,
-      kind: "warn",
-      label: t("ob.live.coverageStopped"),
+      kind: stopIsConfigured(stoppedReason) ? "note" : "warn",
+      label: t(
+        stopIsConfigured(stoppedReason)
+          ? "ob.live.coverageCapped"
+          : "ob.live.coverageStopped",
+      ),
       reason: t(STOPPED_REASON_COPY[stoppedReason]),
     });
   }

@@ -10,7 +10,7 @@ package capture
 // is right far more often than a hand-typed one and still wrong sometimes, in
 // both directions — it misses a regional provider, or it claims a domain an
 // operator's real customers mail from. Neither error can wait for a release, and
-// both are answerable by the people reading the mail.
+// both are answerable by the readers reading the mail.
 //
 // Workspace-shared, with a split write posture: ANY seat may contribute a
 // consumer domain the baseline missed (`extra` — everyday judgment about the
@@ -261,7 +261,7 @@ func (s *FreemailDomainStore) Remove(ctx context.Context, id ids.UUID) error {
 
 // lockFreemailDomain serializes decisions about ONE domain for the life of the
 // caller's transaction. Keyed on the domain alone since ADR-0091 §5 — one
-// installation, one organization (ADR-0061) — so two admins editing different
+// installation, one company (ADR-0061) — so two admins editing different
 // domains never wait on each other.
 func lockFreemailDomain(ctx context.Context, tx pgx.Tx, domain string) error {
 	if _, err := tx.Exec(ctx,

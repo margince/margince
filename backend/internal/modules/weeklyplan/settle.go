@@ -26,7 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
-// settableByRep are the states a person may put a commitment into.
+// settableByRep are the states a contact may put a commitment into.
 //
 // `missed` is absent on purpose: it is what the week's CLOSE writes over an
 // open commitment, not something a rep declares about themselves. A rep who
@@ -140,7 +140,7 @@ func (s *Store) AskForHelp(ctx context.Context, commitmentID ids.UUID, ask strin
 // The second writer, and the only path that touches somebody else's row. It
 // writes THREE columns together — the text, who wrote it and when — because the
 // table's CHECK ties them: an answer with nobody behind it cannot be shown to
-// the person who asked.
+// the contact who asked.
 //
 // It touches nothing else. A lead may answer a request; they may not settle a
 // commitment, reword it or drop it, and there is no argument here by which
@@ -178,7 +178,7 @@ func (s *Store) Respond(ctx context.Context, commitmentID ids.UUID, answer strin
 			return err
 		}
 		// Three columns together: the CHECK ties them, and an answer with
-		// nobody behind it cannot be shown to the person who asked.
+		// nobody behind it cannot be shown to the contact who asked.
 		patch := storekit.NewPatch()
 		patch.Set("manager_response", current.ManagerResponse, text)
 		patch.Set("manager_user_id", current.ManagerUserID, me)

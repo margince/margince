@@ -94,17 +94,17 @@ func TestAnUnreadableModeRefusesRatherThanAssumingNative(t *testing.T) {
 // justifies a row has to survive the crossing. Evidence is the part that would
 // be missed: a hop dropped here is a filter the caller can no longer see.
 func TestTheSeamCarriesEveryReasonARowWasAdmitted(t *testing.T) {
-	deal, org := ids.NewV7(), ids.NewV7()
+	deal, company := ids.NewV7(), ids.NewV7()
 	answer := queryAnswerOf(search.QueryResult{
 		Rows: []search.QueryRow{{
 			Type: "deal", ID: deal, Title: "Retrofit line", Score: 0.42,
 			Evidence: []search.QueryEvidence{{
-				Relation: "organization_id", Type: "organization", ID: org, Title: "Kärcher",
+				Relation: "company_id", Type: "company", ID: company, Title: "Kärcher",
 			}},
 		}},
 		Coverage:  search.CoverageRankedSemantic,
 		Notes:     []search.QueryNote{{Code: search.CodeResultTruncated, Path: "limit", Detail: "more match"}},
-		Narrative: "Deals at an organization in Stuttgart.",
+		Narrative: "Deals at a company in Stuttgart.",
 		Limit:     25,
 	})
 
@@ -112,15 +112,15 @@ func TestTheSeamCarriesEveryReasonARowWasAdmitted(t *testing.T) {
 		t.Fatalf("refs = %+v, want the executor's row with its score", answer.Refs)
 	}
 	evidence := answer.Refs[0].Evidence
-	if len(evidence) != 1 || evidence[0].ID != org || evidence[0].RecordType != "organization" ||
-		evidence[0].Relation != "organization_id" || evidence[0].Title != "Kärcher" {
+	if len(evidence) != 1 || evidence[0].ID != company || evidence[0].RecordType != "company" ||
+		evidence[0].Relation != "company_id" || evidence[0].Title != "Kärcher" {
 		t.Errorf("evidence = %+v, want the hop record that admitted the row", evidence)
 	}
 	if len(answer.Notes) != 1 || answer.Notes[0].Code != search.CodeResultTruncated ||
 		answer.Notes[0].Path != "limit" {
 		t.Errorf("notes = %+v, want the executor's own note with its path", answer.Notes)
 	}
-	if answer.Coverage != search.CoverageRankedSemantic || answer.Narrative != "Deals at an organization in Stuttgart." {
+	if answer.Coverage != search.CoverageRankedSemantic || answer.Narrative != "Deals at a company in Stuttgart." {
 		t.Errorf("coverage/narrative = %q/%q, want them carried verbatim", answer.Coverage, answer.Narrative)
 	}
 }

@@ -4,7 +4,7 @@
 package compose
 
 // The deep read's cross-page fold for the page-parallel lane: facts
-// dedupe on category+field+value key, people on the normalized name,
+// dedupe on category+field+value key, contacts on the normalized name,
 // entities union.
 // With the binary citation gate there is no model confidence to break
 // ties — page-kind specificity does (an Impressum's phone beats a
@@ -13,8 +13,8 @@ package compose
 
 import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/people"
 )
 
 // factPageRank orders page kinds by how specifically they state a
@@ -65,19 +65,19 @@ var factBands = []struct {
 	quota  int
 	fields []string
 }{
-	{40, []string{people.FactProduct, people.FactService}},                                                                          // what the company sells, by name
-	{10, []string{people.FactCapability}},                                                                                           // how it delivers
-	{25, []string{people.FactNamedCustomer, people.FactCertification, people.FactQuantifiedOutcome}},                                // what proves it
-	{10, []string{people.FactServedIndustry, people.FactCompanySize, people.FactGeography, people.FactLanguage}},                    // who it sells to
-	{10, []string{people.FactTechnology, people.FactPartner}},                                                                       // what it builds on
-	{5, []string{people.FactLocation, people.FactFoundedYear, people.FactEmployeeRange, people.FactPhone, people.FactContactEmail}}, // who it is
+	{40, []string{contacts.FactProduct, contacts.FactService}},                                                                                // what the company sells, by name
+	{10, []string{contacts.FactCapability}},                                                                                                   // how it delivers
+	{25, []string{contacts.FactNamedCustomer, contacts.FactCertification, contacts.FactQuantifiedOutcome}},                                    // what proves it
+	{10, []string{contacts.FactServedIndustry, contacts.FactCompanySize, contacts.FactGeography, contacts.FactLanguage}},                      // who it sells to
+	{10, []string{contacts.FactTechnology, contacts.FactPartner}},                                                                             // what it builds on
+	{5, []string{contacts.FactLocation, contacts.FactFoundedYear, contacts.FactEmployeeRange, contacts.FactPhone, contacts.FactContactEmail}}, // who it is
 	// What the company RUNS, and a quota of zero on purpose. These fields are
 	// written by the technical lookup — from DNS, certificate logs and one
 	// homepage fingerprint — and never by a site read, so no crawl produces one
 	// to curate. They are banded rather than omitted because the gate over this
 	// table demands every fact field be placed: a field nobody banded is a
 	// field this budget would silently drop if a producer ever did emit it.
-	{0, []string{people.FactMailProvider, people.FactEmailSecurity, people.FactHostingProvider, people.FactOperatedService}},
+	{0, []string{contacts.FactMailProvider, contacts.FactEmailSecurity, contacts.FactHostingProvider, contacts.FactOperatedService}},
 }
 
 // capFacts applies the bands under the API's own bound
@@ -86,7 +86,7 @@ var factBands = []struct {
 // read allowed to exceed it would build a request the server refuses. It
 // is the honest UX limit too — a review step that asks someone to vet
 // three hundred claims collects a rubber stamp, not a confirmation.
-func capFacts(facts []people.DeepReadFact) []people.DeepReadFact {
+func capFacts(facts []contacts.DeepReadFact) []contacts.DeepReadFact {
 	if len(facts) <= identity.MaxSelectedFacts {
 		return facts
 	}
@@ -134,7 +134,7 @@ func capFacts(facts []people.DeepReadFact) []people.DeepReadFact {
 			kept++
 		}
 	}
-	out := make([]people.DeepReadFact, 0, kept)
+	out := make([]contacts.DeepReadFact, 0, kept)
 	for i, fact := range facts {
 		if keep[i] {
 			out = append(out, fact)
@@ -146,15 +146,15 @@ func capFacts(facts []people.DeepReadFact) []people.DeepReadFact {
 // mergePageResults folds the per-page findings into one result set:
 // single-value facts take the most-specific page kind's answer,
 // multi-value facts keep the first (most-specific-first would churn
-// value spellings without adding truth), people dedupe on the
+// value spellings without adding truth), contacts dedupe on the
 // normalized name keeping the more specific page's entry, entities
 // union — the abstention needs every voice.
 func mergePageResults(results []pageFactsResult) pageFactsResult {
 	var out pageFactsResult
 	factIndex := map[string]int{}
 	factRank := map[string]int{}
-	personIndex := map[string]int{}
-	personRank := map[string]int{}
+	contactIndex := map[string]int{}
+	contactRank := map[string]int{}
 	for _, res := range results {
 		rank := factPageRank[res.kind]
 		for _, fact := range res.facts {
@@ -171,18 +171,18 @@ func mergePageResults(results []pageFactsResult) pageFactsResult {
 				factRank[key] = rank
 			}
 		}
-		for _, person := range res.people {
-			key := sitePersonIdentity(person.Name, person.PublishedEmail)
-			at, seen := personIndex[key]
+		for _, contact := range res.contacts {
+			key := siteContactIdentity(contact.Name, contact.PublishedEmail)
+			at, seen := contactIndex[key]
 			if !seen {
-				personIndex[key] = len(out.people)
-				personRank[key] = rank
-				out.people = append(out.people, person)
+				contactIndex[key] = len(out.contacts)
+				contactRank[key] = rank
+				out.contacts = append(out.contacts, contact)
 				continue
 			}
-			if rank > personRank[key] {
-				out.people[at] = person
-				personRank[key] = rank
+			if rank > contactRank[key] {
+				out.contacts[at] = contact
+				contactRank[key] = rank
 			}
 		}
 		out.entities = append(out.entities, res.entities...)

@@ -12,9 +12,9 @@ import type { BuildStage, ConversationState } from "./conversation-machine";
 // names what is actually happening: idle while the human owes the next move,
 // ingest (with a progress ring) while pages or corpus material arrive, working
 // while the agent reasons over what it has or composes from it, warning while
-// it is stopped on something a person must resolve, error on a failed run. A
+// it is stopped on something a contact must resolve, error on a failed run. A
 // confirmation settles the orb back to idle rather than a state of its own.
-// Anything waiting on a person is the agent at REST: the surface's own card is
+// Anything waiting on a contact is the agent at REST: the surface's own card is
 // what asks for the answer. Nothing here claims the agent is listening — it
 // reads captured activity and never holds a conversation.
 
@@ -85,7 +85,7 @@ function companyPresence(
     return { core: "warning" };
   }
   if (state.phase === "co.review") {
-    // Proposals sitting in front of a person: the agent has stopped, so the orb
+    // Proposals sitting in front of a contact: the agent has stopped, so the orb
     // rests rather than claiming work nobody asked it to keep doing.
     return { core: "idle" };
   }
@@ -130,7 +130,7 @@ function voicePresence(state: ConversationState): OrbPresence {
     };
   }
   if (state.phase === "vo.speaker") {
-    // A question card: the build needs a person to say which voice is theirs,
+    // A question card: the build needs a contact to say which voice is theirs,
     // and until they do the agent is not working.
     return { core: "idle" };
   }

@@ -15,13 +15,13 @@ import {
 
 describe("which reads a timeline write has to invalidate", () => {
   it("names the composite read that seeds the timeline, spelled as that page spells it", () => {
-    expect(entityTimelineKeys("organization", "o1")).toEqual([
-      ["activities", "organization", "o1"],
-      ["organization360", "o1"],
+    expect(entityTimelineKeys("company", "o1")).toEqual([
+      ["activities", "company", "o1"],
+      ["company360", "o1"],
     ]);
-    expect(entityTimelineKeys("person", "p1")).toEqual([
-      ["activities", "person", "p1"],
-      ["person360", "p1"],
+    expect(entityTimelineKeys("contact", "p1")).toEqual([
+      ["activities", "contact", "p1"],
+      ["contact360", "p1"],
     ]);
     expect(entityTimelineKeys("project", "j1")).toEqual([
       ["activities", "project", "j1"],
@@ -48,23 +48,23 @@ describe("which reads a timeline write has to invalidate", () => {
   });
 
   it("adds the workspace work queue when the write is a task", () => {
-    expect(taskWriteKeys("organization", "o1")).toEqual([
-      ["activities", "organization", "o1"],
-      ["organization360", "o1"],
+    expect(taskWriteKeys("company", "o1")).toEqual([
+      ["activities", "company", "o1"],
+      ["company360", "o1"],
       ["tasks"],
     ]);
   });
 
   it("a won deal reaches the project list, the project's page and the company page that embeds it", () => {
-    expect(dealWinKeys({ project_id: "j1", organization_id: "o1" })).toEqual([
+    expect(dealWinKeys({ project_id: "j1", company_id: "o1" })).toEqual([
       ["projects"],
       ["project", "j1"],
-      ["organization360", "o1"],
+      ["company360", "o1"],
     ]);
   });
 
   it("a won deal naming no project still refreshes the project list and nothing it cannot name", () => {
-    expect(dealWinKeys({ project_id: null, organization_id: null })).toEqual([
+    expect(dealWinKeys({ project_id: null, company_id: null })).toEqual([
       ["projects"],
     ]);
     expect(dealWinKeys(undefined)).toEqual([["projects"]]);
@@ -87,7 +87,7 @@ describe("which reads a write to the record itself invalidates", () => {
   });
 
   it("names nothing for a record kind with no derived read", () => {
-    expect(derivedRecordKeys("person", "p1")).toEqual([]);
+    expect(derivedRecordKeys("contact", "p1")).toEqual([]);
   });
 });
 
@@ -101,17 +101,17 @@ describe("which reads could be showing a message", () => {
 
   it("matches every record's timeline, not only the one on screen", () => {
     expect(matches(["activities", "deal", "d1"])).toBe(true);
-    expect(matches(["activities", "person", "p1"])).toBe(true);
+    expect(matches(["activities", "contact", "p1"])).toBe(true);
     // Narrowed and paged reads hang further keys off the same prefix, and they
     // draw the same messages.
-    expect(matches(["activities", "person", "p1", { kind: "email" }])).toBe(
+    expect(matches(["activities", "contact", "p1", { kind: "email" }])).toBe(
       true,
     );
   });
 
   it("matches the composite reads that carry a timeline's first page", () => {
-    expect(matches(["organization360", "o1"])).toBe(true);
-    expect(matches(["person360", "p1"])).toBe(true);
+    expect(matches(["company360", "o1"])).toBe(true);
+    expect(matches(["contact360", "p1"])).toBe(true);
     expect(matches(["project", "j1", "360"])).toBe(true);
   });
 

@@ -37,7 +37,12 @@ type CreateProductInput struct {
 	Currency       string
 	DefaultTaxRate *float64
 	Active         *bool
-	Source         string
+	// BillingModel and BillingIntervalMonths travel together: a model without
+	// its cadence, or a cadence without its model, is half a classification and
+	// product_billing_shape refuses it.
+	BillingModel          *string
+	BillingIntervalMonths *int
+	Source                string
 }
 
 func (s *Store) CreateProduct(ctx context.Context, in CreateProductInput) (crmcontracts.Product, error) {
@@ -58,16 +63,24 @@ func (s *Store) CreateProduct(ctx context.Context, in CreateProductInput) (crmco
 		taxRate = formatPct(*in.DefaultTaxRate)
 	}
 	active := in.Active == nil || *in.Active
+	// Settled before the transaction opens, so a half-stated classification
+	// earns a field to fix rather than a constraint violation naming a schema
+	// object the caller has never heard of.
+	if err := validBillingShape(in.BillingModel, in.BillingIntervalMonths); err != nil {
+		return crmcontracts.Product{}, err
+	}
 
 	var out crmcontracts.Product
 	err = s.Tx(ctx, func(tx pgx.Tx) error {
 		id := ids.New[ids.ProductKind]()
 		_, err := tx.Exec(ctx,
 			`INSERT INTO product (id, name, sku, description, unit, unit_price_minor,
-			                      currency, default_tax_rate, active, source, captured_by)
-			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+			                      currency, default_tax_rate, active, source, captured_by,
+			                      billing_model, billing_interval_months)
+			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
 			id, in.Name, in.SKU, in.Description, unit,
-			in.UnitPriceMinor, in.Currency, taxRate, active, in.Source, by)
+			in.UnitPriceMinor, in.Currency, taxRate, active, in.Source, by,
+			in.BillingModel, in.BillingIntervalMonths)
 		if err != nil {
 			if storekit.IsUniqueViolation(err) {
 				// uq_product_sku: the SKU already names a live product.
@@ -95,7 +108,14 @@ type UpdateProductInput struct {
 	Currency       *string
 	DefaultTaxRate *float64
 	Active         *bool
-	IfVersion      *int64
+	// Classified says the caller addressed the classification at all, which the
+	// pair's own nils cannot: "not specified" is a real answer here, and
+	// without this flag it is indistinguishable from leaving the field alone —
+	// so a product could be classified but never un-classified.
+	Classified            bool
+	BillingModel          *string
+	BillingIntervalMonths *int
+	IfVersion             *int64
 }
 
 func (s *Store) UpdateProduct(ctx context.Context, id ids.ProductID, in UpdateProductInput) (crmcontracts.Product, error) {
@@ -108,7 +128,10 @@ func (s *Store) UpdateProduct(ctx context.Context, id ids.ProductID, in UpdatePr
 		if err != nil {
 			return err
 		}
-		p := buildProductPatch(current, in)
+		p, err := buildProductPatch(current, in)
+		if err != nil {
+			return err
+		}
 		if p.Empty() {
 			out = current
 			return nil
@@ -132,7 +155,7 @@ func (s *Store) UpdateProduct(ctx context.Context, id ids.ProductID, in UpdatePr
 
 // buildProductPatch folds the caller's sparse product edit into a patch —
 // every set field carries its before/after image for the audit trail.
-func buildProductPatch(current crmcontracts.Product, in UpdateProductInput) *storekit.Patch {
+func buildProductPatch(current crmcontracts.Product, in UpdateProductInput) (*storekit.Patch, error) {
 	p := storekit.NewPatch()
 	if in.Name != nil {
 		p.Set("name", current.Name, *in.Name)
@@ -158,7 +181,31 @@ func buildProductPatch(current crmcontracts.Product, in UpdateProductInput) *sto
 	if in.Active != nil {
 		p.Set("active", current.Active, *in.Active)
 	}
-	return p
+	// The classification is ONE fact in two columns, so it is patched as one.
+	// Setting the model without the cadence would leave a recurring product
+	// with no period, which product_billing_shape refuses — and refusing it at
+	// the constraint means the caller gets a schema name instead of a decision.
+	// A caller who addresses the classification restates both halves, including
+	// to null, which is how a product goes back to saying nothing about whether
+	// its price repeats.
+	if in.Classified {
+		var currentModel *string
+		if current.BillingModel != nil {
+			model := string(*current.BillingModel)
+			currentModel = &model
+		}
+		var currentMonths *int
+		if current.BillingIntervalMonths != nil {
+			months := int(*current.BillingIntervalMonths)
+			currentMonths = &months
+		}
+		if err := validBillingShape(in.BillingModel, in.BillingIntervalMonths); err != nil {
+			return nil, err
+		}
+		p.Set("billing_model", currentModel, in.BillingModel)
+		p.Set("billing_interval_months", currentMonths, in.BillingIntervalMonths)
+	}
+	return p, nil
 }
 
 func (s *Store) ArchiveProduct(ctx context.Context, id ids.ProductID) (crmcontracts.Product, error) {
@@ -282,7 +329,8 @@ func scanProductPage(rows pgx.Rows, _ []fieldcatalog.Column, sorted *storekit.Li
 }
 
 const productColumns = `id, name, sku, description, unit, unit_price_minor,
-	currency, default_tax_rate::text, active, source, captured_by, version, created_at, updated_at, archived_at`
+	currency, default_tax_rate::text, active, billing_model, billing_interval_months,
+	source, captured_by, version, created_at, updated_at, archived_at`
 
 func readProduct(ctx context.Context, tx pgx.Tx, id ids.ProductID, archived storekit.ArchivedFilter) (crmcontracts.Product, error) {
 	q := `SELECT ` + productColumns + ` FROM product WHERE id = $1`
@@ -302,10 +350,12 @@ func scanProduct(row pgx.Row, extra ...any) (crmcontracts.Product, error) {
 	var taxRate string
 	var capturedBy string
 	var version int64
+	var billingModel *string
 
 	dests := []any{
 		&id, &p.Name, &p.Sku, &p.Description, &p.Unit, &p.UnitPriceMinor,
-		&p.Currency, &taxRate, &p.Active, &p.Source, &capturedBy, &version, &p.CreatedAt, &p.UpdatedAt, &p.ArchivedAt,
+		&p.Currency, &taxRate, &p.Active, &billingModel, &p.BillingIntervalMonths,
+		&p.Source, &capturedBy, &version, &p.CreatedAt, &p.UpdatedAt, &p.ArchivedAt,
 	}
 	err := row.Scan(append(dests, extra...)...)
 	if err != nil {
@@ -314,6 +364,10 @@ func scanProduct(row pgx.Row, extra ...any) (crmcontracts.Product, error) {
 	rate, err := strconv.ParseFloat(taxRate, 64)
 	if err != nil {
 		return p, fmt.Errorf("default_tax_rate is not numeric: %w", err)
+	}
+	if billingModel != nil {
+		model := crmcontracts.ProductBillingModel(*billingModel)
+		p.BillingModel = &model
 	}
 	p.Id = openapi_types.UUID(id)
 	p.DefaultTaxRate = rate

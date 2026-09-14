@@ -19,13 +19,13 @@ import (
 
 // An exact key hit is the one answer a caller may act on, and it says so.
 func TestAnExactKeyHitAnswersMatched(t *testing.T) {
-	person := ids.NewV7()
+	contact := ids.NewV7()
 	provider := &queryProbeProvider{records: map[ids.UUID]datasource.Record{
-		person: recordAt(datasource.EntityPerson, time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC), true),
+		contact: recordAt(datasource.EntityContact, time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC), true),
 	}}
-	result := handleResolve(t, provider, `{"candidates":[{"kind":"person","ref":"card-1","emails":["anna@acme.example"]}]}`,
+	result := handleResolve(t, provider, `{"candidates":[{"kind":"contact","ref":"card-1","emails":["anna@acme.example"]}]}`,
 		[]ResolveOutcome{{Refs: []ResolveRef{
-			{Kind: "person", ID: person, Exact: true, Confidence: 1, MatchedOn: "email"},
+			{Kind: "contact", ID: contact, Exact: true, Confidence: 1, MatchedOn: "email"},
 		}}})
 
 	answer := result.Candidates[0]
@@ -35,7 +35,7 @@ func TestAnExactKeyHitAnswersMatched(t *testing.T) {
 	if answer.Decision != ResolveDecisionMatched {
 		t.Errorf("decision = %q, want matched", answer.Decision)
 	}
-	if len(answer.Matches) != 1 || answer.Matches[0].Record.ID != person {
+	if len(answer.Matches) != 1 || answer.Matches[0].Record.ID != contact {
 		t.Fatalf("matches = %+v, want the one record the key named", answer.Matches)
 	}
 	if answer.Matches[0].MatchedOn != "email" || answer.Matches[0].Confidence != 1 {
@@ -44,16 +44,16 @@ func TestAnExactKeyHitAnswersMatched(t *testing.T) {
 }
 
 // A near match is NEVER `matched`, whatever it scored. Deciding that two records
-// are the same person is a human's call, and a caller told "this is them" would
+// are the same contact is a human's call, and a caller told "this is them" would
 // write against a record nobody confirmed.
 func TestANearMatchIsNeverPresentedAsAMatch(t *testing.T) {
-	person := ids.NewV7()
+	contact := ids.NewV7()
 	provider := &queryProbeProvider{records: map[ids.UUID]datasource.Record{
-		person: recordAt(datasource.EntityPerson, time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC), true),
+		contact: recordAt(datasource.EntityContact, time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC), true),
 	}}
-	result := handleResolve(t, provider, `{"candidates":[{"kind":"person","name":"Anna Weber"}]}`,
+	result := handleResolve(t, provider, `{"candidates":[{"kind":"contact","name":"Anna Weber"}]}`,
 		[]ResolveOutcome{{Refs: []ResolveRef{
-			{Kind: "person", ID: person, Confidence: 0.99, MatchedOn: "full_name"},
+			{Kind: "contact", ID: contact, Confidence: 0.99, MatchedOn: "full_name"},
 		}}})
 
 	if got := result.Candidates[0].Decision; got != ResolveDecisionAmbiguous {
@@ -64,7 +64,7 @@ func TestANearMatchIsNeverPresentedAsAMatch(t *testing.T) {
 // A candidate with no label answers without one, rather than with an empty
 // string a caller might read as a label they chose.
 func TestACandidateWithNoLabelCarriesNone(t *testing.T) {
-	result := handleResolve(t, &queryProbeProvider{}, `{"candidates":[{"kind":"person","name":"Nobody"}]}`,
+	result := handleResolve(t, &queryProbeProvider{}, `{"candidates":[{"kind":"contact","name":"Nobody"}]}`,
 		[]ResolveOutcome{{}})
 
 	if result.Candidates[0].Ref != "" {
@@ -93,11 +93,11 @@ func TestACandidateWithNoLabelCarriesNone(t *testing.T) {
 // about the answer.
 func TestAWithheldMatchAndAGenuineMissAreByteIdentical(t *testing.T) {
 	hidden := ids.NewV7()
-	args := `{"candidates":[{"kind":"person","ref":"probe","emails":["anna@acme.example"]}]}`
+	args := `{"candidates":[{"kind":"contact","ref":"probe","emails":["anna@acme.example"]}]}`
 
 	withheld := sealedResolve(t, resolveEntities{
 		p:       &queryProbeProvider{fail: map[ids.UUID]error{hidden: apperrors.ErrPermissionDenied}},
-		resolve: fixedResolver([]ResolveOutcome{{Refs: []ResolveRef{{Kind: "person", ID: hidden, Exact: true, Confidence: 1, MatchedOn: "email"}}}}),
+		resolve: fixedResolver([]ResolveOutcome{{Refs: []ResolveRef{{Kind: "contact", ID: hidden, Exact: true, Confidence: 1, MatchedOn: "email"}}}}),
 	}, args)
 	genuine := sealedResolve(t, resolveEntities{
 		p:       &queryProbeProvider{},
@@ -121,10 +121,10 @@ func TestAWithheldMatchAndAGenuineMissAreByteIdentical(t *testing.T) {
 func TestAHiddenRivalCannotChangeTheDecisionWord(t *testing.T) {
 	visible, hidden := ids.NewV7(), ids.NewV7()
 	records := map[ids.UUID]datasource.Record{
-		visible: recordAt(datasource.EntityPerson, time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC), true),
+		visible: recordAt(datasource.EntityContact, time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC), true),
 	}
-	args := `{"candidates":[{"kind":"person","emails":["anna@acme.example"],"phones":["+4915112345678"]}]}`
-	visibleRef := ResolveRef{Kind: "person", ID: visible, Exact: true, Confidence: 1, MatchedOn: "email"}
+	args := `{"candidates":[{"kind":"contact","emails":["anna@acme.example"],"phones":["+4915112345678"]}]}`
+	visibleRef := ResolveRef{Kind: "contact", ID: visible, Exact: true, Confidence: 1, MatchedOn: "email"}
 
 	// The guessed phone belongs to a record outside the caller's reach: the
 	// ladder names both, and the rival is dropped at hydration.
@@ -132,7 +132,7 @@ func TestAHiddenRivalCannotChangeTheDecisionWord(t *testing.T) {
 		&queryProbeProvider{records: records, fail: map[ids.UUID]error{hidden: apperrors.ErrPermissionDenied}},
 		args, []ResolveOutcome{{Refs: []ResolveRef{
 			visibleRef,
-			{Kind: "person", ID: hidden, Exact: true, Confidence: 1, MatchedOn: "phone"},
+			{Kind: "contact", ID: hidden, Exact: true, Confidence: 1, MatchedOn: "phone"},
 		}}})
 	// The guessed phone belongs to nobody.
 	withoutRival := handleResolve(t, &queryProbeProvider{records: records}, args,
@@ -155,17 +155,17 @@ func TestAHiddenRivalCannotChangeTheDecisionWord(t *testing.T) {
 func TestTwoVisibleRivalsStayAmbiguous(t *testing.T) {
 	first, second := ids.NewV7(), ids.NewV7()
 	provider := &queryProbeProvider{records: map[ids.UUID]datasource.Record{
-		first:  recordAt(datasource.EntityPerson, time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC), true),
-		second: recordAt(datasource.EntityPerson, time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC), true),
+		first:  recordAt(datasource.EntityContact, time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC), true),
+		second: recordAt(datasource.EntityContact, time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC), true),
 	}}
-	result := handleResolve(t, provider, `{"candidates":[{"kind":"person","emails":["anna@acme.example"]}]}`,
+	result := handleResolve(t, provider, `{"candidates":[{"kind":"contact","emails":["anna@acme.example"]}]}`,
 		[]ResolveOutcome{{Refs: []ResolveRef{
-			{Kind: "person", ID: first, Exact: true, Confidence: 1, MatchedOn: "email"},
-			{Kind: "person", ID: second, Exact: true, Confidence: 1, MatchedOn: "phone"},
+			{Kind: "contact", ID: first, Exact: true, Confidence: 1, MatchedOn: "email"},
+			{Kind: "contact", ID: second, Exact: true, Confidence: 1, MatchedOn: "phone"},
 		}}})
 
 	if got := result.Candidates[0].Decision; got != ResolveDecisionAmbiguous {
-		t.Errorf("decision = %q, want ambiguous — two keys named two people the caller can see", got)
+		t.Errorf("decision = %q, want ambiguous — two keys named two contacts the caller can see", got)
 	}
 }
 
@@ -177,11 +177,11 @@ func TestTwoVisibleRivalsStayAmbiguous(t *testing.T) {
 // that hit a hidden record and one that hit nothing at all.
 func TestTheVisibilityCaveatIsRaisedWhetherOrNotAnythingWasWithheld(t *testing.T) {
 	hidden := ids.NewV7()
-	args := `{"candidates":[{"kind":"person","ref":"a"}]}`
+	args := `{"candidates":[{"kind":"contact","ref":"a"}]}`
 
 	withheld := warningCodes(t, resolveEntities{
 		p:       &queryProbeProvider{fail: map[ids.UUID]error{hidden: apperrors.ErrPermissionDenied}},
-		resolve: fixedResolver([]ResolveOutcome{{Refs: []ResolveRef{{Kind: "person", ID: hidden, Exact: true}}}}),
+		resolve: fixedResolver([]ResolveOutcome{{Refs: []ResolveRef{{Kind: "contact", ID: hidden, Exact: true}}}}),
 	}, args)
 	absent := warningCodes(t, resolveEntities{
 		p:       &queryProbeProvider{},
@@ -202,7 +202,7 @@ func TestTheVisibilityCaveatSizesNothing(t *testing.T) {
 	tool := resolveEntities{p: &queryProbeProvider{}, resolve: fixedResolver([]ResolveOutcome{{}})}
 	registry, _, ctx := chargingRegistry(t, tool)
 
-	raw, err := registry.Invoke(ctx, "resolve_entities", json.RawMessage(`{"candidates":[{"kind":"person","ref":"anna"}]}`))
+	raw, err := registry.Invoke(ctx, "resolve_entities", json.RawMessage(`{"candidates":[{"kind":"contact","ref":"anna"}]}`))
 	if err != nil {
 		t.Fatalf("invoking resolve_entities: %v", err)
 	}
@@ -234,7 +234,7 @@ func TestAnUnansweredCandidateIsStillCharged(t *testing.T) {
 	registry, charger, ctx := chargingRegistry(t, tool)
 
 	if _, err := registry.Invoke(ctx, "resolve_entities", json.RawMessage(
-		`{"candidates":[{"kind":"person"},{"kind":"person"}]}`,
+		`{"candidates":[{"kind":"contact"},{"kind":"contact"}]}`,
 	)); err != nil {
 		t.Fatalf("invoking resolve_entities: %v", err)
 	}
@@ -269,16 +269,16 @@ func TestResolutionIsChargedPerRecordServed(t *testing.T) {
 	var outcomes []ResolveOutcome
 	for range 4 {
 		id := ids.NewV7()
-		provider.records[id] = recordAt(datasource.EntityPerson, time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC), true)
+		provider.records[id] = recordAt(datasource.EntityContact, time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC), true)
 		outcomes = append(outcomes, ResolveOutcome{Refs: []ResolveRef{
-			{Kind: "person", ID: id, Exact: true, Confidence: 1, MatchedOn: "email"},
+			{Kind: "contact", ID: id, Exact: true, Confidence: 1, MatchedOn: "email"},
 		}})
 	}
 	tool := resolveEntities{p: provider, resolve: fixedResolver(outcomes)}
 	registry, charger, ctx := chargingRegistry(t, tool)
 
 	if _, err := registry.Invoke(ctx, "resolve_entities", json.RawMessage(
-		`{"candidates":[{"kind":"person"},{"kind":"person"},{"kind":"person"},{"kind":"person"}]}`,
+		`{"candidates":[{"kind":"contact"},{"kind":"contact"},{"kind":"contact"},{"kind":"contact"}]}`,
 	)); err != nil {
 		t.Fatalf("invoking resolve_entities: %v", err)
 	}
@@ -289,21 +289,21 @@ func TestResolutionIsChargedPerRecordServed(t *testing.T) {
 }
 
 // One record named by two candidates is charged ONCE. A card carrying two
-// addresses, or a name and a phone number belonging to the same person, is the
+// addresses, or a name and a phone number belonging to the same contact, is the
 // ordinary case — and the bound counts records handed over, not answers.
 func TestARecordNamedByTwoCandidatesIsChargedOnce(t *testing.T) {
-	person := ids.NewV7()
+	contact := ids.NewV7()
 	provider := &queryProbeProvider{records: map[ids.UUID]datasource.Record{
-		person: recordAt(datasource.EntityPerson, time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC), true),
+		contact: recordAt(datasource.EntityContact, time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC), true),
 	}}
 	shared := ResolveOutcome{Refs: []ResolveRef{
-		{Kind: "person", ID: person, Exact: true, Confidence: 1, MatchedOn: "email"},
+		{Kind: "contact", ID: contact, Exact: true, Confidence: 1, MatchedOn: "email"},
 	}}
 	tool := resolveEntities{p: provider, resolve: fixedResolver([]ResolveOutcome{shared, shared})}
 	registry, charger, ctx := chargingRegistry(t, tool)
 
 	raw, err := registry.Invoke(ctx, "resolve_entities", json.RawMessage(
-		`{"candidates":[{"kind":"person","ref":"a"},{"kind":"person","ref":"b"}]}`,
+		`{"candidates":[{"kind":"contact","ref":"a"},{"kind":"contact","ref":"b"}]}`,
 	))
 	if err != nil {
 		t.Fatalf("invoking resolve_entities: %v", err)
@@ -321,7 +321,7 @@ func TestARecordNamedByTwoCandidatesIsChargedOnce(t *testing.T) {
 		t.Fatalf("reading the result: %v", err)
 	}
 	for i, answer := range sealed.Data.Candidates {
-		if len(answer.Matches) != 1 || answer.Matches[0].Record.ID != person {
+		if len(answer.Matches) != 1 || answer.Matches[0].Record.ID != contact {
 			t.Errorf("candidate %d = %+v, want the shared record", i, answer)
 		}
 	}
@@ -341,7 +341,7 @@ func TestTheKeysOnOneCandidateAreBounded(t *testing.T) {
 			for i := range keys {
 				keys[i] = fmt.Sprintf(`"k%d@acme.example"`, i)
 			}
-			args := fmt.Sprintf(`{"candidates":[{"kind":"person","%s":[%s]}]}`, field, strings.Join(keys, ","))
+			args := fmt.Sprintf(`{"candidates":[{"kind":"contact","%s":[%s]}]}`, field, strings.Join(keys, ","))
 			tool := resolveEntities{p: &queryProbeProvider{}, resolve: unreachedResolver(t)}
 
 			var bad *BadArgsError
@@ -359,7 +359,7 @@ func TestTheKeysOnOneCandidateAreBounded(t *testing.T) {
 // An empty batch and an oversized one are both named as the argument that is
 // wrong, before the resolver runs.
 func TestTheCandidateBatchIsBounded(t *testing.T) {
-	oversized := `{"candidates":[` + strings.Repeat(`{"kind":"person"},`, resolveMaxCandidates) + `{"kind":"person"}]}`
+	oversized := `{"candidates":[` + strings.Repeat(`{"kind":"contact"},`, resolveMaxCandidates) + `{"kind":"contact"}]}`
 	for name, args := range map[string]string{
 		"empty":     `{"candidates":[]}`,
 		"oversized": oversized,
@@ -384,7 +384,7 @@ func TestAMisalignedResolverAnswerFailsRatherThanShifting(t *testing.T) {
 	tool := resolveEntities{p: &queryProbeProvider{}, resolve: fixedResolver([]ResolveOutcome{{}})}
 
 	_, err := tool.Handle(t.Context(), json.RawMessage(
-		`{"candidates":[{"kind":"person","ref":"a"},{"kind":"person","ref":"b"}]}`,
+		`{"candidates":[{"kind":"contact","ref":"a"},{"kind":"contact","ref":"b"}]}`,
 	))
 	if err == nil {
 		t.Fatal("an answer covering one of two candidates was accepted, so every later label shifted")
@@ -398,10 +398,10 @@ func TestAnUnreachableStoreDoesNotReadAsNoMatch(t *testing.T) {
 	id := ids.NewV7()
 	provider := &queryProbeProvider{fail: map[ids.UUID]error{id: errors.New("the pool is exhausted")}}
 	tool := resolveEntities{p: provider, resolve: fixedResolver([]ResolveOutcome{
-		{Refs: []ResolveRef{{Kind: "person", ID: id, Exact: true, MatchedOn: "email"}}},
+		{Refs: []ResolveRef{{Kind: "contact", ID: id, Exact: true, MatchedOn: "email"}}},
 	})}
 
-	if _, err := tool.Handle(t.Context(), json.RawMessage(`{"candidates":[{"kind":"person"}]}`)); err == nil {
+	if _, err := tool.Handle(t.Context(), json.RawMessage(`{"candidates":[{"kind":"contact"}]}`)); err == nil {
 		t.Fatal("an unreachable store answered `unresolved`, which tells the caller creating is safe")
 	}
 }

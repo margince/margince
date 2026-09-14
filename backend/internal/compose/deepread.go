@@ -5,16 +5,16 @@ package compose
 
 // The deep read end-to-end: a
 // human's start queues a durable crawl job and answers 202; the worker
-// role crawls the organization's site under the bounded siteCrawler,
+// role crawls the company's site under the bounded siteCrawler,
 // folds the pages into a labeled corpus, and extracts it in ONE model
 // call (chunked only for outsized sites) through the no-guess evidence
-// gate — company fields, category facts, published people, and the
+// gate — company fields, category facts, published contacts, and the
 // site's legal-entity census. The gated findings LAND directly, in one
 // transaction: profile fields fill-empty exactly like a quick scrape,
-// category facts land in organization_fact. Nobody is asked to confirm a
+// category facts land in company_fact. Nobody is asked to confirm a
 // read they pressed the button for — the write is marked as model-derived
-// and stays reversible instead. Published PEOPLE are the exception and
-// still stage as leads. The dossier (people's site_read row) is the
+// and stays reversible instead. Published CONTACTS are the exception and
+// still stage as leads. The dossier (contacts's site_read row) is the
 // transparency surface the SPA polls: live phase and page counts while
 // running, then what was read and what it found.
 
@@ -30,9 +30,10 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
+	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/webread"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -49,10 +50,10 @@ import (
 // — so a copy in the args would be an address sitting in a table with no
 // workspace column and no RLS that no code path ever reads.
 type SiteDeepReadArgs struct {
-	Workspace      ids.UUID `json:"workspace_id"`
-	OrganizationID ids.UUID `json:"organization_id"`
-	SiteReadID     ids.UUID `json:"site_read_id"`
-	RequestedBy    string   `json:"requested_by"`
+	Workspace   ids.UUID `json:"workspace_id"`
+	CompanyID   ids.UUID `json:"company_id"`
+	SiteReadID  ids.UUID `json:"site_read_id"`
+	RequestedBy string   `json:"requested_by"`
 	// MaxPages is this run's page ceiling, or 0 for the deployment's own. It
 	// can only ever narrow: the worker clamps it against the configured cap, so
 	// a payload cannot raise what an operator set.
@@ -76,18 +77,82 @@ const (
 	deepReadMaxWorkers = 2
 )
 
-// siteDeepReadInsertOpts routes the job to its own queue and deduplicates by
-// args: the dossier id is unique per read, so a re-submitted enqueue of the
-// SAME read collapses while a fresh read (new dossier) always queues.
-func siteDeepReadInsertOpts() *river.InsertOpts {
+// DeepReadPriorityLive is the priority a human or agent action's own deep
+// read carries — River's default (1 of 4, highest) — so it is fetched ahead
+// of any housekeeping sweep sharing deepReadQueue's two workers.
+const DeepReadPriorityLive = river.PriorityDefault
+
+// DeepReadPriorityHousekeeping is the priority a sweep-sourced deep read
+// carries: River's lowest tier — its documented range is 1 (highest) to 4
+// (lowest), with no named constant for either end but PriorityDefault.
+// capture_auto_enrich_sweep and domain triage's own periodic pass both run
+// at boot and can fan out dozens of reads in one pass — at River's default
+// priority that fan-out queued ahead of a live read arriving moments later,
+// holding it behind up to the whole boot-time backlog on a pool sized for
+// on-demand traffic. Lowest priority means a live read waiting behind the
+// fan-out is fetched first the instant a worker frees.
+//
+// This is a real, accepted starvation risk, not a self-healing one: River
+// itself documents that sustained higher-priority traffic can leave a
+// lower-priority job unfetched indefinitely, and nothing here bounds that —
+// sweepWorkspace's own daily-cap tolerance ("a pass that stops early simply
+// leaves the rest due for tomorrow") covers a company never yet QUEUED, not a
+// job already sitting in river_job at this priority. What actually bounds
+// the case that matters — a live caller waiting on the SAME company a
+// sweep already queued — is promoteQueuedSiteReadPriority, not this comment.
+const DeepReadPriorityHousekeeping = 4
+
+// siteDeepReadInsertOpts routes the job to its own queue, deduplicates by
+// args (the dossier id is unique per read, so a re-submitted enqueue of the
+// SAME read collapses while a fresh read always queues), and sets priority —
+// DeepReadPriorityLive for a human or agent-initiated read,
+// DeepReadPriorityHousekeeping for one a sweep fanned out on its own.
+func siteDeepReadInsertOpts(priority int) *river.InsertOpts {
 	return &river.InsertOpts{
-		Queue: deepReadQueue,
-		// Swept: capture_auto_enrich_sweep re-nominates an organization that is
+		Queue:    deepReadQueue,
+		Priority: priority,
+		// Swept: capture_auto_enrich_sweep re-nominates a company that is
 		// still due on its next daily pass, so a crawl that cannot finish is
 		// re-read tomorrow rather than re-walked all afternoon.
 		MaxAttempts: sweptJobMaxAttempts,
 		UniqueOpts:  river.UniqueOpts{ByArgs: true},
 	}
+}
+
+// promoteQueuedSiteReadPriority raises an already-queued read's priority to
+// DeepReadPriorityLive when a human or agent action JOINS it rather than
+// starting it.
+//
+// The gap this closes: createOrJoinSiteRead's join branch (contacts/siteread.go)
+// never calls the enqueue callback — the job those args would produce already
+// exists, and River's own ByArgs uniqueness would silently drop a re-insert
+// anyway. So a live request arriving for the same company a boot-time
+// sweep already queued (both derive the identical https://<domain> seed URL)
+// joined a HOUSEKEEPING-priority job with no code path that ever touched its
+// priority again — the exact starvation this file exists to prevent, just
+// one step later than the fresh-insert case siteDeepReadInsertOpts covers.
+//
+// River exposes no client method to change a queued job's priority (only
+// JobUpdateParams.Output), so this reaches river_job directly — the same
+// columns this package's own tests already read off it, now written rather
+// than read. Best effort: a promotion that cannot land leaves the read to run
+// at its original priority rather than failing the request that only wanted
+// to know a read was already in flight.
+func promoteQueuedSiteReadPriority(ctx context.Context, pool *pgxpool.Pool, log *slog.Logger, readID ids.UUID) {
+	if pool == nil {
+		return
+	}
+	// river_job belongs to platform/jobs (tableownership_test.go); this
+	// package asks rather than writes it directly.
+	if _, err := jobs.PromotePriority(ctx, pool, SiteDeepReadArgs{}.Kind(),
+		"site_read_id", readID.String(), DeepReadPriorityLive); err != nil {
+		log.WarnContext(ctx, "deep read: could not promote a joined read's priority",
+			"site_read_id", readID.String(), "err", err)
+	}
+	// A false, no-error result is not logged: the joined read may already be
+	// live-priority (two live callers racing), already claimed by a worker,
+	// or finished between the join and this call — none of those are a
+	// problem this request needs to know about.
 }
 
 // siteDeepReadWorker runs one queued deep read: claim the dossier, crawl,
@@ -97,10 +162,10 @@ func siteDeepReadInsertOpts() *river.InsertOpts {
 type siteDeepReadWorker struct {
 	// pool opens the ONE transaction an act's proposals are staged in, so the
 	// inbox never shows half of a read's findings as a whole question.
-	pool    *pgxpool.Pool
-	people  *people.Store
-	crawler *siteCrawler
-	extract evidenceExtractor
+	pool     *pgxpool.Pool
+	contacts *contacts.Store
+	crawler  *siteCrawler
+	extract  evidenceExtractor
 	// triageBrain answers the domain-triage classification. Its own lane, not
 	// the extractor's: one cheap question of one page must not bill the profile
 	// lane's premium-only ladder. Nil is a role that cannot classify, which
@@ -140,7 +205,7 @@ func newSiteDeepReadWorker(pool *pgxpool.Pool, brain, factBrain, triageBrain com
 	caps = caps.withDefaults()
 	return &siteDeepReadWorker{
 		pool:        pool,
-		people:      people.NewStore(InstallationDB(pool)),
+		contacts:    contacts.NewStore(InstallationDB(pool)),
 		crawler:     newSiteCrawler(fetcher, caps),
 		extract:     evidenceExtractor{fetch: fetcher, brain: brain, factBrain: factBrain},
 		triageBrain: triageBrain,
@@ -199,7 +264,7 @@ func (w *siteDeepReadWorker) reclaimAfter() time.Duration {
 func (w *siteDeepReadWorker) run(ctx context.Context, args SiteDeepReadArgs) error {
 	ctx = deepReadWorkerCtx(ctx, args)
 
-	claim, err := w.people.BeginSiteRead(ctx, args.SiteReadID, w.reclaimAfter())
+	claim, err := w.contacts.BeginSiteRead(ctx, args.SiteReadID, w.reclaimAfter())
 	if err != nil {
 		if errors.Is(err, apperrors.ErrNotFound) {
 			// The CAS miss: the read is no longer queued — a rival replica
@@ -217,7 +282,7 @@ func (w *siteDeepReadWorker) run(ctx context.Context, args SiteDeepReadArgs) err
 		return err
 	}
 
-	if err := w.people.UpdateSiteReadProgress(ctx, args.SiteReadID, "crawling", nil); err != nil {
+	if err := w.contacts.UpdateSiteReadProgress(ctx, args.SiteReadID, "crawling", nil); err != nil {
 		w.log.WarnContext(ctx, "site read progress update failed", "read", args.SiteReadID.String(), "err", err)
 	}
 	// Crawl and extraction OVERLAP (crawlAndExtract): page calls launch
@@ -268,11 +333,11 @@ func (w *siteDeepReadWorker) run(ctx context.Context, args SiteDeepReadArgs) err
 
 // routeClaimedRead dispatches a claimed read to the lane that owns it, before
 // any spend: the disabled-auto-enrich close, the domain-triage lane (which
-// decides whether an organization should exist at all, so it cannot share the
+// decides whether a company should exist at all, so it cannot share the
 // enrichment path, which assumes one to enrich), or the honest failure of a
 // worker role with no model path. It reports whether it settled the read; not
 // settled is the ordinary enrichment read, which the caller crawls itself.
-func (w *siteDeepReadWorker) routeClaimedRead(ctx context.Context, args SiteDeepReadArgs, claim people.SiteReadClaim) (bool, error) {
+func (w *siteDeepReadWorker) routeClaimedRead(ctx context.Context, args SiteDeepReadArgs, claim contacts.SiteReadClaim) (bool, error) {
 	// Before ANY spend: an operator who turned auto-enrich off gets no further
 	// crawling and no further model calls, including from work queued while it
 	// was on. Only the automatic lane is gated — a human who asked for a read
@@ -289,14 +354,14 @@ func (w *siteDeepReadWorker) routeClaimedRead(ctx context.Context, args SiteDeep
 			// Recorded, not returned raw: the read is already claimed, so a
 			// bare error would leave it running until the reclaim window
 			// expires. Every other fault on this path records itself, and the
-			// sweep re-enqueues the org on its next pass.
+			// sweep re-enqueues the company on its next pass.
 			return true, w.fail(ctx, args.SiteReadID,
 				fmt.Errorf("site deep read %s: reading the auto-enrich setting: %w", args.SiteReadID, err))
 		}
 		if !enabled {
 			// A triage read may not simply stop here. Its domain is a question
 			// somebody's mail already asked, and abandoning it would leave that
-			// question open forever — no organization for that domain, ever.
+			// question open forever — no company for that domain, ever.
 			// Answering it from what the workspace already knows is the honest
 			// close, and it is what the operator's "don't crawl" actually means.
 			if isDomainTriageRequest(claim.RequestedBy) {
@@ -323,19 +388,19 @@ func (w *siteDeepReadWorker) routeClaimedRead(ctx context.Context, args SiteDeep
 
 func (w *siteDeepReadWorker) progressiveCallbacks(ctx context.Context, readID ids.UUID) (func(string, []crawlPage), func(pageFactsResult)) {
 	progress := func(phase string, pages []crawlPage) {
-		if err := w.people.UpdateSiteReadProgress(ctx, readID, phase, siteReadPages(pages)); err != nil {
+		if err := w.contacts.UpdateSiteReadProgress(ctx, readID, phase, siteReadPages(pages)); err != nil {
 			w.log.WarnContext(ctx, "site read progress update failed", "read", readID.String(), "err", err)
 		}
 	}
 	publishDraft := func(partial pageFactsResult) {
-		found := siteReadPeople(partial.people)
+		found := siteReadContacts(partial.contacts)
 		entities := siteReadLegalEntities(partial.entities)
 		hash, err := siteReadProposalHash(nil, partial.facts, found, entities)
 		if err != nil {
 			w.log.WarnContext(ctx, "site read progressive draft hash failed", "read", readID.String(), "err", err)
 			return
 		}
-		if err := w.people.UpdateSiteReadDraft(ctx, readID, partial.facts, found, entities, hash); err != nil {
+		if err := w.contacts.UpdateSiteReadDraft(ctx, readID, partial.facts, found, entities, hash); err != nil {
 			w.log.WarnContext(ctx, "site read progressive draft update failed", "read", readID.String(), "err", err)
 		}
 	}
@@ -346,10 +411,10 @@ func (w *siteDeepReadWorker) progressiveCallbacks(ctx context.Context, readID id
 // The abstention refuses to APPLY a legal identity it cannot attribute; it
 // never had a reason to forget the identities it read, and the confirm
 // step turns them into the choice only a human can make.
-func siteReadLegalEntities(entities []corpusLegalEntity) []people.SiteReadLegalEntity {
-	out := make([]people.SiteReadLegalEntity, 0, len(entities))
+func siteReadLegalEntities(entities []corpusLegalEntity) []contacts.SiteReadLegalEntity {
+	out := make([]contacts.SiteReadLegalEntity, 0, len(entities))
 	for _, e := range entities {
-		out = append(out, people.SiteReadLegalEntity{
+		out = append(out, contacts.SiteReadLegalEntity{
 			Name:              e.Name,
 			RegisteredAddress: e.RegisteredAddress,
 			RegisterNumber:    e.RegisterNumber,
@@ -367,32 +432,32 @@ func siteReadLegalEntities(entities []corpusLegalEntity) []people.SiteReadLegalE
 // GUC from them) with a fresh deadline of its own, NEVER the work context's
 // deadline or cancellation. Closing the dossier must not be starved by the
 // crawl+extract work it reports on — otherwise a read whose model calls
-// exhausted the job budget is left running forever, squatting the org's one
+// exhausted the job budget is left running forever, squatting the company's one
 // in-flight slot. Fifteen seconds bounds the single FinishSiteRead tx.
 func terminalCtx(ctx context.Context) (context.Context, context.CancelFunc) {
 	return context.WithTimeout(context.WithoutCancel(ctx), 15*time.Second)
 }
 
-func (w *siteDeepReadWorker) finish(ctx context.Context, readID ids.UUID, claim people.SiteReadClaim, status string, readPages []crawlPage, crawl siteCrawl, factCount int, proposalIDs []ids.UUID, fields []people.DeepReadField, facts []people.DeepReadFact, found []people.SiteReadPerson, entities []people.SiteReadLegalEntity, warnings []string, proposalHash string) error {
-	in := people.FinishSiteReadInput{
+func (w *siteDeepReadWorker) finish(ctx context.Context, readID ids.UUID, claim contacts.SiteReadClaim, status string, readPages []crawlPage, crawl siteCrawl, factCount int, proposalIDs []ids.UUID, fields []contacts.DeepReadField, facts []contacts.DeepReadFact, found []contacts.SiteReadContact, entities []contacts.SiteReadLegalEntity, warnings []string, proposalHash string) error {
+	in := contacts.FinishSiteReadInput{
 		ClaimedAt:     &claim.ClaimedAt,
 		Status:        status,
-		Pages:         make([]people.SiteReadPage, 0, len(readPages)),
-		Skipped:       make([]people.SiteReadSkip, 0, len(crawl.Skipped)),
+		Pages:         make([]contacts.SiteReadPage, 0, len(readPages)),
+		Skipped:       make([]contacts.SiteReadSkip, 0, len(crawl.Skipped)),
 		FactCount:     factCount,
 		ProposalIDs:   proposalIDs,
 		ProfileFields: fields,
 		Facts:         facts,
-		People:        found,
+		Contacts:      found,
 		LegalEntities: entities,
 		Warnings:      warnings,
 		ProposalHash:  proposalHash,
 	}
 	for _, p := range readPages {
-		in.Pages = append(in.Pages, people.SiteReadPage{URL: p.URL, Kind: string(p.Kind)})
+		in.Pages = append(in.Pages, contacts.SiteReadPage{URL: p.URL, Kind: string(p.Kind)})
 	}
 	for _, s := range crawl.Skipped {
-		in.Skipped = append(in.Skipped, people.SiteReadSkip{URL: s.URL, Reason: string(s.Reason)})
+		in.Skipped = append(in.Skipped, contacts.SiteReadSkip{URL: s.URL, Reason: string(s.Reason)})
 	}
 	if crawl.Stopped != nil {
 		reason := string(*crawl.Stopped)
@@ -400,7 +465,7 @@ func (w *siteDeepReadWorker) finish(ctx context.Context, readID ids.UUID, claim 
 	}
 	tctx, cancel := terminalCtx(ctx)
 	defer cancel()
-	if err := w.people.FinishSiteRead(tctx, readID, in); err != nil {
+	if err := w.contacts.FinishSiteRead(tctx, readID, in); err != nil {
 		return fmt.Errorf("site deep read %s: finish: %w", readID, err)
 	}
 	return nil

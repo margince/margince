@@ -35,7 +35,7 @@ func TestAnOmittedPurposeIsNamed(t *testing.T) {
 	ctx := context.Background()
 
 	_, err := store.Record(ctx, RecordInput{
-		PersonID: ids.New[ids.PersonKind](), NewState: "granted",
+		ContactID: ids.New[ids.ContactKind](), NewState: "granted",
 		PolicyText: &grantWording,
 	})
 	faulttest.AssertNamesOmittedID(t, err, "purpose_id")
@@ -49,10 +49,10 @@ func TestAnOmittedPurposeIsNamed(t *testing.T) {
 func TestAnOmittedPurposeIsNamedOnTheIssuanceRefusal(t *testing.T) {
 	rec := httptest.NewRecorder()
 	body := strings.NewReader(`{"purpose_id":"00000000-0000-0000-0000-000000000000"}`)
-	req := httptest.NewRequest(http.MethodPost, "/v1/people/x/consent/double-opt-in", body)
+	req := httptest.NewRequest(http.MethodPost, "/v1/contacts/x/consent/double-opt-in", body)
 	req.Header.Set("Content-Type", "application/json")
 
-	Handlers{}.IssueDoubleOptIn(rec, req, crmcontracts.Id(ids.New[ids.PersonKind]().UUID))
+	Handlers{}.IssueDoubleOptIn(rec, req, crmcontracts.Id(ids.New[ids.ContactKind]().UUID))
 
 	if rec.Code != http.StatusUnprocessableEntity {
 		t.Fatalf("an omitted purpose is a 422 naming the field, got %d: %s", rec.Code, rec.Body.String())

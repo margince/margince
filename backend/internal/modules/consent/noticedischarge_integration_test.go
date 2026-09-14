@@ -19,7 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// seedNoticeCase writes one live case for this person, owed and never sent to.
+// seedNoticeCase writes one live case for this contact, owed and never sent to.
 //
 // attempts stays 0, which is what a freshly opened case holds — the cooldown is
 // driven by discharging and then discharging again, not by dating the seed,
@@ -32,9 +32,9 @@ func seedNoticeCase(
 	var id ids.UUID
 	if err := e.owner.QueryRow(context.Background(), `
 		INSERT INTO privacy_notice_case
-		       (person_id, acquisition_id, rule, due_at, allowed_routes, state)
+		       (contact_id, acquisition_id, rule, due_at, allowed_routes, state)
 		VALUES ($1, $2, 'art14', now() + interval '30 days', $3, 'open')
-		RETURNING id`, e.person, acq, routes).Scan(&id); err != nil {
+		RETURNING id`, e.contact, acq, routes).Scan(&id); err != nil {
 		t.Fatalf("seeding the notice case: %v", err)
 	}
 	return id
@@ -57,16 +57,49 @@ func noticeCaseState(t *testing.T, e *channelConsentEnv, id ids.UUID) (string, i
 // and the reply route is exercised by seeding a case that names it instead.
 func discharge(t *testing.T, e *channelConsentEnv, now time.Time) int {
 	t.Helper()
+	delivery := seedDelivery(t, e)
 	var moved int
 	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
 		var err error
-		moved, err = dischargeNoticeCases(e.ctx, tx, e.person,
-			noticeRouteRecordConfirmation, now)
+		moved, err = dischargeNoticeCases(e.ctx, tx, e.contact,
+			noticeRouteRecordConfirmation, now, delivery)
 		return err
 	}); err != nil {
 		t.Fatalf("discharging: %v", err)
 	}
 	return moved
+}
+
+// seedDelivery writes one sent comms_outbound row and answers its id.
+//
+// A real row, not a fresh uuid: the case's delivery_id is a foreign key, which
+// is what makes "show me the message you say you sent" answerable at all. A
+// fixture pointing at nothing would pass the Go and fail the database.
+//
+// On the CONTROLLER lane, carrying the record-confirmation template and no
+// consent_purpose, because that is what a disclosure is: the table refuses a
+// purpose on anything but a user's own mail, and requires a template on
+// anything that is not.
+func seedDelivery(t *testing.T, e *channelConsentEnv) ids.UUID {
+	t.Helper()
+	activityID := ids.New[ids.ActivityKind]()
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO activity (id, kind, source, captured_by)
+		VALUES ($1, 'email', 'test', 'human:x')`, activityID); err != nil {
+		t.Fatalf("seeding the disclosure's activity: %v", err)
+	}
+	id := ids.NewV7()
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO comms_outbound
+		    (id, activity_id, provider, message_id, recipients, subject, body,
+		     status, sender_kind, template_key, template_version)
+		VALUES ($1, $2, 'controller', $3, '["subject@notice.test"]'::jsonb,
+		        'Your details', 'body', 'sent', 'controller', $4, 1)`,
+		id, activityID, "notice-"+activityID.String()+"@test.invalid",
+		TemplateRecordConfirmation); err != nil {
+		t.Fatalf("seeding the disclosure's delivery: %v", err)
+	}
+	return id
 }
 
 // TestSendingTheDisclosureMovesTheDuty is the whole point of the route: before
@@ -145,7 +178,7 @@ func TestASecondSendInsideTheCooldownMovesNothing(t *testing.T) {
 //
 // The blocked_shape CHECK also refuses that row, and the filter is what turns
 // its refusal into a no-op rather than a failed transaction: without it, one
-// blocked case on a person would make EVERY confirm mail to them fail with a
+// blocked case on a contact would make EVERY confirm mail to them fail with a
 // raw constraint violation. So the assertion is that the send SUCCEEDS and
 // moves nothing — a mutation removing the filter fails here on the error, not
 // on the state.
@@ -155,9 +188,9 @@ func TestABlockedDutyIsNotDischargedBySending(t *testing.T) {
 	var blocked ids.UUID
 	if err := e.owner.QueryRow(context.Background(), `
 		INSERT INTO privacy_notice_case
-		       (person_id, acquisition_id, rule, due_at, allowed_routes, state, blocked_reason)
+		       (contact_id, acquisition_id, rule, due_at, allowed_routes, state, blocked_reason)
 		VALUES ($1, $2, 'art14', now() + interval '30 days', $3, 'blocked', 'no live address')
-		RETURNING id`, e.person, acq, []string{noticeRouteRecordConfirmation}).Scan(&blocked); err != nil {
+		RETURNING id`, e.contact, acq, []string{noticeRouteRecordConfirmation}).Scan(&blocked); err != nil {
 		t.Fatalf("seeding the blocked case: %v", err)
 	}
 
@@ -186,10 +219,12 @@ func TestTheConfirmMailItselfDischargesTheDuty(t *testing.T) {
 	owed := seedNoticeCase(t, e, "purchased_or_imported",
 		[]string{noticeRouteRecordConfirmation})
 	seedSubjectAddress(t, e)
-	e.store = e.store.WithConfirmationLane(&recordingStager{}, &recordingVault{},
-		"https://crm.example.test/")
+	// A stager that writes a REAL delivery, because the case will point at it.
+	e.store = e.store.WithConfirmationLane(
+		&recordingStager{stage: func() ids.UUID { return seedDelivery(t, e) }},
+		&recordingVault{}, "https://crm.example.test/")
 
-	issued, err := e.store.IssueConfirmToken(e.ctx, e.person)
+	issued, err := e.store.IssueConfirmToken(e.ctx, e.contact)
 	if err != nil {
 		t.Fatalf("mint a confirm link: %v", err)
 	}
@@ -247,7 +282,7 @@ func TestAConsentLinkDischargesNoDisclosureDuty(t *testing.T) {
 		Scan(&purpose); err != nil {
 		t.Fatalf("read the marketing purpose: %v", err)
 	}
-	issued, err := e.store.IssueConsentLink(e.ctx, e.person, purpose, "")
+	issued, err := e.store.IssueConsentLink(e.ctx, e.contact, purpose, "")
 	if err != nil {
 		t.Fatalf("mint a consent link: %v", err)
 	}
@@ -257,5 +292,209 @@ func TestAConsentLinkDischargesNoDisclosureDuty(t *testing.T) {
 	}
 	if state, _ := noticeCaseState(t, e, owed); state != string(NoticeOpen) {
 		t.Errorf("the case moved to %q on a link that carries no disclosure", state)
+	}
+}
+
+// TestABouncedDisclosureReopensTheDuty is the failure this slice closes.
+//
+// `queued` is the honest word for "a message is on its way" — it deliberately
+// stops short of claiming the subject was told. It was also where the case
+// STAYED when that message bounced: the duty was not met, nobody was told, and
+// the queue showed a case somebody had handled.
+//
+// That is the worst of the nine states to get wrong. An open case is visible
+// and gets worked. A queued case that silently failed looks BETTER than an open
+// one while being worse, so nobody looks at it again.
+func TestABouncedDisclosureReopensTheDuty(t *testing.T) {
+	e := setupChannelConsent(t)
+	owed := seedNoticeCase(t, e, "purchased_or_imported",
+		[]string{noticeRouteRecordConfirmation})
+	delivery := seedDelivery(t, e)
+
+	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
+		_, err := dischargeNoticeCases(e.ctx, tx, e.contact,
+			noticeRouteRecordConfirmation, time.Now(), delivery)
+		return err
+	}); err != nil {
+		t.Fatalf("sending the disclosure: %v", err)
+	}
+	if state, _ := noticeCaseState(t, e, owed); state != string(NoticeQueued) {
+		t.Fatalf("the case rests in %q after its disclosure was sent, want %q", state, NoticeQueued)
+	}
+
+	// The message dies.
+	var moved int
+	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
+		var err error
+		moved, err = MarkNoticeDeliveryFailedTx(e.ctx, tx, delivery)
+		return err
+	}); err != nil {
+		t.Fatalf("recording the failed delivery: %v", err)
+	}
+	if moved != 1 {
+		t.Errorf("the bounce reopened %d duties, want 1", moved)
+	}
+	state, _ := noticeCaseState(t, e, owed)
+	if state != string(NoticeDeliveryFailed) {
+		t.Errorf("the case rests in %q after its disclosure bounced, want %q: the subject "+
+			"was not told, so the duty is owed again", state, NoticeDeliveryFailed)
+	}
+}
+
+// TestAFailedDisclosureIsBackOnTheQueue. Reopening the case is only half of it:
+// the point is that somebody sees it again.
+func TestAFailedDisclosureIsBackOnTheQueue(t *testing.T) {
+	e := setupChannelConsent(t)
+	owed := seedNoticeCase(t, e, "purchased_or_imported",
+		[]string{noticeRouteRecordConfirmation})
+	delivery := seedDelivery(t, e)
+
+	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
+		if _, err := dischargeNoticeCases(e.ctx, tx, e.contact,
+			noticeRouteRecordConfirmation, time.Now(), delivery); err != nil {
+			return err
+		}
+		_, err := MarkNoticeDeliveryFailedTx(e.ctx, tx, delivery)
+		return err
+	}); err != nil {
+		t.Fatalf("sending and failing the disclosure: %v", err)
+	}
+
+	owedNow, err := e.store.OpenNoticeCasesDueSoonest(officerCtx(e), 0)
+	if err != nil {
+		t.Fatalf("reading the queue: %v", err)
+	}
+	var found bool
+	for _, c := range owedNow {
+		if c.ID == owed {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("a duty whose disclosure bounced is not on the queue: it reads as handled " +
+			"and is not, which is the one way this control fails invisibly")
+	}
+}
+
+// TestALateBounceDoesNotDragBackASettledDuty. A case somebody has since excused,
+// or that a later disclosure completed, is not reopened by a late report about
+// an older message: the state moved on for a reason, and a bounce is evidence
+// about one delivery rather than about the duty's whole history.
+func TestALateBounceDoesNotDragBackASettledDuty(t *testing.T) {
+	e := setupChannelConsent(t)
+	owed := seedNoticeCase(t, e, "purchased_or_imported",
+		[]string{noticeRouteRecordConfirmation})
+	delivery := seedDelivery(t, e)
+
+	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
+		_, err := dischargeNoticeCases(e.ctx, tx, e.contact,
+			noticeRouteRecordConfirmation, time.Now(), delivery)
+		return err
+	}); err != nil {
+		t.Fatalf("sending the disclosure: %v", err)
+	}
+	if _, err := e.store.ExcuseNoticeCase(officerCtx(e), owed, ExcuseInput{
+		State: NoticeProvidedElsewhere,
+		Note:  "they were told in person at the workshop",
+		Now:   time.Now(),
+	}); err != nil {
+		t.Fatalf("excusing the duty: %v", err)
+	}
+
+	var moved int
+	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
+		var err error
+		moved, err = MarkNoticeDeliveryFailedTx(e.ctx, tx, delivery)
+		return err
+	}); err != nil {
+		t.Fatalf("recording the failed delivery: %v", err)
+	}
+	if moved != 0 {
+		t.Errorf("a late bounce reopened %d settled duties, want 0", moved)
+	}
+	if state, _ := noticeCaseState(t, e, owed); state != string(NoticeProvidedElsewhere) {
+		t.Errorf("the excused case moved to %q on a late bounce", state)
+	}
+}
+
+// TestTheCooldownMeasuresFromTheSendAndNotFromAnyWrite.
+//
+// The window used to measure from updated_at, which moves for ANY write — a
+// merge relinking the contact extended somebody's cooldown by up to a month.
+// last_sent_at records when a disclosure actually went, which is the question
+// the cooldown is asking.
+func TestTheCooldownMeasuresFromTheSendAndNotFromAnyWrite(t *testing.T) {
+	e := setupChannelConsent(t)
+	owed := seedNoticeCase(t, e, "purchased_or_imported",
+		[]string{noticeRouteRecordConfirmation})
+	delivery := seedDelivery(t, e)
+
+	// A disclosure sent long ago, well outside the cooldown.
+	longAgo := time.Now().Add(-60 * 24 * time.Hour)
+	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
+		_, err := dischargeNoticeCases(e.ctx, tx, e.contact,
+			noticeRouteRecordConfirmation, longAgo, delivery)
+		return err
+	}); err != nil {
+		t.Fatalf("sending the first disclosure: %v", err)
+	}
+	// Something else touches the row, the way a merge does.
+	if _, err := e.owner.Exec(context.Background(),
+		`UPDATE privacy_notice_case SET updated_at = now() WHERE id = $1`, owed); err != nil {
+		t.Fatalf("touching the case: %v", err)
+	}
+
+	if moved := discharge(t, e, time.Now()); moved != 1 {
+		t.Errorf("a second disclosure 60 days after the first moved %d duties, want 1: the "+
+			"cooldown measures from the SEND, and a merge touching the row is not a send",
+			moved)
+	}
+}
+
+// TestAResendAfterAFailureTracksTheNewMessage. A case reopened by a bounce
+// still points at the delivery that died — that is its evidence — and a
+// corrected re-send has to move the pointer, or the case would carry the old
+// dead message as the thing it is waiting on.
+func TestAResendAfterAFailureTracksTheNewMessage(t *testing.T) {
+	e := setupChannelConsent(t)
+	owed := seedNoticeCase(t, e, "purchased_or_imported",
+		[]string{noticeRouteRecordConfirmation})
+	first := seedDelivery(t, e)
+
+	// Sent long enough ago that the cooldown has expired, then bounced.
+	longAgo := time.Now().Add(-60 * 24 * time.Hour)
+	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
+		if _, err := dischargeNoticeCases(e.ctx, tx, e.contact,
+			noticeRouteRecordConfirmation, longAgo, first); err != nil {
+			return err
+		}
+		_, err := MarkNoticeDeliveryFailedTx(e.ctx, tx, first)
+		return err
+	}); err != nil {
+		t.Fatalf("sending and failing the first disclosure: %v", err)
+	}
+
+	second := seedDelivery(t, e)
+	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
+		moved, err := dischargeNoticeCases(e.ctx, tx, e.contact,
+			noticeRouteRecordConfirmation, time.Now(), second)
+		if err == nil && moved != 1 {
+			t.Errorf("the corrected re-send moved %d duties, want 1: a failed case is still "+
+				"owed, so a fresh disclosure discharges it", moved)
+		}
+		return err
+	}); err != nil {
+		t.Fatalf("the corrected re-send: %v", err)
+	}
+
+	var carried ids.UUID
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT delivery_id FROM privacy_notice_case WHERE id = $1`, owed).Scan(&carried); err != nil {
+		t.Fatalf("reading the case: %v", err)
+	}
+	if carried != second {
+		t.Errorf("the case points at delivery %v after a re-send, want the new one (%v): a "+
+			"case waiting on a message that already died cannot be reopened by the bounce "+
+			"of the message it is actually waiting on", carried, second)
 	}
 }

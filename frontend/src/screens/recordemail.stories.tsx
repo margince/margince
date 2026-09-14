@@ -12,7 +12,7 @@ import { EmailVerb, RecordEmailAside, RecordEmailVerb } from "./recordemail";
 // The box has exactly two states and always offers to write. Both are here, so
 // the difference between them can be judged without arranging a caller that
 // knows a thread is owed. dealemail.stories.tsx covers the deal-specific
-// wording; this is the generic box a person or lead page mounts unstyled.
+// wording; this is the generic box a contact or lead page mounts unstyled.
 //
 // The header VERB is here too, and it is the same write on a different shape: a
 // square whose envelope is its whole label. Judging it needs the neighbours it
@@ -28,7 +28,7 @@ const meta: Meta<typeof RecordEmailAside> = {
 export default meta;
 type Story = StoryObj<typeof RecordEmailAside>;
 
-const PERSON = "person-1";
+const CONTACT = "contact-1";
 
 function withClient(children: ReactNode) {
   const client = new QueryClient({
@@ -44,7 +44,7 @@ function withClient(children: ReactNode) {
 // No reply target: the box offers a fresh mail to the record's contacts.
 export const NothingToAnswer: Story = {
   render: () =>
-    withClient(<RecordEmailAside entityType="person" entityId={PERSON} />),
+    withClient(<RecordEmailAside entityType="contact" entityId={CONTACT} />),
 };
 
 // A reply target is supplied: the box offers to continue that thread.
@@ -52,8 +52,8 @@ export const AnswerIsOwed: Story = {
   render: () =>
     withClient(
       <RecordEmailAside
-        entityType="person"
-        entityId={PERSON}
+        entityType="contact"
+        entityId={CONTACT}
         replyTo="activity-1"
       />,
     ),

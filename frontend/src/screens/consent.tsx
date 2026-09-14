@@ -21,23 +21,23 @@ import "./consent.css";
 import { stable } from "../format/collate";
 
 // The Art. 7 proof log (G-4) + the double-opt-in redeem field (G-5) for the
-// Person 360. GET /people/{id}/consent already returns {state, events}; this
+// Contact 360. GET /contacts/{id}/consent already returns {state, events}; this
 // is the only surface that reads events — the 360 previously rendered state
 // alone and silently dropped the append-only trail. requires_double_opt_in
-// lives on ConsentPurpose, not on the person's per-purpose state, so this
+// lives on ConsentPurpose, not on the contact's per-purpose state, so this
 // section also reads GET /consent-purposes and joins on purpose_id to know
 // which rows can only be confirmed by the subject through a mailed link.
 
 type ConsentPurpose = components["schemas"]["ConsentPurpose"];
-type PersonConsentState = components["schemas"]["PersonConsentState"];
+type ContactConsentState = components["schemas"]["ContactConsentState"];
 type ConsentEvent = components["schemas"]["ConsentEvent"];
 
-function usePersonConsent(personId: string) {
+function useContactConsent(contactId: string) {
   return useQuery({
-    queryKey: ["person-consent", personId],
+    queryKey: ["contact-consent", contactId],
     queryFn: async () => {
-      const { data, error } = await api.GET("/people/{id}/consent", {
-        params: { path: { id: personId } },
+      const { data, error } = await api.GET("/contacts/{id}/consent", {
+        params: { path: { id: contactId } },
       });
       if (error) {
         throwProblem(error);
@@ -167,7 +167,7 @@ function ConsentProofLog({ events }: Readonly<{ events: ConsentEvent[] }>) {
 // Keying on the union keeps a state added upstream a compile error here rather
 // than a silently untoned badge.
 const STATE_TONE: Record<
-  PersonConsentState["state"],
+  ContactConsentState["state"],
   "success" | "warn" | undefined
 > = {
   granted: "success",
@@ -190,9 +190,9 @@ function MutationError({ error }: Readonly<{ error: unknown }>) {
   );
 }
 
-// One consent-purpose row on the Person 360 (P-8/P-9): the state badge, a
+// One consent-purpose row on the Contact 360 (P-8/P-9): the state badge, a
 // Grant/Withdraw toggle that writes an append-only consent_event through
-// POST /people/{id}/consent, and a toggleable proof log. A purpose needing
+// POST /contacts/{id}/consent, and a toggleable proof log. A purpose needing
 // double opt-in says so and offers no control: only the subject can confirm
 // one, from a link mailed to their own address. lawful_basis is
 // intentionally omitted from the toggle body — it's optional in
@@ -206,14 +206,14 @@ function MutationError({ error }: Readonly<{ error: unknown }>) {
 // naming that, rather than quoting a sentence nobody was shown.
 function ConsentRow({
   mayWrite,
-  personId,
+  contactId,
   entry,
   purpose,
   events,
 }: Readonly<{
   mayWrite: boolean;
-  personId: string;
-  entry: PersonConsentState;
+  contactId: string;
+  entry: ContactConsentState;
   purpose: ConsentPurpose | undefined;
   events: ConsentEvent[];
 }>) {
@@ -225,8 +225,8 @@ function ConsentRow({
 
   const setState = useMutation({
     mutationFn: async (newState: "granted" | "withdrawn") => {
-      const { data, error } = await api.POST("/people/{id}/consent", {
-        params: { path: { id: personId } },
+      const { data, error } = await api.POST("/contacts/{id}/consent", {
+        params: { path: { id: contactId } },
         body: {
           purpose_id: entry.purpose_id,
           new_state: newState,
@@ -251,7 +251,7 @@ function ConsentRow({
     // made by refetching, not by patching the cache from this response.
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["person-consent", personId],
+        queryKey: ["contact-consent", contactId],
       });
     },
   });
@@ -278,7 +278,7 @@ function ConsentRow({
         )}
       </div>
       <div className="consent-row-actions">
-        {/* Withdraw stays on every row: a person may always take consent back,
+        {/* Withdraw stays on every row: a contact may always take consent back,
             and a double-opt-in purpose is no exception. Granting one from here
             is what disappears — the server refuses it, because only the subject
             can confirm a purpose that requires the round trip, so offering the
@@ -304,16 +304,16 @@ function ConsentRow({
 }
 
 export function ConsentSection({
-  personId,
-  person,
-}: Readonly<{ personId: string; person?: { readonly writable?: boolean } }>) {
-  // Every verb in this section writes to the PERSON, so they share one
+  contactId,
+  contact,
+}: Readonly<{ contactId: string; contact?: { readonly writable?: boolean } }>) {
+  // Every verb in this section writes to the CONTACT, so they share one
   // decision: the role's grant and this row's own `writable`. Absent fails
   // closed, which is what a section rendered before its record has loaded
   // should do — an editor drawn on a maybe is a control the save refuses.
-  const mayWrite = useCanWriteRecord("person", person);
+  const mayWrite = useCanWriteRecord("contact", contact);
   const t = useT();
-  const consentQuery = usePersonConsent(personId);
+  const consentQuery = useContactConsent(contactId);
   const purposesQuery = useConsentPurposes();
   const purposes = purposesQuery.data?.data ?? [];
   // Only trust "no purposes" once the purposes fetch itself has actually
@@ -334,7 +334,7 @@ export function ConsentSection({
   // purposes themselves are rows of a list and run to the panel's edges.
   let body: ReactNode = (
     <PanelBody>
-      <QueryStates query={consentQuery} pendingLabel={t("person.consent")}>
+      <QueryStates query={consentQuery} pendingLabel={t("contact.consent")}>
         {null}
       </QueryStates>
     </PanelBody>
@@ -368,7 +368,7 @@ export function ConsentSection({
         <ConsentRow
           mayWrite={mayWrite}
           key={entry.purpose_id}
-          personId={personId}
+          contactId={contactId}
           entry={entry}
           purpose={purposes.find((purpose) => purpose.id === entry.purpose_id)}
           events={consent.events.filter(
@@ -380,7 +380,7 @@ export function ConsentSection({
   }
 
   return (
-    <Panel title={t("person.consent")}>
+    <Panel title={t("contact.consent")}>
       {/* The default-deny rule is two sentences, and the head band holds one
           line: truncating the half that says a grant is per purpose would
           leave the rule saying the opposite of what it means. */}
@@ -388,17 +388,17 @@ export function ConsentSection({
         <p className="t-sub">{t("consent.defaultDeny")}</p>
       </PanelBody>
       {body}
-      {/* Per PERSON rather than per purpose, so it sits under the rows instead
+      {/* Per CONTACT rather than per purpose, so it sits under the rows instead
           of inside one: the link opens everything held about them and asks the
           marketing question once, which is not a fact about any single
           purpose. */}
-      {/* Keyed on the person: a mutation result is about the record it was
+      {/* Keyed on the contact: a mutation result is about the record it was
           asked for, and React would otherwise reuse this component across a
           navigation between two cached contacts and leave the previous
           contact's address sitting under the new record. */}
       <ConfirmDetailsAction
-        key={personId}
-        personId={personId}
+        key={contactId}
+        contactId={contactId}
         mayWrite={mayWrite}
       />
     </Panel>
@@ -430,28 +430,28 @@ function sentenceFor(
  * ConfirmDetailsAction mails the contact a link to see what is held about them,
  * correct it, and answer on marketing.
  *
- * The address is never chosen here. The server derives it from the person's own
+ * The address is never chosen here. The server derives it from the contact's own
  * live primary email, which is what lets a grant made through the link stand on
  * its own: the answer came from the subject's mailbox. So this surface offers
  * the act and reports where it went, and cannot aim it anywhere.
  */
 function ConfirmDetailsAction({
-  personId,
+  contactId,
   mayWrite,
-}: Readonly<{ personId: string; mayWrite: boolean }>) {
+}: Readonly<{ contactId: string; mayWrite: boolean }>) {
   const t = useT();
   const { locale } = useLocale();
   const zone = viewerZone();
   const ask = useMutation({
-    // Keyed on the person, so a result belongs to the record it was asked
+    // Keyed on the contact, so a result belongs to the record it was asked
     // about. React reuses this component across a navigation between two
     // cached contacts, and without the key the previous contact's address sat
     // under the new record's rows — naming somebody else's mailbox as the one
     // this contact's link went to.
-    mutationKey: ["confirm-request", personId],
+    mutationKey: ["confirm-request", contactId],
     mutationFn: async (id: string) => {
       const { data, error } = await api.POST(
-        "/people/{id}/consent/confirm-request",
+        "/contacts/{id}/consent/confirm-request",
         { params: { path: { id } } },
       );
       if (error) {
@@ -470,7 +470,7 @@ function ConfirmDetailsAction({
         small
         disabled={ask.isPending}
         data-testid="confirm-details-ask"
-        onClick={() => ask.mutate(personId)}
+        onClick={() => ask.mutate(contactId)}
       >
         {t("consent.askToConfirm")}
       </Button>

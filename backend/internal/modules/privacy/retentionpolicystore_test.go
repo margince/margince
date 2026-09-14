@@ -166,7 +166,7 @@ func TestValidateRetentionActionJudgesThePairNotTheAction(t *testing.T) {
 		{"activity", actionAnonymize},
 		{"lead/unconverted", actionArchive},
 		{"ai_call_payload/content", actionArchive},
-		{"person/no_consent_no_deal", actionArchive},
+		{"contact/no_consent_no_deal", actionArchive},
 	} {
 		scope, err := ParseRetentionScope(tc.wire)
 		if err != nil {

@@ -15,7 +15,7 @@ import (
 
 // One brief, two surfaces.
 //
-// There were two answers to "prepare me for this meeting": a person read eight
+// There were two answers to "prepare me for this meeting": a contact read eight
 // cited sections, and an agent got a separate context walk with its open tasks
 // pulled forward. Both were individually reasonable, which is exactly why the
 // drift went unnoticed — nobody put the two answers side by side.
@@ -30,48 +30,48 @@ func meetingID() openapi_types.UUID { return openapi_types.UUID(ids.NewV7()) }
 // thing the crossing has to preserve: a plain fact, a labelled judgment, and a
 // line citing two records.
 func wireBrief() crmcontracts.MeetingBrief {
-	assessment := crmcontracts.OrganizationBriefSentenceNatureAssessment
+	assessment := crmcontracts.CompanyBriefSentenceNatureAssessment
 	deal, activity := meetingID(), meetingID()
 	return crmcontracts.MeetingBrief{
 		ActivityId:  meetingID(),
 		GeneratedAt: time.Date(2026, time.August, 22, 9, 0, 0, 0, time.UTC),
-		GeneratedBy: crmcontracts.Deterministic,
+		GeneratedBy: crmcontracts.WrittenByDeterministic,
 		Sections: []crmcontracts.MeetingBriefSection{{
 			Kind: crmcontracts.MeetingBriefSectionKindHeader,
-			Sentences: []crmcontracts.OrganizationBriefSentence{{
+			Sentences: []crmcontracts.CompanyBriefSentence{{
 				Text:     "Cutover review with Northwind, Mon 24 Aug 09:00 UTC.",
-				Evidence: []crmcontracts.OrganizationBriefEvidence{{EntityType: "activity", EntityId: activity}},
+				Evidence: []crmcontracts.CompanyBriefEvidence{{EntityType: "activity", EntityId: activity}},
 			}},
 		}, {
 			Kind: crmcontracts.MeetingBriefSectionKindRisks,
-			Sentences: []crmcontracts.OrganizationBriefSentence{{
+			Sentences: []crmcontracts.CompanyBriefSentence{{
 				Text:     "The security pack is four days past its promise.",
 				Nature:   &assessment,
-				Evidence: []crmcontracts.OrganizationBriefEvidence{{EntityType: "deal", EntityId: deal}, {EntityType: "activity", EntityId: activity}},
+				Evidence: []crmcontracts.CompanyBriefEvidence{{EntityType: "deal", EntityId: deal}, {EntityType: "activity", EntityId: activity}},
 			}},
 		}},
 	}
 }
 
-func TestTheAgentReadsEverySectionThePersonReads(t *testing.T) {
+func TestTheAgentReadsEverySectionTheContactReads(t *testing.T) {
 	wire := wireBrief()
 	got := agentMeetingBrief(wire)
 
 	if len(got.Sections) != len(wire.Sections) {
-		t.Fatalf("sections: agent %d, person %d — the two surfaces would disagree about one meeting",
+		t.Fatalf("sections: agent %d, contact %d — the two surfaces would disagree about one meeting",
 			len(got.Sections), len(wire.Sections))
 	}
 	for i, section := range wire.Sections {
 		if got.Sections[i].Kind != string(section.Kind) {
-			t.Errorf("section %d: agent %q, person %q", i, got.Sections[i].Kind, section.Kind)
+			t.Errorf("section %d: agent %q, contact %q", i, got.Sections[i].Kind, section.Kind)
 		}
 		if len(got.Sections[i].Sentences) != len(section.Sentences) {
-			t.Errorf("section %s: agent %d lines, person %d", section.Kind,
+			t.Errorf("section %s: agent %d lines, contact %d", section.Kind,
 				len(got.Sections[i].Sentences), len(section.Sentences))
 		}
 		for j, sentence := range section.Sentences {
 			if got.Sections[i].Sentences[j].Text != sentence.Text {
-				t.Errorf("section %s line %d: agent %q, person %q", section.Kind, j,
+				t.Errorf("section %s line %d: agent %q, contact %q", section.Kind, j,
 					got.Sections[i].Sentences[j].Text, sentence.Text)
 			}
 		}
@@ -116,7 +116,7 @@ func TestAJudgmentReachesTheAgentLabelledAsOne(t *testing.T) {
 		t.Errorf("a plain fact was labelled %q; empty is the contract's default and means fact",
 			got.Sections[0].Sentences[0].Nature)
 	}
-	if got.Sections[1].Sentences[0].Nature != string(crmcontracts.OrganizationBriefSentenceNatureAssessment) {
-		t.Errorf("nature = %q, want %q", got.Sections[1].Sentences[0].Nature, crmcontracts.OrganizationBriefSentenceNatureAssessment)
+	if got.Sections[1].Sentences[0].Nature != string(crmcontracts.CompanyBriefSentenceNatureAssessment) {
+		t.Errorf("nature = %q, want %q", got.Sections[1].Sentences[0].Nature, crmcontracts.CompanyBriefSentenceNatureAssessment)
 	}
 }

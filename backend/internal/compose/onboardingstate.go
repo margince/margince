@@ -10,18 +10,18 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // onboardingStateHandlers is the compose-owned orchestration edge: identity
-// owns the per-user state row, while people owns the anchor whose existence
+// owns the per-user state row, while contacts owns the anchor whose existence
 // decides creator/member routing and whose minimum gates creator advancement.
 type onboardingStateHandlers struct {
 	state     *identity.OnboardingStore
-	company   *people.Store
+	company   *contacts.Store
 	assistant *onboardingCompanyAssistant
 	// proposal serves GET /onboarding/company/proposal — deterministic,
 	// so it is wired unconditionally in newServer, not by an AI option.

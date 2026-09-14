@@ -18,12 +18,12 @@ package search
 //	activity.captured/updated/archived → the pairs that activity's
 //	    participants imply, including the pair it USED to belong to when a
 //	    human relinks it to someone else.
-//	person.merged   → the source person's edges go, the target's are refolded.
-//	person.archived/restored → that contact's edges are refolded.
+//	contact.merged   → the source contact's edges go, the target's are refolded.
+//	contact.archived/restored → that contact's edges are refolded.
 //	ERASURE is NOT here, deliberately. It drops the edges inside its own
 //	    transaction (privacy/erasure.go), because an erasure obligation that
 //	    depends on an event being delivered fails silently when the bus is
-//	    behind. This consumer previously listened for a `person.erased` event
+//	    behind. This consumer previously listened for a `contact.erased` event
 //	    that no path emits, so every erasure left its edges standing.
 //	user.deactivated → nothing. Reads filter through the live-member join, so
 //	    a departure takes effect without rewriting a single row.
@@ -66,8 +66,8 @@ func (g *GraphEdgeGen) HandleEvent(ctx context.Context, env events.Envelope) err
 	switch env.Entity.Type {
 	case entityActivity:
 		return g.onActivity(ctx, env, entity)
-	case entityPerson:
-		return g.onPerson(ctx, env, entity)
+	case entityContact:
+		return g.onContact(ctx, env, entity)
 	default:
 		return nil
 	}
@@ -126,11 +126,11 @@ func (g *GraphEdgeGen) onActivity(ctx context.Context, env events.Envelope, acti
 	})
 }
 
-// onPerson refolds or drops the edges to one contact.
-func (g *GraphEdgeGen) onPerson(ctx context.Context, env events.Envelope, personID ids.UUID) error {
+// onContact refolds or drops the edges to one contact.
+func (g *GraphEdgeGen) onContact(ctx context.Context, env events.Envelope, contactID ids.UUID) error {
 	return g.store.db.Tx(ctx, func(tx pgx.Tx) error {
 		switch env.Type {
-		case "person.merged":
+		case "contact.merged":
 			// The source's edges belong to the survivor now. Dropping the
 			// source and refolding it is enough: the merge already repointed
 			// the activity links, so refolding the SOURCE id finds nothing and
@@ -138,22 +138,22 @@ func (g *GraphEdgeGen) onPerson(ctx context.Context, env events.Envelope, person
 			// refolded here rather than relying on that ordering, because a
 			// projection that is only correct if two events arrive in order is
 			// not correct on an at-least-once bus.
-			if err := DropEdgesForPerson(ctx, tx, personID); err != nil {
+			if err := DropEdgesForContact(ctx, tx, contactID); err != nil {
 				return err
 			}
 			if target := mergeTarget(env); target != ids.Nil {
-				return RecomputeEdgesForPerson(ctx, tx, target)
+				return RecomputeEdgesForContact(ctx, tx, target)
 			}
 			return nil
-		case "person.archived", "person.restored", "person.updated", "person.created", "retention.applied":
-			return RecomputeEdgesForPerson(ctx, tx, personID)
+		case "contact.archived", "contact.restored", "contact.updated", "contact.created", "retention.applied":
+			return RecomputeEdgesForContact(ctx, tx, contactID)
 		default:
 			return nil
 		}
 	})
 }
 
-// mergeTarget reads the surviving person from a merge envelope. An absent or
+// mergeTarget reads the surviving contact from a merge envelope. An absent or
 // unparseable target answers Nil, and the caller treats that as "nothing more
 // to refold": the survivor's own event will still arrive, and the nightly
 // rebuild is the backstop. Guessing an id here would be worse than waiting.

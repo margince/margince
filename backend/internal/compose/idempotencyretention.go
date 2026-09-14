@@ -6,7 +6,7 @@ package compose
 // Retention for the transport-idempotency claim table.
 //
 // settleClaim records the VERBATIM 2xx response body of every replayable
-// mutation, and for the replayable set that body is the whole record: a person
+// mutation, and for the replayable set that body is the whole record: a contact
 // with their names, e-mails, phones and custom fields; a deal with its amount;
 // a DSR case with the data subject's identity. Nothing removed those rows. The
 // 24h window in claimKey only makes a claim RE-CLAIMABLE in place by the exact

@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // Package knowledge owns the document corpus: a named body of uploaded text a
-// person can ask free-text questions of, answered only from what is in it.
+// contact can ask free-text questions of, answered only from what is in it.
 //
 // It holds its own vectors rather than joining search's `embedding` table.
 // That is a deliberate separation: search's embeddable-entity registry is the

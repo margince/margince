@@ -26,7 +26,7 @@ import { useSyncExternalStore } from "react";
  * seconds to a minute: a rim that swells and sends a head of light round the
  * frame says NOW, and is gone before it can become wallpaper. A mailbox import
  * is minutes to hours, and the same rim over that span is a lamp left on in the
- * corner of every screen a person works in. So the import takes a thinner,
+ * corner of every screen a contact works in. So the import takes a thinner,
  * calmer register — still lit, still moving, still saying mail is arriving —
  * and the agent's own register is a little thicker and livelier, so the two
  * read as two things rather than as one thing at two volumes. What each draws

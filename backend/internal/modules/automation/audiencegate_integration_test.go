@@ -40,7 +40,7 @@ func fullyPermittedOwner() fixtureResolver {
 		Objects: map[string]principal.ObjectGrant{
 			"activity": {Create: true, Read: true, Update: true, Delete: true},
 			"deal":     {Create: true, Read: true, Update: true, Delete: true},
-			"person":   {Create: true, Read: true, Update: true, Delete: true},
+			"contact":  {Create: true, Read: true, Update: true, Delete: true},
 			"lead":     {Create: true, Read: true, Update: true, Delete: true},
 		},
 	}}}
@@ -200,7 +200,7 @@ func TestAFiringWhoseOwnerCannotReadMessagesAtAllIsBlocked(t *testing.T) {
 
 func TestAFiringOnAnArchivedMessageIsBlocked(t *testing.T) {
 	// What "Live" buys. EnsureActivityContentVisible admits an archived row;
-	// the Live variant does not. A firing acts NOW, on a record a person can no
+	// the Live variant does not. A firing acts NOW, on a record a contact can no
 	// longer open, so the strict variant is the right one — and swapping it for
 	// the lenient one is a one-word edit nothing else would notice.
 	fx := setupAutomationDB(t)
@@ -224,7 +224,7 @@ func TestAFiringOnAnArchivedMessageIsBlocked(t *testing.T) {
 		t.Fatalf("HandleEvent: %v", err)
 	}
 	if applyCalls != 0 {
-		t.Error("the firing applied on an archived message: the check admits rows a person " +
+		t.Error("the firing applied on an archived message: the check admits rows a contact " +
 			"can no longer open")
 	}
 }

@@ -5,7 +5,7 @@ package consent
 
 // The no-login confirm-your-details transport. The public middleware has
 // already turned an unknown token away and bound the workspace plus a system
-// principal; each handler resolves the token again for the person it names —
+// principal; each handler resolves the token again for the contact it names —
 // the same infra read the preference surface makes — and then drives the store.
 
 import (
@@ -17,17 +17,25 @@ import (
 )
 
 // GetConfirmDetails implements (GET /public/confirm/{token}): one contact's own
-// view of what is held about them. Resolving stamps the link as opened, which is
-// the middle of the ask-to-click chain the proof row later refers to.
+// view of what is held about them.
+//
+// Resolving records a FETCH always and an OPENING only when the request does
+// not announce itself as a machine. The opening is the middle of the
+// ask-to-click chain the proof row later refers to, and a scanner prefetching
+// the link must not write it — see linkfetch.go.
+//
+// The request is read HERE because this is where one exists. The store is given
+// the answer rather than the headers, so the rule lives in one place and every
+// other surface that ever resolves a token has to state which it is.
 func (h Handlers) GetConfirmDetails(w http.ResponseWriter, r *http.Request, token string) {
-	ref, err := h.store.ResolveConfirmToken(r.Context(), token)
+	ref, err := h.store.ResolveConfirmToken(r.Context(), token, WhatFetchedThis(r))
 	if err != nil {
 		writeConsentErr(w, r, err)
 		return
 	}
 	// A consent link is answered with the subscription question and nothing
 	// else. Its mail said "confirm this subscription"; serving the record card
-	// here would hand whoever holds the link the person's name, employer,
+	// here would hand whoever holds the link the contact's name, employer,
 	// address, phone and the whole provenance trail — wider than the mail
 	// described, and wider than the write side of this same link allows.
 	//
@@ -41,6 +49,20 @@ func (h Handlers) GetConfirmDetails(w http.ResponseWriter, r *http.Request, toke
 		httperr.WriteJSON(w, http.StatusOK, wireSubscriptionCard(card))
 		return
 	}
+	// A privacy notice is answered with the disclosure and nothing else: how
+	// this contact was obtained, what their data is used for, and the rights
+	// they hold. No name, no employer, no address, no provenance trail — the
+	// mail said we hold information about you and here is what and why, and it
+	// did not offer to show somebody their file.
+	if ref.Kind == LinkPrivacyNotice {
+		info, err := h.store.PrivacyInformationFor(r.Context(), ref)
+		if err != nil {
+			writeConsentErr(w, r, err)
+			return
+		}
+		httperr.WriteJSON(w, http.StatusOK, wirePrivacyInformation(info))
+		return
+	}
 	// EVERY OTHER KIND IS REFUSED, rather than falling through to the record.
 	//
 	// The record card is the widest thing this endpoint can disclose — name,
@@ -52,7 +74,7 @@ func (h Handlers) GetConfirmDetails(w http.ResponseWriter, r *http.Request, toke
 		writeConsentErr(w, r, apperrors.ErrNotFound)
 		return
 	}
-	card, err := h.store.confirmCardFor(r.Context(), ref.PersonID)
+	card, err := h.store.confirmCardFor(r.Context(), ref.ContactID)
 	if err != nil {
 		writeConsentErr(w, r, err)
 		return
@@ -121,6 +143,34 @@ func submissionFromWire(req crmcontracts.SubmitConfirmDetailsJSONRequestBody) Co
 	return in
 }
 
+// wirePrivacyInformation renders the Art. 14 disclosure.
+//
+// Purposes and rights are always LISTS rather than omitted when empty: a page
+// distinguishing "no purposes" from "the field was absent" would be reading a
+// difference that means nothing, and an installation with no published purposes
+// still owes the rest of the disclosure.
+func wirePrivacyInformation(info PrivacyInformation) crmcontracts.PrivacyInformationPage {
+	rights := make([]crmcontracts.PrivacyInformationPageRights, 0, len(info.Rights))
+	for _, r := range info.Rights {
+		rights = append(rights, crmcontracts.PrivacyInformationPageRights(r))
+	}
+	purposes := info.Purposes
+	if purposes == nil {
+		purposes = []string{}
+	}
+	out := crmcontracts.PrivacyInformationPage{
+		Kind:       crmcontracts.PrivacyInformationPageKindPrivacyNotice,
+		AcquiredAs: info.AcquiredAs,
+		Purposes:   &purposes,
+		Rights:     rights,
+	}
+	if info.AcquiredAt != nil {
+		at := *info.AcquiredAt
+		out.AcquiredAt = &at
+	}
+	return out
+}
+
 // wireConfirmCard renders the card. marketing_state is spelled 'unknown' rather
 // than empty, matching the preference surface's own vocabulary: no record and a
 // withdrawal are different answers, and the page shows them differently.
@@ -140,7 +190,7 @@ func wireConfirmCard(card ConfirmCard) crmcontracts.RecordConfirmationPage {
 		// again. Both bodies used to arrive carrying nothing that said which
 		// they were, so a client had to guess from which fields happened to be
 		// present — and the published schema described only this one.
-		Kind:           crmcontracts.RecordConfirmation,
+		Kind:           crmcontracts.RecordConfirmationPageKindRecordConfirmation,
 		FullName:       card.FullName,
 		Title:          card.Title,
 		Company:        card.Company,
@@ -165,7 +215,7 @@ func wireSubscriptionCard(card SubscriptionCard) crmcontracts.SubscriptionConfir
 		state = "unknown"
 	}
 	return crmcontracts.SubscriptionConfirmationPage{
-		Kind:         crmcontracts.SubscriptionConfirmation,
+		Kind:         crmcontracts.SubscriptionConfirmationPageKindSubscriptionConfirmation,
 		PurposeKey:   card.PurposeKey,
 		PurposeLabel: card.PurposeLabel,
 		State:        crmcontracts.SubscriptionConfirmationPageState(state),

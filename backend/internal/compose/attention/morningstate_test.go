@@ -37,11 +37,11 @@ func TestTheMorningStateSeparatesNoRunFromAllAnswered(t *testing.T) {
 		briefing stubBriefing
 		want     crmcontracts.AttentionThisMorningState
 	}{
-		{"no run produced overnight", stubBriefing{}, crmcontracts.NoRunToday},
-		{"a run whose every item is answered", stubBriefing{ran: true}, crmcontracts.AllAnswered},
+		{"no run produced overnight", stubBriefing{}, crmcontracts.AttentionThisMorningStateNoRunToday},
+		{"a run whose every item is answered", stubBriefing{ran: true}, crmcontracts.AttentionThisMorningStateAllAnswered},
 		{"items still waiting", stubBriefing{rows: []BriefEntry{
 			{ID: ids.NewV7(), DealID: ids.NewV7(), Rank: 1},
-		}}, crmcontracts.ItemsWaiting},
+		}}, crmcontracts.AttentionThisMorningStateItemsWaiting},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			out := assembleMorning(t, tc.briefing)

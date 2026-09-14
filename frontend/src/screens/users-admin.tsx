@@ -31,7 +31,7 @@ import {
 import { PasswordLinkModal, usePasswordLink } from "./users-password-link";
 
 type User = components["schemas"]["User"];
-// The member roster (org settings). Every user-management WRITE is admin-only
+// The member roster (company settings). Every user-management WRITE is admin-only
 // server-side, but the read is not: `GET /users` answers 200 to any authenticated
 // principal, so the list is fetched for everyone and only the controls that
 // change a member are withheld. The read opts into inactive members
@@ -337,7 +337,7 @@ function RoleCell({
 }
 
 // The role a row reports rather than offers: the agent seat's, whose authority
-// is the passport granting it intersected with the person that passport names,
+// is the passport granting it intersected with the contact that passport names,
 // and any member's for a reader who may not change one. `undefined` means the
 // row draws a picker instead.
 function roleAnswer(
@@ -641,7 +641,7 @@ function MemberRow({
       >
         {/* Deactivating the agent seat is a posture an operator is entitled to
             take, so it stays offered — and the generic body (signed out, sessions
-            revoked) describes a person rather than an identity that signs in
+            revoked) describes a colleague rather than an identity that signs in
             nowhere. The agent body's job is to say what does NOT stop: scheduled
             extension jobs keep running, because a tick acts as the job it is. */}
         <p className="t-caption">

@@ -14,22 +14,22 @@ import (
 )
 
 // Every filter this module declares narrows something — the project half of
-// the check people/listfilters_test.go states: a binding that parses its
+// the check contacts/listfilters_test.go states: a binding that parses its
 // operand and writes nowhere runs the list WIDER than the caller asked, and
 // does it while looking exactly like a narrowed answer.
 func TestEveryDeclaredProjectsFilterNarrowsSomething(t *testing.T) {
 	id := ids.NewV7().String()
 	assertEveryFilterNarrows(t, "project", projectListFilters, map[string]string{
-		"key": "ACME", "organization_id": id, "owner_id": id, "phase": "delivering",
+		"key": "ACME", "company_id": id, "owner_id": id, "phase": "delivering",
 	})
 }
 
 // A project is offered ITS OWN vocabulary — the project half of the check
-// people/listfilters_test.go states: a switch arm pointing at a sibling's
+// contacts/listfilters_test.go states: a switch arm pointing at a sibling's
 // table hands out a vocabulary the store then refuses, and comparing
 // ListFilters against the table it returns would never see it.
 func TestAProjectIsOfferedItsOwnVocabulary(t *testing.T) {
-	want := []string{"key", "organization_id", "owner_id", "phase"}
+	want := []string{"company_id", "key", "owner_id", "phase"}
 	if got := (&Provider{}).ListFilters(datasource.EntityProject); !slices.Equal(got, want) {
 		t.Errorf("project is offered %v, want %v", got, want)
 	}

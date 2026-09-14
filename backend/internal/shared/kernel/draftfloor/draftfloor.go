@@ -5,7 +5,7 @@
 // model, in the language of the correspondence and honest about how long it
 // has been silent.
 //
-// Four places in the product write an email with no model available: the person
+// Four places in the product write an email with no model available: the contact
 // composer, the account composer, the timeline's own fallback, and the
 // warm-intro path in signals. All four spelled their skeleton in hardcoded
 // English, and all four opened a first message to a stranger with "Following

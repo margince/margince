@@ -36,12 +36,12 @@ const (
 // one — the CHECK refuses it, and archiving frees the fingerprint for a clean
 // re-derivation under the new audience). A signal ALREADY narrowed to a
 // different owner is archived too: its summary now mixes correspondence two
-// different people limited, and no one reader admits both.
+// different contacts limited, and no one reader admits both.
 //
 // The rows are selected by source = 'signal-scan' — the extraction producer's
 // own stamp — never by source_channel, which the contract DEFAULTS to
 // 'derived' for a human's own POST /signals (migration 0208 records the same
-// trap); a person's own filing is theirs, not this corrector's.
+// trap); a contact's own filing is theirs, not this corrector's.
 func NarrowDerivedForActivity(ctx context.Context, tx pgx.Tx, activityID ids.UUID, owner *ids.UUID) (int, error) {
 	cites := `evidence @> jsonb_build_array(jsonb_build_object('source_type', 'activity', 'source_id', $1::text))`
 	moved := 0
@@ -87,7 +87,7 @@ func NarrowDerivedForActivity(ctx context.Context, tx pgx.Tx, activityID ids.UUI
 			return 0, err
 		}
 		// Already owner-private to SOMEBODY ELSE and citing this newly limited
-		// message: the summary now mixes two people's limited correspondence.
+		// message: the summary now mixes two contacts's limited correspondence.
 		if err := apply("archiving cross-owner extraction signals", `
 			UPDATE signal
 			   SET archived_at = now()

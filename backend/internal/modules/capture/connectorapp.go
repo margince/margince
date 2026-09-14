@@ -10,7 +10,7 @@ package capture
 // It was the process environment (MARGINCE_GMAIL_CLIENT_ID / _CLIENT_SECRET,
 // MARGINCE_GRAPH_CLIENT_ID / _CLIENT_SECRET), which meant setting up capture
 // took shell access to the server and a restart, and there was no way for the
-// person who owns the Google project or the Entra registration to do it
+// contact who owns the Google project or the Entra registration to do it
 // themselves.
 //
 // The SECRET is sealed in the key vault and this row records the ref. The client
@@ -85,7 +85,7 @@ type ConnectorApp struct {
 	// of Credentials is never written back.
 	ClientSecretRef string `json:"client_secret_ref,omitempty"`
 	// Tenant pins a Microsoft app to ONE Entra directory. Empty means the
-	// app authorizes any organization, which is what a multi-tenant
+	// app authorizes any company, which is what a multi-tenant
 	// registration is for. Google apps carry none and validation refuses one:
 	// a field that silently does nothing is worse than an absent one, because
 	// an operator who fills it in believes they narrowed something.
@@ -316,7 +316,7 @@ func (v appVendor) validateEntraClientID(clientID string) error {
 func validateEntraTenant(tenant string) error {
 	switch strings.ToLower(tenant) {
 	case "common", "organizations", "consumers":
-		return fmt.Errorf("capture: %q is a Microsoft authority alias, not a directory — leave the tenant empty to authorize any organization, which is what that alias means", tenant)
+		return fmt.Errorf("capture: %q is a Microsoft authority alias, not a directory — leave the tenant empty to authorize any company, which is what that alias means", tenant)
 	}
 	if !guid.MatchString(tenant) {
 		return fmt.Errorf("capture: %q does not look like an Entra directory (tenant) id — those are GUIDs, from the Overview blade of the directory the app is registered in", tenant)

@@ -13,7 +13,7 @@ package integration
 //
 // These pass on the tree before the change too, and that is the point of
 // keeping them. The requirement travelled with the row-scope NARROWING, and the
-// only thing making it unconditional was that `organization` is owner-private
+// only thing making it unconditional was that `company` is owner-private
 // so its clause is never empty — an invariant holding on a neighbouring table's
 // privacy setting. These cases assert the property directly, so it now has
 // something of its own to stand on.
@@ -31,14 +31,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// anchorOnOrg puts the seeded deal on the organization the contract names: a
+// anchorOnCompany puts the seeded deal on the company the contract names: a
 // contract validates that the two agree, and SeedDeal leaves the deal
 // company-less.
-func anchorOnOrg(t *testing.T, e *Env, deal, org ids.UUID) {
+func anchorOnCompany(t *testing.T, e *Env, deal, company ids.UUID) {
 	t.Helper()
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
-			`UPDATE deal SET organization_id = $1 WHERE id = $2`, org, deal)
+			`UPDATE deal SET company_id = $1 WHERE id = $2`, company, deal)
 		return err
 	}); err != nil {
 		t.Fatal(err)
@@ -49,18 +49,18 @@ func anchorOnOrg(t *testing.T, e *Env, deal, org ids.UUID) {
 // it hangs off, leaving the contract itself live.
 func contractOnArchivedDeal(t *testing.T, e *Env) ids.ContractID {
 	t.Helper()
-	org := e.SeedOrg(t, "Acme", nil)
+	company := e.SeedCompany(t, "Acme", nil)
 	pipeline, open, _ := DealFixture(t, e)
 	dealUUID := e.SeedDeal(t, "Anchor", pipeline, open, &e.Rep1)
 	deal := ids.From[ids.DealKind](dealUUID)
-	anchorOnOrg(t, e, dealUUID, org)
+	anchorOnCompany(t, e, dealUUID, company)
 
 	created, err := e.Contracts.CreateContract(e.Admin(), contracts.CreateContractInput{
-		OrganizationID: ids.From[ids.OrganizationKind](org),
-		DealID:         &deal,
-		Title:          "An agreement on a deal that goes away",
-		ValueBasis:     contracts.BasisTotal,
-		Source:         "manual",
+		CompanyID:  ids.From[ids.CompanyKind](company),
+		DealID:     &deal,
+		Title:      "An agreement on a deal that goes away",
+		ValueBasis: contracts.BasisTotal,
+		Source:     "manual",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -93,18 +93,18 @@ func TestAnUnboundedCallerCannotReadAContractOnAnArchivedAnchor(t *testing.T) {
 // narrowing of exactly one shape rather than of the surface.
 func TestAContractOnALiveAnchorStaysReadable(t *testing.T) {
 	e := Setup(t)
-	org := e.SeedOrg(t, "Acme", nil)
+	company := e.SeedCompany(t, "Acme", nil)
 	pipeline, open, _ := DealFixture(t, e)
 	dealUUID := e.SeedDeal(t, "Anchor", pipeline, open, &e.Rep1)
 	deal := ids.From[ids.DealKind](dealUUID)
-	anchorOnOrg(t, e, dealUUID, org)
+	anchorOnCompany(t, e, dealUUID, company)
 
 	created, err := e.Contracts.CreateContract(e.Admin(), contracts.CreateContractInput{
-		OrganizationID: ids.From[ids.OrganizationKind](org),
-		DealID:         &deal,
-		Title:          "An agreement on a live deal",
-		ValueBasis:     contracts.BasisTotal,
-		Source:         "manual",
+		CompanyID:  ids.From[ids.CompanyKind](company),
+		DealID:     &deal,
+		Title:      "An agreement on a live deal",
+		ValueBasis: contracts.BasisTotal,
+		Source:     "manual",
 	})
 	if err != nil {
 		t.Fatal(err)

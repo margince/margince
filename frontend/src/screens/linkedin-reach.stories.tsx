@@ -42,13 +42,13 @@ type Story = StoryObj<typeof LinkedInReachCard>;
 const REACHED = {
   accounts: [
     {
-      organization_id: "018f3a1b-0000-7000-8000-0000000000a1",
+      company_id: "018f3a1b-0000-7000-8000-0000000000a1",
       display_name: "Nordwind Logistik GmbH",
       connections: 14,
       contacts_on_file: 3,
     },
     {
-      organization_id: "018f3a1b-0000-7000-8000-0000000000a2",
+      company_id: "018f3a1b-0000-7000-8000-0000000000a2",
       display_name: "Havelmann & Söhne",
       connections: 6,
       contacts_on_file: 6,

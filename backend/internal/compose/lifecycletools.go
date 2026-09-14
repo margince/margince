@@ -22,7 +22,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -77,11 +77,11 @@ func relinkBatchWire(out activities.RelinkBatchResult) agents.RelinkBatchResult 
 	return agents.RelinkBatchResult{Relinked: out.Relinked}
 }
 
-type leadDisqualifier struct{ store *people.Store }
+type leadDisqualifier struct{ store *contacts.Store }
 
 func (l leadDisqualifier) DisqualifyLead(ctx context.Context, id ids.UUID, ifVersion *int64) (json.RawMessage, error) {
-	out, err := l.store.DisqualifyLead(ctx, ids.From[ids.LeadKind](id), people.DisqualifyLeadInput{},
-		people.OnlyAtVersion(ifVersion))
+	out, err := l.store.DisqualifyLead(ctx, ids.From[ids.LeadKind](id), contacts.DisqualifyLeadInput{},
+		contacts.OnlyAtVersion(ifVersion))
 	if err != nil {
 		return nil, err
 	}
@@ -120,7 +120,7 @@ func (p projectPhaseAdvancer) AdvanceProjectPhase(
 type companyEnricher struct{ srv *Server }
 
 func (c companyEnricher) EnrichCompany(
-	ctx context.Context, orgID ids.UUID, overrideURL string, depth agents.EnrichDepth,
+	ctx context.Context, companyID ids.UUID, overrideURL string, depth agents.EnrichDepth,
 ) (json.RawMessage, error) {
 	// Routed on the seam's own constants, and an unknown depth is REFUSED
 	// rather than falling through to the cheaper read: both doors resolve the
@@ -133,7 +133,7 @@ func (c companyEnricher) EnrichCompany(
 		if c.srv == nil || c.srv.siteReadHandlers.engine == nil {
 			return nil, fmt.Errorf("enrich: depth %q needs a crawl runner, which this deployment has not configured", depth)
 		}
-		started, err := c.srv.siteReadHandlers.engine.startSiteRead(ctx, orgID, overrideURL)
+		started, err := c.srv.siteReadHandlers.engine.startSiteRead(ctx, companyID, overrideURL)
 		if err != nil {
 			return nil, err
 		}
@@ -142,7 +142,7 @@ func (c companyEnricher) EnrichCompany(
 		if c.srv == nil || c.srv.scrapeHandlers.engine == nil {
 			return nil, fmt.Errorf("enrich: depth %q needs a model path, which this deployment has not configured", depth)
 		}
-		proposal, err := c.srv.scrapeHandlers.engine.Propose(ctx, orgID, overrideURL)
+		proposal, err := c.srv.scrapeHandlers.engine.Propose(ctx, companyID, overrideURL)
 		if err != nil {
 			return nil, err
 		}
@@ -154,7 +154,7 @@ func (c companyEnricher) EnrichCompany(
 		// The override is deliberately NOT passed on: this depth reads the
 		// domain the record holds and has no way to be pointed elsewhere,
 		// which is the guardrail that keeps it from becoming company discovery.
-		started, err := c.srv.startTechnicalEnrich(ctx, orgID)
+		started, err := c.srv.startTechnicalEnrich(ctx, companyID)
 		if err != nil {
 			return nil, err
 		}
@@ -166,17 +166,17 @@ func (c companyEnricher) EnrichCompany(
 
 // lifecycleSeams builds the three adapters over one pool.
 func lifecycleSeams(pool *pgxpool.Pool) (activityRelinker, leadDisqualifier, leadDemoter, projectPhaseAdvancer) {
-	peopleStore := people.NewStore(InstallationDB(pool))
+	contactsStore := contacts.NewStore(InstallationDB(pool))
 	return activityRelinker{store: activities.NewStore(InstallationDB(pool))},
-		leadDisqualifier{store: peopleStore},
-		leadDemoter{store: peopleStore},
+		leadDisqualifier{store: contactsStore},
+		leadDemoter{store: contactsStore},
 		projectPhaseAdvancer{store: ProjectsStore(pool)}
 }
 
 // leadDemoter is the tool door's reach onto the reversal the REST handler
 // calls, and it hands the module's own answer through untouched — the shape
 // DemoteLeadResult declares a subset of.
-type leadDemoter struct{ store *people.Store }
+type leadDemoter struct{ store *contacts.Store }
 
 func (l leadDemoter) DemoteLead(ctx context.Context, id ids.UUID, reason string) (json.RawMessage, error) {
 	out, err := l.store.DemoteLead(ctx, ids.From[ids.LeadKind](id), reason)

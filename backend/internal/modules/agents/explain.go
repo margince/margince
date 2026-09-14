@@ -49,14 +49,14 @@ func (s *Dispatcher) explain(tool string, err error) string {
 	case errors.As(err, &steppedUp):
 		// A step-up that reached a human. It is its own branch rather than a
 		// wording variant of the one below because the INSTRUCTION differs: wait
-		// for the person who connected this agent, then repeat the call
+		// for the contact who connected this agent, then repeat the call
 		// unchanged — and specifically do not present an approval_id, which is
 		// the 🟡 loop's move and cannot work for a kind no tool redeems.
 		// The approval id is deliberately NOT quoted. It is the one identifier a
 		// caller told "do not send an approval_id" would reach for, and it opens
 		// nothing here: a step-up is released by the human, not redeemed by the
 		// agent. The human finds it in their own inbox.
-		return "This agent has reached its " + string(steppedUp.Counter) + " limit for this window, and the person " +
+		return "This agent has reached its " + string(steppedUp.Counter) + " limit for this window, and the contact " +
 			"who connected it has been asked whether it may continue. Do not send an approval_id: once they approve, " +
 			"repeat this call unchanged."
 	case errors.As(err, &overQuota) && overQuota.Releasable():
@@ -67,7 +67,7 @@ func (s *Dispatcher) explain(tool string, err error) string {
 		// the refusal quoted beside it, which correctly says a release WOULD end
 		// this. What is true of both is that nothing is pending.
 		return "This agent has reached a volume limit for this window, and no request to continue is open: " +
-			"the person who connected it has already declined one, or cannot be asked from here. Stop calling this " +
+			"the contact who connected it has already declined one, or cannot be asked from here. Stop calling this " +
 			"tool and tell the user what is blocking it; the same call can succeed after the window rolls. (" +
 			overQuota.Error() + ")"
 	case errors.As(err, &overQuota):
@@ -97,7 +97,7 @@ func (s *Dispatcher) explain(tool string, err error) string {
 		// An approval is required and nothing was staged to carry it — a surface
 		// with no inbox, or a tool that cannot describe its own staging target.
 		// There is no proposal to point at, so the answer says what it can.
-		return "This is a confirm-first (🟡) action: a person answers it before it runs, and not the " +
+		return "This is a confirm-first (🟡) action: a contact answers it before it runs, and not the " +
 			"credential that proposed it. Nothing was changed. Tell the user it is waiting — list_approvals " +
 			"shows it, read_approval shows what it would do, and they release it in the CRM. (" + err.Error() + ")"
 	case errors.Is(err, apperrors.ErrScopeExceeded):
@@ -253,7 +253,8 @@ func (s *Dispatcher) explainClassified(tool string, err error) string {
 // elsewhere but absent from the table is a figure nobody knows to keep true.
 func faultExplanation(fault httperr.Fault) string {
 	if len(fault.Fields) == 0 {
-		return echoSafe(fault.Code, maxBadArgsDetail) + ": " + echoSafe(fault.Detail, MaxFaultDetail)
+		return echoSafe(fault.Code, maxBadArgsDetail) + ": " +
+			echoSafe(fault.Detail, MaxFaultDetail) + faultReferenceSuffix(fault)
 	}
 
 	parts := make([]string, 0, len(fault.Fields))
@@ -327,7 +328,7 @@ const maxRemedyBudget = 4 * httperr.MaxFaultText
 // stagedExplanation is what a caller is told about a 🟡 call now sitting in a
 // human's inbox: what it would do, and which of the two moves to make.
 //
-// The summary is the sentence the human's own card carries, so the person and
+// The summary is the sentence the human's own card carries, so the colleague and
 // the agent are waiting on one described thing.
 //
 // IT ALSO SAYS WHAT IS NOT BLOCKED, AND TO REPORT WHAT ALREADY HAPPENED,
@@ -351,13 +352,61 @@ func stagedExplanation(staged *workflow.StagedApprovalError) string {
 			echoSafe(staged.Summary, workflow.MaxStagedSummary) + "."
 	}
 	if staged.AlreadyApproved {
-		return "A person has ALREADY approved this exact call. " + what +
+		return "A contact has ALREADY approved this exact call. " + what +
 			" Do not stage another: repeat this call with \"approval_id\": \"" +
 			staged.ApprovalID.String() + "\"."
 	}
-	return "Confirm-first (🟡): a person answers this before it runs. " + what +
-		" Tell them that, in those words; they release it in the CRM, and this exact call then " +
-		"repeats with \"approval_id\": \"" + staged.ApprovalID.String() + "\". " +
+	return "Confirm-first (🟡): a contact answers this before it runs, and it is not yours to answer. " +
+		what +
+		" Put what it would do in front of them and wait for their word. They can release it in the " +
+		"CRM, or you can relay the answer they give you with decide_approval — list_approvals is the " +
+		"same queue either way. Once released, this exact call repeats with \"approval_id\": \"" +
+		staged.ApprovalID.String() + "\". " +
 		"Blocks THIS call only — do the rest of what you were asked that does not depend on it, " +
 		"and report what you DID alongside what is waiting."
+}
+
+// faultReferenceSuffix names what a refusal left behind, in the one place an
+// agent reliably reads.
+//
+// THE TOOL SURFACE HAS NO STRUCTURED ERROR SHAPE. A tool failure is
+// `{isError: true, content: [text]}` — the MCP spec's shape — so a refusal's
+// Details map has nowhere to go on this door, and the seam that built it
+// (apperrors.ReferencedFault) would stop at the REST renderer.
+//
+// So the reference is appended to the text in a form an agent can act on: a
+// fixed prefix, a bare id, and the actions it may take. Not JSON, because the
+// content block is prose a model reads; a stable sentence is what it can be
+// asked to look for, and the id is a uuid that cannot be confused with the
+// words around it.
+//
+// AN EMPTY REFERENCE APPENDS NOTHING. Most faults carry none, and a trailing
+// "review:" with nothing after it is worse than silence.
+func faultReferenceSuffix(fault httperr.Fault) string {
+	if len(fault.Details) == 0 {
+		return ""
+	}
+	reference, ok := fault.Details["review_id"].(string)
+	if !ok || reference == "" {
+		return ""
+	}
+	suffix := " (review " + echoSafe(reference, maxBadArgsDetail)
+	if actions := faultActions(fault); actions != "" {
+		suffix += "; you may " + actions
+	}
+	return suffix + ")"
+}
+
+// faultActions renders what the caller may do about a refusal, or nothing when
+// the refusal names none.
+func faultActions(fault httperr.Fault) string {
+	raw, ok := fault.Details["available_actions"].([]string)
+	if !ok || len(raw) == 0 {
+		return ""
+	}
+	bounded := make([]string, 0, len(raw))
+	for _, action := range raw {
+		bounded = append(bounded, echoSafe(action, maxBadArgsDetail))
+	}
+	return strings.Join(bounded, ", ")
 }

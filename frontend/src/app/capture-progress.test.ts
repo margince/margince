@@ -29,15 +29,67 @@ function run(
   state: BackfillStatus["state"],
   scanned: number,
   estimated: number | null,
+  floor = false,
 ): BackfillStatus {
   return {
     state,
     estimated_messages: estimated,
+    estimate_is_floor: floor,
     counts: { messages_scanned: scanned },
   };
 }
 
 describe("liveCapture", () => {
+  // A floor denominator is a bound, not a total: the provider stopped counting
+  // at its cap, so the window holds at least that many and how many more is
+  // unknown. Under it, the share is an upper bound and worth drawing; past it,
+  // clamping to 1 would say the import is COMPLETE when nothing here knows how
+  // much is left — so the ring goes and the counts stand on their own.
+  it("drops the share once a floor denominator is passed, rather than pinning it full", () => {
+    const under = liveCapture([
+      mailbox({ backfill: run("running", 5_000, 20_000, true) }),
+    ]);
+    expect(under?.estimatedIsFloor).toBe(true);
+    expect(under?.fraction).toBe(0.25);
+
+    const past = liveCapture([
+      mailbox({ backfill: run("running", 24_000, 20_000, true) }),
+    ]);
+    expect(past?.estimatedIsFloor).toBe(true);
+    expect(past?.fraction).toBeNull();
+    // The counts are still the truth, and they are what the surfaces fall
+    // back to.
+    expect(past?.scanned).toBe(24_000);
+    expect(past?.estimated).toBe(20_000);
+  });
+
+  // An EXACT denominator that is overrun is a different fact — the mailbox grew
+  // between the preview and the scan — and the clamp is the right answer there:
+  // the run is genuinely at its end.
+  it("still clamps an exact denominator the scan overran", () => {
+    const over = liveCapture([
+      mailbox({ backfill: run("running", 1_200, 1_000) }),
+    ]);
+    expect(over?.estimatedIsFloor).toBe(false);
+    expect(over?.fraction).toBe(1);
+  });
+
+  // One capped mailbox makes the SUM a bound: the other mailbox's exact count
+  // says nothing about how much the capped one still holds.
+  it("treats a sum containing one floor as a floor", () => {
+    const both = liveCapture([
+      mailbox({ backfill: run("running", 100, 500) }),
+      mailbox({
+        id: "018f3a1b-0000-7000-8000-0000000000c2",
+        account_label: "grace@acme.test",
+        backfill: run("running", 21_000, 20_000, true),
+      }),
+    ]);
+    expect(both?.estimatedIsFloor).toBe(true);
+    // 21,100 scanned against a 20,500 bound: past it, so no share.
+    expect(both?.fraction).toBeNull();
+  });
+
   it("is null when no mailbox is importing, never a zero-progress reading", () => {
     expect(liveCapture([])).toBeNull();
     expect(liveCapture([mailbox({})])).toBeNull();
@@ -59,6 +111,7 @@ describe("liveCapture", () => {
     ).toEqual({
       scanned: 420,
       estimated: 1_000,
+      estimatedIsFloor: false,
       fraction: 0.42,
       sources: ["ada@acme.test"],
     });
@@ -70,6 +123,7 @@ describe("liveCapture", () => {
     ).toEqual({
       scanned: 0,
       estimated: 1_000,
+      estimatedIsFloor: false,
       fraction: 0,
       sources: ["ada@acme.test"],
     });
@@ -81,6 +135,7 @@ describe("liveCapture", () => {
     ).toEqual({
       scanned: 37,
       estimated: null,
+      estimatedIsFloor: false,
       fraction: null,
       sources: ["ada@acme.test"],
     });
@@ -115,6 +170,7 @@ describe("liveCapture", () => {
     expect(reading).toEqual({
       scanned: 400,
       estimated: 2_000,
+      estimatedIsFloor: false,
       fraction: 0.2,
       // A mailbox with no label is named by its provider, never dropped.
       sources: ["ada@acme.test", "graph"],

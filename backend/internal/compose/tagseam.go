@@ -74,7 +74,7 @@ func (a tagAdapter) GetTag(ctx context.Context, tagID ids.UUID) (agents.TagDetai
 			Name:     row.Name,
 			Archived: row.ArchivedAt != nil,
 		},
-		People:    usage.People,
+		Contacts:  usage.Contacts,
 		Companies: usage.Companies,
 		Deals:     usage.Deals,
 	}
@@ -85,7 +85,7 @@ func (a tagAdapter) GetTag(ctx context.Context, tagID ids.UUID) (agents.TagDetai
 }
 
 // RecordTags hands the record-tag read across. The tool and the record page
-// read the SAME store method, so a model and a person looking at one company
+// read the SAME store method, so a model and a contact looking at one company
 // cannot be told different things about who tagged it.
 func (a tagAdapter) RecordTags(ctx context.Context, entityType string, entityID ids.UUID) (agents.RecordTagsResult, error) {
 	read, err := a.store.RecordTagsFor(ctx, entityType, entityID)
@@ -136,6 +136,17 @@ func (a tagAdapter) FindTag(ctx context.Context, name string) (ids.UUID, bool, e
 	return a.store.FindTag(ctx, name)
 }
 
+// FindTagToRemove resolves a live OR retired name, because a retired word is
+// exactly what removal has to reach: retiring it is what left it on the records
+// still carrying it.
+func (a tagAdapter) FindTagToRemove(ctx context.Context, name string) (ids.UUID, bool, error) {
+	id, state, err := a.store.LookupTagName(ctx, name)
+	if err != nil {
+		return ids.UUID{}, false, err
+	}
+	return id, state.Live() || state.Archived(), nil
+}
+
 // TaggableTypes hands through the collections module's own list, so the tool
 // schemas' record_type enum and the store's CHECK cannot drift apart.
 func (a tagAdapter) TaggableTypes() []string {
@@ -155,7 +166,7 @@ func (a tagAdapter) RemoveTag(ctx context.Context, tagID ids.UUID, entityType st
 //
 // Each hands straight to the store method the HTTP handler and the admin card
 // already call, so an agent coining or renaming a word takes exactly the gates
-// a person does — `tag.create` and `tag.update`, which the seeded roles give
+// a contact does — `tag.create` and `tag.update`, which the seeded roles give
 // Admin and Ops alone. Re-deriving any of that here would be a second write
 // gate to keep in step with the first.
 

@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { formatTimeOfDay } from "../format/format";
@@ -6,7 +6,7 @@ import { viewerZone } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { meetingRow, readingsDay } from "./brief.fixtures";
-import { PromisesPanel, SchedulePanel } from "./brief.schedule";
+import { SchedulePanel, scheduleIsEmpty } from "./brief.schedule";
 import type { WorklistItem } from "./worklist.queries";
 
 // The two rail panels, and what each of them refuses to claim.
@@ -92,51 +92,38 @@ describe("the schedule panel", () => {
     expect(times[0].textContent).not.toBe("");
   });
 
-  it("says the day is clear rather than drawing an empty panel", () => {
-    draw(<SchedulePanel day={readingsDay({}, [])} state="ready" />);
+  // A CLEAR DAY IS NOT A PANEL. The header band, the hairline and one grey
+  // sentence stood in the rail beside the panels that had news, and the news
+  // was read last. The rail's quiet panel carries the line instead
+  // (brief.rail.tsx), and `scheduleIsEmpty` is the one predicate both turn on.
+  it("draws nothing at all on a day with no meeting", () => {
+    const { container } = draw(
+      <SchedulePanel day={readingsDay({}, [])} state="ready" />,
+    );
 
-    expect(screen.getByText(en["brief.schedule.clear"])).toBeTruthy();
+    expect(container.innerHTML).toBe("");
+    expect(scheduleIsEmpty(readingsDay({}, []), "ready")).toBe(true);
   });
 
-  // A read that has not landed is not a clear day. Saying so would send a rep
-  // into a morning believing nothing was booked.
-  it("says nothing about the day before the read lands", () => {
+  // A read that has not landed is not a clear day. Collapsing here would send a
+  // rep into a morning believing nothing was booked, so the panel keeps its box
+  // and draws the pending state its own title names.
+  it("keeps its box, and claims nothing, before the read lands", () => {
     draw(<SchedulePanel day={undefined} state="loading" />);
 
-    expect(screen.queryByText(en["brief.schedule.clear"])).toBeNull();
-  });
-});
-
-describe("the promises panel", () => {
-  it("lists open tasks and leaves the meetings to the panel above", () => {
-    const day = readingsDay({}, [
-      meetingRow("m1", true),
-      taskRow("t1", "Call Alice back"),
-    ]);
-    draw(<PromisesPanel day={day} state="ready" />);
-
-    const panel = screen.getByRole("region");
-    expect(within(panel).getByText("Call Alice back")).toBeTruthy();
-    expect(within(panel).queryByText(/Weber GmbH/)).toBeNull();
+    expect(
+      screen.getByRole("region", { name: en["brief.panel.schedule"] }),
+    ).toBeTruthy();
+    expect(scheduleIsEmpty(undefined, "loading")).toBe(false);
   });
 
-  // The panel's heading names two things and the product tracks one. Without
-  // this line an empty panel reads as "no promises outstanding", which is the
-  // one claim nothing behind it can make.
-  it("says promises are untracked on a busy day and on a quiet one", () => {
-    const busy = readingsDay({}, [taskRow("t1", "Call Alice back")]);
-    const { unmount } = draw(<PromisesPanel day={busy} state="ready" />);
-    expect(screen.getByText(en["brief.promises.untracked"])).toBeTruthy();
-    unmount();
+  // Nor is a read that failed. Same box, and the failure said out loud.
+  it("keeps its box when the read failed", () => {
+    draw(<SchedulePanel day={undefined} state="failed" />);
 
-    draw(<PromisesPanel day={readingsDay({}, [])} state="ready" />);
-    expect(screen.getByText(en["brief.promises.untracked"])).toBeTruthy();
-    expect(screen.getByText(en["brief.promises.clear"])).toBeTruthy();
-  });
-
-  it("does not claim a clear slate before the read lands", () => {
-    draw(<PromisesPanel day={undefined} state="loading" />);
-
-    expect(screen.queryByText(en["brief.promises.clear"])).toBeNull();
+    expect(
+      screen.getByRole("region", { name: en["brief.panel.schedule"] }),
+    ).toBeTruthy();
+    expect(screen.getByText(en["state.failed"])).toBeTruthy();
   });
 });

@@ -30,11 +30,11 @@ import (
 // deal_room_participant — were purged by files no census had ever parsed.
 //
 // So the reach is DERIVED and the list is judged against it. Every file
-// ErasePerson can reach that executes SQL is either in the cascade or in the
+// EraseContact can reach that executes SQL is either in the cascade or in the
 // register that says why it is not.
 func TestEveryFileTheCascadeExecutesSQLFromIsCensused(t *testing.T) {
 	t.Parallel()
-	reached := filesReachableFrom(t, "internal/modules/privacy", "ErasePerson")
+	reached := filesReachableFrom(t, "internal/modules/privacy", "EraseContact")
 
 	cascade := map[string]bool{}
 	for _, path := range erasureCascadeFiles {
@@ -51,7 +51,7 @@ func TestEveryFileTheCascadeExecutesSQLFromIsCensused(t *testing.T) {
 		unaccounted = append(unaccounted, path)
 	}
 	if len(unaccounted) > 0 {
-		t.Errorf("ErasePerson reaches %d file(s) that execute SQL and no census reads:\n\t%s\n\n"+
+		t.Errorf("EraseContact reaches %d file(s) that execute SQL and no census reads:\n\t%s\n\n"+
 			"Add each to erasureCascadeFiles, or to reachedButNotCascade with the reason it is not "+
 			"part of the cascade. A file left off is a table whose columns no census asks about, "+
 			"reported as covered.", len(unaccounted), strings.Join(unaccounted, "\n\t"))
@@ -62,7 +62,7 @@ func TestEveryFileTheCascadeExecutesSQLFromIsCensused(t *testing.T) {
 	// reader takes it for evidence that the cascade still goes there.
 	for _, path := range erasureCascadeFiles {
 		if !reached[path] {
-			t.Errorf("erasureCascadeFiles names %s, which ErasePerson cannot reach — either the "+
+			t.Errorf("erasureCascadeFiles names %s, which EraseContact cannot reach — either the "+
 				"cascade stopped calling it or this list outlived the call", path)
 		}
 	}
@@ -72,7 +72,7 @@ func TestEveryFileTheCascadeExecutesSQLFromIsCensused(t *testing.T) {
 	// The floor: a walk that reached nothing would pass both loops above in
 	// silence.
 	if len(reached) < 10 {
-		t.Fatalf("the call graph from ErasePerson reached %d file(s), want at least ten — the walk "+
+		t.Fatalf("the call graph from EraseContact reached %d file(s), want at least ten — the walk "+
 			"has stopped following the cascade and this census is judging almost nothing", len(reached))
 	}
 }

@@ -108,9 +108,9 @@ const withheldDeal = {
   ...deal,
   amount_minor: null,
   currency: null,
-  organization_id: null,
-  partner_org_id: null,
-  masked_fields: ["amount_minor", "organization_id", "partner_org_id"],
+  company_id: null,
+  partner_company_id: null,
+  masked_fields: ["amount_minor", "company_id", "partner_company_id"],
 };
 
 // One staged move waiting on this deal's own page: what the confirm-first
@@ -128,18 +128,23 @@ const stagedApproval = {
   evidence: [],
 };
 
+// The caller the page asks about by default. It holds no grant at all, which is
+// the reading the frames below document; a frame about an AVAILABLE verb has to
+// name the grant that verb reads, or the page draws a refusal.
+//
+// A fixture like the records above it, so it is named with them rather than
+// written inline as a parameter default.
+const ungrantedCaller = {
+  user: { id: "u-9", display_name: "Me" },
+  roles: ["rep"],
+  teams: [],
+};
+
 function installDealStub(
   offers: unknown[],
   record: unknown = deal,
   approvals: unknown[] = [],
-  // The caller the page asks about. The default holds no grant at all, which
-  // is the reading the frames below document; a frame about an AVAILABLE verb
-  // has to name the grant that verb reads, or the page draws a refusal.
-  me: unknown = {
-    user: { id: "u-9", display_name: "Me" },
-    roles: ["rep"],
-    teams: [],
-  },
+  me: unknown = ungrantedCaller,
 ) {
   installFetchStub({
     "GET /deals/d1": () => jsonResponse(record),
@@ -274,14 +279,14 @@ const boardStages = [
 ];
 
 const boardDeals = [
-  { ...deal, id: "b1", name: "Fleet retrofit", organization_id: "o1" },
+  { ...deal, id: "b1", name: "Fleet retrofit", company_id: "o1" },
   {
     ...deal,
     id: "b2",
     name: "Depot rollout",
     stage_id: "s2",
     amount_minor: 1_250_000,
-    organization_id: "o1",
+    company_id: "o1",
     stalled: true,
   },
   // The reader may not read this one's company: the wire sends no id and names
@@ -290,8 +295,8 @@ const boardDeals = [
     ...deal,
     id: "b3",
     name: "Northgate framework",
-    organization_id: null,
-    masked_fields: ["organization_id"],
+    company_id: null,
+    masked_fields: ["company_id"],
   },
 ];
 
@@ -351,7 +356,7 @@ function installBoardStub() {
         ],
         page: { next_cursor: null },
       }),
-    "GET /organizations": () =>
+    "GET /companies": () =>
       jsonResponse({
         data: [{ id: "o1", display_name: "Acme GmbH" }],
         page: { next_cursor: null },

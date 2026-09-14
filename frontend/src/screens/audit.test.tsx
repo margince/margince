@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
@@ -91,7 +91,7 @@ describe("ActorTag", () => {
     expect(screen.queryByText(/u-gone/)).toBeNull();
   });
 
-  it("names the Deal Room participant, so a disputed negotiation reads a person", () => {
+  it("names the Deal Room participant, so a disputed negotiation reads a contact", () => {
     wrap(
       <ActorTag
         entry={entry({
@@ -138,7 +138,7 @@ describe("ActorTag", () => {
     expect(screen.getByText("Lars Vogt")).toBeTruthy();
     expect(screen.getByText("via an agent")).toBeTruthy();
     // The passport uuid was the prominent half before PD-002. It is now not
-    // shown at all: a person is answerable for the change, and the tool is a
+    // shown at all: a contact is answerable for the change, and the tool is a
     // qualifier on them.
     expect(screen.queryByText(/01a01740/)).toBeNull();
   });
@@ -275,7 +275,7 @@ describe("AuditEntryLine", () => {
     expect(screen.queryByText(new RegExp(ME))).toBeNull();
   });
 
-  it("dates an entry on the organization's clock, not the reader's", () => {
+  it("dates an entry on the company's clock, not the reader's", () => {
     // 18:00Z on 21 August is 20:00 the same day in Berlin and 01:00 the NEXT
     // day in Ho Chi Minh City. An audit line is a fact in the shared book, so
     // two investigators must be able to quote it by the same day: reading it on

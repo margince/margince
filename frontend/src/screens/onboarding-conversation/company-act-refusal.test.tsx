@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -61,7 +61,7 @@ const REQUIRED_TRIO: ColdField[] = [
 const READ: CompanySiteRead = {
   id: READ_ID,
   target_kind: "onboarding",
-  organization_id: null,
+  company_id: null,
   root_url: SITE_URL,
   status: "ready",
   status_code: null,
@@ -73,7 +73,7 @@ const READ: CompanySiteRead = {
   profile_fields: REQUIRED_TRIO,
   facts: [],
   comparisons: [],
-  people: [],
+  contacts: [],
   legal_entities: [],
   warnings: [],
   draft_version: 1,

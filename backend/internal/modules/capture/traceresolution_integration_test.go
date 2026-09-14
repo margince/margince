@@ -116,7 +116,7 @@ func seedRecord(ctx context.Context, t *testing.T, db *database.DB,
 			if _, err := tx.Exec(ctx, `
 				INSERT INTO capture_pending_counterparty
 				       (email, domain, activity_id, owner_id, status, kind, resolved_at)
-				VALUES ($1, 'client.io', $2, $3, $4, 'person',
+				VALUES ($1, 'client.io', $2, $3, $4, 'contact',
 				        CASE WHEN $4 IN ('pending', 'unsure') THEN NULL ELSE now() END)`,
 				sender, activityID, owner, rec.verdict()); err != nil {
 				return err
@@ -293,7 +293,7 @@ func entriesByConnector(ctx context.Context, t *testing.T, store *capture.TraceS
 // A disposition belongs to the member who raised it, and the join says so.
 //
 // The ledger keeps one question per ADDRESS, and two colleagues corresponding
-// with the same person each raise their own. Joined on the address alone, one
+// with the same contact each raise their own. Joined on the address alone, one
 // member's trace answers with whichever verdict was settled last — including
 // another member's. What the ledger settled about a sender is a fact about that
 // member's own correspondence, which is the one boundary this product does not

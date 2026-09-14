@@ -340,7 +340,7 @@ func TestAHumanSelectedAudienceIsNotMovedByADerivation(t *testing.T) {
 	sync(t, customerMail("selected-1@acme.example"))
 	activityID := oneActivityID(t, e)
 
-	// A person named a specific set of readers. No contribution below knows
+	// A contact named a specific set of readers. No contribution below knows
 	// how to rebuild that set, so a derivation that moved the row would either
 	// publish what they narrowed or discard the names they chose.
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
@@ -523,6 +523,19 @@ func TestAForgedMessageIDBuysNoAccessToAColleaguesHeldMail(t *testing.T) {
 	for _, u := range importRowsOf(t, e, activityID) {
 		if u == e.Rep3 {
 			t.Fatal("a self-declared domain bought an import row on a colleague's held message")
+		}
+	}
+
+	// Nor does mailing YOURSELF the forged header. The seat's own address on the
+	// To line is exactly what the delivery test looks for, and it is on the line
+	// because the forger put it there — what they cannot put there is the
+	// message they are after, so a colliding id over different content is
+	// refused as a different message.
+	syncOther(t, emailWithSubject("mallory@elsewhere.example", "Mallory", secondSeatAddress,
+		"forge-target@acme.example", "anything at all"))
+	for _, u := range importRowsOf(t, e, activityID) {
+		if u == e.Rep3 {
+			t.Fatal("a forged Message-ID mailed to the forger's own address bought an import row on a colleague's held message")
 		}
 	}
 

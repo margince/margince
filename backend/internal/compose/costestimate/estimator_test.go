@@ -138,7 +138,7 @@ func TestEstimateObservedSingleBoundModel(t *testing.T) {
 		ladders: defaultLadders(),
 	}
 	totals := &fakeTotals{rows: []ai.ServedTaskTotal{classify, enrich, embed}}
-	yields := fakeYields{Scanned: 200, Captured: 200, PeopleCreated: 20}
+	yields := fakeYields{Scanned: 200, Captured: 200, ContactsCreated: 20}
 	e := estimatorFor(totals, rates, ladder, fakeLabels(50), yields)
 
 	got := mustEstimate(t, e, scanned)
@@ -341,7 +341,7 @@ func TestEstimatePricedDenomFlooredAtOne(t *testing.T) {
 	rates := fakeRates{rateKey("ollama", "gemma3"): pricedRate} // gemini/flash unrated → the cloud slice is truly unpriced
 	totals := &fakeTotals{rows: []ai.ServedTaskTotal{priced, unpriced}}
 	// enrich denom = Σcalls = 1000; pricedCalls = 1; 1000×1/1000 = 1 → floored ≥1.
-	e := estimatorFor(totals, rates, ladder, fakeLabels(0), fakeYields{Scanned: 100, Captured: 100, PeopleCreated: 50})
+	e := estimatorFor(totals, rates, ladder, fakeLabels(0), fakeYields{Scanned: 100, Captured: 100, ContactsCreated: 50})
 
 	got := mustEstimate(t, e, 100) // must not panic (div-by-zero guard)
 	if !got.HasCost {
@@ -407,25 +407,25 @@ func TestEstimateClassifyUnpricedSliceDoesNotOverquote(t *testing.T) {
 	}
 }
 
-// A zero people_created is NOT a zero-people observed enrich line. A run
+// A zero contacts_created is NOT a zero-contacts observed enrich line. A run
 // counts only the counterparties its own pages minted, so a window whose senders
 // were all already known, suppressed, or deferred to the verdict engine reads 0
 // while a wider window would still create plenty. A 0 therefore means "ratio
 // unavailable": enrich must FLOOR (heuristic) and price the floor units, never
 // silently quote an observed $0 enrich cost.
-func TestEstimateEnrichFloorsWhenPeopleCreatedZero(t *testing.T) {
+func TestEstimateEnrichFloorsWhenContactsCreatedZero(t *testing.T) {
 	// Directly: expectedUnits floors enrich and reports NOT observed at zero
-	// people_created, even with a real captured/scanned ratio available.
-	units, observed := expectedUnits(ai.TaskEnrich, 100, capture.BackfillYields{Scanned: 100, Captured: 100, PeopleCreated: 0})
+	// contacts_created, even with a real captured/scanned ratio available.
+	units, observed := expectedUnits(ai.TaskEnrich, 100, capture.BackfillYields{Scanned: 100, Captured: 100, ContactsCreated: 0})
 	if observed {
-		t.Fatal("enrich units observed=true at people_created=0, want false (ratio unavailable → floor)")
+		t.Fatal("enrich units observed=true at contacts_created=0, want false (ratio unavailable → floor)")
 	}
 	if want := unitsFloor(ai.TaskEnrich, 100); units != want || units <= 0 {
 		t.Fatalf("enrich floor units = %d, want %d (>0)", units, want)
 	}
 
 	// End to end: classify + embeddings price observed from the same yields, but
-	// the zero-people enrich forces the WHOLE estimate heuristic — a per-task
+	// the zero-contacts enrich forces the WHOLE estimate heuristic — a per-task
 	// fallback is never confined to its own task's line.
 	classify := ai.ServedTaskTotal{
 		Task: ai.TaskCaptureClassify, Tier: ai.TierCheapCloud, Provider: "gemini", ModelID: "flash",
@@ -451,11 +451,11 @@ func TestEstimateEnrichFloorsWhenPeopleCreatedZero(t *testing.T) {
 		rateKey("gemini", "embed"): pricedRate,
 	}
 	totals := &fakeTotals{rows: []ai.ServedTaskTotal{classify, enrich, embed}}
-	e := estimatorFor(totals, rates, ladder, fakeLabels(50), fakeYields{Scanned: 100, Captured: 100, PeopleCreated: 0})
+	e := estimatorFor(totals, rates, ladder, fakeLabels(50), fakeYields{Scanned: 100, Captured: 100, ContactsCreated: 0})
 
 	got := mustEstimate(t, e, 100)
 	if got.Quality != QualityHeuristic {
-		t.Fatalf("Quality = %s, want heuristic (zero people_created floors enrich, not a silent observed $0)", got.Quality)
+		t.Fatalf("Quality = %s, want heuristic (zero contacts_created floors enrich, not a silent observed $0)", got.Quality)
 	}
 	// Enrich is still PRICED — at its floor units, not dropped to a $0 line.
 	if !got.HasCost || got.CostMinor <= 0 {
@@ -464,10 +464,10 @@ func TestEstimateEnrichFloorsWhenPeopleCreatedZero(t *testing.T) {
 }
 
 // #4 (ADR-0068): a metering_failed enrich retry spent provider tokens (kept in
-// the slice token sums) but completed no fresh person, so it must inflate ONLY
+// the slice token sums) but completed no fresh contact, so it must inflate ONLY
 // the cost numerator, never the call-count denominator. A slice with Calls=2,
 // CompletedCalls=1 (one clean call + one metering_failed retry) therefore
-// projects ~2× the per-person cost of a clean Calls=1/CompletedCalls=1 slice —
+// projects ~2× the per-contact cost of a clean Calls=1/CompletedCalls=1 slice —
 // the retry's spend must NOT divide back out. Under the pre-fix code (the
 // denominator counted ALL served calls, including metering_failed) the doubled
 // numerator and doubled denominator cancelled and both projected the SAME
@@ -481,14 +481,14 @@ func TestEstimateEnrichMeteringFailedRetryDoesNotCancel(t *testing.T) {
 		ladders: map[ai.Task][]ai.Tier{ai.TaskEnrich: {ai.TierLocalSmall}},
 	}
 	rates := fakeRates{rateKey("ollama", "gemma3"): pricedRate}
-	// PeopleCreated anchors the observed enrich ratio: units = 100×50/100 = 50.
-	yields := fakeYields{Scanned: 100, Captured: 100, PeopleCreated: 50}
+	// ContactsCreated anchors the observed enrich ratio: units = 100×50/100 = 50.
+	yields := fakeYields{Scanned: 100, Captured: 100, ContactsCreated: 50}
 
 	clean := ai.ServedTaskTotal{
 		Task: ai.TaskEnrich, Tier: ai.TierLocalSmall, Provider: "ollama", ModelID: "gemma3",
 		TokensIn: 300_000, TokensOut: 40_000, Calls: 1, CompletedCalls: 1,
 	}
-	// Same person population, one clean call + one metering_failed retry: DOUBLE
+	// Same contact population, one clean call + one metering_failed retry: DOUBLE
 	// the spent tokens, but still ONE completed call.
 	retry := ai.ServedTaskTotal{
 		Task: ai.TaskEnrich, Tier: ai.TierLocalSmall, Provider: "ollama", ModelID: "gemma3",
@@ -544,7 +544,7 @@ func TestEstimateCallDenomReducedFormMatchesOldFormula(t *testing.T) {
 		ladders: map[ai.Task][]ai.Tier{ai.TaskEnrich: {ai.TierLocalSmall}},
 	}
 	rates := fakeRates{rateKey("ollama", "gemma3"): pricedRate}
-	yields := fakeYields{Scanned: 100, Captured: 100, PeopleCreated: 50}
+	yields := fakeYields{Scanned: 100, Captured: 100, ContactsCreated: 50}
 	e := estimatorFor(&fakeTotals{rows: []ai.ServedTaskTotal{a, b}}, rates, ladder, fakeLabels(0), yields)
 
 	got := mustEstimate(t, e, scanned)

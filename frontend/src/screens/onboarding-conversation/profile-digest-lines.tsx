@@ -7,11 +7,11 @@ import { ordinalNumber } from "../../format/format";
 import { useT } from "../../i18n";
 import type { CompanyFieldName } from "../onboarding";
 import type { ReviewRow } from "./company-review-state";
-import type { Fact, LegalEntity, Person } from "./profile-digest-data";
+import type { Contact, Fact, LegalEntity } from "./profile-digest-data";
 
 // The line types the article and the companion both draw from, kept apart
 // from their layout: a record line (with or without a value), a fact the
-// crawl found under no field of the record, a person the crawl found
+// crawl found under no field of the record, a contact the crawl found
 // published, and a legal entity the site's own notice named.
 
 /**
@@ -61,7 +61,7 @@ export function DigestLine({
             <EditableValue row={row} onField={onField} />
           )}
           {n === undefined ? (
-            // Typed by a person, or carried in from a profile that already
+            // Typed by a contact, or carried in from a profile that already
             // existed. It gets no number because there is no page to open, and
             // saying so is the honest half of citing everything else.
             <span className="pdigest-yours t-caption">
@@ -154,7 +154,7 @@ function EditableValue({
 // field's name, that it is not written down, and the one press that settles
 // it. `1.5px dashed` rather than a solid border for the same reason a staged
 // card everywhere else in the product carries one: nothing here is real until
-// a person writes it, and the deck is where that happens.
+// a contact writes it, and the deck is where that happens.
 function UnansweredLine({
   row,
   onSettle,
@@ -192,22 +192,22 @@ export function FactLine({
   );
 }
 
-// One person the crawl found published on the site. Never a contact or a
-// company-context row on its own — confirming the profile leaves people as a
+// One contact the crawl found published on the site. Never a contact or a
+// company-context row on its own — confirming the profile leaves contacts as a
 // separate lead proposal — so the article states only what the page printed.
-export function PersonLine({
-  person,
+export function ContactLine({
+  contact,
   n,
-}: Readonly<{ person: Person; n?: number }>) {
+}: Readonly<{ contact: Contact; n?: number }>) {
   return (
     <p className="pdigest-line">
-      <span className="pdigest-value">{person.name}</span>{" "}
-      <span className="pdigest-label">{person.role}</span>
-      {person.published_email ? (
-        <span className="pdigest-label"> · {person.published_email}</span>
+      <span className="pdigest-value">{contact.name}</span>{" "}
+      <span className="pdigest-label">{contact.role}</span>
+      {contact.published_email ? (
+        <span className="pdigest-label"> · {contact.published_email}</span>
       ) : null}
-      {person.linkedin_url ? (
-        <span className="pdigest-label"> · {person.linkedin_url}</span>
+      {contact.linkedin_url ? (
+        <span className="pdigest-label"> · {contact.linkedin_url}</span>
       ) : null}
       {n === undefined ? null : (
         <sup className="pdigest-ref">{ordinalNumber(n)}</sup>

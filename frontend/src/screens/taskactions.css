@@ -1,0 +1,19 @@
+.task-detail-head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+.task-detail-head h2 {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.task-detail-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+}
+.task-detail-actions {
+  align-items: flex-end;
+  flex-wrap: wrap;
+}

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -27,7 +27,7 @@ import {
 // Settings → Capture: the domains this installation refuses a company. The card
 // answers one question nothing else can — a company that never appeared, was it
 // refused and by whom — so what it must never do is lose the difference between
-// a machine's refusal and a person's, claim an empty list is a broken one, or
+// a machine's refusal and a contact's, claim an empty list is a broken one, or
 // offer a write it has no reason to send.
 //
 // The write is three inputs submitted together, so it lives in a dialog behind
@@ -38,9 +38,9 @@ import {
 const LIST = "GET /capture/blocked-domains";
 const WRITE = "PUT /capture/blocked-domains";
 
-// Read is every human role's; changing an entry is organization:update.
-const OPS: GrantSpec = { organization: ["read", "update"] };
-const READER: GrantSpec = { organization: ["read"] };
+// Read is every human role's; changing an entry is company:update.
+const OPS: GrantSpec = { company: ["read", "update"] };
+const READER: GrantSpec = { company: ["read"] };
 
 const BY_HEURISTIC = {
   domain: "expensify.example",
@@ -48,7 +48,7 @@ const BY_HEURISTIC = {
   reason: "bulk sender: no reply address",
   source: "heuristic",
   decided_at: "2026-08-02T14:40:00Z",
-  organization_id: null,
+  company_id: null,
 };
 const BY_HUMAN = {
   domain: "mckinsey.example",
@@ -56,7 +56,7 @@ const BY_HUMAN = {
   reason: "they became a client in July",
   source: "human",
   decided_at: "2026-08-11T07:05:00Z",
-  organization_id: "018f3a1b-0000-7000-8000-00000000c001",
+  company_id: "018f3a1b-0000-7000-8000-00000000c001",
 };
 
 function mount(allow: GrantSpec, routes: RouteMap) {
@@ -98,7 +98,7 @@ afterEach(() => {
 });
 
 describe("BlockedDomainsCard", () => {
-  it("says of every decision whether a machine or a person made it", async () => {
+  it("says of every decision whether a machine or a contact made it", async () => {
     mount(OPS, {
       [LIST]: () => jsonResponse({ data: [BY_HEURISTIC, BY_HUMAN], total: 2 }),
     });

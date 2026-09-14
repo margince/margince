@@ -40,7 +40,7 @@ func TestAnUntypedSweepDoesNotVisitPartner(t *testing.T) {
 		t.Fatalf("untyped sweep: %v", err)
 	}
 	if slices.Contains(walk, datasource.EntityPartner) {
-		t.Fatal("an untyped sweep visits partner; every word it would match lives on the organization, so the same company answers twice")
+		t.Fatal("an untyped sweep visits partner; every word it would match lives on the company, so the same company answers twice")
 	}
 	if !slices.Equal(walk, searchable) {
 		t.Fatalf("untyped walk = %v, want searchable %v", walk, searchable)
@@ -124,28 +124,28 @@ func TestACursorInAnUnservedStreamIsStillMalformed(t *testing.T) {
 // stream missing from the list it ranks against answers -1 — which compares
 // below every position and sends the walk back to its first type, serving
 // records the caller already holds. That is the shape this asserts against.
-func TestResumingAMixedWalkAtAPartnerCursorAdvancesPastPerson(t *testing.T) {
-	walk, err := sweepOrder([]datasource.EntityType{datasource.EntityPerson, datasource.EntityPartner})
+func TestResumingAMixedWalkAtAPartnerCursorAdvancesPastContact(t *testing.T) {
+	walk, err := sweepOrder([]datasource.EntityType{datasource.EntityContact, datasource.EntityPartner})
 	if err != nil {
-		t.Fatalf("naming person and partner: %v", err)
+		t.Fatalf("naming contact and partner: %v", err)
 	}
 	if len(walk) != 2 || walk[1] != datasource.EntityPartner {
-		t.Fatalf("walk = %v, want person then partner", walk)
+		t.Fatalf("walk = %v, want contact then partner", walk)
 	}
 	at := resumeIndex(walk, string(datasource.EntityPartner))
 	if at != 1 {
-		t.Fatalf("resumed at index %d, want 1 — index 0 re-serves every person the caller already read", at)
+		t.Fatalf("resumed at index %d, want 1 — index 0 re-serves every contact the caller already read", at)
 	}
 }
 
 // The ordinary case still holds: a cursor in the FIRST stream re-enters it,
 // carrying its own keyset rather than skipping the type.
 func TestResumingAtTheFirstStreamReentersIt(t *testing.T) {
-	walk, err := sweepOrder([]datasource.EntityType{datasource.EntityPerson, datasource.EntityPartner})
+	walk, err := sweepOrder([]datasource.EntityType{datasource.EntityContact, datasource.EntityPartner})
 	if err != nil {
-		t.Fatalf("naming person and partner: %v", err)
+		t.Fatalf("naming contact and partner: %v", err)
 	}
-	if at := resumeIndex(walk, string(datasource.EntityPerson)); at != 0 {
-		t.Fatalf("resumed at index %d, want 0 — the person stream has its own keyset to continue", at)
+	if at := resumeIndex(walk, string(datasource.EntityContact)); at != 0 {
+		t.Fatalf("resumed at index %d, want 0 — the contact stream has its own keyset to continue", at)
 	}
 }

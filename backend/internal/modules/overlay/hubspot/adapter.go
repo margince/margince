@@ -201,7 +201,7 @@ func (a *Adapter) Get(ctx context.Context, objectClass, externalID string) (over
 // direction this query resolves.
 func (a *Adapter) Associations(ctx context.Context, fromClass, fromID, toClass string) ([]overlay.Assoc, error) {
 	// The stored edge carries CANONICAL endpoint types (m.Target: "activity",
-	// "person", …), not the incumbent class names — so it references the same
+	// "contact", …), not the incumbent class names — so it references the same
 	// (object_class, external_id) identity the mirror rows and PurgeRecord use
 	// (a "calls" edge under from_type would never be cleaned up when the
 	// activity is purged, nor join the mirror on read).
@@ -447,7 +447,7 @@ func mapRecord(m overlay.ObjectMapping, objectClass string, raw ObjectRecord) (o
 		ExternalID: externalID,
 		// The mirror is keyed by canonical entity type, not the incumbent
 		// source name: the datasource read seam (overlay.Provider) reads
-		// by canonical EntityType ("person"), so incumbent naming
+		// by canonical EntityType ("contact"), so incumbent naming
 		// ("contacts") must never leak above the Incumbent seam — m.Target
 		// is that canonical name.
 		ObjectClass:     m.Target,

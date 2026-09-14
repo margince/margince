@@ -24,7 +24,7 @@ import (
 // READ, the tier ladder decided what got CREATED, and nothing carried the first
 // answer to the second. Deciding a conversation is somebody's private life and
 // then filing its author as a business contact is one system disagreeing with
-// itself in front of the person it is about.
+// itself in front of the contact it is about.
 //
 // It reads the KIND and not only the status. A thread can be held for many
 // reasons — legal, personnel, an explicit confidentiality marking — and those
@@ -33,7 +33,7 @@ import (
 //
 // Scoped to this seat's own verdict row, because that is how the ledger is keyed
 // and because the question is about THEIR mailbox: another seat's conversation
-// with the same person says nothing about whose this one is.
+// with the same contact says nothing about whose this one is.
 //
 // The caller refuses the CREATE and writes no ledger row. That is deliberate:
 // the disposition ledger is keyed on the ADDRESS and this is a fact about one
@@ -42,7 +42,7 @@ import (
 // becoming a contact, on a decision that was never about them as a sender.
 //
 // The message itself commits and keeps its audience. A personal thread is
-// already held to the people on it, and refusing the record is not a reason to
+// already held to the contacts on it, and refusing the record is not a reason to
 // lose the mail.
 func threadIsPrivateTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord) (bool, error) {
 	user := actorUserID(ctx)
@@ -88,9 +88,9 @@ func threadIsPrivateTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedR
 // somebody capture created whose correspondence with this seat is now entirely
 // private.
 type PrivateThreadContact struct {
-	PersonID ids.PersonID
-	OwnerID  ids.UUID
-	Email    string
+	ContactID ids.ContactID
+	OwnerID   ids.UUID
+	Email     string
 }
 
 // ContactsOrphanedByPrivacyTx answers which contacts a thread's personal
@@ -101,7 +101,7 @@ type PrivateThreadContact struct {
 // catches only the messages that arrive afterwards. This is what answers for the
 // records already made.
 //
-// It asks about the person's WHOLE correspondence with this seat, not about the
+// It asks about the contact's WHOLE correspondence with this seat, not about the
 // thread that triggered it. Somebody who writes about a private matter on
 // Monday and a contract on Tuesday is a business contact who also has a private
 // thread, and retracting them would lose a real counterparty. Only somebody
@@ -134,13 +134,13 @@ type PrivateThreadContact struct {
 // engine recomputes its rows' audience AFTER this runs — reading their stored
 // audience here would read the answer from before the verdict.
 //
-// It reads addresses rather than person ids from the thread, because that is
+// It reads addresses rather than contact ids from the thread, because that is
 // what the activity carries; the caller resolves each to the record capture
 // made for it.
 //
 // One bound to know: it matches on counterparty_email, so business
 // correspondence reaching the same human at a DIFFERENT address does not
-// protect them. Widening to person identity would also widen the retraction
+// protect them. Widening to contact identity would also widen the retraction
 // across seats, which the owner bound deliberately narrows; the address is the
 // unit the thread ledger and the activity rows both key on.
 func ContactsOrphanedByPrivacyTx(
@@ -152,8 +152,8 @@ func ContactsOrphanedByPrivacyTx(
 	rows, err := tx.Query(ctx, `
 		SELECT DISTINCT p.id, p.owner_id, pe.email
 		  FROM activity a
-		  JOIN person_email pe ON pe.email = a.counterparty_email AND pe.archived_at IS NULL
-		  JOIN person p ON p.id = pe.person_id AND p.archived_at IS NULL
+		  JOIN contact_email pe ON pe.email = a.counterparty_email AND pe.archived_at IS NULL
+		  JOIN contact p ON p.id = pe.contact_id AND p.archived_at IS NULL
 		 WHERE a.thread_key = $1
 		   AND a.counterparty_email <> ''
 		   AND p.owner_id = $2
@@ -183,7 +183,7 @@ func ContactsOrphanedByPrivacyTx(
 	var out []PrivateThreadContact
 	for rows.Next() {
 		var c PrivateThreadContact
-		if err := rows.Scan(&c.PersonID, &c.OwnerID, &c.Email); err != nil {
+		if err := rows.Scan(&c.ContactID, &c.OwnerID, &c.Email); err != nil {
 			return nil, fmt.Errorf("capture: reading the contacts a private verdict orphaned: %w", err)
 		}
 		out = append(out, c)

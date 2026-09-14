@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -88,7 +88,7 @@ const ME_OPERATOR = meResponse("full", {
 });
 
 // A rep, exactly as the roster seeds it: read on `integrations` so a dated value
-// on a person record has an explanation, and nothing more.
+// on a contact record has an explanation, and nothing more.
 const ME_READER = meResponse("full", {
   create: false,
   read: true,

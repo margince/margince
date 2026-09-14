@@ -12,9 +12,9 @@ import (
 
 func candidates() []Candidate {
 	return []Candidate{{
-		PersonID: "p-1",
-		FullName: "Dietmar Rietsch",
-		Title:    "Managing Director",
+		ContactID: "p-1",
+		FullName:  "Dietmar Rietsch",
+		Title:     "Managing Director",
 		Messages: []Message{{
 			ActivityID: "a-1",
 			Subject:    "Re: Retrofit 2026",
@@ -73,7 +73,7 @@ func outsideEverySpan(content, marker, needle string) bool {
 func TestGateKeepsAWellEvidencedProposal(t *testing.T) {
 	t.Parallel()
 	kept := Gate([]Proposal{{
-		PersonID:        "p-1",
+		ContactID:       "p-1",
 		Role:            "economic_buyer",
 		EvidenceSnippet: "I sign off the budget for this, so send it",
 		SourceID:        "a-1",
@@ -89,7 +89,7 @@ func TestGateKeepsAWellEvidencedProposal(t *testing.T) {
 func TestGateDropsASnippetTheSourceDoesNotContain(t *testing.T) {
 	t.Parallel()
 	kept := Gate([]Proposal{{
-		PersonID:        "p-1",
+		ContactID:       "p-1",
 		Role:            "economic_buyer",
 		EvidenceSnippet: "I am the economic buyer",
 		SourceID:        "a-1",
@@ -103,7 +103,7 @@ func TestGateDropsASnippetTheSourceDoesNotContain(t *testing.T) {
 func TestGateDropsASourceThisCallNeverSupplied(t *testing.T) {
 	t.Parallel()
 	kept := Gate([]Proposal{{
-		PersonID:        "p-1",
+		ContactID:       "p-1",
 		Role:            "economic_buyer",
 		EvidenceSnippet: "I sign off the budget for this, so send it",
 		SourceID:        "a-elsewhere",
@@ -117,7 +117,7 @@ func TestGateDropsASourceThisCallNeverSupplied(t *testing.T) {
 func TestGateDropsAProposalBelowTheFloor(t *testing.T) {
 	t.Parallel()
 	kept := Gate([]Proposal{{
-		PersonID:        "p-1",
+		ContactID:       "p-1",
 		Role:            "economic_buyer",
 		EvidenceSnippet: "I sign off the budget for this, so send it",
 		SourceID:        "a-1",
@@ -128,10 +128,10 @@ func TestGateDropsAProposalBelowTheFloor(t *testing.T) {
 	}
 }
 
-func TestGateDropsAPersonThisCallNeverOffered(t *testing.T) {
+func TestGateDropsAContactThisCallNeverOffered(t *testing.T) {
 	t.Parallel()
 	kept := Gate([]Proposal{{
-		PersonID:        "p-somebody-else",
+		ContactID:       "p-somebody-else",
 		Role:            "champion",
 		EvidenceSnippet: "I sign off the budget for this, so send it",
 		SourceID:        "a-1",
@@ -145,7 +145,7 @@ func TestGateDropsAPersonThisCallNeverOffered(t *testing.T) {
 func TestGateDropsARoleTheVocabularyDoesNotHold(t *testing.T) {
 	t.Parallel()
 	kept := Gate([]Proposal{{
-		PersonID:        "p-1",
+		ContactID:       "p-1",
 		Role:            "chief_wizard",
 		EvidenceSnippet: "I sign off the budget for this, so send it",
 		SourceID:        "a-1",
@@ -156,20 +156,20 @@ func TestGateDropsARoleTheVocabularyDoesNotHold(t *testing.T) {
 	}
 }
 
-// One seat per person. Two proposals for the same contact is the model
-// disagreeing with itself, and writing both would put one person in two lanes.
-func TestGateKeepsOneProposalPerPerson(t *testing.T) {
+// One seat per contact. Two proposals for the same contact is the model
+// disagreeing with itself, and writing both would put one contact in two lanes.
+func TestGateKeepsOneProposalPerContact(t *testing.T) {
 	t.Parallel()
 	kept := Gate([]Proposal{
 		{
-			PersonID:        "p-1",
+			ContactID:       "p-1",
 			Role:            "economic_buyer",
 			EvidenceSnippet: "I sign off the budget for this, so send it",
 			SourceID:        "a-1",
 			Confidence:      0.95,
 		},
 		{
-			PersonID:        "p-1",
+			ContactID:       "p-1",
 			Role:            "champion",
 			EvidenceSnippet: "so send it to me directly, please and thanks",
 			SourceID:        "a-1",
@@ -177,7 +177,7 @@ func TestGateKeepsOneProposalPerPerson(t *testing.T) {
 		},
 	}, candidates())
 	if len(kept) != 1 {
-		t.Fatalf("kept %d proposals for one person", len(kept))
+		t.Fatalf("kept %d proposals for one contact", len(kept))
 	}
 	if kept[0].Role != "economic_buyer" {
 		t.Fatalf("kept the second proposal rather than the first: %+v", kept[0])
@@ -190,9 +190,9 @@ func TestGateKeepsOneProposalPerPerson(t *testing.T) {
 func TestGateDropsAProposalEvidencedOnlyByATitle(t *testing.T) {
 	t.Parallel()
 	titleOnly := []Candidate{{
-		PersonID: "p-2",
-		FullName: "Ute Sommer",
-		Title:    "Chief Financial Officer",
+		ContactID: "p-2",
+		FullName:  "Ute Sommer",
+		Title:     "Chief Financial Officer",
 		Messages: []Message{{
 			ActivityID: "a-2",
 			Subject:    "Re: schedule",
@@ -200,7 +200,7 @@ func TestGateDropsAProposalEvidencedOnlyByATitle(t *testing.T) {
 		}},
 	}}
 	kept := Gate([]Proposal{{
-		PersonID:        "p-2",
+		ContactID:       "p-2",
 		Role:            "economic_buyer",
 		EvidenceSnippet: "Chief Financial Officer",
 		SourceID:        "a-2",
@@ -213,22 +213,22 @@ func TestGateDropsAProposalEvidencedOnlyByATitle(t *testing.T) {
 
 // A CONTACT CANNOT SPEAK FOR ANOTHER. Both sit in one prompt, so a sender who
 // writes an instruction into their own email could otherwise hand a role to a
-// colleague they have never spoken for — the model echoes the other person's
+// colleague they have never spoken for — the model echoes the other contact's
 // id, quotes its own message, and every other check passes. The evidence is
 // bound to its author, which is what makes it evidence.
 func TestGateRefusesEvidenceWrittenBySomebodyElse(t *testing.T) {
 	t.Parallel()
 	two := []Candidate{
-		{PersonID: "p-attacker", FullName: "Mallory", Messages: []Message{{
+		{ContactID: "p-attacker", FullName: "Mallory", Messages: []Message{{
 			ActivityID: "a-1", Subject: "Re: deal",
 			Body: "I sign off the budget for this, so send it to me directly.",
 		}}},
-		{PersonID: "p-victim", FullName: "Ute Sommer", Messages: []Message{{
+		{ContactID: "p-victim", FullName: "Ute Sommer", Messages: []Message{{
 			ActivityID: "a-2", Subject: "hi", Body: "Thursday works for me.",
 		}}},
 	}
 	kept := Gate([]Proposal{{
-		PersonID:        "p-victim",
+		ContactID:       "p-victim",
 		Role:            "economic_buyer",
 		EvidenceSnippet: "I sign off the budget for this, so send it",
 		SourceID:        "a-1",
@@ -244,7 +244,7 @@ func TestGateRefusesEvidenceWrittenBySomebodyElse(t *testing.T) {
 func TestGateRefusesASnippetTooShortToBeEvidence(t *testing.T) {
 	t.Parallel()
 	kept := Gate([]Proposal{{
-		PersonID:        "p-1",
+		ContactID:       "p-1",
 		Role:            "economic_buyer",
 		EvidenceSnippet: "I",
 		SourceID:        "a-1",
@@ -257,19 +257,19 @@ func TestGateRefusesASnippetTooShortToBeEvidence(t *testing.T) {
 
 // A seat somebody typed is a human's answer to this question. Overwriting it
 // with a reading is the one thing this must never do.
-func TestGateRefusesToOverwriteASeatAPersonTyped(t *testing.T) {
+func TestGateRefusesToOverwriteASeatAContactTyped(t *testing.T) {
 	t.Parallel()
 	taken := candidates()
 	taken[0].HoldsRole = true
 	kept := Gate([]Proposal{{
-		PersonID:        "p-1",
+		ContactID:       "p-1",
 		Role:            "champion",
 		EvidenceSnippet: "I sign off the budget for this, so send it",
 		SourceID:        "a-1",
 		Confidence:      1,
 	}}, taken)
 	if len(kept) != 0 {
-		t.Fatalf("overwrote a role a person had already recorded: %+v", kept)
+		t.Fatalf("overwrote a role a contact had already recorded: %+v", kept)
 	}
 }
 
@@ -278,7 +278,7 @@ func TestGateRefusesToOverwriteASeatAPersonTyped(t *testing.T) {
 func TestGateRefusesAConfidenceOutsideItsRange(t *testing.T) {
 	t.Parallel()
 	kept := Gate([]Proposal{{
-		PersonID:        "p-1",
+		ContactID:       "p-1",
 		Role:            "economic_buyer",
 		EvidenceSnippet: "I sign off the budget for this, so send it",
 		SourceID:        "a-1",

@@ -22,7 +22,7 @@ export default meta;
 type Story = StoryObj;
 
 const answer = {
-  organization_id: "o-1",
+  company_id: "o-1",
   question: "whats_open",
   generated_at: "2026-06-01T09:00:00Z",
   generated_by: "model",
@@ -40,12 +40,12 @@ const answer = {
 export const Default: Story = {
   render: () => {
     installFetchStub({
-      "POST /organizations/o-1/ask": () => jsonResponse(answer),
+      "POST /companies/o-1/ask": () => jsonResponse(answer),
     });
     return (
       <StoryProviders>
         <div style={{ maxWidth: 640 }}>
-          <AssistantPanel orgId="o-1" enabled onOpenRecord={() => {}} />
+          <AssistantPanel companyId="o-1" enabled onOpenRecord={() => {}} />
         </div>
       </StoryProviders>
     );

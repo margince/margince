@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// The record's email box: the one place on a person, lead or deal page a rep
+// The record's email box: the one place on a contact, lead or deal page a rep
 // writes from.
 //
 // It is a MAIL box, not a to-do box. It is always here and it always offers to
@@ -12,7 +12,7 @@
 // "nothing to do here".
 //
 // DealEmailAside (dealemail.tsx) is the caller that reads `reply_to` off the
-// deal status card; a person or lead page has no such read today, so it turns
+// deal status card; a contact or lead page has no such read today, so it turns
 // on `detectWaitingReply` instead and lets this component ask the same
 // question directly. Whoever decides which state applies is the caller's
 // job: this component only draws it, from whichever of the two sources the
@@ -38,7 +38,7 @@ import { ComposeModal, type RelinkKind } from "./compose";
  *
  * `enabled` is the caller's opt-in, not a default: DealEmailAside supplies
  * its own `replyTo` and must never also run this query, or the box would
- * have two sources answering one question. A person or lead page turns it on
+ * have two sources answering one question. A contact or lead page turns it on
  * because it has no other read of the same fact.
  *
  * Undefined while the read is unsettled, finds nothing, or FAILED: fresh
@@ -113,7 +113,7 @@ export function EmailVerb({
   const t = useT();
   return (
     <IconAction
-      label={label ?? t("person.action.email")}
+      label={label ?? t("contact.action.email")}
       icon={icon ?? <Mail size={15} aria-hidden="true" />}
       disabled={disabled}
       reason={reason}
@@ -130,13 +130,13 @@ export function EmailVerb({
 export function RecordEmailVerb({
   entityType,
   entityId,
-  personId,
+  contactId,
   recordAddress,
   disabledReasonId,
 }: Readonly<{
   entityType: RelinkKind;
   entityId: string;
-  personId?: string;
+  contactId?: string;
   /** The record's own address, for a first message to it. See ComposeModal. */
   recordAddress?: string;
   disabledReasonId?: string;
@@ -155,7 +155,7 @@ export function RecordEmailVerb({
           key={entityId}
           entityType={entityType}
           entityId={entityId}
-          personId={personId}
+          contactId={contactId}
           recordAddress={recordAddress}
           kind="email"
           open={composing}
@@ -171,7 +171,7 @@ export function RecordEmailAside({
   entityId,
   replyTo,
   detectWaitingReply = false,
-  personId,
+  contactId,
   recordAddress,
   strings,
 }: Readonly<{
@@ -183,7 +183,7 @@ export function RecordEmailAside({
   // caller that already knows its reply target (dealemail.tsx) leaves this
   // off and passes `replyTo` directly instead.
   detectWaitingReply?: boolean;
-  personId?: string;
+  contactId?: string;
   /** The record's own address, for a first message to it. See ComposeModal. */
   recordAddress?: string;
   // Overrides for a caller that already has its own wording for these five
@@ -241,7 +241,7 @@ export function RecordEmailAside({
           activityId={effectiveReplyTo}
           entityType={entityType}
           entityId={entityId}
-          personId={personId}
+          contactId={contactId}
           recordAddress={recordAddress}
           kind="email"
           open={composing}

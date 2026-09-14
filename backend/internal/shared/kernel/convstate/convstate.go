@@ -31,7 +31,7 @@ import "time"
 type Band string
 
 const (
-	// BandNone: no prior correspondence with this person at all. A first
+	// BandNone is no prior correspondence with this contact at all. A first
 	// touch. The band that most needs naming, because every "just following
 	// up" a drafter reaches for by reflex is false here.
 	BandNone Band = "none"
@@ -137,7 +137,7 @@ func (s State) AssumesSharedMemory() bool {
 }
 
 // ImpliesPriorContact reports whether a draft may refer to any earlier contact
-// with this person at all. False only at BandNone, which is exactly where a
+// with this contact at all. False only at BandNone, which is exactly where a
 // follow-up subject or a reply prefix would be a fabrication (DRAFT-AC-E-3).
 func (s State) ImpliesPriorContact() bool {
 	return s.Band != BandNone

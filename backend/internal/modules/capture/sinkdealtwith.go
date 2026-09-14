@@ -21,14 +21,14 @@ import (
 //
 // Three questions, and T1 used to ask only the first. Whether the workspace
 // wrote here (corresponded); whether that amounts to an exchange rather than
-// unreturned intent (exchanged); and whether a person is reachable at the
+// unreturned intent (exchanged); and whether a contact is reachable at the
 // address at all (recordWorthy) — a mailbox owner books flights and answers
 // their own robots, so writing somewhere is not evidence a human is behind it.
 // A single send is deferred rather than refused, so a real prospect written to
 // once still becomes a contact, for a reason.
 //
 // A MEETING is the fourth, and the strongest. Mail is evidence about intent —
-// a founder mails forty people and hears from six — while a meeting is evidence
+// a founder mails forty contacts and hears from six — while a meeting is evidence
 // about time, which nobody spends by accident. Before this, a partner the
 // workspace was meeting next week satisfied nothing here, and the invitation
 // made it worse: it reaches the mailbox as machine-generated mail, so the
@@ -40,7 +40,7 @@ import (
 // One answer feeding both is what says the meeting IS the evidence, rather than
 // a third clause somebody must remember to combine.
 //
-// recordWorthy still binds. A meeting names people, and `noreply@` on the
+// recordWorthy still binds. A meeting names contacts, and `noreply@` on the
 // invitation is not one of them.
 func (s *Sink) dealtWithEnoughToRecord(
 	ctx context.Context, tx pgx.Tx, cp connector.Counterparty, capturing ids.UUID,
@@ -85,7 +85,7 @@ type dealtWith struct {
 	corresponded bool
 	// exchanged: that amounts to an exchange rather than unreturned intent.
 	exchanged bool
-	// replied: they wrote to US, the only one that says the person initiated
+	// replied: they wrote to US, the only one that says the contact initiated
 	// contact. A meeting deliberately does not set it — sitting in a meeting is
 	// worth a record and is not somebody writing to us first.
 	replied bool

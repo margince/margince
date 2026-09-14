@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // Package dealrooms owns the buyer-facing Deal Room: one room per deal, the
-// immutable releases that fix what a buyer was shown, the named people invited
+// immutable releases that fix what a buyer was shown, the named contacts invited
 // into it, the credentials that admit them, the documents the seller shares
 // and the conversation both sides hold about them.
 //
@@ -13,7 +13,7 @@
 // a public edge safe to serve at all: it reads a release, never the live deal.
 //
 // WHAT IS BUILT TODAY is the seller's half: the room, its lifecycle, its
-// releases, and the people admitted to it. A room reads and writes through the
+// releases, and the contacts admitted to it. A room reads and writes through the
 // SELLER's authority, which it takes from the parent deal — deal_room carries no
 // owner of its own, so every read joins deal and applies that row-scope clause,
 // and every write takes auth.EnsureWritable on the same deal on top.

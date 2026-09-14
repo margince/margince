@@ -86,7 +86,7 @@ make dev   # look for: "dev: the stored model binding serves the cold-start read
 > offline fake — Ollama included.
 
 `make dev` brings up the app on `:8080` (the api behind it), cold —
-the bootstrap organization and admin, no records. Open
+the bootstrap company and admin, no records. Open
 **http://localhost:8080** and log in as `admin@demo.test` /
 `demo-password-123`.
 Full first-run details:

@@ -22,7 +22,7 @@ import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { dealRoleLabel } from "../record360";
 import "./dealcommittee.css";
-import { SeatPerson } from "./seatperson";
+import { SeatContact } from "./seatcontact";
 
 type DealCoverage = components["schemas"]["DealCoverage"];
 type DealCoverageSeat = components["schemas"]["DealCoverageSeat"];
@@ -39,7 +39,7 @@ const PITCH = 30;
 const SEAT_RADIUS = 9;
 const MIN_HEIGHT = 120;
 // How far our side's node may grow with the colleagues carrying the deal. It
-// is capped because past a few people the node stops reading as a node.
+// is capped because past a few contacts the node stops reading as a node.
 const MAX_OURS_LIFT = 6;
 
 // The risk kinds that mean a seat is missing rather than cold. Each draws one
@@ -145,9 +145,9 @@ export function DealCommitteeMap({
           {/* The accessible rendering of the same seats, in the same order. */}
           <ul className="dc-seats">
             {seats.map((seat) => (
-              <li key={seat.person_id} className="dc-seat-row">
+              <li key={seat.contact_id} className="dc-seat-row">
                 <span className="dc-seat-name">
-                  <SeatPerson seat={seat} />
+                  <SeatContact seat={seat} />
                 </span>
                 <span className="dc-role">{dealRoleLabel(seat.role, t)}</span>
                 <Badge tone={seat.engaged ? "success" : undefined}>
@@ -213,7 +213,7 @@ function CommitteeSvg({
         // is the exact claim this map exists to disprove.
         seat.engaged ? (
           <line
-            key={`thread-${seat.person_id}`}
+            key={`thread-${seat.contact_id}`}
             className="dc-thread"
             x1={OURS_X}
             y1={ourY}
@@ -234,7 +234,7 @@ function CommitteeSvg({
       />
       {seats.map((seat, index) => (
         <circle
-          key={seat.person_id}
+          key={seat.contact_id}
           className={`dc-seat ${seat.engaged ? "dc-seat-engaged" : "dc-seat-quiet"}`}
           cx={THEIRS_X}
           cy={TOP + index * PITCH}

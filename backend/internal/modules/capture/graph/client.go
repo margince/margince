@@ -42,7 +42,7 @@ const (
 	graphAPIBase     = "https://graph.microsoft.com/v1.0"
 
 	// defaultTenant is the multi-tenant identity endpoint: any Microsoft 365
-	// organization (and personal accounts) can consent. A single-tenant
+	// company (and personal accounts) can consent. A single-tenant
 	// deployment narrows it to its own tenant id via OAuthConfig.Tenant.
 	defaultTenant = "common"
 
@@ -100,7 +100,7 @@ type Authorizer interface {
 	Refresh(ctx context.Context, refreshToken string, granted []string) (oauthflow.TokenRefresh, error)
 }
 
-// OAuth is the full handshake surface: an Authorizer that can also send a person
+// OAuth is the full handshake surface: an Authorizer that can also send a contact
 // to Microsoft's consent screen. The transport holds this; a connector holds the
 // narrower half.
 type OAuth interface {

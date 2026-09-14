@@ -22,7 +22,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -37,7 +37,7 @@ const (
 	technicalLookupMaxWorkers = 1
 )
 
-// TechnicalEnrichOrganizationArgs is one queued lookup: the tenant and the
+// TechnicalEnrichCompanyArgs is one queued lookup: the tenant and the
 // company.
 //
 // The DOMAIN is not among them, deliberately, for the reason the geocode job
@@ -45,16 +45,16 @@ const (
 // it from the record when it runs, so a lookup queued before an edit reads the
 // domain the company actually has — and, because the args cannot carry one,
 // there is no way to point this lane at a domain the record never held.
-type TechnicalEnrichOrganizationArgs struct {
-	Workspace      ids.UUID `json:"workspace_id"`
-	OrganizationID ids.UUID `json:"organization_id"`
+type TechnicalEnrichCompanyArgs struct {
+	Workspace ids.UUID `json:"workspace_id"`
+	CompanyID ids.UUID `json:"company_id"`
 }
 
 // Kind is the stable job identifier River persists in river_job.
-func (TechnicalEnrichOrganizationArgs) Kind() string { return "technical_enrich_organization" }
+func (TechnicalEnrichCompanyArgs) Kind() string { return "technical_enrich_company" }
 
 // WorkspaceID binds this lookup to its tenant (jobs.WorkspaceScoped).
-func (a TechnicalEnrichOrganizationArgs) WorkspaceID() ids.UUID { return a.Workspace }
+func (a TechnicalEnrichCompanyArgs) WorkspaceID() ids.UUID { return a.Workspace }
 
 // TechnicalEnrichBackfillArgs is one pass over the companies due a lookup.
 //
@@ -116,7 +116,7 @@ func addTechnicalEnrichJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerC
 		return nil
 	}
 	worker := &technicalEnrichWorker{pool: pool, enricher: cfg.TechnicalEnricher}
-	addDeclaredWorker[TechnicalEnrichOrganizationArgs](reg, worker)
+	addDeclaredWorker[TechnicalEnrichCompanyArgs](reg, worker)
 	addDeclaredWorker[TechnicalEnrichBackfillArgs](reg, &technicalBackfillWorker{pool: pool})
 	return periodicFor(cfg, TechnicalEnrichBackfillArgs{})
 }
@@ -132,7 +132,7 @@ type technicalEnrichWorker struct {
 // The lane ledger is written even when a lane failed — especially then: it is
 // what carries the backoff, and a failure nobody recorded is a failure the
 // sweep retries at full rate.
-func (w *technicalEnrichWorker) Work(ctx context.Context, job *river.Job[TechnicalEnrichOrganizationArgs]) error {
+func (w *technicalEnrichWorker) Work(ctx context.Context, job *river.Job[TechnicalEnrichCompanyArgs]) error {
 	args := job.Args
 	// Bound through the shared helper, so the args' own WorkspaceID() IS the
 	// binding: a worker that picked its own could claim one workspace and work
@@ -145,15 +145,15 @@ func (w *technicalEnrichWorker) Work(ctx context.Context, job *river.Job[Technic
 		return jobs.FaultContext(ctx, err)
 	}
 	// The lookup reads and writes under an actor of its own: TechnicalDomain
-	// takes organization:read and the apply takes organization:update, both of
+	// takes company:read and the apply takes company:update, both of
 	// which refuse a context with no principal.
 	wsCtx = technicalActor(wsCtx)
-	orgID := ids.From[ids.OrganizationKind](args.OrganizationID)
-	store := people.NewStore(database.Bind(w.pool, func(context.Context) (ids.WorkspaceID, error) {
+	companyID := ids.From[ids.CompanyKind](args.CompanyID)
+	store := contacts.NewStore(database.Bind(w.pool, func(context.Context) (ids.WorkspaceID, error) {
 		return ids.From[ids.WorkspaceKind](args.Workspace), nil
 	}))
 
-	domain, ok, err := store.TechnicalDomain(wsCtx, orgID)
+	domain, ok, err := store.TechnicalDomain(wsCtx, companyID)
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
@@ -163,11 +163,11 @@ func (w *technicalEnrichWorker) Work(ctx context.Context, job *river.Job[Technic
 		return nil
 	}
 
-	read, outcomes := w.enricher.Read(wsCtx, orgID, domain)
+	read, outcomes := w.enricher.Read(wsCtx, companyID, domain)
 	if err := store.ApplyTechnicalEnrichment(wsCtx, read, technicalChangeRecorder()); err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
-	if err := w.recordOutcomes(ctx, wsCtx, store, orgID, read, outcomes); err != nil {
+	if err := w.recordOutcomes(ctx, wsCtx, store, companyID, read, outcomes); err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
 	return nil
@@ -175,41 +175,41 @@ func (w *technicalEnrichWorker) Work(ctx context.Context, job *river.Job[Technic
 
 // recordOutcomes writes each lane's verdict to the ledger.
 func (w *technicalEnrichWorker) recordOutcomes(
-	ctx, wsCtx context.Context, store *people.Store, orgID ids.OrganizationID,
-	read people.TechnicalEnrichment, outcomes []laneOutcome,
+	ctx, wsCtx context.Context, store *contacts.Store, companyID ids.CompanyID,
+	read contacts.TechnicalEnrichment, outcomes []laneOutcome,
 ) error {
 	now := read.ObservedAt
 	for _, outcome := range outcomes {
 		verdict := technicalVerdict(outcome, read)
-		if err := store.RecordTechnicalLane(wsCtx, orgID, outcome.Lane, verdict, now); err != nil {
+		if err := store.RecordTechnicalLane(wsCtx, companyID, outcome.Lane, verdict, now); err != nil {
 			return err
 		}
 		if outcome.Err != nil {
 			// Logged rather than returned: one lane failing must not fail the
 			// job and undo the two that worked. The ledger carries the retry.
 			slog.WarnContext(ctx, "a technical lookup lane did not complete",
-				"lane", outcome.Lane, "organization", orgID.String(), "error", outcome.Err)
+				"lane", outcome.Lane, "company", companyID.String(), "error", outcome.Err)
 		}
 	}
 	return nil
 }
 
 // technicalVerdict reads one lane's outcome in the ledger's vocabulary.
-func technicalVerdict(outcome laneOutcome, read people.TechnicalEnrichment) string {
+func technicalVerdict(outcome laneOutcome, read contacts.TechnicalEnrichment) string {
 	if !outcome.Completed {
-		return people.TechnicalOutcomeFailed
+		return contacts.TechnicalOutcomeFailed
 	}
 	if outcome.Refused {
-		return people.TechnicalOutcomeRefused
+		return contacts.TechnicalOutcomeRefused
 	}
 	for _, observation := range read.Observations {
-		if people.LaneOwningField(observation.Field) == outcome.Lane {
-			return people.TechnicalOutcomeApplied
+		if contacts.LaneOwningField(observation.Field) == outcome.Lane {
+			return contacts.TechnicalOutcomeApplied
 		}
 	}
 	// Completed with nothing: an authoritative empty answer, which is a fact
 	// about the company rather than a gap in what we asked.
-	return people.TechnicalOutcomeEmpty
+	return contacts.TechnicalOutcomeEmpty
 }
 
 // technicalBackfillWorker nominates the companies due a lookup.
@@ -236,21 +236,21 @@ func (w *technicalBackfillWorker) Work(ctx context.Context, _ *river.Job[Technic
 	// services paced in seconds means a batch is minutes of work, and an
 	// operator watching for technical profiles should know that is normal.
 	slog.InfoContext(ctx, "technical lookup queued a batch",
-		"companies", queued, "batch", people.TechnicalBackfillBatch)
+		"companies", queued, "batch", contacts.TechnicalBackfillBatch)
 	return nil
 }
 
 // sweepOneWorkspace nominates one tenant's due companies.
 func (w *technicalBackfillWorker) sweepOneWorkspace(ctx context.Context, ws ids.UUID) (int, error) {
-	// Reads under an actor of its own: nothing queued this on a person's
+	// Reads under an actor of its own: nothing queued this on a contact's
 	// behalf — the installation is asking which of its own companies it has
 	// not looked at lately — so it names itself rather than borrowing a
-	// principal, and organization:read is gated like any other read.
+	// principal, and company:read is gated like any other read.
 	wsCtx := technicalBackfillActor(principal.WithWorkspaceID(ctx, ws))
-	store := people.NewStore(database.Bind(w.pool, func(context.Context) (ids.WorkspaceID, error) {
+	store := contacts.NewStore(database.Bind(w.pool, func(context.Context) (ids.WorkspaceID, error) {
 		return ids.From[ids.WorkspaceKind](ws), nil
 	}))
-	due, err := store.ListTechnicalDue(wsCtx, people.TechnicalBackfillBatch, time.Now().UTC())
+	due, err := store.ListTechnicalDue(wsCtx, contacts.TechnicalBackfillBatch, time.Now().UTC())
 	if err != nil {
 		return 0, err
 	}
@@ -261,10 +261,10 @@ func (w *technicalBackfillWorker) sweepOneWorkspace(ctx context.Context, ws ids.
 	if err != nil {
 		return 0, err
 	}
-	for _, orgID := range due {
-		if _, err := client.Insert(wsCtx, TechnicalEnrichOrganizationArgs{
-			Workspace:      ws,
-			OrganizationID: orgID.UUID,
+	for _, companyID := range due {
+		if _, err := client.Insert(wsCtx, TechnicalEnrichCompanyArgs{
+			Workspace: ws,
+			CompanyID: companyID.UUID,
 		}, technicalBackfillOpts()); err != nil {
 			return 0, err
 		}

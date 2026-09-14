@@ -74,21 +74,21 @@ SELECT id, kind, state, occurred_at, summary, subject_label FROM (
 ORDER BY (state = '` + StateStalled + `') DESC, occurred_at DESC, id DESC
 LIMIT $3`
 
-// Troubled answers the calling person's own failed and stalled runs — failed
+// Troubled answers the calling contact's own failed and stalled runs — failed
 // since `since`, stalled right now — bounded by limit, stalled first and
-// newest within each shape. The person comes from the bound principal and is
-// not a parameter, for the reason Mine's doc states; a caller with no person
+// newest within each shape. The contact comes from the bound principal and is
+// not a parameter, for the reason Mine's doc states; a caller with no contact
 // behind it is refused with the permission sentinel, which the attention feed
 // renders as a withheld lane rather than a broken day.
 func (s *Store) Troubled(ctx context.Context, since time.Time, limit int) ([]TroubledRun, error) {
-	person, err := personalReader(ctx)
+	contact, err := personalReader(ctx)
 	if err != nil {
 		return nil, err
 	}
 	var troubled []TroubledRun
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, txErr := tx.Query(ctx, troubledSQL,
-			person, since, limit, SummaryBound, SubjectLabelBound)
+			contact, since, limit, SummaryBound, SubjectLabelBound)
 		if txErr != nil {
 			return txErr
 		}
@@ -110,13 +110,13 @@ func (s *Store) Troubled(ctx context.Context, since time.Time, limit int) ([]Tro
 	return troubled, nil
 }
 
-// personalReader is the guard Mine and Troubled share: the person comes from
+// personalReader is the guard Mine and Troubled share: the contact comes from
 // the bound principal or the read is refused with the permission sentinel —
-// never a parameter, so another person's feed cannot be expressed.
+// never a parameter, so another seat's feed cannot be expressed.
 func personalReader(ctx context.Context) (ids.UserID, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.UserID.IsZero() {
-		return ids.UserID{}, fmt.Errorf("aiactivity: a personal read needs an authenticated person: %w", apperrors.ErrPermissionDenied)
+		return ids.UserID{}, fmt.Errorf("aiactivity: a personal read needs an authenticated contact: %w", apperrors.ErrPermissionDenied)
 	}
 	return ids.From[ids.UserKind](actor.UserID), nil
 }

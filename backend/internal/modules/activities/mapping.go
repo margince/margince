@@ -17,6 +17,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
+// codeRequired is the machine code for "this value was absent". A constant
+// rather than a literal at each of the thirteen refusals in this module that
+// answer it: a client branches on the code, and one spelled differently is a
+// refusal nothing recognises and nothing reports.
+const codeRequired = "required"
+
 // RequiredFieldError maps to 422 on both surfaces.
 type RequiredFieldError struct{ Field string }
 
@@ -24,7 +30,7 @@ func (e *RequiredFieldError) Error() string { return e.Field + " is required" }
 
 // FieldFault names the missing required field, on every surface.
 func (e *RequiredFieldError) FieldFault() (field, code, message string) {
-	return e.Field, "required", e.Error()
+	return e.Field, codeRequired, e.Error()
 }
 
 // ReservedMailIdentityError refuses a client write into the mail identity.

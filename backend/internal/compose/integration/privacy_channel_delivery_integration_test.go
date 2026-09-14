@@ -16,7 +16,7 @@ package integration
 //
 // What must survive is the same as on the mail arm: the proof a message left.
 // What must not is the subject's own account id — the Telegram user id, which is
-// the channel's exact analogue of an address, and the value person_channel_identity
+// the channel's exact analogue of an address, and the value contact_channel_identity
 // holds for the same human.
 
 import (
@@ -36,44 +36,44 @@ const channelSubjectAccount = "778899001"
 
 // channelDelivery is one seeded outbound channel message and the rows behind it.
 type channelDelivery struct {
-	person   ids.UUID
+	contact  ids.UUID
 	activity ids.UUID
 	delivery ids.UUID
 }
 
-// seedChannelSubject plants a Telegram-only data subject: a person with a channel
+// seedChannelSubject plants a Telegram-only data subject: a contact with a channel
 // identity and no address at all, which is exactly the subject the address-shaped
 // engines could never reach.
 func seedChannelSubject(t *testing.T, e *Env) ids.UUID {
 	t.Helper()
-	personID := ids.NewV7()
+	contactID := ids.NewV7()
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if _, err := tx.Exec(ctx,
-			`INSERT INTO person (id, full_name, source, captured_by)
+			`INSERT INTO contact (id, full_name, source, captured_by)
 			 VALUES ($1, 'Tilda Telegram', 'connector:telegram', 'connector:telegram')`,
-			personID); err != nil {
+			contactID); err != nil {
 			return err
 		}
 		_, err := tx.Exec(ctx, `
-			INSERT INTO person_channel_identity (person_id, provider, channel_user_id, username, source, captured_by)
+			INSERT INTO contact_channel_identity (contact_id, provider, channel_user_id, username, source, captured_by)
 			VALUES ($1, 'telegram', $2, 'tilda', 'connector:telegram', 'connector:telegram')`,
-			personID, channelSubjectAccount)
+			contactID, channelSubjectAccount)
 		return err
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	return personID
+	return contactID
 }
 
-// seedChannelDelivery plants an outbound Telegram activity, its person link, and
+// seedChannelDelivery plants an outbound Telegram activity, its contact link, and
 // the channel-shaped delivery row that carried it. status is the delivery's
 // terminal state, or 'pending' for the one the scrub must close so an erased
 // subject cannot be messaged by a delivery that outlived them.
-func seedChannelDelivery(t *testing.T, e *Env, age, body, status string, person ids.UUID) channelDelivery {
+func seedChannelDelivery(t *testing.T, e *Env, age, body, status string, contact ids.UUID) channelDelivery {
 	t.Helper()
-	out := channelDelivery{person: person, activity: ids.NewV7(), delivery: ids.NewV7()}
+	out := channelDelivery{contact: contact, activity: ids.NewV7(), delivery: ids.NewV7()}
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if _, err := tx.Exec(ctx, `
@@ -84,8 +84,8 @@ func seedChannelDelivery(t *testing.T, e *Env, age, body, status string, person 
 			return err
 		}
 		if _, err := tx.Exec(ctx,
-			`INSERT INTO activity_link (activity_id, entity_type, person_id)
-			 VALUES ($1, 'person', $2)`, out.activity, person); err != nil {
+			`INSERT INTO activity_link (activity_id, entity_type, contact_id)
+			 VALUES ($1, 'contact', $2)`, out.activity, contact); err != nil {
 			return err
 		}
 		// cc and references_chain are named as NULL for the reason
@@ -137,12 +137,12 @@ func readChannelDelivery(t *testing.T, e *Env, id ids.UUID) channelDeliveryRow {
 
 func TestErasureRedactsAChannelDeliveryWithoutBreakingItsShape(t *testing.T) {
 	e := Setup(t)
-	person := seedChannelSubject(t, e)
-	sent := seedChannelDelivery(t, e, "9 years", "the agreed price was 4200 EUR", "sent", person)
-	pending := seedChannelDelivery(t, e, "9 years", "still queued when they asked to be forgotten", "pending", person)
+	contact := seedChannelSubject(t, e)
+	sent := seedChannelDelivery(t, e, "9 years", "the agreed price was 4200 EUR", "sent", contact)
+	pending := seedChannelDelivery(t, e, "9 years", "still queued when they asked to be forgotten", "pending", contact)
 
-	if err := privacy.NewEraser(e.DB()).ErasePerson(e.Admin(), person, "test"); err != nil {
-		t.Fatalf("ErasePerson: %v", err)
+	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), contact, "test"); err != nil {
+		t.Fatalf("EraseContact: %v", err)
 	}
 
 	for name, d := range map[string]channelDelivery{"sent": sent, "pending": pending} {

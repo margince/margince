@@ -10,7 +10,7 @@ import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 // not empty — when nothing is waiting, which the Empty story below pins
 // deliberately: a demo account with a clean queue never shows it, so this
 // is the only place a reader sees the chip stay gone. The panel groups
-// same-kind proposals (a deep read stages one per person it found), which the
+// same-kind proposals (a deep read stages one per contact it found), which the
 // Populated story pins with two `send_email` rows under one heading.
 
 const meta: Meta = {
@@ -21,7 +21,7 @@ export default meta;
 
 type Story = StoryObj;
 type Approval = components["schemas"]["Approval"];
-type View = components["schemas"]["Organization360"];
+type View = components["schemas"]["Company360"];
 
 const page = { has_more: false, next_cursor: null };
 
@@ -70,7 +70,7 @@ function Panel({ approvals: data }: Readonly<{ approvals: Approval[] }>) {
   stubApprovals(data);
   return (
     <StoryProviders>
-      <CompanyApprovalsPanel orgId="o-1" onClose={() => {}} />
+      <CompanyApprovalsPanel companyId="o-1" onClose={() => {}} />
     </StoryProviders>
   );
 }

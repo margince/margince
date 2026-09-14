@@ -15,7 +15,7 @@ package capture
 // the pipeline captured overnight is shared work, and the section says so.
 //
 // The counts are not computed here. The dedupe queue's both-sides-visible rule
-// lives in the people store and decidability is a per-row probe inside the
+// lives in the contacts store and decidability is a per-row probe inside the
 // approvals engine; a count re-derived in this module would be a second answer
 // to each, drifting the moment either rule changed.
 

@@ -306,7 +306,7 @@ func EffectiveCategory(asOfDay time.Time, deal Deal) string {
 // empty when they cover everything.
 //
 // Written from the counts and adding no fact a caller could not compute, the
-// way PersonMoment.headline is the reason in one line written from the
+// way ContactMoment.headline is the reason in one line written from the
 // evidence. What it buys is that the comparison is MADE: the counts arrive as
 // bare integers among nine, and a total quoted flat is arithmetically correct
 // while telling somebody something false about how much pipeline it covers.

@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
@@ -129,8 +129,8 @@ describe("whose mailbox the composer is answering from", () => {
     stubRoutes(mailboxRoutes(mailboxUserIds));
     render(
       <ComposeModal
-        entityType="organization"
-        entityId="org-1"
+        entityType="company"
+        entityId="company-1"
         open
         onClose={vi.fn()}
       />,
@@ -158,7 +158,7 @@ describe("whose mailbox the composer is answering from", () => {
   // Answering your own mail is not answering somebody else's.
   it("says nothing when the reader's own mailbox took delivery", async () => {
     await openOnColleaguesThread(["u-charlotte", "u-lars"]);
-    await screen.findByRole("button", { name: "Draft with AI" });
+    await screen.findByRole("button", { name: /Draft (reply )?with AI/ });
     expect(screen.queryByText(/mailbox/)).toBeNull();
   });
 
@@ -166,7 +166,7 @@ describe("whose mailbox the composer is answering from", () => {
   // anybody. An empty list is an answer, and the answer is "nobody's".
   it("says nothing when no mailbox took delivery", async () => {
     await openOnColleaguesThread([]);
-    await screen.findByRole("button", { name: "Draft with AI" });
+    await screen.findByRole("button", { name: /Draft (reply )?with AI/ });
     expect(screen.queryByText(/mailbox/)).toBeNull();
   });
 
@@ -191,8 +191,8 @@ describe("whose mailbox the composer is answering from", () => {
     });
     render(
       <ComposeModal
-        entityType="organization"
-        entityId="org-1"
+        entityType="company"
+        entityId="company-1"
         open
         onClose={vi.fn()}
       />,
@@ -218,8 +218,8 @@ describe("whose mailbox the composer is answering from", () => {
     });
     render(
       <ComposeModal
-        entityType="organization"
-        entityId="org-1"
+        entityType="company"
+        entityId="company-1"
         open
         onClose={vi.fn()}
       />,
@@ -242,8 +242,8 @@ describe("whose mailbox the composer is answering from", () => {
     });
     render(
       <ComposeModal
-        entityType="organization"
-        entityId="org-1"
+        entityType="company"
+        entityId="company-1"
         open
         onClose={vi.fn()}
       />,
@@ -251,7 +251,7 @@ describe("whose mailbox the composer is answering from", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: /ACTION REQUIRED/ }),
     );
-    await screen.findByRole("button", { name: "Draft with AI" });
+    await screen.findByRole("button", { name: /Draft (reply )?with AI/ });
     expect(screen.queryByText(/mailbox/)).toBeNull();
   });
 
@@ -287,8 +287,8 @@ describe("whose mailbox the composer is answering from", () => {
     });
     const view = render(
       <ComposeModal
-        entityType="organization"
-        entityId="org-1"
+        entityType="company"
+        entityId="company-1"
         activityId="act-charlotte"
         open
         onClose={vi.fn()}
@@ -302,8 +302,8 @@ describe("whose mailbox the composer is answering from", () => {
       <QueryClientProvider client={view.queryClient}>
         <LocaleProvider initial="en">
           <ComposeModal
-            entityType="organization"
-            entityId="org-1"
+            entityType="company"
+            entityId="company-1"
             activityId="act-mine"
             open
             onClose={vi.fn()}
@@ -331,8 +331,8 @@ describe("whose mailbox the composer is answering from", () => {
     });
     render(
       <ComposeModal
-        entityType="organization"
-        entityId="org-1"
+        entityType="company"
+        entityId="company-1"
         open
         onClose={vi.fn()}
       />,
@@ -340,7 +340,7 @@ describe("whose mailbox the composer is answering from", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: /ACTION REQUIRED/ }),
     );
-    await screen.findByRole("button", { name: "Draft with AI" });
+    await screen.findByRole("button", { name: /Draft (reply )?with AI/ });
     expect(screen.queryByText(/mailbox/)).toBeNull();
   });
 });

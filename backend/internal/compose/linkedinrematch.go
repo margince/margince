@@ -7,14 +7,14 @@ package compose
 //
 // The upload handler matches once, against whatever the workspace happened to
 // know at that second. On a new installation that is close to nothing: an
-// export is uploaded during onboarding, and the people and accounts it could
+// export is uploaded during onboarding, and the contacts and accounts it could
 // match arrive over the following hours as mail capture runs. Every one of
 // those arrivals is a match that the upload could not have made and that
 // nothing else was going to make either — the ghost stays unmatched forever,
 // and the account page keeps saying nobody here knows anyone.
 //
 // Measured on a real 5,064-row export: 54 of the workspace's contacts appeared
-// in it by name, and the upload-time pass matched 13. The rest were people and
+// in it by name, and the upload-time pass matched 13. The rest were contacts and
 // employers the CRM learned about minutes later.
 //
 // The MATCH only ever looks at unmatched ghosts, so a decision a human has
@@ -37,7 +37,7 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/modules/approvals"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -56,7 +56,7 @@ func (LinkedInRematchArgs) FleetWide() {}
 
 type linkedInRematchWorker struct {
 	pool      *pgxpool.Pool
-	store     *people.Store
+	store     *contacts.Store
 	authority authz.Resolver
 	// approvals is built ONCE, with the worker, rather than inside the
 	// per-owner loop: it registers a dozen effects over a dozen stores and
@@ -66,7 +66,7 @@ type linkedInRematchWorker struct {
 	log       *slog.Logger
 }
 
-func newLinkedInRematchWorker(pool *pgxpool.Pool, store *people.Store, authority authz.Resolver, log *slog.Logger) *linkedInRematchWorker {
+func newLinkedInRematchWorker(pool *pgxpool.Pool, store *contacts.Store, authority authz.Resolver, log *slog.Logger) *linkedInRematchWorker {
 	return &linkedInRematchWorker{
 		pool: pool, store: store, authority: authority,
 		approvals: approvalsServiceWithEffects(pool), log: log,
@@ -133,13 +133,13 @@ func (w *linkedInRematchWorker) systemContext(ctx context.Context, ws ids.UUID) 
 	})
 }
 
-func (w *linkedInRematchWorker) sweepWorkspace(ctx context.Context, ws ids.UUID) (people.LinkedInMatchResult, error) {
+func (w *linkedInRematchWorker) sweepWorkspace(ctx context.Context, ws ids.UUID) (contacts.LinkedInMatchResult, error) {
 	// Workspace-wide, which is what the zero owner means: this pass is not
-	// reporting one person's upload back to them, it is catching up every
+	// reporting one contact's upload back to them, it is catching up every
 	// member's ghosts against records the workspace has since learned.
 	// Per OWNER, under that owner's own authority: see linkedinowner.go for why
 	// a system principal here is an existence oracle.
-	var total people.LinkedInMatchResult
+	var total contacts.LinkedInMatchResult
 	err := forEachGhostOwner(w.systemContext(ctx, ws), w.pool, w.authority, ws,
 		func(ownerCtx context.Context, owner ids.UUID) error {
 			matched, err := w.store.MatchLinkedInConnections(ownerCtx, owner)

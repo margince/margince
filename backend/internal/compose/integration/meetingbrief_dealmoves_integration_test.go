@@ -61,7 +61,7 @@ func TestAReaderWithoutTheRoomGrantIsToldTheRoomWasLeftOut(t *testing.T) {
 	dealID := e.SeedWonDealLinkedTo(t)
 	noRooms := roomErasureAdmin
 	noRooms.Objects = map[string]principal.ObjectGrant{
-		"person":   {Read: true},
+		"contact":  {Read: true},
 		"deal":     {Read: true},
 		"activity": {Read: true},
 	}
@@ -82,7 +82,7 @@ func TestAReaderWithoutTheRoomGrantIsToldTheRoomWasLeftOut(t *testing.T) {
 }
 
 // A reader who may not read deals is told nothing about the deal. The brief's
-// own gates cover the meeting and the people in the room; until the deal gate
+// own gates cover the meeting and the contacts in the room; until the deal gate
 // was added, the section handed out the stage and the price of a deal the
 // reader could not open.
 func TestAReaderWithoutDealAccessIsToldNothingAboutTheDeal(t *testing.T) {
@@ -90,7 +90,7 @@ func TestAReaderWithoutDealAccessIsToldNothingAboutTheDeal(t *testing.T) {
 	dealID := e.SeedWonDealLinkedTo(t)
 	noDeals := roomErasureAdmin
 	noDeals.Objects = map[string]principal.ObjectGrant{
-		"person":    {Read: true},
+		"contact":   {Read: true},
 		"activity":  {Read: true},
 		"deal_room": {Read: true},
 	}

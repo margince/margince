@@ -50,8 +50,8 @@ type fakeAPI struct {
 
 // The backfill seam's stubs: tests that exercise it set the fields; the
 // sync-path tests never reach these.
-func (f *fakeAPI) EstimateAfter(context.Context, string, string) (int, error) {
-	return len(f.recent), nil
+func (f *fakeAPI) EstimateAfter(context.Context, string, string) (int, bool, error) {
+	return len(f.recent), false, nil
 }
 
 func (f *fakeAPI) ListAfter(_ context.Context, _ string, _ string, pageToken string, _ int) ([]string, string, error) {

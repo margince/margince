@@ -12,7 +12,7 @@ import type { MessageKey } from "../i18n/en";
 // It is its own map rather than a reuse of the three that already exist,
 // because none of them is about this subject: `COLD_FIELD_LABELS`
 // (screens/common.tsx) names the enrichment vocabulary, `PROFILE_FIELD_LABELS`
-// (screens/organizations.tsx) names company profile facts, and today.merge's
+// (screens/companies.tsx) names company profile facts, and today.merge's
 // map names the fields a merge compares. This one names the columns a record's
 // UPDATE writes, and `historyfieldlabels.test.ts` derives that set from the
 // contract so a field added upstream fails the gate instead of reaching a
@@ -23,9 +23,10 @@ import type { MessageKey } from "../i18n/en";
 const HISTORY_FIELD_LABELS = new Map<string, MessageKey>([
   ["address", "history.field.address"],
   ["amount_minor", "history.field.amount_minor"],
+  ["expected_arr_minor", "history.field.expected_arr_minor"],
   ["assignee_id", "history.field.assignee_id"],
   ["body", "history.field.body"],
-  ["candidate_org_key", "history.field.candidate_org_key"],
+  ["candidate_company_key", "history.field.candidate_company_key"],
   ["company_name", "history.field.company_name"],
   ["currency", "history.field.currency"],
   ["description", "history.field.description"],
@@ -51,11 +52,11 @@ const HISTORY_FIELD_LABELS = new Map<string, MessageKey>([
   ["meeting_status", "history.field.meeting_status"],
   ["name", "history.field.name"],
   ["occurred_at", "history.field.occurred_at"],
-  ["organization_id", "history.field.organization_id"],
+  ["company_id", "history.field.company_id"],
   ["owner_id", "history.field.owner_id"],
-  ["parent_org_id", "history.field.parent_org_id"],
+  ["parent_company_id", "history.field.parent_company_id"],
   ["partner_attribution", "history.field.partner_attribution"],
-  ["partner_org_id", "history.field.partner_org_id"],
+  ["partner_company_id", "history.field.partner_company_id"],
   ["phones", "history.field.phones"],
   ["project_id", "history.field.project_id"],
   ["relationship_types", "history.field.relationship_types"],
@@ -72,6 +73,10 @@ const HISTORY_FIELD_LABELS = new Map<string, MessageKey>([
   ["title", "history.field.title"],
   ["visibility", "history.field.visibility"],
   ["wait_until", "history.field.wait_until"],
+  ["description", "history.field.description"],
+  ["commercial_motion", "history.field.commercial_motion"],
+  ["priority", "history.field.priority"],
+  ["acquisition_source", "history.field.acquisition_source"],
 ]);
 
 // Fields a SYNTHETIC AuditEvent payload names — a write with no before/after
@@ -88,7 +93,7 @@ const HISTORY_FIELD_LABELS = new Map<string, MessageKey>([
 // field would suggest (`suppress.go`'s wire request names its kind `kind`,
 // not `suppression_kind`): this lookup carries no entity context, so a key
 // this generic would also answer for an unrelated writer's field of the same
-// name on the SAME projected entity type (`person`) — `kind` already belongs
+// name on the SAME projected entity type (`contact`) — `kind` already belongs
 // to every activity's own audited create
 // (backend/internal/modules/activities/activity.go), and reusing it here
 // mislabelled every activity in history as a suppression.

@@ -24,7 +24,7 @@ func TestTheDraftTheJudgeFlooredIsCaught(t *testing.T) {
 		t.Fatal("the phrasing the judge floored passed the check")
 	}
 	for _, f := range findings {
-		if f.Rule != "assumed-memory" {
+		if f.Rule != draftcheck.RuleAssumedMemory {
 			t.Errorf("unexpected rule %q for %q", f.Rule, f.Phrase)
 		}
 	}
@@ -53,7 +53,7 @@ func TestAWellbeingOpenerIsCaughtAtEveryBand(t *testing.T) {
 		convstate.BandNone, convstate.BandFresh, convstate.BandWeeks, convstate.BandMonths,
 	} {
 		findings := draftcheck.Body(body, textlang.English, band, draftcheck.Grounds{})
-		if len(findings) != 1 || findings[0].Rule != "wellbeing-opener" {
+		if len(findings) != 1 || findings[0].Rule != draftcheck.RuleWellbeingOpener {
 			t.Errorf("at band %q: got %+v, want one wellbeing-opener finding", band, findings)
 		}
 	}
@@ -136,7 +136,7 @@ func TestAPleasantryIsOnlyFillerAtTheOpening(t *testing.T) {
 //
 //	"Follow-up to previous introduction by Romina Medici"
 //
-// Romina did not make that introduction. The product holds no person-to-person
+// Romina did not make that introduction. The product holds no contact-to-contact
 // referral record at all, so any directed introduction fact in a draft was read
 // out of quoted correspondence — which is how the reported defect got the
 // direction backwards in the first place.
@@ -147,7 +147,7 @@ func TestAnInventedIntroductionInAChipIsCaught(t *testing.T) {
 	if len(findings) == 0 {
 		t.Fatal("the chip that shipped the original defect passed the check")
 	}
-	if findings[0].Rule != "invented-relationship" {
+	if findings[0].Rule != draftcheck.RuleInventedRelationship {
 		t.Errorf("expected an invented-relationship finding, got %q", findings[0].Rule)
 	}
 }
@@ -269,7 +269,7 @@ func TestGermanCompoundsCarryingTheStemAreCaught(t *testing.T) {
 
 // A German draft that opens formally and closes familiarly reads as
 // machine-written whichever register it should have picked. The prompt already
-// said to be consistent; three consecutive drafts to one person came back du,
+// said to be consistent; three consecutive drafts to one contact came back du,
 // du, Sie — which is why it is checked rather than merely instructed.
 func TestAMixedRegisterIsCaught(t *testing.T) {
 	mixed := "Hallo Frank,\n\nich würde mich gerne mit dir austauschen. " +
@@ -279,7 +279,7 @@ func TestAMixedRegisterIsCaught(t *testing.T) {
 	if len(findings) == 0 {
 		t.Fatal("a draft using both du and Sie should be caught")
 	}
-	if findings[0].Rule != "mixed-register" {
+	if findings[0].Rule != draftcheck.RuleMixedRegister {
 		t.Errorf("expected a mixed-register finding, got %q", findings[0].Rule)
 	}
 }
@@ -330,7 +330,7 @@ func TestADraftMayNotDeclareTheirSideResolved(t *testing.T) {
 	if len(findings) == 0 {
 		t.Fatal("a draft asserting their side resolved something should be caught")
 	}
-	if findings[0].Rule != "assumed-resolution" {
+	if findings[0].Rule != draftcheck.RuleAssumedResolution {
 		t.Errorf("expected an assumed-resolution finding, got %q", findings[0].Rule)
 	}
 }
@@ -425,7 +425,7 @@ func TestADayIsRefusedWhenNothingIsBooked(t *testing.T) {
 	}
 
 	// With a meeting on file the same sentence is the drafter doing its job —
-	// the person prompt asks for exactly this phrasing over a timestamp.
+	// the contact prompt asks for exactly this phrasing over a timestamp.
 	if got := draftcheck.Body(body, textlang.German, convstate.BandFresh, draftcheck.Grounds{Booked: true}); refusedAsUnscheduled(got) {
 		t.Errorf("a booked meeting still refused its own day: %+v", got)
 	}
@@ -456,7 +456,7 @@ func TestAnEnglishDayIsRefusedToo(t *testing.T) {
 // refusedAsUnscheduled reports whether the unscheduled-arrangement rule fired.
 func refusedAsUnscheduled(findings []draftcheck.Finding) bool {
 	for _, f := range findings {
-		if f.Rule == "unscheduled-arrangement" {
+		if f.Rule == draftcheck.RuleUnscheduledArrangement {
 			return true
 		}
 	}

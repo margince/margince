@@ -1,0 +1,212 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package contactdraft
+
+// The service: one gated composite read, one grounded write, no transaction.
+//
+// There is no pool here and no store with a write method, which is the
+// zero-write guarantee stated as a dependency rather than as a rule. A
+// contributor who wanted this endpoint to persist something would have to add a
+// field to this struct first.
+
+import (
+	"context"
+	"log/slog"
+
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
+	"github.com/margince/margince/backend/internal/compose/briefevidence"
+	"github.com/margince/margince/backend/internal/compose/contact360"
+	"github.com/margince/margince/backend/internal/compose/draftvoice"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
+)
+
+// Assembler is the caller's own composite read of the contact — the same seam
+// the relationship brief uses, for the same reason: a draft may only mention
+// records this caller could open, and one gated read already answers that.
+// The scoped form is what a draft about one project reads: correspondence
+// filed under another project is not in the view to be drawn on.
+type Assembler interface {
+	AssembleScoped(ctx context.Context, contactID ids.ContactID, opts contact360.AssembleOptions) (crmcontracts.Contact360, error)
+}
+
+// Request is the transport's body, narrowed to what the writer needs.
+type Request struct {
+	Intent string
+	// ProjectID names the body of work the message is about. When set, the
+	// draft is grounded in the 360 scoped to that project and the project's
+	// own facts are folded in; nil is the contact in general.
+	ProjectID *ids.ProjectID
+	// Envelope is the correspondence this draft is written into: the language
+	// it must be in, where the conversation stands, the current time, and who
+	// is writing it. Resolved by the caller, never by the model.
+	//
+	// The sender identity in it is what the model needs to know who "I" is —
+	// it is NOT a sign-off. The draft still carries none, because the composer
+	// knows who is signed in and a server that guessed would sometimes sign
+	// with the wrong contact's name.
+	//
+	// The recipient is not here: the contact in the path IS the recipient, which
+	// is what separates this from the account drafter.
+	Envelope draftfloor.Envelope
+}
+
+// Service writes one draft per call.
+type Service struct {
+	view     Assembler
+	lane     Completer
+	envelope *draftfloor.Resolver
+	// voice reads the sender's own Voice DNA. It is the READ seam, not the
+	// voice store: this package promises to write nothing, and a store handed
+	// in whole would carry the learning-signal writes with it.
+	voice draftvoice.Reader
+	log   *slog.Logger
+	// emailRows opens the messages the draft's reasons cite. This service holds
+	// no pool and no transaction of its own, so the reader is injected rather
+	// than built here.
+	emailRows briefevidence.Reader
+}
+
+// WithEmailSummaries binds the reader that opens a cited message, so a reason
+// resting on a conversation opens that conversation.
+func (s *Service) WithEmailSummaries(reader briefevidence.Reader) *Service {
+	s.emailRows = reader
+	return s
+}
+
+// NewService binds the draft to the composite read it is grounded in and the
+// model lane that writes it. lane may be nil: that is a deployment running no
+// model, and the deterministic floor is the answer.
+func NewService(view Assembler, lane Completer) *Service {
+	return &Service{view: view, lane: lane, envelope: draftfloor.NewResolver()}
+}
+
+// WithEnvelope replaces the resolver that answers what language to write in,
+// what time it is and who is signing. Compose binds one carrying the real
+// identity lookup; the default resolves a language and a time but no sender,
+// so drafts are unsigned rather than failing (DRAFT-AC-E-6).
+func (s *Service) WithEnvelope(resolver *draftfloor.Resolver) *Service {
+	if resolver != nil {
+		s.envelope = resolver
+	}
+	return s
+}
+
+// WithVoice binds the sender's voice profile read, so a rep who has built one
+// gets their own writing here and not only when they answer a mail. Without it
+// the draft is written under the shared rules alone, which is what a
+// deployment with no voice lane has.
+func (s *Service) WithVoice(reader draftvoice.Reader, log *slog.Logger) *Service {
+	s.voice = reader
+	s.log = log
+	return s
+}
+
+// Draft writes one email. It performs no write of any kind.
+func (s *Service) Draft(
+	ctx context.Context, contactID ids.ContactID, req Request,
+) (crmcontracts.AccountEmailDraft, error) {
+	// Human-only: drafting spends the workspace's model budget on prose for a
+	// contact to send under their own name.
+	if err := auth.RequireHuman(ctx); err != nil {
+		return crmcontracts.AccountEmailDraft{}, err
+	}
+	// The gates that matter run HERE, in the caller's own composite read: a
+	// contact they cannot read refuses before a word is written, a deal or
+	// claim they cannot see is not in the view to be found, and a project they
+	// cannot see refuses the scoped read itself (activities.RequireProjectScope).
+	view, err := s.view.AssembleScoped(ctx, contactID, contact360.AssembleOptions{ProjectID: req.ProjectID})
+	if err != nil {
+		return crmcontracts.AccountEmailDraft{}, err
+	}
+	req.Envelope = s.envelope.Resolve(ctx,
+		draftfloor.Written{Body: CorrespondenceText(view)},
+		ConversationState(view, s.envelope.Now()))
+	in := FromView(view, req)
+	// A project the caller can see but this contact is not part of is not a
+	// body of work a message to them can be about.
+	if req.ProjectID != nil && in.Project == nil {
+		return crmcontracts.AccountEmailDraft{}, httperr.Validation("project_id", "not_found",
+			"that project is not one this contact is part of, or you cannot see it")
+	}
+	// Loaded after the 360 read, so a caller who may not read this contact is
+	// refused before their voice profile is touched at all.
+	voice := draftvoice.Load(ctx, s.voice, s.log)
+	draft, by, err := Write(ctx, s.lane, in, voice)
+	if err != nil {
+		return crmcontracts.AccountEmailDraft{}, err
+	}
+	out := Wire(draft, by, voice.Degraded, req.Envelope.Language)
+	// The scoped read's own report of what the narrowing kept, so the
+	// composer's scope line counts what the draft was actually written from.
+	out.Scope = view.Scope
+	// Nothing here is stored, so there is no ordering to respect — only the
+	// one read, over the reasons this draft actually cites.
+	if err := briefevidence.Attach(ctx, s.emailRows, briefevidence.FromReasons(out.Reasoning)); err != nil {
+		return crmcontracts.AccountEmailDraft{}, err
+	}
+	return out, nil
+}
+
+// Wire maps the written draft onto the contract.
+//
+// draft_ref is deliberately absent. The reply drafter returns one so the voice
+// model can learn from what the rep changed — and recording a served draft is a
+// WRITE, which this operation does not perform.
+//
+// Exported because the LEAD drafter answers the same contract type from the
+// same writer, and a second mapping of one Draft onto one AccountEmailDraft is
+// two answers to one question — including which of them stamps the Art. 50
+// disclosure, which is the half a reader would notice missing.
+//
+// lang is the DRAFT's language, from the envelope its caller resolved. Passed
+// rather than read here because the two callers resolve their own, and a wire
+// mapper that went looking for one would be a second resolver.
+func Wire(draft Draft, by crmcontracts.WrittenBy, voiceDegraded bool, lang string) crmcontracts.AccountEmailDraft {
+	aiWritten := by == crmcontracts.WrittenByModel
+	out := crmcontracts.AccountEmailDraft{
+		Subject:       draft.Subject,
+		Body:          draft.Body,
+		GeneratedBy:   by,
+		AiGenerated:   &aiWritten,
+		Reasoning:     wireReasons(draft.Reasoning),
+		VoiceDegraded: &voiceDegraded,
+	}
+	if len(draft.To) > 0 {
+		to := make([]openapi_types.Email, 0, len(draft.To))
+		for _, address := range draft.To {
+			to = append(to, openapi_types.Email(address))
+		}
+		out.To = &to
+	}
+	out.AiDisclosure = draftfloor.AIDisclosureFor(aiWritten, textlang.Lang(lang))
+	return out
+}
+
+func wireReasons(reasons []Reason) []crmcontracts.AccountDraftReason {
+	out := make([]crmcontracts.AccountDraftReason, 0, len(reasons))
+	for _, reason := range reasons {
+		wired := crmcontracts.AccountDraftReason{Kind: reason.Kind, Label: reason.Label}
+		if reason.EntityID != "" {
+			id, err := ids.Parse(reason.EntityID)
+			if err != nil {
+				// An id that will not parse cannot be opened, so the chip would
+				// lead nowhere. The reason still stands without its citation.
+				out = append(out, wired)
+				continue
+			}
+			wired.EvidenceRef = &crmcontracts.CompanyBriefEvidence{
+				EntityType: crmcontracts.CompanyBriefEvidenceEntityType(reason.EntityType),
+				EntityId:   openapi_types.UUID(id),
+			}
+		}
+		out = append(out, wired)
+	}
+	return out
+}

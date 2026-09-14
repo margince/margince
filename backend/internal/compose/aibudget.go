@@ -30,7 +30,7 @@ const (
 // seatBudget derives the pool live: seat changes move the budget at
 // the next model call, no restart. The count runs against app_user,
 // which carries no workspace column at all (ADR-0091 §8 phase D) — a
-// single-organization installation has one workspace to charge, so
+// single-company installation has one workspace to charge, so
 // counting every full seat on the installation IS the tenant's count.
 type seatBudget struct {
 	pool *pgxpool.Pool
@@ -44,7 +44,7 @@ func (b seatBudget) MonthlyTokenBudget(ctx context.Context, workspaceID ids.Work
 	err := database.WithWorkspaceTx(principal.WithWorkspaceID(ctx, workspaceID.UUID), b.pool, func(tx pgx.Tx) error {
 		// Every full seat on the installation, which is every full seat there
 		// is: ADR-0091 §8 phase D took the tenant column off app_user, and a
-		// single-organization installation has one workspace to charge.
+		// single-company installation has one workspace to charge.
 		return tx.QueryRow(ctx, `
 			SELECT count(*) FROM app_user
 			WHERE seat_type = 'full' AND `+identity.LiveMemberSQL("")+`

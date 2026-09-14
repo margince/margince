@@ -71,7 +71,7 @@ func startFlakyBackfill(t *testing.T, e *integration.SearchEnv, faults []error) 
 	if _, err := registry.Connect(grantCtx, "gmail", connector.Auth("refresh")); err != nil {
 		t.Fatalf("Connect: %v", err)
 	}
-	run, err := registry.StartBackfill(grantCtx, "gmail", ids.From[ids.UserKind](e.Rep1), 6, 25, enqueueNothing)
+	run, err := registry.StartBackfill(grantCtx, "gmail", ids.From[ids.UserKind](e.Rep1), 6, connector.BackfillEstimate{Messages: 25}, enqueueNothing)
 	if err != nil {
 		t.Fatalf("StartBackfill: %v", err)
 	}
@@ -151,7 +151,7 @@ func TestABackfillPageWhoseJobContextDiedNeverWedgesTheRun(t *testing.T) {
 	if _, err := registry.Connect(grantCtx, "gmail", connector.Auth("refresh")); err != nil {
 		t.Fatalf("Connect: %v", err)
 	}
-	run, err := registry.StartBackfill(grantCtx, "gmail", rep, 6, 25, enqueueNothing)
+	run, err := registry.StartBackfill(grantCtx, "gmail", rep, 6, connector.BackfillEstimate{Messages: 25}, enqueueNothing)
 	if err != nil {
 		t.Fatalf("StartBackfill: %v", err)
 	}
@@ -204,7 +204,7 @@ func TestABackfillPageWhoseJobContextDiedNeverWedgesTheRun(t *testing.T) {
 	}
 	// The assertion that matters: uq_capture_backfill_live is not holding the
 	// connection hostage, so the human can import again without an operator.
-	if _, err := registry.StartBackfill(grantCtx, "gmail", rep, 6, 25, enqueueNothing); err != nil {
+	if _, err := registry.StartBackfill(grantCtx, "gmail", rep, 6, connector.BackfillEstimate{Messages: 25}, enqueueNothing); err != nil {
 		t.Fatalf("a fresh import is blocked by the run that failed: %v", err)
 	}
 }

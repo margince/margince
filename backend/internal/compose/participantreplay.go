@@ -36,7 +36,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture/gcal"
 	"github.com/margince/margince/backend/internal/modules/capture/graphcal"
 	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -110,7 +110,7 @@ func (c replayCandidate) activity() ids.ActivityID { return c.activityID }
 // captured_by, which capture wrote, not from anything the record claimed about
 // itself.
 //
-// A replayed row and a live one must name the same people, so this answers the
+// A replayed row and a live one must name the same contacts, so this answers the
 // same question live capture asks; a drift here is an attendee who reads a
 // meeting on one path and not the other.
 func (c replayCandidate) partyListIsAttested() bool {
@@ -333,12 +333,12 @@ func replayOne(ctx context.Context, tx pgx.Tx, c replayCandidate) (string, error
 		return "", err
 	}
 	// The rows just written carry whatever name the original gave, so the
-	// people they resolved to are named here rather than left to the recovery
+	// contacts they resolved to are named here rather than left to the recovery
 	// pass beside this one. That pass selects on display_name IS NULL, which
 	// the stamp above has just filled in, and this pass is settled per activity
 	// and will not offer the meeting again — so a meeting replayed before the
 	// recovery ever ran would otherwise fall permanently between the two.
-	if err := people.FillParticipantNamesTx(ctx, tx, c.activityID); err != nil {
+	if err := contacts.FillParticipantNamesTx(ctx, tx, c.activityID); err != nil {
 		return "", err
 	}
 	return replayWroteParticipants, nil

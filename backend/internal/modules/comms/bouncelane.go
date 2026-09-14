@@ -19,16 +19,16 @@ import (
 
 // HardBounce is one send of the caller's that did not arrive: what it was
 // about, why the receiving side refused it, when the report landed, and the
-// person the send's activity is filed under — zero when it is filed under
+// contact the send's activity is filed under — zero when it is filed under
 // none, and the card then names the send by its subject line alone.
 type HardBounce struct {
 	ID        ids.UUID
 	Subject   string
 	Reason    string
 	BouncedAt time.Time
-	PersonID  ids.UUID
+	ContactID ids.UUID
 	// Recipient is the address that refused it, so a reader knows WHICH of a
-	// person's addresses is dead. Empty when the send carries none.
+	// contact's addresses is dead. Empty when the send carries none.
 	Recipient string
 }
 
@@ -41,7 +41,7 @@ var bounceLane = sendLane{
 	recipientColumn: "bounce_recipient",
 }
 
-// HardBouncesFor answers the calling person's own hard-bounced sends since
+// HardBouncesFor answers the calling contact's own hard-bounced sends since
 // `since`, newest report first, bounded.
 func (s *Store) HardBouncesFor(ctx context.Context, since time.Time, limit int) ([]HardBounce, error) {
 	sends, err := s.readSendLane(ctx, bounceLane, "bounced sends", since, limit)
@@ -52,7 +52,7 @@ func (s *Store) HardBouncesFor(ctx context.Context, since time.Time, limit int) 
 	for _, send := range sends {
 		bounced = append(bounced, HardBounce{
 			ID: send.ID, Subject: send.Subject, Reason: send.Reason,
-			BouncedAt: send.At, PersonID: send.PersonID, Recipient: send.Recipient,
+			BouncedAt: send.At, ContactID: send.ContactID, Recipient: send.Recipient,
 		})
 	}
 	return bounced, nil

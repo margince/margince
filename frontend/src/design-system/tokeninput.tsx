@@ -42,7 +42,7 @@ export type TokenSuggestion = Suggestion;
  * `suggestions` is OPTIONAL and changes nothing about any of the above: the set
  * is still whatever the reader commits, and a value that is on no list is
  * committed exactly as one that is. It exists because some sets are built out of
- * a vocabulary somebody else already knows — the people on a record, offered to
+ * a vocabulary somebody else already knows — the contacts on a record, offered to
  * the composer's To line — and a reader who remembers a colleague's name but not
  * their address should not have to leave the field to find it. The list, its
  * matching and its keyboard grammar are `suggestlist.tsx`, shared with
@@ -263,7 +263,7 @@ export function TokenList({
 }>) {
   return (
     // A list, because it IS one: a reader on a screen reader is told how many
-    // people are on it before walking them, which a row of loose spans cannot
+    // contacts are on it before walking them, which a row of loose spans cannot
     // say. The explicit `role` is what keeps that promise — `list-style: none` is
     // how this reads as tokens, and Safari drops list semantics from the
     // accessibility tree the moment it is applied.

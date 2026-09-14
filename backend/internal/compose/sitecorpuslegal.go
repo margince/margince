@@ -21,7 +21,7 @@ import (
 // abstention counts AND, when that abstention fires, the choice offered to
 // the human: a group's imprint lists its subsidiaries in blocks — name,
 // registered address, registration or VAT number — and dropping all of it
-// because there were five leaves a person retyping what the page already
+// because there were five leaves a contact retyping what the page already
 // stated, which is the one thing this read exists to prevent.
 type corpusLegalEntity struct {
 	Name string `json:"name"`

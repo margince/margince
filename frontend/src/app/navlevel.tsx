@@ -49,7 +49,7 @@ const BACK_TIP_KEY = "rail-level-back";
 // Where a reader who never walked into the section is sent when they walk out
 // of it: a deep link carries no origin, and an invented one would be a claim
 // about where they had been.
-const BRIEF: Route = { screen: "brief" };
+const BRIEF: Route = { screen: "home" };
 
 // What a walk between levels needs to remember, and both halves of it outlive
 // the panel — because they have to. A section route swaps one rail component for

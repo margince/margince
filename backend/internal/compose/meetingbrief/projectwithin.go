@@ -14,7 +14,7 @@ package meetingbrief
 //
 // The second arm is what makes it usable. A conversation nobody filed is part
 // of every engagement's history rather than none, because filing is a thing
-// people forget rather than a claim that a mail was off-topic.
+// contacts forget rather than a claim that a mail was off-topic.
 
 import (
 	"fmt"

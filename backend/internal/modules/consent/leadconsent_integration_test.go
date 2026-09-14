@@ -6,9 +6,9 @@
 package consent
 
 // The lead arm of consent (E12.20) over a real migrated Postgres: a
-// grant recorded against a lead lands lead-scoped (person_id NULL),
+// grant recorded against a lead lands lead-scoped (contact_id NULL),
 // stays idempotent on re-assertion, reads back through LeadConsent, is
-// refused for DOI purposes (the round-trip is person-keyed), and
+// refused for DOI purposes (the round-trip is contact-keyed), and
 // authorizes the outbound gate for the lead's email.
 
 import (
@@ -117,8 +117,8 @@ func setupLeadConsent(t *testing.T) *leadConsentEnv {
 		Permissions: principal.Permissions{
 			RoleKeys: []string{"admin"},
 			Objects: map[string]principal.ObjectGrant{
-				"lead":   {Create: true, Read: true, Update: true, Delete: true},
-				"person": {Create: true, Read: true, Update: true, Delete: true},
+				"lead":    {Create: true, Read: true, Update: true, Delete: true},
+				"contact": {Create: true, Read: true, Update: true, Delete: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},
@@ -140,16 +140,16 @@ func TestLeadScopedConsentRecordsProofAndReadsBack(t *testing.T) {
 		t.Fatalf("recorded state = %+v", state)
 	}
 
-	// The state row is lead-scoped: lead arm set, person arm NULL.
-	var personArm *ids.UUID
+	// The state row is lead-scoped: lead arm set, contact arm NULL.
+	var contactArm *ids.UUID
 	var rowState string
 	if err := e.owner.QueryRow(context.Background(),
-		`SELECT person_id, state FROM person_consent WHERE lead_id = $1 AND purpose_id = $2`,
-		e.lead, e.newsletter).Scan(&personArm, &rowState); err != nil {
+		`SELECT contact_id, state FROM contact_consent WHERE lead_id = $1 AND purpose_id = $2`,
+		e.lead, e.newsletter).Scan(&contactArm, &rowState); err != nil {
 		t.Fatalf("reading the state row: %v", err)
 	}
-	if personArm != nil || rowState != "granted" {
-		t.Fatalf("state row = (person_id=%v, state=%q), want a lead-scoped granted row", personArm, rowState)
+	if contactArm != nil || rowState != "granted" {
+		t.Fatalf("state row = (contact_id=%v, state=%q), want a lead-scoped granted row", contactArm, rowState)
 	}
 
 	// Re-asserting the same state appends no second proof row.
@@ -195,7 +195,7 @@ func TestLeadScopedDOIGrantIsRefused(t *testing.T) {
 	})
 	var invalid *ValidationError
 	if !errors.As(err, &invalid) {
-		t.Fatalf("a DOI grant on a lead subject: got %v, want a ValidationError (the round-trip is person-keyed)", err)
+		t.Fatalf("a DOI grant on a lead subject: got %v, want a ValidationError (the round-trip is contact-keyed)", err)
 	}
 }
 
@@ -403,7 +403,7 @@ func TestALeadWhoNeverGrantedIsReportedAsAnAbsence(t *testing.T) {
 
 // inboundFromTheLead plants a message the lead SENT us, the way the real writer
 // records one: activity_participant has no lead_id column, so a lead's own mail
-// is stored with person_id NULL and the bare address.
+// is stored with contact_id NULL and the bare address.
 func (e *leadConsentEnv) inboundFromTheLead(ctx context.Context, t *testing.T) ids.UUID {
 	t.Helper()
 	anchor := ids.NewV7()
@@ -414,7 +414,7 @@ func (e *leadConsentEnv) inboundFromTheLead(ctx context.Context, t *testing.T) i
 		t.Fatalf("planting the lead's inbound message: %v", err)
 	}
 	if _, err := e.owner.Exec(ctx, `
-		INSERT INTO activity_participant (activity_id, person_id, address, role)
+		INSERT INTO activity_participant (activity_id, contact_id, address, role)
 		VALUES ($1, NULL, $2, 'from')`, anchor, e.leadEmail); err != nil {
 		t.Fatalf("planting the participant: %v", err)
 	}
@@ -436,7 +436,7 @@ func (e *leadConsentEnv) leadActorContext() context.Context {
 // answering a lead's own mail got "not granted" — stricter than the rule for the
 // same human one promotion later, and stricter than the law.
 //
-// The participant row carries person_id NULL and the bare address, which is how
+// The participant row carries contact_id NULL and the bare address, which is how
 // a lead's inbound mail is actually recorded: activity_participant has no
 // lead_id column at all.
 func TestALeadWhoWroteToUsCanBeAnsweredWithoutAGrant(t *testing.T) {
@@ -529,15 +529,15 @@ func TestALeadsEvidenceOutranksAnUngrantedPurpose(t *testing.T) {
 	}
 }
 
-// A LEAD NEVER TAKES AUTHORITY FROM VerdictForPerson.
+// A LEAD NEVER TAKES AUTHORITY FROM VerdictForContact.
 //
 // This holds a claim that otherwise lives only in a comment on decideLead.
-// VerdictForPerson's ClassTransactional arm returns an unconditional allow
+// VerdictForContact's ClassTransactional arm returns an unconditional allow
 // without reading any grant (verdict.go, "the contract itself is the basis").
 // Routing a lead through decideResolved's unsupported fallthrough would hand it
 // that allow from a purpose row never checked against lead grants. There is no
 // evidence here and no lead grant, so the only way this can come back allow is
-// if somebody reroutes the lead arm through the person one.
+// if somebody reroutes the lead arm through the contact one.
 func TestALeadTakesNoAuthorityFromATransactionalPurpose(t *testing.T) {
 	e := setupLeadConsent(t)
 	gate := NewGate(e.store)
@@ -567,7 +567,7 @@ func TestALeadTakesNoAuthorityFromATransactionalPurpose(t *testing.T) {
 	}
 	if d.Verdict == commsauthz.VerdictAllow {
 		t.Fatalf("verdict = allow (%s) for a lead with no evidence and no grant: the lead arm is "+
-			"taking VerdictForPerson's unconditional transactional allow, which was never "+
+			"taking VerdictForContact's unconditional transactional allow, which was never "+
 			"checked against a lead grant", d.ReasonCode)
 	}
 }
@@ -646,7 +646,7 @@ func TestALeadsReplyIsStillAllowedAtTransmit(t *testing.T) {
 // The reply arm needs the anchor's own thread. An unprompted follow-up has no
 // anchor and rests on the recent-inbound arm instead — which reads the same
 // authorship spelling and answers about a lead. Until this, validate() bailed
-// on every non-person before that arm could run, so a lead who wrote to us last
+// on every non-contact before that arm could run, so a lead who wrote to us last
 // week was refused for want of a grant.
 func TestALeadWhoWroteRecentlyCanBeFollowedUp(t *testing.T) {
 	e := setupLeadConsent(t)
@@ -672,7 +672,7 @@ func TestALeadWhoWroteRecentlyCanBeFollowedUp(t *testing.T) {
 	}
 	if d.Verdict != commsauthz.VerdictAllow {
 		t.Fatalf("verdict = %q (%s), want allow: the lead wrote to us inside the window, which is "+
-			"the same evidence that answers for a person", d.Verdict, d.ReasonCode)
+			"the same evidence that answers for a contact", d.Verdict, d.ReasonCode)
 	}
 	if d.Basis != commsauthz.BasisSubjectInitiatedCorrespondence {
 		t.Errorf("basis = %q, want subject_initiated_correspondence", d.Basis)

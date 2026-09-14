@@ -22,7 +22,7 @@ func TestOnlyAWaitTheComposerCanAnswerOffersReply(t *testing.T) {
 	t.Parallel()
 	at := time.Date(2026, 9, 6, 9, 0, 0, 0, time.UTC)
 	summary := &crmcontracts.EmailSummary{}
-	person := ids.NewV7()
+	contact := ids.NewV7()
 
 	for _, tc := range []struct {
 		name    string
@@ -31,19 +31,19 @@ func TestOnlyAWaitTheComposerCanAnswerOffersReply(t *testing.T) {
 		because string
 	}{
 		{
-			name: "an email naming a person",
+			name: "an email naming a contact",
 			waiting: WaitingCustomer{
 				ActivityID: ids.NewV7(), Subject: "can you resend the quote?",
-				Since: at.Add(-48 * time.Hour), EmailSummary: summary, PersonID: person,
+				Since: at.Add(-48 * time.Hour), EmailSummary: summary, ContactID: contact,
 			},
 			offers:  true,
 			because: "the composer can answer it and knows where to file the answer",
 		},
 		{
-			name: "a channel message naming a person",
+			name: "a channel message naming a contact",
 			waiting: WaitingCustomer{
 				ActivityID: ids.NewV7(), Subject: "can you resend the quote?",
-				Since: at.Add(-48 * time.Hour), PersonID: person,
+				Since: at.Add(-48 * time.Hour), ContactID: contact,
 			},
 			offers: false,
 			because: "the lane spans channel messages too, and answering a chat in the " +

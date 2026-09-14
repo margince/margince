@@ -26,15 +26,15 @@ func TestListActivitiesCarriesItsLinks(t *testing.T) {
 	owner := OwnerConn(t)
 	admin := e.Admin()
 
-	org := e.SeedOrg(t, "Acme", &e.Rep1)
-	person := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
+	company := e.SeedCompany(t, "Acme", &e.Rep1)
+	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
 	activity := SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
 		VALUES ($1, 'email', 'Renewal terms', now(), 'manual', 'human:x')`)
-	// The organization arm is inserted here rather than through
-	// LinkActivity, whose column map covers person and deal only.
-	e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, organization_id)
-		VALUES ($1, 'organization', $2)`, activity, org)
-	LinkActivity(t, owner, activity, "person", person)
+	// The company arm is inserted here rather than through
+	// LinkActivity, whose column map covers contact and deal only.
+	e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, company_id)
+		VALUES ($1, 'company', $2)`, activity, company)
+	LinkActivity(t, owner, activity, "contact", contact)
 
 	got, _, err := e.Activities.ListActivities(admin, activities.ListActivitiesInput{})
 	if err != nil {
@@ -50,11 +50,11 @@ func TestListActivitiesCarriesItsLinks(t *testing.T) {
 	for _, link := range *got[0].Links {
 		linked[ids.UUID(link.EntityId)] = string(link.EntityType)
 	}
-	if linked[org] != "organization" {
-		t.Errorf("organization link = %q, want organization", linked[org])
+	if linked[company] != "company" {
+		t.Errorf("company link = %q, want company", linked[company])
 	}
-	if linked[person] != "person" {
-		t.Errorf("person link = %q, want person", linked[person])
+	if linked[contact] != "contact" {
+		t.Errorf("contact link = %q, want contact", linked[contact])
 	}
 
 	// The single-row read carries them too: one activity has one answer to
@@ -78,13 +78,13 @@ func TestListActivitiesDropsLinksToRecordsOutOfRowScope(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)
 
-	mine := e.SeedPerson(t, "My Contact", &e.Rep1)
-	theirPrivate := e.SeedPerson(t, "Their Private Contact", &e.Rep3)
-	e.MakeCapturePrivate(t, "person", theirPrivate, e.Rep3)
+	mine := e.SeedContact(t, "My Contact", &e.Rep1)
+	theirPrivate := e.SeedContact(t, "Their Private Contact", &e.Rep3)
+	e.MakeCapturePrivate(t, "contact", theirPrivate, e.Rep3)
 	activity := SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
 		VALUES ($1, 'meeting', 'Joint call', now(), 'manual', 'human:x')`)
-	LinkActivity(t, owner, activity, "person", mine)
-	LinkActivity(t, owner, activity, "person", theirPrivate)
+	LinkActivity(t, owner, activity, "contact", mine)
+	LinkActivity(t, owner, activity, "contact", theirPrivate)
 
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLinkRepPerms)
 	got, _, err := e.Activities.ListActivities(rep, activities.ListActivitiesInput{})
@@ -113,8 +113,8 @@ func TestListActivitiesDropsLinksToRecordsOutOfRowScope(t *testing.T) {
 var activityLinkRepPerms = principal.Permissions{
 	RoleKeys: []string{"rep"},
 	Objects: map[string]principal.ObjectGrant{
-		"person":                {Read: true},
-		"organization":          {Read: true},
+		"contact":               {Read: true},
+		"company":               {Read: true},
 		"deal":                  {Read: true},
 		"activity":              {Read: true},
 		"installation_settings": {Read: true},

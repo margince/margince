@@ -25,7 +25,7 @@ export type EvidenceBearingRow = Readonly<{
 
 /**
  * derivedSource builds the evidence mark's payload for a value the system read
- * rather than a person typed.
+ * rather than a human typed.
  *
  * A value a HUMAN entered gets no mark: the record is full of human-entered
  * values, and marking them all would make the underline mean nothing.

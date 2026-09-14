@@ -187,7 +187,7 @@ export const ConnectOnly: Story = {
   render: cardStory(CONNECT_ONLY, [connected]),
 };
 
-// The reading stays — a rep's explanation for a dated value on a person record
+// The reading stays — a rep's explanation for a dated value on a contact record
 // — and the card says once why nothing here is writable.
 export const ReadOnlySeat: Story = {
   render: cardStory(READER, [connected]),
@@ -197,7 +197,7 @@ export const ReadOnlySeat: Story = {
 // the card collapses them into one honest no-provider state rather than a
 // failure — which is why there is ONE story and not two: the second was the
 // same picture under a second name. The 501 path is drawn where it differs, in
-// the person record's own provider section.
+// the contact record's own provider section.
 export const NoProvider: Story = {
   render: cardStory(OPERATOR, []),
 };

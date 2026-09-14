@@ -35,7 +35,7 @@ import (
 // The pair's own silence is not enough to admit a candidate — a contact a
 // colleague spoke to last week has been handed over, not lost, and the
 // derivation would reject them anyway. The NOT EXISTS spells the derivation's
-// person-wide ground here so those rows do not consume LIMIT slots ahead of
+// contact-wide ground here so those rows do not consume LIMIT slots ahead of
 // genuine lapses.
 //
 // That suppression counts only LIVE colleagues, which is why it applies the
@@ -44,7 +44,7 @@ import (
 // relationship now, and suppressing it would hide the exact lapse this lane
 // exists to surface.
 //
-// The person row scope is applied AT SOURCE, not left to the caller: this read
+// The contact row scope is applied AT SOURCE, not left to the caller: this read
 // originates the candidate set, an edge row disclosing that a withheld contact
 // exists is exactly what capture privacy forbids, and a LIMIT over unscoped
 // rows would let unreadable contacts evict readable lapses from the budget.
@@ -82,13 +82,13 @@ func QuietEdgesForUser(
 	limit int,
 	exclude ExcludeEdges,
 ) ([]InteractionEdge, error) {
-	if err := auth.Require(ctx, "person", principal.ActionRead); err != nil {
+	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
 		return nil, err
 	}
 	// The reader is taken from the context, never from a parameter. This read
 	// answers "which of MY relationships lapsed" and returns who a colleague
 	// talks to and when they last did — so a user id off a call site would let
-	// any future caller ask that question about somebody else, and the person
+	// any future caller ask that question about somebody else, and the contact
 	// row scope below would not refuse it: their contacts can be perfectly
 	// readable while their private relationship history is not the asker's.
 	actor, ok := principal.Actor(ctx)
@@ -99,7 +99,7 @@ func QuietEdgesForUser(
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	userPos := arg(actor.UserID)
 	beforePos := arg(quietBefore)
-	scope, err := auth.ScopeClauseFor(ctx, "person", "p", arg)
+	scope, err := auth.ScopeClauseFor(ctx, "contact", "p", arg)
 	if err != nil {
 		return nil, err
 	}
@@ -124,11 +124,11 @@ func QuietEdgesForUser(
 	exchangedPos := arg(2)
 	limitPos := arg(limit)
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT e.user_id, e.person_id, e.last_at, e.last_inbound_at, e.last_outbound_at,
+		SELECT e.user_id, e.contact_id, e.last_at, e.last_inbound_at, e.last_outbound_at,
 		       e.count_90d, e.in_count_90d, e.out_count_90d, e.count_total
 		  FROM graph_interaction_edge e
 		  %s
-		  JOIN person p ON p.id = e.person_id AND p.archived_at IS NULL
+		  JOIN contact p ON p.id = e.contact_id AND p.archived_at IS NULL
 		 WHERE e.user_id = $%d AND e.last_at <= $%d
 		   -- A relationship, not a single contact. A bare count of one admits an
 		   -- address exchanged with once — the cold mail nobody answered, the
@@ -143,7 +143,7 @@ func QuietEdgesForUser(
 		   AND e.count_total >= $%d
 		   AND NOT EXISTS (SELECT 1 FROM graph_interaction_edge later
 		                     %s
-		                    WHERE later.person_id = e.person_id AND later.last_at >= $%d)
+		                    WHERE later.contact_id = e.contact_id AND later.last_at >= $%d)
 		   AND (%s)
 		   -- Before the cap, like every rule above it.
 		   AND (%s)
@@ -154,7 +154,7 @@ func QuietEdgesForUser(
 		 -- relationship worth reviving that happened to be the forty-first, and
 		 -- the oldest silences are exactly where a one-off exchange from years
 		 -- ago sits.
-		 ORDER BY e.count_total DESC, e.last_at ASC, e.person_id
+		 ORDER BY e.count_total DESC, e.last_at ASC, e.contact_id
 		 LIMIT $%d`, liveMemberJoin, userPos, beforePos,
 		exchangedPos, laterMemberJoin, beforePos, scope, excluded, limitPos), args...)
 	if err != nil {

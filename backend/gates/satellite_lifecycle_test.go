@@ -5,27 +5,27 @@
 
 package gates
 
-// Person-satellite lifecycle reach as a fitness function. piicoverage_test.go
+// Contact-satellite lifecycle reach as a fitness function. piicoverage_test.go
 // proves Art. 17 erasure and Art. 15 SAR reach every table its registry
 // declares PII-bearing; it says nothing about the three OTHER lifecycle paths a
-// person's child rows ride — the retention anonymizer, the merge relink, and the
+// contact's child rows ride — the retention anonymizer, the merge relink, and the
 // archive cascade. Those are where a new satellite rots invisibly: a satellite
-// nobody archived stays live under an archived Person, and one nobody relinked
+// nobody archived stays live under an archived Contact, and one nobody relinked
 // is orphaned on the merged-away half. Neither errors, and neither is visible
 // until someone reads the row that should be gone.
 //
 // The obligations are DERIVED, never listed:
 //
-//   - The satellite set comes from the migration DDL — a person_*-named table
-//     with a person_id column. A new satellite is enrolled by the migration
+//   - The satellite set comes from the migration DDL — a contact_*-named table
+//     with a contact_id column. A new satellite is enrolled by the migration
 //     that creates it, not by an edit here.
 //   - The archive cascade binds a satellite IFF it has an archived_at column.
-//     Four satellites (person_consent, person_social, person_profile_field,
-//     person_signature_enrich_state) have none, so ArchivePerson has nothing
+//     Four satellites (contact_consent, contact_social, contact_profile_field,
+//     contact_signature_enrich_state) have none, so ArchiveContact has nothing
 //     to soft-delete on them: their rows leave the database only when the
-//     person ROW itself is deleted, through the person FK's
-//     ON DELETE CASCADE. ArchivePerson is a SOFT delete, so it does not fire
-//     that cascade, and no path in this tree hard-deletes a person — those
+//     contact ROW itself is deleted, through the contact FK's
+//     ON DELETE CASCADE. ArchiveContact is a SOFT delete, so it does not fire
+//     that cascade, and no path in this tree hard-deletes a contact — those
 //     four rows therefore outlive the archive. That is a real coverage gap in
 //     the lifecycle, not a discharge of it; what this gate can honestly hold
 //     is only the obligation the table's own shape admits, and demanding a
@@ -34,8 +34,8 @@ package gates
 //   - The retention anonymizer and the merge relink bind a satellite that the
 //     PII registry (piiTables) declares subject-bearing. Registration in that
 //     registry is the ONE act that declares a table holds a data subject, and
-//     it already carries the ratified reasons a person_* table may sit outside
-//     it — person_consent, for instance, is deliberately kept under Art. 5
+//     it already carries the ratified reasons a contact_* table may sit outside
+//     it — contact_consent, for instance, is deliberately kept under Art. 5
 //     accountability rather than erased. Re-deciding that here would fork the
 //     judgment across two gates.
 //
@@ -69,50 +69,50 @@ type satellitePath struct {
 	piiOnly bool
 }
 
-// satelliteLifecyclePaths are the person-satellite obligations this gate owns.
+// satelliteLifecyclePaths are the contact-satellite obligations this gate owns.
 // Art. 17 erasure and Art. 15 SAR are deliberately absent: piicoverage_test.go
 // already binds them to the same registry piiOnly reads, and duplicating them
 // here would mean two gates to keep in step over one promise.
 var satelliteLifecyclePaths = []satellitePath{
 	{
 		name:         "archive_cascade",
-		file:         "internal/modules/people/personarchive.go",
-		remedy:       "add it to ArchivePerson's statement list — an unlisted satellite stays LIVE under an archived Person",
+		file:         "internal/modules/contacts/contactarchive.go",
+		remedy:       "add it to ArchiveContact's statement list — an unlisted satellite stays LIVE under an archived Contact",
 		archivedOnly: true,
 	},
 	{
 		name:    "retention_anonymize",
 		file:    "internal/modules/privacy/retentionactions.go",
-		remedy:  "delete its rows in the person/anonymize executor — the sweep anonymizes the person row and would leave this satellite's copy of the subject behind",
+		remedy:  "delete its rows in the contact/anonymize executor — the sweep anonymizes the contact row and would leave this satellite's copy of the subject behind",
 		piiOnly: true,
 	},
 	{
 		name:    "merge_relink",
-		file:    "internal/modules/people/mergerelink.go",
-		remedy:  "relink its rows onto the survivor in relinkPersonReferences — rows left on the merged-away person are orphaned, invisible to every read of the survivor",
+		file:    "internal/modules/contacts/mergerelink.go",
+		remedy:  "relink its rows onto the survivor in relinkContactReferences — rows left on the merged-away contact are orphaned, invisible to every read of the survivor",
 		piiOnly: true,
 	},
 }
 
 var (
-	// personSatelliteName matches the CREATE TABLE lines this gate governs:
-	// child tables named for the person they hang off.
-	personSatelliteName = regexp.MustCompile(`^person_[a-z_]+$`)
+	// contactSatelliteName matches the CREATE TABLE lines this gate governs:
+	// child tables named for the contact they hang off.
+	contactSatelliteName = regexp.MustCompile(`^contact_[a-z_]+$`)
 	// columnLine matches a bare column definition inside a CREATE TABLE block.
 	// Constraint clauses (CONSTRAINT/PRIMARY/UNIQUE/CHECK/FOREIGN) never reach
 	// the two names this gate reads, so no exclusion is needed.
 	columnLine = regexp.MustCompile(`^\s+([a-z_]+)\s+[a-z]`)
 	// alterColumn matches a later migration adding or dropping a column on an
-	// existing table — person_consent gains lead_id that way (0056), so a
+	// existing table — contact_consent gains lead_id that way (0056), so a
 	// derivation that read only CREATE TABLE would be reading a stale schema.
 	alterColumn = regexp.MustCompile(`(?i)^\s*ALTER TABLE ([a-z_]+)\s+(ADD|DROP) COLUMN (?:IF (?:NOT )?EXISTS )?([a-z_]+)`)
 )
 
-// personSatellites derives the governed satellites from the migration sources:
-// table name → its column set. A person_*-named CREATE TABLE with a person_id
+// contactSatellites derives the governed satellites from the migration sources:
+// table name → its column set. A contact_*-named CREATE TABLE with a contact_id
 // column qualifies; ADD/DROP COLUMN in a later migration is folded in, in file
 // order, so the column set is the one the migrated schema actually has.
-func personSatellites(t *testing.T) map[string]map[string]bool {
+func contactSatellites(t *testing.T) map[string]map[string]bool {
 	t.Helper()
 	columns := map[string]map[string]bool{}
 	var paths []string
@@ -137,9 +137,9 @@ func personSatellites(t *testing.T) map[string]map[string]bool {
 			t.Fatal(err)
 		}
 		current := ""
-		for _, line := range strings.Split(string(raw), "\n") {
+		for _, line := range strings.Split(withCurrentNames(string(raw)), "\n") {
 			if m := createTableLine.FindStringSubmatch(line); m != nil {
-				if personSatelliteName.MatchString(m[1]) {
+				if contactSatelliteName.MatchString(m[1]) {
 					current = m[1]
 					columns[current] = map[string]bool{}
 				}
@@ -168,15 +168,15 @@ func personSatellites(t *testing.T) map[string]map[string]bool {
 	}
 	satellites := map[string]map[string]bool{}
 	for table, cols := range columns {
-		if cols["person_id"] {
+		if cols["contact_id"] {
 			satellites[table] = cols
 		}
 	}
 	// The derivation reads DDL text, so a change in how migrations spell a
 	// CREATE TABLE would empty it silently and the gate would pass by finding
-	// nothing to check. person_email and person_phone have been satellites
+	// nothing to check. contact_email and contact_phone have been satellites
 	// since 0004 and cannot legitimately disappear.
-	for _, expected := range []string{"person_email", "person_phone"} {
+	for _, expected := range []string{"contact_email", "contact_phone"} {
 		if satellites[expected] == nil {
 			t.Fatalf("derived no %s satellite from the migrations — the derivation is broken, not the schema", expected)
 		}
@@ -196,15 +196,15 @@ func pathWrites(t *testing.T, file string) map[string]bool {
 	return writes
 }
 
-func TestEveryPersonSatelliteJoinsEveryLifecyclePathThatApplies(t *testing.T) {
+func TestEveryContactSatelliteJoinsEveryLifecyclePathThatApplies(t *testing.T) {
 	t.Parallel()
-	satellites := personSatellites(t)
+	satellites := contactSatellites(t)
 	var missing []string
 	for _, path := range satelliteLifecyclePaths {
 		writes := pathWrites(t, path.file)
 		for table, cols := range satellites {
 			if path.archivedOnly && !cols["archived_at"] {
-				continue // removed by the person FK cascade; nothing to archive
+				continue // removed by the contact FK cascade; nothing to archive
 			}
 			if _, subjectBearing := piiTables[table]; path.piiOnly && !subjectBearing {
 				continue // not declared subject-bearing in piiTables
@@ -212,7 +212,7 @@ func TestEveryPersonSatelliteJoinsEveryLifecyclePathThatApplies(t *testing.T) {
 			if writes[table] {
 				continue
 			}
-			missing = append(missing, "person satellite "+table+" is not handled by the "+path.name+
+			missing = append(missing, "contact satellite "+table+" is not handled by the "+path.name+
 				" path ("+path.file+") — "+path.remedy)
 		}
 	}

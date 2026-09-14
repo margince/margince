@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
 // terminalStatuses are the states an agreement does not come back out of. A
@@ -56,24 +57,41 @@ func (e *ContractCheckError) Error() string { return e.Reason }
 // never learns our schema from an error.
 func contractCheckError(constraint string) error {
 	switch constraint {
-	case "contract_value_pair":
-		return &ContractCheckError{Field: "value_minor",
-			Reason: "a contract value needs its currency, and a currency needs its value"}
+	case "contract_money_currency_pair":
+		return &ContractCheckError{
+			Field:  "value_minor",
+			Reason: "a contract figure needs its currency, and a currency needs a value or an ARR to price",
+		}
+	case "contract_arr_nonnegative":
+		return &ContractCheckError{
+			Field:  "arr_minor",
+			Reason: "recurring revenue cannot be negative",
+		}
 	case "contract_fx_pair":
-		return &ContractCheckError{Field: "fx_rate_to_base",
-			Reason: "a frozen conversion rate needs the date it was frozen on"}
+		return &ContractCheckError{
+			Field:  "fx_rate_to_base",
+			Reason: "a frozen conversion rate needs the date it was frozen on",
+		}
 	case "contract_term_order":
-		return &ContractCheckError{Field: "ends_on",
-			Reason: "a term cannot end before it starts"}
+		return &ContractCheckError{
+			Field:  "ends_on",
+			Reason: "a term cannot end before it starts",
+		}
 	case "contract_cancellation_within_term":
-		return &ContractCheckError{Field: "cancellation_effective_on",
-			Reason: "a cancellation cannot take effect after the term already ends"}
+		return &ContractCheckError{
+			Field:  "cancellation_effective_on",
+			Reason: "a cancellation cannot take effect after the term already ends",
+		}
 	case "contract_cancellation_order":
-		return &ContractCheckError{Field: "cancellation_effective_on",
-			Reason: "a cancellation cannot take effect before notice was given"}
+		return &ContractCheckError{
+			Field:  "cancellation_effective_on",
+			Reason: "a cancellation cannot take effect before notice was given",
+		}
 	case "contract_superseded_agrees":
-		return &ContractCheckError{Field: "status",
-			Reason: "a superseded contract names its successor, and only a superseded one may"}
+		return &ContractCheckError{
+			Field:  "status",
+			Reason: "a superseded contract names its successor, and only a superseded one may",
+		}
 	default:
 		return &ContractCheckError{Field: "", Reason: "the contract's dates or amounts contradict each other"}
 	}
@@ -84,9 +102,13 @@ func (s *Store) ChangeStatus(ctx context.Context, id ids.ContractID, to string, 
 	if err := auth.Require(ctx, contractObject, principal.ActionUpdate); err != nil {
 		return crmcontracts.Contract{}, err
 	}
+	active, err := s.catalogColumns(ctx)
+	if err != nil {
+		return crmcontracts.Contract{}, err
+	}
 
 	var out crmcontracts.Contract
-	err := s.tx(ctx, func(tx pgx.Tx) error {
+	err = s.tx(ctx, func(tx pgx.Tx) error {
 		today, err := s.today(ctx, tx)
 		if err != nil {
 			return err
@@ -102,7 +124,7 @@ func (s *Store) ChangeStatus(ctx context.Context, id ids.ContractID, to string, 
 		if err != nil {
 			return err
 		}
-		out, err = applyStatusTx(ctx, tx, id, existing, to, nil, ifVersion, today, frozen)
+		out, err = applyStatusTx(ctx, tx, id, existing, active, to, nil, ifVersion, today, frozen)
 		return err
 	})
 	return out, err
@@ -135,7 +157,7 @@ func statusOf(c crmcontracts.Contract) string {
 }
 
 // applyStatusTx writes one status transition with its audit and event.
-func applyStatusTx(ctx context.Context, tx pgx.Tx, id ids.ContractID, existing crmcontracts.Contract,
+func applyStatusTx(ctx context.Context, tx pgx.Tx, id ids.ContractID, existing crmcontracts.Contract, active []fieldcatalog.Column,
 	to string, supersededBy *ids.ContractID, ifVersion *int64, asOf time.Time, frozen *frozenRate,
 ) (crmcontracts.Contract, error) {
 	patch := storekit.NewPatch()
@@ -162,9 +184,9 @@ func applyStatusTx(ctx context.Context, tx pgx.Tx, id ids.ContractID, existing c
 		return crmcontracts.Contract{}, fmt.Errorf("audit contract status change: %w", err)
 	}
 	changed := crmcontracts.PublicEventContractStatusChanged{
-		FromStatus:     statusOf(existing),
-		ToStatus:       to,
-		OrganizationId: existing.OrganizationId,
+		FromStatus: statusOf(existing),
+		ToStatus:   to,
+		CompanyId:  existing.CompanyId,
 	}
 	if supersededBy != nil {
 		successor := openapi_types.UUID(supersededBy.UUID)
@@ -173,7 +195,7 @@ func applyStatusTx(ctx context.Context, tx pgx.Tx, id ids.ContractID, existing c
 	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, changed); err != nil {
 		return crmcontracts.Contract{}, fmt.Errorf("emit contract.status_changed: %w", err)
 	}
-	return readContractForCaller(ctx, tx, id, asOf)
+	return readContractForCaller(ctx, tx, id, asOf, active)
 }
 
 // frozenRate is what activation stamps: the conversion and the day it is the
@@ -228,12 +250,16 @@ func (s *Store) freezeRateForActivation(ctx context.Context, tx pgx.Tx,
 // because that is what a notice period is — the status moves later, when the
 // date arrives and a human or a proposal says so.
 func (s *Store) Cancel(ctx context.Context, id ids.ContractID, noticeOn, effectiveOn time.Time, ifVersion *int64) (crmcontracts.Contract, error) {
+	active, err := s.catalogColumns(ctx)
+	if err != nil {
+		return crmcontracts.Contract{}, err
+	}
 	if err := auth.Require(ctx, contractObject, principal.ActionUpdate); err != nil {
 		return crmcontracts.Contract{}, err
 	}
 
 	var out crmcontracts.Contract
-	err := s.tx(ctx, func(tx pgx.Tx) error {
+	err = s.tx(ctx, func(tx pgx.Tx) error {
 		today, err := s.today(ctx, tx)
 		if err != nil {
 			return err
@@ -252,7 +278,7 @@ func (s *Store) Cancel(ctx context.Context, id ids.ContractID, noticeOn, effecti
 		if err := applyContractUpdate(ctx, tx, id, patch, ifVersion, "contract cancellation"); err != nil {
 			return err
 		}
-		out, err = readContractForCaller(ctx, tx, id, today)
+		out, err = readContractForCaller(ctx, tx, id, today, active)
 		return err
 	})
 	return out, err
@@ -270,6 +296,10 @@ func (s *Store) Renew(ctx context.Context, id ids.ContractID, successor CreateCo
 		return crmcontracts.Contract{}, err
 	}
 	by, err := storekit.CapturedBy(ctx)
+	if err != nil {
+		return crmcontracts.Contract{}, err
+	}
+	active, err := s.catalogColumns(ctx)
 	if err != nil {
 		return crmcontracts.Contract{}, err
 	}
@@ -294,14 +324,14 @@ func (s *Store) Renew(ctx context.Context, id ids.ContractID, successor CreateCo
 		if err != nil {
 			return err
 		}
-		successor.OrganizationID = ids.OrganizationID{UUID: anchor}
+		successor.CompanyID = ids.CompanyID{UUID: anchor}
 
-		created, err := createContractTx(ctx, tx, successor, by, today)
+		created, err := createContractTx(ctx, tx, successor, by, today, active)
 		if err != nil {
 			return err
 		}
 		successorID := ids.ContractID{UUID: ids.UUID(created.Id)}
-		if _, err := applyStatusTx(ctx, tx, id, predecessor, StatusSuperseded, &successorID, ifVersion, today, nil); err != nil {
+		if _, err := applyStatusTx(ctx, tx, id, predecessor, active, StatusSuperseded, &successorID, ifVersion, today, nil); err != nil {
 			return err
 		}
 		out = created

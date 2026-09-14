@@ -15,7 +15,7 @@ import {
 } from "./story-utils";
 
 // LeadsScreen (list, accent-tinted "segregated" surface) and LeadScreen (its
-// own 360 — never person.html, per the §3.5 segregation gap) both read
+// own 360 — never contact.html, per the §3.5 segregation gap) both read
 // through the api client on mount; LeadScreen's lifecycle panel also reads
 // GET /me (the session-principal probe every role-aware surface shares).
 const meta: Meta = {
@@ -186,7 +186,7 @@ export const LeadPromotedAfterMerge: Story = {
         jsonResponse({
           ...lead,
           status: "promoted",
-          promoted_person_id: "p-42",
+          promoted_contact_id: "p-42",
           promoted_at: "2026-06-20T08:00:00Z",
           archived_at: "2026-06-20T08:00:00Z",
         }),

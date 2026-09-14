@@ -38,8 +38,8 @@ func TestADecisionWhoseEffectFailedIsRedrivenByDecidingAgain(t *testing.T) {
 		return e.redeems(ctx, id, diffHash)
 	})
 	ctx := e.asHumanWith(decidesEverything())
-	org := e.organization(t)
-	id := e.stageInto(ctx, t, ids.NewV7(), org, kindSiteLead, "lead-anna")
+	company := e.company(t)
+	id := e.stageInto(ctx, t, ids.NewV7(), company, kindSiteLead, "lead-anna")
 
 	if _, err := e.svc.Decide(ctx, id, true, nil); err == nil {
 		t.Fatal("the failing effect's error was swallowed — the decider was told it worked")
@@ -79,8 +79,8 @@ func TestAConsumedApprovalStillRefusesASecondDecision(t *testing.T) {
 		return e.redeems(ctx, id, diffHash)
 	})
 	ctx := e.asHumanWith(decidesEverything())
-	org := e.organization(t)
-	id := e.stageInto(ctx, t, ids.NewV7(), org, kindSiteLead, "lead-anna")
+	company := e.company(t)
+	id := e.stageInto(ctx, t, ids.NewV7(), company, kindSiteLead, "lead-anna")
 
 	if _, err := e.svc.Decide(ctx, id, true, nil); err != nil {
 		t.Fatalf("the first decision: %v", err)
@@ -111,8 +111,8 @@ func TestARejectedApprovalIsNotRedrivenByApprovingIt(t *testing.T) {
 		return nil
 	})
 	ctx := e.asHumanWith(decidesEverything())
-	org := e.organization(t)
-	id := e.stageInto(ctx, t, ids.NewV7(), org, kindSiteLead, "lead-anna")
+	company := e.company(t)
+	id := e.stageInto(ctx, t, ids.NewV7(), company, kindSiteLead, "lead-anna")
 
 	reason := "not this quarter"
 	if _, err := e.svc.Decide(ctx, id, false, &reason); err != nil {

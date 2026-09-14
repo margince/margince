@@ -15,7 +15,7 @@ export type { TimelineGroup };
  *  - a THREAD is the provider's own conversation id. Not a subject match —
  *    grouping by subject merges two unrelated "Re: Update" exchanges and splits
  *    one that was renamed mid-conversation.
- *  - a BULK SEND is one message the sender addressed to several people at once.
+ *  - a BULK SEND is one message the sender addressed to several contacts at once.
  *    It has no thread of its own, so it is recognised by shape: same subject,
  *    same day, and either the sender's own List-Unsubscribe attestation or
  *    enough copies that no other reading is plausible.

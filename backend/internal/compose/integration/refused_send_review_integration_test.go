@@ -35,12 +35,24 @@ type reviewRow struct {
 }
 
 // openReviews reads every live review in the installation.
+// allReviews reads every review, closed ones included, for the assertions that
+// are about a row SURVIVING rather than about it being answerable.
+func allReviews(t *testing.T, e *apptest.AppEnv) []reviewRow {
+	t.Helper()
+	return reviewRowsMatching(t, e, "TRUE")
+}
+
 func openReviews(t *testing.T, e *apptest.AppEnv) []reviewRow {
+	t.Helper()
+	return reviewRowsMatching(t, e, "resolved_at IS NULL")
+}
+
+func reviewRowsMatching(t *testing.T, e *apptest.AppEnv, where string) []reviewRow {
 	t.Helper()
 	rows, err := e.Owner.Query(context.Background(), `
 		SELECT id::text, state, reason_code, refusals::text
 		  FROM communication_review
-		 WHERE resolved_at IS NULL
+		 WHERE `+where+`
 		 ORDER BY opened_at`)
 	if err != nil {
 		t.Fatalf("reading the reviews: %v", err)
@@ -410,6 +422,13 @@ func TestAChangedMessageIsItsOwnHeldSendAndReview(t *testing.T) {
 // The row SURVIVES with its refusals emptied rather than being deleted. The
 // work may still be in front of a human, and a row vanishing under them leaves
 // a queue pointing at nothing.
+//
+// IT DOES NOT SURVIVE AS LIVE WORK, and that is a separate obligation the
+// erasure took on later (privacy/scheduledsends.go, closeReviewsForErasedMessages).
+// An erased subject's refused message is nothing anybody should act on: the
+// held row was cancelled and the payload emptied, so directing that send would
+// fire an emptied message at an emptied address list. The row stays readable
+// and stops being answerable.
 func TestErasingASubjectClearsThemFromARefusedSendReview(t *testing.T) {
 	c := setupConsent(t)
 
@@ -421,11 +440,11 @@ func TestErasingASubjectClearsThemFromARefusedSendReview(t *testing.T) {
 		t.Fatalf("no review naming the subject to erase from: %+v", reviews)
 	}
 
-	var personID string
+	var contactID string
 	if err := c.Owner.QueryRow(context.Background(), `
-		SELECT p.id::text FROM person p
-		  JOIN person_email e ON e.person_id = p.id
-		 WHERE lower(e.email) = 'subject@consent.test'`).Scan(&personID); err != nil {
+		SELECT p.id::text FROM contact p
+		  JOIN contact_email e ON e.contact_id = p.id
+		 WHERE lower(e.email) = 'subject@consent.test'`).Scan(&contactID); err != nil {
 		t.Fatalf("finding the subject: %v", err)
 	}
 	// THROUGH THE RIGHTS CASE, which is how an erasure actually happens here: a
@@ -436,7 +455,7 @@ func TestErasingASubjectClearsThemFromARefusedSendReview(t *testing.T) {
 		ID string `json:"id"`
 	}
 	if status := c.Call(t, "POST", "/v1/data-subject-requests", AnyMap{
-		"kind": "erasure", "subject_ref": personID,
+		"kind": "erasure", "subject_ref": contactID,
 		"due_at": "2027-01-01T00:00:00Z",
 	}, nil, &opened); status != http.StatusCreated {
 		t.Fatalf("opening the erasure case → %d", status)
@@ -447,13 +466,20 @@ func TestErasingASubjectClearsThemFromARefusedSendReview(t *testing.T) {
 		t.Fatalf("fulfilling the erasure → %d", status)
 	}
 
-	after := openReviews(t, c.AppEnv)
+	// EVERY review, not only the live ones: the erasure closes this row as well
+	// as emptying it, and reading only live rows would report a surviving row
+	// as deleted.
+	after := allReviews(t, c.AppEnv)
 	if len(after) != 1 {
 		t.Fatalf("%d review(s) after the erasure, want the row to survive with its refusals "+
 			"emptied — a queue pointing at a deleted row shows a human nothing", len(after))
 	}
 	if strings.Contains(after[0].refusals, "subject@consent.test") {
 		t.Errorf("the review still names the erased subject's address: %s", after[0].refusals)
+	}
+	if len(openReviews(t, c.AppEnv)) != 0 {
+		t.Error("the review is still LIVE over an erased subject's cancelled message — somebody " +
+			"can still direct a send to an address that no longer exists")
 	}
 }
 
@@ -479,18 +505,18 @@ func TestErasingASubjectEmptiesAndCancelsTheirHeldMessage(t *testing.T) {
 		t.Fatalf("%d held message(s) to erase from, want 1", len(held))
 	}
 
-	var personID string
+	var contactID string
 	if err := c.Owner.QueryRow(context.Background(), `
-		SELECT p.id::text FROM person p
-		  JOIN person_email e ON e.person_id = p.id
-		 WHERE lower(e.email) = 'subject@consent.test'`).Scan(&personID); err != nil {
+		SELECT p.id::text FROM contact p
+		  JOIN contact_email e ON e.contact_id = p.id
+		 WHERE lower(e.email) = 'subject@consent.test'`).Scan(&contactID); err != nil {
 		t.Fatalf("finding the subject: %v", err)
 	}
 	var opened struct {
 		ID string `json:"id"`
 	}
 	if status := c.Call(t, "POST", "/v1/data-subject-requests", AnyMap{
-		"kind": "erasure", "subject_ref": personID,
+		"kind": "erasure", "subject_ref": contactID,
 		"due_at": "2027-01-01T00:00:00Z",
 	}, nil, &opened); status != http.StatusCreated {
 		t.Fatalf("opening the erasure case → %d", status)
@@ -523,12 +549,12 @@ func TestErasingASubjectEmptiesAndCancelsTheirHeldMessage(t *testing.T) {
 //
 // The held payload keeps the address as the SENDER wrote it, and the erasure's
 // address list carries it as the installation STORED it. A rep who typed
-// Subject@consent.test to a person recorded as subject@consent.test would
+// Subject@consent.test to a contact recorded as subject@consent.test would
 // otherwise leave that message behind — their name, their address and the words
 // meant for them — after the installation had certified their data destroyed.
 //
 // Worse, it would stay unreachable: the erasure's address list is derived from
-// person_email, which the sweep deletes, so no later erasure of the same person
+// contact_email, which the sweep deletes, so no later erasure of the same contact
 // would find the row either.
 func TestErasingASubjectReachesAMessageAddressedInAnotherCase(t *testing.T) {
 	c := setupConsent(t)
@@ -548,18 +574,18 @@ func TestErasingASubjectReachesAMessageAddressedInAnotherCase(t *testing.T) {
 		t.Fatalf("the held message does not keep the address as typed: %s", held[0].payload)
 	}
 
-	var personID string
+	var contactID string
 	if err := c.Owner.QueryRow(context.Background(), `
-		SELECT p.id::text FROM person p
-		  JOIN person_email e ON e.person_id = p.id
-		 WHERE lower(e.email) = 'subject@consent.test'`).Scan(&personID); err != nil {
+		SELECT p.id::text FROM contact p
+		  JOIN contact_email e ON e.contact_id = p.id
+		 WHERE lower(e.email) = 'subject@consent.test'`).Scan(&contactID); err != nil {
 		t.Fatalf("finding the subject: %v", err)
 	}
 	var opened struct {
 		ID string `json:"id"`
 	}
 	if status := c.Call(t, "POST", "/v1/data-subject-requests", AnyMap{
-		"kind": "erasure", "subject_ref": personID,
+		"kind": "erasure", "subject_ref": contactID,
 		"due_at": "2027-01-01T00:00:00Z",
 	}, nil, &opened); status != http.StatusCreated {
 		t.Fatalf("opening the erasure case → %d", status)
@@ -588,7 +614,7 @@ func TestErasingASubjectReachesAMessageAddressedInAnotherCase(t *testing.T) {
 // destroyed, and commits. A hold landing afterwards would put the subject's
 // address and the words meant for them back into the database — in a row no
 // later erasure would find, because the address list every erasure works from
-// is derived from person_email, which the sweep deletes.
+// is derived from contact_email, which the sweep deletes.
 //
 // Driven by planting the erasure's own durable record rather than by running a
 // full erasure, and that is what makes it a test of THIS rule. A real erasure
@@ -619,7 +645,7 @@ func TestARefusalWhoseRecipientWasErasedHoldsNothing(t *testing.T) {
 
 	if held := heldSends(t, c.AppEnv); len(held) != 0 {
 		t.Errorf("%d message(s) held for an erased subject: %+v — the installation certified "+
-			"this person's data destroyed and then stored their address and the words meant "+
+			"this contact's data destroyed and then stored their address and the words meant "+
 			"for them again, in a row no later erasure would find", len(held), held)
 	}
 }
@@ -669,10 +695,17 @@ func TestTheRepCanOpenTheReviewTheirRefusalNamed(t *testing.T) {
 	}
 }
 
-// A REVIEW BELONGING TO SOMEBODY ELSE IS NOT FOUND, not forbidden. The row
-// names the recipients of another person's message and why each was refused,
-// which is a fact about those people — and "forbidden" would confirm the id
-// exists, which is itself a disclosure about a message the caller may not see.
+// A REVIEW NOBODY HAS GIVEN THIS CALLER A REASON TO SEE IS NOT FOUND, not
+// forbidden. The row names the recipients of another colleague's message and why
+// each was refused, which is a fact about those contacts — and "forbidden" would
+// confirm the id exists, which is itself a disclosure about a message the
+// caller may not see.
+//
+// TWO DOORS OPEN THIS ROW and this test closes both. The caller is not the
+// initiator, because the review is reassigned; and they cannot decide refused
+// sends, because the grant is removed. A decider reading somebody else's
+// refusal is the reviewer path and has its own test — what must not happen is a
+// seat holding neither door seeing anything at all.
 func TestAnotherSeatsReviewIsNotFound(t *testing.T) {
 	c := setupConsent(t)
 
@@ -698,10 +731,172 @@ func TestAnotherSeatsReviewIsNotFound(t *testing.T) {
 		other, reviews[0].id); err != nil {
 		t.Fatalf("reassigning the review: %v", err)
 	}
+	// And the caller cannot decide refused sends either, which is the other
+	// door. The fixture signs in as an admin, who holds that grant by default.
+	if _, err := c.Owner.Exec(context.Background(), `
+		UPDATE role SET permissions = jsonb_set(
+			permissions, '{objects,communication_exception}',
+			'{"create":false,"read":false,"update":false,"delete":false}'::jsonb, true)`); err != nil {
+		t.Fatalf("removing the decider grant: %v", err)
+	}
 
 	if status := c.Call(t, "GET", "/v1/communication-reviews/"+reviews[0].id,
 		nil, nil, nil); status != http.StatusNotFound {
 		t.Errorf("another seat's review → %d, want 404 — a 403 would confirm the id exists, "+
 			"which is a disclosure about a message this caller may not see", status)
+	}
+}
+
+// THE REFUSAL NAMES ITS REVIEW AS A FIELD, not only in a sentence.
+//
+// The reference has always travelled in the message, which serves a human
+// reading it and nothing else. An agent handed "consent not granted" in English
+// can do nothing with it: parsing an id out of prose is guesswork, and guessing
+// is worse than failing. Named as a field, the same refusal is something an
+// agent can act on — it can hand the question to a human.
+//
+// AND THE STATUS DOES NOT MOVE. This is the constraint the first attempt at a
+// structured refusal broke: implementing FieldFault flipped the send surface
+// from 409 to 422 across every client and test that already recognised it. The
+// reference is orthogonal to classification and must stay that way.
+func TestARefusedSendNamesItsReviewWhereAMachineCanReadIt(t *testing.T) {
+	c := setupConsent(t)
+
+	var problem struct {
+		Code    string `json:"code"`
+		Details struct {
+			ReviewID         string   `json:"review_id"`
+			AvailableActions []string `json:"available_actions"`
+		} `json:"details"`
+	}
+	status := c.Call(t, "POST", "/v1/activities/"+c.activityID+"/send-email", AnyMap{
+		"subject": "Re: Inbound question", "body": "answer",
+		"to": []string{"subject@consent.test"}, "consent_purpose": "marketing_email",
+	}, nil, &problem)
+
+	if status != http.StatusConflict {
+		t.Fatalf("a refused send answered %d, want 409 — the reference must not change what the "+
+			"refusal says happened", status)
+	}
+	if problem.Code != "consent_not_granted" {
+		t.Errorf("the refusal reads code %q, want consent_not_granted", problem.Code)
+	}
+	reviews := openReviews(t, c.AppEnv)
+	if len(reviews) != 1 {
+		t.Fatalf("%d review(s), want 1", len(reviews))
+	}
+	if problem.Details.ReviewID != reviews[0].id {
+		t.Errorf("the refusal names review %q as a field and opened %q — an agent reading the "+
+			"body cannot find the work this left behind",
+			problem.Details.ReviewID, reviews[0].id)
+	}
+	// NAMED EXACTLY, not merely non-empty. A test that accepted any list would
+	// pass while the refusal promised a move this caller cannot make — which is
+	// the bug it exists to catch.
+	//
+	// The fixture signs in as an admin, who holds communication_exception — so
+	// the move offered is the SEND rather than the ask. Which one a human sees
+	// is the server's decision and turns on that grant; the test below takes
+	// the grant away and watches the offer change.
+	if len(problem.Details.AvailableActions) != 1 ||
+		problem.Details.AvailableActions[0] != "direct_send" {
+		t.Errorf("the refusal offers %v, want exactly [direct_send] — a rep who may overrule the "+
+			"engine is offered the send, not a note asking somebody else to",
+			problem.Details.AvailableActions)
+	}
+}
+
+// A REP WHO CANNOT OVERRULE THE ENGINE IS OFFERED THE ASK INSTEAD.
+//
+// The two are answers to one question — "this was refused, now what" — and
+// which a human sees is decided by what they may actually do. Offering a
+// holder the ask would tell them to go around themselves; offering somebody
+// without the grant the send would be a button that fails when pressed.
+func TestARepWhoCannotOverruleTheEngineIsOfferedTheAsk(t *testing.T) {
+	c := setupConsent(t)
+
+	// The seat loses the grant that makes somebody a director.
+	if _, err := c.Owner.Exec(context.Background(), `
+		UPDATE role SET permissions = jsonb_set(
+			permissions, '{objects,communication_exception}',
+			'{"create":false,"read":false,"update":false,"delete":false}'::jsonb, true)`); err != nil {
+		t.Fatalf("removing the grant: %v", err)
+	}
+
+	var problem struct {
+		Details struct {
+			AvailableActions []string `json:"available_actions"`
+		} `json:"details"`
+	}
+	if status := c.Call(t, "POST", "/v1/activities/"+c.activityID+"/send-email", AnyMap{
+		"subject": "Re: Inbound question", "body": "answer",
+		"to": []string{"subject@consent.test"}, "consent_purpose": "marketing_email",
+	}, nil, &problem); status != http.StatusConflict {
+		t.Fatalf("marketing send with no grant → %d, want 409", status)
+	}
+	if len(problem.Details.AvailableActions) != 1 ||
+		problem.Details.AvailableActions[0] != "request_decision" {
+		t.Errorf("the refusal offers %v, want exactly [request_decision] — a rep who cannot "+
+			"direct a send would press a button that fails", problem.Details.AvailableActions)
+	}
+}
+
+// NAMING THE KIND IS ENOUGH; THE LEGACY KEY IS NOT REQUIRED.
+//
+// The four send tools required consent_purpose, which is the legacy key. A1
+// made communication_context the field the engine decides on, so an agent that
+// knows what kind of message it is sending should say that and nothing else —
+// forced to name a legacy key as well, it names the wrong one.
+//
+// SAYING NEITHER IS STILL REFUSED, and that is the engine working rather than a
+// gap this slice left. Resolution from the thread alone cannot tell a quote
+// from a newsletter, so it answers unknown_purpose and opens a review instead
+// of guessing. Making the resolver cleverer is A1's question; what this slice
+// owes is that an agent naming the CANONICAL field is not also made to name the
+// legacy one.
+func TestNamingTheKindIsEnoughWithoutTheLegacyKey(t *testing.T) {
+	c := setupConsent(t)
+
+	status := c.Call(t, "POST", "/v1/activities/"+c.activityID+"/send-email", AnyMap{
+		"subject": "Re: Inbound question", "body": "answer",
+		"to":                    []string{"subject@consent.test"},
+		"communication_context": "reply_to_inbound",
+	}, nil, nil)
+	if status >= 300 {
+		var reason string
+		// Read to sharpen the failure below, so a refusal that wrote no review
+		// row says so instead of reporting an empty reason as if one had been
+		// recorded — which is the same "answered nothing" this case is about.
+		if err := c.Owner.QueryRow(context.Background(),
+			`SELECT reason_code FROM communication_review WHERE resolved_at IS NULL`).Scan(&reason); err != nil {
+			reason = "no open review to read: " + err.Error()
+		}
+		t.Errorf("a reply naming its kind and no legacy key answered %d (%s), want it accepted — an agent "+
+			"that knows what it is sending should not also have to name a key it does not "+
+			"understand", status, reason)
+	}
+}
+
+// AND SAYING NOTHING AT ALL IS REFUSED WITH SOMETHING TO ACT ON. The engine
+// will not guess a category, which is right; what it owes is a review rather
+// than a dead end.
+func TestASendNamingNoKindAtAllIsRefusedWithAReview(t *testing.T) {
+	c := setupConsent(t)
+
+	var problem struct {
+		Details struct {
+			ReviewID string `json:"review_id"`
+		} `json:"details"`
+	}
+	status := c.Call(t, "POST", "/v1/activities/"+c.activityID+"/send-email", AnyMap{
+		"subject": "Re: Inbound question", "body": "answer",
+		"to": []string{"subject@consent.test"},
+	}, nil, &problem)
+	if status != http.StatusConflict {
+		t.Fatalf("a send naming no kind answered %d, want 409", status)
+	}
+	if problem.Details.ReviewID == "" {
+		t.Error("the refusal names no review, so an agent that cannot resolve its own purpose is " +
+			"left with nothing to hand to a human")
 	}
 }

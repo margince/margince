@@ -99,7 +99,8 @@ func (s *Service) nameTheStep(ctx context.Context, queue []crmcontracts.Worklist
 // needsDealMove answers which deal a row is about, where the row is about a
 // deal and carries no step of its own.
 func needsDealMove(item crmcontracts.WorklistItem) (ids.UUID, bool) {
-	if item.Move != nil || item.Subject == nil || item.Subject.Type != subjectDeal {
+	if (item.Source != sourceBriefItem && item.Source != sourceAtRisk) ||
+		item.Move != nil || item.Subject == nil || item.Subject.Type != subjectDeal {
 		return ids.UUID{}, false
 	}
 	return ids.UUID(item.Subject.Id), true

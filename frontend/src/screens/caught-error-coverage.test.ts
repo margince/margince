@@ -16,7 +16,7 @@ import { parseSource } from "../../scripts/lib/source-tree";
 // composes a refusal's detail from `err.Error()`, and every producer of
 // `permission_denied` wraps it with internals — `auth.Require` sends the RBAC
 // object and the verb, so the raw detail is literally
-// "person.update: permission denied". Rendering it hands the reader who was
+// "contact.update: permission denied". Rendering it hands the reader who was
 // just refused the shape of the authority model that refused them.
 // `problemMessageOf` replaces that arm with catalog copy; a caught error read
 // directly skips it.
@@ -35,7 +35,7 @@ import { parseSource } from "../../scripts/lib/source-tree";
 //   2. `String(binding)`. What hid it: it is the FALLBACK half of that same
 //      ternary, so a reviewer who accepts arm 1's fix stops reading. It is not
 //      a lesser leak — `String(problemError)` is
-//      "ProblemError: person.update: permission denied", the same sentence with
+//      "ProblemError: contact.update: permission denied", the same sentence with
 //      a class name in front. Five of the six sites this gate was written over
 //      carried this arm too, and none of the three hand sweeps counted it.
 //   3. `${binding}` in a template, and `binding.toString()`. The same coercion

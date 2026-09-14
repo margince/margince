@@ -14,8 +14,14 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
+
+// keyData is the envelope key every list response in this module answers under.
+// Three of them write it, and a fourth spelling it differently would give one
+// list a shape no client expects.
+const keyData = "data"
 
 // Handlers is the module's transport slice; compose embeds it so the
 // generated consent stubs are shadowed by real code.
@@ -26,13 +32,24 @@ type Handlers struct {
 	// the eraser: answering an access request means producing the package, not
 	// marking a row done.
 	assembler SubjectAccessAssembler
+	// settings owns the `setting` table. The controller particulars live there
+	// like every other installation setting, and consent may not write another
+	// module's table — so the store that owns it is injected rather than the
+	// row being written from here.
+	settings *settings.Store
+}
+
+// WithSettings hands the handlers the store that owns installation settings.
+func (h Handlers) WithSettings(s *settings.Store) Handlers {
+	h.settings = s
+	return h
 }
 
 // Eraser is the erase-path seam (compose injects the real one): DSR
 // fulfillment of an erasure request EXECUTES the erasure, it never just
 // marks a row done.
 type Eraser interface {
-	ErasePerson(ctx context.Context, personID ids.UUID, reason string) error
+	EraseContact(ctx context.Context, contactID ids.UUID, reason string) error
 }
 
 // SubjectAccessAssembler is the Art. 15 read seam (compose injects the real
@@ -46,7 +63,7 @@ type Eraser interface {
 // holding subject data, and a type mirrored here would be a second declaration
 // of what Art. 15 owes, drifting one release behind the one the gate checks.
 type SubjectAccessAssembler interface {
-	AssemblePackage(ctx context.Context, personID ids.UUID) ([]byte, error)
+	AssemblePackage(ctx context.Context, contactID ids.UUID) ([]byte, error)
 }
 
 // NewHandlers wires the transport over the installation-bound pool.
@@ -62,9 +79,27 @@ func (h Handlers) WithInstallationName(r InstallationNameReader) Handlers {
 	return h
 }
 
+// WithReviewRouter injects the approvals-side seam a refused send is handed to.
+// Compose supplies it; a module never imports a sibling.
+func (h Handlers) WithReviewRouter(r ReviewRouter) Handlers {
+	h.store = h.store.WithReviewRouter(r)
+	return h
+}
+
 // WithEraser returns a copy wired to the erase path.
 func (h Handlers) WithEraser(e Eraser) Handlers {
 	h.eraser = e
+	return h
+}
+
+// WithCorrectionApplier returns a copy whose store can write an accepted
+// correction onto the contact record.
+//
+// On the STORE, because that is where the decision is made: the handler only
+// decodes. A copy of Handlers carries a pointer to the same store, so this
+// wires the one every door shares.
+func (h Handlers) WithCorrectionApplier(a CorrectionApplier) Handlers {
+	h.store = h.store.WithCorrectionApplier(a)
 	return h
 }
 
@@ -90,8 +125,8 @@ func (h Handlers) ListConsentPurposes(w http.ResponseWriter, r *http.Request) {
 		data = append(data, wirePurpose(p))
 	}
 	httperr.WriteJSON(w, http.StatusOK, map[string]any{
-		"data": data,
-		"page": crmcontracts.PageInfo{HasMore: false},
+		keyData: data,
+		"page":  crmcontracts.PageInfo{HasMore: false},
 	})
 }
 
@@ -109,13 +144,15 @@ func (h Handlers) CreateConsentPurpose(w http.ResponseWriter, r *http.Request) {
 	httperr.WriteJSON(w, http.StatusCreated, wirePurpose(purpose))
 }
 
-func (h Handlers) GetPersonConsent(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	states, events, err := h.store.PersonConsent(r.Context(), pathID[ids.PersonKind](id))
+// GetContactConsent serves GET /contacts/{id}/consent — the per-purpose state
+// and the proof log behind it (Art. 7 demonstrability).
+func (h Handlers) GetContactConsent(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	states, events, err := h.store.ContactConsent(r.Context(), pathID[ids.ContactKind](id))
 	if err != nil {
 		writeConsentErr(w, r, err)
 		return
 	}
-	wireStates := make([]crmcontracts.PersonConsentState, 0, len(states))
+	wireStates := make([]crmcontracts.ContactConsentState, 0, len(states))
 	for _, st := range states {
 		wireStates = append(wireStates, wireState(st))
 	}
@@ -132,7 +169,7 @@ func (h Handlers) RecordConsent(w http.ResponseWriter, r *http.Request, id crmco
 		return
 	}
 	state, err := h.store.Record(r.Context(), RecordInput{
-		PersonID:    pathID[ids.PersonKind](id),
+		ContactID:   pathID[ids.ContactKind](id),
 		PurposeID:   pathID[ids.PurposeKind](req.PurposeId),
 		NewState:    string(req.NewState),
 		LawfulBasis: req.LawfulBasis,
@@ -149,7 +186,7 @@ func (h Handlers) RecordConsent(w http.ResponseWriter, r *http.Request, id crmco
 	httperr.WriteJSON(w, http.StatusOK, wireState(state))
 }
 
-// IssueDoubleOptIn implements (POST /people/{id}/consent/double-opt-in): mint
+// IssueDoubleOptIn implements (POST /contacts/{id}/consent/double-opt-in): mint
 // the link for one marketing purpose and queue it to the subject's own address.
 //
 // The plaintext is deliberately absent from the response. A double opt-in is
@@ -167,10 +204,10 @@ func (h Handlers) IssueDoubleOptIn(w http.ResponseWriter, r *http.Request, id cr
 		httperr.Write(w, r, err)
 		return
 	}
-	// No expected address: this door names a PERSON, and the mint derives the
+	// No expected address: this door names a CONTACT, and the mint derives the
 	// mailbox from their record. There is no second address to disagree with.
 	issued, err := h.store.IssueConsentLink(r.Context(),
-		pathID[ids.PersonKind](id), ids.From[ids.PurposeKind](ids.UUID(req.PurposeId)), "")
+		pathID[ids.ContactKind](id), ids.From[ids.PurposeKind](ids.UUID(req.PurposeId)), "")
 	if err != nil {
 		writeConsentErr(w, r, err)
 		return
@@ -192,7 +229,7 @@ func (h Handlers) IssueDoubleOptIn(w http.ResponseWriter, r *http.Request, id cr
 	})
 }
 
-// SuppressPerson serves POST /people/{id}/consent/suppress: a person recording
+// SuppressContact serves POST /contacts/{id}/consent/suppress: a contact recording
 // that the subject asked us to stop writing to them.
 //
 // Wire-only. The store owns which kinds a seat may write, whose authority the
@@ -200,14 +237,14 @@ func (h Handlers) IssueDoubleOptIn(w http.ResponseWriter, r *http.Request, id cr
 // the last of which must not be decided here, because a handler that probed
 // visibility itself would be a second row-scope gate beside the one the store
 // already runs.
-func (h Handlers) SuppressPerson(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	var req crmcontracts.SuppressPersonJSONRequestBody
+func (h Handlers) SuppressContact(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	var req crmcontracts.SuppressContactJSONRequestBody
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
 	in := SuppressInput{
-		PersonID: ids.From[ids.PersonKind](ids.UUID(id)),
-		Kind:     string(req.Kind),
+		ContactID: ids.From[ids.ContactKind](ids.UUID(id)),
+		Kind:      string(req.Kind),
 	}
 	if req.Reason != nil {
 		in.Reason = *req.Reason
@@ -218,11 +255,11 @@ func (h Handlers) SuppressPerson(w http.ResponseWriter, r *http.Request, id crmc
 	}
 	// 204: the row is the whole result, and echoing it back would invite a
 	// caller to read a suppression list from the write door rather than from
-	// the person's own consent view.
+	// the contact's own consent view.
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// LiftSuppression serves POST /people/{id}/consent/suppress/{suppressionId}/lift:
+// LiftSuppression serves POST /contacts/{id}/consent/suppress/{suppressionId}/lift:
 // somebody taking back a stop they outrank.
 //
 // Wire-only, and completely so: the store judges the reason, the row scope and
@@ -238,9 +275,9 @@ func (h Handlers) LiftSuppression(
 	}
 	// The contract says maxLength 500 and the generated type does not enforce
 	// it. Unchecked, one caller stores a megabyte in an audit payload that every
-	// later reader of this person's history is served in full.
+	// later reader of this contact's history is served in full.
 	if err := h.store.Lift(r.Context(), LiftInput{
-		PersonID:      ids.From[ids.PersonKind](ids.UUID(id)),
+		ContactID:     ids.From[ids.ContactKind](ids.UUID(id)),
 		SuppressionID: ids.UUID(suppressionID),
 		Reason:        req.Reason,
 	}); err != nil {
@@ -250,15 +287,15 @@ func (h Handlers) LiftSuppression(
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// RecordQualifyingEvent serves POST /people/{id}/consent/qualifying-events: the
-// one lawful basis nothing can derive, written down by the person who was
+// RecordQualifyingEvent serves POST /contacts/{id}/consent/qualifying-events: the
+// one lawful basis nothing can derive, written down by the contact who was
 // there. The store owns the rules; this is wire-only.
 func (h Handlers) RecordQualifyingEvent(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
 	var req crmcontracts.RecordQualifyingEventRequest
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	recorded, err := h.store.RecordQualifyingEvent(r.Context(), pathID[ids.PersonKind](id), RecordQualifyingEventInput{
+	recorded, err := h.store.RecordQualifyingEvent(r.Context(), pathID[ids.ContactKind](id), RecordQualifyingEventInput{
 		Kind:       string(req.Kind),
 		Note:       req.Note,
 		OccurredAt: req.OccurredAt,
@@ -303,10 +340,10 @@ func wirePurpose(p Purpose) crmcontracts.ConsentPurpose {
 	}
 }
 
-func wireState(st State) crmcontracts.PersonConsentState {
-	out := crmcontracts.PersonConsentState{
+func wireState(st State) crmcontracts.ContactConsentState {
+	out := crmcontracts.ContactConsentState{
 		PurposeId:              openapi_types.UUID(st.PurposeID.UUID),
-		State:                  crmcontracts.PersonConsentStateState(st.State),
+		State:                  crmcontracts.ContactConsentStateState(st.State),
 		LawfulBasis:            st.LawfulBasis,
 		DoubleOptInConfirmedAt: st.DoubleOptInConfirmedAt,
 		UpdatedAt:              st.UpdatedAt,

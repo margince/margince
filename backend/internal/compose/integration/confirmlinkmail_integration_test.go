@@ -131,7 +131,7 @@ func TestTheConfirmMailIsWrittenInTheInstallationsLanguage(t *testing.T) {
 // the subject line of the message it staged.
 func stagedConfirmSubject(t *testing.T, c *consentEnv) string {
 	t.Helper()
-	if status := c.Call(t, "POST", "/v1/people/"+c.personID+"/consent/confirm-request",
+	if status := c.Call(t, "POST", "/v1/contacts/"+c.contactID+"/consent/confirm-request",
 		AnyMap{}, nil, nil); status != http.StatusCreated {
 		t.Fatalf("ask the workspace to mail the confirm link → %d", status)
 	}

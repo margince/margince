@@ -193,7 +193,7 @@ func WithGoogleSignIn(cfg GoogleSignInConfig) Option {
 		// origin. What an incomplete config withholds is the ROUTE, not the URL
 		// the route will answer on once the operator finishes.
 		if base := signInRedirectBase(cfg.RedirectBase); base != "" {
-			s.addRedirectURI(capture.AppProviderGoogle, crmcontracts.SignIn,
+			s.addRedirectURI(capture.AppProviderGoogle, crmcontracts.ConnectorAppRedirectUriPurposeSignIn,
 				identity.SignInRedirectURI(base, googleProviderKey))
 		}
 		if !cfg.Enabled() {

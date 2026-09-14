@@ -18,7 +18,7 @@ package consent
 // and the two answers agreed by accident. They no longer do.
 //
 // WHAT IS CARRIED IS THE POINTER, NEVER THE VERDICT. An id is a question to ask
-// again — is this invoice still live, is this person still employed there — and
+// again — is this invoice still live, is this contact still employed there — and
 // every one of those checks runs at transmit exactly as it ran at staging. The
 // resolution itself is deliberately not carried, for the reason stagedClaims
 // gives: it would let a message ride an answer the record no longer supports.

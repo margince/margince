@@ -262,7 +262,7 @@ func TestUserMapDegradesHonestlyWhenTheDirectoryCannotBeRead(t *testing.T) {
 		t.Errorf("reason = %q, want %q — no reason is derivable without the directory", view.UnmappedReason, reasonNoDirectory)
 	}
 	// The block is this installation's own row, not a reading of the incumbent,
-	// so an unreadable directory must not turn "you unmapped this person" into
+	// so an unreadable directory must not turn "you unmapped this contact" into
 	// "we could not look".
 	blockedView, found := viewFor(page, blocked)
 	if !found {

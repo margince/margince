@@ -18,8 +18,8 @@ func wordingOf(t *testing.T, e *channelConsentEnv) (*string, *string) {
 	var text, version *string
 	if err := e.owner.QueryRow(context.Background(), `
 		SELECT policy_text, policy_version FROM consent_event
-		 WHERE person_id = $1 ORDER BY captured_at DESC, id DESC LIMIT 1`,
-		e.person).Scan(&text, &version); err != nil {
+		 WHERE contact_id = $1 ORDER BY captured_at DESC, id DESC LIMIT 1`,
+		e.contact).Scan(&text, &version); err != nil {
 		t.Fatalf("reading the proof row: %v", err)
 	}
 	return text, version
@@ -27,14 +27,14 @@ func wordingOf(t *testing.T, e *channelConsentEnv) (*string, *string) {
 
 // TestAWithdrawalNeedsNoWording is the other half, and the one that matters
 // more: nothing is demonstrated when somebody takes consent back, so requiring
-// a sentence there would leave a person unable to opt out.
+// a sentence there would leave a contact unable to opt out.
 func TestAWithdrawalNeedsNoWording(t *testing.T) {
 	e := setupChannelConsent(t)
 
 	if _, err := e.store.Record(e.ctx, RecordInput{
-		PersonID: e.person, PurposeID: e.newsletter, NewState: "withdrawn",
+		ContactID: e.contact, PurposeID: e.newsletter, NewState: "withdrawn",
 	}); err != nil {
-		t.Fatalf("withdrawing without wording: %v — a person must always be able to opt out", err)
+		t.Fatalf("withdrawing without wording: %v — a contact must always be able to opt out", err)
 	}
 
 	text, version := wordingOf(t, e)
@@ -50,7 +50,7 @@ func TestAGrantRecordsTheWordingVerbatim(t *testing.T) {
 	shown := "Yes, email me about events. I can unsubscribe at any time."
 
 	if _, err := e.store.Record(e.ctx, RecordInput{
-		PersonID: e.person, PurposeID: e.newsletter, NewState: "granted",
+		ContactID: e.contact, PurposeID: e.newsletter, NewState: "granted",
 		PolicyText: &shown,
 	}); err != nil {
 		t.Fatalf("recording a grant with wording: %v", err)
@@ -79,10 +79,10 @@ func TestThePairCheckRefusesAHalfRecordedWording(t *testing.T) {
 	e := setupChannelConsent(t)
 
 	_, err := e.owner.Exec(e.ctx, `
-		INSERT INTO consent_event (person_id, purpose_id, new_state, source,
+		INSERT INTO consent_event (contact_id, purpose_id, new_state, source,
 		                           policy_text, policy_version, captured_at, captured_by)
 		VALUES ($1, $2, 'granted', 'test', 'a sentence with no version', NULL, now(), 'test')`,
-		e.person, e.newsletter)
+		e.contact, e.newsletter)
 
 	if err == nil {
 		t.Fatal("a row carrying wording with no version was accepted: consent_event_wording_pairs " +

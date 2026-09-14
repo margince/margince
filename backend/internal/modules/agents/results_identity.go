@@ -17,7 +17,7 @@ import (
 )
 
 // WhoamiResult is the human a passport acts for. Every field can be empty:
-// a system principal acts for nobody, and a person who never chose a language
+// a system principal acts for nobody, and a contact who never chose a language
 // has no locale — an empty one is the honest answer, not 'en'.
 type WhoamiResult struct {
 	ActingUserID ids.UUID `json:"acting_user_id"`
@@ -46,7 +46,7 @@ type ListColleaguesResult struct {
 	// workspace employs nobody, and nobody here is spelled the way you asked.
 	// A caller cannot tell them apart, and the one it picks is the wrong one:
 	// asked to hand an account to a colleague, an assistant read `[]` and
-	// reported that the person does not work here — with the seat sitting in
+	// reported that the contact does not work here — with the seat sitting in
 	// the roster under a spelling it had not tried.
 	//
 	// So the miss hands over the set it was matched against. `colleagues` stays
@@ -68,7 +68,7 @@ type ListColleaguesResult struct {
 	// fit" and "the fallback list is capped" — and one flag beside an empty
 	// `colleagues` reads as the first. It would read as it in the case that
 	// matters most: a large workspace, the name absent from the first page, and
-	// a caller MORE certain the person does not work here than a bare empty
+	// a caller MORE certain the contact does not work here than a bare empty
 	// list left it.
 	AllColleaguesTruncated bool `json:"all_colleagues_truncated,omitempty"`
 }
@@ -125,7 +125,7 @@ type ImportPreviewResult struct {
 }
 
 // ImportReportResult carries the run's own report unchanged — one shape before
-// and after the commit, so a person comparing what will happen with what did
+// and after the commit, so a contact comparing what will happen with what did
 // compares like with like.
 type ImportReportResult struct {
 	Report crmcontracts.ImportRunReport `json:"report"`

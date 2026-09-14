@@ -59,7 +59,7 @@ func TestADealNameCannotEscapeTheFenceAndBecomeInstruction(t *testing.T) {
 
 // The prompt says what language to answer in and whose voice to use. Both are
 // gate-enforced across the tree; asserted here too because this lane's output
-// is prose a person reads on their own screen.
+// is prose a reader reads on their own screen.
 func TestTheRequestCarriesTheLanguageAndTheVoice(t *testing.T) {
 	req := Request(Input{WeekStart: "2026-06-29"}, "de")
 	for _, want := range []string{"LANGUAGE", "VOICE", "German"} {

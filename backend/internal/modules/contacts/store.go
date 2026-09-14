@@ -1,0 +1,185 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package contacts
+
+import (
+	"context"
+
+	"github.com/jackc/pgx/v5"
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/freemail"
+	"github.com/margince/margince/backend/internal/platform/settings"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
+)
+
+// ownerIDColumn is the owner reference column contact and company
+// rows share — their sortable vocabularies (DM-VOCAB-1/2) and ownership
+// patches name it in one spelling.
+const ownerIDColumn = "owner_id"
+
+// Store owns this module's tables (data-seam ownership, ADR-0014 Am.1);
+// every write rides the storekit audit+outbox shape in one transaction.
+type Store struct {
+	// db binds the workspace this store runs for (ADR-0091 §9 step 3).
+	db *database.DB
+	// catalog is the fieldcatalog seam (custom-field columns); nil means
+	// no catalog is wired and every read/write runs core-columns-only.
+	catalog fieldcatalog.Reader
+	// geocodeEnqueue queues a coordinate lookup when an address is written.
+	// Nil is a real composition — a deployment with no geocoder writes the
+	// address and queues nothing; the coordinates are what an installation can
+	// offer, the address is what the caller asked for.
+	geocodeEnqueue GeocodeEnqueue
+	// recomputeAudience re-derives a captured activity's audience after this
+	// store has filed it under a record. The activities module owns the
+	// activity table and so owns that derivation; compose injects it, because
+	// contacts never imports a sibling. Nil files links and derives nothing —
+	// which is what every fixture is until it says otherwise.
+	recomputeAudience AudienceRecompute
+	// seatReadsLeads answers whether another seat may read leads; see the
+	// type below. Nil is a composition that did not wire it.
+	seatReadsLeads SeatReadsLeads
+	// vatCheckEnqueue queues a VIES consultation when a VAT number is written.
+	// Nil is a real composition, for geocodeEnqueue's reason: the number is
+	// what the page stated, the verification is what an installation can offer.
+	vatCheckEnqueue VatCheckEnqueue
+	// consumerMail answers which domains can never name a company. The
+	// counterparty ensure needs the same answer capture's tier ladder does — the
+	// verdict engine and the review-queue accept enter the ensure without
+	// passing through that ladder — and the two modules cannot import each
+	// other, so compose injects the one reader. It takes the CALLER's
+	// transaction: the ensure is already inside one, and the list is workspace
+	// config that must not be cached into staleness. Nil falls back to the
+	// shipped baseline with no workspace overlay.
+	consumerMail ConsumerMailReader
+	// settings is the installation settings store the lead-settings endpoints
+	// write through; nil means the settings are read-only on this store.
+	settings *settings.Store
+	// dealOpener opens the deal a qualify call asks for, inside the promote
+	// transaction; compose binds the deals store. Nil refuses such calls.
+	dealOpener LeadDealOpener
+	// stopCarrier moves a retiring subject's recorded stops onto the record
+	// that survives them, inside the merge or promote transaction; compose
+	// binds the consent store. Nil REFUSES the merge — see stopcarry.go: a
+	// merge that quietly dropped a stop resumes mail somebody refused.
+	stopCarrier StopCarrier
+}
+
+// ConsumerMailReader builds the workspace's consumer-mail matcher on a
+// transaction the caller owns. Compose injects capture's implementation.
+type ConsumerMailReader func(context.Context, pgx.Tx) (*freemail.Matcher, error)
+
+// NewStore opens this module's store on a handle already bound to the
+// workspace it serves.
+func NewStore(db *database.DB) *Store {
+	return &Store{db: db}
+}
+
+// WithConsumerMail wires the reader for the workspace's own consumer-mail
+// additions and carve-outs. Omitting it leaves the shipped baseline, which is
+// the correct answer for every domain the workspace has said nothing about.
+func (s *Store) WithConsumerMail(read ConsumerMailReader) *Store {
+	s.consumerMail = read
+	return s
+}
+
+// consumerMailMatcher builds the matcher for this transaction, or the bare
+// baseline when no reader was wired.
+func (s *Store) consumerMailMatcher(ctx context.Context, tx pgx.Tx) (*freemail.Matcher, error) {
+	if s.consumerMail == nil {
+		return freemail.New(nil, nil), nil
+	}
+	return s.consumerMail(ctx, tx)
+}
+
+// WithFieldCatalog wires the workspace custom-field catalog in
+// (compose injects modules/customfields' Service here — ADR-0054: a
+// module never imports a sibling), making active cf_* columns
+// participate in person/company reads and writes.
+func (s *Store) WithFieldCatalog(catalog fieldcatalog.Reader) *Store {
+	s.catalog = catalog
+	return s
+}
+
+// WithGeocodeEnqueue wires the coordinate lookup an address write queues.
+//
+// It is held on the STORE rather than passed per call, unlike SiteReadEnqueue,
+// because an address is written from inside the patch path — six columns deep
+// in a generic builder that has no room to carry a seam through it. Held here,
+// every writer gets it without any of them having to remember.
+func (s *Store) WithGeocodeEnqueue(enqueue GeocodeEnqueue) *Store {
+	s.geocodeEnqueue = enqueue
+	return s
+}
+
+// SeatReadsLeads answers whether ANOTHER seat's grants admit reading a lead.
+//
+// Injected because the answer lives in identity's role tables and a module
+// never imports a sibling: compose binds it. Nil means no installation wired
+// it, and a caller treats that as "cannot confirm" rather than "yes" —
+// nominating a desk to receive records it may not open is the mistake this
+// exists to refuse.
+type SeatReadsLeads func(ctx context.Context, tx pgx.Tx, seat ids.UUID) (bool, error)
+
+// WithSeatReadsLeads wires the grant read the escalation-seat check makes.
+func (s *Store) WithSeatReadsLeads(reads SeatReadsLeads) *Store {
+	s.seatReadsLeads = reads
+	return s
+}
+
+// AudienceRecompute re-derives one captured activity's audience. See the
+// field above for why it is injected rather than called directly.
+type AudienceRecompute func(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID) error
+
+// WithAudienceRecompute wires the derivation the cohort repair runs over the
+// activities it has just filed under a contact.
+func (s *Store) WithAudienceRecompute(recompute AudienceRecompute) *Store {
+	s.recomputeAudience = recompute
+	return s
+}
+
+// WithVatCheckEnqueue wires the VIES consultation a VAT-number write queues.
+func (s *Store) WithVatCheckEnqueue(enqueue VatCheckEnqueue) *Store {
+	s.vatCheckEnqueue = enqueue
+	return s
+}
+
+func (s *Store) tx(ctx context.Context, fn func(pgx.Tx) error) error {
+	return s.db.Tx(ctx, fn)
+}
+
+// scopeAllRows is the row-scope predicate for an actor bounded by nothing.
+// ScopeClauseFor yields the EMPTY clause for them, which is not valid SQL on
+// its own, so every caller that embeds a scope in a larger WHERE needs this
+// substitute. The site read's system worker is one such actor.
+const scopeAllRows = "TRUE"
+
+// scopeOrAllRows renders one table's row-scope clause as a predicate that
+// always composes into a larger WHERE.
+func scopeOrAllRows(ctx context.Context, table, alias string, arg func(any) int) (string, error) {
+	clause, err := auth.ScopeClauseFor(ctx, table, alias, arg)
+	if err != nil || clause != "" {
+		return clause, err
+	}
+	return scopeAllRows, nil
+}
+
+func uuidPtr(id *ids.UUID) *openapi_types.UUID {
+	if id == nil {
+		return nil
+	}
+	converted := openapi_types.UUID(*id)
+	return &converted
+}
+
+// workspaceID types the tx-bound workspace GUC (storekit hands it out
+// untyped) for the helpers that carry it as an entity parameter.
+func workspaceID(ctx context.Context) ids.WorkspaceID {
+	return ids.From[ids.WorkspaceKind](storekit.MustWorkspace(ctx))
+}

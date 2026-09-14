@@ -19,7 +19,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -38,10 +37,10 @@ type DigestPayload struct {
 
 // DigestCapture is what landed in the window.
 type DigestCapture struct {
-	MessagesSynced       int `json:"messages_synced"`
-	ActivitiesCreated    int `json:"activities_created"`
-	PeopleCreated        int `json:"people_created"`
-	OrganizationsCreated int `json:"organizations_created"`
+	MessagesSynced    int `json:"messages_synced"`
+	ActivitiesCreated int `json:"activities_created"`
+	ContactsCreated   int `json:"contacts_created"`
+	CompaniesCreated  int `json:"companies_created"`
 }
 
 // DigestReview is what awaits the human.
@@ -78,7 +77,7 @@ type DigestConnRow struct {
 // day's payload (the counts are as-of-now truths, not increments).
 func (r *Registry) BuildDigests(ctx context.Context, digestDate time.Time) error {
 	day := digestDate.Format(time.DateOnly)
-	since := digestDate.AddDate(0, 0, -1)
+	since := time.Date(digestDate.Year(), digestDate.Month(), digestDate.Day(), 0, 0, 0, 0, time.UTC).AddDate(0, 0, -1)
 	return r.db.Tx(ctx, func(tx pgx.Tx) error {
 		users, err := connectedUsers(ctx, tx)
 		if err != nil {
@@ -105,13 +104,7 @@ func (r *Registry) BuildDigests(ctx context.Context, digestDate time.Time) error
 	})
 }
 
-// connectedUsers lists the workspace's users with a live capture
-// connection — the digest audience.
-//
-// EVERY connected seat, and the counts above are workspace-wide, which is why
-// they carry the audience clause: without it a colleague's held mail would be
-// counted in this seat's digest. Nothing of the message reaches the reader, and
-// the number still says it arrived.
+// connectedUsers lists seats with a live capture connection.
 func connectedUsers(ctx context.Context, tx pgx.Tx) ([]ids.UUID, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT DISTINCT user_id FROM capture_connection
@@ -133,41 +126,9 @@ func connectedUsers(ctx context.Context, tx pgx.Tx) ([]ids.UUID, error) {
 
 func (r *Registry) buildDigestPayload(ctx context.Context, tx pgx.Tx, userID ids.UUID, day string, since time.Time) (DigestPayload, error) {
 	p := DigestPayload{Date: day, GeneratedAt: r.now().UTC()}
-	// Workspace-level truths: what the PIPELINE did overnight is shared work,
-	// and the same number for every reader is the honest report of it.
-	//
-	// What awaits REVIEW is not, and is counted per reader below. A duplicate
-	// pair is visible only to someone who can open both sides, and a staged
-	// proposal only to someone who could decide it, so a workspace-wide count
-	// of either tells every reader how many records exist that they may not be
-	// able to see.
-	err := tx.QueryRow(ctx, `
-		SELECT
-		  (SELECT count(*) FROM activity a
-		    WHERE a.captured_by LIKE 'connector:%' AND a.kind = 'email' AND a.created_at >= $1`+auth.AudienceWorkspaceOnly("a")+`),
-		  (SELECT count(*) FROM person WHERE captured_by LIKE 'connector:%' AND created_at >= $1),
-		  -- Companies now arrive from the domain-triage verdict, not from the
-		  -- connector: capture withholds the organization until a site read
-		  -- says the domain deserves one, so the row is stamped by the system
-		  -- actor that ran that read. Counting only 'connector:%' would report
-		  -- zero companies for ever.
-		  (SELECT count(*) FROM organization
-		    WHERE (captured_by LIKE 'connector:%' OR source LIKE 'domain\_triage:%')
-		      AND created_at >= $1),
-		  (SELECT count(*) FROM activity a
-		    WHERE a.capture_label = 'commitment' AND a.capture_labeled_at >= $1`+auth.AudienceWorkspaceOnly("a")+`),
-		  (SELECT count(*) FROM activity a
-		    WHERE a.capture_label = 'meeting' AND a.capture_labeled_at >= $1`+auth.AudienceWorkspaceOnly("a")+`),
-		  (SELECT count(*) FROM activity WHERE capture_label = 'noise' AND capture_labeled_at >= $1)`,
-		since).Scan(
-		&p.Capture.ActivitiesCreated, &p.Capture.PeopleCreated, &p.Capture.OrganizationsCreated,
-		&p.Review.Classify.Commitments, &p.Review.Classify.Meetings, &p.Review.Classify.Noise,
-	)
-	if err != nil {
-		return DigestPayload{}, fmt.Errorf("capture: digest counts: %w", err)
+	if err := readDigestCounts(ctx, tx, userID, since, p.GeneratedAt, &p); err != nil {
+		return DigestPayload{}, err
 	}
-	// Synced == landed: the capture key makes every landed message one row.
-	p.Capture.MessagesSynced = p.Capture.ActivitiesCreated
 
 	// The connector health strip is the USER's own connections (RC-8).
 	rows, err := tx.Query(ctx, `
@@ -194,7 +155,7 @@ func (r *Registry) buildDigestPayload(ctx context.Context, tx pgx.Tx, userID ids
 		return DigestPayload{}, err
 	}
 	// Everything below is per READER rather than per workspace: it names
-	// records, and which records a person can see is theirs. One context binds
+	// records, and which records a contact can see is theirs. One context binds
 	// that reader once, with the live authority the resolver answers.
 	if r.digestProjects == nil && r.digestReview == nil {
 		return p, nil
@@ -203,14 +164,10 @@ func (r *Registry) buildDigestPayload(ctx context.Context, tx pgx.Tx, userID ids
 	if err != nil {
 		return DigestPayload{}, err
 	}
-	if r.digestReview != nil {
-		review, err := r.digestReview(readerCtx)
-		if err != nil {
-			return DigestPayload{}, fmt.Errorf("capture: digest review counts: %w", err)
-		}
-		p.Review.DedupeOpen = &review.DedupeOpen
-		p.Review.ApprovalsPending = &review.ApprovalsPending
+	if err := r.refreshDigestReview(readerCtx, &p); err != nil {
+		return DigestPayload{}, err
 	}
+
 	if r.digestProjects != nil {
 		// The section names projects and the work on them, so a user with no
 		// project grant gets none rather than an empty one.
@@ -277,5 +234,48 @@ func (r *Registry) ReadDigest(ctx context.Context, userID ids.UUID, day *time.Ti
 	if err := json.Unmarshal(raw, &p); err != nil {
 		return nil, fmt.Errorf("capture: decoding stored digest: %w", err)
 	}
+	readerCtx, err := r.digestReaderContext(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	if err := r.refreshDigestReview(readerCtx, &p); err != nil {
+		return nil, err
+	}
+	digestDay, err := time.Parse(time.DateOnly, p.Date)
+	if err != nil {
+		return nil, fmt.Errorf("capture: reading digest day: %w", err)
+	}
+	if err := r.db.Tx(readerCtx, func(tx pgx.Tx) error {
+		since := digestDay.AddDate(0, 0, -1)
+		if err := readDigestCounts(readerCtx, tx, userID, since, p.GeneratedAt, &p); err != nil {
+			return err
+		}
+		if r.digestProjects != nil {
+			projects, err := r.digestProjects(readerCtx, tx, since, p.GeneratedAt)
+			if err != nil {
+				return err
+			}
+			p.Projects = projects
+		} else {
+			p.Projects = nil
+		}
+		return nil
+	}); err != nil {
+		return nil, err
+	}
 	return &p, nil
+}
+
+// Pending decisions follow live authority and state, including on cached days.
+func (r *Registry) refreshDigestReview(ctx context.Context, p *DigestPayload) error {
+	p.Review.DedupeOpen, p.Review.ApprovalsPending = nil, nil
+	if r.digestReview == nil {
+		return nil
+	}
+	review, err := r.digestReview(ctx)
+	if err != nil {
+		return fmt.Errorf("capture: digest review counts: %w", err)
+	}
+	p.Review.DedupeOpen, p.Review.ApprovalsPending = &review.DedupeOpen, &review.ApprovalsPending
+	return nil
 }

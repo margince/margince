@@ -1,6 +1,6 @@
 # The Margince handbook
 
-How to operate Margince day to day. Written for the person **using** the product
+How to operate Margince day to day. Written for the contact **using** the product
 — a rep, an account owner, a delivery lead, an administrator. No code, no API: a
 sign-in and the app.
 
@@ -34,12 +34,12 @@ its own, so you can also come straight to the one you need.
   deal, files a deal picks up from its email, having a file read for deal fields,
   and document sets you can ask questions of. Every size limit, with its number.
 - **[What is kept, what is destroyed](retention-exports-and-deletion.md)** — the
-  six retention rules a new organization starts with, archive versus delete,
+  six retention rules a new company starts with, archive versus delete,
   erasure and what it cascades to, the statutory floor no administrator can
   override, consent, the audit trail, and what you can export.
 - **[Seats, roles and who can see what](seats-roles-and-access.md)** — full and
   read seats, the six roles, why reading a customer record ignores row scope,
-  teams, sharing one record, inviting and removing people, and what a refusal
+  teams, sharing one record, inviting and removing contacts, and what a refusal
   looks like.
 - **[Settings](settings.md)** — every settings page, what is on it, whose state
   it changes, and which permission opens it.

@@ -162,23 +162,23 @@ func (e ActivityAudience) Valid() bool {
 
 // Defines values for ActivityLinkEntityType.
 const (
-	ActivityLinkEntityTypeDeal         ActivityLinkEntityType = "deal"
-	ActivityLinkEntityTypeLead         ActivityLinkEntityType = "lead"
-	ActivityLinkEntityTypeOrganization ActivityLinkEntityType = "organization"
-	ActivityLinkEntityTypePerson       ActivityLinkEntityType = "person"
-	ActivityLinkEntityTypeProject      ActivityLinkEntityType = "project"
+	ActivityLinkEntityTypeCompany ActivityLinkEntityType = "company"
+	ActivityLinkEntityTypeContact ActivityLinkEntityType = "contact"
+	ActivityLinkEntityTypeDeal    ActivityLinkEntityType = "deal"
+	ActivityLinkEntityTypeLead    ActivityLinkEntityType = "lead"
+	ActivityLinkEntityTypeProject ActivityLinkEntityType = "project"
 )
 
 // Valid indicates whether the value is a known member of the ActivityLinkEntityType enum.
 func (e ActivityLinkEntityType) Valid() bool {
 	switch e {
+	case ActivityLinkEntityTypeCompany:
+		return true
+	case ActivityLinkEntityTypeContact:
+		return true
 	case ActivityLinkEntityTypeDeal:
 		return true
 	case ActivityLinkEntityTypeLead:
-		return true
-	case ActivityLinkEntityTypeOrganization:
-		return true
-	case ActivityLinkEntityTypePerson:
 		return true
 	case ActivityLinkEntityTypeProject:
 		return true
@@ -237,23 +237,23 @@ func (e CreateActivityRequestKind) Valid() bool {
 
 // Defines values for CreateActivityRequestLinksEntityType.
 const (
-	CreateActivityRequestLinksEntityTypeDeal         CreateActivityRequestLinksEntityType = "deal"
-	CreateActivityRequestLinksEntityTypeLead         CreateActivityRequestLinksEntityType = "lead"
-	CreateActivityRequestLinksEntityTypeOrganization CreateActivityRequestLinksEntityType = "organization"
-	CreateActivityRequestLinksEntityTypePerson       CreateActivityRequestLinksEntityType = "person"
-	CreateActivityRequestLinksEntityTypeProject      CreateActivityRequestLinksEntityType = "project"
+	CreateActivityRequestLinksEntityTypeCompany CreateActivityRequestLinksEntityType = "company"
+	CreateActivityRequestLinksEntityTypeContact CreateActivityRequestLinksEntityType = "contact"
+	CreateActivityRequestLinksEntityTypeDeal    CreateActivityRequestLinksEntityType = "deal"
+	CreateActivityRequestLinksEntityTypeLead    CreateActivityRequestLinksEntityType = "lead"
+	CreateActivityRequestLinksEntityTypeProject CreateActivityRequestLinksEntityType = "project"
 )
 
 // Valid indicates whether the value is a known member of the CreateActivityRequestLinksEntityType enum.
 func (e CreateActivityRequestLinksEntityType) Valid() bool {
 	switch e {
+	case CreateActivityRequestLinksEntityTypeCompany:
+		return true
+	case CreateActivityRequestLinksEntityTypeContact:
+		return true
 	case CreateActivityRequestLinksEntityTypeDeal:
 		return true
 	case CreateActivityRequestLinksEntityTypeLead:
-		return true
-	case CreateActivityRequestLinksEntityTypeOrganization:
-		return true
-	case CreateActivityRequestLinksEntityTypePerson:
 		return true
 	case CreateActivityRequestLinksEntityTypeProject:
 		return true
@@ -381,7 +381,7 @@ func (e EmailSummaryMove) Valid() bool {
 // disallowed field for the kind returns `422 code: field_not_valid_for_kind` (the API rejects
 // what the DB CHECK would reject, rather than 500-ing at write time).
 // `channel_provider` is the same kind of constraint in both directions: non-null exactly
-// when `kind=message` (ADR-0107/A158).
+// when `kind=message` (ADR-0107).
 type Activity struct {
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
 
@@ -426,7 +426,7 @@ type Activity struct {
 	// EmailSummary Present exactly when `kind=email`. What the canonical email row renders, so a list does not have to fetch a message per visible line to draw one. Every other kind carries none, and a reader branches on its presence rather than on the kind word.
 	EmailSummary *EmailSummary `json:"email_summary,omitempty"`
 
-	// HostUserId Meeting only: the member of this organization who held it. It is the one place an activity names OUR side of an exchange — a mail says only which contact it was with, and the mailbox behind it is not on the row. Null on every other kind, and on a meeting nobody was recorded as hosting.
+	// HostUserId Meeting only: the member of this company who held it. It is the one place an activity names OUR side of an exchange — a mail says only which contact it was with, and the mailbox behind it is not on the row. Null on every other kind, and on a meeting nobody was recorded as hosting.
 	HostUserId *string `json:"host_user_id,omitempty"`
 	Id         string  `json:"id"`
 
@@ -435,11 +435,11 @@ type Activity struct {
 	Kind   ActivityKind `json:"kind"`
 
 	// Language What language this message is written in, read from its own text when it was captured. Null on a message whose text was too short to tell, on anything hand-logged, and on every row captured before this was recorded — all of which mean "not known", never "not any of these".
-	// A detector's observation, not a declaration by its author, and it describes the message rather than the person: the same contact writes in two languages and each message says which it is. A drafted reply follows it, so that a reply to an English thread is written in English whatever language its sender's own writing samples happen to be in.
+	// A detector's observation, not a declaration by its author, and it describes the message rather than the contact: the same contact writes in two languages and each message says which it is. A drafted reply follows it, so that a reply to an English thread is written in English whatever language its sender's own writing samples happen to be in.
 	// Withheld with the rest of the content: it is derived from the body, so a caller who may discover the row without reading it is not told this either.
 	Language *ActivityLanguage `json:"language,omitempty"`
 
-	// Links One activity may link to >1 entity (person + deal).
+	// Links One activity may link to >1 entity (contact + deal).
 	Links *[]ActivityLink `json:"links,omitempty"`
 
 	// MeetingStatus Set only when kind=meeting.
@@ -486,7 +486,7 @@ type ActivityDirection string
 type ActivityKind string
 
 // ActivityLanguage What language this message is written in, read from its own text when it was captured. Null on a message whose text was too short to tell, on anything hand-logged, and on every row captured before this was recorded — all of which mean "not known", never "not any of these".
-// A detector's observation, not a declaration by its author, and it describes the message rather than the person: the same contact writes in two languages and each message says which it is. A drafted reply follows it, so that a reply to an English thread is written in English whatever language its sender's own writing samples happen to be in.
+// A detector's observation, not a declaration by its author, and it describes the message rather than the contact: the same contact writes in two languages and each message says which it is. A drafted reply follows it, so that a reply to an English thread is written in English whatever language its sender's own writing samples happen to be in.
 // Withheld with the rest of the content: it is derived from the body, so a caller who may discover the row without reading it is not told this either.
 type ActivityLanguage string
 
@@ -675,7 +675,7 @@ type EmailSummaryDirection string
 type EmailSummaryMove string
 
 // ProviderRef A reference to a messaging transport registered in THIS installation
-// (ADR-0107/A158). Deliberately a pattern-constrained string rather than an enum:
+// (ADR-0107). Deliberately a pattern-constrained string rather than an enum:
 // which providers exist is a deployment fact — what this binary composed, including
 // any extension unit present under `extensions/` — so an enum here would assert that
 // the legal set is identical in every installation, which is false. The contract

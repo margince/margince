@@ -3,7 +3,7 @@ import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
 
-// When the pass a person is waiting on will run.
+// When the pass a contact is waiting on will run.
 //
 // A screen that says "waiting" and nothing else leaves two readings, broken and
 // slow, and both are wrong: the pipeline is working exactly as declared, on a

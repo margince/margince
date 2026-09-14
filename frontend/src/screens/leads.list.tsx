@@ -33,7 +33,6 @@ import {
   StatusBadge,
   scoreFactorLabel,
   scoreTone,
-  terminalBadge,
 } from "./leadpresentation";
 import {
   sourceFilterOptions,
@@ -42,6 +41,7 @@ import {
   useLeadSettings,
   useLeadSources,
 } from "./leadsources";
+import { terminalBadge } from "./leadstanding";
 import {
   type ListPage,
   type ListQuery,
@@ -52,7 +52,7 @@ import {
 } from "./listquery";
 import {
   createdColumn,
-  lastActivityCell,
+  lastActivityColumn,
   mineEmptyNote,
   ownerColumn,
   standardViews,
@@ -122,7 +122,7 @@ const leadCreateFields: CreateField[] = [
   { key: "full_name", label: "create.fullName", required: true },
   { key: "email", label: "create.email", type: "email" },
   { key: "linkedin_url", label: "create.linkedinUrl" },
-  { key: "title", label: "create.personTitle" },
+  { key: "title", label: "create.contactTitle" },
   { key: "company_name", label: "create.companyName" },
 ];
 
@@ -374,9 +374,9 @@ function LeadsWorkbench({
         columns={[
           {
             key: "name",
-            header: t("people.name"),
+            header: t("contacts.name"),
             cell: (lead: Lead) => {
-              const terminal = terminalBadge(lead.status);
+              const terminal = terminalBadge(lead);
               return (
                 <span>
                   <strong>{leadIdentityName(lead) || t("lead.unnamed")}</strong>
@@ -417,6 +417,7 @@ function LeadsWorkbench({
           {
             key: "status",
             header: t("lead.status"),
+            sort: "status",
             cell: (lead: Lead) => (
               <span
                 style={{
@@ -433,6 +434,8 @@ function LeadsWorkbench({
           {
             key: "nextTask",
             header: t("lead.nextTask"),
+            sort: "next_task_due_at", // the deadline, not the title
+
             cell: (lead: Lead) => (
               <span className="t-caption">
                 {lead.next_task_subject ?? t("lead.noNextTask")}
@@ -447,16 +450,13 @@ function LeadsWorkbench({
               </span>
             ),
           },
-          {
-            // The CELL, not the shared column: a lead's last activity is
-            // DERIVED (see lastActivityCell), so this header offers no sort.
-            key: "lastActivity",
-            header: t("list.lastActivity"),
-            cell: lastActivityCell<Lead>(locale, recordZone),
-          },
+          // The shared column, now that this header can offer a sort.
+          lastActivityColumn<Lead>(t, locale, recordZone),
           {
             key: "source",
             header: t("lead.source"),
+            sort: "source", // the catalog's label, which is what the cell prints
+
             cell: (lead: Lead) => (
               <span className="t-caption">
                 {sourceLabelFor(lead, sources.data?.data, t)}

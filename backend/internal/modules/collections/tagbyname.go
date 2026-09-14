@@ -16,7 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// Finding a word by the name a person typed, and saying which of the three
+// Finding a word by the name a human typed, and saying which of the three
 // answers it is: a live tag, a retired one, or none at all. Kept apart from the
 // tag writes because a caller asking "is there a word for this?" is asking
 // something else than a caller applying one.

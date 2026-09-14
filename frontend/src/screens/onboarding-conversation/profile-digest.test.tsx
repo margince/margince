@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -37,7 +37,7 @@ const READ: ProfileDigestRead = {
   root_url: "https://acme.example",
   pages: [],
   facts: [],
-  people: [],
+  contacts: [],
 };
 
 function mount(ui: React.ReactNode) {

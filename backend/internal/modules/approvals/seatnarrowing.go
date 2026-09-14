@@ -22,7 +22,7 @@ import (
 // The inbox is a SHARED surface by design — a manager triages what a rep
 // staged — and for almost every kind that is the point. It is wrong for one:
 // a LinkedIn match names a third party out of one member's imported address
-// book, people who never agreed to be in this CRM at all. The endpoints this
+// book, contacts who never agreed to be in this CRM at all. The endpoints this
 // kind replaced were owner-only and said so; routing the same question through
 // a shared inbox would have handed every admin a readable copy of a
 // colleague's contact list, which is a bigger disclosure than the feature it
@@ -34,7 +34,7 @@ import (
 // off the workspace fan-out for the same reason.
 //
 // A step-up is the other: "may this agent keep reading" is a question about ONE
-// connection, and the only person who can answer it is the human whose authority
+// connection, and the only colleague who can answer it is the human whose authority
 // that connection borrows.
 // A held scheduled send is the third: the message is one rep's, the decision is
 // whether to retry it or abandon it, and nobody else has standing to answer.
@@ -45,7 +45,7 @@ var selfOnlyKinds = map[string]bool{
 	// A vCard review is one member's own uploaded address book, exactly the
 	// LinkedIn-match shape: the staged card names a third party who never
 	// agreed to be in this CRM, and a shared inbox would hand every
-	// person:create holder a readable copy of a colleague's contacts.
+	// contact:create holder a readable copy of a colleague's contacts.
 	"vcard_create": true,
 	// A held draft is the fourth, and it is about WHOSE MAILBOX the message
 	// leaves from rather than who may read it. Releasing one sends it, and the
@@ -56,7 +56,7 @@ var selfOnlyKinds = map[string]bool{
 	// their own, into a customer thread they were never part of, signed by
 	// themselves.
 	//
-	// The narrowing puts the decision back with the person the message would go
+	// The narrowing puts the decision back with the contact the message would go
 	// out as. It is also what kindHeldDraft's own doc has always claimed ("held
 	// for the rep it was written for") and what nothing enforced.
 	kindHeldDraft: true,
@@ -72,7 +72,7 @@ var selfOnlyKinds = map[string]bool{
 //
 // Both entries are the overnight sweeps' output about ONE rep's deal. A manager
 // holding activity:create saw every rep's, which is not oversight: it is one
-// person's day appearing on somebody else's queue, where answering it takes the
+// contact's day appearing on somebody else's queue, where answering it takes the
 // question away from the rep who was going to act on it.
 var decidedByTheSeatStagedFor = map[string]bool{
 	// The nightly reconciliation's "this conversation left no next step" card,

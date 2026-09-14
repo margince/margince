@@ -36,7 +36,7 @@ func composedSubscription(events ...string) ComposedSubscription {
 // about: an event it does not want is not filtered in process, it is not read.
 func TestAListenersGroupCoversTheStreamsItsTypesRouteTo(t *testing.T) {
 	group, err := composedSubscription(
-		"activity.archived", "activity.captured", "person.archived", "ext_notes.note_added",
+		"activity.archived", "activity.captured", "contact.archived", "ext_notes.note_added",
 	).Group()
 	if err != nil {
 		t.Fatal(err)
@@ -44,7 +44,7 @@ func TestAListenersGroupCoversTheStreamsItsTypesRouteTo(t *testing.T) {
 	if group.Name != "cg:ext-notes-withdraw_filing" {
 		t.Errorf("group name = %q, want cg:ext-notes-withdraw_filing", group.Name)
 	}
-	want := []string{"gw:events:crm:activity", "gw:events:crm:extension", "gw:events:crm:person"}
+	want := []string{"gw:events:crm:activity", "gw:events:crm:contact", "gw:events:crm:extension"}
 	if !reflect.DeepEqual(group.Streams, want) {
 		t.Errorf("streams = %v, want %v — deduplicated and sorted", group.Streams, want)
 	}
@@ -55,7 +55,7 @@ func TestAListenersGroupCoversTheStreamsItsTypesRouteTo(t *testing.T) {
 // nothing to do with it.
 func TestTwoListenersOfOneUnitGetDistinctGroups(t *testing.T) {
 	first := composedSubscription("activity.archived")
-	second := composedSubscription("person.archived")
+	second := composedSubscription("contact.archived")
 	second.Sub.Name = "another_listener"
 	if first.GroupName() == second.GroupName() {
 		t.Fatalf("both listeners consume %q", first.GroupName())

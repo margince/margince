@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
@@ -231,7 +231,7 @@ describe("ProjectsScreen", () => {
     await waitFor(() => expect(posted).toBeTruthy());
     expect(posted).toEqual({
       name: "CRM rollout",
-      organization_id: "o-1",
+      company_id: "o-1",
       owner_id: null,
       description: null,
       target_end_date: null,

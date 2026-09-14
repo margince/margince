@@ -13,7 +13,6 @@ package activities
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -41,55 +40,7 @@ type DeliveryState struct {
 	Files []OutboundFile
 }
 
-// DeliveryStatesFor reads what happened to each of these messages, in ONE
-// statement over the whole page.
-//
-// The same batching rule the attachment counts and the email rows follow: a
-// read per visible line turns a timeline of twenty into twenty statements.
-//
-// It carries NO gate of its own, and must only be called with ids a
-// content-gated read already admitted. Whether a message left is something
-// about the message, so the caller's own gate is what decides — exactly as the
-// attachment count beside it.
-//
-// An id absent from the map had no delivery staged, which is not the same as a
-// delivery that has not left: an inbound message has none, and so does an
-// outbound one that was logged rather than sent. The row says nothing in that
-// case rather than guessing at `pending`.
-func DeliveryStatesFor(
-	ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID,
-) (map[ids.UUID]DeliveryState, error) {
-	if len(activityIDs) == 0 {
-		return map[ids.UUID]DeliveryState{}, nil
-	}
-	rows, err := tx.Query(ctx, `
-		SELECT activity_id, status, reason, sent_at, bounced_at, bounce_reason, attachments
-		  FROM comms_outbound
-		 WHERE activity_id = ANY($1)`, activityIDs)
-	if err != nil {
-		return nil, fmt.Errorf("activities: reading what happened to a page of messages: %w", err)
-	}
-	defer rows.Close()
-
-	out := make(map[ids.UUID]DeliveryState, len(activityIDs))
-	for rows.Next() {
-		var id ids.UUID
-		var state DeliveryState
-		if err := rows.Scan(
-			&id, &state.Status, &state.Reason, &state.SentAt,
-			&state.BouncedAt, &state.BounceReason, &state.Files,
-		); err != nil {
-			return nil, fmt.Errorf("activities: scanning a delivery state: %w", err)
-		}
-		out[id] = state
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("activities: reading what happened to a page of messages: %w", err)
-	}
-	return out, nil
-}
-
-// applyDeliveryStates stamps onto the email rows of a page what happened to
+// applyEmailStates stamps onto the email rows of a page what happened to
 // each message.
 //
 // It does not decide which rows may carry one. emailIDsOf does, and a row it
@@ -101,32 +52,35 @@ func DeliveryStatesFor(
 //
 // The timeline page and the single-message presentation both reach the delivery
 // through here, the latter as a page of one.
-func applyDeliveryStates(page []crmcontracts.Activity, states map[ids.UUID]DeliveryState) {
+func applyEmailStates(page []crmcontracts.Activity, states map[ids.UUID]EmailRowState) {
 	for i := range page {
 		summary := page[i].EmailSummary
 		if summary == nil {
 			continue
 		}
 		state, known := states[ids.UUID(page[i].Id)]
-		summary.Delivery = contractDelivery(state, known)
+		summary.Delivery = contractDelivery(state.Delivery, known && state.Delivery.Status != "")
+		if known {
+			summary.Move = state.Move
+		}
 	}
 }
 
-// withDeliveryOn fills in what happened to ONE message.
+// withEmailStateOn fills in what happened to ONE message.
 //
 // A page of one, so which rows may carry a delivery is decided where the
 // timeline decides it. Not WithEmailRowFacts: the single-message read already
 // has the attachments in hand, and counting them again would be a statement
 // for a number that caller can see.
-func withDeliveryOn(
+func withEmailStateOn(
 	ctx context.Context, tx pgx.Tx, id openapi_types.UUID, summary *crmcontracts.EmailSummary,
 ) error {
 	row := []crmcontracts.Activity{{Id: id, EmailSummary: summary}}
-	states, err := DeliveryStatesFor(ctx, tx, emailIDsOf(row))
+	states, err := EmailStatesFor(ctx, tx, emailIDsOf(row))
 	if err != nil {
 		return err
 	}
-	applyDeliveryStates(row, states)
+	applyEmailStates(row, states)
 	return nil
 }
 

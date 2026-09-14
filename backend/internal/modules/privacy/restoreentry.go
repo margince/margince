@@ -31,7 +31,7 @@ const UndidAuditLogID = "undid_audit_log_id"
 //
 // It is looked up by the evidence link and not by "the newest restore on the
 // record": a record with several reversals has several, and taking the newest
-// would hand the caller somebody else's line whenever two people press Undo in
+// would hand the caller somebody else's line whenever two contacts press Undo in
 // the same moment.
 func ReadRestoreOf(ctx context.Context, db *database.DB, entityType string, entityID, undidID ids.UUID) (RecordHistoryEntry, error) {
 	var entry RecordHistoryEntry

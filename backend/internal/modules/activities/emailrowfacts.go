@@ -31,10 +31,10 @@ func WithEmailRowFacts(ctx context.Context, tx pgx.Tx, page []crmcontracts.Activ
 	}
 	applyAttachmentCounts(page, counts)
 
-	states, err := DeliveryStatesFor(ctx, tx, emailIDs)
+	states, err := EmailStatesFor(ctx, tx, emailIDs)
 	if err != nil {
 		return err
 	}
-	applyDeliveryStates(page, states)
+	applyEmailStates(page, states)
 	return nil
 }

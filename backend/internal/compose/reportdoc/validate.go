@@ -40,7 +40,7 @@ func (e *InvalidError) Unwrap() error { return apperrors.ErrInvalidArgument }
 
 // MaxBlocks bounds a document.
 //
-// Not a performance limit: a report is something a person reads, and a
+// Not a performance limit: a report is something a reader reads, and a
 // thousand-block document is a dump wearing a report's name. The bound is here
 // so the refusal says so rather than a renderer discovering it.
 const MaxBlocks = 200

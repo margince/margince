@@ -213,7 +213,7 @@ func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
 
 // admittedBranchSQL builds one ranked SELECT per requested-and-admitted
 // entity type. A hit is a read twice over: object RBAC first (a role
-// without person.read gets no person hits — search must not out-see the
+// without contact.read gets no contact hits — search must not out-see the
 // entity lists), then the row scope.
 func admittedBranchSQL(ctx context.Context, types []string, headPos, tailPos int, hasFragment bool, arg func(any) int) ([]string, error) {
 	var branches []string

@@ -36,7 +36,7 @@ expect:
     administrator to contact — so none of the placeholder readings fit: it is not
     a registrar placeholder, a coming-soon notice, a bare error page or a
     domain-for-sale listing.
-    And it identifies nobody. No company name, no person, no service, no product,
+    And it identifies nobody. No company name, no contact, no service, no product,
     no legal notice, not even a tagline; the domain is the only string that could
     hint at anything, and a hostname is not evidence of what a business is. The
     question this site exists to answer is therefore unanswered by the seed page,
@@ -46,7 +46,7 @@ expect:
     unambiguously uninformative, which is different from the model being unsure.
     "company" is the failure this scenario exists to catch and scores low: a
     login page is exactly where a model that infers a business from a domain name
-    will do so, and it would create an organization record grounded in nothing.
+    will do so, and it would create a company record grounded in nothing.
     "parked" scores low: reading a functioning application as an empty
     placeholder would abandon a crawl that has a real site behind it.
     "personal" and "provider" score low; nothing here names a human or sells

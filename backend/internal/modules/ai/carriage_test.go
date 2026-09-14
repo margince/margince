@@ -98,6 +98,57 @@ func TestDocumentMIMEsCoversEveryAdaptersDeclaration(t *testing.T) {
 	}
 }
 
+// The row that was false, held by the thing that made it false.
+//
+// wireCarriage listed openai_compatible and vllm as carrying `application/pdf`.
+// The refutation is not another declaration agreeing with this one — both sides
+// of that comparison are the same variable, and a mirror holds nothing. It is
+// the PART BUILDER: openAICompatMessages emits `text` and `image_url` parts and
+// has no document part at all, so a PDF handed to this wire cannot travel as a
+// document however the binding is configured.
+//
+// Derived from the builder rather than restated, per AGENTS "a gate that
+// hard-codes part of its subject has become a second copy of it".
+func TestTheOpenAICompatibleWireHasNoDocumentPart(t *testing.T) {
+	msgs := openAICompatMessages(
+		"read documents", []model.Message{{Role: roleUser, Content: "what does it say"}},
+		[]model.Attachment{{MIME: mimePDF, Bytes: []byte("%PDF-1.4"), Name: "invoice.pdf"}},
+	)
+
+	kinds := map[string]bool{}
+	for _, message := range msgs {
+		for _, part := range message.Content.Parts {
+			kinds[part.Type] = true
+		}
+	}
+	for kind := range kinds {
+		if kind != "text" && kind != "image_url" {
+			t.Fatalf("this wire grew a %q part; wireCarriage and this test both "+
+				"assume text and image_url are the only two", kind)
+		}
+	}
+	// A PDF reached the builder and came back as an IMAGE, which is the shape
+	// the false row would have licensed a caller to produce.
+	if !kinds["image_url"] {
+		t.Fatal("the fixture attachment produced no part at all, so this proves nothing")
+	}
+	// Therefore the declaration may name no document type.
+	for _, pattern := range wireCarriage()[providerOpenAICompatible] {
+		if !strings.HasPrefix(pattern, "image/") {
+			t.Errorf("openai_compatible declares %q and its wire can only build an image part, "+
+				"so a caller told this is carried would have the document sent as a picture of nothing",
+				pattern)
+		}
+	}
+	// vllm is the SAME adapter under another provider word, so it inherits the
+	// conclusion — asserted rather than assumed, because the two rows are written
+	// separately and only one of them is reached by the loop above.
+	if !slices.Equal(wireCarriage()[providerVLLM], wireCarriage()[providerOpenAICompatible]) {
+		t.Errorf("vllm declares %v and openai_compatible %v; they are one adapter and one wire",
+			wireCarriage()[providerVLLM], wireCarriage()[providerOpenAICompatible])
+	}
+}
+
 // The types the wildcard used to admit and no vendor decodes — the failure this
 // whole change is about. Asserted at the boundary an operator actually meets:
 // a binding built the way production builds one.

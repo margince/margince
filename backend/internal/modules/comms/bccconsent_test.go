@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-// The dispatch-time consent recheck asks about every person the delivery
+// The dispatch-time consent recheck asks about every contact the delivery
 // reaches, and a blind copy reaches one.
 //
 // This is the check that runs at TRANSMIT rather than at staging, so it is the
@@ -30,7 +30,7 @@ func TestTheConsentRecheckAsksAboutBlindCopies(t *testing.T) {
 	}
 }
 
-// The same address in two lists is one person to a mail server, so it is one
+// The same address in two lists is one contact to a mail server, so it is one
 // question to the gate — and the normalized spelling is what travels, because
 // the gate cannot resolve a padded one.
 func TestAnAddressInTwoListsIsAskedAboutOnce(t *testing.T) {

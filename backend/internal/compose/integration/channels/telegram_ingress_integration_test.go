@@ -11,7 +11,7 @@ package channels
 // telegram_fixture_integration_test.go.
 //
 // Every test here drives the whole leg — getUpdates → raw_capture → River → the
-// ONE guarded Sink → people — because each claim is about the SEAM: that an
+// ONE guarded Sink → contacts — because each claim is about the SEAM: that an
 // unmatched sender lands ownerless, that a re-delivered batch converges, that the
 // mail ladder never judges a message with no address, and that the capture
 // completes on the async path rather than when the poll committed.
@@ -27,7 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -47,7 +47,7 @@ const telegramProviderDate = int64(1785000000)
 const captureLatencyBudget = 60 * time.Second
 
 // capturedMessage reads back what one delivered update became: the activity
-// under its chat-scoped natural key, and the person the ensure linked it to.
+// under its chat-scoped natural key, and the contact the ensure linked it to.
 // Both must exist — an activity with no link is the connector's own retry
 // marker, not a captured conversation.
 //
@@ -57,16 +57,16 @@ const captureLatencyBudget = 60 * time.Second
 // the provider fails wherever it is exercised instead of only where somebody
 // remembered to look. A message whose transport is missing is a message the reply
 // path will refuse — a conversation the rep can read and cannot answer.
-func (c *telegramEnv) capturedMessage(t *testing.T, u telegramUpdate) (activityID, personID string) {
+func (c *telegramEnv) capturedMessage(t *testing.T, u telegramUpdate) (activityID, contactID string) {
 	t.Helper()
 	var provider string
 	if err := apptest.InWorkspace(c.AppEnv, t, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
-			SELECT a.id::text, l.person_id::text, coalesce(a.channel_provider, '')
+			SELECT a.id::text, l.contact_id::text, coalesce(a.channel_provider, '')
 			  FROM activity a
-			  JOIN activity_link l ON l.activity_id = a.id AND l.entity_type = 'person'
+			  JOIN activity_link l ON l.activity_id = a.id AND l.entity_type = 'contact'
 			 WHERE a.source_system = 'telegram' AND a.source_id = $1`, u.naturalKey()).
-			Scan(&activityID, &personID, &provider)
+			Scan(&activityID, &contactID, &provider)
 	}); err != nil {
 		t.Fatalf("reading back the captured message %s: %v", u.naturalKey(), err)
 	}
@@ -74,7 +74,7 @@ func (c *telegramEnv) capturedMessage(t *testing.T, u telegramUpdate) (activityI
 		t.Fatalf("captured message %s landed with channel_provider %q, want telegram — the ingest is not recording which transport carried it, "+
 			"so the reply path has nothing to resolve and every answer on this conversation is refused", u.naturalKey(), provider)
 	}
-	return activityID, personID
+	return activityID, contactID
 }
 
 // telegramActivities counts the Telegram activities captured under one natural
@@ -89,7 +89,7 @@ func (c *telegramEnv) telegramActivities(t *testing.T, u telegramUpdate) int {
 func (c *telegramEnv) channelIdentities(t *testing.T, u telegramUpdate) int {
 	t.Helper()
 	return c.count(t, `
-		SELECT count(*) FROM person_channel_identity
+		SELECT count(*) FROM contact_channel_identity
 		 WHERE provider = 'telegram' AND channel_user_id = $1 AND archived_at IS NULL`, u.account())
 }
 
@@ -103,16 +103,16 @@ func (c *telegramEnv) ingestOne(t *testing.T, u telegramUpdate, cfg compose.JobR
 	awaitJobKind(t, sub, compose.TelegramIngestArgs{}.Kind())
 }
 
-// TestAC_TG_3_UnknownSenderBecomesOwnerlessWorkspaceVisiblePerson is AC-TG-3:
-// an inbound message from an unrecognised Telegram account creates a Person
+// TestAC_TG_3_UnknownSenderBecomesOwnerlessWorkspaceVisibleContact is AC-TG-3:
+// an inbound message from an unrecognised Telegram account creates a Contact
 // carrying ONLY a channel identity, ownerless, and the conversation is visible
 // workspace-wide.
 //
 // The visibility half is held against a control: the SAME reader must be
-// refused a capture-private record (people are otherwise readable by every
+// refused a capture-private record (contacts are otherwise readable by every
 // seat). Without that, "the stranger could read it" would also pass on a
 // visibility clause that had stopped filtering anything.
-func TestAC_TG_3_UnknownSenderBecomesOwnerlessWorkspaceVisiblePerson(t *testing.T) {
+func TestAC_TG_3_UnknownSenderBecomesOwnerlessWorkspaceVisibleContact(t *testing.T) {
 	c := setupTelegramConnected(t)
 	u := telegramUpdate{updateID: 5201, messageID: 21, senderID: 770201, username: "annlee", firstName: "Ann", text: "Is this still available?"}
 
@@ -121,37 +121,37 @@ func TestAC_TG_3_UnknownSenderBecomesOwnerlessWorkspaceVisiblePerson(t *testing.
 	var owned struct {
 		ID string `json:"id"`
 	}
-	if status := c.Call(t, "POST", "/v1/people", integration.AnyMap{
+	if status := c.Call(t, "POST", "/v1/contacts", integration.AnyMap{
 		"full_name": "Private To The Admin", "owner_id": c.admin,
 	}, nil, &owned); status != 201 {
-		t.Fatalf("seeding the private control person → %d", status)
+		t.Fatalf("seeding the private control contact → %d", status)
 	}
 	if err := apptest.InWorkspace(c.AppEnv, t, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
-			`UPDATE person SET visibility = 'owner' WHERE id = $1`, owned.ID)
+			`UPDATE contact SET visibility = 'owner' WHERE id = $1`, owned.ID)
 		return err
 	}); err != nil {
-		t.Fatalf("making the control person capture-private: %v", err)
+		t.Fatalf("making the control contact capture-private: %v", err)
 	}
 
 	c.ingestOne(t, u, compose.JobRunnerConfig{})
 
-	activityID, personID := c.capturedMessage(t, u)
+	activityID, contactID := c.capturedMessage(t, u)
 
 	var ownerID *string
 	var fullName string
 	if err := apptest.InWorkspace(c.AppEnv, t, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
-			`SELECT owner_id::text, full_name FROM person WHERE id = $1`, personID).
+			`SELECT owner_id::text, full_name FROM contact WHERE id = $1`, contactID).
 			Scan(&ownerID, &fullName)
 	}); err != nil {
-		t.Fatalf("reading the auto-created person: %v", err)
+		t.Fatalf("reading the auto-created contact: %v", err)
 	}
 	if ownerID != nil {
-		t.Fatalf("the auto-created person is owned by %s; a workspace bot has no owner to hand the record to (design D2)", *ownerID)
+		t.Fatalf("the auto-created contact is owned by %s; a workspace bot has no owner to hand the record to (design D2)", *ownerID)
 	}
 	if fullName != "Ann" {
-		t.Fatalf("person full_name = %q, want the name Telegram reported (%q)", fullName, "Ann")
+		t.Fatalf("contact full_name = %q, want the name Telegram reported (%q)", fullName, "Ann")
 	}
 
 	// Only a channel identity: no address was ever supplied, so a mail
@@ -159,13 +159,13 @@ func TestAC_TG_3_UnknownSenderBecomesOwnerlessWorkspaceVisiblePerson(t *testing.
 	if n := c.channelIdentities(t, u); n != 1 {
 		t.Fatalf("%d live channel identities for account %s, want 1", n, u.account())
 	}
-	if n := c.count(t, `SELECT count(*) FROM person_email WHERE person_id = $1`, personID); n != 0 {
+	if n := c.count(t, `SELECT count(*) FROM contact_email WHERE contact_id = $1`, contactID); n != 0 {
 		t.Errorf("%d email rows beside the channel identity, want 0", n)
 	}
 	var boundUsername, identitySource, identityCapturedBy string
 	if err := apptest.InWorkspace(c.AppEnv, t, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
-			SELECT username, source, captured_by FROM person_channel_identity
+			SELECT username, source, captured_by FROM contact_channel_identity
 			 WHERE provider = 'telegram' AND channel_user_id = $1`, u.account()).
 			Scan(&boundUsername, &identitySource, &identityCapturedBy)
 	}); err != nil {
@@ -182,42 +182,42 @@ func TestAC_TG_3_UnknownSenderBecomesOwnerlessWorkspaceVisiblePerson(t *testing.
 			identitySource, identityCapturedBy)
 	}
 
-	c.assertWorkspaceVisible(t, personID, owned.ID, activityID)
+	c.assertWorkspaceVisible(t, contactID, owned.ID, activityID)
 }
 
 // assertWorkspaceVisible holds AC-TG-3's second half over the REAL read
 // clauses: a human on the tightest scope a seat can hold reads the ownerless
-// person and their conversation, and is refused the capture-private control.
-func (c *telegramEnv) assertWorkspaceVisible(t *testing.T, personID, privatePersonID, activityID string) {
+// contact and their conversation, and is refused the capture-private control.
+func (c *telegramEnv) assertWorkspaceVisible(t *testing.T, contactID, privateContactID, activityID string) {
 	t.Helper()
 	reader := c.strangerRepCtx(t, map[string]principal.ObjectGrant{
-		"person": {Read: true}, "activity": {Read: true},
+		"contact": {Read: true}, "activity": {Read: true},
 	})
-	store := people.NewStore(c.DB())
+	store := contacts.NewStore(c.DB())
 
-	shared, err := ids.ParseAs[ids.PersonKind](personID)
+	shared, err := ids.ParseAs[ids.ContactKind](contactID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := store.GetPerson(reader, shared, storekit.LiveOnly); err != nil {
+	if _, err := store.GetContact(reader, shared, storekit.LiveOnly); err != nil {
 		t.Fatalf("a rep outside every team cannot read the channel counterparty: %v — "+
 			"an ownerless connector record is workspace-shared", err)
 	}
 
-	private, err := ids.ParseAs[ids.PersonKind](privatePersonID)
+	private, err := ids.ParseAs[ids.ContactKind](privateContactID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := store.GetPerson(reader, private, storekit.LiveOnly); err == nil {
-		t.Fatal("the same reader could also read another human's capture-private person — the visibility clause is not filtering, so the claim above is vacuous")
+	if _, err := store.GetContact(reader, private, storekit.LiveOnly); err == nil {
+		t.Fatal("the same reader could also read another human's capture-private contact — the visibility clause is not filtering, so the claim above is vacuous")
 	}
 
 	// And the conversation itself, not only the record it hangs off: the
 	// timeline read walks activity_link, so a message visible only to the
-	// connector would leave the shared person with an empty history.
+	// connector would leave the shared contact with an empty history.
 	if n := c.count(t, `
-		SELECT count(*) FROM activity_link WHERE activity_id = $1 AND person_id = $2`,
-		activityID, personID); n != 1 {
+		SELECT count(*) FROM activity_link WHERE activity_id = $1 AND contact_id = $2`,
+		activityID, contactID); n != 1 {
 		t.Fatalf("the captured activity is not linked to the counterparty it names")
 	}
 }
@@ -257,7 +257,7 @@ func TestAC_TG_4_RedeliveryYieldsExactlyOneActivity(t *testing.T) {
 	if n := c.telegramActivities(t, u); n != 1 {
 		t.Fatalf("%d activities after two deliveries of one update, want exactly 1", n)
 	}
-	_, personID := c.capturedMessage(t, u)
+	_, contactID := c.capturedMessage(t, u)
 
 	// The job-level replay: River's ladder can hand the same job to a worker
 	// twice, and the domain natural key is the only thing standing between that
@@ -277,10 +277,10 @@ func TestAC_TG_4_RedeliveryYieldsExactlyOneActivity(t *testing.T) {
 	if n := c.channelIdentities(t, u); n != 1 {
 		t.Fatalf("%d channel identities after the job was worked twice, want 1", n)
 	}
-	if n := c.count(t, `SELECT count(*) FROM person WHERE archived_at IS NULL AND owner_id IS NULL`); n != 1 {
-		t.Fatalf("%d ownerless people after the job was worked twice, want the one counterparty", n)
+	if n := c.count(t, `SELECT count(*) FROM contact WHERE archived_at IS NULL AND owner_id IS NULL`); n != 1 {
+		t.Fatalf("%d ownerless contacts after the job was worked twice, want the one counterparty", n)
 	}
-	if n := c.count(t, `SELECT count(*) FROM activity_link WHERE person_id = $1`, personID); n != 1 {
+	if n := c.count(t, `SELECT count(*) FROM activity_link WHERE contact_id = $1`, contactID); n != 1 {
 		t.Fatalf("%d activity links onto the counterparty, want 1", n)
 	}
 }
@@ -290,9 +290,9 @@ func TestAC_TG_4_RedeliveryYieldsExactlyOneActivity(t *testing.T) {
 // and the record still reaches the resolver.
 //
 // The two halves have to be asserted together. "No gate artifact" alone would
-// pass on a record that nothing happened to at all, and "the person exists"
+// pass on a record that nothing happened to at all, and "the contact exists"
 // alone would pass on a ladder that had judged the sender and happened to let
-// them through. So this asserts the person AND the absence of every breadcrumb
+// them through. So this asserts the contact AND the absence of every breadcrumb
 // the ladder writes — against a composition whose free-mail and
 // transactional/ESP registries are deliberately POPULATED, and a workspace
 // that owns its own mail domain, so all three gates have something to match on
@@ -320,13 +320,13 @@ func TestAC_TG_5_MailGatesAreNoOpsForAChannelRecord(t *testing.T) {
 		TransactionalExtra: []string{"sendgrid.net"},
 	}})
 
-	// Reached the resolver: the person exists and the identity is bound.
-	_, personID := c.capturedMessage(t, u)
+	// Reached the resolver: the contact exists and the identity is bound.
+	_, contactID := c.capturedMessage(t, u)
 	if n := c.channelIdentities(t, u); n != 1 {
 		t.Fatalf("%d channel identities for the captured sender, want 1 — the record never reached the resolver", n)
 	}
-	if n := c.count(t, `SELECT count(*) FROM person WHERE id = $1 AND owner_id IS NULL`, personID); n != 1 {
-		t.Fatalf("the captured sender did not become one ownerless person")
+	if n := c.count(t, `SELECT count(*) FROM contact WHERE id = $1 AND owner_id IS NULL`, contactID); n != 1 {
+		t.Fatalf("the captured sender did not become one ownerless contact")
 	}
 
 	// And no gate judged them. capture_pending_counterparty is the deferral
@@ -443,12 +443,12 @@ func TestOneInboundMessageLeavesOneRawEvidenceRowAndIsExportedOnce(t *testing.T)
 	// And the subject's own export says the same. The SAR reaches raw_capture
 	// by the sender id in the payload, so a duplicate row is a duplicate entry
 	// in the package handed to the human.
-	_, personID := c.capturedMessage(t, u)
-	person, err := ids.Parse(personID)
+	_, contactID := c.capturedMessage(t, u)
+	contact, err := ids.Parse(contactID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	pkg, err := privacy.AssembleSAR(c.adminStoreCtx(t), c.DB(), ids.From[ids.PersonKind](person))
+	pkg, err := privacy.AssembleSAR(c.adminStoreCtx(t), c.DB(), ids.From[ids.ContactKind](contact))
 	if err != nil {
 		t.Fatalf("AssembleSAR: %v", err)
 	}

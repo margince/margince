@@ -5,7 +5,7 @@ package automation
 
 // The rule-health read: the automations whose recent firings failed or were
 // blocked, newest first. It answers across every live automation — the run
-// history endpoint pages ONE instance, and a person who has to open every
+// history endpoint pages ONE instance, and a contact who has to open every
 // rule to learn one broke is the silence this read ends. Engine workflows
 // that are not automations never join (the run row names no automation), and
 // the lane this feeds claims only automations for exactly that reason.

@@ -5,7 +5,7 @@ package identity
 
 // Naming the caller to themselves.
 //
-// Separate from SeatNames, which names OTHER people in the workspace, because
+// Separate from SeatNames, which names OTHER contacts in the workspace, because
 // the two answer different questions and carry different reasoning. SeatNames
 // is a directory read about colleagues. This one answers "who am I", and the
 // answer is exactly the identity the caller already authenticated as.
@@ -111,7 +111,7 @@ func (s *Service) ActorProfile(ctx context.Context) (ActorProfile, error) {
 	if err != nil {
 		return ActorProfile{}, fmt.Errorf("identity: read acting profile: %w", err)
 	}
-	// NULL locale stays empty: a person who never chose a language is not the
+	// NULL locale stays empty: a contact who never chose a language is not the
 	// same as one who chose English, and only the caller can decide what to
 	// fall back to.
 	if locale != nil {

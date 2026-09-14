@@ -1,0 +1,990 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+//go:build integration
+
+package integration
+
+// The contact Relationship Room against a real database: the composite read's
+// per-section refusals, the correction ledger's promise that a human's answer
+// survives re-derivation, and the local graph's per-arm row scope.
+//
+// These are the claims that cannot be proven without Postgres. Every one of
+// them is about what a caller is REFUSED, and a unit test with a fake store
+// would prove only that the fake refuses.
+
+import (
+	"context"
+	"errors"
+	"testing"
+	"time"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/compose/contact360"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/comms"
+	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
+)
+
+// roomFixedNow pins the clock so a decayed strength score cannot flake between
+// seeding and reading.
+var roomFixedNow = time.Date(2026, 8, 4, 12, 0, 0, 0, time.UTC)
+
+// roomAgo and roomAhead place a fixture's timestamp against the SAME clock the
+// services under test are given.
+//
+// The database's `now()` is a different clock, and a fixture that mixes the two
+// measures the distance between them: it drifts one day further from the frozen
+// now for every real day that passes. A row seeded at `now() - 20 days` was
+// nearly 20 days old to the frozen clock the week this suite was written, and
+// exactly 6.9 days old on 2026-08-17 — one hour under the seven-day rule the
+// gone-quiet rung applies, which is the day the suite began failing with nothing
+// changed but the date.
+func roomAgo(d time.Duration) time.Time { return roomFixedNow.Add(-d) }
+
+// roomTomorrow is a day after the frozen now: comfortably inside the 72-hour
+// horizon the meeting-prep rung applies, and stated as a value because every
+// fixture that wants a booked meeting wants the same one.
+var roomTomorrow = roomFixedNow.Add(24 * time.Hour)
+
+// roomPerms is a bounded rep holding every grant the contact page asks for. The
+// scope must be team-level: an unbounded admin short-circuits the row-scope
+// clauses these tests exist to prove.
+var roomPerms = principal.Permissions{
+	RoleKeys: []string{"rep"},
+	Objects: map[string]principal.ObjectGrant{
+		"contact":               {Create: true, Read: true, Update: true},
+		"company":               {Read: true},
+		"relationship":          {Read: true},
+		"activity":              {Create: true, Read: true, Update: true},
+		"deal":                  {Read: true},
+		"project":               {Read: true},
+		"installation_settings": {Read: true},
+	},
+	RowScope: principal.RowScopeTeam,
+}
+
+// withoutGrant is perms minus one object's grant, as a DEEP copy: a plain
+// struct copy shares the Objects map, and deleting from it would strip the
+// grant from every test that reads roomPerms after this one.
+func withoutGrant(perms principal.Permissions, object string) principal.Permissions {
+	objects := make(map[string]principal.ObjectGrant, len(perms.Objects))
+	for name, grant := range perms.Objects {
+		if name != object {
+			objects[name] = grant
+		}
+	}
+	perms.Objects = objects
+	return perms
+}
+
+func contactRoomService(e *Env) *contact360.Service {
+	return contact360.NewService(e.Pool, e.Contacts, e.Deals, e.Projects, consent.NewStore(e.DB()),
+		comms.NewStore(e.DB(), time.Now, activities.NewStore(e.DB())), ai.NewFeedbackStore(e.DB()), func() time.Time { return roomFixedNow })
+}
+
+// A contact outside the caller's row scope must be a NOT FOUND, never an empty
+// page. An empty page confirms the record exists and only its contents are
+// withheld, which is the disclosure existence-hiding is for. A colleague's
+// contact leaves the caller's row scope through capture privacy.
+func TestContact360RefusesAContactOutsideTheCallersRowScope(t *testing.T) {
+	e := Setup(t)
+	theirs := e.SeedContact(t, "Their Contact", &e.Rep3)
+	e.MakeCapturePrivate(t, "contact", theirs, e.Rep3)
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, roomPerms)
+
+	_, err := contactRoomService(e).Assemble(rep, ids.From[ids.ContactKind](theirs))
+	if !errors.Is(err, apperrors.ErrNotFound) {
+		t.Errorf("Assemble on a capture-private contact → %v, want ErrNotFound", err)
+	}
+}
+
+// A section the caller may not read is NAMED, not returned empty. Empty and
+// forbidden are different facts, and a page that renders them the same way
+// tells the reader a relationship is cold when it is only invisible.
+func TestContact360NamesTheSectionsACallerMayNotRead(t *testing.T) {
+	e := Setup(t)
+	mine := e.SeedContact(t, "My Contact", &e.Rep1)
+
+	// Every grant except activity: the timeline, next steps, last touch and
+	// since-last-visit all hang off it.
+	perms := roomPerms
+	perms.Objects = map[string]principal.ObjectGrant{
+		"contact":      {Read: true},
+		"company":      {Read: true},
+		"relationship": {Read: true},
+	}
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, perms)
+
+	page, err := contactRoomService(e).Assemble(rep, ids.From[ids.ContactKind](mine))
+	if err != nil {
+		t.Fatalf("Assemble: %v", err)
+	}
+	omitted := map[string]bool{}
+	for _, s := range page.SectionsOmitted {
+		omitted[string(s)] = true
+	}
+	for _, want := range []string{"activities", "next_steps", "last_touch", "since_last_visit"} {
+		if !omitted[want] {
+			t.Errorf("section %q was not named as omitted; the caller has no activity grant", want)
+		}
+	}
+	if page.Activities != nil {
+		t.Error("a withheld section was also returned as data")
+	}
+	// The root read still succeeded, so the page is served rather than refused.
+	if page.Contact.Id.String() == "" {
+		t.Error("the page lost its root record along with the withheld sections")
+	}
+}
+
+// AIRT-AC-9, end to end: a suppressed claim is not surfaced again, and a
+// corrected one shows the human's value. The claim key is the claim's PATH, so
+// this has to survive the row being re-derived rather than re-read.
+func TestCorrectionLedgerSurvivesRederivation(t *testing.T) {
+	e := Setup(t)
+	owner := OwnerConn(t)
+	mine := e.SeedContact(t, "Anna Weber", &e.Rep1)
+	SeedIDRow(t, owner, `INSERT INTO contact_profile_field (id, contact_id, field, value, evidence_snippet, source_ref, source, captured_by)
+		VALUES ($1, '`+mine.String()+`', 'title', 'Business Development Manager',
+		        'Anna Weber, Business Development Manager', 'site_read:https://example.test/team', 'site_read', 'agent:enrich')`)
+
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, roomPerms)
+	svc := contactRoomService(e)
+	contactID := ids.From[ids.ContactKind](mine)
+
+	before, err := svc.ProfileFields(rep, contactID)
+	if err != nil {
+		t.Fatalf("ProfileFields: %v", err)
+	}
+	if len(before) != 1 || before[0].Value != "Business Development Manager" {
+		t.Fatalf("seeded field did not read back: %+v", before)
+	}
+	if before[0].ClaimKey == nil || *before[0].ClaimKey == "" {
+		t.Fatal("the field carries no claim key, so nothing could ever correct it")
+	}
+
+	corrected := "Head of Business Development"
+	if err := ai.NewFeedbackStore(e.DB()).Record(rep, ai.RecordInput{
+		SubjectType: "contact", SubjectID: mine, ClaimKind: ai.ClaimProfileField,
+		ClaimPath: *before[0].ClaimKey, Verdict: ai.VerdictCorrected, CorrectedValue: &corrected,
+	}); err != nil {
+		t.Fatalf("Record: %v", err)
+	}
+
+	// The standalone sidecar AND the composite read are two paths to the same
+	// rows. A verdict honoured on one and not the other would leave the
+	// machine's rejected value on a surface nobody thought to check.
+	after, err := svc.ProfileFields(rep, contactID)
+	if err != nil {
+		t.Fatalf("ProfileFields after the correction: %v", err)
+	}
+	if after[0].Value != corrected {
+		t.Errorf("sidecar value = %q, want the human's %q", after[0].Value, corrected)
+	}
+	if after[0].Verdict == nil || string(*after[0].Verdict) != ai.VerdictCorrected {
+		t.Error("the sidecar rendered the human's value with no marker saying it was corrected")
+	}
+	page, err := svc.Assemble(rep, contactID)
+	if err != nil {
+		t.Fatalf("Assemble: %v", err)
+	}
+	if page.ProfileFields == nil || (*page.ProfileFields)[0].Value != corrected {
+		t.Error("the composite read did not honour the correction the sidecar did")
+	}
+}
+
+// The other direction, which the test above passes without: a correction must
+// not outlive the value it was correcting.
+//
+// The sequence is real and every step of it is an ordinary day. A pass writes a
+// title; a human reads it, disagrees, and records their own; then something
+// writes a newer, better value to the same field — an accepted research claim,
+// a fresh enrichment, an edit through another door — and contact_profile_field's
+// updated_at moves. Without a recency check the page keeps serving the human's
+// correction, and the reader is told the current value is one the record does
+// not hold. Asked what somebody's title is, an assistant answers with a value
+// no row carries, which reads as a hallucination and is a data contradiction.
+//
+// Driven against a REAL row rather than the ruling alone, because the ruling is
+// only half the fix: it has to be handed the date the VALUE took its current
+// form, and a reader passing the wrong clock would satisfy every unit case.
+func TestACorrectionDoesNotOutliveTheValueItCorrected(t *testing.T) {
+	e := Setup(t)
+	owner := OwnerConn(t)
+	mine := e.SeedContact(t, "Anna Weber", &e.Rep1)
+	SeedIDRow(t, owner, `INSERT INTO contact_profile_field (id, contact_id, field, value, evidence_snippet, source_ref, source, captured_by)
+		VALUES ($1, '`+mine.String()+`', 'title', 'Business Development Manager',
+		        'Anna Weber, Business Development Manager', 'site_read:https://example.test/team', 'site_read', 'agent:enrich')`)
+
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, roomPerms)
+	svc := contactRoomService(e)
+	contactID := ids.From[ids.ContactKind](mine)
+
+	before, err := svc.ProfileFields(rep, contactID)
+	if err != nil {
+		t.Fatalf("ProfileFields: %v", err)
+	}
+	// The same guards the sibling case above carries. A regression that drops
+	// the seeded row or its claim key should fail here saying so, not panic on
+	// an index or a nil pointer and send the reader to the wrong file.
+	if len(before) != 1 || before[0].Value != "Business Development Manager" {
+		t.Fatalf("seeded field did not read back: %+v", before)
+	}
+	if before[0].ClaimKey == nil || *before[0].ClaimKey == "" {
+		t.Fatal("the field carries no claim key, so nothing could ever correct it")
+	}
+	corrected := "Head of Business Development"
+	if err := ai.NewFeedbackStore(e.DB()).Record(rep, ai.RecordInput{
+		SubjectType: "contact", SubjectID: mine, ClaimKind: ai.ClaimProfileField,
+		ClaimPath: *before[0].ClaimKey, Verdict: ai.VerdictCorrected, CorrectedValue: &corrected,
+	}); err != nil {
+		t.Fatalf("Record: %v", err)
+	}
+	// The correction stands over the value it was recorded against — the
+	// direction the test above pins, asserted here too so the case below is
+	// known to be testing recency rather than a broken overlay.
+	standing, err := svc.ProfileFields(rep, contactID)
+	if err != nil {
+		t.Fatalf("ProfileFields after the correction: %v", err)
+	}
+	if standing[0].Value != corrected {
+		t.Fatalf("the correction did not apply at all (%q), so this case proves nothing", standing[0].Value)
+	}
+
+	// Now a newer answer replaces the value the human was looking at. The
+	// touch trigger moves updated_at; the value is what an accepted research
+	// claim would have written.
+	if _, err := owner.Exec(context.Background(), `UPDATE contact_profile_field
+		   SET value = 'Geschaeftsfuehrerin', source = 'research_accept', captured_by = 'user:rep1'
+		 WHERE contact_id = $1 AND field = 'title'`, mine); err != nil {
+		t.Fatalf("writing the newer value: %v", err)
+	}
+
+	after, err := svc.ProfileFields(rep, contactID)
+	if err != nil {
+		t.Fatalf("ProfileFields after the newer value: %v", err)
+	}
+	if after[0].Value != "Geschaeftsfuehrerin" {
+		t.Errorf("value = %q, want the newer stored answer — the correction outlived the value it was correcting", after[0].Value)
+	}
+	// And the marker goes with it. "corrected" beside a value the human never
+	// wrote says they wrote it.
+	if after[0].Verdict != nil {
+		t.Errorf("verdict marker = %q on a value recorded after it — the page says a human decided about an answer they never saw", *after[0].Verdict)
+	}
+	page, err := svc.Assemble(rep, contactID)
+	if err != nil {
+		t.Fatalf("Assemble: %v", err)
+	}
+	if page.ProfileFields == nil || (*page.ProfileFields)[0].Value != "Geschaeftsfuehrerin" {
+		t.Error("the composite read served the stale correction the sidecar dropped")
+	}
+}
+
+// THE WINDOW ONE PAGE VIEW LONG. The case above is the one that survives
+// forever — a verdict demonstrably older than the value. This is the one that
+// lasts as long as somebody has a page open, and the ordering gets it exactly
+// backwards: the page renders the value written at T1, something writes T2
+// while it is open, the correction is submitted at T3, and T3 > T2 says the
+// verdict is current. It is current about a sentence nobody is holding.
+//
+// The verdict names what the client RENDERED, so the comparison is an equality
+// and the clocks stop mattering.
+func TestACorrectionIsAboutTheValueTheReaderHadInFrontOfThem(t *testing.T) {
+	e := Setup(t)
+	owner := OwnerConn(t)
+	mine := e.SeedContact(t, "Anna Weber", &e.Rep1)
+	SeedIDRow(t, owner, `INSERT INTO contact_profile_field (id, contact_id, field, value, evidence_snippet, source_ref, source, captured_by)
+		VALUES ($1, '`+mine.String()+`', 'title', 'Business Development Manager',
+		        'Anna Weber, Business Development Manager', 'site_read:https://example.test/team', 'site_read', 'agent:enrich')`)
+
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, roomPerms)
+	svc := contactRoomService(e)
+	contactID := ids.From[ids.ContactKind](mine)
+
+	rendered, err := svc.ProfileFields(rep, contactID)
+	if err != nil {
+		t.Fatalf("ProfileFields: %v", err)
+	}
+	if len(rendered) != 1 || rendered[0].ClaimKey == nil {
+		t.Fatalf("the seeded field did not read back with a claim key: %+v", rendered)
+	}
+
+	// The page is open on that value. Something replaces it — and the reader,
+	// still looking at the old one, corrects it AFTERWARDS.
+	if _, err := owner.Exec(context.Background(), `UPDATE contact_profile_field
+		   SET value = 'Geschaeftsfuehrerin', source = 'research_accept', captured_by = 'user:rep1'
+		 WHERE contact_id = $1 AND field = 'title'`, mine); err != nil {
+		t.Fatalf("writing the newer value: %v", err)
+	}
+
+	corrected := "Head of Business Development"
+	openedOn := rendered[0].CapturedAt
+	if err := ai.NewFeedbackStore(e.DB()).Record(rep, ai.RecordInput{
+		SubjectType: "contact", SubjectID: mine, ClaimKind: ai.ClaimProfileField,
+		ClaimPath: *rendered[0].ClaimKey, Verdict: ai.VerdictCorrected, CorrectedValue: &corrected,
+		ValueShown: &rendered[0].Value, ValueCapturedAt: &openedOn,
+	}); err != nil {
+		t.Fatalf("Record: %v", err)
+	}
+
+	after, err := svc.ProfileFields(rep, contactID)
+	if err != nil {
+		t.Fatalf("ProfileFields after the correction: %v", err)
+	}
+	// The verdict is NEWER than the value it is read against, so the ordering
+	// would serve it. It names an older one.
+	if after[0].Value != "Geschaeftsfuehrerin" {
+		t.Errorf("value = %q, want the stored answer — a correction of the sentence the reader was looking at "+
+			"was applied to the one that replaced it while their page was open", after[0].Value)
+	}
+	if after[0].Verdict != nil {
+		t.Errorf("verdict marker = %q on a value the human never saw — the page says they decided about an answer "+
+			"that arrived after their page rendered", *after[0].Verdict)
+	}
+
+	// And a verdict that names the value ON SCREEN NOW does apply, or the case
+	// above passes just as happily against a comparison that refuses
+	// everything — which is the failure this whole ruling would become.
+	//
+	// Recorded against the stamp the read just handed back, which is what the
+	// client does: the reader reloaded, saw the newer answer, and corrected
+	// THAT one.
+	onScreen := after[0].CapturedAt
+	if err := ai.NewFeedbackStore(e.DB()).Record(rep, ai.RecordInput{
+		SubjectType: "contact", SubjectID: mine, ClaimKind: ai.ClaimProfileField,
+		ClaimPath: *rendered[0].ClaimKey, Verdict: ai.VerdictCorrected, CorrectedValue: &corrected,
+		ValueShown: &after[0].Value, ValueCapturedAt: &onScreen,
+	}); err != nil {
+		t.Fatalf("Record against the value now on screen: %v", err)
+	}
+	current, err := svc.ProfileFields(rep, contactID)
+	if err != nil {
+		t.Fatalf("ProfileFields after the second correction: %v", err)
+	}
+	if current[0].Value != corrected {
+		t.Errorf("value = %q, want the human's correction — a verdict was dropped from the very value it names",
+			current[0].Value)
+	}
+}
+
+// A CORRECTION TYPED AGAINST A VALUE THAT HAS MOVED ON DOES NOT DESTROY THE
+// VERDICT ABOUT THE ONE THAT STANDS.
+//
+// Two readers, one claim. The first sees the new value and records a verdict
+// about it. The second still has the old page open and submits afterwards —
+// later in wall-clock time, about an older sentence. One row per claim means
+// the second write would replace the first, and the first reader's decision
+// would be gone: not merely unapplied, but overwritten by a verdict about a
+// value nobody is looking at.
+//
+// Both stamps are the server's own, so they rank. The stale one is refused.
+func TestAStaleCorrectionDoesNotOverwriteTheVerdictAboutTheValueThatStands(t *testing.T) {
+	e := Setup(t)
+	owner := OwnerConn(t)
+	mine := e.SeedContact(t, "Anna Weber", &e.Rep1)
+	SeedIDRow(t, owner, `INSERT INTO contact_profile_field (id, contact_id, field, value, evidence_snippet, source_ref, source, captured_by)
+		VALUES ($1, '`+mine.String()+`', 'title', 'Business Development Manager',
+		        'Anna Weber, Business Development Manager', 'site_read:https://example.test/team', 'site_read', 'agent:enrich')`)
+
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, roomPerms)
+	svc := contactRoomService(e)
+	contactID := ids.From[ids.ContactKind](mine)
+	store := ai.NewFeedbackStore(e.DB())
+
+	stale, err := svc.ProfileFields(rep, contactID)
+	if err != nil {
+		t.Fatalf("ProfileFields: %v", err)
+	}
+
+	// The value moves while that page is open.
+	if _, err := owner.Exec(context.Background(), `UPDATE contact_profile_field
+		   SET value = 'Geschaeftsfuehrerin', source = 'research_accept', captured_by = 'user:rep1'
+		 WHERE contact_id = $1 AND field = 'title'`, mine); err != nil {
+		t.Fatalf("writing the newer value: %v", err)
+	}
+	current, err := svc.ProfileFields(rep, contactID)
+	if err != nil {
+		t.Fatalf("ProfileFields after the write: %v", err)
+	}
+
+	// A colleague reads the NEW value and confirms it.
+	if err := store.Record(rep, ai.RecordInput{
+		SubjectType: "contact", SubjectID: mine, ClaimKind: ai.ClaimProfileField,
+		ClaimPath: *current[0].ClaimKey, Verdict: ai.VerdictConfirmed,
+		ValueShown: &current[0].Value, ValueCapturedAt: &current[0].CapturedAt,
+	}); err != nil {
+		t.Fatalf("recording the verdict about the value that stands: %v", err)
+	}
+
+	// The first reader submits from their stale page, afterwards.
+	corrected := "Head of Business Development"
+	err = store.Record(rep, ai.RecordInput{
+		SubjectType: "contact", SubjectID: mine, ClaimKind: ai.ClaimProfileField,
+		ClaimPath: *stale[0].ClaimKey, Verdict: ai.VerdictCorrected, CorrectedValue: &corrected,
+		ValueShown: &stale[0].Value, ValueCapturedAt: &stale[0].CapturedAt,
+	})
+	if !errors.Is(err, apperrors.ErrConflict) {
+		t.Fatalf("the stale correction was accepted (%v) — it replaces the row, and the verdict a "+
+			"colleague recorded about the value on screen is gone", err)
+	}
+
+	after, err := svc.ProfileFields(rep, contactID)
+	if err != nil {
+		t.Fatalf("ProfileFields after the stale submission: %v", err)
+	}
+	if after[0].Verdict == nil || *after[0].Verdict != crmcontracts.ContactProfileFieldVerdict(ai.VerdictConfirmed) {
+		t.Errorf("verdict = %v, want the confirmation of the value that stands — a submission about a "+
+			"sentence nobody is looking at took it with it", after[0].Verdict)
+	}
+	if after[0].Value != "Geschaeftsfuehrerin" {
+		t.Errorf("value = %q, want the stored answer — the stale correction was applied", after[0].Value)
+	}
+}
+
+// The write is gated on the SUBJECT's own grant. A caller who may read a
+// contact but not edit them cannot overrule what the system says about them.
+func TestCorrectionLedgerRefusesAWriteWithoutTheSubjectsUpdateGrant(t *testing.T) {
+	e := Setup(t)
+	mine := e.SeedContact(t, "Anna Weber", &e.Rep1)
+
+	readOnly := roomPerms
+	readOnly.Objects = map[string]principal.ObjectGrant{"contact": {Read: true}}
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, readOnly)
+
+	err := ai.NewFeedbackStore(e.DB()).Record(rep, ai.RecordInput{
+		SubjectType: "contact", SubjectID: mine, ClaimKind: ai.ClaimProfileField,
+		ClaimPath: "profile_field:title", Verdict: ai.VerdictSuppressed,
+	})
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("Record without contact:update → %v, want ErrPermissionDenied", err)
+	}
+}
+
+// A verdict about a capture-private contact is a not-found, so the endpoint
+// cannot be used to probe which record ids exist.
+func TestCorrectionLedgerRefusesASubjectOutsideRowScope(t *testing.T) {
+	e := Setup(t)
+	theirs := e.SeedContact(t, "Their Contact", &e.Rep3)
+	e.MakeCapturePrivate(t, "contact", theirs, e.Rep3)
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, roomPerms)
+
+	err := ai.NewFeedbackStore(e.DB()).Record(rep, ai.RecordInput{
+		SubjectType: "contact", SubjectID: theirs, ClaimKind: ai.ClaimProfileField,
+		ClaimPath: "profile_field:title", Verdict: ai.VerdictSuppressed,
+	})
+	if !errors.Is(err, apperrors.ErrNotFound) {
+		t.Errorf("Record on a capture-private contact → %v, want ErrNotFound", err)
+	}
+}
+
+// Re-deciding replaces rather than appends: a verdict is the current answer to
+// "has a human decided this", and two answers is no answer.
+func TestCorrectionLedgerKeepsOneVerdictPerClaim(t *testing.T) {
+	e := Setup(t)
+	mine := e.SeedContact(t, "Anna Weber", &e.Rep1)
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, roomPerms)
+	store := ai.NewFeedbackStore(e.DB())
+
+	first := "Head of Sales"
+	if err := store.Record(rep, ai.RecordInput{
+		SubjectType: "contact", SubjectID: mine, ClaimKind: ai.ClaimProfileField,
+		ClaimPath: "profile_field:title", Verdict: ai.VerdictCorrected, CorrectedValue: &first,
+	}); err != nil {
+		t.Fatalf("first Record: %v", err)
+	}
+	if err := store.Record(rep, ai.RecordInput{
+		SubjectType: "contact", SubjectID: mine, ClaimKind: ai.ClaimProfileField,
+		ClaimPath: "profile_field:title", Verdict: ai.VerdictSuppressed,
+	}); err != nil {
+		t.Fatalf("second Record: %v", err)
+	}
+
+	var rows int
+	var verdict string
+	if err := database.WithWorkspaceTx(rep, e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(), `
+			SELECT count(*), max(verdict) FROM ai_feedback
+			 WHERE subject_type = 'contact' AND subject_id = $1`, mine).Scan(&rows, &verdict)
+	}); err != nil {
+		t.Fatalf("reading the ledger: %v", err)
+	}
+	if rows != 1 {
+		t.Errorf("two decisions left %d rows, want 1 — a verdict is the current answer, not a log", rows)
+	}
+	if verdict != ai.VerdictSuppressed {
+		t.Errorf("verdict = %q, want the later decision %q", verdict, ai.VerdictSuppressed)
+	}
+	// The superseded correction's value must not survive: the ledger stores
+	// the human's CURRENT answer, and a suppressed claim carries none.
+	var value *string
+	if err := database.WithWorkspaceTx(rep, e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT corrected_value FROM ai_feedback WHERE subject_id = $1`, mine).Scan(&value)
+	}); err != nil {
+		t.Fatalf("reading the superseded value: %v", err)
+	}
+	if value != nil {
+		t.Errorf("the superseded correction's value survived as %q", *value)
+	}
+}
+
+// Art. 17 has to reach the enrichment sidecar. Anonymize-in-place leaves the
+// contact row standing, so nothing cascades: without the explicit statement the
+// subject's title, employer and the verbatim sentence naming them survive an
+// erasure the controller certified complete.
+func TestErasureReachesTheEnrichmentSidecarAndTheLedger(t *testing.T) {
+	e := Setup(t)
+	owner := OwnerConn(t)
+	mine := e.SeedContact(t, "Anna Weber", &e.Rep1)
+	SeedIDRow(t, owner, `INSERT INTO contact_profile_field (id, contact_id, field, value, evidence_snippet, source_ref, source, captured_by)
+		VALUES ($1, '`+mine.String()+`', 'title', 'Head of Procurement',
+		        'Anna Weber — Head of Procurement at ScaleCommerce', 'site_read:https://example.test/team', 'site_read', 'agent:enrich')`)
+
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, roomPerms)
+	if err := ai.NewFeedbackStore(e.DB()).Record(rep, ai.RecordInput{
+		SubjectType: "contact", SubjectID: mine, ClaimKind: ai.ClaimProfileField,
+		ClaimPath: "profile_field:title", Verdict: ai.VerdictSuppressed,
+	}); err != nil {
+		t.Fatalf("Record: %v", err)
+	}
+
+	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), mine, "test"); err != nil {
+		t.Fatalf("EraseContact: %v", err)
+	}
+
+	for _, tc := range []struct{ table, where string }{
+		{"contact_profile_field", "contact_id = $1"},
+		{"ai_feedback", "subject_type = 'contact' AND subject_id = $1"},
+	} {
+		var left int
+		if err := owner.QueryRow(context.Background(),
+			`SELECT count(*) FROM `+tc.table+` WHERE `+tc.where, mine).Scan(&left); err != nil {
+			t.Fatalf("counting %s: %v", tc.table, err)
+		}
+		if left != 0 {
+			t.Errorf("%s kept %d row(s) about an erased subject", tc.table, left)
+		}
+	}
+}
+
+// The whole page, populated. The refusal tests above prove what a caller does
+// not get; this proves the sections actually assemble from real rows — a page
+// that refuses correctly and renders nothing is not a working page.
+func TestContact360AssemblesEverySectionFromRealRows(t *testing.T) {
+	e := Setup(t)
+	owner := OwnerConn(t)
+	company := e.SeedCompany(t, "ScaleCommerce", &e.Rep1)
+	mine := e.SeedContact(t, "Anna Weber", &e.Rep1)
+
+	SeedIDRow(t, owner, `INSERT INTO relationship
+		(id, kind, contact_id, company_id, role, is_current_primary, source, captured_by)
+		VALUES ($1, 'employment', '`+mine.String()+`', '`+company.String()+`',
+		        'Head of Procurement', true, 'manual', 'human:x')`)
+
+	// One inbound message and one open task: the timeline, the last-touch
+	// pair and the next-steps section each read a different slice of these.
+	inbound := SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, body, occurred_at, direction, source, captured_by)
+		VALUES ($1, 'email', 'Re: pricing', 'body', '2026-08-01T09:00:00Z',
+		        'inbound', 'manual', 'human:x')`)
+	LinkActivity(t, owner, inbound, "contact", mine)
+	LinkActivitySender(t, owner, inbound, mine)
+	task := SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, due_at, is_done, source, captured_by)
+		VALUES ($1, 'task', 'Send the quote', '2026-07-28T09:00:00Z', '2026-07-30T09:00:00Z',
+		        false, 'manual', 'human:x')`)
+	LinkActivity(t, owner, task, "contact", mine)
+
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, roomPerms)
+	page, err := contactRoomService(e).Assemble(rep, ids.From[ids.ContactKind](mine))
+	if err != nil {
+		t.Fatalf("Assemble: %v", err)
+	}
+	if len(page.SectionsOmitted) != 0 {
+		t.Errorf("a fully-granted caller lost sections: %v", page.SectionsOmitted)
+	}
+	if page.Employments == nil || len(page.Employments.Data) != 1 {
+		t.Error("the employment edge did not reach the page")
+	} else if page.Employments.Data[0].Role == nil || *page.Employments.Data[0].Role != "Head of Procurement" {
+		t.Error("the employment edge lost the role it records")
+	}
+	if page.Activities == nil || len(page.Activities.Data) == 0 {
+		t.Error("the timeline is empty on a contact with a captured message")
+	}
+	if page.NextSteps == nil || len(page.NextSteps.Data) != 1 {
+		t.Error("the open task did not reach next steps")
+	}
+	// The two directions are read separately and never folded: an account we
+	// mailed a fortnight ago with no reply and one that wrote this morning
+	// have the same last-touch date and opposite meanings.
+	if page.LastInboundAt == nil {
+		t.Error("last_inbound_at is absent on a contact who wrote to us")
+	}
+	if page.LastOutboundAt != nil {
+		t.Error("last_outbound_at is set though nothing outbound was captured")
+	}
+	if page.Strength == nil {
+		t.Error("the relationship score did not assemble")
+	}
+	if page.RelationshipChanges == nil {
+		t.Error("the derived changes section is absent entirely, which is different from empty")
+	}
+	if page.Moment == nil {
+		t.Fatal("the page assembled without the one moment it opens on")
+	}
+	// The ladder selects ONE. A page offering several reasons has handed the
+	// choosing back to the reader, which is the work the ladder exists to do.
+	if page.Moment.Rule == "" || page.Moment.EvidenceFingerprint == "" {
+		t.Error("a moment must name the rule that selected it and the evidence it fired on")
+	}
+	if page.SinceLastVisit == nil {
+		t.Error("since-last-visit is absent for a caller who has never visited")
+	}
+}
+
+// A dismissal holds while the evidence stands, and lifts when it moves.
+//
+// Both halves are the point. Keyed on the moment's PATH alone, a dismissal
+// survives the world changing underneath it: the reader puts "they went quiet"
+// away, a reply arrives, and the page stays silent about the thing that just
+// changed. Keyed on the evidence, it re-arms.
+func TestADismissalHoldsUntilTheEvidenceMoves(t *testing.T) {
+	e := Setup(t)
+	owner := OwnerConn(t)
+	mine := e.SeedContact(t, "Anna Weber", &e.Rep1)
+	// We wrote and they never answered: the gone-quiet rung.
+	outbound := SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, body, occurred_at, direction, source, captured_by)
+		VALUES ($1, 'email', 'Following up', 'body', $2,
+		        'outbound', 'manual', 'human:x')`, roomAgo(20*24*time.Hour))
+	LinkActivity(t, owner, outbound, "contact", mine)
+
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, roomPerms)
+	svc := contactRoomService(e)
+	contactID := ids.From[ids.ContactKind](mine)
+
+	page, err := svc.Assemble(rep, contactID)
+	if err != nil {
+		t.Fatalf("Assemble: %v", err)
+	}
+	if page.Moment == nil {
+		t.Fatal("an unanswered outbound message produced no moment")
+	}
+	dismissed := *page.Moment
+
+	if err := svc.DismissMoment(rep, contactID, crmcontracts.DismissContactMomentRequest{
+		ClaimKey:            dismissed.ClaimKey,
+		EvidenceFingerprint: dismissed.EvidenceFingerprint,
+	}); err != nil {
+		t.Fatalf("dismissing: %v", err)
+	}
+
+	after, err := svc.Assemble(rep, contactID)
+	if err != nil {
+		t.Fatalf("Assemble after the dismissal: %v", err)
+	}
+	if after.Moment == nil || after.Moment.ClaimKey == dismissed.ClaimKey {
+		t.Fatalf("the dismissed moment %q came back against unchanged evidence", dismissed.ClaimKey)
+	}
+
+	// Now they reply. The evidence the dismissal was held against has moved,
+	// so the page must speak again rather than stay quiet about the new fact.
+	inbound := SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, body, occurred_at, direction, source, captured_by)
+		VALUES ($1, 'email', 'Re: Following up', 'body', $2,
+		        'inbound', 'manual', 'human:x')`, roomAgo(time.Hour))
+	LinkActivity(t, owner, inbound, "contact", mine)
+	LinkActivitySender(t, owner, inbound, mine)
+
+	reArmed, err := svc.Assemble(rep, contactID)
+	if err != nil {
+		t.Fatalf("Assemble after the reply: %v", err)
+	}
+	if reArmed.Moment == nil || reArmed.Moment.Rule == crmcontracts.ContactMomentRuleNothingNeeded {
+		t.Fatal("a reply arrived after the dismissal and the page still says nothing needs you")
+	}
+}
+
+// contactChanges runs the Tx-scoped derivation in a transaction of its own.
+// There is no pool-level variant, and adding one for a test would be an
+// entry point with no production caller.
+func contactChanges(ctx context.Context, t *testing.T, e *Env, contactID ids.ContactID) ([]relstrength.Change, error) {
+	t.Helper()
+	var out []relstrength.Change
+	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		var err error
+		out, err = e.Contacts.ContactRelationshipChangesTx(ctx, tx, contactID, roomFixedNow, nil)
+		return err
+	})
+	return out, err
+}
+
+// The derivation folds the same §4 curve over a window ending in the past, so
+// what it reports comes from the timeline rather than from a stored number —
+// which is the whole reason there is no table.
+func TestRelationshipChangesAreDerivedFromTheTimeline(t *testing.T) {
+	e := Setup(t)
+	owner := OwnerConn(t)
+	mine := e.SeedContact(t, "Anna Weber", &e.Rep1)
+
+	// A long silence, then their reply. roomFixedNow is 2026-08-04, so the
+	// silence the reply broke is 48 days and the reply itself is 3 days old.
+	for _, at := range []string{"2026-06-14T09:00:00Z", "2026-08-01T09:00:00Z"} {
+		id := SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, direction, source, captured_by)
+			VALUES ($1, 'email', 'thread', '`+at+`', 'inbound', 'manual', 'human:x')`)
+		LinkActivity(t, owner, id, "contact", mine)
+	}
+
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, roomPerms)
+	changes, err := contactChanges(rep, t, e, ids.From[ids.ContactKind](mine))
+	if err != nil {
+		t.Fatalf("ContactRelationshipChangesTx: %v", err)
+	}
+	var replied bool
+	for _, c := range changes {
+		if c.Kind == relstrength.ChangeRepliedAfterGap {
+			replied = true
+			if c.Days != 48 {
+				t.Errorf("gap = %d days, want 48 — measured to the interaction the reply broke", c.Days)
+			}
+		}
+	}
+	if !replied {
+		t.Errorf("a reply after a seven-week silence was not derived; got %+v", changes)
+	}
+}
+
+// A contact nobody has ever spoken to has not gone quiet — they were never
+// loud. Saying otherwise turns every dormant record into an alert.
+func TestRelationshipChangesSayNothingAboutAContactWithNoHistory(t *testing.T) {
+	e := Setup(t)
+	mine := e.SeedContact(t, "Anna Weber", &e.Rep1)
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, roomPerms)
+
+	changes, err := contactChanges(rep, t, e, ids.From[ids.ContactKind](mine))
+	if err != nil {
+		t.Fatalf("ContactRelationshipChangesTx: %v", err)
+	}
+	if len(changes) != 0 {
+		t.Errorf("a contact with no interactions produced %d change(s): %+v", len(changes), changes)
+	}
+}
+
+// The changes explain a score, and both are reads of the same record — so a
+// contact outside the caller's row scope is a not-found here too.
+func TestRelationshipChangesRefuseAContactOutsideRowScope(t *testing.T) {
+	e := Setup(t)
+	theirs := e.SeedContact(t, "Their Contact", &e.Rep3)
+	e.MakeCapturePrivate(t, "contact", theirs, e.Rep3)
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, roomPerms)
+
+	if _, err := contactChanges(rep, t, e, ids.From[ids.ContactKind](theirs)); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Errorf("changes for a capture-private contact → %v, want ErrNotFound", err)
+	}
+}
+
+// The enrichment sidecar moves with the contact on a merge. Left behind it is
+// invisible to every read of the survivor, so the evidence for their title
+// would vanish at a merge nobody expected to lose it — and the row would
+// outlive the merged-away record's own archival.
+func TestMergeCarriesTheEnrichmentSidecarToTheSurvivor(t *testing.T) {
+	e := Setup(t)
+	owner := OwnerConn(t)
+	survivor := e.SeedContact(t, "Anna Weber", &e.Rep1)
+	duplicate := e.SeedContact(t, "A. Weber", &e.Rep1)
+
+	// The duplicate carries a field the survivor does not.
+	SeedIDRow(t, owner, `INSERT INTO contact_profile_field (id, contact_id, field, value, evidence_snippet, source_ref, source, captured_by)
+		VALUES ($1, '`+duplicate.String()+`', 'title', 'Head of Procurement',
+		        'Anna Weber — Head of Procurement', 'site_read:https://example.test/team',
+		        'site_read', 'agent:enrich')`)
+	// And one they BOTH carry, with different values.
+	for _, p := range []struct {
+		id    ids.UUID
+		value string
+	}{
+		{survivor, "+49 111"}, {duplicate, "+49 222"},
+	} {
+		SeedIDRow(t, owner, `INSERT INTO contact_profile_field (id, contact_id, field, value, evidence_snippet, source_ref, source, captured_by)
+			VALUES ($1, '`+p.id.String()+`', 'phone', '`+p.value+`', 'sig',
+			        'activity:x', 'capture_enrich', 'agent:enrich')`)
+	}
+
+	if _, err := e.Contacts.MergeContact(e.Admin(),
+		ids.From[ids.ContactKind](duplicate), ids.From[ids.ContactKind](survivor)); err != nil {
+		t.Fatalf("MergeContact: %v", err)
+	}
+
+	rows := map[string]string{}
+	got, err := OwnerConn(t).Query(context.Background(),
+		`SELECT field, value FROM contact_profile_field WHERE contact_id = $1`, survivor)
+	if err != nil {
+		t.Fatalf("reading the survivor's fields: %v", err)
+	}
+	defer got.Close()
+	for got.Next() {
+		var field, value string
+		if err := got.Scan(&field, &value); err != nil {
+			t.Fatalf("scanning: %v", err)
+		}
+		rows[field] = value
+	}
+	// A terminal iteration error leaves a PARTIAL map, and every assertion
+	// below would then report a missing field rather than the database failure
+	// that caused it.
+	if err := got.Err(); err != nil {
+		t.Fatalf("iterating the survivor's fields: %v", err)
+	}
+	if rows["title"] != "Head of Procurement" {
+		t.Errorf("the survivor did not inherit the title; got %q", rows["title"])
+	}
+	// Where the survivor already held the field, THEIRS is the one a human has
+	// been reading. The merged-away copy is dropped, never allowed to overwrite.
+	if rows["phone"] != "+49 111" {
+		t.Errorf("phone = %q, want the survivor's own value", rows["phone"])
+	}
+
+	var left int
+	if err := OwnerConn(t).QueryRow(context.Background(),
+		`SELECT count(*) FROM contact_profile_field WHERE contact_id = $1`, duplicate).Scan(&left); err != nil {
+		t.Fatalf("counting the merged-away rows: %v", err)
+	}
+	if left != 0 {
+		t.Errorf("%d row(s) stayed on the merged-away contact, invisible to every read", left)
+	}
+}
+
+// A captured channel message reaches the page NAMING THE TRANSPORT THAT CARRIED
+// IT, and this test exists because it did not.
+//
+// Since ADR-0107/A158 the kind says only that an interaction was a message —
+// which transport carried it is `channel_provider`, a separate column. The 360's
+// timeline read is a hand-written sibling of activities.activityColumns, and
+// when the narrowing added the column there, nothing pointed at the copy. So
+// every activity on every contact page reported a null provider: the memory card
+// rendered "message" where it should have said the transport's name, and the
+// composer could not tell a contact reachable on a unit's channel from one
+// reachable nowhere.
+//
+// The guard is a ROW-TO-PAYLOAD assertion rather than a source grep, because
+// what regressed was a SELECT list — a grep for the column name would have
+// passed on a query that selected it into a variable nobody scanned.
+func TestTheContact360TimelineNamesTheTransportThatCarriedAMessage(t *testing.T) {
+	e := Setup(t)
+	owner := OwnerConn(t)
+	mine := e.SeedContact(t, "Luu Nguyen Thanh", &e.Rep1)
+
+	// telegram, because it is registered by the core migration on every
+	// installation — the FK on activity.channel_provider means an unregistered
+	// name could not be seeded at all, and this test is about the read.
+	message := SeedIDRow(t, owner, `INSERT INTO activity (id, kind, channel_provider, body, occurred_at, direction, source, captured_by)
+		VALUES ($1, 'message', 'telegram', 'they wrote', '2026-08-01T09:00:00Z',
+		        'inbound', 'manual', 'human:x')`)
+	LinkActivity(t, owner, message, "contact", mine)
+
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, roomPerms)
+	page, err := contactRoomService(e).Assemble(rep, ids.From[ids.ContactKind](mine))
+	if err != nil {
+		t.Fatalf("Assemble: %v", err)
+	}
+	if page.Activities == nil || len(page.Activities.Data) != 1 {
+		t.Fatalf("the timeline holds %v rows, want the one captured message", page.Activities)
+	}
+	got := page.Activities.Data[0]
+	if got.Kind != "message" {
+		t.Errorf("kind = %q, want message", got.Kind)
+	}
+	if got.ChannelProvider == nil {
+		t.Fatal("the message reached the page with no transport; the timeline renders it as the bare word \"message\" and every transport looks alike")
+	}
+	if string(*got.ChannelProvider) != "telegram" {
+		t.Errorf("channel_provider = %q, want telegram", string(*got.ChannelProvider))
+	}
+}
+
+// TestTheContact360TimelineCarriesTheVersionAWriteNeeds is the second
+// instance of the same defect class TestTheContact360TimelineNamesTheTransportThatCarriedAMessage
+// guards: the hand-written SELECT in contact360's readActivities dropped a
+// column activities.activityColumns carries, and nothing pointed at the
+// copy. This time it was version — AudienceAction (the Visibility control)
+// sends the row's version as If-Match and refuses to write blind without
+// one, so a row that reaches this page with no version cannot have its
+// audience narrowed from here at all (margince#3249).
+//
+// Same shape as the sibling guard, and for the same reason: a source grep
+// for "version" would pass on a query that selected it into a variable
+// nobody scanned onto the wire row.
+func TestTheContact360TimelineCarriesTheVersionAWriteNeeds(t *testing.T) {
+	e := Setup(t)
+	owner := OwnerConn(t)
+	mine := e.SeedContact(t, "Version Carrier", &e.Rep1)
+
+	message := SeedIDRow(t, owner, `INSERT INTO activity (id, kind, channel_provider, body, occurred_at, direction, source, captured_by)
+		VALUES ($1, 'message', 'telegram', 'they wrote', '2026-08-01T09:00:00Z', 'inbound', 'manual', 'human:x')`)
+	LinkActivity(t, owner, message, "contact", mine)
+
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, roomPerms)
+	page, err := contactRoomService(e).Assemble(rep, ids.From[ids.ContactKind](mine))
+	if err != nil {
+		t.Fatalf("Assemble: %v", err)
+	}
+	if page.Activities == nil || len(page.Activities.Data) != 1 {
+		t.Fatalf("the timeline holds %v rows, want the one captured message", page.Activities)
+	}
+	got := page.Activities.Data[0]
+	if got.Version == nil {
+		t.Fatal("the message reached the page with no version; a write against it (narrowing its audience) " +
+			"refuses to go blind and the request never leaves the browser")
+	}
+	if *got.Version != 1 {
+		t.Errorf("version = %d, want 1 for a freshly inserted row", *got.Version)
+	}
+}
+
+// The THIRD instance of the same defect class, and the one a customer met.
+//
+// source_system is what says a meeting was logged as a transcript. The contact
+// timeline's hand-written SELECT did not carry it, so a transcript logged
+// against a contact reached that contact's own history as an ordinary meeting:
+// no card offering its reading, no proposal count, nothing to open. The same
+// activity showed all of it on the company and on the deal, which read through
+// activities.activityColumns — so the contact who was actually in the room was
+// the one place the reading was invisible.
+//
+// A row-to-payload assertion again, for the reason the siblings give: what
+// regressed is a SELECT list, and a grep for the column name passes on a query
+// that selects it into a variable nobody scans.
+func TestTheContact360TimelineSaysAMeetingCameFromATranscript(t *testing.T) {
+	e := Setup(t)
+	owner := OwnerConn(t)
+	mine := e.SeedContact(t, "Transcript Speaker", &e.Rep1)
+
+	meeting := SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, body, occurred_at, source_system, source, captured_by)
+		VALUES ($1, 'meeting', 'Quarterly review', 'we agreed a date', '2026-08-01T09:00:00Z',
+		        'transcript', 'manual', 'human:x')`)
+	LinkActivity(t, owner, meeting, "contact", mine)
+
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, roomPerms)
+	page, err := contactRoomService(e).Assemble(rep, ids.From[ids.ContactKind](mine))
+	if err != nil {
+		t.Fatalf("Assemble: %v", err)
+	}
+	if page.Activities == nil || len(page.Activities.Data) != 1 {
+		t.Fatalf("the timeline holds %v rows, want the one logged meeting", page.Activities)
+	}
+	got := page.Activities.Data[0]
+	if got.SourceSystem == nil {
+		t.Fatal("the meeting reached the page with no source system; the timeline cannot tell " +
+			"a transcript from an ordinary meeting, so the card offering its reading is never drawn")
+	}
+	if *got.SourceSystem != "transcript" {
+		t.Errorf("source_system = %q, want transcript", *got.SourceSystem)
+	}
+}

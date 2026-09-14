@@ -26,9 +26,9 @@ package integration
 import (
 	"testing"
 
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/customfields"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -38,27 +38,27 @@ import (
 // KeysetClause that a cf_-sorted walk never exercises.
 func TestCustomFieldVocab_DefaultSortPaginatesWithCursor(t *testing.T) {
 	f := setupCFV(t)
-	first, err := f.store.CreatePerson(f.ctx, people.CreatePersonInput{FullName: "First", Source: "ui"})
+	first, err := f.store.CreateContact(f.ctx, contacts.CreateContactInput{FullName: "First", Source: "ui"})
 	if err != nil {
-		t.Fatalf("CreatePerson: %v", err)
+		t.Fatalf("CreateContact: %v", err)
 	}
-	second, err := f.store.CreatePerson(f.ctx, people.CreatePersonInput{FullName: "Second", Source: "ui"})
+	second, err := f.store.CreateContact(f.ctx, contacts.CreateContactInput{FullName: "Second", Source: "ui"})
 	if err != nil {
-		t.Fatalf("CreatePerson: %v", err)
+		t.Fatalf("CreateContact: %v", err)
 	}
 
 	one := 1
-	page1, info1, err := f.store.ListPeople(f.ctx, people.ListPeopleInput{Limit: &one})
+	page1, info1, err := f.store.ListContacts(f.ctx, contacts.ListContactsInput{Limit: &one})
 	if err != nil {
-		t.Fatalf("ListPeople page 1: %v", err)
+		t.Fatalf("ListContacts page 1: %v", err)
 	}
 	if len(page1) != 1 || page1[0].Id != second.Id || !info1.HasMore {
 		t.Fatalf("page 1 = %+v (more=%v), want [second] with more", page1, info1.HasMore)
 	}
 
-	page2, info2, err := f.store.ListPeople(f.ctx, people.ListPeopleInput{Limit: &one, Cursor: &info1.NextCursor})
+	page2, info2, err := f.store.ListContacts(f.ctx, contacts.ListContactsInput{Limit: &one, Cursor: &info1.NextCursor})
 	if err != nil {
-		t.Fatalf("ListPeople page 2: %v", err)
+		t.Fatalf("ListContacts page 2: %v", err)
 	}
 	if len(page2) != 1 || page2[0].Id != first.Id || info2.HasMore {
 		t.Fatalf("page 2 = %+v (more=%v), want [first] with no more", page2, info2.HasMore)
@@ -166,20 +166,20 @@ func TestCustomFieldVocab_FilterByCurrencyDateEquality(t *testing.T) {
 func TestCustomFieldVocab_SortByOwnerIDWithCursor(t *testing.T) {
 	f := setupCFV(t)
 	owner := ids.From[ids.UserKind](f.e.Rep1)
-	first, err := f.store.CreatePerson(f.ctx, people.CreatePersonInput{FullName: "First", Source: "ui", OwnerID: &owner})
+	first, err := f.store.CreateContact(f.ctx, contacts.CreateContactInput{FullName: "First", Source: "ui", OwnerID: &owner})
 	if err != nil {
-		t.Fatalf("CreatePerson: %v", err)
+		t.Fatalf("CreateContact: %v", err)
 	}
-	second, err := f.store.CreatePerson(f.ctx, people.CreatePersonInput{FullName: "Second", Source: "ui", OwnerID: &owner})
+	second, err := f.store.CreateContact(f.ctx, contacts.CreateContactInput{FullName: "Second", Source: "ui", OwnerID: &owner})
 	if err != nil {
-		t.Fatalf("CreatePerson: %v", err)
+		t.Fatalf("CreateContact: %v", err)
 	}
 
 	sortField := "owner_id"
 	one := 1
-	page1, info1, err := f.store.ListPeople(f.ctx, people.ListPeopleInput{Sort: &sortField, Limit: &one})
+	page1, info1, err := f.store.ListContacts(f.ctx, contacts.ListContactsInput{Sort: &sortField, Limit: &one})
 	if err != nil {
-		t.Fatalf("ListPeople sort=owner_id page 1: %v", err)
+		t.Fatalf("ListContacts sort=owner_id page 1: %v", err)
 	}
 	// Both rows share the same owner_id, so the house tie-break
 	// (created_at DESC) decides: second (created later) first.
@@ -187,9 +187,9 @@ func TestCustomFieldVocab_SortByOwnerIDWithCursor(t *testing.T) {
 		t.Fatalf("page 1 = %+v (more=%v), want [second] with more", page1, info1.HasMore)
 	}
 
-	page2, info2, err := f.store.ListPeople(f.ctx, people.ListPeopleInput{Sort: &sortField, Limit: &one, Cursor: &info1.NextCursor})
+	page2, info2, err := f.store.ListContacts(f.ctx, contacts.ListContactsInput{Sort: &sortField, Limit: &one, Cursor: &info1.NextCursor})
 	if err != nil {
-		t.Fatalf("ListPeople sort=owner_id page 2: %v", err)
+		t.Fatalf("ListContacts sort=owner_id page 2: %v", err)
 	}
 	if len(page2) != 1 || page2[0].Id != first.Id || info2.HasMore {
 		t.Fatalf("page 2 = %+v (more=%v), want [first] with no more", page2, info2.HasMore)
@@ -203,28 +203,28 @@ func TestCustomFieldVocab_SortByOwnerIDWithCursor(t *testing.T) {
 // key through parsesAsKind/listBindCast's timestamp branch.
 func TestCustomFieldVocab_SortByCreatedAtWithCursor(t *testing.T) {
 	f := setupCFV(t)
-	first, err := f.store.CreatePerson(f.ctx, people.CreatePersonInput{FullName: "First", Source: "ui"})
+	first, err := f.store.CreateContact(f.ctx, contacts.CreateContactInput{FullName: "First", Source: "ui"})
 	if err != nil {
-		t.Fatalf("CreatePerson: %v", err)
+		t.Fatalf("CreateContact: %v", err)
 	}
-	second, err := f.store.CreatePerson(f.ctx, people.CreatePersonInput{FullName: "Second", Source: "ui"})
+	second, err := f.store.CreateContact(f.ctx, contacts.CreateContactInput{FullName: "Second", Source: "ui"})
 	if err != nil {
-		t.Fatalf("CreatePerson: %v", err)
+		t.Fatalf("CreateContact: %v", err)
 	}
 
 	sortField := "created_at"
 	one := 1
-	page1, info1, err := f.store.ListPeople(f.ctx, people.ListPeopleInput{Sort: &sortField, Limit: &one})
+	page1, info1, err := f.store.ListContacts(f.ctx, contacts.ListContactsInput{Sort: &sortField, Limit: &one})
 	if err != nil {
-		t.Fatalf("ListPeople sort=created_at page 1: %v", err)
+		t.Fatalf("ListContacts sort=created_at page 1: %v", err)
 	}
 	if len(page1) != 1 || page1[0].Id != first.Id || !info1.HasMore {
 		t.Fatalf("page 1 = %+v (more=%v), want [first] with more", page1, info1.HasMore)
 	}
 
-	page2, info2, err := f.store.ListPeople(f.ctx, people.ListPeopleInput{Sort: &sortField, Limit: &one, Cursor: &info1.NextCursor})
+	page2, info2, err := f.store.ListContacts(f.ctx, contacts.ListContactsInput{Sort: &sortField, Limit: &one, Cursor: &info1.NextCursor})
 	if err != nil {
-		t.Fatalf("ListPeople sort=created_at page 2: %v", err)
+		t.Fatalf("ListContacts sort=created_at page 2: %v", err)
 	}
 	if len(page2) != 1 || page2[0].Id != second.Id || info2.HasMore {
 		t.Fatalf("page 2 = %+v (more=%v), want [second] with no more", page2, info2.HasMore)

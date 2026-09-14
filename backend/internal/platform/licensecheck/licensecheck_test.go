@@ -232,7 +232,7 @@ func TestSeats(t *testing.T) {
 // as {"license":…, "grants":…} and every seat count silently disappeared. This
 // fixture is the tripwire that was missing.
 const moduleOutput = `{"license":{"id":"01890a5d-ac96-774b-bcce-b302099a8057","subject":"acme-prod",` +
-	`"org":"Acme GmbH","name":"Ada Lovelace","email":"ada@acme.example","key_id":"Ujmh",` +
+	`"company":"Acme GmbH","name":"Ada Lovelace","email":"ada@acme.example","key_id":"Ujmh",` +
 	`"issued_at":"2026-08-15T09:00:00Z","not_before":"2026-08-15T09:00:00Z",` +
 	`"expiry":"2027-08-15T09:00:00Z","in_grace":false},` +
 	`"grants":{"seats":10,"feature":true,"something_new":7}}`
@@ -263,8 +263,8 @@ func TestDecodeResultCarriesTheLicenseItVerified(t *testing.T) {
 	if err != nil {
 		t.Fatalf("decodeResult: %v", err)
 	}
-	if result.License.Subject != "acme-prod" || result.License.Org != "Acme GmbH" {
-		t.Errorf("subject/org = %q/%q, want acme-prod/Acme GmbH", result.License.Subject, result.License.Org)
+	if result.License.Subject != "acme-prod" || result.License.Company != "Acme GmbH" {
+		t.Errorf("subject/company = %q/%q, want acme-prod/Acme GmbH", result.License.Subject, result.License.Company)
 	}
 	if result.License.ID == "" || result.License.Expiry.IsZero() {
 		t.Errorf("id/expiry = %q/%s, want both set", result.License.ID, result.License.Expiry)

@@ -39,7 +39,7 @@ func (e *InvalidEditError) Unwrap() error { return e.Cause }
 // UUID may take. An undecidable approval reads as absent, exactly like
 // Get, so Decide never becomes the lookup oracle the inbox filter closed.
 func (s *Service) Decide(ctx context.Context, id ids.ApprovalID, approve bool, reason *string) (row, error) {
-	return s.recordDecision(ctx, id, approve, reason, nil, decidedByPerson)
+	return s.recordDecision(ctx, id, approve, reason, nil, decidedByContact)
 }
 
 // DecideEdited is the ADR-0036 §4 modify-then-approve arm: the human's
@@ -65,10 +65,10 @@ func (s *Service) DecideEdited(ctx context.Context, id ids.ApprovalID, edited js
 	if len(edited) == 0 {
 		return row{}, &InvalidEditError{Cause: errors.New("empty payload")}
 	}
-	return s.recordDecision(ctx, id, true, nil, edited, decidedByPerson)
+	return s.recordDecision(ctx, id, true, nil, edited, decidedByContact)
 }
 
-// decider says whether a person answered this or the product applied it under
+// decider says whether a contact answered this or the product applied it under
 // a rep's standing policy. It is a parameter rather than something read off the
 // context because it is a claim the receipt makes to a reader — "nobody was
 // asked" — and a claim that travels invisibly is one a future call site sets
@@ -76,8 +76,8 @@ func (s *Service) DecideEdited(ctx context.Context, id ids.ApprovalID, edited js
 type decider bool
 
 const (
-	decidedByPerson decider = false
-	decidedBySystem decider = true
+	decidedByContact decider = false
+	decidedBySystem  decider = true
 )
 
 func (s *Service) recordDecision(ctx context.Context, id ids.ApprovalID, approve bool, reason *string, edited json.RawMessage, by decider) (row, error) {
@@ -162,19 +162,19 @@ func (s *Service) runPrecheck(ctx context.Context, id ids.ApprovalID, approve bo
 	return check(ctx, a.ProposedChange, edited)
 }
 
-// countIfAPersonDecided records the track record, and records nothing for an
+// countIfAContactDecided records the track record, and records nothing for an
 // automatic apply.
 //
-// The counters are one person's experience of one kind, and the clean-approval
+// The counters are one contact's experience of one kind, and the clean-approval
 // column is the one a promotion offer is read from — so a pass running every
 // minute under a policy the rep already set would manufacture unbounded
 // evidence that they keep agreeing, about proposals they never saw. The ladder
 // is climbed by decisions, not by the automation a previous rung enabled.
-func countIfAPersonDecided(
+func countIfAContactDecided(
 	ctx context.Context, tx pgx.Tx, userID ids.UUID, kind string,
 	approve bool, edited json.RawMessage, by decider,
 ) error {
-	if by != decidedByPerson {
+	if by != decidedByContact {
 		return nil
 	}
 	return countDecisionTx(ctx, tx, userID, kind, decisionOutcomeOf(approve, edited))
@@ -258,7 +258,7 @@ func (s *Service) decideInTx(ctx context.Context, tx pgx.Tx, p principal.Princip
 	// sweep's. A human decision always names theirs, so it is always set here.
 	decidedBy := openapi_types.UUID(p.UserID)
 	// decided_by_system travels on the event as well as into the column. A
-	// consumer measuring whether PEOPLE agree with what the product proposes
+	// consumer measuring whether CONTACTS agree with what the product proposes
 	// has to exclude the product's own applies from its denominator, and
 	// without this field it cannot tell one from a human's clean approval —
 	// the autopilot would be counted as agreeing with itself.
@@ -283,7 +283,7 @@ func (s *Service) decideInTx(ctx context.Context, tx pgx.Tx, p principal.Princip
 	// transaction as the decision it counts. A counter that could outlive a
 	// rolled-back approval would offer a rep autonomy on evidence of a decision
 	// they never made.
-	if err := countIfAPersonDecided(ctx, tx, p.UserID, a.Kind, approve, edited, by); err != nil {
+	if err := countIfAContactDecided(ctx, tx, p.UserID, a.Kind, approve, edited, by); err != nil {
 		return row{}, err
 	}
 	// An approval's whole content is a state transition, so the images are the
@@ -324,7 +324,7 @@ func (s *Service) emitKindDecided(ctx context.Context, tx pgx.Tx, p principal.Pr
 // ApplyUnderPolicy approves a proposal because the rep it belongs to has put
 // this kind on automatic, rather than because anybody was asked.
 //
-// It is the SAME decision path a person takes — one entry point, so the
+// It is the SAME decision path a contact takes — one entry point, so the
 // registered effect, the audit row, the outbox event and the track record are
 // all written exactly as they are for a human. A second execution route would
 // be a second answer to "what does approving this do", and the two would drift.

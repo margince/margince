@@ -23,7 +23,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/aitasks"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -119,7 +119,7 @@ func runSitePageFactsCase(t *testing.T, fixture json.RawMessage, want map[string
 
 // gatekit:fixture the fact value this case's reply is graded against — expected
 // data the case owns, not a waived exception.
-var sitePageFactsWantAudit = map[string]string{people.FactService: "Cloud Cost Audit"}
+var sitePageFactsWantAudit = map[string]string{contacts.FactService: "Cloud Cost Audit"}
 
 // sitePageFactsReplyCase is one reply and the outcome this site owes it. Each
 // result has a test: a fabricating model is a prompt problem, a confidently
@@ -162,7 +162,7 @@ func TestSitePageFactsCaseAcceptsWhatItGroundsAndTheScenarioExpects(t *testing.T
 			name: "one of several rows a multi-value field grounds",
 			want: sitePageFactsWantAudit,
 			reply: sitePageFactsReply(
-				sitePageFactsClaim(people.FactService, "Kubernetes Migration — managed clusters",
+				sitePageFactsClaim(contacts.FactService, "Kubernetes Migration — managed clusters",
 					sitePageFactsCatalogID(t, "Kubernetes Migration")),
 				sitePageFactsAuditClaim(t, "Cloud Cost Audit — a four-week review")),
 		},
@@ -185,7 +185,7 @@ func TestSitePageFactsCaseReportsAReplyTheGateRefusesEntirely(t *testing.T) {
 			// The schema enum makes this unreachable for a provider that honours it.
 			name: "a citation outside this call's own index",
 			want: sitePageFactsWantAudit,
-			reply: sitePageFactsReply(sitePageFactsClaim(people.FactService,
+			reply: sitePageFactsReply(sitePageFactsClaim(contacts.FactService,
 				"Cloud Cost Audit — a four-week review", "s99")),
 			wantDetail: dropValueNotInSnippet,
 		},
@@ -194,7 +194,7 @@ func TestSitePageFactsCaseReportsAReplyTheGateRefusesEntirely(t *testing.T) {
 			// page is a field the model was never offered.
 			name: "a field this page's menu never offered",
 			want: sitePageFactsWantAudit,
-			reply: sitePageFactsReply(sitePageFactsClaim(people.FactFoundedYear, "1998",
+			reply: sitePageFactsReply(sitePageFactsClaim(contacts.FactFoundedYear, "1998",
 				sitePageFactsCatalogID(t, "Cloud Cost Audit"))),
 			wantDetail: dropUnknownField,
 		},
@@ -213,7 +213,7 @@ func TestSitePageFactsCaseReportsAGroundedReplyTheScenarioDisagreesWith(t *testi
 		{
 			name: "a grounded row the scenario disagrees with",
 			want: sitePageFactsWantAudit,
-			reply: sitePageFactsReply(sitePageFactsClaim(people.FactService,
+			reply: sitePageFactsReply(sitePageFactsClaim(contacts.FactService,
 				"Kubernetes Migration — managed clusters", sitePageFactsCatalogID(t, "Kubernetes Migration"))),
 			wantDetail: "Cloud Cost Audit",
 		},
@@ -222,11 +222,11 @@ func TestSitePageFactsCaseReportsAGroundedReplyTheScenarioDisagreesWith(t *testi
 			// grounded something else is still a usable reply.
 			name: "an expected field the reply never mentions",
 			want: map[string]string{
-				people.FactService:   "Cloud Cost Audit",
-				people.FactGeography: "DACH region",
+				contacts.FactService:   "Cloud Cost Audit",
+				contacts.FactGeography: "DACH region",
 			},
 			reply:      sitePageFactsReply(sitePageFactsAuditClaim(t, "Cloud Cost Audit — a four-week review")),
-			wantDetail: "no surviving " + people.FactGeography,
+			wantDetail: "no surviving " + contacts.FactGeography,
 		},
 	})
 }
@@ -241,7 +241,7 @@ func TestSitePageFactsCaseReportsAReplyThatGroundsNothingAsAnAbstention(t *testi
 		name:       "a page the scenario says lists a service",
 		want:       sitePageFactsWantAudit,
 		reply:      sitePageFactsReply(),
-		wantDetail: "no surviving " + people.FactService,
+		wantDetail: "no surviving " + contacts.FactService,
 	}})
 }
 
@@ -249,7 +249,7 @@ func TestSitePageFactsCaseReportsAReplyThatGroundsNothingAsAnAbstention(t *testi
 // the citation a model reading this page would make.
 func sitePageFactsAuditClaim(t *testing.T, value string) string {
 	t.Helper()
-	return sitePageFactsClaim(people.FactService, value, sitePageFactsCatalogID(t, "Cloud Cost Audit"))
+	return sitePageFactsClaim(contacts.FactService, value, sitePageFactsCatalogID(t, "Cloud Cost Audit"))
 }
 
 // A single-value fact states one thing, so all of it is the claim — unlike a list
@@ -259,16 +259,16 @@ func TestSitePageFactsCaseHoldsASingleValueFactToItsWholeValue(t *testing.T) {
 		"Unser Buero in Stuttgart ist werktags von 9 bis 17 Uhr besetzt."
 	fixture := sitePageFactsFixtureJSON(t, crmcontracts.SiteReadPageKindContact, contact)
 	cited := sitePageFactsSnippetID(t, crmcontracts.SiteReadPageKindContact, contact, "0711 123456")
-	want := map[string]string{people.FactPhone: "0711 123456"}
+	want := map[string]string{contacts.FactPhone: "0711 123456"}
 
 	outcome, _ := runSitePageFactsCase(t, fixture, want,
-		sitePageFactsReply(sitePageFactsClaim(people.FactPhone, "0711 123456", cited)))
+		sitePageFactsReply(sitePageFactsClaim(contacts.FactPhone, "0711 123456", cited)))
 	if outcome.Result != aitasks.OutcomeAccepted {
 		t.Fatalf("Result = %q (%s), want the stated number accepted", outcome.Result, outcome.Detail)
 	}
 
 	outcome, _ = runSitePageFactsCase(t, fixture, want,
-		sitePageFactsReply(sitePageFactsClaim(people.FactPhone, "0711 123456 — Zentrale", cited)))
+		sitePageFactsReply(sitePageFactsClaim(contacts.FactPhone, "0711 123456 — Zentrale", cited)))
 	if outcome.Result != aitasks.OutcomeWrongAnswer {
 		t.Fatalf("Result = %q (%s), want a single-value fact held to all of its value",
 			outcome.Result, outcome.Detail)
@@ -342,11 +342,11 @@ func TestSitePageFactsCaseTraceCarriesTheRequestItIssued(t *testing.T) {
 	if strings.Contains(schemaJSON, `"s2"`) {
 		t.Errorf("the schema offers an id this fixture's index does not carry: %s", schemaJSON)
 	}
-	if !strings.Contains(schemaJSON, `"`+people.FactService+`"`) {
-		t.Errorf("the schema does not offer %q, which a catalog page's menu carries: %s", people.FactService, schemaJSON)
+	if !strings.Contains(schemaJSON, `"`+contacts.FactService+`"`) {
+		t.Errorf("the schema does not offer %q, which a catalog page's menu carries: %s", contacts.FactService, schemaJSON)
 	}
-	if strings.Contains(schemaJSON, `"`+people.FactFoundedYear+`"`) {
-		t.Errorf("the schema offers %q, which a catalog page's menu never carries: %s", people.FactFoundedYear, schemaJSON)
+	if strings.Contains(schemaJSON, `"`+contacts.FactFoundedYear+`"`) {
+		t.Errorf("the schema offers %q, which a catalog page's menu never carries: %s", contacts.FactFoundedYear, schemaJSON)
 	}
 	if trace.Output == "" {
 		t.Error("the trace records no model output for the gate to read")

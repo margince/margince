@@ -39,7 +39,7 @@ import (
 // ago.
 //
 // A card that cannot be read answers NO rather than an error: an unreadable
-// payload is a card a person should look at, and failing the sweep over it
+// payload is a card a contact should look at, and failing the sweep over it
 // would park every proposal behind it.
 func stageProgressionPolicy(pool *pgxpool.Pool, store *deals.Store) kindPolicy {
 	return func(ctx context.Context, approvalID ids.ApprovalID) (bool, error) {
@@ -50,7 +50,7 @@ func stageProgressionPolicy(pool *pgxpool.Pool, store *deals.Store) kindPolicy {
 		change, err := deals.ReadProgressionChange(payload)
 		if err != nil {
 			// Not applied, and not a sweep failure. An unreadable card is one
-			// a PERSON should look at: failing here would end the pass on it,
+			// a CONTACT should look at: failing here would end the pass on it,
 			// and because the batch is ordered oldest-first that one card
 			// would park every other transition's automation behind it until
 			// it expired.
@@ -97,7 +97,7 @@ func stagedChange(
 			approvalID).Scan(&proposed)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
-		// Decided by a person between the sweep listing this card and reading
+		// Decided by a contact between the sweep listing this card and reading
 		// it. ErrNotFound rather than the raw pgx error, because that is what
 		// refusesThisRow matches: a wrapped ErrNoRows ends the whole pass, and
 		// since the batch is ordered oldest-first, one card somebody happened

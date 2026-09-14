@@ -44,7 +44,7 @@ export function useSkewedApiRelease(mine: string): string | null {
  * ReleaseSkewScreen is what a reader sees instead of the app.
  *
  * It names both releases. Most readers cannot act on the numbers, but this
- * screen exists only for a broken deployment, and the one person who can fix it
+ * screen exists only for a broken deployment, and the one contact who can fix it
  * needs to know which of the two images is the odd one out — asking them to open
  * a console for it would be withholding the only fact on the page that matters.
  *

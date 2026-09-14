@@ -221,16 +221,16 @@ func TestReportExtensionNamespacesPropagatesAWriteFailure(t *testing.T) {
 var shellMatcherPattern = regexp.MustCompile(`\[\[ "\$summary" != "([^"]*)"\* \]\]`)
 
 // entrypointProvisionedPattern finds the deploy entrypoint's comparison against
-// the org-exists answer and captures the literal it expects.
+// the workspace-exists answer and captures the literal it expects.
 var entrypointProvisionedPattern = regexp.MustCompile(`\[ "\$provisioned" = "([^"]*)" \]`)
 
-// TestOrgExistsAnswerMatchesTheEntrypointComparison pins the other half of a
+// TestWorkspaceExistsAnswerMatchesTheEntrypointComparison pins the other half of a
 // wire contract that is otherwise only exercised in a container nothing in CI
 // runs: the entrypoint string-compares this verb's stdout to decide whether to
 // write a plaintext bootstrap credential. Drift in either direction is silent
 // and lands on the wrong side of that decision — print "TRUE" and every
 // provisioned installation gets the credential written again.
-func TestOrgExistsAnswerMatchesTheEntrypointComparison(t *testing.T) {
+func TestWorkspaceExistsAnswerMatchesTheEntrypointComparison(t *testing.T) {
 	const script = "../../../scripts/deploy/api-entrypoint.sh"
 	source, err := os.ReadFile(script)
 	if err != nil {
@@ -243,14 +243,14 @@ func TestOrgExistsAnswerMatchesTheEntrypointComparison(t *testing.T) {
 	want := string(found[1])
 
 	var out bytes.Buffer
-	// The exact call orgExists makes to report a provisioned installation. The
+	// The exact call workspaceExists makes to report a provisioned installation. The
 	// shell's $(…) strips the trailing newline, so the comparison is against the
 	// trimmed form.
 	if _, err := fmt.Fprintf(&out, "%t\n", true); err != nil {
 		t.Fatalf("rendering the answer: %v", err)
 	}
 	if got := strings.TrimSpace(out.String()); got != want {
-		t.Errorf("org-exists prints %q for a provisioned installation but %s branches on %q — the entrypoint would write a plaintext bootstrap credential onto a live installation; change both together", got, script, want)
+		t.Errorf("workspace-exists prints %q for a provisioned installation but %s branches on %q — the entrypoint would write a plaintext bootstrap credential onto a live installation; change both together", got, script, want)
 	}
 }
 

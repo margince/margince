@@ -26,17 +26,17 @@ import "./compose.css";
 // (compose-links.test.tsx's account view, compose.test.tsx's draft) rather
 // than one invented here, so a frame in the catalog shows what a real run does.
 
-const ORG_ID = "org-1";
+const COMPANY_ID = "company-1";
 
 // The account view the grounding pickers are populated from: two contacts and
 // two open deals, so each pick is a real choice rather than the only option.
-// Mirrors compose-links.test.tsx's ORG_VIEW.
-const ORG_VIEW = {
-  organization: { id: ORG_ID, name: "Acme" },
-  people: {
+// Mirrors compose-links.test.tsx's COMPANY_VIEW.
+const COMPANY_VIEW = {
+  company: { id: COMPANY_ID, name: "Acme" },
+  contacts: {
     data: [
-      { person_id: "per-1", full_name: "Dieter Klein" },
-      { person_id: "per-2", full_name: "Sara Vogel" },
+      { contact_id: "per-1", full_name: "Dieter Klein" },
+      { contact_id: "per-2", full_name: "Sara Vogel" },
     ],
   },
   deals: {
@@ -49,9 +49,9 @@ const ORG_VIEW = {
 
 // The same account with nobody on it: the DRAFT's honest dead end, which the
 // component says in words instead of offering a picker the rep cannot use.
-const ORG_VIEW_NO_CONTACTS = {
-  ...ORG_VIEW,
-  people: { data: [] },
+const COMPANY_VIEW_NO_CONTACTS = {
+  ...COMPANY_VIEW,
+  contacts: { data: [] },
   deals: { data: [] },
 };
 
@@ -65,7 +65,7 @@ const REASONS: readonly components["schemas"]["AccountDraftReason"][] = [
     kind: "recipient",
     label: "Dieter Klein leads the rollout",
     evidence_ref: {
-      entity_type: "person",
+      entity_type: "contact",
       entity_id: "per-1",
       name: "Dieter Klein",
     },
@@ -92,7 +92,7 @@ function Pickers() {
   return (
     <StoryProviders>
       <AccountDraftContext
-        orgId={ORG_ID}
+        companyId={COMPANY_ID}
         recipientId={recipientId}
         onRecipientChange={setRecipientId}
         dealId={dealId}
@@ -108,7 +108,7 @@ function Pickers() {
 function pickersOver(view: unknown) {
   return () => {
     installFetchStub({
-      [`GET /organizations/${ORG_ID}/360`]: () => jsonResponse(view),
+      [`GET /companies/${COMPANY_ID}/360`]: () => jsonResponse(view),
     });
     return <Pickers />;
   };
@@ -128,11 +128,17 @@ const READY: PendingAction = {
 function Offer({
   draft,
   initialIntent = "",
-}: Readonly<{ draft: PendingAction; initialIntent?: string }>) {
+  replying = false,
+}: Readonly<{
+  draft: PendingAction;
+  initialIntent?: string;
+  replying?: boolean;
+}>) {
   const [intent, setIntent] = useState(initialIntent);
   return (
     <StoryProviders>
       <DraftOffer
+        replying={replying}
         intent={intent}
         onIntentChange={setIntent}
         draft={draft}
@@ -151,7 +157,7 @@ type Story = StoryObj;
 
 /** The account path's two choices: who the draft is to, and which deal it is about. */
 export const AccountPickers: Story = {
-  render: pickersOver(ORG_VIEW),
+  render: pickersOver(COMPANY_VIEW),
 };
 
 /**
@@ -160,7 +166,7 @@ export const AccountPickers: Story = {
  * rep can still type an address into To and write the mail themselves.
  */
 export const NoGroundableRecipient: Story = {
-  render: pickersOver(ORG_VIEW_NO_CONTACTS),
+  render: pickersOver(COMPANY_VIEW_NO_CONTACTS),
 };
 
 /** The pre-draft drawer: what the rep wants said, and the one control that asks for it. */
@@ -228,4 +234,13 @@ export const Reasons: Story = {
       <DraftReasons reasons={REASONS} onOpenRecord={openCited} />
     </StoryProviders>
   ),
+};
+
+export const ReplyOffer: Story = {
+  render: () => (
+    <Offer draft={READY} replying initialIntent="Confirm the delivery window" />
+  ),
+};
+export const NewEmailNeedsPurpose: Story = {
+  render: () => <Offer draft={{ ...READY, disabled: true }} />,
 };

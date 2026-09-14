@@ -4,7 +4,7 @@
 // Package employment is what "this job is still theirs" means, in one place
 // every module can reach.
 //
-// It sat in `modules/people` and answered for that module only. A module never
+// It sat in `modules/contacts` and answered for that module only. A module never
 // imports a sibling, so eight statements in five other modules — activities,
 // projects, signals, consent and search — hand-spelled the question instead,
 // and each hand-spelling was the notice-period defect the helper exists to
@@ -21,7 +21,7 @@
 // was SQLf, and SQLf is fmt.Sprintf under a name that says the string is SQL;
 // that name is worth keeping and the dependency is not.
 //
-// One concept with two kinds of reach: the write paths in people/relationship.go
+// One concept with two kinds of reach: the write paths in contacts/relationship.go
 // decide the flag with it, and the reads derive currency with it rather than
 // trusting a flag written months earlier.
 package employment
@@ -42,7 +42,7 @@ import "fmt"
 // on a create, the patched-or-existing one on an update.
 //
 // A DATE COMPARISON, not a null check: somebody serving three months' notice
-// still works there. Reading the column's mere presence as "gone" took a person
+// still works there. Reading the column's mere presence as "gone" took a contact
 // off their employer's contact list the day their notice was filed, with no way
 // back, because `ended_at` cannot be cleared through the API.
 //
@@ -58,7 +58,7 @@ import "fmt"
 // every reader of this predicate is SQL that knows only the database's own day.
 //
 // EXPORTED because currency is not decided once and stored. The flag records
-// which employer represents the person; whether that employment is still current
+// which employer represents the contact; whether that employment is still current
 // is a function of today's date, so every READER derives it instead of trusting
 // a value written months ago. compose reaches this for the same reason the
 // readers in this package do — one definition, or the copies drift.
@@ -104,7 +104,7 @@ func CurrentPrimarySQL(alias string) string {
 }
 
 // LiveSlotSQL is the THIRD question, and the one uq_rel_employment
-// answers: does this person already hold a live employment edge to this company
+// answers: does this contact already hold a live employment edge to this company
 // at all, primary or not.
 //
 // It is the index's own predicate and so, like CurrentPrimarySlotSQL, it is
@@ -126,15 +126,15 @@ func LiveSlotSQL(alias string) string {
 
 // CurrentPrimarySlotSQL is the other question about `is_current_primary`:
 // WHICH ROW HOLDS THE SLOT that uq_rel_current_primary_employer keeps unique
-// per person. It is the index's own predicate, and so it is date-BLIND —
-// asking it with IsCurrentSQL would read a person serving notice as
+// per contact. It is the index's own predicate, and so it is date-BLIND —
+// asking it with IsCurrentSQL would read a contact serving notice as
 // having freed the slot while the index still held it, and the write that
 // followed would 409 instead of skipping.
 //
 // `alias` is the relationship table's alias at the call site, or "" when the
 // statement does not alias it.
 //
-// Held by: TestTheCurrentPrimarySlotPredicateMirrorsItsIndex (backend/internal/modules/people/currentprimaryslot_test.go)
+// Held by: TestTheCurrentPrimarySlotPredicateMirrorsItsIndex (backend/internal/modules/contacts/currentprimaryslot_test.go)
 // — it derives the expectation from uq_rel_current_primary_employer in the
 // migration head catalog, so this cannot drift from the index it exists to
 // satisfy.

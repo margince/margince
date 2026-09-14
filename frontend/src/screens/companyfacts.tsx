@@ -25,23 +25,23 @@ import { useLocale, usePlural, useT } from "../i18n";
 import { CompanyOwnerControl } from "./companyheader";
 import "./companyfacts.css";
 
-type Organization = components["schemas"]["Organization"];
-type Organization360 = components["schemas"]["Organization360"];
+type Company = components["schemas"]["Company"];
+type Company360 = components["schemas"]["Company360"];
 type Commercial = NonNullable<
-  NonNullable<Organization360["state_strip"]>["commercial"]
+  NonNullable<Company360["state_strip"]>["commercial"]
 >;
 
 /**
  * CompanyFacts is the account's standing: open pipeline, work in flight, owner.
  */
 export function CompanyFacts({
-  org,
+  company,
   view,
 }: Readonly<{
-  org: Organization;
+  company: Company;
   // The 360 the page already holds. Absent while it loads, and each half of
   // it independently absent when a grant withheld it.
-  view?: Organization360;
+  view?: Company360;
 }>) {
   const t = useT();
   return (
@@ -61,7 +61,7 @@ export function CompanyFacts({
       <div className="co-facts-item">
         <dt className="t-caption">{t("co.pulse.owner")}</dt>
         <dd>
-          <CompanyOwnerControl org={org} hideLabel />
+          <CompanyOwnerControl company={company} hideLabel />
         </dd>
       </div>
     </dl>
@@ -79,7 +79,7 @@ export function CompanyFacts({
  * printing a dash there would read as "we do not know", which is the one
  * reading it is not.
  */
-function Pipeline({ view }: Readonly<{ view?: Organization360 }>) {
+function Pipeline({ view }: Readonly<{ view?: Company360 }>) {
   const t = useT();
   const { locale } = useLocale();
   if (!view) {
@@ -112,7 +112,7 @@ function pricedTotal(
  * rule: a withheld half means no count at all, because a number that folds an
  * unreadable half into it is a false statement rather than a partial one.
  */
-function InFlight({ view }: Readonly<{ view?: Organization360 }>) {
+function InFlight({ view }: Readonly<{ view?: Company360 }>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();

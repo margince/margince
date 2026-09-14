@@ -23,10 +23,10 @@
   flex: none;
 }
 
-/* The machine a person acted THROUGH. This is attribution, not ornament — the
+/* The machine a contact acted THROUGH. This is attribution, not ornament — the
  * half of the line that says a tool did the typing — so it takes --textMeta,
  * the AA small-text role, rather than the 3:1 mark role. The lighter WEIGHT is
- * what subordinates it to the person beside it, which is the whole point:
+ * what subordinates it to the contact beside it, which is the whole point:
  * the reader's eye lands on who is answerable, not on what they used. */
 .audit-behalf {
   font-weight: 400;

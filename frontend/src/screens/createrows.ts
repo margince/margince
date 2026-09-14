@@ -4,7 +4,7 @@
 import type { FormRow } from "./create";
 
 // A row's own kind for grouping primaries. An unanswered row resolves to
-// typeDefault rather than its own "" bucket — personformfields.ts passes
+// typeDefault rather than its own "" bucket — contactformfields.ts passes
 // the same default its asEmailType/asPhoneType request mapper falls back
 // to, so an unset row and an explicit default-kind row are one kind on
 // both sides of the wire, never two kinds that collide once submitted.

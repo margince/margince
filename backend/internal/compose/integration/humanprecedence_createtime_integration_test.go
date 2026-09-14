@@ -131,7 +131,7 @@ func TestAgentStillFillsAnEmptyFieldWithoutApproval(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
-	personID, agentToken := stagePersonAndAgent(t, e, "Petra Human", "empty-field agent")
+	contactID, agentToken := stageContactAndAgent(t, e, "Petra Human", "empty-field agent")
 	bearer := map[string]string{"Authorization": "Bearer " + agentToken}
 
 	var patched struct {
@@ -140,7 +140,7 @@ func TestAgentStillFillsAnEmptyFieldWithoutApproval(t *testing.T) {
 			ApprovalID string `json:"approval_id"`
 		} `json:"staged_approval"`
 	}
-	if status := e.Call(t, "PATCH", "/v1/people/"+personID, AnyMap{"title": "Founder"}, bearer, &patched); status != http.StatusOK {
+	if status := e.Call(t, "PATCH", "/v1/contacts/"+contactID, AnyMap{"title": "Founder"}, bearer, &patched); status != http.StatusOK {
 		t.Fatalf("agent fills an empty field → %d", status)
 	}
 	if patched.StagedApproval != nil && patched.StagedApproval.ApprovalID != "" {

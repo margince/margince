@@ -61,7 +61,7 @@ func (w *financeSyncSweepWorker) Work(ctx context.Context, _ *river.Job[FinanceS
 //
 // The connector is the acting principal: every mirrored row carries
 // `connector:` provenance, so a reader can tell an imported invoice from
-// anything a person typed.
+// anything a human typed.
 //
 // PrincipalConnector and not PrincipalSystem, and the two have to agree: the
 // audit row stamps actor_type from the TYPE and actor_id from the ID, so a
@@ -205,7 +205,7 @@ func linkedCustomers(ctx context.Context, tx pgx.Tx) ([]finance.SourceCustomer, 
 	rows, err := tx.Query(ctx, `
 		SELECT l.external_customer_id, coalesce(o.display_name, l.external_customer_id)
 		  FROM finance_customer_link l
-		  JOIN organization o ON o.id = l.organization_id
+		  JOIN company o ON o.id = l.company_id
 		 WHERE l.archived_at IS NULL
 		 ORDER BY l.external_customer_id`)
 	if err != nil {

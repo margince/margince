@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
@@ -12,6 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { THEME_KEY } from "../app/theme";
 import { resetTheme } from "../app/theme-reset";
 import { LOCALES, LocaleProvider, localeNameKey, translate } from "../i18n";
+import { locationDouble } from "../testing/locationdouble";
 import { AuthScreen, AvailabilityScreen, ProviderButtons } from "./auth";
 
 // The unauthenticated surface (A107/ADR-0061 §12): login is the default —
@@ -96,7 +97,7 @@ async function stubLocationAssign(
   const originalLocation = window.location;
   const assign = vi.fn();
   Object.defineProperty(window, "location", {
-    value: { ...originalLocation, assign },
+    value: locationDouble({ assign }),
     writable: true,
     configurable: true,
   });
@@ -352,7 +353,7 @@ describe("AuthScreen login", () => {
     stubApi({ password: true, password_reset: true }, () => ok(200));
     render(<AuthScreen onAuthed={vi.fn()} />);
     expect(
-      await screen.findByText("Access to this organization is restricted."),
+      await screen.findByText("Access to this company is restricted."),
     ).toBeTruthy();
     expect(
       screen.queryByText(/encrypted|compliant|sovereign|your data is safe/i),
@@ -988,7 +989,7 @@ describe("AvailabilityScreen", () => {
     for (const locale of LOCALES) {
       const notice = translate(locale, "auth.noticeOidcFailed");
       expect(notice).not.toMatch(/\{[^}]+\}/);
-      // And it still tells the one person who is genuinely stuck what to do.
+      // And it still tells the one contact who is genuinely stuck what to do.
       expect(notice.length).toBeGreaterThan(40);
     }
   });

@@ -72,24 +72,24 @@ func dressedDeal(t *testing.T, e *integration.Env) ids.UUID {
 		t.Fatalf("seeding the foreign-currency offer: %v", err)
 	}
 
-	org := integration.SeedIDRow(t, owner, `
-		INSERT INTO organization (id, display_name, source, captured_by)
+	company := integration.SeedIDRow(t, owner, `
+		INSERT INTO company (id, display_name, source, captured_by)
 		VALUES ($1, 'Buyer GmbH', 'manual', 'test')`)
 	if _, err := owner.Exec(ctx, `
-		INSERT INTO contract (organization_id, deal_id, title, value_minor, currency,
+		INSERT INTO contract (company_id, deal_id, title, value_minor, currency,
 		                      status, signed_on, source, captured_by)
 		VALUES ($1, $2, 'MSA', 4100000, 'EUR', 'active', now()::date, 'manual', 'test')`,
-		org, deal); err != nil {
+		company, deal); err != nil {
 		t.Fatalf("seeding the signed contract: %v", err)
 	}
 
-	person := integration.SeedIDRow(t, owner, `
-		INSERT INTO person (id, full_name, source, captured_by)
+	contact := integration.SeedIDRow(t, owner, `
+		INSERT INTO contact (id, full_name, source, captured_by)
 		VALUES ($1, 'Signer', 'manual', 'test')`)
 	if _, err := owner.Exec(ctx, `
-		INSERT INTO relationship (kind, person_id, deal_id, role, source, captured_by)
+		INSERT INTO relationship (kind, contact_id, deal_id, role, source, captured_by)
 		VALUES ('deal_stakeholder', $1, $2, 'economic_buyer', 'manual', 'test')`,
-		person, deal); err != nil {
+		contact, deal); err != nil {
 		t.Fatalf("seeding the economic buyer: %v", err)
 	}
 

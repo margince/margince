@@ -11,8 +11,8 @@ import (
 	"github.com/margince/margince/backend/internal/platform/mailrole"
 )
 
-// refusesToNameAPerson answers the question T1's evidence cannot: this address
-// is one the workspace demonstrably writes to, but is there a PERSON to record?
+// refusesToNameAContact answers the question T1's evidence cannot: this address
+// is one the workspace demonstrably writes to, but is there a CONTACT to record?
 //
 // A role mailbox is correspondence-positive exactly like a customer — a mailbox
 // owner writes to `billing@` and `support@` all the time — so T1's evidence is
@@ -20,7 +20,7 @@ import (
 // records called "Billing" and "support" in a founder's CRM, each with a
 // human's shape and nobody behind it.
 //
-// It is deliberately NOT part of recordWorthy, which asks whether a person can
+// It is deliberately NOT part of recordWorthy, which asks whether a contact can
 // be REACHED at the address. Somebody does answer `info@`, and that function's
 // own tests say so. Reachability and identity are two questions, and the second
 // is this one.
@@ -35,7 +35,7 @@ import (
 // travels the ladder's ordinary path, so a first sighting defers and opens the
 // ledger question the verdict answers as `role_mailbox` — returning early would
 // skip that write and leave the queue unjudged, re-asked on every later message.
-func refusesToNameAPerson(email string, exchanged bool) bool {
+func refusesToNameAContact(email string, exchanged bool) bool {
 	if exchanged {
 		return false
 	}
@@ -46,7 +46,7 @@ func refusesToNameAPerson(email string, exchanged bool) bool {
 // exchangedWith reports whether this workspace and that address have actually
 // exchanged mail, rather than the workspace merely having sent one message.
 //
-// Intent is often unreturned: a founder mails forty people about a conference
+// Intent is often unreturned: a founder mails forty contacts about a conference
 // and hears from six. Creating on the send alone recorded the other
 // thirty-four, along with the test addresses and the one-off errands.
 //
@@ -59,9 +59,9 @@ func refusesToNameAPerson(email string, exchanged bool) bool {
 // deferred to the verdict rather than dismissed, and the verdict reads the
 // message.
 // exchangedHow answers the same question and also says WHICH half of it was
-// satisfied, because the two are different facts about the person.
+// satisfied, because the two are different facts about the contact.
 //
-// A reply is the person writing to us. Two outbound threads with no reply is US
+// A reply is the contact writing to us. Two outbound threads with no reply is US
 // writing to them twice — enough to be worth a record, and emphatically not
 // them initiating anything. Collapsing the two was harmless while the answer
 // only decided whether to create a row; it stopped being harmless when the row

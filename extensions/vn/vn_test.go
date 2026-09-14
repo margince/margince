@@ -110,3 +110,53 @@ func TestAnAdvertisingMessageNamesItsAdvertiser(t *testing.T) {
 		}
 	}
 }
+
+// TestThePackStatesTheInstrumentsItsRulesRestOn.
+//
+// A decision records "vn version 2", which is opaque on its own: it answers a
+// subject's question only for somebody holding this source tree at that moment.
+// The instruments say what the number meant, in the words a regulator uses.
+//
+// THE 2020 DECREE IS STILL ONE OF THEM. Law 91/2025 and Decree 356/2025 amended
+// the regime around it rather than replacing it, so a pack listing only the
+// 2025 pair would misdescribe where the daily ceiling and the [QC] label come
+// from — both are still the decree's.
+func TestThePackStatesTheInstrumentsItsRulesRestOn(t *testing.T) {
+	want := map[string]time.Time{
+		"Decree 91/2020/ND-CP":  time.Date(2020, 10, 1, 0, 0, 0, 0, time.UTC),
+		"Law 91/2025/QH15":      time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
+		"Decree 356/2025/ND-CP": time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
+	}
+	got := map[string]time.Time{}
+	for _, in := range messagingRules().Instruments {
+		if _, seen := got[in.Name]; seen {
+			t.Fatalf("instrument %q declared twice", in.Name)
+		}
+		got[in.Name] = in.EffectiveFrom
+	}
+	if len(got) != len(want) {
+		t.Fatalf("the pack states %d instruments, want %d: %v", len(got), len(want), got)
+	}
+	for name, from := range want {
+		stated, declared := got[name]
+		if !declared {
+			t.Errorf("instrument %q is not stated — a decision recording this version "+
+				"cannot be read back against it", name)
+			continue
+		}
+		if !stated.Equal(from) {
+			t.Errorf("instrument %q takes effect %s, want its own commencement date %s — "+
+				"never the date this product learned about it",
+				name, stated.Format(time.DateOnly), from.Format(time.DateOnly))
+		}
+	}
+}
+
+// TestTheVersionMovedWithTheInstruments. The number exists to tell two records
+// apart, so it is meaningless if it stays put when the law it names changes.
+func TestTheVersionMovedWithTheInstruments(t *testing.T) {
+	if got := messagingRules().Version; got != 2 {
+		t.Errorf("ruleset version = %d, want 2 — the pack now states the 2025 "+
+			"instruments and a decision must be able to say which set judged it", got)
+	}
+}

@@ -15,10 +15,10 @@ import { WayOnward } from "./way-onward";
 import { ConversationWorkbench } from "./workbench";
 
 // The invite: the company is confirmed, and the two steps left — training a
-// voice, connecting an inbox and a calendar — are about the PERSON answering,
-// not the installation. So the question is whether that person will work in
+// voice, connecting an inbox and a calendar — are about the CONTACT answering,
+// not the installation. So the question is whether that contact will work in
 // Margince at all. Yes opens those steps; no opens the team act instead, where
-// the first person who will is invited, and nobody is walked through steps
+// the first contact who will is invited, and nobody is walked through steps
 // that could only ever be skipped.
 //
 // A ChoiceList rather than two buttons: the answers need explaining, and an

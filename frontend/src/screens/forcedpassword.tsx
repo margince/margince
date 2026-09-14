@@ -8,7 +8,7 @@ import "./auth.css";
 //
 // A configured bootstrap hands the first admin a credential from a deployment
 // file. The server refuses every route but the one that replaces it, so the
-// person is authenticated and can do nothing — and the login screen is the
+// contact is authenticated and can do nothing — and the login screen is the
 // wrong answer, because their credentials are correct and using them again
 // lands in the same refusal.
 //

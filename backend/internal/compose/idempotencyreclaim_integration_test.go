@@ -35,7 +35,7 @@ func reclaimVerdict(t *testing.T, e *integration.Env, principalID, key, digest s
 	t.Helper()
 	var got claimOutcome
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		outcome, _, _, err := resolveClaimRow(context.Background(), tx, principalID, key, "POST /v1/people", digest, false)
+		outcome, _, _, err := resolveClaimRow(context.Background(), tx, principalID, key, "POST /v1/contacts", digest, false)
 		got = outcome
 		return err
 	}); err != nil {
@@ -56,7 +56,7 @@ func TestALostReclaimReportsWhatTheRivalActuallyLeft(t *testing.T) {
 		INSERT INTO idempotency_key
 		  (principal_id, key, endpoint, request_digest,
 		   response_status, response_body, response_content_type, created_at)
-		VALUES ($1, $2, 'POST /v1/people', 'digest',
+		VALUES ($1, $2, 'POST /v1/contacts', 'digest',
 		        201, '{"full_name":"Ada"}', 'application/json', now())`,
 		principalID, settled)
 	if got := reclaimVerdict(t, e, principalID, settled, "digest"); got != claimReplay {
@@ -70,7 +70,7 @@ func TestALostReclaimReportsWhatTheRivalActuallyLeft(t *testing.T) {
 	e.WsExec(t, `
 		INSERT INTO idempotency_key
 		  (principal_id, key, endpoint, request_digest, created_at)
-		VALUES ($1, $2, 'POST /v1/people', 'the-rivals-digest', now())`,
+		VALUES ($1, $2, 'POST /v1/contacts', 'the-rivals-digest', now())`,
 		principalID, mismatched)
 	if got := reclaimVerdict(t, e, principalID, mismatched, "our-digest"); got != claimMismatch {
 		t.Errorf("a rival holding a different body reports %v, want claimMismatch", got)
@@ -82,7 +82,7 @@ func TestALostReclaimReportsWhatTheRivalActuallyLeft(t *testing.T) {
 	e.WsExec(t, `
 		INSERT INTO idempotency_key
 		  (principal_id, key, endpoint, request_digest, created_at)
-		VALUES ($1, $2, 'POST /v1/people', 'digest', now())`,
+		VALUES ($1, $2, 'POST /v1/contacts', 'digest', now())`,
 		principalID, inFlight)
 	if got := reclaimVerdict(t, e, principalID, inFlight, "digest"); got != claimInProgress {
 		t.Errorf("an unsettled rival under one body reports %v, want claimInProgress", got)
@@ -119,7 +119,7 @@ func TestASettlementFromAnExpiredAttemptWritesNothing(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	actor, _ := principal.Actor(ctx)
-	const key, endpoint, digest = "k-expired", "POST /v1/people", "digest-first"
+	const key, endpoint, digest = "k-expired", "POST /v1/contacts", "digest-first"
 
 	// The first attempt takes the key and is still running.
 	_, stale, _, err := claimKey(ctx, e.Pool, actor.ID, key, endpoint, digest)

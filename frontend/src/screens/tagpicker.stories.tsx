@@ -17,7 +17,7 @@ import { AddTagDialog } from "./tagpicker";
 // anyway: the whole catalog, and a catalog that was CUT and says so. The
 // no-match plate is reached by typing and belongs to the unit test beside this.
 
-const ORG = "01a06151-0000-7000-8000-000000000001";
+const COMPANY = "01a06151-0000-7000-8000-000000000001";
 
 const VOCABULARY = [
   { id: "t-1", workspace_id: "w", name: "Key Account", color: "sky" },
@@ -64,8 +64,8 @@ export const WholeCatalog: Story = {
   render: () => (
     <Served truncated={false}>
       <AddTagDialog
-        entityType="organization"
-        entityID={ORG}
+        entityType="company"
+        entityID={COMPANY}
         current={[]}
         onClose={() => undefined}
       />
@@ -81,8 +81,8 @@ export const CatalogCut: Story = {
   render: () => (
     <Served truncated>
       <AddTagDialog
-        entityType="organization"
-        entityID={ORG}
+        entityType="company"
+        entityID={COMPANY}
         current={[]}
         onClose={() => undefined}
       />

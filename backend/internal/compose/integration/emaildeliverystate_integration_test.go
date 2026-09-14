@@ -32,7 +32,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
-// deliveryEnv is one person's timeline plus the comms writers that stage
+// deliveryEnv is one contact's timeline plus the comms writers that stage
 // against it.
 type deliveryEnv struct {
 	*Env
@@ -49,7 +49,7 @@ func setupDelivery(t *testing.T) *deliveryEnv {
 		Env:     e,
 		comms:   comms.NewStore(e.DB(), time.Now, activities.NewStore(e.DB())),
 		author:  author,
-		contact: e.SeedPerson(t, "Dana Buyer", &e.Rep1),
+		contact: e.SeedContact(t, "Dana Buyer", &e.Rep1),
 	}
 }
 
@@ -59,7 +59,7 @@ func (d *deliveryEnv) sent(t *testing.T, subject string) ids.UUID {
 	body := "As discussed."
 	logged, _, err := d.Activities.LogActivity(d.author, activities.LogActivityInput{
 		Kind: "email", Subject: &subject, Body: &body, Direction: strPtr("outbound"),
-		Links: []activities.ActivityLinkInput{{EntityType: "person", EntityID: d.contact}},
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: d.contact}},
 	})
 	if err != nil {
 		t.Fatalf("logging %q: %v", subject, err)
@@ -91,7 +91,7 @@ func (d *deliveryEnv) stage(t *testing.T, activity ids.UUID, messageID string, f
 func (d *deliveryEnv) timelineRow(who context.Context, t *testing.T, activity ids.UUID) *crmcontracts.EmailSummary {
 	t.Helper()
 	page, _, err := d.Activities.ListActivities(who, activities.ListActivitiesInput{
-		EntityType: strPtr("person"), EntityID: &d.contact,
+		EntityType: strPtr("contact"), EntityID: &d.contact,
 	})
 	if err != nil {
 		t.Fatalf("listing the timeline: %v", err)

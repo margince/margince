@@ -243,7 +243,7 @@ func relationNames(target TargetVocabulary) []string {
 // request on the installation. It is the one read on this surface where the
 // caller decides how large a statement the database is asked to plan.
 //
-// The ceiling sits far above any question a person would ask and far below
+// The ceiling sits far above any question a contact would ask and far below
 // where planning cost bites. A plan over it is REFUSED by name rather than
 // truncated: a silently shortened plan answers a wider question than the one
 // asked, in a shape indistinguishable from the right one.

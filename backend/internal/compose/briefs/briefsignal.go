@@ -75,7 +75,7 @@ func SignalOf(v BriefFeatureVector, warmthKnown bool) BriefSignal {
 		// warmthKnown is the third term because a withheld factor arrives as
 		// zero, indistinguishable from a genuinely cold relationship. Reading
 		// it as cold turns "we could not see this" into an asserted problem on
-		// every quiet deal, for a reader whose only fault is lacking the person
+		// every quiet deal, for a reader whose only fault is lacking the contact
 		// grant. Silence alone is not enough to call a deal stalled.
 		return SignalStalled
 	case v.Momentum > briefMomentumUnchanged:

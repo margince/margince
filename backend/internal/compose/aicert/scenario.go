@@ -318,7 +318,7 @@ func isKnownTask(task string) bool {
 // It deliberately does NOT apply the corpus's admission rules. Source and
 // SanitizedBy gate what may ENTER the committed corpus; a scratch scenario an
 // operator is probing with is not entering it, and demanding a provenance
-// stamp for a throwaway would only teach people to type a false one.
+// stamp for a throwaway would only teach contacts to type a false one.
 // Everything that says what to RUN is still checked: the site must be one this
 // build registers, and the fixture must exist.
 func LoadScenarioFile(path string, census *aitasks.Registry) (Scenario, error) {

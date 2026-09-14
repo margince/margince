@@ -143,7 +143,7 @@ func TestNoGoSourceClaimsRLSStillScopesARead(t *testing.T) {
 	if len(claims) > 0 {
 		t.Errorf("%d line(s) credit RLS with a guarantee no schema in this tree carries. "+
 			"State what actually scopes the statement — its own workspace predicate, the row-scope "+
-			"clauses in platform/auth, or A107/ADR-0061's single organization — and if the answer is "+
+			"clauses in platform/auth, or ADR-0061's single company — and if the answer is "+
 			"\"nothing does\", that is a defect to fix rather than a comment to reword:\n\t%s",
 			len(claims), strings.Join(claims, "\n\t"))
 	}

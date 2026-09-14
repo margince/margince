@@ -82,7 +82,7 @@ const JUMP_PULSE_MS = 1600;
 // carrying `data-finding-id` before this function looks for anything to
 // focus inside it, so a row that renders its control only once expanded
 // (confirm-card.tsx's FieldRow) gets the chance to open first. A row that
-// never listens — settled rows, a person or fact entry with nothing to
+// never listens — settled rows, a contact or fact entry with nothing to
 // edit — simply ignores it, and the fallback below still focuses the row
 // itself.
 export const FINDING_EXPAND_EVENT = "ob:expand-finding";

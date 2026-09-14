@@ -182,13 +182,13 @@ func assertSixTypesCreate(t *testing.T, e *apptest.AppEnv) {
 // assertInjectionLabel proves BuildDDL/quoteLiteral's belt-and-suspenders
 // escaping holds over the real HTTP path: a label carrying SQL-metachar
 // text creates cleanly, the catalog stores the label byte-for-byte, the
-// derived column identifier is alnum-only, and the person table — the
+// derived column identifier is alnum-only, and the contact table — the
 // object this field attaches to — is provably intact afterward.
 func assertInjectionLabel(t *testing.T, e *apptest.AppEnv) {
 	t.Helper()
-	hostile := `Notes'); DROP TABLE person; --`
+	hostile := `Notes'); DROP TABLE contact; --`
 	status, field, problem := createCustomField(t, e, integration.AnyMap{
-		"object": "person", "label": hostile, "type": "text", "source": "ui",
+		"object": "contact", "label": hostile, "type": "text", "source": "ui",
 	})
 	if status != http.StatusCreated {
 		t.Fatalf("create status = %d, want 201: %+v", status, problem)
@@ -200,12 +200,12 @@ func assertInjectionLabel(t *testing.T, e *apptest.AppEnv) {
 		t.Fatalf("column_name = %q, does not match %s (the label must not leak into the derived identifier)", field.ColumnName, cfColumnName)
 	}
 
-	// The person table survives: an ordinary person write still round-trips.
-	var person integration.AnyMap
-	if status := e.Call(t, "POST", "/v1/people", integration.AnyMap{
+	// The contact table survives: an ordinary contact write still round-trips.
+	var contact integration.AnyMap
+	if status := e.Call(t, "POST", "/v1/contacts", integration.AnyMap{
 		"full_name": "Injection Survivor", "source": "ui",
-	}, nil, &person); status != http.StatusCreated {
-		t.Fatalf("person table did not survive the injection attempt: create status = %d %v", status, person)
+	}, nil, &contact); status != http.StatusCreated {
+		t.Fatalf("contact table did not survive the injection attempt: create status = %d %v", status, contact)
 	}
 }
 
@@ -398,11 +398,11 @@ func assertListFiltering(t *testing.T, e *apptest.AppEnv) {
 	// (`activity`, `relationship`) answers 422 and would prove nothing about
 	// filtering.
 	var otherObject customFieldListWire
-	if s := e.Call(t, "GET", "/v1/custom-fields?object=organization", nil, nil, &otherObject); s != http.StatusOK {
+	if s := e.Call(t, "GET", "/v1/custom-fields?object=company", nil, nil, &otherObject); s != http.StatusOK {
 		t.Fatalf("list other-object status = %d, want 200: %+v", s, otherObject)
 	}
 	if containsID(otherObject.Data, active.ID) || containsID(otherObject.Data, retiring.ID) {
-		t.Fatalf("object filter leaked a lead field into the organization list: %+v", otherObject.Data)
+		t.Fatalf("object filter leaked a lead field into the company list: %+v", otherObject.Data)
 	}
 }
 

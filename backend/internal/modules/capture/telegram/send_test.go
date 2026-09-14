@@ -186,7 +186,7 @@ func TestSendMessageClassifiesEveryFailureTheDispatcherActsOn(t *testing.T) {
 
 // The two permanent classes must stay distinguishable at this seam, because the
 // dispatcher turns each into a different instruction and only one of them is ever
-// right: reconnect the channel, or stop trying to reach this person here.
+// right: reconnect the channel, or stop trying to reach this contact here.
 func TestABlockedRecipientIsNeverReportedAsACredentialFault(t *testing.T) {
 	api, _ := serve(t, 403,
 		`{"ok":false,"error_code":403,"description":"Forbidden: bot was blocked by the user"}`)

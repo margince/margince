@@ -4,10 +4,10 @@
 // The confirm link's OTHER answer: one named subscription, and nothing else.
 //
 // A consent link's mail said "confirm this subscription". Answering it with the
-// record card would hand whoever holds the link the person's name, employer,
+// record card would hand whoever holds the link the contact's name, employer,
 // address, phone and the whole provenance trail — wider than the mail described
 // and wider than the link's own write side allows. So this page shows the
-// purpose and the person's current answer to it, and reads no record field at
+// purpose and the contact's current answer to it, and reads no record field at
 // all.
 //
 // It is a separate component rather than a branch inside the record body
@@ -139,7 +139,7 @@ export function SubscriptionConfirmBody({
           {t("confirm.subscription.ask", { purpose: card.purpose_label })}
         </p>
         {/* One affirmative act, never a pre-selected one: a page that arrives
-            with the answer already given is not the person's own act. */}
+            with the answer already given is not the contact's own act. */}
         <Button onClick={onConfirm} disabled={submitting}>
           {t("confirm.subscription.confirm")}
         </Button>

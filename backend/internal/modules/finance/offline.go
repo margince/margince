@@ -62,7 +62,7 @@ type OfflineProvider struct {
 	// file's header for why neither `now` nor a constant works.
 	anchor time.Time
 	// customers is the directory this provider answers. The sync maps them
-	// onto organizations by an explicit link, so the names here are the
+	// onto companies by an explicit link, so the names here are the
 	// source's own and need not match any company in the CRM.
 	customers []SourceCustomer
 }
@@ -86,7 +86,7 @@ func NewOfflineProvider(workspace string, customers []SourceCustomer, anchor tim
 func (p *OfflineProvider) Name() string { return OfflineProviderName }
 
 // Customers answers the directory this generator was built with. A human maps
-// an organization onto one of these; nothing here is matched automatically.
+// a company onto one of these; nothing here is matched automatically.
 func (p *OfflineProvider) Customers(context.Context) ([]SourceCustomer, error) {
 	return p.customers, nil
 }

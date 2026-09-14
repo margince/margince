@@ -50,14 +50,14 @@ const coverage: DealCoverage = {
   deal_id: DEAL_ID,
   stakeholders: [
     {
-      person_id: "p-1",
-      person_name: "Thorsten Ortner",
+      contact_id: "p-1",
+      contact_name: "Thorsten Ortner",
       role: "economic_buyer",
       engaged: true,
     },
     {
-      person_id: "p-2",
-      person_name: "Martina Keller",
+      contact_id: "p-2",
+      contact_name: "Martina Keller",
       role: "influencer",
       engaged: false,
     },
@@ -140,7 +140,7 @@ export const TheirMove: Story = {
 };
 
 /**
- * The coverage read was WITHHELD, not empty. The people card must say so —
+ * The coverage read was WITHHELD, not empty. The contacts card must say so —
  * rendering it as "nobody is on this deal" would report a finding from a check
  * that never ran.
  */

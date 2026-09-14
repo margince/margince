@@ -4,7 +4,7 @@
 package commsauthz
 
 // Reason codes a decision carries. Stable, bounded and safe to put in a metric
-// label or show an operator: none of them names a person, an address or a
+// label or show an operator: none of them names a contact, an address or a
 // message.
 const (
 	// ReasonObjection is Art. 21 — the subject objected to direct marketing.
@@ -31,7 +31,24 @@ const (
 	ReasonLegacyTransactionalUnevidenced = "legacy_transactional_unevidenced"
 	// ReasonUnknownPurpose is a purpose key nothing defines.
 	ReasonUnknownPurpose = "unknown_purpose"
-	// ReasonNoSubject is a recipient that resolves to nobody, or to two people.
+	// ReasonClaimContradictsResolution is a caller naming what a message IS
+	// against what the RECORD says it is.
+	//
+	// Not a verdict about the recipient: it is the engine declining to answer a
+	// request that asks two things at once. Reconciling the two is what let
+	// promotional mail ride the correspondence lane — the claim went in the
+	// column that records what somebody asked for, the record's own reading
+	// took the column that decides what a suppression binds, and an objection
+	// to direct marketing was never put to the message at all.
+	//
+	// The record reads the message two ways and the disagreement is the same
+	// either way: a legacy purpose key whose class says something else, or
+	// evidence — a reply in the thread, a live deal on the links — that bears
+	// out a category the caller did not name. Naming the SOURCE in this code
+	// would have made the second kind look like a different refusal, and the
+	// second kind is where the bypass actually survived a first fix.
+	ReasonClaimContradictsResolution = "claim_contradicts_resolution"
+	// ReasonNoSubject is a recipient that resolves to nobody, or to two contacts.
 	ReasonNoSubject = "recipient_resolves_to_no_single_subject"
 	// ReasonNoMarketingConsent is marketing without a grant or an exception.
 	ReasonNoMarketingConsent = "no_marketing_consent"
@@ -41,7 +58,7 @@ const (
 	ReasonConsentWithdrawn = "consent_withdrawn"
 	// ReasonFrequencyCapReached is a jurisdiction's ceiling on how many
 	// advertising messages one address may receive in a window. A fact about
-	// VOLUME rather than about the person: nothing they did refuses this
+	// VOLUME rather than about the contact: nothing they did refuses this
 	// message, and the same message is lawful again once the window rolls.
 	ReasonFrequencyCapReached = "frequency_cap_reached"
 	// ReasonAllowed is the allow path's own code, so every row has one.
@@ -86,6 +103,14 @@ var absoluteDenials = map[string]bool{
 	// the same message becomes lawful — so refusing costs a delay rather than
 	// the message.
 	ReasonFrequencyCapReached: true,
+	// A request that claims one category and names a purpose meaning another
+	// is here for the reason ReasonNoSubject is: it is not a refusal ABOUT
+	// somebody, it is the engine saying it cannot answer. Softening it does not
+	// fall back to a weaker reading of the same message — it falls back to the
+	// old gate, which answers on the PURPOSE KEY alone and so authorizes
+	// exactly the message this refusal exists to stop, past an objection that
+	// binds the category the caller themselves claimed.
+	ReasonClaimContradictsResolution: true,
 }
 
 // Absolute reports whether this reason denies regardless of Mode.
@@ -169,7 +194,7 @@ func (s DecisionSet) Effective(modeFor func(Category) Mode, legacyAllowed bool) 
 // It is the per-recipient twin of Effective, which answers for a whole set at
 // transmit. Both are spelled here so a caller asking "would this stop" never
 // recombines verdict, mode and absoluteness for itself — three inputs and one
-// rule, and a second copy of it decides whether mail reaches a person.
+// rule, and a second copy of it decides whether mail reaches a contact.
 //
 // Held by: TestWouldRefuseFollowsTheModeExceptWhereNothingMay (absolute_test.go)
 func (d Decision) WouldRefuse(mode Mode) bool {
@@ -182,7 +207,7 @@ func (d Decision) WouldRefuse(mode Mode) bool {
 	return mode == ModeEnforce
 }
 
-// CanBeOverruled reports whether a person may lift this refusal by recording
+// CanBeOverruled reports whether a contact may lift this refusal by recording
 // why they are writing.
 //
 // Both axes have to agree. LevelForReason says whose decision it is, and four

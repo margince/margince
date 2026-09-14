@@ -329,7 +329,7 @@ func TestScanDateFieldInstanceCandidatesSkipsAnUnavailableDateField(t *testing.T
 	now := time.Date(2026, 7, 16, 9, 0, 0, 0, time.UTC)
 	inst := automationInstance{
 		id:     ids.New[ids.AutomationKind](),
-		params: json.RawMessage(`{"object":"person","date_field":"cf_retired_field"}`),
+		params: json.RawMessage(`{"object":"contact","date_field":"cf_retired_field"}`),
 	}
 	scan := &fakeDateFieldScan{err: fmt.Errorf("customfields: loading candidates: %w", ErrDateFieldUnavailable)}
 	run := func(context.Context, workflow.Handler, workflow.Event) error {

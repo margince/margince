@@ -22,7 +22,7 @@ import (
 //
 // It reads through readActivity rather than writing a third SELECT over
 // activity: the withholding rule already exists twice in this tree, and the
-// file comment on compose/person360's hand-written sibling records that the
+// file comment on compose/contact360's hand-written sibling records that the
 // duplicate went missing a column for a whole slice, twice. What this file
 // adds is what a single Activity row cannot carry — who the message went to,
 // what came with it, and which write the caller's Access control performs.
@@ -135,7 +135,7 @@ func readEmailPresentation(ctx context.Context, tx pgx.Tx, id ids.ActivityID, th
 	// What HAPPENED to it. Read after the access gate for the reason the
 	// attachment count is: whether a message left is something about the
 	// message, so the caller's own gate is what decides.
-	if err := withDeliveryOn(ctx, tx, activity.Id, &out.Summary); err != nil {
+	if err := withEmailStateOn(ctx, tx, activity.Id, &out.Summary); err != nil {
 		return crmcontracts.EmailPresentation{}, err
 	}
 
@@ -201,29 +201,10 @@ func availableSummary(
 		far = parties.from
 	}
 	summary.Counterparty = counterpartyOf(far)
-	summary.Move = moveOf(activity)
+	if activity.EmailSummary != nil {
+		summary.Move = activity.EmailSummary.Move
+	}
 	return summary
-}
-
-// moveOf says whose turn it is, from the message's DIRECTION alone.
-//
-// It does not ask whether anyone answered, so an inbound mail the rep replied
-// to a month ago still reads needs_reply. That is the limit of one row read by
-// itself: the answer lives on a later message, which this function is not
-// given. Named rather than dressed up, because a rep works their day from this
-// field — reading the thread is what would close it (margince#3784).
-func moveOf(activity crmcontracts.Activity) crmcontracts.EmailSummaryMove {
-	if activity.Direction == nil {
-		return crmcontracts.EmailSummaryMoveNone
-	}
-	switch *activity.Direction {
-	case crmcontracts.ActivityDirectionInbound:
-		return crmcontracts.EmailSummaryMoveNeedsReply
-	case crmcontracts.ActivityDirectionOutbound:
-		return crmcontracts.EmailSummaryMoveWaitingForThem
-	default:
-		return crmcontracts.EmailSummaryMoveNone
-	}
 }
 
 // callerIsSenderSeat answers whether this caller is the seat the message went

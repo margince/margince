@@ -15,9 +15,9 @@ import (
 func TestNoClaimIsSaidTwiceAcrossTheBrief(t *testing.T) {
 	in := fullInput()
 	in.Commitments = append(in.Commitments,
-		ClaimIn{PersonName: "Ana Roth", Kind: kindObjection, Body: "the cure period is too short", Status: statusOpen, SourceID: activityID},
-		ClaimIn{PersonName: "Ana Roth", Kind: kindPriority, Body: "go-live before Q4", Status: statusOpen, SourceID: activityID},
-		ClaimIn{PersonName: "Ana Roth", Kind: kindDecision, Body: "pilot on two sites first", Status: "done", SourceID: activityID},
+		ClaimIn{ContactName: "Ana Roth", Kind: kindObjection, Body: "the cure period is too short", Status: statusOpen, SourceID: activityID},
+		ClaimIn{ContactName: "Ana Roth", Kind: kindPriority, Body: "go-live before Q4", Status: statusOpen, SourceID: activityID},
+		ClaimIn{ContactName: "Ana Roth", Kind: kindDecision, Body: "pilot on two sites first", Status: "done", SourceID: activityID},
 	)
 	seen := map[string]crmcontracts.MeetingBriefSectionKind{}
 	for _, section := range Deterministic(in) {
@@ -71,7 +71,7 @@ func TestClaimsRankByWhatTheRecordSays(t *testing.T) {
 // A talking point is a move, not a label: evidence plus what to do with it.
 func TestATalkingPointSaysWhatToDoInTheRoom(t *testing.T) {
 	in := fullInput()
-	in.Commitments = []ClaimIn{{PersonName: "Ana Roth", Kind: kindDecisionProcess, Body: "legal reviews after the CFO signs off", Status: statusOpen, SourceID: activityID}}
+	in.Commitments = []ClaimIn{{ContactName: "Ana Roth", Kind: kindDecisionProcess, Body: "legal reviews after the CFO signs off", Status: statusOpen, SourceID: activityID}}
 	points := sectionOf(t, Deterministic(in), crmcontracts.MeetingBriefSectionKindTalkingPoints)
 	if len(points.Sentences) != 1 || !contains(points.Sentences[0].Text, "walk the next step of it in the room") {
 		t.Fatalf("talking points = %+v, want the move", points.Sentences)

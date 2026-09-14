@@ -108,7 +108,7 @@ const siteRead: CompanySiteRead = {
   profile_fields: [],
   facts: [],
   comparisons: [],
-  people: [
+  contacts: [
     {
       name: "Luitpold Alexander",
       role: "Managing Director",
@@ -202,7 +202,7 @@ export default meta;
 type Story = StoryObj<typeof ReviewBoard>;
 
 // The board as the read leaves it: identity card, four field sections plus
-// the people and facts the crawl found, one required gap still open.
+// the contacts and facts the crawl found, one required gap still open.
 export const FieldsToConfirm: Story = {
   render: () => <ReviewBoard />,
 };
@@ -229,7 +229,7 @@ export const SaveFailed: Story = {
   ),
 };
 
-// The proposal-only render: no read backs this board, so there is no people
+// The proposal-only render: no read backs this board, so there is no contacts
 // section, no coverage card, and — the honesty that matters — no omission
 // notice on the legal rows. Nothing looked for them, so nothing may claim
 // they were missing.

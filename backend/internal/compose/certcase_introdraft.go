@@ -11,7 +11,7 @@ package compose
 // record holds, because the colleague reading it can falsify it instantly and
 // the rep who sent it looks careless.
 //
-// Run calls org360.IntroRequestFor and Evaluate calls org360.ParseIntroDraft,
+// Run calls company360.IntroRequestFor and Evaluate calls company360.ParseIntroDraft,
 // both the production path. A case that rebuilt either would measure a copy.
 
 import (
@@ -21,7 +21,7 @@ import (
 	"strings"
 
 	"github.com/margince/margince/backend/internal/compose/aitasks"
-	"github.com/margince/margince/backend/internal/compose/org360"
+	"github.com/margince/margince/backend/internal/compose/company360"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -49,7 +49,7 @@ func (introDraftCases) Site() aitasks.Site {
 //
 //nolint:ireturn // PreparedCase IS the seam: one implementation per site behind the one interface the cert lane runs.
 func (introDraftCases) Prepare(fixture, expected json.RawMessage) (aitasks.PreparedCase, error) {
-	var in org360.IntroFixture
+	var in company360.IntroFixture
 	if err := json.Unmarshal(fixture, &in); err != nil {
 		return nil, fmt.Errorf("%s: the fixture is not the shape this site takes: %w", introDraftSite, err)
 	}
@@ -77,13 +77,13 @@ func (introDraftCases) Prepare(fixture, expected json.RawMessage) (aitasks.Prepa
 
 // introDraftCase is one introduction request ready to be answered.
 type introDraftCase struct {
-	in        org360.IntroFixture
+	in        company360.IntroFixture
 	forbidden []string
 }
 
 // Run issues the one request this site sends, through the production builder.
 func (c *introDraftCase) Run(ctx context.Context, completer aitasks.Completer) (aitasks.Trace, error) {
-	req := org360.IntroRequestFor(c.in)
+	req := company360.IntroRequestFor(c.in)
 	trace := aitasks.Trace{Requests: []model.Request{req}}
 	res, err := completer.Complete(ctx, req)
 	if err != nil {
@@ -100,7 +100,7 @@ func (c *introDraftCase) Run(ctx context.Context, completer aitasks.Completer) (
 // A reply it accepts is wrong only when it says something the scenario names as
 // a claim the record does not support.
 func (c *introDraftCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
-	_, body, err := org360.CheckIntroDraft(trace.Output, c.in)
+	_, body, err := company360.CheckIntroDraft(trace.Output, c.in)
 	if err != nil {
 		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: err.Error()}
 	}

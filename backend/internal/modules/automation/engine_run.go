@@ -204,7 +204,7 @@ func (e *WorkflowEngine) runOne(ctx context.Context, h workflow.Handler, ev work
 // safety argument: a value naming a human that authorises nothing stops being
 // safe the moment a second question turns on it.
 //
-// OnBehalfOf carries the same person to the staging layer, where it becomes
+// OnBehalfOf carries the same contact to the staging layer, where it becomes
 // approval.on_behalf_of — the column the decision-authority predicate narrows a
 // self-only kind by (approvals/authority.go). Without it a held draft is staged
 // with no human recorded, and "the rep it was written for" has no one to be.

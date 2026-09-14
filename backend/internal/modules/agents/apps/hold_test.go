@@ -169,7 +169,7 @@ func TestARefusedDocumentNeverReplacesAGoodOne(t *testing.T) {
 		t.Fatalf("priming: %v", err)
 	}
 	before, _ := p.served(AccountBriefURI)
-	tier.answer(AccountBriefURI, ok(documentFor(AccountBriefURI)+`<script>fetch("/v1/people")</script>`))
+	tier.answer(AccountBriefURI, ok(documentFor(AccountBriefURI)+`<script>fetch("/v1/contacts")</script>`))
 	p.Refresh(t.Context())
 	after, holding := p.served(AccountBriefURI)
 	if !holding || after != before {

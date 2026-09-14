@@ -318,7 +318,7 @@ func progressionEvidenceKinds(facts deals.StageProgressionFacts) []string {
 // stageProgressionPrecheck refuses a decision the effect could not carry out.
 //
 // The paperless-win case: a move onto a won stage with no signed agreement
-// stages with an EMPTY reason, because only a person can say why there is no
+// stages with an EMPTY reason, because only a contact can say why there is no
 // paper. Without this check the ordinary Accept button commits the approval,
 // the effect then refuses the empty reason, and the card is left approved,
 // unredeemable and undecidable while the deal has not moved. A precheck runs
@@ -350,7 +350,7 @@ func stageProgressionPrecheck() approvals.ReleasePrecheck {
 // NOW, in the transaction that would move the deal.
 //
 // Answers nil for a human decision without asking anything: the question is
-// whether the PRODUCT may still move this by itself, and a person who pressed
+// whether the PRODUCT may still move this by itself, and a contact who pressed
 // approve has already answered a different one.
 func refuseAStaleAutomaticMove(
 	ctx context.Context, tx pgx.Tx, change deals.StageProgressionChange,
@@ -392,7 +392,7 @@ func refuseAStaleAutomaticMove(
 // move is lost and the rep is told only that the effect failed.
 //
 // The move runs under the DECIDING HUMAN's authority, not the system's. A
-// person approving a card is making that move themselves, and the audit trail
+// contact approving a card is making that move themselves, and the audit trail
 // should say so: a stage change attributed to the system would leave nobody
 // answerable for a deal that moved.
 func stageProgressionEffect(svc *approvals.Service, store *deals.Store) approvals.ApprovedEffect {
@@ -424,7 +424,7 @@ func stageProgressionEffect(svc *approvals.Service, store *deals.Store) approval
 				// exists — which is exactly what StageAutopilotModeTx's own
 				// comment says the transaction is for.
 				//
-				// A HUMAN's approval skips this. A person deciding is the
+				// A HUMAN's approval skips this. A human deciding is the
 				// authority, and re-asking the autopilot's thresholds would
 				// let a suspended rule block a move somebody explicitly made.
 				if err := refuseAStaleAutomaticMove(ctx, tx, change); err != nil {
@@ -439,7 +439,7 @@ func stageProgressionEffect(svc *approvals.Service, store *deals.Store) approval
 					ApprovalID: &approvalID.UUID,
 					// Carried from the card the human decided, not composed
 					// here: a win with no agreement behind it is refused
-					// unless somebody says why, and the somebody is the person
+					// unless somebody says why, and the somebody is the contact
 					// who approved the move.
 					WonWithoutContractReason: change.WonWithoutContractReason,
 					WonWithoutContractDetail: change.WonWithoutContractDetail,

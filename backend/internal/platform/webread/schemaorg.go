@@ -9,7 +9,7 @@ package webread
 // are assembled by a browser this fetcher does not run. The head's own prose
 // (headtext.go) recovers some of it, and this recovers the rest: a marketing
 // site built by any current framework ships a schema.org block naming the
-// organization behind it, served as text by the server, needing no browser at
+// company behind it, served as text by the server, needing no browser at
 // all.
 //
 // Its own file rather than headtext.go's, because the shape is different in the
@@ -49,8 +49,8 @@ var ldClaimKeys = []string{"name", "legalName", "description"}
 // linkedDataClaims reads the names and descriptions a page declares in JSON-LD.
 //
 // THE TYPE IS DELIBERATELY NOT FILTERED, and that is the decision worth reading.
-// schema.org's organization vocabulary is OPEN — Corporation, NGO, and every
-// LocalBusiness subtype down to Dentist are organizations — so a list of the
+// schema.org's company vocabulary is OPEN — Corporation, NGO, and every
+// LocalBusiness subtype down to Dentist are companies — so a list of the
 // types to accept is a census that goes quietly short: a site declaring itself
 // a `SportsActivityLocation` would be read as declaring nothing, and the read
 // would report an empty page about a company that named itself in the markup.
@@ -136,7 +136,7 @@ func collectLDClaims(doc any, seen map[string]bool, into []string) []string {
 	return into
 }
 
-// ldLogoKey is the schema.org field that names an organization's logo — the
+// ldLogoKey is the schema.org field that names a company's logo — the
 // one place a page says "this picture is our mark" in so many words, where a
 // <link rel="icon"> only says "this is us at icon size".
 const ldLogoKey = "logo"

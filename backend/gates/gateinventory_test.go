@@ -15,7 +15,7 @@ package gates
 // prose is not.
 //
 // The declaration lives in the gate's own file, one line under the SPDX
-// header, because that is where the person editing the gate will see it. A
+// header, because that is where the contact editing the gate will see it. A
 // classification kept here instead would be a second file to remember.
 
 import (
@@ -483,7 +483,7 @@ func TestFirstSentenceKeepsACitationWhoseDotIsPartOfAWord(t *testing.T) {
 			"crm.yaml is the contract.",
 		},
 		{
-			"next sentence opens with an identifier", "A rule holds. `writeOrgColumn` does not.",
+			"next sentence opens with an identifier", "A rule holds. `writeCompanyColumn` does not.",
 			"A rule holds.",
 		},
 		{"no terminator", "One clause with no full stop", "One clause with no full stop"},

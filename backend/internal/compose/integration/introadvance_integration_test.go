@@ -35,7 +35,7 @@ var introPerms = principal.Permissions{
 	RoleKeys: []string{"rep"},
 	Objects: map[string]principal.ObjectGrant{
 		"introduction": {Create: true, Read: true, Update: true},
-		"person":       {Read: true},
+		"contact":      {Read: true},
 		"activity":     {Create: true, Read: true, Update: true},
 	},
 	RowScope: principal.RowScopeAll,
@@ -55,13 +55,13 @@ type introFixture struct {
 // is the row the product writes.
 func seedIntroduced(t *testing.T, e *Env) introFixture {
 	t.Helper()
-	contact := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
+	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
 	store := introductions.NewStore(e.DB(), time.Now)
 	requester := e.As(e.Rep1, nil, introPerms)
 	introducer := e.As(e.Rep2, nil, introPerms)
 
 	id, err := store.Create(requester, introductions.NewRequest{
-		PersonID:       contact,
+		ContactID:      contact,
 		IntroducerUser: e.Rep2,
 		RouteType:      "direct",
 		InternalReason: "Dana reopened the retrofit conversation.",
@@ -98,10 +98,10 @@ func seedIntroduced(t *testing.T, e *Env) introFixture {
 // an outbound message from a contact, a cc without a from. What the consumer
 // reads is the row, and this writes the row.
 func (fx introFixture) message(
-	t *testing.T, e *Env, direction, role string, personID ids.UUID, at time.Time,
+	t *testing.T, e *Env, direction, role string, contactID ids.UUID, at time.Time,
 ) kevents.Envelope {
 	t.Helper()
-	return fx.messageCapturedBy(t, e, connectorProvenance, direction, role, personID, at)
+	return fx.messageCapturedBy(t, e, connectorProvenance, direction, role, contactID, at)
 }
 
 // connectorProvenance is what capture stamps on a row it wrote: the connector
@@ -112,13 +112,13 @@ func (fx introFixture) message(
 const connectorProvenance = "connector:gmail:018f3a1b-0000-7000-8000-000000000099"
 
 // humanProvenance is what a member logging an activity by hand gets:
-// storekit.CapturedBy stamps the authenticated principal's id, and a person's
+// storekit.CapturedBy stamps the authenticated principal's id, and a contact's
 // reads `human:<id>`.
 const humanProvenance = "human:018f3a1b-0000-7000-8000-000000000098"
 
 // messageCapturedBy writes one activity with the provenance a case needs.
 func (fx introFixture) messageCapturedBy(
-	t *testing.T, e *Env, capturedBy, direction, role string, personID ids.UUID, at time.Time,
+	t *testing.T, e *Env, capturedBy, direction, role string, contactID ids.UUID, at time.Time,
 ) kevents.Envelope {
 	t.Helper()
 	activity := ids.NewV7()
@@ -127,11 +127,11 @@ func (fx introFixture) messageCapturedBy(
 		VALUES ($1, 'email', 'Re: retrofit', $2, $3, 'sync', $4)`,
 		activity, at, direction, capturedBy)
 	e.WsExec(t, `
-		INSERT INTO activity_participant (activity_id, person_id, role)
-		VALUES ($1, $2, $3)`, activity, personID, role)
+		INSERT INTO activity_participant (activity_id, contact_id, role)
+		VALUES ($1, $2, $3)`, activity, contactID, role)
 	e.WsExec(t, `
-		INSERT INTO activity_link (activity_id, entity_type, person_id)
-		VALUES ($1, 'person', $2)`, activity, personID)
+		INSERT INTO activity_link (activity_id, entity_type, contact_id)
+		VALUES ($1, 'contact', $2)`, activity, contactID)
 	return kevents.Envelope{
 		EventID: ids.NewV7(),
 		Type:    "activity.captured",
@@ -234,7 +234,7 @@ func TestMailFromBeforeTheHandshakeDoesNotCloseIt(t *testing.T) {
 func TestAnotherContactsMailLeavesTheAskAlone(t *testing.T) {
 	e := Setup(t)
 	fx := seedIntroduced(t, e)
-	other := e.SeedPerson(t, "Unrelated Person", &e.Rep1)
+	other := e.SeedContact(t, "Unrelated Contact", &e.Rep1)
 
 	fx.deliver(t, fx.message(t, e, "inbound", "from", other, fx.handshake.Add(time.Hour)))
 
@@ -302,22 +302,22 @@ func TestAHandLoggedMessageCannotCloseAnIntroduction(t *testing.T) {
 // A reply captured BEFORE its sender was a contact is not lost.
 //
 // Capture writes the message and its address-only participant in one
-// transaction, then promotes that address to a person in a second one
+// transaction, then promotes that address to a contact in a second one
 // afterwards (capture/sinkensure.go). The outbox relay can publish
 // activity.captured in the gap, so the activity arm reads the message, finds no
-// person on it, and acknowledges. Nothing would ever look at that message
+// contact on it, and acknowledges. Nothing would ever look at that message
 // again: the reply is lost permanently and the ask keeps reading unanswered,
 // which to the requester is indistinguishable from the contact ignoring them.
 //
-// The person arm is the repair. This drives the race in the order it actually
-// happens — message first with no person on it, promotion second — and requires
+// The contact arm is the repair. This drives the race in the order it actually
+// happens — message first with no contact on it, promotion second — and requires
 // the ask to close.
 func TestAReplyCapturedBeforeItsSenderExistsIsStillFound(t *testing.T) {
 	e := Setup(t)
 	fx := seedIntroduced(t, e)
 	sentAt := fx.handshake.Add(time.Hour)
 
-	// The message as capture first writes it: no person on the participant row,
+	// The message as capture first writes it: no contact on the participant row,
 	// only the address it arrived from.
 	activity := ids.NewV7()
 	e.WsExec(t, `
@@ -342,12 +342,12 @@ func TestAReplyCapturedBeforeItsSenderExistsIsStillFound(t *testing.T) {
 
 	// Promotion, which is the second transaction capture runs.
 	e.WsExec(t, `
-		UPDATE activity_participant SET person_id = $1
+		UPDATE activity_participant SET contact_id = $1
 		 WHERE activity_id = $2 AND role = 'from'`, fx.contact, activity)
 	fx.deliver(t, kevents.Envelope{
 		EventID: ids.NewV7(),
-		Type:    "person.updated",
-		Entity:  kevents.EntityRef{Type: "person", ID: fx.contact},
+		Type:    "contact.updated",
+		Entity:  kevents.EntityRef{Type: "contact", ID: fx.contact},
 		Trace:   kevents.Trace{CorrelationID: ids.NewV7()},
 	})
 
@@ -361,7 +361,7 @@ func TestAReplyCapturedBeforeItsSenderExistsIsStillFound(t *testing.T) {
 //
 // A backlog pass with a looser rule is worse than none: it would close, quietly
 // and in bulk, the asks the live path had already refused. So the same three
-// clauses are checked here through the person arm — a hand-logged message, an
+// clauses are checked here through the contact arm — a hand-logged message, an
 // outbound one, and one predating the handshake all leave the ask alone.
 func TestTheRepairArmRefusesWhatTheLiveArmRefuses(t *testing.T) {
 	e := Setup(t)
@@ -377,8 +377,8 @@ func TestTheRepairArmRefusesWhatTheLiveArmRefuses(t *testing.T) {
 
 	fx.deliver(t, kevents.Envelope{
 		EventID: ids.NewV7(),
-		Type:    "person.updated",
-		Entity:  kevents.EntityRef{Type: "person", ID: fx.contact},
+		Type:    "contact.updated",
+		Entity:  kevents.EntityRef{Type: "contact", ID: fx.contact},
 		Trace:   kevents.Trace{CorrelationID: ids.NewV7()},
 	})
 
@@ -391,8 +391,8 @@ func TestTheRepairArmRefusesWhatTheLiveArmRefuses(t *testing.T) {
 	fx.message(t, e, "inbound", "from", fx.contact, fx.handshake.Add(2*time.Hour))
 	fx.deliver(t, kevents.Envelope{
 		EventID: ids.NewV7(),
-		Type:    "person.updated",
-		Entity:  kevents.EntityRef{Type: "person", ID: fx.contact},
+		Type:    "contact.updated",
+		Entity:  kevents.EntityRef{Type: "contact", ID: fx.contact},
 		Trace:   kevents.Trace{CorrelationID: ids.NewV7()},
 	})
 	if got := fx.statusOf(t, e); got != "replied" {
@@ -407,19 +407,19 @@ func TestTheRepairArmRefusesWhatTheLiveArmRefuses(t *testing.T) {
 // does nothing — but the reply is real and must not be lost for having been
 // early.
 //
-// intro_request.completed rides on the PERSON entity, so the handshake
-// committing publishes an event the person arm consumes. That is why this arm
-// is keyed on the entity type rather than on person.created/updated alone: it
+// intro_request.completed rides on the CONTACT entity, so the handshake
+// committing publishes an event the contact arm consumes. That is why this arm
+// is keyed on the entity type rather than on contact.created/updated alone: it
 // is the same repair, reached by the event the handshake itself emits.
 func TestAReplyThatBeatsTheHandshakeIsStillFound(t *testing.T) {
 	e := Setup(t)
-	contact := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
+	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
 	store := introductions.NewStore(e.DB(), time.Now)
 	requester := e.As(e.Rep1, nil, introPerms)
 	introducer := e.As(e.Rep2, nil, introPerms)
 
 	id, err := store.Create(requester, introductions.NewRequest{
-		PersonID: contact, IntroducerUser: e.Rep2, RouteType: "direct",
+		ContactID: contact, IntroducerUser: e.Rep2, RouteType: "direct",
 		InternalReason: "Dana reopened the retrofit conversation.",
 		DueAt:          time.Now().AddDate(0, 0, 7),
 	})
@@ -449,11 +449,11 @@ func TestAReplyThatBeatsTheHandshakeIsStillFound(t *testing.T) {
 	e.WsExec(t, `UPDATE intro_request SET introduced_at = $2 WHERE id = $1`,
 		id, early.Add(-time.Minute))
 
-	// The event the handshake itself emits, on the person entity.
+	// The event the handshake itself emits, on the contact entity.
 	fx.deliver(t, kevents.Envelope{
 		EventID: ids.NewV7(),
 		Type:    "intro_request.completed",
-		Entity:  kevents.EntityRef{Type: "person", ID: contact},
+		Entity:  kevents.EntityRef{Type: "contact", ID: contact},
 		Trace:   kevents.Trace{CorrelationID: ids.NewV7()},
 	})
 

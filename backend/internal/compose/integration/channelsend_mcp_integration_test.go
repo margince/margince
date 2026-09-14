@@ -61,25 +61,25 @@ func (c *channelSendEnv) sendMessageInvoker(t *testing.T, agentToken string) fun
 // on demand so the send tests carry none of it.
 func (c *channelSendEnv) enrichTarget(t *testing.T) string {
 	t.Helper()
-	var org struct {
+	var company struct {
 		ID string `json:"id"`
 	}
-	if status := c.Call(t, "POST", "/v1/organizations",
-		AnyMap{"display_name": "Approval Mechanism GmbH"}, nil, &org); status != http.StatusCreated {
-		t.Fatalf("create organization → %d", status)
+	if status := c.Call(t, "POST", "/v1/companies",
+		AnyMap{"display_name": "Approval Mechanism GmbH"}, nil, &company); status != http.StatusCreated {
+		t.Fatalf("create company → %d", status)
 	}
-	return org.ID
+	return company.ID
 }
 
 // enrichArgs is one enrich call, and the same call every time it is asked for:
 // the mechanism tests re-issue an identical call to prove one approval is
 // collected however often it is retried.
-func enrichArgs(orgID string) string {
-	return fmt.Sprintf(`{"organization_id":%q}`, orgID)
+func enrichArgs(companyID string) string {
+	return fmt.Sprintf(`{"company_id":%q}`, companyID)
 }
 
-func enrichRetry(orgID, approvalID string) string {
-	return fmt.Sprintf(`{"organization_id":%q,"approval_id":%q}`, orgID, approvalID)
+func enrichRetry(companyID, approvalID string) string {
+	return fmt.Sprintf(`{"company_id":%q,"approval_id":%q}`, companyID, approvalID)
 }
 
 // enrichInvoker calls the verb that still stages by default.
@@ -88,7 +88,7 @@ func enrichRetry(orgID, approvalID string) string {
 // one passport's approval never offered to another — is what the tests using
 // this are about, and it needs some confirm-first verb to exercise. It used to
 // be send_message, until a passport stopped needing a second confirmation from
-// the person who granted it. `enrich` stays confirm-first for a different
+// the contact who granted it. `enrich` stays confirm-first for a different
 // reason (the model names the URL the server fetches), which makes it the verb
 // that still puts a call in front of a human.
 func (c *channelSendEnv) enrichInvoker(t *testing.T, agentToken string) func(args string) (string, error) {
@@ -130,7 +130,7 @@ func (c *channelSendEnv) verbInvoker(t *testing.T, agentToken, verb string) func
 //
 // It used to stage first, and the staging half is what changed: a passport
 // carries the granting human's own seat and row scope, and `send` is a cap that
-// human chose to lend, so a second confirmation from the same person bought
+// human chose to lend, so a second confirmation from the same contact bought
 // nothing. What still bounds the call is the cap — a passport never granted
 // `send` cannot reach this at all (TestSendMessageRefusesAPassportWithoutTheSendCap).
 func TestSendMessageMCPLoopSendsOnASendScopedPassportAgainstRealPostgres(t *testing.T) {

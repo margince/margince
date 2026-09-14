@@ -23,7 +23,7 @@ const (
 	TriggerAutomaticBackfill Trigger = "automatic_backfill"
 	TriggerScheduledRefresh  Trigger = "scheduled_refresh"
 	// TriggerManual is a human asking explicitly. It is never fenced by the
-	// duplicate or freshness checks: the person looking at the record knows
+	// duplicate or freshness checks: the contact looking at the record knows
 	// something the timestamps do not.
 	TriggerManual Trigger = "manual"
 )

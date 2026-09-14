@@ -1,0 +1,357 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+//go:build integration
+
+package contacts
+
+// A write refuses an archived row, on the five paths in this module that used
+// to reach one.
+//
+// The window these share is not a race. Something decides, time passes, and the
+// write arrives afterwards — a scrape or deep-read proposal sitting in the inbox
+// until somebody approves it, a deep-read auto-apply with no human in the loop
+// at all, or a capture sweep that picks a live candidate and then waits on a
+// model call. Whichever it is, the archive lands inside that gap, which makes it
+// the ordinary case rather than a contention problem.
+//
+// They failed it in two different ways, and both are here. Most asked
+// auth.EnsureWritable, which omits the liveness filter and, for an actor with
+// unbounded row scope, skips the existence check outright. The signature
+// enricher asked nothing at all. So the apply landed on the retired record,
+// shipped a company.updated event for a row PATCH /companies/{id}
+// refuses, and (for the contact paths) wrote declared-PII rows back onto a
+// subject Art. 17 erasure had just cleared.
+
+import (
+	"errors"
+	"testing"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+)
+
+func TestAnArchivedRecordTakesNoStagedApply(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	contactID, companyID := e.seedEmployedContact(ctx, t,
+		"Mira Halvorsen", "mira@voltaq.test", "Voltaq Systems GmbH", "voltaq.test")
+
+	// Commissioned while the company is still live, because a deep-read fact
+	// carries a real site_read FK. Minted here rather than faked so the deep
+	// read below fails on the GATE when the gate is broken, instead of dying on
+	// a foreign key and reporting a refusal that never happened.
+	dossier, _, err := e.store.StartSiteRead(ctx, companyID, "https://voltaq.test/", "rep")
+	if err != nil {
+		t.Fatalf("commission the dossier while the company is live: %v", err)
+	}
+
+	archiver := e.asArchiver()
+	if _, err := e.store.ArchiveCompany(archiver, companyID, nil); err != nil {
+		t.Fatalf("archive company: %v", err)
+	}
+	if _, err := e.store.ArchiveContact(archiver, contactID, nil); err != nil {
+		t.Fatalf("archive contact: %v", err)
+	}
+
+	for _, tc := range []struct {
+		name string
+		// why names the surface a reader should go looking at when this fails,
+		// because the refusal itself cannot say which apply produced it.
+		why  string
+		call func() error
+	}{
+		{
+			name: "an accepted scrape enrichment",
+			why:  "ApplyEnrichment (enrich.go) — compose/scrapeaccept.go approves this after the archive",
+			call: func() error {
+				return e.store.ApplyEnrichment(ctx, companyID, ApplyColdStartProfileInput{
+					SourceURL: "https://voltaq.test/impressum",
+					Fields: []ColdStartFieldInput{{
+						Field: "legal_name", Value: "Voltaq Systems GmbH & Co. KG",
+						EvidenceSnippet: `"Voltaq Systems GmbH & Co. KG"`,
+						SourceURL:       "https://voltaq.test/impressum", Confidence: 0.9,
+					}},
+				})
+			},
+		},
+		{
+			name: "an accepted deep read",
+			why:  "ApplyDeepReadTx (companyfact.go) — reachable with no human in the loop via deepreadautoapply",
+			call: func() error {
+				// Carries a FACT as well as a field, and specifically an
+				// employee_range one: size_band is filled from an applied fact
+				// (fillSizeBandFromFacts), so a fields-only proposal would leave
+				// that column empty however the gate behaved and the assertion
+				// on it below would pass over a broken branch.
+				return e.store.ApplyDeepRead(ctx, DeepReadProposal{
+					CompanyID:  companyID,
+					SourceURL:  "https://voltaq.test/about",
+					SiteReadID: dossier.ID,
+					Fields: []DeepReadField{{
+						Field: "industry", Value: "Energietechnik",
+						EvidenceSnippet: `"Energietechnik"`,
+						SourceURL:       "https://voltaq.test/about", Confidence: 0.8,
+					}},
+					Facts: []DeepReadFact{{
+						Category: factCategoryCompany, Field: FactEmployeeRange,
+						Value: "51-200", EvidenceSnippet: `"51-200 Mitarbeitende"`,
+						SourceURL: "https://voltaq.test/about", Confidence: 0.8,
+					}},
+				})
+			},
+		},
+		{
+			name: "a dossier commissioned for the company",
+			why:  "StartSiteRead (siteread.go) — an archived company has no dossier to commission",
+			call: func() error {
+				_, _, err := e.store.StartSiteRead(ctx, companyID, "https://voltaq.test/", "rep")
+				return err
+			},
+		},
+		{
+			name: "approved discovered fields for the contact",
+			why:  "ApplyDiscoveredFields (searchcontactfields.go) — contact_profile_field is declared PII and erasure had cleared it",
+			call: func() error {
+				_, err := e.store.ApplyDiscoveredFields(ctx, contactID, []DiscoveredField{{
+					Field: "linkedin", Value: "https://www.linkedin.com/in/mira-halvorsen",
+					EvidenceSnippet: "Mira Halvorsen — Voltaq Systems GmbH",
+				}})
+				return err
+			},
+		},
+		{
+			name: "signature fields read out of the contact's own mail",
+			why: "ApplySignatureFields (enrichsignature.go) — the same declared-PII table as the row above, " +
+				"and the path that asked for nothing at all rather than for too little",
+			call: func() error {
+				// Both column-backed fields, because they land in different
+				// places and only one of them is a column: title fills
+				// contact.title, phone INSERTs a contact_phone row. The phone is
+				// the arm whose own emptiness predicate argues the wrong way
+				// round after an erasure — erasure deletes contact_phone, so
+				// "no live phone row" is exactly what an erased subject
+				// answers.
+				_, err := e.store.ApplySignatureFields(ctx, contactID, e.openSignatureSource(ctx, t), []SignatureField{
+					{
+						Name: "title", Value: "Head of Procurement",
+						Evidence: "Mira Halvorsen | Head of Procurement", Confidence: 0.9,
+					},
+					{
+						Name: "phone", Value: "+49 30 1234567",
+						Evidence: "T +49 30 1234567", Confidence: 0.9,
+					},
+				})
+				return err
+			},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			// ErrNotFound and not ErrPermissionDenied: an archived record is
+			// gone as far as a write is concerned, and existence-hiding owes
+			// the same 404 a row-scope miss owes.
+			if err := tc.call(); !errors.Is(err, apperrors.ErrNotFound) {
+				t.Fatalf("got %v, want not found — see %s", err, tc.why)
+			}
+		})
+	}
+
+	// Nothing landed. Asserted on the columns rather than inferred from the
+	// five refusals, because a gate that returns the right error while still
+	// committing the write is the failure this exists to notice — and these are
+	// the columns the applies above would have moved.
+	for column, want := range map[string]string{
+		"legal_name": "", "industry": "", "size_band": "",
+	} {
+		if got := companyColumn(ctx, t, e, companyID, column); got != want {
+			t.Errorf("company.%s = %q after refused applies, want %q", column, got, want)
+		}
+	}
+	// The contact's own three, counted separately because they are three
+	// different writes with three different predicates: the sidecar row carries
+	// its liveness on the INSERT, the title on its UPDATE, and the phone on
+	// neither until this change. A single count would have been earned by
+	// whichever of them still refused.
+	var profileFields, phones int
+	var title *string
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		if err := tx.QueryRow(ctx,
+			`SELECT count(*) FROM contact_profile_field WHERE contact_id = $1`, contactID).Scan(&profileFields); err != nil {
+			return err
+		}
+		if err := tx.QueryRow(ctx,
+			`SELECT count(*) FROM contact_phone WHERE contact_id = $1`, contactID).Scan(&phones); err != nil {
+			return err
+		}
+		return tx.QueryRow(ctx, `SELECT title FROM contact WHERE id = $1`, contactID).Scan(&title)
+	}); err != nil {
+		t.Fatalf("read the contact after refused applies: %v", err)
+	}
+	if profileFields != 0 {
+		t.Errorf("contact_profile_field rows = %d, want 0 — a refused apply wrote PII onto an archived subject", profileFields)
+	}
+	if phones != 0 {
+		t.Errorf("contact_phone rows = %d, want 0 — a refused apply gave an erased subject a phone number back", phones)
+	}
+	if title != nil {
+		t.Errorf("contact.title = %q after refused applies, want unset", *title)
+	}
+}
+
+// The same refusal one layer down, in the STATEMENTS rather than at the gates.
+//
+// The four editable company columns are written by three paths, and each used
+// to rely entirely on a probe an entry point two or three frames up had taken.
+// A probe and its write are two statements with a window between them, and
+// these are the most contended columns in the product — so the rule is in the
+// statement now as well, where no future caller can arrive without it.
+//
+// Asserted against the writers directly, because no public path can reach them
+// on an archived company any more: the gates above refuse first. That is the
+// point — this is the second lock on a door the first one already holds, and a
+// test that went through the door would be testing the first lock again.
+// derefOrEmpty renders a nullable column for a failure message, so a refusal
+// that wrote anyway names the value rather than its address.
+func derefOrEmpty(value *string) string {
+	if value == nil {
+		return ""
+	}
+	return *value
+}
+
+func TestTheCompanyColumnStatementsRefuseAnArchivedCompany(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	_, companyID := e.seedEmployedContact(ctx, t,
+		"Rune Aasen", "rune@haldenkraft.test", "Halden Kraft GmbH", "haldenkraft.test")
+
+	// Live first, so a statement that refused everything could not pass this.
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		filled, err := writeCompanyColumn(ctx, tx, companyID, columnIndustry, "Energietechnik", false)
+		if err != nil || !filled {
+			t.Errorf("filling industry on a LIVE company: filled=%v err=%v", filled, err)
+		}
+		return nil
+	}); err != nil {
+		t.Fatalf("live write: %v", err)
+	}
+
+	if _, err := e.store.ArchiveCompany(e.asArchiver(), companyID, nil); err != nil {
+		t.Fatalf("archive company: %v", err)
+	}
+
+	// Every arm of the shared table, both authorities, on the retired row.
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		for _, tc := range []struct {
+			name      string
+			column    string
+			overwrite bool
+		}{
+			{"fill legal_name", columnLegalName, false},
+			{"fill address", columnAddress, false},
+			{"replace legal_name", columnLegalName, true},
+			{"replace industry", columnIndustry, true},
+			{"replace description", columnDescription, true},
+		} {
+			filled, err := writeCompanyColumn(ctx, tx, companyID, tc.column, "Halden Kraft AS", tc.overwrite)
+			if err != nil {
+				t.Errorf("%s on an archived company: %v", tc.name, err)
+			}
+			if filled {
+				t.Errorf("%s wrote onto an archived company", tc.name)
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatalf("archived writes: %v", err)
+	}
+
+	// And the column is what it was before the archive, not what the refused
+	// writes carried: a statement that reported nothing while writing anyway
+	// would pass every assertion above.
+	var industry, legalName *string
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx,
+			`SELECT industry, legal_name FROM company WHERE id = $1`, companyID).
+			Scan(&industry, &legalName)
+	}); err != nil {
+		t.Fatalf("reading the columns back: %v", err)
+	}
+	if industry == nil || *industry != "Energietechnik" {
+		t.Errorf("industry = %q, want the value written while the company was live", derefOrEmpty(industry))
+	}
+	if legalName != nil {
+		t.Errorf("legal_name = %q on an archived company, want nothing", *legalName)
+	}
+}
+
+// The EVIDENCE the columns are answered by refuses the same record, and the two
+// have to agree: a profile-field row landing on a company whose column write
+// skipped it would leave one accept recorded twice, differently.
+//
+// Both arms of one upsert, on one archived company: the row that would be
+// INSERTED where none stands, and the row that would be UPDATED where one does.
+func TestTheProfileFieldUpsertRefusesAnArchivedCompany(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	_, companyID := e.seedEmployedContact(ctx, t,
+		"Sigrid Berg", "sigrid@nordkraft.test", "Nordkraft AS", "nordkraft.test")
+
+	// One field stated while the company is live, so the conflict arm has a row
+	// to collide with after the archive.
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, upsertCompanyProfileField,
+			companyID, fieldIndustry, "Energietechnik", "", "", humanAuthoredConfidence,
+			companySourceHuman, "human:seed", true)
+		return err
+	}); err != nil {
+		t.Fatalf("stating a field while the company is live: %v", err)
+	}
+
+	if _, err := e.store.ArchiveCompany(e.asArchiver(), companyID, nil); err != nil {
+		t.Fatalf("archive company: %v", err)
+	}
+
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		for _, tc := range []struct{ name, field, value string }{
+			{"the insert arm", fieldLegalName, "Nordkraft Holding AS"},
+			{"the conflict arm", fieldIndustry, "Something else entirely"},
+		} {
+			tag, err := tx.Exec(ctx, upsertCompanyProfileField,
+				companyID, tc.field, tc.value, "", "", humanAuthoredConfidence,
+				companySourceHuman, "human:seed", true)
+			if err != nil {
+				t.Errorf("%s on an archived company: %v", tc.name, err)
+				continue
+			}
+			if tag.RowsAffected() != 0 {
+				t.Errorf("%s wrote %d row(s) onto an archived company", tc.name, tag.RowsAffected())
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatalf("archived upserts: %v", err)
+	}
+
+	// The evidence stands exactly as it did before the archive: the field stated
+	// while the company was live, unchanged, and no second row beside it.
+	var fields int
+	var industry string
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		if err := tx.QueryRow(ctx,
+			`SELECT count(*) FROM company_profile_field WHERE company_id = $1`,
+			companyID).Scan(&fields); err != nil {
+			return err
+		}
+		return tx.QueryRow(ctx,
+			`SELECT value FROM company_profile_field WHERE company_id = $1 AND field = $2`,
+			companyID, fieldIndustry).Scan(&industry)
+	}); err != nil {
+		t.Fatalf("reading the evidence back: %v", err)
+	}
+	if fields != 1 || industry != "Energietechnik" {
+		t.Errorf("the company carries %d evidence row(s) and industry %q, want 1 and the value stated while it was live",
+			fields, industry)
+	}
+}

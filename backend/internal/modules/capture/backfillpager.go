@@ -225,7 +225,7 @@ func backfillRetryDelay(failures int, cause error) time.Duration {
 // The counterparty yields commit in the SAME statement as scanned/captured, so
 // a page that fails to commit has counted nothing. They are an honest
 // undercount rather than an estimate: a sender the tier gate deferred is
-// resolved by the verdict engine long after this page, and the person it may
+// resolved by the verdict engine long after this page, and the contact it may
 // eventually mint is nobody's page to claim.
 func (r *Registry) commitBackfillPage(ctx context.Context, backfillID ids.UUID, generation int, res connector.BackfillPageResult) (done, completed bool, err error) {
 	finishing := res.NextToken == ""

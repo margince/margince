@@ -141,7 +141,7 @@ func TestConfiguredAdminEmailAgreesWithTheFileTheLauncherWrites(t *testing.T) {
 }
 
 // TestConfiguredAdminEmailReadsTheInstallationsOwnAddress covers the case that
-// matters: margince.yaml is write-once and the organization is bootstrapped from
+// matters: margince.yaml is write-once and the company is bootstrapped from
 // it, so an operator who names the admin before the first run owns that name for
 // good and the start message follows the file rather than its own default.
 func TestConfiguredAdminEmailReadsTheInstallationsOwnAddress(t *testing.T) {

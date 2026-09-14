@@ -57,7 +57,7 @@ type SetTransitionPolicyInput struct {
 // automatic — StageAutopilotModeTx re-checks the thresholds in the transaction
 // that would apply it, every time. That separation is what lets an admin turn
 // a transition on before it has earned the bar: the setting stands, the moves
-// keep going to a person, and the day the record clears it starts applying
+// keep going to a contact, and the day the record clears it starts applying
 // without anybody having to come back.
 //
 // It does NOT clear a suspension. A rule the product turned off went off for a
@@ -205,7 +205,7 @@ func upsertTransitionPolicy(
 			undo_window_hours =
 				coalesce($10, stage_progression_policy.undo_window_hours),
 			-- Only the FIRST enabling is recorded. A rule already on auto keeps
-			-- who trusted it; one being turned on now names the person doing it.
+			-- who trusted it; one being turned on now names the contact doing it.
 			enabled_by = CASE
 				WHEN $4 = 'auto' AND stage_progression_policy.enabled_at IS NULL THEN $11
 				WHEN $4 = 'auto' THEN stage_progression_policy.enabled_by
@@ -285,11 +285,11 @@ func policyImage(p TransitionPolicy) map[string]any {
 	}
 }
 
-// policyActor is the person a first enabling is recorded against.
+// policyActor is the contact a first enabling is recorded against.
 //
 // Nil for a principal with no user behind it — the system, or an agent acting
 // on nobody's seat. The column is nullable for exactly that case, and a rule
-// enabled by machinery names no person rather than borrowing one.
+// enabled by machinery names no contact rather than borrowing one.
 func policyActor(ctx context.Context) *ids.UUID {
 	p, ok := principal.Actor(ctx)
 	if !ok || p.UserID.IsZero() {
@@ -426,7 +426,7 @@ func (s *Store) ResumeTransitionPolicy(
 				&after.SuspendedReason, &after.Version); err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				// Resumed by a concurrent caller between the read and here.
-				// Two people clearing one suspension is one clearing, and the
+				// Two contacts clearing one suspension is one clearing, and the
 				// second is a decline rather than a failure.
 				//
 				// The row this caller LOCKED is still the honest answer: it

@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -8,6 +8,7 @@ import type { components } from "../api/schema";
 import { type GrantSpec, meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
+import { CompanyDetails } from "./companydetails";
 import { CompanyFacts } from "./companyfacts";
 import {
   CompanyActionBadges,
@@ -20,7 +21,7 @@ import {
 // to name the author — `ProvenanceTag` takes a `renderUser` — and the header has
 // always had the roster in hand, because the owner control on the line above
 // reads it. Nobody connected the two, so a record every colleague could see
-// reported its author as "a person".
+// reported its author as "a contact".
 //
 // The fallback is the half worth pinning: the roster walk is bounded and the
 // list it walks excludes archived members, so a name that cannot be resolved
@@ -28,12 +29,12 @@ import {
 // "typed by 3f2b8c…" is not more information than "typed by a person", it is the
 // same non-answer with a reader-hostile spelling.
 
-type Organization = components["schemas"]["Organization"];
+type Company = components["schemas"]["Company"];
 
 // Typed, not asserted. A fixture cast into the contract type can drop a required
 // field and still compile, so the test would go on passing after the wire shape
 // moved under it — which is the one thing a fixture must not do.
-const ORG: Organization = {
+const COMPANY: Company = {
   // Absent reads as NOT writable, which is the fail-closed default a real
   // response never relies on: the server answers this per row.
   writable: true,
@@ -54,11 +55,11 @@ afterEach(() => {
 });
 
 // The grants the reader holds wherever a spec is about something other than
-// the grant: the record verbs ask `organization.update` before they draw, so a
+// the grant: the record verbs ask `company.update` before they draw, so a
 // /me with no authorization at all would refuse every Edit these specs open.
 const READER = {
   authorization: meFixture({
-    allow: { organization: ["read", "update", "delete"] },
+    allow: { company: ["read", "update", "delete"] },
   }).authorization,
 };
 
@@ -200,7 +201,7 @@ function renderInApp(ui: ReactNode) {
 }
 
 function renderLine() {
-  renderInApp(<CompanyIdentityLine org={ORG} />);
+  renderInApp(<CompanyIdentityLine company={COMPANY} />);
 }
 
 // The owner control's mount. It sits in the record's facts box beside the
@@ -208,7 +209,7 @@ function renderLine() {
 // one mount, so the three roster states below are asserted where a reader
 // actually meets them.
 function renderFacts() {
-  renderInApp(<CompanyFacts org={ORG} />);
+  renderInApp(<CompanyFacts company={COMPANY} />);
 }
 
 describe("who wrote this record", () => {
@@ -223,7 +224,7 @@ describe("who wrote this record", () => {
     expect(screen.queryByText("typed by a person")).toBeNull();
   });
 
-  it("says a person wrote it, not a uuid, when the roster cannot resolve them", async () => {
+  it("says a contact wrote it, not a uuid, when the roster cannot resolve them", async () => {
     stub([{ id: "u-owner", display_name: "Mira Voss" }]);
     renderLine();
 
@@ -305,24 +306,17 @@ describe("who owns this record", () => {
 // the same claim one control over: a reader who opened the form to check what
 // the header said was told "no longer in the user list" a second time, by a
 // read that had excluded nobody.
-describe("the owner the edit form prefills", () => {
-  it("does not call the owner gone when the roster read failed", async () => {
+describe("the owner in Details", () => {
+  it("keeps the current owner when the roster failed", async () => {
     stubRosterRefused();
     const user = userEvent.setup();
-    renderInApp(
-      <CompanyActionBadges
-        org={ORG}
-        onOpenHistory={() => undefined}
-        onSetUpPartner={() => undefined}
-      />,
-    );
-
+    renderInApp(<CompanyDetails company={COMPANY} overlay={false} />);
     await user.click(
-      await screen.findByRole("button", { name: "More actions" }),
+      await screen.findByRole("button", { name: "Change Owner" }),
     );
-    await user.click(await screen.findByTestId("edit-record"));
-
-    expect(await screen.findByText("Name didn't load")).toBeTruthy();
+    expect(screen.getByRole("combobox").textContent).toContain(
+      en["ref.nameLoadFailed"],
+    );
     expect(
       screen.queryByText("Current owner (no longer in the user list)"),
     ).toBeNull();
@@ -340,7 +334,7 @@ describe("Log activity and Add task, gated on the create grant", () => {
     const user = userEvent.setup();
     renderInApp(
       <CompanyPrimaryActions
-        org={ORG}
+        company={COMPANY}
         composerOpen={false}
         onComposerOpen={() => undefined}
       />,
@@ -367,7 +361,7 @@ describe("Log activity and Add task, gated on the create grant", () => {
     stubGrants({ activity: ["create"] });
     renderInApp(
       <CompanyPrimaryActions
-        org={ORG}
+        company={COMPANY}
         composerOpen={false}
         onComposerOpen={() => undefined}
       />,
@@ -388,7 +382,7 @@ describe("Log activity and Add task, gated on the create grant", () => {
     const answer = stubMeInFlight();
     renderInApp(
       <CompanyPrimaryActions
-        org={ORG}
+        company={COMPANY}
         composerOpen={false}
         onComposerOpen={() => undefined}
       />,
@@ -426,7 +420,7 @@ describe("an archived account's verbs", () => {
     const user = userEvent.setup();
     renderInApp(
       <CompanyActionBadges
-        org={{ ...ORG, archived_at: "2026-07-13T00:00:00Z" }}
+        company={{ ...COMPANY, archived_at: "2026-07-13T00:00:00Z" }}
         onOpenHistory={() => undefined}
         onSetUpPartner={() => undefined}
       />,
@@ -439,7 +433,6 @@ describe("an archived account's verbs", () => {
     // the tick it arrived in — and a menu whose items mount a beat apart threw
     // here, which is the shape that fails under a loaded run and never alone.
     const refused = [
-      await screen.findByTestId("edit-record"),
       await screen.findByTestId("merge-record"),
       await screen.findByTestId("archive-record"),
       await screen.findByTestId("share-record"),
@@ -477,22 +470,22 @@ describe("an account whose lifecycle and relationship agree", () => {
     stub([{ id: "u-owner", display_name: "Mira Voss" }]);
     renderInApp(
       <CompanyRelationshipBadges
-        org={{ ...ORG, relationship_types: ["customer", "partner"] }}
+        company={{ ...COMPANY, relationship_types: ["customer", "partner"] }}
       />,
     );
 
     // These badges are what this component draws; the lifecycle badge is the
     // other mount, so a duplicate here is one "Customer" too many on its own.
-    expect(await screen.findByText(en["org.relType.partner"])).toBeTruthy();
-    expect(screen.queryByText(en["org.relType.customer"])).toBeNull();
+    expect(await screen.findByText(en["company.relType.partner"])).toBeTruthy();
+    expect(screen.queryByText(en["company.relType.customer"])).toBeNull();
   });
 
   it("still draws a relationship the lifecycle disagrees with", async () => {
     stub([{ id: "u-owner", display_name: "Mira Voss" }]);
     renderInApp(
       <CompanyRelationshipBadges
-        org={{
-          ...ORG,
+        company={{
+          ...COMPANY,
           lifecycle: "prospect",
           relationship_types: ["customer"],
         }}
@@ -502,7 +495,9 @@ describe("an account whose lifecycle and relationship agree", () => {
     // An account can be worked as a prospect and be a customer of something
     // else already — dropping the badge because the two words differ would hide
     // a true reading rather than a repeated one.
-    expect(await screen.findByText(en["org.relType.customer"])).toBeTruthy();
+    expect(
+      await screen.findByText(en["company.relType.customer"]),
+    ).toBeTruthy();
   });
 });
 
@@ -521,7 +516,7 @@ describe("the shape of the header's verbs", () => {
     const user = userEvent.setup();
     renderInApp(
       <CompanyActionBadges
-        org={ORG}
+        company={COMPANY}
         onOpenHistory={() => undefined}
         onSetUpPartner={() => undefined}
       />,
@@ -541,11 +536,10 @@ describe("the shape of the header's verbs", () => {
     expect(
       [...panel.querySelectorAll("button")].map((row) => row.textContent),
     ).toEqual([
-      en["record.edit"],
-      en["merge.org"],
+      en["merge.company"],
       en["record.share"],
       en["record.fullHistory"],
-      en["org.partnerSetUp"],
+      en["company.partnerSetUp"],
       en["record.archive"],
     ]);
   });
@@ -559,7 +553,7 @@ describe("the shape of the header's verbs", () => {
     const user = userEvent.setup();
     renderInApp(
       <CompanyActionBadges
-        org={ORG}
+        company={COMPANY}
         onOpenHistory={() => undefined}
         onSetUpPartner={() => undefined}
       />,
@@ -581,7 +575,7 @@ describe("the shape of the header's verbs", () => {
     stubGrants({ activity: ["create"] });
     renderInApp(
       <CompanyPrimaryActions
-        org={ORG}
+        company={COMPANY}
         composerOpen={false}
         onComposerOpen={() => undefined}
       />,
@@ -597,4 +591,26 @@ describe("the shape of the header's verbs", () => {
       );
     }
   });
+});
+
+it("names an owner for readers who cannot edit the company", async () => {
+  stub([{ id: "u-owner", display_name: "Mira Voss" }]);
+  renderInApp(
+    <CompanyDetails
+      company={{ ...COMPANY, writable: false }}
+      overlay={false}
+    />,
+  );
+  expect(await screen.findByText("Mira Voss")).toBeTruthy();
+  expect(screen.queryByRole("button", { name: "Change Owner" })).toBeNull();
+});
+it("does not offer to clear a company's lifecycle", async () => {
+  stub([]);
+  const user = userEvent.setup();
+  renderInApp(<CompanyDetails company={COMPANY} overlay={false} />);
+  await user.click(
+    await screen.findByRole("button", { name: "Change Account lifecycle" }),
+  );
+  await user.click(screen.getByRole("combobox"));
+  expect(screen.queryByRole("option", { name: "Not set" })).toBeNull();
 });

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -179,7 +179,7 @@ describe("EmailEntry", () => {
     expect(screen.getByText("Withheld")).toBeInTheDocument();
     // And nothing of what was said or who said it, though the fixture carries
     // all of it. The counterparty matters as much as the subject: a name
-    // beside a message the reader may not open still says who this person is
+    // beside a message the reader may not open still says who this contact is
     // talking to.
     expect(screen.queryByText("Angebot Q4")).not.toBeInTheDocument();
     expect(

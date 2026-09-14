@@ -5,8 +5,8 @@
 
 package compose
 
-// How far a noise verdict reaches into the PEOPLE list. Hiding a junk sender's
-// mail while their contact stands leaves "receipts@" a person forever, so the
+// How far a noise verdict reaches into the CONTACTS list. Hiding a junk sender's
+// mail while their contact stands leaves "receipts@" a contact forever, so the
 // verdict retracts the capture-only record too — bounded exactly like the rest
 // of its effects: never a corresponded sender's record, never one a human
 // touched, and a `keep out` only the decider's own.
@@ -20,19 +20,19 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/capture"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // The verdict arrives after the contact: a sender judged transactional today
-// may have been minted a person under an earlier, looser creation rule, and
+// may have been minted a contact under an earlier, looser creation rule, and
 // hiding their mail alone would leave that record standing for good.
 func TestANoiseVerdictRetractsTheContactItsSenderAlreadyHad(t *testing.T) {
 	e := integration.Setup(t)
 	const junk = "receipts@spesen.example"
-	personID := seedCaptureOnlyContact(t, e, junk, e.Rep1)
+	contactID := seedCaptureOnlyContact(t, e, junk, e.Rep1)
 	mail := seedCapturedMail(t, e, junk, "Ihre Abrechnung")
 	dispositionID := seedPendingDisposition(t, e, junk, "spesen.example", mail)
 
@@ -42,14 +42,14 @@ func TestANoiseVerdictRetractsTheContactItsSenderAlreadyHad(t *testing.T) {
 		t.Fatalf("verdict pass: %v", err)
 	}
 
-	if n := countIn(t, e, `SELECT count(*) FROM person WHERE id = $1 AND archived_at IS NOT NULL`, personID); n != 1 {
+	if n := countIn(t, e, `SELECT count(*) FROM contact WHERE id = $1 AND archived_at IS NOT NULL`, contactID); n != 1 {
 		t.Fatal("the noise verdict hid the mail but left the sender's contact standing")
 	}
 	// The retraction is an archive like any other: recoverable, and on the
 	// record's own trail.
 	if n := countIn(t, e, `
 		SELECT count(*) FROM audit_log
-		 WHERE entity_type = 'person' AND entity_id = $1 AND action = 'archive'`, personID); n != 1 {
+		 WHERE entity_type = 'contact' AND entity_id = $1 AND action = 'archive'`, contactID); n != 1 {
 		t.Fatal("the retraction left no audit row — an invisible archive is not recoverable")
 	}
 }
@@ -62,7 +62,7 @@ func TestANoiseVerdictLeavesACorrespondedSendersContact(t *testing.T) {
 	// A named localpart: a role address (billing@, support@) settles on the
 	// deterministic rung and would never reach the noise arm this test is about.
 	const supplier = "anna.mueller@lieferant.example"
-	personID := seedCaptureOnlyContact(t, e, supplier, e.Rep1)
+	contactID := seedCaptureOnlyContact(t, e, supplier, e.Rep1)
 	seedOutboundMail(t, e, supplier, "please adjust our invoice")
 	mail := seedCapturedMail(t, e, supplier, "monthly statement")
 	dispositionID := seedPendingDisposition(t, e, supplier, "lieferant.example", mail)
@@ -76,7 +76,7 @@ func TestANoiseVerdictLeavesACorrespondedSendersContact(t *testing.T) {
 		t.Fatalf("the row settled %q, want noise — the fixture no longer exercises the noise arm at all", got)
 	}
 
-	if n := countIn(t, e, `SELECT count(*) FROM person WHERE id = $1 AND archived_at IS NULL`, personID); n != 1 {
+	if n := countIn(t, e, `SELECT count(*) FROM contact WHERE id = $1 AND archived_at IS NULL`, contactID); n != 1 {
 		t.Fatal("a corresponded sender's contact was retracted on a classifier's word about one message")
 	}
 }
@@ -91,7 +91,7 @@ func TestANoiseVerdictLeavesACorrespondedSendersContact(t *testing.T) {
 func TestAPersonalVerdictRetractsTheContactEvenWhenTheOwnerWroteToThem(t *testing.T) {
 	e := integration.Setup(t)
 	const clinic = "maximum.clinic@health.example"
-	personID := seedCaptureOnlyContact(t, e, clinic, e.Rep1)
+	contactID := seedCaptureOnlyContact(t, e, clinic, e.Rep1)
 	seedOutboundMail(t, e, clinic, "thank you, see you on Tuesday")
 	mail := seedCapturedMail(t, e, clinic, "Blood test results of May")
 	dispositionID := seedPendingDisposition(t, e, clinic, "health.example", mail)
@@ -102,7 +102,7 @@ func TestAPersonalVerdictRetractsTheContactEvenWhenTheOwnerWroteToThem(t *testin
 		t.Fatalf("verdict pass: %v", err)
 	}
 
-	if n := countIn(t, e, `SELECT count(*) FROM person WHERE id = $1 AND archived_at IS NOT NULL`, personID); n != 1 {
+	if n := countIn(t, e, `SELECT count(*) FROM contact WHERE id = $1 AND archived_at IS NOT NULL`, contactID); n != 1 {
 		t.Fatal("a private correspondent kept their contact because the owner had written back — " +
 			"replying to your own doctor is not evidence that they are a business counterparty")
 	}
@@ -136,7 +136,7 @@ func TestAKeepOutRetractsOnlyTheDecidersOwnContact(t *testing.T) {
 		t.Fatalf("the keep_out row settled %q, want noise — the fixture no longer reaches the owner-decision path", got)
 	}
 
-	if n := countIn(t, e, `SELECT count(*) FROM person WHERE id = $1 AND archived_at IS NULL`, colleagues); n != 1 {
+	if n := countIn(t, e, `SELECT count(*) FROM contact WHERE id = $1 AND archived_at IS NULL`, colleagues); n != 1 {
 		t.Fatal("one rep's keep_out retracted a COLLEAGUE's contact — a per-mailbox decision reached another seat's record")
 	}
 }
@@ -156,12 +156,12 @@ func TestTheReconcileSweepRetractsContactsANoiseVerdictAlreadyCovered(t *testing
 
 	contested := seedCaptureOnlyContact(t, e, "mixed@vendor.example", e.Rep1)
 	seedSettledNoiseRow(t, e, "mixed@vendor.example", capture.KindTransactional)
-	seedSettledRow(t, e, "mixed@vendor.example", capture.PendingStatusReal, capture.KindPerson)
+	seedSettledRow(t, e, "mixed@vendor.example", capture.PendingStatusReal, capture.KindContact)
 
 	// Written to SINCE the verdict: the one bound that can change after it.
-	answered := seedCaptureOnlyContact(t, e, "kontakt.person@firma.example", e.Rep1)
-	seedSettledNoiseRow(t, e, "kontakt.person@firma.example", capture.KindSpam)
-	seedOutboundMail(t, e, "kontakt.person@firma.example", "thanks, let us proceed")
+	answered := seedCaptureOnlyContact(t, e, "kontakt.contact@firma.example", e.Rep1)
+	seedSettledNoiseRow(t, e, "kontakt.contact@firma.example", capture.KindSpam)
+	seedOutboundMail(t, e, "kontakt.contact@firma.example", "thanks, let us proceed")
 
 	// The owner has said `business` — their standing decision, which no
 	// machine verdict outranks.
@@ -190,35 +190,35 @@ func TestTheReconcileSweepRetractsContactsANoiseVerdictAlreadyCovered(t *testing
 	seedSettledRowFor(t, e, "nachbarin@privat.example", capture.PendingStatusNoise,
 		capture.KindPersonal, e.Rep2)
 
-	worker := NewLinkReconcileWorkspaceWorkerForTest(e.Pool, people.NewStore(InstallationDB(e.Pool)))
+	worker := NewLinkReconcileWorkspaceWorkerForTest(e.Pool, contacts.NewStore(InstallationDB(e.Pool)))
 	if err := worker.reconcileLinksForWorkspace(context.Background(), e.WS); err != nil {
 		t.Fatalf("the sweep failed: %v", err)
 	}
 
-	if n := countIn(t, e, `SELECT count(*) FROM person WHERE id = $1 AND archived_at IS NOT NULL`, covered); n != 1 {
+	if n := countIn(t, e, `SELECT count(*) FROM contact WHERE id = $1 AND archived_at IS NOT NULL`, covered); n != 1 {
 		t.Fatal("a contact whose sender settled as noise before the retraction shipped was never cleaned up")
 	}
-	if n := countIn(t, e, `SELECT count(*) FROM person WHERE id = $1 AND archived_at IS NOT NULL`, keptOut); n != 1 {
-		t.Fatal("a standing keep_out left its sender's contact in the people list")
+	if n := countIn(t, e, `SELECT count(*) FROM contact WHERE id = $1 AND archived_at IS NOT NULL`, keptOut); n != 1 {
+		t.Fatal("a standing keep_out left its sender's contact in the contacts list")
 	}
-	if n := countIn(t, e, `SELECT count(*) FROM person WHERE id = $1 AND archived_at IS NULL`, contested); n != 1 {
+	if n := countIn(t, e, `SELECT count(*) FROM contact WHERE id = $1 AND archived_at IS NULL`, contested); n != 1 {
 		t.Fatal("the sweep retracted on a stale noise row although a later verdict called the sender real")
 	}
-	if n := countIn(t, e, `SELECT count(*) FROM person WHERE id = $1 AND archived_at IS NULL`, answered); n != 1 {
+	if n := countIn(t, e, `SELECT count(*) FROM contact WHERE id = $1 AND archived_at IS NULL`, answered); n != 1 {
 		t.Fatal("the sweep retracted a sender the workspace has since written to — correspondence must call the old verdict off the record")
 	}
-	if n := countIn(t, e, `SELECT count(*) FROM person WHERE id = $1 AND archived_at IS NULL`, readmitted); n != 1 {
+	if n := countIn(t, e, `SELECT count(*) FROM contact WHERE id = $1 AND archived_at IS NULL`, readmitted); n != 1 {
 		t.Fatal("the sweep retracted a contact whose owner had marked the sender business — a standing human decision lost to a machine verdict")
 	}
-	if n := countIn(t, e, `SELECT count(*) FROM person WHERE id = $1 AND archived_at IS NOT NULL`, privatelyJudged); n != 1 {
+	if n := countIn(t, e, `SELECT count(*) FROM contact WHERE id = $1 AND archived_at IS NOT NULL`, privatelyJudged); n != 1 {
 		t.Fatal("correspondence spared a contact judged PERSONAL — the owner writing to their doctor is " +
 			"what a private correspondence looks like, not evidence that it is business")
 	}
-	if n := countIn(t, e, `SELECT count(*) FROM person WHERE id = $1 AND archived_at IS NOT NULL`, promoted); n != 1 {
+	if n := countIn(t, e, `SELECT count(*) FROM contact WHERE id = $1 AND archived_at IS NOT NULL`, promoted); n != 1 {
 		t.Fatal("the sweep could not see a contact the sender classifier had made and published — " +
 			"its selector only ever looked at owner-scoped connector records")
 	}
-	if n := countIn(t, e, `SELECT count(*) FROM person WHERE id = $1 AND archived_at IS NULL`, colleaguesLife); n != 1 {
+	if n := countIn(t, e, `SELECT count(*) FROM contact WHERE id = $1 AND archived_at IS NULL`, colleaguesLife); n != 1 {
 		t.Fatal("one seat's personal verdict retracted ANOTHER seat's contact through the sweep — " +
 			"whose private life a conversation belongs to is answered per mailbox")
 	}
@@ -242,7 +242,7 @@ func seedSettledRowFor(t *testing.T, e *integration.Env, email, status, kind str
 	}
 }
 
-// seedMachineMadeContact inserts the person the SENDER verdict engine makes:
+// seedMachineMadeContact inserts the contact the SENDER verdict engine makes:
 // minted under the agent principal and published by that engine to the
 // workspace, with nobody human behind either act.
 func seedMachineMadeContact(t *testing.T, e *integration.Env, email string, owner ids.UUID) ids.UUID {
@@ -250,13 +250,13 @@ func seedMachineMadeContact(t *testing.T, e *integration.Env, email string, owne
 	id := ids.NewV7()
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(), `
-			INSERT INTO person (id, owner_id, full_name, source, captured_by, visibility)
+			INSERT INTO contact (id, owner_id, full_name, source, captured_by, visibility)
 			VALUES ($1, $2, $3, 'capture_counterparty_verdict',
 			        'agent:capture_counterparty_verdict', 'workspace')`, id, owner, email); err != nil {
 			return err
 		}
 		_, err := tx.Exec(context.Background(), `
-			INSERT INTO person_email (person_id, email, is_primary, source, captured_by)
+			INSERT INTO contact_email (contact_id, email, is_primary, source, captured_by)
 			VALUES ($1, $2, true, 'capture_counterparty_verdict',
 			        'agent:capture_counterparty_verdict')`, id, email)
 		return err
@@ -267,7 +267,7 @@ func seedMachineMadeContact(t *testing.T, e *integration.Env, email string, owne
 	return id
 }
 
-// seedCaptureOnlyContact inserts a person exactly as capture minted one before
+// seedCaptureOnlyContact inserts a contact exactly as capture minted one before
 // the tiered creation gate existed: connector-made, owner-scoped, never touched
 // by a human — the rows the retraction exists to reach, which today's sink
 // refuses to create and so cannot seed.
@@ -276,12 +276,12 @@ func seedCaptureOnlyContact(t *testing.T, e *integration.Env, email string, owne
 	id := ids.NewV7()
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(), `
-			INSERT INTO person (id, owner_id, full_name, source, captured_by, visibility)
+			INSERT INTO contact (id, owner_id, full_name, source, captured_by, visibility)
 			VALUES ($1, $2, $3, 'gmail', 'connector:gmail', 'owner')`, id, owner, email); err != nil {
 			return err
 		}
 		_, err := tx.Exec(context.Background(), `
-			INSERT INTO person_email (person_id, email, is_primary, source, captured_by)
+			INSERT INTO contact_email (contact_id, email, is_primary, source, captured_by)
 			VALUES ($1, $2, true, 'gmail', 'connector:gmail')`, id, email)
 		return err
 	})

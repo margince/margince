@@ -21,7 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
-// The answers a person can give a finding, plus the one the system gives
+// The answers a contact can give a finding, plus the one the system gives
 // itself.
 const (
 	OutcomeFixedRecord   = "fixed_record"
@@ -30,7 +30,7 @@ const (
 	OutcomeNotRelevant   = "not_relevant"
 	OutcomeRemindLater   = "remind_later"
 	OutcomeReassign      = "reassign"
-	// OutcomeConditionCleared is the SYSTEM's, never a person's: a finding
+	// OutcomeConditionCleared is the SYSTEM's, never a contact's: a finding
 	// whose condition stopped being true resolves itself.
 	OutcomeConditionCleared = "condition_cleared"
 )
@@ -142,9 +142,9 @@ func (s *Store) Resolve(ctx context.Context, exceptionID ids.UUID, in Resolution
 		// A surface counting open findings has to know one was answered, and
 		// WHICH KIND of answer it was: the two suppressing outcomes hide the
 		// finding, and a consumer treating all six alike would keep showing
-		// something a person has already dealt with.
+		// something a contact has already dealt with.
 		//
-		// The reason does not ride along. It is prose one person wrote for
+		// The reason does not ride along. It is prose one contact wrote for
 		// another, and a subscriber acting on it is acting on something the
 		// author may edit.
 		event := crmcontracts.PublicEventForecastExceptionResolved{
@@ -169,11 +169,11 @@ func checkResolution(in Resolution, now time.Time) (*time.Time, error) {
 	case OutcomeFixedRecord, OutcomeAddedEvidence, OutcomeValueCorrect,
 		OutcomeNotRelevant, OutcomeRemindLater, OutcomeReassign:
 	case OutcomeConditionCleared:
-		// The system's own. A person claiming it would be saying the condition
+		// The system's own. A contact claiming it would be saying the condition
 		// stopped being true without anything having checked.
 		return nil, &values.ParseError{
 			Field: slotOutcome, Code: "not_allowed",
-			Message: "condition_cleared is recorded by the check itself, not by a person",
+			Message: "condition_cleared is recorded by the check itself, not by a contact",
 		}
 	default:
 		return nil, &values.ParseError{
@@ -196,7 +196,7 @@ func checkResolution(in Resolution, now time.Time) (*time.Time, error) {
 		return noExpiry, nil
 	}
 	// A suppressing answer must say WHY. It hides the finding from the screens
-	// a revenue commitment is made from, and the next person to see the number
+	// a revenue commitment is made from, and the next contact to see the number
 	// is owed the reason it is not flagged.
 	if in.Reason == "" {
 		return nil, &values.ParseError{

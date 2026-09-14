@@ -5,7 +5,7 @@ package compose
 
 // The blocked-domain surface: which domains this installation refuses a
 // company, why, and what decided it — plus the admin's power to change any of
-// it. Thin transport; the people store owns the RBAC gate, the normalization,
+// it. Thin transport; the contacts store owns the RBAC gate, the normalization,
 // the sticky-human rule and the re-ask that makes an unblock actually produce
 // the company.
 
@@ -15,7 +15,7 @@ import (
 	"strings"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/freemail"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -31,7 +31,7 @@ const blockedDomainPageSize = 200
 const maxBlockedDomainReason = 500
 
 type blockedDomainHandlers struct {
-	people *people.Store
+	contacts *contacts.Store
 }
 
 func (h blockedDomainHandlers) ListBlockedDomains(w http.ResponseWriter, r *http.Request) {
@@ -40,7 +40,7 @@ func (h blockedDomainHandlers) ListBlockedDomains(w http.ResponseWriter, r *http
 		httperr.Write(w, r, err)
 		return
 	}
-	entries, total, err := h.people.ListDomainAdmissions(r.Context(), blockedDomainPageSize)
+	entries, total, err := h.contacts.ListDomainAdmissions(r.Context(), blockedDomainPageSize)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -48,7 +48,7 @@ func (h blockedDomainHandlers) ListBlockedDomains(w http.ResponseWriter, r *http
 	// Empty answers as [], never null — the contract promises an array.
 	out := make([]crmcontracts.BlockedDomain, 0, len(entries))
 	for _, e := range entries {
-		out = append(out, people.ToContractBlockedDomain(e))
+		out = append(out, contacts.ToContractBlockedDomain(e))
 	}
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.BlockedDomainListResponse{Data: out, Total: total})
 }
@@ -95,10 +95,10 @@ func (h blockedDomainHandlers) SetBlockedDomain(w http.ResponseWriter, r *http.R
 	}
 	// The store answers with what it STORED, not what was sent: it normalizes
 	// the domain to its registrable form and stamps the decision time itself.
-	stored, err := h.people.SetDomainAdmission(r.Context(), body.Domain, string(body.Admission), body.Reason)
+	stored, err := h.contacts.SetDomainAdmission(r.Context(), body.Domain, string(body.Admission), body.Reason)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, people.ToContractBlockedDomain(stored))
+	httperr.WriteJSON(w, http.StatusOK, contacts.ToContractBlockedDomain(stored))
 }

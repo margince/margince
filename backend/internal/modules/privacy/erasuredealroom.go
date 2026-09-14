@@ -6,9 +6,9 @@ package privacy
 // Erasing a subject who was a buyer in a Deal Room.
 //
 // A room participant is the one place in this product where a named outside
-// person is stored WITHOUT a person row: the seat carries a full name and an
+// contact is stored WITHOUT a contact row: the seat carries a full name and an
 // address of its own, because a buyer is invited by email long before anybody
-// decides they are a contact. Erasure resolves a subject by their person row
+// decides they are a contact. Erasure resolves a subject by their contact row
 // and their addresses, so nothing it did reached these seats — an erased
 // subject's name and address stayed legible in every room they were invited to,
 // and their comments stayed attributed to them by name.
@@ -46,7 +46,7 @@ const erasedEmail = "erased@example.invalid"
 // and tombstone each one's audit spine.
 //
 // It runs BEFORE deleteSubjectIdentifierRows, like the provider purge one step
-// over: a seat holds no person id and is resolved by address, which that delete
+// over: a seat holds no contact id and is resolved by address, which that delete
 // destroys.
 func eraseDealRoomSeats(ctx context.Context, tx pgx.Tx, emails []string, reason string) error {
 	seats, err := anonymizeDealRoomSeats(ctx, tx, emails)
@@ -60,19 +60,19 @@ func eraseDealRoomSeats(ctx context.Context, tx pgx.Tx, emails []string, reason 
 	// the field-history projection cuts a record's timeline at its own newest
 	// erase row. Without this the audit log hands the "erased" address
 	// straight back — an erasure the record itself contradicts.
-	return tombstoneCollateralScrubs(ctx, tx, "deal_room_participant", seats, reason, causePersonErasure)
+	return tombstoneCollateralScrubs(ctx, tx, "deal_room_participant", seats, reason, causeContactErasure)
 }
 
 // anonymizeDealRoomSeats wipes the subject's name and address from every Deal
 // Room seat that carries one of their addresses, and revokes the seat so the
 // access it stood for cannot be exercised again.
 //
-// It matches on ADDRESS because a seat holds no person id — see the file
+// It matches on ADDRESS because a seat holds no contact id — see the file
 // header.
 //
-// An address is a weaker key than a person id, so the question "could this wipe
+// An address is a weaker key than a contact id, so the question "could this wipe
 // somebody else's seat" has to be answered rather than assumed. It cannot,
-// because the erasure refuses outright when a second live person still holds
+// because the erasure refuses outright when a second live contact still holds
 // one of these addresses (refuseRivalIdentifierHolders, run before this): a
 // shared mailbox is a conflict the operator resolves by merging, not something
 // this function silently guesses at. What remains is a seat invited under a
@@ -117,9 +117,9 @@ func anonymizeDealRoomSeats(ctx context.Context, tx pgx.Tx, emails []string) ([]
 //
 // Two things do. A live session is a credential that still admits somebody, and
 // an erased subject's access ending only when the token expires is access they
-// did not consent to keep. An engagement row says WHEN this person signed in
+// did not consent to keep. An engagement row says WHEN this contact signed in
 // and WHICH documents they took — a behavioural record of the subject, useful
-// to the seller only as a claim about a person who has asked to be forgotten.
+// to the seller only as a claim about a contact who has asked to be forgotten.
 //
 // The invitations stay: they are the seller's record that access was granted
 // and when, and they name no addressee beyond the now-wiped seat.

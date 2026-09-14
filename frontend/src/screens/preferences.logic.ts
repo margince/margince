@@ -43,17 +43,18 @@ export function initialDraft(purposes: PurposeView[]): Draft {
 // toggle is disabled, so a draft that claims one moved is noise, never a pending
 // change.
 //
-// A double-opt-in purpose is excluded only in the GRANT direction, and for a
-// different reason: the server refuses that write too, but the withdrawal
-// beside it is honoured. Filtering the whole purpose would strip somebody's
-// unsubscribe; filtering neither would submit a choice that 422s and lose the
-// rest of the save with it.
+// A DOUBLE-OPT-IN GRANT IS NO LONGER EXCLUDED, and that exclusion is worth
+// remembering rather than just deleting. It was correct while the server
+// refused such a write: submitting one would 422 and lose the rest of the save
+// with it, so the grant was stripped and the withdrawal beside it kept.
+//
+// The server now takes that choice and mails a confirmation link instead of
+// refusing it. Stripping it here would mean the subject ticked the box, pressed
+// save, and nothing at all happened — the same dead end the old block was
+// built to be honest about, arriving one layer up.
 export function dirtyKeys(purposes: PurposeView[], draft: Draft): string[] {
   return purposes
     .filter((purpose) => !purpose.locked)
-    .filter(
-      (purpose) => !(purpose.grant_needs_confirmation && draft[purpose.key]),
-    )
     .filter((purpose) => draft[purpose.key] !== displayOn(purpose))
     .map((purpose) => purpose.key);
 }
@@ -142,4 +143,30 @@ export function rowIsOn(purpose: PurposeView, draft: Draft): boolean {
     return true;
   }
   return draft[purpose.key] ?? displayOn(purpose);
+}
+
+// subjectMayGrant answers whether this SUBJECT can be granted anything at all,
+// as opposed to whether a given purpose needs a confirmation round trip.
+//
+// The server sends one flag for both: can_opt_in is
+// `!locked && !grant_needs_confirmation && grantable` (preferenceview.go), and
+// only `grantable` is about the subject — an archived or Art. 17 anonymised
+// record whose erasure destroyed the capability a fresh grant would re-open.
+// The server refuses those with `cannot_grant` however the page asks.
+//
+// Recovered rather than asked for, because the wire carries no separate field:
+// among the purposes the round trip does NOT apply to, at least one offering
+// opt-in means the subject is eligible. None of them offering it means the
+// refusal is about the subject.
+//
+// NO SUCH PURPOSES AT ALL is read as eligible. An installation whose every
+// marketing purpose needs a round trip tells us nothing about the subject, and
+// blocking on no evidence would refuse a live contact their own subscription.
+export function subjectMayGrant(purposes: PurposeView[]): boolean {
+  const decidable = purposes.filter(
+    (purpose) => !purpose.locked && !purpose.grant_needs_confirmation,
+  );
+  return (
+    decidable.length === 0 || decidable.some((purpose) => purpose.can_opt_in)
+  );
 }

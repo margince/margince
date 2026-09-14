@@ -6,7 +6,7 @@
 // The row a rep meets most often is somebody who wrote and nobody answered, and
 // it used to send them to the record to press Reply there.
 
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { cleanup, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { day, renderWorklist, row, stub } from "./worklist.testkit";
@@ -25,7 +25,7 @@ function aWaitingBuyer(over = {}) {
     band: "now",
     destination: "today",
     actions: ["open", "reply"],
-    subject: { type: "person", id: "01a05500-0000-7000-8000-0000000000c2" },
+    subject: { type: "contact", id: "01a05500-0000-7000-8000-0000000000c2" },
     ...over,
   });
 }

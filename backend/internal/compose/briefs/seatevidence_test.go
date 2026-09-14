@@ -32,7 +32,7 @@ func edgeBlindReader() context.Context {
 		Type: principal.PrincipalHuman, ID: "human:test", UserID: ids.NewV7(),
 		Permissions: principal.Permissions{
 			RoleKeys: []string{"rep"},
-			Objects:  map[string]principal.ObjectGrant{"deal": {Read: true}, "person": {Read: true}},
+			Objects:  map[string]principal.ObjectGrant{"deal": {Read: true}, "contact": {Read: true}},
 			RowScope: principal.RowScopeAll,
 		},
 	})

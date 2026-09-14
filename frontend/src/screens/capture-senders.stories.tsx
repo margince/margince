@@ -24,7 +24,7 @@ type SenderDecision = components["schemas"]["CaptureSenderDecision"];
 const EVERY_KIND: SenderDecision[] = [
   {
     address: "jana@commercetools.com",
-    kind: "person",
+    kind: "contact",
     status: "real",
     overruled: false,
     record_exists: true,

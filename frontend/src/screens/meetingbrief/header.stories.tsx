@@ -13,13 +13,13 @@ import "./meetingbrief.css";
 // and which writer produced the prose.
 //
 // The band is rendered from what the OPENING PAGE holds, not from the wire —
-// the subject, the time and the person are props — so a story here is a
+// the subject, the time and the contact are props — so a story here is a
 // caller's knowledge rather than a server answer. `formatWhen` is the caller's
 // too: this tier holds no locale and no zone, so the stories pass a fixed
 // string rather than a live clock.
 
 const meta: Meta<typeof BriefHeader> = {
-  title: "Records/Person record/Meeting brief/Header band",
+  title: "Records/Contact record/Meeting brief/Header band",
   component: BriefHeader,
 };
 export default meta;
@@ -40,7 +40,7 @@ function band(brief: components["schemas"]["MeetingBrief"]) {
   );
 }
 
-/** Everything a caller can hand over: the prepared-for line naming person and
+/** Everything a caller can hand over: the prepared-for line naming contact and
  *  company, the avatar beside the subject, the time under it, and the writer
  *  badge. */
 export const Prepared: Story = { render: band(briefReady) };

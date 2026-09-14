@@ -46,7 +46,7 @@ const (
 type preflightEnv struct {
 	*apptest.AppEnv
 	activityID string
-	personID   string
+	contactID  string
 	dealID     string
 	ws, user   string
 }
@@ -73,7 +73,7 @@ func setupPreflightWithoutGoogleApp(t *testing.T) *preflightEnv {
 	return setupPreflightIn(t)
 }
 
-// setupPreflightIn lays the fixture down: a consented person, the anchor
+// setupPreflightIn lays the fixture down: a consented contact, the anchor
 // activity being answered, and the acting human. extra carries whatever the
 // caller wants composed on top of the vault and the public base URL — which is
 // where the two setups above differ, and the only place. Each test boots its own
@@ -103,21 +103,21 @@ func setupPreflightIn(t *testing.T, extra ...compose.Option) *preflightEnv {
 	e.Vault = vault
 	apptest.BootstrapWorkspaceSession(t, e, "Preflight E2E", "sender@fable.test", "Admin")
 
-	var person struct {
+	var contact struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/people", AnyMap{
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
 		"full_name": "Consented Buyer",
 		"emails":    []AnyMap{{"email": "buyer@preflight.test"}},
-	}, nil, &person); status != http.StatusCreated {
-		t.Fatalf("create person → %d", status)
+	}, nil, &contact); status != http.StatusCreated {
+		t.Fatalf("create contact → %d", status)
 	}
 	var activity struct {
 		ID string `json:"id"`
 	}
 	if status := e.Call(t, "POST", "/v1/activities", AnyMap{
 		"kind": "email", "subject": "Inbound question", "direction": "inbound",
-		"links": []AnyMap{{"entity_type": "person", "entity_id": person.ID}},
+		"links": []AnyMap{{"entity_type": "contact", "entity_id": contact.ID}},
 	}, nil, &activity); status != http.StatusCreated {
 		t.Fatalf("log anchor activity → %d", status)
 	}
@@ -142,7 +142,7 @@ func setupPreflightIn(t *testing.T, extra ...compose.Option) *preflightEnv {
 	if transactional == "" {
 		t.Fatalf("bootstrap seeded no transactional purpose: %+v", purposes.Data)
 	}
-	if status := e.Call(t, "POST", "/v1/people/"+person.ID+"/consent", AnyMap{
+	if status := e.Call(t, "POST", "/v1/contacts/"+contact.ID+"/consent", AnyMap{
 		"purpose_id": transactional, "new_state": "granted", "lawful_basis": "consent",
 		"wording": "Yes, you may contact me about this.",
 	}, nil, nil); status != http.StatusOK {
@@ -156,7 +156,7 @@ func setupPreflightIn(t *testing.T, extra ...compose.Option) *preflightEnv {
 	}); err != nil {
 		t.Fatalf("resolving the acting human: %v", err)
 	}
-	return &preflightEnv{AppEnv: e, activityID: activity.ID, personID: person.ID, ws: ws, user: user}
+	return &preflightEnv{AppEnv: e, activityID: activity.ID, contactID: contact.ID, ws: ws, user: user}
 }
 
 // stakeADeal gives the fixture's anchor real transactional evidence: an open
@@ -175,7 +175,7 @@ func setupPreflightIn(t *testing.T, extra ...compose.Option) *preflightEnv {
 func (p *preflightEnv) stakeADeal(t *testing.T) {
 	t.Helper()
 	stages := apptest.DiscoverSeededPipeline(t, p.AppEnv)
-	p.dealID = apptest.StakeOnOpenDeal(t, p.AppEnv, "Preflight opportunity", stages, p.personID)
+	p.dealID = apptest.StakeOnOpenDeal(t, p.AppEnv, "Preflight opportunity", stages, p.contactID)
 	if status := p.Call(t, "POST", "/v1/activities/"+p.activityID+"/relink", AnyMap{
 		"entity_type": "deal", "entity_id": p.dealID,
 	}, nil, nil); status != http.StatusOK {

@@ -62,7 +62,7 @@ func (s *Store) tx(ctx context.Context, fn func(pgx.Tx) error) error {
 
 // commissionColumns is the select list every read shares, in the order
 // scanEntry expects.
-const commissionColumns = `id, deal_id, partner_org_id, status, trigger_event_id,
+const commissionColumns = `id, deal_id, partner_company_id, status, trigger_event_id,
 	attribution_at_accrual, margin_tier_at_accrual, rate_bps,
 	basis_amount_minor, currency, fx_rate_to_base, amount_minor,
 	reversal_of, void_reason, captured_by, version, created_at, updated_at`
@@ -81,7 +81,7 @@ func scanEntry(row pgx.Row) (crmcontracts.CommissionEntry, error) {
 	}
 	e.Id = openapi_types.UUID(id)
 	e.DealId = openapi_types.UUID(dealID)
-	e.PartnerOrgId = openapi_types.UUID(partnerID)
+	e.PartnerCompanyId = openapi_types.UUID(partnerID)
 	e.ReversalOf = uuidPtr(reversalOf)
 	e.Version = &version
 	return e, nil

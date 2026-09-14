@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -41,7 +41,7 @@ describe("what the selected row is about", () => {
             id: "one",
             title: "A task",
             subject: {
-              type: "person",
+              type: "contact",
               id: "01a05500-0000-7000-8000-0000000000aa",
               label: "Kirsten Vogel",
             },
@@ -118,7 +118,7 @@ describe("what the selected row is about", () => {
             source: "customer_waiting",
             category: "customer_waiting",
             subject: {
-              type: "person",
+              type: "contact",
               id: "01a05500-0000-7000-8000-0000000000cc",
               label: "Alice Müller",
             },
@@ -156,7 +156,7 @@ describe("what the selected row is about", () => {
           id: "one",
           title: "A task",
           subject: {
-            type: "person",
+            type: "contact",
             id: "01a05500-0000-7000-8000-0000000000aa",
             label: "Kirsten Vogel",
           },

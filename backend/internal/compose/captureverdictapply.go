@@ -13,13 +13,13 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 )
 
-// applyOwnerDecision commits what a PERSON said about a sender.
+// applyOwnerDecision commits what a CONTACT said about a sender.
 //
 // Split from applyJudged rather than sharing a bool at the call site, so the
 // two authorities are visible as two entry points: a reader asking "what can an
 // owner's click do" finds one function and the answer beside it.
 func (e *CounterpartyVerdictEngine) applyOwnerDecision(ctx context.Context, row capture.PendingCounterparty, kind string) (int, error) {
-	// No measurement: a person decided, and no model was asked.
+	// No measurement: a human decided, and no model was asked.
 	done, err := e.apply(ctx, row, kind, true, capture.VerdictMeasurement{})
 	if err != nil {
 		return 0, err

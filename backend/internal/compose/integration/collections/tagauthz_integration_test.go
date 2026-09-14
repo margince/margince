@@ -9,7 +9,7 @@ package collections
 // record is filed either. ApplyTag and RemoveTag write to the
 // RECORD — tags.go's own comment says so — so their row gate has to be the
 // record's WRITE authority, not merely whether the caller may see it. A rep's
-// read of a contact is workspace-wide (person is an identity table); their
+// read of a contact is workspace-wide (contact is an identity table); their
 // write is team-scoped. That gap between the two is exactly what a plain
 // visibility probe cannot tell apart from write authority, and exactly what
 // the unit lane (tagapplyauthz_test.go) cannot reach — it proves the OBJECT
@@ -33,8 +33,8 @@ func TestATagWriteOnAForeignOwnedRecordIsRefused(t *testing.T) {
 	e := integration.Setup(t)
 	tags := collectionsmod.NewStore(e.DB())
 
-	own := e.SeedPerson(t, "Own", &e.Rep1)
-	foreign := e.SeedPerson(t, "Foreign", &e.Rep3)
+	own := e.SeedContact(t, "Own", &e.Rep1)
+	foreign := e.SeedContact(t, "Foreign", &e.Rep3)
 	tag, err := tags.NewTag(e.Admin(), "Key Account", "")
 	if err != nil {
 		t.Fatalf("seeding the tag: %v", err)
@@ -43,40 +43,40 @@ func TestATagWriteOnAForeignOwnedRecordIsRefused(t *testing.T) {
 
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
 
-	// The admit arm first: this seat CAN read the foreign contact (person is
+	// The admit arm first: this seat CAN read the foreign contact (contact is
 	// read-all), which is the exact condition an object grant alone cannot
 	// tell apart from write authority. Without this arm, the refusals below
 	// would prove nothing — they would pass just as happily against a path
 	// that refuses everything.
-	if _, err := e.People.GetPerson(rep, integration.PersonIDOf(foreign), storekit.LiveOnly); err != nil {
+	if _, err := e.Contacts.GetContact(rep, integration.ContactIDOf(foreign), storekit.LiveOnly); err != nil {
 		t.Fatalf("reading a foreign contact: %v, want success", err)
 	}
 
 	// The paired allow arm: the same seat, on a record it DOES own, may tag
 	// and untag freely. Without this, a refusal that denied every tag write —
 	// own record included — would pass this test just as happily as the fix.
-	if _, err := tags.ApplyTag(rep, tagID, "person", own); err != nil {
+	if _, err := tags.ApplyTag(rep, tagID, "contact", own); err != nil {
 		t.Errorf("applying a tag to this seat's own contact: %v, want success", err)
 	}
-	if err := tags.RemoveTag(rep, tagID, "person", own); err != nil {
+	if err := tags.RemoveTag(rep, tagID, "contact", own); err != nil {
 		t.Errorf("removing a tag from this seat's own contact: %v, want success", err)
 	}
 
-	if _, err := tags.ApplyTag(rep, tagID, "person", foreign); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, err := tags.ApplyTag(rep, tagID, "contact", foreign); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("applying a tag to a record this seat may only read → %v, want ErrPermissionDenied", err)
 	}
 
 	// Give removal something to refuse: an actor who does hold write
 	// authority over the record applies the tag first.
-	if _, err := tags.ApplyTag(e.Admin(), tagID, "person", foreign); err != nil {
+	if _, err := tags.ApplyTag(e.Admin(), tagID, "contact", foreign); err != nil {
 		t.Fatalf("admin applying the tag: %v", err)
 	}
-	if err := tags.RemoveTag(rep, tagID, "person", foreign); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if err := tags.RemoveTag(rep, tagID, "contact", foreign); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("removing a tag from a record this seat may only read → %v, want ErrPermissionDenied", err)
 	}
 
 	// The refusal must be loud, not a silent no-op: the tag is still there.
-	rt, err := tags.RecordTagsFor(e.Admin(), "person", foreign)
+	rt, err := tags.RecordTagsFor(e.Admin(), "contact", foreign)
 	if err != nil {
 		t.Fatalf("reading the record's tags: %v", err)
 	}
@@ -97,29 +97,29 @@ func TestATagWriteOnAnArchivedRecordIsRefused(t *testing.T) {
 	e := integration.Setup(t)
 	tags := collectionsmod.NewStore(e.DB())
 
-	own := e.SeedPerson(t, "Own", &e.Rep1)
+	own := e.SeedContact(t, "Own", &e.Rep1)
 	tag, err := tags.NewTag(e.Admin(), "Archived Target", "")
 	if err != nil {
 		t.Fatalf("seeding the tag: %v", err)
 	}
 	tagID := ids.From[ids.TagKind](tag.TagID)
 
-	if _, err := e.People.ArchivePerson(e.Admin(), integration.PersonIDOf(own), nil); err != nil {
+	if _, err := e.Contacts.ArchiveContact(e.Admin(), integration.ContactIDOf(own), nil); err != nil {
 		t.Fatalf("archiving the fixture: %v", err)
 	}
 
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
-	if _, err := tags.ApplyTag(rep, tagID, "person", own); !errors.Is(err, apperrors.ErrNotFound) {
+	if _, err := tags.ApplyTag(rep, tagID, "contact", own); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("applying a tag to an archived record this seat owns → %v, want ErrNotFound", err)
 	}
-	if err := tags.EnsureTaggable(rep, "person", own); !errors.Is(err, apperrors.ErrNotFound) {
+	if err := tags.EnsureTaggable(rep, "contact", own); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("EnsureTaggable on an archived record → %v, want ErrNotFound", err)
 	}
 
 	// Removal must refuse the same way, not treat "already gone" as the
 	// idempotent no-tagging-here case: the record is frozen, and that is a
 	// different fact than the tagging never having existed.
-	if err := tags.RemoveTag(e.Admin(), tagID, "person", own); !errors.Is(err, apperrors.ErrNotFound) {
+	if err := tags.RemoveTag(e.Admin(), tagID, "contact", own); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("removing from an archived record → %v, want ErrNotFound", err)
 	}
 }
@@ -135,7 +135,7 @@ func TestATagWriteOnAnOwnerlessRecordIsRefusedBelowRowScopeAll(t *testing.T) {
 	e := integration.Setup(t)
 	tags := collectionsmod.NewStore(e.DB())
 
-	unowned := e.SeedPerson(t, "Unclaimed", nil)
+	unowned := e.SeedContact(t, "Unclaimed", nil)
 	tag, err := tags.NewTag(e.Admin(), "Ownerless Target", "")
 	if err != nil {
 		t.Fatalf("seeding the tag: %v", err)
@@ -143,30 +143,30 @@ func TestATagWriteOnAnOwnerlessRecordIsRefusedBelowRowScopeAll(t *testing.T) {
 	tagID := ids.From[ids.TagKind](tag.TagID)
 
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
-	if _, err := e.People.GetPerson(rep, integration.PersonIDOf(unowned), storekit.LiveOnly); err != nil {
+	if _, err := e.Contacts.GetContact(rep, integration.ContactIDOf(unowned), storekit.LiveOnly); err != nil {
 		t.Fatalf("reading an unowned contact: %v, want success — read-all covers ownerless rows too", err)
 	}
 
-	if _, err := tags.ApplyTag(rep, tagID, "person", unowned); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, err := tags.ApplyTag(rep, tagID, "contact", unowned); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("a bounded seat applying a tag to an unowned record → %v, want ErrPermissionDenied", err)
 	}
-	if err := tags.EnsureTaggable(rep, "person", unowned); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if err := tags.EnsureTaggable(rep, "contact", unowned); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("EnsureTaggable on an unowned record → %v, want ErrPermissionDenied", err)
 	}
 
 	// Give the bounded seat's RemoveTag refusal something to remove: an
 	// unbounded actor applies the tag first.
-	if _, err := tags.ApplyTag(e.Admin(), tagID, "person", unowned); err != nil {
+	if _, err := tags.ApplyTag(e.Admin(), tagID, "contact", unowned); err != nil {
 		t.Fatalf("an unbounded actor applying a tag to an unowned record: %v, want success", err)
 	}
-	if err := tags.RemoveTag(rep, tagID, "person", unowned); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if err := tags.RemoveTag(rep, tagID, "contact", unowned); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("a bounded seat removing a tag from an unowned record → %v, want ErrPermissionDenied", err)
 	}
 
 	// The allow arm: an unbounded actor (RowScopeAll) still may, so this is a
 	// row-scope narrowing and not the table having quietly become untaggable
 	// for everyone.
-	if err := tags.RemoveTag(e.Admin(), tagID, "person", unowned); err != nil {
+	if err := tags.RemoveTag(e.Admin(), tagID, "contact", unowned); err != nil {
 		t.Errorf("an unbounded actor removing a tag from an unowned record: %v, want success", err)
 	}
 }
@@ -181,14 +181,14 @@ func TestEnsureTaggableRefusesTheSameForeignOwnedRecordApplyDoes(t *testing.T) {
 	e := integration.Setup(t)
 	tags := collectionsmod.NewStore(e.DB())
 
-	own := e.SeedPerson(t, "Own", &e.Rep1)
-	foreign := e.SeedPerson(t, "Foreign", &e.Rep3)
+	own := e.SeedContact(t, "Own", &e.Rep1)
+	foreign := e.SeedContact(t, "Foreign", &e.Rep3)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
 
-	if err := tags.EnsureTaggable(rep, "person", own); err != nil {
+	if err := tags.EnsureTaggable(rep, "contact", own); err != nil {
 		t.Errorf("EnsureTaggable on this seat's own contact: %v, want success", err)
 	}
-	if err := tags.EnsureTaggable(rep, "person", foreign); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if err := tags.EnsureTaggable(rep, "contact", foreign); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("EnsureTaggable on a record this seat may only read → %v, want ErrPermissionDenied", err)
 	}
 }
@@ -201,8 +201,8 @@ func TestTheImportersTagWriteRefusesAForeignOwnedRecordToo(t *testing.T) {
 	e := integration.Setup(t)
 	tags := collectionsmod.NewStore(e.DB())
 
-	own := e.SeedPerson(t, "Own", &e.Rep1)
-	foreign := e.SeedPerson(t, "Foreign", &e.Rep3)
+	own := e.SeedContact(t, "Own", &e.Rep1)
+	foreign := e.SeedContact(t, "Foreign", &e.Rep3)
 	tag, err := tags.NewTag(e.Admin(), "Imported", "")
 	if err != nil {
 		t.Fatalf("seeding the tag: %v", err)
@@ -224,10 +224,10 @@ func TestTheImportersTagWriteRefusesAForeignOwnedRecordToo(t *testing.T) {
 	// The paired allow arm: this same transactional door lets the seat tag a
 	// record it owns. Without this, a regression that denied every
 	// ApplyTagTx call — own record included — would pass just as happily.
-	if _, err := tags.ApplyTagTx(rep, tx, tagID, "person", own); err != nil {
+	if _, err := tags.ApplyTagTx(rep, tx, tagID, "contact", own); err != nil {
 		t.Errorf("the importer's apply on this seat's own contact: %v, want success", err)
 	}
-	if _, err := tags.ApplyTagTx(rep, tx, tagID, "person", foreign); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, err := tags.ApplyTagTx(rep, tx, tagID, "contact", foreign); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("the importer's apply on a record this seat may only read → %v, want ErrPermissionDenied", err)
 	}
 }

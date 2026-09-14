@@ -8,7 +8,7 @@
 // verb and what happens after it — the write, the confirmation, the undo, and
 // the undo being refused — while the file it left covers what the queue draws.
 
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";

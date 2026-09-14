@@ -47,7 +47,7 @@ func TestARobotsGroupNamingWhatWeAdvertiseAppliesToUs(t *testing.T) {
 	}
 
 	// The whole header, which is what an operator copies out of their log. A
-	// matcher tightened to exact equality would stop honouring the form people
+	// matcher tightened to exact equality would stop honouring the form contacts
 	// actually write, and nothing else here would notice.
 	fromTheLog := parseRobots("User-agent: " + UserAgent + "\nDisallow: /private\n")
 	if fromTheLog.allows("/private/report.html") {

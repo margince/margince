@@ -186,8 +186,8 @@ func TestAMeterFailureReachesTheDecidingHuman(t *testing.T) {
 
 // THE authority rule: a step-up is decided by the human who lent the passport,
 // and by nobody else. Not an admin, not the workspace owner — an agent's ceiling
-// is the granting human's authority, so the only person who can widen what it
-// may be handed is the person whose reading it is doing.
+// is the granting human's authority, so the only contact who can widen what it
+// may be handed is the contact whose reading it is doing.
 //
 // A target-less row needs no transaction to answer, which is what lets this run
 // as a unit test over the real predicate rather than a paraphrase of it.

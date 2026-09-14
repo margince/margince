@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
+import { meFixture } from "../app/mefixture";
 import { jsonResponse, StoryProviders } from "./story-utils";
 import { HandledForYouPanel } from "./worklist.handled";
 
@@ -51,7 +52,7 @@ const aBusyMorning: HandledData = {
       summary: "Sent the confirmation to Kirsten",
       occurred_at: "2026-09-05T08:12:00Z",
       subject: {
-        type: "person",
+        type: "contact",
         id: "00000000-0000-4000-8000-0000000000a1",
         label: "Kirsten Bauer",
       },
@@ -82,6 +83,8 @@ const aBusyMorning: HandledData = {
 function stubHandled(answer: () => Promise<Response>) {
   globalThis.fetch = (async (input: RequestInfo | URL): Promise<Response> => {
     const url = String(input instanceof Request ? input.url : input);
+    if (url.endsWith("/me"))
+      return jsonResponse(meFixture({ allow: { deal: ["read", "update"] } }));
     return url.includes("/worklist/handled")
       ? answer()
       : jsonResponse({ data: [] });

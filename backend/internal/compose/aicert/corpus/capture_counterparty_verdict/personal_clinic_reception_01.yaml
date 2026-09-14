@@ -29,12 +29,12 @@ expect:
     whose address that list already answers would certify a path production
     never reaches, because the pre-check runs before the model is asked.
     So the whole judgment rests on the message. It is signed by a named human
-    at a reception desk, which is what makes "person" tempting and wrong. What
+    at a reception desk, which is what makes "contact" tempting and wrong. What
     decides it is whose matter this is: the owner's health, not the company's
     business. "personal" scores high — no record at all, which is right for a
     private appointment. "role_mailbox" is the near miss and scores in the
     middle: it creates no contact either, so nothing is disclosed, but it files
-    a private matter as company correspondence. "person" scores zero above the
+    a private matter as company correspondence. "contact" scores zero above the
     floor — it would put a receptionist called Anja in the shared CRM and, with
     her, the fact that the owner is seeing a doctor.
   bands:

@@ -53,7 +53,7 @@ type CorrectionPolicy interface {
 // it is resolvable whoever they are — and the review writes that name into
 // proposed_change, where anyone holding deal:update on the target reads it
 // later. An unbounded read frozen into a stored payload is a disclosure no
-// read-side gate can undo, so the read runs as the person the card is for: the
+// read-side gate can undo, so the read runs as the contact the card is for: the
 // deal's owner, resolved per deal.
 //
 // The composition root fills this because resolving an authority means reading

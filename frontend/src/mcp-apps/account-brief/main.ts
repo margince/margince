@@ -3,7 +3,7 @@
 //
 // WHY THE FACTORS ARE THE POINT. The brief's own contract forbids the mystery
 // number — an item that says only "this ranked first" restates the queue, while
-// one that says "first on momentum and warmth" has told the person something.
+// one that says "first on momentum and warmth" has told the contact something.
 // The score alone would fit in the chat text this view renders instead of; the
 // five factors beside it are what a table buys.
 //

@@ -110,7 +110,7 @@ func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([
 	}
 	// The record the timeline was narrowed TO is gated before it is filtered
 	// on. The scope below is an ANY-LINK rule, so an activity linked to both a
-	// visible person and a lead the caller may not read passes it — and
+	// visible contact and a lead the caller may not read passes it — and
 	// filtering on that lead's id would then answer "this lead exists, and here
 	// is what happened on it" to someone with no right to either fact.
 	if err := ensureNarrowingTargetVisible(ctx, tx, in.EntityType, in.EntityID); err != nil {
@@ -241,12 +241,12 @@ func readActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archived
 }
 
 // attachLinks fills the contract's links[] on a page of activities in ONE
-// query — the column the timeline's "via" chips and the per-person filter
+// query — the column the timeline's "via" chips and the per-contact filter
 // read. Batched rather than per-row because the timeline reads a page at a
 // time.
 //
 // Each link row carries its OWN row-scope check, which the activity's does
-// not subsume. Activity visibility is an ANY-link rule: one visible person
+// not subsume. Activity visibility is an ANY-link rule: one visible contact
 // makes the whole activity readable. Projecting every link row back would
 // then disclose the ids of the other records it touches — a colleague's
 // deal on the same thread — to a caller who cannot read them. A link whose

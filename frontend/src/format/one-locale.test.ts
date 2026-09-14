@@ -71,7 +71,7 @@ import { INTL_LOCALE } from "./format";
 // `toLocaleLowerCase` / `toLocaleUpperCase` were derived into the set and then
 // filtered back out, because the right answer is per site and opposite in each
 // direction — a machine key must sort identically for every reader, so a pinned
-// "en" is correct there, while a name in a list a person reads must follow that
+// "en" is correct there, while a name in a list a reader reads must follow that
 // reader's alphabet. Neither answer generalises, so no single formatter could be
 // demanded and the gate held one half of its own subject.
 //
@@ -685,7 +685,7 @@ describe("one locale for every rendered value", () => {
       // Collation and casing, the half this gate used to filter back out. The
       // pinned "en" is the shape that made the exclusion look reasonable: it is
       // the RIGHT ordering for a machine key and the wrong one for a name a
-      // person reads, and the line cannot say which it is. `format/collate.ts`
+      // contact reads, and the line cannot say which it is. `format/collate.ts`
       // is where that gets said, so both spellings are findings here.
       { code: 'const o = a.localeCompare(b, "en");', finding: true },
       { code: "const p = a.localeCompare(b);", finding: true },
@@ -698,7 +698,7 @@ describe("one locale for every rendered value", () => {
     // it the line proves one formatter rather than the set, and on a runtime
     // that does not (Node 22 has no DurationFormat; CI pins 24) it yields no
     // finding and the arm goes red for a reason that is not a defect. A gate
-    // whose suite depends on which Node somebody has is a gate people turn off.
+    // whose suite depends on which Node somebody has is a gate contacts turn off.
     const beforeDerived = planted.length;
     for (const formatter of formatters) {
       planted.push({

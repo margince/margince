@@ -171,8 +171,8 @@ func TestACachedStandingCitingNoMessageIsUnaffectedByAnAudience(t *testing.T) {
 	// deal.read has already reached.
 	seedCachedStandingCiting(t, e, readerOf(reader, t), deal,
 		"drifting", "The close date has passed twice without a new one.",
-		crmcontracts.OrganizationBriefEvidence{
-			EntityType: crmcontracts.OrganizationBriefEvidenceEntityTypeDeal,
+		crmcontracts.CompanyBriefEvidence{
+			EntityType: crmcontracts.CompanyBriefEvidenceEntityTypeDeal,
 			EntityId:   openapi_types.UUID(deal),
 		})
 
@@ -196,8 +196,8 @@ func TestACachedStandingCitingNoMessageIsUnaffectedByAnAudience(t *testing.T) {
 func seedCachedStanding(t *testing.T, e *SearchEnv, userID, deal, activity ids.UUID, standing, line string) {
 	t.Helper()
 	seedCachedStandingCiting(t, e, userID, deal, standing, line,
-		crmcontracts.OrganizationBriefEvidence{
-			EntityType: crmcontracts.OrganizationBriefEvidenceEntityTypeActivity,
+		crmcontracts.CompanyBriefEvidence{
+			EntityType: crmcontracts.CompanyBriefEvidenceEntityTypeActivity,
 			EntityId:   openapi_types.UUID(activity),
 		})
 }
@@ -208,7 +208,7 @@ func seedCachedStanding(t *testing.T, e *SearchEnv, userID, deal, activity ids.U
 // would make the fixture depend on it.
 func seedCachedStandingCiting(
 	t *testing.T, e *SearchEnv, userID, deal ids.UUID,
-	standing, line string, cites ...crmcontracts.OrganizationBriefEvidence,
+	standing, line string, cites ...crmcontracts.CompanyBriefEvidence,
 ) {
 	t.Helper()
 	payload, err := json.Marshal(map[string]any{
@@ -216,7 +216,7 @@ func seedCachedStandingCiting(
 			Verdict: &crmcontracts.DealStatusCardVerdict{
 				Standing: standing,
 				Because: crmcontracts.DealStatusCardSection{
-					Sentences: []crmcontracts.OrganizationBriefSentence{
+					Sentences: []crmcontracts.CompanyBriefSentence{
 						{Text: line, Evidence: cites},
 					},
 				},

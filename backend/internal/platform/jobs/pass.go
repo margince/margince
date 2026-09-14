@@ -5,7 +5,7 @@ package jobs
 
 // When a periodic kind next runs, for the surfaces that make somebody wait.
 //
-// A screen that says "waiting" and nothing else leaves a person two readings,
+// A screen that says "waiting" and nothing else leaves a contact two readings,
 // broken and slow, and both are wrong when the pipeline is working exactly as
 // declared on a clock the screen never mentions. The clock is knowable here and
 // nowhere else: the cadence is the compiled declaration, and whether a pass is
@@ -22,7 +22,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// Pass is one periodic kind's schedule as a caller can state it to a person.
+// Pass is one periodic kind's schedule as a caller can state it to a contact.
 type Pass struct {
 	// Every is the declared cadence. Zero for a kind no clock runs, which is a
 	// different sentence from one whose next run is merely unknown.

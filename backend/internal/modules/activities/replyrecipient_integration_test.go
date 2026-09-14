@@ -9,7 +9,7 @@ package activities
 //
 // Sending REQUIRES `to`, so an unresolved address is not a cosmetic gap: it is
 // a reply the reader must address by hand against a thread that already names
-// the person. These cases drive the two handlers that answer it — the draft
+// the contact. These cases drive the two handlers that answer it — the draft
 // response and the recipient endpoint — because what they must agree on is WHO
 // may be written to, and that is a different question from who a draft greets.
 
@@ -37,28 +37,28 @@ func (d ourDomain) Covers(context.Context) (func(string) bool, error) {
 	}, nil
 }
 
-// seedPersonEmail gives a person their one primary address, the way capture
+// seedContactEmail gives a contact their one primary address, the way capture
 // records one. Which of SEVERAL addresses wins is ReplyAddressFor's own
 // question and is covered where that resolver lives; what these cases vary is
 // WHOSE address is offered.
-func (e *sendEnv) seedPersonEmail(t *testing.T, person ids.UUID, email string) {
+func (e *sendEnv) seedContactEmail(t *testing.T, contact ids.UUID, email string) {
 	t.Helper()
 	if _, err := e.owner.Exec(context.Background(), `
-		INSERT INTO person_email (person_id, email, is_primary, position, source, captured_by)
+		INSERT INTO contact_email (contact_id, email, is_primary, position, source, captured_by)
 		VALUES ($1, $2, true, 0, 'manual', 'human:x')`,
-		person, email); err != nil {
-		t.Fatalf("seeding the person address: %v", err)
+		contact, email); err != nil {
+		t.Fatalf("seeding the contact address: %v", err)
 	}
 }
 
 // participate stamps one participant role on the anchor. A participant that
-// carries a user_id is one of OUR OWN people, which is the difference between
+// carries a user_id is one of OUR OWN contacts, which is the difference between
 // a reply and a message to ourselves.
-func (e *sendEnv) participate(t *testing.T, anchor ids.ActivityID, person ids.UUID, role string, seat *ids.UUID) {
+func (e *sendEnv) participate(t *testing.T, anchor ids.ActivityID, contact ids.UUID, role string, seat *ids.UUID) {
 	t.Helper()
 	if _, err := e.owner.Exec(context.Background(), `
-		INSERT INTO activity_participant (activity_id, person_id, role, user_id)
-		VALUES ($1, $2, $3, $4)`, anchor, person, role, seat); err != nil {
+		INSERT INTO activity_participant (activity_id, contact_id, role, user_id)
+		VALUES ($1, $2, $3, $4)`, anchor, contact, role, seat); err != nil {
 		t.Fatalf("stamping the %s participant: %v", role, err)
 	}
 }
@@ -119,20 +119,20 @@ func TestAReplyIsAddressedToTheSenderOfTheMessageItAnswers(t *testing.T) {
 	anchor := e.seedAnchor(t, "", "")
 
 	// The copied contact is stamped FIRST, so insertion order favours the
-	// wrong person: only the role ranking can put the sender ahead of them.
+	// wrong contact: only the role ranking can put the sender ahead of them.
 	// Seeded the other way round, this passes with no ranking at all.
-	copied := e.linkPerson(t, anchor, "Anne Wiegert")
-	e.seedPersonEmail(t, copied, "anne@buyer.test")
+	copied := e.linkContact(t, anchor, "Anne Wiegert")
+	e.seedContactEmail(t, copied, "anne@buyer.test")
 	e.participate(t, anchor, copied, "cc", nil)
 
-	sender := e.linkPerson(t, anchor, "Dietmar Rietsch")
-	e.seedPersonEmail(t, sender, "dietmar@buyer.test")
+	sender := e.linkContact(t, anchor, "Dietmar Rietsch")
+	e.seedContactEmail(t, sender, "dietmar@buyer.test")
 	e.participate(t, anchor, sender, "from", nil)
 
 	got := recipientOf(e.as(principal.RowScopeAll), t,
 		e.handlers(ourDomain{suffix: "@demo.test"}), anchor)
 	if got.Address != "dietmar@buyer.test" {
-		t.Errorf("address = %q, want the sender's dietmar@buyer.test — a reply addressed to a copied contact answers the wrong person", got.Address)
+		t.Errorf("address = %q, want the sender's dietmar@buyer.test — a reply addressed to a copied contact answers the wrong contact", got.Address)
 	}
 	if got.FullName != "Dietmar Rietsch" {
 		t.Errorf("full name = %q, want Dietmar Rietsch", got.FullName)
@@ -150,12 +150,12 @@ func TestOurOwnSenderIsNeverTheAddressOnOurOutboundMail(t *testing.T) {
 	// predicate cannot catch them and only the seat exclusion can. Given them
 	// an @demo.test address instead, this passes with the seat filter deleted
 	// and proves nothing about it.
-	us := e.linkPerson(t, anchor, "Sofia Meier")
-	e.seedPersonEmail(t, us, "sofia.private@gmail.test")
+	us := e.linkContact(t, anchor, "Sofia Meier")
+	e.seedContactEmail(t, us, "sofia.private@gmail.test")
 	e.participate(t, anchor, us, "from", &e.rep)
 
-	buyer := e.linkPerson(t, anchor, "Dietmar Rietsch")
-	e.seedPersonEmail(t, buyer, "dietmar@buyer.test")
+	buyer := e.linkContact(t, anchor, "Dietmar Rietsch")
+	e.seedContactEmail(t, buyer, "dietmar@buyer.test")
 	e.participate(t, anchor, buyer, "to", nil)
 
 	got := recipientOf(e.as(principal.RowScopeAll), t,
@@ -180,8 +180,8 @@ func TestAColleagueWithoutASeatIsNotAddressable(t *testing.T) {
 
 	// A co-worker on our own domain who has NO login, so no user_id marks
 	// them as ours. Only the domain predicate can tell.
-	coworker := e.linkPerson(t, anchor, "Jonas Weber")
-	e.seedPersonEmail(t, coworker, "jonas@demo.test")
+	coworker := e.linkContact(t, anchor, "Jonas Weber")
+	e.seedContactEmail(t, coworker, "jonas@demo.test")
 	e.participate(t, anchor, coworker, "from", nil)
 
 	got := recipientOf(e.as(principal.RowScopeAll), t,
@@ -194,8 +194,8 @@ func TestAColleagueWithoutASeatIsNotAddressable(t *testing.T) {
 func TestAnUnwiredColleagueReaderOffersNoAddressRatherThanAnUnfilteredOne(t *testing.T) {
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
-	coworker := e.linkPerson(t, anchor, "Jonas Weber")
-	e.seedPersonEmail(t, coworker, "jonas@demo.test")
+	coworker := e.linkContact(t, anchor, "Jonas Weber")
+	e.seedContactEmail(t, coworker, "jonas@demo.test")
 	e.participate(t, anchor, coworker, "from", nil)
 
 	// Nil reader: a deployment that has not wired the own-domain store cannot
@@ -211,11 +211,11 @@ func TestTheDraftCarriesTheAddressTheRecipientEndpointNames(t *testing.T) {
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
 
-	us := e.linkPerson(t, anchor, "Sofia Meier")
-	e.seedPersonEmail(t, us, "sofia.private@gmail.test")
+	us := e.linkContact(t, anchor, "Sofia Meier")
+	e.seedContactEmail(t, us, "sofia.private@gmail.test")
 	e.participate(t, anchor, us, "from", &e.rep)
-	buyer := e.linkPerson(t, anchor, "Dietmar Rietsch")
-	e.seedPersonEmail(t, buyer, "dietmar@buyer.test")
+	buyer := e.linkContact(t, anchor, "Dietmar Rietsch")
+	e.seedContactEmail(t, buyer, "dietmar@buyer.test")
 	e.participate(t, anchor, buyer, "to", nil)
 
 	h := e.handlers(ourDomain{suffix: "@demo.test"})
@@ -244,10 +244,10 @@ func TestAnArchivedAddressIsNotOfferedAsTheRecipient(t *testing.T) {
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
 
-	sender := e.linkPerson(t, anchor, "Dietmar Rietsch")
-	e.seedPersonEmail(t, sender, "gone@buyer.test")
+	sender := e.linkContact(t, anchor, "Dietmar Rietsch")
+	e.seedContactEmail(t, sender, "gone@buyer.test")
 	if _, err := e.owner.Exec(context.Background(),
-		`UPDATE person_email SET archived_at = now() WHERE person_id = $1`, sender); err != nil {
+		`UPDATE contact_email SET archived_at = now() WHERE contact_id = $1`, sender); err != nil {
 		t.Fatalf("archiving the address: %v", err)
 	}
 	e.participate(t, anchor, sender, "from", nil)
@@ -266,31 +266,31 @@ func TestAnArchivedAddressIsNotOfferedAsTheRecipient(t *testing.T) {
 	}
 }
 
-func TestAnErasedPersonYieldsNeitherNameNorAddress(t *testing.T) {
+func TestAnErasedContactYieldsNeitherNameNorAddress(t *testing.T) {
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
 
 	// A readable contact keeps the CONVERSATION reachable, so this exercises
-	// the person filter rather than the activity gate refusing outright.
-	readable := e.linkPerson(t, anchor, "Anne Wiegert")
-	e.seedPersonEmail(t, readable, "anne@buyer.test")
+	// the contact filter rather than the activity gate refusing outright.
+	readable := e.linkContact(t, anchor, "Anne Wiegert")
+	e.seedContactEmail(t, readable, "anne@buyer.test")
 	e.participate(t, anchor, readable, "cc", nil)
 
-	erased := e.linkPerson(t, anchor, "Dietmar Rietsch")
-	e.seedPersonEmail(t, erased, "dietmar@buyer.test")
+	erased := e.linkContact(t, anchor, "Dietmar Rietsch")
+	e.seedContactEmail(t, erased, "dietmar@buyer.test")
 	e.participate(t, anchor, erased, "from", nil)
-	// Art. 17 erasure archives the person in place, leaving the activity and
+	// Art. 17 erasure archives the contact in place, leaving the activity and
 	// its participant row behind. The reply must not go on naming or writing
 	// to them.
 	if _, err := e.owner.Exec(context.Background(),
-		`UPDATE person SET archived_at = now() WHERE id = $1`, erased); err != nil {
-		t.Fatalf("archiving the person: %v", err)
+		`UPDATE contact SET archived_at = now() WHERE id = $1`, erased); err != nil {
+		t.Fatalf("archiving the contact: %v", err)
 	}
 
 	got := recipientOf(e.as(principal.RowScopeAll), t,
 		e.handlers(ourDomain{suffix: "@demo.test"}), anchor)
 	if got.Address == "dietmar@buyer.test" || got.FullName == "Dietmar Rietsch" {
-		t.Fatalf("got name %q address %q — an erased person is still being answered",
+		t.Fatalf("got name %q address %q — an erased contact is still being answered",
 			got.FullName, got.Address)
 	}
 	if got.Address != "anne@buyer.test" {
@@ -303,21 +303,21 @@ func TestAPrivatelyCapturedContactStaysWithheldOnAReachableConversation(t *testi
 	anchor := e.seedAnchor(t, "", "")
 
 	// A readable contact makes the CONVERSATION reachable, so the activity
-	// gate admits and the person gate is what has to hold. Without them the
+	// gate admits and the contact gate is what has to hold. Without them the
 	// activity is unreachable outright and this would pass on the outer
 	// refusal, never exercising capture privacy at all.
-	readable := e.linkPerson(t, anchor, "Anne Wiegert")
-	e.seedPersonEmail(t, readable, "anne@buyer.test")
+	readable := e.linkContact(t, anchor, "Anne Wiegert")
+	e.seedContactEmail(t, readable, "anne@buyer.test")
 	e.participate(t, anchor, readable, "cc", nil)
 
 	private := ids.NewV7()
 	if _, err := e.owner.Exec(context.Background(),
-		`INSERT INTO person (id, full_name, owner_id, visibility, source, captured_by)
+		`INSERT INTO contact (id, full_name, owner_id, visibility, source, captured_by)
 		 VALUES ($1, 'Dietmar Rietsch', $2, 'owner', 'manual', 'human:x')`,
 		private, e.other); err != nil {
-		t.Fatalf("seeding the owner-private person: %v", err)
+		t.Fatalf("seeding the owner-private contact: %v", err)
 	}
-	e.seedPersonEmail(t, private, "dietmar@buyer.test")
+	e.seedContactEmail(t, private, "dietmar@buyer.test")
 	// The private contact is the SENDER, so the role ranking wants them: only
 	// the capture-privacy arm can keep their address off this reply.
 	e.participate(t, anchor, private, "from", nil)
@@ -337,16 +337,16 @@ func TestAPrivatelyCapturedContactStaysWithheldOnAReachableConversation(t *testi
 	}
 }
 
-func TestAddressingRefusesACallerWithoutThePersonReadGrant(t *testing.T) {
+func TestAddressingRefusesACallerWithoutTheContactReadGrant(t *testing.T) {
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
-	sender := e.linkPerson(t, anchor, "Dietmar Rietsch")
-	e.seedPersonEmail(t, sender, "dietmar@buyer.test")
+	sender := e.linkContact(t, anchor, "Dietmar Rietsch")
+	e.seedContactEmail(t, sender, "dietmar@buyer.test")
 	e.participate(t, anchor, sender, "from", nil)
 
-	// A seat that may read the conversation and not the people on it. Neither
+	// A seat that may read the conversation and not the contacts on it. Neither
 	// the name nor the address may reach them through the drafting door that
-	// the people surface closes.
+	// the contacts surface closes.
 	ctx := principal.WithCorrelationID(
 		principal.WithWorkspaceID(context.Background(), e.ws), ids.NewV7())
 	ctx = principal.WithActor(ctx, principal.Principal{
@@ -363,7 +363,7 @@ func TestAddressingRefusesACallerWithoutThePersonReadGrant(t *testing.T) {
 		httptest.NewRequest(http.MethodGet, "/v1/activities/x/reply-recipient", nil).WithContext(ctx),
 		crmcontracts.Id(anchor.UUID))
 	if rec.Code == http.StatusOK {
-		t.Errorf("reply-recipient answered 200 to a caller with no person read grant: %s", rec.Body.String())
+		t.Errorf("reply-recipient answered 200 to a caller with no contact read grant: %s", rec.Body.String())
 	}
 }
 
@@ -371,22 +371,22 @@ func TestAWithheldContactIsStillAnsweredAtTheAddressTheyWroteFrom(t *testing.T) 
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
 
-	// Privately captured by somebody else, so the person row is unreadable —
+	// Privately captured by somebody else, so the contact row is unreadable —
 	// and the message they wrote carries the address they wrote FROM, which is
-	// on the activity this caller already reached rather than on the person.
+	// on the activity this caller already reached rather than on the contact.
 	private := ids.NewV7()
 	if _, err := e.owner.Exec(context.Background(),
-		`INSERT INTO person (id, full_name, owner_id, visibility, source, captured_by)
+		`INSERT INTO contact (id, full_name, owner_id, visibility, source, captured_by)
 		 VALUES ($1, 'Dietmar Rietsch', $2, 'owner', 'manual', 'human:x')`,
 		private, e.other); err != nil {
-		t.Fatalf("seeding the owner-private person: %v", err)
+		t.Fatalf("seeding the owner-private contact: %v", err)
 	}
-	e.seedPersonEmail(t, private, "dietmar@buyer.test")
-	readable := e.linkPerson(t, anchor, "Anne Wiegert")
-	e.seedPersonEmail(t, readable, "anne@buyer.test")
+	e.seedContactEmail(t, private, "dietmar@buyer.test")
+	readable := e.linkContact(t, anchor, "Anne Wiegert")
+	e.seedContactEmail(t, readable, "anne@buyer.test")
 	e.participate(t, anchor, readable, "cc", nil)
 	if _, err := e.owner.Exec(context.Background(), `
-		INSERT INTO activity_participant (activity_id, person_id, role, address)
+		INSERT INTO activity_participant (activity_id, contact_id, role, address)
 		VALUES ($1, $2, 'from', 'dietmar@buyer.test')`, anchor, private); err != nil {
 		t.Fatalf("stamping the corresponding address: %v", err)
 	}
@@ -394,22 +394,22 @@ func TestAWithheldContactIsStillAnsweredAtTheAddressTheyWroteFrom(t *testing.T) 
 	got := recipientOf(e.as(principal.RowScopeAll), t,
 		e.handlers(ourDomain{suffix: "@demo.test"}), anchor)
 
-	// The address is answered even though the person is not readable, and that
+	// The address is answered even though the contact is not readable, and that
 	// is the honest outcome rather than a leak: it is on the message this
 	// caller can already open, and withholding it would refuse a reply to
 	// correspondence they are looking at.
 	if got.Address != "dietmar@buyer.test" {
 		t.Errorf("address = %q, want the address on the message itself", got.Address)
 	}
-	// The NAME cannot come from the withheld person, so it falls through to
-	// the readable contact — the two fields name two different people here.
-	// Worth pinning: a reader who assumed they were one person would greet
+	// The NAME cannot come from the withheld contact, so it falls through to
+	// the readable contact — the two fields name two different contacts here.
+	// Worth pinning: a reader who assumed they were one contact would greet
 	// the colleague and mail the sender.
 	if got.FullName != "Anne Wiegert" {
-		t.Errorf("full name = %q, want the readable Anne Wiegert — the withheld person cannot be named", got.FullName)
+		t.Errorf("full name = %q, want the readable Anne Wiegert — the withheld contact cannot be named", got.FullName)
 	}
 	if got.FullName == "Dietmar Rietsch" {
-		t.Error("the withheld person was named through the drafting door")
+		t.Error("the withheld contact was named through the drafting door")
 	}
 }
 
@@ -417,13 +417,13 @@ func TestTheSurnameAFormalGreetingNeedsIsResolvedWithTheFirstName(t *testing.T) 
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
 
-	sender := e.linkPerson(t, anchor, "Dietmar Rietsch")
+	sender := e.linkContact(t, anchor, "Dietmar Rietsch")
 	if _, err := e.owner.Exec(context.Background(),
-		`UPDATE person SET first_name = 'Dietmar', last_name = 'Rietsch' WHERE id = $1`,
+		`UPDATE contact SET first_name = 'Dietmar', last_name = 'Rietsch' WHERE id = $1`,
 		sender); err != nil {
 		t.Fatalf("seeding the split name: %v", err)
 	}
-	e.seedPersonEmail(t, sender, "dietmar@buyer.test")
+	e.seedContactEmail(t, sender, "dietmar@buyer.test")
 	e.participate(t, anchor, sender, "from", nil)
 
 	got, err := e.store(nil).ReplyRecipientFor(e.as(principal.RowScopeAll), anchor)
@@ -445,8 +445,8 @@ func TestAContactWithNoSurnameOnRecordOffersNone(t *testing.T) {
 	// One-word name: a name, not a mistake. Empty is the answer that keeps the
 	// greeting familiar rather than producing a formal one with nothing after
 	// the honorific.
-	sender := e.linkPerson(t, anchor, "Cher")
-	e.seedPersonEmail(t, sender, "cher@buyer.test")
+	sender := e.linkContact(t, anchor, "Cher")
+	e.seedContactEmail(t, sender, "cher@buyer.test")
 	e.participate(t, anchor, sender, "from", nil)
 
 	got, err := e.store(nil).ReplyRecipientFor(e.as(principal.RowScopeAll), anchor)
@@ -463,22 +463,22 @@ func TestAContactWithNoSurnameOnRecordOffersNone(t *testing.T) {
 
 // The observed defect: a reply drafted on a shared mailbox opened with
 // "steireif," — the first token of the display name "steireif Partnernet",
-// used as a person's given name in a message a rep was about to send.
+// used as a contact's given name in a message a rep was about to send.
 //
-// The record is faithful; the mailbox is not a person. `partner` is
+// The record is faithful; the mailbox is not a contact. `partner` is
 // deliberately outside the role vocabulary, so the resolver has to read the
 // name against its own domain rather than the local part.
 func TestASharedMailboxIsGreetedByNoName(t *testing.T) {
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
 
-	sender := e.linkPerson(t, anchor, "steireif Partnernet")
+	sender := e.linkContact(t, anchor, "steireif Partnernet")
 	if _, err := e.owner.Exec(context.Background(),
-		`UPDATE person SET first_name = 'steireif', last_name = 'Partnernet' WHERE id = $1`,
+		`UPDATE contact SET first_name = 'steireif', last_name = 'Partnernet' WHERE id = $1`,
 		sender); err != nil {
 		t.Fatalf("seeding the split name: %v", err)
 	}
-	e.seedPersonEmail(t, sender, "partner@steireif.net")
+	e.seedContactEmail(t, sender, "partner@steireif.net")
 	e.participate(t, anchor, sender, "from", nil)
 
 	got, err := e.store(nil).ReplyRecipientFor(e.as(principal.RowScopeAll), anchor)
@@ -495,18 +495,18 @@ func TestASharedMailboxIsGreetedByNoName(t *testing.T) {
 }
 
 // The rule abstains rather than guessing, so the case it must NOT reach is a
-// real person at the company whose domain this is.
-func TestAPersonAtTheSameDomainIsStillGreetedByName(t *testing.T) {
+// real contact at the company whose domain this is.
+func TestAContactAtTheSameDomainIsStillGreetedByName(t *testing.T) {
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
 
-	sender := e.linkPerson(t, anchor, "Anna Steireif")
+	sender := e.linkContact(t, anchor, "Anna Steireif")
 	if _, err := e.owner.Exec(context.Background(),
-		`UPDATE person SET first_name = 'Anna', last_name = 'Steireif' WHERE id = $1`,
+		`UPDATE contact SET first_name = 'Anna', last_name = 'Steireif' WHERE id = $1`,
 		sender); err != nil {
 		t.Fatalf("seeding the split name: %v", err)
 	}
-	e.seedPersonEmail(t, sender, "anna@steireif.net")
+	e.seedContactEmail(t, sender, "anna@steireif.net")
 	e.participate(t, anchor, sender, "from", nil)
 
 	got, err := e.store(nil).ReplyRecipientFor(e.as(principal.RowScopeAll), anchor)

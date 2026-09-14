@@ -201,7 +201,7 @@ const (
 //
 // No event. Every other reader-state write announces itself because somebody
 // else's view depends on it — a not_sales settles a thread for the workspace,
-// a dismissal changes a lane. A pin changes the ORDER of one person's own page
+// a dismissal changes a lane. A pin changes the ORDER of one contact's own page
 // and nothing else reads it, so an announcement would be a bus message no
 // consumer could act on. The audit row is what "who reordered their day, and
 // when" is answered from.

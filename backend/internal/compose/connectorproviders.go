@@ -17,7 +17,7 @@ import "slices"
 // The OAuth capture providers. Gmail and Google Calendar (gcal) share one
 // Google OAuth app; graph (Outlook mail) and graphcal (Outlook calendar) share
 // one Microsoft app. Within each vendor the two differ only in scope, and each
-// is its own CONNECTION: one consent apiece, so a person can bring their
+// is its own CONNECTION: one consent apiece, so a contact can bring their
 // calendar without their mail and disconnect either.
 const (
 	providerGmail    = "gmail"
@@ -61,6 +61,27 @@ func MailProviders() []string { return []string{providerGmail, providerGraph, pr
 // IsMailProvider reports whether this provider connects a mailbox.
 func IsMailProvider(provider string) bool {
 	return slices.Contains(MailProviders(), provider)
+}
+
+// calendarProviders are the providers that connect a CALENDAR. Derived as the
+// complement of the mail set inside the OAuth set rather than written out a
+// third time: a vendor is brought here by ONE change to oauthProviders, and a
+// calendar this deployment can connect but nothing recognises as one is exactly
+// the failure MailProviders' own comment records from the other direction.
+//
+// What reads it is the scheduling seam: free/busy computed for a host with none
+// of these connected is not a reading of their diary, and the answer has to say
+// so instead of reporting an unread calendar as an empty one.
+var calendarProviders = calendarProvidersFrom(oauthProviders)
+
+func calendarProvidersFrom(oauth []string) []string {
+	calendars := make([]string, 0, len(oauth))
+	for _, provider := range oauth {
+		if !IsMailProvider(provider) {
+			calendars = append(calendars, provider)
+		}
+	}
+	return calendars
 }
 
 // listedProviders are what the connect screen offers, which is the mail set:

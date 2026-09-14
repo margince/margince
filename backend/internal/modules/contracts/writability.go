@@ -17,7 +17,7 @@ package contracts
 //
 // The anchor rule is visibility.go's, restated once here rather than re-derived:
 // a contract WITH a deal is judged by that deal, and one without is judged by
-// its organization. Widening a deal-anchored contract to its company would hand
+// its company. Widening a deal-anchored contract to its company would hand
 // a caller agreements attached to deals they cannot see; narrowing it to both
 // would refuse a legitimate editor who holds only the deal.
 
@@ -64,13 +64,15 @@ import (
 // agreement they may not even know exists, for the length of their own
 // transaction.
 func writableContract(ctx context.Context, tx pgx.Tx, id ids.ContractID, asOf time.Time) (crmcontracts.Contract, error) {
-	if _, err := readContract(ctx, tx, id, asOf); err != nil {
+	// nil columns: this reads only to PROVE visibility and throws the row
+	// away, so fetching custom values here would be work nobody reads.
+	if _, err := readContract(ctx, tx, id, asOf, nil); err != nil {
 		return crmcontracts.Contract{}, err
 	}
 	if _, err := storekit.LockRow(ctx, tx, contractTable, id.UUID, storekit.IncludeArchived); err != nil {
 		return crmcontracts.Contract{}, err
 	}
-	existing, err := readContract(ctx, tx, id, asOf)
+	existing, err := readContract(ctx, tx, id, asOf, nil)
 	if err != nil {
 		return crmcontracts.Contract{}, err
 	}
@@ -103,5 +105,5 @@ func ensureAnchorWritable(ctx context.Context, tx pgx.Tx, contract crmcontracts.
 	if err != nil {
 		return err
 	}
-	return auth.EnsureWritable(ctx, tx, organizationTable, anchor)
+	return auth.EnsureWritable(ctx, tx, companyTable, anchor)
 }

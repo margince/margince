@@ -157,7 +157,7 @@ func TestReconcileOverwritesDivergedNonDirtyRowAndEmitsConflict(t *testing.T) {
 	ctx, pool, ws := testWorkspaceCtx(t)
 	ms := NewMirrorStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](ws)), noOwnerEmails{})
 
-	const objectClass = "organization"
+	const objectClass = "company"
 	const externalID = "61655665850"
 	oldBaseline := time.Date(2026, 7, 1, 12, 0, 0, 0, time.UTC)
 	newBaseline := oldBaseline.Add(time.Hour)
@@ -235,7 +235,7 @@ func TestEmitMirrorConflictIsFencedAgainstADisconnectedConnection(t *testing.T) 
 	}
 	fenced := store.WithFenceIdentity(conn.ConnectedAt)
 
-	const objectClass = "organization"
+	const objectClass = "company"
 	const externalID = "61655665899"
 
 	if err := svc.Disconnect(ctx); err != nil {
@@ -276,7 +276,7 @@ func TestReconcileNeverClobbersADirtyRow(t *testing.T) {
 	ctx, pool, ws := testWorkspaceCtx(t)
 	ms := NewMirrorStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](ws)), noOwnerEmails{})
 
-	const objectClass = "organization"
+	const objectClass = "company"
 	const externalID = "61655665851"
 	oldBaseline := time.Date(2026, 7, 1, 12, 0, 0, 0, time.UTC)
 	newBaseline := oldBaseline.Add(time.Hour)
