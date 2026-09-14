@@ -1,7 +1,8 @@
 /** @vitest-environment happy-dom */
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
+import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
 import { ConversationChoices, ThreadPane } from "./composethread";
 
@@ -103,4 +104,105 @@ it("offers each conversation and the way back as design-system buttons", async (
   expect(back.classList.contains("btn")).toBe(true);
   await user.click(back);
   expect(leave).toHaveBeenCalledTimes(1);
+});
+
+type Activity = components["schemas"]["Activity"];
+
+function message(
+  id: string,
+  subject: string,
+  displayStatus: "team" | "withheld",
+): Activity {
+  return {
+    id,
+    kind: "email",
+    subject,
+    body: `Full text of ${subject}.\n\nA second paragraph beyond the preview.`,
+    thread_key: "pricing",
+    occurred_at: "2026-08-20T09:00:00Z",
+    created_at: "2026-08-20T09:00:00Z",
+    updated_at: "2026-08-20T09:00:00Z",
+    source: "manual",
+    captured_by: "human:u1",
+    is_done: false,
+    content_state: displayStatus === "withheld" ? "withheld" : "available",
+    email_summary: {
+      activity_id: id,
+      subject,
+      preview: `Full text of ${subject}.`,
+      direction: "inbound",
+      occurred_at: "2026-08-20T09:00:00Z",
+      counterparty: "Ada Brandt",
+      display_status: displayStatus,
+      move: "none",
+      attachment_count: 0,
+      version: 1,
+    },
+  };
+}
+
+// Reading a message and answering it are two different moves on one row. The
+// row picks what the reply answers; the fold under it opens the text in place,
+// so re-reading the exchange neither retargets the draft nor covers it with a
+// second drawer. The folds share a name, which is what makes them an
+// accordion: the browser closes one as the next opens.
+it("folds each readable message's text open under its row without retargeting the reply", async () => {
+  const user = userEvent.setup();
+  const select = vi.fn();
+  render(
+    <LocaleProvider initial="en">
+      <ThreadPane
+        messages={[
+          message("m1", "Re: Pricing", "team"),
+          message("m2", "Re: Delivery", "team"),
+          message("m3", "Re: Terms", "withheld"),
+        ]}
+        selectedId="m1"
+        onSelect={select}
+        pending={false}
+        failed={false}
+        onRetry={() => undefined}
+        nameOf={nobody}
+        named
+      />
+    </LocaleProvider>,
+  );
+
+  const delivery = screen.getByRole("listitem", { name: /Re: Delivery/ });
+  const fold = delivery.querySelector("details");
+  if (!fold) {
+    throw new Error("a readable message draws no fold for its text");
+  }
+  expect(fold.open).toBe(false);
+  expect(fold.getAttribute("name")).toBe("compose-thread-message");
+  expect(
+    screen
+      .getByRole("listitem", { name: /Re: Pricing/ })
+      .querySelector("details")
+      ?.getAttribute("name"),
+  ).toBe("compose-thread-message");
+
+  await user.click(within(delivery).getByText("Message text"));
+  expect(fold.open).toBe(true);
+  expect(
+    within(fold).getByText(/A second paragraph beyond the preview\./),
+  ).toBeTruthy();
+  // Opening the text was a read, not a pick.
+  expect(select).not.toHaveBeenCalled();
+
+  // The way to the whole message stands at the foot of the opened text, as
+  // the design system's button and outside the fold's own control, so
+  // pressing it does not toggle the text under it.
+  const read = within(fold).getByRole("button", { name: "Read full email" });
+  expect(read.classList.contains("btn")).toBe(true);
+  expect(read.closest("summary")).toBeNull();
+
+  // A withheld message keeps its row and gets no text to open: the fold would
+  // open on nothing, and a control that opens nothing is a claim there was
+  // nothing to say.
+  expect(
+    screen
+      .getByRole("listitem", { name: /Re: Terms/ })
+      .querySelector("details"),
+  ).toBeNull();
 });

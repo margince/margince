@@ -63,7 +63,7 @@ function Conversation() {
 }
 const meta: Meta = { title: "Patterns/Composer conversation" };
 export default meta;
-export const SelectAndPreview: StoryObj = { render: () => <Conversation /> };
+export const SelectAndRead: StoryObj = { render: () => <Conversation /> };
 export const SelectedReply: StoryObj = {
   render: () => {
     installFetchStub({

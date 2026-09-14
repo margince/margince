@@ -165,11 +165,24 @@
   color: var(--textMeta);
 }
 
-.compose-message-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--gapActions);
+/* A message's text, folded under its row, inside the row's own inset. The atom
+   draws a rule above and a margin below for a section standing on its own in
+   a page; here the row is the section's head, so both go — kept, the rule
+   would draw a line through every message of the list. */
+.compose-message-fold {
   padding: 0 var(--space-3) var(--space-3);
+}
+.compose-message-text {
+  border-top: 0;
+  margin-bottom: 0;
+}
+.compose-message-read {
+  margin: var(--space-3) 0 0;
+}
+/* The words at the row's own size: the pane is the narrower column, and a
+   body at the reading size beside the form's fields read as a second form. */
+.compose-message-text > .disclosure-body {
+  font-size: var(--fs-sm);
 }
 
 .compose-thread-list > .compose-message {

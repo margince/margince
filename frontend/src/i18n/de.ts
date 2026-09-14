@@ -3676,7 +3676,7 @@ export const de = {
   "compose.reply": "Antworten",
   "compose.writeEmail": "E-Mail schreiben",
   "compose.relink": "Neu verknüpfen",
-  "compose.previewEmail": "Vorschau",
+  "compose.messageText": "Nachrichtentext",
   "compose.readEmail": "Vollständige E-Mail lesen",
   "compose.replyIntent": "Antworten mit…",
   "compose.newIntent": "Was soll diese E-Mail erreichen?",

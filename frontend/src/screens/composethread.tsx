@@ -6,13 +6,12 @@ import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { activityTimeline } from "../design-system/activitytimeline";
-import { Button, PendingBody } from "../design-system/atoms";
+import { Button, Disclosure, PendingBody } from "../design-system/atoms";
 import { TimelineRow } from "../design-system/composed";
 import { EmailDetail } from "../design-system/emaildetail";
 import { EmailEntry } from "../design-system/emailentry";
 import { EmailText } from "../design-system/emailtext";
 import type { NameOf } from "../design-system/participants";
-import { Popover } from "../design-system/popover";
 import { SurfaceState } from "../design-system/surfacestate";
 import { formatDate, formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
@@ -224,19 +223,36 @@ export function ThreadPane({
                         disabled={disabled || !onSelect}
                       />
                     )}
+                    {/* The text folds open UNDER its row, one message at a
+                        time, so the reader re-reads the exchange without
+                        leaving the draft beside it. The row itself stays the
+                        control that picks what the reply answers: opening a
+                        message to read it must not retarget the draft. The
+                        full drawer remains the way to the envelope and the
+                        attachments, which the text alone does not carry, and
+                        it is offered at the foot of the text rather than on
+                        the summary's line: a verb beside the summary keeps
+                        its column for the whole open body, and in the
+                        drawer's narrow half that wrapped every sentence. */}
                     {message.content_state !== "withheld" &&
                       message.email_summary?.display_status !== "withheld" && (
-                        <div className="compose-message-actions">
-                          <Popover label={t("compose.previewEmail")} onHover>
-                            <EmailText body={message.body ?? ""} />
-                          </Popover>
-                          <Button
-                            small
-                            variant="link"
-                            onClick={() => setReading(message.id)}
+                        <div className="compose-message-fold">
+                          <Disclosure
+                            summary={t("compose.messageText")}
+                            name="compose-thread-message"
+                            className="compose-message-text"
                           >
-                            {t("compose.readEmail")}
-                          </Button>
+                            <EmailText body={message.body ?? ""} />
+                            <p className="compose-message-read">
+                              <Button
+                                small
+                                variant="link"
+                                onClick={() => setReading(message.id)}
+                              >
+                                {t("compose.readEmail")}
+                              </Button>
+                            </p>
+                          </Disclosure>
                         </div>
                       )}
                   </li>

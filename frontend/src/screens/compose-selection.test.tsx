@@ -203,20 +203,22 @@ it("ignores a delayed draft after selecting another message", async () => {
   expect(screen.queryByText("wrong@example.test")).toBeNull();
 });
 
-it("previews full paragraphs without changing the reply target", async () => {
+it("opens another message's full text in place without changing the reply target", async () => {
   const user = userEvent.setup();
   setup();
   await user.click(await screen.findByRole("button", { name: /Pricing/ }));
   await screen.findByDisplayValue("Re: Pricing");
-  fireEvent.click(
-    within(screen.getByRole("listitem", { name: /Re: Delivery/ })).getByRole(
-      "button",
-      { name: "Preview" },
-    ),
-  );
-  expect(await screen.findByText(/Full text of Re: Delivery\./)).toBeTruthy();
+  const delivery = screen.getByRole("listitem", { name: /Re: Delivery/ });
+  const fold = delivery.querySelector("details");
+  if (!fold) {
+    throw new Error("the other message draws no fold for its text");
+  }
+  expect(fold.open).toBe(false);
+  fireEvent.click(within(delivery).getByText("Message text"));
+  expect(fold.open).toBe(true);
+  expect(within(fold).getByText(/Full text of Re: Delivery\./)).toBeTruthy();
   expect(
-    screen.getByText(/A second paragraph beyond the preview\./),
+    within(fold).getByText(/A second paragraph beyond the preview\./),
   ).toBeTruthy();
   expect(screen.getByDisplayValue("Re: Pricing")).toBeTruthy();
 });

@@ -3631,7 +3631,7 @@ export const vi = {
   "compose.reply": "Trả lời",
   "compose.writeEmail": "Viết email",
   "compose.relink": "Liên kết lại",
-  "compose.previewEmail": "Xem trước",
+  "compose.messageText": "Nội dung thư",
   "compose.readEmail": "Đọc toàn bộ email",
   "compose.replyIntent": "Trả lời với…",
   "compose.newIntent": "Email này cần đạt được điều gì?",
