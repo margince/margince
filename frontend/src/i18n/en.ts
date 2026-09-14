@@ -2671,6 +2671,7 @@ export const en = {
   "deals.amount": "Value",
   "deals.lastSignal": "Last signal",
   "deals.lastSignalNone": "no signal yet",
+  "deals.lastMailNone": "no email yet",
   "deals.stage": "Stage",
   "deals.close": "Expected close",
   "deals.confirmAdvance": "Move to {stage}?",

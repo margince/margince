@@ -2583,6 +2583,7 @@ export const vi = {
   "deals.amount": "Giá trị",
   "deals.lastSignal": "Tín hiệu gần nhất",
   "deals.lastSignalNone": "chưa có tín hiệu",
+  "deals.lastMailNone": "chưa có email",
   "deals.stage": "Giai đoạn",
   "deals.close": "Dự kiến chốt",
   "deals.confirmAdvance": "Chuyển sang {stage}?",

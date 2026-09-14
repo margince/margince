@@ -21,14 +21,18 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { routeHash } from "../app/router";
 import type { BoardDeal } from "../design-system/composed";
+import { DealMailChip } from "../design-system/dealcard";
 import { EmailReference } from "../design-system/emailreference";
 import { Eyebrow } from "../design-system/eyebrow";
+import type { ListColumn } from "../design-system/listtable";
 import { formatElapsed } from "../format/now";
-import { useLocale, useT } from "../i18n";
+import { type Translator, useLocale, useT } from "../i18n";
+import { boardMail } from "./boarddeal";
 import { QueryStates, throwProblem } from "./common";
 import "./dealmailaside.css";
 
 type Activity = components["schemas"]["Activity"];
+type Deal = components["schemas"]["Deal"];
 
 // Three, like the card the flyout was modelled on: enough to read the shape of
 // the exchange, few enough that the panel stays an aside rather than a page.
@@ -123,15 +127,41 @@ export function DealMailAside({
 }
 
 /**
- * The board's binding: the aside for one card, addressed to the deal it is
+ * The binding: the aside for one card or one row, addressed to the deal it is
  * about. Built HERE rather than in the board's props because this is the tier
- * that holds routes, and the board is a 4,000-line screen already.
+ * that holds routes, and the deals screen is a 4,000-line file already. It
+ * asks for the id alone, so a board card and a table row — different shapes
+ * of the same deal — both fit.
  */
-export function dealMailAside(deal: BoardDeal) {
+export function dealMailAside(deal: Pick<BoardDeal, "id">) {
   return (
     <DealMailAside
       dealId={deal.id}
       href={routeHash({ screen: "deals", id: deal.id })}
     />
   );
+}
+
+/**
+ * The table's column: the same chip and the same flyout the card draws, off
+ * the same wire field, so a reader switching views reads one fact once. No
+ * `sort` — the field is attached to the page after the query, not a column
+ * the server can order by, and a header that promised an ordering it cannot
+ * give would be a control that does nothing.
+ */
+export function lastMailColumn(t: Translator): ListColumn<Deal> {
+  return {
+    key: "last_mail",
+    header: t("deal.lastMail"),
+    cell: (deal) => {
+      const mail = boardMail(deal.last_email);
+      return mail ? (
+        <DealMailChip mail={mail} aside={dealMailAside(deal)} />
+      ) : (
+        // A word rather than the card's blank: a column is scanned down, and
+        // an empty cell in one cannot be told from a cell still loading.
+        <span className="t-caption">{t("deals.lastMailNone")}</span>
+      );
+    },
+  };
 }

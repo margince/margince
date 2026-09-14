@@ -2609,6 +2609,7 @@ export const de = {
   "deals.amount": "Wert",
   "deals.lastSignal": "Letztes Signal",
   "deals.lastSignalNone": "noch kein Signal",
+  "deals.lastMailNone": "noch keine E-Mail",
   "deals.stage": "Phase",
   "deals.close": "Erwarteter Abschluss",
   "deals.confirmAdvance": "Nach {stage} verschieben?",

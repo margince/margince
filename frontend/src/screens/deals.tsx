@@ -133,7 +133,7 @@ import { DealBulkBar } from "./dealbulk";
 import { DealEmailAside } from "./dealemail";
 import { DealFiles } from "./dealfiles";
 import { DealIdentityLine } from "./dealidentity";
-import { dealMailAside } from "./dealmailaside";
+import { dealMailAside, lastMailColumn } from "./dealmailaside";
 import {
   DealProjectChip,
   dealProjectFields,
@@ -1556,6 +1556,7 @@ function dealColumns(
           <span className="t-caption">{t("deals.lastSignalNone")}</span>
         ),
     },
+    lastMailColumn(t),
     {
       key: "status",
       header: t("lead.status"),

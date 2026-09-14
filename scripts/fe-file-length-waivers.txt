@@ -72,7 +72,7 @@
 2315 frontend/src/screens/settings.tsx
 2833 frontend/src/screens/leads.test.tsx
 3331 frontend/src/screens/compose.test.tsx
-4140 frontend/src/screens/deals.tsx
+4141 frontend/src/screens/deals.tsx
 505 frontend/src/screens/recordchronology.tsx
 507 frontend/src/design-system/briefitem.tsx
 513 frontend/src/design-system/relationshipmap.tsx

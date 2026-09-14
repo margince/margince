@@ -89,9 +89,10 @@ export function toBoardDeal(
 /**
  * The wire's last email as the card states it: a span and a direction. The
  * span is measured HERE, where every other span on the card is — a card that
- * read the clock itself would be one no test could pin.
+ * read the clock itself would be one no test could pin. Exported for the
+ * table's column, which states the same chip off the same row.
  */
-function boardMail(last: Deal["last_email"]): BoardDealMail | null {
+export function boardMail(last: Deal["last_email"]): BoardDealMail | null {
   if (!last) {
     return null;
   }

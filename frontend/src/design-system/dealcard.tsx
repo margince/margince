@@ -156,7 +156,9 @@ function DealCloses({
 }
 
 /**
- * When mail last moved on this deal, at the foot of the card.
+ * When mail last moved on this deal: at the foot of the card, and in the deals
+ * table's own column, which is why it is exported — one chip, one flyout, on
+ * both views of the same deal.
  *
  * The one line a rep triages a column by after the money: a deal they wrote
  * to ten days ago with no reply and a deal the buyer wrote to yesterday sit in
@@ -169,7 +171,7 @@ function DealCloses({
  * one it is plain text. The flyout's CONTENT is the caller's, because it is
  * read from the timeline and this tier fetches nothing.
  */
-function DealLastMail({
+export function DealMailChip({
   mail,
   aside,
 }: Readonly<{ mail: BoardDealMail; aside?: ReactNode }>) {
@@ -248,7 +250,7 @@ export function DealCard({
   /**
    * What the mail line reveals on hover: the deal's last few messages, read
    * by the caller from the timeline. Given, the line becomes a flyout's
-   * trigger; absent, it stays a line of text. See `DealLastMail`.
+   * trigger; absent, it stays a line of text. See `DealMailChip`.
    */
   mailAside?: (deal: BoardDeal) => ReactNode;
   dragHandlers?: {
@@ -344,7 +346,7 @@ export function DealCard({
           flyout rather than the deal's door. */}
       {deal.lastEmail && (
         <span className="deal-foot">
-          <DealLastMail mail={deal.lastEmail} aside={mailAside?.(deal)} />
+          <DealMailChip mail={deal.lastEmail} aside={mailAside?.(deal)} />
         </span>
       )}
     </div>

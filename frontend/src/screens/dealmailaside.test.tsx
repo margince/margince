@@ -2,8 +2,9 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render as rtlRender, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { LocaleProvider } from "../i18n";
-import { DealMailAside } from "./dealmailaside";
+import type { components } from "../api/schema";
+import { LocaleProvider, useT } from "../i18n";
+import { DealMailAside, lastMailColumn } from "./dealmailaside";
 
 afterEach(() => {
   cleanup();
@@ -134,5 +135,79 @@ describe("DealMailAside", () => {
     render();
     expect(await screen.findByRole("alert")).toBeTruthy();
     expect(screen.queryByText("No email on this deal yet")).toBeNull();
+  });
+});
+
+type Deal = components["schemas"]["Deal"];
+
+function tableDeal(overrides: Partial<Deal>): Deal {
+  return {
+    id: "d1",
+    name: "Fleet retrofit",
+    pipeline_id: "pl",
+    stage_id: "s1",
+    status: "open",
+    source: "manual",
+    captured_by: "human:u1",
+    version: 4,
+    created_at: "2026-06-01T00:00:00Z",
+    updated_at: "2026-06-01T00:00:00Z",
+    ...overrides,
+  } as Deal;
+}
+
+// The column needs a translator, which only a component can ask for.
+function Cell({ deal }: Readonly<{ deal: Deal }>) {
+  const t = useT();
+  return <>{lastMailColumn(t).cell(deal)}</>;
+}
+
+describe("lastMailColumn", () => {
+  // The table's cell is the card's chip: same fact, same flyout trigger, off
+  // the same wire field — so a reader switching views reads one thing.
+  it("draws the chip for a deal with mail, and says so for one without", () => {
+    serve([]);
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const { unmount } = rtlRender(
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">
+          <Cell
+            deal={tableDeal({
+              last_email: { occurred_at: daysAgo(10), direction: "outbound" },
+            })}
+          />
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+    expect(screen.getByRole("button", { name: /Last email/ })).toBeTruthy();
+    expect(screen.getByText("10 d ago")).toBeTruthy();
+    unmount();
+
+    rtlRender(
+      <LocaleProvider initial="en">
+        <Cell deal={tableDeal({})} />
+      </LocaleProvider>,
+    );
+    expect(screen.getByText("no email yet")).toBeTruthy();
+    expect(screen.queryByRole("button")).toBeNull();
+  });
+
+  // The header offers no ordering: the field is attached after the query, and
+  // a sortable header on it would be a control that does nothing.
+  it("offers no sort", () => {
+    let column: ReturnType<typeof lastMailColumn> | undefined;
+    function Probe() {
+      column = lastMailColumn(useT());
+      return null;
+    }
+    rtlRender(
+      <LocaleProvider initial="en">
+        <Probe />
+      </LocaleProvider>,
+    );
+    expect(column?.sort).toBeUndefined();
+    expect(column?.header).toBe("Last email");
   });
 });
