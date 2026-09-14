@@ -72,7 +72,6 @@ export const en = {
   "brief.week.lostLabel": "Lost",
   "brief.feed.refreshFailed":
     "The brief could not refresh. The last loaded work is still shown.",
-  "brief.feed.routine": "Privacy follow-up · {count} items due later",
   "brief.team.saveResponse": "Save response",
   "brief.team.response": "Your response to the help request",
   "brief.team.planFor": "Current plan · {name}",
@@ -10148,6 +10147,37 @@ export const en = {
   "stageAutomation.saveFailed": "That change did not save",
   "stageAutomation.nothingReviewed":
     "Proposed, but nobody has answered one yet.",
+  "employment.importLoading": "Reading purchased employment history…",
+  "employment.apply": "Link imported companies",
+  "employment.status.current": "Current",
+  "employment.status.former": "Former",
+  "employment.status.unknown": "Status unknown",
+  "employment.statusLabel": "Employment status",
+  "employment.review": "Review this role before linking it.",
+  "employment.matchNeeded": "Company match needed.",
+  "employment.resolve": "Match company",
+  "employment.dismiss": "Dismiss this evidence",
+  "employment.research": "Research",
+  "employment.researchDeferred":
+    "Waiting for research settings and available budget",
+  "employment.website": "Confirmed company website",
+  "employment.websiteHint":
+    "Choose an existing company above, or confirm its own website to create it.",
+  "employment.saveMatch": "Save company link",
+  "employment.researchNeedsWebsite": "Website needed",
+  "employment.research.queued": "Queued",
+  "employment.research.running": "Researching",
+  "employment.research.done": "Completed",
+  "employment.research.partial": "Partially completed",
+  "employment.research.failed": "Failed — open the company to retry",
+  "employment.research.cancelled": "Cancelled",
+  "employment.researchQueued":
+    "Research status is available on the company page.",
+  "employment.edit": "Edit employment",
+  "employment.start": "Start date",
+  "employment.end": "End date",
+  "employment.dateHint": "Use YYYY-MM or YYYY-MM-DD. Leave blank when unknown.",
+  "employment.more": "Show more employment",
 } as const;
 
 export type MessageKey = keyof typeof en;

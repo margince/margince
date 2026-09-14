@@ -13,7 +13,7 @@ var createRecordShapes = map[string]string{
 	"lead":         "{candidate_company_key?: string, company_name?: string, email?: email, full_name?: string, linkedin_url?: string, owner_id?: uuid, project_id?: uuid, source?: string, source_id?: string, source_system?: string, status?: \"new\"|\"contacted\"|\"engaged\"|\"promoted\"|\"disqualified\", title?: string}",
 	"activity":     "{assignee_id?: uuid, body?: string, channel_provider?: string, direction?: \"inbound\"|\"outbound\", due_at?: rfc3339, duration_seconds?: integer, kind: \"email\"|\"call\"|\"meeting\"|\"note\"|\"task\"|\"message\", links?: [{entity_id: uuid, entity_type: \"contact\"|\"company\"|\"deal\"|\"lead\"|\"project\"}], meeting_status?: \"booked\"|\"held\"|\"no_show\"|\"canceled\", occurred_at?: rfc3339, raw?: object, remind_at?: rfc3339, source?: string, source_id?: string, source_system?: string, subject?: string}",
 	"project":      "{company_id: uuid, description?: string, name: string, owner_id?: uuid, source?: string, started_at?: YYYY-MM-DD, target_end_date?: YYYY-MM-DD}",
-	"relationship": "{company_id?: uuid, contact_id?: uuid, counterparty_company_id?: uuid, counterparty_contact_id?: uuid, deal_id?: uuid, ended_at?: YYYY-MM-DD, is_current_primary?: boolean, kind: \"employment\"|\"deal_stakeholder\"|\"project_stakeholder\"|\"partner_of\"|\"referred_by\"|\"co_sell_with\"|\"works_with\"|\"billing_contact\", project_id?: uuid, role?: string, source?: string, started_at?: YYYY-MM-DD}",
+	"relationship": "{company_id?: uuid, contact_id?: uuid, counterparty_company_id?: uuid, counterparty_contact_id?: uuid, deal_id?: uuid, employment_status?: \"current\"|\"former\"|\"unknown\", ended_at?: YYYY-MM-DD, ended_precision?: \"day\"|\"month\", is_current_primary?: boolean, kind: \"employment\"|\"deal_stakeholder\"|\"project_stakeholder\"|\"partner_of\"|\"referred_by\"|\"co_sell_with\"|\"works_with\"|\"billing_contact\", project_id?: uuid, role?: string, source?: string, started_at?: YYYY-MM-DD, started_precision?: \"day\"|\"month\"}",
 }
 
 var updateRecordShapes = map[string]string{
@@ -23,7 +23,7 @@ var updateRecordShapes = map[string]string{
 	"lead":         "{candidate_company_key?: string, company_name?: string, email?: email, full_name?: string, owner_id?: uuid, project_id?: uuid, score?: integer, score_override_reason?: string, source?: string, status?: \"new\"|\"contacted\"|\"engaged\", title?: string}",
 	"activity":     "{assignee_id?: uuid, body?: string, due_at?: rfc3339, is_done?: boolean, meeting_status?: \"booked\"|\"held\"|\"no_show\"|\"canceled\", occurred_at?: rfc3339, remind_at?: rfc3339, subject?: string}",
 	"project":      "{description?: string, ended_at?: YYYY-MM-DD, name?: string, owner_id?: uuid, started_at?: YYYY-MM-DD, target_end_date?: YYYY-MM-DD}",
-	"relationship": "{ended_at?: YYYY-MM-DD, is_current_primary?: boolean, role?: string, started_at?: YYYY-MM-DD}",
+	"relationship": "{clear_ended_at?: boolean, clear_started_at?: boolean, employment_status?: \"current\"|\"former\"|\"unknown\", ended_at?: YYYY-MM-DD, ended_precision?: \"day\"|\"month\", is_current_primary?: boolean, role?: string, started_at?: YYYY-MM-DD, started_precision?: \"day\"|\"month\"}",
 }
 
 // The contract's own closed vocabularies, as JSON arrays a tool's InputSchema

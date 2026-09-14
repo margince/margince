@@ -389,6 +389,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/contacts/{id}/employment-import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** Read retained provider roles and their company-link outcomes without buying another lookup. */
+        get: operations["previewContactEmploymentImport"];
+        put?: never;
+        /** Apply retained employer evidence, resolve a company match, or dismiss an incorrect role. */
+        post: operations["applyContactEmploymentImport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/employment-import/backfill": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Administratively preview or apply one resumable batch of retained employment evidence. */
+        post: operations["backfillEmploymentImport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/contacts": {
         parameters: {
             query?: never;
@@ -20767,8 +20805,76 @@ export interface components {
             /** @description Why, in the human's own words, when they gave a reason. */
             verdict_note?: string | null;
         };
+        EmploymentImportRequest: {
+            /**
+             * @description Apply the company choice to unresolved roles at the same employer; date and status corrections affect only the selected key.
+             * @default false
+             */
+            resolve_group: boolean;
+            /** @description Corrected start as YYYY-MM or YYYY-MM-DD; empty clears an incorrect date. */
+            started?: string;
+            /** @description Corrected end as YYYY-MM or YYYY-MM-DD; empty clears an incorrect date. */
+            ended?: string;
+            /**
+             * @default apply
+             * @enum {string}
+             */
+            action: "apply" | "resolve" | "dismiss";
+            /** @description Episode key returned by the preview; required for resolve or dismiss. */
+            key?: string;
+            /**
+             * Format: uuid
+             * @description Existing company explicitly selected by the user.
+             */
+            company_id?: string;
+            /** @description Company website explicitly confirmed by the user; creates a missing company only after identity resolution. */
+            domain?: string;
+            /**
+             * @description Explicit user correction of this episode status.
+             * @enum {string}
+             */
+            employment_status?: "current" | "former" | "unknown";
+        };
+        EmploymentImportItem: {
+            key: string;
+            provider: string;
+            company_name: string;
+            role: string;
+            domain?: string;
+            /** @description Provider date at its original precision, YYYY-MM or YYYY-MM-DD. */
+            started?: string;
+            /** @description Provider date at its original precision, YYYY-MM or YYYY-MM-DD. */
+            ended?: string;
+            /** @enum {string} */
+            employment_status: "current" | "former" | "unknown";
+            /** @enum {string} */
+            state: "pending" | "linked" | "needs_match" | "needs_review" | "dismissed";
+            /** Format: uuid */
+            company_id?: string;
+            /** Format: uuid */
+            relationship_id?: string;
+            /** Format: date-time */
+            retrieved_at?: string;
+            /** @description Current company research state or a reason it cannot yet run. */
+            research_state?: string;
+        };
+        EmploymentImportReport: {
+            /** @description Retained evidence that requires administrator review. */
+            warnings?: string[];
+            /** Format: uuid */
+            contact_id: string;
+            items: components["schemas"]["EmploymentImportItem"][];
+        };
+        EmploymentBackfillReport: {
+            reports: components["schemas"]["EmploymentImportReport"][];
+            applied: boolean;
+            has_more: boolean;
+            /** Format: uuid */
+            next_cursor?: string;
+        };
         /** @description One employment edge, current primary first. */
         Contact360Employment: {
+            version?: components["schemas"]["RowVersion"];
             /** Format: uuid */
             relationship_id: string;
             /** Format: uuid */
@@ -20777,11 +20883,20 @@ export interface components {
             /** @description The title as the edge records it, which may differ from the contact's own title field. */
             role?: string | null;
             is_current_primary: boolean;
+            /**
+             * @description Employment assertion. Omitted retains legacy date-based behavior; former and unknown never count as current merely because the end date is missing.
+             * @enum {string}
+             */
+            employment_status?: "current" | "former" | "unknown";
+            /** @enum {string} */
+            started_precision?: "day" | "month";
+            /** @enum {string} */
+            ended_precision?: "day" | "month";
             /** Format: date-time */
             started_at?: string | null;
             /**
              * Format: date-time
-             * @description Null means ongoing. A former employment keeps its row — history is never overwritten.
+             * @description Missing date; consult employment_status. Historical roles retain their own rows.
              */
             ended_at?: string | null;
         };
@@ -22715,11 +22830,20 @@ export interface components {
              * @default false
              */
             is_current_primary: boolean;
+            /**
+             * @description Employment assertion. Omitted retains legacy date-based behavior; former and unknown never count as current merely because the end date is missing.
+             * @enum {string}
+             */
+            employment_status?: "current" | "former" | "unknown";
+            /** @enum {string} */
+            started_precision?: "day" | "month";
+            /** @enum {string} */
+            ended_precision?: "day" | "month";
             /** Format: date */
             started_at?: string | null;
             /**
              * Format: date
-             * @description Null = current/ongoing.
+             * @description Missing date; employment_status distinguishes former and unknown from ongoing.
              */
             ended_at?: string | null;
             source: string;
@@ -22750,6 +22874,15 @@ export interface components {
             project_id?: string | null;
             role?: string | null;
             is_current_primary?: boolean;
+            /**
+             * @description Employment assertion. Omitted retains legacy date-based behavior; former and unknown never count as current merely because the end date is missing.
+             * @enum {string}
+             */
+            employment_status?: "current" | "former" | "unknown";
+            /** @enum {string} */
+            started_precision?: "day" | "month";
+            /** @enum {string} */
+            ended_precision?: "day" | "month";
             /** Format: date */
             started_at?: string | null;
             /** Format: date */
@@ -22757,8 +22890,21 @@ export interface components {
             source: string;
         };
         UpdateRelationshipRequest: {
+            /** @description Remove an incorrect start date and its precision. */
+            clear_started_at?: boolean;
+            /** @description Remove an incorrect end date and its precision. */
+            clear_ended_at?: boolean;
             role?: string | null;
             is_current_primary?: boolean;
+            /**
+             * @description Employment assertion. Omitted retains legacy date-based behavior; former and unknown never count as current merely because the end date is missing.
+             * @enum {string}
+             */
+            employment_status?: "current" | "former" | "unknown";
+            /** @enum {string} */
+            started_precision?: "day" | "month";
+            /** @enum {string} */
+            ended_precision?: "day" | "month";
             /** Format: date */
             started_at?: string | null;
             /** Format: date */
@@ -36677,6 +36823,95 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    previewContactEmploymentImport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Employment evidence and resolution outcomes. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmploymentImportReport"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    applyContactEmploymentImport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmploymentImportRequest"];
+            };
+        };
+        responses: {
+            /** @description Applied employment evidence and unresolved items. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmploymentImportReport"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    backfillEmploymentImport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @default false */
+                    apply?: boolean;
+                    /** Format: uuid */
+                    after?: string;
+                    /** @default 10 */
+                    limit?: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Batch outcomes; pass next_cursor to continue. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmploymentBackfillReport"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
             422: components["responses"]["ValidationError"];
         };
     };
