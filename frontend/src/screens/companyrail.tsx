@@ -134,11 +134,18 @@ export function CompanyRail({
             </PanelBody>
           </Disclosure>
         )}
-        <RecordTeam
-          recordType="company"
-          recordId={companyId}
-          readOnly={!canWriteCompany}
-        />
+        <Disclosure
+          className="co-sect"
+          open
+          summary={<SectionSummary title={t("assignments.title")} />}
+        >
+          <RecordTeam
+            recordType="company"
+            recordId={companyId}
+            readOnly={!canWriteCompany}
+            bare
+          />
+        </Disclosure>
         {/* Both summaries stand on EVERY tab, the open one included: the
             column is the reader's anchor while they move between tabs, and
             each shows only the top RAIL_ROW_LIMIT rows — a summary beside a
