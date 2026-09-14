@@ -31,8 +31,42 @@ import { textsOf } from "./waits";
  * outlives the guard fails here, naming itself, rather than being measured
  * mid-flight.
  */
+// How long a finite animation is given to land before the assertions read the
+// page. Longer than the design system's own arrivals — the Select's open is
+// ~140ms, the longest here — and short enough that a PERPETUAL animation is
+// still reported by the assertion below rather than hidden by the wait.
+const ANIMATION_LANDING_MS = 500;
+
 async function settleAnimations(page: Page) {
   await page.emulateMedia({ reducedMotion: "reduce" });
+  // Reduced motion stops the NEXT animation; it cannot call off one already in
+  // flight. The design system's Select drives its open through the Web
+  // Animations API, gated by usePrefersReducedMotion() AT RENDER TIME — so a
+  // test that clicks the control and then emulates has already started an
+  // animation the media query has no say over, and CSS `animation: none` does
+  // not govern a WAAPI one the way it governs a keyframe.
+  //
+  // So the in-flight ones are given a moment to LAND, at their resting frame,
+  // which is what a settled page means. The race is the bound: a perpetual
+  // animation never resolves `finished`, and waiting on one would turn the
+  // finding below into a timeout that names nothing. What survives this wait is
+  // exactly what the assertion is about.
+  //
+  // allSettled rather than all: a cancelled animation REJECTS `finished`, and
+  // that is a settled outcome here — the animation is over, which is all this
+  // waits for.
+  await page.evaluate(async (budgetMs) => {
+    const landing = document
+      .getAnimations()
+      .filter((animation) => animation.playState === "running")
+      .map((animation) => animation.finished);
+    await Promise.race([
+      Promise.allSettled(landing),
+      new Promise((resolve) => {
+        window.setTimeout(resolve, budgetMs);
+      }),
+    ]);
+  }, ANIMATION_LANDING_MS);
   const motion = await page.evaluate(() => {
     const describe = (element: Element) =>
       `${element.tagName.toLowerCase()}.${element.className}`;
@@ -256,6 +290,43 @@ const primaryDestinations = [
   "Margince fragen",
 ];
 
+// settleAnimations' own case, because the gap it closes is invisible to every
+// other test in this file: none of them touches a WAAPI-driven control before
+// sweeping, so all of them pass whether or not an in-flight animation is
+// settled.
+//
+// The design system's Select drives its ~140ms open through the Web Animations
+// API and reads prefers-reduced-motion AT RENDER TIME, so a test that clicks
+// the control and then emulates has started something the media query cannot
+// call off. Reproduced here directly rather than through a screen, so the case
+// is about the harness and not about whichever surface happens to carry a
+// Select today.
+test("the settle waits for an animation already in flight to land", async ({
+  page,
+}) => {
+  await page.goto("/#/home");
+  // Anchored before the animation starts, because the page's OWN boot carries
+  // finite work — the Core's fallback dress transitions its opacity out over
+  // 300ms once the canvas takes over — and a settle that ran during boot would
+  // be reporting that rather than the animation this case is about.
+  await expect(page.locator("nav.rail .navlevel a.navitem")).toHaveCount(
+    primaryDestinations.length,
+  );
+  await settleAnimations(page);
+
+  await page.evaluate(() => {
+    // What Select does: a finite WAAPI animation on a real element, started
+    // BEFORE reduced motion is emulated. `animation: none` does not govern it.
+    document.body.animate([{ opacity: 1 }, { opacity: 0.5 }], {
+      duration: 140,
+      iterations: 1,
+    });
+  });
+
+  // Without the landing wait this fails on that animation, mid-flight, which is
+  // the flake #5298 recorded — and axe would have read the frame it was at.
+  await settleAnimations(page);
+});
 test("AC-shell-1: the rail renders the primary destinations in order", async ({
   page,
 }) => {
