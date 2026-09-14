@@ -6,11 +6,13 @@
 package activities
 
 import (
+	"errors"
 	"testing"
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -135,5 +137,67 @@ func TestHistoricalRequestIsReviewableAndExplicitAcceptanceIsIdempotent(t *testi
 	}
 	if summaries[id].Move != crmcontracts.EmailSummaryMoveNone {
 		t.Fatal("completed request remains actionable in email")
+	}
+}
+
+// TestArchivingAStaleTaskRefusesRatherThanHidingTheAnswer.
+//
+// ArchiveActivity takes a version pin and nothing proved what it does with a
+// stale one — which matters because a sweep that reads a batch of tasks and
+// archives them later is relying on exactly that: between the read and the
+// write a rep can complete the task, and an unpinned archive would bury their
+// answer without either of them seeing it.
+//
+// So the pin refuses, and the caller decides. The compose-side sweep that
+// settles duplicate assurance tasks reads that refusal as "somebody wrote to
+// this; leave it alone".
+func TestArchivingAStaleTaskRefusesRatherThanHidingTheAnswer(t *testing.T) {
+	e := setupLoad(t)
+	store := storeKnowing(e)
+	actor, ok := principal.Actor(e.as())
+	if !ok {
+		t.Fatal("missing reader")
+	}
+	actor.Permissions.Objects["activity"] = principal.ObjectGrant{
+		Read: true, Create: true, Update: true, Delete: true,
+	}
+	reader := principal.WithActor(e.as(), actor)
+
+	subject := "Chase the retrofit quote"
+	task, _, err := store.LogActivity(reader, LogActivityInput{
+		Kind: "task", Source: "ui", Subject: &subject,
+	})
+	if err != nil {
+		t.Fatalf("logging the task: %v", err)
+	}
+	stale := (*int64)(task.Version)
+	if stale == nil {
+		t.Fatal("a freshly written task carries no version, so nothing can be pinned to it")
+	}
+
+	// The rep answers it, which moves the version — the write the sweep did
+	// not see.
+	done := true
+	if _, err := store.UpdateActivity(reader, ids.From[ids.ActivityKind](ids.UUID(task.Id)),
+		UpdateActivityInput{IsDone: &done}); err != nil {
+		t.Fatalf("completing the task: %v", err)
+	}
+
+	if _, err := store.ArchiveActivity(reader, ids.From[ids.ActivityKind](ids.UUID(task.Id)), stale); !errors.Is(err, apperrors.ErrVersionSkew) {
+		t.Fatalf("archiving on the stale version answered %v, want ErrVersionSkew — an unpinned archive "+
+			"here buries an answer the rep had already given", err)
+	}
+
+	// And the answer stands: refusing is only worth anything if it left the
+	// row alone.
+	after, err := store.GetActivity(reader, ids.From[ids.ActivityKind](ids.UUID(task.Id)), storekit.LiveOnly)
+	if err != nil {
+		t.Fatalf("re-reading the task: %v", err)
+	}
+	if after.ArchivedAt != nil {
+		t.Error("the refused archive still archived the task")
+	}
+	if after.IsDone == nil || !*after.IsDone {
+		t.Error("the refused archive lost the rep's completion")
 	}
 }
