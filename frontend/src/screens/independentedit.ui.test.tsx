@@ -13,7 +13,6 @@ import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { meFixture } from "../app/mefixture";
 import { RecordShell } from "../app/testing/recordshell.testkit";
-import { pickOption } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
 import { CompanyScreen } from "./companies";
 import {
@@ -22,8 +21,7 @@ import {
   jsonResponse,
   stubFetch,
 } from "./company.fixtures";
-import { ContactEditMergeArchive } from "./contacteditmergearchive";
-import { useObjectCustomFields } from "./customfields.form";
+import { ContactDetails } from "./contactdetails";
 import { DealScreen } from "./deals";
 
 const anna: components["schemas"]["Contact"] = {
@@ -31,6 +29,7 @@ const anna: components["schemas"]["Contact"] = {
   full_name: "Anna Weber",
   title: "Head of Procurement",
   version: 1,
+  writable: true,
   emails: [
     {
       id: "e-1",
@@ -47,10 +46,6 @@ const anna: components["schemas"]["Contact"] = {
   created_at: "2026-06-01T00:00:00Z",
   updated_at: "2026-06-01T00:00:00Z",
 };
-function ContactEditor() {
-  const cf = useObjectCustomFields("contact");
-  return <ContactEditMergeArchive contact={anna} cf={cf} overlay={false} />;
-}
 function deal(
   overrides: Partial<components["schemas"]["Deal"]>,
 ): components["schemas"]["Deal"] {
@@ -105,13 +100,6 @@ function render(ui: ReactNode) {
     </QueryClientProvider>,
   );
 }
-async function openRecordMenu(testId: string) {
-  fireEvent.click(await screen.findByRole("button", { name: "More actions" }));
-  return screen.findByTestId(testId);
-}
-async function openEditForm() {
-  fireEvent.click(await openRecordMenu("edit-record"));
-}
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
@@ -150,15 +138,15 @@ it("saves Customer tier when a background logo update changed the company versio
     return emptyPage();
   });
   render(<CompanyScreen id="o-1" />);
-  await userEvent.click(await openRecordMenu("edit-record"));
-  await pickOption(
-    userEvent.setup(),
-    await screen.findByRole("combobox", { name: "Customer tier" }),
-    "Growth Client",
+  const user = userEvent.setup();
+  await user.click(
+    await screen.findByRole("button", { name: "Change Customer tier" }),
   );
   current = { ...original, version: 2, logo_url: "new-logo" };
-  fireEvent.click(screen.getByRole("button", { name: "Save" }));
-  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  await user.click(
+    await screen.findByRole("option", { name: "Growth Client" }),
+  );
+  await waitFor(() => expect(patches).toHaveLength(2));
   expect(patches).toEqual([
     { body: { cf_customer_tier: "Growth Client" }, version: "1" },
     { body: { cf_customer_tier: "Growth Client" }, version: "2" },
@@ -182,17 +170,22 @@ it("saves a contact's title across an unrelated update without resending their e
       current = { ...current, ...body, version: 3 };
       return jsonResponse(current);
     }
-    if (url.includes("/activities")) return jsonResponse({ data: [] });
+    if (url.endsWith("/me"))
+      return jsonResponse(
+        meFixture({ allow: { contact: ["read", "update"] } }),
+      );
+    if (url.includes("/custom-fields") || url.includes("/activities"))
+      return jsonResponse({ data: [] });
     return jsonResponse(current);
   });
-  render(<ContactEditor />);
-  fireEvent.click(screen.getByTestId("edit-record"));
+  render(<ContactDetails contact={anna} />);
+  fireEvent.click(await screen.findByRole("button", { name: "Change Title" }));
   fireEvent.change(await screen.findByLabelText("Title"), {
     target: { value: "New title" },
   });
   current = { ...anna, version: 2, full_name: "Updated name" };
-  fireEvent.click(screen.getByRole("button", { name: "Save" }));
-  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  fireEvent.keyDown(screen.getByRole("textbox"), { key: "Enter" });
+  await waitFor(() => expect(patches).toHaveLength(2));
   expect(patches).toEqual([
     { body: { title: "New title" }, version: "1" },
     { body: { title: "New title" }, version: "2" },
@@ -227,13 +220,15 @@ it("saves a deal's name across an unrelated update using the fresh version", asy
     }),
   );
   render(<DealScreen id="x" />);
-  await openEditForm();
-  fireEvent.change(screen.getByLabelText("Deal name *"), {
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Change Deal name" }),
+  );
+  fireEvent.change(screen.getByLabelText("Deal name"), {
     target: { value: "Renamed deal" },
   });
   current = { ...original, version: 5, description: "Updated description" };
-  fireEvent.click(screen.getByRole("button", { name: "Save" }));
-  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  fireEvent.keyDown(screen.getByRole("textbox"), { key: "Enter" });
+  await waitFor(() => expect(patches).toHaveLength(2));
   expect(patches).toEqual([
     { body: { name: "Renamed deal" }, version: "4" },
     { body: { name: "Renamed deal" }, version: "5" },

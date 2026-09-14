@@ -193,7 +193,7 @@ function matchesShape(
 // ── The record's own read ───────────────────────────────────────────────────
 
 // The deal's record read. It is NOT in TIMELINE_SEED_KEYS because the deal's
-// seed is the status card, which is written by a model; what carries the
+// seed is the status card; what carries the
 // deal's own fields is this.
 const DEAL_RECORD_KEY = (id: string): QueryKey => ["deal", id];
 
@@ -206,17 +206,16 @@ const DEAL_RECORD_KEY = (id: string): QueryKey => ["deal", id];
  * app/queryclient.ts): a record on screen re-reads itself, and everything else
  * is served from cache the way it always was.
  *
- * Derived from TIMELINE_SEED_KEYS rather than listed a second time, so a
- * record kind that grows a composite read joins this by being added there —
- * the list that goes stale silently is the one nobody has to touch. Matched
- * EXACTLY rather than as a prefix: a record's read is that key, and a prefix
- * would sweep in whatever else a page happens to hang under it.
+ * Composite records derive their shapes from TIMELINE_SEED_KEYS. The deal
+ * adds its field read and its facts-only status read; the latter cannot ask
+ * a model. Matching exact shapes keeps unrelated cached reads out.
  */
 export function isRecordRead(key: QueryKey): boolean {
   const shapes = Object.values(TIMELINE_SEED_KEYS).map(
     (seed) => seed(SHAPE_ID) as unknown[],
   );
   shapes.push(DEAL_RECORD_KEY(SHAPE_ID) as unknown[]);
+  shapes.push(DEAL_STATUS_KEY(SHAPE_ID) as unknown[]);
   return shapes.some((shape) => matchesShape(key as unknown[], shape, false));
 }
 

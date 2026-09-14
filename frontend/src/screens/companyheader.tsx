@@ -28,26 +28,16 @@ import {
 } from "./common";
 import { LIFECYCLE_LABELS, LIFECYCLE_OPTIONS } from "./companies";
 import { DecisionsChip } from "./companyapprovals";
-import {
-  addressFrom,
-  companyEditComparison,
-  companyEditFields,
-  mapCompanyUpdate,
-  searchCompanyTargets,
-} from "./companyform";
+import { patchCompanyField, searchCompanyTargets } from "./companyform";
 import { RELATIONSHIP_TYPE_LABELS, relationshipBadges } from "./companylookups";
 import { CompanyRejectAction } from "./companyreject";
 import { ComposeModal } from "./compose";
-import { joinMultiselectValue } from "./create";
-import { useObjectCustomFields } from "./customfields.form";
-import { EditAction } from "./edit";
 import {
   EntityRef,
   rosterMissLabel,
   useRoster,
   useRosterPartial,
 } from "./entityref";
-import { saveIndependentEdit } from "./independentedit";
 import { LogActivityAction } from "./logactivity";
 import { MergeAction } from "./merge";
 import { EmailVerb } from "./recordemail";
@@ -232,22 +222,6 @@ function WriteEmailAction({
 // It throws on failure rather than swallowing: InlineChoice renders what is
 // thrown beside the control, and the server's problem detail is a better
 // sentence than any this layer could invent.
-async function patchCompanyField(
-  company: Company,
-  body: UpdateCompanyRequest,
-): Promise<void> {
-  const { error } = await api.PATCH("/companies/{id}", {
-    params: {
-      path: { id: company.id },
-      ...ifMatch(requireVersion(company.version)),
-    },
-    body,
-  });
-  if (error) {
-    throwProblem(error);
-  }
-}
-
 // useCompanyFieldPatch wires one inline header edit to the query cache: the
 // record, the list it appears in and the 360 that summarizes it all read the
 // value being changed, so all three are refetched rather than left showing the
@@ -519,122 +493,6 @@ export function useCompanyVerbRefusal(company: Company): string | undefined {
   });
 }
 
-function CompanyEditAction({
-  company,
-  overlay,
-  disabledReasonId,
-}: Readonly<{
-  company: Company;
-  overlay: boolean;
-  // Passed straight to EditAction: the id of the sentence saying why this
-  // account takes no edits, when it does not.
-  disabledReasonId?: string;
-}>) {
-  const t = useT();
-  const cf = useObjectCustomFields("company");
-  const roster = useRoster("user", true);
-  const rosterPartial = useRosterPartial("user", true);
-  // The roster hook serves users and teams alike, so narrow to the entries
-  // that actually carry a contact's name rather than asserting the shape.
-  const owners = (roster.data ?? []).flatMap((entry) =>
-    "display_name" in entry
-      ? [{ id: entry.id, display_name: entry.display_name }]
-      : [],
-  );
-  // An owner outside what the roster read — a deactivated user, or a workspace
-  // deeper than the walk reaches — would leave the prefilled select showing a
-  // blank it cannot resolve, and since the select is required once an owner is
-  // set, saving anything else would then force a reassignment nobody asked for.
-  // The form names them exactly as the header does, off the same four readings:
-  // the same roster read cannot be a departure here and a refusal there.
-  if (
-    company.owner_id &&
-    !owners.some((user) => user.id === company.owner_id)
-  ) {
-    owners.push({
-      id: company.owner_id,
-      display_name: unresolvedOwnerLabel(roster, rosterPartial, t),
-    });
-  }
-  return (
-    <EditAction<Company>
-      disabledReasonId={disabledReasonId}
-      // This one lives in the overflow menu, among rows that say what they do.
-      labelled
-      label={t("record.edit")}
-      savedMessage={(saved) =>
-        t("record.saveDone", { name: saved.display_name })
-      }
-      notice={overlay ? t("overlay.partialWriteBack") : undefined}
-      fields={[
-        ...companyEditFields(owners, Boolean(company.owner_id), t),
-        ...cf.formFields,
-      ]}
-      record={{
-        id: company.id,
-        original: company,
-        version: company.version,
-        display_name: company.display_name,
-        owner_id: company.owner_id ?? "",
-        legal_name: company.legal_name ?? "",
-        industry: company.industry ?? "",
-        size_band: company.size_band ?? "",
-        // Seed the replace-set so an untouched picker preserves every type.
-        lifecycle: company.lifecycle ?? "",
-        relationship_types: joinMultiselectValue(
-          company.relationship_types ?? [],
-        ),
-        linkedin_url: company.linkedin_url ?? "",
-        ...addressFrom(company.address),
-        // Repeatable cells use form strings, including the primary flag.
-        domains: (company.domains ?? []).map((domain) => ({
-          domain: domain.domain,
-          is_primary: String(domain.is_primary),
-        })),
-        // Domain replace-set comparison uses the original API shape.
-        domains_at_open: company.domains ?? [],
-        ...cf.recordSlice(company),
-      }}
-      update={async (values, rows, opened) => {
-        return saveIndependentEdit({
-          opened,
-          patch: {
-            ...mapCompanyUpdate(
-              values,
-              rows ?? {},
-              opened?.domains_at_open as Company["domains"],
-            ),
-            // Late custom fields carry the baseline the form actually showed.
-            ...cf.toPatch(values, opened ?? {}),
-          },
-          project: companyEditComparison,
-          read: async () => {
-            const { data, error } = await api.GET("/companies/{id}", {
-              params: { path: { id: company.id } },
-            });
-            if (error) throwProblem(error);
-            return data;
-          },
-          write: async (body, version) => {
-            const { data, error } = await api.PATCH("/companies/{id}", {
-              params: { path: { id: company.id }, ...ifMatch(version) },
-              body,
-            });
-            if (error) throwProblem(error);
-            return data;
-          },
-        });
-      }}
-      invalidate="companies"
-      recordKey="company"
-      resolveExisting={(_code, existingId) => ({
-        screen: "companies",
-        id: existingId,
-      })}
-    />
-  );
-}
-
 // Which relationship types the LIFECYCLE already speaks for.
 //
 // The two fields answer different questions — what a company IS to us, and
@@ -725,11 +583,7 @@ export function CompanyActionBadges({
             {refusedReason}
           </p>
         )}
-        <CompanyEditAction
-          company={company}
-          overlay={overlay}
-          disabledReasonId={refusedByState}
-        />
+
         {/* Merge has no incumbent-first projection — the seam refuses it
             outright (overlay/provider_writes.go Merge) — unlike edit and
             archive, which it serves, so it stays hidden here.
@@ -832,7 +686,10 @@ export function CompanyActionBadges({
           })}
           archive={async () => {
             const { data, error } = await api.DELETE("/companies/{id}", {
-              params: { path: { id: company.id } },
+              params: {
+                path: { id: company.id },
+                ...ifMatch(requireVersion(company.version)),
+              },
             });
             if (error) {
               throwProblem(error);

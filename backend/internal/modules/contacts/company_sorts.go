@@ -13,6 +13,7 @@ package contacts
 
 import (
 	"context"
+	"github.com/margince/margince/backend/internal/platform/auth"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
@@ -41,7 +42,7 @@ func orderByPrimaryDomain(context.Context, func(any) int) (string, error) {
 // no count and orders by NOTHING: the column is absent for them, and a page
 // ordered by a number they are refused would disclose it through the order.
 func orderByContactCount(ctx context.Context, arg func(any) int) (string, error) {
-	if !grantVisible(ctx, "contact") || !grantVisible(ctx, "relationship") {
+	if !auth.ReadGranted(ctx, "contact") || !auth.ReadGranted(ctx, "relationship") {
 		return withheldSortValue, nil
 	}
 	from, err := countedEmploymentFrom(ctx, "rel.company_id = company.id", arg)
@@ -64,7 +65,7 @@ func orderByContactCount(ctx context.Context, arg func(any) int) (string, error)
 // A role without computed_field:read is shown NO count (STATE-4) and orders by
 // nothing — same rule as the contacts column above, for the same reason.
 func orderByOpenDealCount(ctx context.Context, arg func(any) int) (string, error) {
-	if !grantVisible(ctx, "deal") || !computedFieldsVisible(ctx) {
+	if !auth.ReadGranted(ctx, "deal") || !auth.ReadGranted(ctx, "computed_field") {
 		return withheldSortValue, nil
 	}
 	return storekit.SQLf(

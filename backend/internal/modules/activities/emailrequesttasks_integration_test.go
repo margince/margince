@@ -47,7 +47,7 @@ func seedEmailRequest(t *testing.T, e *loadEnv, subject, label, verdict string) 
 func TestEmailRequestCreatesOneUndatedPersonalTaskWithSourceEvidence(t *testing.T) {
 	e := setupLoad(t)
 	source := seedEmailRequest(t, e, "Product report", "commitment", OwedVerdictAsksUs)
-	seedEmailRequest(t, e, "Thanks for the report", "noise", OwedVerdictAsksUs)
+	seedEmailRequest(t, e, "Thanks for the report", "noise", OwedVerdictInformsUs)
 	seedEmailRequest(t, e, "I will send my draft", "commitment", OwedVerdictInformsUs)
 	store := storeKnowing(e)
 	for range 2 {
@@ -152,8 +152,8 @@ func TestEmailMoveUsesTheConversationAndActionEvidence(t *testing.T) {
 	if got[first].Move != crmcontracts.EmailSummaryMoveNeedsReply {
 		t.Fatal("unrelated reply cleared the report request")
 	}
-	if got[answered].Move != crmcontracts.EmailSummaryMoveNone || got[info].Move != crmcontracts.EmailSummaryMoveNone {
-		t.Fatal("answered or informational email still claimed a reply")
+	if got[answered].Move != crmcontracts.EmailSummaryMoveNeedsReply || got[info].Move != crmcontracts.EmailSummaryMoveNone {
+		t.Fatal("a reply erased an unfulfilled request, or information claimed work")
 	}
 	// Both positive and negative obligations agree on the list and the detail.
 	for _, id := range []ids.UUID{first, answered, info} {

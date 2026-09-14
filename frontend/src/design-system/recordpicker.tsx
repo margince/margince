@@ -28,6 +28,9 @@ export function RecordPicker({
   onPick,
   selected,
   disabled = false,
+  id,
+  "aria-describedby": describedBy,
+  "aria-invalid": invalid,
 }: Readonly<{
   // Doubles as the search field's placeholder and aria-label — the caller
   // supplies already-translated copy, because only the caller knows WHICH
@@ -35,6 +38,9 @@ export function RecordPicker({
   // failed lookup puts on screen — is this component's own state and is
   // written here, in the reader's language.
   label: string;
+  id?: string;
+  "aria-describedby"?: string;
+  "aria-invalid"?: boolean;
   searchTargets: (q: string) => Promise<RecordPickerCandidate[]>;
   onPick: (candidate: RecordPickerCandidate) => void;
   selected?: RecordPickerCandidate | null;
@@ -145,6 +151,9 @@ export function RecordPicker({
     // itself, which sits in toolbar rows where shrink-to-fit is what is wanted.
     <div className="recordpicker">
       <SearchField
+        id={id}
+        aria-describedby={describedBy}
+        aria-invalid={invalid}
         placeholder={label}
         aria-label={label}
         value={term}

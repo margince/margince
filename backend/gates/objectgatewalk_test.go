@@ -58,11 +58,24 @@ type objectGate struct {
 	rowHalfOwners []string
 }
 
-// requireCall matches a call that asks the object gate under any of this
-// tree's spellings — auth.Require, or a package-local wrapper such as
-// contact360's requireRead. Paired with the object name in the same CALL, it
-// is the older form of the admission and still counts.
-var requireCall = regexp.MustCompile(`^[Rr]equire[A-Za-z]*$`)
+// objectGateCall matches a call that asks the object gate under any of this
+// tree's spellings, paired with the object name in the same CALL.
+//
+// Two families, and the second is not a weaker form of the first:
+//
+//   - Require-shaped — auth.Require, or a package-local wrapper such as
+//     contact360's requireRead. The answer is a 403 and the request ends.
+//   - auth.ReadGranted. The answer is a boolean, for the reads that must
+//     DEGRADE rather than refuse: a list ordered by a company name the caller
+//     may not read falls back to its tie-breaker instead of failing a page the
+//     caller never asked to sort. It asks the same merged permissions Require
+//     asks, so a read that takes it has taken the object half.
+//
+// Recognising only the first is what let four hand-rolled copies of the second
+// sit in this tree reading as ungated, which is the reverse of the error this
+// walk exists to prevent: a census that cannot see a real gate teaches its
+// readers to distrust it.
+var objectGateCall = regexp.MustCompile(`^([Rr]equire[A-Za-z]*|ReadGranted)$`)
 
 // site is one read: the function that holds it, empty for a package-level SQL
 // fragment, the first line of the SQL for the report, and whether that
@@ -297,7 +310,7 @@ func referencesIn(node ast.Node, consts map[string]string) references {
 			// qualifier" is the same question here, and auth.EdgeReadScope and
 			// a local edgeScope both need to resolve to what they call.
 			name := calleeName(typed)
-			if requireCall.MatchString(name) {
+			if objectGateCall.MatchString(name) {
 				for _, object := range stringArgumentsOf(typed, consts) {
 					refs.gatedObjects[object] = true
 				}
@@ -315,7 +328,7 @@ func referencesIn(node ast.Node, consts map[string]string) references {
 	return refs
 }
 
-// stringArgumentsOf is the object names a Require-shaped call could be gating.
+// stringArgumentsOf is the object names an object-gate call could be gating.
 // Every string argument, because the position differs by spelling —
 // auth.Require(ctx, "lead", action) and contact360's requireRead(ctx, "lead")
 // — and a census pinned to one index would silently stop seeing the other.

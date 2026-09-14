@@ -2,38 +2,22 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useQueryClient } from "@tanstack/react-query";
-import {
-  Building2,
-  CircleDot,
-  Globe,
-  Hash,
-  Landmark,
-  Link as LinkIcon,
-  MapPin,
-  Text,
-  User,
-  Users,
-} from "lucide-react";
+import { Hash, MapPin } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
 import { useCanWriteRecord } from "../app/capability";
 import { useRecordZone } from "../app/recordzone";
-import { Disclosure } from "../design-system/atoms";
+import { useUnsavedGuard } from "../app/unsaved";
 import { EvidenceMark } from "../design-system/evidencemark";
 import { FieldGrid, FieldRow } from "../design-system/fieldgrid";
-import { InlineChoice, InlineText } from "../design-system/inlinechoice";
+import { InlineText } from "../design-system/inlinechoice";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { throwProblem } from "./common";
-import {
-  CompanyLifecycleControl,
-  CompanyOwnerControl,
-  useCompanyFieldPatch,
-  useCompanyReadOnlyReason,
-} from "./companyheader";
-import { SIZE_BAND_OPTIONS } from "./companylookups";
+import { throwProblem, useSorMode } from "./common";
+import { CompanyDetails } from "./companydetails";
+import { useCompanyReadOnlyReason } from "./companyheader";
 import { VatMark } from "./companyvatmark";
 import { derivedSource } from "./evidencesource";
 import { profileFieldsKey, useCompanyProfileFields } from "./evidenceverdict";
@@ -44,7 +28,6 @@ import { profileFieldsKey, useCompanyProfileFields } from "./evidenceverdict";
 // cut.
 
 type Company = components["schemas"]["Company"];
-type CompanyDomain = NonNullable<Company["domains"]>[number];
 type ProfileField = components["schemas"]["CompanyProfileField"];
 // The path parameter's own closed vocabulary, taken from the generated contract
 // rather than respelled: a field name this endpoint does not accept is then a
@@ -54,77 +37,6 @@ type ProfileFieldKey = components["parameters"]["ProfileFieldKey"];
 // alongside its six named parts (schema.d.ts's own escape hatch for a future
 // field), which collapses `keyof` down to bare `string` and loses every part's
 // actual value type. The six literals are the only ones this row ever writes.
-type AddressPart =
-  | "line1"
-  | "line2"
-  | "city"
-  | "region"
-  | "postal_code"
-  | "country";
-type UpdateCompanyRequest = components["schemas"]["UpdateCompanyRequest"];
-
-// The column's own CHECK bound (core 0203) — stops the reader at the limit
-// rather than letting the server refuse the save. Same figure companyheader.tsx
-// used to cap its own (now-removed) description control at.
-const DESCRIPTION_MAX_LENGTH = 500;
-
-/**
- * DetailsGrid draws the account's own fields as a label/value grid: legal
- * name, where it stands with us, who owns it, its domain, its address (one
- * row per part), industry, size, LinkedIn page and description. EVERY known
- * field draws a row, whether or not the account carries a value: an absent
- * field is a fact about the record (nobody has filled it in yet), and hiding
- * the row along with the fact erases the "yet" — a reader can only add what
- * they can see is missing. An empty row reads as a quiet add affordance
- * (InlineText/InlineChoice's own empty-state button) rather than a blank
- * line.
- *
- * Writability gates the VERBS only, never the values: an archived or
- * overlay-mirrored account still shows every field, it simply shows them
- * without the edit affordance (InlineText/InlineChoice's own
- * `canEdit={false}` path). Derived internally from
- * `useCanWriteRecord("company", …)` and `useCompanyReadOnlyReason` — the
- * grant, the seat ceiling, the record's own `writable`, and the same
- * archived/overlay reasoning the header's inline controls gate on — rather
- * than threaded down as a prop, so a caller cannot render this grid writable
- * on a record it should not be able to write.
- *
- * Every field here edits in place, including lifecycle, domain and address —
- * none of the three is scalar the way legal name or industry is, so each
- * keeps its own rule about what "editing this" is allowed to touch:
- *
- *   - Lifecycle and owner both reuse the header's OWN control
- *     (`CompanyLifecycleControl` / `CompanyOwnerControl`) rather than a
- *     second InlineChoice PATCHing the same field down its own path — one
- *     implementation of "how this field is written," mounted here and in
- *     the header, so the two can never disagree about what they last wrote.
- *   - Domain edits the PRIMARY domain's name only, and always sends the
- *     record's full domain array back with that one entry changed: `domains`
- *     is a replace-set on the wire (interfaces.md), so a write that sent
- *     just the edited entry would silently drop every other domain the
- *     account has. Clearing the field to empty is refused client-side
- *     (`field.domainRequired`) rather than sent as a delete — removing a
- *     domain outright stays in the full editor, which can retarget which
- *     domain is primary and prompts for confirmation.
- *   - Address is six rows, one per part (line 1, line 2, city, region,
- *     postal code, country) rather than one grouped editor: each part reuses
- *     InlineText exactly as it stands, with zero new commit machinery, at
- *     the cost of a longer grid than a single "Address" row would be. Every
- *     write sends the WHOLE address object back with only that one part
- *     changed (`{...current, [part]: next}`) — `address` replaces the
- *     object wholesale on the wire, so omitting the untouched parts would
- *     blank them.
- *
- * ABSENT VS WITHHELD, stated rather than built: this grid does not today
- * distinguish a field nobody has filled in from one the viewer's role cannot
- * see, because `Company` carries no field-level grant signal to draw
- * that distinction from — only `computed_fields` does (STATE-4), and it is
- * not one of these fields. `FieldGuard` (design-system/rbac.tsx) is the
- * presentation primitive for a withheld value once one exists; its own
- * comment names B-EP03.4 as the wire change this grid is waiting on. Until
- * then every empty row here reads as absent, which is the only fact this
- * grid can currently tell.
- */
 export function DetailsGrid({ company }: Readonly<{ company?: Company }>) {
   if (!company) {
     return null;
@@ -136,304 +48,6 @@ export function DetailsGrid({ company }: Readonly<{ company?: Company }>) {
   // of Hooks the moment `company` flips between defined and not, which a
   // 360 read that answers slower than the shell mount does routinely.
   return <DetailsGridBody company={company} />;
-}
-
-// The four props every DetailsGrid row needs off the record: the value to
-// read, the verb to write it back, and the two reasons that verb might not
-// be offered. One shape rather than each row re-deriving it from
-// `company` keeps the RBAC/read-only wiring in DetailsGridBody's single
-// pair of hook calls, not scattered across nine row components each running
-// its own.
-type DetailsRowProps = Readonly<{
-  company: Company;
-  canEdit: boolean;
-  readOnlyReason: string | undefined;
-  patch: (body: UpdateCompanyRequest) => Promise<void>;
-}>;
-
-function LegalNameRow({
-  company,
-  canEdit,
-  readOnlyReason,
-  patch,
-}: DetailsRowProps) {
-  const t = useT();
-  return (
-    <FieldRow label={t("create.legalName")} icon={<Landmark />}>
-      <InlineText
-        label={t("create.legalName")}
-        value={company.legal_name ?? ""}
-        placeholder={t("field.addLegalName")}
-        canEdit={canEdit}
-        readOnlyReason={readOnlyReason}
-        onSave={(next) => patch({ legal_name: next || null })}
-      />
-    </FieldRow>
-  );
-}
-
-// Lifecycle and owner both reuse the header's OWN control rather than a
-// second InlineChoice wired to the same field — see the docblock above.
-// `hideLabel` leaves the visible label to FieldGrid's own label column, the
-// same way SizeBandRow below suppresses InlineChoice's own prefix.
-function LifecycleRow({ company }: Readonly<{ company: Company }>) {
-  const t = useT();
-  return (
-    // The badge is a box, not a line of text, so it centres against its label
-    // rather than sharing the row's top edge with it.
-    <FieldRow
-      label={t("company.lifecycle")}
-      icon={<CircleDot />}
-      align="middle"
-    >
-      <CompanyLifecycleControl company={company} />
-    </FieldRow>
-  );
-}
-
-function OwnerRow({ company }: Readonly<{ company: Company }>) {
-  const t = useT();
-  return (
-    <FieldRow label={t("co.pulse.owner")} icon={<User />}>
-      <CompanyOwnerControl company={company} hideLabel />
-    </FieldRow>
-  );
-}
-
-// The account's current primary domain — same fallback the header's own read
-// paths use (flagged primary, else the first row): a record with no domain
-// flagged primary still has to name ONE entry as "the" domain this row edits.
-function primaryDomainOf(
-  domains: readonly CompanyDomain[],
-): CompanyDomain | undefined {
-  return domains.find((domain) => domain.is_primary) ?? domains[0];
-}
-
-// Renames the primary domain in place, sending the FULL set back with every
-// other entry untouched — see the docblock above for why `domains` cannot
-// take a single-entry write. Clearing the field is refused rather than
-// treated as a delete: this row renames, it does not remove, and a removal
-// here would drop an entry with no confirmation and no way to reconsider.
-function DomainRow({
-  company,
-  canEdit,
-  readOnlyReason,
-  patch,
-}: DetailsRowProps) {
-  const t = useT();
-  const domains = company.domains ?? [];
-  const primary = primaryDomainOf(domains);
-  return (
-    <FieldRow label={t("field.domain")} icon={<Globe />}>
-      <InlineText
-        label={t("field.domain")}
-        value={primary?.domain ?? ""}
-        placeholder={t("field.addDomain")}
-        canEdit={canEdit}
-        readOnlyReason={readOnlyReason}
-        onSave={(next) => {
-          if (!next) {
-            // A refusal this screen decided, carrying copy it already
-            // translated. It rides as a problem body rather than a bare Error
-            // because that is the one carrier the reader's side reads: a plain
-            // throw is wording nobody wrote for a user, and is replaced by the
-            // shared failure line rather than shown.
-            throwProblem({ detail: t("field.domainRequired") });
-          }
-          const rest = domains.filter((domain) => domain !== primary);
-          return patch({
-            domains: [...rest, { domain: next, is_primary: true }],
-          });
-        }}
-      />
-    </FieldRow>
-  );
-}
-
-// The six address parts this grid draws, in the order the create form's own
-// `ADDRESS_FIELDS` shows them. Label and placeholder are separate keys per
-// part: a label NAMES the fact and an empty row INVITES one, and reusing the
-// label as the placeholder made every unfilled row read as a second, quieter
-// copy of its own label rather than as something to press. Country is the one
-// row whose label is not the create form's own — the form's carries the
-// ISO-3166 hint inline ("Country (ISO-3166, e.g. DE)"), which is guidance for
-// someone typing, not the name of the field; here the hint sits in the
-// placeholder, where the contact about to type is the only one who reads it.
-// `normalize` is likewise only non-trivial for country: ISO-3166 alpha-2,
-// canonicalized the same way the full editor's own `addressPatch` does — the
-// server compares on the uppercase spelling, so "de" typed here and "DE"
-// typed in the edit modal read as the same value.
-const ADDRESS_PARTS: ReadonlyArray<{
-  part: AddressPart;
-  labelKey: MessageKey;
-  placeholderKey: MessageKey;
-  normalize?: (next: string) => string;
-}> = [
-  {
-    part: "line1",
-    labelKey: "create.addressLine1",
-    placeholderKey: "field.addAddressLine1",
-  },
-  {
-    part: "line2",
-    labelKey: "create.addressLine2",
-    placeholderKey: "field.addAddressLine2",
-  },
-  {
-    part: "postal_code",
-    labelKey: "create.postalCode",
-    placeholderKey: "field.addPostalCode",
-  },
-  { part: "city", labelKey: "create.city", placeholderKey: "field.addCity" },
-  {
-    part: "region",
-    labelKey: "create.region",
-    placeholderKey: "field.addRegion",
-  },
-  {
-    part: "country",
-    labelKey: "field.country",
-    placeholderKey: "field.addCountry",
-    normalize: (next) => next.toUpperCase(),
-  },
-];
-
-// One InlineText per address part, each sending the WHOLE object back with
-// only its own part changed — see the docblock above for why a part cannot
-// PATCH alone.
-function AddressPartRow({
-  company,
-  canEdit,
-  readOnlyReason,
-  patch,
-  part,
-  labelKey,
-  placeholderKey,
-  normalize = (next) => next,
-}: DetailsRowProps & {
-  part: AddressPart;
-  labelKey: MessageKey;
-  placeholderKey: MessageKey;
-  normalize?: (next: string) => string;
-}) {
-  const t = useT();
-  return (
-    <FieldRow label={t(labelKey)} icon={<MapPin />}>
-      <InlineText
-        label={t(labelKey)}
-        value={company.address?.[part] ?? ""}
-        placeholder={t(placeholderKey)}
-        canEdit={canEdit}
-        readOnlyReason={readOnlyReason}
-        onSave={(next) =>
-          patch({
-            address: {
-              ...company.address,
-              [part]: normalize(next) || null,
-            },
-          })
-        }
-      />
-    </FieldRow>
-  );
-}
-
-function IndustryRow({
-  company,
-  canEdit,
-  readOnlyReason,
-  patch,
-}: DetailsRowProps) {
-  const t = useT();
-  return (
-    <FieldRow label={t("create.industry")} icon={<Building2 />}>
-      <InlineText
-        label={t("create.industry")}
-        value={company.industry ?? ""}
-        placeholder={t("field.addIndustry")}
-        canEdit={canEdit}
-        readOnlyReason={readOnlyReason}
-        onSave={(next) => patch({ industry: next || null })}
-      />
-    </FieldRow>
-  );
-}
-
-function SizeBandRow({
-  company,
-  canEdit,
-  readOnlyReason,
-  patch,
-}: DetailsRowProps) {
-  const t = useT();
-  return (
-    <FieldRow label={t("create.sizeBand")} icon={<Users />}>
-      <InlineChoice
-        label={t("create.sizeBand")}
-        hideLabel
-        value={company.size_band ?? ""}
-        options={SIZE_BAND_OPTIONS.map((band) => ({
-          value: band,
-          label: band,
-        }))}
-        canEdit={canEdit}
-        readOnlyReason={readOnlyReason}
-        render={(value) => value || t("field.unset")}
-        onSave={(next) =>
-          patch({
-            size_band: (next || null) as UpdateCompanyRequest["size_band"],
-          })
-        }
-      />
-    </FieldRow>
-  );
-}
-
-// Always InlineText, whether or not the account has a URL yet: the header's
-// own LinkedIn chip (companyheader.tsx) already gives a reader the clickable
-// link once one is set, so this row's job is writing the value, not a second
-// place to click through to it.
-function LinkedinRow({
-  company,
-  canEdit,
-  readOnlyReason,
-  patch,
-}: DetailsRowProps) {
-  const t = useT();
-  return (
-    <FieldRow label={t("create.linkedinUrl")} icon={<LinkIcon />}>
-      <InlineText
-        label={t("create.linkedinUrl")}
-        value={company.linkedin_url ?? ""}
-        placeholder={t("field.addLinkedinUrl")}
-        canEdit={canEdit}
-        readOnlyReason={readOnlyReason}
-        onSave={(next) => patch({ linkedin_url: next || null })}
-      />
-    </FieldRow>
-  );
-}
-
-function DescriptionRow({
-  company,
-  canEdit,
-  readOnlyReason,
-  patch,
-}: DetailsRowProps) {
-  const t = useT();
-  return (
-    <FieldRow label={t("co.description.label")} icon={<Text />}>
-      <InlineText
-        label={t("co.description.label")}
-        value={company.description ?? ""}
-        placeholder={t("co.description.placeholder")}
-        maxLength={DESCRIPTION_MAX_LENGTH}
-        canEdit={canEdit}
-        readOnlyReason={readOnlyReason}
-        onSave={(next) => patch({ description: next || null })}
-      />
-    </FieldRow>
-  );
 }
 
 // The two legal-identity fields that live only in the evidence sidecar: the
@@ -489,6 +103,7 @@ export function SidecarFieldRow({
   canEdit,
   readOnlyReason,
   multiline,
+  guardDetails,
 }: Readonly<{
   companyId: string;
   fields: readonly ProfileField[];
@@ -514,12 +129,15 @@ export function SidecarFieldRow({
   canEdit: boolean;
   readOnlyReason: string | undefined;
   multiline?: boolean;
+  guardDetails?: boolean;
 }>) {
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  useUnsavedGuard(dirty, guardDetails ? "details" : undefined);
   const label = labelText ?? (labelKey ? t(labelKey) : field);
   const current = fields.find((one) => one.field === field);
   const save = async (next: string) => {
@@ -573,6 +191,7 @@ export function SidecarFieldRow({
         canEdit={canEdit && fieldsLoaded}
         readOnlyReason={readOnlyReason}
         onEditingChange={setEditing}
+        onDirtyChange={setDirty}
         onSave={save}
       />
       {/* Only while the stored value is what is on screen. Mid-edit the text
@@ -596,87 +215,34 @@ export function SidecarFieldRow({
   );
 }
 
-function DetailsGridBody({ company }: Readonly<{ company: Company }>) {
-  const t = useT();
-  // useCanWriteRecord, not useCan: the grant alone offers a control whose save
-  // the seat middleware refuses before RBAC is even consulted, and offers it on
-  // a record the row scope will not let this reader write. The Profile tab
-  // derives the same answer for its own rows, so the two halves of one page
-  // cannot disagree about whether the reader may edit it.
+export function CompanyProfileDetails({
+  company,
+}: Readonly<{ company: Company }>) {
   const canUpdate = useCanWriteRecord("company", company);
   const readOnlyReason = useCompanyReadOnlyReason(company);
-  const patch = useCompanyFieldPatch(company);
-  // The same read the Overview's own profile-field card uses, so a correction
-  // made here settles that card too rather than leaving the two surfaces
-  // disagreeing about what the record says.
-  const sidecarQuery = useCompanyProfileFields(company.id);
-  // A read that has not answered yet leaves both rows empty rather than absent:
-  // the grid's rule is that every known field draws a row, and a row that
-  // appears once its value arrives would make the panel jump under the reader.
-  const sidecarFields = sidecarQuery.data ?? [];
-  const row: DetailsRowProps = {
-    company,
-    canEdit: canUpdate && !readOnlyReason,
-    readOnlyReason,
-    patch,
-  };
-  // The postal address, behind one row until it has something in it.
-  //
-  // The six parts are one fact spelled six ways, and on a crawled record none
-  // of them is filled: a reader publishes their team page, not their registered
-  // address, so the panel opened with six consecutive invitations to type and
-  // the account's actual facts started below the fold. Six empty rows are not
-  // six facts, and a rail whose first screen is mostly absence teaches a reader
-  // to scroll past the part that does say something.
-  //
-  // Open whenever ANY part is set, so a filled or half-filled address reads
-  // exactly as it did before — the collapse is for the empty case, which is the
-  // one the data actually produces. Native `<details>`, so the open state is
-  // the browser's and nothing here holds it.
-  const anyAddressPartSet = ADDRESS_PARTS.some((field) =>
-    Boolean(company.address?.[field.part]),
+  const query = useCompanyProfileFields(company.id);
+  return (
+    <FieldGrid icons>
+      {SIDECAR_FIELDS.map((sidecar) => (
+        <SidecarFieldRow
+          key={sidecar.field}
+          guardDetails
+          companyId={company.id}
+          fields={query.data ?? []}
+          fieldsLoaded={query.isSuccess}
+          canEdit={canUpdate && !readOnlyReason}
+          readOnlyReason={readOnlyReason}
+          {...sidecar}
+        />
+      ))}
+    </FieldGrid>
   );
+}
+function DetailsGridBody({ company }: Readonly<{ company: Company }>) {
   return (
     <>
-      {/* The address block sits last rather than in its old slot between the
-          domain and the industry: it is its own grid now, and two grids with a
-          third between them put two seams through a panel that reads best as
-          one block. Both are the same `FieldGrid icons`, so the values share one
-          left edge — which no screen may inset away (disclosure-inset.test.ts). */}
-      <FieldGrid icons>
-        <LegalNameRow {...row} />
-        {/* Beside the legal name, not with the postal address below: a VAT
-            number and a registry address are identity facts about the legal
-            entity, and the address disclosure is where the company operates. */}
-        {SIDECAR_FIELDS.map((sidecar) => (
-          <SidecarFieldRow
-            key={sidecar.field}
-            companyId={company.id}
-            fields={sidecarFields}
-            fieldsLoaded={sidecarQuery.isSuccess}
-            canEdit={row.canEdit}
-            readOnlyReason={readOnlyReason}
-            {...sidecar}
-          />
-        ))}
-        <OwnerRow company={company} />
-        <LifecycleRow company={company} />
-        <DomainRow {...row} />
-        <IndustryRow {...row} />
-        <SizeBandRow {...row} />
-        <LinkedinRow {...row} />
-        <DescriptionRow {...row} />
-      </FieldGrid>
-      <Disclosure
-        summary={t(anyAddressPartSet ? "co.address.summary" : "co.address.add")}
-        open={anyAddressPartSet}
-      >
-        <FieldGrid icons>
-          {ADDRESS_PARTS.map((field) => (
-            <AddressPartRow key={field.part} {...row} {...field} />
-          ))}
-        </FieldGrid>
-      </Disclosure>
+      <CompanyDetails company={company} overlay={useSorMode() === "overlay"} />
+      <CompanyProfileDetails company={company} />
     </>
   );
 }

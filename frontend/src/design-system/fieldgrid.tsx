@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { createContext, type ReactNode, useContext } from "react";
+import { createContext, type ReactNode, type Ref, useContext } from "react";
 import "./fieldgrid.css";
 
 // Whether this grid draws a column for the rows' glyphs. It is the GRID's
@@ -48,6 +48,8 @@ export function FieldRow({
   label,
   icon,
   align = "top",
+  stacked = false,
+  valueRef,
   children,
 }: Readonly<{
   label: ReactNode;
@@ -65,11 +67,22 @@ export function FieldRow({
   // chip): taller than the label naming it, and visibly hung too high when the
   // two share a top edge.
   align?: "top" | "middle";
+  /** A local group editor uses the whole pane beneath its label. */
+  stacked?: boolean;
+  valueRef?: Ref<HTMLSpanElement>;
   children: ReactNode;
 }>) {
   const hasIconColumn = useContext(IconColumn);
-  const modifier = align === "middle" ? " fieldgrid-label--middle" : "";
-  const valueModifier = align === "middle" ? " fieldgrid-value--middle" : "";
+  const modifier = stacked
+    ? " fieldgrid-label--stacked"
+    : align === "middle"
+      ? " fieldgrid-label--middle"
+      : "";
+  const valueModifier = stacked
+    ? " fieldgrid-value--stacked"
+    : align === "middle"
+      ? " fieldgrid-value--middle"
+      : "";
   return (
     <>
       {hasIconColumn ? (
@@ -78,7 +91,13 @@ export function FieldRow({
         </span>
       ) : null}
       <span className={`fieldgrid-label${modifier}`}>{label}</span>
-      <span className={`fieldgrid-value${valueModifier}`}>{children}</span>
+      <span
+        ref={valueRef}
+        tabIndex={valueRef ? -1 : undefined}
+        className={`fieldgrid-value${valueModifier}`}
+      >
+        {children}
+      </span>
     </>
   );
 }

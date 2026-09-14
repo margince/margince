@@ -5,7 +5,6 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent } from "storybook/test";
 import type { components } from "../api/schema";
 import { ContactActions } from "./contactactions";
-import { useObjectCustomFields } from "./customfields.form";
 import {
   installFetchStub,
   jsonResponse,
@@ -84,7 +83,6 @@ function Header({
   view = VIEW,
   refusedReasonId,
 }: Readonly<{ view?: Contact360; refusedReasonId?: string }>) {
-  const cf = useObjectCustomFields("contact");
   return (
     // The header's own row class, borrowed so the verbs stand at the interval
     // the record page gives them rather than at whatever a bare story would.
@@ -92,7 +90,6 @@ function Header({
       <ContactActions
         view={view}
         contactId={view.contact.id}
-        cf={cf}
         overlay={false}
         onWrite={() => undefined}
         onResearch={() => undefined}
@@ -130,7 +127,7 @@ export const MenuOpen: Story = {
     // The panel portals to the body, so it is reached through `screen` and
     // never through a canvas-scoped query.
     await userEvent.click(screen.getByRole("button", { name: "More actions" }));
-    await screen.findByTestId("edit-record");
+    await screen.findByTestId("archive-record");
   },
 };
 
@@ -156,7 +153,7 @@ export const RefusedWrites: Story = {
   },
   play: async () => {
     await userEvent.click(screen.getByRole("button", { name: "More actions" }));
-    await screen.findByTestId("edit-record");
+    await screen.findByTestId("archive-record");
   },
 };
 

@@ -61,12 +61,39 @@ func TestFocusPreservesRankingAndReportsUrgentOverflowWithoutAPageCursor(t *test
 	}
 }
 
-func TestFocusHonorsPinsWithoutCallingMaintenanceUrgent(t *testing.T) {
-	rows := []ranked{classifyLegalDeadline(item("future", "notice_case", withDue(rankInstant.Add(30*24*time.Hour))), rankInstant)}
-	pinned := applyPins(rows, map[RowRef]bool{{Source: "notice_case", RowID: "future"}: true})
-	focus := focusOf(pinned, pinned, rankInstant, ids.UUID{})
-	if len(focus.Items) != 1 || focus.Items[0].Urgent == nil || *focus.Items[0].Urgent || focus.UrgentRemaining != 0 {
-		t.Fatalf("pin did not preserve its meaning: %+v", focus)
+func TestFocusUsesOrdinaryRankingWhileTheQueueKeepsPins(t *testing.T) {
+	day := crmcontracts.Attention{
+		AsOf: rankInstant,
+		Planned: []crmcontracts.AttentionItem{
+			item("later", "task", withDue(rankInstant.Add(-time.Hour))),
+			item("earlier", "task", withDue(rankInstant.Add(-2*time.Hour))),
+		},
+		NoticeCases: lane(item("future", "notice_case", withDue(rankInstant.Add(30*24*time.Hour)))),
+	}
+	svc := &Service{pinned: map[RowRef]bool{
+		{Source: "notice_case", RowID: "future"}: true,
+		{Source: "task", RowID: "later"}:         true,
+	}}
+	for _, filter := range []string{"all", "decisions", "system"} {
+		t.Run(filter, func(t *testing.T) {
+			out := svc.worklistFrom(context.Background(), day, filter, "all", 25, waitingRead{}, leadRead{}, worklistCursor{}, nil)
+			if out.Focus == nil || len(out.Focus.Items) != 2 || out.Focus.Items[0].Id != "earlier" {
+				t.Fatalf("personal pins changed focus: %+v", out.Focus)
+			}
+			for _, row := range out.Focus.Items {
+				if row.Level == levelPinned {
+					t.Fatalf("focus retained pin priority: %+v", row)
+				}
+				for _, why := range row.Because {
+					if why.Kind == "pinned" {
+						t.Fatalf("focus retained a pin marker: %+v", row)
+					}
+				}
+			}
+			if filter == "all" && (len(out.Queue) != 3 || out.Queue[0].Level != levelPinned) {
+				t.Fatalf("focus removal changed personal queue pins: %+v", out.Queue)
+			}
+		})
 	}
 }
 
@@ -97,7 +124,7 @@ func TestFocusKeepsPromisesDueLaterToday(t *testing.T) {
 	}
 }
 
-func TestFocusLeavesInformationalNoticesInUpdatesUnlessPinned(t *testing.T) {
+func TestFocusLeavesInformationalNoticesInUpdatesEvenWhenPinned(t *testing.T) {
 	day := crmcontracts.Attention{AsOf: rankInstant, Notices: lane(item("notice", "notice", withDetail("The deal changed stage")))}
 	svc := &Service{}
 	out := svc.worklistFrom(context.Background(), day, "all", "all", 25, waitingRead{}, leadRead{}, worklistCursor{}, nil)
@@ -106,8 +133,8 @@ func TestFocusLeavesInformationalNoticesInUpdatesUnlessPinned(t *testing.T) {
 	}
 	svc.pinned = map[RowRef]bool{{Source: "notice", RowID: "notice"}: true}
 	out = svc.worklistFrom(context.Background(), day, "all", "all", 25, waitingRead{}, leadRead{}, worklistCursor{}, nil)
-	if len(out.Focus.Items) != 1 || out.Focus.UrgentRemaining != 0 {
-		t.Fatalf("explicit notice pin was ignored: %+v", out.Focus)
+	if len(out.Focus.Items) != 0 || out.Focus.UrgentRemaining != 0 {
+		t.Fatalf("queue pin promoted an informational notice into focus: %+v", out.Focus)
 	}
 }
 

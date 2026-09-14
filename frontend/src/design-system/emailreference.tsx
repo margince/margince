@@ -29,6 +29,7 @@ export function EmailReference({
   subject,
   occurredAt,
   withheld = false,
+  stacked = false,
   onOpen,
 }: Readonly<{
   /** Null when the message has none, or when its content is not the reader's. */
@@ -43,6 +44,14 @@ export function EmailReference({
    * assemble their own summaries.
    */
   withheld?: boolean;
+  /**
+   * The date UNDER the subject rather than beside it, for a citation in a
+   * narrow column — a flyout, a rail — where the two on one line leave the
+   * subject four words wide. Same citation, same words; only the shape of the
+   * box it fits changes, which is why it is a prop here and not a second
+   * component.
+   */
+  stacked?: boolean;
   /**
    * Opens the canonical detail. Omitted when this reader may not read the
    * message: a control that opens nothing teaches a reader that citations do
@@ -64,13 +73,14 @@ export function EmailReference({
       {occurredAt && <span className="emailref__when">{occurredAt}</span>}
     </>
   );
+  const shape = stacked ? "emailref emailref--stacked" : "emailref";
   if (!open) {
-    return <span className="emailref">{body}</span>;
+    return <span className={shape}>{body}</span>;
   }
   return (
     <button
       type="button"
-      className="emailref emailref--open"
+      className={`${shape} emailref--open`}
       onClick={open}
       aria-haspopup="dialog"
     >

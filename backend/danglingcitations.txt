@@ -236,7 +236,6 @@ frontend/e2e/seed.ts migration 0042
 frontend/src/design-system/recordtimeline.ts migration 0038
 frontend/src/screens/companyevidence.stories.tsx migration 0099
 frontend/src/screens/companyrail.test.tsx core 0019
-frontend/src/screens/companyraildetails.tsx core 0203
 frontend/src/screens/embedreindex.stories.tsx migration 0115
 frontend/src/screens/embedreindex.test.tsx migration 0115
 frontend/src/screens/embedreindex.tsx migration 0115

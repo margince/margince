@@ -16,6 +16,9 @@ vi.mock("./customfields.form", async (importOriginal) => {
     ...actual,
     useObjectCustomFields: (): ObjectCustomFields => ({
       fields: activeFields,
+      loading: false,
+      failed: false,
+      retry: () => undefined,
       formFields: [],
       recordSlice: () => ({}),
       toBody: () => ({}),

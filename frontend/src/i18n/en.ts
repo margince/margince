@@ -72,7 +72,6 @@ export const en = {
   "brief.week.lostLabel": "Lost",
   "brief.feed.refreshFailed":
     "The brief could not refresh. The last loaded work is still shown.",
-  "brief.feed.routine": "Privacy follow-up · {count} items due later",
   "brief.team.saveResponse": "Save response",
   "brief.team.response": "Your response to the help request",
   "brief.team.planFor": "Current plan · {name}",
@@ -466,6 +465,12 @@ export const en = {
   "deal.archived": "archived",
   "deal.closes": "closes {date}",
   "deal.undated": "no close date",
+  "deal.lastMail": "Last email",
+  "deal.mail.title": "Previous emails",
+  "deal.mail.sent": "Sent {ago}",
+  "deal.mail.received": "Received {ago}",
+  "deal.mail.none": "No email on this deal yet",
+  "deal.mail.viewAll": "View all activity",
   "deal.closesProvisional": "provisional close date, not confirmed by a human",
   "record.notShown": "Not shown",
   "record.timelineLoading": "Loading this record’s history…",
@@ -475,6 +480,23 @@ export const en = {
   // as two things.
   "record.timeline": "History",
   "record.edit": "Edit",
+
+  "record.fieldRequired": "This field is required.",
+  "record.registration": "Registration",
+  "record.leadProfileReadOnly": "LinkedIn cannot be changed on a lead.",
+  "record.leadStatusAction":
+    "Use the lead status controls to change its status.",
+  "record.leadScoreAction":
+    "Use the score override to change the score with a reason.",
+  "record.openProfile": "Open profile",
+  "record.fieldsFailed": "Custom fields could not be loaded.",
+  "record.fieldsLoading": "Loading custom fields…",
+  "record.fieldsRetry": "Retry",
+
+  "record.visibilityOwner": "Owner only",
+  "record.companyRoutingKey": "Company routing key",
+  "record.finishFieldEdit":
+    "Save or cancel the current edit before closing Details.",
   "record.save": "Save",
   "record.saveDone": "“{name}” saved",
   "record.archiveDone": "“{name}” archived",
@@ -1000,8 +1022,13 @@ export const en = {
   "company.filterLifecycleAll": "Any stage",
   "company.filterRelTypeAll": "Any type",
   "company.filterSizeBandAll": "Any size",
+  "consent.confirmRecipient": "Send to {address}",
+  "consent.guardFailed": "Communication permissions could not be loaded.",
+  "consent.permissionScope":
+    "Permissions apply to the named purpose. Account and service notices do not authorize sales or marketing; each message is checked before sending.",
+  "consent.manage": "Manage consent & proof history",
   "contact.consent": "Consent",
-  "consent.grant": "Grant",
+  "consent.grant": "Record consent",
   // Submitted as the proof row's wording when an operator records a grant
   // here. It does NOT quote a screen the subject read — this door has none —
   // so it says what actually happened: a named operator attested to a consent
@@ -1011,7 +1038,7 @@ export const en = {
     "Recorded in the CRM by a member of staff, who attested that this contact gave their consent for {label} outside the product. No wording was shown to them here.",
   "consent.withdraw": "Withdraw",
   "consent.doiBySubject":
-    "This purpose is confirmed by the contact themselves, through a link mailed to their own address. Use “Ask them to confirm their details” below.",
+    "Only this contact can confirm this purpose through a link sent to their recorded address. Use “Ask them to confirm their details” in Communication permissions.",
   "consent.askToConfirm": "Ask them to confirm their details",
   "consent.askToConfirmWhat":
     "Mails this contact a private link to see what you hold about them, correct it, and say whether they want to hear from you. It goes to their own recorded address; you cannot send it anywhere else.",
@@ -1022,7 +1049,7 @@ export const en = {
   "consent.noRecord": "no record",
   "consent.noPurposes": "This company tracks no consent purposes yet.",
   "consent.defaultDeny":
-    "Outbound is default-deny per purpose: a send is blocked unless an active, proven grant exists for that purpose. A grant for one purpose never authorizes another.",
+    "This history records consent for each purpose. Communication permission may also depend on other recorded grounds; the message is checked again before sending.",
   "consent.basis": "Basis: {basis}",
   "consent.proofLog": "Proof log",
   "consent.proofEmpty":
@@ -1085,7 +1112,7 @@ export const en = {
   "co.strip.noOpenDeals": "No open deals",
   "co.strip.pipeline": "Open pipeline",
   "co.description.label": "Description",
-  "co.description.placeholder": "Add description",
+
   "co.strip.netInvoiced": "Net invoiced · 12 mo",
   "co.strip.notAssessed": "Not assessed",
   "co.strip.lifetimeOf": "{amount} lifetime",
@@ -1808,7 +1835,7 @@ export const en = {
   "co.rail.contacts.empty": "No contacts yet. Nobody to write to.",
   "co.rail.contacts.add": "Add a contact",
   "co.rail.contacts.inTouch": "Already in touch with them",
-  "co.rail.details.all": "All fields",
+
   "co.commercial.title": "Commercial",
   "co.commercial.lostFigure": "Lost deals",
   "co.commercial.allDeals": "All deals",
@@ -2325,7 +2352,7 @@ export const en = {
   "lead.scoreNoSignals": "No qualifying signals",
   "lead.source": "Source",
   "lead.project": "Project",
-  "lead.openLinkedIn": "Open LinkedIn profile",
+
   "lead.filterSource": "Source",
   "lead.filterSourceAll": "All sources",
   "lead.source.manual": "Created manually",
@@ -2447,7 +2474,7 @@ export const en = {
     "These leads could not be read. The count above still stands.",
   "lead.boardTerminalOnly":
     "None of these leads are still open \u2014 they are counted under Qualified and Disqualified.",
-  "contact.fromLead": "From lead",
+
   "lead.mergedTitle": "Merged into another lead",
   "lead.mergedBody":
     "This lead turned out to be the same prospect as another one. Its timeline, its consent and its score moved there; this record stays as the trail.",
@@ -2648,6 +2675,7 @@ export const en = {
   "deals.amount": "Value",
   "deals.lastSignal": "Last signal",
   "deals.lastSignalNone": "no signal yet",
+  "deals.lastMailNone": "no email yet",
   "deals.stage": "Stage",
   "deals.close": "Expected close",
   "deals.confirmAdvance": "Move to {stage}?",
@@ -2669,7 +2697,7 @@ export const en = {
   "deals.cancel": "Cancel",
   "deals.advanced": "Moved to {stage}",
   "deal.pendingApprovals": "Awaiting your confirmation",
-  "deal.edit": "Edit deal",
+
   "deal.ownerKeep": "Keep current owner",
   "deal.ownerMe": "Assign to me",
   "deal.ownerUnassign": "Unassign",
@@ -2762,17 +2790,7 @@ export const en = {
   "outcomeReview.noAnswer": "Not answered",
   "outcomeReview.notes": "Anything else",
   "deal.commercialContext": "Commercial context",
-  "deal.commercialEdit": "Edit",
-  "deal.commercialAdd": "Record the context",
-  "deal.commercialEditTitle": "Commercial context",
-  "deal.commercialSave": "Save context",
-  "deal.commercialEmpty": "Nothing recorded yet",
-  "deal.commercialEmptyDetail":
-    "Why this deal exists, how much it matters, where it came from, and what it is worth per year.",
-  "deal.arrHint": "The recurring value for a year, in {currency}.",
-  "deal.arrNeedsCurrency":
-    "Expected ARR needs a currency. Set the deal's value and currency in Edit deal first.",
-  "deal.arrClear": "Remove",
+
   "deal.arrFromOffer":
     "Expected ARR comes from the accepted offer and is not edited here.",
   "deal.brief": "Deal brief",
@@ -2781,12 +2799,11 @@ export const en = {
   "deal.briefLess": "Show less",
   "deal.briefEdit": "Edit",
   "deal.briefAdd": "Write the brief",
-  "deal.briefEditTitle": "The deal brief",
+
   "deal.briefEmpty": "No brief written yet",
   "deal.briefEmptyDetail":
     "Say what the customer needs and what winning looks like, so whoever picks this up does not have to reconstruct it.",
-  "deal.briefSave": "Save brief",
-  "deal.briefTooLong": "A brief runs to at most {max} characters.",
+
   "deal.motion": "Commercial motion",
   "deal.motionUnset": "Not set",
   "deal.motionNewBusiness": "New business",
@@ -2802,7 +2819,7 @@ export const en = {
   "deal.priorityLow": "Low",
   "deal.acquisitionSource": "Acquisition source",
   "deal.expectedArr": "Expected ARR",
-  "deal.monthlyEquivalent": "Monthly equivalent",
+
   "deal.monthlyApproximate": "approx.",
   "assignments.title": "Responsible",
   "assignments.noAccessNote":
@@ -3510,7 +3527,7 @@ export const en = {
   "create.industry": "Industry",
   "create.sizeBand": "Company size",
   "co.address.summary": "Address",
-  "co.address.add": "Add an address",
+
   "create.addressLine1": "Street and number",
   "create.addressLine2": "Address line 2",
   "create.city": "City",
@@ -3529,23 +3546,14 @@ export const en = {
   "field.addEmail": "Add email",
   "field.addPhone": "Add phone",
   "field.addDomain": "Add domain",
-  "field.addLegalName": "Add legal name",
-  "field.addIndustry": "Add industry",
-  "field.addLinkedinUrl": "Add LinkedIn URL",
+
   "field.addRegisterVat": "Add VAT ID",
   "field.addRegisteredAddress": "Add registered address",
-  "field.addFullName": "Add name",
+
   "field.addTitle": "Add title",
-  "field.addAddressLine1": "Add street and number",
-  "field.addAddressLine2": "Add address line 2",
-  "field.addPostalCode": "Add postal code",
-  "field.addCity": "Add city",
-  "field.addRegion": "Add state / region",
-  "field.addCountry": "Add country code, e.g. DE",
-  "field.country": "Country",
+
   "field.domain": "Domain",
-  "field.domainRequired":
-    "A domain cannot be cleared here — use the full editor to remove one.",
+
   "field.emailType": "Type",
   "field.emailWork": "Work",
   "field.emailPersonal": "Personal",
@@ -3592,7 +3600,7 @@ export const en = {
   "co.spine.earlier_one": "{count} earlier conversation",
   "today.failed":
     "This could not be assembled. The rest of the page still shows what it could read.",
-  "today.quiet": "Nothing here needs you today.",
+  "today.quiet": "No outstanding work found in this view.",
   "task.untitled": "Untitled task",
   "today.withheld":
     "Hidden from you: {sections}. This list is assembled without them.",
@@ -8692,10 +8700,7 @@ export const en = {
   "contact.page.owner": "Owner",
   "contact.page.ownerUnassigned": "Unassigned",
   "contact.page.linkedin": "LinkedIn",
-  // Beside the editable address, not instead of it: the row holds a value to
-  // correct AND a place to go, and the verb names the second so neither reads
-  // as the other.
-  "contact.page.openProfile": "Open profile",
+
   // The rail's own details grid: the contact's own fields, at a glance above
   // the six relationship sections below it.
   "contact.rail.detailsTitle": "Details",
@@ -8775,22 +8780,23 @@ export const en = {
   "contact.moment.rule.open_promise": "You owe them",
   "contact.moment.rule.public_signal": "Said in public",
   "contact.moment.rule.missing_next_step": "Nothing scheduled",
-  "contact.moment.rule.thin_relationship": "One thread only",
+  "contact.moment.rule.thin_relationship": "No interactions recorded",
   "contact.moment.rule.nothing_needed": "Nothing needed",
   "contact.moment.evidence.activity": "From an exchange",
   "contact.moment.evidence.task": "From a task",
   "contact.moment.evidence.relationship_change": "From a change on the record",
-  "contact.today.source_one": "{count} source",
-  "contact.today.source_other": "{count} sources",
-  "contact.today.updated": "Updated {when}",
-  "contact.today.freshToday": "today",
-  "contact.today.freshYesterday": "yesterday",
-  "contact.today.freshDaysAgo": "{count} days ago",
+
+  "contact.overview.detailsPermissions": "Details & permissions",
+  "contact.overview.partial":
+    "Some sections are not available to your role. This summary covers the records you can see.",
+  "contact.overview.coverage": "Based on the records available to you.",
+  "contact.overview.about": "About this contact",
+  "contact.overview.profileOnly":
+    "From the contact details on file. Add context when you learn more.",
+  "contact.overview.briefFailed": "The relationship brief could not be loaded.",
 
   "contact.brief.title": "Relationship brief",
   "contact.brief.reading": "Reading the relationship…",
-  "contact.brief.empty":
-    "Nothing has been captured yet that this brief could be written from.",
   "contact.brief.sourceActivity": "Conversation",
   "contact.brief.sourceDeal": "Deal notes",
 
@@ -8847,7 +8853,10 @@ export const en = {
   "contact.rail.explain": "Explain",
   "contact.rail.direction": "Direction",
   "contact.rail.twoWay": "Two-way",
-  "contact.rail.oneSided": "One-sided",
+  "contact.rail.noDirection": "No direction recorded",
+  "contact.overview.unavailable": "Not shown: {sections}.",
+  "contact.rail.inboundOnly": "Inbound only",
+  "contact.rail.outboundOnly": "Outbound only",
   "contact.rail.lastReply": "Last reply",
   "contact.rail.coverage": "Coverage",
   "contact.rail.colleagues_one": "{count} colleague",
@@ -8870,15 +8879,12 @@ export const en = {
   "contact.rail.repliedDaysAgo_other": "Replied {count} days ago",
   "contact.rail.singleThreaded": "Single-threaded on this deal",
   "contact.rail.noMeetingBooked": "No next meeting booked",
-  "contact.rail.consentTitle": "Consent & channels",
+  "contact.rail.consentTitle": "Communication permissions",
   "contact.rail.email": "Email",
   "contact.rail.phone": "Phone",
   "contact.rail.noEmailAddress": "No address on file",
   "contact.rail.noPhoneNumber": "No number on file",
   "contact.rail.channelNotDeliverable": "Not deliverable",
-  "contact.rail.recentActivity": "Recent activity",
-  "contact.rail.nothingCaptured": "Nothing captured yet.",
-  "contact.rail.viewAllActivity": "View all activity",
   "contact.drawer.close": "Close",
   "richtext.bold": "Bold",
   "richtext.italic": "Italic",
@@ -10148,6 +10154,37 @@ export const en = {
   "stageAutomation.saveFailed": "That change did not save",
   "stageAutomation.nothingReviewed":
     "Proposed, but nobody has answered one yet.",
+  "employment.importLoading": "Reading purchased employment history…",
+  "employment.apply": "Link imported companies",
+  "employment.status.current": "Current",
+  "employment.status.former": "Former",
+  "employment.status.unknown": "Status unknown",
+  "employment.statusLabel": "Employment status",
+  "employment.review": "Review this role before linking it.",
+  "employment.matchNeeded": "Company match needed.",
+  "employment.resolve": "Match company",
+  "employment.dismiss": "Dismiss this evidence",
+  "employment.research": "Research",
+  "employment.researchDeferred":
+    "Waiting for research settings and available budget",
+  "employment.website": "Confirmed company website",
+  "employment.websiteHint":
+    "Choose an existing company above, or confirm its own website to create it.",
+  "employment.saveMatch": "Save company link",
+  "employment.researchNeedsWebsite": "Website needed",
+  "employment.research.queued": "Queued",
+  "employment.research.running": "Researching",
+  "employment.research.done": "Completed",
+  "employment.research.partial": "Partially completed",
+  "employment.research.failed": "Failed — open the company to retry",
+  "employment.research.cancelled": "Cancelled",
+  "employment.researchQueued":
+    "Research status is available on the company page.",
+  "employment.edit": "Edit employment",
+  "employment.start": "Start date",
+  "employment.end": "End date",
+  "employment.dateHint": "Use YYYY-MM or YYYY-MM-DD. Leave blank when unknown.",
+  "employment.more": "Show more employment",
 } as const;
 
 export type MessageKey = keyof typeof en;

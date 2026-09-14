@@ -37,6 +37,9 @@ func relationshipCreateInput(req crmcontracts.CreateRelationshipRequest) CreateR
 		// decides the flag only for a caller who omitted it, and an omitted
 		// field and an explicit false are different requests.
 		IsCurrentPrimary:      req.IsCurrentPrimary,
+		EmploymentStatus:      enumArg(req.EmploymentStatus),
+		StartedPrecision:      enumArg(req.StartedPrecision),
+		EndedPrecision:        enumArg(req.EndedPrecision),
 		ContactID:             idArg[ids.ContactKind](req.ContactId),
 		CompanyID:             idArg[ids.CompanyKind](req.CompanyId),
 		CounterpartyCompanyID: idArg[ids.CompanyKind](req.CounterpartyCompanyId),
@@ -64,7 +67,12 @@ func relationshipUpdateInput(req crmcontracts.UpdateRelationshipRequest, ifVersi
 	in := UpdateRelationshipInput{
 		Role:             req.Role,
 		IsCurrentPrimary: req.IsCurrentPrimary,
+		EmploymentStatus: enumArg(req.EmploymentStatus),
+		StartedPrecision: enumArg(req.StartedPrecision),
+		EndedPrecision:   enumArg(req.EndedPrecision),
 		IfVersion:        ifVersion,
+		ClearStartedAt:   req.ClearStartedAt != nil && *req.ClearStartedAt,
+		ClearEndedAt:     req.ClearEndedAt != nil && *req.ClearEndedAt,
 	}
 	if req.StartedAt != nil {
 		in.StartedAt = &req.StartedAt.Time
@@ -93,6 +101,9 @@ func wireRelationship(rel relationshipRow) crmcontracts.Relationship {
 	version := crmcontracts.RowVersion(rel.Version)
 	out.Version = &version
 	out.IsCurrentPrimary = &rel.IsCurrentPrimary
+	out.EmploymentStatus = wireEnum[crmcontracts.RelationshipEmploymentStatus](rel.EmploymentStatus)
+	out.StartedPrecision = wireEnum[crmcontracts.RelationshipStartedPrecision](rel.StartedPrecision)
+	out.EndedPrecision = wireEnum[crmcontracts.RelationshipEndedPrecision](rel.EndedPrecision)
 	out.ContactId = uuidPtr(untypedPtr(rel.ContactID))
 	out.CompanyId = uuidPtr(untypedPtr(rel.CompanyID))
 	out.CounterpartyCompanyId = uuidPtr(untypedPtr(rel.CounterpartyCompanyID))
@@ -106,4 +117,13 @@ func wireRelationship(rel relationshipRow) crmcontracts.Relationship {
 		out.EndedAt = &openapi_types.Date{Time: *rel.EndedAt}
 	}
 	return out
+}
+
+// The database constraint validates stored enums; preserve an omitted assertion.
+func wireEnum[T ~string](value *string) *T {
+	if value == nil {
+		return nil
+	}
+	out := T(*value)
+	return &out
 }

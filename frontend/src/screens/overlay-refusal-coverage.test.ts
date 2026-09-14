@@ -158,9 +158,9 @@ describe("overlay refusal copy — translator coverage", () => {
 
   it("merge-contact (POST /contacts/{id}/merge)", () => {
     // Edit, merge and archive live in their own shared file, imported by
-    // both ContactScreen's header (contacts.tsx) and ContactPageV2's.
+    // the contact record header.
     assertTranslatedRefusal(
-      "contacteditmergearchive.tsx",
+      "contactrecordactions.tsx",
       '"/contacts/{id}/merge"',
       "merge-contact",
     );

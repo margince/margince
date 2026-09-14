@@ -20,6 +20,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -74,13 +75,8 @@ func (s *Store) LatestSiteRead(ctx context.Context, companyID ids.CompanyID) (Si
 		if err := auth.EnsureVisible(ctx, tx, "company", companyID.UUID); err != nil {
 			return err
 		}
-		row := tx.QueryRow(ctx, `
-			SELECT `+siteReadColumns+` FROM site_read
-			WHERE company_id = $1
-			ORDER BY created_at DESC, id DESC
-			LIMIT 1`, companyID)
 		var err error
-		out, err = scanSiteRead(row)
+		out, err = latestSiteReadTx(ctx, tx, companyID.UUID)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
 		}
@@ -119,4 +115,10 @@ func (s *Store) GetOnboardingSiteRead(ctx context.Context, readID ids.UUID) (Sit
 		return nil
 	})
 	return out, err
+}
+
+// Both account research and employment progress use the same stable latest read.
+func latestSiteReadTx(ctx context.Context, tx pgx.Tx, company ids.UUID) (SiteRead, error) {
+	args := []any{company}
+	return scanSiteRead(tx.QueryRow(ctx, storekit.SQLf("SELECT %s FROM site_read WHERE company_id=$%d ORDER BY created_at DESC, id DESC LIMIT 1", siteReadColumns, len(args)), args...))
 }

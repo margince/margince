@@ -16,22 +16,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
-
-// companyGrantVisible answers whether this caller holds the OBJECT half of
-// company.read. A system principal holds every object grant by
-// construction; a seat holds what its role was given.
-func companyGrantVisible(ctx context.Context) bool {
-	actor, ok := principal.Actor(ctx)
-	if !ok {
-		return false
-	}
-	if actor.Type == principal.PrincipalSystem {
-		return true
-	}
-	return actor.Permissions.Allows("company", principal.ActionRead)
-}
 
 // orderByStagePosition orders by a stage's place in its PIPELINE, not by its
 // name.
@@ -74,7 +59,7 @@ func orderByPriorityRank(context.Context, func(any) int) (string, error) {
 // where the reference is withheld.
 func orderByReadableCompanyName(column string) func(context.Context, func(any) int) (string, error) {
 	return func(ctx context.Context, arg func(any) int) (string, error) {
-		if !companyGrantVisible(ctx) {
+		if !auth.ReadGranted(ctx, "company") {
 			// Ordered by nothing: every row sits in the tail and the page
 			// falls back to its tie-breaker.
 			return "NULL::text", nil

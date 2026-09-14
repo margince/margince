@@ -14,9 +14,10 @@ import { type SectionState, SurfaceState } from "../design-system/surfacestate";
 import { formatDate, formatNumber } from "../format/format";
 import { webUrl } from "../format/weburl";
 import { useLocale, useT } from "../i18n";
-import { problemCodeOf, throwProblem } from "./common";
+import { problemCodeOf, throwProblem, useSorMode } from "./common";
+import { CompanyDetails } from "./companydetails";
 import { DealsSection } from "./companyraildeals";
-import { DetailsGrid } from "./companyraildetails";
+import { CompanyProfileDetails } from "./companyraildetails";
 import {
   contactRole,
   contactsSlice,
@@ -27,6 +28,7 @@ import {
 import { CompanyTagsSection } from "./companyrailtags";
 import { CounterpartyHoldRow } from "./counterparty-hold";
 import { signalKindLabel, signalTone } from "./record360";
+import { RecordCustomFields } from "./recordcustomfields";
 import { RecordTeam } from "./recordteam";
 // The row and card shapes this file draws — co-rowlink, co-row-meta, co-card —
 // are defined in company360.css. Imported HERE rather than left to the caller:
@@ -93,11 +95,13 @@ export function CompanyRail({
   onTab: (tab: "deals" | "contacts" | "profile") => void;
 }>) {
   const t = useT();
+  const overlay = useSorMode() === "overlay";
   // The same per-row answer the company's other verbs read: an archived
   // company, or one this seat may read but not write, takes no new
   // responsibilities.
+  const resolved = view?.company ?? company;
   const canWriteCompany =
-    useCanWriteRecord("company", company) && !company?.archived_at;
+    useCanWriteRecord("company", resolved) && !resolved?.archived_at;
   if (composerOpen) {
     return null;
   }
@@ -109,28 +113,27 @@ export function CompanyRail({
     // disclosure with its own summary, so the column reads as one object with
     // five slices rather than five cards a reader has to assemble.
     <div className="co-rail">
-      <Panel>
-        {/* Details lead the column: the account's own fields are the first
+      {/* Details lead the column: the account's own fields are the first
             thing a reader orients by, and they draw from the page's already-
             resolved record while the composite read below is still arriving. */}
-        <Disclosure
-          className="co-sect"
-          open
-          summary={<SectionSummary title={t("co.details.title")} />}
-        >
-          <PanelBody>
-            <DetailsGrid company={view?.company ?? company} />
-          </PanelBody>
-          <div className="card-actions">
-            {/* "All fields", not "Profile": the Profile TAB carries that name a
-                few pixels away, and two controls with one accessible name in
-                one view is a dead end for anyone moving by name rather than by
-                sight. */}
-            <Button small variant="ghost" onClick={() => onTab("profile")}>
-              {t("co.rail.details.all")}
-            </Button>
-          </div>
-        </Disclosure>
+      {resolved && (
+        <>
+          <CompanyDetails company={resolved} overlay={overlay} />
+          <RecordCustomFields kind="company" record={resolved} />
+        </>
+      )}
+      <Panel>
+        {resolved && (
+          <Disclosure
+            className="co-sect"
+            open
+            summary={<SectionSummary title={t("record.registration")} />}
+          >
+            <PanelBody>
+              <CompanyProfileDetails company={resolved} />
+            </PanelBody>
+          </Disclosure>
+        )}
         <RecordTeam
           recordType="company"
           recordId={companyId}
@@ -142,17 +145,13 @@ export function CompanyRail({
             tab is not a duplicate of it, a full copy would be. */}
         <DealsSection view={view} loading={loading} onTab={onTab} />
         <ContactsSection view={view} loading={loading} onTab={onTab} />
-        <CompanyHoldSection company={view?.company ?? company} />
+        <CompanyHoldSection company={resolved} />
         <Disclosure
           className="co-sect"
           open
           summary={<SectionSummary title={t("tags.panelTitle")} />}
         >
-          <CompanyTagsSection
-            company={view?.company ?? company}
-            companyId={companyId}
-            bare
-          />
+          <CompanyTagsSection company={resolved} companyId={companyId} bare />
         </Disclosure>
       </Panel>
     </div>

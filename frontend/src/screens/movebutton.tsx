@@ -63,6 +63,7 @@ export function hasMoveControl(move: PerformableMove): boolean {
 
 export function MoveButton({
   dealId,
+  contactId,
   move,
 }: Readonly<{
   // The deal whose card to refresh after the verb writes, where the caller has
@@ -71,6 +72,7 @@ export function MoveButton({
   // invalidate a key naming no deal — a call that does nothing, spelled as one
   // that does something.
   dealId?: string;
+  contactId?: string;
   move: PerformableMove;
 }>) {
   const t = useT();
@@ -85,6 +87,7 @@ export function MoveButton({
   const canUpdateTask = useCan("activity", "update");
   const taskUpdate = useTaskUpdate([
     ...(dealId ? [["deal-status", dealId]] : []),
+    ...(contactId ? [["contact360", contactId]] : []),
     ["tasks"],
     ["worklist"],
   ]);

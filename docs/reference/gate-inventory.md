@@ -132,7 +132,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `worklistbounds_test.go` | H2 | The worklist reports a source as possibly having more work behind it when its lane came back exactly at its bound. |
 | `worklistverdictstandings_test.go` | H2 | The queue's verdict standings ARE the deal card's, and this derives them from the card rather than keeping a second list of them. |
 
-## Census (147)
+## Census (148)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -166,6 +166,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `claimedspelling_test.go` | H3 | A constant whose doc comment says it is spelled once is making a checkable statement, and until now nothing checked it. |
 | `clearablefields_test.go` | H2 | The fields a restore says it can clear are the fields the stores clear. |
 | `communityhealth_test.go` | H1 | The community-health files GitHub resolves from the repository root. |
+| `companyreaders_test.go` | H2 | `company` is an RBAC object, and until this gate nothing held the object half of that anywhere outside the module that owns it. |
 | `confirmcardfields_test.go` | H2 | The confirm page shows a data subject their own record, and only that. |
 | `consumerlanes_test.go` | H3 | Every consumer group the catalog declares is subscribed by some process role — or is a reserved placeholder that says so. |
 | `consumersubscribed_test.go` | H3 | Every event consumer is actually subscribed. |
@@ -339,7 +340,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `writeauthority_test.go` | H2 | The read/write asymmetry of a manual record grant, as a fitness function: a path that CHANGES a shareable record probes for write authority, not for visibility. |
 | `writeliveness_test.go` | H2 | The LIVENESS obligation as a fitness function: a write that targets one standing row of a table which can be archived either REFUSES an archived row, DECLARES that it deliberately reaches one, or is ratified with a reason. |
 
-## Prohibition (59)
+## Prohibition (60)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -361,6 +362,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `extensions_arch_test.go` | H2 | Extension-tier fitness functions (ADR-0120 §3): the compiler already walls extensions off from internal/\*\* (their module paths sit outside the backend module), these tests hold the rest of the import contract from the tree — every extension source dir (enabled or fixture) is enrolled the moment it exists. |
 | `flagdefault_test.go` | H2 | No string flag takes its default straight from the environment. |
 | `followablecitations_test.go` | H1 | A file this push touched does not send its reader to a document they cannot open. |
+| `forkheadcheckout_test.go` | H2 | Code from a pull request's own branch never runs with a token GitHub has not downgraded. |
 | `formulafieldscope_test.go` | H3 | The negative-scope half of the formula-field boundary proof (RD-AC-7): a formula field is a database-GENERATED artifact, never a runtime-authored one, so NO contract operation may accept a writable formula\_sql in its request body — ComputedField.formula\_sql (crm.yaml) is a response-only display field, never echoed back as an editable one. |
 | `fxconversioncallers_test.go` | H2 | Converting money to the base currency happens in ONE place, and this fails when a second appears. |
 | `googleconnectorregistration_test.go` | H2 | The Google connectors are built for the registry in ONE function, because putting one INTO the registry is a decision about REACHABILITY and that decision has been wrong once. |

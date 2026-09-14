@@ -1,9 +1,9 @@
 import { useState } from "react";
+import { useShowDetails } from "../../app/pageaside";
 import { Button } from "../../design-system/atoms";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { useT } from "../../i18n";
-import { DealBriefEdit } from "./dealbriefedit";
 
 /** How much of the brief shows before the reader asks for the rest. */
 const COLLAPSED_LINES = 6;
@@ -24,15 +24,9 @@ const COLLAPSED_LINES = 6;
  * holds is how somebody learns the brief exists.
  */
 export function DealBrief({
-  dealId,
-  version,
   brief,
   readOnly = false,
 }: Readonly<{
-  dealId: string;
-  // The version the page READ, which pins the save. Without it the write is
-  // refused rather than landing unpinned.
-  version: number | undefined;
   brief?: string | null;
   // The page's own answer to whether this deal takes writes. The panel does
   // not re-derive it: the server refuses an unauthorized write whatever this
@@ -42,16 +36,16 @@ export function DealBrief({
 }>) {
   const t = useT();
   const [expanded, setExpanded] = useState(false);
-  const [editing, setEditing] = useState(false);
+  const showDetails = useShowDetails("description");
   const text = brief?.trim();
-  const canWrite = !readOnly;
+  const canWrite = !readOnly && Boolean(showDetails);
   if (!text) {
     return (
       <Panel
         title={t("deal.brief")}
         actions={
           canWrite ? (
-            <Button variant="ghost" onClick={() => setEditing(true)}>
+            <Button variant="ghost" onClick={showDetails}>
               {t("deal.briefAdd")}
             </Button>
           ) : undefined
@@ -67,13 +61,6 @@ export function DealBrief({
             {null}
           </SurfaceState>
         </PanelBody>
-        <DealBriefEdit
-          open={editing}
-          onClose={() => setEditing(false)}
-          dealId={dealId}
-          version={version}
-          brief={brief}
-        />
       </Panel>
     );
   }
@@ -87,7 +74,7 @@ export function DealBrief({
       title={t("deal.brief")}
       actions={
         canWrite ? (
-          <Button variant="ghost" onClick={() => setEditing(true)}>
+          <Button variant="ghost" onClick={showDetails}>
             {t("deal.briefEdit")}
           </Button>
         ) : undefined
@@ -121,13 +108,6 @@ export function DealBrief({
           </Button>
         )}
       </PanelBody>
-      <DealBriefEdit
-        open={editing}
-        onClose={() => setEditing(false)}
-        dealId={dealId}
-        version={version}
-        brief={brief}
-      />
     </Panel>
   );
 }

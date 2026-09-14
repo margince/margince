@@ -251,6 +251,7 @@ func (s *Store) updateLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in U
 			return crmcontracts.Lead{}, err
 		}
 	}
+	in.Clear = storekit.CoreFieldClears(in.Clear, active, in.CustomFields)
 	p, resumeRecompute, err := buildLeadPatch(current, in)
 	if err != nil {
 		return crmcontracts.Lead{}, err
