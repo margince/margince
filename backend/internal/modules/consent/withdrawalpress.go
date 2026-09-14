@@ -38,6 +38,19 @@ import (
 // exactly this case. The send engine reads that table for every message, so a
 // stop written here binds the same way a contact's withdrawal does.
 //
+// THE SCOPE THE LINK CARRIES IS THE SCOPE THE ROW GETS. A named-purpose link
+// writes a row narrowed to that purpose (purpose_id set to the purpose the
+// link was minted for); an all-marketing link writes the broad row
+// (purpose_id NULL) it always did. This used to decline the named-purpose
+// case rather than narrow it, on the reasoning that the table had no purpose
+// column and a broad row would exceed the authority the recipient was
+// handed — true as far as it went, but it meant the link was issued and then
+// silently did nothing, which is worse than never issuing it: a lead who
+// pressed "stop this list" found every list still arriving. Now that the
+// column exists (communication_suppression.purpose_id) and the engine reads
+// it (applySuppression in authorizesuppression.go), the press can honour the
+// scope it was actually asked for instead of refusing between two wrongs.
+//
 // MACHINE LEVEL, not subject level. The press is genuine and unauthenticated
 // both: possession of a mailed link is good evidence and not proof of who
 // pressed it, and a subject-level row is one no seat may ever lift. An
@@ -51,23 +64,14 @@ func (s *Store) StopForCredentialTx(ctx context.Context, tx pgx.Tx, ref Withdraw
 	if ref.LeadID.IsZero() && ref.Address == "" {
 		return apperrors.ErrNotFound
 	}
-	// A NAMED-PURPOSE LINK CANNOT BE HONOURED HERE, so it stops nothing rather
-	// than stopping too much.
-	//
-	// communication_suppression has no purpose column: a row binds by KIND,
-	// and the objection kind binds every marketing message. So the only stop
-	// this table can record for a lead is a broad one, and writing it for a
-	// link minted to stop a single subscription would exceed the authority the
-	// recipient was handed — they asked to leave one list and would find every
-	// marketing message stopped.
-	//
-	// The narrow stop needs a per-purpose shape for subjects who hold no
-	// contact_consent rows, which is a schema question this slice does not
-	// answer. Until then a named-purpose lead link is issued and declines to
-	// act, which is visible in the audit as nothing happening rather than as
-	// the wrong thing happening.
+	// THE NAMED-PURPOSE ROW NARROWS TO THE LINK'S OWN PURPOSE, and nothing
+	// narrower is possible: the link carries one purpose id, so that is the
+	// only subscription this press can name. zeroAsNull turns the all-marketing
+	// scope's zero-value PurposeID into SQL NULL — the broad row every prior
+	// press wrote, unchanged.
+	var purposeID *ids.UUID
 	if ref.Scope == WithdrawalScopeNamedPurpose {
-		return nil
+		purposeID = zeroAsNull(ref.PurposeID)
 	}
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
@@ -82,18 +86,26 @@ func (s *Store) StopForCredentialTx(ctx context.Context, tx pgx.Tx, ref Withdraw
 	if err := lockStopKey(ctx, tx, stopSubjectKey(ref)); err != nil {
 		return err
 	}
+	// THE DEDUP KEYS ON PURPOSE TOO, or a broad live row would silently absorb
+	// a narrow press (the recipient asked to leave one list and the row would
+	// say they already had, when what already stood was the OTHER kind of
+	// stop) and a narrow live row would block a broad one for a different
+	// purpose from ever being recorded. IS NOT DISTINCT FROM treats two NULLs
+	// as equal, which is what lets a second all-marketing press still read as
+	// "already stopped" exactly as it did before this column existed.
 	tag, err := tx.Exec(ctx, `
 		INSERT INTO communication_suppression
-		    (lead_id, address, kind, source, captured_by, decided_by_level)
-		SELECT $1, $2, $3, 'public_link', $4, $5
+		    (lead_id, address, kind, source, captured_by, decided_by_level, purpose_id)
+		SELECT $1, $2, $3, 'public_link', $4, $5, $6
 		 WHERE NOT EXISTS (
 		       SELECT 1 FROM communication_suppression live
 		        WHERE live.revoked_at IS NULL
 		          AND live.kind = $3
+		          AND live.purpose_id IS NOT DISTINCT FROM $6
 		          AND (($1::uuid IS NOT NULL AND live.lead_id = $1)
 		            OR ($1::uuid IS NULL AND lower(live.address) = $2)))`,
 		zeroAsNull(ref.LeadID.UUID), ref.Address, commsauthz.ReasonObjection,
-		by, string(commsauthz.LevelMachine))
+		by, string(commsauthz.LevelMachine), purposeID)
 	if err != nil {
 		return fmt.Errorf("consent: recording the stop this link pressed: %w", err)
 	}
