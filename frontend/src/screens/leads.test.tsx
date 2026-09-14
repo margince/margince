@@ -666,7 +666,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     // resolves to that one sentence — a disabled button whose reason is
     // nowhere on the page is a dead button.
     await openLeadActions();
-    for (const testId of ["edit-record", "lead-qualify", "lead-disqualify"]) {
+    for (const testId of ["lead-qualify", "lead-disqualify"]) {
       const control = await screen.findByTestId(testId);
       expect(control.hasAttribute("disabled")).toBe(true);
       expect(
@@ -1486,11 +1486,11 @@ describe("LeadScreen — edit with If-Match (P-1)", () => {
     });
     render(<LeadScreen id="l-1" />);
 
-    await openLeadActions();
-    await userEvent.click(screen.getByTestId("edit-record"));
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Change Title" }),
+    );
     const title = await screen.findByLabelText("Title");
-    await userEvent.type(title, "VP Sales");
-    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    await userEvent.type(title, "VP Sales{Enter}");
 
     await waitFor(() => expect(patchBody).toBeTruthy());
     expect(patchHeader).toBe("1");
@@ -1726,7 +1726,7 @@ describe("LeadScreen — overlay mode write affordances", () => {
     render(<LeadScreen id="l-1" />);
 
     await openLeadActions();
-    expect(screen.getByTestId("edit-record")).toBeTruthy();
+    expect(screen.queryByTestId("edit-record")).toBeNull();
     expect(screen.queryByTestId("lead-disqualify")).toBeNull();
     // The mirror owns the lead's mail, so the header offers no Email verb.
     expect(screen.queryByRole("button", { name: "Email" })).toBeNull();
@@ -1751,12 +1751,12 @@ describe("LeadScreen — overlay mode write affordances", () => {
     });
     render(<LeadScreen id="l-1" />);
 
-    await openLeadActions();
-    await userEvent.click(screen.getByTestId("edit-record"));
-    const fullName = await screen.findByLabelText("Full name *");
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Change Full name" }),
+    );
+    const fullName = await screen.findByRole("textbox", { name: "Full name" });
     await userEvent.clear(fullName);
-    await userEvent.type(fullName, "Jonas Petersen-Berg");
-    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    await userEvent.type(fullName, "Jonas Petersen-Berg{Enter}");
 
     // The saved name now reads in two places — the record header and the
     // inline Details row — which is the point of the grid, not a duplicate.
@@ -1774,8 +1774,9 @@ describe("LeadScreen — overlay mode write affordances", () => {
     });
     render(<LeadScreen id="l-1" />);
 
-    await openLeadActions();
-    await userEvent.click(screen.getByTestId("edit-record"));
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Change Full name" }),
+    );
     expect(
       screen.getByText(/Only the fields HubSpot accepts are written back/),
     ).toBeTruthy();
@@ -1802,8 +1803,7 @@ describe("LeadsScreen — archived marking (P-3)", () => {
     );
     const warned = screen
       .getAllByText("Disqualified", { selector: ".badge-label" })
-      .map((label) => label.closest(".badge"))
-      .filter((badge) => badge?.classList.contains("badge-warn"));
+      .filter((label) => label.closest(".badge.badge-warn"));
     expect(warned).toHaveLength(1);
   });
 });
@@ -2519,7 +2519,7 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
     );
     const reason = "Disqualified — this lead is now read-only.";
     await openLeadActions();
-    for (const testId of ["edit-record", "lead-disqualify"]) {
+    for (const testId of ["lead-disqualify"]) {
       const control = screen.getByTestId(testId) as HTMLButtonElement;
       expect(control.disabled).toBe(true);
       const describedBy = control.getAttribute("aria-describedby");

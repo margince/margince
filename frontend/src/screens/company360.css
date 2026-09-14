@@ -385,9 +385,17 @@
 }
 /* A basis holding message ROWS stacks instead of wrapping inline: an email
    entry carries a subject, a sender and a preview, and two of those side by
-   side is the chip run this block exists not to be. */
+   side is the chip run this block exists not to be.
+
+   One line, never a wrapping run. A column that may still wrap sizes its
+   line to its widest item rather than to the container, so a row whose
+   preview is one unbreakable line takes that line's width and runs out of
+   the card — its own ellipsis never fires, because the row is never narrower
+   than its words. Unwrapped, the line is the column and the row clamps
+   inside it. */
 .co-move-basis:has(.co-evidence-sources) {
   flex-direction: column;
+  flex-wrap: nowrap;
   align-items: stretch;
 }
 

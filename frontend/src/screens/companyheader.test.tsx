@@ -8,6 +8,7 @@ import type { components } from "../api/schema";
 import { type GrantSpec, meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
+import { CompanyDetails } from "./companydetails";
 import { CompanyFacts } from "./companyfacts";
 import {
   CompanyActionBadges,
@@ -308,24 +309,17 @@ describe("who owns this record", () => {
 // the same claim one control over: a reader who opened the form to check what
 // the header said was told "no longer in the user list" a second time, by a
 // read that had excluded nobody.
-describe("the owner the edit form prefills", () => {
-  it("does not call the owner gone when the roster read failed", async () => {
+describe("the owner in Details", () => {
+  it("keeps the current owner when the roster failed", async () => {
     stubRosterRefused();
     const user = userEvent.setup();
-    renderInApp(
-      <CompanyActionBadges
-        company={COMPANY}
-        onOpenHistory={() => undefined}
-        onSetUpPartner={() => undefined}
-      />,
-    );
-
+    renderInApp(<CompanyDetails company={COMPANY} overlay={false} />);
     await user.click(
-      await screen.findByRole("button", { name: "More actions" }),
+      await screen.findByRole("button", { name: "Change Owner" }),
     );
-    await user.click(await screen.findByTestId("edit-record"));
-
-    expect(await screen.findByText("Name didn't load")).toBeTruthy();
+    expect(screen.getByRole("combobox").textContent).toContain(
+      en["ref.nameLoadFailed"],
+    );
     expect(
       screen.queryByText("Current owner (no longer in the user list)"),
     ).toBeNull();
@@ -442,7 +436,6 @@ describe("an archived account's verbs", () => {
     // the tick it arrived in — and a menu whose items mount a beat apart threw
     // here, which is the shape that fails under a loaded run and never alone.
     const refused = [
-      await screen.findByTestId("edit-record"),
       await screen.findByTestId("merge-record"),
       await screen.findByTestId("archive-record"),
       await screen.findByTestId("share-record"),
@@ -546,7 +539,6 @@ describe("the shape of the header's verbs", () => {
     expect(
       [...panel.querySelectorAll("button")].map((row) => row.textContent),
     ).toEqual([
-      en["record.edit"],
       en["merge.company"],
       en["record.share"],
       en["record.fullHistory"],
@@ -602,4 +594,26 @@ describe("the shape of the header's verbs", () => {
       );
     }
   });
+});
+
+it("names an owner for readers who cannot edit the company", async () => {
+  stub([{ id: "u-owner", display_name: "Mira Voss" }]);
+  renderInApp(
+    <CompanyDetails
+      company={{ ...COMPANY, writable: false }}
+      overlay={false}
+    />,
+  );
+  expect(await screen.findByText("Mira Voss")).toBeTruthy();
+  expect(screen.queryByRole("button", { name: "Change Owner" })).toBeNull();
+});
+it("does not offer to clear a company's lifecycle", async () => {
+  stub([]);
+  const user = userEvent.setup();
+  renderInApp(<CompanyDetails company={COMPANY} overlay={false} />);
+  await user.click(
+    await screen.findByRole("button", { name: "Change Account lifecycle" }),
+  );
+  await user.click(screen.getByRole("combobox"));
+  expect(screen.queryByRole("option", { name: "Not set" })).toBeNull();
 });

@@ -4,54 +4,10 @@
 package contacts
 
 import (
-	"context"
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
-
-// computedFieldsVisible is a pure in-memory check (no DB round trip):
-// it reads the acting principal's already-merged Permissions, the
-// divergence from poc-1's per-call role reload the plan calls out.
-func TestComputedFieldsVisible_GrantedRole(t *testing.T) {
-	ctx := principal.WithActor(context.Background(), principal.Principal{
-		Type: principal.PrincipalHuman,
-		Permissions: principal.Permissions{
-			Objects: map[string]principal.ObjectGrant{"computed_field": {Read: true}},
-		},
-	})
-	if !computedFieldsVisible(ctx) {
-		t.Fatal("want visible for a role granting computed_field:read")
-	}
-}
-
-func TestComputedFieldsVisible_UngatedRoleDenied(t *testing.T) {
-	ctx := principal.WithActor(context.Background(), principal.Principal{
-		Type: principal.PrincipalHuman,
-		Permissions: principal.Permissions{
-			// A role missing the computed_field grant entirely — the
-			// zero-value ObjectGrant denies, matching Permissions.Allows.
-			Objects: map[string]principal.ObjectGrant{"company": {Read: true}},
-		},
-	})
-	if computedFieldsVisible(ctx) {
-		t.Fatal("want NOT visible when the role's policy carries no computed_field grant")
-	}
-}
-
-func TestComputedFieldsVisible_NoActorBoundDenied(t *testing.T) {
-	if computedFieldsVisible(context.Background()) {
-		t.Fatal("want NOT visible with no actor bound (fail-closed)")
-	}
-}
-
-func TestComputedFieldsVisible_SystemPrincipalTrusted(t *testing.T) {
-	ctx := principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalSystem})
-	if !computedFieldsVisible(ctx) {
-		t.Fatal("want the system principal trusted by construction, matching auth.Require's own carve-out")
-	}
-}
 
 // companyComputedFields is the pure 5-row assembler: exactly one
 // computable row (open_pipeline, fed by the view read), four floors —

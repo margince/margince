@@ -431,34 +431,20 @@ describe("the legal identity a contact can state", () => {
   });
 });
 
-describe("the postal address, behind one line until it has something in it", () => {
-  it("holds the six parts behind one line that invites the first of them", async () => {
+describe("the grouped postal address", () => {
+  it("keeps the six parts behind one editor even when the address is empty", async () => {
+    const user = userEvent.setup();
     await renderSettledGrid(COMPANY);
-
-    expect(screen.getByText("Add an address")).toBeVisible();
-    expect(document.querySelector("details")?.open).toBe(false);
-    for (const label of PART_LABELS) {
-      expect(screen.getByText(label)).not.toBeVisible();
-    }
-    // The regression itself: six "Add …" pressables stacked above the facts a
-    // reader came for.
-    expect(screen.getByText("Add street and number")).not.toBeVisible();
-    // What the panel is for is still on screen, unmoved.
-    expect(screen.getByText("Automotive")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Change Address" }));
+    for (const label of PART_LABELS)
+      expect(screen.getByLabelText(new RegExp(label))).toBeVisible();
   });
-
-  it("opens on a half-filled address and reads the part that is set", async () => {
+  it("opens with all existing address parts", async () => {
+    const user = userEvent.setup();
     await renderSettledGrid(COMPANY_WITH_CITY);
-
-    expect(document.querySelector("details")?.open).toBe(true);
-    expect(screen.getByText("Address")).toBeVisible();
-    expect(screen.queryByText("Add an address")).toBeNull();
-    expect(screen.getByText("City")).toBeVisible();
-    expect(screen.getByText("Berlin")).toBeVisible();
-    // Open means all six, so the five still-empty parts keep inviting a value
-    // exactly as they did before the collapse existed.
-    for (const label of PART_LABELS) {
-      expect(screen.getByText(label)).toBeVisible();
-    }
+    await user.click(screen.getByRole("button", { name: "Change Address" }));
+    expect(screen.getByDisplayValue("Berlin")).toBeVisible();
+    for (const label of PART_LABELS)
+      expect(screen.getByLabelText(new RegExp(label))).toBeVisible();
   });
 });

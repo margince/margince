@@ -251,7 +251,7 @@ function Scorecard({ review }: Readonly<{ review: TeamWeeklyReview }>) {
   return (
     <StatStrip testId="teamweekly-strip">
       <StatCard
-        density="compact"
+        narrow="row"
         label={t("teamweekly.card.firstResponse")}
         value={ofTotal(counts.leads_answered_in_target, counts.leads_routed)}
         detail={t("teamweekly.card.firstResponseBasis", {
@@ -259,19 +259,19 @@ function Scorecard({ review }: Readonly<{ review: TeamWeeklyReview }>) {
         })}
       />
       <StatCard
-        density="compact"
+        narrow="row"
         label={t("teamweekly.card.meetings")}
         value={ofTotal(counts.meetings_with_next_step, counts.meetings_held)}
         detail={t("teamweekly.card.meetingsBasis")}
       />
       <StatCard
-        density="compact"
+        narrow="row"
         label={t("teamweekly.card.commitments")}
         value={ofTotal(counts.commitments_kept, counts.commitments_due)}
         detail={t("teamweekly.card.commitmentsBasis")}
       />
       <StatCard
-        density="compact"
+        narrow="row"
         label={t("teamweekly.card.won")}
         value={n(counts.deals_won)}
         // What the wins were WORTH, beside how many were lost. The count alone
@@ -292,7 +292,7 @@ function Scorecard({ review }: Readonly<{ review: TeamWeeklyReview }>) {
         }
       />
       <StatCard
-        density="compact"
+        narrow="row"
         label={t("teamweekly.card.reps")}
         value={n(counts.reps_counted)}
         detail={t("teamweekly.card.repsBasis")}

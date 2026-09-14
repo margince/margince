@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Badge, Button, EmptyState } from "./atoms";
+import { Badge, Button, Disclosure, EmptyState } from "./atoms";
 import {
   Panel,
   PanelBody,
@@ -427,6 +427,22 @@ const DETAIL: SectionDetail = {
     "This workspace reads deals from HubSpot, and a composite section cannot be assembled from a mirror.",
   withheldReason:
     "Deal amounts on this account are readable by its owner and by finance.",
+};
+
+// A Disclosure standing in the panel directly, as one row among rows: its
+// summary sits on the pane's gutter at the row's interval, with no second
+// hairline under the header band, and the rows it opens run edge to edge like
+// the ones above it. Set free-standing the atom drew its own rule and inset,
+// and the caret stood hard against the card's edge.
+export const WithDisclosure: Story = {
+  render: () => (
+    <Panel title="Overnight" sub="digest for 14/09/2026">
+      <Disclosure summary="Sync details">
+        <PanelRow>3 messages synced</PanelRow>
+        <PanelRow>1 contact created</PanelRow>
+      </Disclosure>
+    </Panel>
+  ),
 };
 
 // RailPanel on `ready`: the children are handed to Panel undecorated, so rows

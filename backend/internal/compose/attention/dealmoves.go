@@ -163,7 +163,10 @@ func worklistMoveOf(decided crmcontracts.DealStatusCardMove) *crmcontracts.Workl
 //
 // Held by: TestBothSidesReadTheRecordArgumentAlike (backend/gates)
 func NamedActivityArgument(args map[string]any) (ids.UUID, bool) {
-	raw, present := args["activity_id"]
+	raw, present := args["request_activity_id"]
+	if !present {
+		raw, present = args["activity_id"]
+	}
 	if !present {
 		return ids.UUID{}, false
 	}

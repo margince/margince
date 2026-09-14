@@ -253,11 +253,10 @@ export const GlanceWeeklyUnread: Story = {
 
 // ── The readings strip ──────────────────────────────────────────────────────
 
-// ONE DENSE ROW: label, figure, basis line, and the way into the lane the
-// figure counted in the card's own foot. The density is the change here — the
-// tile keeps every line at the size every stat card in the product draws it,
-// and gives up only air, so five readings are taken in at one glance instead of
-// pushing the day's own work below the fold.
+// ONE ROW: label, figure, basis line, and the way into the lane the figure
+// counted in the card's own foot. Each tile is the tile a record page's
+// readings wear, air included — the plate owns the row and nothing about the
+// card.
 //
 // The figure is in NEUTRAL ink unless the reading counts something BREACHING:
 // four coloured numbers in a row are a traffic light rather than a comparison.
@@ -300,7 +299,7 @@ export const ReadingsCapped: Story = {
 // edge, one hairline between, and no boxes at all. Two-up it was five 190px
 // cards and 600px of readings before a reader reached the day's own work. The
 // shape belongs to `StatStrip` and keys off the slots declaring
-// `density="compact"`, so no other strip in the product folds this way —
+// `narrow="row"`, so no other strip in the product folds this way —
 // `Design System/StatStrip` has both side by side.
 export const ReadingsOnAPhone: Story = {
   globals: { viewport: { value: "phone" } },

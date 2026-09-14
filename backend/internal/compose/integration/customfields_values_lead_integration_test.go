@@ -56,6 +56,14 @@ func TestCustomFieldValues_LeadRoundTrip(t *testing.T) {
 		t.Fatalf("ListLeads returned %d rows, want 1", len(list))
 	}
 	assertCF(t, list[0].AdditionalProperties, col, false)
+
+	cleared, err := f.store.UpdateLead(f.ctx, leadIDOf(ids.UUID(created.Id)), contacts.UpdateLeadInput{
+		Clear: []string{col}, CustomFields: map[string]any{col: nil},
+	})
+	if err != nil {
+		t.Fatalf("clear custom value: %v", err)
+	}
+	assertNoCF(t, cleared.AdditionalProperties, col)
 }
 
 // Source-key replay returns the existing row carrying its custom fields, and

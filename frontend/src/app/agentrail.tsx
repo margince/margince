@@ -93,6 +93,8 @@ const MARK_FADE = 0.16;
  * Account, because the screen still renders the combined entry.
  */
 const AI_SETTINGS_HREF = "#/settings/ai";
+/** Where a licence key is entered: the seats section of settings. */
+const LICENSE_SETTINGS_HREF = "#/settings/seats";
 
 /** What the installation can actually tell us, and what it cannot. */
 type Signals = Readonly<{
@@ -521,8 +523,13 @@ function RuntimeRows({
           {LABELS.tools} <b>{formatNumber(tools, locale)}</b>
         </span>
       )}
+      {/* The badge names a fault the reader can repair only on the seats
+          page, so a link around it takes them there: the badge stays the
+          label nobody presses, and the anchor carries the press. */}
       {(license === "none" || license === "refused") && (
-        <Badge tone="warn">{licenseLine}</Badge>
+        <a className="arwarn" href={LICENSE_SETTINGS_HREF}>
+          <Badge tone="warn">{licenseLine}</Badge>
+        </a>
       )}
       {offline.map((source) => (
         <span className="arconn down" key={source}>

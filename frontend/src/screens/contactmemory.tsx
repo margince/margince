@@ -56,8 +56,10 @@ const GLANCE = 3;
 export function ContactMemory({
   view,
   onOpenEmail,
+  hideEmpty = false,
 }: Readonly<{
   view: Contact360;
+  hideEmpty?: boolean;
   /**
    * Opens the page's email drawer. Optional because the page owns the drawer,
    * not this card: a host that mounts none passes none, and the rows stay
@@ -86,6 +88,7 @@ export function ContactMemory({
   // nothing already drawn would read as a channel with no history on it.
   const matching = rows.filter((row) => matches(row, filter));
   const shown = matching.slice(0, GLANCE);
+  if (hideEmpty && rows.length === 0) return null;
 
   return (
     <Panel

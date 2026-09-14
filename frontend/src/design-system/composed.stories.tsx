@@ -155,6 +155,8 @@ export const WithRowActions: Story = {
 // row read exactly as a table's would. Four open stages plus one won stage,
 // and Proposal carries no deals — the honest empty-column case a stage sees
 // between a lead qualifying and the next one reaching it.
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 function boardDeal(
   id: string,
   name: string,
@@ -182,16 +184,21 @@ const boardColumns: BoardMoneyColumn[] = [
     weightedMinor: 4_500,
     currency: "EUR",
     deals: [
+      // The buyer wrote last: an envelope, and how long ago.
       boardDeal("d1", "Contoso renewal", 12_000, 3, {
         singleThreaded: true,
         closeDate: "2026-10-14",
         owner: "Ada Lindqvist",
+        lastEmail: { agoMs: 2 * DAY_MS, direction: "inbound" },
       }),
-      // A close date the nightly run set and nobody confirmed: marked, not hidden.
+      // A close date the nightly run set and nobody confirmed: marked, not
+      // hidden. We wrote last, ten days ago, and nobody answered — which is the
+      // line a rep reads before the stall badge above it.
       boardDeal("d2", "Fabrikam expansion", 33_000, 9, {
         stalled: true,
         closeDate: "2026-09-30",
         closeDateProvisional: true,
+        lastEmail: { agoMs: 10 * DAY_MS, direction: "outbound" },
       }),
     ],
   },

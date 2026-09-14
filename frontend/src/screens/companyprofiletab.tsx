@@ -12,7 +12,7 @@ import { useT } from "../i18n";
 import { profileFieldLabel } from "./companies";
 import { CompanyFactsPanel } from "./companyfactspanel";
 import { useCompanyReadOnlyReason } from "./companyheader";
-import { DetailsGrid, SidecarFieldRow } from "./companyraildetails";
+import { SidecarFieldRow } from "./companyraildetails";
 import { useCompanyProfileFields } from "./evidenceverdict";
 
 type Company = components["schemas"]["Company"];
@@ -107,11 +107,6 @@ export function CompanyProfileForm({
           title={<span id={reasonId}>{reason}</span>}
         />
       )}
-      <Panel title={t("co.details.title")}>
-        <PanelBody>
-          <DetailsGrid company={company} />
-        </PanelBody>
-      </Panel>
       <Panel title={t("co.narrative.title")} sub={t("co.narrative.sub")}>
         <PanelBody>
           <FieldGrid>

@@ -31,10 +31,9 @@ import (
 )
 
 // pageExtractConcurrency bounds the fan-out. The calls are tiny and the
-// read's wall clock IS their slowest round, so the bound is generous —
-// effectively "every fact-bearing page at once" for a capped crawl —
-// while still capping runaway parallelism against provider rate limits
-// and the worker's DB pool (each call meters through it).
+// bound stays below the crawl page cap: completed calls release slots as
+// later pages arrive. Reading more pages must not increase the burst against
+// provider rate limits or the worker's DB pool (each call meters through it).
 const pageExtractConcurrency = 40
 
 // siteExtraction is the fan-out's outcome: the gated profile fields,

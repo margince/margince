@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
@@ -49,7 +50,15 @@ func (s *Store) IntroPath(ctx context.Context, signalID ids.SignalID, now time.T
 			return err
 		}
 		// The proposal names the company — that is a read of the company
-		// record, so it carries the row-scope gate like any other read.
+		// record, so it carries BOTH halves of the gate like any other read.
+		//
+		// The object half refuses rather than degrades, unlike a section that
+		// can be withheld: the company's name IS the proposal here ("ask X to
+		// introduce you at Y"), and an intro path with the company removed is
+		// not a smaller answer, it is a wrong one.
+		if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
+			return err
+		}
 		if err := auth.EnsureLinkTarget(ctx, tx, "company", ids.UUID(warmth.ResolvedCompanyId)); err != nil {
 			return err
 		}

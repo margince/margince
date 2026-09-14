@@ -55,6 +55,15 @@ Nine workflows sit beside the gate, deliberately outside it:
   without it the report would go red on the fix commit and stay red through the
   re-review that answers it, until somebody happened to push again.
 
+  It carries the one restriction that trigger forces. `pull_request_review` runs
+  in the **base** repository's context, so GitHub does not downgrade a fork's
+  token the way it does on `pull_request` — and this job checks out the pull
+  request's head and runs a script from it. The job is therefore confined to
+  branches of this repository whenever it is not the `pull_request` event that
+  started it. A fork still gets the report on every push; what it does not get
+  is the refresh on a submitted review.
+  `backend/gates/forkheadcheckout_test.go` holds that across the workflow tree.
+
   It says nothing about a pull request **nobody has reviewed yet**. That is
   every pull request for most of its life, and it is the same reason
   `merge-attest.yml` stays quiet about an absent verdict.

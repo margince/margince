@@ -338,33 +338,30 @@ function WeeklyBody({
           sentences 40px apart with nothing between them. */}
       <PanelBody className="brief-weekly-outcomes">
         <p className="t-sub">{t("brief.weekly.basis")}</p>
-        {/* `compact` because this row is read as ONE glance rather than a
-            reading at a time: the roomy tile's floor put half of it below the
-            fold on a laptop and left a band of dead space under every figure.
-            The scale is untouched — a compact reading is the same reading. */}
+        {/* On a phone the strip is a list, not ten boxes stacked. */}
         <StatStrip testId="weekly-strip">
           {c.tasks_completed !== undefined && (
             <StatCard
-              density="compact"
+              narrow="row"
               label={t("brief.weekly.tasksCompleted")}
               value={formatNumber(c.tasks_completed, locale)}
               detail={since(c.tasks_completed, prior?.tasks_completed)}
             />
           )}
           <StatCard
-            density="compact"
+            narrow="row"
             label={t("brief.week.lostLabel")}
             value={formatNumber(c.deals_lost, locale)}
             detail={since(c.deals_lost, prior?.deals_lost)}
           />
           <StatCard
-            density="compact"
+            narrow="row"
             label={t("brief.week.movedLabel")}
             value={formatNumber(c.deals_moved, locale)}
             detail={since(c.deals_moved, prior?.deals_moved)}
           />
           <StatCard
-            density="compact"
+            narrow="row"
             label={t("brief.weekly.planCommitmentsKept")}
             value={
               c.commitments_due === 0
@@ -377,7 +374,7 @@ function WeeklyBody({
             detail={since(c.commitments_kept, prior?.commitments_kept)}
           />
           <StatCard
-            density="compact"
+            narrow="row"
             label={t("brief.weekly.dealsWon")}
             value={formatNumber(c.deals_won, locale)}
             // Value uses the frozen close-time exchange rates.
@@ -387,7 +384,7 @@ function WeeklyBody({
             }
           />
           <StatCard
-            density="compact"
+            narrow="row"
             label={t("brief.weekly.leadsAnswered")}
             value={
               c.leads_routed === 0
@@ -403,7 +400,7 @@ function WeeklyBody({
             )}
           />
           <StatCard
-            density="compact"
+            narrow="row"
             label={t("brief.weekly.meetingsHeld")}
             value={
               c.meetings_held === 0
@@ -416,7 +413,7 @@ function WeeklyBody({
             detail={since(c.meetings_held, prior?.meetings_held)}
           />
           <StatCard
-            density="compact"
+            narrow="row"
             label={t("brief.weekly.carriedOver")}
             value={formatNumber(c.tasks_carried_over, locale)}
             detail={since(c.tasks_carried_over, prior?.tasks_carried_over)}

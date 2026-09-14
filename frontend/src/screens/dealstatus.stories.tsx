@@ -9,31 +9,58 @@ import {
 } from "./story-utils";
 
 type WrittenBy = components["schemas"]["WrittenBy"];
+type Situation = "task" | "request" | "covered";
 
-// One helper rather than a stub literal per story: what varies between these
-// frames is WHO wrote the briefing, and spelling the two routes out twice
-// invites them to drift apart.
-function panel(writer: WrittenBy) {
+function panel(writer: WrittenBy, situation: Situation = "task") {
+  const request = situation !== "task";
+  const next = request
+    ? {
+        action: situation === "covered" ? "draft_email" : "create_task",
+        reason:
+          situation === "covered"
+            ? "This request already has a reminder. The reply still needs to be handled."
+            : "Review and take responsibility for the outstanding request: Meeting slots",
+        arguments:
+          situation === "covered"
+            ? {}
+            : {
+                subject: "Meeting slots",
+                source: "ui",
+                request_activity_id: "demo-mail",
+              },
+        evidence: [
+          {
+            activity_id: "demo-mail",
+            text: "Yes, please send a few meeting slots.",
+          },
+        ],
+      }
+    : {
+        action: "open_task",
+        reason: "Complete the existing task: Follow up on the proposal",
+        arguments: { activity_id: "demo-task" },
+        evidence: [
+          { activity_id: "demo-task", text: "Follow up on the proposal" },
+        ],
+      };
   return () => {
     installFetchStub({
-      "GET /me": meRoute({ activity: ["read", "update"] }),
+      "GET /me": meRoute({ activity: ["read", "create", "update"] }),
       "GET /deals/demo-deal/status": () =>
         jsonResponse({
           deal_id: "demo-deal",
           story: {
             sentences: [
-              { text: "The buyer is reviewing the proposal.", evidence: [] },
+              {
+                text: request
+                  ? "This deal is won. The customer asked for meeting slots."
+                  : "The buyer is reviewing the proposal.",
+                evidence: [],
+              },
             ],
           },
           verdict: { standing: "live", because: { sentences: [] } },
-          next: {
-            action: "open_task",
-            reason: "Complete the existing task: Follow up on the proposal",
-            arguments: { activity_id: "demo-task" },
-            evidence: [
-              { activity_id: "demo-task", text: "Follow up on the proposal" },
-            ],
-          },
+          next,
           generated_at: "2026-09-05T09:00:00Z",
           generated_by: writer,
         }),
@@ -42,7 +69,10 @@ function panel(writer: WrittenBy) {
     });
     return (
       <StoryProviders>
-        <DealStatusCardPanel dealId="demo-deal" dealName="Demo proposal" />
+        <DealStatusCardPanel
+          dealId="demo-deal"
+          dealName={request ? "Won account" : "Demo proposal"}
+        />
       </StoryProviders>
     );
   };
@@ -52,19 +82,23 @@ const meta: Meta = { title: "Records/Deal next step" };
 export default meta;
 type Story = StoryObj;
 
-// The model's own prose. The brief's band is indigo and its head discloses
-// itself; the foot names the writer beside "Write it again", the machine's own
-// verb — quiet, because it sits inside the panel that writer already filled.
 export const ExistingTask: Story = { render: panel("model") };
-
-// The same read with no model lane behind it. STILL indigo, because the
-// briefing is the machine's reading either way; the only thing that moves is
-// the foot, which now says the words were assembled from the records.
 export const ComposedBrief: Story = { render: panel("deterministic") };
-
-// The indigo head band and the quiet indigo verb in the dark theme: `--aiText`
-// on `--aiLight` is the pair the dark accent lift moves first.
 export const ExistingTaskDark: Story = {
   globals: { theme: "dark" },
   render: panel("model"),
+};
+export const HistoricalRequestOnWonDeal: Story = {
+  render: panel("deterministic", "request"),
+};
+export const HistoricalRequestOnWonDealDark: Story = {
+  ...HistoricalRequestOnWonDeal,
+  globals: { theme: "dark" },
+};
+export const RequestAlreadyCovered: Story = {
+  render: panel("deterministic", "covered"),
+};
+export const RequestAlreadyCoveredDark: Story = {
+  ...RequestAlreadyCovered,
+  globals: { theme: "dark" },
 };

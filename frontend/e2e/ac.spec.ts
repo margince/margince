@@ -1273,23 +1273,17 @@ test.describe("B-EP09.23: overlay mode", () => {
   test("AC-overlay-3: an ordinary edit succeeds in overlay mode — the mirror write-back seam accepts it", async ({
     page,
   }) => {
-    // Update writes back through the incumbent seam and succeeds
-    // (overlay/provider_writes.go) — so Edit is a row of the deal's overflow
-    // menu in overlay too, and this drives it for real: open the menu, click
-    // Edit, change the name, save, and see the 360 render the saved value —
-    // the same click path AC-deal-* exercises in native mode.
+    // Inline edits use the same write-back seam in overlay mode.
     await mockApi(page, { sor: "overlay" });
     await page.goto("/#/deals/d-fleet");
-    await page.getByRole("button", { name: "Weitere Aktionen" }).click();
-    await page.getByTestId("edit-record").click();
-    const name = page.getByLabel("Deal-Name *");
-    // Wait for the modal's own prefill to land before typing over it — the
-    // form seeds its fields from the fetched record on open, and typing
-    // into it before that commits races the prefill, not the write-back
-    // this test is about.
+    await page.getByRole("button", { name: "Details", exact: true }).click();
+    await page
+      .getByRole("button", { name: "Deal-Name ändern", exact: true })
+      .click();
+    const name = page.getByRole("textbox", { name: "Deal-Name", exact: true });
     await expect(name).toHaveValue("Fleet retrofit");
     await name.fill("Fleet retrofit — expanded scope");
-    await page.getByRole("button", { name: "Speichern" }).click();
+    await name.press("Enter");
     // The record's own heading, by ROLE — which is what "the edit landed"
     // means, and what stays true when a panel, a toast or a breadcrumb also
     // carries the name. The agent line in the rail already does: it says what
@@ -1497,12 +1491,16 @@ test.describe("B-EP09.23: overlay mode", () => {
     await expect(
       page.getByRole("heading", { level: 1, name: "Anna Weber", exact: true }),
     ).toBeVisible();
-    // The contact page V2 states a withheld section in its own vocabulary rather
-    // than the SoR-specific copy the other 360s use, so what is asserted here is
-    // what it actually promises today: the page renders, and no panel degrades
-    // into an error box. That it cannot yet say "HubSpot does not carry this" —
-    // a different fact from "you may not see this" — is issue #882.
-    await expect(page.getByTestId("contact-readings")).toBeVisible();
+    // Restricted context stays explicit even when the overview has no readings
+    // worth a separate panel.
+    const coverage = page.getByText(
+      "Einige Bereiche sind für Ihre Rolle nicht verfügbar.",
+      { exact: false },
+    );
+    await expect(coverage).toBeVisible();
+    await expect(coverage).toContainText("Gesprächsgedächtnis");
+    await expect(coverage).toContainText("Wo dieser Kontakt steht");
+    await expect(page.getByTestId("contact-readings")).toHaveCount(0);
     await expect(page.getByText(errorBox)).toHaveCount(0);
 
     // Deal 360: timeline, coverage, offers, the context panel, and the buying

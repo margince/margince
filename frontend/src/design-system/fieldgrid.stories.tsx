@@ -126,3 +126,20 @@ export const WithIcons: Story = {
     </FieldGrid>
   ),
 };
+
+export const ExpandedGroup: Story = {
+  render: () => (
+    <FieldGrid>
+      <FieldRow label="Name">Brandt Automotive</FieldRow>
+      <FieldRow label="Address" stacked>
+        <InlineText
+          label="Street"
+          value="17 Fleet Road"
+          placeholder="Not set"
+          canEdit
+          onSave={async () => undefined}
+        />
+      </FieldRow>
+    </FieldGrid>
+  ),
+};

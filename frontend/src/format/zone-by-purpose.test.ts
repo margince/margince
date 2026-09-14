@@ -270,6 +270,10 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Same prop, asserted: the row's rendered time is only checkable against a zone the test chose.",
   },
   {
+    file: "design-system/dealcard.stories.tsx",
+    why: "DealCard takes the record's zone as a required prop for its close date; the story has to hand it a named one, and a zone read off the runner would draw a different date on every machine the catalog builds on.",
+  },
+  {
     file: "design-system/explain.stories.tsx",
     why: "The FX-lineage panel takes `workspaceZone` as a prop and the story shows what a named one renders.",
   },

@@ -1,10 +1,12 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
 import { ContactToday } from "./contacttoday";
+import { installFetchStub, jsonResponse, meRoute } from "./story-utils";
 
 // THE DAY'S WORK GIVES ONE ANSWER. The quiet rung is the answer a reader came
 // for on a record with nothing pending, and a contradiction on one that has
@@ -15,7 +17,16 @@ import { ContactToday } from "./contacttoday";
 // is at its length ceiling, and what is under test here is the panel's
 // composition, which needs neither the header nor the rail.
 
-afterEach(cleanup);
+beforeEach(() =>
+  installFetchStub({
+    "GET /me": meRoute({ activity: ["read"] }),
+    "GET /activities/a-9": () => jsonResponse(OPEN_TASK),
+  }),
+);
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 
 type Contact360 = components["schemas"]["Contact360"];
 type ContactMoment = components["schemas"]["ContactMoment"];
@@ -71,12 +82,7 @@ function show(view: Contact360, moment: ContactMoment) {
   render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <ContactToday
-          name="Dana Buyer"
-          view={view}
-          moment={moment}
-          onAction={() => {}}
-        />
+        <ContactToday view={view} moment={moment} onAction={() => {}} />
       </LocaleProvider>
     </QueryClientProvider>,
   );
@@ -102,12 +108,23 @@ describe("the day's work on a contact", () => {
 
   // Dropped only where it would contradict. With nothing else in the list the
   // quiet card IS the answer, and it keeps the verb the ladder named on it.
-  it("keeps the quiet card when it is the whole answer", () => {
+  it("shows a compact coverage sentence without presenting absence as a suggestion", () => {
     show(VIEW, QUIET);
 
-    expect(screen.getByText("Nothing needs you today")).toBeTruthy();
-    expect(
-      screen.getByRole("button", { name: "Log an interaction" }),
-    ).toBeTruthy();
+    expect(screen.getByText(QUIET.why_now)).toBeTruthy();
+    expect(screen.queryByText("Margince suggests")).toBeNull();
+    expect(screen.queryByRole("button")).toBeNull();
   });
+});
+
+it("opens the actual task from the contact's attention list", async () => {
+  const user = userEvent.setup();
+  show(
+    { ...VIEW, next_steps: { data: [OPEN_TASK], page: { has_more: false } } },
+    QUIET,
+  );
+  await user.click(screen.getByRole("button", { name: "Open existing task" }));
+  expect(
+    await screen.findByRole("dialog", { name: "Send the renewal quote" }),
+  ).toBeTruthy();
 });

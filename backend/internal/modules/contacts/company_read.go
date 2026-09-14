@@ -96,7 +96,7 @@ func getCompanyInTx(ctx context.Context, tx pgx.Tx, id ids.CompanyID,
 	// caller whose role lacks computed_field:read never pays for the
 	// rollup read below, and out.ComputedFields stays its nil zero
 	// value — omitempty then drops the key entirely on marshal (T1).
-	if computedFieldsVisible(ctx) {
+	if auth.ReadGranted(ctx, "computed_field") {
 		open, err := openPipelineRollup(ctx, tx, id, asOf)
 		if err != nil {
 			return crmcontracts.Company{}, fmt.Errorf("read open pipeline rollup: %w", err)

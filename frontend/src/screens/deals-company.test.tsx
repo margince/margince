@@ -12,6 +12,7 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { meFixture } from "../app/mefixture";
+import { RecordShell } from "../app/testing/recordshell.testkit";
 import { LocaleProvider } from "../i18n";
 import {
   buildColumns,
@@ -86,7 +87,9 @@ const render = (ui: ReactNode) => {
   });
   return rtlRender(
     <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">{ui}</LocaleProvider>
+      <LocaleProvider initial="en">
+        <RecordShell>{ui}</RecordShell>
+      </LocaleProvider>
     </QueryClientProvider>,
   );
 };
@@ -534,11 +537,11 @@ describe("a deal's edit form over a withheld reference", () => {
       stubBackend({ deals: [single], single, page, byId, project }),
     );
     render(<DealScreen id={single.id} />);
-    // Edit lives in the header's overflow, so the form is two presses away.
-    await user.click(
-      await screen.findByRole("button", { name: "More actions" }),
-    );
-    await user.click(await screen.findByTestId("edit-record"));
+    await screen.findByRole("heading", { name: single.name, level: 1 });
+    if (!single.masked_fields?.length)
+      await user.click(
+        await screen.findByRole("button", { name: "Change Company" }),
+      );
     return user;
   };
 
@@ -547,28 +550,19 @@ describe("a deal's edit form over a withheld reference", () => {
       { id: "o1", display_name: "Acme Corp" },
     ]);
 
-    expect(
-      screen.getByRole("combobox", { name: "Company" }).textContent,
-    ).toContain("Company withheld");
+    expect(screen.getAllByText(/Company withheld/).length).toBeGreaterThan(0);
   });
 
   // The reason the field is not simply hidden, and not simply blank: a picker
   // full of companies over a company nobody was shown invites a reader to
   // re-point the deal away from the one a colleague linked.
   it("offers no company to pick while the company is withheld", async () => {
-    const user = await openEdit(
-      deal({ company_id: null, masked_fields: ["company_id"] }),
-      [
-        { id: "o1", display_name: "Acme Corp" },
-        { id: "o2", display_name: "Northgate Systems" },
-      ],
-    );
-    await user.click(screen.getByRole("combobox", { name: "Company" }));
-
-    const options = within(screen.getByRole("listbox")).getAllByRole("option");
-    expect(options).toHaveLength(1);
-    expect(options[0].textContent).toContain("Company withheld");
-    expect(screen.queryByRole("option", { name: "Acme Corp" })).toBeNull();
+    await openEdit(deal({ company_id: null, masked_fields: ["company_id"] }), [
+      { id: "o1", display_name: "Acme Corp" },
+      { id: "o2", display_name: "Northgate Systems" },
+    ]);
+    expect(screen.queryByRole("button", { name: "Change Company" })).toBeNull();
+    expect(screen.queryByRole("combobox", { name: "Company" })).toBeNull();
   });
 
   it("offers the partner field as withheld too", async () => {
@@ -577,9 +571,7 @@ describe("a deal's edit form over a withheld reference", () => {
       [{ id: "o1", display_name: "Acme Corp" }],
     );
 
-    expect(
-      screen.getByRole("combobox", { name: "via Partner" }).textContent,
-    ).toContain("Partner withheld");
+    expect(screen.getAllByText(/Partner withheld/).length).toBeGreaterThan(0);
   });
 
   // Present, and off the pickable page: the same rule the partner field
@@ -603,7 +595,7 @@ describe("a deal's edit form over a withheld reference", () => {
   // drop entirely: a missing project row says the deal is on no project, which
   // is the opposite of what `masked_fields` said.
   it("offers the project field as withheld rather than dropping it", async () => {
-    const user = await openEdit(
+    await openEdit(
       deal({
         company_id: "o1",
         project_id: null,
@@ -612,14 +604,9 @@ describe("a deal's edit form over a withheld reference", () => {
       [{ id: "o1", display_name: "Acme Corp" }],
     );
 
-    const picker = screen.getByRole("combobox", { name: "Project" });
-    expect(picker.textContent).toContain("Project withheld");
-    await user.click(picker);
-    const options = within(screen.getByRole("listbox")).getAllByRole("option");
-    expect(options).toHaveLength(1);
-    // Not even the "start a new one" entry: saving it would re-point the deal
-    // off a project the reader never saw.
-    expect(screen.queryByRole("option", { name: /New project/ })).toBeNull();
+    expect(screen.getAllByText(/Project withheld/).length).toBeGreaterThan(0);
+    expect(screen.queryByRole("button", { name: "Change Company" })).toBeNull();
+    expect(screen.queryByRole("combobox", { name: "Project" })).toBeNull();
   });
 
   it("names the project a reader may see", async () => {

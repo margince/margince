@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { ReactNode } from "react";
 import type { components } from "../api/schema";
 import { en } from "../i18n/en";
 import { ContactPageV2 } from "./contactpage";
@@ -39,6 +40,7 @@ export const view: Contact360 = {
     // page asks for. Absent it the fixture describes a contact this reader
     // may not write, and the controls correctly disappear.
     writable: true,
+    version: 1,
     emails: [
       {
         id: "pe-1",
@@ -90,6 +92,7 @@ export function mount(
   // stay here.
   extraRoutes: RouteMap = {},
   allow: Parameters<typeof meRoute>[0] = callerGrants,
+  wrap: (page: ReactNode) => ReactNode = (page) => page,
 ) {
   installFetchStub({
     "GET /me": meRoute(allow, { seat: "full" }),
@@ -125,7 +128,7 @@ export function mount(
   });
   render(
     <StoryProviders>
-      <ContactPageV2 id="p-1" tab={tab} />
+      {wrap(<ContactPageV2 id="p-1" tab={tab} />)}
     </StoryProviders>,
   );
 }
@@ -134,10 +137,7 @@ export function mount(
 // header's overflow menu, and the menu does not mount its rows until it has
 // been opened once — so a spec reaching for one opens it first.
 //
-// Both contact surfaces draw that menu (ContactPageV2 through contactactions.tsx,
-// ContactScreen through contacts.tsx), so both suites reach for these: a copy
-// per suite would be two answers to where those verbs live, and the suite
-// holding the stale one would go on passing against a header nobody ships.
+// The record suites share the routed contact header's menu.
 export async function openRecordMenu(): Promise<void> {
   await userEvent.click(
     await screen.findByRole("button", { name: en["record.moreActions"] }),

@@ -11,7 +11,7 @@ import type { ConfidenceLevel } from "../design-system/trust";
 import { formatDate, formatDecimal, formatNumber } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import { provenanceOf, throwProblem } from "./common";
-import { currentEmployer, formerEmployers } from "./employmentcurrency";
+import { currentEmployer, stillHeld } from "./employmentcurrency";
 import { EntityRef } from "./entityref";
 import { dealRoleLabel } from "./record360";
 import { changeSentence } from "./relationshipchange";
@@ -249,7 +249,9 @@ export function IdentityRail({
     (view.profile_fields ?? []).map((f) => [f.field, f]),
   );
   const current = currentEmployer(view.employments?.data);
-  const former = formerEmployers(view.employments?.data);
+  const career = (view.employments?.data ?? []).filter(
+    (e) => e.relationship_id !== current?.relationship_id,
+  );
 
   return (
     <>
@@ -340,25 +342,29 @@ export function IdentityRail({
         </PanelBody>
       </Panel>
 
-      {former.length > 0 && (
+      {career.length > 0 && (
         <Panel title={t("contact.career.title")}>
           <PanelBody>
             <ul style={{ margin: 0, paddingLeft: "var(--space-4)" }}>
-              {former.map((e) => (
+              {career.map((e) => (
                 <li
                   key={e.relationship_id}
                   style={{ marginTop: "var(--space-1)" }}
                 >
-                  {/* A former employer is a company the reader can open, and
-                      `company_id` was on the row already. EntityRef draws
-                      the em dash itself when there is no id, which is what this
-                      was falling back to by hand. */}
+                  {/* EntityRef preserves the company link and handles withheld names. */}
                   <EntityRef
                     kind="company"
                     id={e.company_id}
                     name={e.company_name}
                   />
-                  {e.role && <> · {e.role}</>}
+                  {e.role && <> · {e.role}</>} ·{" "}
+                  {t(
+                    stillHeld(e)
+                      ? "employment.status.current"
+                      : e.employment_status === "unknown"
+                        ? "employment.status.unknown"
+                        : "employment.status.former",
+                  )}
                 </li>
               ))}
             </ul>

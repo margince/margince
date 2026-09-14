@@ -232,6 +232,13 @@ func LogActivityInputFrom(req crmcontracts.CreateActivityRequest) (LogActivityIn
 		Source:       req.Source,
 		AssigneeID:   idArg[ids.UserKind](req.AssigneeId),
 	}
+	if req.RequestActivityId != nil {
+		if string(req.Kind) != string(crmcontracts.ActivityKindTask) {
+			return LogActivityInput{}, &RequestAcceptanceFieldError{Field: "request_activity_id", Message: "Only a task can accept a request."}
+		}
+		id := ids.UUID(*req.RequestActivityId)
+		in.RequestActivityID = &id
+	}
 	// The caller states the transport; nothing infers it. The predecessor of this
 	// read the provider back out of the kind, which was only ever a translation of
 	// an input shape that could not say what it meant — and since ADR-0107/A158 the

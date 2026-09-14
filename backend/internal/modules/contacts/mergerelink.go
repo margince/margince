@@ -264,6 +264,13 @@ func mergeContactSocial(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.C
 //     it out of the live-run index — the established idiom, the same one
 //     markSkipped uses — while leaving its money and its outcome intact.
 func relinkProviderPurchases(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.ContactID) error {
+	args := []any{targetID}
+	targetPos := len(args)
+	args = append(args, sourceID)
+	sourcePos := len(args)
+	if _, err := tx.Exec(ctx, storekit.SQLf(`UPDATE provider_employment_resolution SET contact_id=$%d WHERE contact_id=$%d`, targetPos, sourcePos), args...); err != nil {
+		return err
+	}
 	if _, err := tx.Exec(ctx,
 		`UPDATE contact_provider_claim SET contact_id = $2 WHERE contact_id = $1`,
 		sourceID.UUID, targetID.UUID); err != nil {

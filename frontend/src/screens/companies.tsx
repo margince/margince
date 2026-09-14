@@ -111,7 +111,6 @@ import { Company360Call, NeedsList, useTodayReading } from "./companytoday";
 import { hasWorkInFlight, sinceLastVisitFooter } from "./companywork";
 import { ComposeModal } from "./compose";
 import { CreateAction } from "./create";
-import { CustomFieldsPanel } from "./customfields.card";
 import { useObjectCustomFields } from "./customfields.form";
 import { useRoster } from "./entityref";
 import { RecordHistoryTab } from "./history";
@@ -2276,7 +2275,7 @@ function ReferenceDisclosures({
             scope={{ company_id: company.id }}
             refusedReasonId={refusedReasonId}
           />
-          <CustomFieldsPanel object="company" record={company} />
+
           <HierarchyRollupPanel companyId={company.id} />
           {/* Only where the Brief is not already offering it: an account with
               nothing on file meets the offer at the top of its own column, and

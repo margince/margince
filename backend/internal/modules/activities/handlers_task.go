@@ -38,13 +38,17 @@ func (h Handlers) CreateTask(w http.ResponseWriter, r *http.Request, _ crmcontra
 		writeStoreErr(w, r, err)
 		return
 	}
-	activity, _, err := h.store.LogActivity(r.Context(), in)
+	activity, created, err := h.store.LogActivity(r.Context(), in)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
 	}
 	w.Header().Set("Location", "/v1/activities/"+activity.Id.String())
-	httperr.WriteJSON(w, http.StatusCreated, activity)
+	status := http.StatusOK
+	if created {
+		status = http.StatusCreated
+	}
+	httperr.WriteJSON(w, status, activity)
 }
 
 // activityOfTask is the fold: the task request as the activity request the
@@ -53,12 +57,13 @@ func (h Handlers) CreateTask(w http.ResponseWriter, r *http.Request, _ crmcontra
 func activityOfTask(req crmcontracts.CreateTaskRequest) (crmcontracts.CreateActivityRequest, error) {
 	subject := req.Subject
 	out := crmcontracts.CreateActivityRequest{
-		Kind:       crmcontracts.CreateActivityRequestKindCreateActivityRequestKindTask,
-		Subject:    &subject,
-		Body:       req.Body,
-		DueAt:      req.DueAt,
-		AssigneeId: req.AssigneeId,
-		Source:     req.Source,
+		Kind:              crmcontracts.CreateActivityRequestKindCreateActivityRequestKindTask,
+		Subject:           &subject,
+		Body:              req.Body,
+		RequestActivityId: req.RequestActivityId,
+		DueAt:             req.DueAt,
+		AssigneeId:        req.AssigneeId,
+		Source:            req.Source,
 	}
 	if req.Links != nil {
 		// The two link shapes are generated separately and identical on the

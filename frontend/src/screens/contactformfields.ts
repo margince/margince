@@ -2,16 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../api/schema";
+import { normalizeProfileUrl } from "../format/profileurl";
 import type { useT } from "../i18n";
+import { addressPatch } from "./companyform";
 import type { CreateField, FormRows } from "./create";
 
-// The contact form's field schema and its two request-body mappers — create
-// and edit both describe an address the same way, because ONE mapper for
-// each request is what stops the two coming to disagree about what a
-// ContactEmailInput or a repeatable phone row means. Its own file so
-// contacts.tsx's ContactsScreen (create) and contacteditmergearchive.tsx's
-// ContactEditMergeArchive (edit, shared by both ContactScreen and
-// ContactPageV2) can each read it without importing one another.
+// Creation and Details share the field definitions and collection mappers.
+// The update mapper sends only fields submitted by the active editor.
 
 type CreateContactRequest = components["schemas"]["CreateContactRequest"];
 type UpdateContactRequest = components["schemas"]["UpdateContactRequest"];
@@ -98,16 +95,42 @@ function stringField(value: unknown): string {
 export function mapContactUpdate(
   values: Record<string, unknown>,
   rows?: FormRows,
+  opened: Record<string, unknown> = {},
 ): UpdateContactRequest {
-  const linkedin = stringField(values["social.linkedin"]).trim();
+  const scalar = (key: string) =>
+    Object.hasOwn(values, key)
+      ? stringField(values[key]).trim() || null
+      : undefined;
+  const social = opened.social;
   return {
     full_name: stringField(values.full_name).trim() || undefined,
-    first_name: stringField(values.first_name).trim() || undefined,
-    last_name: stringField(values.last_name).trim() || undefined,
-    title: stringField(values.title).trim() || undefined,
-    social: linkedin ? { linkedin } : undefined,
-    emails: rows ? contactEmailInputs(rows) : undefined,
-    phones: rows ? contactPhoneInputs(rows) : undefined,
+    first_name: scalar("first_name"),
+    last_name: scalar("last_name"),
+    title: scalar("title"),
+    owner_id: scalar("owner_id"),
+    visibility:
+      values.visibility === "workspace" || values.visibility === "owner"
+        ? values.visibility
+        : undefined,
+    social: Object.hasOwn(values, "social.linkedin")
+      ? {
+          ...(social && typeof social === "object" && !Array.isArray(social)
+            ? social
+            : {}),
+          linkedin: scalar("social.linkedin")
+            ? normalizeProfileUrl(stringField(values["social.linkedin"]))
+            : null,
+        }
+      : undefined,
+    address: addressPatch(values),
+    emails:
+      rows && Object.hasOwn(rows, "emails")
+        ? contactEmailInputs(rows)
+        : undefined,
+    phones:
+      rows && Object.hasOwn(rows, "phones")
+        ? contactPhoneInputs(rows)
+        : undefined,
   };
 }
 
@@ -176,21 +199,29 @@ export function contactCreateFields(t: ReturnType<typeof useT>): CreateField[] {
   ];
 }
 
-// The edit form is contactCreateFields WITHOUT the create-only parts, so the
-// two cannot come to describe an address differently — the same reason one
-// mapper serves both request bodies.
-//
-// It carries the email and phone rows because nothing else in the product can
-// change them. A bounced send names the address that refused it and sends the
-// reader here; a form that omitted the field left that reader at a page which
-// reported the failure and could not fix it.
-//
-// Moving the primary marker between two addresses of the SAME type is refused
-// by the server with a bare 409 today. Not a limit of this form and not
-// introduced here — the same PATCH has answered that way since the field
-// existed — but the primary radio is the first control that reaches it, so the
-// conflict is shown rather than swallowed. Correcting an address, adding one
-// and removing one all work.
+// Creation and Details share the same address types and primary semantics.
 export function contactEditFields(t: ReturnType<typeof useT>): CreateField[] {
   return contactCreateFields(t);
+}
+
+// Compare replace-sets in their request shape; row ids and server metadata
+// are not editable values. Position comes from the displayed row order.
+export function contactEditComparison(
+  record: components["schemas"]["Contact"],
+) {
+  return {
+    ...record,
+    emails: (record.emails ?? []).map((row, position) => ({
+      email: row.email,
+      email_type: row.email_type ?? "work",
+      is_primary: row.is_primary,
+      position,
+    })),
+    phones: (record.phones ?? []).map((row, position) => ({
+      phone: row.phone,
+      phone_type: row.phone_type ?? "work",
+      is_primary: row.is_primary,
+      position,
+    })),
+  };
 }
