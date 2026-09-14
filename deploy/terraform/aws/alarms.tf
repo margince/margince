@@ -14,14 +14,21 @@
 # Subscribe with:
 #   aws sns subscribe --topic-arn "$(terraform output -raw alerts_topic_arn)" \
 #     --protocol email --notification-endpoint you@example.com
+#
+# Every resource below is gated on var.enable_deep_monitoring (variables.tf),
+# so this whole file is a no-op when it's false — the alarms, and the SNS
+# topic they'd otherwise page into, simply don't exist rather than existing
+# unsubscribed.
 
 resource "aws_sns_topic" "alerts" {
+  count             = var.enable_deep_monitoring ? 1 : 0
   name              = "${var.name_prefix}-alerts"
   kms_master_key_id = aws_kms_key.data.arn
   tags              = { Name = "${var.name_prefix}-alerts", Component = "observability" }
 }
 
 resource "aws_cloudwatch_metric_alarm" "rds_cpu_credit_balance" {
+  count              = var.enable_deep_monitoring ? 1 : 0
   alarm_name         = "${var.name_prefix}-rds-cpu-credit-balance-low"
   alarm_description  = "RDS ${aws_db_instance.this.identifier} is burning through its CPU credit balance — sustained load is about to throttle it, not a transient spike."
   namespace          = "AWS/RDS"
@@ -38,8 +45,8 @@ resource "aws_cloudwatch_metric_alarm" "rds_cpu_credit_balance" {
   comparison_operator = "LessThanThreshold"
   treat_missing_data  = "breaching"
 
-  alarm_actions = [aws_sns_topic.alerts.arn]
-  ok_actions    = [aws_sns_topic.alerts.arn]
+  alarm_actions = [aws_sns_topic.alerts[0].arn]
+  ok_actions    = [aws_sns_topic.alerts[0].arn]
 
   tags = { Name = "${var.name_prefix}-rds-cpu-credit-balance", Component = "observability" }
 }
@@ -58,7 +65,7 @@ locals {
 # convention aws_elasticache_replication_group.this already relies on
 # implicitly, made explicit here because the alarm has to name the node.
 resource "aws_cloudwatch_metric_alarm" "redis_cpu_credit_balance" {
-  count               = local.redis_node_count
+  count               = var.enable_deep_monitoring ? local.redis_node_count : 0
   alarm_name          = "${var.name_prefix}-redis-cpu-credit-balance-low-${count.index + 1}"
   alarm_description   = "ElastiCache node ${count.index + 1} of ${aws_elasticache_replication_group.this.replication_group_id} is burning through its CPU credit balance."
   namespace           = "AWS/ElastiCache"
@@ -71,8 +78,8 @@ resource "aws_cloudwatch_metric_alarm" "redis_cpu_credit_balance" {
   comparison_operator = "LessThanThreshold"
   treat_missing_data  = "breaching"
 
-  alarm_actions = [aws_sns_topic.alerts.arn]
-  ok_actions    = [aws_sns_topic.alerts.arn]
+  alarm_actions = [aws_sns_topic.alerts[0].arn]
+  ok_actions    = [aws_sns_topic.alerts[0].arn]
 
   tags = { Name = "${var.name_prefix}-redis-cpu-credit-balance-${count.index + 1}", Component = "observability" }
 }

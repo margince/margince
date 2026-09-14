@@ -395,7 +395,8 @@ elsewhere in this stack (the security group, the subnet group, secret names)
 still correctly names the protocol this thing speaks, not the engine binary —
 see `elasticache.tf`'s own comment.
 
-**CPU credit alarms**: `alarms.tf` watches `CPUCreditBalance` on both
+**CPU credit alarms — off by default**: gated on `var.enable_deep_monitoring`
+(`false` unless set). When on, `alarms.tf` watches `CPUCreditBalance` on both
 burstable (T-family) resources this stack defaults to — `aws_db_instance.this`
 and each ElastiCache node — and pages an SNS topic (`alerts_topic_arn`
 output) when either is running out, rather than waiting for the throttling
@@ -403,6 +404,10 @@ itself to show up as an unexplained slowdown. No subscription is created;
 subscribe your own destination with the `aws sns subscribe` command in that
 file's own comment. The threshold (20) is a starting point, not a tuned
 value — the same honest-floor reasoning as the instance sizing itself.
+CloudWatch Logs and the log/metric *exports* (`enabled_cloudwatch_logs_exports`,
+the flow-log group, the Redis slow-log group) are unaffected by this toggle —
+those are baseline observability every deployment keeps regardless of whether
+it also wants alerting.
 
 **S3 SSE-KMS enforcement**: `s3.tf`'s bucket policy denies any `PutObject`
 that isn't `aws:kms`-encrypted under this stack's own key

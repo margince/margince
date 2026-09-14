@@ -255,3 +255,21 @@ variable "admin_bootstrap_password" {
   type        = string
   sensitive   = true
 }
+
+# ---- Observability -----------------------------------------------------------
+
+variable "enable_deep_monitoring" {
+  description = <<-EOT
+    Toggles alarms.tf's SNS topic and CPU-credit-balance alarms (RDS +
+    every ElastiCache node). CloudWatch Logs (iam.tf, network.tf's flow
+    logs) and the metrics/log EXPORTS themselves (rds.tf's
+    enabled_cloudwatch_logs_exports, elasticache.tf's slow-log group) stay
+    on regardless — those are baseline "what happened" observability every
+    deployment needs to debug itself, not the alerting layer this toggles.
+    Off by default: an operator who has not yet decided where alerts should
+    go (email/Slack/PagerDuty — alarms.tf's own comment has the subscribe
+    command) gets no half-wired SNS topic with nothing subscribed to it.
+  EOT
+  type        = bool
+  default     = false
+}

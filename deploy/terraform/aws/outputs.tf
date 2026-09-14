@@ -43,8 +43,8 @@ output "kms_key_arn" {
 }
 
 output "alerts_topic_arn" {
-  description = "Subscribe your own alert destination — alarms.tf's own comment has the aws sns subscribe command."
-  value       = aws_sns_topic.alerts.arn
+  description = "Subscribe your own alert destination — alarms.tf's own comment has the aws sns subscribe command. Empty when var.enable_deep_monitoring is false: there is no topic to subscribe to."
+  value       = var.enable_deep_monitoring ? aws_sns_topic.alerts[0].arn : ""
 }
 
 output "waf_web_acl_arn" {

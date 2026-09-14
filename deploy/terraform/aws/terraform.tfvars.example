@@ -47,3 +47,4 @@ image_tag = "2026.09.01"
 # log_retention_days       = 30
 # ecr_tagged_image_retain_count = 30
 # license_token            = ""
+# enable_deep_monitoring   = false  # true adds SNS + CPU-credit-balance alarms (alarms.tf)
