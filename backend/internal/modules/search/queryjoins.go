@@ -140,6 +140,9 @@ var notAnEdge = map[string]string{
 		"subject was lawful, which relates a contact to a DECISION and not to another record",
 	"communication_suppression": "polymorphic in the same way, and for the same reason: an objection is " +
 		"something one subject said, not a path from them to anybody else",
+	"communication_override": "polymorphic exactly as communication_suppression is: contact_id and " +
+		"lead_id are alternative SUBJECTS of one vouch, never both, and the row relates that subject to " +
+		"a rep's DECISION about a refusal — not to any other record a hop could land on",
 	"withdrawal_credential": "polymorphic exactly as the two above: contact_id and lead_id are " +
 		"alternative HOLDERS of one credential, never both, and most rows name neither — the " +
 		"credential is keyed by the address the mail went to, which is what an opt-out acts on. " +

@@ -117,3 +117,23 @@ func (c Category) ServesTheSubject() bool {
 		return false
 	}
 }
+
+// KnownForOverride reports whether c is a category a rep's standing override
+// (consent.Allow) may name.
+//
+// SAME MEMBERSHIP AS Valid, spelled as its own predicate because the two ask
+// different questions that happen to share an answer today: Valid asks
+// whether the engine can resolve a send to this category at all, and
+// KnownForOverride asks whether a rep's vouch names one it understands. A
+// future category the engine cannot yet resolve confidently enough to
+// classify a send would need Valid before it needs an override door — so the
+// two stay separate calls rather than one, even though nothing here narrows
+// the set below Valid's own.
+//
+// It reads the SAME categories map Valid and Categories() both read, rather
+// than a retyped list: the migration's CHECK on communication_override.category
+// (backend/migrations/core/1789363454_a_rep_may_vouch_for_a_send.up.sql) repeats
+// those fourteen values by hand, because SQL cannot call this package, and a
+// caller here must answer to the vocabulary Categories() already enumerates
+// rather than a second copy of it.
+func (c Category) KnownForOverride() bool { return c.Valid() }

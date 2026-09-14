@@ -15468,6 +15468,73 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /contacts/{id}/consent/allow:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Compliance]
+      operationId: allowContact
+      security: [ { cookieAuth: [] } ]   # human session only
+      # HUMAN-ONLY for the same reason liftSuppression is: this door RESUMES a
+      # send the engine refused. An agent inferring that the missing evidence
+      # no longer matters is exactly the shape this door must not have — the
+      # vouch is a rep staking their own name on the send, and only a rep can
+      # do that.
+      x-agent-access: human-only
+      summary: Record a standing vouch that a machine-level refusal for one category may be overruled.
+      description: |
+        Writes a `communication_override`: a rep's standing statement that a future send in the
+        named category may go out even though the engine, on its own, would refuse it for lack of
+        evidence. **It is not consent and not a lawful basis** — it sits beside the refusal and
+        outranks only a MACHINE-level, non-absolute one. A subject-level stop (a suppression, an
+        Art. 21 objection) still wins at the gate; this door cannot touch one.
+
+        **The authority is the seat's own, always.** There is no field for it: the level recorded
+        is read from the authenticated session (`user` for a rep, `admin` for an admin), never
+        from the body — a caller naming its own level would let any seat write a row that outranks
+        every future refusal in that category.
+
+        **The reason is required**, unlike `suppress`: a vouch that flips a refusal is the write
+        most worth being able to explain later, and there is no phone call it merely relays.
+
+        The override is a standing fact for the contact and category named, not a one-time
+        instruction for a single message: it remains live, and is read by every future send
+        evaluation for that pair, until it is revoked.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [category, reason]
+              properties:
+                category:
+                  type: string
+                  enum: [
+                    reply_to_inbound, requested_followup, precontract_quote, active_deal_followup,
+                    customer_service, account_notice, contract_notice, invoice_or_payment,
+                    security_notice, privacy_notice, record_confirmation, consent_confirmation,
+                    optout_confirmation, marketing
+                  ]
+                  description: |
+                    Which category of send this vouch covers. The engine resolves every send to
+                    exactly one of these, and the override applies to that one category only — a
+                    vouch for `marketing` says nothing about `customer_service`.
+                reason:
+                  type: string
+                  minLength: 1
+                  maxLength: 500
+                  description: |
+                    Why the rep is vouching for this send, in their own words. Required: unlike a
+                    suppression, which may only relay what the subject said, this write is the
+                    rep's own judgement call and the record must say why it was made.
+      responses:
+        '204': { description: Recorded. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /contacts/{id}/consent/double-opt-in:
     parameters:
       - $ref: '#/components/parameters/Id'

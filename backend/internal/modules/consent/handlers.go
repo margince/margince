@@ -259,6 +259,31 @@ func (h Handlers) SuppressContact(w http.ResponseWriter, r *http.Request, id crm
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// AllowContact serves POST /contacts/{id}/consent/allow: a rep vouching that a
+// machine-level refusal for one category may be overruled for this contact.
+//
+// Wire-only, matching SuppressContact: the store owns the category vocabulary,
+// takes the authority from the session and decides whether this caller may
+// write about this subject — none of which belongs at this layer.
+func (h Handlers) AllowContact(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	var req crmcontracts.AllowContactJSONRequestBody
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	if err := h.store.Allow(r.Context(), AllowInput{
+		ContactID: ids.From[ids.ContactKind](ids.UUID(id)),
+		Category:  string(req.Category),
+		Reason:    req.Reason,
+	}); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	// 204: the row is the whole result, matching SuppressContact — a caller
+	// reads the standing override back from the contact's own consent view,
+	// not from the write door.
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // LiftSuppression serves POST /contacts/{id}/consent/suppress/{suppressionId}/lift:
 // somebody taking back a stop they outrank.
 //

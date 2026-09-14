@@ -113,6 +113,7 @@ components:
         - consent.changed
         - consent.suppressed
         - consent.suppression_lifted
+        - consent.override_recorded
         - email_signature.changed
         - user_locale.changed
         - user_display_name.changed
@@ -2615,6 +2616,44 @@ components:
           description: >-
             Whose decision it is, which is what says who may lift it
             (machine | user | admin | subject).
+      additionalProperties: false
+
+    PublicEventConsentOverrideRecorded:
+      type: object
+      x-event-type: consent.override_recorded
+      x-entity-type: contact
+      x-version: 1
+      description: >-
+        Payload for consent.override_recorded — a rep recorded a standing vouch that a
+        machine-level refusal for one category may be overruled for this contact
+        (consent/override.go's Allow). Its own event rather than a consent.changed: an
+        override is not consent and not a lawful basis, it outranks only a
+        machine-level, non-absolute refusal, and a subject-level stop still wins
+        at the gate regardless of this row.
+
+        The subject is a contact and only a contact: the write door names that
+        object as a literal, so this is a static entity whose delivery scope
+        the fan-out gate proves mechanically rather than by hand-ratification.
+
+        It names WHAT category was vouched for and at WHICH authority, never
+        the reason the rep gave: that explanation belongs to the audit trail a
+        rep reviewing the contact reads, not to every subscriber the event
+        reaches.
+      required:
+        - category
+        - decided_by_level
+      properties:
+        category:
+          type: string
+          description: >-
+            Which category of send this vouch covers. The engine resolves every
+            send to exactly one category, and the override applies to that one
+            only.
+        decided_by_level:
+          type: string
+          description: >-
+            Whose decision it is (user | admin) — always the recording seat's
+            own authority, never a value the request body could name.
       additionalProperties: false
 
     PublicEventConsentChanged:

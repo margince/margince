@@ -9,9 +9,10 @@ package consent
 // nothing else: not a subject's own act, and not an absolute machine fact —
 // both of which the gate refuses before liveOverride is ever consulted.
 //
-// Integration because the row lives in Postgres and the writer door does not
-// exist yet (Task 4): every override here is seeded by a direct INSERT, the
-// shape a real writer will produce.
+// Integration because the row lives in Postgres. Every override here is
+// seeded by a direct INSERT rather than through Store.Allow (override.go): this
+// file is about what liveOverride reads, not about who may write the row —
+// override_integration_test.go covers the writer door itself, end to end.
 
 import (
 	"context"
@@ -25,7 +26,12 @@ import (
 // seedOverride records one live communication_override row directly, the
 // writer door's eventual shape minus its own auth/audit machinery — this test
 // is about what liveOverride reads, not about who may write the row.
-func (e *resolveEnv) seedOverride(t *testing.T, category, level string, revoked bool) ids.UUID {
+//
+// Always at user level: liveOverride treats every level above machine alike
+// (outranksMachine), so the read path this file exercises has no arm that
+// distinguishes user from admin — that distinction belongs to
+// override_integration_test.go, which drives the real writer.
+func (e *resolveEnv) seedOverride(t *testing.T, category string, revoked bool) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
 	var revokedAt *time.Time
@@ -36,8 +42,8 @@ func (e *resolveEnv) seedOverride(t *testing.T, category, level string, revoked 
 	if _, err := e.owner.Exec(context.Background(), `
 		INSERT INTO communication_override
 		    (id, contact_id, category, reason, decided_by_level, captured_by, revoked_at)
-		VALUES ($1, $2, $3, 'the rep called them last week', $4, 'human:x', $5)`,
-		id, e.contact, category, level, revokedAt); err != nil {
+		VALUES ($1, $2, $3, 'the rep called them last week', 'user', 'human:x', $4)`,
+		id, e.contact, category, revokedAt); err != nil {
 		t.Fatalf("seeding the override: %v", err)
 	}
 	return id
@@ -60,7 +66,7 @@ func TestAnOverrideFlipsANoEvidenceRefusal(t *testing.T) {
 			before.ReasonCode, commsauthz.ReasonNoMarketingConsent)
 	}
 
-	overrideID := e.seedOverride(t, "marketing", "user", false)
+	overrideID := e.seedOverride(t, "marketing", false)
 
 	after := e.decide(t, req)
 	if after.Verdict != commsauthz.VerdictAllow {
@@ -83,7 +89,7 @@ func TestAnOverrideIsScopedToItsCategory(t *testing.T) {
 	req := commsauthz.Request{LegacyPurposeKey: "newsletter"}
 
 	// A live override, but for a category this send never resolves to.
-	e.seedOverride(t, "invoice_or_payment", "user", false)
+	e.seedOverride(t, "invoice_or_payment", false)
 
 	got := e.decide(t, req)
 	if got.Verdict == commsauthz.VerdictAllow {
@@ -104,7 +110,7 @@ func TestAnOverrideCannotFlipASubjectStop(t *testing.T) {
 	e := setupResolve(t)
 	e.seedPurpose(t, "newsletter", "marketing")
 	e.suppress(t, "subject_request")
-	e.seedOverride(t, "marketing", "user", false)
+	e.seedOverride(t, "marketing", false)
 
 	got := e.decide(t, commsauthz.Request{LegacyPurposeKey: "newsletter"})
 	if got.Verdict != commsauthz.VerdictDeny {
@@ -128,7 +134,7 @@ func TestAnOverrideCannotFlipAHardBounce(t *testing.T) {
 	e := setupResolve(t)
 	e.seedPurpose(t, "newsletter", "marketing")
 	e.suppress(t, "hard_bounce")
-	e.seedOverride(t, "marketing", "user", false)
+	e.seedOverride(t, "marketing", false)
 
 	got := e.decide(t, commsauthz.Request{LegacyPurposeKey: "newsletter"})
 	if got.Verdict != commsauthz.VerdictDeny {
@@ -144,7 +150,7 @@ func TestAnOverrideCannotFlipAHardBounce(t *testing.T) {
 func TestARevokedOverrideDoesNotApply(t *testing.T) {
 	e := setupResolve(t)
 	e.seedPurpose(t, "newsletter", "marketing")
-	e.seedOverride(t, "marketing", "user", true)
+	e.seedOverride(t, "marketing", true)
 
 	got := e.decide(t, commsauthz.Request{LegacyPurposeKey: "newsletter"})
 	if got.Verdict == commsauthz.VerdictAllow {

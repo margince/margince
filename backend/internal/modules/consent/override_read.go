@@ -29,9 +29,10 @@ import (
 // absolute machine fact never reaches here.
 //
 // The level filter derives from LevelsWeakestFirst rather than a retyped rank,
-// so "outranks machine" here and CanOverrule elsewhere cannot drift. Every seat
-// level (user, admin) outranks machine; the door writes no other, but the query
-// states the rule rather than trusting the writer.
+// so "outranks machine" here reads the same ladder CanOverrule elsewhere
+// compares against, instead of a second ranking that could fall out of step
+// with it. Every seat level (user, admin) outranks machine; the door writes no
+// other, but the query states the rule rather than trusting the writer.
 func liveOverride(
 	ctx context.Context, tx pgx.Tx, contactID string, category commsauthz.Category,
 ) (ids.UUID, bool, error) {
@@ -54,8 +55,9 @@ func liveOverride(
 	return id, true, nil
 }
 
-// outranksMachine is the set of levels strictly above LevelMachine, derived from
-// the one ladder so it cannot disagree with AuthorityLevel.CanOverrule.
+// outranksMachine is the set of levels strictly above LevelMachine, derived
+// from the same ladder AuthorityLevel.CanOverrule itself compares against,
+// rather than a second ranking of its own that could fall out of step with it.
 func outranksMachine() []string {
 	var above []string
 	for _, l := range commsauthz.LevelsWeakestFirst() {
