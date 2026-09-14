@@ -89,12 +89,13 @@ it("does not claim an empty agenda when a source failed", () => {
   ];
   const { container } = render(<BriefFeed day={day} state="ready" />);
   expect(screen.queryByText(en["brief.feed.clear"])).toBeNull();
-  // The sentence pays the pane's inset, and no empty grid stands under it: a
+  // The sentence stands in the section, and no empty list stands under it: a
   // list of nothing was only its own padding, a blank band under the caption.
   expect(
-    screen.getByText(en["brief.feed.incomplete"]).closest(".panel-body"),
+    screen.getByText(en["brief.feed.incomplete"]).closest("#brief-today"),
   ).not.toBeNull();
   expect(container.querySelector(".brief-feed-list")).toBeNull();
+  expect(container.querySelector(".brief-focus-list")).toBeNull();
 });
 
 it("keeps approvals in the agenda and offers their review action", () => {

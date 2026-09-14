@@ -114,6 +114,7 @@ export function WorklistRow({
   onOpenEmail,
   card = false,
   onOpen,
+  hero = false,
 }: Readonly<{
   item: WorklistItem;
   // Whose queue this row is on, empty for the reader's own. It names the
@@ -147,6 +148,8 @@ export function WorklistRow({
   card?: boolean;
   /** The card's own door where the row has no address — see `CompactRowLine`. */
   onOpen?: () => void;
+  /** The day's lead, drawn open — see `CompactRowLine`. Drawn with `card`. */
+  hero?: boolean;
 }> &
   RowDensity) {
   const t = useT();
@@ -297,6 +300,7 @@ export function WorklistRow({
               named={!emailOpener}
               card={card}
               onOpen={onOpen}
+              hero={hero}
             />
           ) : (
             <RowText

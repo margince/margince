@@ -113,12 +113,45 @@ function cardReason(readings: RowReadings): string | null {
 /** The levels the day treats as urgent: somebody waiting or a promise going. */
 const URGENT_LEVEL = 2;
 
+/**
+ * What the line folds away: the further reasons, the evidence sentence and a
+ * grouped row's named members. Captions in the order a reader would ask for
+ * them; the caller decides whether they stand open or behind a press.
+ */
+function foldedLines(readings: RowReadings): ReactNode[] {
+  const { item, folded, detail, sample } = readings;
+  const lines: ReactNode[] = [];
+  if (folded.length > 0) {
+    lines.push(
+      <p className="t-caption" key="reasons">
+        {folded.join(" · ")}
+      </p>,
+    );
+  }
+  if (detail && item.source !== "notice") {
+    lines.push(
+      <p className="t-caption" key="detail">
+        {detail}
+      </p>,
+    );
+  }
+  if (sample.length > 0) {
+    lines.push(
+      <p className="t-caption" key="sample">
+        {sample.join(" · ")}
+      </p>,
+    );
+  }
+  return lines;
+}
+
 /** The linked title opens the record; optional details contain its evidence. */
 export function CompactRowLine({
   readings,
   named,
   card = false,
   onOpen,
+  hero = false,
 }: Readonly<{
   readings: RowReadings;
   /**
@@ -144,10 +177,18 @@ export function CompactRowLine({
    * band under it asks the reader to learn two places to press.
    */
   onOpen?: () => void;
+  /**
+   * The day's LEAD, drawn open: what the fold would hold — the further reasons,
+   * the evidence sentence, the named members — stands on the card instead of
+   * behind a "Details" press. The first row is the one the reader acts on
+   * without opening anything, so it is the one row that may spend the height.
+   */
+  hero?: boolean;
 }>) {
-  const { item, title, href, said, folded, zone } = readings;
+  const { item, title, href, said, zone } = readings;
   const t = useT();
-  const reason = card ? cardReason(readings) : null;
+  const asCard = card || hero;
+  const reason = asCard ? cardReason(readings) : null;
   // ONE STRING, so there is ONE truncation and one tip over it. Drawn as
   // separate fragments the line would clip whichever happened to be last and
   // leave a reader no way to see what went.
@@ -160,31 +201,14 @@ export function CompactRowLine({
     .filter((part): part is string => part !== null && part !== "")
     .join(" · ");
   const tip = useTruncationTooltip<HTMLSpanElement>(inline);
-  const rest: ReactNode[] = [];
-  if (folded.length > 0) {
-    rest.push(
-      <p className="t-caption" key="reasons">
-        {folded.join(" · ")}
-      </p>,
-    );
-  }
-  if (readings.detail && item.source !== "notice") {
-    rest.push(
-      <p className="t-caption" key="detail">
-        {readings.detail}
-      </p>,
-    );
-  }
-  if (readings.sample.length > 0) {
-    rest.push(
-      <p className="t-caption" key="sample">
-        {readings.sample.join(" · ")}
-      </p>,
-    );
-  }
+  const rest = foldedLines(readings);
 
   return (
-    <div className="worklist-row-line">
+    <div
+      className={
+        hero ? "worklist-row-line worklist-row-hero" : "worklist-row-line"
+      }
+    >
       <p className="t-body worklist-row-title">
         {named && <RowName title={title} href={href} onOpen={onOpen} />}
         {/* The day's states ride the name at both densities: a rep scanning for
@@ -209,9 +233,10 @@ export function CompactRowLine({
         <p className="t-caption worklist-row-notice">{readings.detail}</p>
       )}
       {reason && <p className="t-caption worklist-row-reason">{reason}</p>}
-      {card && <PaneDoor href={href} onOpen={onOpen} />}
+      {asCard && <PaneDoor href={href} onOpen={onOpen} />}
       <VerdictLine verdict={item.verdict} zone={zone} />
-      {rest.length > 0 && (
+      {hero && rest}
+      {!hero && rest.length > 0 && (
         <Popover
           // NO `variant`: the catalog's own direction for a trigger that reads
           // as words in the line it sits in rather than as a control — the

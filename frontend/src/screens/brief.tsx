@@ -136,14 +136,6 @@ function PersonalMorning({
       : "ready";
   return (
     <>
-      <BriefFeed
-        day={day}
-        onContext={(item) => setSelected(`${item.source}-${item.id}`)}
-        state={state}
-        changed={changedSinceBrief(day)}
-        refreshFailed={query.isRefetchError}
-        onRetry={() => void query.refetch()}
-      />
       {day && (
         <div className="brief-overview">
           <BriefReadingsLine day={day} />
@@ -168,6 +160,14 @@ function PersonalMorning({
           </p>
         </div>
       )}
+      <BriefFeed
+        day={day}
+        onContext={(item) => setSelected(`${item.source}-${item.id}`)}
+        state={state}
+        changed={changedSinceBrief(day)}
+        refreshFailed={query.isRefetchError}
+        onRetry={() => void query.refetch()}
+      />
       <PageZones
         shape="aside"
         className="brief-followthrough"

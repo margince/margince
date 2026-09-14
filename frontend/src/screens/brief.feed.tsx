@@ -2,11 +2,11 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { navigate } from "../app/router";
 import { Badge, Button } from "../design-system/atoms";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
-import { Panel, PanelBody } from "../design-system/panel";
+import { Panel } from "../design-system/panel";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
 import { formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
@@ -45,6 +45,7 @@ export function BriefFeed({
   const plural = usePlural();
   const [openEmail, setOpenEmail] = useState<string | null>(null);
   const client = useQueryClient();
+  const titleId = useId();
   const rows = waitingRows(day);
   const partial = Boolean(
     !day?.focus ||
@@ -52,68 +53,70 @@ export function BriefFeed({
       day?.sources_unavailable?.length,
   );
   return (
-    <section id="brief-today">
-      <Panel
-        title={t(
-          day?.scope === "team" ? "brief.feed.teamTitle" : "brief.feed.title",
-        )}
-        sub={
-          day?.summary
-            ? plural("brief.feed.visible", rows.length, {
-                count: formatNumber(rows.length, locale),
-              })
-            : undefined
-        }
-        titleAction={
-          changed ? (
-            <a className="entity-link" href={changed.href}>
-              <Badge>
-                {plural("brief.feed.changedBadge", changed.count, {
-                  count: formatNumber(changed.count, locale),
-                })}
-              </Badge>
-            </a>
-          ) : undefined
-        }
-        footer={day ? <AgendaFoot day={day} /> : undefined}
-      >
-        {/* Prose standing where the cards will stand pays the pane's inset
-            itself: the grid under it carries its own, and a sentence set
-            straight into the panel printed against the card's edge. */}
-        {refreshFailed && (
-          <PanelBody>
-            <p role="alert">
-              {t("brief.feed.refreshFailed")}{" "}
-              <Button variant="ghost" onClick={onRetry}>
-                {t("brief.coverage.retry")}
-              </Button>
-            </p>
-          </PanelBody>
-        )}
-        <SurfaceState
-          state={
-            state !== "ready"
-              ? state
-              : rows.length > 0 || partial
-                ? "ready"
-                : "empty"
-          }
-          emptyLabel={t("brief.feed.clear")}
-          loadingLabel={t("brief.feed.loading")}
-        >
-          {rows.length === 0 && partial && (
-            <PanelBody>
-              <p className="t-caption">{t("brief.feed.incomplete")}</p>
-            </PanelBody>
+    <section id="brief-today" className="brief-focus" aria-labelledby={titleId}>
+      {/* No panel band. The greeting above already heads the page, and a
+          card around six cards was a box around boxes: the section has an
+          eyebrow, the lead is the one elevated surface, and the rest is a
+          list on the page's own ground. */}
+      <header className="brief-focus-head">
+        <h2 id={titleId} className="eyebrow">
+          {t(
+            day?.scope === "team" ? "brief.feed.teamTitle" : "brief.feed.title",
           )}
-          <AgendaRows
-            rows={rows}
-            onOpenEmail={setOpenEmail}
-            onContext={onContext}
-            focus
-          />
-        </SurfaceState>
-      </Panel>
+        </h2>
+        {day?.summary && (
+          <span className="t-caption">
+            {plural("brief.feed.visible", rows.length, {
+              count: formatNumber(rows.length, locale),
+            })}
+          </span>
+        )}
+        {changed && (
+          <a className="entity-link" href={changed.href}>
+            <Badge>
+              {plural("brief.feed.changedBadge", changed.count, {
+                count: formatNumber(changed.count, locale),
+              })}
+            </Badge>
+          </a>
+        )}
+      </header>
+      {refreshFailed && (
+        <p className="t-caption brief-focus-note" role="alert">
+          {t("brief.feed.refreshFailed")}{" "}
+          <Button variant="ghost" onClick={onRetry}>
+            {t("brief.coverage.retry")}
+          </Button>
+        </p>
+      )}
+      <SurfaceState
+        state={
+          state !== "ready"
+            ? state
+            : rows.length > 0 || partial
+              ? "ready"
+              : "empty"
+        }
+        emptyLabel={t("brief.feed.clear")}
+        loadingLabel={t("brief.feed.loading")}
+      >
+        {rows.length === 0 && partial && (
+          <p className="t-caption brief-focus-note">
+            {t("brief.feed.incomplete")}
+          </p>
+        )}
+        <AgendaRows
+          rows={rows}
+          onOpenEmail={setOpenEmail}
+          onContext={onContext}
+          focus
+        />
+      </SurfaceState>
+      {day && (
+        <footer className="brief-focus-foot">
+          <AgendaFoot day={day} />
+        </footer>
+      )}
       <OpenEmailDrawer
         activityId={openEmail}
         zone={viewerZone()}
@@ -171,42 +174,73 @@ function AgendaRows({
   // A list of nothing is only its own padding: under the sentence saying the
   // read was incomplete it stood as a blank band the height of two gutters.
   if (rows.length === 0) return null;
-  const draw = (item: WorklistItem) => (
-    <li key={`${item.source}-${item.id}`}>
-      {/* A DECISION IS STAGED, NOT DONE: the dashed indigo edge is the
-          design system's one mark for a value an agent proposed and nobody has
-          accepted yet, and it goes solid when the reader decides. Nothing else
-          on a card is coloured for being a card. */}
-      <Panel
-        className={focus && decidable(item) ? "brief-focus-staged" : undefined}
-      >
-        <WorklistRow
-          allowPin={!focus}
-          item={item}
-          density="compact"
-          card={focus}
-          onOpen={
-            focus && onContext && (hasPane(item) || item.source === "task")
-              ? () => onContext(item)
-              : undefined
-          }
-          owner=""
-          onOpenEmail={onOpenEmail}
-          onReview={() =>
-            navigate(
-              { screen: "worklist" },
-              new Map([["filter", item.category]]),
-            )
-          }
-        />
-      </Panel>
-    </li>
-  );
+  const door = (item: WorklistItem) =>
+    focus && onContext && (hasPane(item) || item.source === "task")
+      ? () => onContext(item)
+      : undefined;
+  const review = (item: WorklistItem) => () =>
+    navigate({ screen: "worklist" }, new Map([["filter", item.category]]));
+  // A DECISION IS STAGED, NOT DONE: the dashed indigo edge is the design
+  // system's one mark for a value an agent proposed and nobody has accepted
+  // yet, and it goes solid when the reader decides. Nothing else on a row is
+  // coloured for being a row.
+  const staged = (item: WorklistItem) =>
+    focus && decidable(item) ? "brief-focus-staged" : undefined;
+  if (!focus) {
+    return (
+      <ol className="brief-feed-list">
+        {rows.map((item) => (
+          <li key={`${item.source}-${item.id}`}>
+            <Panel>
+              <WorklistRow
+                item={item}
+                density="compact"
+                owner=""
+                onOpenEmail={onOpenEmail}
+                onReview={review(item)}
+              />
+            </Panel>
+          </li>
+        ))}
+      </ol>
+    );
+  }
+  // THE LEAD, THEN THE ORDER. The first row is the day's answer to "what
+  // first", so it is drawn open on the one elevated surface, its evidence and
+  // its reason standing where a card has the height for them. The rows under
+  // it are one line each with their rank in the margin: the ranking is the
+  // page's structure, and six equal boxes hid it.
+  const [lead, ...rest] = rows;
   return (
-    <ol
-      className={focus ? "brief-feed-list brief-focus-grid" : "brief-feed-list"}
-    >
-      {rows.map(draw)}
+    <ol className="brief-focus-list">
+      <li key={`${lead.source}-${lead.id}`} className="brief-focus-lead">
+        <Panel className={staged(lead)}>
+          <WorklistRow
+            allowPin={false}
+            item={lead}
+            density="compact"
+            card
+            hero
+            onOpen={door(lead)}
+            owner=""
+            onOpenEmail={onOpenEmail}
+            onReview={review(lead)}
+          />
+        </Panel>
+      </li>
+      {rest.map((item) => (
+        <li key={`${item.source}-${item.id}`} className={staged(item)}>
+          <WorklistRow
+            allowPin={false}
+            item={item}
+            density="compact"
+            onOpen={door(item)}
+            owner=""
+            onOpenEmail={onOpenEmail}
+            onReview={review(item)}
+          />
+        </li>
+      ))}
     </ol>
   );
 }

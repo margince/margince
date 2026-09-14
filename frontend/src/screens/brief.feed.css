@@ -88,77 +88,159 @@
 }
 
 /* Focus cards keep the shared row actions and the server's reading order. */
-.brief-focus-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+/* ── Focus: the lead, then the order ─────────────────────────────────────
+   No panel around the section. The eyebrow names it, the lead is the one
+   elevated surface, and the ranked rows sit on the page's own ground with a
+   hairline between them and their rank in the margin. */
+.brief-focus-head {
+  display: flex;
+  align-items: baseline;
   gap: var(--space-3);
-  padding: var(--padPanel);
+  margin-bottom: var(--space-3);
+}
+.brief-focus-head > h2 {
+  margin: 0;
+}
+.brief-focus-note {
+  margin: 0 0 var(--space-3);
+}
+.brief-focus-foot {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  padding: var(--space-3) 0 0 var(--brief-rank-w);
+  font-size: var(--fs-sm);
+  color: var(--textMeta);
 }
 
-.brief-focus-grid > li {
-  min-width: 0;
+.brief-focus-list {
+  --brief-rank-w: 2rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  counter-reset: brief-rank;
+}
+.brief-focus-list > li {
+  position: relative;
+  counter-increment: brief-rank;
+  animation: brief-arrive var(--dur-enter) var(--ease-out) both;
+}
+/* Each row arrives a beat after the one above it: the order is what the list
+   is about, and the eye is led down it once. */
+.brief-focus-list > li:nth-child(2) {
+  animation-delay: calc(var(--dur-tap) * 1);
+}
+.brief-focus-list > li:nth-child(3) {
+  animation-delay: calc(var(--dur-tap) * 2);
+}
+.brief-focus-list > li:nth-child(4) {
+  animation-delay: calc(var(--dur-tap) * 3);
+}
+.brief-focus-list > li:nth-child(5) {
+  animation-delay: calc(var(--dur-tap) * 4);
+}
+.brief-focus-list > li:nth-child(n + 6) {
+  animation-delay: calc(var(--dur-tap) * 5);
 }
 
-.brief-focus-grid > li > .panel {
-  height: 100%;
+/* THE RANK IN THE MARGIN. The list element carries the order for a screen
+   reader; the numeral states it for everybody else, in the caption register
+   the queue's own rank column uses, on the same x for every row. */
+.brief-focus-list > li::before {
+  content: counter(brief-rank);
+  position: absolute;
+  left: 0;
+  top: var(--space-3);
+  width: var(--brief-rank-w);
+  font-size: var(--fs-meta);
+  color: var(--textMeta);
+  font-variant-numeric: tabular-nums;
+}
+.brief-focus-list > li > .panel-row {
+  margin-left: var(--brief-rank-w);
+  padding-inline: 0;
+}
+/* The rule between two ranked rows spans the row, not the panel inset it
+   inherits from `PanelRow`. */
+.brief-focus-list > li > .panel-row::before {
+  inset: 0 0 auto;
+}
+.brief-focus-list > li:nth-child(2) > .panel-row::before {
+  content: none;
 }
 
-@media (max-width: 640px) {
-  .brief-focus-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
+/* The lead. Its numeral sits on the card's own top line, and the card is
+   the one surface on the page that stands off the ground. */
+.brief-focus-lead {
+  margin-bottom: var(--space-2);
 }
-
-/* Cards give the subject a full line and keep controls below its evidence. */
-.brief-focus-grid .panel-row.worklist-row-compact {
+.brief-focus-lead::before {
+  top: calc(var(--space-4) + var(--space-1));
+}
+.brief-focus-lead > .panel {
+  margin-left: var(--brief-rank-w);
+  box-shadow: var(--shadow-card);
+}
+.brief-focus-lead .panel-row.worklist-row-compact {
   display: flex;
   flex-direction: column;
   align-items: stretch;
   gap: var(--space-3);
+  padding: var(--space-4) var(--padPanel);
 }
-
-.brief-focus-grid .worklist-row-text {
-  width: 100%;
-}
-
-.brief-focus-grid .worklist-row-kind {
-  align-self: flex-start;
-}
-
-.brief-focus-grid .worklist-row-acts {
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  width: 100%;
-}
-
-/* Keep the mobile card in the same reading order as its desktop version. */
-.brief-focus-grid .worklist-row-text,
-.brief-focus-grid .worklist-row-acts {
+.brief-focus-lead .worklist-row-text,
+.brief-focus-lead .worklist-row-acts {
   order: 0;
   flex: none;
+  width: 100%;
 }
-
-.brief-focus-grid > li > .panel {
-  display: flex;
-  flex-direction: column;
+.brief-focus-lead .worklist-row-kind {
+  align-self: flex-start;
 }
-/* THE VERBS SIT AT THE CARD'S FOOT whatever the card says above them, so a
-   row of cards keeps one baseline for its buttons. The row is the panel's one
-   child and fills it; the verbs take the space left. */
-.brief-focus-grid > li > .panel > .panel-row {
-  flex: 1 1 auto;
+.brief-focus-lead .worklist-row-acts {
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
-.brief-focus-grid .worklist-row-acts {
-  margin-top: auto;
+.brief-focus-lead .worklist-row-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-2);
 }
-.brief-focus-grid .worklist-row-title {
-  font-weight: var(--fw-medium);
+.brief-focus-lead .worklist-row-hero > .worklist-row-title {
+  font-size: var(--fs-h2);
+  font-weight: var(--fw-semibold);
+  line-height: 1.25;
+  flex-wrap: wrap;
+  overflow: visible;
+  white-space: normal;
+}
+.brief-focus-lead .worklist-row-hero > .worklist-row-title > a,
+.brief-focus-lead
+  .worklist-row-hero
+  > .worklist-row-title
+  > .worklist-row-open {
+  overflow: visible;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.brief-focus-lead .worklist-row-hero > .worklist-row-inline {
+  font-size: var(--fs-sm);
+  white-space: normal;
+  overflow: visible;
+}
+.brief-focus-lead .worklist-row-hero > p {
+  margin: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.brief-focus-lead .worklist-row-reason {
+  color: var(--textContent);
 }
 
 /* The name is the door. A task has no record to link, so its name is a button
-   that opens its evidence — drawn as the name, not as a control: the whole
-   card already told the reader what pressing it does. */
-.brief-focus-grid .worklist-row-open {
+   that opens its evidence — drawn as the name, not as a control. */
+.brief-focus-list .worklist-row-open {
   font: inherit;
   color: inherit;
   background: none;
@@ -168,53 +250,35 @@
   cursor: pointer;
   overflow-wrap: anywhere;
 }
-.brief-focus-grid .worklist-row-open:hover,
-.brief-focus-grid .worklist-row-title > a:hover {
+.brief-focus-list .worklist-row-open:hover,
+.brief-focus-list .worklist-row-title > a:hover {
   color: var(--accentText);
   text-decoration: underline;
   text-underline-offset: 2px;
 }
-.brief-focus-grid .worklist-row-reason {
+.brief-focus-list .worklist-row-reason {
   margin: 0;
-  white-space: normal;
-  overflow-wrap: anywhere;
 }
 
 /* A decision the runner proposed and nobody has accepted. The design system's
    one spelling of "staged": dashed indigo, going solid on acceptance. */
-.brief-focus-grid > li > .panel.brief-focus-staged {
+.brief-focus-lead > .panel.brief-focus-staged {
   border: 1.5px dashed var(--aiMed);
   background: var(--aiLight);
 }
-
-/* On a phone the cards are rows: no card chrome, one hairline between them,
-   and the reason line folded — the name, the facts and the verb are what a
-   thumb needs, and six reasons stacked were a page before the readings. */
-@media (max-width: 640px) {
-  .brief-focus-grid {
-    gap: 0;
-    padding: 0;
-  }
-  .brief-focus-grid > li > .panel {
-    border-width: 1px 0 0;
-    border-radius: 0;
-  }
-  .brief-focus-grid > li:first-child > .panel {
-    border-top-width: 0;
-  }
-  .brief-focus-grid > li > .panel.brief-focus-staged {
-    border-width: 1.5px 0;
-  }
-  .brief-focus-grid .worklist-row-reason {
-    display: none;
-  }
+.brief-focus-list > li.brief-focus-staged > .panel-row {
+  background: var(--aiLight);
+  box-shadow: inset 0 0 0 1.5px var(--aiMed);
+  border-radius: var(--r-sm);
+  padding-inline: var(--space-3);
 }
 
-/* Swipe gestures keep a real wrapper on phones; it follows the card layout. */
-.brief-focus-grid .swipe-row {
-  flex: none;
-  flex-direction: column;
-  flex-wrap: nowrap;
-  align-items: stretch;
-  width: 100%;
+/* On a phone the rank margin is narrower and the lead's verbs wrap. */
+@media (max-width: 640px) {
+  .brief-focus-list {
+    --brief-rank-w: 1.5rem;
+  }
+  .brief-focus-lead .worklist-row-hero > .worklist-row-title {
+    font-size: var(--fs-h3);
+  }
 }
