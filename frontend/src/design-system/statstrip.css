@@ -108,11 +108,11 @@
    boxes stops being a row (below). Nothing here sets a family, a size or a
    weight, and nothing here may. */
 
-/* Compact readings become rows when two cards no longer fit. Labels remain
-   complete, and explanations and actions have separate lines so neither can
-   squeeze the other out of a phone or side rail. */
+/* Readings that declared `narrow="row"` become rows when two cards no longer
+   fit. Labels remain complete, and explanations and actions have separate
+   lines so neither can squeeze the other out of a phone or side rail. */
 @container (max-width: 26rem) {
-  .stat-strip:has(.stat-card-compact) {
+  .stat-strip:has(.stat-card-narrow-row) {
     grid-template-columns: 1fr;
     /* The hairline IS the divider now, so the air between slots would be a
        second one. Each row carries its own padding instead. */
@@ -126,7 +126,7 @@
   /* No boxes: a column of five bordered panes reads as five cards to swipe
      rather than one list to scan. The plate draws the single rule between
      rows, which is the seam rule every other row shape here follows. */
-  .stat-strip:has(.stat-card-compact) .stat-card-compact {
+  .stat-strip:has(.stat-card-narrow-row) .stat-card-narrow-row {
     border: 0;
     border-radius: 0;
     background: none;
@@ -144,34 +144,42 @@
     column-gap: var(--space-4);
     row-gap: 0;
   }
-  .stat-strip:has(.stat-card-compact) .stat-card-compact > .stat-card-label {
+  .stat-strip:has(.stat-card-narrow-row)
+    .stat-card-narrow-row
+    > .stat-card-label {
     grid-area: label;
   }
-  .stat-strip:has(.stat-card-compact) .stat-card-compact > .stat-card-value {
+  .stat-strip:has(.stat-card-narrow-row)
+    .stat-card-narrow-row
+    > .stat-card-value {
     grid-area: figure;
     /* Trailing edge, so a column of figures lines up whatever the label beside
        it runs to. `tabular-nums` is the tile's own and does the rest. */
     text-align: right;
   }
-  .stat-strip:has(.stat-card-compact) .stat-card-compact > .stat-card-foot {
+  .stat-strip:has(.stat-card-narrow-row)
+    .stat-card-narrow-row
+    > .stat-card-foot {
     grid-area: foot;
     justify-self: start;
   }
-  .stat-strip:has(.stat-card-compact) .stat-card-compact > .stat-card-detail {
+  .stat-strip:has(.stat-card-narrow-row)
+    .stat-card-narrow-row
+    > .stat-card-detail {
     grid-area: basis;
     -webkit-line-clamp: 2;
     line-clamp: 2;
   }
-  .stat-strip:has(.stat-card-compact) .stat-card-label-text {
+  .stat-strip:has(.stat-card-narrow-row) .stat-card-label-text {
     display: block;
     overflow: visible;
   }
-  .stat-strip:has(.stat-card-compact) > * + * {
+  .stat-strip:has(.stat-card-narrow-row) > * + * {
     border-block-start: 1px solid var(--paneEdge);
   }
   /* A wrapper's own corner goes with its box: a radius on a full-bleed row
      clips the hairline it sits against. */
-  .stat-strip:has(.stat-card-compact) > button {
+  .stat-strip:has(.stat-card-narrow-row) > button {
     border-radius: 0;
   }
 }

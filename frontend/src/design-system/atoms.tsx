@@ -908,7 +908,7 @@ export function StatCard({
   onOpen,
   openLabel,
   meter,
-  density,
+  narrow,
 }: Readonly<{
   label: string;
   value: string;
@@ -950,12 +950,14 @@ export function StatCard({
   // stronger volume, it is a different judgement (the slot itself is bad
   // news, not just its figure).
   alert?: boolean;
-  // HOW MUCH AIR the tile keeps, and nothing about its TYPE — which is the
-  // whole licence for the prop, and why atoms.css spells the distinction where
-  // the intervals are. For a row read as ONE glance rather than a reading at a
-  // time. A closed word, not a boolean: `compact={false}` is a place for a
+  // What the reading becomes where its strip can no longer hold two tiles
+  // abreast: `row` folds it into one full-width line, label and basis leading,
+  // figure trailing (statstrip.css). Nothing about the tile's air or type at
+  // any wider width — this reading is the reading beside it on a record page,
+  // and a tighter tile here once made the same figure read as a different
+  // card. A closed word, not a boolean: `narrow={true}` is a place for a
   // second SIZE to arrive unnoticed, and a size here is the removed `hero`.
-  density?: "compact";
+  narrow?: "row";
 }>) {
   const t = useT();
   const labelId = useId();
@@ -969,7 +971,7 @@ export function StatCard({
   const cardClass = [
     "stat-card",
     alert && "stat-card-alert",
-    density && `stat-card-${density}`,
+    narrow && `stat-card-narrow-${narrow}`,
   ]
     .filter(Boolean)
     .join(" ");
