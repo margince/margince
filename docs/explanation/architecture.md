@@ -217,3 +217,9 @@ Approving takes the authority the effect itself takes; a passport may
 answer on the authority of the human who lent it, bounded by the caps
 they lent and never on the proposal it made itself. An agent never
 exceeds the granting human's live RBAC.
+
+Every operation — core or extension — declares exactly one of `x-mcp-tool`
+or `x-agent-access: human-only`: the latter stays REST/UI-reachable but is
+refused for any Agent (or Buyer) principal before admission, tiering or
+staging ever runs, and never appears in an agent's tool listing. Extensions
+carry the identical vocabulary (`docs/how-to/add-an-extension.md`).
