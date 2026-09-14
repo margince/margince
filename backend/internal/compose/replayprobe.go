@@ -24,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // replayProbe answers whether the caller may still see one record, for the
@@ -44,6 +45,30 @@ func ensureReplayVisible(ctx context.Context, pool *pgxpool.Pool, probes map[str
 		// is unreachable; if it is ever reached, the unclassified case is
 		// exactly the one that must not pay out.
 		return apperrors.ErrNotFound
+	}
+
+	// The OBJECT half, before any of the row work below.
+	//
+	// A replay hands back a record, and anything that returns a record is a
+	// read — replay paths included. The row half was already re-run here; the
+	// object half was recorded beside it and never asked, so a caller whose
+	// grant was revoked after the original call could replay the key and be
+	// handed the stored record anyway, for as long as the idempotency row
+	// lived. Revoking somebody's access to an administered catalog did not
+	// reach the requests they had already keyed.
+	//
+	// It is first because it is the cheaper refusal and the one that does not
+	// disclose anything: a seat that may not read this object at all learns
+	// nothing from the answer about which records exist.
+	//
+	// Every route either names an object here or says in `objectNote` why none
+	// governs it, and backend/gates/replayscope_test.go refuses a target
+	// carrying neither or both — so an empty object is a stated absence rather
+	// than one nobody noticed.
+	if target.object != "" {
+		if err := auth.Require(ctx, target.object, principal.ActionRead); err != nil {
+			return err
+		}
 	}
 
 	if target.table == "" && target.tableField == "" && target.moduleProbe == "" {
