@@ -128,6 +128,48 @@ func TestBuildExtensionToolsAdaptsHandlerBearingTools(t *testing.T) {
 	}
 }
 
+// TestBuildExtensionToolsAdaptsAHumanOnlyVerbWithNoTierOrScope: a verb
+// declaring x-agent-access: human-only (no Tier/RequestedScope) is still
+// served — REST still needs to dispatch it by name — with HumanOnly carried
+// onto the adapted spec and Tier/RequiredScope left at their zero value.
+func TestBuildExtensionToolsAdaptsAHumanOnlyVerbWithNoTierOrScope(t *testing.T) {
+	exts := []extension.Extension{{
+		Name:    "demo",
+		Version: "1.0.0",
+		Tools: []extension.Tool{
+			{Name: "human_op", Handle: servedHandle},
+		},
+	}}
+	verb := extension.Verb{
+		Unit:        "demo",
+		Contract:    "crm.yaml",
+		OperationID: "demoHumanOp",
+		Route:       "/ext/demo/human-op",
+		Method:      http.MethodPost,
+		Tool:        "human_op",
+		Title:       "A human-only op",
+		Description: unitToolDescription,
+		Version:     "1.0.0",
+		HumanOnly:   true,
+		RbacObject:  "ext_demo_record",
+		RbacAction:  extension.RbacUpdate,
+	}
+	tools, err := buildExtensionTools(exts, []extension.Verb{verb})
+	if err != nil {
+		t.Fatalf("a human-only verb with no Tier must be accepted: %v", err)
+	}
+	if len(tools) != 1 {
+		t.Fatalf("want 1 served tool, got %d", len(tools))
+	}
+	spec := tools[0].Spec()
+	if !spec.HumanOnly {
+		t.Fatal("the adapted spec must carry HumanOnly")
+	}
+	if spec.Tier != 0 || spec.RequiredScope != "" {
+		t.Fatalf("a human-only spec must carry a zero Tier/RequiredScope, got %+v", spec)
+	}
+}
+
 // TestBuildExtensionToolsRejectsAServedConfirmationRequiredToolWithNoSubject:
 // a handler-bearing 🟡 tool the gate cannot park a refused call for is a dead
 // capability — refused on every call with no approval to redeem — so building
