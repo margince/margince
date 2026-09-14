@@ -84,21 +84,36 @@ var notThisRecord = regexp.MustCompile(
 // with them.
 var humanSense = sync.OnceValue(humanSenseSentences)
 
-// humanSenseQuoted matches any of those sentences in any letter case. A label
-// the screen sets in sentence case is still the same sentence when a comment
-// quotes it mid-prose or a test queries it with /…/i, and an exemption that
-// read case exactly went stale the moment a catalog value was recapitalised —
-// every quote of it in the tree turned into a finding about a word it does not
-// use.
-var humanSenseQuoted = sync.OnceValue(func() *regexp.Regexp {
+// quotedSentence is one of those sentences, ready to be found in any letter
+// case. A label the screen sets in sentence case is still the same sentence
+// when a comment quotes it mid-prose or a test queries it with /…/i, and an
+// exemption that read case exactly went stale the moment a catalog value was
+// recapitalised — every quote of it in the tree turned into a finding about a
+// word it does not use.
+type quotedSentence struct {
+	lower    string
+	anyCase  *regexp.Regexp
+	anchored bool
+}
+
+// humanSenseQuoted keeps humanSense's longest-first order.
+//
+// One small pattern per sentence, run only on a line that already contains the
+// sentence, and never one case-folding alternation over every line: the census
+// reads the whole tree, and that alternation cost it minutes where the exact
+// match had cost it seconds.
+var humanSenseQuoted = sync.OnceValue(func() []quotedSentence {
 	sentences := humanSense()
-	quoted := make([]string, len(sentences))
+	out := make([]quotedSentence, len(sentences))
 	for i, sentence := range sentences {
-		quoted[i] = regexp.QuoteMeta(sentence)
+		lower := strings.ToLower(sentence)
+		out[i] = quotedSentence{
+			lower:    lower,
+			anyCase:  regexp.MustCompile(`(?i)` + regexp.QuoteMeta(sentence)),
+			anchored: strings.Contains(lower, "person") || strings.Contains(lower, "people"),
+		}
 	}
-	// Alternation is leftmost-first, so the longest-first order humanSense
-	// returns still takes a sentence that contains a shorter one whole.
-	return regexp.MustCompile(`(?i)` + strings.Join(quoted, "|"))
+	return out
 })
 
 func humanSenseSentences() []string {
@@ -236,9 +251,32 @@ var retired = gatekit.Waive(map[string]string{
 // quoting a frozen criterion and then naming `person_id` is still naming the
 // column, and a skip-the-line rule would read that as clean.
 func beyondTheExemptions(line string) string {
-	line = humanSenseQuoted().ReplaceAllString(line, "")
+	line = withoutHumanSense(line)
 	for _, criterion := range frozenCriteria() {
 		line = strings.ReplaceAll(line, criterion, "")
+	}
+	return line
+}
+
+// withoutHumanSense takes every catalog sentence out of a line, in any case,
+// longest first.
+//
+// The cheap question comes first. Almost no line in the tree names the word,
+// and a sentence carrying it cannot be in a line that does not — so such a line
+// is looked at no further. A sentence the derivation admitted without the plain
+// letters (its match was on masked text) is not anchored, and is checked on
+// every line rather than skipped by a filter it does not satisfy.
+func withoutHumanSense(line string) string {
+	lower := strings.ToLower(line)
+	mayQuote := strings.Contains(lower, "person") || strings.Contains(lower, "people")
+	for _, sentence := range humanSenseQuoted() {
+		if sentence.anchored && !mayQuote {
+			continue
+		}
+		if strings.Contains(lower, sentence.lower) {
+			line = sentence.anyCase.ReplaceAllString(line, "")
+			lower = strings.ToLower(line)
+		}
 	}
 	return line
 }
