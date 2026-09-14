@@ -49,10 +49,7 @@ func TestTheParticipantListAndThePredicateAreOneSet(t *testing.T) {
 	}
 }
 
-// The scoring set has no Go predicate — every reader of it is a query — so the
-// two renderings are all there is, and the parenthesised one must be the list
-// and nothing else. Asserted as SHAPE rather than by recomputing the expression
-// under test, which would only prove the function equals itself.
+// The parenthesised scoring set must be a valid SQL group of the same kinds.
 func TestTheScoringGroupIsTheListInBrackets(t *testing.T) {
 	t.Parallel()
 	group := relstrength.InteractionKindSQLGroup()

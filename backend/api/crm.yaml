@@ -5700,6 +5700,11 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/CreateTaskRequest' }
       responses:
+        '200':
+          description: The existing source-linked reminder, including an explicitly restored reminder.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Activity' }
         '201':
           description: The task, as an activity.
           headers:
@@ -20443,6 +20448,11 @@ paths:
         deterministically and `generated_by` says which wrote it. There is no blank
         AI card and no spinner that never resolves.
       parameters:
+        - name: facts_only
+          in: query
+          required: false
+          schema: { type: boolean }
+          description: Refresh the card and shared action cache from current facts without model calls. Takes precedence over refresh.
         - name: refresh
           in: query
           required: false
@@ -24609,6 +24619,9 @@ components:
         `display_status` says so — the row stays, the words do not.
       required: [activity_id, occurred_at, display_status, attachment_count, move, version]
       properties:
+        request_has_reminder:
+          type: boolean
+          description: An unfinished reminder covers this readable source request. This obligation fact names no private task, owner, or task content. Absent when the source is withheld.
         activity_id: { type: string, format: uuid }
         subject:
           type: [string, 'null']
@@ -34086,6 +34099,17 @@ components:
       description: What a task needs. Stored as an activity of kind `task`.
       required: [subject, source]
       properties:
+        request_activity_id:
+          type: string
+          format: uuid
+          description: >-
+            Accept this inbound request for the authenticated human, with activity read and create
+            authority. Task only; agents cannot accept and assignee_id must name the caller
+            when provided. The server verifies source access and copies its links instead
+            of caller-supplied links. Subject and body are honored on creation. Retries return
+            the same personal reminder without changing it. Explicit acceptance can restore
+            an archived unfinished reminder with update authority. Completion settles the
+            source request; automatic reconciliation never restores a reminder.
         subject: { type: string, minLength: 1, description: 'What has to be done, as one line.' }
         body: { type: [string, 'null'], description: 'Detail, if one line is not enough.' }
         due_at: { type: [string, 'null'], format: date-time, description: 'When it is due. Optional — a task without a date is still a task.' }
@@ -34105,6 +34129,17 @@ components:
       type: object
       required: [kind, source]
       properties:
+        request_activity_id:
+          type: string
+          format: uuid
+          description: >-
+            Accept this inbound request for the authenticated human, with activity read and create
+            authority. Task only; agents cannot accept and assignee_id must name the caller
+            when provided. The server verifies source access and copies its links instead
+            of caller-supplied links. Subject and body are honored on creation. Retries return
+            the same personal reminder without changing it. Explicit acceptance can restore
+            an archived unfinished reminder with update authority. Completion settles the
+            source request; automatic reconciliation never restores a reminder.
         kind:
           type: string
           enum: [email, call, meeting, note, task, message]

@@ -71,7 +71,8 @@ type LogActivityInput struct {
 	SourceID      *string
 	// SourceActivityID is the activity this one was derived FROM — the meeting
 	// whose transcript proposed a task. Nil on almost every activity.
-	SourceActivityID *ids.UUID
+	SourceActivityID  *ids.UUID
+	RequestActivityID *ids.UUID
 	// ThreadKey files this activity under a conversation. Empty stores NULL.
 	// It is written at insert time or not at all: the (source_system,
 	// source_id) upsert both capture and this path key on does nothing when
@@ -158,6 +159,9 @@ func (s *Store) LogActivityTx(ctx context.Context, tx pgx.Tx, in LogActivityInpu
 func (s *Store) logActivityAndReadTranscript(
 	ctx context.Context, tx pgx.Tx, in LogActivityInput,
 ) (crmcontracts.Activity, bool, error) {
+	if in.RequestActivityID != nil {
+		return s.takeEmailRequest(ctx, tx, in)
+	}
 	out, created, err := logActivityInTx(ctx, tx, in)
 	if err != nil {
 		return out, created, err

@@ -26621,11 +26621,14 @@ type CreateActivityRequest struct {
 	Raw           *map[string]interface{}             `json:"raw,omitempty"`
 
 	// RemindAt Task only.
-	RemindAt     *time.Time `json:"remind_at,omitempty"`
-	Source       string     `json:"source"`
-	SourceId     *string    `json:"source_id,omitempty"`
-	SourceSystem *string    `json:"source_system,omitempty"`
-	Subject      *string    `json:"subject,omitempty"`
+	RemindAt *time.Time `json:"remind_at,omitempty"`
+
+	// RequestActivityId Accept this inbound request for the authenticated human, with activity read and create authority. Task only; agents cannot accept and assignee_id must name the caller when provided. The server verifies source access and copies its links instead of caller-supplied links. Subject and body are honored on creation. Retries return the same personal reminder without changing it. Explicit acceptance can restore an archived unfinished reminder with update authority. Completion settles the source request; automatic reconciliation never restores a reminder.
+	RequestActivityId *openapi_types.UUID `json:"request_activity_id,omitempty"`
+	Source            string              `json:"source"`
+	SourceId          *string             `json:"source_id,omitempty"`
+	SourceSystem      *string             `json:"source_system,omitempty"`
+	Subject           *string             `json:"subject,omitempty"`
 }
 
 // CreateActivityRequestDirection defines model for CreateActivityRequest.Direction.
@@ -27333,7 +27336,10 @@ type CreateTaskRequest struct {
 		EntityId   openapi_types.UUID               `json:"entity_id"`
 		EntityType CreateTaskRequestLinksEntityType `json:"entity_type"`
 	} `json:"links,omitempty"`
-	Source string `json:"source"`
+
+	// RequestActivityId Accept this inbound request for the authenticated human, with activity read and create authority. Task only; agents cannot accept and assignee_id must name the caller when provided. The server verifies source access and copies its links instead of caller-supplied links. Subject and body are honored on creation. Retries return the same personal reminder without changing it. Explicit acceptance can restore an archived unfinished reminder with update authority. Completion settles the source request; automatic reconciliation never restores a reminder.
+	RequestActivityId *openapi_types.UUID `json:"request_activity_id,omitempty"`
+	Source            string              `json:"source"`
 
 	// Subject What has to be done, as one line.
 	Subject string `json:"subject"`
@@ -28658,6 +28664,9 @@ type EmailSummary struct {
 	// Preview One line of the sender's own text, signature and quoted history already removed.
 	// Null when withheld, and when the message has no text of its own.
 	Preview *string `json:"preview,omitempty"`
+
+	// RequestHasReminder An unfinished reminder covers this readable source request. This obligation fact names no private task, owner, or task content. Absent when the source is withheld.
+	RequestHasReminder *bool `json:"request_has_reminder,omitempty"`
 
 	// Subject Null when the message has none, and when the content is withheld.
 	Subject *string `json:"subject,omitempty"`
@@ -43180,6 +43189,9 @@ type RevertStageProgressionParams struct {
 
 // GetDealStatusParams defines parameters for GetDealStatus.
 type GetDealStatusParams struct {
+	// FactsOnly Refresh the card and shared action cache from current facts without model calls. Takes precedence over refresh.
+	FactsOnly *bool `form:"facts_only,omitempty" json:"facts_only,omitempty"`
+
 	// Refresh Rewrite even when the fingerprint still matches. The reader asking for a second opinion.
 	Refresh *bool `form:"refresh,omitempty" json:"refresh,omitempty"`
 }
@@ -76265,6 +76277,19 @@ func (siw *ServerInterfaceWrapper) GetDealStatus(w http.ResponseWriter, r *http.
 
 	// Parameter object where we will unmarshal all parameters from the context
 	var params GetDealStatusParams
+
+	// ------------- Optional query parameter "facts_only" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "facts_only", r.URL.Query(), &params.FactsOnly, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "facts_only"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "facts_only", Err: err})
+		}
+		return
+	}
 
 	// ------------- Optional query parameter "refresh" -------------
 
