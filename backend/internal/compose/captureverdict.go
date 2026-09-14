@@ -264,8 +264,18 @@ func (e *CounterpartyVerdictEngine) judgeOne(
 	// address nobody answers at all. See addressNamesNoContact for what the gap
 	// cost — a stray `contact` answer at 0.95 for an expense tool's receipts
 	// address, and the contact it minted.
+	//
+	// Settled as a ROLE MAILBOX rather than as transactional, and the difference
+	// is what the kind authorizes rather than what it reads like. `transactional`
+	// takes apply's noise arm, which suppresses the sender's whole DOMAIN for
+	// company creation and hides their mail — so one `noreply@` at a real
+	// customer would refuse that customer a company record for every colleague,
+	// on the strength of a local part. This kind creates no contact and touches
+	// nothing else, which is the whole claim being made here: nobody answers at
+	// this ADDRESS. What the domain is remains the model's question, and the
+	// mail stays where a human can read it.
 	if addressNamesNoContact(row.Email, row.Domain, e.transactional) {
-		return e.applyJudged(ctx, row, capture.KindTransactional, capture.VerdictMeasurement{})
+		return e.applyJudged(ctx, row, capture.KindRoleMailbox, capture.VerdictMeasurement{})
 	}
 	// Everything above answers from the address and the ledger alone; what
 	// follows needs a model. An installation without one asks a human instead —
@@ -278,10 +288,12 @@ func (e *CounterpartyVerdictEngine) judgeOne(
 		return 0, err
 	}
 	if len(answers) == 1 && clearsItsFloor(answers[0]) {
-		if stray, err := e.strayAgainstItsOwnHistory(ctx, row, answers[0]); err != nil {
+		stray, settled, err := e.strayAgainstItsOwnHistory(ctx, row, answers[0])
+		if err != nil {
 			return 0, err
-		} else if stray {
-			return e.askAboutAStrayAnswer(ctx, row, answers, servedModel)
+		}
+		if stray {
+			return e.askAboutAStrayAnswer(ctx, row, answers, servedModel, settled)
 		}
 		return e.applyJudged(ctx, row, answers[0].Verdict,
 			capture.MeasuredVerdict(float64(answers[0].Confidence), servedModel))
@@ -310,6 +322,18 @@ func (e *CounterpartyVerdictEngine) judgeOne(
 		return 0, err
 	}
 	if len(retry) == 1 && clearsItsFloor(retry[0]) {
+		// The history guard binds here too. A first answer below the floor
+		// followed by a confident creating re-ask is the SAME contradiction the
+		// first-answer branch refuses, and checking only there would leave the
+		// guard reachable by being unsure once — which is the cheaper path for
+		// exactly the borderline sender it exists over.
+		stray, settled, err := e.strayAgainstItsOwnHistory(ctx, row, retry[0])
+		if err != nil {
+			return 0, err
+		}
+		if stray {
+			return e.askAboutAStrayAnswer(ctx, row, retry, retryModel, settled)
+		}
 		return e.applyJudged(ctx, row, retry[0].Verdict,
 			capture.MeasuredVerdict(float64(retry[0].Confidence), retryModel))
 	}

@@ -74,7 +74,7 @@ func TestNoVerdictScenarioCertifiesAnAddressTheListAlreadyAnswers(t *testing.T) 
 				entry.Name(), scenario.Fixture.Email, scenario.Expect.Answer)
 		}
 		// The same census for the sibling gate: an address nobody answers at all
-		// is settled as `transactional` before the model is asked.
+		// is settled as a role mailbox before the model is asked.
 		//
 		// The domain is deliberately not supplied. This arm asks only about the
 		// LOCAL PART — `receipts@`, `noreply@` — which is the class the gate
@@ -84,9 +84,9 @@ func TestNoVerdictScenarioCertifiesAnAddressTheListAlreadyAnswers(t *testing.T) 
 		// which a corpus file cannot know, so this census stays silent about it
 		// rather than failing a scenario that some installations still ask.
 		if addressNamesNoContact(scenario.Fixture.Email, "", nil) &&
-			scenario.Expect.Answer != capture.KindTransactional {
-			t.Errorf("%s certifies %s as %q, but the address gate settles it as "+
-				"transactional before the model is asked — production and this scenario "+
+			scenario.Expect.Answer != capture.KindRoleMailbox {
+			t.Errorf("%s certifies %s as %q, but the address gate settles it as a "+
+				"role mailbox before the model is asked — production and this scenario "+
 				"give different answers, and only the scenario is measured",
 				entry.Name(), scenario.Fixture.Email, scenario.Expect.Answer)
 		}

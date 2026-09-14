@@ -5,6 +5,7 @@ package compose
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/mailrole"
@@ -96,17 +97,19 @@ const strayVerdictHistory = 3
 // answer act ALONE against a settled history, and routes the disagreement to a
 // human instead. The model may still be right — a role mailbox really can gain
 // a human — and a human is the one who should say so.
+// It reports the count alongside the verdict, so the retirement beside it can
+// tell a human what the disagreement actually was.
 func (e *CounterpartyVerdictEngine) strayAgainstItsOwnHistory(
 	ctx context.Context, row capture.PendingCounterparty, answer verdictResult,
-) (bool, error) {
+) (bool, int, error) {
 	if !createsARecord(answer.Verdict) {
-		return false, nil
+		return false, 0, nil
 	}
 	settled, err := e.pending.TimesJudgedNotAContact(ctx, row.Email)
 	if err != nil {
-		return false, err
+		return false, 0, err
 	}
-	return settled >= strayVerdictHistory, nil
+	return settled >= strayVerdictHistory, settled, nil
 }
 
 // askAboutAStrayAnswer retires a creating answer that contradicts the address's
@@ -118,10 +121,21 @@ func (e *CounterpartyVerdictEngine) strayAgainstItsOwnHistory(
 // "it answered contact at 0.95 after fifteen transactional answers" is the whole
 // question.
 func (e *CounterpartyVerdictEngine) askAboutAStrayAnswer(
-	ctx context.Context, row capture.PendingCounterparty, answers []verdictResult, servedModel string,
+	ctx context.Context, row capture.PendingCounterparty, answers []verdictResult,
+	servedModel string, settled int,
 ) (int, error) {
-	if err := e.pending.Retire(ctx, row,
-		"a creating answer that contradicts this address's own settled history",
+	// The reason carries the KIND and the COUNT, because the confidence and the
+	// model are all Retire stores and neither says what the disagreement was. A
+	// human opening this row is being asked to settle "it answered contact once,
+	// after fifteen answers saying nobody is there" — and without both numbers
+	// they get the question with none of the evidence.
+	kind := ""
+	if len(answers) == 1 {
+		kind = answers[0].Verdict
+	}
+	reason := fmt.Sprintf(
+		"answered %q against %d settled answers naming no contact at this address", kind, settled)
+	if err := e.pending.Retire(ctx, row, reason,
 		lastMeasurement(nil, "", answers, servedModel)); err != nil {
 		return 0, err
 	}

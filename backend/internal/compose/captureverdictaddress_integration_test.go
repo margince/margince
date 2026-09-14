@@ -27,6 +27,9 @@ import (
 // The addresses themselves. Each one reached a model in the real import, and a
 // stray `contact` answer created the record — so the answer is read off the
 // address here, where it does not vary.
+//
+// The mail STAYS VISIBLE and the domain keeps its company question: what the
+// gate claims is only that nobody answers at this address.
 func TestAnAddressNobodyAnswersNeverBecomesAContact(t *testing.T) {
 	e := integration.Setup(t)
 	cases := []struct {
@@ -68,8 +71,13 @@ func TestAnAddressNobodyAnswersNeverBecomesAContact(t *testing.T) {
 			if brain.calls != 0 {
 				t.Errorf("the model was asked %d times about an address readable without it", brain.calls)
 			}
-			if got := dispositionStatus(t, e, dispositionID); got != capture.PendingStatusNoise {
-				t.Errorf("disposition settled %q, want %q", got, capture.PendingStatusNoise)
+			// `real`, not `noise`: the claim is that nobody answers at this
+			// ADDRESS, which creates no contact and authorizes nothing else.
+			// Settling it as noise would take apply's suppression arm and refuse
+			// the sender's whole domain a company — far more than the local part
+			// can support. See the gate's own comment in judgeOne.
+			if got := dispositionStatus(t, e, dispositionID); got != capture.PendingStatusReal {
+				t.Errorf("disposition settled %q, want %q", got, capture.PendingStatusReal)
 			}
 			if n := countIn(t, e, `
 				SELECT count(*) FROM contact_email WHERE email = $1`, tc.email); n != 0 {
