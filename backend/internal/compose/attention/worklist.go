@@ -108,6 +108,11 @@ func (s *Service) Worklist(
 		reader = reader.forReader()
 	case resolved == scopeUnassigned:
 		reader = reader.forUnowned()
+	case resolved == scopeTeam:
+		reader, err = reader.forNoticeTeam(ctx)
+		if err != nil {
+			return crmcontracts.Worklist{}, err
+		}
 	}
 	// The day AND what the night knows about each deal — its finding and its
 	// score — from one read of the brief lane. Both travel as values rather than

@@ -19,6 +19,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/platform/approvalsubject"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -786,6 +787,9 @@ func TestAProposalStagedForARepIsDecidedByThatRepAlone(t *testing.T) {
 // carries the obligation with it.
 func TestEveryKindNarrowedOnReadIsAlsoNarrowedOnStaging(t *testing.T) {
 	seatNarrowed := map[string]bool{}
+	for _, kind := range approvalsubject.PayloadOwnedKinds() {
+		seatNarrowed[kind] = true
+	}
 	for kind := range selfOnlyKinds {
 		seatNarrowed[kind] = true
 	}

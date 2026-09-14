@@ -20486,7 +20486,8 @@ type AttentionItem struct {
 	// handles `snooze` generically write the wrong endpoint.
 	Actions []AttentionItemActions `json:"actions"`
 
-	// AssigneeId Who holds this task, null when nobody has taken it. Sent by `task`.
+	// AssigneeId Who holds this work, null when nobody has taken it. Sent by `task` and `notice_case`.
+	// A disclosure duty uses its assigned officer, falling back to its contact owner.
 	//
 	// The lane serves three scopes and only one is the reader's own queue: an
 	// unassigned sweep and a named colleague's queue both put work on the page that
