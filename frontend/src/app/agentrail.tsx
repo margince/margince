@@ -92,6 +92,8 @@ const MARK_FADE = 0.16;
  * Account, because the screen still renders the combined entry.
  */
 const AI_SETTINGS_HREF = "#/settings/ai";
+/** Where a licence key is entered: the seats section of settings. */
+const LICENSE_SETTINGS_HREF = "#/settings/seats";
 
 /** What the installation can actually tell us, and what it cannot. */
 type Signals = Readonly<{
@@ -522,8 +524,12 @@ function RuntimeRows({
           {LABELS.tools} <b>{formatNumber(tools, locale)}</b>
         </span>
       )}
+      {/* A link, not a label: the pill names a fault the reader can repair
+          only on the seats page, so the pill takes them there. */}
       {(license === "none" || license === "refused") && (
-        <span className="arwarn">{licenseLine}</span>
+        <a className="arwarn" href={LICENSE_SETTINGS_HREF}>
+          {licenseLine}
+        </a>
       )}
       {offline.map((source) => (
         <span className="arconn down" key={source}>
