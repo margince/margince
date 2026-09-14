@@ -17456,15 +17456,15 @@ export interface components {
         };
         BackfillPreviewRequest: {
             /**
-             * @description The CAP-PARAM-4 window; default UI selection is 6m. 24m/60m added by ADR-0106 — the set stays closed, and the preview is what keeps a multi-year reach consented.
+             * @description Bounded mail-history window, up to ten years. The default UI selection is six months.
              * @enum {string}
              */
-            window: "none" | "3m" | "6m" | "12m" | "24m" | "60m";
+            window: "none" | "3m" | "6m" | "12m" | "24m" | "36m" | "60m" | "84m" | "120m";
         };
         /** @description The scope before the spend (ADR-0063/ADR-0020): what starting this window would touch and roughly cost. An estimate, labeled as such — actual spend is metered per task. */
         BackfillPreview: {
             /** @enum {string} */
-            window: "none" | "3m" | "6m" | "12m" | "24m" | "60m";
+            window: "none" | "3m" | "6m" | "12m" | "24m" | "36m" | "60m" | "84m" | "120m";
             /** @description Provider-side message count for the window. Read `estimate_is_floor` before presenting it: the two providers answer different KINDS of number. */
             estimated_messages: number;
             /** @description True when `estimated_messages` is a LOWER BOUND rather than a total — the window holds at least that many and how many more was not counted. Gmail counts by paging message ids under a cap, so a large mailbox hits it; Graph answers an exact `$count` and never does. A client MUST qualify the number when this is true ("at least 20,000"), because a floor shown as a count is short by multiples and a reader has no way to tell which kind they are looking at — and this is the number they are consenting to. Absent means the count is exact. It is NOT a reason to refuse: the scope being consented to is the mailbox and the period, and the count is supporting detail. */
@@ -17480,6 +17480,11 @@ export interface components {
             estimate_quality?: "observed" | "heuristic";
             /** @description ISO-4217; "USD" in v1. */
             currency?: string;
+            /**
+             * Format: date
+             * @description Calendar day of the preview query boundary; time within that day remains provider-specific. Omitted for none. Starting later recalculates the rolling window.
+             */
+            after_date?: string;
             /** Format: date-time */
             computed_at: string;
         };
@@ -17488,7 +17493,7 @@ export interface components {
              * @description `none` is expressed by never calling this op. Widen-only versus a prior run.
              * @enum {string}
              */
-            window: "3m" | "6m" | "12m" | "24m" | "60m";
+            window: "3m" | "6m" | "12m" | "24m" | "36m" | "60m" | "84m" | "120m";
         };
         /** @description The CAP-DDL-4 single-row activation read: every count is a persisted-row count, never a fabricated counter (closes CAP-AC-OPEN-1). */
         BackfillStatus: {
@@ -17497,7 +17502,7 @@ export interface components {
             /** Format: uuid */
             backfill_id?: string | null;
             /** @enum {string|null} */
-            window?: "3m" | "6m" | "12m" | "24m" | "60m" | null;
+            window?: "3m" | "6m" | "12m" | "24m" | "36m" | "60m" | "84m" | "120m" | null;
             /** @description The previewed count the user consented to — the progress fraction's denominator. */
             estimated_messages?: number | null;
             /** @description True when `estimated_messages` is a floor (see BackfillPreview): the denominator can be passed, so a client shows counts rather than a percentage instead of drawing a bar past its end. Persisted with the run, because the preview that produced the number is long gone by the time progress is read. */

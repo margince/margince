@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useId } from "react";
 import type { components } from "../api/schema";
 import { useDrawsImportRun } from "../app/import-onscreen";
-import { Button, Radio, Skeleton } from "../design-system/atoms";
+import { Button, Skeleton } from "../design-system/atoms";
 import { formatMoney, formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { ImportWindowPicker } from "../mail-history/window-picker";
 import { type ImportWindow, isLiveRun, useBackfillRun } from "./backfill-run";
 import { problemMessageOf } from "./common";
 import { errorClassKey } from "./connector-status";
@@ -38,18 +38,6 @@ type BackfillStatus = components["schemas"]["BackfillStatus"];
 type BackfillPreview = components["schemas"]["BackfillPreview"];
 type BackfillCounts = NonNullable<BackfillStatus["counts"]>;
 type Provider = components["schemas"]["CaptureConnection"]["provider"];
-
-// The startable windows, in reach order. `none` is expressed by never starting
-// a run at all — which is what the leave-without-reading control does, and
-// which windows are startable is `ImportWindow`, beside the operations this
-// step and the Settings card share.
-const WINDOWS: readonly { value: ImportWindow; label: MessageKey }[] = [
-  { value: "3m", label: "ob.backread.window3m" },
-  { value: "6m", label: "ob.backread.window6m" },
-  { value: "12m", label: "ob.backread.window12m" },
-  { value: "24m", label: "ob.backread.window24m" },
-  { value: "60m", label: "ob.backread.window60m" },
-];
 
 // The contract pins v1 estimates to USD minor units and leaves `currency`
 // optional, so USD is the documented fallback rather than a guess. The symbol
@@ -234,24 +222,15 @@ function BackreadSetup({
   onDone: () => void;
 }>) {
   const t = useT();
-  const group = useId();
 
   return (
     <section className="ob-backread">
       <h3 className="ob-backread-h t-h3">{t("ob.backread.heading")}</h3>
-      <fieldset className="ob-backread-windows">
-        <legend className="sr-only">{t("ob.backread.heading")}</legend>
-        {WINDOWS.map((option) => (
-          <Radio
-            className="ob-backread-window"
-            key={option.value}
-            name={group}
-            checked={selected === option.value}
-            onChange={() => onSelect(option.value)}
-            label={t(option.label)}
-          />
-        ))}
-      </fieldset>
+      <ImportWindowPicker
+        value={selected}
+        onChange={onSelect}
+        preview={preview}
+      />
       <BackreadScope
         preview={preview}
         problem={previewProblem}
@@ -310,9 +289,14 @@ function BackreadScope({
       )}
       {preview && (
         <p className="ob-backread-estimate">
-          {t("ob.backread.estimate", {
-            messages: formatNumber(preview.estimated_messages, locale),
-          })}
+          {t(
+            preview.estimate_is_floor
+              ? "ob.backread.estimateAtLeast"
+              : "ob.backread.estimate",
+            {
+              messages: formatNumber(preview.estimated_messages, locale),
+            },
+          )}
         </p>
       )}
       {preview?.estimate_quality === "heuristic" && (
@@ -324,6 +308,9 @@ function BackreadScope({
         <p className="ob-backread-cost">
           {t("ob.backread.estimateCost", { cost })}
         </p>
+      )}
+      {preview?.estimate_is_floor && cost !== null && (
+        <p className="t-caption">{t("backfill.costFloorNote")}</p>
       )}
       {problem !== null && (
         <p className="ob-backread-problem" role="alert">

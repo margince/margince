@@ -5159,9 +5159,17 @@ export const vi = {
   "backfill.intro":
     "Hãy chọn nhập ngược lại bao xa. Bạn sẽ thấy phạm vi và chi phí ước tính trước khi có gì chạy — và bỏ qua hẳn bước này cũng được.",
   "backfill.windowLabel": "Khoảng thời gian nhập",
+  "backfill.window36m": "3 năm",
+  "backfill.window84m": "7 năm",
+  "backfill.window120m": "10 năm",
+  "backfill.since": "Nhập email từ ngày {date}.",
+  "backfill.extendNote":
+    "Bạn có thể mở rộng khoảng thời gian sau. Email đã nhập được giữ lại và không bị trùng lặp.",
+  "backfill.costFloorNote":
+    "Ước tính này chỉ bao gồm các thư đã đếm. Toàn bộ quá trình nhập có thể có nhiều thư hơn và tốn chi phí hơn.",
   "backfill.window3m": "3 tháng",
   "backfill.window6m": "6 tháng",
-  "backfill.window12m": "12 tháng",
+  "backfill.window12m": "1 năm",
   "backfill.window24m": "2 năm",
   "backfill.window60m": "5 năm",
   "backfill.previewLoading": "Đang đếm hộp thư của bạn…",
@@ -6102,19 +6110,16 @@ export const vi = {
   // separate: connecting grants access, the backread spends budget reading
   // history. Read-only, and it writes nothing until the reader approves.
   "ob.backread.heading": "Tôi nên đọc ngược lại bao xa?",
-  "ob.backread.window3m": "3 tháng — bối cảnh gần đây",
-  "ob.backread.window6m": "6 tháng — nên chọn",
-  "ob.backread.window12m": "12 tháng — trọn một chu kỳ bán hàng",
-  "ob.backread.window24m": "2 năm — cả mối quan hệ, không chỉ deal",
-  "ob.backread.window60m": "5 năm — tất cả những gì hộp thư còn giữ",
   "ob.backread.estimating": "Đang đếm thư trong khoảng thời gian đó…",
   "ob.backread.estimate": "Khoảng {messages} thư trong khoảng thời gian đó.",
+  "ob.backread.estimateAtLeast":
+    "Ít nhất {messages} thư trong khoảng thời gian này; việc đếm đã dừng trước khi kết thúc.",
   "ob.backread.estimateHeuristic": "Ước tính từ hộp thư, chưa đếm thật.",
   "ob.backread.estimateCost": "Khoảng {cost} tiền gọi mô hình.",
   "ob.backread.estimateFailed":
     "Tôi không ước tính được khoảng thời gian đó: {detail} Bạn vẫn bắt đầu được, hoặc chọn khoảng khác.",
   "ob.backread.note":
-    "Lượt đọc lịch sử chỉ đọc. Bạn xem mọi liên hệ và công ty tôi tìm được trước khi ghi.",
+    "Hộp thư của bạn không thay đổi. Email và liên hệ đã nhập sẽ xuất hiện trong Margince khi quá trình nhập tiến triển.",
   "ob.backread.start": "Kết nối và đọc",
   "ob.backread.startFailed":
     "Tôi không bắt đầu được lượt đọc lịch sử: {detail} Hãy thử lại, hoặc đi tiếp rồi bắt đầu sau trong Cài đặt.",

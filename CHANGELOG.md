@@ -14,6 +14,11 @@ when it has content.
 
 ## [Unreleased]
 
+### Added
+
+- Mail history: setup and Settings share a dropdown through ten years, show the
+  preview start date, and qualify capped message and cost estimates.
+
 ### Fixed
 
 - Customer meeting requests remain actionable on won or lost deals and outside

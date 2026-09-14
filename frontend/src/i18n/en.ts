@@ -5349,9 +5349,17 @@ export const en = {
   "backfill.intro":
     "Choose how far back to import. You'll see the scope and estimated cost before anything runs — and you can skip this entirely.",
   "backfill.windowLabel": "Import window",
+  "backfill.window36m": "3 years",
+  "backfill.window84m": "7 years",
+  "backfill.window120m": "10 years",
+  "backfill.since": "Import emails since {date}.",
+  "backfill.extendNote":
+    "You can extend the history later. Emails already imported are kept and will not be duplicated.",
+  "backfill.costFloorNote":
+    "This estimate covers only the messages counted so far. The full import can contain more messages and cost more.",
   "backfill.window3m": "3 months",
   "backfill.window6m": "6 months",
-  "backfill.window12m": "12 months",
+  "backfill.window12m": "1 year",
   "backfill.window24m": "2 years",
   "backfill.window60m": "5 years",
   "backfill.previewLoading": "Counting your mailbox…",
@@ -6319,20 +6327,17 @@ export const en = {
   // separate: connecting grants access, the backread spends budget reading
   // history. Read-only, and it writes nothing until the reader approves.
   "ob.backread.heading": "How far back should I read?",
-  "ob.backread.window3m": "3 months — recent context",
-  "ob.backread.window6m": "6 months — recommended",
-  "ob.backread.window12m": "12 months — full sales cycle",
-  "ob.backread.window24m": "2 years — the relationship, not just the deal",
-  "ob.backread.window60m": "5 years — everything the mailbox still holds",
   "ob.backread.estimating": "Counting the messages in that window…",
   "ob.backread.estimate": "About {messages} messages in that window.",
+  "ob.backread.estimateAtLeast":
+    "At least {messages} messages in that window; counting stopped before the end.",
   "ob.backread.estimateHeuristic":
     "Estimated from the mailbox, not counted yet.",
   "ob.backread.estimateCost": "Roughly {cost} in model calls.",
   "ob.backread.estimateFailed":
     "I could not estimate that window: {detail} You can still start, or pick another.",
   "ob.backread.note":
-    "The backread only reads. You see every contact and company I found before anything is written.",
+    "Your mailbox stays unchanged. Imported emails and contacts appear in Margince as the import progresses.",
   "ob.backread.start": "Connect and read",
   "ob.backread.startFailed":
     "I could not start the backread: {detail} Try again, or continue and start it later in Settings.",

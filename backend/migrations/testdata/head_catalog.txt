@@ -1276,7 +1276,7 @@ public.capture_backfill.after_date date NOT NULL gen=- def=-
 public.capture_backfill.capture_backfill_connection_fkey FOREIGN KEY (connection_id) REFERENCES capture_connection(id) ON DELETE CASCADE
 public.capture_backfill.capture_backfill_pkey PRIMARY KEY (id)
 public.capture_backfill.capture_backfill_status_check CHECK ((status = ANY (ARRAY['queued'::text, 'running'::text, 'done'::text, 'error'::text, 'cancelled'::text])))
-public.capture_backfill.capture_backfill_window_months_check CHECK ((window_months = ANY (ARRAY[3, 6, 12, 24, 60])))
+public.capture_backfill.capture_backfill_window_months_check CHECK ((window_months = ANY (ARRAY[3, 6, 12, 24, 36, 60, 84, 120])))
 public.capture_backfill.captured integer NOT NULL gen=- def=0
 public.capture_backfill.companies_created integer NOT NULL gen=- def=0
 public.capture_backfill.completed_at timestamp with time zone gen=- def=-

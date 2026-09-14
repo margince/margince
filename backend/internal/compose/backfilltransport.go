@@ -40,7 +40,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
-// codeWindowInvalid names the RFC 7807 code for a window outside {3m,6m,12m}.
+// codeWindowInvalid names the refusal for an unsupported history window.
 const codeWindowInvalid = "window_invalid"
 
 // backfillEstimator is the transport's narrow seam onto the ADR-0068 cost
@@ -231,6 +231,7 @@ func (h backfillHandlers) PreviewConnectorBackfill(w http.ResponseWriter, r *htt
 		Window:            crmcontracts.BackfillPreviewWindow(req.Window),
 		EstimatedMessages: estimate.Messages,
 		ComputedAt:        time.Now().UTC(),
+		AfterDate:         &openapi_types.Date{Time: estimate.AfterDate},
 	}
 	if estimate.Floor {
 		// Sent only when it is TRUE, which is the contract's own reading of
@@ -306,7 +307,7 @@ func (h backfillHandlers) StartConnectorBackfill(w http.ResponseWriter, r *http.
 	// only — honest, just less shaped).
 	var estimate connector.BackfillEstimate
 	if previewed, err := h.registry.EstimateBackfill(r.Context(), string(provider), userID, months); err == nil {
-		estimate = previewed
+		estimate = previewed.BackfillEstimate
 	}
 	ws, ok := principal.WorkspaceID(r.Context())
 	if !ok {
