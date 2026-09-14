@@ -86,7 +86,6 @@ export const vi = {
   "brief.week.lostLabel": "Đã mất",
   "brief.feed.refreshFailed":
     "Không thể làm mới bản tin. Vẫn hiển thị công việc đã tải lần trước.",
-  "brief.feed.routine": "Theo dõi quyền riêng tư · {count} mục đến hạn sau",
   "brief.team.saveResponse": "Lưu phản hồi",
   "brief.team.response": "Phản hồi của bạn cho yêu cầu hỗ trợ",
   "brief.team.planFor": "Kế hoạch hiện tại · {name}",

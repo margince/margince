@@ -4,7 +4,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { navigate } from "../app/router";
-import { Badge, Button, Disclosure } from "../design-system/atoms";
+import { Badge, Button } from "../design-system/atoms";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { Panel, PanelBody } from "../design-system/panel";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
@@ -168,17 +168,9 @@ function AgendaRows({
   onContext?: (item: WorklistItem) => void;
 }>) {
   const t = useT();
-  const { locale } = useLocale();
   // A list of nothing is only its own padding: under the sentence saying the
   // read was incomplete it stood as a blank band the height of two gutters.
   if (rows.length === 0) return null;
-  const routine = rows.filter(
-    (item) =>
-      !item.overdue &&
-      item.level === 6 &&
-      (item.source === "notice_case" || item.source === "dsr"),
-  );
-  const grouped = new Set(!focus && routine.length > 1 ? routine : []);
   const draw = (item: WorklistItem) => (
     <li key={`${item.source}-${item.id}`}>
       <Panel
@@ -209,24 +201,7 @@ function AgendaRows({
     <ol
       className={focus ? "brief-feed-list brief-focus-grid" : "brief-feed-list"}
     >
-      {rows.filter((item) => !grouped.has(item)).map(draw)}
-      {grouped.size > 0 && (
-        <li>
-          <Disclosure
-            summary={t("brief.feed.routine", {
-              count: formatNumber(routine.length, locale),
-            })}
-          >
-            <ol
-              className={
-                focus ? "brief-feed-list brief-focus-grid" : "brief-feed-list"
-              }
-            >
-              {routine.map(draw)}
-            </ol>
-          </Disclosure>
-        </li>
-      )}
+      {rows.map(draw)}
     </ol>
   );
 }
