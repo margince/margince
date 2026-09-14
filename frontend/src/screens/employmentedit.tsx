@@ -11,7 +11,7 @@ import {
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import { problemMessageOf } from "./common";
-import { patchEmployment } from "./contactemployers";
+import { patchEmployment } from "./employmentactions";
 import { stillHeld } from "./employmentcurrency";
 
 type Employment = components["schemas"]["Contact360Employment"];
