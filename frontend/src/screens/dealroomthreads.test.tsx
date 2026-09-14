@@ -125,13 +125,18 @@ describe("what a tile says about its document", () => {
         />
       </LocaleProvider>,
     );
-    await userEvent
-      .setup()
-      .click(screen.getByRole("button", { name: "Read Rahmenvertrag" }));
+    const user = userEvent.setup();
+    await user.click(
+      screen.getByRole("button", { name: "Read Rahmenvertrag" }),
+    );
     expect(read).toHaveBeenCalledOnce();
+    // The title is the tile's own door: pressing the paper opens it too.
+    await user.click(screen.getByRole("button", { name: "Rahmenvertrag" }));
+    expect(read).toHaveBeenCalledTimes(2);
     cleanup();
     draw();
     expect(screen.queryByRole("button", { name: /^Read/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Rahmenvertrag" })).toBeNull();
   });
 
   // The stamp and the size are read off what the caller knows, never fetched:

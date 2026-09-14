@@ -131,6 +131,19 @@ export const ThreadOnADocument: Story = {
   render: board([thread({ document_id: "doc-1" })]),
 };
 
+/** Documents this side can read in place: the title is the tile's door and the
+ *  Read verb its visible spelling. The buyer's screen supplies `read` for a
+ *  PDF or an image; a spreadsheet keeps the download as its only verb. */
+export const ReadableDocuments: Story = {
+  render: board(
+    [thread({ document_id: "doc-1" })],
+    SELLER_VERBS,
+    DOCUMENTS.map((doc, index) =>
+      index === 0 ? { ...doc, read: () => {} } : doc,
+    ),
+  ),
+};
+
 /** A question about the room rather than any one document, in the room-wide
  *  panel with the count beside its title. */
 export const RoomWideThread: Story = { render: board([thread()]) };

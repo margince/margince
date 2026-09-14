@@ -215,7 +215,25 @@ function DocumentCard({
         ) : null}
       </div>
       <div className="board-doc-body">
-        <p className="board-doc-title">{doc.title}</p>
+        {/* The tile's own door when the file can be read here: the title is a
+            button stretched over the stage and the facts by CSS, so pressing
+            anywhere on the paper opens it, while the verbs and the threads
+            sit above the stretch and keep their own presses. It carries the
+            TITLE, not "Read", so a screen reader hears which document it
+            opens; the Read verb beside it is the visible spelling of the
+            same act. */}
+        {doc.read ? (
+          <button
+            type="button"
+            className="board-doc-title board-doc-open"
+            aria-haspopup="dialog"
+            onClick={doc.read}
+          >
+            {doc.title}
+          </button>
+        ) : (
+          <p className="board-doc-title">{doc.title}</p>
+        )}
         <p className="t-caption board-doc-meta">
           {[
             doc.meta,
@@ -249,7 +267,7 @@ function DocumentCard({
       {threads.length > 0 ? (
         <div className="board-doc-threads">
           <span className="t-caption board-doc-threads-head">
-            <MessageSquare aria-hidden />
+            <MessageSquare size={12} aria-hidden />
             {plural("threads.aboutThis", threads.length, {
               count: formatNumber(threads.length, locale),
             })}
