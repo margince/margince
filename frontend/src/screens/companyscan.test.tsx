@@ -4,7 +4,7 @@
 
 import { describe, expect, it } from "vitest";
 import type { components } from "../api/schema";
-import { scanStates } from "./companies";
+import { scanStates } from "./companydeepread";
 
 type SiteReadReport = components["schemas"]["SiteReadReport"];
 
