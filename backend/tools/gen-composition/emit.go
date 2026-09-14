@@ -435,6 +435,13 @@ func writeVerbLiterals(b *strings.Builder, verbs []declaredVerb) {
 			fmt.Fprintf(b, "\t\t\tSubject:        extension.Subject{Arg: %q, Table: %q},\n", v.Subject.Arg, v.Subject.Table)
 		}
 		fmt.Fprintf(b, "\t\t\tRbacAction:     %q,\n", string(v.RbacAction))
+		if v.HumanOnly {
+			// Emitted only when true, matching Subject's own convention just
+			// above: the zero value is every verb as it behaves today, and a
+			// literal `false` on every one of them would bury the one field
+			// that actually says something.
+			b.WriteString("\t\t\tHumanOnly:      true,\n")
+		}
 		b.WriteString("\t\t},\n")
 	}
 	b.WriteString("\t}\n}\n")
