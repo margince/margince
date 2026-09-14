@@ -405,7 +405,7 @@ describe("RecordView + timeline", () => {
     ).toBeTruthy();
     expect(screen.getByText("12/06/2026")).toBeTruthy();
     expect(screen.getByText("Automated by capture")).toBeTruthy();
-    expect(screen.getByText("typed by you")).toBeTruthy();
+    expect(screen.getByText("Typed by you")).toBeTruthy();
   });
 
   it("keeps the whole message in the document, clamped but never cut", () => {

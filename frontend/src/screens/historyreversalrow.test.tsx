@@ -164,10 +164,10 @@ describe("a reversal and the change it reversed, as one row", () => {
     if (!reversal || !reversed) throw new Error("expected both rows");
 
     // The attribution chip names the actor inside its own sentence.
-    expect(reversal.querySelector(".provenance")?.textContent).toContain(
+    expect(reversal.querySelector(".tl-meta .badge")?.textContent).toContain(
       "Tin Nguyen",
     );
-    expect(reversed.querySelector(".provenance")?.textContent).toContain(
+    expect(reversed.querySelector(".tl-meta .badge")?.textContent).toContain(
       "Sam Okafor",
     );
     // Two instants two minutes apart: each row shows its own, so the pair is

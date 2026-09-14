@@ -57,8 +57,8 @@ can tell that the component you just wrote already existed under another name. T
 catalog gate keeps it findable; the grep is still yours.
 
 **A label in a pill is one `Badge`**: `soft` or `primary`, six tones, icon left.
-Always a fill, never a border or uppercase; a clickable thing is a control.
-`badge-spelling.test.ts` refuses a hand-rolled pill or a `.badge` restyle.
+Soft is a tint plus tone hairline, primary a solid fill; `ai` draws Sparkles.
+No caps, no click; `badge-spelling.test.ts` fails a hand-rolled pill or restyle.
 
 ### Indigo is a claim about provenance
 
@@ -71,7 +71,7 @@ not yet accepted; the dashes going solid is acceptance. Text on `--aiLight` take
 `--aiText`, never `--ai`, which fails AA on its own family's ground.
 `--orbAmber` / `--orbRed` / `--orbGrey` are OUTCOME, not provenance, and stay put.
 
-Why, plus the token table and the provenance triad:
+Why, plus the token table and `ProvenanceTag`, the rule at its smallest:
 [`src/design-system/README.md`](src/design-system/README.md). `check-ds-purity.sh`
 holds that colours come from tokens; nothing can tell you the token you picked
 means the wrong thing.

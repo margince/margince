@@ -154,11 +154,11 @@ export const en = {
   "trust.edit": "Edit",
   "trust.dismiss": "Dismiss",
   "trust.save": "Save",
-  "trust.typedByYou": "typed by you",
-  "trust.typedByHuman": "typed by a person",
-  "trust.typedByBuyer": "typed by a buyer",
-  "trust.typedByPrefix": "typed by",
-  "trust.sourceUnknown": "source not recorded",
+  "trust.typedByYou": "Typed by you",
+  "trust.typedByHuman": "Typed by a person",
+  "trust.typedByBuyer": "Typed by a buyer",
+  "trust.typedByPrefix": "Typed by",
+  "trust.sourceUnknown": "Source not recorded",
   "trust.agentTag": "Automated by {agent}",
   // A passport call stamps an opaque id and nothing on this side resolves it to
   // a name, so the tag says the kind and stops rather than printing an
@@ -169,7 +169,7 @@ export const en = {
   // system did its housekeeping" are different answers to "who do I ask".
   "trust.systemTag": "System task {job}",
   "trust.systemUnnamed": "System task",
-  "trust.connectorTag": "via {connector}",
+  "trust.connectorTag": "Via {connector}",
   "trust.dismissed": "Suggestion dismissed.",
   "trust.stagedProposal": "staged proposal",
   "trust.resolvedValue": "resolved value",
