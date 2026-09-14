@@ -122,7 +122,10 @@ func (s *Store) PublicStop(
 			sub.id = surviving
 		}
 
-		standing, err := publicStopStandingTx(ctx, tx, sub, kind)
+		// NIL PURPOSE: this door's own wire (PublicStopAction) never names one —
+		// stop_all_marketing and stop_all_contact are both broad — so the press
+		// this checks is always the broad one.
+		standing, err := publicStopStandingTx(ctx, tx, sub, kind, nil)
 		if err != nil {
 			return err
 		}
@@ -167,7 +170,7 @@ func publicStopKind(action PublicStopAction) (string, error) {
 }
 
 // publicStopStandingTx reports whether this kind of stop already stands for this
-// subject AT THEIR OWN AUTHORITY.
+// subject AT THEIR OWN AUTHORITY, for this purpose.
 //
 // THE LEVEL IS PART OF THE QUESTION, and leaving it out was a defect Codex
 // found. A rep relaying a phone call writes a subject_request at LevelUser,
@@ -178,14 +181,25 @@ func publicStopKind(action PublicStopAction) (string, error) {
 //
 // So a weaker row does not satisfy a stronger press. The subject's row is
 // recorded beside it, and liveSuppression takes the strongest.
-func publicStopStandingTx(ctx context.Context, tx pgx.Tx, sub subject, kind string) (bool, error) {
+//
+// PURPOSE IS PART OF THE QUESTION TOO, matching the writer's own dedup key
+// (withdrawalpress.go's StopForCredentialTx): IS NOT DISTINCT FROM treats two
+// NULLs as equal, so a broad press still reads as a replay of an earlier broad
+// one, while a narrow row for one purpose does not silently answer for a
+// broader press or for a different purpose's press. PublicStop itself always
+// asks with purpose nil today — the wire this door reads carries no purpose to
+// narrow to — so this is presently exercised only at the broad end; a future
+// narrow press reuses the same predicate rather than a second one drifting
+// from it.
+func publicStopStandingTx(ctx context.Context, tx pgx.Tx, sub subject, kind string, purpose *ids.UUID) (bool, error) {
 	var standing bool
 	err := tx.QueryRow(ctx, `
 		SELECT EXISTS (
 		  SELECT 1 FROM communication_suppression
 		   WHERE `+sub.column+` = $1 AND kind = $2 AND revoked_at IS NULL
-		     AND decided_by_level = $3)`,
-		sub.id, kind, string(commsauthz.LevelSubject)).Scan(&standing)
+		     AND decided_by_level = $3
+		     AND purpose_id IS NOT DISTINCT FROM $4)`,
+		sub.id, kind, string(commsauthz.LevelSubject), purpose).Scan(&standing)
 	if err != nil {
 		return false, fmt.Errorf("consent: reading whether this stop already stands: %w", err)
 	}

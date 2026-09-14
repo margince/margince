@@ -71,7 +71,7 @@ func sarCommunicationSections(
 			// subject's ids alone tells them nothing about an address of theirs
 			// this installation has stopped writing to.
 			&pkg.CommunicationSuppression, `SELECT kind, source, address, recorded_at, revoked_at,
-		          decided_by_level
+		          decided_by_level, purpose_id
 		   FROM communication_suppression
 		   WHERE contact_id = ANY($1) OR lead_id = ANY($2)
 		      OR lower(address) = ANY($3)`,

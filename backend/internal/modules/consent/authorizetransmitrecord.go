@@ -102,6 +102,30 @@ func nullableText(s string) *string {
 	return &s
 }
 
+// liveStop is one live communication_suppression row, resolved for a
+// recipient: the reason it stops mail, and the single purpose it binds — nil
+// when the row binds every marketing purpose, as every row does until a
+// writer narrows one (see communication_suppression.purpose_id).
+type liveStop struct {
+	Kind      string
+	PurposeID *ids.UUID
+}
+
+// stopKinds names the reason codes a set of stops carries, with the purpose
+// scoping dropped.
+//
+// bindsEveryCategory answers on the kind alone: no kind that ever carries a
+// narrow purpose (today, only marketing_objection) is among the ones it calls
+// absolute, so a purpose comparison could never change its answer — this
+// conversion is safe rather than lossy for that caller's question.
+func stopKinds(stops []liveStop) []string {
+	kinds := make([]string, len(stops))
+	for i, s := range stops {
+		kinds[i] = s.Kind
+	}
+	return kinds
+}
+
 // liveSuppression reads what stops a message reaching this recipient
 // independently of any consent grant.
 //
@@ -109,7 +133,7 @@ func nullableText(s string) *string {
 // bounce is a fact about a MAILBOX, so it is recorded against the address and
 // keeps applying when the same address later appears on a different record.
 // The contact arm carries objections and restrictions, which follow the human.
-func liveSuppression(ctx context.Context, tx pgx.Tx, contactID string, r connector.Recipient) ([]string, error) {
+func liveSuppression(ctx context.Context, tx pgx.Tx, contactID string, r connector.Recipient) ([]liveStop, error) {
 	// EVERY live kind, not the strongest one.
 	//
 	// An earlier version took one row ordered by a fixed strength, which was
@@ -121,10 +145,15 @@ func liveSuppression(ctx context.Context, tx pgx.Tx, contactID string, r connect
 	// order, so the caller is given all of them and applies each.
 	//
 	// Reading the row is not applying it: what a suppression BINDS depends on
-	// the category, which is not known here. applySuppression decides that,
-	// after resolution.
+	// the category and, since Task 1's column, the send's own resolved
+	// purpose — neither known here. applySuppression decides that, after
+	// resolution.
+	//
+	// DISTINCT now spans (kind, purpose_id): two narrow rows for the same kind
+	// but different purposes are two different stops, and collapsing them
+	// would silently drop one of them.
 	rows, err := tx.Query(ctx, `
-		SELECT DISTINCT kind FROM communication_suppression
+		SELECT DISTINCT kind, purpose_id FROM communication_suppression
 		 WHERE revoked_at IS NULL
 		   AND (contact_id = $1
 		        OR lead_id = $1
@@ -134,18 +163,19 @@ func liveSuppression(ctx context.Context, tx pgx.Tx, contactID string, r connect
 		return nil, fmt.Errorf("consent: read the recipient's suppressions: %w", err)
 	}
 	defer rows.Close()
-	var kinds []string
+	var stops []liveStop
 	for rows.Next() {
 		var kind string
-		if err := rows.Scan(&kind); err != nil {
+		var purposeID *ids.UUID
+		if err := rows.Scan(&kind, &purposeID); err != nil {
 			return nil, fmt.Errorf("consent: read the recipient's suppressions: %w", err)
 		}
-		kinds = append(kinds, reasonForSuppressionKind(kind))
+		stops = append(stops, liveStop{Kind: reasonForSuppressionKind(kind), PurposeID: purposeID})
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("consent: read the recipient's suppressions: %w", err)
 	}
-	return kinds, nil
+	return stops, nil
 }
 
 // reasonForSuppressionKind maps a stored kind onto the reason code a decision

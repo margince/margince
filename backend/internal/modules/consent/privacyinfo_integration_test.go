@@ -387,18 +387,18 @@ func TestTheEngineSupportsANoticeOnItsOwnLink(t *testing.T) {
 // most likely to have asked us to stop were owed a disclosure the product could
 // not deliver.
 func TestAStoppedContactStillGetsTheirNotice(t *testing.T) {
-	if !suppressionBinds("subject_request", commsauthz.CategoryRecordConfirmation) {
+	if !suppressionBinds("subject_request", commsauthz.CategoryRecordConfirmation, nil, nil) {
 		t.Fatal("a subject request no longer stops the record confirmation, which would " +
 			"make this template unnecessary — check whether that is intended")
 	}
-	if suppressionBinds("subject_request", commsauthz.CategoryPrivacyNotice) {
+	if suppressionBinds("subject_request", commsauthz.CategoryPrivacyNotice, nil, nil) {
 		t.Error("a subject request stops the privacy notice: the disclosure duty survives a " +
 			"stop, so refusing it leaves the duty owed and undeliverable to exactly the " +
 			"contacts who asked")
 	}
 	// A DEAD MAILBOX still refuses it, and must: a notice nobody can receive
 	// discharges nothing, and pretending otherwise would mark the duty handled.
-	if !suppressionBinds("hard_bounce", commsauthz.CategoryPrivacyNotice) {
+	if !suppressionBinds("hard_bounce", commsauthz.CategoryPrivacyNotice, nil, nil) {
 		t.Error("a hard-bounced address accepts the privacy notice: the mailbox is gone, so " +
 			"the message cannot arrive and the duty is not discharged by sending it")
 	}

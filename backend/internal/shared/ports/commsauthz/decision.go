@@ -142,6 +142,15 @@ type Decision struct {
 	// LegacyVerdict is what the old purpose gate said, so a disagreement is
 	// visible in the row rather than only in a metric.
 	LegacyVerdict string
+	// PurposeID is the purpose this send itself resolved to, when resolution
+	// read one off a purpose key (legacyVerdictFor, decideLeadOnItsRecord) —
+	// nil on the evidence arms, which never consult a purpose key at all. It
+	// is the same value applySuppression already compares a narrow stop's own
+	// purpose against; carrying it here is what lets a REVIEW opened from this
+	// decision ask the identical question later, once the local it started as
+	// would otherwise have been discarded (aStopThatBindsTheMessage,
+	// consent/reviewcontext.go).
+	PurposeID *ids.UUID
 }
 
 // DecisionSet holds the per-recipient answers for one delivery and phase.
