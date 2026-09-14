@@ -139,6 +139,19 @@ func (r *Registry) InvokeServing(ctx context.Context, name string, in json.RawMe
 		return nil, 0, &UnknownToolError{Name: name}
 	}
 
+	if spec.HumanOnly {
+		// Refused before anything is parsed, charged, staged, or resolved —
+		// the call never had authority to be made. RequireHuman is the same
+		// primitive core's own x-agent-access: human-only operations call
+		// in-handler when they are not behind agentGate; extension operations
+		// are never behind it at all, so this is where they call it instead.
+		// Refuses PrincipalAgent and PrincipalBuyer, admits human/system/
+		// connector unchanged into the handler below.
+		if err := auth.RequireHuman(ctx); err != nil {
+			return nil, 0, err
+		}
+	}
+
 	res, err := splitReserved(in)
 	if err != nil {
 		return nil, 0, err
