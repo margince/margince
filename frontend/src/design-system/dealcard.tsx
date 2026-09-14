@@ -15,6 +15,7 @@ import { Avatar, Badge } from "./atoms";
 import type { BoardDeal } from "./composed";
 import { Popover } from "./popover";
 import { FieldGuard } from "./rbac";
+import { Chip } from "./readings";
 import { useTooltip } from "./tooltip";
 
 // One deal, as a card on the pipeline board (composed.tsx draws the board).
@@ -160,7 +161,7 @@ function DealCloses({
  * The one line a rep triages a column by after the money: a deal they wrote
  * to ten days ago with no reply and a deal the buyer wrote to yesterday sit in
  * the same stage and are not the same deal. The glyph says which way the last
- * mail went, the words say how long ago, and the name of the line is spoken to
+ * mail went, the words say how long ago, and the name of the chip is spoken to
  * a screen reader rather than drawn — a sighted reader knows an envelope.
  *
  * With an `aside` it is the trigger of a hover flyout — the last few messages,
@@ -174,12 +175,16 @@ function DealLastMail({
 }: Readonly<{ mail: BoardDealMail; aside?: ReactNode }>) {
   const t = useT();
   const { locale } = useLocale();
-  const Glyph = mail.direction === "outbound" ? Send : Mail;
+  // A Chip, because that is what this is: one fact about the record with the
+  // glyph naming its kind — the same pill a company's domain or a file's type
+  // is drawn as, dense so it sits at the badges' geometry rather than a rung
+  // above the name.
   const label = (
     <>
       <span className="sr-only">{t("deal.lastMail")}: </span>
-      <Glyph aria-hidden="true" />
-      <span>{formatElapsed(mail.agoMs, t, locale)}</span>
+      <Chip icon={mail.direction === "outbound" ? Send : Mail} dense>
+        {formatElapsed(mail.agoMs, t, locale)}
+      </Chip>
     </>
   );
   if (!aside) {

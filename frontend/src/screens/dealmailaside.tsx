@@ -16,6 +16,7 @@
 // so a board of a hundred cards asks for nothing until a pointer settles.
 
 import { useQuery } from "@tanstack/react-query";
+import { ArrowRight } from "lucide-react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { routeHash } from "../app/router";
@@ -99,6 +100,7 @@ export function DealMailAside({
                   subject={mail.subject}
                   occurredAt={when(mail)}
                   withheld={mail.content_state === "withheld"}
+                  stacked
                 />
               </li>
             ))}
@@ -112,8 +114,9 @@ export function DealMailAside({
           <p className="dealmail__none">{t("deal.mail.none")}</p>
         )}
       </QueryStates>
-      <a className="dealmail__all" href={href}>
+      <a className="link-button dealmail__all" href={href}>
         {t("deal.mail.viewAll")}
+        <ArrowRight aria-hidden="true" />
       </a>
     </div>
   );
