@@ -23,7 +23,7 @@ const HELD_DOMAIN = {
   created_at: "2026-08-01T09:00:00Z",
 };
 
-function story(holds: unknown[]) {
+function story(holds: unknown[], email = "office@studiolegal.de") {
   return () => {
     installFetchStub({
       "GET /me": meRoute({}),
@@ -31,7 +31,7 @@ function story(holds: unknown[]) {
     });
     return (
       <StoryProviders>
-        <CounterpartyHoldRow email="office@studiolegal.de" />
+        <CounterpartyHoldRow email={email} />
       </StoryProviders>
     );
   };
@@ -56,4 +56,13 @@ export const HeldByAddress: Story = {
   render: story([
     { ...HELD_DOMAIN, kind: "address", value: "office@studiolegal.de" },
   ]),
+};
+
+// The domain goes INTO the button's label, and its length is the firm's to
+// choose. A regional TLD under a subdomain is longer than this rail is wide,
+// and before `.btn-valuelabel` the label was drawn past both edges of its own
+// button at once — the one place a reader learns which domain they are about
+// to hold.
+export const NotHeldLongDomain: Story = {
+  render: story([], "kanzlei@mandanten-postfach.nordrhein-westfalen.example"),
 };
