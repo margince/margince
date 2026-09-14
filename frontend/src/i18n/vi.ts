@@ -3634,6 +3634,16 @@ export const vi = {
   "compose.reply": "Trả lời",
   "compose.writeEmail": "Viết email",
   "compose.relink": "Liên kết lại",
+  "compose.previewEmail": "Xem trước",
+  "compose.readEmail": "Đọc toàn bộ email",
+  "compose.replyIntent": "Trả lời với…",
+  "compose.newIntent": "Email này cần đạt được điều gì?",
+  "compose.draftReply": "Soạn câu trả lời bằng AI",
+  "compose.newEmail": "Email mới",
+  "compose.replyingTo": "Trả lời “{subject}” · {when}",
+  "compose.followingUp": "Theo dõi email bạn đã gửi “{subject}” · {when}",
+  "compose.draftContextHint":
+    "Mô tả mục đích. Margince sẽ sử dụng ngữ cảnh hiện có của hồ sơ.",
   "compose.draftWithAi": "Soạn bằng AI",
   "compose.drafting": "Đang soạn…",
   "compose.discardDraft": "Bỏ bản nháp",
@@ -3649,14 +3659,7 @@ export const vi = {
   "compose.provisional": "Giọng tạm thời",
   "compose.provisionalHint":
     "Voice DNA của bạn vẫn đang được dựng. Giọng đó đã định hình bản nháp này y như một bản đã hoàn thiện — không giữ lại gì cả.",
-  "compose.intent":
-    'Định hướng bản nháp (không bắt buộc), ví dụ "thư nhắc lịch sự"',
   "compose.to": "Đến",
-  "compose.answering": "Trả lời “{subject}” · {when}",
-  "compose.answeringTo": "Trả lời {who} · “{subject}” · {when}",
-  "compose.answeringNoSubject": "Trả lời tin nhắn ngày {when}",
-  "compose.answeringNothing":
-    "Chưa có tin nhắn nào trước đó — đây sẽ mở một chuỗi mới.",
   "compose.cc": "Cc",
   "compose.subject": "Tiêu đề",
   "compose.noGroundableRecipient":
@@ -3678,7 +3681,6 @@ export const vi = {
   "compose.bodyHint": "Nhấp vào văn bản để chỉnh sửa.",
   "compose.transport": "Cách gửi",
   "compose.transportEmail": "Email",
-  "compose.intentLabel": "Nội dung nên nói về điều gì?",
   "compose.recipientHint": "Tên hoặc địa chỉ",
   "compose.subjectHint": "Nội dung chính",
   "compose.bodyPlaceholder": "Viết tin nhắn…",
@@ -3790,10 +3792,14 @@ export const vi = {
   "compose.sendConfirmTitle": "Soạn email",
   "compose.threadHeading": "Cuộc trao đổi này",
   "compose.continueHeading": "Tiếp nối một cuộc trao đổi?",
-  "compose.threadLeave": "Chọn cuộc khác",
+  "compose.threadLeave": "Email mới",
   "compose.messageCount_one": "{count} tin nhắn",
   "compose.messageCount_other": "{count} tin nhắn",
   "compose.threadContinuing": "Lần trao đổi gần nhất, mà thư này tiếp nối",
+  "compose.draftKept":
+    "Các chỉnh sửa của bạn được giữ lại. Hãy tạo bản nháp mới khi sẵn sàng.",
+  "compose.threadFailed":
+    "Không đọc được thư này. Hãy thử lại trong cuộc hội thoại.",
   "compose.threadPending": "Đang tải cuộc trao đổi\u2026",
   "compose.sendBody":
     "Xem lại và chỉnh sửa bản nháp. Nhấn Gửi sẽ gửi email và không thể hoàn tác.",

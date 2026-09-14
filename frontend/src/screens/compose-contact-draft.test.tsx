@@ -124,6 +124,7 @@ describe("drafting to a contact", () => {
     });
     render(
       <ComposeModal
+        intent="Follow up on our discussion"
         entityType="contact"
         entityId="c-1"
         contactId="c-1"
@@ -134,7 +135,7 @@ describe("drafting to a contact", () => {
     );
 
     await userEvent.click(
-      screen.getByRole("button", { name: "Draft with AI" }),
+      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
     );
 
     expect(
@@ -165,11 +166,11 @@ describe("drafting to a contact", () => {
     );
 
     await userEvent.type(
-      screen.getByPlaceholderText(/Steer the draft/),
+      screen.getByPlaceholderText(/What should this email achieve|Reply with/),
       "kurz halten",
     );
     await userEvent.click(
-      screen.getByRole("button", { name: "Draft with AI" }),
+      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
     );
     await screen.findByDisplayValue("Zwei Produkte ohne Übersetzung");
 
@@ -186,6 +187,7 @@ describe("drafting to a contact", () => {
     });
     render(
       <ComposeModal
+        intent="Follow up on our discussion"
         entityType="contact"
         entityId="c-1"
         contactId="c-1"
@@ -196,7 +198,7 @@ describe("drafting to a contact", () => {
     );
 
     await userEvent.click(
-      screen.getByRole("button", { name: "Draft with AI" }),
+      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
     );
 
     expect(
@@ -212,6 +214,7 @@ describe("drafting to a contact", () => {
     });
     render(
       <ComposeModal
+        intent="Follow up on our discussion"
         entityType="contact"
         entityId="c-1"
         contactId="c-1"
@@ -222,7 +225,7 @@ describe("drafting to a contact", () => {
     );
 
     await userEvent.click(
-      screen.getByRole("button", { name: "Draft with AI" }),
+      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
     );
 
     await waitFor(() =>
@@ -239,6 +242,7 @@ describe("drafting to a contact", () => {
     const sent = stubRoutes();
     render(
       <ComposeModal
+        intent="Follow up on our discussion"
         entityType="deal"
         entityId="d-1"
         recordAddress="annabelle@akeneo.example"
@@ -248,7 +252,7 @@ describe("drafting to a contact", () => {
     );
 
     await userEvent.click(
-      screen.getByRole("button", { name: "Draft with AI" }),
+      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
     );
 
     await waitFor(() =>

@@ -190,11 +190,13 @@ export type PendingAction = Readonly<{
 // sits in the action row with the other verdicts (send, cancel), where a rep
 // decides what happens to the message rather than how it gets written.
 export function DraftOffer({
+  replying = false,
   intent,
   onIntentChange,
   draft,
   unavailable,
 }: Readonly<{
+  replying?: boolean;
   intent: string;
   onIntentChange: (next: string) => void;
   draft: PendingAction;
@@ -203,13 +205,18 @@ export function DraftOffer({
   const t = useT();
   return (
     <div className="compose-offer">
+      {!replying && (
+        <p className="t-caption">{t("compose.draftContextHint")}</p>
+      )}
       <div className="compose-draftbar">
         <TextInput
           // A NAME, not just a placeholder. The placeholder is the example and
           // disappears the moment the reader types; a field whose only name was
           // the example had none at all the instant it held anything.
-          aria-label={t("compose.intentLabel")}
-          placeholder={t("compose.intent")}
+          aria-label={t(replying ? "compose.replyIntent" : "compose.newIntent")}
+          placeholder={t(
+            replying ? "compose.replyIntent" : "compose.newIntent",
+          )}
           value={intent}
           onChange={(event) => onIntentChange(event.target.value)}
         />
@@ -228,7 +235,7 @@ export function DraftOffer({
           busyLabel={t("compose.drafting")}
         >
           <Sparkles aria-hidden="true" />
-          {t("compose.draftWithAi")}
+          {t(replying ? "compose.draftReply" : "compose.draftWithAi")}
         </Button>
       </div>
       {unavailable && (

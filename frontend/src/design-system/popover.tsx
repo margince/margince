@@ -148,6 +148,7 @@ export function Popover({
       if (event.key !== "Escape") {
         return;
       }
+      event.preventDefault();
       setOpen(false);
       // Back to the button that opened it. Escape with the focus left in a
       // panel that has just been removed drops a keyboard reader at the top of

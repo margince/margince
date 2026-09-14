@@ -234,6 +234,7 @@ export function EmailEntry({
      * fallback reason too: `onOpen` undefined then means what the caller says
      * it means, rather than meaning nobody thought about it.
      */
+    | { onSelect: () => void; selected: boolean; disabled?: boolean }
     | { onOpen: () => void }
     | { onOpen: undefined; whyNotOpenable: NoOpenReason }
     | { whyNotOpenable: NoOpenReason }
@@ -294,6 +295,19 @@ export function EmailEntry({
     </>
   );
 
+  if ("onSelect" in opener && summary.display_status !== "withheld") {
+    return (
+      <button
+        type="button"
+        className="emailentry emailentry--open"
+        onClick={opener.onSelect}
+        aria-pressed={opener.selected}
+        disabled={opener.disabled}
+      >
+        {content}
+      </button>
+    );
+  }
   const onOpen = "onOpen" in opener ? opener.onOpen : undefined;
   if (!onOpen) {
     return <div className="emailentry">{content}</div>;

@@ -1,9 +1,9 @@
 {
   "totals": {
     "sites": 45,
-    "sites_best_current": 44,
+    "sites_best_current": 43,
     "sites_best_partial": 0,
-    "sites_best_stale": 1,
+    "sites_best_stale": 2,
     "sites_absent": 0,
     "scenarios": 163,
     "records": 76,
@@ -17,9 +17,9 @@
         "env": "eu_hosted"
       },
       "sites": 39,
-      "sites_current": 37,
+      "sites_current": 36,
       "sites_partial": 0,
-      "sites_stale": 2,
+      "sites_stale": 3,
       "runs": 444,
       "passed": 387,
       "reliability": 0.8716216216216216,
@@ -177,9 +177,9 @@
         "env": "eu_hosted"
       },
       "sites": 38,
-      "sites_current": 37,
+      "sites_current": 36,
       "sites_partial": 0,
-      "sites_stale": 1,
+      "sites_stale": 2,
       "runs": 435,
       "passed": 322,
       "reliability": 0.7402298850574712,
@@ -2626,17 +2626,8 @@
         "proof",
         "market"
       ],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "gemini",
-          "model": "gemini-3.1-flash-lite",
-          "env": "eu_hosted"
-        },
-        "band": "supported_degraded",
-        "reliability": 1,
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
         {
           "name": "german_thread_with_an_introduction_in_it",
@@ -2666,9 +2657,9 @@
             "model": "gemini-3.1-flash-lite",
             "env": "eu_hosted"
           },
-          "state": "current",
+          "state": "stale",
           "band": "supported_degraded",
-          "scenarios_measured": 4,
+          "scenarios_measured": 0,
           "scenarios_total": 4,
           "runs": 12,
           "passed": 12,
@@ -2681,7 +2672,15 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends): german_thread_with_an_introduction_in_it, reply_to_pricing_question, replying_to_a_thread_eight_months_old, rich_german_thread_with_a_long_ask",
+          "stale_cause": {
+            "prompt_changed": [
+              "german_thread_with_an_introduction_in_it",
+              "reply_to_pricing_question",
+              "replying_to_a_thread_eight_months_old",
+              "rich_german_thread_with_a_long_ask"
+            ]
+          }
         },
         {
           "binding": {
@@ -2786,9 +2785,9 @@
             "model": "openai/gpt-oss-120b",
             "env": "eu_hosted"
           },
-          "state": "current",
+          "state": "stale",
           "band": "not_supported",
-          "scenarios_measured": 4,
+          "scenarios_measured": 0,
           "scenarios_total": 4,
           "runs": 12,
           "passed": 12,
@@ -2801,7 +2800,15 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends): german_thread_with_an_introduction_in_it, reply_to_pricing_question, replying_to_a_thread_eight_months_old, rich_german_thread_with_a_long_ask",
+          "stale_cause": {
+            "prompt_changed": [
+              "german_thread_with_an_introduction_in_it",
+              "reply_to_pricing_question",
+              "replying_to_a_thread_eight_months_old",
+              "rich_german_thread_with_a_long_ask"
+            ]
+          }
         }
       ]
     },

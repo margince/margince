@@ -3793,6 +3793,16 @@ export const en = {
   "compose.reply": "Reply",
   "compose.writeEmail": "Write email",
   "compose.relink": "Relink",
+  "compose.previewEmail": "Preview",
+  "compose.readEmail": "Read full email",
+  "compose.replyIntent": "Reply with…",
+  "compose.newIntent": "What should this email achieve?",
+  "compose.draftReply": "Draft reply with AI",
+  "compose.newEmail": "New email",
+  "compose.replyingTo": "Replying to “{subject}” · {when}",
+  "compose.followingUp": "Following up on your email “{subject}” · {when}",
+  "compose.draftContextHint":
+    "Describe the purpose. Margince will use the available record context.",
   "compose.draftWithAi": "Draft with AI",
   "compose.drafting": "Drafting…",
   "compose.discardDraft": "Discard draft",
@@ -3808,13 +3818,7 @@ export const en = {
   "compose.provisional": "Provisional voice",
   "compose.provisionalHint":
     "Your Voice DNA is still being built. It already shapes this draft exactly as a finished one would — nothing is held back.",
-  "compose.intent": 'Steer the draft (optional), e.g. "polite follow-up"',
   "compose.to": "To",
-  "compose.answering": "Replying to “{subject}” · {when}",
-  "compose.answeringTo": "Replying to {who} · “{subject}” · {when}",
-  "compose.answeringNoSubject": "Replying to the message of {when}",
-  "compose.answeringNothing":
-    "No earlier message here — this starts a new thread.",
   "compose.cc": "Cc",
   "compose.subject": "Subject",
   "compose.noGroundableRecipient":
@@ -3839,7 +3843,6 @@ export const en = {
   "compose.bodyHint": "Click into the text to edit it.",
   "compose.transport": "How to send",
   "compose.transportEmail": "Email",
-  "compose.intentLabel": "What should it be about?",
   "compose.recipientHint": "Name or address",
   "compose.subjectHint": "What it is about",
   "compose.bodyPlaceholder": "Write the message…",
@@ -3951,10 +3954,13 @@ export const en = {
   "compose.sendConfirmTitle": "Draft email",
   "compose.threadHeading": "This conversation",
   "compose.continueHeading": "Continue a conversation?",
-  "compose.threadLeave": "Choose another",
+  "compose.threadLeave": "New email",
   "compose.messageCount_one": "{count} message",
   "compose.messageCount_other": "{count} messages",
   "compose.threadContinuing": "The last exchange, which this will continue",
+  "compose.draftKept": "Your edits were kept. Draft again when you are ready.",
+  "compose.threadFailed":
+    "That message could not be read. Use Try again in the conversation.",
   "compose.threadPending": "Loading the conversation\u2026",
   "compose.sendBody":
     "Review and edit your draft. Clicking Send sends this email and cannot be undone.",

@@ -18,8 +18,9 @@ import { Select } from "../design-system/select";
 import { useToast } from "../design-system/toast";
 import type { TokenSuggestion } from "../design-system/tokeninput";
 import { formatDateTime, INTL_LOCALE } from "../format/format";
+import { replySubject } from "../format/replysubject";
 import { viewerZone } from "../format/timezone";
-import { type Locale, useLocale, usePlural, useT } from "../i18n";
+import { useLocale, usePlural, useT } from "../i18n";
 import { entityTimelineKeys } from "./activitykeys";
 import {
   isConsentNotGranted,
@@ -242,74 +243,6 @@ function ProjectFiling({
 }
 
 /**
- * The message this composer should answer, when the caller did not name one.
- *
- * Opened from a record page there is no anchor: the dialog asked the reader to
- * authorise a draft with an empty To, an empty Subject, and nothing on screen
- * saying what was being replied to. The reader could press "Draft with AI"
- * without knowing who they were writing to or which message they were
- * answering — reported from the running product in exactly those words.
- *
- * The latest message on the record is the answer, and the PROJECT narrows it:
- * a reader who has picked a project is working inside that project, so the
- * conversation to continue is that project's own last message rather than the
- * account's. Changing the selection changes the answer, which is why this is a
- * query keyed on both rather than a value read once when the dialog opened.
- *
- * `kind: email` because this composer sends mail: the last CALL on an account
- * is not a message anyone can reply to, and offering it as one would put a
- * recipient in the To field that the call never had.
- */
-function useLatestMessage(
-  entityType: RelinkKind,
-  entityId: string,
-  projectId: string,
-  enabled: boolean,
-): { activity?: Activity; settled: boolean } {
-  // A project narrows through the list's OWN project_id filter, not through
-  // entity_type — a project is not one of the entity kinds that filter takes,
-  // and asking for one returns an empty page rather than an error, which reads
-  // as "no earlier message" for every project on the installation.
-  const query = useQuery({
-    queryKey: ["compose-latest-message", entityType, entityId, projectId],
-    queryFn: async () => {
-      const { data, error } = await api.GET("/activities", {
-        params: {
-          query: {
-            entity_type: entityType,
-            entity_id: entityId,
-            ...(projectId ? { project_id: projectId } : {}),
-            kind: "email",
-            limit: 1,
-          },
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-    enabled,
-  });
-  // A row whose content is WITHHELD is not an anchor. The list is
-  // discover-gated, so a limited-audience message on this account comes back
-  // with its subject and body nulled — and the draft endpoint, which is
-  // content-gated, answers 404 for it. Anchoring there strands the composer:
-  // the account path is hidden because an anchor exists, the draft cannot run,
-  // and the reader is told they are replying to a message the server will not
-  // let them answer. Falling back to the account path is the honest outcome.
-  const newest = query.data?.data?.[0];
-  return {
-    // The list is ordered newest first (occurred_at DESC), so one row is the
-    // latest — asked for as one row rather than fetched and sorted here.
-    activity: newest?.content_state === "withheld" ? undefined : newest,
-    // A read that has not answered, or failed, is not "no message": the
-    // composer says nothing rather than claiming this is a fresh thread.
-    settled: query.isSuccess,
-  };
-}
-
-/**
  * Who a reply to this anchor goes to, resolved without drafting.
  *
  * Sending REQUIRES `to`, so an empty field is not a convenience gap: it is a
@@ -351,49 +284,6 @@ function useReplyRecipient(anchor: string | undefined): {
 }
 
 /**
- * What the composer says it is answering, or null while it does not yet know.
- *
- * Only for the composer with no conversation pane beside it. Where the pane
- * renders, the messages themselves say what is being answered and this sentence
- * repeats them. It survives for the case that has nothing to show: a message
- * opened from a record, where what is being continued was decided here.
- */
-function answeringSentence(
-  latest: { activity?: Activity; settled: boolean },
-  callerAnchor: string | undefined,
-  recipients: readonly string[],
-  t: ReturnType<typeof useT>,
-  locale: Locale,
-  zone: string,
-): string | null {
-  if (callerAnchor !== undefined || !latest.settled) {
-    return null;
-  }
-  const answering = latest.activity;
-  if (!answering) {
-    return t("compose.answeringNothing");
-  }
-  const when = formatDateTime(answering.occurred_at, locale, zone);
-  const subject = answering.subject?.trim();
-  // WHO, as soon as it is known. The composer used to ask the reader to pick
-  // the contact, and picking them is what made the consent purpose beneath an
-  // attestation about a named human. Now the thread supplies the address, so
-  // the line has to name it — a purpose chosen against a recipient the reader
-  // never saw is a weaker attestation than the one this replaced.
-  //
-  // The activity list does not carry the recipient, so this fills in when the
-  // draft does. Before that the line still says what is being answered, which
-  // is the question the reader had first.
-  const who = recipients.join(", ");
-  if (who && subject) {
-    return t("compose.answeringTo", { who, subject, when });
-  }
-  return subject
-    ? t("compose.answering", { subject, when })
-    : t("compose.answeringNoSubject", { when });
-}
-
-/**
  * The project link a reply's own thread already carries, if any.
  *
  * Read from the anchor activity rather than assumed, because the thread is the
@@ -406,6 +296,7 @@ function useThreadProject(activityId?: string): {
   projectId?: string;
   settled: boolean;
   failed: boolean;
+  retry: () => void;
 } {
   const query = useQuery({
     queryKey: ["activity", activityId, "filing"],
@@ -425,6 +316,9 @@ function useThreadProject(activityId?: string): {
     // `thread_key` this same read already carries, and a second GET of one
     // activity to reach one field is two answers to "what is being answered".
     activity: query.data,
+    retry: () => {
+      void query.refetch();
+    },
     // Its own flag rather than folded into `settled`, because the two callers
     // want different halves: the filing says nothing on a failure, while the
     // pane must stop holding its place — a read that failed is not one still
@@ -1001,6 +895,7 @@ export function missingToSend(
 // request shape has no room for. Kept as its own component so a channel
 // reply — which renders none of this — doesn't inherit its branching.
 function MailOnlyFields({
+  replying,
   intent,
   onIntentChange,
   draft,
@@ -1026,6 +921,7 @@ function MailOnlyFields({
   flagged,
   deadRecipients,
 }: Readonly<{
+  replying: boolean;
   intent: string;
   onIntentChange: (next: string) => void;
   draft: PendingAction;
@@ -1052,15 +948,15 @@ function MailOnlyFields({
   /** The fields a pressed Send is still waiting for. Empty until it is pressed. */
   flagged: ReadonlySet<MissingField>;
   rejectionInFlight: boolean;
-  /** What this message answers, in the reader's own words. Null while the
-   * lookup is unsettled — an unanswered read is not "no earlier message". */
-  answering: string | null;
+  /** The reply target or the current loading/error state. */
+  answering: string;
   /** The recipients on this draft that are known not to arrive. */
   deadRecipients: readonly string[];
 }>) {
   const t = useT();
   const offer = (
     <DraftOffer
+      replying={replying}
       intent={intent}
       onIntentChange={onIntentChange}
       draft={draft}
@@ -1080,13 +976,7 @@ function MailOnlyFields({
       ) : (
         offer
       )}
-      {/* WHAT is being answered, above the recipient — the first thing a
-          reader looks for and the thing this dialog used to leave out. Opened
-          from a record page it named no conversation at all, so a reader could
-          press "Draft with AI" without knowing who they were writing to. */}
-      {answering !== null && (
-        <p className="t-caption mw-answering">{answering}</p>
-      )}
+      <p className="t-caption mw-answering">{answering}</p>
       <AddressBlock
         to={to}
         onToChange={onToChange}
@@ -1170,37 +1060,42 @@ function MailSendNotices({
 // instruction for every draft after.
 type DraftAsk = Readonly<{
   grounding: Grounding;
-  instruction?: string;
-}>;
-
-function useDraftMutation({
-  activityId,
-  entityType,
-  entityId,
-  intent,
-  onUnavailable,
-  onDrafted,
-  resetUnavailable,
-  t,
-}: Readonly<{
   activityId?: string;
   entityType: RelinkKind;
   entityId: string;
   intent: string;
+  epoch: number;
+  body: string;
+  html: string;
+  instruction?: string;
+}>;
+
+function useDraftMutation({
+  entityId,
+  onUnavailable,
+  onDrafted,
+  resetUnavailable,
+  isCurrent,
+  onSkipped,
+  t,
+}: Readonly<{
+  entityId: string;
   onUnavailable: (reason: DraftUnavailable) => void;
   onDrafted: (
     result: Extract<DraftResult, { available: true }>,
     ask: DraftAsk,
   ) => void;
   resetUnavailable: () => void;
+  isCurrent: (ask: DraftAsk) => boolean;
+  onSkipped: (ask: DraftAsk) => void;
   t: ReturnType<typeof useT>;
 }>) {
   return useMutation({
     mutationKey: ["email-draft", entityId],
     mutationFn: async (ask: DraftAsk): Promise<DraftResult> => {
       resetUnavailable();
-      const { grounding } = ask;
-      const intentOf = ask.instruction ?? intent;
+      const { grounding, activityId, entityType } = ask;
+      const intentOf = ask.instruction ?? ask.intent;
       // A reply answers the message it is anchored to; an account-started
       // message has none, so it is grounded in the account itself and needs
       // the recipient named first.
@@ -1209,13 +1104,17 @@ function useDraftMutation({
       }
       return draftFromAccount({
         entityType,
-        entityId,
+        entityId: ask.entityId,
         ...grounding,
         intent: intentOf,
         t,
       });
     },
     onSuccess: (result, ask) => {
+      if (!isCurrent(ask)) {
+        onSkipped(ask);
+        return;
+      }
       if (!result.available) {
         onUnavailable(result.reason);
         return;
@@ -1328,26 +1227,29 @@ function useProjectFiling(input: {
 }): { projectId: string; setProjectId: (next: string) => void } {
   const thread = useThreadProject(input.activityId);
   // Empty string is a real answer ("None"), so unanswered is undefined.
-  const [picked, setPicked] = useState<string | undefined>(undefined);
+  const filingKey = input.activityId ?? "";
+  const [picks, setPicks] = useState<Record<string, string>>({});
+  const picked = picks[filingKey];
+  const setPicked = useCallback(
+    (next: string) => {
+      setPicks((current) => ({ ...current, [filingKey]: next }));
+    },
+    [filingKey],
+  );
   const settled = thread.settled && input.anchorSettled;
   const suggested = settled
     ? (thread.projectId ?? input.anchorProjectId ?? "")
     : "";
-  // Adopted once, when the suggestion first arrives. `picked` then holds it, so
-  // a rep who chooses None is not overruled on the next render.
-  const adopted = useRef("");
+  // Each message owns its filing choice, including an explicit No project.
   useEffect(() => {
-    if (suggested && adopted.current !== suggested) {
-      adopted.current = suggested;
-      setPicked(suggested);
-    }
-  }, [suggested]);
+    if (suggested && picked === undefined) setPicked(suggested);
+  }, [suggested, picked, setPicked]);
   const chosen = picked ?? suggested;
   // The account path has no thread and no deal to suggest from, so its rule is
   // the older one: a company with exactly ONE live project defaults to it. The
   // two never both fire — a suggestion above means there was something to
   // inherit, and this only applies when there was not.
-  useSoleProjectDefault(input.projects, chosen, setPicked);
+  useSoleProjectDefault(input.projects, chosen, setPicked, filingKey);
   // A value the option list does not carry is not shown as chosen — the control
   // would render blank while the subject claimed a filing nobody can see named.
   // Read rather than written: writing it back would race the adoption above,
@@ -1491,6 +1393,11 @@ export function ComposeModal({
   // (a timeline Reply on a captured message) and a reader who turned the dial
   // reach the same answer.
   const isChannelReply = kind === "message" || channel !== undefined;
+  // Undefined follows the opener; null explicitly starts a new message.
+  const [chosen, setChosen] = useState<string | null | undefined>(undefined);
+  const answering =
+    channel?.anchorId ??
+    (chosen === undefined ? activityId : (chosen ?? undefined));
   const [to, setTo] = useState<string[]>([]);
   const [cc, setCc] = useState<string[]>([]);
   // Blind copies, and whether the row is drawn at all. It opens on a press and
@@ -1503,12 +1410,21 @@ export function ComposeModal({
   // because the wire is multipart/alternative.
   const [body, setBody] = useState("");
   const [html, setHtml] = useState("");
-  // The files this message will carry, as references to paper already on the
-  // record — see composeattachments.tsx for why an upload files it first.
-  const [files, setFiles] = useState<readonly ChosenFile[]>([]);
-  // Where this message breaks the channel's carriage bounds (empty for mail):
-  // the shelf warns and the send refuses here, ahead of the park comms/gates.go
-  // carriageRefusal raises after staging.
+  // Uploads may finish after switching; their callback retains its target's bank.
+  const [filesByTarget, setFilesByTarget] = useState<
+    Record<string, readonly ChosenFile[]>
+  >({});
+  const fileTarget = answering ?? "";
+  const files = filesByTarget[fileTarget] ?? [];
+  const setFiles = (
+    update: (current: readonly ChosenFile[]) => readonly ChosenFile[],
+  ) => {
+    setFilesByTarget((current) => ({
+      ...current,
+      [fileTarget]: update(current[fileTarget] ?? []),
+    }));
+  };
+  // Warn about carriage bounds before staging can refuse the message.
   const carriageBlocks = useCarriageBlocks(channel?.id, files, body);
   const [intent, setIntent] = useState(askedIntent ?? "");
   // Keyed on what the CALLER asked for, so a second moment action opening the
@@ -1548,6 +1464,7 @@ export function ComposeModal({
   const [draftUnavailable, setDraftUnavailable] =
     useState<DraftUnavailable | null>(null);
   const [sendUnavailable, setSendUnavailable] = useState(false);
+  const [draftKept, setDraftKept] = useState(false);
   // Retiring the previous pair's draft is the composer's job, not the
   // grounding hook's: the body, the recipients, the reference and the
   // disclosure all live here.
@@ -1567,46 +1484,13 @@ export function ComposeModal({
     setDraftRef(null);
     setProvenance(null);
   });
-  // Whether this composer can ground a draft in an account: an account-started
-  // message on a company page, over mail. A channel reply resolves its
-  // recipient server-side and has no draft endpoint at all.
-  // What this composer is answering. The caller names it when the reader opened
-  // a specific message; opened from a record page it does not, and the reader
-  // was then asked to authorise a draft against a conversation nothing on
-  // screen identified. The project narrows it, so switching projects switches
-  // the conversation being continued.
-  const latest = useLatestMessage(
-    entityType,
-    entityId,
-    account.grounding.projectId,
-    open && !activityId,
-  );
-  // The conversation the reader PICKED, when they picked one. A composer opened
-  // from the record used to anchor itself to the account's latest exchange
-  // without asking: the reader pressed a button that says "write an email" and
-  // got a reply to whatever came last, addressed to somebody they had not
-  // chosen. The threads are offered beside the form now, and this holds their
-  // answer. The old behaviour's benefit survives — continuing the last exchange
-  // is still one press — without the surprise.
-  const [chosen, setChosen] = useState<string | undefined>(undefined);
+  // A ref invalidates in-flight work immediately, including React Query’s
+  // window before it adopts the latest render callbacks.
+  const draftEpoch = useRef(0);
   useEffect(() => {
-    if (!open) {
-      setChosen(undefined);
-    }
+    if (!open) setChosen(undefined);
   }, [open]);
-  // Offered on every record's account-started mail. A caller that anchored the
-  // send (a timeline Reply, a panel that resolved what is owed) has already
-  // chosen, so nothing is offered over its choice; a channel reply's
-  // conversation is the provider's, with nothing of ours to pick from.
-  const offeringThreads = !isChannelReply && !activityId;
-  // A channel reply answers the conversation the transport carries, and that
-  // outranks everything below it: the reader turned a dial that says which
-  // conversation this continues, so an anchor resolved for the mail path would
-  // send their words into a different one.
-  const answering =
-    channel?.anchorId ??
-    activityId ??
-    (offeringThreads ? chosen : latest.activity?.id);
+  const offeringThreads = !isChannelReply;
   // Addressing the reply before a draft is asked for. A channel reply resolves
   // its recipient server-side and shows no To field, so it asks nothing.
   const { address: replyRecipient, mailboxes: replyMailboxes } =
@@ -1636,6 +1520,8 @@ export function ComposeModal({
   // The ref, not state: this decides whether to offer at all, so re-rendering
   // on it would be a render caused by the thing it is trying not to do twice.
   const offered = useRef(false);
+  // Restoring a saved target must not re-offer an address the reader removed.
+  const restoringRecipient = useRef(false);
   // WHICH address was offered, so that on a change of conversation it is the
   // one thing replaced. Without it the field kept the first thread's
   // counterparty while the pane showed another's messages, and a reply to the
@@ -1661,6 +1547,10 @@ export function ComposeModal({
   // theirs and stays.
   // biome-ignore lint/correctness/useExhaustiveDependencies: keyed on the anchor alone — this re-arms the offer when the conversation changes, not when its address resolves.
   useEffect(() => {
+    if (restoringRecipient.current) {
+      restoringRecipient.current = false;
+      return;
+    }
     offered.current = false;
     const previous = offeredAddress.current;
     if (previous === undefined) {
@@ -1694,9 +1584,6 @@ export function ComposeModal({
         : [...current, threadRecipient];
     });
   }, [threadRecipient, answering]);
-  // The anchor as a RECORD, not just an id: the conversation pane reads its
-  // `thread_key`. A caller-named activity is fetched (that read already runs,
-  // for the thread's filing); a resolved one is the row `latest` is holding.
   const viewerId = useViewerId();
   // What the conversation's rows are CALLED. An activity link carries ids, and
   // "Sent to 8f21c4…" is not a reader telling you who was on a message. Two
@@ -1736,22 +1623,8 @@ export function ComposeModal({
     replyMailboxes.includes(viewerId);
   const answeringColleaguesMail =
     colleagueMailboxes.length > 0 && !ownMailboxTookIt;
-  // The anchor as a ROW, in the same order `answering` resolves it: a channel
-  // the reader picked answers its own conversation, and reading only the
-  // caller's or the picked thread left a dial-chosen channel with no anchor row
-  // at all — so the drawer asked what kind of message it was, over a
-  // conversation that already says.
-  const anchorRead = useThreadProject(
-    channel?.anchorId ?? activityId ?? chosen,
-  );
-  // The latest message stands in only when it IS the anchor being answered.
-  // While a caller-named or picked anchor is still loading, standing the
-  // newest message in would draw a conversation the reader did not choose —
-  // and offer its counterparty — for a beat, then swap it.
-  const anchorActivity = answering
-    ? (anchorRead.activity ??
-      (answering === latest.activity?.id ? latest.activity : undefined))
-    : undefined;
+  const anchorRead = useThreadProject(answering);
+  const anchorActivity = anchorRead.activity;
   const conversation = useThreadMessages(open ? anchorActivity : undefined);
   // An anchor named but not yet read. The pane holds its place on this, so
   // the drawer does not open narrow and snap wide when the read answers. A
@@ -1762,20 +1635,39 @@ export function ComposeModal({
   const recent = useRecentConversations(
     entityType,
     entityId,
-    open && offeringThreads && !chosen,
+    open && offeringThreads && !answering,
     { nameOf, t, locale },
   );
-  // The sentence the reader reads. Null while the lookup is unsettled: an
-  // unanswered read is not "no earlier message", and saying so would tell them
-  // this starts a new thread when it may continue one.
-  const answeringLine = answeringSentence(
-    latest,
-    activityId,
-    to,
-    t,
-    locale,
-    zone,
-  );
+  const answeringLine = answering
+    ? anchorActivity?.occurred_at && anchorActivity.content_state !== "withheld"
+      ? t(
+          anchorActivity.direction === "outbound"
+            ? "compose.followingUp"
+            : "compose.replyingTo",
+          {
+            subject: anchorActivity.subject || t("email.noSubject"),
+            when: formatDateTime(anchorActivity.occurred_at, locale, zone),
+          },
+        )
+      : t(anchorRead.failed ? "compose.threadFailed" : "compose.threadPending")
+    : t("compose.newEmail");
+  const prefilledSubjects = useRef(new Set<string>());
+  useEffect(() => {
+    if (
+      prefilledSubjects.current.has(answering ?? "") ||
+      anchorActivity?.kind !== "email" ||
+      !anchorActivity.subject?.trim() ||
+      anchorActivity.content_state === "withheld"
+    )
+      return;
+    prefilledSubjects.current.add(answering ?? "");
+    const topic = replySubject(anchorActivity.subject);
+    setSubject((current) =>
+      stripEveryKeyTag(current).trim()
+        ? current
+        : withSubjectTag(topic, keptTag(current)),
+    );
+  }, [anchorActivity, answering]);
 
   // The account-started path: no conversation to continue, so the reader names
   // the recipient and the draft is grounded in the account itself.
@@ -1813,7 +1705,8 @@ export function ComposeModal({
       (conversation.messages.length > 0 ||
         conversation.pending ||
         conversation.failed)) ||
-      anchorUnresolved);
+      anchorUnresolved ||
+      (Boolean(answering) && anchorRead.failed));
   // The ways in, when the reader has not taken one. Nothing to offer is not a
   // column: an account with no mail gets the plain drawer it had before.
   // While the lookup is still out, the column holds its place with the
@@ -1825,7 +1718,7 @@ export function ComposeModal({
   // had no history, which is the surprise the choices exist to prevent.
   const showChoices =
     offeringThreads &&
-    !chosen &&
+    !answering &&
     (recent.pending || recent.failed || recent.conversations.length > 0);
   const splitColumns = showConversation || showChoices;
   // Where this send files, and the subject tag that travels with it. The
@@ -1911,6 +1804,7 @@ export function ComposeModal({
   // own addressee server-side, so an address left standing here would be one the
   // reader believes they are writing to and the send never uses.
   const changeTransport = (next: string) => {
+    draftEpoch.current += 1;
     setTransportId(next);
     setSubject("");
     setBody("");
@@ -1925,6 +1819,7 @@ export function ComposeModal({
   };
 
   const editBody = (next: Readonly<{ html: string; text: string }>) => {
+    if (next.text !== body || next.html !== html) draftEpoch.current += 1;
     setBody(next.text);
     setHtml(next.html);
     if (next.text.trim()) {
@@ -1966,10 +1861,7 @@ export function ComposeModal({
   };
 
   const draft = useDraftMutation({
-    activityId: answering,
-    entityType,
     entityId,
-    intent,
     onUnavailable: (reason: DraftUnavailable) => setDraftUnavailable(reason),
     onDrafted: (result, ask) => {
       fillFromDraft(result, {
@@ -1988,7 +1880,26 @@ export function ComposeModal({
       });
       revealDraftedBody();
     },
-    resetUnavailable: () => setDraftUnavailable(null),
+    resetUnavailable: () => {
+      setDraftUnavailable(null);
+      setDraftKept(false);
+    },
+    onSkipped: (ask) => {
+      if (open && ask.activityId === answering && ask.entityId === entityId)
+        setDraftKept(true);
+    },
+    isCurrent: (ask) =>
+      open &&
+      ask.epoch === draftEpoch.current &&
+      ask.body === body &&
+      ask.html === html &&
+      ask.intent === intent &&
+      ask.activityId === answering &&
+      ask.entityId === entityId &&
+      ask.entityType === entityType &&
+      ask.grounding.recipientId === account.recipientId &&
+      ask.grounding.dealId === account.dealId &&
+      ask.grounding.projectId === projectFiling.projectId,
     t,
   });
 
@@ -2047,49 +1958,9 @@ export function ComposeModal({
     mutationKey: ["email", entityId],
     // The grounding is the variable, not a closure read: a stale closure
     // could file the mail under a project the picker no longer shows.
-    mutationFn: async (grounding: Grounding | null) => {
+    mutationFn: async (request: Parameters<typeof sendFrom>[0]) => {
       setSendUnavailable(false);
-      // No X-Approval-Token, no Idempotency-Key on either path: the human's
-      // own click IS the approval on the REST path (ADR-0055).
-      const attachmentIds = files.length
-        ? files.map((file) => file.id)
-        : undefined;
-      const mail = {
-        subject,
-        body,
-        // Omitted entirely when the rep formatted nothing: an empty markup part
-        // would make every plain send multipart for no reader's gain.
-        html_body: html.trim() === "" ? undefined : html,
-        to,
-        cc: cc.length ? cc : undefined,
-        bcc: bcc.length ? bcc : undefined,
-        attachment_ids: attachmentIds,
-        draft_ref: draftRef ?? undefined,
-        communication_context: claimedContext,
-        ...scheduleFields(sendAt),
-      };
-      const { data, error, response } = await sendFrom({
-        // The SAME anchor the draft used. Split, these disagree in the worst
-        // possible way: the draft answers a thread and writes "Re: …", and the
-        // send then takes the account path — which files under the links the
-        // body names rather than the anchor's own (the contact the mail was
-        // with gets none, so the message is missing from their timeline), and
-        // starts a new RFC message-id chain, so what the reader was shown as a
-        // reply reaches the recipient as an orphan.
-        activityId: answering,
-        isChannelReply,
-        mail,
-        channelBody: {
-          body,
-          communication_context: claimedContext,
-          attachment_ids: attachmentIds,
-        },
-        links: composedLinks(
-          { entityType, entityId },
-          grounding,
-          projectFiling.projectId,
-        ),
-      });
+      const { data, error, response } = await sendFrom(request);
       if (response.status === 501) return { sent: false as const };
       // Only a real 202 is a send. openapi-fetch returns a falsy `error` for a
       // bodiless non-2xx (a gateway 502/503/504); inferring success from
@@ -2213,19 +2084,96 @@ export function ComposeModal({
   // may only ever name the words on screen, never words typed while it was
   // away.
   const rejectionInFlight = discard.isPending;
-  // The two draft controls, assembled here so the JSX below reads as a layout
-  // rather than as a list of conditions.
-  //
-  // An account-started draft grounds itself on the recipient, so there is
-  // nothing to draft until one is chosen: the button is disabled with the
-  // picker directly above it, rather than running and coming back with a
-  // refusal about a field already on screen.
+  // Switching targets saves the whole editable offer; none of these fields
+  // may quietly become part of a reply to a different message.
+  const currentDraft = {
+    to,
+    cc,
+    bcc,
+    bccOpen,
+    subject,
+    body,
+    html,
+    intent,
+    context,
+    sendAt,
+    provenance,
+    draftRef,
+    servedBody,
+    reasoning: account.reasoning,
+    scope: account.scope,
+    offeredAddress: offeredAddress.current,
+    offered: offered.current,
+  };
+  const emptyDraft: typeof currentDraft = {
+    to: [],
+    cc: [],
+    bcc: [],
+    bccOpen: false,
+    subject: "",
+    body: "",
+    html: "",
+    intent: "",
+    context: "",
+    sendAt: "",
+    provenance: null,
+    draftRef: null,
+    servedBody: "",
+    reasoning: [],
+    scope: undefined,
+    offeredAddress: undefined,
+    offered: false,
+  };
+  const savedDrafts = useRef(new Map<string, typeof currentDraft>());
+  const selectMessage = (id: string | null) => {
+    if (id === (answering ?? null) || send.isPending || rejectionInFlight)
+      return;
+    savedDrafts.current.set(answering ?? "", currentDraft);
+    const saved = savedDrafts.current.get(id ?? "");
+    const next = saved ?? emptyDraft;
+    draftEpoch.current += 1;
+    draft.reset();
+    setDraftKept(false);
+    send.reset();
+    setAttempted(false);
+    setChosen(id);
+    setTo(next.to);
+    setCc(next.cc);
+    setBcc(next.bcc);
+    setBccOpen(next.bccOpen);
+    setSubject(next.subject);
+    setBody(next.body);
+    setHtml(next.html);
+    setIntent(next.intent);
+    setContext(next.context);
+    setSendAt(next.sendAt);
+    setProvenance(next.provenance);
+    setDraftRef(next.draftRef);
+    setServedBody(next.servedBody);
+    account.setReasoning(next.reasoning);
+    account.setScope(next.scope);
+    setDraftUnavailable(null);
+    offeredAddress.current = next.offeredAddress;
+    offered.current = next.offered;
+    restoringRecipient.current = Boolean(saved);
+    vacated.current = false;
+  };
+  const draftAsk = {
+    activityId: answering,
+    entityType,
+    entityId,
+    intent,
+    epoch: draftEpoch.current,
+    body,
+    html,
+  };
   const draftControl = {
     // The project the PICKER holds, not the account hook's own copy: one
     // control owns that answer now, and the draft must be grounded in the
     // project the reader can see chosen.
     run: () =>
       draft.mutate({
+        ...draftAsk,
         grounding: {
           ...account.grounding,
           projectId: projectFiling.projectId,
@@ -2235,8 +2183,18 @@ export function ComposeModal({
     // The write in flight is NOT spelled here: a drafting button keeps its full
     // ink and a turning mark, and only a precondition the reader could meet
     // takes the control away from them.
-    disabled: rejectionInFlight || (groundable && !account.recipientId),
-    error: draft.isError ? problemMessageOf(draft.error, t) : null,
+    disabled:
+      rejectionInFlight ||
+      send.isPending ||
+      (!answering && !intent.trim()) ||
+      (Boolean(answering) &&
+        (!anchorActivity || anchorActivity.content_state === "withheld")) ||
+      (groundable && !account.recipientId),
+    error: anchorRead.failed
+      ? t("compose.threadFailed")
+      : draft.isError
+        ? problemMessageOf(draft.error, t)
+        : null,
   };
   // The account-started path's two additions to the mail's head — who this is
   // to, and which deal it is about — built here so the JSX below reads as a
@@ -2309,6 +2267,7 @@ export function ComposeModal({
         now={new Date()}
       />
       <ConfirmModal
+        initialFocusTo={() => document.getElementById(bodyId)}
         open={open}
         onClose={onClose}
         title={t(
@@ -2347,7 +2306,36 @@ export function ComposeModal({
             globalThis.requestAnimationFrame(focusFirstMissing);
             return;
           }
-          send.mutate(chosenGrounding);
+          const attachmentIds = files.length
+            ? files.map((file) => file.id)
+            : undefined;
+          send.mutate({
+            activityId: answering,
+            isChannelReply,
+            mail: {
+              subject,
+              body,
+              to,
+              // Preserve the editor's markup; omit only an empty alternative.
+              html_body: html.trim() === "" ? undefined : html,
+              cc: cc.length ? cc : undefined,
+              bcc: bcc.length ? bcc : undefined,
+              attachment_ids: attachmentIds,
+              draft_ref: draftRef ?? undefined,
+              communication_context: claimedContext,
+              ...scheduleFields(sendAt),
+            },
+            channelBody: {
+              body,
+              communication_context: claimedContext,
+              attachment_ids: attachmentIds,
+            },
+            links: composedLinks(
+              { entityType, entityId },
+              chosenGrounding,
+              projectFiling.projectId,
+            ),
+          });
         }}
         pending={send.isPending}
         error={sendError}
@@ -2386,9 +2374,7 @@ export function ComposeModal({
           )
         }
       >
-        {/* The conversation on the left, the reply on the right. Wrapped only
-          when there IS one: an account-started message has no thread, and a
-          lone form inside a two-column grid is a form with an empty half. */}
+        {/* The form uses the full width when no conversation is available. */}
         <div
           ref={fields}
           className={splitColumns ? "compose-split" : undefined}
@@ -2399,22 +2385,32 @@ export function ComposeModal({
               pending={recent.pending}
               failed={recent.failed}
               onRetry={recent.retry}
-              onChoose={setChosen}
+              onChoose={selectMessage}
             />
           )}
           {showConversation && (
             <ThreadPane
               messages={conversation.messages}
               pending={conversation.pending || anchorUnresolved}
-              failed={conversation.failed}
-              onRetry={conversation.retry}
+              failed={conversation.failed || anchorRead.failed}
+              onRetry={
+                anchorRead.failed ? anchorRead.retry : conversation.retry
+              }
               viewerUserId={viewerId}
               nameOf={nameOf}
               named
-              onLeave={chosen ? () => setChosen(undefined) : undefined}
+              onLeave={() => selectMessage(null)}
+              selectedId={answering}
+              onSelect={selectMessage}
+              disabled={send.isPending || rejectionInFlight}
             />
           )}
           <div className="compose-fields">
+            {draftKept && (
+              <p className="t-caption" role="status">
+                {t("compose.draftKept")}
+              </p>
+            )}
             {/* HOW this is going, above everything that depends on it. A reader
             who changes the dial changes what the rest of the head even is —
             a channel carries no subject and names no addressee — so the
@@ -2472,7 +2468,8 @@ export function ComposeModal({
                 // messages themselves. The sentence stays for the composer that
                 // has no pane — an account-started message, where what is being
                 // continued was decided here and shown nowhere.
-                answering={splitColumns ? null : answeringLine}
+                answering={answeringLine}
+                replying={Boolean(answering)}
                 flagged={flagged}
                 intent={intent}
                 onIntentChange={setIntent}
@@ -2521,6 +2518,7 @@ export function ComposeModal({
               hint={t("compose.bodyHint")}
               actions={
                 <AttachAction
+                  key={fileTarget}
                   entityType={entityType}
                   entityId={entityId}
                   chosen={files}
@@ -2558,6 +2556,7 @@ export function ComposeModal({
                 disabled={draftControl.pending || draftControl.disabled}
                 onRewrite={(instruction) =>
                   draft.mutate({
+                    ...draftAsk,
                     grounding: {
                       ...account.grounding,
                       projectId: projectFiling.projectId,

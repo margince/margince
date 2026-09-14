@@ -187,7 +187,7 @@ describe("a moment action that opens the composer", () => {
   // matcher: this file carries no jest-dom, and narrowing beats asserting.
   async function intentValue(): Promise<string> {
     const field = await screen.findByRole("textbox", {
-      name: "What should it be about?",
+      name: /What should this email achieve|Reply with/,
     });
     if (!(field instanceof HTMLInputElement)) {
       throw new Error("the composer's steering field is not a text input");
@@ -916,7 +916,9 @@ describe("ContactPageV2 — the addressed composer", () => {
     // The INTENT is what makes this different from the generic "Write an
     // email": the draft opens knowing what it is for. It is the field's VALUE
     // rather than text on the page — the composer hands it to a model.
-    const intent = await screen.findByLabelText(en["compose.intentLabel"]);
+    const intent = await screen.findByLabelText(
+      /What should this email achieve|Reply with/,
+    );
     expect((intent as HTMLInputElement).value).toBe(
       en["contact.composer.intentReply"],
     );
@@ -929,7 +931,9 @@ describe("ContactPageV2 — the addressed composer", () => {
     mount("overview");
 
     await screen.findByRole("heading", { name: view.contact.full_name });
-    expect(screen.queryByLabelText(en["compose.intentLabel"])).toBeNull();
+    expect(
+      screen.queryByLabelText(/What should this email achieve|Reply with/),
+    ).toBeNull();
   });
 
   // Derived from the address rather than seeded from it — the same reason the
@@ -938,13 +942,15 @@ describe("ContactPageV2 — the addressed composer", () => {
   it("closes when the address stops asking for it", async () => {
     window.location.hash = "#/contacts/p-1?compose=reply";
     mount("overview");
-    await screen.findByLabelText(en["compose.intentLabel"]);
+    await screen.findByLabelText(/What should this email achieve|Reply with/);
 
     window.location.hash = "#/contacts/p-1";
     window.dispatchEvent(new HashChangeEvent("hashchange"));
 
     await waitFor(() =>
-      expect(screen.queryByLabelText(en["compose.intentLabel"])).toBeNull(),
+      expect(
+        screen.queryByLabelText(/What should this email achieve|Reply with/),
+      ).toBeNull(),
     );
   });
 });

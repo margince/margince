@@ -113,6 +113,13 @@ function composeStory(routes: RouteMap) {
       // for.
       "GET /me": meRoute({}),
       "GET /consent-purposes": () => jsonResponse(PURPOSES),
+      "GET /activities/act-1": () =>
+        jsonResponse({
+          id: "act-1",
+          kind: "email",
+          subject: "Q3 numbers",
+          occurred_at: "2026-09-01T09:00:00Z",
+        }),
       ...routes,
     });
     return (
@@ -166,6 +173,8 @@ async function fillAndSend() {
   await composerOnScreen();
   await userEvent.type(screen.getByLabelText("To"), "buyer@acme.test");
   await userEvent.tab();
+  await screen.findByDisplayValue("Re: Q3 numbers");
+  await userEvent.clear(screen.getByLabelText("Subject"));
   await userEvent.type(screen.getByLabelText("Subject"), "Following up");
   await userEvent.type(
     screen.getByRole("textbox", { name: "Body" }),
@@ -213,9 +222,11 @@ export const Drafted: Story = {
   }),
   play: async () => {
     await composerOnScreen();
+    await screen.findByDisplayValue("Re: Q3 numbers");
     await userEvent.click(
-      screen.getByRole("button", { name: "Draft with AI" }),
+      screen.getByRole("button", { name: "Draft reply with AI" }),
     );
+    await screen.findByText(DRAFT.body);
   },
 };
 

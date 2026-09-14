@@ -99,7 +99,7 @@ it("offers each conversation and the way back as design-system buttons", async (
   await user.click(row);
   expect(choose).toHaveBeenCalledWith("a1");
 
-  const back = screen.getByRole("button", { name: "Choose another" });
+  const back = screen.getByRole("button", { name: "New email" });
   expect(back.classList.contains("btn")).toBe(true);
   await user.click(back);
   expect(leave).toHaveBeenCalledTimes(1);

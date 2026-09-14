@@ -128,11 +128,17 @@ const READY: PendingAction = {
 function Offer({
   draft,
   initialIntent = "",
-}: Readonly<{ draft: PendingAction; initialIntent?: string }>) {
+  replying = false,
+}: Readonly<{
+  draft: PendingAction;
+  initialIntent?: string;
+  replying?: boolean;
+}>) {
   const [intent, setIntent] = useState(initialIntent);
   return (
     <StoryProviders>
       <DraftOffer
+        replying={replying}
         intent={intent}
         onIntentChange={setIntent}
         draft={draft}
@@ -228,4 +234,13 @@ export const Reasons: Story = {
       <DraftReasons reasons={REASONS} onOpenRecord={openCited} />
     </StoryProviders>
   ),
+};
+
+export const ReplyOffer: Story = {
+  render: () => (
+    <Offer draft={READY} replying initialIntent="Confirm the delivery window" />
+  ),
+};
+export const NewEmailNeedsPurpose: Story = {
+  render: () => <Offer draft={{ ...READY, disabled: true }} />,
 };

@@ -247,6 +247,7 @@ describe("what a sent message files under", () => {
     });
     render(
       <ComposeModal
+        intent="Discuss the cutover"
         entityType="company"
         entityId="company-1"
         contactId="per-1"
@@ -258,7 +259,7 @@ describe("what a sent message files under", () => {
     await screen.findByLabelText("Project");
     await pickBy("Project", "ERP-27 · ERP rollout");
     await userEvent.click(
-      screen.getByRole("button", { name: "Draft with AI" }),
+      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
     );
 
     await waitFor(() =>
@@ -270,6 +271,7 @@ describe("what a sent message files under", () => {
       (r) => r.key === "POST /companies/company-1/draft-email",
     );
     expect(request?.body).toEqual({
+      intent: "Discuss the cutover",
       contact_id: "per-1",
       project_id: "proj-1",
     });

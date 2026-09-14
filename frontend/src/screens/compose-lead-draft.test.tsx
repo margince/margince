@@ -119,6 +119,7 @@ describe("drafting to a lead", () => {
     });
     render(
       <ComposeModal
+        intent="Follow up on our discussion"
         entityType="lead"
         entityId="l-1"
         recordAddress="dung.ly@newsky.example"
@@ -128,7 +129,7 @@ describe("drafting to a lead", () => {
     );
 
     await userEvent.click(
-      screen.getByRole("button", { name: "Draft with AI" }),
+      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
     );
 
     expect(
@@ -158,11 +159,11 @@ describe("drafting to a lead", () => {
     );
 
     await userEvent.type(
-      screen.getByPlaceholderText(/Steer the draft/),
+      screen.getByPlaceholderText(/What should this email achieve|Reply with/),
       "shorter",
     );
     await userEvent.click(
-      screen.getByRole("button", { name: "Draft with AI" }),
+      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
     );
     await screen.findByDisplayValue("Following up on your pricing question");
 
@@ -178,6 +179,7 @@ describe("drafting to a lead", () => {
     });
     render(
       <ComposeModal
+        intent="Follow up on our discussion"
         entityType="lead"
         entityId="l-1"
         recordAddress="dung.ly@newsky.example"
@@ -187,7 +189,7 @@ describe("drafting to a lead", () => {
     );
 
     await userEvent.click(
-      screen.getByRole("button", { name: "Draft with AI" }),
+      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
     );
 
     expect(
@@ -208,6 +210,7 @@ describe("drafting to a lead", () => {
     });
     render(
       <ComposeModal
+        intent="Follow up on our discussion"
         entityType="lead"
         entityId="l-1"
         recordAddress="dung.ly@newsky.example"
@@ -217,7 +220,7 @@ describe("drafting to a lead", () => {
     );
 
     await userEvent.click(
-      screen.getByRole("button", { name: "Draft with AI" }),
+      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
     );
 
     await waitFor(() =>

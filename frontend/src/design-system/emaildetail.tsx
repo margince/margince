@@ -9,10 +9,10 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ENTITY } from "../app/entity";
 import { routeHash } from "../app/router";
-import { splitEmailBody } from "../format/emailtext";
 import { formatBytes, formatNumber } from "../format/format";
 import { translatePlural, useLocale, useT } from "../i18n";
 import { Button, Modal } from "./atoms";
+import { EmailText } from "./emailtext";
 import { FileChip } from "./filechip";
 import { SurfaceState } from "./surfacestate";
 import "./emaildetail.css";
@@ -259,7 +259,6 @@ function EmailBody({
       </SurfaceState>
     );
   }
-  const parts = splitEmailBody(presentation.body ?? "");
   return (
     <div className="emaildetail__body">
       <Parties
@@ -267,27 +266,7 @@ function EmailBody({
         formatWhen={formatWhen}
         renderRecords={renderRecords}
       />
-      <p className="emaildetail__main">{parts.main}</p>
-      {/* A SIGN-OFF is the sender still speaking, and it is two lines. It is
-          shown, quietly, under the message it belongs to.
-
-          Folding it away was the defect: the tail was one field for two
-          different things, so a message ending "Viele Grüße / Bảo" and no
-          quoted reply at all put the sender's own name behind a control
-          promising history that was not there. A reader pressed nothing,
-          because the label said the thing they did not want. */}
-      {parts.tail === "signature" && (
-        <p className="emaildetail__signoff">{parts.trimmed}</p>
-      )}
-      {/* An older message under this one. Kept and folded rather than dropped:
-          a splitter that guesses wrong must stay one press from being wrong in
-          public. */}
-      {parts.tail === "quote" && (
-        <details className="emaildetail__quoted">
-          <summary>{t("email.detail.showQuoted")}</summary>
-          <p>{parts.trimmed}</p>
-        </details>
-      )}
+      <EmailText body={presentation.body ?? ""} />
       <Attachments files={presentation.attachments} />
     </div>
   );

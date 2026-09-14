@@ -347,3 +347,14 @@ export const RecordDrawerHeld: StoryObj = {
     );
   },
 };
+
+export const ReplyTarget: StoryObj = {
+  render: () => (
+    <EmailEntry
+      summary={BASE}
+      timestamp="1 Sep 09:12"
+      onSelect={() => {}}
+      selected
+    />
+  ),
+};
