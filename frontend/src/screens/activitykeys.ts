@@ -60,11 +60,33 @@ const DERIVED_FROM_TIMELINE: Partial<
 
 const DEAL_STATUS_KEY = (id: string): QueryKey => ["deal-status", id];
 
+// A deal's outcome reviews hang off its CLOSING rather than off the deal, and
+// the panel reads them AGAINST the deal record: each review is captioned as
+// this closing's or an earlier one by comparing its closing_occurrence_id with
+// the deal's. Two reads answering one comparison have to move together, which
+// is why this key appears twice below — in dealRecordKeys, so a write that
+// moves the deal moves them both, and in isRecordRead, so the minute-long
+// cadence does. Left out of either, the deal advances to a closing somebody
+// else has already reviewed and the panel goes on saying nobody has.
+//
+// Exported because the reader spells its query key with it too
+// (outcomereview.queries.ts): one helper, so the writer cannot invalidate a key
+// the reader does not read under.
+export const dealOutcomeReviewsKey = (dealId: string): QueryKey => [
+  "deals",
+  dealId,
+  "outcome-reviews",
+];
+
 // Which cached reads a write to the DEAL RECORD itself invalidates — a stage
 // advance, an amount, a close date. Spelled once here so a new writer picks up
 // the derived reads by using the helper rather than by remembering them.
 export function dealRecordKeys(dealId: string): QueryKey[] {
-  return [["deal", dealId], ...derivedRecordKeys("deal", dealId)];
+  return [
+    ["deal", dealId],
+    dealOutcomeReviewsKey(dealId),
+    ...derivedRecordKeys("deal", dealId),
+  ];
 }
 
 // The reads written FROM a record, by the key its own page reads it under.
@@ -207,8 +229,9 @@ const DEAL_RECORD_KEY = (id: string): QueryKey => ["deal", id];
  * is served from cache the way it always was.
  *
  * Composite records derive their shapes from TIMELINE_SEED_KEYS. The deal
- * adds its field read and its facts-only status read; the latter cannot ask
- * a model. Matching exact shapes keeps unrelated cached reads out.
+ * adds its field read, its facts-only status read — the latter cannot ask a
+ * model — and its outcome reviews. Matching exact shapes keeps unrelated
+ * cached reads out.
  */
 export function isRecordRead(key: QueryKey): boolean {
   const shapes = Object.values(TIMELINE_SEED_KEYS).map(
@@ -216,6 +239,10 @@ export function isRecordRead(key: QueryKey): boolean {
   );
   shapes.push(DEAL_RECORD_KEY(SHAPE_ID) as unknown[]);
   shapes.push(DEAL_STATUS_KEY(SHAPE_ID) as unknown[]);
+  // Live because it is READ AGAINST a live one: the deal record re-reads itself
+  // every minute, and a reviews list that did not would leave the two halves of
+  // one comparison on different clocks.
+  shapes.push(dealOutcomeReviewsKey(SHAPE_ID) as unknown[]);
   return shapes.some((shape) => matchesShape(key as unknown[], shape, false));
 }
 

@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { dealOutcomeReviewsKey } from "./activitykeys";
 import { throwProblem } from "./common";
 
 // The outcome review: what a closed deal recorded about how it went.
@@ -17,17 +18,13 @@ export type ReviewQuestion = components["schemas"]["ReviewQuestion"];
 
 export const REVIEW_TEMPLATES_KEY = ["activity-review-templates"] as const;
 
-export function outcomeReviewsKey(dealId: string) {
-  return ["deals", dealId, "outcome-reviews"] as const;
-}
-
 export function useOutcomeReviews(dealId: string, enabled: boolean) {
   return useQuery({
     // `enabled` rather than a conditional call: an OPEN deal has no closing to
     // review, so asking would spend a request to be told nothing. The hook
     // still runs, which is what keeps the rules-of-hooks contract.
     enabled,
-    queryKey: outcomeReviewsKey(dealId),
+    queryKey: dealOutcomeReviewsKey(dealId),
     queryFn: async () => {
       const { data, error, response } = await api.GET(
         "/deals/{id}/outcome-reviews",
@@ -90,7 +87,7 @@ export function useCreateOutcomeReview(dealId: string) {
     // The review is written as a note on the deal's timeline, so the timeline
     // and the deal itself are as stale as this list was.
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: outcomeReviewsKey(dealId) });
+      void qc.invalidateQueries({ queryKey: dealOutcomeReviewsKey(dealId) });
       void qc.invalidateQueries({ queryKey: ["activities"] });
     },
   });
