@@ -46,24 +46,24 @@ export function RepeatableRowsField({
   // through a polite live region rather than left silent.
   const [moveNotice, setMoveNotice] = useState("");
 
-  // After a reorder, focus follows the row that MOVED rather than staying on the
-  // fixed DOM position the index key reuses — otherwise the next press acts on
-  // whatever row slid into that slot. When the moved row reaches an end its own
-  // direction button disables, so focus lands on the opposite one rather than
-  // falling to <body>.
+  // Every press that changes the row list decides where focus goes next, or
+  // it falls to <body>: a reorder must follow the row that MOVED rather than
+  // the fixed DOM position the index key reuses (otherwise the next press acts
+  // on whatever row slid into that slot), removing the last row unmounts the
+  // very button that was pressed, and Add would strand focus behind the row it
+  // created. Each handler leaves a finder for the element that should hold
+  // focus once the re-render has produced it.
   const containerRef = useRef<HTMLDivElement>(null);
-  const pendingFocus = useRef<{ pos: number; dir: "up" | "down" } | null>(null);
+  const pendingFocus = useRef<
+    ((container: HTMLElement) => HTMLElement | null) | null
+  >(null);
   useEffect(() => {
-    const req = pendingFocus.current;
-    if (!req) {
+    const findTarget = pendingFocus.current;
+    if (!findTarget || !containerRef.current) {
       return;
     }
     pendingFocus.current = null;
-    containerRef.current
-      ?.querySelector<HTMLButtonElement>(
-        `[data-move="${req.dir}"][data-row="${req.pos}"]`,
-      )
-      ?.focus();
+    findTarget(containerRef.current)?.focus();
   });
 
   function updateRow(index: number, key: string, value: string) {
@@ -82,18 +82,42 @@ export function RepeatableRowsField({
     if (target < 0 || target >= rows.length) {
       return;
     }
+    // When the moved row reaches an end its own direction button disables, so
+    // focus lands on the opposite one rather than falling to <body>.
     const dirEnabledAtTarget =
       direction === "up" ? target > 0 : target < rows.length - 1;
-    pendingFocus.current = {
-      pos: target,
-      dir: dirEnabledAtTarget ? direction : direction === "up" ? "down" : "up",
-    };
+    const dir = dirEnabledAtTarget
+      ? direction
+      : direction === "up"
+        ? "down"
+        : "up";
+    pendingFocus.current = (container) =>
+      container.querySelector(`[data-move="${dir}"][data-row="${target}"]`);
     setRows(withRowMoved(rows, index, direction));
     setMoveNotice(t("field.rowMoved", { n: ordinalNumber(target + 1) }));
   }
 
   function removeRow(index: number) {
+    // The remove control now at this position — the row that slid in, or the
+    // new last row when the removed one was last — or Add once no row is left.
+    const survivor = Math.min(index, rows.length - 2);
+    pendingFocus.current = (container) =>
+      container.querySelector(
+        survivor < 0 ? "[data-add-row]" : `[data-remove="${survivor}"]`,
+      );
     setRows(rows.filter((_, rowIndex) => rowIndex !== index));
+  }
+
+  function addRow() {
+    // Focus follows the row the press created rather than staying on Add, so
+    // a keyboard user types into the new row without tabbing backwards.
+    const created = rows.length;
+    pendingFocus.current = (container) =>
+      container
+        .querySelectorAll(":scope > .card")
+        .item(created)
+        ?.querySelector("input, textarea, select, button") ?? null;
+    setRows([...rows, typeKey ? { [typeKey]: typeDefault } : {}]);
   }
 
   return (
@@ -170,9 +194,13 @@ export function RepeatableRowsField({
           >
             <ChevronDown aria-hidden size={16} />
           </Button>
+          {/* field.removeRow and field.removeRowLabel are one control's two
+              names — the short visible text and the row-numbered accessible
+              name — and an edit to either wording has to carry the other. */}
           <Button
             small
             type="button"
+            data-remove={index}
             aria-label={t("field.removeRowLabel", {
               n: ordinalNumber(index + 1),
             })}
@@ -182,13 +210,7 @@ export function RepeatableRowsField({
           </Button>
         </Card>
       ))}
-      <Button
-        small
-        type="button"
-        onClick={() =>
-          setRows([...rows, typeKey ? { [typeKey]: typeDefault } : {}])
-        }
-      >
+      <Button small type="button" data-add-row onClick={addRow}>
         {field.addLabel ? t(field.addLabel) : fieldLabel(field, t)}
       </Button>
       <p className="sr-only" role="status" aria-live="polite">

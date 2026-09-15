@@ -179,6 +179,51 @@ describe("repeatable-row fields", () => {
     );
   });
 
+  it("keeps focus at the removed row's position", async () => {
+    const user = userEvent.setup();
+    render(<Harness fields={[emailsField]} onSubmit={vi.fn()} />);
+    for (let i = 0; i < 3; i++) {
+      await user.click(screen.getByText("Add email"));
+    }
+    // The pressed button leaves the DOM with its row, which would drop focus
+    // to <body>; it lands on the remove control of the row that slides into
+    // the vacated position instead.
+    await user.click(screen.getByRole("button", { name: "Remove row 1" }));
+    expect(screen.getAllByLabelText("Email *")).toHaveLength(2);
+    expect(document.activeElement).toBe(
+      screen.getByRole("button", { name: "Remove row 1" }),
+    );
+  });
+
+  it("moves focus to the new last row when the last row is removed", async () => {
+    const user = userEvent.setup();
+    render(<Harness fields={[emailsField]} onSubmit={vi.fn()} />);
+    await user.click(screen.getByText("Add email"));
+    await user.click(screen.getByText("Add email"));
+    await user.click(screen.getByRole("button", { name: "Remove row 2" }));
+    expect(document.activeElement).toBe(
+      screen.getByRole("button", { name: "Remove row 1" }),
+    );
+  });
+
+  it("returns focus to Add when the only row is removed", async () => {
+    const user = userEvent.setup();
+    render(<Harness fields={[emailsField]} onSubmit={vi.fn()} />);
+    await user.click(screen.getByText("Add email"));
+    await user.click(screen.getByRole("button", { name: "Remove row 1" }));
+    expect(document.activeElement).toBe(screen.getByText("Add email"));
+  });
+
+  it("moves focus into the first field of a freshly added row", async () => {
+    const user = userEvent.setup();
+    render(<Harness fields={[emailsField]} onSubmit={vi.fn()} />);
+    await user.click(screen.getByText("Add email"));
+    await user.click(screen.getByText("Add email"));
+    // Focus follows the row the press created rather than staying on Add, so
+    // a keyboard user types into the new row without tabbing backwards.
+    expect(document.activeElement).toBe(screen.getAllByLabelText("Email *")[1]);
+  });
+
   it("collects the rows for submission", async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn();
