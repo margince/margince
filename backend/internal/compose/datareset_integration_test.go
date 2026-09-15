@@ -21,11 +21,9 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
-	"github.com/margince/margince/backend/internal/platform/overlaybudget/budgettest"
 	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // TestSweepWorkspaceDataClearsDomainKeepsIdentity is the reset engine's core
@@ -200,52 +198,6 @@ func TestResetRunRestoresBootstrapState(t *testing.T) {
 	}
 }
 
-// resetBudgetIncumbent is an arbitrary configured incumbent: its identity does
-// not matter to the purge, only that a metered call leaves counters under the
-// workspace's ovb:<ws>:… prefix for the reset to find.
-const resetBudgetIncumbent = "acme"
-
-// TestResetDataAuditEvidenceCarriesTheSameCacheKeyTallyAsTheResponse:
-// cache_keys_deleted is one number with one meaning. Every Redis surface a reset
-// purges — the bus's dedupe marks and the overlay budget's counters — is cleared
-// before the sweep's transaction opens, so the audit row written inside it, the
-// 200 body and the completion log line all report the same total. A purge that
-// drifted after the commit would leave the PERMANENT record under-reporting
-// while the response over-reported, under one key name.
-func TestResetDataAuditEvidenceCarriesTheSameCacheKeyTallyAsTheResponse(t *testing.T) {
-	e := integration.Setup(t)
-	ctx := e.Admin()
-
-	meter := budgettest.Meter(t, budgettest.SmallConfig(resetBudgetIncumbent))
-	// Spend through the meter's own public API rather than hand-writing a key,
-	// so the counters the reset purges are exactly what real traffic leaves.
-	if err := meter.ConsumeSearch(principal.WithWorkspaceID(context.Background(), e.WS), resetBudgetIncumbent, 1); err != nil {
-		t.Fatalf("seeding a budget counter: %v", err)
-	}
-
-	h := dataResetHandlers{
-		pool:             e.Pool,
-		seeds:            deployconfig.Seeds{},
-		dataResetAllowed: true,
-		budget:           meter,
-		log:              slog.New(slog.NewTextHandler(io.Discard, nil)),
-	}
-
-	counts, err := h.run(ctx, "Authz")
-	if err != nil {
-		t.Fatalf("run: %v", err)
-	}
-	if counts.CacheKeys == 0 {
-		t.Fatal("cache_keys_deleted = 0 although a budget counter was spent; the assertion below would hold vacuously")
-	}
-	recorded := e.WsCount(t,
-		`SELECT (evidence->>'cache_keys_deleted')::int FROM audit_log WHERE action = 'reset_data'`)
-	if recorded != counts.CacheKeys {
-		t.Errorf("audit evidence cache_keys_deleted = %d, response reports %d — the durable record and the reply disagree about what the same key name counts",
-			recorded, counts.CacheKeys)
-	}
-}
-
 // TestDropResetCustomFieldColumns proves the DDL finalize in isolation — a
 // fake cf_* column added directly via the owner pool (standing in for a
 // customfields definition that outlived a reset) is dropped, without
@@ -390,74 +342,6 @@ func TestSweepTargetsCarryNoDeleteBlockingTrigger(t *testing.T) {
 	}
 }
 
-// TestResetReturnsAnOverlayWorkspaceToNativeMode: a reset restores first-boot
-// state, and a first-boot installation is native.
-//
-// The workspace row is in the preserved set — it carries the company, so
-// the sweep must not delete it — but the overlay-mode columns living on that
-// row are configuration a connect flow wrote, not identity. Everything overlay
-// mode depends on IS swept: the incumbent connection, the mirror, the budget
-// counters. Leaving the mode behind therefore strands the installation claiming
-// to read from an incumbent it no longer has a connection to, with every read
-// dispatching to a mirror that has nothing in it.
-//
-// The two columns move together because the schema requires it:
-// CHECK ((sor_mode = 'overlay') = (incumbent IS NOT NULL)).
-func TestResetReturnsAnOverlayWorkspaceToNativeMode(t *testing.T) {
-	e := integration.Setup(t)
-	ctx := e.Admin()
-	e.WsExec(t, `UPDATE overlay_mode SET sor_mode = 'overlay', incumbent = 'hubspot'`)
-
-	h := dataResetHandlers{
-		pool:             e.Pool,
-		seeds:            deployconfig.Seeds{},
-		dataResetAllowed: true,
-		log:              slog.New(slog.NewTextHandler(io.Discard, nil)),
-	}
-	if _, err := h.run(ctx, "Authz"); err != nil {
-		t.Fatalf("run: %v", err)
-	}
-
-	var mode string
-	var incumbent *string
-	if err := e.Pool.QueryRow(ctx,
-		`SELECT sor_mode, incumbent FROM overlay_mode`).Scan(&mode, &incumbent); err != nil {
-		t.Fatalf("reading the workspace's mode back: %v", err)
-	}
-	if mode != "native" {
-		t.Errorf("sor_mode = %q, want native — the install still reads from an incumbent the reset disconnected it from", mode)
-	}
-	if incumbent != nil {
-		t.Errorf("incumbent = %q, want NULL", *incumbent)
-	}
-	if got := e.WsCount(t, `SELECT count(*) FROM audit_log
-		WHERE action = 'reset_data' AND evidence->>'sor_mode_reverted' = 'true'`); got != 1 {
-		t.Errorf("reset_data rows recording the mode revert = %d, want 1 — a flip this consequential belongs in the permanent record", got)
-	}
-}
-
-// TestResetLeavesANativeWorkspaceAlone: the flip is conditional, so a native
-// installation's reset claims no mode change in its evidence.
-func TestResetLeavesANativeWorkspaceAlone(t *testing.T) {
-	e := integration.Setup(t)
-	ctx := e.Admin()
-
-	h := dataResetHandlers{
-		pool:             e.Pool,
-		seeds:            deployconfig.Seeds{},
-		dataResetAllowed: true,
-		log:              slog.New(slog.NewTextHandler(io.Discard, nil)),
-	}
-	if _, err := h.run(ctx, "Authz"); err != nil {
-		t.Fatalf("run: %v", err)
-	}
-
-	if got := e.WsCount(t, `SELECT count(*) FROM audit_log
-		WHERE action = 'reset_data' AND evidence->>'sor_mode_reverted' = 'true'`); got != 0 {
-		t.Errorf("evidence claims a mode revert on an install that was already native (%d rows)", got)
-	}
-}
-
 // TestResetPurgesTheSealedCredentialsItsSweepOrphans: vault_secret carries no
 // workspace_id — the tenant lives inside the ref and inside the AES-256-GCM
 // AAD, deliberately, so it is operational infrastructure rather than a tenant
@@ -493,12 +377,12 @@ func TestResetPurgesTheSealedCredentialsItsSweepOrphans(t *testing.T) {
 	// collection could be written against one name and look correct. A test
 	// that exercises the spelling the code already knows about cannot fail on
 	// the spellings it does not.
-	mine := seal("an incumbent's oauth refresh token")
+	mine := seal("a capture connection's oauth refresh token")
 	extension := seal("an extension's api key")
 	signing := seal("a webhook's signing secret")
 
-	e.WsExec(t, `INSERT INTO incumbent_connection (id, incumbent, region, status, credential_ref)
-		VALUES ($1, 'hubspot', 'eu', 'active', $2)`, ids.NewV7(), mine)
+	e.WsExec(t, `INSERT INTO capture_connection (id, user_id, provider, status, credential_ref)
+		VALUES ($1, $2, 'gmail', 'connected', $3)`, ids.NewV7(), e.AdminUser, mine)
 	e.WsExec(t, `INSERT INTO extension_secret (id, extension_name, key, vault_ref)
 		VALUES ($1, 'openchannel', 'inbound', $2)`, ids.NewV7(), extension)
 	e.WsExec(t, `INSERT INTO webhook_subscription (id, owner_id, target_url, event_types, signing_secret_ref)
@@ -517,7 +401,7 @@ func TestResetPurgesTheSealedCredentialsItsSweepOrphans(t *testing.T) {
 	}
 
 	for _, c := range []struct{ what, ref string }{
-		{"the incumbent connection's credential_ref", mine},
+		{"the capture connection's credential_ref", mine},
 		{"the extension secret's vault_ref", extension},
 		{"the webhook subscription's signing_secret_ref", signing},
 	} {

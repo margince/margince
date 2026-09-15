@@ -78,7 +78,7 @@ export function DealStrip({
 }: Readonly<{
   deal: Deal;
   // The deal's offers, newest revision first. Undefined while the read is in
-  // flight or when overlay mode serves none.
+  // flight.
   offers?: readonly Offer[];
   coverage?: DealCoverage;
   // Withheld is not empty. A caller without the relationship grant is served

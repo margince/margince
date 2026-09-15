@@ -236,7 +236,7 @@ describe("Callout", () => {
     render(
       <Callout
         tone="success"
-        title="HubSpot is connected"
+        title="The mailbox is connected"
         dismiss={{ label: "Dismiss", onDismiss }}
       />,
     );
@@ -246,7 +246,7 @@ describe("Callout", () => {
 
   it("offers no dismiss control unless the caller handles it", () => {
     const { container } = render(
-      <Callout tone="success" title="HubSpot is connected" />,
+      <Callout tone="success" title="The mailbox is connected" />,
     );
     expect(container.querySelector(".callout-dismiss")).toBeNull();
     expect(screen.queryByRole("button")).toBeNull();

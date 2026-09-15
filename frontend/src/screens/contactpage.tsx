@@ -28,9 +28,8 @@ import { linkedinUrl } from "../format/weburl";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { BriefQueue } from "./brief.queue";
-import { provenanceOf, throwProblem, useSorMode, useViewerId } from "./common";
+import { provenanceOf, throwProblem, useViewerId } from "./common";
 import { ComposeModal } from "./compose";
-import { ContactAccess } from "./contactaccess";
 import { ContactActions } from "./contactactions";
 import { ContactDealsTab } from "./contactdeals";
 import { ContactResearchDrawer } from "./contactdrawers";
@@ -48,13 +47,12 @@ import { ContactResearchTab } from "./contactresearch";
 import { CONTACT_TABS, type ContactTab, contactTabRoute } from "./contacttab";
 import { ContactTimelineTab } from "./contacttabs";
 import { transportForActivity, useTransports } from "./contacttransports";
-
 import { currentEmployer } from "./employmentcurrency";
-
 import { rosterOwnerName, useRoster, useRosterPartial } from "./entityref";
 import { LogActivityAction } from "./logactivity";
 import { ContactMeetingBrief } from "./meetingbrief";
 import { useOpenEmail } from "./openemail";
+import { RecordAccess } from "./recordaccess";
 import {
   useMailboxConnected,
   useWriteTo,
@@ -376,9 +374,6 @@ export function ContactPageV2({
     setDrawer("composer");
   };
 
-  // Read before the loading returns: a hook below an early return renders a
-  // different hook count per state, which React rejects.
-  const overlay = useSorMode() === "overlay";
   // Every write affordance on this page that changes the RECORD answers one
   // question, asked once: an archived contact takes no changes, and one this
   // caller cannot write takes none from them. The rail's inline fields ask
@@ -466,7 +461,6 @@ export function ContactPageV2({
               <ContactActions
                 view={view.data}
                 contactId={id}
-                overlay={overlay}
                 onWrite={() => openComposer("")}
                 onResearch={() => setDrawer("research")}
                 onLogActivity={() => setDrawer("activity_log")}
@@ -827,7 +821,11 @@ function ContactMarks({
           <Badge tone={standing.tone}>{standing.words}</Badge>
         </StandingChip>
       )}
-      <ContactAccess key={view.contact.id} contact={view.contact} />
+      <RecordAccess
+        key={view.contact.id}
+        kind="contact"
+        record={view.contact}
+      />
     </IdentityLine>
   );
 }

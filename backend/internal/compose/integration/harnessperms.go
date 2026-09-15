@@ -195,6 +195,7 @@ var (
 			// read and updated, and an absent row is its registered default
 			// rather than a missing record. It gates which vendor the
 			// installation's text is sent to.
+			"ai_budget":  {Read: true, Update: true},
 			"ai_routing": {Read: true, Update: true},
 			// capture_settings mirrors the real admin seed: create + read +
 			// update (0210 added create — any seat may contribute a consumer

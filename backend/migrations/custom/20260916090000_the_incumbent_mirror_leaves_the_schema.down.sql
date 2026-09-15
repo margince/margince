@@ -1,0 +1,3 @@
+-- Irreversible by design: the mirror's rows were a cache of another system's
+-- records, and re-creating empty tables would restore the schema and none of
+-- the data. A rebuild starts from the baseline.

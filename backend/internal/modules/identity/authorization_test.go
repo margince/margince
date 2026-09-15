@@ -12,6 +12,7 @@ package identity
 // in each case — so these assert against the JSON the client actually receives.
 
 import (
+	"context"
 	"encoding/json"
 	"maps"
 	"net/http"
@@ -49,7 +50,7 @@ func TestMeResponseAuthorizationUsesTheContractSpelling(t *testing.T) {
 			Objects  map[string]map[string]bool `json:"objects"`
 		} `json:"authorization"`
 	}
-	raw, err := json.Marshal(NewHandlers(&Service{}).meResponse(id, crmcontracts.MeResponseSystemOfRecordModeNative))
+	raw, err := json.Marshal(NewHandlers(&Service{}).meResponse(context.Background(), id))
 	if err != nil {
 		t.Fatalf("marshalling /me: %v", err)
 	}
@@ -90,7 +91,7 @@ func TestMeResponseSeatTypeFailsClosed(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := NewHandlers(&Service{}).meResponse(Identity{SeatType: tt.seat}, crmcontracts.MeResponseSystemOfRecordModeNative)
+			got := NewHandlers(&Service{}).meResponse(context.Background(), Identity{SeatType: tt.seat})
 			if got.Authorization == nil {
 				t.Fatal("authorization must always be present on a human /me")
 			}

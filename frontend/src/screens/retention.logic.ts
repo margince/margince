@@ -35,6 +35,7 @@ export const RETENTION_SCOPES: readonly RetentionScope[] = [
   "deal/lost",
   "deal/won",
   "ai_call_payload/content",
+  "raw_capture",
 ];
 
 // Ordered by how much they take away — archive keeps the record, erase does
@@ -56,6 +57,7 @@ export const SCOPE_LABEL_KEYS: Record<RetentionScope, MessageKey> = {
   "deal/lost": "retention.scopeDealLost",
   "deal/won": "retention.scopeDealWon",
   "ai_call_payload/content": "retention.scopeAiCallPayloadContent",
+  raw_capture: "retention.scopeRawCapture",
 };
 
 export function scopeLabelKey(scope: RetentionScope): MessageKey {

@@ -14,6 +14,14 @@
 // sensible default, and picking one for them would be the product choosing
 // which of a customer's two records is the real one. Saying they are not the
 // same needs no such choice and settles the pair for everybody, for good.
+//
+// The asymmetry reaches the OFFER too, which is why the two verbs are guarded
+// apart. Two companies each running live projects cannot be combined by
+// anybody — nothing in the data says which body of work is which — and the
+// lane withholds `merge` on a pair like that however much authority the reader
+// holds. The dismissal is still theirs: a false positive is exactly what this
+// pair is, and clearing it changes neither record. Guarding both on `merge` is
+// what left such a pair on the page as a question nobody could answer here.
 
 import { Button, Card } from "../design-system/atoms";
 import { useToast } from "../design-system/toast";
@@ -30,17 +38,19 @@ import { type WorklistItem, worklistKey } from "./worklist.queries";
  * The pair, and the verbs that answer it.
  *
  * Drawn only where the server sent the payload. A row that arrives without it
- * is one whose reader may not see both sides, and the lane already withheld the
- * `merge` verb for exactly that reason — so there is nothing here to draw and
+ * is one whose reader may not see both sides, and the lane already withheld
+ * every verb for exactly that reason — so there is nothing here to draw and
  * no decision to offer.
  *
- * The verbs are drawn only where the server OFFERED them. Settling a pair
- * archives one record and rewrites the other, so it belongs to whoever could
- * change both — the owner, or a workspace-wide seat. A reader without that
- * authority still sees the pair, because knowing a duplicate is waiting is not
- * the same as being able to settle it, and is told who can. Rendering the
- * buttons for everybody is what produced a control that refused every press a
- * rep made on a colleague's records, then advised trying again.
+ * Each verb is drawn only where the server OFFERED that verb, and they are
+ * asked for separately. Deciding a pair either way archives or rewrites
+ * records, so both belong to whoever could change both — the owner, or a
+ * workspace-wide seat — and the merge needs one thing more, which is a pair
+ * the merge would actually take. A reader without the authority still sees the
+ * pair, because knowing a duplicate is waiting is not the same as being able
+ * to settle it, and is told who can. Rendering the buttons for everybody is
+ * what produced a control that refused every press a rep made on a colleague's
+ * records, then advised trying again.
  */
 // keepLabel is what the Keep button is CALLED, which is not always what it says.
 //
@@ -73,7 +83,8 @@ export function PairDecision({ item }: Readonly<{ item: WorklistItem }>) {
   if (!pair) {
     return null;
   }
-  const mayDecide = item.actions?.includes("merge") ?? false;
+  const mayMerge = item.actions?.includes("merge") ?? false;
+  const mayDismiss = item.actions?.includes("dismiss") ?? false;
   const answer = (
     disposition: "merge" | "not_a_duplicate",
     winnerId?: string,
@@ -115,8 +126,19 @@ export function PairDecision({ item }: Readonly<{ item: WorklistItem }>) {
   return (
     <div className="worklist-pair-review">
       {/* THE QUESTION, as the block's lead line. What follows it is the two
-          records it is about and the one answer that is about neither. */}
-      <p className="t-body worklist-pair-ask">{t("worklist.pair.ask")}</p>
+          records it is about and the one answer that is about neither.
+
+          Which question it is depends on what can be done. "Which record
+          should survive?" over a card with no Keep button asks for an answer
+          the page will not take; where the merge is off the table, what is
+          actually being asked is whether these two are the same at all. */}
+      <p className="t-body worklist-pair-ask">
+        {t(
+          mayDismiss && !mayMerge
+            ? "worklist.pair.mergeBlocked"
+            : "worklist.pair.ask",
+        )}
+      </p>
       <ul className="worklist-pair-cards">
         {[pair.left, pair.right].map((side) => (
           // ONE CANDIDATE, on the catalog's recessed card. `Card inset` rather
@@ -151,7 +173,7 @@ export function PairDecision({ item }: Readonly<{ item: WorklistItem }>) {
                 joins the accessible name. The visible text is unchanged and
                 is still its prefix, so the spoken name and the seen one do
                 not come apart. */}
-            {mayDecide && (
+            {mayMerge && (
               // At the card's own FOOT, on its trailing edge: the verb belongs
               // to the record above it, and `.card-actions` is the catalog's
               // trailing row for exactly that — the air above the verbs rides
@@ -171,11 +193,15 @@ export function PairDecision({ item }: Readonly<{ item: WorklistItem }>) {
           </Card>
         ))}
       </ul>
-      {mayDecide ? (
+      {mayDismiss && (
         // ONE LINE UNDER BOTH CARDS, on the trailing edge every other line of
         // verbs in the queue stands on, and nothing on it is filled: the two
         // Keep verbs are the answers to the question, and a fill here would
         // offer "not the same" as the expected one of three.
+        //
+        // Where the merge is withheld this is the only verb left, and it is
+        // still ghost: the pair being unmergeable is not a reason to press
+        // harder for the answer that says it was never a pair.
         <div className="worklist-pair-actions">
           <Button
             small
@@ -186,7 +212,8 @@ export function PairDecision({ item }: Readonly<{ item: WorklistItem }>) {
             {t("worklist.pair.notDuplicate")}
           </Button>
         </div>
-      ) : (
+      )}
+      {!mayMerge && !mayDismiss && (
         // Said in words rather than shown as disabled buttons. A greyed-out
         // control asks the reader to work out why it is grey; a sentence tells
         // them the pair is real, that they cannot settle it, and who can.

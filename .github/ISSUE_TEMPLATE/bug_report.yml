@@ -62,7 +62,6 @@ body:
         - identity
         - integrations
         - migration
-        - overlay
         - contacts
         - privacy
         - search

@@ -229,10 +229,7 @@ func ownedDeal(id string, owner ids.UUID) crmcontracts.WorklistItem {
 // own overdue task unreachable behind them — the row they most needed.
 func TestTheReadersOwnScopeReachesTheTaskQuery(t *testing.T) {
 	tasks := &stubTasks{}
-	svc := NewService(
-		stubApprovals{}, stubDuplicates{}, tasks, stubReceipts{}, stubBriefing{},
-		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock,
-	)
+	svc := NewService(stubApprovals{}, stubDuplicates{}, tasks, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
 
 	if _, err := svc.forReader().Assemble(pageReader()); err != nil {
 		t.Fatalf("assembling the day: %v", err)
@@ -247,10 +244,7 @@ func TestTheReadersOwnScopeReachesTheTaskQuery(t *testing.T) {
 // with its own promise, and this change must not narrow it.
 func TestTheLaneFeedStillReadsEveryVisibleTask(t *testing.T) {
 	tasks := &stubTasks{}
-	svc := NewService(
-		stubApprovals{}, stubDuplicates{}, tasks, stubReceipts{}, stubBriefing{},
-		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock,
-	)
+	svc := NewService(stubApprovals{}, stubDuplicates{}, tasks, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
 
 	if _, err := svc.Assemble(pageReader()); err != nil {
 		t.Fatalf("assembling the day: %v", err)

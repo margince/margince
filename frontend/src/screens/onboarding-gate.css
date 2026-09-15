@@ -65,7 +65,10 @@
   border: 1px solid var(--borderControl);
   border-radius: var(--r-md);
   background: var(--bgElevated);
-  box-shadow: var(--shadow-card);
+  /* A field, so it takes the floor and not the top side — the same depth the
+     design system's own fields wear, because this one is a hand-rolled shell
+     and a reader cannot tell it apart from theirs. */
+  box-shadow: var(--shadow-well);
   transition:
     border-color 0.15s,
     box-shadow 0.15s;

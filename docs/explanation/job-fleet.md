@@ -276,8 +276,8 @@ the one dispatcher a hand-maintained comment forgot to list.
 one `InsertMany`. A per-workspace loop of single inserts that fails partway leaves some children
 queued and then fails the dispatcher; by the time it retries, those children may already have
 `completed` — and `activeSweepStates` deliberately excludes `completed`, so `ByArgs` uniqueness does
-**not** suppress them. The retry would silently re-run those workspaces: a second overlay reconcile
-spending incumbent API quota, a second AI-backed capture pass spending model budget. What this does
+**not** suppress them. The retry would silently re-run those workspaces: a second AI-backed capture
+pass spending model budget. What this does
 not buy is exactly-once — River is at-least-once, and the bound on that is the workspace passes
 themselves, each re-reading its own backlog.
 
@@ -333,10 +333,10 @@ func (f *fault) Error() string { return f.sentence }   // fixed
 func (f *fault) Unwrap() error { return f.cause }      // still classifies
 ```
 
-The vocabulary maps the shared sentinel registry (`internal/shared/apperrors`) to fifteen sentences,
+The vocabulary maps the shared sentinel registry (`internal/shared/apperrors`) to sixteen sentences,
 each saying what went wrong **and** what it means for the job — an operator reading a failure list
 needs to know whether to retry, wait, or fix something (`"the record this job names no longer
-exists"`, `"the incumbent CRM's API budget is spent; the poller will catch up"`). An unclassified
+exists"`, `"the provider refused the credential; reconnect the account"`). An unclassified
 cause logs at ERROR with the caller's context and becomes one fixed fallback sentence that says where
 the diagnosis went.
 

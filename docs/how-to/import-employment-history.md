@@ -36,5 +36,3 @@ Keep the batch reports as the operational record. They identify linked, needs-ma
 Restarting the worker resumes unprocessed retained claims. Malformed purchases become visible review items without blocking valid roles. Transient failures retry with exponential delays, up to six attempts; then processing stops and the contact shows an administrator-review warning. Correct the evidence or configuration and apply that contact explicitly to retry. Correct unresolved identities in the contact UI and retry. Do not repair an import by deleting a shared company.
 
 For application rollback, stop employment processing first and retain the populated schema. Retract only untouched imported contributions through the provider-data controls if needed. The down migration refuses undated historical/unknown rows that would acquire a different meaning under the old reader. Do not force that rollback by deleting customer history.
-
-In overlay mode, employer resolution follows the native quick-capture policy: it can create local companies and links. It does not promise HubSpot write-back.

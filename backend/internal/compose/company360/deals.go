@@ -17,6 +17,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -47,8 +48,17 @@ func dealsSection(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now t
 	if err != nil {
 		return crmcontracts.Company360Deals{}, err
 	}
+	// The band prints each open deal's figure, so the mask reaches the column
+	// here as it does the deal list. A masked deal keeps its name, its stage
+	// and its place in the band and loses the number — withholding the row
+	// would say the account has no business rather than that the size is not
+	// this reader's to see.
+	amountSQL, err := auth.MaskedColumnSQL(ctx, "deal", "amount_minor", "d", "amount_minor", arg)
+	if err != nil {
+		return crmcontracts.Company360Deals{}, err
+	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT d.id, d.name, d.status, d.stage_id, s.name, d.amount_minor, d.currency,
+		SELECT d.id, d.name, d.status, d.stage_id, s.name, %[3]s, d.currency,
 		       -- Read as text, then parsed below. pgx decodes a bare DATE into
 		       -- its own type and refuses the contract's Date wrapper, so the
 		       -- scan fails at RUNTIME on any deal that names a close date —
@@ -57,9 +67,9 @@ func dealsSection(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now t
 		       d.created_at, d.last_activity_at, d.wait_until
 		FROM deal d
 		LEFT JOIN stage s ON s.id = d.stage_id
-		%s
+		%[1]s
 		ORDER BY d.created_at DESC, d.id DESC
-		LIMIT %d`, openDealsWhere(companyPos, dealScope), sectionLimit+1), args...)
+		LIMIT %[2]d`, openDealsWhere(companyPos, dealScope), sectionLimit+1, amountSQL), args...)
 	if err != nil {
 		return crmcontracts.Company360Deals{}, err
 	}
@@ -127,14 +137,23 @@ func closedTotals(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID,
 	if err != nil {
 		return crmcontracts.Money{}, 0, err
 	}
+	// The won TOTAL is a sum over the converted amount, so a mask that
+	// withholds the figure on a row must withhold it here too: a total is the
+	// one place a withheld number reappears whole. A masked row contributes
+	// NULL, which SUM skips, and it still counts toward the LOST count beside
+	// it — that one is about the deal's existence rather than its size.
+	amount, err := auth.MaskedColumnSQL(ctx, "deal", "amount_minor", "d", "amount_minor_base", arg)
+	if err != nil {
+		return crmcontracts.Money{}, 0, err
+	}
 	var wonMinor int64
 	var lost int
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
-		SELECT coalesce(sum(d.amount_minor_base) FILTER (WHERE d.status = 'won'), 0)::bigint,
+		SELECT coalesce(sum(%[3]s) FILTER (WHERE d.status = 'won'), 0)::bigint,
 		       count(*) FILTER (WHERE d.status = 'lost')
 		FROM deal d
-		WHERE d.company_id = $%d AND d.archived_at IS NULL
-		  AND d.status IN ('won','lost') AND (%s)`, companyPos, dealScope), args...).Scan(&wonMinor, &lost)
+		WHERE d.company_id = $%[1]d AND d.archived_at IS NULL
+		  AND d.status IN ('won','lost') AND (%[2]s)`, companyPos, dealScope, amount), args...).Scan(&wonMinor, &lost)
 	// No GROUP BY, so no empty result to handle: an ungrouped aggregate returns
 	// exactly one row whatever it counted, and the coalesce above makes that row
 	// an honest zero in the installation's own currency for an account with no

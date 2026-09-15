@@ -763,51 +763,9 @@ func TestTheBlockedDomainListWithholdsAnInvisibleCompany(t *testing.T) {
 	}
 }
 
-// An open question reaches the operator's list. A domain the machine declined to
-// answer is invisible everywhere else — its retry cursor is cleared, so nothing
-// will ask again on its own — and a company that never appeared then looks
-// exactly like one nobody ever asked about.
-func TestTheDomainListCarriesTheQuestionsNobodyAnswered(t *testing.T) {
-	e := setupDedupe(t)
-	ctx := e.as()
-	e.openTriage(ctx, t, "hello@pwc.example", "", "pwc.example")
-	if _, err := e.store.ResolveUnreadableDomainTriage(ctx, ResolveDomainTriageInput{
-		Domain: "pwc.example", SeedURL: TriageSeedURL("pwc.example"),
-		Evidence: "the site could not be read",
-	}); err != nil {
-		t.Fatalf("resolve unreadable: %v", err)
-	}
-
-	entries, total, err := e.store.ListDomainAdmissions(ctx, 50)
-	if err != nil {
-		t.Fatalf("list: %v", err)
-	}
-	if total != 1 || len(entries) != 1 {
-		t.Fatalf("list = %d entries (total %d), want the one open question", len(entries), total)
-	}
-	got := entries[0]
-	if got.Domain != "pwc.example" {
-		t.Fatalf("domain = %q, want the withheld one", got.Domain)
-	}
-	if got.Admission != DomainUndecided {
-		t.Errorf("admission = %q, want %q — nobody decided this domain", got.Admission, DomainUndecided)
-	}
-	// The source says what STOPPED the machine, which is the only thing an
-	// operator can act on: a site that named nothing is a different problem
-	// from mail too old to trust.
-	if got.Source != PendingUnevidenced {
-		t.Errorf("source = %q, want %q", got.Source, PendingUnevidenced)
-	}
-	if got.Reason == "" {
-		t.Error("the open question carries no sentence — a row nobody can read is one nobody can answer")
-	}
-	// Dated from the last time the row moved. An undecided row has no
-	// admission_at, and serving a zero time would sort every open question
-	// under the epoch.
-	if got.DecidedAt.IsZero() {
-		t.Error("decided_at is zero — an undecided row still has to say when it last moved")
-	}
-}
+// What the operator's list carries — decisions, and the questions nobody owns —
+// lives in domainadmissionlist_integration_test.go, beside the WHERE clause that
+// is its whole subject.
 
 // Re-asking puts the question back in the sweep's path. The machine cleared the
 // cursor because re-crawling could not help; somebody may know otherwise, and

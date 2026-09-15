@@ -69,8 +69,7 @@ var openToAnyone = gatekit.Waive(map[string]string{
 var verifiesItsOwnCaller = gatekit.Waive(map[string]string{
 	"/webhooks/gmail": "verifies a Google-signed OIDC token on the push notification (oidcverify.go). " +
 		"The sender is proven; what it does not carry is one of OUR sessions",
-	"/webhooks/graph":   "the Microsoft Graph push, proven the same way by its own subscription secret",
-	"/webhooks/hubspot": "the overlay incumbent's webhook, proven by its signature over the raw body",
+	"/webhooks/graph": "the Microsoft Graph push, proven the same way by its own subscription secret",
 	"/mcp": "the remote MCP edge. It mounts its own admission (mcpEdge) rather than the session " +
 		"middleware, because an MCP caller presents a passport rather than a browser session",
 	"/": "the SPA fallback: static assets and the index document, which are public by nature and " +

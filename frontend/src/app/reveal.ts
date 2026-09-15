@@ -19,7 +19,7 @@
  * The id is ONE constant, exported by the strip that draws the door and given
  * to the element by the screen that owns the layout, so a typo cannot split the
  * two. The only miss left is a section not on the page — and a door for such a
- * section is not drawn: the deal strip is withheld in overlay, and every other
+ * section is not drawn: a withheld deal strip, say, and every other
  * door stands in the same tree as its section. The `?.` on the lookup answers
  * the type, `HTMLElement | null`, not a case this app has.
  */

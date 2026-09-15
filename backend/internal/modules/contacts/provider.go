@@ -371,9 +371,11 @@ func (p *Provider) Merge(ctx context.Context, in datasource.MergeInput) (datasou
 
 // PromoteLead exposes the features/01 §6.4 graduation to the tool surface
 // (a provider extension: interfaces.md §3 has no promotion verb yet).
-func (p *Provider) PromoteLead(ctx context.Context, id ids.UUID, trigger string, evidenceNote *string) (datasource.EntityRef, bool, error) {
+func (p *Provider) PromoteLead(
+	ctx context.Context, id ids.UUID, trigger string, evidenceNote *string, ifVersion *int64,
+) (datasource.EntityRef, bool, error) {
 	contact, merged, err := p.store.PromoteLead(ctx, ids.From[ids.LeadKind](id), PromoteLeadInput{
-		Trigger: trigger, EvidenceNote: evidenceNote,
+		Trigger: trigger, EvidenceNote: evidenceNote, IfVersion: ifVersion,
 	})
 	return ref(datasource.EntityContact, contact.Id), merged, err
 }

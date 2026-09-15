@@ -270,8 +270,7 @@ func TestCompany360ContactsHideACapturePrivateContact(t *testing.T) {
 // only exists for mirror-backed ones.
 func TestCompany360TransportServesANativeWorkspace(t *testing.T) {
 	e := integration.Setup(t)
-	handlers := company360svc.NewHandlers(company360Service(e),
-		func(context.Context) (bool, error) { return false, nil })
+	handlers := company360svc.NewHandlers(company360Service(e))
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme", &e.Rep1))
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
 

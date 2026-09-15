@@ -56,6 +56,16 @@ type PromoteLeadInput struct {
 	EvidenceNote       *string
 	// Deal, when set, opens a deal in the same transaction (qualify-to-deal).
 	Deal *QualifyDealInput
+	// IfVersion refuses the promotion unless the lead is still at this
+	// version, asked under the row lock the write already takes.
+	//
+	// It rides the input rather than a WriteOption because this verb reaches
+	// the store through the system-of-record seam, whose signature is the same
+	// for every provider — the option form would have nowhere to travel.
+	//
+	// Nil attaches no precondition, so a REST caller and an agent whose
+	// approval carried no version spell the call the same way.
+	IfVersion *int64
 }
 
 // AlreadyPromotedError maps to 409: promotion happened once; the pointer
@@ -132,6 +142,14 @@ func (s *Store) QualifyLead(ctx context.Context, id ids.LeadID, in PromoteLeadIn
 		}
 		lead, err := promotableLead(ctx, tx, id, in)
 		if err != nil {
+			return err
+		}
+		// Under the lock, against the row this transaction will write. An
+		// agent's released approval was granted against a version, and
+		// redemption verified it in a transaction that has since committed —
+		// the agent's own 🟢 writes can land in the window between. Unpinned,
+		// the promotion then mints a contact from lead fields nobody released.
+		if err := refuseIfVersionMoved("lead", lead.Version, writeOptions{atVersion: in.IfVersion}); err != nil {
 			return err
 		}
 

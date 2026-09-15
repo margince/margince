@@ -59,7 +59,7 @@ var Routing = settings.Define[RoutingConfig](
 
 // Definitions is the ai module's contribution to the settings registry.
 func Definitions() []settings.Definition {
-	return append([]settings.Definition{Routing}, keyDefinitions()...)
+	return append([]settings.Definition{Routing, BudgetSettings}, keyDefinitions()...)
 }
 
 // validateStoredRouting holds a stored binding to the same bar the file always

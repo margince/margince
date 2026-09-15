@@ -31,7 +31,6 @@ import {
 } from "../design-system/recordtimeline";
 import { RecordView } from "../design-system/recordview";
 import { Select } from "../design-system/select";
-import { SurfaceState } from "../design-system/surfacestate";
 import { TimelineFilterBar } from "../design-system/timelinefilterbar";
 import { useToast } from "../design-system/toast";
 import {
@@ -48,13 +47,11 @@ import type { MessageKey } from "../i18n/en";
 import { useClaimRecord } from "./claimrecord";
 import {
   LoadMoreButton,
-  OverlayUnavailable,
   problemMessageOf,
   QueryGate,
   throwProblem,
   timelineZoneNotice,
   useMe,
-  useSorMode,
   useViewerId,
 } from "./common";
 import type { CreateField } from "./create";
@@ -650,7 +647,6 @@ function LeadIdentityFields({
   writer,
 }: Readonly<{ lead: Lead; writer: LeadWriter }>) {
   const t = useT();
-  const overlay = useSorMode() === "overlay";
   const project = useEntityName("project", lead.project_id);
   const sources = useLeadSources();
   const owners = useRecordOwners(lead.owner_id);
@@ -659,7 +655,6 @@ function LeadIdentityFields({
     <>
       <RecordFields
         title={t("lead.details")}
-        notice={overlay ? t("overlay.partialWriteBack") : undefined}
         kind="lead"
         links={
           lead.linkedin_url
@@ -829,13 +824,11 @@ function useLeadPatch(lead: Lead, id: string, onChanged: () => void) {
 function LeadLadderPanel({
   lead,
   writer,
-  overlay,
   onQualify,
   onDisqualify,
 }: Readonly<{
   lead: Lead;
   writer: LeadWriter;
-  overlay: boolean;
   onQualify: () => void;
   onDisqualify: () => void;
 }>) {
@@ -850,19 +843,15 @@ function LeadLadderPanel({
         <div className="lead-stack">
           {/* The ladder leads: where this lead stands and how it got there is
               the first thing a rep needs, and the step they take next is one
-              click on it (the terminal steps open their own dialogs). The
-              mirror refuses a lifecycle write, so in overlay it only reads. */}
+              click on it (the terminal steps open their own dialogs). */}
           <LeadStepper
             lead={lead}
             pending={writer.patch.isPending}
-            readOnlyReason={
-              writer.readOnlyReason ??
-              (overlay ? t("lead.ladder.overlay") : undefined)
-            }
+            readOnlyReason={writer.readOnlyReason}
             onStep={(status) => {
               // Same one-write-at-a-time rule as the inline rows: a status
               // sent while another save is in flight races it for If-Match.
-              if (!writer.patch.isPending && !readOnly && !overlay) {
+              if (!writer.patch.isPending && !readOnly) {
                 writer.save({ status });
               }
             }}
@@ -1029,12 +1018,10 @@ function LeadScoreCard({
 function LeadCall({
   lead,
   thread,
-  overlay,
   onOpenEmail,
 }: Readonly<{
   lead: Lead;
   thread: RecordTimeline;
-  overlay: boolean;
   // The page's one drawer, handed down to the thread. A conversation the
   // thread names and cannot open is the one place in the product that does
   // that.
@@ -1050,15 +1037,7 @@ function LeadCall({
       because={standing.because}
       restsOn={standing.restsOn}
     >
-      {/* The timeline is a read the mirror refuses, so in overlay the query
-          never runs and its page is empty — which the thread would draw as a
-          lead nobody has written to. The call stands; under it the reader is
-          told the history lives in the incumbent. */}
-      {overlay ? (
-        <OverlayUnavailable />
-      ) : (
-        <TimelineThread thread={thread} onOpenEmail={onOpenEmail} />
-      )}
+      <TimelineThread thread={thread} onOpenEmail={onOpenEmail} />
     </CallCard>
   );
 }
@@ -1310,7 +1289,6 @@ function PromotedLeadPanel({
   lead,
   promotion,
 }: Readonly<{ lead: Lead; promotion: PromotionRecord }>) {
-  const overlay = useSorMode() === "overlay";
   const t = useT();
   const { locale } = useLocale();
   const triggerLabel = promotionTriggerLabel(promotion.trigger);
@@ -1367,9 +1345,8 @@ function PromotedLeadPanel({
             </p>
           )}
           {/* The reversal lives here and nowhere else: this is the record the
-              promotion is a fact about. Not in overlay, where the mirror owns
-              the contact. */}
-          {!overlay && <DemoteAction id={lead.id} />}
+              promotion is a fact about. */}
+          <DemoteAction id={lead.id} />
         </div>
       </PanelBody>
     </Panel>
@@ -1438,7 +1415,6 @@ function LeadOverviewPane({
   id,
   writer,
   promotion,
-  overlay,
   terminalReasonId,
   thread,
   onQualify,
@@ -1450,7 +1426,6 @@ function LeadOverviewPane({
   id: string;
   writer: LeadWriter;
   promotion: PromotionRecord;
-  overlay: boolean;
   terminalReasonId: string;
   // The lead's unfiltered timeline read, which the thread under the call is
   // drawn from — the whole read, so its failure reaches the call too.
@@ -1502,7 +1477,6 @@ function LeadOverviewPane({
       <LeadLadderPanel
         lead={lead}
         writer={writer}
-        overlay={overlay}
         onQualify={onQualify}
         onDisqualify={onDisqualify}
       />
@@ -1511,12 +1485,7 @@ function LeadOverviewPane({
           under them the two sections a reader consults rather than reads —
           why it scores what it scores, and what the rep knows about it. */}
       <RecordReading>
-        <LeadCall
-          lead={lead}
-          thread={thread}
-          overlay={overlay}
-          onOpenEmail={onOpenEmail}
-        />
+        <LeadCall lead={lead} thread={thread} onOpenEmail={onOpenEmail} />
         <TodayPanel onOpenTasks={() => navigate({ screen: "worklist" })}>
           {leadTodoRows(lead, t, locale, recordZone)}
         </TodayPanel>
@@ -1542,7 +1511,7 @@ function LeadOverviewPane({
       </RecordReading>
       {/* The composer follows the facts so opening a lead answers "what
           should I do" before asking the rep to type. */}
-      {!lead.archived_at && !overlay && (
+      {!lead.archived_at && (
         <div ref={composer}>
           <LogActivity
             entityType="lead"
@@ -1552,24 +1521,7 @@ function LeadOverviewPane({
           />
         </div>
       )}
-      {/* An address that named a verb this posture cannot perform is answered,
-          not ignored. The composer is absent in overlay for every reader, and
-          for a reader who followed a link TO it that absence would read as a
-          broken page rather than as a mirrored record the product may not
-          write. */}
-      {!lead.archived_at && overlay && askedToLogCall && (
-        <SurfaceState
-          loadingLabel={t("tab.overview")}
-          state="unsupported"
-          // Never drawn — the state above is fixed — but the primitive asks
-          // every caller for the sentence it would say if it were empty.
-          emptyLabel={t("lead.callNotInOverlay")}
-          detail={{ unsupportedReason: t("lead.callNotInOverlay") }}
-        >
-          {null}
-        </SurfaceState>
-      )}
-      {!lead.archived_at && !overlay && (
+      {!lead.archived_at && (
         <RecordEmailAside
           entityType="lead"
           entityId={id}
@@ -1591,7 +1543,6 @@ function LeadOverviewPane({
 function LeadActions({
   lead,
   id,
-  overlay,
   onQualify,
   onDisqualify,
   terminalReasonId,
@@ -1599,7 +1550,6 @@ function LeadActions({
 }: Readonly<{
   lead: Lead;
   id: string;
-  overlay: boolean;
   onQualify: () => void;
   onDisqualify: () => void;
   // The id of the ONE sentence this page prints about why the lead takes no
@@ -1619,7 +1569,7 @@ function LeadActions({
           where a reader looks for the verb (ADR-0108 §6). Ineligibility is
           stated on the control itself rather than as a sentence beside it —
           a disabled button whose reason is elsewhere is a dead button. */}
-      {!lead.archived_at && !overlay && (
+      {!lead.archived_at && (
         <Button
           variant="primary"
           data-testid="lead-qualify"
@@ -1636,16 +1586,13 @@ function LeadActions({
           <ArrowUpRight aria-hidden="true" /> {t("lead.promote")}
         </Button>
       )}
-      {/* The shared Email verb every record header carries. Not in overlay,
-          where the mirror owns the lead's mail. */}
-      {!overlay && (
-        <RecordEmailVerb
-          entityType="lead"
-          entityId={id}
-          recordAddress={lead.email ?? undefined}
-          disabledReasonId={lead.archived_at ? terminalReasonId : undefined}
-        />
-      )}
+      {/* The shared Email verb every record header carries. */}
+      <RecordEmailVerb
+        entityType="lead"
+        entityId={id}
+        recordAddress={lead.email ?? undefined}
+        disabledReasonId={lead.archived_at ? terminalReasonId : undefined}
+      />
       {/* Everything else this lead offers, behind one trigger. Qualify and
           Email are what a rep reaches for between calls; the rest are rare
           enough that a reader hunting one of them should not have to read
@@ -1662,35 +1609,26 @@ function LeadActions({
           sentence is passed in rather than minted here: a reason living in
           the panel would not exist until the menu was first opened. */}
       <OverflowMenu label={t("record.moreActions")}>
-        {/* The overlay seam refuses disqualify (a cross-type lifecycle
-            transition) and share (a grant probes a native row a mirror lead
-            does not have), so in overlay these are genuinely UNSUPPORTED
-            rather than state-blocked — a different STATE-4a cause, and the
-            answer for that one is absence. */}
-        {!overlay && (
-          <>
-            <ShareAction
-              recordType="lead"
-              recordId={lead.id}
-              disabledReasonId={refusedReasonId}
-            />
-            {/* Last: it is the one verb here a reader cannot walk back from
+        <ShareAction
+          recordType="lead"
+          recordId={lead.id}
+          disabledReasonId={refusedReasonId}
+        />
+        {/* Last: it is the one verb here a reader cannot walk back from
                 the header, so it does not sit where a pointer sliding down
                 the list reaches it on the way to something routine. It asks
                 why, in its own dialog, and stays a secondary verb rather than
                 a red one — closing a lead is ordinary work, and the panel's
                 seam (atoms.css) belongs to the destructive verbs. A terminal
                 lead keeps the control, disabled with the page's one reason. */}
-            <Button
-              small
-              data-testid="lead-disqualify"
-              reasonId={refusedReasonId}
-              onClick={onDisqualify}
-            >
-              {t("record.disqualify")}
-            </Button>
-          </>
-        )}
+        <Button
+          small
+          data-testid="lead-disqualify"
+          reasonId={refusedReasonId}
+          onClick={onDisqualify}
+        >
+          {t("record.disqualify")}
+        </Button>
       </OverflowMenu>
     </>
   );
@@ -1759,19 +1697,7 @@ function LeadDialogs({
  * render prop, and moving the mutation above the gate would have it guarding a
  * record it had not read yet.
  */
-function LeadRecord({
-  lead,
-  id,
-  overlay,
-}: Readonly<{
-  lead: Lead;
-  id: string;
-  // Read ABOVE the query gate and handed down, so the posture is known on the
-  // page's FIRST paint. Read here it would start loading only once the lead
-  // had arrived, and the page would draw one frame of native affordances — an
-  // offered Disqualify the mirror refuses — before correcting itself.
-  overlay: boolean;
-}>) {
+function LeadRecord({ lead, id }: Readonly<{ lead: Lead; id: string }>) {
   const t = useT();
   const queryClient = useQueryClient();
   const refreshAfterTouch = useLadderRefresh(id);
@@ -1780,12 +1706,6 @@ function LeadRecord({
   // every control the closure refuses (ADR-0108 §6).
   const terminalReasonId = useId();
   const [tab, setTab] = useLeadTab(id);
-  // The seam serves update for a mirrored lead (write-back projects onto the
-  // incumbent, overlay/provider_writes.go), so Edit renders in overlay too.
-  // DELETE /leads/{id} is disqualify_lead, not an archive — a cross-type
-  // lifecycle transition the seam refuses outright, so it and share stay
-  // hidden (share: a record grant probes the native lead row, which a
-  // mirror lead has no row in — see deals.tsx's DealBadges).
   const [timelineFilters, setTimelineFilters] = useTimelineFilters(id);
   const timelineQuery = useRecordTimeline("lead", id, {
     filters: timelineFilters,
@@ -1873,7 +1793,6 @@ function LeadRecord({
         <LeadActions
           lead={lead}
           id={id}
-          overlay={overlay}
           terminalReasonId={terminalReasonId}
           refusedReasonId={writer.readOnly ? terminalReasonId : undefined}
           onQualify={() => setDialog("qualify")}
@@ -1891,12 +1810,10 @@ function LeadRecord({
         timelineQuery.hasNextPage,
       )}
       timelineHeader={
-        overlay ? undefined : (
-          <TimelineFilterBar
-            value={timelineFilters}
-            onChange={setTimelineFilters}
-          />
-        )
+        <TimelineFilterBar
+          value={timelineFilters}
+          onChange={setTimelineFilters}
+        />
       }
       timelineFooter={
         <>
@@ -1910,7 +1827,7 @@ function LeadRecord({
         </>
       }
       timelineNotice={timelineZoneNotice(
-        { overlay, pending: timelineQuery.isPending },
+        { pending: timelineQuery.isPending },
         t,
       )}
       band={leadBand({ lead, writer, reasonId: terminalReasonId, id, t })}
@@ -1939,7 +1856,6 @@ function LeadRecord({
           id={id}
           writer={writer}
           promotion={promotion}
-          overlay={overlay}
           terminalReasonId={terminalReasonId}
           thread={threadQuery}
           onOpenEmail={setOpenEmail}
@@ -1957,7 +1873,7 @@ function LeadRecord({
           toast.show(done);
         }}
       />
-      {tab === "history" && !overlay && (
+      {tab === "history" && (
         <RecordHistoryTab
           kind="lead"
           id={lead.id}
@@ -1967,20 +1883,12 @@ function LeadRecord({
           }}
         />
       )}
-      {tab === "history" && overlay && <OverlayUnavailable />}
     </RecordView>
   );
 }
 
 export function LeadScreen({ id }: Readonly<{ id: string }>) {
   const t = useT();
-  // The seam serves update for a mirrored lead (write-back projects onto the
-  // incumbent, overlay/provider_writes.go), so Edit renders in overlay too.
-  // DELETE /leads/{id} is disqualify_lead, not an archive — a cross-type
-  // lifecycle transition the seam refuses outright, so it and share stay
-  // hidden (share: a record grant probes the native lead row, which a mirror
-  // lead has no row in — see deals.tsx's DealBadges).
-  const overlay = useSorMode() === "overlay";
   const leadQuery = useQuery({
     queryKey: leadKey(id),
     queryFn: async () => {
@@ -2001,7 +1909,7 @@ export function LeadScreen({ id }: Readonly<{ id: string }>) {
           // Keyed by lead: every piece of page state below — the open dialog,
           // the tab, a half-typed score override — is about THIS lead, and
           // this screen stays mounted from one to the next.
-          <LeadRecord key={lead.id} lead={lead} id={id} overlay={overlay} />
+          <LeadRecord key={lead.id} lead={lead} id={id} />
         )}
       </QueryGate>
     </div>

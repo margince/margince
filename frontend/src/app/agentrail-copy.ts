@@ -218,7 +218,6 @@ export const SAID: Readonly<Record<string, string>> = {
   dsrs: "Checking privacy requests",
   lead: "Reading a lead",
   leads: "Reading leads",
-  overlay: "Reading what it wrote here",
   contacts: "Reading contacts",
   contact: "Reading a contact",
   contact360: "Reading everything about this contact",

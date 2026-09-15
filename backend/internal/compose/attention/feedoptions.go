@@ -44,6 +44,17 @@ func (s *Service) WithIntroductions(i Introductions) *Service {
 	return s
 }
 
+// WithDomainQuestions binds the reader's own undecided domains — an option for
+// the reason WithWaiting is one.
+//
+// Unbound, the lane is ABSENT rather than empty: an installation whose feed
+// does not read the triage ledger has no such questions to show, which is a
+// different fact from a reader having answered all of theirs.
+func (s *Service) WithDomainQuestions(d DomainQuestions) *Service {
+	s.domainQuestions = d
+	return s
+}
+
 // WithMachineSender binds the rule that tells a sending system from a contact.
 func (s *Service) WithMachineSender(is MachineSender) *Service {
 	s.machine = is

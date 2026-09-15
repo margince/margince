@@ -335,3 +335,23 @@ it("says nothing about the pass when no row is waiting on it", async () => {
   await screen.findByText("Legal");
   expect(screen.queryByTestId("verdict-pass-threads")).toBeNull();
 });
+
+// The classifier can name a kind this build has no word for — the vocabulary is
+// the server's and it moves independently of the app. The badge then shows the
+// server's own token rather than nothing: an untranslated word is a fact the
+// reader can carry to whoever knows it, and a blank is the "judged nothing" the
+// pending badge exists to be told apart from.
+it("shows a kind it has no translation for, rather than an empty badge", async () => {
+  renderCard([{ ...JUDGED, thread_key: "t-unknown", kind: "export_control" }]);
+
+  await screen.findByText("export_control");
+});
+
+// And a row that reached a verdict carrying no kind at all falls back to the
+// status, which is the one thing every held row has. Without it the badge is
+// empty and the row says nothing about why it is here.
+it("falls back to the status when a judged row carries no kind", async () => {
+  renderCard([{ ...JUDGED, thread_key: "t-nokind", kind: undefined }]);
+
+  await screen.findByText("held");
+});

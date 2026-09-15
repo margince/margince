@@ -1,4 +1,6 @@
-import { Badge } from "../design-system/atoms";
+import { useState } from "react";
+import { useCanWrite } from "../app/capability";
+import { Badge, Button } from "../design-system/atoms";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
 import { useT } from "../i18n";
@@ -6,14 +8,13 @@ import {
   type ReviewTemplate,
   useReviewTemplates,
 } from "./outcomereview.queries";
+import { ReviewTemplateEditor } from "./reviewtemplateeditor";
 import "./deal360/deal360.css";
 
 /**
  * The questions a closed deal is asked, per outcome.
  *
- * Read-only, and the card says so rather than showing controls that refuse. The
- * API serves these templates and does not yet accept edits, so a form here
- * would be a promise the server breaks — see the note the card renders.
+ * Administrators edit future questions; saved reviews keep their snapshots.
  *
  * The questions are shown in full rather than counted. An administrator opening
  * this page is asking what their reps are being asked, and "3 questions" does
@@ -23,6 +24,8 @@ export function ReviewTemplatesCard() {
   const t = useT();
   const { data, isPending, isError } = useReviewTemplates();
   const templates = data ?? [];
+  const canEdit = useCanWrite("custom_field", "update");
+  const [editing, setEditing] = useState<ReviewTemplate | null>(null);
   return (
     <Panel title={t("reviewTemplates.title")} sub={t("reviewTemplates.sub")}>
       <PanelBody>
@@ -37,9 +40,22 @@ export function ReviewTemplatesCard() {
         ) : (
           <>
             {templates.map((template) => (
-              <TemplateRow key={template.id} template={template} />
+              <div key={template.id}>
+                <TemplateRow template={template} />
+                {canEdit && (
+                  <Button variant="ghost" onClick={() => setEditing(template)}>
+                    {t("reviewTemplates.edit")}
+                  </Button>
+                )}
+              </div>
             ))}
-            <p className="t-caption">{t("reviewTemplates.readOnly")}</p>
+            <p className="t-caption">{t("reviewTemplates.editHint")}</p>
+            {editing && (
+              <ReviewTemplateEditor
+                template={editing}
+                onClose={() => setEditing(null)}
+              />
+            )}
           </>
         )}
       </PanelBody>

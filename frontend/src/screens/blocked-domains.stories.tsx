@@ -38,10 +38,10 @@ const BY_HUMAN = {
   decided_at: "2026-08-11T07:05:00Z",
   company_id: "018f3a1b-0000-7000-8000-00000000c001",
 };
-// The two open questions. They are why this list is not merely a record of
-// refusals: nothing decided these, their retry cursor is cleared, and without a
-// surface they are invisible — a company that never appeared looks exactly like
-// one nobody ever asked about.
+// The two open questions that reach this list: the ones belonging to nobody.
+// Nothing decided them, their retry cursor is cleared, and no colleague's queue
+// can carry them — a question is addressed by the mailbox that raised it, and
+// these have none left. Without this surface they would be visible to nobody.
 const UNEVIDENCED = {
   domain: "pwc.example",
   admission: "undecided",
@@ -96,9 +96,9 @@ export const Populated: Story = {
   render: story([BY_VERDICT, BY_HEURISTIC, BY_HUMAN], 3, OPS),
 };
 
-// Decisions and open questions in one list, which is the case the card exists
-// for: an operator hunting a company that never appeared has to be able to tell
-// "we refused this" from "nobody ever answered". The undecided rows carry a
+// Decisions and ownerless open questions in one list, which is the case the card
+// exists for: an operator hunting a company that never appeared has to be able to
+// tell "we refused this" from "nobody ever answered". The undecided rows carry a
 // different verb — asking again, not deciding — and a neutral badge.
 export const WithOpenQuestions: Story = {
   render: story([UNEVIDENCED, STALE, BY_HEURISTIC, BY_HUMAN], 4, OPS),

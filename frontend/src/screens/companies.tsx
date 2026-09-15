@@ -20,7 +20,6 @@ import type { TimelineEntry, TimelineGroup } from "../design-system/composed";
 import type { ListChip } from "../design-system/listsurface";
 import { CellStrip } from "../design-system/listtable";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
-import { OverlayFallback } from "../design-system/overlayfallback";
 import { Panel, PanelBody } from "../design-system/panel";
 import { liveProjects } from "../design-system/projectpicker";
 import { RecordTabs } from "../design-system/recordtabs";
@@ -43,12 +42,10 @@ import {
   problemMessageOf,
   QueryGate,
   throwProblem,
-  useSorMode,
   useViewerId,
 } from "./common";
 import { ContactsChips, MoneyPane, ThreadFold } from "./company/glance";
 import {
-  type Company360Result,
   DealsCard,
   NextSteps,
   ProposedNextSteps,
@@ -730,12 +727,11 @@ export function CompanyScreen({ id }: Readonly<{ id: string }>) {
   const t = useT();
   const [tab, setTab] = useCompanyTab(id);
   const view = useCompany360(id);
-  // Only an assembled 360 counts as a visit: in overlay mode there is no
-  // baseline to advance, and a page that never rendered the account is not
-  // one the reader saw.
-  useAcknowledgeCompanyView(id, view.data?.state === "ready");
-  // The account itself still comes from its own read: the 360 refuses
-  // entirely in overlay mode, and the header must render either way.
+  // Only an assembled 360 counts as a visit: a page that never rendered the
+  // account is not one the reader saw.
+  useAcknowledgeCompanyView(id, view.data !== undefined);
+  // The account itself still comes from its own read, so the header renders
+  // whatever the composite is doing.
   const companyQuery = useQuery({
     queryKey: ["company", id],
     queryFn: async () => {
@@ -767,9 +763,8 @@ export function CompanyScreen({ id }: Readonly<{ id: string }>) {
 }
 
 // CompanyRecord renders the page once the account itself has loaded. Split
-// out so the 360's three states — assembling, assembled, refused because the
-// workspace reads elsewhere — are handled in one place rather than nested
-// inside the account gate.
+// out so the 360's two states — assembling and assembled — are handled in one
+// place rather than nested inside the account gate.
 function CompanyRecord({
   company,
   view,
@@ -778,18 +773,12 @@ function CompanyRecord({
   t,
 }: Readonly<{
   company: Company;
-  view: { data?: Company360Result; isPending: boolean; isError: boolean };
+  view: { data?: Company360View; isPending: boolean; isError: boolean };
   tab: CompanyTab;
   onTab: (next: CompanyTab) => void;
   t: ReturnType<typeof useT>;
 }>) {
-  const sorMode = useSorMode();
-  const assembled = view.data?.state === "ready" ? view.data.view : undefined;
-  // Two sources say "this workspace reads elsewhere", and either is enough.
-  // The 360 refuses with a 422, and /me reports the mode directly — a
-  // workspace that flipped mode after this page cached its read would
-  // otherwise keep serving a native-looking company view.
-  const overlay = view.data?.state === "overlay" || sorMode === "overlay";
+  const assembled = view.data;
   const visibleTabs = companyTabsFor(company, tab);
   // The strip stands whatever it holds: the details switch rides at its end,
   // so a row that disappeared for an account with one body to read would take
@@ -841,7 +830,6 @@ function CompanyRecord({
     <CompanyPage
       company={company}
       view={assembled}
-      overlay={overlay}
       loading={view.isPending}
       failed={view.isError}
       tab={tab}
@@ -867,14 +855,12 @@ type ChronologySlots = {
 function useChronologySlots({
   company,
   view,
-  overlay,
   loading,
   failed,
   active,
 }: Readonly<{
   company: Company;
   view?: Company360View;
-  overlay: boolean;
   loading: boolean;
   failed: boolean;
   // Whether the chronology is on screen at all. The Partner tab is a form,
@@ -962,17 +948,6 @@ function useChronologySlots({
   if (!active) {
     return {
       slots: { timelineNotice: <span /> },
-      showChanges,
-      openEmail,
-      setOpenEmail,
-    };
-  }
-  // In overlay mode the refusal is stated once, in the body: repeating it over
-  // the timeline would read as two separate things being unavailable rather
-  // than one page not being assembled.
-  if (overlay) {
-    return {
-      slots: { timeline: history.entries, timelineNotice: <span /> },
       showChanges,
       openEmail,
       setOpenEmail,
@@ -1149,7 +1124,6 @@ function AccountComposer({
 function CompanyPage({
   company,
   view,
-  overlay,
   loading,
   failed,
   tab,
@@ -1158,7 +1132,6 @@ function CompanyPage({
 }: Readonly<{
   company: Company;
   view?: Company360View;
-  overlay: boolean;
   loading: boolean;
   // The composite read failed. Distinct from "still loading" and from "the
   // account is empty", because all three would otherwise draw the same
@@ -1250,7 +1223,6 @@ function CompanyPage({
   } = useChronologySlots({
     company,
     view,
-    overlay,
     loading,
     failed,
     active: tab === "timeline",
@@ -1340,7 +1312,6 @@ function CompanyPage({
       <CompanyRecordBody
         company={company}
         view={view}
-        overlay={overlay}
         refusedReasonId={archivedReasonId}
         loading={loading}
         failed={failed}
@@ -1438,7 +1409,6 @@ function CompanyPage({
 function CompanyRecordBody({
   company,
   view,
-  overlay,
   loading,
   failed,
   tab,
@@ -1459,7 +1429,6 @@ function CompanyRecordBody({
 }: Readonly<{
   company: Company;
   view?: Company360View;
-  overlay: boolean;
   // The composite read's own pending flag, threaded to every card below that
   // reads `view` directly with no skeleton guard of its own — see
   // sectionState's own doc for why "undefined view" is not one fact.
@@ -1496,18 +1465,12 @@ function CompanyRecordBody({
   // and the Profile tab. Computing it twice is how the panel would come to
   // appear in both places at once, or in neither.
   const offerResearch = offerResearchOnOverview({
-    overlay,
     view,
     read: useHasSiteRead(company.id),
   });
   return (
     <>
-      {/* Overlay refuses the whole company page, not one tab of it: the
-          partner extension and the field history are native records the
-          mirror does not hold, so switching tabs must not walk around the
-          refusal into reads that can only fail. */}
-      {overlay && <OverlayFallback />}
-      {!overlay && tab === "partner" && <PartnerTab companyId={company.id} />}
+      {tab === "partner" && <PartnerTab companyId={company.id} />}
       {/* The partial-read notice stands IN the overview's stack rather than
           above it: the sentence and the column it qualifies are one body, and
           on the record's own ground the notice's card met the first pane of
@@ -1523,7 +1486,6 @@ function CompanyRecordBody({
           <CompanyOverviewStack
             company={company}
             view={view}
-            overlay={overlay}
             loading={loading}
             failed={failed}
             readOnly={readOnly}
@@ -1550,19 +1512,17 @@ function CompanyRecordBody({
       {/* Deals and Tasks, pulled off the overview: a reader who came for the
           commercial picture or the open work should not scroll past the
           day's brief to find either. */}
-      {!overlay && (
-        <CompanyDealsAndTasksTabs
-          tab={tab}
-          company={company}
-          view={view}
-          failed={failed}
-          readOnly={readOnly}
-          openTaskId={openTaskId}
-          onOpenTask={onOpenTask}
-          onOpenRecord={receipt.open}
-          taskUpdate={taskUpdate}
-        />
-      )}
+      <CompanyDealsAndTasksTabs
+        tab={tab}
+        company={company}
+        view={view}
+        failed={failed}
+        readOnly={readOnly}
+        openTaskId={openTaskId}
+        onOpenTask={onOpenTask}
+        onOpenRecord={receipt.open}
+        taskUpdate={taskUpdate}
+      />
       {/* The composer, anchored on the message a draft_reply suggestion named.
           It is the same modal the timeline's own Reply opens — the advice
           shortcuts to it rather than inventing a second way to answer. */}
@@ -1583,7 +1543,7 @@ function CompanyRecordBody({
               three: the roster card, the connections card and its diagram all
               answered "who works here" again in a different shape, and the
               reader's question is which of them to write to. */}
-          {!overlay && !view?.sections_omitted?.includes("contacts") && (
+          {!view?.sections_omitted?.includes("contacts") && (
             <CompanyContactsList
               companyId={company.id}
               bandSlot={(narrow) => (
@@ -1600,14 +1560,13 @@ function CompanyRecordBody({
               contacts, and the reader working them is the one who knows it. The same panel the Finance tab shows, reading its rows off the
               Company360 the tab already holds — so the write path and its
               refusals stay in one place. */}
-          {!overlay &&
-            !view?.sections_omitted?.includes("billing_contacts") && (
-              <BillingContactsPanel
-                contacts={view?.billing_contacts}
-                companyId={company.id}
-                readOnly={readOnly}
-              />
-            )}
+          {!view?.sections_omitted?.includes("billing_contacts") && (
+            <BillingContactsPanel
+              contacts={view?.billing_contacts}
+              companyId={company.id}
+              readOnly={readOnly}
+            />
+          )}
         </div>
       )}
       {/* Files get the whole column on their own tab, which is what the mockup
@@ -1620,14 +1579,14 @@ function CompanyRecordBody({
           title inside the tab — a former customer's figures still read under
           "Finance (historical)", which is the one thing the tab strip above
           cannot say, because a tab label names a place, not its qualifier. */}
-      {!overlay && tab === "finance" && (
+      {tab === "finance" && (
         <CompanyFinanceCard
           companyId={company.id}
           lifecycle={company.lifecycle}
           readOnly={readOnly}
         />
       )}
-      {!overlay && tab === "documents" && (
+      {tab === "documents" && (
         // The same stacked column the overview uses, so the two panels are
         // spaced like every other pair of panels in this record rather than
         // touching at the border.
@@ -1669,15 +1628,13 @@ function CompanyRecordBody({
         zone={viewerZone()}
         onClose={receipt.closeEmail}
       />
-      {!overlay && (
-        <CompanyProfileTab
-          active={tab === "profile"}
-          company={company}
-          offerOnOverview={offerResearch}
-          onOpenHistory={onOpenHistory}
-          refusedReasonId={refusedReasonId}
-        />
-      )}
+      <CompanyProfileTab
+        active={tab === "profile"}
+        company={company}
+        offerOnOverview={offerResearch}
+        onOpenHistory={onOpenHistory}
+        refusedReasonId={refusedReasonId}
+      />
     </>
   );
 }
@@ -1727,20 +1684,16 @@ function nothingOnFile(view?: Company360View): boolean {
  *
  * Missing the second condition is what put the offer at the top of an account
  * with 109 staged facts behind it, telling a rep nobody had looked.
- *
- * Never in overlay: the whole research verb is native-only there.
  */
 export function offerResearchOnOverview({
-  overlay,
   view,
   read,
 }: Readonly<{
-  overlay: boolean;
   view?: Company360View;
   /** Whether this account has a website read on record. */
   read: boolean;
 }>): boolean {
-  return !overlay && !read && nothingOnFile(view);
+  return !read && nothingOnFile(view);
 }
 
 // The create verb the work card carries, only where the reader may actually
@@ -1773,7 +1726,6 @@ function workVerbs({
 function CompanyOverviewStack({
   company,
   view,
-  overlay,
   loading,
   failed,
   readOnly,
@@ -1790,7 +1742,6 @@ function CompanyOverviewStack({
 }: Readonly<{
   company: Company;
   view?: Company360View;
-  overlay: boolean;
   /**
    * Whether the research offer LEADS this column, decided by the page so that
    * this stack and the Profile tab cannot both draw it — or neither.
@@ -1823,7 +1774,7 @@ function CompanyOverviewStack({
   // the workspace roster for the colleague who held a meeting. Read here rather
   // than inside the thread, because the roster is a workspace read and the
   // thread is a presentational component that holds none of its own.
-  const roster = useRoster("user", !overlay);
+  const roster = useRoster("user", true);
   const colleagues = new Map(
     (roster.data ?? []).flatMap((entry) =>
       "display_name" in entry ? [[entry.id, entry.display_name] as const] : [],
@@ -1834,10 +1785,9 @@ function CompanyOverviewStack({
     entityType === "user"
       ? colleagues.get(entityId)
       : records(entityType, entityId);
-  // The reader's scan of this account, asked for on open. Only once the 360
-  // has answered natively: the scan is read from the same records, and an
-  // overlay workspace has none of them here.
-  const scan = useAccountScan(company.id, !overlay && view !== undefined);
+  // The reader's scan of this account, asked for on open — only once the 360
+  // has answered, because the scan is read from the same records.
+  const scan = useAccountScan(company.id, view !== undefined);
   // ONE reading of the account, drawn in two panes: the 360's call at the
   // full measure, and the needs list in the left column under it. Computed
   // here, once, so the verdict and the queue cannot disagree.
@@ -1860,7 +1810,7 @@ function CompanyOverviewStack({
           the record — the Contacts tab is a roster and the Documents tab is a
           filing cabinet, and a row of account readings over either is a header
           for a page it is not describing. */}
-      {!overlay && view && (
+      {view && (
         <StateStrip companyId={company.id} view={view} onOpenTab={onOpenTab} />
       )}
       {/* An account with nothing on file is asked a different question from a
@@ -1880,119 +1830,108 @@ function CompanyOverviewStack({
           the thread folded under it. What moved since this reader was last
           here rides in its foot — the account's own clock, on the account's
           own reading. */}
-      {!overlay && (
-        <Company360Call
-          reading={reading}
-          name={company.display_name}
-          footer={sinceLastVisitFooter(view)}
-        >
-          <RecordSpine
-            source={view}
-            commercial={view?.state_strip?.commercial}
-            // The thread names the contacts on each conversation off the
-            // account's own roster: the links carry ids, and an id is not a
-            // contact a reader recognises. Colleagues come from the workspace
-            // roster rather than the account — the contact who held a meeting
-            // is one of ours, and the account's own contacts are the other side
-            // of it.
-            nameOf={nameOf}
-            // The page's own router, which already sends an `activity` to the
-            // email drawer for every cited chip on this account
-            // (citationOpensEmail). The thread takes that same door rather
-            // than a second opener somebody would have to keep in step.
-            onOpenEmail={(activityId) => onOpenRecord("activity", activityId)}
-          />
-          {/* Keyed on the account, so its fold is the account's own. The page
+      <Company360Call
+        reading={reading}
+        name={company.display_name}
+        footer={sinceLastVisitFooter(view)}
+      >
+        <RecordSpine
+          source={view}
+          commercial={view?.state_strip?.commercial}
+          // The thread names the contacts on each conversation off the
+          // account's own roster: the links carry ids, and an id is not a
+          // contact a reader recognises. Colleagues come from the workspace
+          // roster rather than the account — the contact who held a meeting
+          // is one of ours, and the account's own contacts are the other side
+          // of it.
+          nameOf={nameOf}
+          // The page's own router, which already sends an `activity` to the
+          // email drawer for every cited chip on this account
+          // (citationOpensEmail). The thread takes that same door rather
+          // than a second opener somebody would have to keep in step.
+          onOpenEmail={(activityId) => onOpenRecord("activity", activityId)}
+        />
+        {/* Keyed on the account, so its fold is the account's own. The page
               stays mounted while the route swaps companies, and without
               this a thread a reader OPENED on one company arrives open on the
               next — carrying one account's reading into another's, and
               spending the glance the fold is closed to protect. */}
-          <ThreadFold
-            key={company.id}
-            view={view}
-            loading={loading}
-            onOpenHistory={onOpenHistory}
-            onOpenRecord={onOpenRecord}
-          />
-        </Company360Call>
-      )}
+        <ThreadFold
+          key={company.id}
+          view={view}
+          loading={loading}
+          onOpenHistory={onOpenHistory}
+          onOpenRecord={onOpenRecord}
+        />
+      </Company360Call>
       {/* Two columns under the 360. Left: what needs a contact, then the money.
           Right: Ask, then what the account is, then who is there. Each is one
           pane, and the order is the order a rep works them. */}
-      {!overlay && (
-        <div className="co-glance-cols">
-          <div className="co-glance-col">
-            <NeedsList reading={reading} onOpenTasks={onOpenTasks} />
-            <MoneyPane
-              companyId={company.id}
-              view={view}
-              loading={loading}
-              readOnly={readOnly}
-              onAllDeals={onAllDeals}
-              onOpenRecord={onOpenRecord}
-              onOpenEmail={onOpenEmail}
-              // The verbs ride with the WORK rather than with the figures:
-              // this is the pane that names every open deal, so it is where a
-              // reader is standing when they notice one is missing. Each is
-              // gated on its own section being READABLE, and the guard is here
-              // rather than inside the verb: NewDealAction reads the pipelines
-              // the moment it mounts, which is itself a disclosure to a reader
-              // who may not see deals.
-              verbs={workVerbs({ view, company, readOnly })}
-            />
-          </div>
-          <div className="co-glance-col">
-            {/* The prepared questions are the ones the 360 answers in prose,
+      <div className="co-glance-cols">
+        <div className="co-glance-col">
+          <NeedsList reading={reading} onOpenTasks={onOpenTasks} />
+          <MoneyPane
+            companyId={company.id}
+            view={view}
+            loading={loading}
+            readOnly={readOnly}
+            onAllDeals={onAllDeals}
+            onOpenRecord={onOpenRecord}
+            onOpenEmail={onOpenEmail}
+            // The verbs ride with the WORK rather than with the figures:
+            // this is the pane that names every open deal, so it is where a
+            // reader is standing when they notice one is missing. Each is
+            // gated on its own section being READABLE, and the guard is here
+            // rather than inside the verb: NewDealAction reads the pipelines
+            // the moment it mounts, which is itself a disclosure to a reader
+            // who may not see deals.
+            verbs={workVerbs({ view, company, readOnly })}
+          />
+        </div>
+        <div className="co-glance-col">
+          {/* The prepared questions are the ones the 360 answers in prose,
                 and both are written server-side from this reader's own 360
                 and cite records through the same receipt. Beside the reading
                 rather than at the foot of the page, so a reader does not
                 discover at the bottom that they could have asked at the top. */}
-            <div className="co-glance-ask">
-              <AssistantPanel
-                companyId={company.id}
-                enabled={!overlay}
-                onOpenRecord={onOpenRecord}
-                onOpenEmail={onOpenEmail}
-                projects={view?.projects}
-              />
-            </div>
-            {/* The account in prose, beside the reading of it: the 360 answers
-                what to DO, this answers what the account IS, in sentences with
-                their sources under them. */}
-            <DossierPanel
+          <div className="co-glance-ask">
+            <AssistantPanel
               companyId={company.id}
-              enabled
-              nameOf={records}
               onOpenRecord={onOpenRecord}
               onOpenEmail={onOpenEmail}
+              projects={view?.projects}
             />
-            {/* Is this an account we should be selling to at all — the
+          </div>
+          {/* The account in prose, beside the reading of it: the 360 answers
+                what to DO, this answers what the account IS, in sentences with
+                their sources under them. */}
+          <DossierPanel
+            companyId={company.id}
+            nameOf={records}
+            onOpenRecord={onOpenRecord}
+            onOpenEmail={onOpenEmail}
+          />
+          {/* Is this an account we should be selling to at all — the
                 question an account with nothing in flight is actually asking.
                 Its own card rather than a section of the money pane: it
                 carries its own attribution and its own reassess verb in a
                 footer band. */}
-            {!hasWorkInFlight(view) && (
-              <GrowthFitPanel
-                companyId={company.id}
-                enabled={!overlay}
-                onOpenRecord={onOpenRecord}
-                onOpenEmail={onOpenEmail}
-              />
-            )}
-            {/* What Margince noticed on this account that nobody asked it to
+          {!hasWorkInFlight(view) && (
+            <GrowthFitPanel
+              companyId={company.id}
+              onOpenRecord={onOpenRecord}
+              onOpenEmail={onOpenEmail}
+            />
+          )}
+          {/* What Margince noticed on this account that nobody asked it to
                 look for — promises made, blockers named, risks read out of
                 meetings, mail and invoices. */}
-            <Panel className="co-signals">
-              <SignalsSection companyId={company.id} />
-            </Panel>
-            <ContactsChips
-              view={view}
-              loading={loading}
-              onOpenTab={onOpenTab}
-            />
-          </div>
+          <Panel className="co-signals">
+            <SignalsSection companyId={company.id} />
+          </Panel>
+          <ContactsChips view={view} loading={loading} onOpenTab={onOpenTab} />
         </div>
-      )}
+      </div>
     </div>
   );
 }
@@ -2225,8 +2164,7 @@ function CompanyTasksTab({
 // like in its own words and ours, its filed fields, its facts, who it is
 // connected to and the one-off tools. None of it comes from the 360; each
 // card runs its own read, so it renders whichever state that read is in
-// rather than following the composite's. The tab is gated on overlay at the
-// call site — the page has already refused once there.
+// rather than following the composite's.
 function CompanyProfileTab({
   active,
   company,

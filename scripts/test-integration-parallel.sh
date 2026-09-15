@@ -396,8 +396,8 @@ rm -f "$GROUPED"
 NPKGS=$(wc -l < "$WORK" | tr -d ' ')
 # One Redis logical db per package, and there must be enough of them. Wrapping
 # the mapping instead is what this guard exists to prevent: two packages on one
-# db do not run slowly, they corrupt each other — platform/events and
-# overlaybudget's budgettest both FLUSHDB between tests, so a collision wipes the
+# db do not run slowly, they corrupt each other — platform/events and every
+# suite on platform/redistest FLUSHDB between tests, so a collision wipes the
 # other package's keys mid-test and the failure surfaces in whichever suite was
 # reading them, with nothing pointing back here. Redis serves REDIS_DBS+1
 # databases (docker-compose.dev.yml); db 0 is reserved for `make dev`.

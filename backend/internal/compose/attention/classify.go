@@ -48,9 +48,9 @@ func classifyDay(day crmcontracts.Attention, asOf time.Time, money dayMoney) []r
 	rows = appendLane(rows, &day.NeedsYou, asOf, classifyDecision)
 	rows = appendLane(rows, day.RelationshipDecay, asOf, classifyDecay)
 	rows = appendLane(rows, day.CaptureHealth, asOf, classifySystem)
+	rows = appendLane(rows, day.DomainQuestions, asOf, classifyDomainQuestion)
 	rows = appendLane(rows, day.AiWorkHealth, asOf, classifySystem)
 	rows = appendLane(rows, day.AutomationHealth, asOf, classifySystem)
-	rows = appendLane(rows, day.SyncHealth, asOf, classifySystem)
 	rows = appendLane(rows, day.Notices, asOf, classifySystem)
 	rows = appendLane(rows, day.Introductions, asOf, classifyIntroduction)
 	return rows

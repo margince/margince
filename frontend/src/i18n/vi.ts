@@ -14,6 +14,74 @@ import type { MessageKey } from "./en";
 //     "pháp nhân" (onboarding's legal-block copy). The two senses share no
 //     string in this catalog and must stay that way.
 export const vi = {
+  "aiAdmin.allowance": "Hạn mức AI hàng tháng",
+  "aiAdmin.pool":
+    "Hạn mức chung của công ty, không phải hạn mức cá nhân hay giới hạn chi tiêu bằng đô la.",
+  "aiAdmin.consumption": "Đã dùng {spent}/{total} token · {pct}%",
+  "aiAdmin.remaining": "Còn {tokens} token",
+  "aiAdmin.reset": "Đặt lại lúc {date} UTC",
+  "aiAdmin.fixed":
+    "Hạn mức cố định của công ty thay thế cách tính theo người dùng.",
+  "aiAdmin.formula":
+    "{users} người dùng đầy đủ đang hoạt động × {tokens} token mỗi người mỗi tháng.",
+  "aiAdmin.floor":
+    "Khi chưa có người dùng đủ điều kiện, tính tối thiểu một người.",
+  "aiAdmin.normal": "Trong ngưỡng hạn mức bình thường",
+  "aiAdmin.degraded": "Đã đạt ngưỡng 80%: định tuyến sang tầng thấp hơn",
+  "aiAdmin.queued": "Đã hết hạn mức: AI nền được hoãn lại",
+  "aiAdmin.policy":
+    "Từ 80%, định tuyến dùng tầng thấp hơn; mô hình thực tế có thể không đổi. Từ 100%, tác vụ nền chờ, AI tương tác dùng tầng thấp nhất. Embedding tìm kiếm vẫn chạy và vẫn tính vào mức dùng.",
+  "aiAdmin.saved": "Đã lưu hạn mức",
+  "aiAdmin.recovery":
+    "Các lần đọc website, quét tài khoản và tạo giọng văn đủ điều kiện sẽ sẵn sàng chạy trong lần đối soát kế tiếp, thường trong một phút. Hoàn thành tùy thuộc năng lực xử lý, quyền hiện tại và nhà cung cấp. Các tác vụ nền khác giữ lịch thường lệ.",
+  "aiAdmin.edit": "Sửa hạn mức",
+  "aiAdmin.perUser": "Token mỗi người dùng đầy đủ mỗi tháng",
+  "aiAdmin.range": "Số token nguyên từ 1 đến 1.000.000.000.000.",
+  "aiAdmin.company": "Tổng cố định của công ty (tùy chọn)",
+  "aiAdmin.overrideHint":
+    "Để trống để tính theo người dùng. Giá trị theo người dùng vẫn được giữ.",
+  "aiAdmin.routingStale":
+    "Liên kết mô hình đã thay đổi trong khi bạn chỉnh sửa",
+  "aiAdmin.stale": "Hạn mức đã thay đổi trong khi bạn chỉnh sửa",
+  "aiAdmin.staleHelp": "Hủy rồi mở lại trình sửa để dùng cài đặt mới nhất.",
+  "aiAdmin.failed": "Không thể áp dụng thay đổi",
+  "aiAdmin.preview": "Xem trước tác động",
+  "aiAdmin.previewHint":
+    "Xem trước điều kiện hiện tại. Khi lưu, hệ thống kiểm tra lại cài đặt và mức dùng. Thao tác này không giữ chỗ năng lực hay gọi mô hình.",
+  "aiAdmin.features": "AI theo hoạt động",
+  "aiAdmin.featuresWithheld":
+    "Chỉ người có cả quyền đọc chẩn đoán AI và quyền đọc hạn mức AI mới xem được các tính năng đang hoạt động.",
+  "aiAdmin.save": "Lưu hạn mức",
+  "aiAdmin.cancel": "Hủy",
+  "aiAdmin.prospective":
+    "Mô hình được chính sách hiện tại chọn. Lời gọi thực tế có thể dùng dự phòng hoặc thất bại; đây không phải trạng thái nhà cung cấp hay bằng chứng mô hình đã được dùng.",
+  "aiAdmin.calls": "Xem các lời gọi mô hình thực tế",
+  "aiAdmin.website": "Đọc website",
+  "aiAdmin.scans": "Quét tài khoản",
+  "aiAdmin.voice": "Tạo giọng văn",
+  "aiAdmin.waiting": "Công việc đã ghi nhận đang chờ hạn mức",
+  "aiAdmin.coverage":
+    "Chỉ đếm các lần đọc website, quét tài khoản và tạo giọng văn được lưu bền vững. Không bao gồm mọi lượt AI theo lịch và không đảm bảo yêu cầu vẫn đủ điều kiện chạy.",
+  "aiAdmin.unavailable": "Không khả dụng",
+  "aiAdmin.impact.blocked": "Chờ hạn mức",
+  "aiAdmin.impact.model": "Đã chọn mô hình khác",
+  "aiAdmin.impact.fallback": "Chuỗi dự phòng đã đổi",
+  "aiAdmin.impact.unconfigured": "Chưa cấu hình mô hình",
+  "aiAdmin.impact.exempt": "Tiếp tục khi vượt hạn mức",
+  "aiAdmin.impact.same": "Giữ nguyên lựa chọn mô hình",
+  "aiAdmin.activity": "Hoạt động",
+  "aiAdmin.model": "Mô hình được chính sách chọn",
+  "aiAdmin.cloud": "Nhà cung cấp đám mây",
+  "aiAdmin.endpoint": "Điểm cuối đã cấu hình; vị trí chưa xác minh",
+  "aiAdmin.editBinding": "Sửa liên kết dùng chung",
+  "aiAdmin.effect": "Tác động",
+  "aiAdmin.advanced": "Nâng cao: liên kết mô hình dùng chung",
+  "aiAdmin.shared":
+    "Các liên kết này được dùng chung. Kiểm tra mọi hoạt động bị ảnh hưởng trước khi lưu.",
+  "aiAdmin.unused": "Không được hoạt động hiện có sử dụng: {tiers}",
+  "aiAdmin.inputRate": "Đầu vào {input} mỗi 1 triệu token",
+  "aiAdmin.rates": "Đầu vào {input} · Đầu ra {output} mỗi 1 triệu token",
+
   "brief.weekly.tasksCompleted": "Công việc đã hoàn thành",
   "teamweekly.noPriority": "Các chỉ số đã ghi nhận chưa cho thấy ưu tiên",
   "teamweekly.basis":
@@ -66,7 +134,6 @@ export const vi = {
   "brief.coverage.source.bounce": "Email không gửi đến được",
   "brief.coverage.source.ai_work_health": "Kiểm tra tự động hóa",
   "brief.coverage.source.capture_health": "Kết nối hộp thư",
-  "brief.coverage.source.sync_health": "Kiểm tra đồng bộ CRM",
   "brief.coverage.source.failed_approval":
     "Hành động được duyệt nhưng thất bại",
   "brief.coverage.source.relationship_decay": "Mối quan hệ ít liên lạc",
@@ -731,8 +798,6 @@ export const vi = {
 
   "state.withheld": "Đã ẩn — vai trò của bạn không đọc được phần này",
   "state.unavailable": "Không tải được — đây có thể chưa phải toàn cảnh",
-  "state.unsupported":
-    "Không có ở chế độ này — hệ thống đang kết nối không lưu dữ liệu đó",
   "state.failed": "Phần này không tải được.",
   "state.loading": "Đang tải phần này…",
   "state.retry": "Thử lại",
@@ -753,7 +818,6 @@ export const vi = {
   "list.loadMore": "Tải thêm",
   "list.viewAll": "Tất cả",
   "list.viewHot": "Tiềm năng cao",
-  "list.overlayReadOnly": "Sắp xếp và bộ lọc đọc qua HubSpot — hãy mở bên đó",
   "table.range": "{first}–{last} trong {count} {unit}",
   "table.pagination": "Trang",
   "table.page": "Trang {number}",
@@ -796,153 +860,6 @@ export const vi = {
   "table.filterSearching": "Đang tìm…",
   "table.filterSearchFailed": "Tìm kiếm thất bại. Hãy thử lại.",
   "table.filterNoMatches": "Không có kết quả.",
-  "overlay.unavailable":
-    "Không dùng được khi đang đọc từ HubSpot — hãy mở bên HubSpot",
-  "overlay.chipLabel": "Đang đọc từ HubSpot",
-  "overlay.chipAria":
-    "Bản cài đặt này đọc bản ghi từ bản sao HubSpot thay vì các bảng gốc. Hãy mở Cài đặt → Tích hợp để quản lý kết nối.",
-  "overlay.refused":
-    "Không dùng được khi đang đọc từ HubSpot — bản sao không phục vụ được lượt ghi này.",
-  "overlay.filterUnsupported":
-    "Bộ lọc hay cách sắp xếp này không dùng được khi đang đọc từ HubSpot — hãy bỏ đi rồi thử lại.",
-  "overlay.emptyOwnerHint":
-    "Danh sách trống ở đây thường có nghĩa là email HubSpot của người phụ trách không khớp người dùng nào trong tổ chức, chứ không phải portal HubSpot trống.",
-  "overlay.partialWriteBack":
-    "Chỉ những trường HubSpot chấp nhận mới được ghi ngược lại — mọi thứ khác ở đây, kể cả trường tuỳ chỉnh và người phụ trách, hoàn toàn không được áp dụng; giá trị hiện tại bên HubSpot vẫn giữ nguyên.",
-
-  "overlay.title": "Bản sao HubSpot",
-  "overlay.sub":
-    "Kết nối CRM đang dùng của tổ chức để bản ghi được đọc từ bản sao của CRM đó thay vì các bảng gốc.",
-  "overlay.loading": "Đang tải kết nối tới CRM đang dùng…",
-  "overlay.notConfigured":
-    "Chế độ Overlay chưa được cấu hình trên bản triển khai này.",
-  "overlay.loadFailed": "Không tải được kết nối tới CRM đang dùng.",
-  "overlay.empty":
-    "Chưa kết nối CRM đang dùng nào. Hãy kết nối HubSpot để đọc bản ghi từ bản sao HubSpot.",
-  "overlay.adminOnly": "Bạn không có quyền thay đổi kết nối HubSpot.",
-  "overlay.loadFailedTitle": "Không đọc được kết nối",
-  "overlay.region": "Khu vực",
-  "overlay.regionEu1": "EU",
-  "overlay.connectionLabel": "Kết nối",
-  "overlay.notConnectedYet": "Chưa kết nối",
-  "overlay.regionUs": "Hoa Kỳ",
-  "overlay.token": "Token private app",
-  "overlay.tokenHint":
-    "Được niêm phong vào kho khoá; không hiển thị lại lần nào nữa.",
-  "overlay.connect": "Kết nối HubSpot",
-  "overlay.reconnect": "Kết nối lại",
-  "overlay.connectConfirmTitle": "Kết nối HubSpot cho cả tổ chức?",
-  "overlay.reconnectConfirmTitle": "Kết nối lại HubSpot cho cả tổ chức?",
-  "overlay.connectConfirmBody":
-    "Thao tác này chuyển ngay phần đọc dữ liệu của mọi người dùng sang bản sao HubSpot, và bản ghi trở thành chỉ đọc ở bất cứ đâu bản sao không phục vụ được lượt ghi. Việc này ảnh hưởng toàn bộ bản cài đặt, không chỉ phiên của riêng bạn.",
-  "overlay.statusActive": "Đã kết nối",
-  "overlay.statusRevoked": "Đã thu hồi",
-  "overlay.statusError": "Lỗi đồng bộ",
-  "overlay.connectedAt": "Kết nối {at}",
-  "overlay.syncTitle": "Đồng bộ bản sao",
-  "overlay.syncLoadFailed": "Không tải được trạng thái đồng bộ.",
-  "overlay.syncLoadFailedTitle": "Không đọc được trạng thái đồng bộ",
-  "overlay.syncEmpty": "Chưa đồng bộ được gì.",
-  "overlay.syncStateFresh": "Mới nhất",
-  "overlay.syncStatePending": "Chờ đồng bộ",
-  "overlay.syncStateStale": "Đã cũ",
-  "overlay.backfillDone": "Đã nạp xong dữ liệu cũ",
-  "overlay.backfillPending": "Đang nạp dữ liệu cũ",
-  "overlay.lastSynced": "Đồng bộ lần cuối {at}",
-  "overlay.neverSynced": "Chưa đồng bộ lần nào",
-  "overlay.budgetTitle": "Hạn mức API",
-  "overlay.budgetLoadFailed": "Không tải được cửa sổ hạn mức.",
-  "overlay.budgetLoadFailedTitle": "Không đọc được cửa sổ hạn mức",
-  "overlay.budgetHeadroom": "Còn dư: {headroom}",
-  "overlay.budgetUnmeasured":
-    "Các lệnh gọi trực tiếp tạm dừng để phòng ngừa. Đây không phải áp lực hạn mức HubSpot — bộ đếm không báo số liệu.",
-  "overlay.budgetUnmeasuredTitle": "Không đo được hạn mức lệnh gọi",
-  "overlay.budgetEmpty":
-    "Hệ thống cũ không báo cáo cửa sổ ngân sách nào cho kỳ này.",
-  "overlay.budgetSources":
-    "Force-fresh {forceFresh} · Poller {poller} · Capture {capture}",
-  "overlay.budgetSearch": "API tìm kiếm: {consumed} / {limit} mỗi giây",
-  "overlay.bandOk": "Ổn định",
-  "overlay.bandWarn": "Sắp chạm giới hạn",
-  "overlay.bandShed": "Đang giảm tải",
-  "overlay.reconcile": "Đồng bộ ngay",
-  "overlay.reconcileQueued":
-    "Đã xếp hàng lượt quét — worker sẽ nhận ở lần kiểm tra kế tiếp (khoảng 2 phút một lần).",
-  "overlay.reconcileFailedTitle": "Chưa xếp được lượt quét",
-  "overlay.disconnect": "Ngắt kết nối",
-  "overlay.disconnectTitle": "Ngắt kết nối HubSpot?",
-  "overlay.disconnectBody":
-    "Thao tác này xoá sạch dữ liệu đã sao và chuyển tổ chức về dùng bản ghi gốc. Nhật ký kiểm toán vẫn được giữ.",
-
-  "overlay.userMap.title": "Ánh xạ người dùng của bản sao",
-  "overlay.userMap.sub":
-    "Mỗi người dùng của tổ chức tương ứng với người dùng {principal} nào. Ánh xạ này quyết định toàn bộ những gì họ thấy trong bản sao.",
-  "overlay.userMap.cost":
-    "Người dùng không có ánh xạ sẽ không thấy bản ghi đã sao nào — danh sách của họ trả về trống.",
-  "overlay.userMap.costTitle": "Người dùng chưa ánh xạ không thấy gì",
-  "overlay.userMap.loading": "Đang tải ánh xạ người dùng…",
-  "overlay.userMap.loadFailed": "Không tải được ánh xạ người dùng.",
-  "overlay.userMap.loadFailedTitle": "Không đọc được ánh xạ người dùng",
-  "overlay.userMap.adminOnly": "Bạn không có quyền xem ai đã được ánh xạ.",
-  "overlay.userMap.notOverlay":
-    "Tổ chức này đọc từ các bảng gốc, nên không có gì để ánh xạ.",
-  "overlay.userMap.notConfigured":
-    "Chế độ Overlay chưa được cấu hình trên bản triển khai này.",
-  "overlay.userMap.empty": "Tổ chức này không có người dùng nào để ánh xạ.",
-  "overlay.userMap.view": "Nhóm theo",
-  "overlay.userMap.viewByUser": "Theo người dùng",
-  "overlay.userMap.viewByOwner": "Theo người dùng {principal}",
-  "overlay.userMap.principal.hubspot": "HubSpot",
-  "overlay.userMap.principal.generic": "CRM đã kết nối",
-  "overlay.userMap.you": "Bạn",
-  "overlay.userMap.matchEmail": "Khớp theo email",
-  "overlay.userMap.matchManual": "Đặt thủ công",
-  "overlay.userMap.map": "Gán ánh xạ",
-  "overlay.userMap.change": "Đổi ánh xạ",
-  "overlay.userMap.unmap": "Bỏ ánh xạ",
-  "overlay.userMap.cancel": "Huỷ",
-  "overlay.userMap.pickerLabel": "Tìm người dùng {principal}",
-  "overlay.userMap.pickTitle": "Ghép với người dùng {principal}",
-  "overlay.userMap.truncated":
-    "Danh bạ {principal} dài hơn danh sách này — người bạn không tìm thấy ở đây có thể nằm ngoài phần đã tải.",
-  "overlay.userMap.directoryFailed":
-    "Không đọc được danh bạ {principal}, nên hiện chưa chọn được ai.",
-  "overlay.userMap.directoryFailedTitle": "Không đọc được danh bạ",
-  "overlay.userMap.saveFailedTitle": "Ánh xạ chưa được lưu",
-  "overlay.userMap.notMapped": "Chưa ánh xạ",
-  "overlay.userMap.chip.noEmailMatch": "Không khớp email",
-  "overlay.userMap.chip.ambiguousEmail": "Email trùng nhiều người",
-  "overlay.userMap.chip.blockedByAdmin": "Quản trị viên đã bỏ ánh xạ",
-  "overlay.userMap.chip.notYetSynced": "Chưa đồng bộ",
-  "overlay.userMap.chip.directoryUnavailable": "Chưa rõ lý do",
-  "overlay.userMap.reason.noEmailMatch":
-    "Không người dùng {principal} nào có địa chỉ email này.",
-  "overlay.userMap.reason.ambiguousEmail":
-    "Hai người dùng {principal} trở lên dùng chung địa chỉ email này, nên không thể khớp tự động một cách an toàn.",
-  "overlay.userMap.reason.blockedByAdmin":
-    "Một quản trị viên đã bỏ ánh xạ người dùng này, và việc khớp tự động sẽ không ánh xạ lại.",
-  "overlay.userMap.reason.notYetSynced":
-    "Danh bạ {principal} chưa liệt kê người dùng này.",
-  "overlay.userMap.reason.directoryUnavailable":
-    "Không đọc được trọn danh bạ {principal}, nên không suy ra được lý do.",
-  "overlay.userMap.staleChip": "Không còn trong danh bạ {principal}",
-  "overlay.userMap.staleNote":
-    "Ánh xạ thủ công này không mở thêm quyền xem nào. Hệ thống chỉ báo lại, không bao giờ tự gỡ — quyết định vẫn thuộc về bạn.",
-  "overlay.userMap.unmapTitle": "Bỏ ánh xạ người dùng này?",
-  "overlay.userMap.unmapSelfTitle": "Bỏ ánh xạ của chính bạn?",
-  "overlay.userMap.unmapBody":
-    "{user} sẽ không còn thấy bản ghi đã sao nào cho đến khi được ánh xạ lại.",
-  "overlay.userMap.unmapSelfBody":
-    "Bạn sẽ không còn thấy bản ghi đã sao nào cho đến khi được ánh xạ lại. Tab này vẫn mở được, nên bạn có thể hoàn tác tại đây.",
-  "overlay.userMap.sharedSeat": "Dùng chung — {count} người dùng",
-  "overlay.userMap.ownerEmpty":
-    "Chưa ai được ánh xạ tới người dùng {principal}.",
-  "overlay.userMap.unmappedCount_one":
-    "1 người dùng chưa được ánh xạ và không hiện ở đây — hãy chuyển sang Theo người dùng để xử lý.",
-  "overlay.userMap.unmappedCount_other":
-    "{count} người dùng chưa được ánh xạ và không hiện ở đây — hãy chuyển sang Theo người dùng để xử lý.",
-  "overlay.userMap.partialView":
-    "Cách nhóm và số đếm này chỉ tính những người dùng đã tải. Hãy tải thêm để xem phần còn lại.",
 
   "contacts.name": "Tên",
   "contacts.email": "Email",
@@ -2251,8 +2168,6 @@ export const vi = {
   "tagResult.noneLeft": "Không còn bản ghi nào mang thẻ",
   "tagResult.unnamed": "Chưa có tên",
   "co.timeline.empty": "Chưa ghi nhận gì trên tài khoản này.",
-  "co.overlayFallback":
-    "Tài khoản này được phục vụ từ hệ thống ghi nhận đã kết nối, nên màn hình công ty không được dựng ở đây. Hãy mở bên hệ thống đó để xem toàn cảnh.",
   "company.domains": "Tên miền",
   "company.factCategory.company": "Công ty",
   "company.factCategory.offering": "Sản phẩm dịch vụ",
@@ -2387,8 +2302,6 @@ export const vi = {
     "Khách hàng tiềm năng này đã đóng và không nhận thay đổi.",
   "lead.notYoursToChange":
     "Bạn không thể thay đổi khách hàng tiềm năng này. Hãy đề nghị chủ sở hữu chia sẻ, hoặc quản trị viên cấp quyền chỉnh sửa.",
-  "lead.callNotInOverlay":
-    "Khách hàng tiềm năng này là bản phản chiếu của hệ thống gốc và không nhận hoạt động từ đây \u2014 hãy ghi cuộc gọi ở nơi lưu bản ghi.",
   "lead.boardCountsUnavailable":
     "Không đọc được số lượng ở cột Đã chuyển đổi và Đã loại.",
   "lead.boardTerminalRowsUnavailable":
@@ -2553,8 +2466,6 @@ export const vi = {
   "lead.viewEngaged": "Đang trao đổi",
   "lead.ladder": "Trạng thái khách hàng tiềm năng",
   "lead.ladder.new": "Mới — chưa ai liên hệ.",
-  "lead.ladder.overlay":
-    "Bản sao không đổi trạng thái khách hàng tiềm năng; hãy đổi trong hệ thống nguồn.",
   "lead.ladder.automatic": "{label} · tự động đặt từ hoạt động đã ghi nhận",
   "lead.ladder.automaticWith": "{label} · tự động đặt — {what} vào {at}",
   "lead.ladder.byHand": "{label} · đặt thủ công",
@@ -2617,7 +2528,6 @@ export const vi = {
   "deals.winReasonOther": "Trường hợp khác",
   "deals.winReasonDetail": "Cụ thể là gì?",
   "deals.confirm": "Xác nhận",
-  "deals.loading": "Đang đọc danh sách deal…",
   "deals.cancel": "Huỷ",
   "deals.advanced": "Đã chuyển sang {stage}",
   "deal.pendingApprovals": "Đang chờ bạn xác nhận",
@@ -2690,13 +2600,21 @@ export const vi = {
   "settings.page.reviewtemplates.sub":
     "Các câu hỏi khi một thương vụ thắng hoặc thua.",
   "settings.tab.reviewtemplates": "Đánh giá kết quả",
+  "reviewTemplates.editHint":
+    "Thay đổi áp dụng cho đánh giá mới. Đánh giá đã lưu giữ nguyên câu hỏi và câu trả lời.",
+  "reviewTemplates.question": "Câu hỏi",
+  "reviewTemplates.answerType": "Loại câu trả lời",
+  "reviewTemplates.options": "Lựa chọn (mỗi dòng một mục)",
+  "reviewTemplates.requiredChoice": "Bắt buộc trả lời",
+  "reviewTemplates.removeQuestion": "Xóa câu hỏi",
+  "reviewTemplates.addQuestion": "Thêm câu hỏi",
+  "reviewTemplates.save": "Lưu mẫu",
+  "reviewTemplates.edit": "Sửa câu hỏi",
   "reviewTemplates.title": "Câu hỏi đánh giá kết quả",
   "reviewTemplates.sub": "Những gì được hỏi khi một thương vụ thắng hoặc thua.",
   "reviewTemplates.empty": "Chưa thiết lập câu hỏi đánh giá",
   "reviewTemplates.retired": "Đã ngừng dùng",
   "reviewTemplates.required": "(bắt buộc)",
-  "reviewTemplates.readOnly":
-    "Các câu hỏi này đi kèm sản phẩm và chưa thể chỉnh sửa tại đây.",
   "outcomeReview.title": "Đánh giá kết quả",
   "outcomeReview.add": "Thêm đánh giá",
   "outcomeReview.save": "Lưu đánh giá",
@@ -2796,6 +2714,8 @@ export const vi = {
   "deal.archivedReadOnly": "Deal này đã lưu trữ và không nhận thay đổi.",
   "deal.notYoursToChange":
     "Bạn không thể thay đổi deal này. Hãy đề nghị chủ sở hữu chia sẻ, hoặc quản trị viên cấp quyền chỉnh sửa.",
+  "deal.closedTakesNoStage":
+    "Deal này đã kết thúc. Hãy mở lại để chuyển sang giai đoạn khác.",
   "deal.reopen": "Mở lại",
   "deal.reopenPick": "Chuyển deal này về một giai đoạn đang mở",
   "deal.reopenConfirm": "Mở lại",
@@ -3397,6 +3317,10 @@ export const vi = {
   "field.phoneOther": "Khác",
   "field.primary": "Chính",
   "field.removeRow": "Gỡ",
+  "field.removeRowLabel": "Gỡ hàng {n}",
+  "field.moveRowUp": "Di chuyển hàng {n} lên",
+  "field.moveRowDown": "Di chuyển hàng {n} xuống",
+  "field.rowMoved": "Đã chuyển đến vị trí {n}",
   "field.yes": "Có",
   "field.no": "Không",
 
@@ -3625,17 +3549,30 @@ export const vi = {
   "log.save": "Ghi nhận",
   "log.saving": "Đang ghi nhận…",
 
-  "contactAccess.title": "Ai xem được liên hệ này",
-  "contactAccess.privateToYou":
+  "recordAccess.contact.title": "Ai xem được liên hệ này",
+  "recordAccess.contact.privateToYou":
     "Riêng của bạn. Hộp thư của bạn đã tạo liên hệ này, và không ai khác trong tổ chức xem được — kể cả nhóm của bạn và quản trị viên.",
-  "contactAccess.company": "Mọi người trong tổ chức đều xem được liên hệ này.",
-  "contactAccess.privateTip":
+  "recordAccess.contact.shared":
+    "Mọi người trong tổ chức đều xem được liên hệ này.",
+  "recordAccess.contact.privateTip":
     "Chỉ bạn thấy được liên hệ này. Chia sẻ với tổ chức để đồng nghiệp cũng thấy.",
-  "contactAccess.share": "Chia sẻ với tổ chức",
-  "contactAccess.published": "Tổ chức đã xem được liên hệ này.",
-  "contactAccess.makePrivate": "Đặt ở chế độ riêng tư",
-  "contactAccess.madePrivate":
+  "recordAccess.contact.share": "Chia sẻ với tổ chức",
+  "recordAccess.contact.published": "Tổ chức đã xem được liên hệ này.",
+  "recordAccess.contact.makePrivate": "Đặt ở chế độ riêng tư",
+  "recordAccess.contact.madePrivate":
     "Liên hệ này thuộc về chủ sở hữu trở lại. Những ai đã được chia sẻ bản ghi vẫn giữ quyền truy cập.",
+  "recordAccess.company.title": "Ai xem được công ty này",
+  "recordAccess.company.privateToYou":
+    "Riêng của bạn. Hộp thư của bạn đã tạo công ty này, và không ai khác trong tổ chức xem được — kể cả nhóm của bạn và quản trị viên.",
+  "recordAccess.company.shared":
+    "Mọi người trong tổ chức đều xem được công ty này.",
+  "recordAccess.company.privateTip":
+    "Chỉ bạn thấy được công ty này. Chia sẻ với tổ chức để đồng nghiệp cũng thấy.",
+  "recordAccess.company.share": "Chia sẻ với tổ chức",
+  "recordAccess.company.published": "Tổ chức đã xem được công ty này.",
+  "recordAccess.company.makePrivate": "Đặt ở chế độ riêng tư",
+  "recordAccess.company.madePrivate":
+    "Công ty này thuộc về chủ sở hữu trở lại. Các deal, liên hệ và email đã lưu vào công ty vẫn giữ phạm vi hiển thị riêng của chúng.",
   "compose.reply": "Trả lời",
   "compose.writeEmail": "Viết email",
   "compose.relink": "Liên kết lại",
@@ -4753,6 +4690,7 @@ export const vi = {
   "retention.scopeDealWon": "Deal đã thắng",
   "retention.scopeAiCallPayloadContent": "Nội dung lời gọi AI",
 
+  "retention.scopeRawCapture": "Bản gốc tin nhắn đã lưu",
   "settings.pipelines": "Pipeline",
   "settings.pipelinesReadOnly":
     "Chế độ chỉ đọc — bạn không thể thay đổi pipeline hay các giai đoạn.",
@@ -5568,7 +5506,7 @@ export const vi = {
 
   "blockedDomains.title": "Tên miền bị từ chối",
   "blockedDomains.sub":
-    "Những tên miền mà bản cài đặt này không cho thành công ty, và điều gì đã quyết định từng trường hợp — một phán định của mô hình, một quy tắc suy đoán, hay một con người. Cho một tên miền vào lại sẽ mở lại câu hỏi về công ty, chứ không chỉ xoá một dấu hiệu.",
+    "Những tên miền mà bản cài đặt này không cho thành công ty, và điều gì đã quyết định từng trường hợp — một phán định của mô hình, một quy tắc suy đoán, hay một con người. Cho một tên miền vào lại sẽ mở lại câu hỏi về công ty, chứ không chỉ xoá một dấu hiệu. Câu hỏi còn ngỏ chỉ xuất hiện ở đây khi không ai sở hữu chúng; câu hỏi phát sinh từ thư của một đồng nghiệp sẽ nằm trên danh sách của chính họ.",
   "blockedDomains.listTitle": "Các quyết định đã lưu",
   "blockedDomains.record": "Ghi một quyết định",
   "blockedDomains.recordOpen": "Ghi một quyết định",
@@ -6705,6 +6643,7 @@ export const vi = {
   "cf.type.number": "Số",
   "cf.type.date": "Ngày",
   "cf.type.currency": "Tiền tệ",
+  "cf.type.multiselect": "Chọn nhiều",
   "cf.type.picklist": "Danh sách chọn",
   "cf.type.boolean": "Có / Không",
   "cf.builder.addTo": "Thêm một trường vào {object}",
@@ -7638,17 +7577,11 @@ export const vi = {
   "tools.scopedTo": "{label} gọi được",
   "tools.unreachable": "chưa được cấp phạm vi",
 
-  "aiusage.title": "Mức dùng và hạn mức AI",
+  "aiusage.title": "Chi phí AI ước tính và lịch sử sử dụng",
   "aiusage.withheld":
     "Chỉ người vận hành mới thấy được chi phí AI. Số liệu bao trùm cả bản cài đặt, nên không hiển thị rộng hơn.",
   "aiusage.sub":
-    "Hoá đơn của chính bạn, hiện rõ — theo từng tác vụ và bậc, tính bằng token.",
-  "aiusage.budget": "{spent} trên {budget} token · {pct}%",
-  "aiusage.budgetMeter": "Ngân sách token hằng tháng đã dùng",
-  "aiusage.band.normal": "Bình thường",
-  "aiusage.band.degraded": "Chế độ tiết kiệm",
-  "aiusage.band.queued": "Đã chạm hạn mức — AI chạy nền bị xếp hàng",
-  "aiusage.band.unknown": "Không rõ trạng thái hạn mức",
+    "Mức dùng của tháng đã chọn. Ước tính tách biệt với hạn mức token hiện tại và hóa đơn nhà cung cấp.",
   "aiusage.col.task": "Tác vụ",
   "aiusage.col.tier": "Bậc",
   "aiusage.col.calls": "Lượt gọi",
@@ -7666,10 +7599,10 @@ export const vi = {
   "aiusage.prevMonth": "Tháng trước",
   "aiusage.nextMonth": "Tháng sau",
 
-  "aibanner.degraded": "AI đang chạy ở chế độ tiết kiệm",
-  "aibanner.queued": "Đã chạm hạn mức AI — AI chạy nền bị xếp hàng",
+  "aibanner.degraded": "Đã đạt ngưỡng 80% hạn mức AI — xem tác động",
+  "aibanner.queued": "Đã hết hạn mức AI — xem công việc bị hoãn",
   "aibanner.unknown": "Không nhận diện được trạng thái hạn mức AI",
-  "aibanner.link": "Xem mức dùng",
+  "aibanner.link": "Quản lý hạn mức",
   "aibanner.dismiss": "Bỏ qua",
 
   "aicalls.title": "Dấu vết lượt gọi AI",
@@ -7883,12 +7816,15 @@ export const vi = {
   "elapsed.minutes": "{minutes} phút trước",
   "elapsed.hours": "{hours} giờ trước",
   "elapsed.days": "{days} ngày trước",
-  "aiRouting.lane.local_small": "Phân loại hàng loạt, trên phần cứng của bạn",
+  "aiRouting.lane.local_small":
+    "Tầng định tuyến thấp nhất; liên kết quyết định nơi xử lý",
   "aiRouting.lane.cheap_cloud":
     "Việc thường ngày — làm giàu, tóm tắt, phân loại",
   "aiRouting.lane.premium": "Bất cứ thứ gì khách hàng sẽ đọc",
-  "aiRouting.lane.frontier": "Suy luận khó nhất, dùng dè dặt",
-  "aiRouting.lane.local_large": "Việc nặng hơn, không được rời máy chủ của bạn",
+  "aiRouting.lane.frontier":
+    "Tầng suy luận nâng cao; khả dụng không có nghĩa đang được dùng",
+  "aiRouting.lane.local_large":
+    "Tầng định tuyến cục bộ cao hơn; kiểm tra điểm cuối",
   "aiRouting.lane.embeddings": "Tìm kiếm và truy hồi trên dữ liệu của bạn",
   "aiRouting.lanes.title": "Các làn định tuyến",
   "aiRouting.lanes.sub": "Rẻ nhất trước. Tác vụ chọn làn; làn chọn mô hình.",
@@ -7972,7 +7908,8 @@ export const vi = {
   "aiRouting.savedTitle": "Đã lưu định tuyến",
   "aiRouting.saved": "Mọi tiến trình đang phục vụ theo nó.",
   "aiRouting.saveFailed": "Không thể lưu định tuyến",
-  "aiRouting.adminOnly": "Chỉ admin hoặc ops mới đổi được định tuyến mô hình.",
+  "aiRouting.adminOnly":
+    "Đổi định tuyến mô hình cần quyền cập nhật định tuyến và đọc hạn mức.",
   "workingHours.title": "Khi nào bạn nhận lịch hẹn",
   "workingHours.sub":
     "Chỉ của riêng bạn. Không ai đặt giúp bạn, và bạn cũng không đặt cho ai.",
@@ -9258,6 +9195,8 @@ export const vi = {
   "worklist.pair.ask": "Giữ lại bản ghi nào?",
   "worklist.pair.keep": "Giữ {name}",
   "worklist.pair.notDuplicate": "Không trùng nhau",
+  "worklist.pair.mergeBlocked":
+    "Không thể gộp hai bản ghi này: cả hai đều đang có dự án chạy, và dữ liệu không cho biết công việc nào thuộc về đâu. Nếu chúng không trùng nhau, bạn vẫn có thể ghi nhận điều đó.",
   "worklist.pair.related": "{count} liên kết",
   "worklist.pair.failed": "Không quyết định được cặp này. Hãy thử lại.",
   "worklist.pair.refused":
@@ -9559,37 +9498,16 @@ export const vi = {
   "worklist.untitled.failed_approval": "Điều bạn duyệt đã không chạy",
   "worklist.untitled.dsr": "Một yêu cầu quyền riêng tư",
   "worklist.untitled.notice_case": "Một thông báo cần gửi cho liên hệ này",
-  "worklist.untitled.sync_health": "Đồng bộ CRM cần chú ý",
-  "worklist.sync.class.contacts": "liên hệ",
-  "worklist.sync.class.companies": "công ty",
-  "worklist.sync.class.deals": "deal",
-  "worklist.sync.class.leads": "khách hàng tiềm năng",
-  "worklist.sync.class.calls": "cuộc gọi",
-  "worklist.sync.class.meetings": "cuộc họp",
-  "worklist.sync.class.emails": "email",
-  "worklist.sync.class.notes": "ghi chú",
-  "worklist.sync.class.tasks": "công việc",
-  "worklist.sync.error.rate_limited":
-    "hệ thống kia đang giới hạn số lần chúng ta được hỏi",
-  "worklist.sync.error.unreachable": "không kết nối được tới hệ thống kia",
-  "worklist.sync.error.auth": "kết nối cần đăng nhập lại",
-  "worklist.sync.error.history_gone": "hệ thống kia không còn giữ lịch sử đó",
-  "worklist.sync.error.internal": "có lỗi ở phía chúng ta",
-  "worklist.sync.band.warn":
-    "Gần chạm hạn mức đọc, một số truy vấn sẽ lấy từ bản sao.",
-  "worklist.sync.band.shed":
-    "Vượt hạn mức đọc: truy vấn lấy từ bản sao thay vì trực tiếp.",
-  "worklist.sync.failing": "Không đồng bộ được – {reason}.",
-  "worklist.sync.objects_stale": "Chưa cập nhật ở đây: {classes}.",
-  "worklist.sync.backfill_incomplete": "Đang nhập tiếp: {classes}.",
-  "worklist.sync.records_overwritten":
-    "Sửa ở đây và bị hệ thống kia ghi đè: {classes}.",
   "worklist.untitled.capture_health": "Kết nối hộp thư cần chú ý",
   "worklist.untitled.ai_work_health": "Công việc AI cần xem lại",
   "worklist.untitled.bounce": "Một email không đến nơi",
   "worklist.untitled.undelivered": "Một email chưa từng được gửi",
   "worklist.untitled.automation_run": "Một quy tắc đã không chạy",
   "worklist.untitled.notice": "Một thông báo cho bạn",
+  // Câu hỏi về tên miền luôn lấy chính tên miền làm tiêu đề, nên chuỗi dự phòng
+  // này lẽ ra không bao giờ hiển thị. Nó tồn tại vì bảng ánh xạ phải bao gồm
+  // mọi nguồn mà bản dựng này biết.
+  "worklist.untitled.domain_question": "Một tên miền chưa ai đánh giá",
   "worklist.untitled.introduction_request":
     "Một đồng nghiệp nhờ bạn giới thiệu",
   "worklist.verb.decide": "Quyết định",
@@ -9614,6 +9532,13 @@ export const vi = {
   "worklist.verb.retry": "Chạy lại",
   "worklist.verb.retryStarted": "Quy tắc đang chạy lại.",
   "worklist.verb.retryFailed": "Không thể chạy lại.",
+  "worklist.verb.keep": "Là một công ty",
+  "worklist.verb.discard": "Không dành cho tôi",
+  "worklist.verb.domainKept": "Đã tạo công ty từ tên miền này.",
+  "worklist.verb.domainKeepFailed": "Không thể tạo công ty này.",
+  "worklist.verb.domainDiscarded":
+    "Thư của bạn từ tên miền này không còn được lưu nữa.",
+  "worklist.verb.domainDiscardFailed": "Không thể loại trừ tên miền này.",
   "worklist.verb.retryRefusedNotFailed":
     "Không có gì để chạy lại — lần chạy này bị dừng có chủ đích, không phải do lỗi.",
   "worklist.verb.retryRefusedRepeats":

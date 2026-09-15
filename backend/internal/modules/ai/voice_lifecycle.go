@@ -27,6 +27,7 @@ import (
 type VoiceBuild struct {
 	ID              ids.UUID
 	ProfileID       ids.UUID
+	RequestedBy     *ids.UUID
 	Reason          string
 	Status          string
 	Stage           *string
@@ -58,11 +59,11 @@ type CreateVoiceBuildInput struct {
 	Reason string
 }
 
-const voiceBuildColumns = `id, voice_profile_id, reason, status, stage, source_hash, source_count, result_version, candidate_action, status_code, status_detail, next_attempt_at, version, created_at, started_at, completed_at, updated_at, archived_at, attempt, attempt_at`
+const voiceBuildColumns = `id, voice_profile_id, requested_by, reason, status, stage, source_hash, source_count, result_version, candidate_action, status_code, status_detail, next_attempt_at, version, created_at, started_at, completed_at, updated_at, archived_at, attempt, attempt_at`
 
 func scanVoiceBuild(row pgx.Row) (VoiceBuild, error) {
 	var build VoiceBuild
-	err := row.Scan(&build.ID, &build.ProfileID, &build.Reason, &build.Status, &build.Stage,
+	err := row.Scan(&build.ID, &build.ProfileID, &build.RequestedBy, &build.Reason, &build.Status, &build.Stage,
 		&build.SourceHash, &build.SourceCount, &build.ResultVersion, &build.CandidateAction,
 		&build.StatusCode, &build.StatusDetail, &build.NextAttemptAt, &build.Version,
 		&build.CreatedAt, &build.StartedAt, &build.CompletedAt, &build.UpdatedAt, &build.ArchivedAt,

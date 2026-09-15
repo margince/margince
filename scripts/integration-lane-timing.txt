@@ -16,10 +16,8 @@
 ./internal/compose/integration/agentaccess|49.698
 ./internal/modules/contacts|36.219
 ./internal/compose/integration/channels|30.629
-./internal/compose/integration/overlay|30.114
 ./internal/modules/identity|28.752
 ./internal/compose/integration/company360|27.690
-./internal/modules/overlay|27.639
 ./internal/compose/integration/capture|23.226
 ./internal/compose/integration/jobfanout|20.120
 ./internal/compose/integration/webhooks|15.577
@@ -46,8 +44,6 @@
 ./internal/compose/costestimate|1.636
 ./internal/modules/customfields|1.126
 ./cmd/worker|0.911
-./internal/platform/overlaybudget|0.789
-./internal/modules/overlay/hubspot|0.672
 ./internal/platform/blobstore|0.612
 ./internal/modules/privacy|0.440
 ./internal/platform/agentquota|0.356
