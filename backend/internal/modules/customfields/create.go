@@ -258,7 +258,7 @@ func downgradeToAppRole(ctx context.Context, tx pgx.Tx) error {
 // column; non-picklist fields store NULL (a nil []byte binds as SQL
 // NULL), not an empty array.
 func optionsJSON(spec FieldSpec) ([]byte, error) {
-	if spec.Type != TypePicklist {
+	if !hasOptions(spec.Type) {
 		return nil, nil
 	}
 	return marshalOptions(spec.Options)

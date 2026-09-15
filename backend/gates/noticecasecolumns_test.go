@@ -61,7 +61,7 @@ func wholeRowSelect(table string) *regexp.Regexp {
 // noticeownership.go's noticeCaseColumns doc comment.
 //
 // A NARROW PROJECTION IS NOT DRIFT, and the difference is what this gate has to
-// get right or it becomes noise. OpenNoticeCasesDueSoonest reads five fields
+// get right or it becomes noise. OpenNoticeCasesDueSoonest reads a subset of fields
 // into OpenNoticeCase, a smaller struct the attention lane needs; it is not
 // trying to be a case, and adding a column to the table should not change it.
 // So the rule is about queries that read the WHOLE row: a list naming at least

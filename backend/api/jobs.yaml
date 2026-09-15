@@ -1207,7 +1207,7 @@ kinds:
     queue: privacy_retention
     timeout:
       derived: privacyRetentionPassTimeout
-      value: 5h38m20s
+      value: 6h11m40s
       reason: >-
         privacy.MaxPassDuration is the pass's own ceiling — its stage count
         times its batch bound times its per-record allowance — and the margin
@@ -1618,6 +1618,20 @@ kinds:
     reason: >-
       One builder call plus fifteen evaluation drafts and five judge calls, each
       small, with validator retry headroom.
+
+  ai_budget_resume:
+    role: worker
+    fleet: true
+    go_type: AIBudgetResumeArgs
+    queue: default
+    timeout: 2m
+    max_attempts: 1
+    opts_owner: args
+    cadence: 1m
+    reason: >-
+      Reconcile durable budget deferrals after allowance changes and late commits.
+      Carrier recovery preserves the original request and its attempt policy.
+      The next periodic pass retries reconciliation; River backoff must not delay it.
 
   voice_build_retry:
     role: dispatcher

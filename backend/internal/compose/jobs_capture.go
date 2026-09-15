@@ -137,8 +137,10 @@ func addCapturePipelineJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerC
 	// AI-less deployment never staged a review for an existing unsure row and
 	// never redacted mail it had already hidden.
 	addDeclaredWorker[CounterpartyVerdictArgs](reg, &counterpartyVerdictWorker{
-		pool:   pool,
-		engine: NewCounterpartyVerdictEngine(pool, cfg.VerdictBrain, log),
+		pool: pool,
+		// The capture list config is the SAME value the sink is composed from, so
+		// the tier ladder and the verdict lane read one operator allowlist.
+		engine: NewCounterpartyVerdictEngine(pool, cfg.VerdictBrain, cfg.CaptureConfig, log),
 		// The personal-mail purge, and only when an object store is bound. A
 		// nil store means no purger and the stage is skipped: destroying the
 		// rows that name an attachment while its bytes stay in a bucket would

@@ -72,6 +72,29 @@
   font-weight: var(--fw-regular);
   color: inherit;
 }
+/* An address or a number is a `ContactLink`, a button in the accent, and it
+   KEEPS the accent: it is an action, not a fact the row edits. What it gives
+   up is the button's centring. `overflow-wrap: anywhere` above lets a long
+   address break inside the rung, and a button centres every line it breaks
+   into, so the tail of a wrapped address floated to the middle of the column
+   under a first line that started at the edge. Left, like every other value. */
+.fieldgrid-value .link-button {
+  text-align: left;
+}
+/* An editable value and its evidence mark are true siblings in this slot —
+   InlineText makes the value itself the button that starts an edit, so the
+   mark cannot sit inside it and reads beside it instead. Neither is a flex
+   child with a row gap to lean on, so with no space of its own the mark ran
+   straight into the value: "Googleread". The same rung `.vatmark` already
+   takes unconditionally (companyvatmark.css) for the identical shape one
+   field over — kept as two rules rather than one shared selector because
+   `.evmark` (unlike `.vatmark`, which has this one caller) also renders
+   inside `.co-fact-line`'s own flex `gap`, where a margin of its own would
+   double it. Scoped to this slot instead of to `.evmark` itself for that
+   reason. */
+.fieldgrid-value .evmark {
+  margin-inline-start: var(--space-1);
+}
 /* An empty row states an absence, and it states it the way a form's own
    placeholder does: the "Add …" text sits BELOW the filled values in weight
    and tone, so a reader scanning the column reads the record's actual facts

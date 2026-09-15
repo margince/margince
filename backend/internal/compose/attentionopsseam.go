@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/modules/overlay"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -42,14 +43,29 @@ func (d attentionDSRs) OpenDueSoonest(ctx context.Context, limit int) ([]attenti
 	return out, nil
 }
 
-// attentionNoticeCases binds the disclosure-duty lane to the consent module's
-// own thin read. The same DSR-admin gate lives in the store, not here — both
-// queues answer to the privacy_request object, so an installation that
-// delegated its privacy inbox delegated this with it.
+// attentionNoticeCases binds contact-linked duties to the consent agenda,
+// which requires both compliance authority and access to the linked contact.
 type attentionNoticeCases struct{ store *consent.Store }
 
-func (n attentionNoticeCases) OpenDueSoonest(ctx context.Context, limit int) ([]attention.NoticeCase, error) {
-	owed, err := n.store.OpenNoticeCasesDueSoonest(ctx, limit)
+func (n attentionNoticeCases) OpenDueSoonest(ctx context.Context, limit int, scope attention.TaskScope, owner ids.UUID, team []ids.UUID) ([]attention.NoticeCase, error) {
+	in := consent.NoticeAgendaInput{Limit: limit, TeamOwners: team}
+	switch scope {
+	case attention.TasksMine:
+		actor, ok := principal.Actor(ctx)
+		if !ok || actor.UserID.IsZero() {
+			return nil, apperrors.ErrPermissionDenied
+		}
+		in.OwnerID = &actor.UserID
+	case attention.TasksOwnedBy:
+		if owner.IsZero() {
+			return nil, apperrors.ErrPermissionDenied
+		}
+		in.OwnerID = &owner
+	case attention.TasksUnassigned:
+		unassigned := ids.Nil
+		in.OwnerID = &unassigned
+	}
+	owed, err := n.store.OpenNoticeCasesDueSoonest(ctx, in)
 	if err != nil {
 		return nil, err
 	}
@@ -58,7 +74,7 @@ func (n attentionNoticeCases) OpenDueSoonest(ctx context.Context, limit int) ([]
 		// duty.Blocked is deliberately dropped: a blocked case reaches the lane
 		// like any other, and the obstacle is read on the contact's own screen.
 		out = append(out, attention.NoticeCase{
-			ID: duty.ID, Rule: string(duty.Rule),
+			ID: duty.ID, Rule: string(duty.Rule), OwnerID: duty.OwnerID,
 			ContactID: duty.ContactID.UUID, DueAt: duty.DueAt,
 		})
 	}

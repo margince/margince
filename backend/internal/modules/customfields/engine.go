@@ -32,17 +32,18 @@ import (
 // (migrations/core/0063_custom_field_catalog.up.sql) exactly — Validate,
 // the catalog CHECK, and this package must never drift apart.
 const (
-	TypeText     = "text"
-	TypeNumber   = "number"
-	TypeDate     = "date"
-	TypeCurrency = "currency"
-	TypePicklist = "picklist"
-	TypeBoolean  = "boolean"
+	TypeText        = "text"
+	TypeNumber      = "number"
+	TypeDate        = "date"
+	TypeCurrency    = "currency"
+	TypePicklist    = "picklist"
+	TypeMultiselect = "multiselect"
+	TypeBoolean     = "boolean"
 )
 
 // FieldTypes is the closed, ordered set of supported field types, spelled
 // the way the custom_field.type CHECK constraint spells them.
-var FieldTypes = []string{TypeText, TypeNumber, TypeDate, TypeCurrency, TypePicklist, TypeBoolean}
+var FieldTypes = []string{TypeText, TypeNumber, TypeDate, TypeCurrency, TypePicklist, TypeMultiselect, TypeBoolean}
 
 // FieldObjects is the closed, ordered set of core objects a custom field can
 // attach to. A member must satisfy BOTH properties, and neither is something the
@@ -101,7 +102,7 @@ var allowedObjects = func() map[string]bool {
 }()
 
 var allowedTypes = map[string]bool{
-	TypeText: true, TypeNumber: true, TypeDate: true, TypeCurrency: true, TypePicklist: true, TypeBoolean: true,
+	TypeText: true, TypeNumber: true, TypeDate: true, TypeCurrency: true, TypePicklist: true, TypeMultiselect: true, TypeBoolean: true,
 }
 
 // FieldSpec is a candidate custom-field definition — the only source the
@@ -186,10 +187,10 @@ func Validate(spec FieldSpec) []FieldError {
 	if spec.Type == TypeCurrency && (spec.Currency == nil || !values.ValidCurrency(*spec.Currency)) {
 		errs = append(errs, FieldError{Field: fieldCurrency, Code: "required_for_type_currency"})
 	}
-	if spec.Type == TypePicklist && len(spec.Options) == 0 {
+	if hasOptions(spec.Type) && len(spec.Options) == 0 {
 		errs = append(errs, FieldError{Field: fieldOptions, Code: "required_for_type_picklist"})
 	}
-	if spec.Type == TypePicklist {
+	if hasOptions(spec.Type) {
 		for _, o := range spec.Options {
 			if !validOptionText(o) {
 				errs = append(errs, FieldError{Field: fieldOptions, Code: codeInvalidCharacters})
@@ -275,6 +276,8 @@ func sqlType(fieldType string) (string, error) {
 		return "date", nil
 	case TypeCurrency:
 		return "bigint", nil
+	case TypeMultiselect:
+		return "text[]", nil
 	case TypePicklist:
 		return "text", nil
 	case TypeBoolean:
@@ -346,8 +349,8 @@ func BuildDDL(object, columnName string, spec FieldSpec) (string, error) {
 	}
 	stmt := fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s %s NULL",
 		quoteIdentifier(object), quoteIdentifier(columnName), colType)
-	if spec.Type == TypePicklist {
-		checkName, clause, err := checkConstraintClause(columnName, spec.Options)
+	if hasOptions(spec.Type) {
+		checkName, clause, err := typedCheckConstraintClause(columnName, spec.Type, spec.Options)
 		if err != nil {
 			return "", err
 		}
@@ -368,7 +371,7 @@ func BuildDDL(object, columnName string, spec FieldSpec) (string, error) {
 // package's DDL-generation boundary, not just its request-validation
 // boundary, so they carry the same defense-in-depth check rather than
 // trust an upstream caller.
-func checkConstraintClause(columnName string, options []string) (checkName, clause string, err error) {
+func typedCheckConstraintClause(columnName, fieldType string, options []string) (checkName, clause string, err error) {
 	checkName = columnName + "_check"
 	if !validIdentifier(checkName) {
 		return "", "", fmt.Errorf("customfields: invalid check-constraint identifier %q", checkName)
@@ -386,6 +389,9 @@ func checkConstraintClause(columnName string, options []string) (checkName, clau
 		quotedOpts[i] = lit
 	}
 	clause = fmt.Sprintf("CHECK (%s IS NULL OR %s IN (%s))", quotedCol, quotedCol, strings.Join(quotedOpts, ", "))
+	if fieldType == TypeMultiselect {
+		clause = fmt.Sprintf("CHECK (%s IS NULL OR (array_ndims(%s) = 1 AND array_position(%s, NULL) IS NULL AND %s <@ ARRAY[%s]::text[]))", quotedCol, quotedCol, quotedCol, quotedCol, strings.Join(quotedOpts, ", "))
+	}
 	return checkName, clause, nil
 }
 
@@ -397,16 +403,24 @@ func checkConstraintClause(columnName string, options []string) (checkName, clau
 // server-derived (never client text) by the time this is called, but both
 // are re-validated defensively, matching BuildDDL's own posture.
 func BuildOptionsDDL(object, columnName string, options []string) (string, error) {
+	return buildTypedOptionsDDL(object, columnName, TypePicklist, options)
+}
+
+func buildTypedOptionsDDL(object, columnName, fieldType string, options []string) (string, error) {
 	if !validIdentifier(object) {
 		return "", fmt.Errorf("customfields: invalid object identifier %q", object)
 	}
 	if !validIdentifier(columnName) {
 		return "", fmt.Errorf("customfields: invalid column identifier %q", columnName)
 	}
-	checkName, clause, err := checkConstraintClause(columnName, options)
+	checkName, clause, err := typedCheckConstraintClause(columnName, fieldType, options)
 	if err != nil {
 		return "", err
 	}
 	return fmt.Sprintf("ALTER TABLE %s DROP CONSTRAINT IF EXISTS %s, ADD CONSTRAINT %s %s",
 		quoteIdentifier(object), quoteIdentifier(checkName), quoteIdentifier(checkName), clause), nil
+}
+
+func hasOptions(fieldType string) bool {
+	return fieldType == TypePicklist || fieldType == TypeMultiselect
 }

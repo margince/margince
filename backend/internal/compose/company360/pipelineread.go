@@ -20,6 +20,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/idlebase"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -201,11 +202,20 @@ func openPipeline(
 	// rather than once per row. What stays here is this surface's own policy: a
 	// deal with no usable rate is priced at nothing and still counted, which is
 	// what priced_count reports.
+	// The pipeline band prints each open deal's figure, and the fold below sums
+	// them into the account's open value — so a mask has to reach both. A
+	// masked row arrives with a null amount, which this surface already treats
+	// as "priced at nothing and still counted", so the deal keeps its place in
+	// the band and its size stays withheld.
+	amountSQL, err := auth.MaskedColumnSQL(ctx, "deal", "amount_minor", "d", "amount_minor", arg)
+	if err != nil {
+		return pipeline{}, err
+	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT d.id, d.name, d.status, d.created_at, d.last_activity_at, d.wait_until,
 		       (SELECT count(*) FROM deal_stage_history h
 		         WHERE h.deal_id = d.id AND h.from_stage_id IS DISTINCT FROM h.to_stage_id),
-		       d.amount_minor,
+		       %[3]s,
 		       -- Cast to a timestamp because the scan takes a *time.Time and
 		       -- this column is nullable: the cast keeps the null a null while
 		       -- naming the type the row hands back. pgx does decode a bare
@@ -215,9 +225,9 @@ func openPipeline(
 		       d.expected_close_date::timestamptz,
 		       d.currency
 		FROM deal d
-		%s
-		ORDER BY %s, d.id`,
-		openDealsWhere(companyPos, dealScope), idlebase.SQL("d")), args...)
+		%[1]s
+		ORDER BY %[2]s, d.id`,
+		openDealsWhere(companyPos, dealScope), idlebase.SQL("d"), amountSQL), args...)
 	if err != nil {
 		return pipeline{}, fmt.Errorf("read the account's open pipeline: %w", err)
 	}

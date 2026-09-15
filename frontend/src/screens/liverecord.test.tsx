@@ -8,6 +8,7 @@ import { useCompany360 } from "./company360";
 import { useContact360 } from "./contact360";
 import { useDeal } from "./deals";
 import { useDealStatusCard } from "./dealstatus";
+import { useOutcomeReviews } from "./outcomereview.queries";
 import { useProject360 } from "./project360";
 
 // A RECORD RE-READS ITSELF WHILE SOMEBODY IS LOOKING AT IT (FE-PARAM-5).
@@ -47,14 +48,20 @@ function wrapper({ children }: Readonly<{ children: ReactNode }>) {
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
 }
 
-/** Mounts one record read against a counted fetch stub. */
-function mount(read: () => unknown) {
+/**
+ * Mounts one record read against a counted fetch stub.
+ *
+ * `body` because a read that unwraps an envelope needs one to unwrap: a bare
+ * `{}` leaves its hook returning undefined, which react-query treats as a
+ * failed query and retries — counting reads this test would read as a cadence.
+ */
+function mount(read: () => unknown, body: unknown = {}) {
   const paths: string[] = [];
   vi.stubGlobal(
     "fetch",
     vi.fn(async (request: Request) => {
       paths.push(new URL(request.url).pathname);
-      return jsonResponse({});
+      return jsonResponse(body);
     }),
   );
   const { unmount } = renderHook(read, { wrapper });
@@ -132,6 +139,22 @@ describe("a record the reader has open", () => {
     await advance(0);
     await advance(LIVE_RECORD_MS);
     expect(paths).toEqual(["/v1/deals/d-1/status", "/v1/deals/d-1/status"]);
+  });
+
+  it("re-reads the deal's outcome reviews, which are read against the deal", async () => {
+    // Not a record of its own: this list is read AGAINST the deal record, each
+    // review captioned as this closing's or an earlier one by comparing it with
+    // the deal's closing_occurrence_id. The deal re-reads itself every minute,
+    // so this has to as well — otherwise the deal advances to a closing a
+    // colleague has already reviewed and the panel goes on inviting a review
+    // nobody needs, for as long as the tab stays open.
+    const { paths } = mount(() => useOutcomeReviews("d-1", true), { data: [] });
+    await advance(0);
+    await advance(LIVE_RECORD_MS);
+    expect(paths).toEqual([
+      "/v1/deals/d-1/outcome-reviews",
+      "/v1/deals/d-1/outcome-reviews",
+    ]);
   });
 
   // The return is what the minute-long cadence is priced against, so it has

@@ -56,11 +56,7 @@ type signalHeadline struct {
 // the account owes nothing, which is a claim about the account rather than
 // about what this reader was allowed to see.
 func readSignalFacts(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) (signalFacts, error) {
-	allowed, err := granted(ctx, "signal")
-	if err != nil {
-		return signalFacts{}, err
-	}
-	if !allowed {
+	if !auth.ReadGranted(ctx, "signal") {
 		return signalFacts{}, nil
 	}
 	var args []any

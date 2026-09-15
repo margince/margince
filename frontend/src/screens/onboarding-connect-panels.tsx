@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
-import { Button, Disclosure, Field } from "../design-system/atoms";
+import { Badge, Button, Disclosure, Field } from "../design-system/atoms";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { CaptureNotice } from "./capture-notice";
@@ -334,9 +334,9 @@ export function OAuthReturnPanel({
       )}
       {live && (
         <>
-          <span className="trustpill">
-            <ShieldCheck aria-hidden /> {t("ob.s4.connectLive")}
-          </span>
+          <Badge tone="success" icon={ShieldCheck}>
+            {t("ob.s4.connectLive")}
+          </Badge>
           {/* Asked BEFORE the backread, because the backread is what reads a
               year of mail: a posture chosen after it has already let every
               captured message in under the previous answer. */}

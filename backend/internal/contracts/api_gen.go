@@ -1510,6 +1510,7 @@ const (
 	AttentionLanesOmittedCaptureHealth      AttentionLanesOmitted = "capture_health"
 	AttentionLanesOmittedCommitments        AttentionLanesOmitted = "commitments"
 	AttentionLanesOmittedDidNotRun          AttentionLanesOmitted = "did_not_run"
+	AttentionLanesOmittedDomainQuestions    AttentionLanesOmitted = "domain_questions"
 	AttentionLanesOmittedDoneForYou         AttentionLanesOmitted = "done_for_you"
 	AttentionLanesOmittedDsr                AttentionLanesOmitted = "dsr"
 	AttentionLanesOmittedIntroductions      AttentionLanesOmitted = "introductions"
@@ -1541,6 +1542,8 @@ func (e AttentionLanesOmitted) Valid() bool {
 	case AttentionLanesOmittedCommitments:
 		return true
 	case AttentionLanesOmittedDidNotRun:
+		return true
+	case AttentionLanesOmittedDomainQuestions:
 		return true
 	case AttentionLanesOmittedDoneForYou:
 		return true
@@ -1600,7 +1603,9 @@ const (
 	AttentionItemActionsAct         AttentionItemActions = "act"
 	AttentionItemActionsComplete    AttentionItemActions = "complete"
 	AttentionItemActionsDecide      AttentionItemActions = "decide"
+	AttentionItemActionsDiscard     AttentionItemActions = "discard"
 	AttentionItemActionsDismiss     AttentionItemActions = "dismiss"
+	AttentionItemActionsKeep        AttentionItemActions = "keep"
 	AttentionItemActionsMerge       AttentionItemActions = "merge"
 	AttentionItemActionsOpen        AttentionItemActions = "open"
 	AttentionItemActionsReply       AttentionItemActions = "reply"
@@ -1621,7 +1626,11 @@ func (e AttentionItemActions) Valid() bool {
 		return true
 	case AttentionItemActionsDecide:
 		return true
+	case AttentionItemActionsDiscard:
+		return true
 	case AttentionItemActionsDismiss:
+		return true
+	case AttentionItemActionsKeep:
 		return true
 	case AttentionItemActionsMerge:
 		return true
@@ -1681,6 +1690,7 @@ const (
 	AttentionItemSourceCustomerWaiting     AttentionItemSource = "customer_waiting"
 	AttentionItemSourceDealAtRisk          AttentionItemSource = "deal_at_risk"
 	AttentionItemSourceDedupeCandidate     AttentionItemSource = "dedupe_candidate"
+	AttentionItemSourceDomainQuestion      AttentionItemSource = "domain_question"
 	AttentionItemSourceDsr                 AttentionItemSource = "dsr"
 	AttentionItemSourceFailedApproval      AttentionItemSource = "failed_approval"
 	AttentionItemSourceIntroductionRequest AttentionItemSource = "introduction_request"
@@ -1717,6 +1727,8 @@ func (e AttentionItemSource) Valid() bool {
 	case AttentionItemSourceDealAtRisk:
 		return true
 	case AttentionItemSourceDedupeCandidate:
+		return true
+	case AttentionItemSourceDomainQuestion:
 		return true
 	case AttentionItemSourceDsr:
 		return true
@@ -2283,26 +2295,35 @@ func (e BackfillPreviewEstimateQuality) Valid() bool {
 
 // Defines values for BackfillPreviewWindow.
 const (
-	BackfillPreviewWindowN12m BackfillPreviewWindow = "12m"
-	BackfillPreviewWindowN24m BackfillPreviewWindow = "24m"
-	BackfillPreviewWindowN3m  BackfillPreviewWindow = "3m"
-	BackfillPreviewWindowN60m BackfillPreviewWindow = "60m"
-	BackfillPreviewWindowN6m  BackfillPreviewWindow = "6m"
-	BackfillPreviewWindowNone BackfillPreviewWindow = "none"
+	BackfillPreviewWindowN120m BackfillPreviewWindow = "120m"
+	BackfillPreviewWindowN12m  BackfillPreviewWindow = "12m"
+	BackfillPreviewWindowN24m  BackfillPreviewWindow = "24m"
+	BackfillPreviewWindowN36m  BackfillPreviewWindow = "36m"
+	BackfillPreviewWindowN3m   BackfillPreviewWindow = "3m"
+	BackfillPreviewWindowN60m  BackfillPreviewWindow = "60m"
+	BackfillPreviewWindowN6m   BackfillPreviewWindow = "6m"
+	BackfillPreviewWindowN84m  BackfillPreviewWindow = "84m"
+	BackfillPreviewWindowNone  BackfillPreviewWindow = "none"
 )
 
 // Valid indicates whether the value is a known member of the BackfillPreviewWindow enum.
 func (e BackfillPreviewWindow) Valid() bool {
 	switch e {
+	case BackfillPreviewWindowN120m:
+		return true
 	case BackfillPreviewWindowN12m:
 		return true
 	case BackfillPreviewWindowN24m:
+		return true
+	case BackfillPreviewWindowN36m:
 		return true
 	case BackfillPreviewWindowN3m:
 		return true
 	case BackfillPreviewWindowN60m:
 		return true
 	case BackfillPreviewWindowN6m:
+		return true
+	case BackfillPreviewWindowN84m:
 		return true
 	case BackfillPreviewWindowNone:
 		return true
@@ -2313,26 +2334,35 @@ func (e BackfillPreviewWindow) Valid() bool {
 
 // Defines values for BackfillPreviewRequestWindow.
 const (
-	BackfillPreviewRequestWindowN12m BackfillPreviewRequestWindow = "12m"
-	BackfillPreviewRequestWindowN24m BackfillPreviewRequestWindow = "24m"
-	BackfillPreviewRequestWindowN3m  BackfillPreviewRequestWindow = "3m"
-	BackfillPreviewRequestWindowN60m BackfillPreviewRequestWindow = "60m"
-	BackfillPreviewRequestWindowN6m  BackfillPreviewRequestWindow = "6m"
-	BackfillPreviewRequestWindowNone BackfillPreviewRequestWindow = "none"
+	BackfillPreviewRequestWindowN120m BackfillPreviewRequestWindow = "120m"
+	BackfillPreviewRequestWindowN12m  BackfillPreviewRequestWindow = "12m"
+	BackfillPreviewRequestWindowN24m  BackfillPreviewRequestWindow = "24m"
+	BackfillPreviewRequestWindowN36m  BackfillPreviewRequestWindow = "36m"
+	BackfillPreviewRequestWindowN3m   BackfillPreviewRequestWindow = "3m"
+	BackfillPreviewRequestWindowN60m  BackfillPreviewRequestWindow = "60m"
+	BackfillPreviewRequestWindowN6m   BackfillPreviewRequestWindow = "6m"
+	BackfillPreviewRequestWindowN84m  BackfillPreviewRequestWindow = "84m"
+	BackfillPreviewRequestWindowNone  BackfillPreviewRequestWindow = "none"
 )
 
 // Valid indicates whether the value is a known member of the BackfillPreviewRequestWindow enum.
 func (e BackfillPreviewRequestWindow) Valid() bool {
 	switch e {
+	case BackfillPreviewRequestWindowN120m:
+		return true
 	case BackfillPreviewRequestWindowN12m:
 		return true
 	case BackfillPreviewRequestWindowN24m:
+		return true
+	case BackfillPreviewRequestWindowN36m:
 		return true
 	case BackfillPreviewRequestWindowN3m:
 		return true
 	case BackfillPreviewRequestWindowN60m:
 		return true
 	case BackfillPreviewRequestWindowN6m:
+		return true
+	case BackfillPreviewRequestWindowN84m:
 		return true
 	case BackfillPreviewRequestWindowNone:
 		return true
@@ -2373,25 +2403,34 @@ func (e BackfillStatusState) Valid() bool {
 
 // Defines values for BackfillStatusWindow.
 const (
-	BackfillStatusWindowN12m BackfillStatusWindow = "12m"
-	BackfillStatusWindowN24m BackfillStatusWindow = "24m"
-	BackfillStatusWindowN3m  BackfillStatusWindow = "3m"
-	BackfillStatusWindowN60m BackfillStatusWindow = "60m"
-	BackfillStatusWindowN6m  BackfillStatusWindow = "6m"
+	BackfillStatusWindowN120m BackfillStatusWindow = "120m"
+	BackfillStatusWindowN12m  BackfillStatusWindow = "12m"
+	BackfillStatusWindowN24m  BackfillStatusWindow = "24m"
+	BackfillStatusWindowN36m  BackfillStatusWindow = "36m"
+	BackfillStatusWindowN3m   BackfillStatusWindow = "3m"
+	BackfillStatusWindowN60m  BackfillStatusWindow = "60m"
+	BackfillStatusWindowN6m   BackfillStatusWindow = "6m"
+	BackfillStatusWindowN84m  BackfillStatusWindow = "84m"
 )
 
 // Valid indicates whether the value is a known member of the BackfillStatusWindow enum.
 func (e BackfillStatusWindow) Valid() bool {
 	switch e {
+	case BackfillStatusWindowN120m:
+		return true
 	case BackfillStatusWindowN12m:
 		return true
 	case BackfillStatusWindowN24m:
+		return true
+	case BackfillStatusWindowN36m:
 		return true
 	case BackfillStatusWindowN3m:
 		return true
 	case BackfillStatusWindowN60m:
 		return true
 	case BackfillStatusWindowN6m:
+		return true
+	case BackfillStatusWindowN84m:
 		return true
 	default:
 		return false
@@ -2423,6 +2462,7 @@ func (e BillingContactRole) Valid() bool {
 const (
 	BlockedDomainAdmissionAdmitted   BlockedDomainAdmission = "admitted"
 	BlockedDomainAdmissionSuppressed BlockedDomainAdmission = "suppressed"
+	BlockedDomainAdmissionUndecided  BlockedDomainAdmission = "undecided"
 )
 
 // Valid indicates whether the value is a known member of the BlockedDomainAdmission enum.
@@ -2432,6 +2472,8 @@ func (e BlockedDomainAdmission) Valid() bool {
 		return true
 	case BlockedDomainAdmissionSuppressed:
 		return true
+	case BlockedDomainAdmissionUndecided:
+		return true
 	default:
 		return false
 	}
@@ -2439,9 +2481,11 @@ func (e BlockedDomainAdmission) Valid() bool {
 
 // Defines values for BlockedDomainSource.
 const (
-	BlockedDomainSourceHeuristic BlockedDomainSource = "heuristic"
-	BlockedDomainSourceHuman     BlockedDomainSource = "human"
-	BlockedDomainSourceVerdict   BlockedDomainSource = "verdict"
+	BlockedDomainSourceHeuristic     BlockedDomainSource = "heuristic"
+	BlockedDomainSourceHuman         BlockedDomainSource = "human"
+	BlockedDomainSourceStaleEvidence BlockedDomainSource = "stale_evidence"
+	BlockedDomainSourceUnevidenced   BlockedDomainSource = "unevidenced"
+	BlockedDomainSourceVerdict       BlockedDomainSource = "verdict"
 )
 
 // Valid indicates whether the value is a known member of the BlockedDomainSource enum.
@@ -2450,6 +2494,10 @@ func (e BlockedDomainSource) Valid() bool {
 	case BlockedDomainSourceHeuristic:
 		return true
 	case BlockedDomainSourceHuman:
+		return true
+	case BlockedDomainSourceStaleEvidence:
+		return true
+	case BlockedDomainSourceUnevidenced:
 		return true
 	case BlockedDomainSourceVerdict:
 		return true
@@ -3223,45 +3271,6 @@ func (e CommunicationReviewState) Valid() bool {
 	case CommunicationReviewStateResolved:
 		return true
 	case CommunicationReviewStateSuperseded:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for CompanyClassification.
-const (
-	CompanyClassificationAgency     CompanyClassification = "agency"
-	CompanyClassificationCompetitor CompanyClassification = "competitor"
-	CompanyClassificationCustomer   CompanyClassification = "customer"
-	CompanyClassificationOther      CompanyClassification = "other"
-	CompanyClassificationPartner    CompanyClassification = "partner"
-	CompanyClassificationPlatform   CompanyClassification = "platform"
-	CompanyClassificationProspect   CompanyClassification = "prospect"
-	CompanyClassificationReseller   CompanyClassification = "reseller"
-	CompanyClassificationTechVendor CompanyClassification = "tech_vendor"
-)
-
-// Valid indicates whether the value is a known member of the CompanyClassification enum.
-func (e CompanyClassification) Valid() bool {
-	switch e {
-	case CompanyClassificationAgency:
-		return true
-	case CompanyClassificationCompetitor:
-		return true
-	case CompanyClassificationCustomer:
-		return true
-	case CompanyClassificationOther:
-		return true
-	case CompanyClassificationPartner:
-		return true
-	case CompanyClassificationPlatform:
-		return true
-	case CompanyClassificationProspect:
-		return true
-	case CompanyClassificationReseller:
-		return true
-	case CompanyClassificationTechVendor:
 		return true
 	default:
 		return false
@@ -6651,12 +6660,13 @@ func (e CreateCustomFieldRequestObject) Valid() bool {
 
 // Defines values for CreateCustomFieldRequestType.
 const (
-	CreateCustomFieldRequestTypeBoolean  CreateCustomFieldRequestType = "boolean"
-	CreateCustomFieldRequestTypeCurrency CreateCustomFieldRequestType = "currency"
-	CreateCustomFieldRequestTypeDate     CreateCustomFieldRequestType = "date"
-	CreateCustomFieldRequestTypeNumber   CreateCustomFieldRequestType = "number"
-	CreateCustomFieldRequestTypePicklist CreateCustomFieldRequestType = "picklist"
-	CreateCustomFieldRequestTypeText     CreateCustomFieldRequestType = "text"
+	CreateCustomFieldRequestTypeBoolean     CreateCustomFieldRequestType = "boolean"
+	CreateCustomFieldRequestTypeCurrency    CreateCustomFieldRequestType = "currency"
+	CreateCustomFieldRequestTypeDate        CreateCustomFieldRequestType = "date"
+	CreateCustomFieldRequestTypeMultiselect CreateCustomFieldRequestType = "multiselect"
+	CreateCustomFieldRequestTypeNumber      CreateCustomFieldRequestType = "number"
+	CreateCustomFieldRequestTypePicklist    CreateCustomFieldRequestType = "picklist"
+	CreateCustomFieldRequestTypeText        CreateCustomFieldRequestType = "text"
 )
 
 // Valid indicates whether the value is a known member of the CreateCustomFieldRequestType enum.
@@ -6667,6 +6677,8 @@ func (e CreateCustomFieldRequestType) Valid() bool {
 	case CreateCustomFieldRequestTypeCurrency:
 		return true
 	case CreateCustomFieldRequestTypeDate:
+		return true
+	case CreateCustomFieldRequestTypeMultiselect:
 		return true
 	case CreateCustomFieldRequestTypeNumber:
 		return true
@@ -7263,12 +7275,13 @@ func (e CustomFieldStatus) Valid() bool {
 
 // Defines values for CustomFieldType.
 const (
-	CustomFieldTypeBoolean  CustomFieldType = "boolean"
-	CustomFieldTypeCurrency CustomFieldType = "currency"
-	CustomFieldTypeDate     CustomFieldType = "date"
-	CustomFieldTypeNumber   CustomFieldType = "number"
-	CustomFieldTypePicklist CustomFieldType = "picklist"
-	CustomFieldTypeText     CustomFieldType = "text"
+	CustomFieldTypeBoolean     CustomFieldType = "boolean"
+	CustomFieldTypeCurrency    CustomFieldType = "currency"
+	CustomFieldTypeDate        CustomFieldType = "date"
+	CustomFieldTypeMultiselect CustomFieldType = "multiselect"
+	CustomFieldTypeNumber      CustomFieldType = "number"
+	CustomFieldTypePicklist    CustomFieldType = "picklist"
+	CustomFieldTypeText        CustomFieldType = "text"
 )
 
 // Valid indicates whether the value is a known member of the CustomFieldType enum.
@@ -7279,6 +7292,8 @@ func (e CustomFieldType) Valid() bool {
 	case CustomFieldTypeCurrency:
 		return true
 	case CustomFieldTypeDate:
+		return true
+	case CustomFieldTypeMultiselect:
 		return true
 	case CustomFieldTypeNumber:
 		return true
@@ -8310,14 +8325,15 @@ func (e FilterVocabularyFieldReferences) Valid() bool {
 
 // Defines values for FilterVocabularyFieldType.
 const (
-	FilterVocabularyFieldTypeBoolean  FilterVocabularyFieldType = "boolean"
-	FilterVocabularyFieldTypeCurrency FilterVocabularyFieldType = "currency"
-	FilterVocabularyFieldTypeDate     FilterVocabularyFieldType = "date"
-	FilterVocabularyFieldTypeDomain   FilterVocabularyFieldType = "domain"
-	FilterVocabularyFieldTypeId       FilterVocabularyFieldType = "id"
-	FilterVocabularyFieldTypeNumber   FilterVocabularyFieldType = "number"
-	FilterVocabularyFieldTypePicklist FilterVocabularyFieldType = "picklist"
-	FilterVocabularyFieldTypeText     FilterVocabularyFieldType = "text"
+	FilterVocabularyFieldTypeBoolean     FilterVocabularyFieldType = "boolean"
+	FilterVocabularyFieldTypeCurrency    FilterVocabularyFieldType = "currency"
+	FilterVocabularyFieldTypeDate        FilterVocabularyFieldType = "date"
+	FilterVocabularyFieldTypeDomain      FilterVocabularyFieldType = "domain"
+	FilterVocabularyFieldTypeId          FilterVocabularyFieldType = "id"
+	FilterVocabularyFieldTypeMultiselect FilterVocabularyFieldType = "multiselect"
+	FilterVocabularyFieldTypeNumber      FilterVocabularyFieldType = "number"
+	FilterVocabularyFieldTypePicklist    FilterVocabularyFieldType = "picklist"
+	FilterVocabularyFieldTypeText        FilterVocabularyFieldType = "text"
 )
 
 // Valid indicates whether the value is a known member of the FilterVocabularyFieldType enum.
@@ -8332,6 +8348,8 @@ func (e FilterVocabularyFieldType) Valid() bool {
 	case FilterVocabularyFieldTypeDomain:
 		return true
 	case FilterVocabularyFieldTypeId:
+		return true
+	case FilterVocabularyFieldTypeMultiselect:
 		return true
 	case FilterVocabularyFieldTypeNumber:
 		return true
@@ -12058,6 +12076,7 @@ const (
 	RetentionScopeDeallost               RetentionScope = "deal/lost"
 	RetentionScopeDealwon                RetentionScope = "deal/won"
 	RetentionScopeLeadunconverted        RetentionScope = "lead/unconverted"
+	RetentionScopeRawCapture             RetentionScope = "raw_capture"
 )
 
 // Valid indicates whether the value is a known member of the RetentionScope enum.
@@ -12077,6 +12096,8 @@ func (e RetentionScope) Valid() bool {
 		return true
 	case RetentionScopeLeadunconverted:
 		return true
+	case RetentionScopeRawCapture:
+		return true
 	default:
 		return false
 	}
@@ -12084,12 +12105,15 @@ func (e RetentionScope) Valid() bool {
 
 // Defines values for ReviewQuestionType.
 const (
-	ReviewQuestionTypeText ReviewQuestionType = "text"
+	ReviewQuestionTypeMultiselect ReviewQuestionType = "multiselect"
+	ReviewQuestionTypeText        ReviewQuestionType = "text"
 )
 
 // Valid indicates whether the value is a known member of the ReviewQuestionType enum.
 func (e ReviewQuestionType) Valid() bool {
 	switch e {
+	case ReviewQuestionTypeMultiselect:
+		return true
 	case ReviewQuestionTypeText:
 		return true
 	default:
@@ -13374,25 +13398,34 @@ func (e StageEvidenceSource) Valid() bool {
 
 // Defines values for StartBackfillRequestWindow.
 const (
-	StartBackfillRequestWindowN12m StartBackfillRequestWindow = "12m"
-	StartBackfillRequestWindowN24m StartBackfillRequestWindow = "24m"
-	StartBackfillRequestWindowN3m  StartBackfillRequestWindow = "3m"
-	StartBackfillRequestWindowN60m StartBackfillRequestWindow = "60m"
-	StartBackfillRequestWindowN6m  StartBackfillRequestWindow = "6m"
+	StartBackfillRequestWindowN120m StartBackfillRequestWindow = "120m"
+	StartBackfillRequestWindowN12m  StartBackfillRequestWindow = "12m"
+	StartBackfillRequestWindowN24m  StartBackfillRequestWindow = "24m"
+	StartBackfillRequestWindowN36m  StartBackfillRequestWindow = "36m"
+	StartBackfillRequestWindowN3m   StartBackfillRequestWindow = "3m"
+	StartBackfillRequestWindowN60m  StartBackfillRequestWindow = "60m"
+	StartBackfillRequestWindowN6m   StartBackfillRequestWindow = "6m"
+	StartBackfillRequestWindowN84m  StartBackfillRequestWindow = "84m"
 )
 
 // Valid indicates whether the value is a known member of the StartBackfillRequestWindow enum.
 func (e StartBackfillRequestWindow) Valid() bool {
 	switch e {
+	case StartBackfillRequestWindowN120m:
+		return true
 	case StartBackfillRequestWindowN12m:
 		return true
 	case StartBackfillRequestWindowN24m:
+		return true
+	case StartBackfillRequestWindowN36m:
 		return true
 	case StartBackfillRequestWindowN3m:
 		return true
 	case StartBackfillRequestWindowN60m:
 		return true
 	case StartBackfillRequestWindowN6m:
+		return true
+	case StartBackfillRequestWindowN84m:
 		return true
 	default:
 		return false
@@ -13945,6 +13978,24 @@ func (e UpdateCompanyRequestSizeBand) Valid() bool {
 	case UpdateCompanyRequestSizeBandN5011000:
 		return true
 	case UpdateCompanyRequestSizeBandN51200:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UpdateCompanyRequestVisibility.
+const (
+	UpdateCompanyRequestVisibilityOwner     UpdateCompanyRequestVisibility = "owner"
+	UpdateCompanyRequestVisibilityWorkspace UpdateCompanyRequestVisibility = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the UpdateCompanyRequestVisibility enum.
+func (e UpdateCompanyRequestVisibility) Valid() bool {
+	switch e {
+	case UpdateCompanyRequestVisibilityOwner:
+		return true
+	case UpdateCompanyRequestVisibilityWorkspace:
 		return true
 	default:
 		return false
@@ -15721,7 +15772,9 @@ const (
 	WorklistItemActionsAct         WorklistItemActions = "act"
 	WorklistItemActionsComplete    WorklistItemActions = "complete"
 	WorklistItemActionsDecide      WorklistItemActions = "decide"
+	WorklistItemActionsDiscard     WorklistItemActions = "discard"
 	WorklistItemActionsDismiss     WorklistItemActions = "dismiss"
+	WorklistItemActionsKeep        WorklistItemActions = "keep"
 	WorklistItemActionsMerge       WorklistItemActions = "merge"
 	WorklistItemActionsOpen        WorklistItemActions = "open"
 	WorklistItemActionsReply       WorklistItemActions = "reply"
@@ -15742,7 +15795,11 @@ func (e WorklistItemActions) Valid() bool {
 		return true
 	case WorklistItemActionsDecide:
 		return true
+	case WorklistItemActionsDiscard:
+		return true
 	case WorklistItemActionsDismiss:
+		return true
+	case WorklistItemActionsKeep:
 		return true
 	case WorklistItemActionsMerge:
 		return true
@@ -16022,6 +16079,7 @@ const (
 	WorklistItemSourceCustomerWaiting     WorklistItemSource = "customer_waiting"
 	WorklistItemSourceDealAtRisk          WorklistItemSource = "deal_at_risk"
 	WorklistItemSourceDedupeCandidate     WorklistItemSource = "dedupe_candidate"
+	WorklistItemSourceDomainQuestion      WorklistItemSource = "domain_question"
 	WorklistItemSourceDsr                 WorklistItemSource = "dsr"
 	WorklistItemSourceFailedApproval      WorklistItemSource = "failed_approval"
 	WorklistItemSourceIntroductionRequest WorklistItemSource = "introduction_request"
@@ -16061,6 +16119,8 @@ func (e WorklistItemSource) Valid() bool {
 	case WorklistItemSourceDealAtRisk:
 		return true
 	case WorklistItemSourceDedupeCandidate:
+		return true
+	case WorklistItemSourceDomainQuestion:
 		return true
 	case WorklistItemSourceDsr:
 		return true
@@ -16157,6 +16217,7 @@ const (
 	WorklistReachSourceCustomerWaiting     WorklistReachSource = "customer_waiting"
 	WorklistReachSourceDealAtRisk          WorklistReachSource = "deal_at_risk"
 	WorklistReachSourceDedupeCandidate     WorklistReachSource = "dedupe_candidate"
+	WorklistReachSourceDomainQuestion      WorklistReachSource = "domain_question"
 	WorklistReachSourceDsr                 WorklistReachSource = "dsr"
 	WorklistReachSourceFailedApproval      WorklistReachSource = "failed_approval"
 	WorklistReachSourceIntroductionRequest WorklistReachSource = "introduction_request"
@@ -16196,6 +16257,8 @@ func (e WorklistReachSource) Valid() bool {
 	case WorklistReachSourceDealAtRisk:
 		return true
 	case WorklistReachSourceDedupeCandidate:
+		return true
+	case WorklistReachSourceDomainQuestion:
 		return true
 	case WorklistReachSourceDsr:
 		return true
@@ -19062,6 +19125,42 @@ type AiActivityItemState string
 // edits one.
 type AiActivityKind string
 
+// AiBudgetChange defines model for AiBudgetChange.
+type AiBudgetChange struct {
+	Config           AiBudgetConfig `json:"config"`
+	ExpectedRevision string         `json:"expected_revision"`
+}
+
+// AiBudgetConfig defines model for AiBudgetConfig.
+type AiBudgetConfig struct {
+	CompanyMonthlyTokens *int64 `json:"company_monthly_tokens"`
+	TokensPerFullUser    int64  `json:"tokens_per_full_user"`
+}
+
+// AiBudgetPreview defines model for AiBudgetPreview.
+type AiBudgetPreview struct {
+	Current      AiBudgetSnapshot `json:"current"`
+	DeferredWork []AiDeferredWork `json:"deferred_work"`
+	Features     []AiFeatureRoute `json:"features"`
+	Proposed     AiBudgetSnapshot `json:"proposed"`
+}
+
+// AiBudgetSnapshot defines model for AiBudgetSnapshot.
+type AiBudgetSnapshot struct {
+	Band              string         `json:"band"`
+	BudgetedFullUsers int64          `json:"budgeted_full_users"`
+	Config            AiBudgetConfig `json:"config"`
+	EligibleFullUsers int64          `json:"eligible_full_users"`
+	MonthStartAt      time.Time      `json:"month_start_at"`
+	MonthlyTokens     int64          `json:"monthly_tokens"`
+	ObservedAt        time.Time      `json:"observed_at"`
+	RemainingTokens   int64          `json:"remaining_tokens"`
+	ResetsAt          time.Time      `json:"resets_at"`
+	Revision          string         `json:"revision"`
+	Source            string         `json:"source"`
+	SpentTokens       int64          `json:"spent_tokens"`
+}
+
 // AiCall defines model for AiCall.
 type AiCall struct {
 	AgentRunId *openapi_types.UUID `json:"agent_run_id,omitempty"`
@@ -19181,6 +19280,14 @@ type AiCallSummary struct {
 	TokensOut int    `json:"tokens_out"`
 }
 
+// AiDeferredWork defines model for AiDeferredWork.
+type AiDeferredWork struct {
+	Available bool   `json:"available"`
+	Carrier   string `json:"carrier"`
+	Count     *int64 `json:"count,omitempty"`
+	Unit      string `json:"unit"`
+}
+
 // AiEmbeddingsBinding defines model for AiEmbeddingsBinding.
 type AiEmbeddingsBinding struct {
 	// BaseUrl Endpoint override; empty means the provider default.
@@ -19201,6 +19308,18 @@ type AiEmbeddingsBinding struct {
 	// Provider The adapter serving this tier: fake | anthropic | ollama | vllm | openai_compatible
 	// | openai | gemini. The credential is never part of this document.
 	Provider string `json:"provider"`
+}
+
+// AiFeatureRoute defines model for AiFeatureRoute.
+type AiFeatureRoute struct {
+	BudgetExempt        bool               `json:"budget_exempt"`
+	DisplayName         string             `json:"display_name"`
+	EffectiveCandidates []AiRouteCandidate `json:"effective_candidates"`
+	ExecutionMode       string             `json:"execution_mode"`
+	Impact              string             `json:"impact"`
+	LeadingTier         string             `json:"leading_tier"`
+	NormalCandidates    []AiRouteCandidate `json:"normal_candidates"`
+	Task                string             `json:"task"`
 }
 
 // AiHealth defines model for AiHealth.
@@ -19290,6 +19409,14 @@ type AiProviderKeyStatus struct {
 	Provider string `json:"provider"`
 }
 
+// AiRouteCandidate defines model for AiRouteCandidate.
+type AiRouteCandidate struct {
+	Model      string `json:"model"`
+	Processing string `json:"processing"`
+	Provider   string `json:"provider"`
+	Tier       string `json:"tier"`
+}
+
 // AiRouting The installation's tier-to-model binding. `tiers` is keyed by tier name; the closed set
 // of names is the one the task contract declares (api/ai-tasks.yaml), and the server
 // refuses an unknown key with a 422 naming it — restating the set here would be a second
@@ -19308,6 +19435,13 @@ type AiRouting struct {
 // AiRoutingProfile The location ladder (§4). `sovereign` means zero egress by construction: a cloud
 // provider on any tier is refused, and so is a local provider pointed at another host.
 type AiRoutingProfile string
+
+// AiRoutingPreview defines model for AiRoutingPreview.
+type AiRoutingPreview struct {
+	CurrentVersion string           `json:"current_version"`
+	Features       []AiFeatureRoute `json:"features"`
+	UnusedTiers    []string         `json:"unused_tiers"`
+}
 
 // AiRunModelUsage One task, route, and served-model slice within a correlated AI run.
 type AiRunModelUsage struct {
@@ -19380,6 +19514,18 @@ type AiRungHealth struct {
 	Tier string `json:"tier"`
 }
 
+// AiStatus defines model for AiStatus.
+type AiStatus struct {
+	Budget               AiBudgetSnapshot `json:"budget"`
+	DeferredWork         []AiDeferredWork `json:"deferred_work"`
+	DeferredWorkCoverage string           `json:"deferred_work_coverage"`
+	Features             []AiFeatureRoute `json:"features"`
+	ObservedAt           time.Time        `json:"observed_at"`
+	RoutingVersion       string           `json:"routing_version"`
+	TaskContractHash     string           `json:"task_contract_hash"`
+	UnusedTiers          *[]string        `json:"unused_tiers,omitempty"`
+}
+
 // AiTierBinding defines model for AiTierBinding.
 type AiTierBinding struct {
 	// BaseUrl Endpoint override; empty means the provider default.
@@ -19424,7 +19570,8 @@ type AiUsage struct {
 			CostEstMinor *int `json:"cost_est_minor,omitempty"`
 
 			// Task capture_classify, enrich, summarize, …
-			Task string `json:"task"`
+			Task            string  `json:"task"`
+			TaskDisplayName *string `json:"task_display_name,omitempty"`
 
 			// Tier local_small, cheap_cloud, premium, frontier, local_large.
 			Tier      string `json:"tier"`
@@ -20175,6 +20322,29 @@ type Attention struct {
 	// failure marks.
 	DidNotRun *[]AttentionItem `json:"did_not_run,omitempty"`
 
+	// DomainQuestions Domains the capture triage could not judge, whose mail belongs to THIS
+	// reader — the machine read the site, found nothing that named a company,
+	// and left the question open rather than inventing a record.
+	//
+	// Each card names the domain as `title` and why the machine stopped as
+	// `detail`. The two verbs are the whole answer a human owes: `keep` makes
+	// the company from the domain's own label, and `discard` writes a capture
+	// exclusion for this reader's mailboxes alone. Neither needs anything
+	// typed, which is why this lane can settle from a queue row where a
+	// free-text answer could not.
+	//
+	// OWNED, and that is the point of the lane. Every open question carries
+	// the mailbox owner whose mail raised it (`company_domain_disposition.owner_id`,
+	// stamped when the question opens), so it reaches the reader whose mail it
+	// is about rather than a shared pile nobody answers for. One installation's
+	// two colleagues may answer the same domain differently, and the exclusion
+	// a `discard` writes binds only the colleague who pressed it.
+	//
+	// Withheld — named in `lanes_omitted` — for a caller with no human behind
+	// it. Absent — not empty — on an installation whose feed does not read
+	// domain questions.
+	DomainQuestions *[]AttentionItem `json:"domain_questions,omitempty"`
+
 	// DoneForYou What the system did on its own, most recent first. Receipts, not questions.
 	DoneForYou []AttentionItem `json:"done_for_you"`
 
@@ -20403,6 +20573,9 @@ type AttentionCounts struct {
 	// DidNotRun How many failed decisions this lane is CARRYING — the bounded page, as the other lanes report.
 	DidNotRun *int `json:"did_not_run,omitempty"`
 
+	// DomainQuestions How many open domain questions belong to this reader — the full count rather than a bounded page, because a reader with thirty must be told thirty and the lane offers no second page to find the rest by.
+	DomainQuestions *int `json:"domain_questions,omitempty"`
+
 	// Dsr How many unresolved data-subject requests this lane is CARRYING — the bounded page, as the other lanes report. A reader past the bound sees the soonest deadlines, which is the order the lane is in.
 	Dsr *int `json:"dsr,omitempty"`
 
@@ -20480,6 +20653,13 @@ type AttentionItem struct {
 	// Actions What this item offers. `decide` and `merge` mean the verb is irreversible and a
 	// contact must choose; `complete` and `snooze` are a task's own verbs; `open` is
 	// the read-only fallback for a receipt.
+	//
+	// `keep` and `discard` are an undecided domain's pair, and they always travel
+	// together: keeping it creates the company the triage withheld, discarding it stops
+	// the caller's OWN mailboxes capturing that domain. Neither carries a body, because
+	// a domain question has no field to fill in — which is what lets it be answered from
+	// a queue row. They route to `/capture/domain-questions/{domain}/…`, keyed on the
+	// domain because an open question is named by the domain rather than by a record id.
 	//
 	// `act`, `dismiss` and `set_aside` are the briefing queue's three, and they route
 	// to `/brief/items/{itemId}/…`. `acknowledge` is a notice's one verb and routes
@@ -21216,7 +21396,9 @@ type AvailableModelListUnavailable string
 
 // BackfillPreview The scope before the spend (ADR-0063/ADR-0020): what starting this window would touch and roughly cost. An estimate, labeled as such — actual spend is metered per task.
 type BackfillPreview struct {
-	ComputedAt time.Time `json:"computed_at"`
+	// AfterDate Calendar day of the preview query boundary; time within that day remains provider-specific. Omitted for none. Starting later recalculates the rolling window.
+	AfterDate  *openapi_types.Date `json:"after_date,omitempty"`
+	ComputedAt time.Time           `json:"computed_at"`
 
 	// Currency ISO-4217; "USD" in v1.
 	Currency *string `json:"currency,omitempty"`
@@ -21246,11 +21428,11 @@ type BackfillPreviewWindow string
 
 // BackfillPreviewRequest defines model for BackfillPreviewRequest.
 type BackfillPreviewRequest struct {
-	// Window The CAP-PARAM-4 window; default UI selection is 6m. 24m/60m added by ADR-0106 — the set stays closed, and the preview is what keeps a multi-year reach consented.
+	// Window Bounded mail-history window, up to ten years. The default UI selection is six months.
 	Window BackfillPreviewRequestWindow `json:"window"`
 }
 
-// BackfillPreviewRequestWindow The CAP-PARAM-4 window; default UI selection is 6m. 24m/60m added by ADR-0106 — the set stays closed, and the preview is what keeps a multi-year reach consented.
+// BackfillPreviewRequestWindow Bounded mail-history window, up to ten years. The default UI selection is six months.
 type BackfillPreviewRequestWindow string
 
 // BackfillStatus The CAP-DDL-4 single-row activation read: every count is a persisted-row count, never a fabricated counter (closes CAP-AC-OPEN-1).
@@ -21261,7 +21443,6 @@ type BackfillStatus struct {
 		Captured         *int `json:"captured,omitempty"`
 		CompaniesCreated *int `json:"companies_created,omitempty"`
 		ContactsCreated  *int `json:"contacts_created,omitempty"`
-		DedupeCandidates *int `json:"dedupe_candidates,omitempty"`
 		MessagesScanned  *int `json:"messages_scanned,omitempty"`
 		Skipped          *int `json:"skipped,omitempty"`
 	} `json:"counts,omitempty"`
@@ -21332,31 +21513,49 @@ type BillingContact struct {
 // One contact may hold several, and each is a separate edge.
 type BillingContactRole string
 
-// BlockedDomain One domain carrying a standing admission decision. `suppressed` refuses it a company —
+// BlockedDomain One domain and where its company question stands. `suppressed` refuses it a company —
 // a vendor or bulk sender the business does not sell to — while `admitted` is a human
 // deliberately letting one in, which no later verdict may undo.
+//
+// `undecided` is the third state and it is not a decision: the question was asked, the
+// machine declined to answer it, and nobody has since. Those rows are why this list
+// exists rather than being a record of refusals alone — a domain nothing decided is
+// invisible everywhere else, and an operator hunting a company that never appeared
+// cannot tell it from one that was refused.
 type BlockedDomain struct {
-	// Admission `suppressed` — never a company. `admitted` — allowed, and sticky against later machine refusals.
+	// Admission `suppressed` — never a company. `admitted` — allowed, and sticky against later machine
+	// refusals. `undecided` — the question is open and waiting to be answered; nothing is stored
+	// on the row for this state, it is what the absence of a decision is called on the wire.
 	Admission BlockedDomainAdmission `json:"admission"`
 
 	// CompanyId The company on this domain, when one exists — an admitted domain usually has one.
 	CompanyId *openapi_types.UUID `json:"company_id,omitempty"`
-	DecidedAt time.Time           `json:"decided_at"`
+
+	// DecidedAt When the decision was recorded. For an `undecided` domain, when the row last moved.
+	DecidedAt time.Time `json:"decided_at"`
 
 	// Domain The registrable domain the decision is about.
 	Domain string `json:"domain"`
 
-	// Reason One sentence an operator can act on: why this domain was refused or let in.
+	// Reason One sentence an operator can act on: why this domain was refused, let in, or left open.
 	Reason string `json:"reason"`
 
-	// Source What decided it. `human` decisions outrank every machine one.
+	// Source What decided it, or — for an `undecided` domain — what stopped the machine deciding.
+	// `human` decisions outrank every machine one. `unevidenced` means nothing the crawl
+	// found named a company; `stale_evidence` means the newest mail from the domain is too
+	// old to mint one from today's site.
 	Source BlockedDomainSource `json:"source"`
 }
 
-// BlockedDomainAdmission `suppressed` — never a company. `admitted` — allowed, and sticky against later machine refusals.
+// BlockedDomainAdmission `suppressed` — never a company. `admitted` — allowed, and sticky against later machine
+// refusals. `undecided` — the question is open and waiting to be answered; nothing is stored
+// on the row for this state, it is what the absence of a decision is called on the wire.
 type BlockedDomainAdmission string
 
-// BlockedDomainSource What decided it. `human` decisions outrank every machine one.
+// BlockedDomainSource What decided it, or — for an `undecided` domain — what stopped the machine deciding.
+// `human` decisions outrank every machine one. `unevidenced` means nothing the crawl
+// found named a company; `stale_evidence` means the newest mail from the domain is too
+// old to mint one from today's site.
 type BlockedDomainSource string
 
 // BlockedDomainListResponse defines model for BlockedDomainListResponse.
@@ -22557,10 +22756,6 @@ type Company struct {
 	// CapturedBy Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.
 	CapturedBy *string `json:"captured_by,omitempty"`
 
-	// Classification RETIRED (ADR-0079) — superseded by `lifecycle` + `relationship_types`, which split the two questions this one value tried to answer at once. Carried one release, written by nothing; read it for migration comparison only.
-	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-	Classification *CompanyClassification `json:"classification,omitempty"`
-
 	// ComputedFields S-E15.8c formula-field display rows (RD-AC-6/RD-AC-7/RD-AC-N-1). Populated on
 	// `getCompany` only; the key is absent entirely (not an empty array) when the
 	// viewer's role lacks computed_field:read visibility (STATE-4).
@@ -22613,7 +22808,8 @@ type Company struct {
 	ParentCompanyId *openapi_types.UUID `json:"parent_company_id,omitempty"`
 
 	// Partner First-class partner state as a 1:1 extension of a company (a company IS a partner iff it
-	// has a `partner` row + classification='partner'). Company identity is never duplicated.
+	// has a `partner` row AND carries `partner` in its `relationship_types` — ADR-0079 split that
+	// second half out of the retired `classification`). Company identity is never duplicated.
 	// ADR-0053 adds the relationship-in-flight layer: lifecycle stage, relationship health,
 	// partner fit, next step, and served segments. Behavior is Fast-follow, but the V1 schema is
 	// forward-compatible.
@@ -22637,7 +22833,7 @@ type Company struct {
 	// not only overlay mode.
 	Version *RowVersion `json:"version,omitempty"`
 
-	// Visibility Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the workspace through a sender verdict, and never travels back. There is no owner-driven door for a company: `POST /contacts/{id}/publish` is a contact's.
+	// Visibility Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the workspace through a sender verdict, or through `visibility` on `PATCH /companies/{id}`, which moves it BOTH ways for anybody the write gate admits. Read-only HERE, on the read schema, the same as the contact column beside it: the update request carries the writable copy.
 	Visibility *CompanyVisibility `json:"visibility,omitempty"`
 
 	// WebsiteUrl The company's readable website, DERIVED from its primary domain row. There is deliberately no website column — a second store for a fact company_domain already owns is the duplication ADR-0085 closes. Not accepted on write.
@@ -22648,9 +22844,6 @@ type Company struct {
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
-// CompanyClassification RETIRED (ADR-0079) — superseded by `lifecycle` + `relationship_types`, which split the two questions this one value tried to answer at once. Carried one release, written by nothing; read it for migration comparison only.
-type CompanyClassification string
-
 // CompanyLifecycle WHERE THE ACCOUNT STANDS with us (PO-DDL-4, ADR-0079). Single-valued: an account is at one point in a sales motion at a time. `unknown` is the default and means it — the retired `classification` defaulted to `prospect` and, having no writer, rendered that default on every unassessed account as though someone had judged it.
 type CompanyLifecycle string
 
@@ -22660,7 +22853,7 @@ type CompanyRelationshipTypes string
 // CompanySizeBand defines model for Company.SizeBand.
 type CompanySizeBand string
 
-// CompanyVisibility Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the workspace through a sender verdict, and never travels back. There is no owner-driven door for a company: `POST /contacts/{id}/publish` is a contact's.
+// CompanyVisibility Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the workspace through a sender verdict, or through `visibility` on `PATCH /companies/{id}`, which moves it BOTH ways for anybody the write gate admits. Read-only HERE, on the read schema, the same as the contact column beside it: the update request carries the writable copy.
 type CompanyVisibility string
 
 // Company360 The company record page in one payload. Every section except `company` is
@@ -27072,11 +27265,17 @@ type CreateOutcomeReviewRequest struct {
 	// Body Free prose for the note itself, beside the structured answers. Optional: the answers are the review.
 	Body *string `json:"body,omitempty"`
 
+	// ChoiceAnswers Selected options by question key; values must belong to the frozen question vocabulary.
+	ChoiceAnswers *map[string][]string `json:"choice_answers,omitempty"`
+
 	// ClosingOccurrenceId The closing being reviewed. Must be the one the deal is on now, else 409.
 	ClosingOccurrenceId openapi_types.UUID `json:"closing_occurrence_id"`
 
 	// SubmissionId The client's own id for this submission. Retrying with the same id returns the review that already exists rather than writing a second one; a deliberate second review uses a new id.
 	SubmissionId openapi_types.UUID `json:"submission_id"`
+
+	// TemplateVersion Version shown when the form opened. A changed template returns 409 rather than filing answers against new questions.
+	TemplateVersion *int64 `json:"template_version,omitempty"`
 }
 
 // CreatePipelineRequest defines model for CreatePipelineRequest.
@@ -27424,7 +27623,7 @@ type CustomField struct {
 	// Status retired = soft: hidden from the API and filtering, column and values preserved (CUSTOM-FIELDS-AC-13).
 	Status CustomFieldStatus `json:"status"`
 
-	// Type The closed set of six scalar types (CUSTOM-FIELDS-PARAM-1). Immutable once created.
+	// Type The supported field types. Multiselect values are JSON string arrays; empty arrays clear the selection. Immutable once created.
 	Type      CustomFieldType `json:"type"`
 	UpdatedAt time.Time       `json:"updated_at"`
 
@@ -27442,7 +27641,7 @@ type CustomFieldObject string
 // CustomFieldStatus retired = soft: hidden from the API and filtering, column and values preserved (CUSTOM-FIELDS-AC-13).
 type CustomFieldStatus string
 
-// CustomFieldType The closed set of six scalar types (CUSTOM-FIELDS-PARAM-1). Immutable once created.
+// CustomFieldType The supported field types. Multiselect values are JSON string arrays; empty arrays clear the selection. Immutable once created.
 type CustomFieldType string
 
 // CustomFieldListResponse defines model for CustomFieldListResponse.
@@ -30593,9 +30792,10 @@ type KindAutonomy struct {
 	// as reversibility does. A client renders the kinds it is sent.
 	Kind string `json:"kind"`
 
-	// Mode `manual` asks every time, and is what a kind stands at until the reader
-	// says otherwise. `auto` applies on sight, undoably, under the authority of
-	// whoever owns the record at the time.
+	// Mode `auto` is the default for eligible kinds and applies changes under the
+	// authority of whoever owns the record at the time. Saved choices take
+	// precedence. `manual` disables automatic application: proposals wait for
+	// review, and close-date maintenance stops for the owner.
 	//
 	// `veto` is a third rung the policy table admits and nothing writes yet: it
 	// would apply after a stated delay unless the reader stops it first. It is
@@ -30608,9 +30808,10 @@ type KindAutonomy struct {
 	Rejected int `json:"rejected"`
 }
 
-// KindAutonomyMode `manual` asks every time, and is what a kind stands at until the reader
-// says otherwise. `auto` applies on sight, undoably, under the authority of
-// whoever owns the record at the time.
+// KindAutonomyMode `auto` is the default for eligible kinds and applies changes under the
+// authority of whoever owns the record at the time. Saved choices take
+// precedence. `manual` disables automatic application: proposals wait for
+// review, and close-date maintenance stops for the owner.
 //
 // `veto` is a third rung the policy table admits and nothing writes yet: it
 // would apply after a stated delay unless the reader stops it first. It is
@@ -32691,6 +32892,9 @@ type OutcomeReview struct {
 	// Answers Keyed by question key. Every key here has a question in `questions`.
 	Answers map[string]string `json:"answers"`
 
+	// ChoiceAnswers Selected options by question key; values must belong to the frozen question vocabulary.
+	ChoiceAnswers *map[string][]string `json:"choice_answers,omitempty"`
+
 	// ClosingOccurrenceId Which closing this review is about. Compare it against the deal's own `closing_occurrence_id` to tell whether it reviews the current outcome or an earlier one.
 	ClosingOccurrenceId openapi_types.UUID `json:"closing_occurrence_id"`
 	CreatedAt           time.Time          `json:"created_at"`
@@ -32958,7 +33162,8 @@ type PageInfo struct {
 }
 
 // Partner First-class partner state as a 1:1 extension of a company (a company IS a partner iff it
-// has a `partner` row + classification='partner'). Company identity is never duplicated.
+// has a `partner` row AND carries `partner` in its `relationship_types` — ADR-0079 split that
+// second half out of the retired `classification`). Company identity is never duplicated.
 // ADR-0053 adds the relationship-in-flight layer: lifecycle stage, relationship health,
 // partner fit, next step, and served segments. Behavior is Fast-follow, but the V1 schema is
 // forward-compatible.
@@ -34566,9 +34771,15 @@ type RejectCompanyResponse struct {
 	// Company A company. Mirrors the `company` table.
 	Company Company `json:"company"`
 
-	// Domain One domain carrying a standing admission decision. `suppressed` refuses it a company —
+	// Domain One domain and where its company question stands. `suppressed` refuses it a company —
 	// a vendor or bulk sender the business does not sell to — while `admitted` is a human
 	// deliberately letting one in, which no later verdict may undo.
+	//
+	// `undecided` is the third state and it is not a decision: the question was asked, the
+	// machine declined to answer it, and nobody has since. Those rows are why this list
+	// exists rather than being a record of refusals alone — a domain nothing decided is
+	// invisible everywhere else, and an operator hunting a company that never appeared
+	// cannot tell it from one that was refused.
 	Domain BlockedDomain `json:"domain"`
 }
 
@@ -35176,14 +35387,17 @@ type ReviewQuestion struct {
 	Key string `json:"key"`
 
 	// Label What the question asks, worded as the reader sees it.
-	Label    string `json:"label"`
-	Required bool   `json:"required"`
+	Label string `json:"label"`
 
-	// Type Only free text for now. The vocabulary is closed so a client never meets a control it cannot render.
+	// Options Allowed choices, required for multiselect. Frozen alongside the question in each submitted review.
+	Options  *[]string `json:"options,omitempty"`
+	Required bool      `json:"required"`
+
+	// Type Text answers use answers; multiple-choice answers use choice_answers.
 	Type ReviewQuestionType `json:"type"`
 }
 
-// ReviewQuestionType Only free text for now. The vocabulary is closed so a client never meets a control it cannot render.
+// ReviewQuestionType Text answers use answers; multiple-choice answers use choice_answers.
 type ReviewQuestionType string
 
 // RightsCaseReceipt What a data subject is told to quote when asking after a request they sent through their confirm
@@ -37477,6 +37691,14 @@ type UpdateActivityRequest struct {
 // sending the right one.
 type UpdateActivityRequestMeetingStatus string
 
+// UpdateActivityReviewTemplateRequest defines model for UpdateActivityReviewTemplateRequest.
+type UpdateActivityReviewTemplateRequest struct {
+	Questions []ReviewQuestion `json:"questions"`
+
+	// Version Last read template version.
+	Version int64 `json:"version"`
+}
+
 // UpdateAttachmentMetadataRequest A sparse patch. An absent field is untouched; `title` and `supersedes_id` accept
 // null to clear, because clearing either is an edit a human makes deliberately.
 type UpdateAttachmentMetadataRequest struct {
@@ -37567,9 +37789,30 @@ type UpdateCompanyRequest struct {
 	ParentCompanyId *openapi_types.UUID `json:"parent_company_id,omitempty"`
 
 	// RelationshipTypes Replace-set of what the company is to us (add new, archive removed), the same shape as `domains`. Absent = untouched; an empty array clears every type. Removing `partner` while the company still has a `partner` extension row is refused with 422 — the invariant binds both ways, and an invariant nothing enforces is a comment.
-	RelationshipTypes    *[]UpdateCompanyRequestRelationshipTypes `json:"relationship_types,omitempty"`
-	SizeBand             *UpdateCompanyRequestSizeBand            `json:"size_band,omitempty"`
-	AdditionalProperties map[string]interface{}                   `json:"-"`
+	RelationshipTypes *[]UpdateCompanyRequestRelationshipTypes `json:"relationship_types,omitempty"`
+	SizeBand          *UpdateCompanyRequestSizeBand            `json:"size_band,omitempty"`
+
+	// Visibility Who may see this company: `workspace` for everyone holding the read grant, `owner` for
+	// the seat named by `owner_id` alone. Absent = untouched.
+	//
+	// An ORDINARY field, writable in BOTH directions by anybody the write gate admits, on the
+	// same terms as `visibility` on `PATCH /contacts/{id}`. Capture mints a company
+	// owner-scoped from a message nothing has judged yet, and until this field existed the
+	// only way out was a sender verdict — so a company the classifier never asked about, or
+	// judged wrong, stayed private to its mailbox owner with no door at all. A machine's
+	// decision no human could undo is the same reasoning that made the contact column
+	// writable both ways.
+	//
+	// Narrowing a company does not retract what was already done with it. Deals, contacts and
+	// mail filed against it keep their own audiences; what changes is who finds the company
+	// from here on.
+	//
+	// A company that reads `owner` and names no owner is invisible to EVERY seat, including
+	// its author and an admin, so the pair is refused rather than written: sending
+	// `{"visibility":"owner","owner_id":null}`, or narrowing a company that has no owner,
+	// answers 422 naming `owner_id`.
+	Visibility           *UpdateCompanyRequestVisibility `json:"visibility,omitempty"`
+	AdditionalProperties map[string]interface{}          `json:"-"`
 }
 
 // UpdateCompanyRequestLifecycle Where the account stands with us (ADR-0079). Absent = untouched.
@@ -37580,6 +37823,27 @@ type UpdateCompanyRequestRelationshipTypes string
 
 // UpdateCompanyRequestSizeBand defines model for UpdateCompanyRequest.SizeBand.
 type UpdateCompanyRequestSizeBand string
+
+// UpdateCompanyRequestVisibility Who may see this company: `workspace` for everyone holding the read grant, `owner` for
+// the seat named by `owner_id` alone. Absent = untouched.
+//
+// An ORDINARY field, writable in BOTH directions by anybody the write gate admits, on the
+// same terms as `visibility` on `PATCH /contacts/{id}`. Capture mints a company
+// owner-scoped from a message nothing has judged yet, and until this field existed the
+// only way out was a sender verdict — so a company the classifier never asked about, or
+// judged wrong, stayed private to its mailbox owner with no door at all. A machine's
+// decision no human could undo is the same reasoning that made the contact column
+// writable both ways.
+//
+// Narrowing a company does not retract what was already done with it. Deals, contacts and
+// mail filed against it keep their own audiences; what changes is who finds the company
+// from here on.
+//
+// A company that reads `owner` and names no owner is invisible to EVERY seat, including
+// its author and an admin, so the pair is refused rather than written: sending
+// `{"visibility":"owner","owner_id":null}`, or narrowing a company that has no owner,
+// answers 422 naming `owner_id`.
+type UpdateCompanyRequestVisibility string
 
 // UpdateContactRequest Partial update. Omitted fields are unchanged.
 type UpdateContactRequest struct {
@@ -40359,7 +40623,7 @@ type WorklistReadings struct {
 	//
 	// Only rows carrying a verb the reader may press. A duplicate pair whose two
 	// records the reader cannot both write is somebody else's decision, and
-	// counting it here tells them a contact is blocked on an answer they are not
+	// counting it here tells them a contact is waiting on an answer they are not
 	// able to give.
 	Review int `json:"review"`
 
@@ -44098,6 +44362,9 @@ type ListNoticeCasesParams struct {
 
 	// Limit Max items in the page.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. It encodes the last row's `due_at` and id — both, because the order is by both, and an id alone cannot continue it when two duties fall due in the same second. Changing `state` mid-walk changes which rows the remaining pages see, so re-issue without the cursor when the filter changes. A token this endpoint did not mint returns `422 code: malformed_cursor`.
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
 }
 
 // ListProductsParams defines parameters for ListProducts.
@@ -45834,11 +46101,20 @@ type PreviewSendAuthorizationJSONRequestBody = PreviewSendRequest
 // SendMessageJSONRequestBody defines body for SendMessage for application/json ContentType.
 type SendMessageJSONRequestBody = SendMessageRequest
 
+// UpdateActivityReviewTemplateJSONRequestBody defines body for UpdateActivityReviewTemplate for application/json ContentType.
+type UpdateActivityReviewTemplateJSONRequestBody = UpdateActivityReviewTemplateRequest
+
 // ResetDataJSONRequestBody defines body for ResetData for application/json ContentType.
 type ResetDataJSONRequestBody ResetDataJSONBody
 
 // SetAiModelRateJSONRequestBody defines body for SetAiModelRate for application/json ContentType.
 type SetAiModelRateJSONRequestBody = SetAiModelRateRequest
+
+// ReplaceAiBudgetJSONRequestBody defines body for ReplaceAiBudget for application/json ContentType.
+type ReplaceAiBudgetJSONRequestBody = AiBudgetChange
+
+// PreviewAiBudgetJSONRequestBody defines body for PreviewAiBudget for application/json ContentType.
+type PreviewAiBudgetJSONRequestBody = AiBudgetChange
 
 // RecordAIFeedbackJSONRequestBody defines body for RecordAIFeedback for application/json ContentType.
 type RecordAIFeedbackJSONRequestBody = AIFeedbackInput
@@ -45848,6 +46124,9 @@ type SetAiProviderKeyJSONRequestBody = AiProviderKeyInput
 
 // ReplaceAiRoutingJSONRequestBody defines body for ReplaceAiRouting for application/json ContentType.
 type ReplaceAiRoutingJSONRequestBody = AiRouting
+
+// PreviewAiRoutingJSONRequestBody defines body for PreviewAiRouting for application/json ContentType.
+type PreviewAiRoutingJSONRequestBody = AiRouting
 
 // ExplainAnalyticsCellJSONRequestBody defines body for ExplainAnalyticsCell for application/json ContentType.
 type ExplainAnalyticsCellJSONRequestBody = AnalyticsExplainRequest
@@ -46904,14 +47183,6 @@ func (a *Company) UnmarshalJSON(b []byte) error {
 		delete(object, "captured_by")
 	}
 
-	if raw, found := object["classification"]; found {
-		err = json.Unmarshal(raw, &a.Classification)
-		if err != nil {
-			return fmt.Errorf("error reading 'classification': %w", err)
-		}
-		delete(object, "classification")
-	}
-
 	if raw, found := object["computed_fields"]; found {
 		err = json.Unmarshal(raw, &a.ComputedFields)
 		if err != nil {
@@ -47188,13 +47459,6 @@ func (a Company) MarshalJSON() ([]byte, error) {
 	object["captured_by"], err = json.Marshal(a.CapturedBy)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'captured_by': %w", err)
-	}
-
-	if a.Classification != nil {
-		object["classification"], err = json.Marshal(a.Classification)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling 'classification': %w", err)
-		}
 	}
 
 	if a.ComputedFields != nil {
@@ -54070,6 +54334,14 @@ func (a *UpdateCompanyRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "size_band")
 	}
 
+	if raw, found := object["visibility"]; found {
+		err = json.Unmarshal(raw, &a.Visibility)
+		if err != nil {
+			return fmt.Errorf("error reading 'visibility': %w", err)
+		}
+		delete(object, "visibility")
+	}
+
 	if len(object) != 0 {
 		a.AdditionalProperties = make(map[string]interface{})
 		for fieldName, fieldBuf := range object {
@@ -54170,6 +54442,13 @@ func (a UpdateCompanyRequest) MarshalJSON() ([]byte, error) {
 		object["size_band"], err = json.Marshal(a.SizeBand)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'size_band': %w", err)
+		}
+	}
+
+	if a.Visibility != nil {
+		object["visibility"], err = json.Marshal(a.Visibility)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'visibility': %w", err)
 		}
 	}
 
@@ -56369,6 +56648,9 @@ type ServerInterface interface {
 	// The question sets an outcome review can ask.
 	// (GET /activity-review-templates)
 	ListActivityReviewTemplates(w http.ResponseWriter, r *http.Request)
+	// Edit the questions for future outcome reviews.
+	// (PATCH /activity-review-templates/{id})
+	UpdateActivityReviewTemplate(w http.ResponseWriter, r *http.Request, id Id)
 	// What capture's judgement queues are holding, and in whose mailbox.
 	// (GET /admin/capture-health)
 	GetCaptureHealth(w http.ResponseWriter, r *http.Request)
@@ -56393,6 +56675,15 @@ type ServerInterface interface {
 	// What one vendor says it serves today (admin/ops).
 	// (GET /ai/available-models/{provider})
 	ListAvailableModels(w http.ResponseWriter, r *http.Request, provider string, params ListAvailableModelsParams)
+	// Read the shared company allowance (ai_budget read).
+	// (GET /ai/budget)
+	GetAiBudget(w http.ResponseWriter, r *http.Request)
+	// Replace the shared company allowance (ai_budget update).
+	// (PUT /ai/budget)
+	ReplaceAiBudget(w http.ResponseWriter, r *http.Request)
+	// Preview an allowance change (ai_budget read/update).
+	// (POST /ai/budget/preview)
+	PreviewAiBudget(w http.ResponseWriter, r *http.Request)
 	// The AI call trace — every terminal model call, newest first.
 	// (GET /ai/calls)
 	ListAiCalls(w http.ResponseWriter, r *http.Request, params ListAiCallsParams)
@@ -56423,6 +56714,12 @@ type ServerInterface interface {
 	// Replace the tier-to-model binding (admin/ops).
 	// (PUT /ai/routing)
 	ReplaceAiRouting(w http.ResponseWriter, r *http.Request)
+	// Preview affected features without calling a model (ai_routing read/update and ai_budget read).
+	// (POST /ai/routing/preview)
+	PreviewAiRouting(w http.ResponseWriter, r *http.Request)
+	// Read AI administration status (ai_diagnostics and ai_budget read).
+	// (GET /ai/status)
+	GetAiStatus(w http.ResponseWriter, r *http.Request)
 	// AI usage + budget — the spend is never invisible.
 	// (GET /ai/usage)
 	GetAiUsage(w http.ResponseWriter, r *http.Request, params GetAiUsageParams)
@@ -56561,7 +56858,7 @@ type ServerInterface interface {
 	// Read-only run history for one automation — successes AND errored/blocked/skipped runs.
 	// (GET /automations/{id}/runs)
 	ListAutomationRuns(w http.ResponseWriter, r *http.Request, id Id, params ListAutomationRunsParams)
-	// Which kinds of proposal the caller has put on automatic.
+	// The caller's automatic-change settings and review history.
 	// (GET /autonomy)
 	GetAutonomy(w http.ResponseWriter, r *http.Request)
 	// Turn automatic application on or off for one kind.
@@ -56600,12 +56897,15 @@ type ServerInterface interface {
 	// The same window for the workspace's shared channel connections.
 	// (GET /capture/activity/workspace)
 	ListWorkspaceCaptureActivity(w http.ResponseWriter, r *http.Request, params ListWorkspaceCaptureActivityParams)
-	// The domains refused a company, and why.
+	// Where each domain's company question stands.
 	// (GET /capture/blocked-domains)
 	ListBlockedDomains(w http.ResponseWriter, r *http.Request)
 	// Block a domain, or unblock one (admin/ops).
 	// (PUT /capture/blocked-domains)
 	SetBlockedDomain(w http.ResponseWriter, r *http.Request)
+	// Ask about an undecided domain again (admin/ops).
+	// (POST /capture/blocked-domains/{domain}/reopen)
+	ReopenWithheldDomain(w http.ResponseWriter, r *http.Request, domain string)
 	// Search the shipped consumer-mail baseline (CAP-PARAM-5).
 	// (GET /capture/consumer-mail-baseline)
 	ListConsumerMailBaseline(w http.ResponseWriter, r *http.Request, params ListConsumerMailBaselineParams)
@@ -56630,6 +56930,12 @@ type ServerInterface interface {
 	// Lift a counterparty hold.
 	// (DELETE /capture/counterparty-holds/{id})
 	DeleteCaptureCounterpartyHold(w http.ResponseWriter, r *http.Request, id Id)
+	// Answer an open domain question by excluding the domain from your own capture.
+	// (POST /capture/domain-questions/{domain}/discard)
+	DiscardDomainQuestion(w http.ResponseWriter, r *http.Request, domain string)
+	// Answer an open domain question by keeping the company.
+	// (POST /capture/domain-questions/{domain}/keep)
+	KeepDomainQuestion(w http.ResponseWriter, r *http.Request, domain string)
 	// The workspace's own email domains.
 	// (GET /capture/email-domains)
 	ListWorkspaceEmailDomains(w http.ResponseWriter, r *http.Request)
@@ -58427,6 +58733,12 @@ func (_ Unimplemented) ListActivityReviewTemplates(w http.ResponseWriter, r *htt
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Edit the questions for future outcome reviews.
+// (PATCH /activity-review-templates/{id})
+func (_ Unimplemented) UpdateActivityReviewTemplate(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // What capture's judgement queues are holding, and in whose mailbox.
 // (GET /admin/capture-health)
 func (_ Unimplemented) GetCaptureHealth(w http.ResponseWriter, r *http.Request) {
@@ -58472,6 +58784,24 @@ func (_ Unimplemented) ProposeAiModelRateRefresh(w http.ResponseWriter, r *http.
 // What one vendor says it serves today (admin/ops).
 // (GET /ai/available-models/{provider})
 func (_ Unimplemented) ListAvailableModels(w http.ResponseWriter, r *http.Request, provider string, params ListAvailableModelsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Read the shared company allowance (ai_budget read).
+// (GET /ai/budget)
+func (_ Unimplemented) GetAiBudget(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Replace the shared company allowance (ai_budget update).
+// (PUT /ai/budget)
+func (_ Unimplemented) ReplaceAiBudget(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Preview an allowance change (ai_budget read/update).
+// (POST /ai/budget/preview)
+func (_ Unimplemented) PreviewAiBudget(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -58532,6 +58862,18 @@ func (_ Unimplemented) GetAiRouting(w http.ResponseWriter, r *http.Request) {
 // Replace the tier-to-model binding (admin/ops).
 // (PUT /ai/routing)
 func (_ Unimplemented) ReplaceAiRouting(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Preview affected features without calling a model (ai_routing read/update and ai_budget read).
+// (POST /ai/routing/preview)
+func (_ Unimplemented) PreviewAiRouting(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Read AI administration status (ai_diagnostics and ai_budget read).
+// (GET /ai/status)
+func (_ Unimplemented) GetAiStatus(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -58811,7 +59153,7 @@ func (_ Unimplemented) ListAutomationRuns(w http.ResponseWriter, r *http.Request
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Which kinds of proposal the caller has put on automatic.
+// The caller's automatic-change settings and review history.
 // (GET /autonomy)
 func (_ Unimplemented) GetAutonomy(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -58889,7 +59231,7 @@ func (_ Unimplemented) ListWorkspaceCaptureActivity(w http.ResponseWriter, r *ht
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// The domains refused a company, and why.
+// Where each domain's company question stands.
 // (GET /capture/blocked-domains)
 func (_ Unimplemented) ListBlockedDomains(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -58898,6 +59240,12 @@ func (_ Unimplemented) ListBlockedDomains(w http.ResponseWriter, r *http.Request
 // Block a domain, or unblock one (admin/ops).
 // (PUT /capture/blocked-domains)
 func (_ Unimplemented) SetBlockedDomain(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Ask about an undecided domain again (admin/ops).
+// (POST /capture/blocked-domains/{domain}/reopen)
+func (_ Unimplemented) ReopenWithheldDomain(w http.ResponseWriter, r *http.Request, domain string) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -58946,6 +59294,18 @@ func (_ Unimplemented) ShareCaptureCounterpartyHoldHistory(w http.ResponseWriter
 // Lift a counterparty hold.
 // (DELETE /capture/counterparty-holds/{id})
 func (_ Unimplemented) DeleteCaptureCounterpartyHold(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Answer an open domain question by excluding the domain from your own capture.
+// (POST /capture/domain-questions/{domain}/discard)
+func (_ Unimplemented) DiscardDomainQuestion(w http.ResponseWriter, r *http.Request, domain string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Answer an open domain question by keeping the company.
+// (POST /capture/domain-questions/{domain}/keep)
+func (_ Unimplemented) KeepDomainQuestion(w http.ResponseWriter, r *http.Request, domain string) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -63644,6 +64004,40 @@ func (siw *ServerInterfaceWrapper) ListActivityReviewTemplates(w http.ResponseWr
 	handler.ServeHTTP(w, r)
 }
 
+// UpdateActivityReviewTemplate operation middleware
+func (siw *ServerInterfaceWrapper) UpdateActivityReviewTemplate(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateActivityReviewTemplate(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetCaptureHealth operation middleware
 func (siw *ServerInterfaceWrapper) GetCaptureHealth(w http.ResponseWriter, r *http.Request) {
 
@@ -63868,6 +64262,66 @@ func (siw *ServerInterfaceWrapper) ListAvailableModels(w http.ResponseWriter, r 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListAvailableModels(w, r, provider, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAiBudget operation middleware
+func (siw *ServerInterfaceWrapper) GetAiBudget(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAiBudget(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ReplaceAiBudget operation middleware
+func (siw *ServerInterfaceWrapper) ReplaceAiBudget(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReplaceAiBudget(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PreviewAiBudget operation middleware
+func (siw *ServerInterfaceWrapper) PreviewAiBudget(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PreviewAiBudget(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -64149,6 +64603,46 @@ func (siw *ServerInterfaceWrapper) ReplaceAiRouting(w http.ResponseWriter, r *ht
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ReplaceAiRouting(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PreviewAiRouting operation middleware
+func (siw *ServerInterfaceWrapper) PreviewAiRouting(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PreviewAiRouting(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAiStatus operation middleware
+func (siw *ServerInterfaceWrapper) GetAiStatus(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAiStatus(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -66383,6 +66877,38 @@ func (siw *ServerInterfaceWrapper) SetBlockedDomain(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
+// ReopenWithheldDomain operation middleware
+func (siw *ServerInterfaceWrapper) ReopenWithheldDomain(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "domain" -------------
+	var domain string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "domain", chi.URLParam(r, "domain"), &domain, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "domain", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReopenWithheldDomain(w, r, domain)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListConsumerMailBaseline operation middleware
 func (siw *ServerInterfaceWrapper) ListConsumerMailBaseline(w http.ResponseWriter, r *http.Request) {
 
@@ -66577,6 +67103,70 @@ func (siw *ServerInterfaceWrapper) DeleteCaptureCounterpartyHold(w http.Response
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.DeleteCaptureCounterpartyHold(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DiscardDomainQuestion operation middleware
+func (siw *ServerInterfaceWrapper) DiscardDomainQuestion(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "domain" -------------
+	var domain string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "domain", chi.URLParam(r, "domain"), &domain, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "domain", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DiscardDomainQuestion(w, r, domain)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// KeepDomainQuestion operation middleware
+func (siw *ServerInterfaceWrapper) KeepDomainQuestion(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "domain" -------------
+	var domain string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "domain", chi.URLParam(r, "domain"), &domain, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "domain", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.KeepDomainQuestion(w, r, domain)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -81855,6 +82445,19 @@ func (siw *ServerInterfaceWrapper) ListNoticeCases(w http.ResponseWriter, r *htt
 		return
 	}
 
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListNoticeCases(w, r, params)
 	}))
@@ -90322,6 +90925,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/activity-review-templates", wrapper.ListActivityReviewTemplates)
 	})
 	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/activity-review-templates/{id}", wrapper.UpdateActivityReviewTemplate)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/admin/capture-health", wrapper.GetCaptureHealth)
 	})
 	r.Group(func(r chi.Router) {
@@ -90344,6 +90950,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/ai/available-models/{provider}", wrapper.ListAvailableModels)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/ai/budget", wrapper.GetAiBudget)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/ai/budget", wrapper.ReplaceAiBudget)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/ai/budget/preview", wrapper.PreviewAiBudget)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/ai/calls", wrapper.ListAiCalls)
@@ -90374,6 +90989,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/ai/routing", wrapper.ReplaceAiRouting)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/ai/routing/preview", wrapper.PreviewAiRouting)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/ai/status", wrapper.GetAiStatus)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/ai/usage", wrapper.GetAiUsage)
@@ -90559,6 +91180,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Put(options.BaseURL+"/capture/blocked-domains", wrapper.SetBlockedDomain)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/capture/blocked-domains/{domain}/reopen", wrapper.ReopenWithheldDomain)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/capture/consumer-mail-baseline", wrapper.ListConsumerMailBaseline)
 	})
 	r.Group(func(r chi.Router) {
@@ -90581,6 +91205,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/capture/counterparty-holds/{id}", wrapper.DeleteCaptureCounterpartyHold)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/capture/domain-questions/{domain}/discard", wrapper.DiscardDomainQuestion)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/capture/domain-questions/{domain}/keep", wrapper.KeepDomainQuestion)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/capture/email-domains", wrapper.ListWorkspaceEmailDomains)

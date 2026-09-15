@@ -594,9 +594,9 @@
 }
 /* The head's second line: what this installation runs on, and which build of it
    this is. One row for both, because they are one statement — and in the same
-   small voice as the name above them rather than the mono uppercase kicker this
-   used to draw in, which was a third type family standing in the corner of
-   every screen and saying nothing the name did not.
+   small voice as the name above them, in the same face: an uppercase kicker in
+   another family would stand in the corner of every screen saying nothing the
+   name did not.
    It is a SIBLING of the brand anchor and not a child of it: the marker is a
    fact about the build, and a fact inside a link is a fact a press carries you
    away from. */
@@ -616,20 +616,12 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-/* WHICH BUILD THIS IS, as a badge rather than a line of grey type.
-   Filled in the brand's own accent so it reads as a stamp on the product rather
-   than as one more label: the reader it exists for is somebody seeing the
-   product for the first time, and "this is not finished software" is the one
-   thing in this panel they must not miss. --textOnAccentControl and not
-   --textOnAccent, because the fill IS --accent and dark mode lightens it
-   (design-system/tokens.css says so where the two are split). */
+/* WHICH BUILD THIS IS, as a badge rather than a line of grey type (app/shell.tsx
+   draws it): a stamp on the product, soft because a version is a standing fact
+   rather than a status to act on. The wrapper only keeps it from shrinking. */
 .rail .ws-alpha {
+  display: inline-flex;
   flex: none;
-  background: var(--accent);
-  color: var(--textOnAccentControl);
-  font-weight: var(--fw-bold);
-  padding: 1px var(--space-1); /* ds:ignore a cap-height band on a 10.5px label, not spaced content */
-  border-radius: var(--r-xs);
 }
 /* Collapsed there is no room for the attribution and no need for it: the mark
    above says whose installation this is, and 56px is one glyph wide. The badge
@@ -803,18 +795,7 @@
   opacity: 0;
 }
 .rail .navitem .count {
-  min-width: 18px;
-  height: 18px;
-  border-radius: var(--r-full);
-  corner-shape: round;
-  background: var(--accent);
-  color: var(--textOnAccentControl);
-  font-size: var(--fs-eyebrow);
-  font-weight: 600;
-  display: grid;
-  place-items: center;
-  padding: 0 var(--space-1);
-  font-family: var(--f-body);
+  display: inline-flex;
   flex: none;
   margin-left: auto;
 }
@@ -1204,17 +1185,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-.palette-row .type {
-  font-size: var(--fs-eyebrow);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-eyebrow);
-  color: var(--textChip);
-  background: var(--bgChip);
-  border-radius: var(--r-full);
-  corner-shape: round;
-  padding: 1px var(--space-2); /* ds:ignore a cap-height band on a 10.5px label, not spaced content */
 }
 /* The one thing the list says that is not a row. It sits on the list's own
    inset so the sentence starts on the same text column the results do. */

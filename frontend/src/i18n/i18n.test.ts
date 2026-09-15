@@ -20,6 +20,10 @@ import { vi as viCatalog } from "./vi";
 // name" from "missed translation" at a glance — an addition to any group
 // must be defensible on the same grounds as its neighbours.
 const KEPT_IN_ENGLISH = new Set<string>([
+  // The name of the network, offered as a profile field in the research drawer.
+  // "LinkedIn" is the brand and is written the same in every catalog; the other
+  // six field labels beside it are translated normally.
+  "contact.research.field.linkedin",
   // The product name of the buyer surface.
   "room.card.title",
   // Two sales nouns Vietnamese borrows rather than translates, on the
@@ -105,7 +109,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // English does — digits then the sign, no space — so the value is identical by
   // agreement rather than by omission. German differs (it takes the space) and
   // carries its own.
-  "brief.pct",
   // Pure punctuation layouts: every word in them is a placeholder, so there is
   // nothing to translate and a "translation" could only reorder the slots.
   // Two phase names and an arrow.

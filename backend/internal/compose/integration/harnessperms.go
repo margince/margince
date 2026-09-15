@@ -179,14 +179,23 @@ var (
 			// admin stands in for every seat in most suites, so a plan test
 			// that could not write one would be testing the fixture rather
 			// than the store.
-			"weekly_plan":   {Create: true, Read: true, Update: true, Delete: true},
-			"fx_rate":       {Create: true, Read: true, Update: true, Delete: true},
-			"ai_model_rate": {Create: true, Read: true, Update: true, Delete: true},
+			// offer_template is crud for admin in the real seed: policy's admin
+			// row is grid(crud, …) over every core object, and offer_template is
+			// not one of its named exceptions. Mirrored here for the reason the
+			// entries around it are — a narrower admin makes a suite pass for the
+			// wrong reason, and this one did: the replay gate's object half found
+			// a keyed offer-template call the fixture's own principal could never
+			// have made.
+			"offer_template": {Create: true, Read: true, Update: true, Delete: true},
+			"weekly_plan":    {Create: true, Read: true, Update: true, Delete: true},
+			"fx_rate":        {Create: true, Read: true, Update: true, Delete: true},
+			"ai_model_rate":  {Create: true, Read: true, Update: true, Delete: true},
 			// ai_routing mirrors the real seed: read + update for admin/ops and
 			// nothing for anyone else, and NO create or delete — a setting is
 			// read and updated, and an absent row is its registered default
 			// rather than a missing record. It gates which vendor the
 			// installation's text is sent to.
+			"ai_budget":  {Read: true, Update: true},
 			"ai_routing": {Read: true, Update: true},
 			// capture_settings mirrors the real admin seed: create + read +
 			// update (0210 added create — any seat may contribute a consumer

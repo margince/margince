@@ -137,15 +137,22 @@ func (s *Store) ApplySignatureFields(ctx context.Context, contactID ids.ContactI
 		// may run days after the mail arrived and re-delivery is ordinary — a
 		// processing time would let a replayed old signature outrank a recent
 		// one.
+		// The SAME eligibility the candidate query selected on, re-asked here
+		// under the lock — ONE spelling, so selection and application cannot
+		// disagree. A flat audience test here would reject every owner-scoped
+		// contact's own mail that SignatureCandidates had just offered, skip
+		// all its fields, and still let the caller mark the message read: the
+		// mail consumed, nothing written, and never reconsidered.
 		var sourceLimited bool
 		var observedAt time.Time
 		if err := tx.QueryRow(ctx, `
-			SELECT audience <> 'workspace'
-			       OR restricted_at IS NOT NULL
-			       OR archived_at IS NOT NULL,
-			       occurred_at
-			  FROM activity WHERE id = $1 FOR SHARE`,
-			sourceActivity).Scan(&sourceLimited, &observedAt); err != nil {
+			SELECT NOT `+SignatureSourceEligible("p", "a")+`
+			       OR a.restricted_at IS NOT NULL
+			       OR a.archived_at IS NOT NULL,
+			       a.occurred_at
+			  FROM activity a, contact p
+			 WHERE a.id = $1 AND p.id = $2 FOR SHARE OF a`,
+			sourceActivity, contactID).Scan(&sourceLimited, &observedAt); err != nil {
 			if !errors.Is(err, pgx.ErrNoRows) {
 				return fmt.Errorf("contacts: reading the signature's source message: %w", err)
 			}

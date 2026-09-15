@@ -1,6 +1,4 @@
-/* The support reference. Read aloud and copied into tickets, so the glyphs have
-   to be told apart. */
+/* The support reference, read aloud and copied into tickets. */
 .license-id {
-  font-family: var(--f-mono);
   font-size: var(--fs-meta);
 }

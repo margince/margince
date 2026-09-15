@@ -242,7 +242,7 @@ function ParticipantRow({
         ) : null}
       </div>
       <div className="access-row-side">
-        {revoked ? <Badge>{t("access.state.revoked")}</Badge> : null}
+        {revoked ? <Badge>{t("access.state.revokedBadge")}</Badge> : null}
         {mayManage && !revoked ? (
           <OverflowMenu
             label={t("access.rowActions", { name: participant.full_name })}

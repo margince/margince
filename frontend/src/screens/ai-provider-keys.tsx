@@ -200,9 +200,9 @@ function ProviderKeyRow({
             <span className="ai-provider-vendor">{status.provider}</span>
             {/* The variable is the only thing that says HOW a key reached the
                 vault, and an operator debugging a vendor wants to know whether
-                an export seeded it. Mono, because it is a name to be typed
+                an export seeded it. Verbatim, because it is a name to be typed
                 somewhere else exactly as it reads here. */}
-            <span className="ai-provider-env t-mono">
+            <span className="ai-provider-env">
               {keyless ? "\u2014" : status.env_var}
             </span>
           </span>

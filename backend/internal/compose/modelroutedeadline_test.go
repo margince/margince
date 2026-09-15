@@ -8,8 +8,10 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/platform/httpserver"
 )
 
 // A handler that CALLS a model needs longer to answer than the server's
@@ -86,29 +88,88 @@ func TestTheRouteDeadlineCoversTheWholeLadder(t *testing.T) {
 	}
 }
 
-// A route with no model behind it is handed straight through — the middleware
-// must not touch the deadline of an ordinary read.
-func TestAnOrdinaryRouteIsUntouched(t *testing.T) {
-	served := false
-	handler := extendDeadlineForModelRoutes(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
-		served = true
+// A route with no model behind it keeps the server's own write deadline — the
+// middleware must not hand an ordinary read the long one — and runs under a
+// context bounded by that same figure.
+//
+// The context half is what stops a handler outliving the response it was
+// writing. Until it, a read whose answer was already lost kept its goroutine
+// and every database connection it took from there on, against a pool of 16
+// that the worklist family asks 33-54 transactions of per request.
+func TestAnOrdinaryRouteRunsUnderTheServersOwnDeadline(t *testing.T) {
+	// Measured from INSIDE the handler: the deadline is set a hair before it
+	// runs, so what the handler has left is what the bound actually gives it.
+	var within time.Duration
+	var bounded bool
+	handler := boundByResponseDeadline(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+		var deadline time.Time
+		deadline, bounded = r.Context().Deadline()
+		within = time.Until(deadline)
 	}))
 
 	recorder := httptest.NewRecorder()
 	handler.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/v1/me", nil))
 
-	if !served {
-		t.Fatal("an ordinary route is served, deadline untouched")
-	}
 	if recorder.Code != http.StatusOK {
-		t.Fatalf("status = %d, want 200", recorder.Code)
+		t.Fatalf("status = %d, want 200 — an ordinary route keeps the short write deadline", recorder.Code)
+	}
+	if !bounded {
+		t.Fatal("the handler ran under a context with no deadline, so a lost response costs its connections until the work ends on its own")
+	}
+	if within > httpserver.ResponseDeadline || within < httpserver.ResponseDeadline-time.Second {
+		t.Errorf("the handler had %s left, want the response's own %s",
+			within, httpserver.ResponseDeadline)
 	}
 }
+
+// And a model route's context is bounded by ITS deadline, not the server's.
+//
+// The two halves have to name the same figure per route or the change is a
+// regression rather than a fix: bound at the server's, a draft that legitimately
+// runs past 30s would be cancelled by the very middleware that exists to let it
+// finish.
+func TestAModelRouteRunsUnderTheDeadlineItsResponseWasGiven(t *testing.T) {
+	var within time.Duration
+	var bounded bool
+	handler := boundByResponseDeadline(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+		var deadline time.Time
+		deadline, bounded = r.Context().Deadline()
+		within = time.Until(deadline)
+	}))
+
+	handler.ServeHTTP(&deadlineWriter{ResponseRecorder: httptest.NewRecorder()},
+		httptest.NewRequest(http.MethodPost, "/v1/activities/01a0-4cd3/draft-email", nil))
+
+	if !bounded {
+		t.Fatal("the model route ran under a context with no deadline")
+	}
+	if within > ai.RouteWriteDeadline || within < ai.RouteWriteDeadline-time.Second {
+		t.Errorf("the handler had %s left, want the route's own %s", within, ai.RouteWriteDeadline)
+	}
+	// The whole point of the per-route arm: it must be the LONGER figure.
+	if within <= httpserver.ResponseDeadline {
+		t.Errorf("the handler had %s left, which is inside the server's %s — a model route bounded "+
+			"at the server's figure is cut by the middleware that exists to let it finish",
+			within, httpserver.ResponseDeadline)
+	}
+}
+
+// deadlineWriter is a recorder that accepts a write deadline, which
+// httptest.NewRecorder alone does not. Unwrap is what http.NewResponseController
+// reaches the recorder through; without it the middleware takes its refusal path
+// and the test measures that instead.
+type deadlineWriter struct {
+	*httptest.ResponseRecorder
+}
+
+func (d *deadlineWriter) Unwrap() http.ResponseWriter { return d.ResponseRecorder }
+
+func (*deadlineWriter) SetWriteDeadline(time.Time) error { return nil }
 
 // And a chain that cannot extend the deadline fails LOUDLY rather than serving
 // a response that dies mid-write, which is the symptom this exists to remove.
 func TestAChainThatCannotExtendSaysSo(t *testing.T) {
-	handler := extendDeadlineForModelRoutes(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	handler := boundByResponseDeadline(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte("drafted"))
 	}))
 

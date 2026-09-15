@@ -472,6 +472,7 @@ public.activity_review_response.activity_review_response_questions_shape CHECK (
 public.activity_review_response.activity_review_response_revision_check CHECK ((revision >= 1))
 public.activity_review_response.answers jsonb NOT NULL gen=- def=-
 public.activity_review_response.captured_by text NOT NULL gen=- def=-
+public.activity_review_response.choice_answers jsonb NOT NULL gen=- def='{}'::jsonb
 public.activity_review_response.closing_occurrence_id uuid NOT NULL gen=- def=-
 public.activity_review_response.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.activity_review_response.deal_id uuid NOT NULL gen=- def=-
@@ -1276,7 +1277,7 @@ public.capture_backfill.after_date date NOT NULL gen=- def=-
 public.capture_backfill.capture_backfill_connection_fkey FOREIGN KEY (connection_id) REFERENCES capture_connection(id) ON DELETE CASCADE
 public.capture_backfill.capture_backfill_pkey PRIMARY KEY (id)
 public.capture_backfill.capture_backfill_status_check CHECK ((status = ANY (ARRAY['queued'::text, 'running'::text, 'done'::text, 'error'::text, 'cancelled'::text])))
-public.capture_backfill.capture_backfill_window_months_check CHECK ((window_months = ANY (ARRAY[3, 6, 12, 24, 60])))
+public.capture_backfill.capture_backfill_window_months_check CHECK ((window_months = ANY (ARRAY[3, 6, 12, 24, 36, 60, 84, 120])))
 public.capture_backfill.captured integer NOT NULL gen=- def=0
 public.capture_backfill.companies_created integer NOT NULL gen=- def=0
 public.capture_backfill.completed_at timestamp with time zone gen=- def=-
@@ -2032,7 +2033,7 @@ public.company_domain_disposition.company_domain_disposition_admission_source_ch
 public.company_domain_disposition.company_domain_disposition_company_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
 public.company_domain_disposition.company_domain_disposition_domain_check CHECK (((domain = lower(domain)) AND (domain <> ''::text)))
 public.company_domain_disposition.company_domain_disposition_owner_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE SET NULL (owner_id)
-public.company_domain_disposition.company_domain_disposition_pending_reason_check CHECK (((pending_reason IS NULL) OR (pending_reason = 'unevidenced'::text)))
+public.company_domain_disposition.company_domain_disposition_pending_reason_check CHECK (((pending_reason IS NULL) OR (pending_reason = ANY (ARRAY['unevidenced'::text, 'stale_evidence'::text]))))
 public.company_domain_disposition.company_domain_disposition_pending_reason_shape CHECK (((pending_reason IS NULL) OR ((status = 'pending'::text) AND (admission IS DISTINCT FROM 'suppressed'::text))))
 public.company_domain_disposition.company_domain_disposition_pkey PRIMARY KEY (id)
 public.company_domain_disposition.company_domain_disposition_settled_shape CHECK ((((status = 'pending'::text) AND (source IS NULL)) OR ((status = 'company'::text) AND (source IS NOT NULL) AND (company_id IS NOT NULL)) OR ((status = ANY (ARRAY['personal'::text, 'provider'::text, 'no_site'::text])) AND (source IS NOT NULL))))
@@ -2045,6 +2046,7 @@ public.company_domain_disposition.domain text NOT NULL gen=- def=-
 public.company_domain_disposition.evidence text gen=- def=-
 public.company_domain_disposition.id uuid NOT NULL gen=- def=uuidv7()
 public.company_domain_disposition.last_attempt_at timestamp with time zone gen=- def=-
+public.company_domain_disposition.last_evidence_at timestamp with time zone gen=- def=-
 public.company_domain_disposition.next_attempt_at timestamp with time zone gen=- def=now()
 public.company_domain_disposition.owner_id uuid gen=- def=-
 public.company_domain_disposition.pending_reason text gen=- def=-
@@ -2883,7 +2885,7 @@ public.custom_field.custom_field_currency_check CHECK (((currency IS NULL) OR (c
 public.custom_field.custom_field_object_check CHECK ((object = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'activity'::text, 'project'::text, 'relationship'::text, 'partner'::text, 'contract'::text])))
 public.custom_field.custom_field_pkey PRIMARY KEY (id)
 public.custom_field.custom_field_status_check CHECK ((status = ANY (ARRAY['active'::text, 'retired'::text])))
-public.custom_field.custom_field_type_check CHECK ((type = ANY (ARRAY['text'::text, 'number'::text, 'date'::text, 'currency'::text, 'picklist'::text, 'boolean'::text])))
+public.custom_field.custom_field_type_check CHECK ((type = ANY (ARRAY['text'::text, 'number'::text, 'date'::text, 'currency'::text, 'picklist'::text, 'multiselect'::text, 'boolean'::text])))
 public.custom_field.id uuid NOT NULL gen=- def=uuidv7()
 public.custom_field.label text NOT NULL gen=- def=-
 public.custom_field.object text NOT NULL gen=- def=-

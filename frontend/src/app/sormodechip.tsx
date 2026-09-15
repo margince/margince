@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { Badge } from "../design-system/atoms";
 import { useT } from "../i18n";
 import { useSorMode } from "../screens/common";
 import { useVisibleSettingsPages } from "../screens/settingsnav";
@@ -38,9 +39,11 @@ export function SorModeChip() {
   if (mode !== "overlay") {
     return null;
   }
-  // Same element, same tokens, same words either way: what changes is whether
-  // it is a link. A `<span>` with a title and an accessible name still reports
-  // the mode to a screen reader; what it no longer does is promise a page.
+  // Same badge, same words either way: what changes is whether it is a link.
+  // A badge is never interactive itself, so the link form WRAPS it and the
+  // anchor carries the target and the focus ring (`.sormode-link`, topbar.css).
+  // The plain form still reports the mode to a screen reader; what it no
+  // longer does is promise a page.
   const label = t("overlay.chipLabel");
   const explanation = t("overlay.chipAria");
   return reaches ? (
@@ -49,20 +52,22 @@ export function SorModeChip() {
       // installation-wide wiring, and the personal Connections entry now holds
       // only a reader's own mailbox and network.
       href="#/settings/integrations"
-      className="badge badge-accent"
+      className="sormode-link"
       title={explanation}
       aria-label={explanation}
     >
-      {label}
+      <Badge tone="accent">{label}</Badge>
     </a>
   ) : (
-    <span className="badge badge-accent" title={explanation}>
-      {label}
-      {/* The explanation as text rather than as `aria-label`: a plain span has
-          no role for that attribute to belong to, so a screen reader is not
-          obliged to read it. Visually hidden text is announced with the chip
-          and the `title` above still serves a hover. */}
-      <span className="sr-only"> {explanation}</span>
+    <span title={explanation}>
+      <Badge tone="accent">
+        {label}
+        {/* The explanation as text rather than as `aria-label`: a plain span
+            has no role for that attribute to belong to, so a screen reader is
+            not obliged to read it. Visually hidden text is announced with the
+            chip and the `title` above still serves a hover. */}
+        <span className="sr-only"> {explanation}</span>
+      </Badge>
     </span>
   );
 }

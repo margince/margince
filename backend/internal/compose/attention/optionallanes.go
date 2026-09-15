@@ -165,13 +165,13 @@ func (s *Service) optionalLanes(
 			into: &out.Dsr, count: &out.Counts.Dsr,
 		},
 		{
-			name: "notice_case", bound: s.noticeCases != nil,
+			name: sourceNoticeCase, bound: s.noticeCases != nil,
 			read: func() ([]crmcontracts.AttentionItem, error) {
 				// No window, for the DSR lane's reason: the deadline is the
 				// law's and it does not stop running because a case got old.
 				// An Art. 14 duty that aged out of this lane would be one the
 				// installation had quietly decided not to meet.
-				owed, err := s.noticeCases.OpenDueSoonest(ctx, doneCap)
+				owed, err := s.noticeCases.OpenDueSoonest(ctx, doneCap, s.taskScope, s.taskOwner, s.noticeOwners)
 				return renderEach(owed, func(duty NoticeCase) crmcontracts.AttentionItem {
 					return noticeCaseItem(duty, asOf)
 				}), err
@@ -213,6 +213,17 @@ func (s *Service) operationalLanes(
 				return renderEach(concerns, captureItem), err
 			},
 			into: &out.CaptureHealth, count: &out.Counts.CaptureHealth,
+		},
+		{
+			name: "domain_questions", bound: s.domainQuestions != nil,
+			read: func() ([]crmcontracts.AttentionItem, error) {
+				// No window and no page cut: an open question waits until
+				// somebody answers it, and a bound would hide the oldest —
+				// which are exactly the reader's real backlog.
+				questions, err := s.domainQuestions.OpenDomainQuestions(ctx)
+				return renderEach(questions, domainQuestionItem), err
+			},
+			into: &out.DomainQuestions, count: &out.Counts.DomainQuestions,
 		},
 		{
 			name: "ai_work_health", bound: s.aiWork != nil,

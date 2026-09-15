@@ -130,7 +130,7 @@ func TestTheQueueOrdersByTheClock(t *testing.T) {
 	// whether we have told them. The shared fixture's actor holds contacts
 	// grants, not the privacy inbox, so the grant is added HERE rather than
 	// widened for every test that shares the fixture.
-	got, err := e.store.OpenNoticeCasesDueSoonest(privacyOperator(e), 10)
+	got, err := e.store.OpenNoticeCasesDueSoonest(privacyOperator(e), NoticeAgendaInput{Limit: 10})
 	if err != nil {
 		t.Fatalf("reading the queue: %v", err)
 	}

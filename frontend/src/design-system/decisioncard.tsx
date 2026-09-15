@@ -402,8 +402,6 @@ type PayloadReading = Readonly<{
   /** The declared sentence that says WHY this is being asked, if the kind has one. */
   lead: string | null;
   rest: readonly PayloadField[];
-  /** True when `rest` holds wire keys because the kind declared no display policy. */
-  raw: boolean;
   hasContent: boolean;
 }>;
 
@@ -434,7 +432,6 @@ function readPayload(
     diffs,
     lead,
     rest,
-    raw: display.length === 0,
     hasContent:
       draft.subject !== null ||
       draft.body !== null ||
@@ -609,7 +606,6 @@ export function DecisionCard({
             diffs={payload.diffs}
             lead={payload.lead}
             rest={payload.rest}
-            raw={payload.raw}
             labels={labels}
           />
         </SurfaceState>

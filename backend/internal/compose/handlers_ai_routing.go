@@ -12,11 +12,13 @@ package compose
 
 import (
 	"net/http"
+	"strings"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
 type aiRoutingHandlers struct {
@@ -33,6 +35,7 @@ func (h aiRoutingHandlers) GetAiRouting(w http.ResponseWriter, r *http.Request) 
 		httperr.Write(w, r, err)
 		return
 	}
+	w.Header().Set("ETag", `"`+cfg.Revision()+`"`)
 	httperr.WriteJSON(w, http.StatusOK, toContractAiRouting(cfg))
 }
 
@@ -52,11 +55,17 @@ func (h aiRoutingHandlers) ReplaceAiRouting(w http.ResponseWriter, r *http.Reque
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	cfg, err := h.store.Replace(r.Context(), fromContractAiRouting(req))
+	expected, err := routingPrecondition(r.Header)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
+	cfg, err := h.store.ReplaceIfVersion(r.Context(), fromContractAiRouting(req), expected)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	w.Header().Set("ETag", `"`+cfg.Revision()+`"`)
 	httperr.WriteJSON(w, http.StatusOK, toContractAiRouting(cfg))
 }
 
@@ -216,4 +225,19 @@ func availableModelLane(lane string) *crmcontracts.AvailableModelLane {
 	}
 	out := crmcontracts.AvailableModelLane(lane)
 	return &out
+}
+
+// The routing resource always exists, including its unconfigured default.
+// Absence and * permit replacement; an explicitly empty tag must not unpin it.
+func routingPrecondition(header http.Header) (string, error) {
+	_, present := header["If-Match"]
+	value := strings.TrimSpace(header.Get("If-Match"))
+	if !present || value == "*" {
+		return "", nil
+	}
+	value = strings.Trim(value, `"`)
+	if value == "" {
+		return "", apperrors.ErrVersionSkew
+	}
+	return value, nil
 }

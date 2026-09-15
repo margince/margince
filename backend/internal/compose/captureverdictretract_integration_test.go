@@ -31,13 +31,14 @@ import (
 // hiding their mail alone would leave that record standing for good.
 func TestANoiseVerdictRetractsTheContactItsSenderAlreadyHad(t *testing.T) {
 	e := integration.Setup(t)
-	const junk = "receipts@spesen.example"
+	// A machine address settles before the model; this exercises a model verdict.
+	const junk = "updates@spesen.example"
 	contactID := seedCaptureOnlyContact(t, e, junk, e.Rep1)
 	mail := seedCapturedMail(t, e, junk, "Ihre Abrechnung")
 	dispositionID := seedPendingDisposition(t, e, junk, "spesen.example", mail)
 
 	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindTransactional}}
-	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
@@ -68,7 +69,7 @@ func TestANoiseVerdictLeavesACorrespondedSendersContact(t *testing.T) {
 	dispositionID := seedPendingDisposition(t, e, supplier, "lieferant.example", mail)
 
 	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindTransactional}}
-	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
@@ -97,7 +98,7 @@ func TestAPersonalVerdictRetractsTheContactEvenWhenTheOwnerWroteToThem(t *testin
 	dispositionID := seedPendingDisposition(t, e, clinic, "health.example", mail)
 
 	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindPersonal}}
-	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
@@ -128,7 +129,7 @@ func TestAKeepOutRetractsOnlyTheDecidersOwnContact(t *testing.T) {
 	seedSenderOverride(t, e, e.Rep1, sender, "keep_out")
 
 	// No scripted verdict: the owner's decision answers before any model.
-	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{}, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{}, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
@@ -326,5 +327,66 @@ func seedSettledRow(t *testing.T, e *integration.Env, email, status, kind string
 	})
 	if err != nil {
 		t.Fatalf("seeding the settled ledger row: %v", err)
+	}
+}
+
+// seedSettledPersonalThread lands the ledger row a settled `personal` verdict
+// leaves: the kind AND the held status, which is what makes
+// ThreadHoldsItsCounterparty true of it afterwards.
+func seedSettledPersonalThread(t *testing.T, e *integration.Env, threadKey string) {
+	t.Helper()
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `
+			INSERT INTO capture_thread_verdict (thread_key, user_id, kind, status, resolved_at)
+			VALUES ($1, $2, 'personal', 'held', now())`, threadKey, e.Rep1)
+		return err
+	}); err != nil {
+		t.Fatalf("seeding the settled personal thread: %v", err)
+	}
+}
+
+// TestTheReconcileSweepRetractsAContactAPrivateThreadEarnedAfterItsVerdict.
+//
+// The verdict-time retraction runs once, inside the transaction that settles
+// the thread. One ordering of two background passes escapes it: the THREAD
+// verdict settles first and retracts whatever exists, the SENDER verdict lands
+// second, and createContactForVerdict mints a fresh owner-scoped record —
+// ThreadHoldsItsCounterparty is true of a settled `personal` thread, so it
+// takes the narrow arm rather than refusing. Nothing looked at that record
+// again.
+//
+// The record is owner-scoped, so no colleague ever saw it. The promise is that
+// a private correspondent gets no record at all.
+func TestTheReconcileSweepRetractsAContactAPrivateThreadEarnedAfterItsVerdict(t *testing.T) {
+	e := integration.Setup(t)
+
+	// The thread settles personal, and the contact arrives afterwards — the
+	// order that had no second look.
+	const doctor = "praxis@hausarzt.example"
+	seedHeldThreadMail(t, e, "thread-hausarzt", doctor, "Befund")
+	seedSettledPersonalThread(t, e, "thread-hausarzt")
+	late := seedCapturedContact(t, e, doctor)
+
+	// The bound that must survive the sweep, on the same shape: a correspondent
+	// whose OTHER thread was judged business is a business contact who also has
+	// a private one, and retracting them loses a real counterparty.
+	const both = "einkauf@lieferant.example"
+	seedHeldThreadMail(t, e, "thread-privat", both, "privat")
+	seedSettledPersonalThread(t, e, "thread-privat")
+	seedOpenThreadMail(t, e, "thread-geschaeft", both, "Angebot")
+	keeps := seedCapturedContact(t, e, both)
+
+	worker := NewLinkReconcileWorkspaceWorkerForTest(e.Pool, contacts.NewStore(InstallationDB(e.Pool)))
+	if err := worker.reconcileLinksForWorkspace(context.Background(), e.WS); err != nil {
+		t.Fatalf("the sweep failed: %v", err)
+	}
+
+	if n := countIn(t, e, `SELECT count(*) FROM contact WHERE id = $1 AND archived_at IS NOT NULL`, late); n != 1 {
+		t.Fatal("a contact minted for a thread ALREADY judged private is still standing — the sender " +
+			"verdict created it after the thread verdict had retracted, and nothing looked again")
+	}
+	if n := countIn(t, e, `SELECT count(*) FROM contact WHERE id = $1 AND archived_at IS NULL`, keeps); n != 1 {
+		t.Fatal("the sweep retracted a correspondent whose other thread is business — a private thread " +
+			"with somebody does not stop them being a counterparty")
 	}
 }

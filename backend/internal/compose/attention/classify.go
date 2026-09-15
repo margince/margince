@@ -48,6 +48,7 @@ func classifyDay(day crmcontracts.Attention, asOf time.Time, money dayMoney) []r
 	rows = appendLane(rows, &day.NeedsYou, asOf, classifyDecision)
 	rows = appendLane(rows, day.RelationshipDecay, asOf, classifyDecay)
 	rows = appendLane(rows, day.CaptureHealth, asOf, classifySystem)
+	rows = appendLane(rows, day.DomainQuestions, asOf, classifyDomainQuestion)
 	rows = appendLane(rows, day.AiWorkHealth, asOf, classifySystem)
 	rows = appendLane(rows, day.AutomationHealth, asOf, classifySystem)
 	rows = appendLane(rows, day.SyncHealth, asOf, classifySystem)
@@ -184,20 +185,10 @@ func classifyIntroduction(item crmcontracts.AttentionItem, asOf time.Time) ranke
 	}
 }
 
-// classifyLegalDeadline: a clock the law started, and the shape BOTH compliance
-// lanes take. A subject request and a disclosure duty differ in what they oblige
-// and in nothing this function decides — same band, same reason, same deadline
-// stamp, same unassigned owner — so they share it rather than drifting apart.
-//
-// UNASSIGNED, for both. Each is a compliance queue rather than a personal one:
-// the lane reads every open item due soonest behind one gate, so several admins
-// see the same row and none owns it by having looked. A subject request has no
-// assignee column at all; a notice case has a nullable owner that is frequently
-// empty, and reading it as an assignment would hide an unowned overdue duty from
-// everybody — the failure the lane exists to prevent.
-//
-// Both lanes reach only privacy admins — they are absent for everyone else — so
-// neither ever needs explaining to a rep.
+// classifyLegalDeadline ranks both compliance clocks by the same deadline.
+// Subject requests remain unassigned; disclosure duties carry the responsible
+// officer, falling back to their contact owner. Ownerless duties remain
+// available in the unassigned view.
 func classifyLegalDeadline(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	// Seven days is the agenda preparation window, not a change to the legal deadline.
 	level := levelRoutine
@@ -208,7 +199,8 @@ func classifyLegalDeadline(item crmcontracts.AttentionItem, asOf time.Time) rank
 	stampDeadline(&row, item.DueAt, asOf)
 	row.Because = []crmcontracts.WorklistReason{reason("legal_deadline", nil)}
 	return ranked{
-		ownerRef:   unassigned(),
+		ownerRef:   ownerFromAssignee(item.AssigneeId),
+		owner:      assigneeID(item.AssigneeId),
 		item:       row,
 		deadlineAt: deadlineOf(item.DueAt),
 		overdue:    overdueAt(item.DueAt, asOf),

@@ -40,6 +40,7 @@ import {
   whenText,
 } from "./worklist.copy";
 import { PutDownByThumb } from "./worklist.dispositions";
+import { DomainQuestionAnswer } from "./worklist.domainquestion";
 import { WaitingEmailLine } from "./worklist.emailtitle";
 import { conditionOf, eyebrowKeyFor, kindClass } from "./worklist.eyebrow";
 import { leadFactsText } from "./worklist.leadfacts";
@@ -247,14 +248,14 @@ export function WorklistRow({
             title line keeps the states that are about this row alone: overdue,
             unprepared.
 
-            `Badge quiet` because that is the catalog's answer for a column
-            carrying one per row: the tone survives as a dot and the label as
-            plain text, where a filled pill down a queue reads as decoration a
-            reader learns to skip. The span is PLACEMENT — the grid cell and the
+            A soft `Badge`, the variant a column carrying one per row wears:
+            the solid fill is kept for the one status a surface must not let a
+            reader miss, and a queue of those would teach the eye to skip them.
+            The span is PLACEMENT — the grid cell and the
             width the kinds share; `conditionOf` says what a system row
             draws there instead. */}
         <span className={kindClass(named)} title={named ?? undefined}>
-          <Badge quiet tone={item.band === "now" ? "warn" : undefined}>
+          <Badge tone={item.band === "now" ? "warn" : undefined}>
             {named ?? t(eyebrowKeyFor(item))}
           </Badge>
         </span>
@@ -470,6 +471,14 @@ const ANSWER_BY_SOURCE: Partial<
   automation_run: {
     verb: "retry",
     draw: (item) => ({ primary: <AutomationRetry id={item.id} /> }),
+  },
+  // Keyed on `keep`, which is the server's signal that this row may be
+  // answered at all; the control then asks the row again for each button, so a
+  // seat offered only one of the two draws only that one. The same one-entry
+  // shape meeting_outcome uses — one entry per source, not one per button.
+  domain_question: {
+    verb: "keep",
+    draw: (item) => ({ equals: <DomainQuestionAnswer item={item} /> }),
   },
   // THREE verbs of equal weight, so the row has no primary. Held, no-show and
   // cancelled are equally likely records of what already happened, and leading

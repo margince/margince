@@ -42,7 +42,11 @@ func (h Handlers) ListNoticeCases(w http.ResponseWriter, r *http.Request, params
 	if params.Limit != nil {
 		limit = int(*params.Limit)
 	}
-	cases, err := h.store.ListNoticeCases(r.Context(), states, limit)
+	cursor := ""
+	if params.Cursor != nil {
+		cursor = *params.Cursor
+	}
+	cases, page, err := h.store.ListNoticeCases(r.Context(), states, limit, cursor)
 	if err != nil {
 		writeConsentErr(w, r, err)
 		return
@@ -51,7 +55,11 @@ func (h Handlers) ListNoticeCases(w http.ResponseWriter, r *http.Request, params
 	for _, c := range cases {
 		data = append(data, wireNoticeCase(c))
 	}
-	httperr.WriteJSON(w, http.StatusOK, map[string]any{keyData: data})
+	info := crmcontracts.PageInfo{HasMore: page.HasMore}
+	if page.NextCursor != "" {
+		info.NextCursor = &page.NextCursor
+	}
+	httperr.WriteJSON(w, http.StatusOK, map[string]any{keyData: data, keyPage: info})
 }
 
 // AssignNoticeCase records who is working a disclosure duty.

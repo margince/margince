@@ -242,6 +242,12 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "sendPermission.reason.withdrawn",
   ],
   vi: [
+    // Human account holders whose full seats determine the shared allowance.
+    "aiAdmin.fixed",
+    "aiAdmin.formula",
+    "aiAdmin.floor",
+    "aiAdmin.perUser",
+    "aiAdmin.overrideHint",
     // The human who made a change, not a CRM contact record.
     "home.change.by",
     // "Người khác" — SOMEBODY ELSE, a third party who passed on this reader's
@@ -322,7 +328,8 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "contact.intro.lanePeers",
     "contact.intro.laneTarget",
     "contact.intro.stepRoutePick",
-    "contactAccess.company",
+    "recordAccess.company.shared",
+    "recordAccess.contact.shared",
     "release.skewBody",
     "retention.lawfulBasisHint",
     "retention.withheld",
@@ -385,6 +392,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "book.attendee",
     "book.tellThemYourself",
     "buyer.contact",
+    "buyer.contactEyebrow",
     "buyer.deadAskContact",
     "buyer.docs.downloadFailed",
     "buyer.previewBanner",
@@ -490,6 +498,11 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "co.role.economic_buyer",
     "co.role.influencer",
     "co.role.user",
+    "co.roleLabel.blocker",
+    "co.roleLabel.champion",
+    "co.roleLabel.economic_buyer",
+    "co.roleLabel.influencer",
+    "co.roleLabel.user",
     "co.spine.andOthers",
     "common.seatReadOnly",
     "coverage.risk.champion_left",

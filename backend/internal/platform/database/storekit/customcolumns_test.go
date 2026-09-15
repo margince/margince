@@ -228,6 +228,11 @@ func TestSQLValue_RoundTrip(t *testing.T) {
 			scanned: "hello", wantWire: "hello",
 		},
 		{
+			name: "multiselect", typ: fieldcatalog.TypeMultiselect,
+			wire: []any{"a,b", "C++", "a,b"}, wantBind: []string{"a,b", "C++"},
+			scanned: []any{"a,b", "C++"}, wantWire: []string{"a,b", "C++"},
+		},
+		{
 			name: "picklist", typ: fieldcatalog.TypePicklist,
 			wire: "red", wantBind: "red",
 			scanned: "red", wantWire: "red",

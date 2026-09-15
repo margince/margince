@@ -392,7 +392,7 @@ function CommitmentRow({
         <div className="plan-row-body">
           <span className="plan-row-label">{commitment.label}</span>
           <span className="plan-row-meta">
-            <Badge tone={STATE_TONE[commitment.state]} quiet>
+            <Badge tone={STATE_TONE[commitment.state]}>
               {t(STATE_LABEL[commitment.state])}
             </Badge>
             {commitment.linked_record && (

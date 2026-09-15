@@ -34,6 +34,9 @@ const attendeeCap = 8
 // empty for "narrows nothing", and an empty string is not a legal SQL fragment.
 const scopeAll = "TRUE"
 
+// scopeNone matches no row, for an object the caller holds no read grant on.
+const scopeNone = "FALSE"
+
 // meeting is the room, as the brief reads it.
 type meeting struct {
 	ID        ids.UUID
@@ -125,7 +128,8 @@ func (s *Service) readMeeting(ctx context.Context, tx pgx.Tx, activityID ids.UUI
 	var attendees []byte
 	var project projectRow
 	var projectID *ids.UUID
-	err = tx.QueryRow(ctx, fmt.Sprintf(meetingQuery, clauses.deal, clauses.contact, idPos, clauses.touch, clauses.seat, clauses.project, requestedPos), args...).
+	err = tx.QueryRow(ctx, fmt.Sprintf(meetingQuery, clauses.deal, clauses.contact, idPos, clauses.touch, clauses.seat, clauses.project, requestedPos,
+		clauses.amount), args...).
 		Scan(&out.ID, &out.StartsAt, &subject,
 			&dealID, &deal.Name, &stage, &deal.AmountMinor, &currency, &deal.CloseDate,
 			&projectID, &project.Name, &project.Key, &project.Phase, &project.TargetEndDate,
@@ -236,7 +240,11 @@ const meetingQuery = `
 	  LIMIT 1
 	) pr ON TRUE
 	LEFT JOIN LATERAL (
-	  SELECT dd.id, dd.name, s.name AS stage_name, dd.amount_minor, dd.currency, dd.expected_close_date
+	  -- ALIASED, because %[8]s is a CASE when a mask applies and Postgres names
+	  -- an unaliased expression as a placeholder name. The outer select reads the
+	  -- amount from this derived table, so without the alias a masked caller gets a
+	  -- column-not-found error rather than a withheld figure.
+	  SELECT dd.id, dd.name, s.name AS stage_name, %[8]s AS amount_minor, dd.currency, dd.expected_close_date
 	  FROM activity_link dl
 	  JOIN deal dd ON dd.id = dl.deal_id AND dd.archived_at IS NULL
 	  LEFT JOIN stage s ON s.id = dd.stage_id
@@ -256,9 +264,14 @@ const meetingQuery = `
 // deciding what the caller may be TOLD rather than filtering afterwards.
 type roomScopes struct {
 	deal, contact, project, touch, seat string
+	// amount is the deal's money rendered under the caller's field masks — a
+	// projection rather than a clause, because a masked figure withholds the
+	// NUMBER and keeps the deal. The brief is grounding for generated prose, so
+	// a figure that reaches it reaches the letter.
+	amount string
 }
 
-// roomClauses renders the five clauses in bind order.
+// roomClauses renders the five clauses in bind order, and the masked amount.
 //
 // The last-touch sub-select reads ACTIVITIES, so it takes the activity row
 // scope like every other activity read on this page. Without it the brief
@@ -291,6 +304,12 @@ func roomClauses(ctx context.Context, arg func(any) int) (roomScopes, error) {
 		out.touch = scopeAll
 	}
 	if out.seat, err = seatJoinPredicate(ctx, "r", arg); err != nil {
+		return roomScopes{}, err
+	}
+	// The INNER alias, because the outer select reads this sub-select's column
+	// rather than the deal's: masking it at the source means the pass-through
+	// above cannot be the way around it.
+	if out.amount, err = auth.MaskedColumnSQL(ctx, "deal", "amount_minor", "dd", "amount_minor", arg); err != nil {
 		return roomScopes{}, err
 	}
 	return out, nil
@@ -355,6 +374,20 @@ func projectJoinPredicate(ctx context.Context, alias string, arg func(any) int) 
 }
 
 func scopeFor(ctx context.Context, object, alias string, arg func(any) int) (string, error) {
+	// The object half first. ScopeClauseFor answers WHICH rows and never
+	// whether this caller may read the kind at all — under row_scope=all it
+	// answers `scopeAll`, so a seat holding activity and contact and no DEAL
+	// grant would be handed the deal's name, stage, amount and close date in
+	// the brief. The brief's own entry asks the activity and contact grants and
+	// has never asked this one.
+	//
+	// A false clause rather than a refusal, which is the shape this file
+	// already chose one comment above: the join matches nothing, the band is
+	// simply absent, and the rest of the brief stands. Emptying the room over
+	// a band the caller was never entitled to would be the worse answer.
+	if !auth.ReadGranted(ctx, object) {
+		return scopeNone, nil
+	}
 	clause, err := auth.ScopeClauseFor(ctx, object, alias, arg)
 	if err != nil {
 		return "", err

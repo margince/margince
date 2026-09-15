@@ -315,7 +315,7 @@ export function ConsentPurposesCard() {
 }
 
 // Matches a proper contact-id UUID; an external identifier (email, a partner's
-// own reference string) never does, so it stays raw mono text rather than a
+// own reference string) never does, so it stays raw text rather than a
 // dead EntityRef lookup against a record that was never a contact id.
 const SUBJECT_UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -769,7 +769,7 @@ function DsrRow({
         aria-controls={panelId}
       >
         <Badge tone={dsrKindTone(dsr.kind)}>{humanizeToken(dsr.kind)}</Badge>
-        <span className="t-mono">{dsr.subject_ref}</span>
+        <span>{dsr.subject_ref}</span>
         <Badge tone={STATUS_TONE[dsr.status]}>
           {humanizeToken(dsr.status)}
         </Badge>
@@ -785,7 +785,7 @@ function DsrRow({
               {SUBJECT_UUID_RE.test(dsr.subject_ref) ? (
                 <EntityRef kind="contact" id={dsr.subject_ref} />
               ) : (
-                <span className="t-mono">{dsr.subject_ref}</span>
+                <span>{dsr.subject_ref}</span>
               )}
             </div>
 

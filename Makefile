@@ -372,9 +372,13 @@ fe-test-ext: composition
 ## ds-purity — design-system token purity (no raw hex/rgb outside tokens.css).
 ds-purity:
 	frontend/scripts/check-ds-purity.sh
-## font-lock — font-family lock lint (the sanctioned families only).
+## font-lock — font-family lock lint (the sanctioned families only, and the mono
+## face on code, pre, samp and .code-block alone). Its test runs beside it: every
+## mono arm is planted in a fixture tree, because an arm that stopped firing would
+## read exactly like a clean tree.
 font-lock:
 	frontend/scripts/check-font-lock.sh
+	bash frontend/scripts/check-font-lock.test.sh
 ## icon-lint — icon-glyph lock lint (UI chrome is Lucide only).
 icon-lint:
 	frontend/scripts/check-icon-glyph.sh
@@ -496,6 +500,7 @@ frontend-check:
 fe-ds-gates:
 	frontend/scripts/check-ds-purity.sh
 	frontend/scripts/check-font-lock.sh
+	bash frontend/scripts/check-font-lock.test.sh
 	frontend/scripts/check-icon-glyph.sh
 	frontend/scripts/check-ds-spacing.sh
 	bash frontend/scripts/check-ds-spacing.test.sh

@@ -220,6 +220,7 @@ func (s *Server) wireCaptureSettingsSurface(pool *pgxpool.Pool) {
 		store: ai.NewRoutingStore(NewSettingsStore(pool), config.FromOS).
 			WithCatalogue(ai.NewModelCatalogue(systemClock{})),
 	}
+	s.aiAdminHandlers = aiAdminHandlers{store: ai.NewAdminStore(InstallationDB(pool), NewSettingsStore(pool), budgetFullUsers, aiDeferredWork(pool))}
 	s.ownDomainHandlers = ownDomainHandlers{store: capture.NewOwnDomainStore(InstallationDB(pool))}
 	// The installation's own identity and reporting basis (ADR-0090/A135):
 	// name, reporting zone, base currency — the last of which locks once a
@@ -313,6 +314,13 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 	s.contactsStore = contacts.NewStore(InstallationDB(pool)).WithFieldCatalog(customfields.NewService(pool, nil))
 	s.blockedDomainHandlers = blockedDomainHandlers{contacts: s.contactsStore}
 	s.captureExclusionHandlers = captureExclusionHandlers{store: capture.NewExclusionStore(InstallationDB(pool))}
+	// Both stores, because answering a domain question is two different acts:
+	// keeping it settles the triage ledger, discarding it writes the caller's
+	// own capture exclusion.
+	s.domainQuestionHandlers = domainQuestionHandlers{
+		contacts:   s.contactsStore,
+		exclusions: capture.NewExclusionStore(InstallationDB(pool)),
+	}
 	s.threadAudience = NewThreadAudienceSetter(pool)
 	s.captureSenderHandlers = captureSenderHandlers{
 		db:         InstallationDB(pool),

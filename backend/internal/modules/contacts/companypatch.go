@@ -92,5 +92,8 @@ func setCompanyCheckedFields(ctx context.Context, tx pgx.Tx, p *storekit.Patch, 
 		}
 		p.Set("linkedin_url", current.LinkedinUrl, normalized)
 	}
+	if in.Visibility != nil {
+		p.Set(fieldVisibility, current.Visibility, *in.Visibility)
+	}
 	return nil
 }

@@ -114,6 +114,116 @@ describe("repeatable-row fields", () => {
     expect(screen.getAllByLabelText("Email *")).toHaveLength(1);
   });
 
+  it("reorders rows and submits them in the new order", async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    render(<Harness fields={[emailsField]} onSubmit={onSubmit} />);
+    await user.click(screen.getByText("Add email"));
+    await user.click(screen.getByText("Add email"));
+    const emails = screen.getAllByLabelText("Email *");
+    await user.type(emails[0], "first@x.test");
+    await user.type(emails[1], "second@x.test");
+
+    // Move the second row up so it leads; the array order is what the save maps
+    // to each row's position, so the submitted list carries the new order.
+    await user.click(screen.getByRole("button", { name: "Move row 2 up" }));
+    expect(screen.getByRole("status").textContent).toBe("Moved to position 1");
+
+    await user.click(screen.getByRole("button", { name: "Create" }));
+    expect(onSubmit).toHaveBeenCalledWith(
+      {},
+      {
+        emails: [{ email: "second@x.test" }, { email: "first@x.test" }],
+      },
+    );
+  });
+
+  it("disables move-up on the first row and move-down on the last", async () => {
+    const user = userEvent.setup();
+    render(<Harness fields={[emailsField]} onSubmit={vi.fn()} />);
+    await user.click(screen.getByText("Add email"));
+    await user.click(screen.getByText("Add email"));
+    expect(
+      screen.getByRole("button", { name: "Move row 1 up" }),
+    ).toHaveProperty("disabled", true);
+    expect(
+      screen.getByRole("button", { name: "Move row 2 down" }),
+    ).toHaveProperty("disabled", true);
+  });
+
+  it("keeps focus on the row that moved, not the slot it left", async () => {
+    const user = userEvent.setup();
+    render(<Harness fields={[emailsField]} onSubmit={vi.fn()} />);
+    for (let i = 0; i < 3; i++) {
+      await user.click(screen.getByText("Add email"));
+    }
+    // Move the third row up into the middle. Focus must follow it — otherwise a
+    // second press would act on whatever row slid into row 3's old position.
+    await user.click(screen.getByRole("button", { name: "Move row 3 up" }));
+    expect(document.activeElement).toBe(
+      screen.getByRole("button", { name: "Move row 2 up" }),
+    );
+  });
+
+  it("moves focus off the edge button its own move disabled", async () => {
+    const user = userEvent.setup();
+    render(<Harness fields={[emailsField]} onSubmit={vi.fn()} />);
+    for (let i = 0; i < 3; i++) {
+      await user.click(screen.getByText("Add email"));
+    }
+    // Row 2 to the top disables its own up button, so focus lands on the down
+    // button of that row rather than falling to <body>.
+    await user.click(screen.getByRole("button", { name: "Move row 2 up" }));
+    expect(document.activeElement).toBe(
+      screen.getByRole("button", { name: "Move row 1 down" }),
+    );
+  });
+
+  it("keeps focus at the removed row's position", async () => {
+    const user = userEvent.setup();
+    render(<Harness fields={[emailsField]} onSubmit={vi.fn()} />);
+    for (let i = 0; i < 3; i++) {
+      await user.click(screen.getByText("Add email"));
+    }
+    // The pressed button leaves the DOM with its row, which would drop focus
+    // to <body>; it lands on the remove control of the row that slides into
+    // the vacated position instead.
+    await user.click(screen.getByRole("button", { name: "Remove row 1" }));
+    expect(screen.getAllByLabelText("Email *")).toHaveLength(2);
+    expect(document.activeElement).toBe(
+      screen.getByRole("button", { name: "Remove row 1" }),
+    );
+  });
+
+  it("moves focus to the new last row when the last row is removed", async () => {
+    const user = userEvent.setup();
+    render(<Harness fields={[emailsField]} onSubmit={vi.fn()} />);
+    await user.click(screen.getByText("Add email"));
+    await user.click(screen.getByText("Add email"));
+    await user.click(screen.getByRole("button", { name: "Remove row 2" }));
+    expect(document.activeElement).toBe(
+      screen.getByRole("button", { name: "Remove row 1" }),
+    );
+  });
+
+  it("returns focus to Add when the only row is removed", async () => {
+    const user = userEvent.setup();
+    render(<Harness fields={[emailsField]} onSubmit={vi.fn()} />);
+    await user.click(screen.getByText("Add email"));
+    await user.click(screen.getByRole("button", { name: "Remove row 1" }));
+    expect(document.activeElement).toBe(screen.getByText("Add email"));
+  });
+
+  it("moves focus into the first field of a freshly added row", async () => {
+    const user = userEvent.setup();
+    render(<Harness fields={[emailsField]} onSubmit={vi.fn()} />);
+    await user.click(screen.getByText("Add email"));
+    await user.click(screen.getByText("Add email"));
+    // Focus follows the row the press created rather than staying on Add, so
+    // a keyboard user types into the new row without tabbing backwards.
+    expect(document.activeElement).toBe(screen.getAllByLabelText("Email *")[1]);
+  });
+
   it("collects the rows for submission", async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn();

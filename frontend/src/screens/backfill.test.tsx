@@ -5,6 +5,7 @@ import {
   render as rtlRender,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
@@ -138,7 +139,9 @@ function preferNoMotion() {
   })) as typeof window.matchMedia);
 }
 
+let user: ReturnType<typeof userEvent.setup>;
 beforeEach(() => {
+  user = userEvent.setup();
   preferNoMotion();
   vi.stubGlobal("scrollTo", vi.fn());
 });
@@ -149,6 +152,24 @@ afterEach(() => {
 });
 
 describe("the connect-time backfill payoff", () => {
+  it("restarts an unknown server window with a named supported default", async () => {
+    installFetchStub({
+      "GET /connectors/gmail/backfill": () =>
+        jsonResponse({ state: "cancelled", window: "180m" }),
+      "POST /connectors/gmail/backfill/preview": () =>
+        jsonResponse(previewOf(400)),
+    });
+    render(<BackfillPanel provider="gmail" />);
+    await user.click(
+      await screen.findByRole("button", { name: /Start another import/ }),
+    );
+    const picker = await screen.findByRole("combobox", {
+      name: "Import window",
+    });
+    expect(picker.textContent).toContain("6 months");
+    expect(screen.queryByText(/imports undefined/)).toBeNull();
+  });
+
   // The multi-year reach (ADR-0106) is only real if the picker offers it and
   // the chosen value reaches the server: the window set is stated in five
   // places, and this is the one a human touches.
@@ -158,30 +179,37 @@ describe("the connect-time backfill payoff", () => {
       preview: previewOf(90210),
     });
     render(<BackfillPanel provider="gmail" />);
-    await screen.findByRole("group");
-
+    const picker = await screen.findByRole("combobox", {
+      name: "Import window",
+    });
+    expect(picker.textContent).toContain("6 months");
+    await user.click(picker);
     for (const label of [
       "3 months",
       "6 months",
-      "12 months",
+      "1 year",
       "2 years",
+      "3 years",
       "5 years",
+      "7 years",
+      "10 years",
     ]) {
-      expect(screen.getByRole("radio", { name: label })).toBeTruthy();
+      expect(
+        within(screen.getByRole("listbox")).getByRole("option", {
+          name: label,
+        }),
+      ).toBeTruthy();
     }
-    // 6 months stays the default: a multi-year import is offered, never
-    // defaulted into — it spends the customer's own inference budget.
-    expect(
-      (screen.getByRole("radio", { name: "6 months" }) as HTMLInputElement)
-        .checked,
-    ).toBe(true);
-
-    await userEvent.click(screen.getByRole("radio", { name: "5 years" }));
+    await user.click(
+      within(screen.getByRole("listbox")).getByRole("option", {
+        name: "10 years",
+      }),
+    );
     await waitFor(async () => {
       const previews = requestsTo(calls, "/backfill/preview", "POST");
       const last = previews.at(-1);
       expect(last).toBeTruthy();
-      expect(await last?.clone().json()).toMatchObject({ window: "60m" });
+      expect(await last?.clone().json()).toMatchObject({ window: "120m" });
     });
   });
 
@@ -243,9 +271,7 @@ describe("the connect-time backfill payoff", () => {
     render(<BackfillPanel provider="gmail" />);
 
     await screen.findByText(/400 messages in that period/);
-    await userEvent.click(
-      screen.getByRole("button", { name: /Start the import/ }),
-    );
+    await user.click(screen.getByRole("button", { name: /Start the import/ }));
 
     await waitFor(() =>
       expect(requestsTo(calls, "/backfill", "POST").length).toBe(1),
@@ -266,9 +292,7 @@ describe("the connect-time backfill payoff", () => {
     render(<BackfillPanel provider="gmail" />);
 
     expect(await screen.findByText("Counting your mailbox…")).toBeTruthy();
-    await userEvent.click(
-      screen.getByRole("button", { name: /Start the import/ }),
-    );
+    await user.click(screen.getByRole("button", { name: /Start the import/ }));
 
     await waitFor(() =>
       expect(requestsTo(calls, "/backfill", "POST").length).toBe(1),
@@ -290,9 +314,7 @@ describe("the connect-time backfill payoff", () => {
     render(<BackfillPanel provider="gmail" />);
 
     expect(await screen.findByText(/No answer from Gmail\./)).toBeTruthy();
-    await userEvent.click(
-      screen.getByRole("button", { name: /Start the import/ }),
-    );
+    await user.click(screen.getByRole("button", { name: /Start the import/ }));
 
     await waitFor(() =>
       expect(requestsTo(calls, "/backfill", "POST").length).toBe(1),
@@ -348,7 +370,7 @@ describe("the connect-time backfill payoff", () => {
     });
     render(<BackfillPanel provider="gmail" />);
 
-    await userEvent.click(
+    await user.click(
       await screen.findByRole("button", { name: /Stop the import/ }),
     );
     await waitFor(() =>
@@ -376,20 +398,17 @@ describe("the connect-time backfill payoff", () => {
     });
     render(<BackfillPanel provider="gmail" />);
 
-    await userEvent.click(
+    await user.click(
       await screen.findByRole("button", { name: /Start another import/ }),
     );
     // Opened on the window this mailbox already ran, because the server only
     // ever widens — a picker that opens on a refusal wastes the first press.
     expect(
-      (
-        (await screen.findByRole("radio", {
-          name: "12 months",
-        })) as HTMLInputElement
-      ).checked,
-    ).toBe(true);
+      (await screen.findByRole("combobox", { name: "Import window" }))
+        .textContent,
+    ).toContain("1 year");
 
-    await userEvent.click(
+    await user.click(
       await screen.findByRole("button", { name: /Start the import/ }),
     );
     await waitFor(async () => {
@@ -518,7 +537,7 @@ describe("honest capability and staleness", () => {
     });
     render(<BackfillPanel provider="gmail" initial={{ state: "none" }} />);
 
-    await userEvent.click(
+    await user.click(
       await screen.findByRole("button", { name: /Start the import/ }),
     );
 
@@ -540,7 +559,7 @@ describe("a failure nobody wrote for a reader", () => {
     });
     render(<BackfillPanel provider="gmail" initial={{ state: "none" }} />);
 
-    await userEvent.click(
+    await user.click(
       await screen.findByRole("button", { name: /Start the import/ }),
     );
 
@@ -563,7 +582,7 @@ describe("a failure nobody wrote for a reader", () => {
     });
     render(<BackfillPanel provider="gmail" initial={{ state: "none" }} />);
 
-    await userEvent.click(
+    await user.click(
       await screen.findByRole("button", { name: /Start the import/ }),
     );
 

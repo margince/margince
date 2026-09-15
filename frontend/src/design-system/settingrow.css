@@ -190,10 +190,9 @@
 }
 
 /* The value the row currently holds, beside the verb that changes it —
- * Discord's "luitpold.me  [Edit]" shape. Muted, and mono is deliberately NOT
- * applied here: this is a value a contact typed, not an identifier, and the
- * callers that DO hold an identifier pass `PassportChip` or `.t-mono`
- * themselves. */
+ * Discord's "luitpold.me  [Edit]" shape. Muted, in the body face like every
+ * value that is not code; a caller whose value names an agent passes
+ * `PassportChip` itself. */
 .settingrow-value {
   color: var(--textMeta);
   font-size: var(--fs-body);

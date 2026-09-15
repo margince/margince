@@ -114,30 +114,6 @@ func (s *Store) ResolveUnreadableDomainTriage(ctx context.Context, in ResolveDom
 	return res, nil
 }
 
-// markDispositionUnevidenced records that a domain's question is still open
-// because nothing evidenced a company — the site could not be read, and the
-// sender's name did not explain the domain.
-//
-// It keeps status='pending' deliberately. Pending is the ONE value every
-// due-scan, queue-mark and exhaustion query treats as open, so a withheld
-// domain stays retryable and stays visible without teaching five other queries
-// a second word for the same thing.
-//
-// Guarded on pending so it cannot overwrite an answer a HUMAN settled: an admin
-// who confirmed the company owns that verdict, and a later sweep finding the
-// site still unreadable must not quietly reopen their decision.
-func markDispositionUnevidenced(ctx context.Context, tx pgx.Tx, domain, evidence string) error {
-	if _, err := tx.Exec(ctx, `
-		UPDATE company_domain_disposition
-		   SET pending_reason = 'unevidenced', evidence = NULLIF($2, ''),
-		       next_attempt_at = NULL, updated_at = now()
-		 WHERE domain = $1 AND status = $3`,
-		domain, evidence, DomainPending); err != nil {
-		return fmt.Errorf("contacts: recording that %s evidenced no company: %w", domain, err)
-	}
-	return nil
-}
-
 func (s *Store) resolveDomainTriageTx(ctx context.Context, tx pgx.Tx, in ResolveDomainTriageInput) (ResolveDomainTriageResult, error) {
 	// The lock every concurrent ensure on this domain waits behind, taken
 	// before anything is decided so no ensure can slip between the read and
@@ -169,6 +145,14 @@ func (s *Store) resolveDomainTriageTx(ctx context.Context, tx pgx.Tx, in Resolve
 	}
 	if in.Status != DomainCompany {
 		return ResolveDomainTriageResult{}, settleDisposition(ctx, tx, in, nil)
+	}
+	// The crawl read the site as it stands TODAY. Evidence older than the
+	// threshold does not argue that this company is there now, so the question
+	// is handed to a human instead of answered from a decade-old thread. The
+	// contacts keep their mail and gain no employer, which is the same state
+	// they were already in.
+	if stale, err := withholdForStaleEvidence(ctx, tx, in, prior); err != nil || stale {
+		return ResolveDomainTriageResult{}, err
 	}
 
 	res, err := s.adoptOrCreateTriagedCompany(ctx, tx, in, prior)

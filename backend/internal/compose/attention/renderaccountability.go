@@ -10,6 +10,8 @@ package attention
 import (
 	"time"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -82,8 +84,12 @@ func dsrItem(request DSRCase, asOf time.Time) crmcontracts.AttentionItem {
 // the one most worth a reader's attention, and drawing it differently would
 // invite a client to filter it out; the obstacle is read on the contact's page.
 func noticeCaseItem(owed NoticeCase, asOf time.Time) crmcontracts.AttentionItem {
-	item := legalDeadlineItem(owed.ID, owed.Rule, owed.DueAt, "notice_case", asOf)
+	item := legalDeadlineItem(owed.ID, owed.Rule, owed.DueAt, sourceNoticeCase, asOf)
 	item.Subject = subjectOf("contact", owed.ContactID)
+	if owed.OwnerID != nil {
+		owner := openapi_types.UUID(*owed.OwnerID)
+		item.AssigneeId = &owner
+	}
 	if openableSubject(item.Subject) {
 		item.Actions = []crmcontracts.AttentionItemActions{actionOpen}
 	}

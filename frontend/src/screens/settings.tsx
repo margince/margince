@@ -61,6 +61,7 @@ import { viewerZone } from "../format/timezone";
 import { LOCALES, type Locale, localeNameKey, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { AcquisitionSourcesCard } from "./acquisitionsources";
+import { AiBudgetCard, AiFeaturesCard } from "./ai-admin";
 import { AiHealthCard } from "./ai-health";
 import { AiProviderKeysCard } from "./ai-provider-keys";
 import { AiRoutingCard } from "./ai-routing";
@@ -334,9 +335,11 @@ export function tabContent(id: SettingsPageId): ReactNode {
       return (
         <>
           {/* What the month has cost, above the breakdown that explains it. */}
+          <AiBudgetCard />
+          <AiFeaturesCard />
           <SpendStat />
           <AiUsageCard />
-          <ModelCostsCard />
+          <ModelPriceDetails />
         </>
       );
     case "model-calls":
@@ -1274,7 +1277,7 @@ function PassportCard() {
           {mint.isSuccess && (
             <PanelPlate>
               <p className="t-label">{t("settings.tokenOnce")}</p>
-              <p className="t-mono passport-token-value">{mint.data.token}</p>
+              <p className="passport-token-value">{mint.data.token}</p>
             </PanelPlate>
           )}
         </div>
@@ -1658,11 +1661,7 @@ function ToolRow({
     <div data-tool={tool.name}>
       <SettingRow
         label={
-          <span
-            className={["t-mono", "tool-name", struck]
-              .filter(Boolean)
-              .join(" ")}
-          >
+          <span className={["tool-name", struck].filter(Boolean).join(" ")}>
             {tool.name}
           </span>
         }
@@ -2111,7 +2110,7 @@ function AuditLogRow({
         {entry.entity_id && isEntityKind(entry.entity_type) ? (
           <EntityRef kind={entry.entity_type} id={entry.entity_id} />
         ) : (
-          <span className="t-mono t-caption">
+          <span className="t-caption">
             {entry.entity_type}
             {entry.entity_id ? ` ${entry.entity_id}` : ""}
           </span>
@@ -2139,8 +2138,7 @@ function AuditLogRow({
           {entry.passport_id && <PassportChip id={entry.passport_id} />}
           {entry.on_behalf_of && (
             <span className="t-caption">
-              {t("settings.auditOnBehalf")}{" "}
-              <span className="t-mono">{entry.on_behalf_of}</span>
+              {t("settings.auditOnBehalf")} <span>{entry.on_behalf_of}</span>
             </span>
           )}
           {entry.authorization_rule && (
@@ -2213,9 +2211,7 @@ function AuditLogEntries({
     return (
       <EmptyState>
         <p>{t("common.error")}</p>
-        <p className="t-mono audit-error-cause">
-          {problemMessageOf(query.error, t)}
-        </p>
+        <p className="audit-error-cause">{problemMessageOf(query.error, t)}</p>
         <Button small onClick={() => query.refetch()}>
           {t("common.retry")}
         </Button>
@@ -2289,5 +2285,14 @@ export function AuditLogCard() {
         </SettingList>
       </PanelBody>
     </Panel>
+  );
+}
+
+function ModelPriceDetails() {
+  const t = useT();
+  return (
+    <Disclosure summary={t("aiRouting.priceSheet")}>
+      <ModelCostsCard />
+    </Disclosure>
   );
 }

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { useEffect, useId, useRef, useState } from "react";
-import { Button } from "../../design-system/atoms";
+import { Badge, Button } from "../../design-system/atoms";
 import { formatNumber } from "../../format/format";
 import { type Locale, useLocale, useT } from "../../i18n";
 import type { CompanyFieldName } from "../onboarding";
@@ -296,9 +296,9 @@ function DeckCardFace({
   return (
     <div className="rdeck-card staging-card" data-required={card.required}>
       <div className="rdeck-head">
-        <span className="rdeck-tag t-eyebrow" data-required={card.required}>
+        <Badge tone={card.required ? "danger" : "default"}>
           {t(card.required ? "ob.deck.needed" : "ob.deck.optional")}
-        </span>
+        </Badge>
         <span className="rdeck-count t-caption">
           {t("ob.deck.counter", {
             n: formatNumber(index + 1, locale),

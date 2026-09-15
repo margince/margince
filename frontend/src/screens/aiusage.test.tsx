@@ -65,7 +65,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-it("renders the budget meter and economy band without inventing cost", async () => {
+it("renders historical usage without inventing cost or duplicating the live allowance", async () => {
   mount({
     budget,
     days: [
@@ -84,12 +84,12 @@ it("renders the budget meter and economy band without inventing cost", async () 
       },
     ],
   });
-  expect(await screen.findByText("economy mode")).toBeTruthy();
-  expect(screen.getByText("850 of 1,000 tokens · 85%")).toBeTruthy();
+  expect(await screen.findByText("enrich")).toBeTruthy();
+  expect(screen.queryByText("850 of 1,000 tokens · 85%")).toBeNull();
   expect(screen.queryByText("Est. cost")).toBeNull();
 });
 
-it("renders queued and lights up estimated cost only when present", async () => {
+it("shows estimated cost when present independently of the current allowance band", async () => {
   mount({
     budget: { ...budget, band: "queued", spent_tokens: 1000, currency: "EUR" },
     days: [
@@ -108,9 +108,7 @@ it("renders queued and lights up estimated cost only when present", async () => 
       },
     ],
   });
-  expect(
-    await screen.findByText("budget reached — background AI queued"),
-  ).toBeTruthy();
+  expect(await screen.findByText("enrich")).toBeTruthy();
   expect(screen.getByText("Est. cost")).toBeTruthy();
   expect(screen.getAllByText(/€1\.23/).length).toBeGreaterThan(0);
   // The caveat and the total are what the table says taken TOGETHER, so they
@@ -242,9 +240,9 @@ it("names every row, and puts the per-day breakdown behind one disclosure", asyn
   expect(screen.queryByText("Hide days")).toBeNull();
 });
 
-it("surfaces an unknown budget band", async () => {
+it("keeps historical usage usable when the live allowance band is unknown", async () => {
   mount({ budget: { ...budget, band: "future-band" }, days: [] });
-  expect(await screen.findByText("unknown budget state")).toBeTruthy();
+  expect(await screen.findByText("No AI calls in this window.")).toBeTruthy();
 });
 
 it("withholds the spend from a principal without the diagnostics read, and asks the server for nothing", async () => {
@@ -260,7 +258,7 @@ it("withholds the spend from a principal without the diagnostics read, and asks 
       /only an operator can see what the AI runtime spent/i,
     ),
   ).toBeTruthy();
-  expect(screen.getByText("AI usage & budget")).toBeTruthy();
+  expect(screen.getByText("Estimated AI spend & usage history")).toBeTruthy();
   expect(seen.some((url) => url.includes("/ai/usage"))).toBe(false);
 });
 

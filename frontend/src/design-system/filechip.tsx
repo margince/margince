@@ -134,10 +134,15 @@ export function previewMediaType(filename: string): string | null {
   return factsFor(fileKind(filename)).preview;
 }
 
-// The extension, upper-cased, or "" for a filename that carries none. Capped
-// at four characters so a dotted name without one ("Q3.final report") is read
-// as having no extension rather than as a kind nobody has heard of.
-function fileKind(filename: string): string {
+/**
+ * The extension, upper-cased, or "" for a filename that carries none. Capped
+ * at four characters so a dotted name without one ("Q3.final report") is read
+ * as having no extension rather than as a kind nobody has heard of.
+ *
+ * Exported for the one other card that stamps a file's kind — the Deal Room's
+ * document tile — so the two cannot read the same name as two kinds.
+ */
+export function fileKind(filename: string): string {
   const dot = filename.lastIndexOf(".");
   const extension = dot > 0 ? filename.slice(dot + 1) : "";
   return extension.length > 0 && extension.length <= 4

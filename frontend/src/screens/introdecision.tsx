@@ -97,9 +97,7 @@ export function IntroDecisionDrawer({
               about to forward these under their own name, so whether a model
               wrote them is part of what they are deciding. */}
           {request.note_ai_generated ? (
-            <Badge tone="ai" quiet>
-              {t("contact.intro.noteByModel")}
-            </Badge>
+            <Badge tone="ai">{t("contact.intro.noteByModel")}</Badge>
           ) : null}
           <blockquote>{request.forwardable_note}</blockquote>
         </section>

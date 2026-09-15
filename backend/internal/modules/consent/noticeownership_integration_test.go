@@ -11,12 +11,18 @@ package consent
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 	"time"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -186,7 +192,7 @@ func TestAnExcusedDutyLeavesTheQueue(t *testing.T) {
 	ctx := officerCtx(e)
 	id := seedNoticeCase(t, e, "purchased_or_imported", []string{"record_confirmation"})
 
-	before, err := e.store.ListNoticeCases(ctx, nil, 0)
+	before, _, err := e.store.ListNoticeCases(ctx, nil, 0, "")
 	if err != nil {
 		t.Fatalf("reading the queue: %v", err)
 	}
@@ -202,7 +208,7 @@ func TestAnExcusedDutyLeavesTheQueue(t *testing.T) {
 		t.Fatalf("excusing the duty: %v", err)
 	}
 
-	after, err := e.store.ListNoticeCases(ctx, nil, 0)
+	after, _, err := e.store.ListNoticeCases(ctx, nil, 0, "")
 	if err != nil {
 		t.Fatalf("reading the queue: %v", err)
 	}
@@ -212,7 +218,7 @@ func TestAnExcusedDutyLeavesTheQueue(t *testing.T) {
 	}
 
 	// It is still readable by name, which is what an auditor asks for.
-	closed, err := e.store.ListNoticeCases(ctx, []NoticeState{NoticeExemptWithReason}, 0)
+	closed, _, err := e.store.ListNoticeCases(ctx, []NoticeState{NoticeExemptWithReason}, 0, "")
 	if err != nil {
 		t.Fatalf("reading the excused cases: %v", err)
 	}
@@ -229,7 +235,7 @@ func TestTheQueueRefusesAStateThatDoesNotExist(t *testing.T) {
 	ctx := officerCtx(e)
 
 	var verr *ValidationError
-	_, err := e.store.ListNoticeCases(ctx, []NoticeState{"overdue"}, 0)
+	_, _, err := e.store.ListNoticeCases(ctx, []NoticeState{"overdue"}, 0, "")
 	if !errors.As(err, &verr) || verr.Field != fieldState {
 		t.Fatalf("asking for a state that does not exist answered %v, want a validation error on %q",
 			err, fieldState)
@@ -243,7 +249,7 @@ func TestTheNoticeQueueIsGatedOnThePrivacyObject(t *testing.T) {
 	e := setupChannelConsent(t)
 	id := seedNoticeCase(t, e, "purchased_or_imported", []string{"record_confirmation"})
 
-	if _, err := e.store.ListNoticeCases(e.ctx, nil, 0); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, _, err := e.store.ListNoticeCases(e.ctx, nil, 0, ""); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("a rep reading the notice queue got %v, want permission denied", err)
 	}
 	if _, err := e.store.AssignNoticeCase(e.ctx, id, e.user); !errors.Is(err, apperrors.ErrPermissionDenied) {
@@ -367,7 +373,7 @@ func TestOneDutyReadsTheSameAsItDoesInTheQueue(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading the duty: %v", err)
 	}
-	listed, err := e.store.ListNoticeCases(ctx, nil, 0)
+	listed, _, err := e.store.ListNoticeCases(ctx, nil, 0, "")
 	if err != nil {
 		t.Fatalf("reading the queue: %v", err)
 	}
@@ -401,5 +407,206 @@ func TestTheDetailReadIsGatedLikeTheQueue(t *testing.T) {
 
 	if _, err := e.store.GetNoticeCase(e.ctx, id); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("a rep reading one duty got %v, want permission denied", err)
+	}
+}
+
+// seedNoticeCaseDue seeds one duty at a stated deadline, so a case about
+// ORDER can pin the order rather than hope two `now()` calls land apart.
+func seedNoticeCaseDue(t *testing.T, e *channelConsentEnv, due time.Time) ids.UUID {
+	t.Helper()
+	acq := seedAcquisition(t, e, "purchased_or_imported")
+	var id ids.UUID
+	if err := e.owner.QueryRow(context.Background(), `
+		INSERT INTO privacy_notice_case
+		       (contact_id, acquisition_id, rule, due_at, allowed_routes, state)
+		VALUES ($1, $2, 'art14', $3, ARRAY['record_confirmation'], 'open')
+		RETURNING id`, e.contact, acq, due).Scan(&id); err != nil {
+		t.Fatalf("seeding the notice case: %v", err)
+	}
+	return id
+}
+
+// walkQueue reads the whole queue a page at a time, the way a caller following
+// the contract does, and answers what it saw.
+//
+// It refuses to loop forever rather than trusting the cursor to advance: a
+// walk that never terminates is how a paging bug arrives as a hung lane rather
+// than a failing assertion.
+func walkQueue(ctx context.Context, t *testing.T, e *channelConsentEnv, perPage int) []ids.UUID {
+	t.Helper()
+	var seen []ids.UUID
+	cursor := ""
+	for pages := 0; ; pages++ {
+		if pages > 10 {
+			t.Fatal("the queue walk did not finish in ten pages — the cursor is not advancing")
+		}
+		page, info, err := e.store.ListNoticeCases(ctx, nil, perPage, cursor)
+		if err != nil {
+			t.Fatalf("reading page %d of the queue: %v", pages, err)
+		}
+		for _, c := range page {
+			seen = append(seen, c.ID)
+		}
+		if !info.HasMore {
+			return seen
+		}
+		if info.NextCursor == "" {
+			t.Fatal("the queue says there is another page and hands back no cursor to fetch it with")
+		}
+		cursor = info.NextCursor
+	}
+}
+
+// TestEveryDutyIsReachableHoweverManyThereAre.
+//
+// The queue was a single bounded read with no continuation, so a duty ranked
+// past the limit was absent from every answer the route could give — not slow
+// to reach, not on page two, structurally unreachable, with the screen giving
+// no sign a tail existed. A privacy officer working the queue in good faith
+// would believe they had seen every duty the installation owes.
+func TestEveryDutyIsReachableHoweverManyThereAre(t *testing.T) {
+	e := setupChannelConsent(t)
+	ctx := officerCtx(e)
+
+	base := time.Now().Add(24 * time.Hour).Truncate(time.Second)
+	want := make([]ids.UUID, 0, 5)
+	for i := range 5 {
+		want = append(want, seedNoticeCaseDue(t, e, base.Add(time.Duration(i)*time.Hour)))
+	}
+
+	got := walkQueue(ctx, t, e, 2)
+	if len(got) != len(want) {
+		t.Fatalf("walking the queue two at a time saw %d duties, want %d — a duty past the "+
+			"first page is one the installation owes and nobody can see", len(got), len(want))
+	}
+	for i, id := range want {
+		if got[i] != id {
+			t.Errorf("duty %d of the walk is %s, want %s: the pages are not in deadline order, "+
+				"so the officer working soonest-first is not", i, got[i], id)
+		}
+	}
+}
+
+// TestTwoDutiesFallingDueTogetherAreBothReached.
+//
+// The tie-break is the half an id-keyed cursor would lose. The queue orders by
+// (due_at, id), and a walk resumed on id alone skips every case whose deadline
+// is later and whose id happens to be smaller — silently, and only on an
+// installation where two duties share a second, which is ordinary once a
+// nightly import files a batch of them.
+func TestTwoDutiesFallingDueTogetherAreBothReached(t *testing.T) {
+	e := setupChannelConsent(t)
+	ctx := officerCtx(e)
+
+	together := time.Now().Add(48 * time.Hour).Truncate(time.Second)
+	sharing := []ids.UUID{
+		seedNoticeCaseDue(t, e, together),
+		seedNoticeCaseDue(t, e, together),
+	}
+	// The queue's own tie-break, applied here so the expectation is the
+	// ordering rather than the order the ids happened to be minted in.
+	slices.SortFunc(sharing, func(a, b ids.UUID) int {
+		return strings.Compare(a.String(), b.String())
+	})
+	want := append(slices.Clone(sharing), seedNoticeCaseDue(t, e, together.Add(time.Hour)))
+
+	// The SEQUENCE, not the set. Presence alone is not the property: an
+	// id-keyed cursor can still reach every row while serving one of them
+	// twice and another out of deadline order, which is the same officer
+	// reading the same duty on two pages and trusting the order of neither.
+	got := walkQueue(ctx, t, e, 1)
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("walking one at a time saw %v, want %v — two duties sharing a deadline are "+
+			"separated by the id tie-break, and a cursor carrying only one half of the key "+
+			"loses that", got, want)
+	}
+}
+
+// TestACursorTheQueueDidNotMintIsRefused. An empty page would tell a privacy
+// officer there is nothing left to do, which is the one answer this route must
+// never guess at.
+func TestACursorTheQueueDidNotMintIsRefused(t *testing.T) {
+	e := setupChannelConsent(t)
+	ctx := officerCtx(e)
+	seedNoticeCaseDue(t, e, time.Now().Add(time.Hour))
+
+	// A created_at cursor from any other paged route. It decodes cleanly here
+	// — the envelope is shared and `id` is spelled the same — and names no
+	// deadline, so a queue that trusted the id alone would page from the year
+	// zero and serve the whole queue again as the officer's next page.
+	foreign, err := storekit.EncodeCursor(time.Now(), ids.NewV7())
+	if err != nil {
+		t.Fatalf("minting another route's cursor: %v", err)
+	}
+
+	for _, token := range []struct {
+		name  string
+		value string
+	}{
+		{"a token this installation never minted", "not-a-cursor"},
+		{"another route's cursor", foreign},
+	} {
+		t.Run(token.name, func(t *testing.T) {
+			var malformed *storekit.MalformedCursorError
+			_, _, err := e.store.ListNoticeCases(ctx, nil, 0, token.value)
+			if !errors.As(err, &malformed) {
+				t.Fatalf("%s answered %v, want a malformed-cursor refusal", token.name, err)
+			}
+		})
+	}
+}
+
+// TestTheQueuesWireCarriesItsPage drives the HANDLER, not the store.
+//
+// The store can page correctly and the route still answer a body with no
+// continuation in it — the envelope is assembled here, and a client walks what
+// the wire says rather than what the store returned. So this asserts the shape
+// the contract declares: `data` and `page`, with a cursor that is accepted back
+// on the next request.
+func TestTheQueuesWireCarriesItsPage(t *testing.T) {
+	e := setupChannelConsent(t)
+	ctx := officerCtx(e)
+	base := time.Now().Add(24 * time.Hour).Truncate(time.Second)
+	for i := range 3 {
+		seedNoticeCaseDue(t, e, base.Add(time.Duration(i)*time.Hour))
+	}
+	h := Handlers{store: e.store}
+
+	read := func(cursor *string) (data []crmcontracts.NoticeCase, page crmcontracts.PageInfo) {
+		t.Helper()
+		limit := 2
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, "/v1/privacy/notice-cases", nil).WithContext(ctx)
+		h.ListNoticeCases(rec, req, crmcontracts.ListNoticeCasesParams{Limit: &limit, Cursor: cursor})
+		if rec.Code != http.StatusOK {
+			t.Fatalf("status = %d, want 200: %s", rec.Code, rec.Body.String())
+		}
+		var body struct {
+			Data []crmcontracts.NoticeCase `json:"data"`
+			Page crmcontracts.PageInfo     `json:"page"`
+		}
+		if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+			t.Fatalf("decoding the queue's answer: %v", err)
+		}
+		return body.Data, body.Page
+	}
+
+	first, page := read(nil)
+	if len(first) != 2 || !page.HasMore {
+		t.Fatalf("first page carried %d duties and has_more %v, want 2 and true", len(first), page.HasMore)
+	}
+	if page.NextCursor == nil || *page.NextCursor == "" {
+		t.Fatal("the wire says there is another page and hands back no cursor to fetch it with")
+	}
+
+	second, page := read(page.NextCursor)
+	if len(second) != 1 || page.HasMore {
+		t.Fatalf("second page carried %d duties and has_more %v, want 1 and false", len(second), page.HasMore)
+	}
+	if page.NextCursor != nil {
+		t.Errorf("the last page handed back cursor %q — a client walking until has_more is false is fine, but one walking until the cursor is null would loop", *page.NextCursor)
+	}
+	if second[0].Id == first[0].Id || second[0].Id == first[1].Id {
+		t.Error("the second page repeated a duty from the first")
 	}
 }

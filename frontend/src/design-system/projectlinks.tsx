@@ -213,9 +213,7 @@ export function ProjectLinks({
             >
               {project.name}
             </a>
-            {project.key && (
-              <span className="t-mono pl-key">{project.key}</span>
-            )}
+            {project.key && <span className="pl-key">{project.key}</span>}
             {project.phase}
             {adapter.detach && !adapter.readOnly && (
               <Button

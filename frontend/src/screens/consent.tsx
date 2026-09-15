@@ -100,7 +100,7 @@ function ConsentEventActor({ event }: Readonly<{ event: ConsentEvent }>) {
       {event.actor_id && (
         <>
           {" "}
-          <span className="t-mono">{event.actor_id}</span>
+          <span>{event.actor_id}</span>
         </>
       )}
     </span>

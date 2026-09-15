@@ -97,7 +97,7 @@ it("allows removing the final address", async () => {
     return jsonResponse(contact);
   });
   await user.click(await screen.findByRole("button", { name: "Change Email" }));
-  await user.click(screen.getByRole("button", { name: "Remove" }));
+  await user.click(screen.getByRole("button", { name: /^Remove row/ }));
   await user.click(screen.getByRole("button", { name: "Save" }));
   await waitFor(() => expect(sent).toEqual([{ emails: [] }]));
 });

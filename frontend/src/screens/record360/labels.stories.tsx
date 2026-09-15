@@ -61,9 +61,7 @@ function SignalKinds() {
             gap: "var(--space-3)",
           }}
         >
-          <Badge tone={signalTone("info")} quiet>
-            {signalKindLabel(kind, t)}
-          </Badge>
+          <Badge tone={signalTone("info")}>{signalKindLabel(kind, t)}</Badge>
           <span className="t-caption">{kind}</span>
         </div>
       ))}

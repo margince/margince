@@ -56,11 +56,11 @@ const run = (over: Partial<AutomationRun>): AutomationRun => ({
 
 describe("OutcomeBadge", () => {
   const cases: ReadonlyArray<[AutomationRun["outcome"], string, string]> = [
-    ["fired", "badge-success", "fired"],
-    ["failed", "badge-danger", "failed"],
-    ["blocked", "badge-danger", "blocked"],
-    ["skipped", "badge-warn", "skipped"],
-    ["queued_for_approval", "badge-warn", "queued"],
+    ["fired", "badge-success", "Fired"],
+    ["failed", "badge-danger", "Failed"],
+    ["blocked", "badge-danger", "Blocked"],
+    ["skipped", "badge-warn", "Skipped"],
+    ["queued_for_approval", "badge-warn", "Queued"],
   ];
 
   it.each(cases)(
@@ -86,8 +86,8 @@ describe("AutomationRuns", () => {
       ),
     );
     render(<AutomationRuns automationId="au-1" />);
-    // the badge label carries a leading glyph ("✓ fired"), so match the token
-    await waitFor(() => expect(screen.getByText(/fired/)).toBeTruthy());
+    // the badge label carries a leading glyph ("✓ Fired"), so match the token
+    await waitFor(() => expect(screen.getByText(/Fired/)).toBeTruthy());
     // no fabricated blank label rows for the null optional fields (T7)
     expect(screen.queryByText("Why")).toBeNull();
     expect(screen.queryByText("Target")).toBeNull();

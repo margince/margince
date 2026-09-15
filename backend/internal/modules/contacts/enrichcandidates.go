@@ -35,13 +35,9 @@ var signatureCandidateSQL = `
 				  -- THIS CONTACT WROTE IT. Reaching them is not writing it, and a
 				  -- signature is only theirs to be read off a message they sent.
 				  AND ` + SenderPredicate("p.id", "a") + `
-				  -- A limited message is not signature material. What this pass
-				  -- extracts — a title, a phone, an employer — is written onto a
-				  -- contact every seat can read, so mining a message whose
-				  -- audience excludes those seats republishes its content in
-				  -- field form, and narrowing the mail afterwards does not take
-				  -- the field back. The candidate simply waits for open mail.
-				  AND a.audience = 'workspace'
+				  -- Whose mail may be mined for whom: SignatureSourceEligible
+				  -- states the rule, and the apply asks the same fragment.
+				  AND ` + SignatureSourceEligible("p", "a") + `
 				  -- A row held under a statutory obligation is out of reach of
 				  -- every ordinary read, and the model call this feeds is
 				  -- processing — which is exactly what such a hold bars.
@@ -84,6 +80,61 @@ var signatureCandidateSQL = `
 			-- who would wait longest.
 			ORDER BY a.occurred_at DESC
 			LIMIT $1`
+
+// SignatureSourceEligible is the ONE spelling of "may this message be mined for
+// this contact's signature", given the contact's alias and the activity's.
+//
+// It exists as a fragment because TWO statements must agree: the candidate
+// query that SELECTS the work, and the apply in enrichsignature.go that lands
+// the fields. They ran on different rules once — selection widened to an
+// owner's own mail while the apply still demanded audience='workspace' — and
+// the pass then marked every such message read without writing anything, so
+// the mail was consumed and never reconsidered. A predicate spelled twice is
+// how that happens; spelled once, the two cannot drift.
+//
+// Held by: TestSignatureEligibilityHasOneSpelling
+// (backend/gates/signatureeligibilityonespelling_test.go), which fails when any
+// other signature reader in this module tests the audience itself.
+//
+// The rule, in two parts.
+//
+// WORKSPACE MAIL is always minable, whatever the contact's visibility. Every
+// seat can already open it, so writing its content into a field discloses it to
+// nobody new. This arm is unconditional on purpose: an owner-scoped contact with
+// open mail is the ordinary case, and hanging it off the visibility would refuse
+// mail that nothing protects.
+//
+// NARROWED MAIL is minable only when the record is no wider than the message.
+// A `participants` message may be read for an OWNER-SCOPED contact, because
+// their fields are readable by their owner — the same audience the mail already
+// has. Three conditions bound it:
+//
+//   - the owner must actually be ON the message, delivered to their mailbox or
+//     stamped as a participant, the two facts auth.activityMembershipArm uses
+//     to decide a seat was present;
+//   - the record must carry NO live grant. contact is a shareable table, so a
+//     record_grant lets another seat read these fields with no tie to the source
+//     message's audience — mining narrowed mail would put its content in front
+//     of somebody who cannot open it;
+//   - a WORKSPACE-VISIBLE contact never qualifies: their fields land on a record
+//     every seat reads, and narrowing the message afterwards does not take the
+//     field back.
+//
+// audience='selected' is deliberately absent: it admits named users and teams
+// beyond the participants, so it is not bounded by "the owner was there".
+func SignatureSourceEligible(contact, activity string) string {
+	return fmt.Sprintf(`(
+		    %[2]s.audience = 'workspace'
+		    OR (%[1]s.visibility = 'owner' AND %[2]s.audience = 'participants'
+		        AND (EXISTS (SELECT 1 FROM capture_import ci
+		                      WHERE ci.activity_id = %[2]s.id AND ci.user_id = %[1]s.owner_id)
+		             OR EXISTS (SELECT 1 FROM activity_participant ap
+		                         WHERE ap.activity_id = %[2]s.id AND ap.user_id = %[1]s.owner_id))
+		        AND NOT EXISTS (SELECT 1 FROM record_grant rg
+		                         WHERE rg.record_type = 'contact' AND rg.record_id = %[1]s.id
+		                           AND (rg.expires_at IS NULL OR rg.expires_at > now())))
+		  )`, contact, activity)
+}
 
 // SignatureCandidates lists the contacts whose latest inbound mail this pass has
 // not read yet, freshest first and capped at limit.

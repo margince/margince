@@ -260,6 +260,7 @@ var catalog = map[string]struct {
 	"passport.revoked":          {identityStreamEntity, 1},
 	"onboarding.state_changed":  {identityStreamEntity, 1},
 
+	"ai_budget.updated":            {aiBudgetStreamEntity, 1},
 	"voice.profile_created":        {voiceStreamEntity, 1},
 	"voice.profile_updated":        {voiceStreamEntity, 1},
 	"voice.profile_archived":       {voiceStreamEntity, 1},

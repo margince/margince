@@ -52,14 +52,13 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
   // SHOW the key it was given. This is the half a create form could not prove
   // once the field was removed: without it, a create that came back with no key
   // at all would look exactly like a success.
-  // Scoped to the mono chip: the key also appears in the prose that explains
-  // what a key is for, and a bare text match would pass on the explanation
-  // alone — which renders whether or not the project actually got a key.
-  await expect(
-    page
-      .locator(".t-mono")
-      .filter({ hasText: new RegExp(`^${MOCK_MINTED_KEY}$`) }),
-  ).toBeVisible();
+  // Scoped to the key chip — the element whose hover text explains what THIS
+  // key is for — and asserted to read the key alone: a bare text match would
+  // pass on the explanation, which renders whether or not the project actually
+  // got a key.
+  const keyChip = page.getByTitle(`[${MOCK_MINTED_KEY}]`);
+  await expect(keyChip).toBeVisible();
+  await expect(keyChip).toHaveText(MOCK_MINTED_KEY);
   await expect(
     page.getByRole("heading", { level: 1, name: "Brandt ERP" }),
   ).toBeVisible();

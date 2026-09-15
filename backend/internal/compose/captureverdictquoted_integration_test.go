@@ -58,7 +58,7 @@ func TestVerdictDecidesOnAQuotedConfidence(t *testing.T) {
 	dispositionID := seedPendingDisposition(t, e, "ada@quoted.example", "quoted.example", activityID)
 
 	brain := &literalConfidenceBrain{verdict: capture.KindContact, confidence: `"0.9"`}
-	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
@@ -85,7 +85,7 @@ func TestVerdictDefersAnUnreadableConfidence(t *testing.T) {
 	dispositionID := seedPendingDisposition(t, e, "ada@unreadable.example", "unreadable.example", activityID)
 
 	brain := &literalConfidenceBrain{verdict: capture.KindContact, confidence: `"very high"`}
-	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}

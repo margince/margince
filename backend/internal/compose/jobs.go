@@ -458,6 +458,7 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 		periodicFor(cfg, ForecastSnapshotSweepArgs{}),
 		periodicFor(cfg, TimeScanArgs{}),
 		periodicFor(cfg, VoiceBuildRetryArgs{}),
+		periodicFor(cfg, AIBudgetResumeArgs{}),
 		periodicFor(cfg, IdempotencyRetentionArgs{}),
 		periodicFor(cfg, AgentTaskRetentionArgs{}),
 		periodicFor(cfg, AIActivityReconcileArgs{}),

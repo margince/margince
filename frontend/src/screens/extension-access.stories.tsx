@@ -109,8 +109,8 @@ export const ReadSeat: Story = {
 
 // The inventory and the matrix in dark. Three things here are drawn from tokens
 // that mean "one step off the card ground", and dark is where a step that small
-// either survives or collapses: `.ext-chip` fills an RBAC object and a route with
-// --bgHover inside a card, the matrix separates every role row with a single
+// either survives or collapses: a soft `Badge` fills an RBAC object and a route
+// with --bgChip inside a card, the matrix separates every role row with a single
 // --borderSubtle hairline, and the `SettingList` now rules between one object's
 // grid and the next with the same hairline — two rules of the same weight, one
 // inside a grid and one between two of them, which either read as a hierarchy or

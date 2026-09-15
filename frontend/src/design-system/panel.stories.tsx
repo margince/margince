@@ -123,7 +123,7 @@ export const WithSubRowsAndFooter: Story = {
         <PanelRow>Pilot — €4,200</PanelRow>
       </>
     ),
-    footer: <span className="t-mono">€64,700.00</span>,
+    footer: <span className="t-num">€64,700.00</span>,
   },
 };
 
