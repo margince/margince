@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# The font-lock gate's own test — it gates the VERDICT of the mono arms.
+# The font-lock gate's own test — it gates the VERDICT of both arms.
 #
 # "The gate passed" and "the gate looked at nothing" print the same line, so
 # every case runs the REAL gate over a fixture tree whose contents are known
@@ -8,11 +8,11 @@
 # Two properties:
 #   1. each refused shape is refused, and the finding names the planted file;
 #   2. the shapes the rule allows stay silent — code, pre, samp and .code-block
-#      in every spelling a stylesheet uses, and the --f-mono token in
-#      tokens.css. A gate that fires on correct code teaches readers to stop
-#      reading it. (A grep reads comments as it reads code, so a comment naming
-#      the class is refused here too; design-system/mono.test.ts is the arm
-#      that reads past one.)
+#      in every spelling a stylesheet uses, the --f-mono token in tokens.css,
+#      a var() reference with a fallback, and `inherit`. A gate that fires on
+#      correct code teaches readers to stop reading it. (A grep reads comments
+#      as it reads code, so a comment naming the class is refused here too;
+#      design-system/mono.test.ts is the arm that reads past one.)
 #
 # Usage: bash frontend/scripts/check-font-lock.test.sh
 
@@ -57,6 +57,12 @@ REFUSED=(
   "screens/a.tsx|export const A = () => <span className=\"t-mono\">1</span>;"
   "screens/a.tsx|export const A = () => <b style={{ fontFamily: \"var(--f-mono)\" }} />;"
   "screens/a.tsx|const face = { fontFamily: 'monospace' };"
+  # The three-family arm. A fourth family fails however it is spelled — and the
+  # second of these is the one the var() stripping could hide: a fallback is what
+  # a document that never defined the token actually renders in, so it is held to
+  # the rule exactly like a bare family name.
+  "screens/a.css|.foo { font-family: \"Comic Sans MS\"; }"
+  "screens/a.css|.foo { font-family: var(--f-body, \"Comic Sans MS\"); }"
 )
 
 index=0
@@ -95,7 +101,10 @@ pre.code-block:hover { font-family: monospace; }
 .a { & code { font-family: var(--f-mono); } }
 pre { &:hover { font-family: var(--f-mono); } }
 @media (width > 1px) { samp { font-family: ui-monospace; } }
-.label { font-family: var(--f-body); }'
+.label { font-family: var(--f-body); }
+.reset { font-family: inherit; }
+.figure { font-family: var(--f-display, var(--f-body)); }
+.stack { font-family: var(--f-body, Geist), sans-serif; }'
 plant "$CLEAN" screens/b.tsx 'export const B = () => <span className="t-num t-monochrome">1</span>;
 const sheet = "pre code { font-family: var(--f-mono); }";'
 

@@ -5,8 +5,10 @@
 #    frontend/src or an extension unit's frontend names only Outfit (display),
 #    Geist (body), or Geist Mono (code). Allowed besides the three families: the
 #    generic stack fallbacks the §2 token definitions name (system-ui,
-#    sans-serif, ui-monospace, monospace) and var(--f-*) references, which
-#    resolve inside tokens.css.
+#    sans-serif, ui-monospace, monospace), var(--f-*) references, which resolve
+#    inside tokens.css, and the `inherit` keyword, which names no family at all
+#    — it takes whatever the root already resolved, and the root is the one
+#    place a family is chosen.
 #
 # 2. Mono is for code. The code face is worn only by an element that IS code —
 #    a rule whose selectors all have `code`, `pre`, `samp` or `.code-block` as
@@ -62,16 +64,18 @@ echo "==> Font-lock check (${#FILES[@]} files under frontend/src + extensions/*/
 
 EXIT=0
 
-# For each font-family declaration, strip everything allowed; any residue is
-# a family outside the three-family rule.
-while IFS= read -r hit; do
-  # A declaration whose value starts on the next line matches nothing here, and
-  # under pipefail that no-match would end the whole gate with a bare exit 1.
-  value=$(echo "$hit" | grep -oE "font-family\s*:[^;]+" | head -1 || true)
-  [[ -z "$value" ]] && continue
-  stripped=$(echo "$value" \
-    | sed -E 's/font-family\s*://g' \
-    | sed -E 's/var\(--[A-Za-z0-9-]+\)//g' \
+# A var() reference names no family here — the token resolves in tokens.css —
+# so the whole reference comes out. It is removed INNERMOST FIRST, one layer per
+# pass, because a fallback may itself be a var(): `var(--f-display,
+# var(--f-body))` reduces to `var(--f-display, )` and only then to nothing.
+#
+# What must NOT happen is a var() swallowing its fallback whole: a rule written
+# `var(--f-body, "Comic Sans MS")` renders in Comic Sans on any document that
+# never defined the token, so the fallback is held to the rule like any other
+# value. That is why the second pattern requires the fallback to be EMPTY by the
+# time it fires — an unstripped family inside one is residue, and residue fails.
+strip_allowed() {
+  sed -E 's/font-family[[:space:]]*://g' \
     | sed -E 's/Geist Mono//g' \
     | sed -E 's/Geist//g' \
     | sed -E 's/Outfit//g' \
@@ -79,7 +83,25 @@ while IFS= read -r hit; do
     | sed -E 's/sans-serif//g' \
     | sed -E 's/ui-monospace//g' \
     | sed -E 's/monospace//g' \
-    | tr -d '",'"'"',; \t')
+    | sed -E 's/(^|[^A-Za-z0-9_-])inherit([^A-Za-z0-9_-]|$)/\1\2/g'
+}
+
+# For each font-family declaration, strip everything allowed; any residue is
+# a family outside the three-family rule.
+while IFS= read -r hit; do
+  # A declaration whose value starts on the next line matches nothing here, and
+  # under pipefail that no-match would end the whole gate with a bare exit 1.
+  value=$(echo "$hit" | grep -oE "font-family\s*:[^;]+" | head -1 || true)
+  [[ -z "$value" ]] && continue
+  stripped=$(echo "$value" | strip_allowed)
+  while :; do
+    peeled=$(echo "$stripped" \
+      | sed -E 's/var\([[:space:]]*--[A-Za-z0-9-]+[[:space:]]*\)//g' \
+      | sed -E 's/var\([[:space:]]*--[A-Za-z0-9-]+[[:space:]]*,[[:space:]]*\)//g')
+    [[ "$peeled" == "$stripped" ]] && break
+    stripped="$peeled"
+  done
+  stripped=$(echo "$stripped" | tr -d '",'"'"',; \t')
   if [[ -n "$stripped" ]]; then
     echo "FAIL (family outside the three-family rule): $hit"
     EXIT=1
@@ -245,7 +267,8 @@ if [[ "$EXIT" == "0" ]]; then
 else
   echo ""
   echo "Allowed: Outfit, Geist, Geist Mono; generics system-ui,"
-  echo "sans-serif, ui-monospace, monospace; var(--f-*) token references."
+  echo "sans-serif, ui-monospace, monospace; var(--f-*) token references,"
+  echo "their fallbacks held to the same rule; and the inherit keyword."
   echo "Mono is for code: only code, pre, samp and .code-block wear it; a figure"
   echo "aligns with t-num (font-variant-numeric: tabular-nums) in the body face."
 fi
