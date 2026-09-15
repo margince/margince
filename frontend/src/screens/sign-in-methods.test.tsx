@@ -23,7 +23,10 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
-function mount(providers: { key: string; label: string; enabled: boolean }[]) {
+function mount(
+  providers: { key: string; label: string; enabled: boolean }[],
+  groupRoleMap: Record<string, string> = {},
+) {
   const calls: unknown[] = [];
   const fetchMock = vi.fn(async (request: Request) => {
     if (request.url.endsWith("/v1/me")) {
@@ -35,18 +38,13 @@ function mount(providers: { key: string; label: string; enabled: boolean }[]) {
       calls.push(JSON.parse(await request.text()));
       return new Response(null, { status: 204 });
     }
+    // The narrow authentication-policy projection this card reads — not the
+    // installation aggregate, which answers a different route.
     return jsonResponse({
-      name: "Acme",
-      // Not a zone name: this card never reads the field, and zone literals are
-      // reserved to the module that owns them so a screen cannot grow a second
-      // opinion about which clock a date is in.
-      timezone: "",
-      base_currency: "EUR",
-      base_language: "en",
-      fiscal_year_start_month: 1,
-      base_currency_locked: false,
-      max_upload_bytes: 1,
       sign_in_providers: providers,
+      require_sso: false,
+      require_mfa: false,
+      oidc_group_role_map: groupRoleMap,
     });
   });
   vi.stubGlobal("fetch", fetchMock);
@@ -115,5 +113,91 @@ describe("the sign-in methods card", () => {
       await screen.findByText(/no external provider configured/i),
     ).toBeTruthy();
     expect(screen.queryByRole("switch", { name: /google/i })).toBeNull();
+  });
+});
+
+describe("the group role grant editor", () => {
+  it("renders each stored mapping with its group and granted role", async () => {
+    mount([], { engineering: "manager" });
+    expect(await screen.findByDisplayValue("engineering")).toBeTruthy();
+    // The role reads under its product name, the same label the roster uses.
+    const role = screen.getByRole("combobox", { name: /granted role/i });
+    expect(role.textContent).toContain("Team Lead");
+  });
+
+  // The whole map travels: the setting replaces rather than merges, so the
+  // stored mapping must ride along with the added one.
+  it("adds a mapping and saves the whole map", async () => {
+    const { calls } = mount([], { sales: "rep" });
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: /add group/i }));
+    const groups = screen.getAllByRole("textbox", { name: /idp group/i });
+    const added = groups[groups.length - 1];
+    if (!added) {
+      throw new Error("the added row rendered no group input");
+    }
+    await user.type(added, "platform");
+    const roles = screen.getAllByRole("combobox", { name: /granted role/i });
+    const addedRole = roles[roles.length - 1];
+    if (!addedRole) {
+      throw new Error("the added row rendered no role picker");
+    }
+    await user.click(addedRole);
+    await user.click(await screen.findByRole("option", { name: "Ops" }));
+    await user.click(
+      screen.getByRole("button", { name: /save group grants/i }),
+    );
+    await waitFor(() =>
+      expect(calls).toEqual([
+        { oidc_group_role_map: { sales: "rep", platform: "ops" } },
+      ]),
+    );
+  });
+
+  it("removes a mapping and saves the map without it", async () => {
+    const { calls } = mount([], { sales: "rep", engineering: "manager" });
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: /remove the sales mapping/i }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: /save group grants/i }),
+    );
+    await waitFor(() =>
+      expect(calls).toEqual([
+        { oidc_group_role_map: { engineering: "manager" } },
+      ]),
+    );
+  });
+
+  // Mirrors the server's refusal so it reaches the admin before a request
+  // does: the save is barred and says why, and nothing is sent.
+  it("refuses a blank group name before any request is made", async () => {
+    const { calls } = mount([], {});
+    const user = userEvent.setup();
+    // The empty map says what it costs: nothing extra is granted.
+    expect(await screen.findByText(/no groups are mapped/i)).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: /add group/i }));
+    const save = screen.getByRole("button", { name: /save group grants/i });
+    expect(save.hasAttribute("disabled")).toBe(true);
+    expect(screen.getByText(/every mapping needs a group name/i)).toBeTruthy();
+    await user.click(save);
+    expect(calls).toEqual([]);
+  });
+
+  // The setting's honest cost stands beside the editor, not in a tooltip: the
+  // directory only ever grants here, and mapping a group onto Admin is a grant
+  // of admin.
+  it("carries the grant-only warning where the map is edited", async () => {
+    mount([], {});
+    expect(
+      await screen.findByText(/grants the mapped roles and never removes any/i),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(/removing a member from an idp group does not take/i),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(/mapping a group onto admin grants admin/i),
+    ).toBeTruthy();
   });
 });

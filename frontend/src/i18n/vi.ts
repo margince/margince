@@ -6779,7 +6779,7 @@ export const vi = {
   "settings.page.company.sub":
     "T\u00ean, ti\u1ec1n t\u1ec7 v\u00e0 b\u1ed1i c\u1ea3nh m\u00e0 m\u1ecdi b\u1ea3n ghi \u0111\u01b0\u1ee3c \u0111\u1ecdc theo.",
   "settings.page.authentication.sub":
-    "C\u00e1ch m\u1ecdi ng\u01b0\u1eddi \u0111\u0103ng nh\u1eadp v\u00e0o b\u1ea3n tri\u1ec3n khai n\u00e0y, v\u00e0 \u1ee9ng d\u1ee5ng n\u00e0o \u0111\u01b0\u1ee3c thay m\u1eb7t n\u00f3.",
+    "C\u00e1ch m\u1ecdi ng\u01b0\u1eddi \u0111\u0103ng nh\u1eadp v\u00e0o b\u1ea3n tri\u1ec3n khai n\u00e0y, \u1ee9ng d\u1ee5ng n\u00e0o \u0111\u01b0\u1ee3c thay m\u1eb7t n\u00f3, v\u00e0 nh\u00f3m IdP n\u00e0o c\u1ea5p vai tr\u00f2.",
   "settings.page.members.sub":
     "M\u1ecdi ng\u01b0\u1eddi c\u00f3 gh\u1ebf, v\u00e0 m\u1ed7i ng\u01b0\u1eddi t\u1edbi \u0111\u01b0\u1ee3c \u0111\u00e2u.",
   "settings.page.teams.sub":
@@ -7792,6 +7792,28 @@ export const vi = {
     "Cung cấp nhà cung cấp này trên màn hình đăng nhập. Tắt đi sẽ dừng cả những lượt đăng nhập đang diễn ra; các phiên hiện có không bị ảnh hưởng.",
   "signInMethods.noneConfigured":
     "Bản triển khai này chưa cấu hình nhà cung cấp bên ngoài nào, nên ngoài mật khẩu không có lựa chọn khác.",
+  "groupRoles.title": "Cấp vai trò theo nhóm",
+  "groupRoles.sub":
+    "Cấp một vai trò khi đăng nhập doanh nghiệp cho mọi thành viên đã được mời thuộc một nhóm IdP. Viết tên nhóm đúng như claim groups trong ID token. Cách này không tạo tài khoản — email chưa được mời vẫn bị từ chối, dù có nhóm hay không.",
+  "groupRoles.grantOnlyTitle": "Chỉ cấp — thư mục không bao giờ thu hồi",
+  "groupRoles.grantOnly":
+    "Mỗi lần đăng nhập cấp các vai trò đã ánh xạ và không bao giờ gỡ vai trò nào. Xóa một thành viên khỏi nhóm IdP không thu hồi vai trò ở đây: việc thu hồi vẫn là hành động chủ động của quản trị viên trên tài khoản của chính thành viên đó.",
+  "groupRoles.adminGrant":
+    "Ánh xạ một nhóm vào vai trò Admin sẽ cấp quyền quản trị cho mọi thành viên đã được mời của nhóm đó ở lần đăng nhập kế tiếp.",
+  "groupRoles.group": "Nhóm IdP",
+  "groupRoles.groupPlaceholder": "Tên nhóm, đúng như ID token ghi",
+  "groupRoles.role": "Vai trò được cấp",
+  "groupRoles.add": "Thêm nhóm",
+  "groupRoles.remove": "Gỡ ánh xạ nhóm này",
+  "groupRoles.removeNamed": "Gỡ ánh xạ {group}",
+  "groupRoles.save": "Lưu cấp vai trò theo nhóm",
+  "groupRoles.empty":
+    "Chưa có nhóm nào được ánh xạ. Đăng nhập doanh nghiệp không cấp thêm gì ngoài những gì mỗi thành viên đang có.",
+  "groupRoles.blankGroup": "Mỗi ánh xạ cần một tên nhóm.",
+  "groupRoles.whitespaceGroup":
+    "Tên nhóm không được bắt đầu hay kết thúc bằng khoảng trắng — phải khớp chính xác với ID token.",
+  "groupRoles.duplicateGroup": "Mỗi nhóm chỉ được ánh xạ một lần.",
+  "groupRoles.tooMany": "Chỉ có thể ánh xạ tối đa 64 nhóm.",
   "oauthApp.google.title": "Ứng dụng Google",
   "oauthApp.google.sub":
     "Hộp thư được kết nối, và mọi người đăng nhập bằng Google, thông qua một ứng dụng Google OAuth của bạn. Thông tin xác thực của tổ chức bạn được dùng thay vì của chúng tôi.",
