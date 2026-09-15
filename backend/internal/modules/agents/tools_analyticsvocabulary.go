@@ -39,9 +39,9 @@ type DescribeAnalyticsVocabularyResult struct {
 // principal.
 //
 // A port rather than the schema itself, so the composition root can wrap the
-// answer the way it wraps the analytics runner's: in an overlay workspace the
-// query verb is refused, and a vocabulary served there would teach a caller a
-// language nothing here can execute.
+// answer the way it wraps the analytics runner's: where the query verb is
+// refused, a vocabulary served anyway would teach a caller a language nothing
+// there can execute.
 type AnalyticsVocabularyReader interface {
 	AnalyticsVocabularyDocument(ctx context.Context) (string, error)
 }

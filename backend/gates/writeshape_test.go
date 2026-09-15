@@ -235,11 +235,9 @@ var auditOnlyWrites = gatekit.Waive(map[string]string{
 	//
 	// The event catalog is CLOSED: an event type exists because the contract
 	// declares one, and a build may not mint a type to satisfy this rule. The
-	// catalog carries no finance verb at all, and neither adjacent type fits.
-	// `mirror.*` is the overlay write-back stream, so staging an accounting fact
-	// under it would route the envelope to subscribers watching for something
-	// else. `company.updated` would tell every subscriber that a company
-	// record changed when none did — the same argument that already makes
+	// catalog carries no finance verb at all, and the one adjacent type does not
+	// fit: `company.updated` would tell every subscriber that a company record
+	// changed when none did — the same argument that already makes
 	// contacts:WriteProviderClaims audit-only. A wrong envelope is acted on; an
 	// absent one is not.
 	//

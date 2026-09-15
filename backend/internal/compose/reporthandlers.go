@@ -13,9 +13,7 @@ import (
 )
 
 // reportHandlers shadows the generated RunReport/ExplainReport stubs over the
-// engine. Both are themselves shadowed again on Server, by the overlay-mode
-// guards in nativeonlytools.go: the engine reads native domain tables, which
-// hold none of an overlay workspace's records, so neither verb may run for one.
+// engine.
 type reportHandlers struct {
 	engine *reportEngine
 }

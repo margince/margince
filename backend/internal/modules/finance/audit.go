@@ -18,13 +18,10 @@ package finance
 // AUDIT-ONLY, deliberately, and this is the whole rationale — read it before
 // adding an emit. The event catalog is CLOSED: an event type exists because a
 // contract declares it, and a build may not mint one to satisfy a rule. The
-// catalog carries no finance verb at all, and neither of the two types that
-// look adjacent fits. `mirror.*` belongs to the overlay write-back stream, so
-// staging a mirrored invoice under it would route an accounting fact to
-// subscribers watching for something else entirely. `company.updated`
-// would tell every subscriber that a company record changed when none did.
-// Publishing under either is worse than publishing nothing: a wrong envelope
-// is acted on, an absent one is not.
+// catalog carries no finance verb at all, and the one type that looks adjacent
+// does not fit: `company.updated` would tell every subscriber that a company
+// record changed when none did. Publishing under it is worse than publishing
+// nothing — a wrong envelope is acted on, an absent one is not.
 
 import (
 	"context"

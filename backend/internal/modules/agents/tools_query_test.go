@@ -161,7 +161,7 @@ func TestARowWhoseHopBecameUnreadableIsDropped(t *testing.T) {
 	}
 }
 
-// A mirror-backed hop is labelled where the caller reads it. Evidence is a
+// A non-authoritative hop is labelled where the caller reads it. Evidence is a
 // reason to act, so it carries the same trust label the record it names does.
 func TestAMirrorBackedHopIsMarkedExternal(t *testing.T) {
 	deal, company := ids.NewV7(), ids.NewV7()
@@ -178,7 +178,7 @@ func TestAMirrorBackedHopIsMarkedExternal(t *testing.T) {
 	})
 
 	if len(result.Rows) != 1 {
-		t.Fatalf("got %d rows, want the deal with its mirror-backed hop", len(result.Rows))
+		t.Fatalf("got %d rows, want the deal with its non-authoritative hop", len(result.Rows))
 	}
 	if got := result.Rows[0].Evidence[0].TrustTier; got != "external" {
 		t.Errorf("the hop's trust_tier = %q, want %q — its title is content and reads as a reason to act", got, "external")
@@ -215,7 +215,7 @@ func TestTheDroppedRowNoteNeverStatesHowMany(t *testing.T) {
 	}
 }
 
-// A mirror-backed record taints the row it becomes, at the one place that taint
+// A non-authoritative record taints the row it becomes, at the one place that taint
 // is applied. Reaching the seam is not enough — the answer has to CARRY what
 // the seam said about where the record came from.
 func TestAMirrorBackedRowIsMarkedExternal(t *testing.T) {
@@ -230,7 +230,7 @@ func TestAMirrorBackedRowIsMarkedExternal(t *testing.T) {
 	})
 
 	if len(result.Rows) != 1 {
-		t.Fatalf("got %d rows, want the mirror-backed record — a panic here would report the wrong "+
+		t.Fatalf("got %d rows, want the non-authoritative record — a panic here would report the wrong "+
 			"thing about the wrong line", len(result.Rows))
 	}
 	if got := result.Rows[0].Record.TrustTier; got != "external" {

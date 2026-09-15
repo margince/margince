@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Package datasource defines the System-of-Record Provider seam (interfaces.md
-// §3, 03e §2.1): the one interface that binds the AI layers, the MCP tool
-// surface, and the UI to either the SoR-mode modules or an incumbent
-// adapter (Overlay-mode). Nothing above this seam imports the modules or an
-// incumbent SDK directly (AC-OV-1); identical signatures in both modes
-// (AC-OV-2).
+// Package datasource defines the System-of-Record Provider seam: the one
+// interface that binds the AI layers, the MCP tool surface, and the UI to
+// whichever provider answers for the records — this product's own modules, or
+// a fork's adapter over another system. Nothing above this seam imports the
+// modules or a vendor SDK directly, and the signatures are identical whoever
+// answers.
 package datasource
 
 import (
