@@ -8,21 +8,50 @@ import (
 	"testing"
 )
 
-// The cases are the real headers a Gmail import produced, so the table doubles
-// as the record of what was actually wrong: every `want` here is a row that
-// shipped broken before the parser existed.
-func TestParseContactNameReadsTheNameAHeaderCarries(t *testing.T) {
+// nameCase is one header and the reading it must produce. The cases are the real
+// headers a Gmail import produced, so the two tables below double as the record
+// of what was actually wrong: every `want` is a row that shipped broken before
+// the parser existed.
+type nameCase struct {
+	name        string
+	display     string
+	email       string
+	wantFull    string
+	wantFirst   string
+	wantLast    string
+	wantHonor   string
+	wantConfide bool
+}
+
+func runNameCases(t *testing.T, cases []nameCase) {
+	t.Helper()
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got := ParseContactName(tc.display, tc.email)
+			if got.Full != tc.wantFull {
+				t.Errorf("Full = %q, want %q", got.Full, tc.wantFull)
+			}
+			if got.First != tc.wantFirst {
+				t.Errorf("First = %q, want %q", got.First, tc.wantFirst)
+			}
+			if got.Last != tc.wantLast {
+				t.Errorf("Last = %q, want %q", got.Last, tc.wantLast)
+			}
+			if got.Honorific != tc.wantHonor {
+				t.Errorf("Honorific = %q, want %q", got.Honorific, tc.wantHonor)
+			}
+			if got.Confident != tc.wantConfide {
+				t.Errorf("Confident = %v, want %v", got.Confident, tc.wantConfide)
+			}
+		})
+	}
+}
+
+// The address is the only evidence: no display name, or one the parser refused.
+func TestParseContactNameReadsTheAddressWhenTheHeaderNamesNobody(t *testing.T) {
 	t.Parallel()
-	cases := []struct {
-		name        string
-		display     string
-		email       string
-		wantFull    string
-		wantFirst   string
-		wantLast    string
-		wantHonor   string
-		wantConfide bool
-	}{
+	runNameCases(t, []nameCase{
 		{
 			name:  "dotted local part splits into a first and last name",
 			email: "lars.ferner@louis.de", wantFull: "Lars Ferner",
@@ -34,17 +63,52 @@ func TestParseContactNameReadsTheNameAHeaderCarries(t *testing.T) {
 			wantFirst: "Charlotte", wantLast: "Nguyen", wantConfide: true,
 		},
 		{
-			name:    "a surname-first display name is reversed and its header quotes dropped",
-			display: `"Lienesch, André"`, email: "andre.lienesch@louis.de",
-			wantFull: "André Lienesch", wantFirst: "André", wantLast: "Lienesch", wantConfide: true,
-		},
-		{
 			name:  "a lone surname names the contact but is not split",
 			email: "schluepmann@k5-gmbh.com", wantFull: "Schluepmann",
 		},
 		{
 			name:  "a role mailbox names nobody",
 			email: "mail@petereich.com", wantFull: "mail",
+		},
+		{
+			name:  "plus-addressing is a routing tag, not a name",
+			email: "anna.weber+crm@example.com", wantFull: "Anna Weber",
+			wantFirst: "Anna", wantLast: "Weber", wantConfide: true,
+		},
+		{
+			name:  "hyphenated and apostrophed names capitalize every part",
+			email: "anne-marie.o'brien@example.com", wantFull: "Anne-Marie O'Brien",
+			wantFirst: "Anne-Marie", wantLast: "O'Brien", wantConfide: true,
+		},
+		{
+			name:  "a digits-only local part is not a name",
+			email: "2016@example.com", wantFull: "2016",
+		},
+		{
+			name:  "an address with no local part falls back to the raw string",
+			email: "nobody", wantFull: "nobody",
+		},
+		{
+			name:  "a departmental mailbox is a role address, not two contacts",
+			email: "support.eu@example.com", wantFull: "support.eu",
+		},
+		{
+			name:  "a handle with digits in the middle is not split",
+			email: "user2name@example.com", wantFull: "user2name",
+		},
+	})
+}
+
+// What the sender calls themselves, when the header carries it. These rows are
+// the display-name path: affiliations, honorifics, surname-first spellings, and
+// the client conventions contactnameshouting.go reads.
+func TestParseContactNameReadsTheNameAHeaderCarries(t *testing.T) {
+	t.Parallel()
+	runNameCases(t, []nameCase{
+		{
+			name:    "a surname-first display name is reversed and its header quotes dropped",
+			display: `"Lienesch, André"`, email: "andre.lienesch@louis.de",
+			wantFull: "André Lienesch", wantFirst: "André", wantLast: "Lienesch", wantConfide: true,
 		},
 		{
 			name:    "an employer suffixed onto the display name is not a surname",
@@ -73,32 +137,14 @@ func TestParseContactNameReadsTheNameAHeaderCarries(t *testing.T) {
 			display: "van Dijk", email: "vandijk@example.com", wantFull: "van Dijk",
 		},
 		{
-			name:  "plus-addressing is a routing tag, not a name",
-			email: "anna.weber+crm@example.com", wantFull: "Anna Weber",
-			wantFirst: "Anna", wantLast: "Weber", wantConfide: true,
-		},
-		{
 			name:    "a chosen inner-capital spelling is preserved",
 			display: "Ronan McDonald", email: "r@example.com",
 			wantFull: "Ronan McDonald", wantFirst: "Ronan", wantLast: "McDonald", wantConfide: true,
 		},
 		{
-			name:  "hyphenated and apostrophed names capitalize every part",
-			email: "anne-marie.o'brien@example.com", wantFull: "Anne-Marie O'Brien",
-			wantFirst: "Anne-Marie", wantLast: "O'Brien", wantConfide: true,
-		},
-		{
 			name:    "a department prefix makes the string too long to read as a name",
 			display: "MKT-Quynh.Vo Ngoc Nhu Thi Anh", email: "mkt@example.com",
 			wantFull: "MKT-Quynh.Vo Ngoc Nhu Thi Anh",
-		},
-		{
-			name:  "a digits-only local part is not a name",
-			email: "2016@example.com", wantFull: "2016",
-		},
-		{
-			name:  "an address with no local part falls back to the raw string",
-			email: "nobody", wantFull: "nobody",
 		},
 		{
 			name:    "a bare honorific names nobody",
@@ -120,10 +166,6 @@ func TestParseContactNameReadsTheNameAHeaderCarries(t *testing.T) {
 			wantFull: "Anna Weber", wantFirst: "Anna", wantLast: "Weber", wantConfide: true,
 		},
 		{
-			name:  "a departmental mailbox is a role address, not two contacts",
-			email: "support.eu@example.com", wantFull: "support.eu",
-		},
-		{
 			name:    "punctuation is not a surname",
 			display: "Alice -", email: "a@example.com", wantFull: "Alice -",
 		},
@@ -137,31 +179,71 @@ func TestParseContactNameReadsTheNameAHeaderCarries(t *testing.T) {
 			wantFull: "Alice htimS", wantFirst: "Alice", wantLast: "htimS", wantConfide: true,
 		},
 		{
-			name:  "a handle with digits in the middle is not split",
-			email: "user2name@example.com", wantFull: "user2name",
+			name:    "a display name typed entirely in capitals is folded to a written name",
+			display: "QUANG NGUYEN", email: "quang@example.com",
+			wantFull: "Quang Nguyen", wantFirst: "Quang", wantLast: "Nguyen", wantConfide: true,
 		},
-	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-			got := ParseContactName(tc.display, tc.email)
-			if got.Full != tc.wantFull {
-				t.Errorf("Full = %q, want %q", got.Full, tc.wantFull)
-			}
-			if got.First != tc.wantFirst {
-				t.Errorf("First = %q, want %q", got.First, tc.wantFirst)
-			}
-			if got.Last != tc.wantLast {
-				t.Errorf("Last = %q, want %q", got.Last, tc.wantLast)
-			}
-			if got.Honorific != tc.wantHonor {
-				t.Errorf("Honorific = %q, want %q", got.Honorific, tc.wantHonor)
-			}
-			if got.Confident != tc.wantConfide {
-				t.Errorf("Confident = %v, want %v", got.Confident, tc.wantConfide)
-			}
-		})
-	}
+		{
+			name:    "an all-caps particle surname keeps the particle lowercase",
+			display: "LUDWIG VAN BEETHOVEN", email: "lvb2@example.com",
+			wantFull: "Ludwig van Beethoven", wantFirst: "Ludwig", wantLast: "van Beethoven",
+			wantConfide: true,
+		},
+		{
+			name:    "a shouted honorific is still lifted off the name",
+			display: "DR. ANNA WEBER", email: "aw3@example.com",
+			wantFull: "Anna Weber", wantFirst: "Anna", wantLast: "Weber",
+			wantHonor: "Dr.", wantConfide: true,
+		},
+		{
+			name:    "one acronym inside a mixed-case name is not a shout",
+			display: "Ronan MCDONALD Smith", email: "rms@example.com",
+			wantFull: "Ronan MCDONALD Smith",
+		},
+		{
+			name:    "a caseless script has nothing to fold",
+			display: "寺田文哉", email: "terada@example.com",
+			wantFull: "寺田文哉",
+		},
+		{
+			name:    "a display name that is an address names nobody",
+			display: "office@tinohaller.com", email: "office@tinohaller.com",
+			wantFull: "office",
+		},
+		{
+			name:    "an office code written straight onto the name is not a surname",
+			display: "Hang Tran/VNM", email: "hang@example.com",
+			wantFull: "Hang Tran", wantFirst: "Hang", wantLast: "Tran", wantConfide: true,
+		},
+		{
+			name:    "a longer mixed-case tail after a slash stays part of the name",
+			display: "Anna/Maria Weber", email: "amw2@example.com",
+			wantFull: "Anna/Maria Weber",
+		},
+		{
+			name:    "a short tail after a slash is a surname unless it is written as a code",
+			display: "Jane Smith/Lee", email: "jsl@example.com",
+			wantFull: "Jane Smith/Lee",
+		},
+		{
+			name:    "a bilingual spelling after a slash is not a unit code",
+			display: "Ichiro Hasegawa/長谷川一郎", email: "ih@example.com",
+			wantFull: "Ichiro Hasegawa/長谷川一郎",
+		},
+		{
+			name:    "a unit code is cut from the end, past a slash the name itself carries",
+			display: "Anna/Maria Weber/DE", email: "amw3@example.com",
+			wantFull: "Anna/Maria Weber",
+		},
+		{
+			// The name is not SPLIT: isWordLike refuses a token carrying a period,
+			// so initials abstain exactly as they do when already mixed-case. What
+			// this row pins is the fold — "J.r. Smith" would be a corruption.
+			name:    "shouted initials keep both capitals",
+			display: "J.R. SMITH", email: "jrs@example.com",
+			wantFull: "J.R. Smith",
+		},
+	})
 }
 
 // full_name is NOT NULL, so no input may parse to an empty display string.

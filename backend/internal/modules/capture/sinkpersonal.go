@@ -193,3 +193,71 @@ func ContactsOrphanedByPrivacyTx(
 	}
 	return out, nil
 }
+
+// SettledPersonalThread is one thread already judged private, and the seat
+// whose mailbox it arrived in.
+type SettledPersonalThread struct {
+	ThreadKey string
+	UserID    ids.UUID
+}
+
+// SettledPersonalThreads lists private threads that still have a contact
+// standing against them.
+//
+// The verdict-time retraction runs once, inside the transaction that settles
+// the thread, and that is the whole of it. A SENDER verdict landing afterwards
+// mints its own record — ThreadHoldsItsCounterparty is true of a settled
+// `personal` thread, so createContactForVerdict takes the owner-scoped arm —
+// and nothing looks at that record again. One ordering of two background
+// passes, and a private correspondent has a contact record the product
+// promised would not be created.
+//
+// A CANDIDATE scan, deliberately: it asks only whether some live contact of
+// this seat's stands on the thread's counterparty addresses, and leaves the
+// full bound — no other business thread with the same address, no human touch,
+// no workspace promotion — to ContactsOrphanedByPrivacyTx and the retraction
+// itself, re-read per thread inside their own transaction. Same shape as the
+// noise sweep beside it: a broad scan and a precise recheck, because the scan
+// commits before the write opens.
+//
+// Drawn at random for the reason that one does: a thread whose contacts the
+// retraction refuses stays selectable, and under a stable order a page of
+// refusals would starve every thread behind it while reporting success.
+func (s *PendingStore) SettledPersonalThreads(ctx context.Context, limit int) ([]SettledPersonalThread, error) {
+	var out []SettledPersonalThread
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, `
+			SELECT tv.thread_key, tv.user_id
+			  FROM capture_thread_verdict tv
+			 WHERE tv.kind = $1
+			   AND tv.status IN ($2, $3)
+			   AND tv.thread_key <> ''
+			   AND EXISTS (
+			         SELECT 1
+			           FROM activity a
+			           JOIN contact_email pe ON pe.email = a.counterparty_email
+			                                AND pe.archived_at IS NULL
+			           JOIN contact p ON p.id = pe.contact_id AND p.archived_at IS NULL
+			          WHERE a.thread_key = tv.thread_key
+			            AND a.counterparty_email <> ''
+			            AND p.owner_id = tv.user_id)
+			 ORDER BY random()
+			 LIMIT $4`, ThreadKindPersonal, VerdictHeld, VerdictHeldByOwner, limit)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var t SettledPersonalThread
+			if err := rows.Scan(&t.ThreadKey, &t.UserID); err != nil {
+				return err
+			}
+			out = append(out, t)
+		}
+		return rows.Err()
+	})
+	if err != nil {
+		return nil, fmt.Errorf("capture: listing private threads whose contacts still stand: %w", err)
+	}
+	return out, nil
+}

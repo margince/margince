@@ -315,7 +315,7 @@ function AiUsageBody({
       {data.days.length > 0 && (
         <Disclosure summary={t("aiusage.days.show")}>
           {data.days.map((day) => (
-            <p key={day.date} className="t-mono">
+            <p key={day.date} className="t-num">
               {day.date} ·{" "}
               {formatNumber(
                 day.tasks.reduce((sum, task) => sum + task.calls, 0),

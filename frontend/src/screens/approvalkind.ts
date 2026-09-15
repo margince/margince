@@ -175,7 +175,7 @@ export const EDITABLE_FIELDS: Readonly<
 // asked to make a business decision. The information they actually need is
 // usually in there — `basis` on a close-date correction is written by the
 // server expressly as the plain-language reason — but it arrives as row four
-// of eight, in the same grey monospace as a uuid.
+// of eight, in the same grey type as a uuid.
 //
 // So a kind may declare what each field IS. Three consequences follow from the
 // declaration, and they are the whole point:

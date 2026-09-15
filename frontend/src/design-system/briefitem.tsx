@@ -178,7 +178,7 @@ export function BriefItemCard({
       testId={testId ?? `brief-item-${item.id}`}
     >
       <div className="brief-item-head">
-        <span className="brief-item-rank t-mono">
+        <span className="brief-item-rank t-num">
           <span className="sr-only">{labels.rank}</span>#
           {ordinalNumber(item.rank)}
         </span>
@@ -198,7 +198,7 @@ export function BriefItemCard({
           <ArrowRight aria-hidden="true" />
         </button>
         {amount !== undefined && amount !== null && (
-          <span className="brief-item-amount t-mono">{amount}</span>
+          <span className="brief-item-amount t-num">{amount}</span>
         )}
       </div>
       <BriefItemLineage
@@ -367,7 +367,7 @@ function BriefBar({
         dense
         flat
       />
-      <span className="brief-item-bar-value t-mono">
+      <span className="brief-item-bar-value t-num">
         {formatPercent(clamped)}
       </span>
     </div>

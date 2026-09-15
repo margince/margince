@@ -2866,6 +2866,8 @@ export const en = {
   "recordRoles.builtIn": "Built in",
   "recordRoles.addOpen": "Add role",
   "recordRoles.addTitle": "Add a responsibility role",
+  "recordRoles.recordTypes": "Applies to",
+  "recordRoles.assigneeKinds": "Can be assigned to",
   "recordRoles.addLabel": "Name",
   "recordRoles.addHint":
     "What the responsible party is accountable for, as a reader would say it.",
@@ -5349,9 +5351,17 @@ export const en = {
   "backfill.intro":
     "Choose how far back to import. You'll see the scope and estimated cost before anything runs — and you can skip this entirely.",
   "backfill.windowLabel": "Import window",
+  "backfill.window36m": "3 years",
+  "backfill.window84m": "7 years",
+  "backfill.window120m": "10 years",
+  "backfill.since": "Import emails since {date}.",
+  "backfill.extendNote":
+    "You can extend the history later. Emails already imported are kept and will not be duplicated.",
+  "backfill.costFloorNote":
+    "This estimate covers only the messages counted so far. The full import can contain more messages and cost more.",
   "backfill.window3m": "3 months",
   "backfill.window6m": "6 months",
-  "backfill.window12m": "12 months",
+  "backfill.window12m": "1 year",
   "backfill.window24m": "2 years",
   "backfill.window60m": "5 years",
   "backfill.previewLoading": "Counting your mailbox…",
@@ -6196,17 +6206,12 @@ export const en = {
     "Setup is complete. Anyone you add can train their voice and connect their accounts from Settings.",
   "ob.conv.team.persistFailed":
     "I couldn't record that setup is complete. Try again, or leave it and finish from Settings later.",
-  // The basis act: the installation's reporting basis and the agent's
-  // autonomy, asked once the company is confirmed and before any step about
-  // the contact answering.
+  // Reporting settings are settled after the company is confirmed.
   "ob.conv.basis.title": "First, the basis.",
   "ob.conv.basis.body":
-    "Base currency and reporting timezone are the installation's: every deal, report and brief is priced and dated on them. What it may change without asking is yours to decide. All of it is prefilled and can be changed later in Settings, until a deal has frozen the currency.",
+    "Base currency and reporting timezone are the installation's: every deal, report and brief is priced and dated on them. All of it is prefilled and can be changed later in Settings, until a deal has frozen the currency.",
   "ob.conv.basis.reportingTitle": "Reporting basis",
   "ob.conv.basis.timezoneNeeded": "A reporting timezone is needed.",
-  "ob.conv.basis.autonomyTitle": "What it may change on its own",
-  "ob.conv.basis.autonomyBody":
-    "Each kind of change below is proposed to you first. Switch one on and it applies without asking; switch it back any time.",
   "ob.conv.basis.continue": "Continue",
   "ob.conv.basis.done": "Reporting basis settled.",
 
@@ -6319,20 +6324,17 @@ export const en = {
   // separate: connecting grants access, the backread spends budget reading
   // history. Read-only, and it writes nothing until the reader approves.
   "ob.backread.heading": "How far back should I read?",
-  "ob.backread.window3m": "3 months — recent context",
-  "ob.backread.window6m": "6 months — recommended",
-  "ob.backread.window12m": "12 months — full sales cycle",
-  "ob.backread.window24m": "2 years — the relationship, not just the deal",
-  "ob.backread.window60m": "5 years — everything the mailbox still holds",
   "ob.backread.estimating": "Counting the messages in that window…",
   "ob.backread.estimate": "About {messages} messages in that window.",
+  "ob.backread.estimateAtLeast":
+    "At least {messages} messages in that window; counting stopped before the end.",
   "ob.backread.estimateHeuristic":
     "Estimated from the mailbox, not counted yet.",
   "ob.backread.estimateCost": "Roughly {cost} in model calls.",
   "ob.backread.estimateFailed":
     "I could not estimate that window: {detail} You can still start, or pick another.",
   "ob.backread.note":
-    "The backread only reads. You see every contact and company I found before anything is written.",
+    "Your mailbox stays unchanged. Imported emails and contacts appear in Margince as the import progresses.",
   "ob.backread.start": "Connect and read",
   "ob.backread.startFailed":
     "I could not start the backread: {detail} Try again, or continue and start it later in Settings.",
@@ -8223,23 +8225,23 @@ export const en = {
   "workingHours.day.7": "Sunday",
   "autonomy.title": "What answers itself",
   "autonomy.sub":
-    "Small corrections you have been confirming by hand. Switch one on and it applies as soon as it comes up, with the change and an Undo waiting on your day.",
-  "autonomy.noneDecidedYetTitle": "Nothing decided yet",
+    "Automatic changes start on. Existing settings are kept. You can change each switch here. Your choices apply to your work, not the whole team.",
+  "autonomy.noneDecidedYetTitle": "No reviews yet",
   "autonomy.updateFailed": "That switch could not be saved",
   "autonomy.noneDecidedYet":
-    "You have not decided any of these yet. What reaches this list depends on the records you own and the work your team routes to you, so a seat with neither stays empty. The switches still decide what happens when something appears.",
+    "You have not decided any of these proposals yourself yet. Automatic changes can already run according to the switches below. Proposals depend on the records you own and the work routed to you.",
   "autonomy.noRecord": "You have not decided one of these yet.",
   "autonomy.record":
     "So far: {clean} approved as proposed, {edited} after an edit, {rejected} turned down.",
   "autonomy.kind.close_date_correction.label": "Close dates",
   "autonomy.kind.close_date_correction.help":
-    "A deal's close date moved by what was said on a call or written in a mail.",
+    "Maintain your deals overnight: estimate missing or overdue close dates from pipeline pace and review deals that have gone quiet. Turn off to stop this maintenance.",
   "autonomy.kind.company_name_promotion.label": "Company names",
   "autonomy.kind.company_name_promotion.help":
-    "A company recorded under its domain takes the name its own website gives.",
+    "Accept proposed company names from email signatures for companies named after their domain. Turn off to review these proposals yourself. Names confirmed by independent sources can still be updated automatically.",
   "autonomy.kind.lifecycle_change.label": "Lifecycle stages",
   "autonomy.kind.lifecycle_change.help":
-    "A company moves stage on what has happened with it. This one can also change who sees the account and which automations run.",
+    "Move a company to another lifecycle stage based on activity. Turn off to review these proposals yourself. Stage changes can affect who sees the account and which automations run.",
   "captureSettings.title": "Enrichment",
   "captureSettings.sub":
     "How captured companies and contacts are enriched after they are created.",

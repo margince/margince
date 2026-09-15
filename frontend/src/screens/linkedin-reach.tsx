@@ -199,7 +199,7 @@ function ReachTable({
           key: "connections",
           header: t("linkedinReach.connections"),
           render: (account: ReachAccount) => (
-            <span className="t-mono li-reach-cell li-reach-figure">
+            <span className="li-reach-cell li-reach-figure">
               {/* Grouped, like the pair in the column beside it: two spellings
                   of one count in one table is the drift this closes. */}
               {formatNumber(account.connections, locale)}
@@ -212,7 +212,7 @@ function ReachTable({
           // contacts. Rendering only the total would hide it.
           header: t("linkedinReach.onFile"),
           render: (account: ReachAccount) => (
-            <span className="t-mono li-reach-cell li-reach-figure">
+            <span className="li-reach-cell li-reach-figure">
               {t("linkedinReach.onFileOf", {
                 onFile: formatNumber(account.contacts_on_file, locale),
                 total: formatNumber(account.connections, locale),

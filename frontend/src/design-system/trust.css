@@ -23,7 +23,6 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-family: var(--f-mono);
   font-size: var(--fs-meta);
   color: var(--textChip);
   background: var(--bgChip);
@@ -82,7 +81,6 @@ button.evidence-chip:hover {
 .evidence-chip-snippet {
   display: block;
   max-width: 100%;
-  font-family: var(--f-mono);
   font-size: var(--fs-meta);
   color: var(--textMeta);
   overflow-wrap: anywhere;
@@ -186,7 +184,6 @@ button.evidence-chip:hover {
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
-  font-family: var(--f-mono);
   font-size: var(--fs-meta);
 }
 

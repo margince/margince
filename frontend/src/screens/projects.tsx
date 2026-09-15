@@ -83,7 +83,7 @@ export function PhaseBadge({ phase }: Readonly<{ phase: ProjectPhase }>) {
 
 /**
  * The key as a fact chip. A key is the handle a human writes in a subject
- * line, so it draws in the mono face beside the name rather than as a status.
+ * line, so it draws as a fact beside the name rather than as a status.
  */
 export function ProjectKeyChip({
   projectKey,
@@ -101,10 +101,7 @@ export function ProjectKeyChip({
         A reader learns it once by hovering the code they are already looking
         at; a permanent sentence under the title pays every day for a lesson
         taught once, which is what it was doing. */}
-      <span
-        className="t-mono"
-        title={t("project.keyMinted", { key: projectKey })}
-      >
+      <span title={t("project.keyMinted", { key: projectKey })}>
         {projectKey}
       </span>
     </Chip>

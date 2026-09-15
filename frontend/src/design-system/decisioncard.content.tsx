@@ -84,27 +84,19 @@ export function DecisionContent({
   diffs,
   lead,
   rest,
-  raw,
   labels,
 }: Readonly<{
   draft: DecisionDraft;
   diffs: readonly DecisionDiff[];
   lead: string | null;
   rest: readonly PayloadField[];
-  /** The facts are wire keys, not declared fields — see restFields. */
-  raw: boolean;
   labels: DecisionCardLabels;
 }>) {
-  // The ELEMENT each field is drawn in is decided here and nowhere else: the
-  // payload module reads the map and returns two strings per row, so a wire key
-  // reading as an identifier is one rule rather than one per call site.
+  // A wire key and a declared label are drawn alike: both are words a reader
+  // reads, and neither is code, so neither takes the code face.
   const facts: readonly Fact[] = rest.map((field) => ({
     key: field.key,
-    term: raw ? (
-      <span className="t-mono">{field.label}</span>
-    ) : (
-      <span>{field.label}</span>
-    ),
+    term: field.label,
     value: <span className="dcard-fact">{field.value}</span>,
   }));
   return (
@@ -126,12 +118,7 @@ export function DecisionContent({
           <FieldDiff oldValue={diff.from} newValue={diff.to} />
         </div>
       ))}
-      {facts.length > 0 && (
-        <FactList
-          facts={facts}
-          className={raw ? "dcard-rest dcard-rest-raw" : "dcard-rest"}
-        />
-      )}
+      {facts.length > 0 && <FactList facts={facts} className="dcard-rest" />}
     </>
   );
 }

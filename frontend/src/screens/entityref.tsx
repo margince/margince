@@ -15,7 +15,7 @@ import { throwProblem } from "./common";
 // across the contract (owner, counterparty, partner company, deal); showing the
 // raw UUID is honest but unreadable, so this hydrates the name off the record
 // read and links through. A reference that cannot be named renders the id
-// (mono, no link) rather than blank or a dead link — on an audit row or a
+// (as text, no link) rather than blank or a dead link — on an audit row or a
 // history entry that id is the one traceable fact left. A reference whose read
 // has not answered YET, or whose read came back refused, says so instead:
 // a name that is coming, a name that is never coming, and a name nobody could
@@ -419,11 +419,7 @@ function UnnamedRef({
       </span>
     );
   }
-  return (
-    <span className="t-mono" title={id}>
-      {id}
-    </span>
-  );
+  return <span title={id}>{id}</span>;
 }
 
 function rosterName(kind: RosterKind, entry: User | Team): string | null {
@@ -475,7 +471,7 @@ export function EntityRef({
   name?: string | null;
 }>) {
   if (!id) {
-    return <span className="t-mono">—</span>;
+    return <span>—</span>;
   }
   // Dispatch on the kind rather than running both resolutions and discarding
   // one. Each branch then owns exactly the read it needs — no query has to be

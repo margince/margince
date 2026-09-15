@@ -273,7 +273,7 @@ export function QueryStates({
             button is something to reach, not something to hear. */}
         <div role="alert">
           <p>{t("common.error")}</p>
-          <p className="t-mono" style={{ marginTop: "var(--space-2)" }}>
+          <p style={{ marginTop: "var(--space-2)" }}>
             {problemMessageOf(query.error, t)}
           </p>
         </div>

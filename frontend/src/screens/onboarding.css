@@ -454,7 +454,6 @@
 .ob-core-url span {
   padding-left: var(--space-3);
   color: var(--railIconHover);
-  font-family: var(--f-mono);
   font-size: var(--fs-meta);
 }
 .ob-core-url input {
@@ -582,7 +581,6 @@
 }
 .legal-preview-card small {
   color: var(--accentText);
-  font-family: var(--f-mono);
   font-size: var(--fs-meta);
 }
 .ob-manual-progress {

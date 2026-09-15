@@ -162,20 +162,12 @@
 }
 
 /* A payload value, wrapped because a jsonb document has no length a card can
-   rely on.
-
-   Mono only where the value is a RAW one — a kind that declared no display
-   policy, whose keys and values are shown as the wire spells them. A declared
-   field carries a name and a date somebody typed, and setting those in mono
-   would dress a business fact as machine output, which is the thing this
-   whole reading exists to stop. */
+   rely on. In the body face whether the kind declared its fields or not: a raw
+   value is still a business fact someone is being asked to agree to, and the
+   code face would dress it as machine output. */
 .dcard-fact {
   font-size: var(--fs-sm);
   overflow-wrap: anywhere;
-}
-
-.dcard-rest-raw .dcard-fact {
-  font-family: var(--f-mono);
 }
 
 .dcard-evidence {

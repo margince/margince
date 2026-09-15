@@ -501,11 +501,11 @@ function HierarchyRollupPanel({ companyId }: Readonly<{ companyId: string }>) {
         <dl className="firmo">
           <div>
             <dt className="t-eyebrow">{t("rollup.weightedPipeline")}</dt>
-            <dd className="t-mono">{money(rollup.weighted_pipeline)}</dd>
+            <dd className="t-num">{money(rollup.weighted_pipeline)}</dd>
           </div>
           <div>
             <dt className="t-eyebrow">{t("rollup.closedWon")}</dt>
-            <dd className="t-mono">{money(rollup.closed_won)}</dd>
+            <dd className="t-num">{money(rollup.closed_won)}</dd>
           </div>
           <div>
             <dt className="t-eyebrow">{t("rollup.activity30d")}</dt>

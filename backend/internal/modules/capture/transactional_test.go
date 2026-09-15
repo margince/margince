@@ -216,6 +216,61 @@ func counterpartyOf(address string) connector.Counterparty {
 	return connector.Counterparty{Email: address, Domain: domain}
 }
 
+// The same refusal, asked the way the verdict lane asks it — by address, with no
+// Sink to hold the registry.
+//
+// The lane needs its own entry point because a deferred sender reaches a model,
+// and a model's stray answer is enough to create the record: a ten-year import
+// produced fifteen `transactional` verdicts for an expense tool's receipts
+// address and one `contact` at 0.95, and the one created a contact called
+// "Receipts". Nothing re-read the fifteen.
+func TestTheVerdictLaneRefusesTheSameAddressesTheLadderDoes(t *testing.T) {
+	// A billing product sends under its customer's letterhead, so the display
+	// name names a company the owner really deals with while the address belongs
+	// to the tool. That pair minted a contact called "BERATUNG JUDITH ANDRESEN".
+	for _, address := range []string{
+		"receipts@expensify.com",
+		"noreply@fastbill.com",
+		"invoice-receipts@fastbill.com",
+	} {
+		if AddressCouldNameAContact(address, domainOf(address), nil) {
+			t.Errorf("AddressCouldNameAContact(%q) = true — no human answers it", address)
+		}
+	}
+	// A personal-service domain refuses its named staff too, exactly as it does
+	// for the tools already on that list — the owner's traffic with a product
+	// they use is the product's, whoever signs it. An operator who genuinely
+	// sells to one of these declares it (the allowlist case below), which is the
+	// escape hatch that keeps the refusal honest rather than absolute.
+	if AddressCouldNameAContact("anna.mueller@fastbill.com", "fastbill.com", nil) {
+		t.Error("a personal-service domain admitted a named local part — expensify's support@ is refused the same way")
+	}
+	// And it gives the Sink's answer rather than a second one.
+	sink := &Sink{transactional: NewTransactionalList(nil, nil)}
+	for _, address := range []string{
+		"receipts@expensify.com", "noreply@acme.com", "jane@github.com", "info@acme.com",
+	} {
+		want := sink.recordWorthy(counterpartyOf(address))
+		if got := AddressCouldNameAContact(address, domainOf(address), nil); got != want {
+			t.Errorf("AddressCouldNameAContact(%q) = %v, recordWorthy = %v — two answers to one question", address, got, want)
+		}
+	}
+	// The operator's allowlist still outranks the domain lists, and still says
+	// nothing about a robot on a vouched domain.
+	vouched := NewTransactionalList(nil, []string{"expensify.com"})
+	if !AddressCouldNameAContact("anna@expensify.com", "expensify.com", vouched) {
+		t.Error("an allowlisted domain refused a named human")
+	}
+	if AddressCouldNameAContact("receipts@expensify.com", "expensify.com", vouched) {
+		t.Error("an allowlisted domain admitted a machine local part — nobody answers it whoever vouched")
+	}
+}
+
+func domainOf(address string) string {
+	_, domain, _ := strings.Cut(address, "@")
+	return domain
+}
+
 func TestTheAttentionQueueStillSeesHumansAtPersonalServiceCompanies(t *testing.T) {
 	// IsMachineAddress is read by the attention queue to drop rows from "who is
 	// waiting on me". Its own contract says over-recognising hides a real

@@ -2283,26 +2283,35 @@ func (e BackfillPreviewEstimateQuality) Valid() bool {
 
 // Defines values for BackfillPreviewWindow.
 const (
-	BackfillPreviewWindowN12m BackfillPreviewWindow = "12m"
-	BackfillPreviewWindowN24m BackfillPreviewWindow = "24m"
-	BackfillPreviewWindowN3m  BackfillPreviewWindow = "3m"
-	BackfillPreviewWindowN60m BackfillPreviewWindow = "60m"
-	BackfillPreviewWindowN6m  BackfillPreviewWindow = "6m"
-	BackfillPreviewWindowNone BackfillPreviewWindow = "none"
+	BackfillPreviewWindowN120m BackfillPreviewWindow = "120m"
+	BackfillPreviewWindowN12m  BackfillPreviewWindow = "12m"
+	BackfillPreviewWindowN24m  BackfillPreviewWindow = "24m"
+	BackfillPreviewWindowN36m  BackfillPreviewWindow = "36m"
+	BackfillPreviewWindowN3m   BackfillPreviewWindow = "3m"
+	BackfillPreviewWindowN60m  BackfillPreviewWindow = "60m"
+	BackfillPreviewWindowN6m   BackfillPreviewWindow = "6m"
+	BackfillPreviewWindowN84m  BackfillPreviewWindow = "84m"
+	BackfillPreviewWindowNone  BackfillPreviewWindow = "none"
 )
 
 // Valid indicates whether the value is a known member of the BackfillPreviewWindow enum.
 func (e BackfillPreviewWindow) Valid() bool {
 	switch e {
+	case BackfillPreviewWindowN120m:
+		return true
 	case BackfillPreviewWindowN12m:
 		return true
 	case BackfillPreviewWindowN24m:
+		return true
+	case BackfillPreviewWindowN36m:
 		return true
 	case BackfillPreviewWindowN3m:
 		return true
 	case BackfillPreviewWindowN60m:
 		return true
 	case BackfillPreviewWindowN6m:
+		return true
+	case BackfillPreviewWindowN84m:
 		return true
 	case BackfillPreviewWindowNone:
 		return true
@@ -2313,26 +2322,35 @@ func (e BackfillPreviewWindow) Valid() bool {
 
 // Defines values for BackfillPreviewRequestWindow.
 const (
-	BackfillPreviewRequestWindowN12m BackfillPreviewRequestWindow = "12m"
-	BackfillPreviewRequestWindowN24m BackfillPreviewRequestWindow = "24m"
-	BackfillPreviewRequestWindowN3m  BackfillPreviewRequestWindow = "3m"
-	BackfillPreviewRequestWindowN60m BackfillPreviewRequestWindow = "60m"
-	BackfillPreviewRequestWindowN6m  BackfillPreviewRequestWindow = "6m"
-	BackfillPreviewRequestWindowNone BackfillPreviewRequestWindow = "none"
+	BackfillPreviewRequestWindowN120m BackfillPreviewRequestWindow = "120m"
+	BackfillPreviewRequestWindowN12m  BackfillPreviewRequestWindow = "12m"
+	BackfillPreviewRequestWindowN24m  BackfillPreviewRequestWindow = "24m"
+	BackfillPreviewRequestWindowN36m  BackfillPreviewRequestWindow = "36m"
+	BackfillPreviewRequestWindowN3m   BackfillPreviewRequestWindow = "3m"
+	BackfillPreviewRequestWindowN60m  BackfillPreviewRequestWindow = "60m"
+	BackfillPreviewRequestWindowN6m   BackfillPreviewRequestWindow = "6m"
+	BackfillPreviewRequestWindowN84m  BackfillPreviewRequestWindow = "84m"
+	BackfillPreviewRequestWindowNone  BackfillPreviewRequestWindow = "none"
 )
 
 // Valid indicates whether the value is a known member of the BackfillPreviewRequestWindow enum.
 func (e BackfillPreviewRequestWindow) Valid() bool {
 	switch e {
+	case BackfillPreviewRequestWindowN120m:
+		return true
 	case BackfillPreviewRequestWindowN12m:
 		return true
 	case BackfillPreviewRequestWindowN24m:
+		return true
+	case BackfillPreviewRequestWindowN36m:
 		return true
 	case BackfillPreviewRequestWindowN3m:
 		return true
 	case BackfillPreviewRequestWindowN60m:
 		return true
 	case BackfillPreviewRequestWindowN6m:
+		return true
+	case BackfillPreviewRequestWindowN84m:
 		return true
 	case BackfillPreviewRequestWindowNone:
 		return true
@@ -2373,25 +2391,34 @@ func (e BackfillStatusState) Valid() bool {
 
 // Defines values for BackfillStatusWindow.
 const (
-	BackfillStatusWindowN12m BackfillStatusWindow = "12m"
-	BackfillStatusWindowN24m BackfillStatusWindow = "24m"
-	BackfillStatusWindowN3m  BackfillStatusWindow = "3m"
-	BackfillStatusWindowN60m BackfillStatusWindow = "60m"
-	BackfillStatusWindowN6m  BackfillStatusWindow = "6m"
+	BackfillStatusWindowN120m BackfillStatusWindow = "120m"
+	BackfillStatusWindowN12m  BackfillStatusWindow = "12m"
+	BackfillStatusWindowN24m  BackfillStatusWindow = "24m"
+	BackfillStatusWindowN36m  BackfillStatusWindow = "36m"
+	BackfillStatusWindowN3m   BackfillStatusWindow = "3m"
+	BackfillStatusWindowN60m  BackfillStatusWindow = "60m"
+	BackfillStatusWindowN6m   BackfillStatusWindow = "6m"
+	BackfillStatusWindowN84m  BackfillStatusWindow = "84m"
 )
 
 // Valid indicates whether the value is a known member of the BackfillStatusWindow enum.
 func (e BackfillStatusWindow) Valid() bool {
 	switch e {
+	case BackfillStatusWindowN120m:
+		return true
 	case BackfillStatusWindowN12m:
 		return true
 	case BackfillStatusWindowN24m:
+		return true
+	case BackfillStatusWindowN36m:
 		return true
 	case BackfillStatusWindowN3m:
 		return true
 	case BackfillStatusWindowN60m:
 		return true
 	case BackfillStatusWindowN6m:
+		return true
+	case BackfillStatusWindowN84m:
 		return true
 	default:
 		return false
@@ -3223,45 +3250,6 @@ func (e CommunicationReviewState) Valid() bool {
 	case CommunicationReviewStateResolved:
 		return true
 	case CommunicationReviewStateSuperseded:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for CompanyClassification.
-const (
-	CompanyClassificationAgency     CompanyClassification = "agency"
-	CompanyClassificationCompetitor CompanyClassification = "competitor"
-	CompanyClassificationCustomer   CompanyClassification = "customer"
-	CompanyClassificationOther      CompanyClassification = "other"
-	CompanyClassificationPartner    CompanyClassification = "partner"
-	CompanyClassificationPlatform   CompanyClassification = "platform"
-	CompanyClassificationProspect   CompanyClassification = "prospect"
-	CompanyClassificationReseller   CompanyClassification = "reseller"
-	CompanyClassificationTechVendor CompanyClassification = "tech_vendor"
-)
-
-// Valid indicates whether the value is a known member of the CompanyClassification enum.
-func (e CompanyClassification) Valid() bool {
-	switch e {
-	case CompanyClassificationAgency:
-		return true
-	case CompanyClassificationCompetitor:
-		return true
-	case CompanyClassificationCustomer:
-		return true
-	case CompanyClassificationOther:
-		return true
-	case CompanyClassificationPartner:
-		return true
-	case CompanyClassificationPlatform:
-		return true
-	case CompanyClassificationProspect:
-		return true
-	case CompanyClassificationReseller:
-		return true
-	case CompanyClassificationTechVendor:
 		return true
 	default:
 		return false
@@ -13374,25 +13362,34 @@ func (e StageEvidenceSource) Valid() bool {
 
 // Defines values for StartBackfillRequestWindow.
 const (
-	StartBackfillRequestWindowN12m StartBackfillRequestWindow = "12m"
-	StartBackfillRequestWindowN24m StartBackfillRequestWindow = "24m"
-	StartBackfillRequestWindowN3m  StartBackfillRequestWindow = "3m"
-	StartBackfillRequestWindowN60m StartBackfillRequestWindow = "60m"
-	StartBackfillRequestWindowN6m  StartBackfillRequestWindow = "6m"
+	StartBackfillRequestWindowN120m StartBackfillRequestWindow = "120m"
+	StartBackfillRequestWindowN12m  StartBackfillRequestWindow = "12m"
+	StartBackfillRequestWindowN24m  StartBackfillRequestWindow = "24m"
+	StartBackfillRequestWindowN36m  StartBackfillRequestWindow = "36m"
+	StartBackfillRequestWindowN3m   StartBackfillRequestWindow = "3m"
+	StartBackfillRequestWindowN60m  StartBackfillRequestWindow = "60m"
+	StartBackfillRequestWindowN6m   StartBackfillRequestWindow = "6m"
+	StartBackfillRequestWindowN84m  StartBackfillRequestWindow = "84m"
 )
 
 // Valid indicates whether the value is a known member of the StartBackfillRequestWindow enum.
 func (e StartBackfillRequestWindow) Valid() bool {
 	switch e {
+	case StartBackfillRequestWindowN120m:
+		return true
 	case StartBackfillRequestWindowN12m:
 		return true
 	case StartBackfillRequestWindowN24m:
+		return true
+	case StartBackfillRequestWindowN36m:
 		return true
 	case StartBackfillRequestWindowN3m:
 		return true
 	case StartBackfillRequestWindowN60m:
 		return true
 	case StartBackfillRequestWindowN6m:
+		return true
+	case StartBackfillRequestWindowN84m:
 		return true
 	default:
 		return false
@@ -21270,7 +21267,9 @@ type AvailableModelListUnavailable string
 
 // BackfillPreview The scope before the spend (ADR-0063/ADR-0020): what starting this window would touch and roughly cost. An estimate, labeled as such — actual spend is metered per task.
 type BackfillPreview struct {
-	ComputedAt time.Time `json:"computed_at"`
+	// AfterDate Calendar day of the preview query boundary; time within that day remains provider-specific. Omitted for none. Starting later recalculates the rolling window.
+	AfterDate  *openapi_types.Date `json:"after_date,omitempty"`
+	ComputedAt time.Time           `json:"computed_at"`
 
 	// Currency ISO-4217; "USD" in v1.
 	Currency *string `json:"currency,omitempty"`
@@ -21300,11 +21299,11 @@ type BackfillPreviewWindow string
 
 // BackfillPreviewRequest defines model for BackfillPreviewRequest.
 type BackfillPreviewRequest struct {
-	// Window The CAP-PARAM-4 window; default UI selection is 6m. 24m/60m added by ADR-0106 — the set stays closed, and the preview is what keeps a multi-year reach consented.
+	// Window Bounded mail-history window, up to ten years. The default UI selection is six months.
 	Window BackfillPreviewRequestWindow `json:"window"`
 }
 
-// BackfillPreviewRequestWindow The CAP-PARAM-4 window; default UI selection is 6m. 24m/60m added by ADR-0106 — the set stays closed, and the preview is what keeps a multi-year reach consented.
+// BackfillPreviewRequestWindow Bounded mail-history window, up to ten years. The default UI selection is six months.
 type BackfillPreviewRequestWindow string
 
 // BackfillStatus The CAP-DDL-4 single-row activation read: every count is a persisted-row count, never a fabricated counter (closes CAP-AC-OPEN-1).
@@ -21315,7 +21314,6 @@ type BackfillStatus struct {
 		Captured         *int `json:"captured,omitempty"`
 		CompaniesCreated *int `json:"companies_created,omitempty"`
 		ContactsCreated  *int `json:"contacts_created,omitempty"`
-		DedupeCandidates *int `json:"dedupe_candidates,omitempty"`
 		MessagesScanned  *int `json:"messages_scanned,omitempty"`
 		Skipped          *int `json:"skipped,omitempty"`
 	} `json:"counts,omitempty"`
@@ -22611,10 +22609,6 @@ type Company struct {
 	// CapturedBy Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.
 	CapturedBy *string `json:"captured_by,omitempty"`
 
-	// Classification RETIRED (ADR-0079) — superseded by `lifecycle` + `relationship_types`, which split the two questions this one value tried to answer at once. Carried one release, written by nothing; read it for migration comparison only.
-	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-	Classification *CompanyClassification `json:"classification,omitempty"`
-
 	// ComputedFields S-E15.8c formula-field display rows (RD-AC-6/RD-AC-7/RD-AC-N-1). Populated on
 	// `getCompany` only; the key is absent entirely (not an empty array) when the
 	// viewer's role lacks computed_field:read visibility (STATE-4).
@@ -22667,7 +22661,8 @@ type Company struct {
 	ParentCompanyId *openapi_types.UUID `json:"parent_company_id,omitempty"`
 
 	// Partner First-class partner state as a 1:1 extension of a company (a company IS a partner iff it
-	// has a `partner` row + classification='partner'). Company identity is never duplicated.
+	// has a `partner` row AND carries `partner` in its `relationship_types` — ADR-0079 split that
+	// second half out of the retired `classification`). Company identity is never duplicated.
 	// ADR-0053 adds the relationship-in-flight layer: lifecycle stage, relationship health,
 	// partner fit, next step, and served segments. Behavior is Fast-follow, but the V1 schema is
 	// forward-compatible.
@@ -22701,9 +22696,6 @@ type Company struct {
 	Writable             *bool                  `json:"writable,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
-
-// CompanyClassification RETIRED (ADR-0079) — superseded by `lifecycle` + `relationship_types`, which split the two questions this one value tried to answer at once. Carried one release, written by nothing; read it for migration comparison only.
-type CompanyClassification string
 
 // CompanyLifecycle WHERE THE ACCOUNT STANDS with us (PO-DDL-4, ADR-0079). Single-valued: an account is at one point in a sales motion at a time. `unknown` is the default and means it — the retired `classification` defaulted to `prospect` and, having no writer, rendered that default on every unassessed account as though someone had judged it.
 type CompanyLifecycle string
@@ -30647,9 +30639,10 @@ type KindAutonomy struct {
 	// as reversibility does. A client renders the kinds it is sent.
 	Kind string `json:"kind"`
 
-	// Mode `manual` asks every time, and is what a kind stands at until the reader
-	// says otherwise. `auto` applies on sight, undoably, under the authority of
-	// whoever owns the record at the time.
+	// Mode `auto` is the default for eligible kinds and applies changes under the
+	// authority of whoever owns the record at the time. Saved choices take
+	// precedence. `manual` disables automatic application: proposals wait for
+	// review, and close-date maintenance stops for the owner.
 	//
 	// `veto` is a third rung the policy table admits and nothing writes yet: it
 	// would apply after a stated delay unless the reader stops it first. It is
@@ -30662,9 +30655,10 @@ type KindAutonomy struct {
 	Rejected int `json:"rejected"`
 }
 
-// KindAutonomyMode `manual` asks every time, and is what a kind stands at until the reader
-// says otherwise. `auto` applies on sight, undoably, under the authority of
-// whoever owns the record at the time.
+// KindAutonomyMode `auto` is the default for eligible kinds and applies changes under the
+// authority of whoever owns the record at the time. Saved choices take
+// precedence. `manual` disables automatic application: proposals wait for
+// review, and close-date maintenance stops for the owner.
 //
 // `veto` is a third rung the policy table admits and nothing writes yet: it
 // would apply after a stated delay unless the reader stops it first. It is
@@ -33012,7 +33006,8 @@ type PageInfo struct {
 }
 
 // Partner First-class partner state as a 1:1 extension of a company (a company IS a partner iff it
-// has a `partner` row + classification='partner'). Company identity is never duplicated.
+// has a `partner` row AND carries `partner` in its `relationship_types` — ADR-0079 split that
+// second half out of the retired `classification`). Company identity is never duplicated.
 // ADR-0053 adds the relationship-in-flight layer: lifecycle stage, relationship health,
 // partner fit, next step, and served segments. Behavior is Fast-follow, but the V1 schema is
 // forward-compatible.
@@ -44176,6 +44171,9 @@ type ListNoticeCasesParams struct {
 
 	// Limit Max items in the page.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. It encodes the last row's `due_at` and id — both, because the order is by both, and an id alone cannot continue it when two duties fall due in the same second. Changing `state` mid-walk changes which rows the remaining pages see, so re-issue without the cursor when the filter changes. A token this endpoint did not mint returns `422 code: malformed_cursor`.
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
 }
 
 // ListProductsParams defines parameters for ListProducts.
@@ -46988,14 +46986,6 @@ func (a *Company) UnmarshalJSON(b []byte) error {
 		delete(object, "captured_by")
 	}
 
-	if raw, found := object["classification"]; found {
-		err = json.Unmarshal(raw, &a.Classification)
-		if err != nil {
-			return fmt.Errorf("error reading 'classification': %w", err)
-		}
-		delete(object, "classification")
-	}
-
 	if raw, found := object["computed_fields"]; found {
 		err = json.Unmarshal(raw, &a.ComputedFields)
 		if err != nil {
@@ -47272,13 +47262,6 @@ func (a Company) MarshalJSON() ([]byte, error) {
 	object["captured_by"], err = json.Marshal(a.CapturedBy)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'captured_by': %w", err)
-	}
-
-	if a.Classification != nil {
-		object["classification"], err = json.Marshal(a.Classification)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling 'classification': %w", err)
-		}
 	}
 
 	if a.ComputedFields != nil {
@@ -56645,7 +56628,7 @@ type ServerInterface interface {
 	// Read-only run history for one automation — successes AND errored/blocked/skipped runs.
 	// (GET /automations/{id}/runs)
 	ListAutomationRuns(w http.ResponseWriter, r *http.Request, id Id, params ListAutomationRunsParams)
-	// Which kinds of proposal the caller has put on automatic.
+	// The caller's automatic-change settings and review history.
 	// (GET /autonomy)
 	GetAutonomy(w http.ResponseWriter, r *http.Request)
 	// Turn automatic application on or off for one kind.
@@ -58901,7 +58884,7 @@ func (_ Unimplemented) ListAutomationRuns(w http.ResponseWriter, r *http.Request
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Which kinds of proposal the caller has put on automatic.
+// The caller's automatic-change settings and review history.
 // (GET /autonomy)
 func (_ Unimplemented) GetAutonomy(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -82026,6 +82009,19 @@ func (siw *ServerInterfaceWrapper) ListNoticeCases(w http.ResponseWriter, r *htt
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
 		}
 		return
 	}

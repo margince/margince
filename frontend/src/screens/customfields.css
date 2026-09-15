@@ -100,7 +100,6 @@
 .cf-ddl {
   display: inline-block;
   margin-top: var(--space-2);
-  font-family: var(--f-mono);
   background: var(--bgElevated);
   border-radius: var(--r-sm);
   padding: var(--space-1) var(--space-2);
@@ -113,7 +112,7 @@
 }
 
 /* Field cell: a type-glyph tile, then the human label with the immutable API
-   key on its own muted mono line beneath it — never run together. */
+   key on its own muted line beneath it — never run together. */
 .cf-fieldcell {
   display: flex;
   align-items: center;

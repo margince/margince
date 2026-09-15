@@ -75,6 +75,11 @@ var personalServiceDomains = map[string]struct{}{
 	"concur.com":          {},
 	"concursolutions.com": {},
 	"docusign.com":        {}, // the product's own mail; docusign.net is its relay
+	// A billing product sends under its CUSTOMER's letterhead, so the display
+	// name is a company the mailbox owner really deals with while the address
+	// belongs to the tool. Read as correspondence it mints a contact named after
+	// that customer — "BERATUNG JUDITH ANDRESEN" from `noreply@fastbill.com`.
+	"fastbill.com": {},
 }
 
 // transactionalPrefixes are subdomain labels that MARK a sender subdomain as an
@@ -200,10 +205,17 @@ func isMachineLocalpart(localpart string) bool {
 // machineMarkers are the words a sending SYSTEM names itself with. Listed once:
 // the three places below ask about the same vocabulary, and three copies of it
 // drift into meaning three different things.
+// `receipts` is here rather than in platform/mailrole because the two lists
+// answer different questions and this address answers neither with a human: an
+// expense tool's `receipts@` is the product mailing its own user, and a reply
+// to it reaches a parser. The money words a company's staff DO answer —
+// billing, invoice, rechnung, buchhaltung — stay in mailrole, where a role
+// mailbox is real correspondence with nobody to name.
 var machineMarkers = map[string]bool{
 	"noreply": true, "noreplies": true, "donotreply": true, "notreply": true,
 	"nreply": true, "notification": true, "notifications": true, "notify": true,
 	"mailerdaemon": true, "autoreply": true, "automailer": true, "automated": true,
+	"receipt": true, "receipts": true,
 }
 
 func hasMachineMarker(localpart string) bool {

@@ -60,7 +60,7 @@ function DigestCount({
       <PanelRow interactive>
         <button type="button" className="rail-count-go" onClick={onOpen}>
           <span className="rail-count-label">{label}</span>
-          <span className="rail-count-value t-mono">
+          <span className="rail-count-value t-num">
             {formatNumber(value, locale)}
           </span>
           <ArrowRight size={14} aria-hidden />
@@ -72,7 +72,7 @@ function DigestCount({
     <PanelRow>
       <span className="rail-count">
         <span className="rail-count-label">{label}</span>
-        <span className="rail-count-value t-mono">
+        <span className="rail-count-value t-num">
           {formatNumber(value, locale)}
         </span>
       </span>

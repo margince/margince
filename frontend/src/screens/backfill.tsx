@@ -3,10 +3,12 @@ import { useState } from "react";
 import type { components } from "../api/schema";
 import { useDrawsImportRun } from "../app/import-onscreen";
 import { Button } from "../design-system/atoms";
-import { ChoiceList } from "../design-system/choicelist";
 import { formatMoney, formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
-import type { MessageKey } from "../i18n/en";
+import {
+  IMPORT_WINDOW_LABELS,
+  ImportWindowPicker,
+} from "../mail-history/window-picker";
 import { type ImportWindow, isLiveRun, useBackfillRun } from "./backfill-run";
 import { RunView } from "./backfillrunview";
 import { ProblemError, problemCode, problemMessageOf } from "./common";
@@ -33,23 +35,6 @@ import "./backfill.css";
 
 type BackfillStatus = components["schemas"]["BackfillStatus"];
 type Provider = components["schemas"]["CaptureConnection"]["provider"];
-
-// The CAP-PARAM-4 set, in reach order (ADR-0063, widened to 24/60 by
-// ADR-0106). Which one the picker OPENS on is `DEFAULT_IMPORT_WINDOW`, beside
-// the operations both surfaces share.
-const WINDOWS: { value: ImportWindow; label: MessageKey }[] = [
-  { value: "3m", label: "backfill.window3m" },
-  { value: "6m", label: "backfill.window6m" },
-  { value: "12m", label: "backfill.window12m" },
-  { value: "24m", label: "backfill.window24m" },
-  { value: "60m", label: "backfill.window60m" },
-];
-
-// windowLabel is the picker's own wording for a window, reused by the scope
-// sentence so the two cannot drift into two names for one period.
-function windowLabel(window: ImportWindow): MessageKey {
-  return WINDOWS.find((w) => w.value === window)?.label ?? "backfill.window3m";
-}
 
 // The contract pins v1 estimates to USD minor units and leaves `currency`
 // optional, so USD is the documented fallback rather than a guess. Named
@@ -211,20 +196,12 @@ function BackfillSetup({
         <History aria-hidden /> {t("backfill.title")}
       </h3>
       <p className="t-caption">{t("backfill.intro")}</p>
-      {/* The design system's radio GROUP, not a div wearing `role="radiogroup"`:
-          the ARIA pair is the weaker spelling of what a `fieldset` and a
-          `legend` say natively, and it was this screen's own wrapper to keep
-          correct. The question stays off screen exactly as its `aria-label` was,
-          so nothing visible changes. */}
-      <ChoiceList
-        className="backfill-windows"
-        layout="row"
-        legend={t("backfill.windowLabel")}
-        hideLegend
+      <ImportWindowPicker
         value={window}
-        choices={WINDOWS.map((w) => ({ value: w.value, label: t(w.label) }))}
         onChange={onWindowChange}
+        preview={previewData}
       />
+      <p className="t-caption">{t("backfill.extendNote")}</p>
       {previewErrorMessage && (
         <p className="t-caption backfill-error">{previewErrorMessage}</p>
       )}
@@ -281,7 +258,7 @@ function EstimateCard({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const costMinor = preview?.estimated_cost_minor ?? 0;
+  const costMinor = preview?.estimated_cost_minor;
   return (
     <div className="backfill-estimate">
       {counting && <p className="t-caption">{t("backfill.previewLoading")}</p>}
@@ -289,7 +266,9 @@ function EstimateCard({
           mailbox; the count describes that period and is not the thing being
           agreed to. It also degrades better — the scope sentence is true while
           the count is still arriving, or when it never does. */}
-      <p>{t("backfill.scopeIs", { window: t(windowLabel(window)) })}</p>
+      <p>
+        {t("backfill.scopeIs", { window: t(IMPORT_WINDOW_LABELS[window]) })}
+      </p>
       {/* The count is its own line and its own condition. `estimated_messages`
           is required on the wire, so an answer without it is a server too old
           to send one or a response nothing routed — and the scope sentence
@@ -310,7 +289,7 @@ function EstimateCard({
           )}
         </p>
       )}
-      {preview && costMinor > 0 && (
+      {preview && costMinor !== undefined && (
         <p className="t-caption">
           {t("backfill.estimateCost")} ~
           {formatMoney(
@@ -319,6 +298,9 @@ function EstimateCard({
             locale,
           )}
         </p>
+      )}
+      {preview?.estimate_is_floor && costMinor !== undefined && (
+        <p className="t-caption">{t("backfill.costFloorNote")}</p>
       )}
       <p className="t-caption">{t("backfill.estimateNote")}</p>
       <Button

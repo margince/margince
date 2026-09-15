@@ -2805,6 +2805,8 @@ export const de = {
   "recordRoles.builtIn": "Vorinstalliert",
   "recordRoles.addOpen": "Rolle hinzuf\u00fcgen",
   "recordRoles.addTitle": "Verantwortungsrolle hinzuf\u00fcgen",
+  "recordRoles.recordTypes": "Gilt für",
+  "recordRoles.assigneeKinds": "Zuweisbar an",
   "recordRoles.addLabel": "Name",
   "recordRoles.addHint":
     "Wof\u00fcr die zust\u00e4ndige Seite verantwortlich ist, in verst\u00e4ndlichen Worten.",
@@ -5237,9 +5239,17 @@ export const de = {
   "backfill.intro":
     "Wähle, wie weit zurück importiert wird. Umfang und geschätzte Kosten siehst du vor dem Start — du kannst diesen Schritt auch überspringen.",
   "backfill.windowLabel": "Import-Zeitraum",
+  "backfill.window36m": "3 Jahre",
+  "backfill.window84m": "7 Jahre",
+  "backfill.window120m": "10 Jahre",
+  "backfill.since": "E-Mails seit dem {date} importieren.",
+  "backfill.extendNote":
+    "Du kannst den Zeitraum später erweitern. Bereits importierte E-Mails bleiben erhalten und werden nicht dupliziert.",
+  "backfill.costFloorNote":
+    "Diese Schätzung umfasst nur die bisher gezählten Nachrichten. Der vollständige Import kann mehr Nachrichten enthalten und mehr kosten.",
   "backfill.window3m": "3 Monate",
   "backfill.window6m": "6 Monate",
-  "backfill.window12m": "12 Monate",
+  "backfill.window12m": "1 Jahr",
   "backfill.window24m": "2 Jahre",
   "backfill.window60m": "5 Jahre",
   "backfill.previewLoading": "Postfach wird gezählt…",
@@ -6066,12 +6076,9 @@ export const de = {
     "Ich konnte nicht festhalten, dass die Einrichtung abgeschlossen ist. Versuche es noch einmal oder schließe sie später in den Einstellungen ab.",
   "ob.conv.basis.title": "Zuerst: die Basis.",
   "ob.conv.basis.body":
-    "Basiswährung und Berichtszeitzone gehören der Installation: jeder Deal, jeder Bericht und jedes Briefing wird darauf bepreist und datiert. Was es ohne Rückfrage ändern darf, entscheidest du. Alles ist vorausgefüllt und lässt sich später in den Einstellungen ändern, bis ein Deal die Währung eingefroren hat.",
+    "Basiswährung und Berichtszeitzone gehören der Installation: jeder Deal, jeder Bericht und jedes Briefing wird darauf bepreist und datiert. Alles ist vorausgefüllt und lässt sich später in den Einstellungen ändern, bis ein Deal die Währung eingefroren hat.",
   "ob.conv.basis.reportingTitle": "Berichtsbasis",
   "ob.conv.basis.timezoneNeeded": "Eine Berichtszeitzone wird benötigt.",
-  "ob.conv.basis.autonomyTitle": "Was es eigenständig ändern darf",
-  "ob.conv.basis.autonomyBody":
-    "Jede Art von Änderung unten wird dir zuerst vorgeschlagen. Schalte eine ein, und sie gilt ohne Rückfrage; jederzeit wieder abschaltbar.",
   "ob.conv.basis.continue": "Weiter",
   "ob.conv.basis.done": "Berichtsbasis festgelegt.",
 
@@ -6188,20 +6195,17 @@ export const de = {
   // Budget, um den Verlauf zu lesen. Es liest nur und schreibt nichts,
   // solange der Leser nicht zustimmt.
   "ob.backread.heading": "Wie weit soll ich zurücklesen?",
-  "ob.backread.window3m": "3 Monate — aktueller Kontext",
-  "ob.backread.window6m": "6 Monate — empfohlen",
-  "ob.backread.window12m": "12 Monate — ganzer Vertriebszyklus",
-  "ob.backread.window24m": "2 Jahre — die Beziehung, nicht nur der Deal",
-  "ob.backread.window60m": "5 Jahre — alles, was das Postfach noch hat",
   "ob.backread.estimating": "Nachrichten in diesem Zeitraum werden gezählt…",
   "ob.backread.estimate": "Etwa {messages} Nachrichten in diesem Zeitraum.",
+  "ob.backread.estimateAtLeast":
+    "Mindestens {messages} Nachrichten in diesem Zeitraum; die Zählung endete vorzeitig.",
   "ob.backread.estimateHeuristic":
     "Aus dem Postfach geschätzt, noch nicht gezählt.",
   "ob.backread.estimateCost": "Ungefähr {cost} an Modellaufrufen.",
   "ob.backread.estimateFailed":
     "Ich konnte diesen Zeitraum nicht schätzen: {detail} Du kannst trotzdem starten oder einen anderen wählen.",
   "ob.backread.note":
-    "Das Zurücklesen liest nur. Du siehst jeden Kontakt und jede Firma, bevor etwas geschrieben wird.",
+    "Dein Postfach bleibt unverändert. Importierte E-Mails und Kontakte erscheinen während des Imports in Margince.",
   "ob.backread.start": "Verbinden und lesen",
   "ob.backread.startFailed":
     "Ich konnte das Zurücklesen nicht starten: {detail} Versuch es erneut, oder mach weiter und starte es später in den Einstellungen.",
@@ -8108,23 +8112,23 @@ export const de = {
   "workingHours.day.7": "Sonntag",
   "autonomy.title": "Was sich von selbst erledigt",
   "autonomy.sub":
-    "Kleine Korrekturen, die du bisher von Hand bestätigt hast. Schalte eine ein, und sie wird sofort übernommen – die Änderung und ein Rückgängig warten auf deinem Tag.",
-  "autonomy.noneDecidedYetTitle": "Noch nichts entschieden",
+    "Automatische Änderungen sind anfangs eingeschaltet. Bestehende Einstellungen bleiben erhalten. Du kannst jeden Schalter hier ändern. Deine Auswahl gilt für deine Arbeit, nicht für das ganze Team.",
+  "autonomy.noneDecidedYetTitle": "Noch keine Prüfungen",
   "autonomy.updateFailed": "Dieser Schalter konnte nicht gespeichert werden",
   "autonomy.noneDecidedYet":
-    "Darüber hast du noch nichts entschieden. Was in dieser Liste landet, hängt von den Datensätzen ab, die dir gehören, und von der Arbeit, die dein Team an dich weiterleitet. Ohne beides bleibt sie leer. Die Schalter entscheiden trotzdem, was passiert, sobald etwas auftaucht.",
+    "Du hast noch keinen dieser Vorschläge selbst entschieden. Automatische Änderungen können entsprechend den Schaltern unten bereits laufen. Vorschläge hängen von deinen Datensätzen und der dir zugewiesenen Arbeit ab.",
   "autonomy.noRecord": "Darüber hast du noch nicht entschieden.",
   "autonomy.record":
     "Bisher: {clean} wie vorgeschlagen übernommen, {edited} nach einer Änderung, {rejected} abgelehnt.",
   "autonomy.kind.close_date_correction.label": "Abschlussdaten",
   "autonomy.kind.close_date_correction.help":
-    "Das Abschlussdatum eines Deals verschiebt sich durch das, was in einem Gespräch gesagt oder in einer Mail geschrieben wurde.",
+    "Deine Deals werden über Nacht gepflegt: Fehlende oder überfällige Abschlussdaten werden anhand des Pipeline-Tempos geschätzt und ruhige Deals überprüft. Ausschalten beendet diese Pflege.",
   "autonomy.kind.company_name_promotion.label": "Firmennamen",
   "autonomy.kind.company_name_promotion.help":
-    "Ein unter seiner Domain erfasstes Unternehmen übernimmt den Namen, den seine eigene Website nennt.",
+    "Vorgeschlagene Firmennamen aus E-Mail-Signaturen für Unternehmen übernehmen, die nach ihrer Domain benannt sind. Ausschalten lässt dich diese Vorschläge selbst prüfen. Durch unabhängige Quellen bestätigte Namen können weiterhin automatisch aktualisiert werden.",
   "autonomy.kind.lifecycle_change.label": "Lebenszyklus-Phasen",
   "autonomy.kind.lifecycle_change.help":
-    "Ein Unternehmen wechselt die Phase aufgrund dessen, was mit ihm geschehen ist. Das kann auch ändern, wer das Konto sieht und welche Automationen laufen.",
+    "Ein Unternehmen wechselt aufgrund seiner Aktivitäten die Lebenszyklus-Phase. Ausschalten lässt dich diese Vorschläge selbst prüfen. Phasenwechsel können ändern, wer das Konto sieht und welche Automationen laufen.",
   "captureSettings.title": "Anreicherung",
   "captureSettings.sub":
     "Wie erfasste Unternehmen und Kontakte nach ihrer Erstellung angereichert werden.",

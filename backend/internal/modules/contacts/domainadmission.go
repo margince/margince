@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -309,7 +310,12 @@ func (s *Store) SuppressBulkSenderDomainTx(ctx context.Context, tx pgx.Tx, domai
 // Guarded on the withheld state, so it cannot disturb a question already in
 // flight, and never touches a SUPPRESSED domain: a refusal is not a question
 // waiting for evidence.
-func reopenWithheldDispositionTx(ctx context.Context, tx pgx.Tx, domain string, ownerID ids.UUID) error {
+func reopenWithheldDispositionTx(
+	ctx context.Context, tx pgx.Tx, domain string, ownerID ids.UUID, evidenceAt *time.Time,
+) error {
+	if err := recordEvidenceAgeTx(ctx, tx, domain, evidenceAt); err != nil {
+		return err
+	}
 	if _, err := tx.Exec(ctx, `
 		UPDATE company_domain_disposition
 		   SET pending_reason = NULL,
@@ -320,7 +326,8 @@ func reopenWithheldDispositionTx(ctx context.Context, tx pgx.Tx, domain string, 
 		 WHERE domain = $1
 		   AND status = $3
 		   AND admission IS DISTINCT FROM $4
-		   AND (pending_reason = 'unevidenced' OR next_attempt_at IS NULL OR owner_id IS NULL)`,
+		   AND (pending_reason = 'unevidenced' OR pending_reason = 'stale_evidence'
+		        OR next_attempt_at IS NULL OR owner_id IS NULL)`,
 		domain, ownerID, DomainPending, DomainSuppressed); err != nil {
 		return fmt.Errorf("contacts: reopening the withheld question for %s: %w", domain, err)
 	}

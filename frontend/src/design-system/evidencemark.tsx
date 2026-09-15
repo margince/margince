@@ -155,7 +155,7 @@ export function EvidenceMark({
             <blockquote className="evmark-snippet">{source.snippet}</blockquote>
           )}
           {source.sourceUrl && (
-            <p className="evmark-source t-mono">{source.sourceUrl}</p>
+            <p className="evmark-source">{source.sourceUrl}</p>
           )}
           {source.at && <p className="evmark-at">{source.at}</p>}
           {onOpenHistory && (

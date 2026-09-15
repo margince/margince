@@ -36,7 +36,7 @@
 }
 
 /* One factor of the score: its name, its points, and what decayed them.
-   Baseline-aligned rather than centred, so the mono figure sits on the same
+   Baseline-aligned rather than centred, so the figure sits on the same
    line as the words beside it however tall the row grows. */
 .lead-factor {
   display: flex;

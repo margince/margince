@@ -128,7 +128,7 @@ func TestAcceptingTheOfferMovesTheAccountAndSettlesTheSignal(t *testing.T) {
 	if staged := proposePass(t, e); staged != 1 {
 		t.Fatalf("the pass staged %d offers, want the one the contradiction deserves", staged)
 	}
-	// Nothing structural before the human says yes (GATE-AI-2).
+	// Staging alone leaves the account unchanged; this path releases it manually.
 	if stage := accountStage(t, e, company); stage != "prospect" {
 		t.Fatalf("the account moved to %q before anyone decided", stage)
 	}

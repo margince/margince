@@ -272,7 +272,7 @@ function AutomationForm({
       <h2 className="t-h3 modal-title" id={titleId}>
         {initialName}
       </h2>
-      <p className="t-mono t-caption">
+      <p className="t-caption">
         {entry.trigger} {"->"} {entry.action}
       </p>
       <div className="field">
@@ -625,8 +625,8 @@ export function AutomationRow({
           />
         )}
         <strong>{automation.name}</strong>
-        <span className="t-mono t-caption">{automation.key}</span>
-        <span className="t-mono t-caption">
+        <span className="t-caption">{automation.key}</span>
+        <span className="t-caption">
           {Object.entries(automation.params)
             .map(([key, value]) => `${key}=${scalarText(value)}`)
             .join(" ")}
@@ -1034,7 +1034,7 @@ function CatalogEntryItem({
       description={
         <>
           {entry.description}
-          <span className="t-mono auto-catalog-recipe">
+          <span className="auto-catalog-recipe">
             {entry.trigger} {"->"} {entry.action}
           </span>
         </>

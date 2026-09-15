@@ -309,7 +309,11 @@ validated to the full identifier budget, so a name chosen today stays valid for 
   that is merged into the composed `crm.yaml`. `build/composition/api/crm.yaml` is a real merge now, not
   a byte-copy of the core contract.
 - **Its own governed tools** — an `x-mcp-tool` verb on a declared operation, served through the same
-  admission gate a core tool passes, at the tier and scope the contract declares.
+  admission gate a core tool passes, at the tier and scope the contract declares. An operation that
+  should stay REST/UI-reachable but never agent-reachable declares `x-agent-access: human-only`
+  instead — core's own vocabulary, restated for extensions (`docs/how-to/add-an-extension.md`).
+  `openchannel`'s whole surface is `human-only`: it mints and returns a durable signing secret over an
+  anonymous edge, which is not a capability any agent should hold unattended.
 - **Its own scheduled jobs** — declared in a `jobs.yaml` fragment, dispatched as a fleet fan-out with a
   worker child per live tenant.
 - **Its own secret namespace** — reached through `Runtime.Secrets()`, keyed by the unit's own bare names.

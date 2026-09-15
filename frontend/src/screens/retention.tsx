@@ -61,7 +61,7 @@ function ScopeCell({ policy }: Readonly<{ policy: RetentionPolicy }>) {
   return (
     <span className="retention-scope">
       <span>{t(scopeLabelKey(policy.scope))}</span>
-      <span className="t-mono t-caption">{policy.scope}</span>
+      <span className="t-caption">{policy.scope}</span>
     </span>
   );
 }

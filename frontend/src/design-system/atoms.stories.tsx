@@ -346,9 +346,9 @@ export const BadgeInsideUppercaseParent: Story = {
       <h3 className="t-eyebrow">
         Pipeline <Badge tone="accent">Three open</Badge>
       </h3>
-      <em className="t-mono">
+      <code>
         run 4f2a <Badge tone="success">Passed</Badge>
-      </em>
+      </code>
     </div>
   ),
 };
@@ -845,7 +845,7 @@ const DEAL_COLUMNS = [
   {
     key: "weighted",
     header: "Weighted",
-    render: (deal: DemoDeal) => <span className="t-mono">{deal.weighted}</span>,
+    render: (deal: DemoDeal) => <span className="t-num">{deal.weighted}</span>,
   },
 ];
 

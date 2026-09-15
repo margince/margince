@@ -64,6 +64,17 @@ const EXCUSED = {
 
 type Sent = { key: string; url: string; body: unknown };
 
+/**
+ * One page of the queue, as the route answers it.
+ *
+ * `page` is required on the wire — the queue is keyset-paged because an
+ * installation owes as many duties as it owes — so a fixture without one is a
+ * payload no server can send, and the screen's walk reads it.
+ */
+function queuePage(data: unknown[]) {
+  return jsonResponse({ data, page: { next_cursor: null, has_more: false } });
+}
+
 function stubRoutes(
   overrides: Record<string, () => Response> = {},
   sent: Sent[] = [],
@@ -92,7 +103,7 @@ function stubRoutes(
       const override = overrides[key];
       if (override) return override();
       if (key === "GET /privacy/notice-cases") {
-        return jsonResponse({ data: [OWED] });
+        return queuePage([OWED]);
       }
       if (key === "GET /users") {
         return jsonResponse({
@@ -158,7 +169,7 @@ describe("the disclosure-duty queue", () => {
   it("offers no actions on a duty that has already ended", async () => {
     // The server refuses both, so offering them would be a button that fails.
     stubRoutes({
-      "GET /privacy/notice-cases": () => jsonResponse({ data: [EXCUSED] }),
+      "GET /privacy/notice-cases": () => queuePage([EXCUSED]),
     });
     render(<NoticeCasesCard />);
 
@@ -258,7 +269,7 @@ describe("the disclosure-duty queue", () => {
     // filled in, one keystroke from confirming them.
     stubRoutes({
       "GET /privacy/notice-cases": () =>
-        jsonResponse({ data: [OWED, { ...OWED, id: "case-3" }] }),
+        queuePage([OWED, { ...OWED, id: "case-3" }]),
       "POST /privacy/notice-cases/case-1/excuse": () =>
         jsonResponse({ ...OWED, state: "exempt_with_reason" }),
     });
@@ -298,7 +309,7 @@ describe("the disclosure-duty queue", () => {
 
   it("says why it is empty rather than showing nothing", async () => {
     stubRoutes({
-      "GET /privacy/notice-cases": () => jsonResponse({ data: [] }),
+      "GET /privacy/notice-cases": () => queuePage([]),
     });
     render(<NoticeCasesCard />);
 
@@ -320,5 +331,55 @@ describe("the disclosure-duty queue", () => {
       await screen.findByText(en["notice.readOnlyForPrivacy"]),
     ).toBeInTheDocument();
     expect(screen.queryByTestId("notice-case-case-1")).not.toBeInTheDocument();
+  });
+
+  it("reaches a duty the first page did not carry", async () => {
+    // The queue is as long as the installation's obligations are. Before this
+    // the screen asked for one bounded page and offered nothing further, so an
+    // officer who worked what they were shown would believe they had seen every
+    // duty owed — the tail was not slow to reach, it was absent from every
+    // answer the route could give.
+    const SECOND = {
+      ...OWED,
+      id: "case-9",
+      contact_id: "contact-9",
+      due_at: "2026-03-01T00:00:00Z",
+    };
+    const sent: Sent[] = [];
+    stubRoutes(
+      {
+        "GET /privacy/notice-cases": () => {
+          const asked = sent.filter(
+            (s) => s.key === "GET /privacy/notice-cases",
+          );
+          const first = asked.length === 1;
+          return jsonResponse({
+            data: [first ? OWED : SECOND],
+            page: first
+              ? { next_cursor: "page-2", has_more: true }
+              : { next_cursor: null, has_more: false },
+          });
+        },
+      },
+      sent,
+    );
+    render(<NoticeCasesCard />);
+
+    await screen.findByTestId("notice-case-case-1");
+    expect(screen.queryByTestId("notice-case-case-9")).not.toBeInTheDocument();
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: en["list.loadMore"] }),
+    );
+
+    // Both duties on screen at once: a walk, not a replacement. An officer
+    // working down the queue must not lose the row they were reading.
+    await screen.findByTestId("notice-case-case-9");
+    expect(screen.getByTestId("notice-case-case-1")).toBeInTheDocument();
+    // And the second request carried the cursor the first page handed back,
+    // rather than re-asking for the same page forever.
+    const asked = sent.filter((s) => s.key === "GET /privacy/notice-cases");
+    expect(asked).toHaveLength(2);
+    expect(asked[1].url).toContain("cursor=page-2");
   });
 });

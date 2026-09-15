@@ -144,7 +144,7 @@ function SyncStatusPanel({
           <ul className="overlay-sync-list">
             {objects.map((o, i) => (
               <li key={o.object ?? i} className="overlay-sync-row">
-                <span className="t-mono overlay-object">{o.object ?? "—"}</span>
+                <span className="overlay-object">{o.object ?? "—"}</span>
                 <Badge tone={o.state ? SYNC_STATE_TONE[o.state] : undefined}>
                   {o.state ? labelOrRaw(t, SYNC_STATE_LABEL, o.state) : "—"}
                 </Badge>
@@ -235,7 +235,7 @@ function BudgetReading({
             {labelOrRaw(t, BAND_LABEL, budget.band)}
           </Badge>
         )}
-        <span className="t-mono t-caption">
+        <span className="t-num t-caption">
           {formatNumber(consumed, locale)} /{" "}
           {limit === undefined ? "—" : formatNumber(limit, locale)}
         </span>

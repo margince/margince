@@ -231,7 +231,7 @@ function DealRailRow({ deal }: Readonly<{ deal: Deal }>) {
       >
         {deal.name}
       </a>
-      <span className="t-mono">
+      <span className="t-num">
         {formatMoneyOrAbsent(
           deal.amount?.amount_minor,
           deal.amount?.currency,

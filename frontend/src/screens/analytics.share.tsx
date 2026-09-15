@@ -190,7 +190,7 @@ function ShareLinkReveal({
       <p id={headingId} className="t-caption">
         {t("analytics.share.linkWarning")}
       </p>
-      <pre className="code-block t-mono" data-testid="forecast-share-link">
+      <pre className="code-block" data-testid="forecast-share-link">
         {url}
       </pre>
       {copyFailed && (

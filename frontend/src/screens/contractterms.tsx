@@ -126,7 +126,7 @@ export function ProjectContractRow({
       <span>{contract.title}</span>
       <span className="project-row-meta t-caption">
         <Badge>{contract.status}</Badge>
-        <span className="t-mono">
+        <span className="t-num">
           {formatMoneyOrAbsent(contract.value_minor, contract.currency, locale)}
         </span>
         {contract.ends_on && (

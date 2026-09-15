@@ -124,7 +124,7 @@ export function ComboBox(props: ComboBoxProps) {
           </button>
         )}
       </div>
-      <SuggestPopup list={list} face="mono" selected={value} />
+      <SuggestPopup list={list} selected={value} />
     </>
   );
 }

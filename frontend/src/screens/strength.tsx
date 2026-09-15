@@ -172,7 +172,7 @@ function StrengthBody({
         <Badge tone={BUCKET_TONE[bucket]}>
           {t(`strength.bucket.${bucket}`)}
         </Badge>
-        <span className="t-mono">
+        <span className="t-num">
           {t("strength.score", { score: formatNumber(score, locale) })}
         </span>
       </div>
@@ -189,7 +189,7 @@ function StrengthBody({
                 }}
               >
                 <span>{t(`strength.factor.${row.key}`)}</span>
-                <span className="t-mono">{formatNumber(pct, locale)}%</span>
+                <span className="t-num">{formatNumber(pct, locale)}%</span>
               </div>
               <Meter
                 value={pct}

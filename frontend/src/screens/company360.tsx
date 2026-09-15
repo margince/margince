@@ -273,7 +273,7 @@ function DealRow({ deal }: Readonly<{ deal: Deal360 }>) {
       <span className="co-row-meta t-caption">
         <span>{deal.stage_name ?? t("co.deals.noStage")}</span>
         {deal.amount?.amount_minor != null && (
-          <span className="t-mono">
+          <span className="t-num">
             {formatMoneyOrAbsent(
               deal.amount.amount_minor,
               deal.amount.currency,
@@ -454,7 +454,7 @@ export function CommercialPanel({
               <span className="co-row-meta t-caption">
                 {deal.stage_name && <Badge>{deal.stage_name}</Badge>}
                 {deal.amount?.amount_minor != null && (
-                  <span className="t-mono">
+                  <span className="t-num">
                     {formatMoneyOrAbsent(
                       deal.amount.amount_minor,
                       deal.amount.currency,

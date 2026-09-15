@@ -634,7 +634,7 @@ function LaneRow<
               A lane this build does not know gets no gloss rather than an
               invented one. */}
           <span className="ai-lane-name">
-            <span className="ai-lane-id t-mono">{name}</span>
+            <span className="ai-lane-id">{name}</span>
             {laneGloss(name, t) && (
               <span className="ai-lane-gloss t-sub">{laneGloss(name, t)}</span>
             )}
@@ -651,16 +651,14 @@ function LaneRow<
                 of the vendor would put three status marks on a row carrying one
                 fact and two warnings. */}
             <Badge>{binding.provider}</Badge>
-            <span className="ai-lane-model t-mono">{binding.model}</span>
+            <span className="ai-lane-model">{binding.model}</span>
             {/* WHERE the OpenAI-wire adapter is pointed. It is not a detail of
                 the binding, it IS the vendor: `openai_compatible` names a
                 protocol, and every broker on it — OpenRouter, Together, a
                 self-hosted gateway — reads identically on this row without the
                 host. Only this adapter has one, so nothing else grows it. */}
             {binding.base_url ? (
-              <span className="ai-lane-host t-mono">
-                {hostOf(binding.base_url)}
-              </span>
+              <span className="ai-lane-host">{hostOf(binding.base_url)}</span>
             ) : null}
             {unkeyed?.has(binding.provider) && (
               <Badge tone="warn">{t("aiRouting.noKey")}</Badge>

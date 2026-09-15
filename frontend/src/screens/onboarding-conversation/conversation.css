@@ -582,7 +582,7 @@
 }
 
 /* What this answer puts on the record, next to the answer itself.
-   Mono and verbatim, because it is a STRING that will be stored and quoted
+   Verbatim and in a <code>, because it is a STRING that will be stored and quoted
    rather than a description of one: paraphrasing it here would defeat the
    whole point of showing it before the choice is made. */
 .ob-decision-writes {
@@ -596,7 +596,6 @@
   color: var(--textMeta);
 }
 .ob-decision-writes code {
-  font-family: var(--f-mono);
   color: var(--textPrimary);
   overflow-wrap: anywhere;
 }
@@ -739,7 +738,6 @@
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-sm);
   background: var(--bgElevated);
-  font-family: var(--f-mono);
 }
 
 /* The escape at the list's foot: present, dashed, never competing. */
@@ -2173,7 +2171,7 @@
   }
 }
 
-/* The collapsed row's raw score, mono beside the band word. */
+/* The collapsed row's raw score, tabular beside the band word. */
 .ob-triage-score {
   display: inline-flex;
   align-items: baseline;
@@ -2521,7 +2519,8 @@
 }
 
 /* The group head reads as a section, not a divider line: label at reading
-   size, its filled/total in mono beside it — the same pair the map shows. */
+   size, its filled/total in tabular figures beside it — the same pair the map
+   shows. */
 .ob-triage-group-head {
   display: flex;
   align-items: baseline;
@@ -2834,13 +2833,6 @@
   font-family: var(--f-body);
   font-size: var(--fs-sm);
   font-weight: var(--fw-semibold);
-}
-
-/* The URL alone takes the mono face. A profile address is a machine string and
-   reads as one; the contact's e-mail beside it is words somebody wrote down, and
-   set in mono a name and a domain read as an identifier. */
-.ob-triage-contact-url {
-  font-family: var(--f-mono);
 }
 
 /* The facts section: grouped by type, each group a quiet sub-heading over
@@ -3265,7 +3257,7 @@
   outline-offset: 1px;
 }
 
-/* ---- the basis act: the reporting basis and the autonomy switches ---- */
+/* ---- the basis act: the installation reporting basis ---- */
 
 .ob-basis-scene {
   max-width: 48rem;
@@ -3286,11 +3278,4 @@
   margin: 0;
   color: var(--textPrimary);
   font: var(--fw-semibold) var(--fs-h3) / var(--lh-tight) var(--f-display);
-}
-
-.ob-basis-lead {
-  margin: 0;
-  color: var(--textContent);
-  font-size: var(--fs-sm);
-  line-height: var(--lh-normal);
 }

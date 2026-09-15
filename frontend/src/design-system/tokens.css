@@ -512,8 +512,9 @@
 
   /* Three families (DESIGN.md §4): a display face with character for the one
    * line a reader identifies a record by, a quiet grotesk for everything read,
-   * and a mono with tabular figures for every number, so figures align in a
-   * column and never look like words. */
+   * and a mono for code — `code`, `pre`, `samp` and `.code-block` (base.css) and
+   * nothing else. Figures stay in the grotesk and align through tabular-nums
+   * (`.t-num`); an id or a key is read, not compiled, so it is body text too. */
   --f-display: "Outfit", system-ui, sans-serif;
   --f-body: "Geist", system-ui, sans-serif;
   --f-mono: "Geist Mono", ui-monospace, monospace;

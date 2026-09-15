@@ -511,7 +511,7 @@ const NAV_NAMED_LIMIT = 5;
 // reading a single named list) already tells settled from advisory from
 // blocking apart. Only the shape differs by tier: the blocking count is the
 // solid danger badge (the one count that actually gates confirm), the
-// advisory count is the same quiet mono numeral the Contacts/Facts counts
+// advisory count is the same quiet tabular numeral the Contacts/Facts counts
 // use — never the danger tone, since none of these fields stop anything.
 function SectionBadge({
   blocking,
@@ -874,9 +874,7 @@ function ContactRow({ contact }: Readonly<{ contact: SiteContact }>) {
         <span className="t-caption">{contact.published_email}</span>
       )}
       {contact.linkedin_url && (
-        <span className="ob-triage-contact-url t-caption">
-          {contact.linkedin_url}
-        </span>
+        <span className="t-caption">{contact.linkedin_url}</span>
       )}
       {evidence && <EvidenceChip evidence={evidence} collapsed />}
     </li>

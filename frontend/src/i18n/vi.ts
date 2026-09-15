@@ -2775,6 +2775,8 @@ export const vi = {
   "recordRoles.builtIn": "C\u00f3 s\u1eb5n",
   "recordRoles.addOpen": "Th\u00eam vai tr\u00f2",
   "recordRoles.addTitle": "Th\u00eam vai tr\u00f2 ph\u1ee5 tr\u00e1ch",
+  "recordRoles.recordTypes": "Áp dụng cho",
+  "recordRoles.assigneeKinds": "Có thể giao cho",
   "recordRoles.addLabel": "T\u00ean",
   "recordRoles.addHint":
     "\u0110i\u1ec1u m\u00e0 b\u00ean ph\u1ee5 tr\u00e1ch ch\u1ecbu tr\u00e1ch nhi\u1ec7m, di\u1ec5n \u0111\u1ea1t d\u1ec5 hi\u1ec3u.",
@@ -5159,9 +5161,17 @@ export const vi = {
   "backfill.intro":
     "Hãy chọn nhập ngược lại bao xa. Bạn sẽ thấy phạm vi và chi phí ước tính trước khi có gì chạy — và bỏ qua hẳn bước này cũng được.",
   "backfill.windowLabel": "Khoảng thời gian nhập",
+  "backfill.window36m": "3 năm",
+  "backfill.window84m": "7 năm",
+  "backfill.window120m": "10 năm",
+  "backfill.since": "Nhập email từ ngày {date}.",
+  "backfill.extendNote":
+    "Bạn có thể mở rộng khoảng thời gian sau. Email đã nhập được giữ lại và không bị trùng lặp.",
+  "backfill.costFloorNote":
+    "Ước tính này chỉ bao gồm các thư đã đếm. Toàn bộ quá trình nhập có thể có nhiều thư hơn và tốn chi phí hơn.",
   "backfill.window3m": "3 tháng",
   "backfill.window6m": "6 tháng",
-  "backfill.window12m": "12 tháng",
+  "backfill.window12m": "1 năm",
   "backfill.window24m": "2 năm",
   "backfill.window60m": "5 năm",
   "backfill.previewLoading": "Đang đếm hộp thư của bạn…",
@@ -5981,12 +5991,9 @@ export const vi = {
     "Tôi không thể ghi nhận rằng thiết lập đã hoàn tất. Thử lại, hoặc để đó và hoàn tất sau trong Cài đặt.",
   "ob.conv.basis.title": "Trước hết, cơ sở.",
   "ob.conv.basis.body":
-    "Đơn vị tiền tệ cơ sở và múi giờ báo cáo là của toàn hệ thống: mọi deal, báo cáo và bản tóm tắt đều định giá và ghi ngày theo đó. Những gì nó được tự thay đổi mà không hỏi là do bạn quyết định. Tất cả được điền sẵn và có thể đổi sau trong Cài đặt, cho đến khi một deal đã khóa đơn vị tiền tệ.",
+    "Đơn vị tiền tệ cơ sở và múi giờ báo cáo là của toàn hệ thống: mọi deal, báo cáo và bản tóm tắt đều định giá và ghi ngày theo đó. Tất cả được điền sẵn và có thể đổi sau trong Cài đặt, cho đến khi một deal đã khóa đơn vị tiền tệ.",
   "ob.conv.basis.reportingTitle": "Cơ sở báo cáo",
   "ob.conv.basis.timezoneNeeded": "Cần một múi giờ báo cáo.",
-  "ob.conv.basis.autonomyTitle": "Những gì nó có thể tự thay đổi",
-  "ob.conv.basis.autonomyBody":
-    "Mỗi loại thay đổi bên dưới sẽ được đề xuất cho bạn trước. Bật một loại và nó sẽ áp dụng mà không hỏi; tắt lại bất cứ lúc nào.",
   "ob.conv.basis.continue": "Tiếp tục",
   "ob.conv.basis.done": "Đã chốt cơ sở báo cáo.",
 
@@ -6102,19 +6109,16 @@ export const vi = {
   // separate: connecting grants access, the backread spends budget reading
   // history. Read-only, and it writes nothing until the reader approves.
   "ob.backread.heading": "Tôi nên đọc ngược lại bao xa?",
-  "ob.backread.window3m": "3 tháng — bối cảnh gần đây",
-  "ob.backread.window6m": "6 tháng — nên chọn",
-  "ob.backread.window12m": "12 tháng — trọn một chu kỳ bán hàng",
-  "ob.backread.window24m": "2 năm — cả mối quan hệ, không chỉ deal",
-  "ob.backread.window60m": "5 năm — tất cả những gì hộp thư còn giữ",
   "ob.backread.estimating": "Đang đếm thư trong khoảng thời gian đó…",
   "ob.backread.estimate": "Khoảng {messages} thư trong khoảng thời gian đó.",
+  "ob.backread.estimateAtLeast":
+    "Ít nhất {messages} thư trong khoảng thời gian này; việc đếm đã dừng trước khi kết thúc.",
   "ob.backread.estimateHeuristic": "Ước tính từ hộp thư, chưa đếm thật.",
   "ob.backread.estimateCost": "Khoảng {cost} tiền gọi mô hình.",
   "ob.backread.estimateFailed":
     "Tôi không ước tính được khoảng thời gian đó: {detail} Bạn vẫn bắt đầu được, hoặc chọn khoảng khác.",
   "ob.backread.note":
-    "Lượt đọc lịch sử chỉ đọc. Bạn xem mọi liên hệ và công ty tôi tìm được trước khi ghi.",
+    "Hộp thư của bạn không thay đổi. Email và liên hệ đã nhập sẽ xuất hiện trong Margince khi quá trình nhập tiến triển.",
   "ob.backread.start": "Kết nối và đọc",
   "ob.backread.startFailed":
     "Tôi không bắt đầu được lượt đọc lịch sử: {detail} Hãy thử lại, hoặc đi tiếp rồi bắt đầu sau trong Cài đặt.",
@@ -8004,23 +8008,23 @@ export const vi = {
   "workingHours.day.7": "Chủ Nhật",
   "autonomy.title": "Những gì tự xử lý",
   "autonomy.sub":
-    "Những chỉnh sửa nhỏ bạn vẫn xác nhận bằng tay. Bật một mục lên và nó sẽ được áp dụng ngay khi xuất hiện, kèm thay đổi và nút Hoàn tác chờ sẵn trong ngày của bạn.",
-  "autonomy.noneDecidedYetTitle": "Chưa quyết định điều gì",
+    "Các thay đổi tự động được bật khi bắt đầu. Cài đặt hiện có được giữ nguyên. Bạn có thể đổi từng công tắc tại đây. Lựa chọn chỉ áp dụng cho công việc của bạn, không phải cả nhóm.",
+  "autonomy.noneDecidedYetTitle": "Chưa có lượt xem xét",
   "autonomy.updateFailed": "Không thể lưu công tắc này",
   "autonomy.noneDecidedYet":
-    "Bạn chưa quyết định mục nào trong số này. Những gì xuất hiện trong danh sách này phụ thuộc vào các bản ghi bạn sở hữu và công việc nhóm bạn chuyển đến, nên khi không có cả hai thì danh sách vẫn trống. Các công tắc vẫn quyết định điều gì xảy ra khi có việc đến.",
+    "Bạn chưa tự quyết định đề xuất nào trong số này. Các thay đổi tự động có thể đã chạy theo các công tắc bên dưới. Đề xuất phụ thuộc vào bản ghi bạn sở hữu và công việc được chuyển đến bạn.",
   "autonomy.noRecord": "Bạn chưa quyết định mục nào thuộc loại này.",
   "autonomy.record":
     "Đến nay: {clean} chấp nhận như đề xuất, {edited} sau khi sửa, {rejected} đã từ chối.",
   "autonomy.kind.close_date_correction.label": "Ngày chốt",
   "autonomy.kind.close_date_correction.help":
-    "Ngày chốt của một deal thay đổi theo những gì được nói trong cuộc gọi hoặc viết trong email.",
+    "Duy trì deal của bạn mỗi đêm: ước tính ngày chốt còn thiếu hoặc quá hạn theo tiến độ pipeline và xem xét các deal không có hoạt động. Tắt để dừng việc duy trì này.",
   "autonomy.kind.company_name_promotion.label": "Tên công ty",
   "autonomy.kind.company_name_promotion.help":
-    "Một công ty được ghi theo tên miền sẽ lấy tên mà chính website của họ công bố.",
+    "Chấp nhận tên công ty được đề xuất từ chữ ký email cho các công ty đang mang tên miền. Tắt để tự xem xét các đề xuất này. Tên được xác nhận bởi các nguồn độc lập vẫn có thể được cập nhật tự động.",
   "autonomy.kind.lifecycle_change.label": "Giai đoạn vòng đời",
   "autonomy.kind.lifecycle_change.help":
-    "Một công ty chuyển giai đoạn dựa trên những gì đã diễn ra. Điều này cũng có thể đổi ai nhìn thấy tài khoản và những automation nào chạy.",
+    "Chuyển công ty sang giai đoạn vòng đời khác dựa trên hoạt động. Tắt để tự xem xét các đề xuất này. Việc chuyển giai đoạn có thể ảnh hưởng đến ai nhìn thấy tài khoản và những automation nào chạy.",
   "captureSettings.title": "Bổ sung thông tin",
   "captureSettings.sub":
     "Cách các công ty và liên hệ đã thu thập được bổ sung thông tin sau khi tạo.",

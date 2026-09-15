@@ -335,3 +335,32 @@ func TestHTTPAPIListAfterFirstPageOmitsToken(t *testing.T) {
 		t.Fatal("a first page must not send an empty pageToken")
 	}
 }
+
+// TestBackfillPageNeverPutsADraftOnTheTimeline is the same rule on the OTHER
+// ingest path. Both walk their own enumeration — messages.list here,
+// history.list in Sync — and a draft rule spelled at one of them is a rule the
+// other puts back, which is why each path has its own case.
+//
+// A draft is SCANNED and skipped rather than unseen: the tally is what an
+// operator reads to know the run covered the window.
+func TestBackfillPageNeverPutsADraftOnTheTimeline(t *testing.T) {
+	api := &pagedAPI{pages: map[string][]string{"": {"d1@mail.gmail.com", "m1@mail.gmail.com"}}}
+	api.raws = map[string][]byte{
+		"d1@mail.gmail.com": rawMsg("d1@mail.gmail.com", owner),
+		"m1@mail.gmail.com": rawMsg("m1@mail.gmail.com", "alice@acme.com"),
+	}
+	api.drafts = map[string]bool{"d1@mail.gmail.com": true}
+	c := New(fakeOAuth{access: "access-1"}, api)
+	sink := &recordingSink{}
+
+	res, err := c.BackfillPage(context.Background(), authBytes(t), time.Now(), "", sink)
+	if err != nil {
+		t.Fatalf("BackfillPage: %v", err)
+	}
+	if res.Scanned != 2 || res.Captured != 1 || res.Skipped != 1 {
+		t.Fatalf("page = %+v, want scanned 2 / captured 1 / skipped 1", res)
+	}
+	if len(sink.recs) != 1 || sink.recs[0].Source != "gmail:m1@mail.gmail.com" {
+		t.Fatalf("captured %+v, want only the message that was sent", sink.recs)
+	}
+}

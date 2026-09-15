@@ -134,7 +134,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `worklistbounds_test.go` | H2 | The worklist reports a source as possibly having more work behind it when its lane came back exactly at its bound. |
 | `worklistverdictstandings_test.go` | H2 | The queue's verdict standings ARE the deal card's, and this derives them from the card rather than keeping a second list of them. |
 
-## Census (149)
+## Census (151)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -162,6 +162,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `bootcomposition_test.go` | H2 | The fitness gate on the boot sequence: a process role that composes extensions also records what it composed. |
 | `briefevidencestrip_test.go` | H2 | "Never persist an email summary" is spelled once, and every writer that caches evidence says it that way. |
 | `briefsectioncensus_test.go` | H2 | Every worklist category reaches a section of the morning. |
+| `buildinputfetch_test.go` | H3 | A build input fetched over the network survives a transient failure. |
 | `calendaroccurrenceexpansion_test.go` | H2 | Every calendar pull lists OCCURRENCES, never recurring series masters. |
 | `capturecontainers_test.go` | H2 | Every mail connector tells the sink where the provider FILED a message. |
 | `catalogoptionsreaders_test.go` | H2 | Who may read a custom field's OPTIONS. |
@@ -174,6 +175,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `consumersubscribed_test.go` | H3 | Every event consumer is actually subscribed. |
 | `contactattachlock_test.go` | H2 | A relationship carrying a contact is written under that contact's row lock. |
 | `contactprofilefieldwriter_test.go` | H2 | contacts.writeContactProfileField is the one writer of contact\_profile\_field, and the one place the precedence rule lives: a machine fill claims an unanswered field, a human's acceptance replaces what is there. |
+| `contactreaders_test.go` | H2 | `contact` is an RBAC object, and until this gate nothing held the object half of that anywhere outside the module that owns it. |
 | `contractproducers_test.go` | H2 | A field the contract PROMISES and nobody WRITES is invisible. |
 | `contractrefs_test.go` | H3 | Contract $ref pre-flight as a fitness function. |
 | `contributorwiring_test.go` | H1 | What a contributor arriving from outside is promised, in the files they meet on the way in. |
@@ -343,7 +345,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `writeauthority_test.go` | H2 | The read/write asymmetry of a manual record grant, as a fitness function: a path that CHANGES a shareable record probes for write authority, not for visibility. |
 | `writeliveness_test.go` | H2 | The LIVENESS obligation as a fitness function: a write that targets one standing row of a table which can be archived either REFUSES an archived row, DECLARES that it deliberately reaches one, or is ratified with a reason. |
 
-## Prohibition (60)
+## Prohibition (61)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -381,6 +383,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `metriclabelescaping_test.go` | H2 | A label VALUE in the hand-rolled exposition is escaped by httpserver.Label, never by %q. |
 | `modulepoolsharing_test.go` | H2 | Pool-sharing discipline for the module suites, as a fitness function. |
 | `moduletablespelling_test.go` | H2 | A package that names its table does not pass that name as a bare string. |
+| `onebindingpublisher_test.go` | H2 | One function publishes an AI Router binding, and it is install. |
 | `onecurrencyconversion_test.go` | H2 | Converting money to the base currency has one implementation. |
 | `owndomainpredicate_test.go` | H2 | One spelling of "this message came from one of our own domains". |
 | `pipefailgrepq_test.go` | H2 | A shell gate does not decide its verdict through a pipe that can break. |
@@ -408,7 +411,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `waiveronoffender_test.go` | H2 | A waiver must be asked about an offender, never about a candidate. |
 | `workflowhandler_test.go` | H2 | The workflow.Handler read/write contract as a fitness function (ports/workflow.Handler): Match is a pure predicate and Plan computes the typed Effect WITHOUT applying it — "this is what makes dry-run and diff preview possible". |
 
-## Claim (14)
+## Claim (15)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -425,6 +428,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `renovatelockfileage_test.go` | H3 | The lockfile refresh is not held back by the repo-wide release-age floor. |
 | `reviewoutcome_test.go` | H2 | Every way a held message can settle closes its review. |
 | `rolemailboxonelist_test.go` | H2 | One role-mailbox list, held by a test rather than by a comment. |
+| `signatureeligibilityonespelling_test.go` | H2 | One spelling of "may this message be mined for this contact's signature", held by a test rather than by a comment. |
 | `uniquenessclaims_test.go` | H1 | A comment that says a declaration is the ONLY one of its kind is not decoration. |
 
 ## Budget (4)

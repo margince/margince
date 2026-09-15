@@ -88,9 +88,45 @@
      rows and toolbars, where a 96px minimum is what would break the layout. An
      icon-only control opts out through .btn-icon, which is square by intent. */
   min-inline-size: 6rem;
+  /* And the ceiling that floor made necessary. Naming `min-inline-size` at all
+     replaces the flex `auto` minimum, which is the content width — so from
+     here on a button in a container narrower than its own label shrinks below
+     it instead of refusing to. Capped at the container and measured with the
+     border inside, so the box a caller sees is the box that gets drawn. What
+     the box does with a label too long for it is the label's own business:
+     one of our verbs holds the `nowrap` below, and a label carrying a VALUE
+     says so with `.btn-valuelabel`. */
+  box-sizing: border-box;
+  max-inline-size: 100%;
   gap: var(--space-1);
   white-space: nowrap;
   text-decoration: none;
+}
+
+/* A label that carries a VALUE takes a second line rather than being drawn past
+   the edges of the button holding it.
+ *
+ * `.btn` pins `nowrap` because every other label in the product is one of our
+ * verbs, of a length we chose. A domain, a provider's own sign-in sentence, a
+ * file name — none of those is, and "Keep all of
+ * thraud-2026-09-mtl5igk5616s6.example private" came out of both sides of its
+ * own ghost button at once in a contact's rail.
+ *
+ * `overflow-wrap: anywhere` because the value need not contain a space: a
+ * domain is one long word to a line breaker, and permission to wrap that it
+ * cannot act on is no permission at all.
+ *
+ * Two callers, one spelling. The federated variant needed exactly this pair
+ * first and said so in its own rule; the need is the label being DATA rather
+ * than the variant it arrives in, so both take it from here. */
+.btn-valuelabel,
+.btn-federated {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  /* `.btn` pins the leading at 1 because a one-line label should add none of
+     its own to a box the control's height token decides. Two lines set solid
+     touch. */
+  line-height: 1.25;
 }
 /* Every button in the product had NO focus style: no rule here, none in
    app.css, none in tokens.css or brand.css, so a keyboard reader got whatever
@@ -242,15 +278,9 @@
   padding: 11px 12px;
   /* The label is a SENTENCE the installation wrote, in a language and a length
      nothing here chooses — "Continue with Google", or a German clause twice
-     that. Every other variant labels itself with one of our verbs and holds the
-     `nowrap` on `.btn`; this one has to be allowed to take a second line rather
-     than push its own box past the column it fills. */
-  white-space: normal;
-  /* And the leading that second line needs. `.btn` pins `line-height: 1`
-     because a one-line label should add none of its own to a box `min-block-size`
-     decides; this is the only variant that can wrap, and two lines set solid
-     touch. */
-  line-height: 1.25;
+     that. That is the `.btn-valuelabel` case above, which this variant is
+     named in rather than restating: the wrap belongs to a label that is data,
+     and this is one of the two places such a label arrives. */
   border-radius: var(--r-control);
   border-color: var(--borderControl);
   background: var(--bgElevated);
@@ -528,7 +558,7 @@ a:not([class]):focus-visible {
 }
 
 /* Conservative type-scale realizing the hierarchy already implied by usage
- * across the app (record headings, field labels, captions, mono figures) —
+ * across the app (record headings, field labels, captions, figures) —
  * no new sizes invented, just named. */
 .t-display {
   font-family: var(--f-display);
@@ -577,8 +607,13 @@ a:not([class]):focus-visible {
   font-size: var(--fs-body);
   color: var(--textContent);
 }
-.t-mono {
-  font-family: var(--f-mono);
+/* A figure that is read down a column — an amount, a count, a percentage, a
+   duration, a date in a table — in the face around it, with every digit one
+   width so the column lines up. The family is never changed for alignment:
+   mono is for code, and a figure is not code. No size either, so it rides on
+   whichever size class or context the figure already sits in. */
+.t-num {
+  font-variant-numeric: tabular-nums;
 }
 /* The eyebrow: the micro-label above the thing it names. THE one spelling of
    uppercase micro-type — five sheets used to carry their own copy of it, at
@@ -598,6 +633,23 @@ a:not([class]):focus-visible {
   letter-spacing: var(--tracking-eyebrow);
   text-transform: uppercase;
   color: var(--textMeta);
+}
+
+/* Mono is for code, and only for code: an element that IS code — `<code>`,
+   `<pre>`, `<samp>` — or the `.code-block` below. Everything else, an id, a key
+   or a figure included, reads in the body face; a figure aligns through `.t-num`
+   instead. `<kbd>` names a key someone presses rather than text a machine
+   reads, so it sits in the body face too — the browser's own sheet would set it
+   in monospace, which is why this says so rather than leaving it to inherit.
+   Held by mono.test.ts and check-font-lock.sh: a mono family on any other
+   selector fails. */
+code,
+pre,
+samp {
+  font-family: var(--f-mono);
+}
+kbd {
+  font-family: var(--f-body);
 }
 
 /* Code / payload preview surface (AI observability: the call-trace panel and
