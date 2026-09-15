@@ -6,10 +6,11 @@ import { screen, userEvent } from "storybook/test";
 import type { components } from "../api/schema";
 import {
   CompanyActionBadges,
-  CompanyIdentityLine,
   CompanyLifecycleControl,
-  CompanyPrimaryActions,
+  CompanyRelationshipBadges,
 } from "./companyheader";
+import { CompanyHeaderActions } from "./companyheaderactions";
+import { CompanyIdentityFacts, CompanySubtitle } from "./companyheaderfacts";
 import {
   installFetchStub,
   jsonResponse,
@@ -17,7 +18,7 @@ import {
   StoryProviders,
 } from "./story-utils";
 
-// The account header's own pieces (RecordView's nameBadge/subtitle/pulse/
+// The account header's own pieces (RecordView's nameBadge/pulse/badges/
 // actions slots in companies.tsx), mounted together rather than through
 // the whole record page: the header does not own a screen of its own, so
 // reaching for it through CompanyScreen would drag in every other tab's reads.
@@ -87,10 +88,10 @@ const noWayIn = {
   },
 } as unknown as View;
 
-// The roster the owner control reads, and — since the identity line resolves
-// `captured_by` against the same `["users"]` entry — the only place a record's
-// AUTHOR can be named from. Mira owns the account; Sofia wrote the row, and is
-// here so one story can show that second half.
+// The roster the owner control reads, and, since the facts strip's Source
+// fact resolves `captured_by` against the same `["users"]` entry, the only
+// place a record's AUTHOR can be named from. Mira owns the account; Sofia
+// wrote the row, and is here so one story can show that second half.
 const roster = [
   { id: "u-1", display_name: "Mira Voss" },
   { id: "u-2", display_name: "Sofia Meier" },
@@ -120,8 +121,7 @@ function Header({
   return (
     <StoryProviders>
       <div style={{ maxWidth: 640 }}>
-        <CompanyLifecycleControl company={record} />
-        <CompanyIdentityLine company={record} view={view} loading={loading} />
+        <CompanySubtitle company={record} />
         <div
           style={{
             marginTop: "var(--space-2)",
@@ -129,7 +129,18 @@ function Header({
             gap: "var(--space-2)",
           }}
         >
-          <CompanyPrimaryActions
+          <CompanyLifecycleControl company={record} />
+          <CompanyRelationshipBadges company={record} />
+        </div>
+        <CompanyIdentityFacts company={record} view={view} loading={loading} />
+        <div
+          style={{
+            marginTop: "var(--space-2)",
+            display: "flex",
+            gap: "var(--space-2)",
+          }}
+        >
+          <CompanyHeaderActions
             company={record}
             composerOpen={false}
             onComposerOpen={() => {}}
@@ -146,7 +157,7 @@ function Header({
   );
 }
 
-// The three stories below all render the quiet line's FALLBACK provenance,
+// The three stories below all render the Source fact's FALLBACK provenance,
 // "typed by a person": the fixture's `captured_by` names `u1`, which is nobody
 // the roster answers with, and an author the roster cannot resolve is not named
 // with the raw uuid. That is the state a record lands in when its author is
@@ -162,10 +173,10 @@ export const Loading: Story = {
 };
 
 // The other half of the provenance tag, and the state the header did not show
-// until the identity line was given the roster: the NAMED author, "typed by
-// Sofia Meier", beside the date the record was created. `captured_by` names a
-// colleague the roster answers with, and one this viewer is not — the tag reads
-// "typed by you" for the reader's own writing.
+// until the facts strip was given the roster: the NAMED author, "typed by
+// Sofia Meier", beside the Created fact. `captured_by` names a colleague the
+// roster answers with, and one this viewer is not, so the tag reads "typed by
+// you" for the reader's own writing.
 export const AuthorNamed: Story = {
   render: () => (
     <Header

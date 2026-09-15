@@ -36,13 +36,14 @@ async function openRecord(page: Page, route: string) {
   await mockApi(page);
   await page.goto(route);
   await expect(page.locator(".recordtabs-tab").first()).toBeVisible();
-  // The pane is what the strip must stand clear of, and it starts closed. A
-  // test that measured before opening it would measure a page with no
-  // neighbour and pass on every record. The switch that opens it stands at the
-  // end of the tab row, the same place on every record page, so one locator
-  // reaches it everywhere and a switch found anywhere else is the defect.
-  await page.locator(".recordtabs-trailing button[aria-pressed]").click();
-  await expect(page.locator(".record-aside")).toBeVisible();
+  // The pane is what the strip must stand clear of, and it is open on
+  // arrival: a page measured without its neighbour would pass on every
+  // record. Asserted rather than assumed, so a record whose pane failed to
+  // open is caught here and not read as a strip with nothing to clear.
+  await expect(
+    page.locator(".record-aside"),
+    "the details pane is not open on arrival",
+  ).toBeVisible();
 }
 
 test.describe("the record tab strip", () => {
@@ -153,13 +154,20 @@ test.describe("the record tab strip", () => {
         .locator(".recordtabs-tab")
         .first()
         .boundingBox();
-      const columnStart = await page
-        .locator(".wrap")
-        .first()
-        .evaluate((wrap) => {
-          const box = wrap.getBoundingClientRect();
-          return box.x + Number.parseFloat(getComputedStyle(wrap).paddingLeft);
-        });
+      // On a record drawn on a sheet the column's own edge is the sheet's
+      // content edge: the tabs belong to the document on the sheet, inset by
+      // its padding like every card under them.
+      const sheet = page.locator(".record-sheet");
+      const column = (await sheet.count()) > 0 ? sheet : page.locator(".wrap");
+      const columnStart = await column.first().evaluate((column) => {
+        const box = column.getBoundingClientRect();
+        const style = getComputedStyle(column);
+        return (
+          box.x +
+          Number.parseFloat(style.borderLeftWidth) +
+          Number.parseFloat(style.paddingLeft)
+        );
+      });
       if (!firstTab) {
         throw new Error("the first tab is visible but has no box");
       }

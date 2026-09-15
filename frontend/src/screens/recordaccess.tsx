@@ -147,7 +147,10 @@ export function RecordAccess({
       {/* The mark explains itself on hover and on focus: what "Only you"
           means, and that the verb beside it is how to change it. A native
           title reached a pointer alone and only after a pause. */}
-      <AccessTip text={t(isPrivate ? copy.privateTip : copy.shared)}>
+      <AccessTip
+        text={t(isPrivate ? copy.privateTip : copy.shared)}
+        focusable={!mayChange}
+      >
         {(tipId) => (
           <VisibilityLine
             state={isPrivate ? "private" : "team"}
@@ -198,13 +201,27 @@ function describedBy(...ids: (string | undefined)[]): string | undefined {
 // share the one explanation rather than each hanging its own. The tip's id is
 // handed to the children, because `aria-describedby` does not inherit: set on
 // the span alone, the button inside it stayed undescribed for a screen reader.
+//
+// `focusable` gives the span a tab stop only while no verb sits inside it: a
+// reader who may not change the visibility still reaches the explanation from
+// the keyboard, and one who may gets it from the button without a second stop.
 function AccessTip({
   text,
+  focusable,
   children,
-}: Readonly<{ text: string; children: (tipId?: string) => ReactNode }>) {
+}: Readonly<{
+  text: string;
+  focusable: boolean;
+  children: (tipId?: string) => ReactNode;
+}>) {
   const { ref, trigger, tip } = useTooltip<HTMLSpanElement>(text);
   return (
-    <span className="record-access-tip" ref={ref} {...trigger}>
+    <span
+      className="record-access-tip"
+      ref={ref}
+      {...trigger}
+      tabIndex={focusable ? 0 : trigger.tabIndex}
+    >
       {children(trigger["aria-describedby"])}
       {tip}
     </span>

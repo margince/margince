@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useRecordWriteRefusal } from "../app/capability";
@@ -11,7 +11,7 @@ import { navigate } from "../app/router";
 import { useHasUnsavedChanges } from "../app/unsaved";
 import { useUrlParams } from "../app/urlstate";
 import { useFoldedViewport } from "../app/viewport";
-import { Badge, Button, Modal } from "../design-system/atoms";
+import { Badge, Modal } from "../design-system/atoms";
 import { ContactLink } from "../design-system/contactlink";
 import { IdentityLine } from "../design-system/identityline";
 import { OffsiteLink } from "../design-system/offsitelink";
@@ -439,7 +439,11 @@ export function ContactPageV2({
             // true of the CONTACT does not belong to whichever part of them is open,
             // so it does not move when a tab changes. The same pane, fold and
             // memory of it as every other record page.
-            aside={!narrow && details.open ? contactDetails : undefined}
+            // At phone width there is no column to fold: the same cards open as
+            // the drawer below instead, so the record hands the view no pane at
+            // all rather than one that folds to nothing beside nothing.
+            aside={narrow ? undefined : contactDetails}
+            asideOpen={details.open}
             name={contact.full_name}
             avatarSrc={null}
             // One rung under the record scale: the name is still the largest
@@ -592,32 +596,30 @@ export function ContactPageV2({
             {/* The work queue, over the record: the same drawer the Home page
               opens, driven by the same address, so a link to it from here
               and from there is one link. */}
-            <BriefQueue closeLabel={t("common.close")} />
+            <BriefQueue />
           </RecordView>
         </div>
-        {narrow && mobileDetails && (
-          <Modal
-            open
-            onClose={closeMobileDetails}
-            labelledBy={detailsTitle}
-            placement="right"
-          >
-            <div className="pe-drawer-title">
-              <h2 id={detailsTitle}>
-                {t("contact.overview.detailsPermissions")}
-              </h2>
-              <Button
-                small
-                variant="ghost"
-                onClick={closeMobileDetails}
-                reason={detailsDirty ? t("record.finishFieldEdit") : undefined}
-              >
-                {t("common.close")}
-              </Button>
-            </div>
-            {contactDetails}
-          </Modal>
-        )}
+        {/* Rendered whether or not it is showing, and told so by `open`: a
+            drawer whose caller conditions its ELEMENT can only ever appear —
+            there is nothing left on the page to animate on its way out. */}
+        <Modal
+          open={narrow && mobileDetails}
+          onClose={closeMobileDetails}
+          // The drawer holds fields the reader may be part-way through
+          // changing, and `closeMobileDetails` refuses to leave while one is
+          // open. The refusal says WHY on the control that carries it, rather
+          // than answering the press with nothing.
+          closeReason={detailsDirty ? t("record.finishFieldEdit") : undefined}
+          labelledBy={detailsTitle}
+          placement="right"
+        >
+          <div className="pe-drawer-title">
+            <h2 id={detailsTitle}>
+              {t("contact.overview.detailsPermissions")}
+            </h2>
+          </div>
+          {contactDetails}
+        </Modal>
       </ContactWriteTo>
     </div>
   );
@@ -982,7 +984,15 @@ function ContactMailDrawer({
   // lead. A worklist row is about one message, and opening on whatever the
   // contact happens to lead with would draft a reply into a different thread.
   const anchored = transportForActivity(transports, view, threadId);
-  if (!open) {
+  // Nothing until the drawer is first opened, and mounted from then on: a
+  // composer mounted with the page would read on every render of a contact
+  // nobody is writing to, and one unmounted the moment it closes has no frame
+  // left to animate out on.
+  const everOpened = useRef(false);
+  if (open) {
+    everOpened.current = true;
+  }
+  if (!everOpened.current) {
     return null;
   }
   return (
@@ -996,7 +1006,7 @@ function ContactMailDrawer({
       initialTransportId={anchored.chosen?.id}
       staleThread={anchored.stale}
       intent={intent}
-      open
+      open={open}
       onClose={onClose}
     />
   );

@@ -1,6 +1,7 @@
 import { useCallback } from "react";
 import type { components } from "../api/schema";
 import { useCanWriteRecord } from "../app/capability";
+import { FieldRow } from "../design-system/fieldgrid";
 import { useT } from "../i18n";
 import {
   ADDRESS_FIELDS,
@@ -8,6 +9,7 @@ import {
   companyEditFields,
   mapCompanyUpdate,
 } from "./companyform";
+import { CompanyTagsSection } from "./companyrailtags";
 import { joinMultiselectValue } from "./create";
 import { prefillRowsFromRecord } from "./edit.prefill";
 import { useEntityName } from "./entityref";
@@ -54,6 +56,15 @@ export function CompanyDetails({
           keys: ADDRESS_FIELDS.map((field) => field.key),
         },
       ]}
+      // Tags as one more row of the card: filing beside the facts it files,
+      // the same shape the contact's own Details card uses. The gate is
+      // `CompanyTagsSection`'s own — one writer for the axes a tag write
+      // answers to, whichever surface mounts the row.
+      extraRows={
+        <FieldRow label={t("tags.panelTitle")} align="top">
+          <CompanyTagsSection company={company} companyId={company.id} bare />
+        </FieldRow>
+      }
       title={t("co.details.title")}
       fields={[
         ...companyEditFields(owners, false, t),

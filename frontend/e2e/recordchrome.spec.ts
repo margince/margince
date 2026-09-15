@@ -319,11 +319,18 @@ test.describe("the record's details pane", () => {
           await expect(dialog).toBeVisible();
           await expect(dialog.getByTestId("contact-rail")).toBeVisible();
           await expect(pane).toHaveCount(0);
-          const box = await dialog.boundingBox();
-          if (!box) throw new Error("the visible Details drawer has no box");
-          expect(box.x).toBeGreaterThanOrEqual(0);
-          expect(box.x + box.width).toBeLessThanOrEqual(width + 1);
-          expect(box.width).toBeGreaterThan(width * 0.9);
+          // Where the drawer comes to REST, not where it is on the frame it
+          // became visible: it arrives by sliding in from the trailing edge,
+          // so measured on the first visible frame it is still most of a
+          // screen to the right of where it lands. Retried rather than waited
+          // out, so the assertion needs no copy of the duration.
+          await expect(async () => {
+            const box = await dialog.boundingBox();
+            if (!box) throw new Error("the visible Details drawer has no box");
+            expect(box.x).toBeGreaterThanOrEqual(0);
+            expect(box.x + box.width).toBeLessThanOrEqual(width + 1);
+            expect(box.width).toBeGreaterThan(width * 0.9);
+          }).toPass();
           await page.keyboard.press("Escape");
           await expect(dialog).toBeHidden();
           await expect(detailsSwitch(page)).toBeFocused();

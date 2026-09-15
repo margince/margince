@@ -30,6 +30,11 @@ export function ConsentAndChannels({
   const t = useT();
   const providerLabel = useProviderLabel();
   const [manage, setManage] = useState(false);
+  // Opened once, mounted from then on. The drawer's section reads consent and
+  // the purpose catalogue, so it must not mount with the rail — and it must not
+  // unmount on close either, because the drawer is still on screen while it
+  // leaves and an emptied one is what the reader would watch go.
+  const [everManaged, setEverManaged] = useState(false);
   const titleId = useId();
   const mayWrite = useCanWriteRecord("contact", view.contact);
   const entries = guard?.entries ?? [];
@@ -122,7 +127,14 @@ export function ConsentAndChannels({
           </>
         )}
         <p className="t-caption">{t("consent.permissionScope")}</p>
-        <Button small variant="ghost" onClick={() => setManage(true)}>
+        <Button
+          small
+          variant="ghost"
+          onClick={() => {
+            setEverManaged(true);
+            setManage(true);
+          }}
+        >
           {t("consent.manage")}
         </Button>
       </PanelBody>
@@ -135,27 +147,24 @@ export function ConsentAndChannels({
           !hasEmail ? t("contact.rail.noEmailAddress") : undefined
         }
       />
-      {manage && (
-        <Modal
-          open
-          onClose={() => setManage(false)}
-          labelledBy={titleId}
-          placement="right"
-        >
-          <div className="pe-drawer-title">
-            <h2 id={titleId}>{t("consent.manage")}</h2>
-            <Button small variant="ghost" onClick={() => setManage(false)}>
-              {t("common.close")}
-            </Button>
-          </div>
+      <Modal
+        open={manage}
+        onClose={() => setManage(false)}
+        labelledBy={titleId}
+        placement="right"
+      >
+        <div className="pe-drawer-title">
+          <h2 id={titleId}>{t("consent.manage")}</h2>
+        </div>
+        {everManaged && (
           <ConsentSection
             contactId={view.contact.id}
             contact={view.contact}
             showConfirm={false}
             titleLevel={3}
           />
-        </Modal>
-      )}
+        )}
+      </Modal>
     </Panel>
   );
 }

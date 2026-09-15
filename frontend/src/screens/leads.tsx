@@ -1530,9 +1530,10 @@ function LeadRecord({ lead, id }: Readonly<{ lead: Lead; id: string }>) {
         // — in the details pane beside the work, so the work column stays the
         // work and the context does not move when the tab does. The same pane,
         // fold and memory of it as every other record page.
-        aside={
-          details.open ? <LeadRail lead={lead} writer={writer} /> : undefined
-        }
+        // At every width, and told whether it is showing, so the column
+        // folds rather than vanishing when the toggle shuts it.
+        aside={<LeadRail lead={lead} writer={writer} />}
+        asideOpen={details.open}
         name={leadIdentityName(lead) || t("lead.unnamed")}
         avatarSrc={null}
         // The role and the company, on the name's own line: the contact

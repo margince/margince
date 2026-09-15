@@ -132,7 +132,7 @@ export function ImportCard() {
           <h2 id={headingId} className="t-h2 modal-title">
             {t("import.title")}
           </h2>
-          <ImportWizard flow={flow} onClose={() => setOpen(false)} />
+          <ImportWizard flow={flow} />
         </Modal>
       </PanelBody>
     </Panel>
@@ -148,10 +148,8 @@ export function ImportCard() {
 // would forget an interrupted import the moment the dialog closed.
 function ImportWizard({
   flow,
-  onClose,
 }: Readonly<{
   flow: ReturnType<typeof useImportFlow>;
-  onClose: () => void;
 }>) {
   const t = useT();
   const fileInput = useRef<HTMLInputElement>(null);
@@ -284,12 +282,6 @@ function ImportWizard({
           contextTagID={flow.contextTagID}
         />
       ) : null}
-
-      {/* Closing puts the act down; it does not abandon it. The flow outlives
-          the dialog, so a reader who steps away comes back to the same step. */}
-      <Button small onClick={onClose}>
-        {t("common.close")}
-      </Button>
     </div>
   );
 }

@@ -100,7 +100,6 @@ export const de = {
   "brief.queue.title": "Arbeitsliste",
   "brief.queue.show": "Arbeitsliste einblenden",
   "brief.queue.hide": "Arbeitsliste ausblenden",
-  "brief.queue.close": "Zur Startseite",
   "brief.focus.urgentRemaining_one":
     "{count} weitere dringende Aufgabe in der Liste",
   "brief.focus.urgentRemaining_other":
@@ -817,7 +816,6 @@ export const de = {
   "state.partialCount": "{count} weitere nicht angezeigt",
   "filePreview.download": "Herunterladen",
   "filePreview.print": "Drucken",
-  "filePreview.close": "Vorschau schließen",
   "filePreview.loading": "Datei wird geöffnet…",
   "filePreview.failedTitle": "Diese Datei kann hier nicht angezeigt werden",
   "filePreview.failed":
@@ -940,6 +938,7 @@ export const de = {
   "company.rejectDone":
     "„{name}“ archiviert, und {domain} legt kein Unternehmen mehr an",
   "company.name": "Firma",
+  "company.brief.title": "Kontobriefing",
   "company.description": "Was sie tun",
   "company.website": "Website",
   "company.contactCount": "Kontakte",
@@ -1246,7 +1245,6 @@ export const de = {
   "room.state.closed": "Abgeschlossen",
   "room.state.expired": "Abgelaufen",
   "room.state.archived": "Archiviert",
-  "co.pulse.created": "Erstellt {when}",
   "co.pulse.owner": "Betreut von",
   "co.pulse.sizeBand": "{band} Mitarbeitende",
   "co.pulse.strongestLead": "Zugang \u00fcber",
@@ -1822,7 +1820,6 @@ export const de = {
   "email.detail.attachments_one": "{count} Anhang",
   "email.detail.attachments_other": "{count} Anhänge",
   "email.detail.showQuoted": "Zitierten Verlauf anzeigen",
-  "email.detail.close": "Schließen",
   "email.detail.withheldReason":
     "Diese Nachricht ist nicht für Sie freigegeben",
   "email.detail.from": "Von",
@@ -5850,7 +5847,6 @@ export const de = {
   "ob.conv.connect.appSetupLink": "In den Einstellungen einrichten",
   "ob.conv.connect.dialogIntro":
     "{brings}. Ich lese es einmal, um deine Kontakte und Historie aufzubauen, und halte es danach synchron.",
-  "ob.conv.connect.dialogClose": "Schließen",
   "ob.conv.connect.linkedinName": "LinkedIn",
   "ob.conv.connect.linkedinSaved": "Profil gespeichert",
   "ob.conv.connect.linkedinSkippedNote":

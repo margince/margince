@@ -505,8 +505,8 @@ function connectorLabel(rest: string): string {
 // The reader's own user id, for the provenance tags on this screen. Undefined
 // while /me is in flight, which the tags read as "a contact, not provably you"
 // — the honest reading until the session is known.
-export function useViewerId(): string | undefined {
-  return useMe().data?.user.id;
+export function useViewerId(enabled = true): string | undefined {
+  return useMe(enabled).data?.user.id;
 }
 
 // RFC 7807 bodies carry the honest detail; surface it instead of a generic

@@ -340,9 +340,6 @@ export function TaskDetailModal({
         <h2 id={titleId} className="t-h2">
           {task?.subject ?? t("tasks.detail")}
         </h2>
-        <Button variant="ghost" onClick={onClose}>
-          {t("common.close")}
-        </Button>
       </div>
       <div className="drawer-body">
         {query.isPending && <PendingBody label={t("tasks.detailLoading")} />}

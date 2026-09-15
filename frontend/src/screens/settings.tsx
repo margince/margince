@@ -746,7 +746,10 @@ function SignatureSettingRow({ toast }: Readonly<{ toast: Toast }>) {
   // The same comparison the Save button already made, now also the claim that
   // stops a sidebar click throwing the draft away.
   const dirty = shown !== stored;
-  useUnsavedGuard(dirty);
+  // Only while the dialog is SHOWING. It outlives its own close, so a draft the
+  // reader already walked away from would otherwise go on blocking navigation
+  // from behind a dialog that is no longer on screen.
+  useUnsavedGuard(open && dirty);
   // The first line, because a sign-off is several lines and only the first one
   // identifies it. `.split` on a string always yields at least one element, so
   // the empty signature reads as the empty string and the row says so instead —
@@ -763,10 +766,15 @@ function SignatureSettingRow({ toast }: Readonly<{ toast: Toast }>) {
   // Leaving discards the draft rather than keeping it: the reader closed the
   // form, and a sign-off half-typed into a dialog nobody reopened is not an
   // edit anybody is coming back to.
-  const close = () => {
+  // Closing only CLOSES. The dialog outlives it so it can animate out, and a
+  // draft cleared on the way out snaps back to the stored sign-off in front of
+  // a reader still watching the dialog leave. The discarding happens on the
+  // next OPEN, which is the same moment the reader asks for a blank form.
+  const close = () => setOpen(false);
+  const edit = () => {
     setBody(null);
     save.reset();
-    setOpen(false);
+    setOpen(true);
   };
 
   return (
@@ -776,57 +784,55 @@ function SignatureSettingRow({ toast }: Readonly<{ toast: Toast }>) {
         description={t("settings.signatureSub")}
         value={answer}
         control={
-          <Button small variant="ghost" onClick={() => setOpen(true)}>
+          <Button small variant="ghost" onClick={edit}>
             {t("settings.signatureEdit")}
           </Button>
         }
       />
-      {open && (
-        <Modal open onClose={close} labelledBy={titleId}>
-          {/* A real form, so Enter from the field commits it — and the Save
+      <Modal open={open} onClose={close} labelledBy={titleId}>
+        {/* A real form, so Enter from the field commits it — and the Save
               button keeps the semantics it had as a card action: nothing is
               written until it is pressed. */}
-          <form
-            className="form-stack"
-            onSubmit={(event) => {
-              event.preventDefault();
-              if (dirty && !save.isPending) save.mutate(shown);
-            }}
-          >
-            <h2 className="t-h3 modal-title" id={titleId}>
-              {t("settings.signature")}
-            </h2>
-            <WriteRefused titleKey="settings.saveFailed" error={save.error} />
-            <Field label={t("settings.signatureLabel")}>
-              {(control) => (
-                <Textarea
-                  {...control}
-                  rows={5}
-                  value={shown}
-                  placeholder={t("settings.signaturePlaceholder")}
-                  onChange={(event) => setBody(event.target.value)}
-                />
-              )}
-            </Field>
-            <p className="t-caption">{t("settings.signatureHint")}</p>
-            <div className="form-actions">
-              <Button small variant="ghost" onClick={close}>
-                {t("settings.signatureCancel")}
-              </Button>
-              <Button
-                small
-                type="submit"
-                variant="primary"
-                disabled={!save.isPending && !dirty}
-                pending={save.isPending}
-                busyLabel={t("settings.signatureSaving")}
-              >
-                {t("record.save")}
-              </Button>
-            </div>
-          </form>
-        </Modal>
-      )}
+        <form
+          className="form-stack"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (dirty && !save.isPending) save.mutate(shown);
+          }}
+        >
+          <h2 className="t-h3 modal-title" id={titleId}>
+            {t("settings.signature")}
+          </h2>
+          <WriteRefused titleKey="settings.saveFailed" error={save.error} />
+          <Field label={t("settings.signatureLabel")}>
+            {(control) => (
+              <Textarea
+                {...control}
+                rows={5}
+                value={shown}
+                placeholder={t("settings.signaturePlaceholder")}
+                onChange={(event) => setBody(event.target.value)}
+              />
+            )}
+          </Field>
+          <p className="t-caption">{t("settings.signatureHint")}</p>
+          <div className="form-actions">
+            <Button small variant="ghost" onClick={close}>
+              {t("settings.signatureCancel")}
+            </Button>
+            <Button
+              small
+              type="submit"
+              variant="primary"
+              disabled={!save.isPending && !dirty}
+              pending={save.isPending}
+              busyLabel={t("settings.signatureSaving")}
+            >
+              {t("record.save")}
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </>
   );
 }

@@ -4,7 +4,7 @@
 import { useEffect, useId, useRef } from "react";
 import { navigateReplacing } from "../app/router";
 import { useUrlParams } from "../app/urlstate";
-import { Button, Modal } from "../design-system/atoms";
+import { Modal } from "../design-system/atoms";
 import { useT } from "../i18n";
 import { WorklistScreen } from "./worklist";
 import "./brief.css";
@@ -25,12 +25,7 @@ export function WorklistRedirect({ opensOn }: Readonly<{ opensOn?: string }>) {
   return null;
 }
 
-// `closeLabel` names where closing LEAVES the reader: "Back to Home" on the
-// Home page the drawer was written for, and the plain word on a record page
-// that mounts the same drawer over itself.
-export function BriefQueue({
-  closeLabel,
-}: Readonly<{ closeLabel?: string }> = {}) {
+export function BriefQueue() {
   const t = useT();
   const titleId = useId();
   const scroll = useRef(0);
@@ -48,13 +43,15 @@ export function BriefQueue({
       placement="right"
       size="split"
     >
-      <div className="drawer-head brief-queue-head">
+      {/* The BANDED head, not the composer's one scrolling column: the queue is
+          a list a reader pages through, so its title and the dialog's own close
+          have to stay put while the rows move under them. Everything about how
+          the band is spaced is the shared drawer's (atoms.css) — this head adds
+          nothing, because a queue title is not a different kind of title. */}
+      <div className="drawer-head">
         <h2 id={titleId} className="t-h2">
           {t("brief.queue.title")}
         </h2>
-        <Button variant="ghost" onClick={close}>
-          {closeLabel ?? t("brief.queue.close")}
-        </Button>
       </div>
       <div
         className="drawer-body brief-queue-body"
