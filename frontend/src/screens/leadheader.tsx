@@ -12,6 +12,7 @@ import type { components } from "../api/schema";
 import { useCanWrite } from "../app/capability";
 import { Badge, Button } from "../design-system/atoms";
 import { ContactLink } from "../design-system/contactlink";
+import { IdentityLine } from "../design-system/identityline";
 import { Fact, RecordFacts } from "../design-system/recordfacts";
 import { Select } from "../design-system/select";
 import { formatDateAbbrev, formatNumber } from "../format/format";
@@ -79,13 +80,15 @@ function statusPillTone(
 export function LeadPulse({ lead }: Readonly<{ lead: Lead }>): ReactNode {
   const t = useT();
   const label = leadStatusLabel(lead.status);
+  // The same row shape the contact's marks take: pills side by side with a
+  // space between, never stretched across the head.
   return (
-    <>
+    <IdentityLine separator="space">
       <Badge tone="accent">{t("lead.marker")}</Badge>
       <Badge tone={statusPillTone(lead.status)}>
         {label ? t(label) : lead.status}
       </Badge>
-    </>
+    </IdentityLine>
   );
 }
 
@@ -223,7 +226,7 @@ function LeadOwner({
             (ADR-0108 §5). The viewer is the first option because
             self-assignment is the common case on a small team. */}
         <Button
-          small
+          variant="link"
           disabled={pending}
           reasonId={refusedReasonId}
           aria-expanded={picking}
