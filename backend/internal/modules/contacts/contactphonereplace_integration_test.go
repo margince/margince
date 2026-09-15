@@ -21,6 +21,8 @@ import (
 	"errors"
 	"testing"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -191,9 +193,154 @@ func TestTwoPrimaryPhonesOfOneTypeIsRefusedByType(t *testing.T) {
 	}
 }
 
+// #4675: a contact legitimately holds one number twice under two types. A PATCH
+// that re-sends both rows unchanged — an ordinary rename that replaces the
+// phone set every save — must not collapse them onto the last type.
+func TestReplacingLeavesTwoTypesOfOneNumberIntact(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+
+	contact, err := e.store.CreateContact(ctx, CreateContactInput{
+		FullName: "Dup Phone",
+		Phones: []ContactPhoneInput{
+			{Phone: "+491119999999", PhoneType: "work", IsPrimary: false, Position: 0},
+			{Phone: "+491119999999", PhoneType: "home", IsPrimary: false, Position: 1},
+		},
+		Source: "test",
+	})
+	if err != nil {
+		t.Fatalf("create contact: %v", err)
+	}
+
+	updated, err := e.store.UpdateContact(ctx, ids.From[ids.ContactKind](ids.UUID(contact.Id)), UpdateContactInput{
+		Phones: []ContactPhoneInput{
+			{Phone: "+491119999999", PhoneType: "work", IsPrimary: false, Position: 0},
+			{Phone: "+491119999999", PhoneType: "home", IsPrimary: false, Position: 1},
+		},
+		Source: "test",
+	})
+	if err != nil {
+		t.Fatalf("re-sending both rows: %v", err)
+	}
+
+	rows := livePhoneRows(updated)
+	types := map[string]bool{}
+	for _, r := range rows {
+		types[string(r.PhoneType)] = true
+	}
+	if len(rows) != 2 || !types["work"] || !types["home"] {
+		t.Fatalf("phones = %+v, want one work and one home", rows)
+	}
+}
+
+// Dropping one of two types of a number keeps the SURVIVING row's own identity.
+// The by-value reconciler relabelled the FIRST held row of the number to the
+// surviving type and archived the real one, so the survivor inherited the dropped
+// row's id, created_at, source and captured_by — and observed_at, which decides
+// whether a later provider fill stands, so a home row wearing a work row's older
+// observed_at could be overwritten by a fill that should have been skipped. Any
+// row pointing at the archived id then named a number that was still live.
+func TestDroppingOneTypeKeepsTheSurvivorsIdentity(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+
+	contact, err := e.store.CreateContact(ctx, CreateContactInput{
+		FullName: "Dup Phone",
+		Phones: []ContactPhoneInput{
+			{Phone: "+493011112222", PhoneType: "work", IsPrimary: false, Position: 0},
+			{Phone: "+493011112222", PhoneType: "home", IsPrimary: false, Position: 1},
+		},
+		Source: "test",
+	})
+	if err != nil {
+		t.Fatalf("create contact: %v", err)
+	}
+	homeID := phoneIDOfType(t, contact, "home")
+
+	updated, err := e.store.UpdateContact(ctx, ids.From[ids.ContactKind](ids.UUID(contact.Id)), UpdateContactInput{
+		// The reader kept only the home row.
+		Phones: []ContactPhoneInput{{Phone: "+493011112222", PhoneType: "home", IsPrimary: false, Position: 0}},
+		Source: "test",
+	})
+	if err != nil {
+		t.Fatalf("dropping the work row: %v", err)
+	}
+
+	rows := livePhoneRows(updated)
+	if len(rows) != 1 || rows[0].PhoneType != "home" {
+		t.Fatalf("phones = %+v, want a single home row", rows)
+	}
+	if rows[0].Id != homeID {
+		t.Fatalf("survivor id = %v, want the HOME row's id %v — the work row was relabelled instead of the home row kept",
+			rows[0].Id, homeID)
+	}
+}
+
+// A work primary corrected to a home primary while a second number takes over the
+// work slot — both submitted primary, of different types. A row can leave a
+// per-type primary slot by CHANGING TYPE, not only by dropping primary, so a
+// demote-the-non-primaries-only pass promoted the incoming work row while the
+// outgoing one still held the work slot: two live work primaries for the length of
+// a statement, which uq_contact_phone_primary refused. Landing every retained row
+// demoted before raising any primary is what makes this valid change go through.
+func TestRetypingAPrimaryWhileAnotherTakesItsSlot(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+
+	contact, err := e.store.CreateContact(ctx, CreateContactInput{
+		FullName: "Ada Lovelace",
+		Phones: []ContactPhoneInput{
+			{Phone: "+493011111111", PhoneType: "work", IsPrimary: true, Position: 0},
+			{Phone: "+493022222222", PhoneType: "work", IsPrimary: false, Position: 1},
+		},
+		Source: "test",
+	})
+	if err != nil {
+		t.Fatalf("create contact: %v", err)
+	}
+
+	updated, err := e.store.UpdateContact(ctx, ids.From[ids.ContactKind](ids.UUID(contact.Id)), UpdateContactInput{
+		Phones: []ContactPhoneInput{
+			{Phone: "+493011111111", PhoneType: "home", IsPrimary: true, Position: 0},
+			{Phone: "+493022222222", PhoneType: "work", IsPrimary: true, Position: 1},
+		},
+		Source: "test",
+	})
+	if err != nil {
+		t.Fatalf("retyping the primary while another takes the work slot: %v", err)
+	}
+
+	rows := livePhoneRows(updated)
+	if len(rows) != 2 {
+		t.Fatalf("phones = %+v, want both numbers live", rows)
+	}
+	byNumber := map[string]crmcontracts.ContactPhone{}
+	for _, r := range rows {
+		byNumber[r.Phone] = r
+	}
+	if r := byNumber["+493011111111"]; r.PhoneType != "home" || !r.IsPrimary {
+		t.Fatalf("first number = %+v, want home + primary", r)
+	}
+	if r := byNumber["+493022222222"]; r.PhoneType != "work" || !r.IsPrimary {
+		t.Fatalf("second number = %+v, want work + primary", r)
+	}
+}
+
 func livePhoneRows(p crmcontracts.Contact) []crmcontracts.ContactPhone {
 	if p.Phones == nil {
 		return nil
 	}
 	return *p.Phones
+}
+
+// phoneIDOfType reads the id of the one live row of the given type at create time.
+func phoneIDOfType(t *testing.T, p crmcontracts.Contact, phoneType string) openapi_types.UUID {
+	t.Helper()
+	for _, r := range livePhoneRows(p) {
+		if string(r.PhoneType) == phoneType {
+			return r.Id
+		}
+	}
+	t.Fatalf("no %s phone in %+v", phoneType, p.Phones)
+	return openapi_types.UUID{}
 }

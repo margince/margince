@@ -3630,6 +3630,10 @@ export const en = {
   "field.phoneOther": "Other",
   "field.primary": "Primary",
   "field.removeRow": "Remove",
+  "field.removeRowLabel": "Remove row {n}",
+  "field.moveRowUp": "Move row {n} up",
+  "field.moveRowDown": "Move row {n} down",
+  "field.rowMoved": "Moved to position {n}",
   "field.yes": "Yes",
   "field.no": "No",
 
