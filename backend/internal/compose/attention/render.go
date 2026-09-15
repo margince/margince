@@ -35,16 +35,18 @@ const actionOpen crmcontracts.AttentionItemActions = "open"
 // one would be a button naming nothing to reverse.
 const actionUndo crmcontracts.AttentionItemActions = "undo"
 
-// actionDismiss puts a lapsed contact aside for a while.
+// actionDismiss says this row is not work, and what that MEANS is the row's.
 //
-// Offered ONLY where a dismissal endpoint takes the row's own id, which today
-// is the relationship-decay lane: its rows carry the contact's id, and
-// /contacts/{id}/nudge-dismissal is keyed on exactly that. A verb on a row whose
-// id the endpoint cannot take would be a control that 404s.
-//
-// A reader's own judgement rather than a change to the record — the contact is
-// no less quiet for being set aside — which is why the dismissal is per-reader
-// and expires rather than resolving anything.
+// Offered only where a dismissal endpoint takes the row's own id. Two lanes
+// qualify, and the difference between them is the reason the client dispatches
+// on source rather than on the verb. A relationship-decay row carries the
+// contact's id and /contacts/{id}/nudge-dismissal is keyed on it: a reader's
+// own judgement rather than a change to the record — the contact is no less
+// quiet for being set aside — so that dismissal is per-reader and expires. A
+// dedupe row carries the candidate's id and
+// /dedupe-candidates/{id}/disposition is keyed on it: a verdict for the whole
+// workspace, for good. A verb on a row whose id no endpoint can take would be
+// a control that 404s.
 const actionDismiss crmcontracts.AttentionItemActions = "dismiss"
 
 // duplicateItem renders one open candidate pair, with both records named.
@@ -62,9 +64,9 @@ const actionDismiss crmcontracts.AttentionItemActions = "dismiss"
 // honest answer: the alternative is a merge button over a record they cannot
 // read.
 //
-// The verb needs MORE than that read, and this is where the two questions part.
-// Settling a pair archives one record and rewrites the other, so it is offered
-// only to a reader who could change BOTH — the records' owner, or a seat that
+// The verbs need MORE than that read, and this is where the two questions part.
+// Deciding a pair either way writes it, so both verbs are offered only to a
+// reader who could change BOTH records — the records' owner, or a seat that
 // writes the whole workspace. Everyone else sees the pair and no verb, because
 // they are the ones who cannot act on it. Offered on visibility alone, the
 // button refused every press on a pair whose two records had different owners,
@@ -91,12 +93,22 @@ func (s *Service) duplicateItem(
 		Right:    right,
 		Evidence: evidenceRows(pair.Evidence),
 	}
-	// Both questions, and they are different. Authority asks whether this
-	// reader could change these records; settleable asks whether the merge
-	// would be accepted from anyone. A button offered on either alone is one
-	// that refuses after the press.
-	if decidable.both(pair.EntityType, pair.LeftID, pair.RightID) && settleable[pair.ID] {
-		item.Actions = []crmcontracts.AttentionItemActions{"merge"}
+	// Two questions, and each answers a different verb. Authority asks whether
+	// this reader could change these records, which is all a dismissal needs:
+	// DisposeDedupeCandidate's not-a-duplicate arm takes write authority over
+	// both sides and nothing else. Settleable asks whether the MERGE would be
+	// accepted from anyone, which only the merge needs — two companies each
+	// carrying live work do not combine, whoever presses.
+	//
+	// So the pair the merge refuses still carries dismiss. It is a real false
+	// positive somebody is entitled to clear, and gating both verbs on the
+	// merge's own refusal left it on the page as a question nobody could answer
+	// from here.
+	if decidable.both(pair.EntityType, pair.LeftID, pair.RightID) {
+		item.Actions = append(item.Actions, actionDismiss)
+		if settleable[pair.ID] {
+			item.Actions = append(item.Actions, "merge")
+		}
 	}
 	return item
 }

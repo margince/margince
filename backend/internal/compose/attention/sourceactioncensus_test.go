@@ -59,8 +59,11 @@ var performedBySource = map[string][]crmcontracts.AttentionItemActions{
 	// `snooze` opens the record, where the due date lives.
 	"task": {"complete", "snooze", "open"},
 	// Answered inline: the decision card is on the row itself.
-	"approval":             {"decide", "open"},
-	"dedupe_candidate":     {"merge", "open"},
+	"approval": {"decide", "open"},
+	// Both answered by PairDecision in worklist.pair.tsx, and each on its own
+	// guard: the Keep buttons ask for `merge`, and the "Not the same" line asks
+	// for `dismiss`. A pair no merge would accept still carries the second.
+	"dedupe_candidate":     {"merge", "dismiss", "open"},
 	"introduction_request": {"decide", "open"},
 	// Drawn by NoticeAcknowledge rather than through the routing table.
 	"notice": {"acknowledge", "open"},

@@ -9459,6 +9459,8 @@ export const de = {
   "worklist.pair.ask": "Welcher Datensatz soll bleiben?",
   "worklist.pair.keep": "{name} behalten",
   "worklist.pair.notDuplicate": "Nicht dieselben",
+  "worklist.pair.mergeBlocked":
+    "Diese beiden lassen sich nicht zusammenführen: In beiden laufen aktive Projekte, und die Daten sagen nicht, welche Arbeit wohin gehört. Wenn es nicht dieselben sind, kannst du das trotzdem festhalten.",
   "worklist.pair.related": "{count} verknüpft",
   "worklist.pair.failed":
     "Paar konnte nicht entschieden werden. Bitte erneut versuchen.",

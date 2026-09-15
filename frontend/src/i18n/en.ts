@@ -9601,6 +9601,8 @@ export const en = {
   "worklist.pair.ask": "Which record should survive?",
   "worklist.pair.keep": "Keep {name}",
   "worklist.pair.notDuplicate": "Not the same",
+  "worklist.pair.mergeBlocked":
+    "These two cannot be combined: each is running live projects, and nothing in the records says which work belongs where. If they are not the same, you can still say so.",
   "worklist.pair.related": "{count} linked",
   "worklist.pair.failed": "Could not settle the pair. Try again.",
   "worklist.pair.refused":
