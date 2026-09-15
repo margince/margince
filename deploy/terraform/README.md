@@ -71,3 +71,11 @@ Then follow [`aws/README.md`](aws/README.md) for the one-time steps Terraform
 does not do: bootstrapping the database roles
 (`scripts/deploy/db-bootstrap.sql`), mounting `margince.yaml`, and
 building/pushing the three images to the registry Terraform created.
+
+## A lighter alternative
+
+[`aws-light/`](aws-light/README.md) trades the above for one EC2 instance
+running api/worker/web behind a plain nginx reverse proxy — no ALB, no ECS,
+no EFS, no customer-managed KMS key. Read its own README's "what this is
+NOT" before using it; it's the minimal/small-deployment option, not a
+smaller copy of the same guarantees.
