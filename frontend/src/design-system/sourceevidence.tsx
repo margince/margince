@@ -11,6 +11,7 @@ import { useLocale, useT } from "../i18n";
 import { throwProblem } from "../screens/common";
 import { Button } from "./atoms";
 import { SourceEmailPanel } from "./sourceemailpanel";
+import { SurfaceState } from "./surfacestate";
 
 type Activity = components["schemas"]["Activity"];
 
@@ -54,6 +55,24 @@ export function SourceEvidence({
       return data;
     },
   });
+  // A failed lookup is SAID, not swallowed. Returning nothing here removed the
+  // evidence altogether — no panel, no button, no reason — and the email
+  // panel's own failure arm cannot help, because a kind nobody resolved never
+  // mounts it.
+  if (query.isError) {
+    return (
+      <SurfaceState
+        label={t("tasks.sourceEmail")}
+        labelLevel="h4"
+        state="failed"
+        emptyLabel={t("email.detail.none")}
+        loadingLabel={t("email.detail.loading")}
+        detail={{ onRetry: () => void query.refetch() }}
+      >
+        {null}
+      </SurfaceState>
+    );
+  }
   const source: Activity | undefined = query.data;
   // Nothing is drawn until the kind is known. A button that appeared and then
   // vanished as the read landed would offer a verb this task does not have.

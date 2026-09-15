@@ -91,6 +91,79 @@ test("a task nobody read out of a meeting offers no way back", async () => {
   expect(screen.queryByRole("button", { name: "Open original" })).toBeNull();
 });
 
+test("a transcript refused on reopen is not painted from the cache", async () => {
+  const user = userEvent.setup();
+  // The kind lookup and the reader share one query key, and the lookup's
+  // observer outlives the drawer — so `gcTime: 0` cannot evict between the
+  // first read and the second, and the refused reopen has a cached transcript
+  // sitting in `data`. Rendering that beside the error is what this holds.
+  let refused = false;
+  installFetchStub({
+    "GET /activities/task-1": () =>
+      jsonResponse({
+        id: "task-1",
+        kind: "task",
+        subject: "Create a comparison sheet with two products",
+        occurred_at: "2026-09-08T09:00:00Z",
+        is_done: false,
+        source_activity_id: "meeting-9",
+      }),
+    "GET /activities/meeting-9": () =>
+      refused
+        ? jsonResponse({ title: "Not found", status: 404 }, 404)
+        : jsonResponse({
+            id: "meeting-9",
+            kind: "meeting",
+            subject: "Akeneo — Vergleichsblatt",
+            body: "Lena: Ich mache ein Vergleichsblatt mit zwei Produkten.",
+            occurred_at: "2026-09-08T08:00:00Z",
+            version: 1,
+          }),
+  });
+  openTask();
+
+  await user.click(
+    await screen.findByRole("button", { name: "Open original" }),
+  );
+  await screen.findByText(/Vergleichsblatt mit zwei Produkten/);
+
+  // Access goes away, and the reader is opened again. Escape rather than the
+  // close control: the task drawer and the transcript reader are both dialogs
+  // and both draw a "Close", so naming one finds two.
+  refused = true;
+  await user.keyboard("{Escape}");
+  await user.click(
+    await screen.findByRole("button", { name: "Open original" }),
+  );
+
+  // The words are gone, not merely accompanied by an error.
+  await waitFor(() => {
+    expect(screen.queryByText(/Vergleichsblatt mit zwei Produkten/)).toBeNull();
+  });
+});
+
+test("a source that cannot be read says so instead of disappearing", async () => {
+  installFetchStub({
+    "GET /activities/task-1": () =>
+      jsonResponse({
+        id: "task-1",
+        kind: "task",
+        subject: "Create a comparison sheet with two products",
+        occurred_at: "2026-09-08T09:00:00Z",
+        is_done: false,
+        source_activity_id: "meeting-9",
+      }),
+    // The kind lookup fails, so nothing downstream knows which reader to be.
+    "GET /activities/meeting-9": () =>
+      jsonResponse({ title: "Server error", status: 500 }, 500),
+  });
+  openTask();
+
+  // A retry, rather than a panel that silently removed the evidence: the email
+  // panel's own failure arm cannot speak here, because it never mounts.
+  expect(await screen.findByRole("button", { name: "Try again" })).toBeTruthy();
+});
+
 test("an email request is read in the task, with no click to open it", async () => {
   installFetchStub({
     "GET /activities/task-1": () =>
