@@ -123,14 +123,18 @@ That is the rule when a message reached two mailboxes: each owner contributes
 what their own mailbox asks for, and the message ends at the **strictest** of
 those.
 
-## Setting the audience on a message you send
+## Changing one message's audience
 
-When you write a message, you set its audience before it goes: **Who may read
-this message?** — everyone in the company, only the participants, or only those
-you name.
+On a message's own row — not in the composer, and after it has been sent or
+captured — **Change visibility** asks "Who may read this message?": everyone in
+the company, participants only, or named people.
 
-It applies to the whole thread rather than the one message, which is what stops a
-reply quietly widening what the original narrowed.
+**It reaches exactly one message.** The control says so: "Applies to this
+message only — not to the thread and not to the contact."
+
+That is the difference from sharing, above. **Share with the company** on a
+thread "applies to the whole thread", and releases your own hold on all of it;
+changing a message's visibility moves that one row.
 
 ## What you can see of other seats' capture
 
@@ -150,5 +154,5 @@ never returns another seat's personal rows.
 | The company-wide floor | Settings → Capture rules → Email sharing |
 | Hold mail with one party | The contact's or company's page |
 | Share one thread | The thread's own row on a timeline |
-| A sent message's audience | The composer, before you send |
+| One message's audience | Its own row on the timeline |
 | Who can see the *record* | The contact or company header |

@@ -32,6 +32,10 @@ its own, so you can also come straight to the one you need.
   each number covers and how to open the rows behind it, forecast calls, the
   projected landing, and the pipeline-needed figure that is deliberately not a
   target.
+- **[Writing and sending mail](sending-mail.md)** — the composer, drafting in
+  your voice, the purpose picker and the consent check, what a send refuses and
+  what it only warns about, scheduling one for later, and what the recipient
+  controls from their own preference page.
 - **[Who can see an email](who-can-see-an-email.md)** — record visibility
   against a message's own audience, the nine reasons one is held and which a
   verdict can clear, the three mailbox postures, the company floor, and how to
@@ -46,6 +50,12 @@ its own, so you can also come straight to the one you need.
 - **[Approvals](approvals.md)** — what a staged action looks like, the kinds that
   reach the inbox, how to accept, edit or reject one, who is allowed to decide,
   the 72-hour expiry and the one kind that never expires.
+- **[Offers and the rate card](offers-and-products.md)** — what an offer holds,
+  how its money is worked out, the four verbs and what each locks, recurring
+  lines, and why a rate-card change never rewrites an offer you already sent.
+- **[Contracts and invoices](contracts-and-invoices.md)** — the two value bases
+  and why they are never summed, why a status is never inferred from a date,
+  renewing and cancelling, what counts as a signed win, and the finance mirror.
 - **[Documents and files](documents-and-files.md)** — documents on a company or
   deal, files a deal picks up from its email, having a file read for deal fields,
   and document sets you can ask questions of. Every size limit, with its number.
