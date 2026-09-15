@@ -494,7 +494,6 @@ export const en = {
   "record.fieldsLoading": "Loading custom fields…",
   "record.fieldsRetry": "Retry",
 
-  "record.visibilityOwner": "Owner only",
   "record.companyRoutingKey": "Company routing key",
   "record.finishFieldEdit":
     "Save or cancel the current edit before closing Details.",
@@ -3782,15 +3781,29 @@ export const en = {
   "log.save": "Log",
   "log.saving": "Logging…",
 
-  "contactAccess.title": "Who can see this contact",
-  "contactAccess.privateToYou":
+  // Who may READ a record, on its own header. The company half says "account"
+  // where the contact half says "contact", because that is the word the rest
+  // of the company page uses for itself.
+  "recordAccess.contact.title": "Who can see this contact",
+  "recordAccess.contact.privateToYou":
     "Private to its owner. Nobody else in the company can see this contact — not the team, and not an admin.",
-  "contactAccess.company": "Everyone in the company can see this contact.",
-  "contactAccess.share": "Share with the company",
-  "contactAccess.published": "The company can see this contact now.",
-  "contactAccess.makePrivate": "Make private",
-  "contactAccess.madePrivate":
+  "recordAccess.contact.shared":
+    "Everyone in the company can see this contact.",
+  "recordAccess.contact.share": "Share with the company",
+  "recordAccess.contact.published": "The company can see this contact now.",
+  "recordAccess.contact.makePrivate": "Make private",
+  "recordAccess.contact.madePrivate":
     "This contact is the owner's again. Anyone the record was explicitly shared with keeps their access.",
+  "recordAccess.company.title": "Who can see this account",
+  "recordAccess.company.privateToYou":
+    "Private to its owner. Nobody else in the company can see this account — not the team, and not an admin.",
+  "recordAccess.company.shared":
+    "Everyone in the company can see this account.",
+  "recordAccess.company.share": "Share with the company",
+  "recordAccess.company.published": "The company can see this account now.",
+  "recordAccess.company.makePrivate": "Make private",
+  "recordAccess.company.madePrivate":
+    "This account is the owner's again. Deals, contacts and mail already filed against it keep their own audiences.",
   "compose.reply": "Reply",
   "compose.writeEmail": "Write email",
   "compose.relink": "Relink",

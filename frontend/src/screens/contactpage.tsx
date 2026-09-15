@@ -31,7 +31,6 @@ import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { provenanceOf, throwProblem, useSorMode, useViewerId } from "./common";
 import { ComposeModal } from "./compose";
-import { ContactAccess } from "./contactaccess";
 import { ContactActions } from "./contactactions";
 import { ContactResearchDrawer } from "./contactdrawers";
 import { ContactFilesTab } from "./contactfiles";
@@ -51,13 +50,12 @@ import {
   ContactTimelineTab,
 } from "./contacttabs";
 import { transportForActivity, useTransports } from "./contacttransports";
-
 import { currentEmployer } from "./employmentcurrency";
-
 import { rosterOwnerName, useRoster, useRosterPartial } from "./entityref";
 import { LogActivityAction } from "./logactivity";
 import { ContactMeetingBrief } from "./meetingbrief";
 import { useOpenEmail } from "./openemail";
+import { RecordAccess } from "./recordaccess";
 import { RecordEmailAside } from "./recordemail";
 import {
   useMailboxConnected,
@@ -888,7 +886,7 @@ function ContactIdentityLine({
           {t("list.created")}:{" "}
           {formatDateAbbrev(contact.created_at, locale, zone)}
         </IdentityFact>
-        <ContactAccess key={contact.id} contact={contact} />
+        <RecordAccess key={contact.id} kind="contact" record={contact} />
       </IdentityLine>
     </IdentityMeta>
   );

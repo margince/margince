@@ -40,6 +40,7 @@ import {
 } from "./entityref";
 import { LogActivityAction } from "./logactivity";
 import { MergeAction } from "./merge";
+import { RecordAccess } from "./recordaccess";
 import { EmailVerb } from "./recordemail";
 import { ShareAction } from "./share";
 
@@ -800,6 +801,11 @@ export function CompanyIdentityLine({
     );
   }
   facts.push(<CompanyRecordProvenance key="provenance" company={company} />);
+  // Who may READ the account, last and on the line the contact header says it
+  // on. A capture-private account used to say nothing about itself here, so a
+  // reader who had learned the contact page was told by omission that this
+  // account was shared when it was its owner's alone.
+  facts.push(<RecordAccess key="access" kind="company" record={company} />);
   // Clauses of ONE sentence about the account — what it is, where, how big,
   // whose — so they are strung on dots rather than left to stand apart.
   return (

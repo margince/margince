@@ -53,6 +53,10 @@ type UpdateCompanyInput struct {
 	// Lifecycle, when non-nil, moves where the account stands with us
 	// (ADR-0079/A124). nil leaves it untouched.
 	Lifecycle *string
+	// Visibility, when non-nil, moves who may see this company between
+	// 'workspace' and 'owner'. nil leaves it untouched. companyvisibility.go
+	// carries the two rules it owes that no other column here does.
+	Visibility *string
 	// RelationshipTypes, when non-nil, is the desired live type set — the same
 	// replace-set shape as Domains. nil leaves them untouched; an empty slice
 	// clears them, except that 'partner' cannot be dropped while the partner
@@ -100,6 +104,9 @@ func (s *Store) updateCompanyInTx(
 	if err != nil {
 		return crmcontracts.Company{}, fmt.Errorf("read company before update: %w", err)
 	}
+	if err := refuseUnreadableCompany(current, in); err != nil {
+		return crmcontracts.Company{}, err
+	}
 	in.Clear = storekit.CoreFieldClears(in.Clear, active, in.CustomFields)
 	p, err := buildCompanyPatch(ctx, tx, current, in)
 	if err != nil {
@@ -114,7 +121,15 @@ func (s *Store) updateCompanyInTx(
 	if p.Empty() {
 		return current, nil
 	}
+	if in.Visibility != nil {
+		if err := refuseStaleCompanyVisibility(ctx, tx, id, current); err != nil {
+			return crmcontracts.Company{}, err
+		}
+	}
 	if err := p.ApplyGuarded(ctx, tx, "company", id.UUID, in.IfVersion); err != nil {
+		if constraint, ok := storekit.CheckViolation(err); ok && constraint == "company_owner_private_names_its_owner" {
+			return crmcontracts.Company{}, &RequiredFieldError{Field: filterOwnerID}
+		}
 		return crmcontracts.Company{}, fmt.Errorf("apply company patch: %w", err)
 	}
 	if err := s.relocateIfAddressMoved(ctx, tx, id, p); err != nil {
