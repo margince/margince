@@ -30631,9 +30631,10 @@ type KindAutonomy struct {
 	// as reversibility does. A client renders the kinds it is sent.
 	Kind string `json:"kind"`
 
-	// Mode `manual` asks every time, and is what a kind stands at until the reader
-	// says otherwise. `auto` applies on sight, undoably, under the authority of
-	// whoever owns the record at the time.
+	// Mode `auto` is the default for eligible kinds and applies changes under the
+	// authority of whoever owns the record at the time. Saved choices take
+	// precedence. `manual` disables automatic application: proposals wait for
+	// review, and close-date maintenance stops for the owner.
 	//
 	// `veto` is a third rung the policy table admits and nothing writes yet: it
 	// would apply after a stated delay unless the reader stops it first. It is
@@ -30646,9 +30647,10 @@ type KindAutonomy struct {
 	Rejected int `json:"rejected"`
 }
 
-// KindAutonomyMode `manual` asks every time, and is what a kind stands at until the reader
-// says otherwise. `auto` applies on sight, undoably, under the authority of
-// whoever owns the record at the time.
+// KindAutonomyMode `auto` is the default for eligible kinds and applies changes under the
+// authority of whoever owns the record at the time. Saved choices take
+// precedence. `manual` disables automatic application: proposals wait for
+// review, and close-date maintenance stops for the owner.
 //
 // `veto` is a third rung the policy table admits and nothing writes yet: it
 // would apply after a stated delay unless the reader stops it first. It is
@@ -56602,7 +56604,7 @@ type ServerInterface interface {
 	// Read-only run history for one automation — successes AND errored/blocked/skipped runs.
 	// (GET /automations/{id}/runs)
 	ListAutomationRuns(w http.ResponseWriter, r *http.Request, id Id, params ListAutomationRunsParams)
-	// Which kinds of proposal the caller has put on automatic.
+	// The caller's automatic-change settings and review history.
 	// (GET /autonomy)
 	GetAutonomy(w http.ResponseWriter, r *http.Request)
 	// Turn automatic application on or off for one kind.
@@ -58852,7 +58854,7 @@ func (_ Unimplemented) ListAutomationRuns(w http.ResponseWriter, r *http.Request
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Which kinds of proposal the caller has put on automatic.
+// The caller's automatic-change settings and review history.
 // (GET /autonomy)
 func (_ Unimplemented) GetAutonomy(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)

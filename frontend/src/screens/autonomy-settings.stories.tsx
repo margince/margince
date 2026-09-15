@@ -47,20 +47,27 @@ function story(data: Row[]) {
 }
 
 const meta: Meta<typeof AutonomySettingsCard> = {
-  title: "Settings/You/Account/What answers itself",
+  title: "Settings/You/Agents/What answers itself",
   component: AutonomySettingsCard,
 };
 export default meta;
 type Story = StoryObj<typeof AutonomySettingsCard>;
 
-// The first visit: three switches off, and nothing under any of them. A reader
-// with no history is offered the choice on the description alone, so this story
-// is the one that shows whether that description carries it.
+// First visit: all three defaults are on, before any review history exists.
 export const NothingDecidedYet: Story = {
   render: story([
-    row("close_date_correction", "manual", [0, 0, 0]),
-    row("lifecycle_change", "manual", [0, 0, 0]),
-    row("company_name_promotion", "manual", [0, 0, 0]),
+    row("close_date_correction", "auto", [0, 0, 0]),
+    row("lifecycle_change", "auto", [0, 0, 0]),
+    row("company_name_promotion", "auto", [0, 0, 0]),
+  ]),
+};
+
+// Stored choices survive alongside kinds that still use the default.
+export const SavedOffWithDefaults: Story = {
+  render: story([
+    row("close_date_correction", "auto", [0, 0, 0]),
+    row("lifecycle_change", "auto", [0, 0, 0]),
+    row("company_name_promotion", "manual", [1, 0, 0]),
   ]),
 };
 
@@ -81,7 +88,7 @@ export const EarnedOnOne: Story = {
 export const AKindTheCopyDoesNotKnow: Story = {
   render: story([
     row("close_date_correction", "auto", [14, 1, 0]),
-    row("project_attribution", "manual", [0, 0, 0]),
+    row("project_attribution", "auto", [0, 0, 0]),
   ]),
 };
 

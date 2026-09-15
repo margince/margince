@@ -552,9 +552,9 @@ func TestOnlyTheContactKindCreatesAContact(t *testing.T) {
 		// contact is what is withheld.
 		{kind: capture.KindRoleMailbox, email: "support@respacio.example", wantContacts: 0, wantStatus: capture.PendingStatusReal},
 		{kind: capture.KindCompanySender, email: "contact@vinasa.example", wantContacts: 0, wantStatus: capture.PendingStatusReal},
-		// Bulk and automated mail is hidden as before.
+		// These addresses reach the model; its bulk and automated verdicts hide the mail.
 		{kind: capture.KindNewsletter, email: "digest@saasweekly.example", wantContacts: 0, wantStatus: capture.PendingStatusNoise, wantHidden: true},
-		{kind: capture.KindTransactional, email: "receipts@expensify.example", wantContacts: 0, wantStatus: capture.PendingStatusNoise, wantHidden: true},
+		{kind: capture.KindTransactional, email: "updates@expense-tool.example", wantContacts: 0, wantStatus: capture.PendingStatusNoise, wantHidden: true},
 		{kind: capture.KindSpam, email: "deals@peinsights.example", wantContacts: 0, wantStatus: capture.PendingStatusNoise, wantHidden: true},
 	}
 	for _, tc := range cases {

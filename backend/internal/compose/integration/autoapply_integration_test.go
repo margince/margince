@@ -5,8 +5,7 @@
 
 package integration
 
-// Applying a proposal because its owner said to, and the four cases where it
-// must not.
+// Applying and reversing proposals under their owner's standing policy.
 //
 // Every claim here is SQL: whose policy was consulted, whether that contact is
 // still live, and what the decision wrote. A unit test with hand-built rows
@@ -19,6 +18,8 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+
+	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/approvals"
@@ -132,21 +133,20 @@ func statusOf(t *testing.T, approvalID ids.ApprovalID) (string, bool) {
 // without anybody being asked, and the row says the SYSTEM decided it — which
 // is what lets the day's "Done for you" lane report it honestly rather than
 // putting a rep's name on a click they never made.
-func TestAProposalAppliesWhenItsOwnerSaidSo(t *testing.T) {
+func TestAProposalAppliesByDefault(t *testing.T) {
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	svc := approvals.NewService(e.DB())
 	deal := e.SeedDeal(t, "Fleet retrofit", pipeline, open, &e.Rep1)
 	grantDealRepRole(t, e, e.Rep1)
 	approvalID := stageCloseDateCorrection(t, svc, e, deal)
-	turnAutoApplyOn(t, svc, e, e.Rep1)
 
 	applied, err := compose.SweepAutoApply(sweepCtx(e), e.Pool)
 	if err != nil {
 		t.Fatalf("sweeping: %v", err)
 	}
 	if applied != 1 {
-		t.Fatalf("applied %d proposals, want the one its owner said to apply", applied)
+		t.Fatalf("applied %d proposals, want the default to apply the proposal", applied)
 	}
 	status, bySystem := statusOf(t, approvalID)
 	if status != "approved" {
@@ -157,22 +157,25 @@ func TestAProposalAppliesWhenItsOwnerSaidSo(t *testing.T) {
 	}
 }
 
-// A rep who has said nothing is a rep who wants to be asked. 'manual' is the
-// default, and the absence of a policy row must read as it — otherwise the
-// first proposal of a kind would behave unlike every one after it.
-func TestAProposalWaitsWhenNobodyOptedIn(t *testing.T) {
+// A saved off choice keeps proposals waiting even though the default is on.
+func TestAProposalWaitsWhenItsOwnerSwitchedItOff(t *testing.T) {
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	svc := approvals.NewService(e.DB())
 	deal := e.SeedDeal(t, "Fleet retrofit", pipeline, open, &e.Rep1)
 	approvalID := stageCloseDateCorrection(t, svc, e, deal)
 
+	grantDealRepRole(t, e, e.Rep1)
+	if _, err := svc.SetAutoApply(e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms), deals.CloseDateCorrectionKind, false); err != nil {
+		t.Fatalf("switching the kind off: %v", err)
+	}
+
 	applied, err := compose.SweepAutoApply(sweepCtx(e), e.Pool)
 	if err != nil {
 		t.Fatalf("sweeping: %v", err)
 	}
 	if applied != 0 {
-		t.Fatalf("applied %d proposals, want none — nobody opted in", applied)
+		t.Fatalf("applied %d proposals, want none — the owner switched it off", applied)
 	}
 	if status, _ := statusOf(t, approvalID); status != "pending" {
 		t.Errorf("status = %q, want the proposal still waiting for a contact", status)
@@ -257,12 +260,6 @@ func TestAnIneligibleKindNeverApplies(t *testing.T) {
 // Nothing new reverses it — the audit row the apply wrote goes back through the
 // same record-history restore a contact's Undo button uses, which is the point
 // of computing reversibility rather than storing a flag beside the approval.
-//
-// A company rename rather than a close date, and deliberately: a confirmed close
-// date currently cannot be undone at all, because its audit image records a
-// timestamp against a date column and every restore reads that as superseded.
-// That is a defect in the close-date effect rather than in this path, filed
-// separately — proving the premise here needs a kind whose image round-trips.
 func TestAnAutomaticChangeCanBePutBack(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)
@@ -294,10 +291,6 @@ func TestAnAutomaticChangeCanBePutBack(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatalf("staging the proposal: %v", err)
-	}
-	repCtx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
-	if _, err := svc.SetAutoApply(repCtx, "company_name_promotion", true); err != nil {
-		t.Fatalf("turning auto-apply on: %v", err)
 	}
 
 	if applied, err := compose.SweepAutoApply(sweepCtx(e), e.Pool); err != nil || applied != 1 {
@@ -449,5 +442,58 @@ func TestOneUnapplyableProposalDoesNotParkTheRest(t *testing.T) {
 	}
 	if failure == nil {
 		t.Error("the stranded proposal records no failure, so nothing would ever surface it to a contact")
+	}
+}
+
+func TestADefaultCloseDateChangeCanBePutBack(t *testing.T) {
+	e := Setup(t)
+	pipeline, open, _ := DealFixture(t, e)
+	deal := e.SeedDeal(t, "Undo the automatic date", pipeline, open, &e.Rep1)
+	grantDealRepRole(t, e, e.Rep1)
+	stageCloseDateCorrection(t, approvals.NewService(e.DB()), e, deal)
+	if applied, err := compose.SweepAutoApply(sweepCtx(e), e.Pool); err != nil || applied != 1 {
+		t.Fatalf("automatic apply = %d, error %v", applied, err)
+	}
+	owner := OwnerConn(t)
+	var auditID ids.UUID
+	var version int64
+	if err := owner.QueryRow(context.Background(), `SELECT id FROM audit_log
+		WHERE entity_type = 'deal' AND entity_id = @deal AND action = 'update'
+		ORDER BY occurred_at DESC LIMIT 1`, pgx.NamedArgs{"deal": deal}).Scan(&auditID); err != nil {
+		t.Fatal(err)
+	}
+	if err := owner.QueryRow(context.Background(), `SELECT version FROM deal WHERE id = @deal`,
+		pgx.NamedArgs{"deal": deal}).Scan(&version); err != nil {
+		t.Fatal(err)
+	}
+	seam := compose.NewRestoreSeam(e.Pool, compose.NewDispatcher(compose.NewProvider(e.Pool), nil, e.Pool), nil)
+	if _, err := seam.Restore(e.Admin(), "deal", deal, auditID, version); err != nil {
+		t.Fatalf("undoing the automatic date: %v", err)
+	}
+	var restored bool
+	if err := owner.QueryRow(context.Background(), `SELECT expected_close_date IS NULL FROM deal WHERE id = @deal`,
+		pgx.NamedArgs{"deal": deal}).Scan(&restored); err != nil {
+		t.Fatal(err)
+	}
+	if !restored {
+		t.Fatal("Undo left the automatically assigned date on the deal")
+	}
+}
+
+func TestAVetoPolicyKeepsAProposalPending(t *testing.T) {
+	e := Setup(t)
+	pipeline, open, _ := DealFixture(t, e)
+	deal := e.SeedDeal(t, "Show the owner first", pipeline, open, &e.Rep1)
+	grantDealRepRole(t, e, e.Rep1)
+	// Veto is a stored schema mode without a public writer.
+	e.WsExec(t, `INSERT INTO approval_autonomy_policy (user_id, kind, mode, veto_window)
+		VALUES (@user, @kind, 'veto', '1 hour')`,
+		pgx.NamedArgs{"user": e.Rep1, "kind": deals.CloseDateCorrectionKind})
+	approval := stageCloseDateCorrection(t, approvals.NewService(e.DB()), e, deal)
+	if applied, err := compose.SweepAutoApply(sweepCtx(e), e.Pool); err != nil || applied != 0 {
+		t.Fatalf("veto applied %d proposals, error %v", applied, err)
+	}
+	if status, bySystem := statusOf(t, approval); status != "pending" || bySystem {
+		t.Fatalf("proposal status %s, system decision %v; want pending", status, bySystem)
 	}
 }

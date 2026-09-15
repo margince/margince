@@ -6204,17 +6204,12 @@ export const en = {
     "Setup is complete. Anyone you add can train their voice and connect their accounts from Settings.",
   "ob.conv.team.persistFailed":
     "I couldn't record that setup is complete. Try again, or leave it and finish from Settings later.",
-  // The basis act: the installation's reporting basis and the agent's
-  // autonomy, asked once the company is confirmed and before any step about
-  // the contact answering.
+  // Reporting settings are settled after the company is confirmed.
   "ob.conv.basis.title": "First, the basis.",
   "ob.conv.basis.body":
-    "Base currency and reporting timezone are the installation's: every deal, report and brief is priced and dated on them. What it may change without asking is yours to decide. All of it is prefilled and can be changed later in Settings, until a deal has frozen the currency.",
+    "Base currency and reporting timezone are the installation's: every deal, report and brief is priced and dated on them. All of it is prefilled and can be changed later in Settings, until a deal has frozen the currency.",
   "ob.conv.basis.reportingTitle": "Reporting basis",
   "ob.conv.basis.timezoneNeeded": "A reporting timezone is needed.",
-  "ob.conv.basis.autonomyTitle": "What it may change on its own",
-  "ob.conv.basis.autonomyBody":
-    "Each kind of change below is proposed to you first. Switch one on and it applies without asking; switch it back any time.",
   "ob.conv.basis.continue": "Continue",
   "ob.conv.basis.done": "Reporting basis settled.",
 
@@ -8228,23 +8223,23 @@ export const en = {
   "workingHours.day.7": "Sunday",
   "autonomy.title": "What answers itself",
   "autonomy.sub":
-    "Small corrections you have been confirming by hand. Switch one on and it applies as soon as it comes up, with the change and an Undo waiting on your day.",
-  "autonomy.noneDecidedYetTitle": "Nothing decided yet",
+    "Automatic changes start on. Existing settings are kept. You can change each switch here. Your choices apply to your work, not the whole team.",
+  "autonomy.noneDecidedYetTitle": "No reviews yet",
   "autonomy.updateFailed": "That switch could not be saved",
   "autonomy.noneDecidedYet":
-    "You have not decided any of these yet. What reaches this list depends on the records you own and the work your team routes to you, so a seat with neither stays empty. The switches still decide what happens when something appears.",
+    "You have not decided any of these proposals yourself yet. Automatic changes can already run according to the switches below. Proposals depend on the records you own and the work routed to you.",
   "autonomy.noRecord": "You have not decided one of these yet.",
   "autonomy.record":
     "So far: {clean} approved as proposed, {edited} after an edit, {rejected} turned down.",
   "autonomy.kind.close_date_correction.label": "Close dates",
   "autonomy.kind.close_date_correction.help":
-    "A deal's close date moved by what was said on a call or written in a mail.",
+    "Maintain your deals overnight: estimate missing or overdue close dates from pipeline pace and review deals that have gone quiet. Turn off to stop this maintenance.",
   "autonomy.kind.company_name_promotion.label": "Company names",
   "autonomy.kind.company_name_promotion.help":
-    "A company recorded under its domain takes the name its own website gives.",
+    "Accept proposed company names from email signatures for companies named after their domain. Turn off to review these proposals yourself. Names confirmed by independent sources can still be updated automatically.",
   "autonomy.kind.lifecycle_change.label": "Lifecycle stages",
   "autonomy.kind.lifecycle_change.help":
-    "A company moves stage on what has happened with it. This one can also change who sees the account and which automations run.",
+    "Move a company to another lifecycle stage based on activity. Turn off to review these proposals yourself. Stage changes can affect who sees the account and which automations run.",
   "captureSettings.title": "Enrichment",
   "captureSettings.sub":
     "How captured companies and contacts are enriched after they are created.",
