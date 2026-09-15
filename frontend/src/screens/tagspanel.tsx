@@ -51,8 +51,10 @@ export function TagsPanel({
   const { locale } = useLocale();
   const [expanded, setExpanded] = useState(false);
   const [adding, setAdding] = useState(false);
-  // The row the tags stand in, for focus to return to once a pill is gone.
-  const set = useRef<HTMLDivElement>(null);
+  // Where focus returns once a pill is gone: the Add tag row, which stays
+  // mounted whenever a tag can be removed, including after the last one goes
+  // and the row of tags unmounts with it.
+  const actions = useRef<HTMLDivElement>(null);
   const read = useRecordTags(entityType, entityID);
 
   // The frame stands while the read is in flight. This panel sits in the record
@@ -109,7 +111,7 @@ export function TagsPanel({
           </div>
         )
       ) : (
-        <div className="tagspanel-set" ref={set} tabIndex={-1}>
+        <div className="tagspanel-set">
           {visible.map((tag) => (
             <TagOnRecord
               key={tag.tag_id}
@@ -117,7 +119,7 @@ export function TagsPanel({
               entityType={entityType}
               entityID={entityID}
               canEdit={canEdit}
-              returnFocusTo={() => set.current}
+              returnFocusTo={() => actions.current}
             />
           ))}
           {hidden > 0 && (
@@ -133,7 +135,7 @@ export function TagsPanel({
         </div>
       )}
       {canEdit && (
-        <div className="tagspanel-actions">
+        <div className="tagspanel-actions" ref={actions} tabIndex={-1}>
           <AddTagButton onOpen={() => setAdding(true)} />
         </div>
       )}
