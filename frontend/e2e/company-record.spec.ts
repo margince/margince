@@ -12,7 +12,7 @@ import { itemsOf, signIn } from "./waits";
  *
  * Shape alone is not the requirement, and asserting only shape is how a page
  * with the right skeleton at half the mockup's scale passed every check while
- * looking nothing like it. The second describe reads computed styles.
+ * looking nothing like it. The second describe measures what is drawn.
  *
  * Never pixel-equality and never the drawn English strings: the app renders
  * German chrome, so a copy change must not fail a layout suite, and a font
@@ -108,14 +108,9 @@ test.describe("company record — the glance's page shape", () => {
   // strip derives the row's fold from it — a row that sometimes carried six
   // would fold at a different width on two accounts of the same product.
   //
-  // Then the row must READ as one row — the regression this strip actually had
-  // was two slots drawn at a different font size than the rest — so every slot
-  // is checked for a label AND a value, and every value against the SAME
-  // computed size. A row of readings is a scale the eye sweeps; a slot that
-  // sizes itself to its own content breaks the sweep.
-  test("every reading carries a label and a value, all at one size", async ({
-    page,
-  }) => {
+  // Then every slot is checked for a label AND a value: a reading that drew one
+  // of the pair and not the other is a door the eye sweeps past.
+  test("every reading carries a label and a value", async ({ page }) => {
     await openCompany(page, POPULATED_COMPANY as string);
     const slots = page.locator(`${STRIP} > *`);
     // Waited for, not counted straight away: a bare count() resolves against
@@ -124,18 +119,11 @@ test.describe("company record — the glance's page shape", () => {
     await expect(slots.nth(1)).toBeVisible();
     await expect(slots).toHaveCount(5);
     const count = await slots.count();
-    const sizes = new Set<string>();
     for (let index = 0; index < count; index++) {
       const slot = slots.nth(index);
       await expect(slot.locator(".stat-card-label")).not.toBeEmpty();
       await expect(slot.locator(".stat-card-value")).not.toBeEmpty();
-      sizes.add(
-        await slot
-          .locator(".stat-card-value")
-          .evaluate((element) => getComputedStyle(element).fontSize),
-      );
     }
-    expect(sizes.size).toBe(1);
   });
 
   // Overview · History · Contacts · Deals · Tasks · Finance · Documents · Profile,
@@ -299,41 +287,22 @@ test.describe("company record — the glance's page shape", () => {
 });
 
 /**
- * The mockup's TYPOGRAPHIC SCALE, asserted as computed styles.
+ * The mockup's PROMINENCE, measured off the boxes the page lays out.
  *
  * The structural suite above passes on a page rendering at half the mockup's
- * size, because a count does not know how big anything is. These are the
- * numbers a reader actually sees: the account's name, its logo, the money in
- * the KPI strip, and the control that says where the account stands.
+ * size, because a count does not know how big anything is. These are the things
+ * a reader actually sees at their drawn size: the account's logo and the
+ * control that says where the account stands.
  *
- * Floors rather than exact values. A design that lands at 42px where the
- * mockup drew 40 is right; one that lands at 22 is the dense admin-tool
- * rendering these exist to catch. Pixel equality would fail on a font
- * substitution and tell nobody anything.
+ * Floors rather than exact values. A mark that lands at 120px where the mockup
+ * drew 110 is right; one that lands at 44 is the list-row avatar these exist to
+ * catch. Pixel equality would fail on a rounding difference and tell nobody
+ * anything.
  */
 test.describe("company record — the mockup's visual weight", () => {
   test.beforeEach(async ({ page }) => {
     await signIn(page);
     await openCompany(page, POPULATED_COMPANY as string);
-  });
-
-  const px = async (locator: Locator, prop: string): Promise<number> => {
-    await expect(locator).toBeVisible();
-    const value = await locator.evaluate(
-      (element, name) => getComputedStyle(element).getPropertyValue(name),
-      prop,
-    );
-    return Number.parseFloat(value);
-  };
-
-  test("the account's name leads the page", async ({ page }) => {
-    // ~40px in both mockups. It is the largest text on the record and the
-    // first thing a reader lands on. Measured on the record header's own
-    // heading: it is the page's h1, and the page head above it carries the
-    // trail back at a deliberately quiet 13px.
-    expect(
-      await px(page.locator(".record-head h1"), "font-size"),
-    ).toBeGreaterThanOrEqual(30);
   });
 
   test("the company's mark is a logo, not a favicon", async ({ page }) => {
@@ -347,32 +316,6 @@ test.describe("company record — the mockup's visual weight", () => {
       throw new Error("the header avatar has no box");
     }
     expect(box.width).toBeGreaterThanOrEqual(72);
-  });
-
-  test("the KPI figures read as the headline numbers they are", async ({
-    page,
-  }) => {
-    // ONE size for every slot, and it belongs to the primitive now
-    // (design-system/statstrip.css `.stat-strip .stat-card-value`): some slots
-    // carry a figure and some a sentence ("typically 4 days early"), and a slot
-    // sized to its own content would stop the row reading as one comparison.
-    // The shared clamp floors at 13px, and at 1280px (this suite's pinned
-    // viewport) it sits AT that floor: the bar is "clearly bigger than a label",
-    // not "exactly what the clamp happens to compute".
-    const size = await px(
-      page.locator(`${STRIP} .stat-card-value`).first(),
-      "font-size",
-    );
-    expect(size).toBeGreaterThanOrEqual(13);
-    // And it must still LEAD its label — the stronger claim, that every
-    // slot's value shares this exact size with every other slot, is what the
-    // strip's "every KPI slot carries a label and a value, all at one size"
-    // test above pins; a fixed ratio here cannot also express that.
-    const label = await px(
-      page.locator(`${STRIP} .stat-card-label`).first(),
-      "font-size",
-    );
-    expect(size).toBeGreaterThan(label);
   });
 
   test("the lifecycle control is a control, not a tag", async ({ page }) => {

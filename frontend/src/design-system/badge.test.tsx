@@ -241,26 +241,20 @@ describe("Badge", () => {
       expect(shouted).toEqual([]);
     });
 
-    // 20px tall with a 1px edge top and bottom: the 18px line box fills what is
-    // left exactly, which is what centres the label.
-    it("resets every type property a parent could hand down", () => {
+    // A badge in an eyebrow heading or inside a code sample reads as the badge
+    // beside it everywhere else: the face and the slope are the badge's own,
+    // and the floor is what gives a row of mixed variants one height.
+    it("states the face, the slope and the floor rather than inheriting them", () => {
       expect(
         Object.fromEntries(
-          [
-            "font-family",
-            "font-style",
-            "letter-spacing",
-            "text-transform",
-            "line-height",
-            "min-block-size",
-          ].map((name) => [name, declared(".badge", name)]),
+          ["font-family", "font-style", "min-block-size"].map((name) => [
+            name,
+            declared(".badge", name),
+          ]),
         ),
       ).toEqual({
         "font-family": "var(--f-body)",
         "font-style": "normal",
-        "letter-spacing": "var(--tracking-normal)",
-        "text-transform": "none",
-        "line-height": "18px",
         "min-block-size": "20px",
       });
     });

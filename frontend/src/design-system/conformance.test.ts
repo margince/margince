@@ -195,7 +195,14 @@ function familiesIn(text: string): string[] {
       // reporting `${x}` as a font would be a false positive — the same reason
       // a `var()` reference is skipped, and the same limit: neither spelling is
       // checkable here, and both are checkable where the value comes from.
-      if (name !== "" && !name.startsWith("var(") && !name.includes("${")) {
+      // `inherit` names no family either: it defers to whatever the root
+      // already resolved, which is the one place a family is chosen.
+      if (
+        name !== "" &&
+        name !== "inherit" &&
+        !name.startsWith("var(") &&
+        !name.includes("${")
+      ) {
         found.push(name);
       }
     }
@@ -257,6 +264,10 @@ describe("design-system conformance gates (B-EP09.1)", scanBudget, () => {
     // nothing.
     expect(familiesIn("font-family: var(--f-body);")).toEqual([]);
     expect(familiesIn("fontFamily: `${chosenFamily}`")).toEqual([]);
+    // Nor does `inherit`, which the UA reset writes on every control so the
+    // root's family reaches it.
+    expect(familiesIn("font-family: inherit;")).toEqual([]);
+    expect(familiesIn("fontFamily: `inherit`")).toEqual([]);
   });
 
   // B-EP09.16: no inline user-facing copy — every string the user reads comes

@@ -174,7 +174,6 @@ edge is `--aiMed`, and status is `--success` / `--warn` / `--danger`.
 | `--pane` / `--paneEdge` | `rgba(255,255,255,.72)` + `blur(12px)` / `rgba(16,26,21,.08)` | A zone, the details panel, a board card, a control at rest. |
 | `--bg2` / `--bg3` | `rgba(255,255,255,.55)` / `rgba(16,26,21,.05)` | The sidebar (glass over the glow, `blur(20px)`); a pill, a keycap, the active sidebar row. |
 | `--bgChip` | `rgba(16,26,21,.07)` | The shipped spelling of `--bg3`'s pill and keycap: the fill under a badge, a key-cap, a segmented strip, the trough of a meter. TRANSLUCENT, so a chip reads one step deeper than whatever ground it lands on — an opaque value can only be a step off one, and on a plate drawn in the same grey it is a chip nobody can see. `.07` and no deeper: `--accentText` on this fill reads 4.57:1 over `--bgCard`, the worst of the four grounds a chip lands on, and `.08` would take that to 4.49:1 — under the floor. |
-| `--textChip` | `#57645e` | Meta text ON `--bgChip`, and a token rather than `--textMeta` because that fill costs the four per cent of contrast headroom `--textMeta` had — 4.68:1 on `--bgCard`, and anything laid under it fails. The same split, for the same reason, as `--accentText` and `--tealText`. |
 | `--line` / `--line2` | `rgba(16,26,21,.08)` / `.16` | The hairline between rows; a control's outline, the spine's axis. |
 | `--ink` / `--ink2` / `--ink3` / `--ink4` | `#101a15` / `#33403a` / `#66736c` / `#9aa59f` | Names and values / body / labels and meta / placeholders and dates. |
 | `--accent` / `--accentText` / `--accentBg` | `#0b7a53` / `#0a6f4b` / `#e8f3ee` | The one filled verb; a link; a selected row or a done stage. |
@@ -190,7 +189,7 @@ The same room with the lights down: `--bg #0c1311` (a hair above the mock's
 `#5c6862`, the accent lifted to `#2bb673` with dark ink on it, the indigo text
 lifted to `#b3b7f5`. The chip inverts rather than mirrors: `--bgChip` becomes
 `rgba(255,255,255,.09)`, because a chip on a dark ground has only one direction
-to step, and `--textChip` lifts with it to `#95a69f`. The three-state theme pattern (`:root`,
+to step. The three-state theme pattern (`:root`,
 `prefers-color-scheme` guarded by `:not([data-theme="light"])`,
 `[data-theme="dark"]`) is how they switch.
 
@@ -216,18 +215,20 @@ for code alone: a mono face on an amount or a date dressed a business fact as
 machine output and shouted in a dense row, and `tabular-nums` gives a column the
 alignment mono was bought for.
 
+**The stylesheet draws no scale today.** One `html` rule in `app.css` reads
+`--fs-base`, `--lh-base`, `--fw-base` and `--textPrimary`; every element inherits
+all four; and the `.t-*` names in `base.css` are role hooks whose rules are
+layered on top of that root one at a time, each in its own change and each with
+its own gate. So every size, weight, tracking and neutral ink named anywhere else
+in this document is a TARGET for that rebuild rather than a description of the
+sheet that ships.
+
 | Role | Family | Where |
 |---|---|---|
-| Display | **Outfit** 600 | A record's name at 24px (`-0.025em`), the Brief greeting at 30px, a zone's title at 16px, the agent's verdict word at 19px, a reading's word at 17px, a reading's figure at 22px (`-0.03em`, tabular). |
-| Body and UI | **Geist** | 13px 400 for everything, 500 for a row's lead and a control, 12px in `--ink3` for meta and labels. Prose at 14px on 1.65, 72ch (§5). |
-| Figures | **Geist**, tabular (`.t-num`) | Every amount, count, percent, duration and date in a row or a cell, at the size and weight of its context. An identifier is plain body type. |
+| Display | **Outfit** | A record's name, the Brief greeting, a zone's title, the agent's verdict word, a reading's word and its figure. |
+| Body and UI | **Geist** | Everything else, prose included. |
+| Figures | **Geist**, tabular (`.t-num`) | Every amount, count, percent, duration and date in a row or a cell. An identifier is plain body type. |
 | Code | **Geist Mono** | `<pre>`, `<code>` and `<samp>` through one rule in `base.css`, and the `.code-block` surface; nothing else. A `<kbd>` is body type. |
-
-- **Weight 600 is for the display face.** Everything that must stand out in a
-  row does it at 500 in the body face.
-- **Uppercase is one thing: the eyebrow** (`.t-eyebrow`, 10.5px, `.08em`,
-  in a lighter ink) — a reading's label, a timeline entry's kind, the TODAY
-  marker. Every other label is sentence case.
 
 ## 5. Space, shape, depth
 
@@ -241,27 +242,9 @@ alignment mono was bought for.
   short.
 - **Type at rest is 13.5px on 1.55**, so a row's second line does not touch
   its first; prose is 14px on 1.65 at 72 characters.
-- **Sizes by role, and there are nine.** `--fs-eyebrow` 10.5 (uppercase
-  kickers, monograms), `--fs-meta` 12 (counts, timestamps, provenance),
-  `--fs-sm` 13 (chips, table cells, helper text), `--fs-body` 13.5 (the
-  default), `--fs-lead` 15 (the paragraph under a heading, and inputs),
-  `--fs-h3` 17 (a card title), `--fs-h2` 20 (a section title), `--fs-h1` 24 (a
-  step title, a record's head), `--fs-display` 32 (a full-viewport moment),
-  plus the two fluid rungs `--fs-display-fluid` and `--fs-hero-fluid` for the
-  first-run surfaces. Nothing in the tree names a length instead — a size half
-  a pixel off a rung is a decision nobody made, and the tree carried 25 of
-  them. `design-system/type.test.ts` fails a tenth value, and a genuine
-  platform floor (iOS zooms a field under 16px) is waived in line with its
-  reason. A role that has a class is spelled as the class: `.t-caption` is
-  quiet grey at the meta size, `.t-sub` the same at the dense size, `.t-label`,
-  `.t-eyebrow`, `.t-h3` and the rest, all in `base.css`. A rule that writes a
-  utility's properties out again under a name of its own stops moving when the
-  utility does, and `design-system/type-one-spelling.test.ts` fails it.
-- **Tracking is a family of three.** `--tracking-eyebrow` 0.08em on an
-  uppercase label, `--tracking-display` -0.03em on the display face,
-  `--tracking-normal` everywhere else. The eyebrow ran 0.02em to 0.14em across
-  eighteen sheets while the token said 0.08em, which is a label that looks
-  different depending on which screen drew it.
+- **A role that has a class is spelled as the class** — `.t-caption`,
+  `.t-sub`, `.t-label`, `.t-eyebrow`, `.t-h3` and the rest, all in `base.css`.
+  What each one draws is §4's rebuild, taken one role at a time.
 - **Radii by role**: 20px for a pane, the details panel and a reading card;
   16px for a board card and the agent's row; 12px for a control; 8px for a chip
   and 4px for a keycap; full for a pill and a monogram.

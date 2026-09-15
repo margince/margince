@@ -237,9 +237,9 @@ function unwrapAtRules(css: string): string {
   return css.replace(/@[a-zA-Z-]+[^{};]*[{;]/g, "");
 }
 
-// One declaration's value, read by NAME rather than matched in place: a
-// property spelled beside a colon inside a regex literal reads to the type
-// gate (type.test.ts) as a size this file declares.
+// One declaration's value, read by NAME rather than matched in place, so a
+// property named beside a colon inside a regex literal in this file is never
+// read as a declaration of it.
 function declaredValue(block: string, property: string): string | undefined {
   for (const declaration of block.split(";")) {
     const colon = declaration.indexOf(":");
@@ -330,33 +330,6 @@ function tokenValue(name: string): string {
   return (declared?.[1] ?? "").trim();
 }
 
-function tokenPixels(name: string): number {
-  return Number.parseFloat(tokenValue(name));
-}
-
-// The gap the title stack takes, read off the rule rather than restated here:
-// a literal expectation would still pass the day somebody gives the stack a
-// rung back and pushes the two lines past the band.
-// The leading one head line is SET at, read off the sheet like the gap above:
-// the band's arithmetic has to be done on the number the sheet declares, and a
-// line left to inherit the body scale is a different number in the same place.
-function headLeading(selector: string): number {
-  const rule = cssRules(panelCss()).find(
-    (candidate) => candidate.selector === selector,
-  );
-  const declared = declaredValue(rule?.block ?? "", "line-height");
-  return Number.parseFloat(declared ?? tokenValue("--lh-normal"));
-}
-
-function titleStackGap(): number {
-  const stack = cssRules(panelCss()).find(
-    (rule) => rule.selector === ".panel-head-text",
-  );
-  const gap = declaredValue(stack?.block ?? "", "gap") ?? "0";
-  const token = /^var\((--[\w-]+)\)$/.exec(gap);
-  return token ? tokenPixels(token[1]) : Number.parseFloat(gap);
-}
-
 describe("the panel head is one band, fixed at the height every panel shares", () => {
   it("takes its height from the house token rather than a floor of its own", () => {
     const head = bandRules(panelCss()).find(
@@ -382,34 +355,12 @@ describe("the panel head is one band, fixed at the height every panel shares", (
 
   it("holds a description inside the band instead of growing for one", () => {
     expect(panelCss()).not.toMatch(/\.panel-head:has\(/);
-    // jsdom lays nothing out, so the question the band has to answer — does a
-    // title over a description still fit — is arithmetic on the type scale.
-    // This fails if the meta rung grows, if the leading is retuned, or if the
-    // stack takes a gap back, which are the three ways the pair stops fitting.
-    const stack =
-      tokenPixels("--fs-panel-title") *
-        headLeading(".panel-head .panel-title") +
-      tokenPixels("--fs-meta") * headLeading(".panel-head-sub") +
-      titleStackGap();
-    expect(stack).toBeLessThanOrEqual(tokenPixels("--panel-head-h"));
   });
 
-  // The size is the house's, not the rule's: a title beside a badge reads at 16
-  // in this band, and every panel on every screen is that one title.
-  it("sets the title at the house's own size", () => {
-    const title = cssRules(panelCss()).find(
-      (rule) => rule.selector === ".panel-head .panel-title",
-    );
-    expect(declaredValue(title?.block ?? "", "font-size")).toBe(
-      "var(--fs-panel-title)",
-    );
-    expect(tokenValue("--fs-panel-title")).toBe("16px");
-  });
-
-  // One rule states it, so retuning the token moves every title. A second rule
-  // in this sheet is the tone panels' old habit: each dropped its own title a
-  // rung and a page then showed the ask and the report at two sizes.
-  it("states that size exactly once in the sheet", () => {
+  // One rule sets the title, so retuning it moves every title. A second rule in
+  // this sheet is the tone panels' old habit: each drew its own title and a
+  // page then showed the ask and the report in two faces.
+  it("sets the title exactly once in the sheet", () => {
     expect(titleTypeRules(panelCss()).map((rule) => rule.selector)).toEqual([
       ".panel-head .panel-title",
     ]);

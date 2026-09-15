@@ -40,9 +40,7 @@ const tokenDecls = tokensCss.replace(/\/\*[\s\S]*?\*\//g, "");
 // of measured inks that the tree has outgrown is a gate reporting PASS over a
 // case it never looked at.
 const chipInks: readonly string[] = [
-  "--textChip",
   "--textPrimary",
-  "--textContent",
   "--tealText",
   "--accentText",
   "--aiText",
@@ -59,10 +57,6 @@ const canonical: Record<string, string> = {
   "--accentLight": "rgba(11,122,83,.09)",
   "--accentMed": "rgba(11,122,83,.17)",
   "--textPrimary": "#15201B",
-  "--textContent": "#36433D",
-  "--textTertiary": "#9AA6A0",
-  "--textMuted": "#CBD2CD",
-  "--textMeta": "#5E6C65",
   "--textOnAccent": "#fff",
   "--borderSubtle": "#E3EAE6",
   "--borderStrong": "#D1D8D4",
@@ -183,7 +177,9 @@ describe("the token block's shape", () => {
       "--space-16",
       "--control-h",
       "--control-h-sm",
-      "--fs-body",
+      "--fs-base",
+      "--lh-base",
+      "--fw-base",
       "--f-body",
       "--phoneNavClearance",
     ]) {
@@ -548,9 +544,6 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
     // contact who retunes a ground finds out here rather than from a user.
     //
     // Only TEXT roles, and only against grounds they can actually sit on.
-    // --textTertiary is deliberately not in the list: it is a decorative tone
-    // that never carries prose, and holding it to 4.5:1 would make it
-    // --textMeta.
     it("every text role clears AA on every ground it sits on, both themes", () => {
       // The status Text tokens are in this list and their bases are not, which
       // is the split the family is built on: --successText and its siblings ARE
@@ -559,8 +552,6 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
       // own size and not at the prose floor.
       const prose = [
         "--textPrimary",
-        "--textContent",
-        "--textMeta",
         "--accentText",
         "--tealText",
         "--successText",
@@ -568,19 +559,18 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
         "--dangerText",
       ];
       // Per ground, the roles that can actually be read on it — not a cross
-      // product. The two rungs that carry less than everything are the reason
-      // this is a map: a hovered RAIL row sets its own ink to --textPrimary
-      // (app/shell.css), so the mid-tones never land on --bgSidebarHover, and
-      // asserting they do would force that rung lighter than the rail it has to
-      // stay darker than. The rail's static ground does carry mid-tone prose —
-      // group headings, the entitlement row — so it is held to everything.
+      // product. A ground that carries less than everything is the reason this
+      // is a map: a hovered RAIL row sets its own ink to --textPrimary
+      // (app/shell.css), so an accent label never lands on --bgSidebarHover,
+      // and asserting it does would force that rung lighter than the rail it
+      // has to stay darker than.
       const carries: Record<string, string[]> = {
         "--bgPage": prose,
         "--bgElevated": prose,
         "--bgCard": prose,
         "--bgHover": prose,
         "--bgSidebar": prose,
-        "--bgSidebarHover": ["--textPrimary", "--textContent", "--accentText"],
+        "--bgSidebarHover": ["--textPrimary", "--accentText"],
         // A FILLED control or a primary badge is a ground too, its label read
         // on the fill. A status fill is the tone's TEXT token, never the base:
         // nothing clears 4.5:1 on the base (white 2.55:1 on --success), which
@@ -823,8 +813,8 @@ describe("the derived brand layer", () => {
 // of it. This derives the corpus instead: every rule under src/ that paints
 // --bgChip, plus every rule that draws INSIDE one — the same element in another
 // state, or a descendant — and the ink each sets. An unmeasured ink is the
-// failure nothing else would see: --textMeta on the chip fill reads 3.99:1 over
-// --bgCard and looks like an ordinary declaration.
+// failure nothing else would see: it reads as an ordinary declaration and no
+// pair anywhere says what it comes out at over the fill.
 //
 // A rule is in scope when ANY compound of its selector carries every class the
 // chip's SUBJECT does: `.segmented` paints a track with no ink, and `.segmented
@@ -898,8 +888,7 @@ describe("the chip fill's call sites", () => {
   }
 
   // WCAG 1.4.3 exempts an inactive control, which is the whole point of the
-  // dimmed tone a disabled segment takes; --textTertiary is out of the contrast
-  // corpus above for the same reason and in the same words.
+  // dimmed tone a disabled segment takes.
   function isDisabledState(selector: string): boolean {
     return /:disabled|\[disabled\]|\[aria-disabled="true"\]/.test(selector);
   }
@@ -959,9 +948,9 @@ describe("the chip fill's call sites", () => {
   // The other way the fill goes wrong, and the one that broke the segmented
   // strip: --bgChip painted on a DESCENDANT of something already painted in it.
   // The two composite, the ground goes a step past where the ink was measured,
-  // and every pair above is measuring the wrong colour — --textChip on a
-  // doubled fill is 3.99:1 in light and 3.45:1 in dark. A chip is one step off
-  // its host by construction, so a chip on a chip is never what was meant; the
+  // and every pair above is measuring the wrong colour — the strip's own label
+  // came out under 4.5:1 on the doubled fill. A chip is one step off its host
+  // by construction, so a chip on a chip is never what was meant; the
   // state that wants to look pressed takes a ground from the ladder instead.
   it("never paints --bgChip inside something already painted in it", () => {
     const all = rules();
