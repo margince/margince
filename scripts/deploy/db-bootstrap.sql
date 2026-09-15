@@ -47,22 +47,75 @@ WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'margince_owner')
 ALTER ROLE margince_app   NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE;
 ALTER ROLE margince_owner NOSUPERUSER NOBYPASSRLS;
 
+-- Reassigning ownership below needs the connecting role (RDS's master user
+-- on the real path; whoever runs this script on any other Postgres) to be a
+-- MEMBER of margince_owner first — plain PostgreSQL rule for ALTER
+-- .../OWNER TO: the executor must already own the object AND be a member of
+-- the new owning role, unless the executor is a true superuser. RDS's master
+-- user holds rds_superuser, not superuser (see
+-- docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Appendix.PostgreSQL.CommonDBATasks.Roles.rds_superuser.html),
+-- so it is not exempt, and CREATE ROLE above did not make it a member of the
+-- role it just created — that membership has to be granted explicitly.
+-- INHERIT (the default) means everything below runs with margince_owner's
+-- privileges without a SET ROLE. Revoked again at the end of this script,
+-- once nothing further needs it.
+GRANT margince_owner TO CURRENT_USER;
+
 -- The application database, owned by margince_owner. CREATE DATABASE cannot run
 -- inside a DO block or a transaction, so it is guarded with \gexec instead.
+--
+-- The OWNER clause above only takes effect on the branch that actually
+-- creates the database. On RDS (deploy/terraform/aws/rds.tf sets
+-- `db_name = "margince"`), the database already exists — created by RDS
+-- itself, owned by the master user — before this script ever runs, so the
+-- WHERE NOT EXISTS guard skips this line and margince_owner never owns
+-- anything on that (the overwhelmingly common) path.
 SELECT 'CREATE DATABASE margince OWNER margince_owner'
 WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'margince')
 \gexec
+
+-- Extensions the migrations expect must be installed from here on, so switch
+-- connections to margince now — before either ALTER below, not after. On
+-- PostgreSQL 15+ `public` is owned by pg_database_owner, which resolves to
+-- whoever CURRENT_USER's database-owner check names, not to any role
+-- CURRENT_USER merely inherits from. While margince still has its original
+-- owner (the RDS master user / whoever ran CREATE DATABASE above), that
+-- owner is CURRENT_USER, so the ALTER SCHEMA below succeeds. Doing the
+-- ALTER DATABASE first would hand database ownership to margince_owner
+-- first, CURRENT_USER's inherited membership in margince_owner would NOT
+-- carry the implicit pg_database_owner membership with it, and the ALTER
+-- SCHEMA would then fail — which, under \set ON_ERROR_STOP, would silently
+-- skip the extension installs and the REVOKE at the end of this script.
+\connect margince
+
+-- `public` is created by initdb, not by this script, so a fresh Postgres
+-- ≥15 (RDS 16 included — see rds.tf) has already revoked CREATE on it from
+-- everyone but its owner before this script runs. Migration 0001_baseline's
+-- very first statement (CREATE SCHEMA ext) and its CREATE EXTENSION calls
+-- both need margince_owner to hold that privilege, which owning the schema
+-- outright guarantees without a separate GRANT to maintain in step.
+ALTER SCHEMA public OWNER TO margince_owner;
+
+-- Now safe to hand the database itself to margince_owner too — the schema
+-- transfer above no longer depends on who owns it. Unconditional and
+-- idempotent: a no-op when CREATE DATABASE above already set this owner,
+-- the actual fix when RDS created margince instead.
+ALTER DATABASE margince OWNER TO margince_owner;
 
 -- The app role must be able to reach the database; object-level grants come from
 -- migration 0015 (run by the api entrypoint as margince_owner).
 GRANT CONNECT ON DATABASE margince TO margince_app;
 
--- Extensions the migrations expect. `vector` (pgvector) is NOT a trusted
--- extension, so it cannot be installed by the non-superuser owner from a
--- migration — pre-install it (and the trusted ones too, so every migration's
--- `CREATE EXTENSION IF NOT EXISTS` is a guaranteed no-op) here as superuser.
-\connect margince
+-- `vector` (pgvector) is NOT a trusted extension, so it cannot be installed
+-- by the non-superuser owner from a migration — pre-install it (and the
+-- trusted ones too, so every migration's `CREATE EXTENSION IF NOT EXISTS`
+-- is a guaranteed no-op) here as superuser.
 CREATE EXTENSION IF NOT EXISTS vector;      -- 0022_embeddings (pgvector; untrusted)
 CREATE EXTENSION IF NOT EXISTS unaccent;    -- 0052_fts_linguistics
 CREATE EXTENSION IF NOT EXISTS pg_trgm;     -- 0052_fts_linguistics
 CREATE EXTENSION IF NOT EXISTS btree_gist;  -- 0032_meeting_exclusion
+
+-- Drop the membership taken out above — nothing past this point needs it,
+-- and margince_owner's privileges have no business lingering on whatever
+-- role runs this script after it exits.
+REVOKE margince_owner FROM CURRENT_USER;

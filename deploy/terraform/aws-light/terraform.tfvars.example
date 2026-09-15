@@ -1,0 +1,45 @@
+# Copy to terraform.tfvars and fill in the values with no default below.
+
+# ---- Required, no default ----------------------------------------------------
+
+# MARGINCE_PUBLIC_BASE_URL. This host's DNS must already point (an A
+# record) at instance_public_ip BEFORE first boot when enable_tls is true
+# (the default) — see README.md step 2. Use http:// only if you set
+# enable_tls = false and front this instance with your own TLS-terminating
+# reverse proxy or CDN instead.
+public_base_url = "https://crm.example.com"
+
+# Contact address Let's Encrypt sends expiry/revocation notices to.
+# Required when enable_tls is true (the default).
+letsencrypt_email = "ops@example.com"
+
+# MARGINCE_ADMIN_PASSWORD for the first boot. Rotate/remove per
+# docs/deployment.md once the organization exists.
+admin_bootstrap_password = "change-me-before-first-boot"
+
+# A real release version — a git SHA, MARGINCE_RELEASE_VERSION, anything but
+# "latest". The ECR repos are image_tag_mutability = IMMUTABLE (ecr.tf): the
+# first push of a tag succeeds, every push after it to the same tag is
+# refused, so "latest" only ever works once. No default on purpose.
+image_tag = "2026.09.01"
+
+# ---- Optional — shown with their defaults ------------------------------------
+
+# aws_region                    = "eu-central-1"
+# name_prefix                   = "margince-light"
+# environment                   = "production"  # stamped as the Environment tag on every resource
+# vpc_cidr                      = "10.30.0.0/16"
+# az_count                      = 2
+# cpu_architecture               = "arm64"  # or "x86_64" if your own build only pushes amd64, see variables.tf
+# instance_type                  = "t4g.small"
+# root_volume_gb                 = 30
+# db_instance_class               = "db.t4g.micro"
+# db_allocated_storage_gb         = 20
+# db_engine_version               = "16.4"
+# db_backup_retention_days        = 3
+# redis_node_type                 = "cache.t4g.micro"
+# log_retention_days              = 14
+# ecr_tagged_image_retain_count   = 10
+# license_token                   = ""
+# enable_deep_monitoring          = false  # true adds SNS + an instance status-check alarm (alarms.tf)
+# enable_tls                      = true   # false = plain HTTP only, for your own TLS-terminating proxy/CDN in front instead

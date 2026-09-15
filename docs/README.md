@@ -200,6 +200,7 @@ budget rather than keeping its own list of which pages are generated.
 
 ### Operate — run it in production
 - [deployment.md](deployment.md) — self-hosting: the container materials, the two-role non-superuser database model the grant wall requires, env-only configuration, one-host routing for `/v1` + `/mcp` + the OAuth flow, health checks, and order of operations.
+- [deployment-aws-light.md](deployment-aws-light.md) — the other AWS shape: one EC2 instance instead of the full `deploy/terraform/aws/` reference stack, what still carries over from `deployment.md` unchanged, and the one thing that doesn't (self-managed Let's Encrypt TLS, DNS-before-boot).
 - [desktop-distribution.md](explanation/desktop-distribution.md) — the other shape: one folder a non-technical user runs on macOS or Windows with no Docker. Why it must carry its own Postgres (pgvector is not in `contrib`), how relocatability is enforced and verified on each platform, the update contract the folder layout encodes, single-file configuration, the four places the two platforms are forced apart (socket vs. loopback auth, `pg_ctl` vs. a child process, Valkey vs. Redis, signing), and the limits — collation, signing, and the socket-path ceiling.
 
 ### Evidence — kept records, not current behaviour
