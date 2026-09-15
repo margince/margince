@@ -82,7 +82,7 @@ const ALIASES: Partial<Record<SettingsPageId, readonly string[]>> = {
   tags: ["tag", "label", "vocabulary"],
   products: ["product", "offer", "template", "price", "catalog"],
   capture: ["mail", "email", "domain", "sharing", "inbox", "rules"],
-  integrations: ["webhook", "overlay", "hubspot", "mirror", "sync"],
+  integrations: ["webhook", "api"],
   knowledge: ["document", "corpus", "rag", "upload"],
   import: ["csv", "upload", "migration", "bulk"],
   models: ["ai", "routing", "provider", "anthropic", "openai", "key"],

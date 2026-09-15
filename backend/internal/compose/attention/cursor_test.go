@@ -208,7 +208,7 @@ func TestACursorFromOneQueueCannotOpenAnothers(t *testing.T) {
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
 		stubBriefing{}, nil, nil, nil, nil,
-		nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+		nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
 	// Three waits each, so a page of two leaves a third behind and the read
 	// actually mints a cursor.
 	waits := []WaitingCustomer{}
@@ -321,7 +321,7 @@ func TestEquivalentSpellingsOfOneQuestionShareACursor(t *testing.T) {
 		svc := NewService(
 			stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
 			stubBriefing{}, nil, nil, nil, nil,
-			nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+			nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
 		waits := []WaitingCustomer{}
 		for i := range 3 {
 			waits = append(waits, WaitingCustomer{
@@ -372,7 +372,7 @@ func TestNamingYourselfAnswersTheSamePageAsOmittingTheOwner(t *testing.T) {
 		svc := NewService(
 			stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
 			stubBriefing{}, nil, nil, nil, nil,
-			nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+			nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
 		svc.waiting = waitingOwnedBy{
 			{
 				ActivityID: ids.MustParse("01a05500-0000-7000-8000-0000000000b1"),

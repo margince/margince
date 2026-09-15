@@ -186,7 +186,6 @@ func TestClassify_withholdsInfrastructureTextFromEverySurface(t *testing.T) {
 func TestFault_transientMeansRepeatingTheCallCanHelp(t *testing.T) {
 	cases := map[error]bool{
 		apperrors.ErrBudgetExceeded:                      true,
-		apperrors.ErrIncumbentBudgetExhausted:            true,
 		apperrors.ErrConflict:                            false,
 		apperrors.ErrConsentNotGranted:                   false,
 		apperrors.ErrSeatTierInsufficient:                false,

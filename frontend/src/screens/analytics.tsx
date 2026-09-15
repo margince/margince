@@ -41,13 +41,7 @@ import { ForecastView } from "./analytics.forecast";
 import { sourceName } from "./analytics.forecast.review";
 import { AnalyticsScopePicker } from "./analytics.scope";
 import { ShareViewButton } from "./analytics.share";
-import {
-  OverlayUnavailable,
-  problemMessageOf,
-  QueryGate,
-  throwProblem,
-  useSorMode,
-} from "./common";
+import { problemMessageOf, QueryGate, throwProblem } from "./common";
 import { dealsFilteredBy } from "./dealsaddress";
 import { EntityRef } from "./entityref";
 import { isProjectPhase, PHASE_LABEL } from "./projects.form";
@@ -1770,10 +1764,6 @@ export function AnalyticsScreen() {
   const section = sectionFromAddress(
     route.screen === "analytics" ? route.id : undefined,
   );
-  // Deal reports aggregate over the pipeline/stage structure the overlay mirror
-  // does not hold (the report endpoints answer 422 unsupported_by_sor in
-  // overlay), so the sections show the honest unavailable state.
-  const overlay = useSorMode() === "overlay";
   // The server decides which population this reader measures and which ones
   // they may choose. Read once here and handed down, so every card on the page
   // is answering about the same set.
@@ -1782,7 +1772,6 @@ export function AnalyticsScreen() {
 
   const pipelineQuery = useQuery({
     queryKey: ["pipelines"],
-    enabled: !overlay,
     queryFn: async () => {
       const { data, error } = await api.GET("/pipelines", {
         params: { query: {} },
@@ -1837,15 +1826,6 @@ export function AnalyticsScreen() {
       ) : null}
     </div>
   );
-
-  if (overlay) {
-    return (
-      <div className="wrap">
-        {header}
-        <OverlayUnavailable />
-      </div>
-    );
-  }
 
   return (
     <div className="wrap">

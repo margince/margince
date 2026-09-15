@@ -90,7 +90,6 @@ backed by the provider module's store — so neither module names the other. The
 | Consumer | ← needs | Wired as |
 |---|---|---|
 | the installation bootstrap | deals + consent + automation + activities defaults | `compose.EnsureInstallation` (one tx, at boot — `installation.go`) |
-| migration (the importer engine) | overlay's frozen mirror estate as its `Source`; contacts + deals + activities stores as its `Writers` | `mirrorFlipSource` (`flipsource.go`) + `flipWriters` (`flipwriters.go`, `flipdeals.go`, `flipowners.go`) |
 | activities | consent's outbound suppression gate; contacts (public booking); consent (unsubscribe link) | `.WithConsent(...)`, `.WithPublicBooking(...)`, `.WithUnsubscribe(...)` |
 | consent (DSR erase) | privacy's `Eraser` (blob-aware under `WithBlobstore`) | `consent.NewHandlers(pool).WithEraser(privacy.NewEraser(pool))` |
 | agents (MCP surface) | approvals' staging + redemption (the 🟡 confirm-first effects) | `approvalsHandlersWithEffects(pool)` (`.WithEffects(...)`) |
@@ -146,7 +145,7 @@ Each binary composes only what its role needs, all through this one layer:
 | The per-role `Option`s | `internal/compose/serveroptions.go` |
 | Route mounting: `contractAPI`, `operationalMux` | `internal/compose/routes.go` |
 | The installation bootstrap | `internal/compose/installation.go` |
-| The overlay→native cutover | `internal/compose/flip*.go`, `export.go`, `exportbundle.go` |
+| The workspace export bundle | `internal/compose/{export,exportbundle,exportbundletransport}.go` |
 | The datasource provider | `internal/compose/provider.go` |
 | The MCP registry | `internal/compose/registry.go` |
 | The REST admission middleware | `internal/compose/agentgate.go`, `idempotency.go` |

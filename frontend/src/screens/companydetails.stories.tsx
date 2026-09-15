@@ -49,13 +49,11 @@ const fixture: components["schemas"]["Company"] = {
 };
 export const Editable: Story = {
   args: {
-    overlay: false,
     company: fixture,
   },
 };
 export const ReadOnly: Story = {
   args: {
-    overlay: false,
     company: {
       ...fixture,
       id: "co1",

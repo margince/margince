@@ -97,7 +97,6 @@ var destinationOfSource = map[crmcontracts.WorklistItemSource]crmcontracts.Workl
 	crmcontracts.WorklistItemSourceDomainQuestion: destinationReview,
 
 	// The product reporting on itself. An administrator restores these.
-	crmcontracts.WorklistItemSourceSyncHealth:    destinationSystemHealth,
 	crmcontracts.WorklistItemSourceCaptureHealth: destinationSystemHealth,
 	crmcontracts.WorklistItemSourceAiWorkHealth:  destinationSystemHealth,
 	crmcontracts.WorklistItemSourceAutomationRun: destinationSystemHealth,

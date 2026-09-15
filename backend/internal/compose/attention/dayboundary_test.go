@@ -115,11 +115,7 @@ func TestTheZoneIsResolvedOncePerAssembly(t *testing.T) {
 	if err != nil {
 		t.Fatalf("loading the zone: %v", err)
 	}
-	s := NewService(
-		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
-		stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock,
-		WithZone(func(context.Context) (*time.Location, error) { asked++; return loc, nil }),
-	)
+	s := NewService(stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock, WithZone(func(context.Context) (*time.Location, error) { asked++; return loc, nil }))
 	if _, err := s.Assemble(pageReader()); err != nil {
 		t.Fatalf("assembling: %v", err)
 	}

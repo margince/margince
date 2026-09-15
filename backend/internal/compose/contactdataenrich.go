@@ -35,9 +35,6 @@ import (
 const contactDataEnrichActor = "system:contact-data-enrich"
 
 // The event this consumer acts on, and the object its principal is granted.
-// Spelled here rather than reusing flipObjectContact, which names the same
-// word for the incumbent-flip surface: two unrelated features sharing one
-// constant is how a rename in either silently changes the other.
 const (
 	contactCreatedEvent = "contact.created"
 	contactObject       = "contact"

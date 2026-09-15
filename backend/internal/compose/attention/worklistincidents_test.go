@@ -150,7 +150,7 @@ func TestTwoBrokenMailboxesAreTwoIncidents(t *testing.T) {
 	}
 }
 
-// Capture and overlay sync both name a condition `sync_failing`. Grouping on
+// Capture and the AI lane both name a condition `sync_failing`. Grouping on
 // the condition word alone merges two unrelated failures under one heading
 // that names neither.
 func TestTwoSourcesSharingAConditionWordAreNotOneIncident(t *testing.T) {

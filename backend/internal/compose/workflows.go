@@ -52,24 +52,17 @@ func workflowEngineWithDrafter(db *database.DB, drafter activities.EmailDrafter)
 	// identity is injected (ADR-0054 §8), same as platform/auth.NewGate.
 	engine := automation.NewWorkflowEngine(db, identity.NewService(db.Pool()))
 	contactsStore := contacts.NewStore(db)
-	// Executors ride the same per-workspace dispatch as every other
-	// datasource consumer: a starter firing for an overlay-mode
-	// workspace reads/writes through the overlay seam, not silently
-	// against the native tables that workspace no longer owns. The overlay
-	// provider here carries no live-incumbent resolver (the nil below), so
-	// a starter never triggers a force-fresh spend; its OVB meter is a
-	// fail-closed placeholder (no Redis), never charged.
+	// Executors ride the same record provider as every other datasource
+	// consumer.
 	ex := automation.Executors{
-		Provider:  NewDispatcher(NewProvider(db.Pool()), NewOverlayProvider(db.Pool(), failClosedOverlayMeter(), nil), db.Pool()),
+		Provider:  NewProvider(db.Pool()),
 		Approvals: automationApprovalsAdapter{svc: approvals.NewService(db)},
 		// The zero SendPath is the honest one here: automation.Comms declares
 		// DraftEmail alone, so no send is reachable from this surface to
 		// configure. What an automation composes waits as a held draft, and
 		// THAT release sends through the fully-wired store the send path builds
 		// (lateApprovalEffects) rather than anything configured here.
-		// nil system-of-record seam, for reconcile.go's reason: the automation
-		// executors reach DraftEmail alone.
-		Comms: newCommsAdapter(db.Pool(), drafter, SendPath{}, nil),
+		Comms: newCommsAdapter(db.Pool(), drafter, SendPath{}),
 		// The notify transport is the durable notice row (noticesseam.go):
 		// recording one is delivering one, so the engine's success record
 		// is finally a true sentence rather than a skipped run.

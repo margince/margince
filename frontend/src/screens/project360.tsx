@@ -22,7 +22,7 @@ import { TimelineFilterBar } from "../design-system/timelinefilterbar";
 import { useLocale, useT } from "../i18n";
 import { taskWriteKeys } from "./activitykeys";
 import { ArchiveAction } from "./archive";
-import { QueryGate, throwProblem, useMe, useSorMode } from "./common";
+import { QueryGate, throwProblem, useMe } from "./common";
 import { NewDealAction } from "./companyactions";
 import { CustomFieldsPanel } from "./customfields.card";
 import {
@@ -120,8 +120,7 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
   const project = view.project;
   const readOnlyReasonId = useId();
   const [moveTo, setMoveTo] = useState<ProjectPhase | null>(null);
-  const overlay = useSorMode() === "overlay";
-  const chronology = useProjectChronology(view, overlay);
+  const chronology = useProjectChronology(view);
   // Every write affordance on this page answers ONE question, asked once: an
   // archived project takes no changes, and one this caller cannot write takes
   // none from them. The verbs, the stepper and the rail cards used to ask only
@@ -262,7 +261,6 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
               // without re-checking, so `EnsureAttachable` proves the authority
               // at the moment of attaching. A caller who may read this project
               // but not write it can still work deals — just not born into it.
-              !overlay &&
               !readOnly &&
               project.company_id && (
                 <NewDealAction
@@ -340,24 +338,20 @@ function ProjectActions({
   const t = useT();
   const me = useMe();
   const companies = useCompanyOptions();
-  const overlay = useSorMode() === "overlay";
   return (
     <>
       {/* A project's mail is a NEW conversation with somebody on the account
           behind it: the composer offers that roster in To and files the send
           under this project, which is the filing a message written from here
-          can only mean. Off in overlay for the reason the other verbs are: a
-          mirrored workspace has no send of its own. No `recordAddress` — a
-          project is not a contact and has no address of its own to open with,
-          so the reader picks from the account's contacts rather than the page
-          guessing which of them a project-wide message is to. */}
-      {!overlay && (
-        <RecordEmailVerb
-          entityType="project"
-          entityId={project.id}
-          disabledReasonId={refusedReasonId}
-        />
-      )}
+          can only mean. No `recordAddress` — a project is not a contact and has
+          no address of its own to open with, so the reader picks from the
+          account's contacts rather than the page guessing which of them a
+          project-wide message is to. */}
+      <RecordEmailVerb
+        entityType="project"
+        entityId={project.id}
+        disabledReasonId={refusedReasonId}
+      />
       <OverflowMenu label={t("record.moreActions")}>
         {/* Worded — a bare pencil among sentences names nothing to a reader. */}
         <EditAction<Project>
@@ -397,13 +391,11 @@ function ProjectActions({
           invalidate="projects"
           recordKey="project"
         />
-        {!overlay && (
-          <ShareAction
-            recordType="project"
-            recordId={project.id}
-            disabledReasonId={refusedReasonId}
-          />
-        )}
+        <ShareAction
+          recordType="project"
+          recordId={project.id}
+          disabledReasonId={refusedReasonId}
+        />
         <AssignProjectOwnerAction
           project={project}
           disabledReasonId={refusedReasonId}
@@ -453,10 +445,7 @@ type ChronologySlots = Readonly<{
  * page of activities is what is drawn, so the list cannot disagree with the
  * rollup figures read in the same transaction.
  */
-function useProjectChronology(
-  view: Project360,
-  overlay: boolean,
-): ChronologySlots {
+function useProjectChronology(view: Project360): ChronologySlots {
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
@@ -499,9 +488,6 @@ function useProjectChronology(
       />
     ),
   });
-  if (overlay) {
-    return { timeline: history.entries, timelineNotice: <span /> };
-  }
   // A withheld activities section is not an empty timeline, and the change
   // feed is a separate grant: Activities and All say withheld, Changes still
   // reads.

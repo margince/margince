@@ -81,10 +81,6 @@ func apiUnflaggedItems() []config.Item {
 	both := []string{config.RoleAPI, config.RoleWorker}
 	return []config.Item{
 		{
-			Name: overlayBackfillLimitEnv, Kind: config.KindInt, Default: "0", Roles: both,
-			Doc: "per-object-class cap on the overlay initial backfill; 0 runs it uncapped",
-		},
-		{
 			Name: oauthAccessTokenTTLEnv, Kind: config.KindDuration, Default: "0", Roles: []string{config.RoleAPI},
 			Doc: "lifetime of a minted OAuth access token; 0 takes the compiled default",
 		},

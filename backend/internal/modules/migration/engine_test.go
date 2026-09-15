@@ -16,6 +16,11 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// connectorHubSpot is a connector the column's CHECK admits but no Go
+// constant names yet — the cases here need a NON-csv value, and undo's
+// csv-only refusal needs one that is honestly not csv.
+const connectorHubSpot = "hubspot"
+
 // Every exported RunStore entry point admits on the import_run object BEFORE it
 // opens a transaction, so an ungranted actor is refused without a database. The
 // nil pool is what proves it: a guard that ever slipped behind the query would
@@ -42,11 +47,11 @@ func TestRunStoreRefusesUngrantedRole(t *testing.T) {
 		call func() error
 	}{
 		{"Create", func() error {
-			_, err := s.Create(ctx, CreateRunInput{Connector: ConnectorMirror, SourceRef: "x", Source: "t"})
+			_, err := s.Create(ctx, CreateRunInput{Connector: connectorHubSpot, SourceRef: "x", Source: "t"})
 			return err
 		}},
 		{"Get", func() error { _, err := s.Get(ctx, runID); return err }},
-		{"Latest", func() error { _, err := s.Latest(ctx, ConnectorMirror); return err }},
+		{"Latest", func() error { _, err := s.Latest(ctx, connectorHubSpot); return err }},
 		{"LookupIdentity", func() error {
 			_, _, err := s.LookupIdentity(ctx, "hubspot", "contact", "1")
 			return err

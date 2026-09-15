@@ -126,7 +126,7 @@ Migrate-once schema setup + fast data-only reset for the integration lanes (`Ens
 Callers branch with `errors.Is`; the HTTP/MCP choke-points own the wire mapping. **Never** invent a
 new error string a handler must parse — extend this registry (with the contract) instead.
 - Core sentinels: `ErrNotFound`, `ErrConflict`, `ErrScopeExceeded`, `ErrPermissionDenied`, `ErrRequiresApproval`, `ErrVersionSkew`, `ErrBudgetExceeded`, `ErrApprovalTokenInvalid`, `ErrConsentNotGranted`, `ErrSeatTierInsufficient`.
-- Overlay sentinels: `ErrModeNotOverlay`, `ErrUnsupportedBySoR`, `ErrIncumbentAlreadyConnected`, `ErrOverlayFlipBlocked`, `ErrIncumbentBudgetExhausted`.
+- System-of-record sentinel: `ErrUnsupportedBySoR`.
 - **Reach for it when:** returning any domain error.
 
 ### `shared/kernel/ids` — UUIDv7 identifiers

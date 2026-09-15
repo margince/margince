@@ -243,9 +243,9 @@ function SearchHit({
         ) : (
           <span>{hit.title ?? hit.id}</span>
         )}
-        {/* Only a tier the reader would not otherwise assume. In native mode
-            every stored record is `authoritative` (contract: external and
-            unverified are reserved for overlay/connector rows), so badging it
+        {/* Only a tier the reader would not otherwise assume. Nearly every
+            stored record is `authoritative` (contract: external and unverified
+            are reserved for connector rows), so badging it
             put the same green pill on every hit on the page — a mark that
             never varies marks nothing, and it crowded out the one that does.
             `unverified` is the opposite case and keeps its badge: it is rare by
@@ -253,9 +253,9 @@ function SearchHit({
             nothing reads as a record with nothing to declare.
 
             Neither badge names the SYSTEM a row came from. `external` covers
-            every overlay- and connector-sourced row and the hit carries no
-            provider field, so one vendor's name would be stamped on rows
-            mirrored from any other. */}
+            every connector-sourced row and the hit carries no provider field,
+            so one vendor's name would be stamped on rows mirrored from any
+            other. */}
         {hit.trust_tier === "external" && (
           <Badge tone="accent">{t("search.tier.mirrored")}</Badge>
         )}

@@ -113,8 +113,6 @@ import { SEARCH_DEBOUNCE_MS } from "./listquery";
 import { MailSharingCard, MailSharingPostureRow } from "./mail-sharing";
 import { OAuthAppCard } from "./oauth-app";
 import { OfferTemplatesAdmin } from "./offertemplates";
-import { OverlayCard } from "./overlay";
-import { MirrorUserMapCard } from "./overlay-usermap";
 import { OvernightGrantCard } from "./overnight-grant";
 import { OwnDomainsCard } from "./own-domains";
 import { PasswordSettingRow } from "./passwordcard";
@@ -436,27 +434,17 @@ function ConnectionsTab() {
   );
 }
 
-// What the INSTALLATION is wired to: one shared contact-data credential, the
-// outbound subscriptions, the incumbent CRM it mirrors, and who each of its users
-// is over there. All four are workspace-wide — a key everybody spends from, a webhook everybody's writes
-// fire, a system-of-record flip that re-points every read — which is why they
-// sit under the company heading and the personal connections do not.
+// What the INSTALLATION is wired to: one shared contact-data credential and the
+// outbound subscriptions. Both are workspace-wide — a key everybody spends from
+// and a webhook everybody's writes fire — which is why they sit under the
+// company heading and the personal connections do not.
 function IntegrationsTab() {
   return (
     <>
       <ProviderCard />
       <WebhooksCard />
-      {/* Everything overlay — connect, live sync/budget health (OverlayCard
-          renders OverlayLiveSection itself once a connection is active or in
-          error, so it is not rendered a second time here), and the user
-          mapping. Deliberately NOT gated on useSorMode() === "overlay": a
-          workspace is native until an overlay is connected, so mode-gating
-          would hide the only surface that can connect one. In native mode
-          OverlayCard renders its connect form and the rest stays quiet. */}
-      <OverlayCard />
-      <MirrorUserMapCard />
       {/* The other half of the units split: a unit whose secret is
-          `workspace`-scoped holds the INSTALLATION's credential, like the four
+          `workspace`-scoped holds the INSTALLATION's credential, like the two
           cards above it, so it is offered here and not on a member's own
           Connections page. Which page a unit lands on is its manifest's
           decision, never this file's. */}

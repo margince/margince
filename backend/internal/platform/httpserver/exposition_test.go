@@ -19,7 +19,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 )
 
 // hangUp is a ResponseWriter whose body refuses after the first write, which is
@@ -57,20 +56,11 @@ func TestNothingIsMeasuredForAScrapeThatHasAlreadyGone(t *testing.T) {
 		Published: func() uint64 { return 0 },
 		Extra:     func(io.Writer) { measured["extra"] = true },
 		JobStats:  func(context.Context, io.Writer) error { measured["jobs"] = true; return nil },
-		Overlay: &OverlayMetrics{
-			SourceLag: func(context.Context) (map[string]time.Duration, error) {
-				measured["overlay"] = true
-				return map[string]time.Duration{}, nil
-			},
-			SyncedTotal:   func() uint64 { return 0 },
-			ConflictTotal: func() uint64 { return 0 },
-			DeletedTotal:  func() uint64 { return 0 },
-		},
 	})(w, httptest.NewRequest(http.MethodGet, "/metrics", nil))
 
 	// The runtime section is first and does the refusing, so everything after
 	// it is work for a body that cannot be delivered.
-	for _, section := range []string{"backlog", "extra", "jobs", "overlay"} {
+	for _, section := range []string{"backlog", "extra", "jobs"} {
 		if measured[section] {
 			t.Errorf("the %s section was measured after the scrape's writer was already gone — "+
 				"a database read nobody will see the result of, on a socket that is not there", section)
@@ -92,33 +82,6 @@ func TestTheExpositionKeepsRefusingAfterTheFirstFailure(t *testing.T) {
 	if _, err := out.Write([]byte("third")); !errors.Is(err, errClientGone) {
 		t.Errorf("a write after the refusal answered %v, want the remembered %v — "+
 			"claiming success after failing lets a caller that checks keep writing into nothing", err, errClientGone)
-	}
-}
-
-// Every supplier, not only the expensive ones. printf goes quiet after a
-// refusal, but Go evaluates its arguments first, so a counter read still
-// happens unless the section that would print it is guarded. Cheap here — the
-// suppliers are atomic loads — and the point is the rule rather than the cost:
-// "nothing is measured for a scrape that has gone" is either true of all of
-// them or it is a claim a reader has to check one section at a time.
-func TestNoCounterIsReadForAScrapeThatHasAlreadyGone(t *testing.T) {
-	read := map[string]bool{}
-	w := &hangUp{ResponseWriter: httptest.NewRecorder(), accepts: 1}
-
-	Metrics(MetricsInput{
-		Published: func() uint64 { read["published"] = true; return 0 },
-		Overlay: &OverlayMetrics{
-			SourceLag:     func(context.Context) (map[string]time.Duration, error) { return map[string]time.Duration{}, nil },
-			SyncedTotal:   func() uint64 { read["synced"] = true; return 0 },
-			ConflictTotal: func() uint64 { read["conflict"] = true; return 0 },
-			DeletedTotal:  func() uint64 { read["deleted"] = true; return 0 },
-		},
-	})(w, httptest.NewRequest(http.MethodGet, "/metrics", nil))
-
-	for _, supplier := range []string{"published", "synced", "conflict", "deleted"} {
-		if read[supplier] {
-			t.Errorf("the %s counter was read after the scrape's writer was already gone", supplier)
-		}
 	}
 }
 

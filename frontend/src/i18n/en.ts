@@ -118,7 +118,6 @@ export const en = {
   "brief.coverage.source.bounce": "Undeliverable emails",
   "brief.coverage.source.ai_work_health": "Automation checks",
   "brief.coverage.source.capture_health": "Mailbox connections",
-  "brief.coverage.source.sync_health": "CRM sync checks",
   "brief.coverage.source.failed_approval": "Failed approved actions",
   "brief.coverage.source.relationship_decay": "Quiet relationships",
   "brief.coverage.source.meeting_outcome": "Meeting follow-up",
@@ -845,8 +844,6 @@ export const en = {
   "state.withheld": "Hidden — your role cannot read this",
   "state.unavailable":
     "Could not be loaded — this may not be the whole picture",
-  "state.unsupported":
-    "Not available in this mode — the connected system does not hold it",
   "state.failed": "This section did not load.",
   "state.loading": "Loading this section…",
   "state.retry": "Try again",
@@ -871,8 +868,6 @@ export const en = {
   "list.loadMore": "Load more",
   "list.viewAll": "All",
   "list.viewHot": "Hot",
-  "list.overlayReadOnly":
-    "Sorting and filters read through HubSpot — open it there",
 
   // The list surface (design-system/listtable.tsx). The count says "loaded"
   // rather than a total on purpose: paging is a keyset cursor, so the number
@@ -919,152 +914,6 @@ export const en = {
   "table.filterSearching": "Searching…",
   "table.filterSearchFailed": "The search failed. Try again.",
   "table.filterNoMatches": "No matches.",
-  "overlay.unavailable":
-    "Not available while reading from HubSpot — open it in HubSpot",
-  "overlay.chipLabel": "Reading from HubSpot",
-  "overlay.chipAria":
-    "This installation reads records from a HubSpot mirror instead of native tables. Open Settings → Integrations to manage the connection.",
-  "overlay.refused":
-    "Not available while reading from HubSpot — the mirror can't serve this write.",
-  "overlay.filterUnsupported":
-    "This filter or sort isn't available while reading from HubSpot — remove it and try again.",
-  "overlay.emptyOwnerHint":
-    "An empty list here usually means the owner's HubSpot email doesn't match a user in this company, not an empty HubSpot portal.",
-  "overlay.partialWriteBack":
-    "Only the fields HubSpot accepts are written back — anything else here, including custom fields and owner, is not applied at all; HubSpot's current value is kept.",
-
-  "overlay.title": "HubSpot mirror",
-  "overlay.sub":
-    "Connect the company's incumbent CRM so records read from its mirror instead of native tables.",
-  "overlay.loading": "Loading the incumbent connection…",
-  "overlay.notConfigured": "Overlay mode isn't configured in this deployment.",
-  "overlay.loadFailed": "Couldn't load the incumbent connection.",
-  "overlay.empty":
-    "No incumbent is connected. Connect HubSpot to read records from its mirror.",
-  "overlay.adminOnly":
-    "You do not have permission to change the HubSpot connection.",
-  "overlay.loadFailedTitle": "The connection could not be read",
-  "overlay.region": "Region",
-  "overlay.regionEu1": "EU",
-  "overlay.connectionLabel": "Connection",
-  "overlay.notConnectedYet": "Not connected",
-  "overlay.regionUs": "United States",
-  "overlay.token": "Private-app token",
-  "overlay.tokenHint": "Sealed into the vault; never shown again.",
-  "overlay.connect": "Connect HubSpot",
-  "overlay.reconnect": "Reconnect",
-  "overlay.connectConfirmTitle": "Connect HubSpot for the whole company?",
-  "overlay.reconnectConfirmTitle": "Reconnect HubSpot for the whole company?",
-  "overlay.connectConfirmBody":
-    "This switches every seat's reads to HubSpot's mirror immediately, and records become read-only wherever the mirror can't serve a write. This affects the whole installation, not just your own session.",
-  "overlay.statusActive": "Connected",
-  "overlay.statusRevoked": "Revoked",
-  "overlay.statusError": "Sync error",
-  "overlay.connectedAt": "Connected {at}",
-  "overlay.syncTitle": "Mirror sync",
-  "overlay.syncLoadFailed": "Couldn't load sync status.",
-  "overlay.syncLoadFailedTitle": "Sync status could not be read",
-  "overlay.syncEmpty": "Nothing has synced yet.",
-  "overlay.syncStateFresh": "Fresh",
-  "overlay.syncStatePending": "Pending sync",
-  "overlay.syncStateStale": "Stale",
-  "overlay.backfillDone": "Backfill complete",
-  "overlay.backfillPending": "Backfill in progress",
-  "overlay.lastSynced": "Last synced {at}",
-  "overlay.neverSynced": "Never synced",
-  "overlay.budgetTitle": "API budget",
-  "overlay.budgetLoadFailed": "Couldn't load the budget window.",
-  "overlay.budgetLoadFailedTitle": "The budget window could not be read",
-  "overlay.budgetHeadroom": "Headroom: {headroom}",
-  "overlay.budgetUnmeasured":
-    "Live calls are paused as a precaution. This is not HubSpot quota pressure — the meter itself is not reporting.",
-  "overlay.budgetUnmeasuredTitle": "The call budget cannot be measured",
-  "overlay.budgetEmpty":
-    "The incumbent reported no budget window for this period.",
-  "overlay.budgetSources":
-    "Force-fresh {forceFresh} · Poller {poller} · Capture {capture}",
-  "overlay.budgetSearch": "Search API: {consumed} / {limit} per second",
-  "overlay.bandOk": "Healthy",
-  "overlay.bandWarn": "Approaching limit",
-  "overlay.bandShed": "Shedding load",
-  "overlay.reconcile": "Sync now",
-  "overlay.reconcileQueued":
-    "Sweep queued — the worker picks it up on its next poll (about every 2 minutes).",
-  "overlay.reconcileFailedTitle": "The sweep was not queued",
-  "overlay.disconnect": "Disconnect",
-  "overlay.disconnectTitle": "Disconnect HubSpot?",
-  "overlay.disconnectBody":
-    "This purges the mirrored data and switches the company back to native records. The audit trail is kept.",
-
-  "overlay.userMap.title": "Mirror user mapping",
-  "overlay.userMap.sub":
-    "Who each user in this company is as a {principal} user. This mapping is the whole of their mirror visibility.",
-  "overlay.userMap.cost":
-    "A user with no mapping sees no mirrored records at all — their lists come back empty.",
-  "overlay.userMap.costTitle": "An unmapped user sees nothing",
-  "overlay.userMap.loading": "Loading the user mapping…",
-  "overlay.userMap.loadFailed": "Couldn't load the user mapping.",
-  "overlay.userMap.loadFailedTitle": "The user mapping could not be read",
-  "overlay.userMap.adminOnly":
-    "You do not have permission to review who is mapped.",
-  "overlay.userMap.notOverlay":
-    "This company reads from native tables, so there is nothing to map.",
-  "overlay.userMap.notConfigured":
-    "Overlay mode isn't configured in this deployment.",
-  "overlay.userMap.empty": "This company has no users to map.",
-  "overlay.userMap.view": "Grouping",
-  "overlay.userMap.viewByUser": "By user",
-  "overlay.userMap.viewByOwner": "By {principal} user",
-  "overlay.userMap.principal.hubspot": "HubSpot",
-  "overlay.userMap.principal.generic": "connected CRM",
-  "overlay.userMap.you": "You",
-  "overlay.userMap.matchEmail": "Matched by email",
-  "overlay.userMap.matchManual": "Manual override",
-  "overlay.userMap.map": "Map",
-  "overlay.userMap.change": "Change",
-  "overlay.userMap.unmap": "Unmap",
-  "overlay.userMap.cancel": "Cancel",
-  "overlay.userMap.pickerLabel": "Search {principal} users",
-  "overlay.userMap.pickTitle": "Map to a {principal} user",
-  "overlay.userMap.truncated":
-    "The {principal} directory is longer than this list — someone you can't find here may be past the cut-off.",
-  "overlay.userMap.directoryFailed":
-    "Couldn't read the {principal} directory, so nobody can be picked right now.",
-  "overlay.userMap.directoryFailedTitle": "The directory could not be read",
-  "overlay.userMap.saveFailedTitle": "That mapping was not saved",
-  "overlay.userMap.notMapped": "Not mapped",
-  "overlay.userMap.chip.noEmailMatch": "No email match",
-  "overlay.userMap.chip.ambiguousEmail": "Ambiguous email",
-  "overlay.userMap.chip.blockedByAdmin": "Unmapped by an admin",
-  "overlay.userMap.chip.notYetSynced": "Not synced yet",
-  "overlay.userMap.chip.directoryUnavailable": "Reason unknown",
-  "overlay.userMap.reason.noEmailMatch":
-    "No {principal} user has this email address.",
-  "overlay.userMap.reason.ambiguousEmail":
-    "Two or more {principal} users share this email address, so no automatic match is safe.",
-  "overlay.userMap.reason.blockedByAdmin":
-    "An admin unmapped this user, and automatic matching will not map them again.",
-  "overlay.userMap.reason.notYetSynced":
-    "The {principal} directory hasn't listed this user yet.",
-  "overlay.userMap.reason.directoryUnavailable":
-    "Couldn't read the whole {principal} directory, so no reason can be derived.",
-  "overlay.userMap.staleChip": "No longer in the {principal} directory",
-  "overlay.userMap.staleNote":
-    "This manual mapping grants no visibility. It is reported, never withdrawn automatically — the decision stays yours.",
-  "overlay.userMap.unmapTitle": "Unmap this user?",
-  "overlay.userMap.unmapSelfTitle": "Unmap yourself?",
-  "overlay.userMap.unmapBody":
-    "{user} will stop seeing every mirrored record until they are mapped again.",
-  "overlay.userMap.unmapSelfBody":
-    "You will stop seeing every mirrored record until you are mapped again. This tab stays reachable, so you can undo it here.",
-  "overlay.userMap.sharedSeat": "Shared seat — {count} users",
-  "overlay.userMap.ownerEmpty": "Nobody is mapped to a {principal} user yet.",
-  "overlay.userMap.unmappedCount_one":
-    "1 user is not mapped and isn't shown here — switch to By user to fix that.",
-  "overlay.userMap.unmappedCount_other":
-    "{count} users are not mapped and aren't shown here — switch to By user to fix that.",
-  "overlay.userMap.partialView":
-    "This grouping and count cover the users loaded so far. Load more to see the rest.",
 
   "contacts.name": "Name",
   "contacts.email": "Email",
@@ -2412,8 +2261,6 @@ export const en = {
   "tagResult.noneLeft": "Nothing carries it any more",
   "tagResult.unnamed": "Unnamed",
   "co.timeline.empty": "Nothing logged on this account yet.",
-  "co.overlayFallback":
-    "This account is served from the connected system of record, so the company view is not assembled here. Open it in that system to see the full picture.",
   "company.domains": "Domains",
   "company.factCategory.company": "Company",
   "company.factCategory.offering": "Offering",
@@ -2542,8 +2389,6 @@ export const en = {
   "lead.terminalReadOnly": "This lead is closed and takes no changes.",
   "lead.notYoursToChange":
     "You cannot change this lead. Ask its owner to share it with you, or your administrator for the right to edit it.",
-  "lead.callNotInOverlay":
-    "This lead is a mirror of the system of record, which takes no activity from here \u2014 log the call where the record lives.",
   "lead.boardCountsUnavailable":
     "The Qualified and Disqualified counts could not be read.",
   "lead.boardTerminalRowsUnavailable":
@@ -2707,8 +2552,6 @@ export const en = {
   "lead.viewEngaged": "Engaged",
   "lead.ladder": "Lead status",
   "lead.ladder.new": "New — nobody has reached out yet.",
-  "lead.ladder.overlay":
-    "The mirror does not move a lead's status; change it in the source system.",
   "lead.ladder.automatic": "{label} · set automatically from captured activity",
   "lead.ladder.automaticWith": "{label} · set automatically — {what} on {at}",
   "lead.ladder.byHand": "{label} · set by hand",
@@ -2769,7 +2612,6 @@ export const en = {
   "deals.winReasonOther": "Something else",
   "deals.winReasonDetail": "What was it?",
   "deals.confirm": "Confirm",
-  "deals.loading": "Reading the deals…",
   "deals.cancel": "Cancel",
   "deals.advanced": "Moved to {stage}",
   "deal.pendingApprovals": "Awaiting your confirmation",
@@ -9904,32 +9746,6 @@ export const en = {
   "worklist.untitled.failed_approval": "Something you approved did not run",
   "worklist.untitled.dsr": "An open privacy request",
   "worklist.untitled.notice_case": "A disclosure this contact is owed",
-  "worklist.untitled.sync_health": "The CRM sync needs attention",
-  "worklist.sync.class.contacts": "contacts",
-  "worklist.sync.class.companies": "companies",
-  "worklist.sync.class.deals": "deals",
-  "worklist.sync.class.leads": "prospects",
-  "worklist.sync.class.calls": "calls",
-  "worklist.sync.class.meetings": "meetings",
-  "worklist.sync.class.emails": "emails",
-  "worklist.sync.class.notes": "notes",
-  "worklist.sync.class.tasks": "tasks",
-  "worklist.sync.error.rate_limited":
-    "the other system is limiting how often we may ask",
-  "worklist.sync.error.unreachable": "the other system cannot be reached",
-  "worklist.sync.error.auth": "the connection needs signing in again",
-  "worklist.sync.error.history_gone":
-    "the other system no longer holds that history",
-  "worklist.sync.error.internal": "something on our side went wrong",
-  "worklist.sync.band.warn":
-    "Close to the read budget, so some reads may be served from the copy.",
-  "worklist.sync.band.shed":
-    "Over the read budget: reads are being served from the copy rather than live.",
-  "worklist.sync.failing": "Not syncing — {reason}.",
-  "worklist.sync.objects_stale": "Out of date here: {classes}.",
-  "worklist.sync.backfill_incomplete": "Still importing: {classes}.",
-  "worklist.sync.records_overwritten":
-    "Changed here and overwritten by the other system: {classes}.",
   "worklist.untitled.capture_health": "A mailbox connection needs attention",
   "worklist.untitled.ai_work_health": "AI work needs a look",
   "worklist.untitled.bounce": "An email did not arrive",

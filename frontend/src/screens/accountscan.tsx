@@ -44,9 +44,8 @@ const POLL_LIVE_MS = 3000;
  * reader sees it against what it stored and answers with the stored findings,
  * the same findings marked stale, or a queued read — so an open costs a
  * model call only when the account moved and the hourly floor has passed.
- * `enabled` is false where the page cannot ask at all — an overlay
- * workspace, a 360 that has not answered — so nothing is asked for a page
- * that has nothing to show it on.
+ * `enabled` is false where the page cannot ask at all — a 360 that has not
+ * answered — so nothing is asked for a page that has nothing to show it on.
  */
 export function useAccountScan(
   companyId: string,

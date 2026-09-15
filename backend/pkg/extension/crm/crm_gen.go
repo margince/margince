@@ -468,8 +468,7 @@ type Activity struct {
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
-	// (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
-	// not only overlay mode.
+	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version *RowVersion `json:"version,omitempty"`
 }
 
@@ -691,6 +690,5 @@ type ProviderRef = string
 // RowVersion Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 // Echoed back as the `version` field on every mutable entity. To make a write conditional,
 // send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
-// (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
-// not only overlay mode.
+// (ErrVersionSkew) so the client re-reads before retrying.
 type RowVersion = int64

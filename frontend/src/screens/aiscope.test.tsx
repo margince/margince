@@ -153,7 +153,7 @@ describe("Ask about this account, scoped to a project", () => {
           sentences: [],
         }),
     });
-    render(<AskSection companyId="o-1" enabled projects={view.projects} />);
+    render(<AskSection companyId="o-1" projects={view.projects} />);
     const user = userEvent.setup();
     await user.click(screen.getByRole("combobox", { name: "Project" }));
     await user.click(screen.getByRole("option", { name: /ERP-27/ }));
@@ -190,7 +190,7 @@ describe("Ask about this account, scoped to a project", () => {
         });
       },
     });
-    render(<AskSection companyId="o-1" enabled projects={view.projects} />);
+    render(<AskSection companyId="o-1" projects={view.projects} />);
     const user = userEvent.setup();
     await user.click(screen.getByRole("combobox", { name: "Project" }));
     await user.click(screen.getByRole("option", { name: /ERP-27/ }));
@@ -217,7 +217,7 @@ describe("Ask about this account, scoped to a project", () => {
         }),
     });
     const { rerender } = render(
-      <AskSection companyId="o-1" enabled projects={view.projects} />,
+      <AskSection companyId="o-1" projects={view.projects} />,
     );
     const user = userEvent.setup();
     await user.click(screen.getByRole("combobox", { name: "Project" }));
@@ -225,7 +225,7 @@ describe("Ask about this account, scoped to a project", () => {
     expect(screen.getByText("Scoped to ERP-27")).toBeTruthy();
 
     // The ERP project closes; the page's refetched list no longer carries it.
-    rerender(<AskSection companyId="o-1" enabled projects={[migration]} />);
+    rerender(<AskSection companyId="o-1" projects={[migration]} />);
     await waitFor(() =>
       expect(
         screen.getByRole("combobox", { name: "Project" }).textContent,
@@ -239,7 +239,7 @@ describe("Ask about this account, scoped to a project", () => {
     });
 
     // No project left at all: the hidden id must not keep travelling.
-    rerender(<AskSection companyId="o-1" enabled projects={[]} />);
+    rerender(<AskSection companyId="o-1" projects={[]} />);
     await user.click(screen.getByRole("button", { name: "What's open here?" }));
     await waitFor(() => expect(seen).toHaveLength(2));
     expect(seen[1].body).toEqual({ question: "whats_open" });
@@ -256,7 +256,7 @@ describe("Ask about this account, scoped to a project", () => {
           sentences: [],
         }),
     });
-    render(<AskSection companyId="o-1" enabled projects={view.projects} />);
+    render(<AskSection companyId="o-1" projects={view.projects} />);
     await userEvent
       .setup()
       .click(screen.getByRole("button", { name: "What's open here?" }));

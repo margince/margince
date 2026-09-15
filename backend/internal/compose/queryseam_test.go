@@ -4,15 +4,11 @@
 package compose
 
 import (
-	"context"
-	"encoding/json"
-	"errors"
 	"slices"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/search"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
@@ -52,41 +48,6 @@ func TestTheSurfaceAndTheExecutorAgreeOnDegradation(t *testing.T) {
 		t.Errorf("the executor says %q and search_context says %q; a caller branching on the code "+
 			"would read one condition as two",
 			search.CodeSemanticRankingDegraded, agents.CodeSemanticRankingDegraded)
-	}
-}
-
-// The mode guard is the reason this tool is composed here rather than
-// registered next to its executor: the plan runs against the NATIVE tables, and
-// an overlay workspace has no rows in them. A well-formed empty answer is the
-// silent break ADR-0018 forbids, so the refusal is the declared one.
-func TestAnOverlayWorkspaceIsRefusedRatherThanAnsweredFromNativeTables(t *testing.T) {
-	reached := false
-	guarded := nativeOnlyQueryRunner(stubOverlayMode{overlay: true}, func(context.Context, json.RawMessage) (agents.QueryAnswer, error) {
-		reached = true
-		return agents.QueryAnswer{}, nil
-	})
-
-	_, err := guarded(t.Context(), json.RawMessage(`{"version":"v1","target":"deal"}`))
-	if !errors.Is(err, apperrors.ErrUnsupportedBySoR) {
-		t.Errorf("err = %v, want the declared unsupported-by-SoR refusal", err)
-	}
-	if reached {
-		t.Error("the executor ran for an overlay workspace, against tables holding none of its records")
-	}
-}
-
-// An unresolved mode refuses. Defaulting to native would answer an overlay
-// workspace from the wrong tables on exactly the request whose mode nobody
-// could read — the case the guard exists for.
-func TestAnUnreadableModeRefusesRatherThanAssumingNative(t *testing.T) {
-	failed := errors.New("resolving the workspace mode")
-	guarded := nativeOnlyQueryRunner(stubOverlayMode{err: failed}, func(context.Context, json.RawMessage) (agents.QueryAnswer, error) {
-		t.Error("the executor ran without the mode having been resolved")
-		return agents.QueryAnswer{}, nil
-	})
-
-	if _, err := guarded(t.Context(), json.RawMessage(`{}`)); !errors.Is(err, failed) {
-		t.Errorf("err = %v, want the mode read's own failure", err)
 	}
 }
 
@@ -151,12 +112,3 @@ func TestQueryWorkspaceIsOnTheComposedSurface(t *testing.T) {
 		t.Errorf("tier = %v, want auto-execute: a read is reversible and logged", spec.Tier)
 	}
 }
-
-// stubOverlayMode answers a fixed mode, which is what lets the guard's two
-// branches be exercised without a database.
-type stubOverlayMode struct {
-	overlay bool
-	err     error
-}
-
-func (s stubOverlayMode) isOverlayUncached(context.Context) (bool, error) { return s.overlay, s.err }

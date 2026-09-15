@@ -63,17 +63,15 @@ func WithDataReset(schemaPool *pgxpool.Pool, seeds deployconfig.Seeds, allowed b
 		s.dataResetHandlers = dataResetHandlers{
 			pool: pool, schemaPool: schemaPool, seeds: seeds, dataResetAllowed: allowed, log: s.log,
 			// A pointer into the Server, so WithResetRuntime may be applied
-			// before or after this option (see Server.resetRuntime). The meter
-			// is likewise the ONE shared instance WithOverlayMeter rebinds; the
-			// object store is backfilled by WithBlobstore when it runs later,
-			// and the flush is a method value that reads the Server's caches at
-			// reset time, not now.
+			// before or after this option (see Server.resetRuntime). The object
+			// store is backfilled by WithBlobstore when it runs later, and the
+			// flush is a method value that reads the Server's caches at reset
+			// time, not now.
 			//
 			// flushAfterOwnReset, NOT FlushResetCaches: this handler is the
 			// gated path, so it is the one allowed to clear the auth lockout
 			// buckets as well as the caches.
 			runtime: &s.resetRuntime,
-			budget:  s.overlayMeter,
 			blob:    s.blob,
 			vault:   s.vault,
 			flush:   s.flushAfterOwnReset,

@@ -323,13 +323,7 @@ func startRunnerLane(ctx context.Context, cfg workerConfig, pool *pgxpool.Pool, 
 		return nil
 	}
 	grounding := search.NewRetriever(search.NewStore(compose.InstallationDB(pool)), modelPath.Embedder)
-	// The Surface-B runner's agent tools reach overlay write-back through the
-	// workspace's own vaulted incumbent token; wire the vault-backed resolver so
-	// an autonomous run can write back. A deployment with none configured has a
-	// nil vault here, and the resolver answers "no incumbent" from it — the same
-	// unsupported that the job lane's equivalent surface reports, because it is
-	// now the same value rather than a second reading of one.
-	// The same pool and custodian back the extension tier's per-call Runtime:
+	// The pool and custodian back the extension tier's per-call Runtime:
 	// a Surface-B run invokes governed extension tools through the runner's
 	// registry, so this role serves them and must bind what they reach the
 	// installation through. Bound here rather than at RegisterExtensions
@@ -346,7 +340,7 @@ func startRunnerLane(ctx context.Context, cfg workerConfig, pool *pgxpool.Pool, 
 	// order the boot reaches them in: one pool, and the boot's one vault,
 	// which is already nil on a deployment that configured none.
 	compose.BindExtensionRuntime(pool, vault)
-	runnerSvc := compose.NewRunnerService(pool, modelPath.AgentLoop, modelPath.DraftReply, grounding, logger, compose.OverlayIncumbentResolver(pool, vault), send)
+	runnerSvc := compose.NewRunnerService(pool, modelPath.AgentLoop, modelPath.DraftReply, grounding, logger, send)
 	_, _ = fmt.Fprintln(stdout, "worker resuming approved Surface-B runs (cg:overnight-agent)")
 	lanes.runner = runnerSvc
 	lanes.background.Go(func() { runResumeSubscriber(ctx, rdb, runnerSvc, logger) })

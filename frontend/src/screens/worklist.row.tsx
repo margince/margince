@@ -55,7 +55,6 @@ import {
 import { noticeDetail, readerTask } from "./worklist.reader";
 import { CompactRowLine, type RowReadings } from "./worklist.row.compact";
 import { RowActs } from "./worklist.rowverbs";
-import { syncHealthDetail } from "./worklist.synchealth";
 import { VerdictLine } from "./worklist.verdict";
 import "./worklist.row.css";
 
@@ -148,13 +147,8 @@ export function WorklistRow({
   // began in four minutes or in fifty, and a task said "Overdue" without saying
   // by how long — on the two rows whose whole claim is a moment.
   const when = whenText(item, t, locale, zone, recordZone, new Date());
-  // The supporting line. Every source but one sends a sentence already;
-  // sync_health sends its condition's facts in its own vocabulary, so its line
-  // is written from `kind` and `detail` together.
-  const detail =
-    item.source === "sync_health"
-      ? syncHealthDetail(item.kind, item.detail, t)
-      : noticeDetail(item, viewer, t);
+  // The supporting line, which every source sends as a sentence already.
+  const detail = noticeDetail(item, viewer, t);
   // The badged reasons are drawn as badges above and left out here, so one
   // meeting does not report the same finding twice in two registers. The when
   // line takes `due_today` the same way when it is drawn: the moment names the
@@ -377,13 +371,7 @@ function RowText({
           writing sentences get to say them: which mailbox stopped, why a
           message bounced, why a send was held, what an AI task was about,
           which rule failed and how. That is the decisive line on most of these
-          rows, and a reader was reading around it.
-
-          `sync_health` sends its facts in the producer's own vocabulary —
-          `shed`, `rate_limited`, `deals, contacts` — so its line is WRITTEN
-          from that pair rather than drawn, by worklist.synchealth.ts. A value
-          that build does not recognise draws nothing, which is what this row
-          did for every sync value before. */}
+          rows, and a reader was reading around it. */}
       {detail && <p className="t-caption worklist-row-detail">{detail}</p>}
       {sample.length > 0 && (
         // A group nobody can see into is a group nobody trusts, and an

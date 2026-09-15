@@ -200,10 +200,6 @@ func idBearingRefusalDrivers() map[string]func(context.Context) error {
 				Args: VoiceBuildArgs{RequestedBy: ids.NewV7().String()},
 			})
 		},
-		OverlayRefetchArgs{}.Kind(): func(ctx context.Context) error {
-			return (&overlayRefetchWorker{log: slog.New(slog.DiscardHandler)}).Work(
-				ctx, &river.Job[OverlayRefetchArgs]{})
-		},
 		SiteDeepReadArgs{}.Kind(): func(ctx context.Context) error {
 			return (&siteDeepReadWorker{}).Work(ctx, &river.Job[SiteDeepReadArgs]{
 				Args: SiteDeepReadArgs{SiteReadID: ids.NewV7()},

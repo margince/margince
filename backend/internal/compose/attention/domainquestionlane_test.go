@@ -24,9 +24,7 @@ func (s *stubDomainQuestions) OpenDomainQuestions(context.Context) ([]DomainQues
 }
 
 func domainQuestionLaneService(questions DomainQuestions) *Service {
-	svc := NewService(
-		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
-		stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+	svc := NewService(stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
 	if questions == nil {
 		return svc
 	}

@@ -18,10 +18,8 @@ import { searchCompanyReferences, useRecordOwners } from "./recordreferences";
 type Company = components["schemas"]["Company"];
 export function CompanyDetails({
   company,
-  overlay,
 }: Readonly<{
   company: Company;
-  overlay: boolean;
 }>) {
   const t = useT();
   const searchParents = useCallback(
@@ -57,7 +55,6 @@ export function CompanyDetails({
         },
       ]}
       title={t("co.details.title")}
-      notice={overlay ? t("overlay.partialWriteBack") : undefined}
       fields={[
         ...companyEditFields(owners, false, t),
         {

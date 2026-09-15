@@ -139,9 +139,6 @@ backend/internal/modules/customfields/fieldobjects_test.go core 0171
 backend/internal/modules/customfields/service.go core 0063
 backend/internal/modules/deals/offer.go core 0217
 backend/internal/modules/identity/roles.go migration 0211
-backend/internal/modules/overlay/freshness_integration_test.go core 0217
-backend/internal/modules/overlay/teardown.go core 0012
-backend/internal/modules/overlay/teardown_integration_test.go core 0012
 backend/internal/modules/privacy/auditprojection.go migration 1787109970
 backend/internal/modules/privacy/erasure_approvals.go core 0244
 backend/internal/modules/privacy/recordhistoryverbs.go migration 0287

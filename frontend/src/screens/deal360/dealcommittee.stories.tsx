@@ -77,7 +77,6 @@ export const WellThreaded: Story = {
     coverage: coverage(),
     withheld: false,
     pending: false,
-    overlay: false,
   },
 };
 
@@ -112,7 +111,6 @@ export const SingleThreaded: Story = {
     }),
     withheld: false,
     pending: false,
-    overlay: false,
   },
 };
 
@@ -140,7 +138,6 @@ export const SeatWithoutAName: Story = {
     }),
     withheld: false,
     pending: false,
-    overlay: false,
   },
 };
 
@@ -159,7 +156,6 @@ export const Withheld: Story = {
     }),
     withheld: true,
     pending: false,
-    overlay: false,
   },
 };
 
@@ -169,6 +165,5 @@ export const Empty: Story = {
     coverage: coverage({ stakeholders: [], our_side: [] }),
     withheld: false,
     pending: false,
-    overlay: false,
   },
 };

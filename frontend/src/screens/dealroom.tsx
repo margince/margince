@@ -237,11 +237,8 @@ function OpenRoomCard({
   );
 }
 
-export function useDealRoom(dealId: string, enabled = true) {
+export function useDealRoom(dealId: string) {
   return useQuery({
-    // Off in overlay mode, where the deal is a mirror from another system of
-    // record and its sub-resources answer 422.
-    enabled,
     queryKey: ["deal-rooms", dealId],
     queryFn: async () => {
       const { data, error } = await api.GET("/deal-rooms", {

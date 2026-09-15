@@ -19,14 +19,6 @@ import (
 func (w *weeklyGenerateWorker) reviewWindowOpen(ctx context.Context, now time.Time) (bool, error) {
 	var ready bool
 	err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
-		overlay, err := overlayModeOf(ctx, tx)
-		if err != nil {
-			return err
-		}
-		if overlay {
-			w.log.InfoContext(ctx, "weekly review skipped: CRM measurement belongs to the incumbent")
-			return nil
-		}
 		_, local, err := briefs.LocalDayAt(ctx, tx, now)
 		if err != nil {
 			return err

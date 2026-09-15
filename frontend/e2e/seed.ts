@@ -1,4 +1,4 @@
-import type { Page, Route } from "@playwright/test";
+import type { Page } from "@playwright/test";
 import { type GrantSpec, meFixture } from "../src/app/mefixture";
 import {
   briefEmpty,
@@ -35,7 +35,6 @@ const E2E_ADMIN_GRANTS: GrantSpec = {
   project: ["read", "create", "update"],
   activity: ["read", "create"],
   automation: ["create", "read", "update", "delete"],
-  overlay_connection: ["create", "read", "update", "delete"],
   pipeline: ["create", "read", "update", "delete"],
   custom_field: ["create", "read", "update", "delete"],
   webhook_subscription: ["create", "read", "update", "delete"],
@@ -889,157 +888,6 @@ export const publicSlots = [
   { start: "2026-07-06T10:00:00Z", end: "2026-07-06T10:30:00Z" },
 ];
 
-// The overlay fixtures (B-EP09.23): the incumbent connection, its two health
-// reads, and the RFC-7807 refusal shape a mirrored write answers with. Field
-// names mirror overlay.test.tsx's unit fixtures (the contract's camelCase on
-// OverlayConnection/OverlaySyncStatus, snake_case on OverlayBudget.sources) —
-// keep the two in sync if the contract shape changes under either.
-export const overlayConnection = {
-  incumbent: "hubspot",
-  region: "eu1",
-  status: "active",
-  connectedAt: "2026-07-20T10:00:00Z",
-  scopes: ["crm.objects.contacts.read", "crm.objects.deals.read"],
-};
-
-export const overlaySyncStatus = {
-  objects: [
-    {
-      object: "contact",
-      lastSyncedAt: "2026-07-25T08:00:00Z",
-      state: "fresh",
-      backfillComplete: true,
-    },
-    {
-      object: "company",
-      lastSyncedAt: "2026-07-25T08:00:00Z",
-      state: "fresh",
-      backfillComplete: true,
-    },
-    {
-      object: "deal",
-      lastSyncedAt: "2026-07-25T07:00:00Z",
-      state: "pending_sync",
-      backfillComplete: false,
-    },
-  ],
-};
-
-export const overlayBudget = {
-  window: "2026-07-25T08:00:00Z/PT1H",
-  consumed: 120,
-  limit: 1000,
-  band: "ok",
-  sources: { force_fresh: 10, poller: 100, capture: 10 },
-  // The server's own "can't attribute a share" sentinel — printed verbatim by
-  // the UI (overlay-health.tsx), never recomputed, so the mock must answer it
-  // literally rather than a plausible-looking number.
-  headroom: "~unknown",
-  search: {
-    window: "2026-07-25T08:00:00Z/PT1S",
-    consumed: 2,
-    limit: 20,
-    band: "ok",
-  },
-};
-
-// The mirror user mapping, on the same tab as the connection: the seed's own
-// admin holds a matched HubSpot seat, so the overlay tab renders its settled
-// state rather than an empty table nobody would ship with.
-export const overlayOwners = {
-  incumbent: "hubspot",
-  owners: [
-    {
-      incumbent_user_id: "hs-7",
-      name: "Lars Brandt",
-      email: "lars@brandt.example",
-    },
-  ],
-  truncated: false,
-};
-
-// One row of the admin mapping table, shaped as the contract's
-// OverlayUserMapEntry. The nullable halves are spelled out rather than left to
-// inference: the stateful write handlers below have to be able to CLEAR a
-// mapping, and an inferred `string` cannot express the unmapped state the
-// endpoint actually produces.
-type OverlayUserMapEntry = {
-  user_id: string;
-  name: string;
-  email: string;
-  incumbent_user_id: string | null;
-  incumbent_user_name: string | null;
-  incumbent_user_email: string | null;
-  match_source?: "email" | "manual";
-  unmapped_reason: string;
-};
-
-export const overlayUserMap: {
-  incumbent: string;
-  entries: OverlayUserMapEntry[];
-  next_cursor: string | null;
-} = {
-  incumbent: "hubspot",
-  entries: [
-    {
-      user_id: "u1",
-      name: "Lars Brandt",
-      email: "lars@brandt.example",
-      incumbent_user_id: "hs-7",
-      incumbent_user_name: "Lars Brandt",
-      incumbent_user_email: "lars@brandt.example",
-      match_source: "email",
-      unmapped_reason: "none",
-    },
-  ],
-  next_cursor: null,
-};
-
-// PUT/DELETE /overlay/user-map/{id} against the page's own mapping state. The
-// real verbs MOVE a row — a manual pin, or an unmap that also stops automatic
-// re-matching — so the mock moves it too and the card's post-write reload shows
-// what the write did. An id nobody seeded is the endpoint's 404 and a verb it
-// does not serve is a 405, because a mapping write that silently succeeds is
-// indistinguishable from one that worked.
-function overlayUserMapWrite(
-  route: Route,
-  entries: OverlayUserMapEntry[],
-  userId: string,
-  method: string,
-): Promise<void> {
-  if (method !== "PUT" && method !== "DELETE") {
-    return route.fulfill({ status: 405 });
-  }
-  const entry = entries.find((candidate) => candidate.user_id === userId);
-  if (!entry) {
-    return route.fulfill({ status: 404 });
-  }
-  if (method === "DELETE") {
-    entry.incumbent_user_id = null;
-    entry.incumbent_user_name = null;
-    entry.incumbent_user_email = null;
-    entry.unmapped_reason = "blocked_by_admin";
-    delete entry.match_source;
-    return route.fulfill({ status: 204 });
-  }
-  const incumbentUserId = String(
-    route.request().postDataJSON().incumbent_user_id ?? "",
-  );
-  const owner = overlayOwners.owners.find(
-    (candidate) => candidate.incumbent_user_id === incumbentUserId,
-  );
-  entry.incumbent_user_id = incumbentUserId;
-  entry.incumbent_user_name = owner?.name ?? null;
-  entry.incumbent_user_email = owner?.email ?? null;
-  entry.match_source = "manual";
-  entry.unmapped_reason = "none";
-  return route.fulfill({ status: 204 });
-}
-
-function unsupportedBySor(detail: string) {
-  return { title: "Unprocessable Entity", detail, code: "unsupported_by_sor" };
-}
-
 // Settings → Capture activity, both scopes. A fixture rather than a catch-all
 // `page([])` answer for the reason the block above states: the catch-all is the
 // WRONG SHAPE, not a thin one. `funnel` is required by CaptureActivityResponse
@@ -1155,11 +1003,6 @@ function page(data: unknown[]) {
 }
 
 export type MockApiOptions = Readonly<{
-  // "native" (the default) is the full-capability spine every existing AC
-  // runs against; "overlay" swaps /me's system_of_record.mode and layers the
-  // incumbent-mirror routes on top — same fixtures, so a caller that doesn't
-  // pass this option keeps working unchanged (B-EP09.23).
-  sor?: "native" | "overlay";
   // "authenticated" (the default) is what every existing AC needs.
   // "unauthenticated" answers /me with 401 so the app renders the login screen
   // instead — the surface a signed-out user actually meets, and the one the
@@ -1208,10 +1051,6 @@ export async function mockApi(
   if (process.env.BASE_URL) {
     return; // live-backend mode: no mocking
   }
-  // Mutable so DELETE /overlay/connection can flip the workspace back to
-  // native within the SAME test (AC-overlay-6) — /me below reads this on
-  // every call, the same per-page-state pattern `automations`/`brief` use.
-  let sorMode: "native" | "overlay" = options?.sor ?? "native";
   // An installation nobody has described yet: no company row and no wizard row.
   // Both journeys before the gate answer the same way about those two, and
   // "unconfigured" only adds the unbound model on top — so the condition is
@@ -1234,24 +1073,15 @@ export async function mockApi(
 
   // per-page automation state so the create→paused→enable flow is coherent
   let automations = [{ ...seededAutomation }];
-  // per-page deal patch state so an overlay-mode edit's re-read (the screen
-  // invalidates ["deal", id] after a save) reflects the write instead of
-  // reverting to the seed — the same "mirror re-read reflects write-back"
-  // shape overlay.Provider.Update gives via mirrorWriteResult.
+  // per-page deal patch state so an edit's re-read (the screen invalidates
+  // ["deal", id] after a save) reflects the write instead of reverting to the
+  // seed.
   const dealPatches: Record<string, Partial<(typeof deals)[number]>> = {};
   // per-page brief state so act/dismiss marks stick within a test
   const brief = {
     ...briefRun,
     items: briefRun.items.map((item) => ({ ...item })),
   };
-  // per-page connection state so a DELETE is reflected on the next GET —
-  // the real Disconnect (overlay/teardown.go's revokeConnection) flips the
-  // row's status to "revoked" and never deletes it (overlay/connection.go's
-  // Service.Get: a revoked connection still reads back, its status column
-  // carrying that fact), so the mock must answer the same shape instead of
-  // vanishing the row or reporting 404 — a 404 means no connection was ever
-  // inserted, a different state than "disconnected".
-  let connection = { ...overlayConnection };
   // The mailbox-privacy fixtures, per page for the same reason as the rest:
   // a posture change, a sender overrule and a hold all have to be readable
   // back within one test.
@@ -1315,7 +1145,6 @@ export async function mockApi(
   // 200 would let the card report a successful write and then reload the
   // untouched fixture — the workflow would pass having done nothing, which is
   // the one outcome a mapping test must not be able to reach.
-  const userMapEntries = overlayUserMap.entries.map((entry) => ({ ...entry }));
   // per-page activity state for the rows a spec LOGS and then expects to see
   // again — on the deal it was logged against, and on the project it is
   // relinked to. Only rows linked to a deal or a project are remembered, so
@@ -1384,7 +1213,6 @@ export async function mockApi(
           // a key the catalogs have no entry for.
           locale: "de",
         },
-        system_of_record: { mode: sorMode },
       });
     }
     // When this reader is bookable. The Account page carries the card, and a
@@ -1518,86 +1346,13 @@ export async function mockApi(
         providers: ["anthropic", "ollama"],
       });
     }
-    // The overlay routes: always registered (a native workspace can still
-    // read a stale/absent connection), but the three write verbs below only
-    // change behavior FROM the native one while sorMode is "overlay" — a
-    // caller that never passes { sor: "overlay" } sees the native mock
-    // completely unchanged.
-    if (path === "/overlay/connection" && method === "GET") {
-      return json(connection);
-    }
-    if (path === "/overlay/connection" && method === "DELETE") {
-      // The real disconnect purges the mirror and flips workspace.x_sor_mode
-      // for the whole installation — the mock's stand-in for that flip is
-      // this flag, read fresh by /me above on the app's next refetch
-      // (OverlayCard's onSuccess invalidates every query, /me included).
-      sorMode = "native";
-      // The connection row itself survives disconnect (revoked, not
-      // deleted) — a refetch of the card must see the same revoked-state
-      // reconnect affordance the real backend answers, not a stale "active"
-      // that the real backend can never produce.
-      connection = { ...connection, status: "revoked" };
-      return route.fulfill({ status: 202 });
-    }
-    if (path === "/overlay/sync-status") {
-      return json(overlaySyncStatus);
-    }
-    if (path === "/overlay/budget") {
-      return json(overlayBudget);
-    }
-    if (path === "/overlay/user-map" && method === "GET") {
-      return json({ ...overlayUserMap, entries: userMapEntries });
-    }
-    if (path.startsWith("/overlay/user-map/")) {
-      return overlayUserMapWrite(
-        route,
-        userMapEntries,
-        path.slice("/overlay/user-map/".length),
-        method,
-      );
-    }
-    if (path === "/overlay/owners" && method === "GET") {
-      return json(overlayOwners);
-    }
-    if (path === "/overlay/reconcile" && method === "POST") {
-      // Queues a sweep for the worker's next tick — never runs it in-request,
-      // so the response carries no body to report as "finished".
-      return route.fulfill({ status: 202 });
-    }
-    if (sorMode === "overlay" && path === "/contacts" && method === "POST") {
-      // Create is unsupported for every mirrored type (the write mapping
-      // leaves owner_id unset, so a created incumbent record would be
-      // unowned and invisible — overlay/provider_writes.go's SupportsWrite).
-      return json(
-        unsupportedBySor(
-          "Creating a contact isn't supported while reading from HubSpot.",
-        ),
-        422,
-      );
-    }
-    if (
-      sorMode === "overlay" &&
-      path.startsWith("/deals/") &&
-      path.endsWith("/advance")
-    ) {
-      // Stage advance stays unsupported outright (no overlay stage map) —
-      // OVA-MAP-W6.
-      return json(
-        unsupportedBySor(
-          "Advancing a deal isn't supported while reading from HubSpot.",
-        ),
-        422,
-      );
-    }
     if (await projectState.handle(route, path, method, json)) {
       return;
     }
     if (path.startsWith("/deals/") && method === "PATCH") {
-      // In overlay mode Update DOES write back through the incumbent seam and
-      // succeed (overlay/provider_writes.go Update); natively it is an
-      // ordinary write. Either way the mock echoes the patched fields onto the
-      // matching seeded deal and remembers the patch so a follow-up GET (the
-      // screen's post-save refetch) reflects it too.
+      // The mock echoes the patched fields onto the matching seeded deal and
+      // remembers the patch so a follow-up GET (the screen's post-save
+      // refetch) reflects it too.
       const id = path.slice("/deals/".length);
       const base = deals.find((deal) => deal.id === id) ?? deals[0];
       const body = route.request().postDataJSON();
@@ -1777,48 +1532,20 @@ export async function mockApi(
     // required by the contract, so a body without one is not a thin response —
     // it is a response the page cannot render, which is what the page did here
     // until this handler existed.
-    //
-    // In overlay mode the mirror holds none of the sections folded from natively
-    // captured interactions, so they are NAMED as withheld rather than answered
-    // empty: "you cannot see this here" and "there is none" are different facts.
     if (method === "GET" && /^\/contacts\/[^/]+\/360$/.test(path)) {
       return json({
         as_of: "2026-06-20T09:00:00Z",
         contact: anna,
-        // A booked meeting, so the meetings tab has a "Brief me" to press. The
-        // overlay mirror holds no natively captured interaction, so it holds no
-        // meeting either.
-        next_meeting:
-          sorMode === "overlay"
-            ? undefined
-            : {
-                activity_id: MEETING_ACTIVITY,
-                starts_at: "2026-06-24T13:00:00Z",
-                subject: "Retrofit-Abstimmung",
-                participants: [
-                  { contact_id: "p-anna", full_name: "Anna Weber" },
-                ],
-              },
-        last_inbound_at:
-          sorMode === "overlay" ? undefined : "2026-06-18T08:00:00Z",
-        last_outbound_at:
-          sorMode === "overlay" ? undefined : "2026-06-19T08:00:00Z",
-        sections_omitted:
-          sorMode === "overlay"
-            ? [
-                "activities",
-                "strength",
-                "network",
-                "next_steps",
-                "moments",
-                "claims",
-                "conversation_memory",
-                "relationship_changes",
-                "since_last_visit",
-                "last_touch",
-                "commercial",
-              ]
-            : [],
+        // A booked meeting, so the meetings tab has a "Brief me" to press.
+        next_meeting: {
+          activity_id: MEETING_ACTIVITY,
+          starts_at: "2026-06-24T13:00:00Z",
+          subject: "Retrofit-Abstimmung",
+          participants: [{ contact_id: "p-anna", full_name: "Anna Weber" }],
+        },
+        last_inbound_at: "2026-06-18T08:00:00Z",
+        last_outbound_at: "2026-06-19T08:00:00Z",
+        sections_omitted: [],
       });
     }
     // The meeting brief, from the same fixtures the stories and the unit tests
