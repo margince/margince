@@ -5,14 +5,13 @@
 
 package compose
 
-// A regression for margince#5694: a domain-triage site read carries
-// systemDomainTriageActor, not systemAutoEnrichActor, so a naive equality
-// check against the auto-enrich sentinel alone leaves the resume sweep unable
-// to recognise it — every other deferred read in the batch still resumes
-// (each runs inside its own savepoint), but the mismatched row never advances,
-// and the sweep's own returned error goes red on every tick until its
-// deferral window lapses. This proves the sweep now recognises the lane, not
-// just the earlier one.
+// A domain-triage site read carries systemDomainTriageActor, not
+// systemAutoEnrichActor, so a naive equality check against the auto-enrich
+// sentinel alone leaves the resume sweep unable to recognise it — every
+// other deferred read in the batch still resumes (each runs inside its own
+// savepoint), but the mismatched row never advances, and the sweep's own
+// returned error goes red on every tick until its deferral window lapses.
+// This proves the sweep recognises both system lanes, not just one.
 
 import (
 	"log/slog"

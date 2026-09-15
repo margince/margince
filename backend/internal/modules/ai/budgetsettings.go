@@ -67,7 +67,7 @@ func validateBudget(c BudgetConfig) error {
 
 // resolveMonthlyTokens applies the override or the live full-user count with an
 // onboarding floor, delegating the overflow decision to the caller. MonthlyTokens
-// rejects it, because nothing may be WRITTEN past the ceiling. SaturatingMonthlyTokens
+// rejects it, because nothing may be WRITTEN past the ceiling. saturatingMonthlyTokens
 // clamps it, because an already-stored value (valid when written, overflowing now that
 // the workspace's full-user count grew) must still be OBSERVABLE by the admin surfaces
 // that exist to correct it.
@@ -92,13 +92,13 @@ func (c BudgetConfig) MonthlyTokens(fullUsers int64) (int64, error) {
 	})
 }
 
-// SaturatingMonthlyTokens reports the same allowance as MonthlyTokens, except a
+// saturatingMonthlyTokens reports the same allowance as MonthlyTokens, except a
 // product that has grown past MaxMonthlyTokens saturates at the ceiling instead of
 // erroring. It exists only for surfaces that OBSERVE an already-stored config
 // (AdminStore.observedTx and friends) so an admin can load and correct a workspace
 // that is currently over-cap; a NEW value being written is still rejected outright by
 // MonthlyTokens, so the ceiling itself is never weakened.
-func (c BudgetConfig) SaturatingMonthlyTokens(fullUsers int64) (int64, error) {
+func (c BudgetConfig) saturatingMonthlyTokens(fullUsers int64) (int64, error) {
 	return c.resolveMonthlyTokens(fullUsers, func() (int64, error) { return MaxMonthlyTokens, nil })
 }
 

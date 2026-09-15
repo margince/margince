@@ -16,7 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// TestAllowanceOverflowLockoutRecoversThroughReplaceBudget reproduces margince#5693: a
+// TestAllowanceOverflowLockoutRecoversThroughReplaceBudget proves a
 // TokensPerFullUser that is valid against today's full-user count can start overflowing
 // MaxMonthlyTokens once the workspace's full-user count grows, and — before this fix —
 // every admin entry point that could correct it (ReadBudget, PreviewBudget, ReplaceBudget)

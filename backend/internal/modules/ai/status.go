@@ -15,12 +15,18 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-func (s *AdminStore) currentWith(ctx context.Context, budgetTx func(context.Context, pgx.Tx) (crmcontracts.AiBudgetSnapshot, error)) (crmcontracts.AiBudgetSnapshot, RoutingConfig, error) {
+// observed is the read surfaces' snapshot: it never errors on a stored budget that
+// has grown past the overflow ceiling (see AdminStore.observedTx), so a workspace
+// already over-cap can still be read and corrected. Real spend (compose's
+// seatBudget.MonthlyTokenBudget) stays on BudgetConfig.MonthlyTokens's strict,
+// fail-closed contract — only observing an already-stored value tolerates the
+// overflow, never authorizing more of it.
+func (s *AdminStore) observed(ctx context.Context) (crmcontracts.AiBudgetSnapshot, RoutingConfig, error) {
 	var budget crmcontracts.AiBudgetSnapshot
 	var cfg RoutingConfig
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		budget, err = budgetTx(ctx, tx)
+		budget, err = s.observedTx(ctx, tx)
 		if err != nil {
 			return err
 		}
@@ -32,19 +38,6 @@ func (s *AdminStore) currentWith(ctx context.Context, budgetTx func(context.Cont
 	return budget, cfg, err
 }
 
-// current is the operational read: it fails closed on a stored budget that has grown
-// past the overflow ceiling, same as everything else that gates real spend.
-func (s *AdminStore) current(ctx context.Context) (crmcontracts.AiBudgetSnapshot, RoutingConfig, error) {
-	return s.currentWith(ctx, s.currentTx)
-}
-
-// observed is the admin recovery read PreviewBudget uses: it never errors on the
-// overflow case (see AdminStore.observedTx), so a workspace already over-cap can still
-// preview a correction.
-func (s *AdminStore) observed(ctx context.Context) (crmcontracts.AiBudgetSnapshot, RoutingConfig, error) {
-	return s.currentWith(ctx, s.observedTx)
-}
-
 // ReadStatus reports prospective routing separately from observed provider health.
 func (s *AdminStore) ReadStatus(ctx context.Context) (crmcontracts.AiStatus, error) {
 	if err := auth.Require(ctx, "ai_diagnostics", principal.ActionRead); err != nil {
@@ -53,7 +46,7 @@ func (s *AdminStore) ReadStatus(ctx context.Context) (crmcontracts.AiStatus, err
 	if err := auth.Require(ctx, budgetObject, principal.ActionRead); err != nil {
 		return crmcontracts.AiStatus{}, err
 	}
-	budget, cfg, err := s.current(ctx)
+	budget, cfg, err := s.observed(ctx)
 	if err != nil {
 		return crmcontracts.AiStatus{}, err
 	}
@@ -112,7 +105,7 @@ func (s *AdminStore) PreviewRouting(ctx context.Context, next RoutingConfig) (cr
 	if err := validateStoredRouting(next); err != nil {
 		return crmcontracts.AiRoutingPreview{}, settings.InvalidValue{Setting: RoutingKey, Code: settings.CodeInvalidValue, Reason: err.Error()}
 	}
-	budget, cfg, err := s.current(ctx)
+	budget, cfg, err := s.observed(ctx)
 	if err != nil {
 		return crmcontracts.AiRoutingPreview{}, err
 	}

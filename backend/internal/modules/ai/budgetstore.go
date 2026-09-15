@@ -64,20 +64,19 @@ func budgetSnapshot(config BudgetConfig, users, spent int64, now time.Time) (crm
 }
 
 // observedSnapshot never errors on a stored config that has grown past the overflow
-// ceiling (see BudgetConfig.SaturatingMonthlyTokens) — it exists for surfaces that must
+// ceiling (see BudgetConfig.saturatingMonthlyTokens) — it exists for surfaces that must
 // render a workspace's CURRENT allowance so an admin can correct it, as opposed to
 // budgetSnapshot's strict/fail-closed contract used to gate real spend and to validate a
 // NEW value being written.
 func observedSnapshot(config BudgetConfig, users, spent int64, now time.Time) (crmcontracts.AiBudgetSnapshot, error) {
-	monthly, err := config.SaturatingMonthlyTokens(users)
+	monthly, err := config.saturatingMonthlyTokens(users)
 	if err != nil {
 		return crmcontracts.AiBudgetSnapshot{}, err
 	}
 	return snapshotWithMonthly(config, monthly, users, spent, now), nil
 }
 
-// loadBudgetInputs reads the pieces both the strict and the observed snapshot need, so
-// neither currentTx nor observedTx duplicates the settings/full-user/spend lookups.
+// loadBudgetInputs reads the pieces observedTx needs.
 func (s *AdminStore) loadBudgetInputs(ctx context.Context, tx pgx.Tx) (BudgetConfig, int64, int64, time.Time, error) {
 	config, err := settings.GetTx(ctx, tx, BudgetSettings)
 	if err != nil {
@@ -95,18 +94,12 @@ func (s *AdminStore) loadBudgetInputs(ctx context.Context, tx pgx.Tx) (BudgetCon
 	return config, users, spent, now, nil
 }
 
-func (s *AdminStore) currentTx(ctx context.Context, tx pgx.Tx) (crmcontracts.AiBudgetSnapshot, error) {
-	config, users, spent, now, err := s.loadBudgetInputs(ctx, tx)
-	if err != nil {
-		return crmcontracts.AiBudgetSnapshot{}, err
-	}
-	return budgetSnapshot(config, users, spent, now)
-}
-
-// observedTx backs the admin recovery surfaces (ReadBudget, ReplaceBudget's
-// optimistic-concurrency read, PreviewBudget's Current) so a workspace whose stored
-// config has grown past the overflow ceiling can still be read and corrected, rather
-// than failing every one of the entry points that exist to fix it.
+// observedTx backs every read surface (ReadStatus, PreviewRouting, ReadBudget,
+// ReplaceBudget's optimistic-concurrency read, PreviewBudget's Current) so a
+// workspace whose stored config has grown past the overflow ceiling can still be
+// read and corrected, rather than failing every one of the entry points that exist
+// to fix it. Real spend (compose's seatBudget.MonthlyTokenBudget) reads
+// BudgetConfig.MonthlyTokens directly and keeps the strict, fail-closed contract.
 func (s *AdminStore) observedTx(ctx context.Context, tx pgx.Tx) (crmcontracts.AiBudgetSnapshot, error) {
 	config, users, spent, now, err := s.loadBudgetInputs(ctx, tx)
 	if err != nil {

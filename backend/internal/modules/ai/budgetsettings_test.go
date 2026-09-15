@@ -57,7 +57,7 @@ func TestAllowanceSaturatesInsteadOfErroringForAnAlreadyStoredOverflow(t *testin
 		t.Fatal("MonthlyTokens must still reject an overflowing product")
 	}
 	// The same overflow, OBSERVED rather than written, saturates instead.
-	got, err := config.SaturatingMonthlyTokens(2)
+	got, err := config.saturatingMonthlyTokens(2)
 	if err != nil || got != MaxMonthlyTokens {
 		t.Fatalf("saturating observation: %d %v", got, err)
 	}
@@ -67,7 +67,7 @@ func TestAllowanceSaturatesInsteadOfErroringForAnAlreadyStoredOverflow(t *testin
 	if err != nil {
 		t.Fatal(err)
 	}
-	saturating, err := inBounds.SaturatingMonthlyTokens(3)
+	saturating, err := inBounds.saturatingMonthlyTokens(3)
 	if err != nil || saturating != strict {
 		t.Fatalf("in-bounds divergence: strict=%d saturating=%d err=%v", strict, saturating, err)
 	}
@@ -75,13 +75,13 @@ func TestAllowanceSaturatesInsteadOfErroringForAnAlreadyStoredOverflow(t *testin
 	// report the override untouched.
 	limit := int64(500)
 	overridden := BudgetConfig{TokensPerFullUser: 1, CompanyMonthlyTokens: &limit}
-	if got, err := overridden.SaturatingMonthlyTokens(9); err != nil || got != limit {
+	if got, err := overridden.saturatingMonthlyTokens(9); err != nil || got != limit {
 		t.Fatalf("override: %d %v", got, err)
 	}
 	// A config that fails validateBudget itself (not merely a growth overflow) is
 	// still an error under both — saturating only covers the overflow case.
 	invalid := BudgetConfig{TokensPerFullUser: -1}
-	if _, err := invalid.SaturatingMonthlyTokens(1); err == nil {
+	if _, err := invalid.saturatingMonthlyTokens(1); err == nil {
 		t.Fatal("an out-of-range stored value must still error")
 	}
 }
