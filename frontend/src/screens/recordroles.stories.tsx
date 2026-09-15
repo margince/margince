@@ -116,3 +116,8 @@ export const AddingRole: Story = {
     );
   },
 };
+
+export const AddingRoleDark: Story = {
+  ...AddingRole,
+  globals: { theme: "dark" },
+};

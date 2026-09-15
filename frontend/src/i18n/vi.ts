@@ -2775,6 +2775,8 @@ export const vi = {
   "recordRoles.builtIn": "C\u00f3 s\u1eb5n",
   "recordRoles.addOpen": "Th\u00eam vai tr\u00f2",
   "recordRoles.addTitle": "Th\u00eam vai tr\u00f2 ph\u1ee5 tr\u00e1ch",
+  "recordRoles.recordTypes": "Áp dụng cho",
+  "recordRoles.assigneeKinds": "Có thể giao cho",
   "recordRoles.addLabel": "T\u00ean",
   "recordRoles.addHint":
     "\u0110i\u1ec1u m\u00e0 b\u00ean ph\u1ee5 tr\u00e1ch ch\u1ecbu tr\u00e1ch nhi\u1ec7m, di\u1ec5n \u0111\u1ea1t d\u1ec5 hi\u1ec3u.",
