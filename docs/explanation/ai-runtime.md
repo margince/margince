@@ -287,10 +287,12 @@ eligible work right away rather than after up to a minute's wait:
       deactivated one stays parked; restoring their access is what
       makes it eligible on a later pass) — the auto-enrich case has no
       human grant to revoke, so this step is a no-op for it
-   3. lock the underlying queue job; refuse one that is missing,
-      already terminal, or has exhausted its own attempt limit — a
-      voice build is the exception: if its original job is gone, a
-      FRESH job is inserted instead, starting its own attempt count
+   3. lock the underlying queue job. For a site read or company scan,
+      refuse one that is missing, already terminal, or has exhausted
+      its own attempt limit. A voice build differs: only an ACTIVE
+      original goes through that same refusal check — a missing or
+      terminal one instead gets a FRESH job inserted in its place,
+      starting its own attempt count
    4. put it back on its queue — same requester, same attempt count
       (except the voice-build fresh-insert case above)
 ```
