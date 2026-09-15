@@ -43,6 +43,27 @@ import (
 // different places.
 var errUnknownObject = fmt.Errorf("%w: no RBAC object with this name is defined", apperrors.ErrNotFound)
 
+// roleIDByKey resolves a role key to its row id — the ONE spelling of the
+// lookup every role_assignment writer starts from (invite, re-role, the
+// sign-in group grants). An unknown key answers errUnknownRole; what that
+// MEANS differs per caller (an admin's typo is a 404, a stale group-role map
+// entry is skipped), so the verdict stays at the site.
+//
+// applyRoleObjectGrant below keeps its own SELECT rather than calling this: it
+// reads the role's version and permissions under FOR UPDATE in the same
+// statement, which is a lock this lookup must not impose on every invite.
+func roleIDByKey(ctx context.Context, tx pgx.Tx, key string) (ids.UUID, error) {
+	var roleID ids.UUID
+	err := tx.QueryRow(ctx, `SELECT id FROM role WHERE key = $1`, key).Scan(&roleID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ids.Nil, errUnknownRole
+	}
+	if err != nil {
+		return ids.Nil, err
+	}
+	return roleID, nil
+}
+
 // storedGrant is one object's CRUD as `role.permissions` SPELLS it — lower-case
 // json keys, all four verbs always present.
 //

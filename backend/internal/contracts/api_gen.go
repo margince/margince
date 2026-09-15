@@ -20995,6 +20995,14 @@ type AuthCapabilities struct {
 // and currency are NOT here — every role reads those, and repeating them in a document
 // governed by a narrower grant would make the same fact answer to two authorities.
 type AuthenticationPolicy struct {
+	// OidcGroupRoleMap The stored group→role grant map: each key an IdP group as the ID token's
+	// `groups` claim spells it, each value the system role key it grants at
+	// corporate sign-in. GRANT-ONLY: a role granted this way is never revoked by
+	// leaving the group — revocation stays a deliberate admin action — and an
+	// empty object means no group grants anything. It admits nobody who was not
+	// already invited.
+	OidcGroupRoleMap map[string]string `json:"oidc_group_role_map"`
+
 	// RequireMfa When true, a second factor is mandatory: a member with no confirmed authenticator
 	// is admitted only to the MFA enrolment routes until they set one up, the same
 	// confinement a forced password change uses. A member who already holds a factor is
@@ -37944,6 +37952,23 @@ type UpdateInstallationSettingsRequest struct {
 
 	// Name Rename the company.
 	Name *string `json:"name,omitempty"`
+
+	// OidcGroupRoleMap Directory groups that GRANT roles at corporate sign-in. Each key is a group
+	// exactly as the IdP spells it in the ID token's `groups` claim; each value is
+	// one of the system role keys (admin, management, manager, rep, read_only, ops).
+	//
+	// GRANT-ONLY, NEVER REVOKE — read that cost before mapping anything. At each
+	// sign-in the member's token groups are intersected with this map and every
+	// mapped role is ADDED to what they already hold. Removing a member from an
+	// IdP group does NOT take the role away here: revocation stays a deliberate
+	// admin action on the member's own account. Mapping a group onto `admin`
+	// grants admin to every invited member of that group at their next sign-in —
+	// this map is itself admin-only to edit, so that is a deliberate act.
+	//
+	// It creates no accounts: an email nobody invited is refused exactly as
+	// before, groups or none. Omit the field to leave the map unchanged; send an
+	// empty object to clear it; sending a map replaces the whole stored map.
+	OidcGroupRoleMap *map[string]string `json:"oidc_group_role_map,omitempty"`
 
 	// RequireMfa Make a second factor mandatory: a member without a confirmed authenticator is
 	// confined to the MFA enrolment routes until they set one up. Omit to leave the policy

@@ -77,6 +77,11 @@ type InstallationPatch struct {
 	// RequireMFA makes a second factor mandatory. A nil pointer leaves it
 	// unchanged.
 	RequireMFA *bool
+	// OidcGroupRoleMap replaces the whole group→role grant map. A nil pointer
+	// leaves it unchanged; a pointer to an empty map is a real choice — no
+	// group grants anything — so the two cannot be collapsed, exactly like
+	// EnabledOidcProviders above.
+	OidcGroupRoleMap *map[string]string
 }
 
 // pendingWrite is one field of a sparse patch, already reduced to the two
@@ -264,7 +269,11 @@ func encodeInstallationPatch(in InstallationPatch) ([]pendingWrite, error) {
 	if err != nil {
 		return nil, err
 	}
-	return []pendingWrite{name, zone, currency, language, fiscal, bannerHours, measure, providers, dateFormat, timeFormat, requireSSO, requireMFA}, nil
+	groupRoleMap, err := encodePatchField(OidcGroupRoleMap, in.OidcGroupRoleMap)
+	if err != nil {
+		return nil, err
+	}
+	return []pendingWrite{name, zone, currency, language, fiscal, bannerHours, measure, providers, dateFormat, timeFormat, requireSSO, requireMFA, groupRoleMap}, nil
 }
 
 // UpdateInstallation applies a sparse patch. Named for the same reason as

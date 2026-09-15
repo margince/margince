@@ -137,7 +137,18 @@ func linkFederatedIdentity(ctx context.Context, tx pgx.Tx, userID ids.UserID, pr
 // audits — the same unexported session helpers Login already uses, no
 // parallel implementation. Sessions carry no workspace column (ADR-0091 §8),
 // so unlike Login this needs no bound installation context.
-func (s *Service) LoginViaFederatedIdentity(ctx context.Context, provider, subject, email string) (string, error) {
+//
+// groups is the token's `groups` claim; the mapped roles it grants
+// (grouprolesync.go) commit in the same transaction as the session, so a
+// member never holds a session that predates the grant their sign-in earned.
+func (s *Service) LoginViaFederatedIdentity(ctx context.Context, provider, subject, email string, groups []string) (string, error) {
+	// Read before the transaction, like the login-path policy reads
+	// (Authenticate's requireMFA): only a token that actually carried groups
+	// pays for it, so the common groupless sign-in reads no settings at all.
+	mappedRoles, err := s.mappedRoleKeys(ctx, groups)
+	if err != nil {
+		return "", err
+	}
 	rawToken, tokenHash, err := mintSessionToken()
 	if err != nil {
 		return "", fmt.Errorf("identity: mint session token: %w", err)
@@ -151,6 +162,9 @@ func (s *Service) LoginViaFederatedIdentity(ctx context.Context, provider, subje
 		wasRelink, linkErr := linkFederatedIdentity(ctx, tx, userID, provider, subject, email)
 		if linkErr != nil {
 			return linkErr
+		}
+		if grantErr := s.grantMappedRoles(ctx, tx, userID, mappedRoles); grantErr != nil {
+			return grantErr
 		}
 		if insErr := insertSession(ctx, tx, userID, tokenHash); insErr != nil {
 			return fmt.Errorf("identity: insert session: %w", insErr)

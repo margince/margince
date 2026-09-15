@@ -397,11 +397,7 @@ func (s *Service) ChangeUserRole(ctx context.Context, actor Identity, userID ids
 		if isAgent {
 			return errAgentSeatHoldsNoRole
 		}
-		var roleID ids.UUID
-		err := tx.QueryRow(ctx, `SELECT id FROM role WHERE key = $1`, toRole).Scan(&roleID)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return errUnknownRole
-		}
+		roleID, err := roleIDByKey(ctx, tx, toRole)
 		if err != nil {
 			return err
 		}

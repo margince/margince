@@ -105,6 +105,82 @@ var RequireSSO = settings.Define[bool](
 	nil,
 ).AsInstallationIdentity()
 
+// The ceilings on the group→role map, mirroring the contract's maxProperties.
+// Bounded for the same reason the provider list is: the map is read on the
+// sign-in path, so an oversized value stored once would be paid for on every
+// corporate login. 64 groups is generous — a map is one entry per role a
+// directory hands out, and there are six roles.
+const (
+	maxGroupRoleMapEntries = 64
+	maxGroupKeyLen         = 255
+)
+
+// OidcGroupRoleMap grants roles from the corporate directory: each key is a
+// group exactly as the IdP spells it in the ID token's `groups` claim, each
+// value the system role it grants. At sign-in the member's token groups are
+// intersected with this map and every mapped role is ADDED to what they hold.
+//
+// GRANT-ONLY, NEVER REVOKE — the honest cost of this setting, stated in its
+// contract description too. Removing a member from an IdP group does not take
+// the role away here; revocation stays a deliberate admin action. And it
+// admits nobody: an email with no live app_user is refused exactly as before,
+// whatever groups the token carries — the map only widens what an
+// already-invited member holds.
+//
+// It SURVIVES A DATA RESET like its siblings above: who a directory group
+// makes an admin is a decision about who may do what, not customer data, and
+// a wipe must not silently stop granting what an admin deliberately mapped.
+var OidcGroupRoleMap = settings.Define[map[string]string](
+	"identity.oidc_group_role_map",
+	installationSettingsObject,
+	"update",
+	nil,
+	validateGroupRoleMap,
+).AsInstallationIdentity()
+
+// validateGroupRoleMap holds the map's bounds and vocabulary at the write.
+// The allowed values are DERIVED from systemRoles rather than restated, so a
+// role added to the seeded set is mappable without touching this file — and a
+// key that was never a role cannot be stored, only become stale later by a
+// role being retired after the map was saved (the sign-in sync skips those).
+func validateGroupRoleMap(m map[string]string) error {
+	if len(m) > maxGroupRoleMapEntries {
+		return fmt.Errorf("at most %d groups may be mapped, not %d", maxGroupRoleMapEntries, len(m))
+	}
+	for group, roleKey := range m {
+		// Runes, not bytes, for the reason the provider keys count them: a
+		// bound on characters must refuse the same values everywhere.
+		if utf8.RuneCountInString(group) > maxGroupKeyLen {
+			return fmt.Errorf("a group name is at most %d characters", maxGroupKeyLen)
+		}
+		if strings.TrimSpace(group) == "" {
+			return fmt.Errorf("a group name cannot be blank")
+		}
+		// Refused rather than trimmed, exactly like a provider key: the match
+		// against the token's groups claim is byte-exact, so " sales" would
+		// store cleanly, report success, and grant nothing.
+		if strings.TrimSpace(group) != group {
+			return fmt.Errorf("the group name %q carries surrounding whitespace, which would match no token group", group)
+		}
+		if !isSystemRoleKey(roleKey) {
+			return fmt.Errorf("%q is not a role this installation defines, so mapping %q onto it would grant nothing", roleKey, group)
+		}
+	}
+	return nil
+}
+
+// isSystemRoleKey answers from the seeded role set (service.go), the one
+// source of what a role key is — retyping the six keys here would be a second
+// list that drifts the day a role is renamed.
+func isSystemRoleKey(key string) bool {
+	for _, role := range systemRoles {
+		if role.key == key {
+			return true
+		}
+	}
+	return false
+}
+
 // RequireMFA makes a second factor mandatory: a member without a confirmed
 // authenticator is admitted only to the MFA enrolment routes until they set one
 // up, the same confinement must_change_password uses for an operator-set

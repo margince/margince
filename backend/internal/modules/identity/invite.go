@@ -11,7 +11,6 @@ package identity
 
 import (
 	"context"
-	"errors"
 
 	"github.com/jackc/pgx/v5"
 
@@ -66,11 +65,7 @@ func (s *Service) InviteUser(ctx context.Context, actor Identity, in InviteUserI
 		if err := s.refuseWhenNoSeatIsLeft(ctx, tx); err != nil {
 			return err
 		}
-		var roleID ids.UUID
-		roleErr := tx.QueryRow(ctx, `SELECT id FROM role WHERE key = $1`, in.Role).Scan(&roleID)
-		if errors.Is(roleErr, pgx.ErrNoRows) {
-			return errUnknownRole
-		}
+		roleID, roleErr := roleIDByKey(ctx, tx, in.Role)
 		if roleErr != nil {
 			return roleErr
 		}

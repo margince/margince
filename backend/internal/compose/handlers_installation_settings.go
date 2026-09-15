@@ -75,10 +75,18 @@ func (h installationSettingsHandlers) GetAuthenticationPolicy(w http.ResponseWri
 	// The SAME resolver the aggregate renders and the login screen is served
 	// from, so a reader cannot be told a different answer by asking a different
 	// surface.
+	// A never-written map reads back nil, and the contract requires an object:
+	// {} is the honest spelling of "no group grants anything", where null would
+	// hand every client a second absent-shape to branch on.
+	groupRoleMap := policy.GroupRoleMap
+	if groupRoleMap == nil {
+		groupRoleMap = map[string]string{}
+	}
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.AuthenticationPolicy{
-		SignInProviders: h.signInProviders(policy.Providers),
-		RequireSso:      policy.RequireSSO,
-		RequireMfa:      policy.RequireMFA,
+		SignInProviders:  h.signInProviders(policy.Providers),
+		RequireSso:       policy.RequireSSO,
+		RequireMfa:       policy.RequireMFA,
+		OidcGroupRoleMap: groupRoleMap,
 	})
 }
 
@@ -153,6 +161,10 @@ func (h installationSettingsHandlers) UpdateInstallationSettings(w http.Response
 	// break-glass admin exemption is enforced at login, not stored here.
 	patch.RequireSSO = req.RequireSso
 	patch.RequireMFA = req.RequireMfa
+	// The entry's validator holds the bounds and the role vocabulary, so a
+	// refusal names the setting and quotes the group or role it refused —
+	// the same division of labour as the fiscal month above.
+	patch.OidcGroupRoleMap = req.OidcGroupRoleMap
 	s, err := h.store.UpdateInstallation(r.Context(), patch)
 	if err != nil {
 		httperr.Write(w, r, err)

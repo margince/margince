@@ -16276,6 +16276,26 @@ export interface components {
              */
             require_mfa?: boolean;
             /**
+             * @description Directory groups that GRANT roles at corporate sign-in. Each key is a group
+             *     exactly as the IdP spells it in the ID token's `groups` claim; each value is
+             *     one of the system role keys (admin, management, manager, rep, read_only, ops).
+             *
+             *     GRANT-ONLY, NEVER REVOKE — read that cost before mapping anything. At each
+             *     sign-in the member's token groups are intersected with this map and every
+             *     mapped role is ADDED to what they already hold. Removing a member from an
+             *     IdP group does NOT take the role away here: revocation stays a deliberate
+             *     admin action on the member's own account. Mapping a group onto `admin`
+             *     grants admin to every invited member of that group at their next sign-in —
+             *     this map is itself admin-only to edit, so that is a deliberate act.
+             *
+             *     It creates no accounts: an email nobody invited is refused exactly as
+             *     before, groups or none. Omit the field to leave the map unchanged; send an
+             *     empty object to clear it; sending a map replaces the whole stored map.
+             */
+            oidc_group_role_map?: {
+                [key: string]: string;
+            };
+            /**
              * @description How far back the maintenance banner looks before it calls dead work a problem, in
              *     hours. 24 by default, bounded above by River's own seven-day retention — a window
              *     past that cannot narrow anything, since every terminal row still there is inside it.
@@ -16736,6 +16756,17 @@ export interface components {
              *     unaffected — they are challenged for it at sign-in either way.
              */
             require_mfa: boolean;
+            /**
+             * @description The stored group→role grant map: each key an IdP group as the ID token's
+             *     `groups` claim spells it, each value the system role key it grants at
+             *     corporate sign-in. GRANT-ONLY: a role granted this way is never revoked by
+             *     leaving the group — revocation stays a deliberate admin action — and an
+             *     empty object means no group grants anything. It admits nobody who was not
+             *     already invited.
+             */
+            oidc_group_role_map: {
+                [key: string]: string;
+            };
         };
         /** @description One external sign-in provider this deployment holds credentials for, and whether the installation currently offers it. An admin can turn one off; they cannot add one, because a client id and secret cannot be invented from a settings screen. */
         SignInProvider: {

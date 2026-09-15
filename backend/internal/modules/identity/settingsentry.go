@@ -244,6 +244,7 @@ func Definitions() []settings.Definition {
 		EnabledOidcProviders,
 		RequireSSO,
 		RequireMFA,
+		OidcGroupRoleMap,
 		SMTPPasswordRef,
 		LicenseTokenRef,
 	}

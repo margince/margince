@@ -30,6 +30,11 @@ type SignInPolicyView struct {
 	Providers  []string
 	RequireSSO bool
 	RequireMFA bool
+	// GroupRoleMap is the stored group→role grant map (OidcGroupRoleMap),
+	// read here rather than on the aggregate for the same reason the
+	// providers are: which directory group grants admin is authentication
+	// administration, not something every installation_settings reader needs.
+	GroupRoleMap map[string]string
 }
 
 // SignInPolicy answers which providers the installation offers and whether it
@@ -61,7 +66,11 @@ func (s *InstallationSettingsStore) SignInPolicy(ctx context.Context) (SignInPol
 	if err != nil {
 		return SignInPolicyView{}, fmt.Errorf("identity: reading the sign-in policy: %w", err)
 	}
-	return SignInPolicyView{Providers: chosen, RequireSSO: requireSSO, RequireMFA: requireMFA}, nil
+	groupRoleMap, err := settings.Get(readCtx, s.settings, OidcGroupRoleMap)
+	if err != nil {
+		return SignInPolicyView{}, fmt.Errorf("identity: reading the sign-in policy: %w", err)
+	}
+	return SignInPolicyView{Providers: chosen, RequireSSO: requireSSO, RequireMFA: requireMFA, GroupRoleMap: groupRoleMap}, nil
 }
 
 // SSOEnforced reports whether the installation has closed the password path — for
@@ -87,6 +96,21 @@ func (s *InstallationSettingsStore) MFARequired(ctx context.Context) (bool, erro
 		return false, fmt.Errorf("identity: reading the require-MFA policy: %w", err)
 	}
 	return required, nil
+}
+
+// GroupRoleMap reports the stored group→role grant map for the sign-in path —
+// the third sibling of SSOEnforced and MFARequired, read on the same terms:
+// anonymous of any caller, because it runs while a federated login is deciding
+// what the arriving member holds and there is no principal yet to gate on. A
+// read that fails propagates rather than reading as empty, because answering a
+// policy outage as "no grants" would silently sign a member in without a role
+// an admin deliberately mapped.
+func (s *InstallationSettingsStore) GroupRoleMap(ctx context.Context) (map[string]string, error) {
+	m, err := settings.Get(s.asInstallation(ctx), s.settings, OidcGroupRoleMap)
+	if err != nil {
+		return nil, fmt.Errorf("identity: reading the group-role grant map: %w", err)
+	}
+	return m, nil
 }
 
 // asInstallation stamps the read as the installation's own system principal —

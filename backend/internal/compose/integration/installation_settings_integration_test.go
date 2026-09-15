@@ -25,6 +25,8 @@ package integration
 import (
 	"context"
 	"errors"
+	"fmt"
+	"maps"
 	"strings"
 	"testing"
 	"time"
@@ -243,6 +245,74 @@ func TestInstallationSettingsRoundTripTheFiscalYearStart(t *testing.T) {
 	if after.FiscalYearStartMonth != april {
 		t.Errorf("a patch naming only the name moved the fiscal start to %d, want %d",
 			after.FiscalYearStartMonth, april)
+	}
+}
+
+// The group→role grant map travels the REAL write path — patch, encode,
+// validate, store — and reads back through the projection that owns it,
+// SignInPolicy, since who a directory group makes an admin is authentication
+// administration rather than part of the every-role aggregate. The two
+// refusals proven here are the validator's own: a role key the installation
+// does not define, and a map past the entry's ceiling — both through
+// UpdateInstallation, not by calling the validator directly, so the wiring
+// from patch to entry is part of what passes.
+func TestOidcGroupRoleMapRoundTripAndValidation(t *testing.T) {
+	e := SetupSearch(t)
+	store := identity.NewInstallationSettings(e.DB(), compose.NewSettingsStore(e.Pool))
+	admin := e.installationSettingsCtx(principal.ObjectGrant{Read: true, Update: true})
+	policyReader := e.authPolicyCtx(map[string]principal.ObjectGrant{
+		"authentication_policy": {Read: true},
+	})
+
+	saved := map[string]string{"crm-users": "rep", "crm-admins": "admin"}
+	if _, err := store.UpdateInstallation(admin, identity.InstallationPatch{OidcGroupRoleMap: &saved}); err != nil {
+		t.Fatalf("storing the group-role map: %v", err)
+	}
+	policy, err := store.SignInPolicy(policyReader)
+	if err != nil {
+		t.Fatalf("reading the sign-in policy back: %v", err)
+	}
+	if !maps.Equal(policy.GroupRoleMap, saved) {
+		t.Errorf("read back %v, want %v", policy.GroupRoleMap, saved)
+	}
+
+	// An EMPTY map is a real choice — no group grants anything — and must
+	// store as that choice, not read back as never-chosen.
+	cleared := map[string]string{}
+	if _, err := store.UpdateInstallation(admin, identity.InstallationPatch{OidcGroupRoleMap: &cleared}); err != nil {
+		t.Fatalf("clearing the group-role map: %v", err)
+	}
+	policy, err = store.SignInPolicy(policyReader)
+	if err != nil {
+		t.Fatalf("re-reading the sign-in policy: %v", err)
+	}
+	if len(policy.GroupRoleMap) != 0 {
+		t.Errorf("cleared map read back as %v, want empty", policy.GroupRoleMap)
+	}
+
+	// A role key nobody defines is refused at the write, naming the setting:
+	// storing it would be storing a grant that silently grants nothing.
+	unknownRole := map[string]string{"crm-users": "sysadmin"}
+	_, err = store.UpdateInstallation(admin, identity.InstallationPatch{OidcGroupRoleMap: &unknownRole})
+	if err == nil {
+		t.Fatal("a map value that is not a defined role key was accepted")
+	}
+	var fault apperrors.FieldFault
+	if !errors.As(err, &fault) {
+		t.Fatalf("the unknown-role refusal does not classify as a field fault: %v", err)
+	}
+	if field, _, _ := fault.FieldFault(); field != "identity.oidc_group_role_map" {
+		t.Errorf("refusal names field %q, want the setting key", field)
+	}
+
+	// And the ceiling: a 65-entry map is refused before it can be paid for on
+	// every corporate sign-in.
+	oversized := make(map[string]string, 65)
+	for i := range 65 {
+		oversized[fmt.Sprintf("group-%d", i)] = "rep"
+	}
+	if _, err := store.UpdateInstallation(admin, identity.InstallationPatch{OidcGroupRoleMap: &oversized}); err == nil {
+		t.Fatal("a 65-entry group-role map was accepted past the 64-entry ceiling")
 	}
 }
 
