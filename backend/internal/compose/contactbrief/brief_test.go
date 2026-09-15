@@ -48,12 +48,12 @@ func inputFixture() Input {
 		Recent: []ActIn{
 			{
 				ID: schedulingID, Kind: "email", Subject: "Re: renewal call",
-				Preview: "Thursday at ten works for me.", Direction: "inbound", At: "2026-08-29T08:10:00Z",
+				Preview: "Thursday at ten works for me.", Speaker: "them", At: "2026-08-29T08:10:00Z",
 			},
 			{
 				ID: objectionID, Kind: "email", Subject: "Sub-processor list before we sign",
 				Preview: "We cannot go ahead while the analytics vendor is on it.",
-				Move:    "needs_reply", Direction: "inbound", At: "2026-08-24T09:00:00Z",
+				Move:    "needs_reply", Speaker: "them", At: "2026-08-24T09:00:00Z",
 			},
 		},
 	}

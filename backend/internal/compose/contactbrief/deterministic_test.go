@@ -50,7 +50,7 @@ func TestTheFloorAccountsForAHeldMessageWithoutQuotingIt(t *testing.T) {
 	in := inputFixture()
 	// As the 360 hands it over: the row keeps its date and loses its words.
 	in.Recent[0] = ActIn{
-		ID: schedulingID, Kind: "email", Direction: "inbound",
+		ID: schedulingID, Kind: "email", Speaker: "them",
 		At: "2026-08-29T08:10:00Z", Withheld: true,
 	}
 	prose := Prose(Deterministic(briefContactID, in))

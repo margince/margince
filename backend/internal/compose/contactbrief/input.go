@@ -198,11 +198,29 @@ type MomentIn struct {
 // such a row — the 360 nulls them before this fold ever sees them — so the flag
 // adds no content, it explains an absence.
 type ActIn struct {
-	ID        string `json:"id"`
-	Kind      string `json:"kind"`
-	Subject   string `json:"subject,omitempty"`
-	Preview   string `json:"preview,omitempty"`
-	Direction string `json:"direction,omitempty"`
+	ID      string `json:"id"`
+	Kind    string `json:"kind"`
+	Subject string `json:"subject,omitempty"`
+	Preview string `json:"preview,omitempty"`
+	// Speaker says WHO wrote this message, in the voice the brief is written
+	// in: "them" for a message from the contact, "you" for one from the
+	// reader. Empty on a row that records no direction, which the contract
+	// allows and the prompt is told to expect.
+	//
+	// It is a SPEAKER and not a direction, and that is the whole of the fix it
+	// carries. `direction: outbound` states a fact about a message and leaves the
+	// model to join it to "so these are the reader's own words" — a join it got
+	// wrong in production, attributing a founder's own assessment of a competitor
+	// to the contact who had merely asked about them, and labelling the sentence
+	// a FACT. The prompt had a rule telling it to make that join. A rule is not a
+	// substitute for saying the thing plainly in the data.
+	//
+	// Preview is the SPEAKER's own line, so the two fields belong together: this
+	// one names whose words those are. The deterministic floor never had this
+	// defect — lastTouchLine writes "You wrote last" straight from LastOutbound —
+	// which is why the fix lands in the shape the model reads rather than in the
+	// prose either path produces.
+	Speaker string `json:"speaker,omitempty"`
 	// Move is the server's reading of whose turn it is on this message:
 	// `needs_reply`, `waiting_for_them`, or `none` when the question cannot be
 	// answered honestly. Empty on a row that is not mail.
@@ -365,7 +383,7 @@ func foldRecent(in *Input, view crmcontracts.Contact360) {
 			folded.Subject = *activity.Subject
 		}
 		if activity.Direction != nil {
-			folded.Direction = string(*activity.Direction)
+			folded.Speaker = SpeakerFor(*activity.Direction)
 		}
 		foldMailSummary(&folded, activity.EmailSummary)
 		in.Recent = append(in.Recent, folded)
@@ -389,6 +407,35 @@ func foldMailSummary(into *ActIn, summary *crmcontracts.EmailSummary) {
 	if summary.Move != crmcontracts.EmailSummaryMoveNone {
 		into.Move = string(summary.Move)
 	}
+}
+
+// The two speakers a captured message can have, in the voice the brief is
+// written in. Derived from the contract's own direction enum rather than
+// compared against string literals, so a rename upstream fails to compile here
+// instead of silently folding every message to the same one.
+const (
+	speakerThem = "them"
+	speakerYou  = "you"
+)
+
+// SpeakerFor names who wrote a message, from the direction the 360 recorded.
+//
+// Inbound is the contact; everything else is the reader. The default is
+// deliberate rather than lazy: a direction this function does not recognise is
+// one the product has just added, and attributing an unknown message to the
+// READER is the safe way to be wrong — a brief that credits the reader with a
+// contact's words understates what the contact said, where the reverse puts
+// words in their mouth, which is the defect this field exists to prevent.
+//
+// Exported because the certification case folds its fixture through THIS
+// function rather than mapping directions to speakers a second time: a copy
+// would agree until somebody edited one side, and the side that drifted would be
+// the one certifying the prompt.
+func SpeakerFor(direction crmcontracts.ActivityDirection) string {
+	if direction == crmcontracts.ActivityDirectionInbound {
+		return speakerThem
+	}
+	return speakerYou
 }
 
 // withheldContent reports a row whose words are not this reader's. The 360 has
