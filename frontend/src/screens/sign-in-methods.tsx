@@ -306,6 +306,12 @@ function GroupRoleGrants({
 export function SignInMethodsCard() {
   const t = useT();
   const canManage = useCanWrite("installation_settings", "update");
+  // The group→role map GRANTS roles, so writing it is admin-only
+  // (`authentication_policy:update`), not the `installation_settings:update`
+  // that toggles the provider switches — an ops holder administers sign-in
+  // settings but must not be able to grant itself a role through the directory.
+  // Gated separately so the switches stay usable for them while the map does not.
+  const canManageGrants = useCanWrite("authentication_policy", "update");
   const settings = useAuthenticationPolicy();
   const save = useSetEnabledProviders();
 
@@ -391,7 +397,7 @@ export function SignInMethodsCard() {
                   // field is contract-required, and a body that lost it hands
                   // over `undefined` anyway.
                   initial={current.oidc_group_role_map ?? {}}
-                  canManage={canManage}
+                  canManage={canManageGrants}
                 />
               </>
             );

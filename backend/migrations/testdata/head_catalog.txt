@@ -3926,6 +3926,7 @@ public.idx_linkedin_connection_email CREATE INDEX idx_linkedin_connection_email 
 public.idx_linkedin_connection_match CREATE INDEX idx_linkedin_connection_match ON public.linkedin_connection USING btree (normalized_name, normalized_company) WHERE (tombstoned_at IS NULL)
 public.idx_list_member_entity CREATE INDEX idx_list_member_entity ON public.list_member USING btree (entity_type, entity_id)
 public.idx_list_member_list CREATE INDEX idx_list_member_list ON public.list_member USING btree (list_id)
+public.idx_mfa_challenge_spent_expires CREATE INDEX idx_mfa_challenge_spent_expires ON public.mfa_challenge_spent USING btree (expires_at)
 public.idx_mfa_recovery_code_user CREATE INDEX idx_mfa_recovery_code_user ON public.mfa_recovery_code USING btree (user_id)
 public.idx_mirror_user_map CREATE INDEX idx_mirror_user_map ON public.mirror_user_map USING btree (incumbent, incumbent_user_id)
 public.idx_mirror_visibility_record CREATE INDEX idx_mirror_visibility_record ON public.mirror_visibility USING btree (object_class, external_id)

@@ -23,16 +23,24 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
+// The provider switches take installation_settings:update; the group→role map
+// takes the admin-only authentication_policy:update. The default holds both, so
+// a caller who can work the whole card is the common case; a test that wants to
+// prove the map is withheld passes an allow that omits the sign-in-policy grant.
+const fullSignInGrants = {
+  installation_settings: ["read", "update"],
+  authentication_policy: ["read", "update"],
+};
+
 function mount(
   providers: { key: string; label: string; enabled: boolean }[],
   groupRoleMap: Record<string, string> = {},
+  allow: Record<string, string[]> = fullSignInGrants,
 ) {
   const calls: unknown[] = [];
   const fetchMock = vi.fn(async (request: Request) => {
     if (request.url.endsWith("/v1/me")) {
-      return jsonResponse(
-        meFixture({ allow: { installation_settings: ["read", "update"] } }),
-      );
+      return jsonResponse(meFixture({ allow }));
     }
     if (request.method === "PATCH") {
       calls.push(JSON.parse(await request.text()));
@@ -199,5 +207,27 @@ describe("the group role grant editor", () => {
     expect(
       screen.getByText(/mapping a group onto admin grants admin/i),
     ).toBeTruthy();
+  });
+
+  // Writing the map grants roles, so it is admin-only
+  // (authentication_policy:update) — a caller who administers installation
+  // settings but not the sign-in policy sees the map read-only rather than an
+  // editor that would 403 on save. The provider switches, which ARE
+  // installation_settings:update, stay theirs to work; this asserts only that
+  // the grant editor withholds itself.
+  it("shows the map read-only to a caller without the sign-in-policy grant", async () => {
+    mount([], { sales: "rep" }, { installation_settings: ["read", "update"] });
+    const group = await screen.findByRole("textbox", { name: /idp group/i });
+    expect(group.hasAttribute("disabled")).toBe(true);
+    expect(
+      screen
+        .getByRole("button", { name: /add group/i })
+        .hasAttribute("disabled"),
+    ).toBe(true);
+    expect(
+      screen
+        .getByRole("button", { name: /save group grants/i })
+        .hasAttribute("disabled"),
+    ).toBe(true);
   });
 });

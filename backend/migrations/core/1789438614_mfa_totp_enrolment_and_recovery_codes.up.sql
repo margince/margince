@@ -60,3 +60,8 @@ CREATE TABLE mfa_challenge_spent (
     jti text PRIMARY KEY,
     expires_at timestamptz NOT NULL
 );
+
+-- The reap selects expired nonces by expires_at on every completion; without
+-- this it is a sequential scan over a table that grows with the challenge rate
+-- between sweeps. The index makes each sweep a bounded range scan.
+CREATE INDEX idx_mfa_challenge_spent_expires ON mfa_challenge_spent (expires_at);
