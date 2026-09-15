@@ -57,3 +57,6 @@ const subjectDeal = "deal"
 // decay lane against a waiting row matches on it, and a misspelt literal there
 // fails silently — it matches nothing, drops nothing, and reads green.
 const subjectContact = "contact"
+
+// sourceNoticeCase names contact-linked disclosure duties across ranking and scope.
+const sourceNoticeCase = "notice_case"

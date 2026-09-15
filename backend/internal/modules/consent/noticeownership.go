@@ -97,9 +97,9 @@ func scanNoticeCase(row pgx.Row) (NoticeCase, error) {
 // ListNoticeCases answers the queue: every case in the states asked for,
 // soonest deadline first.
 //
-// Gated exactly as OpenNoticeCasesDueSoonest is — a notice case says how a
-// named contact was obtained and whether we have told them, which is the same
-// disclosure the subject-request queue makes about who exercised a right.
+// The explicit compliance queue uses privacy-request authority, including
+// cases about contacts outside ordinary CRM visibility. The contact-linked
+// agenda applies contact access separately because its action opens the contact.
 //
 // An empty `states` means every unresolved one, which is what a queue asks for
 // when it asks for nothing in particular. A caller that wants closed cases has
