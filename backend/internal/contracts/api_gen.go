@@ -21518,10 +21518,14 @@ type BillingContactRole string
 // deliberately letting one in, which no later verdict may undo.
 //
 // `undecided` is the third state and it is not a decision: the question was asked, the
-// machine declined to answer it, and nobody has since. Those rows are why this list
-// exists rather than being a record of refusals alone — a domain nothing decided is
-// invisible everywhere else, and an operator hunting a company that never appeared
-// cannot tell it from one that was refused.
+// machine declined to answer it, and nobody has since.
+//
+// Only the undecided domains belonging to NOBODY reach this list. A question raised by a
+// colleague's mail is addressed to that colleague and waits on their own queue, where the
+// verbs answering it live; carrying it here too would put one question on two surfaces and
+// invite an operator to answer for mail they cannot read. A domain whose owner has since
+// been deleted keeps no such addressee — the column is cleared with the account — and those
+// rows would otherwise be visible to nobody at all, which is what this list is for.
 type BlockedDomain struct {
 	// Admission `suppressed` — never a company. `admitted` — allowed, and sticky against later machine
 	// refusals. `undecided` — the question is open and waiting to be answered; nothing is stored
@@ -34776,10 +34780,14 @@ type RejectCompanyResponse struct {
 	// deliberately letting one in, which no later verdict may undo.
 	//
 	// `undecided` is the third state and it is not a decision: the question was asked, the
-	// machine declined to answer it, and nobody has since. Those rows are why this list
-	// exists rather than being a record of refusals alone — a domain nothing decided is
-	// invisible everywhere else, and an operator hunting a company that never appeared
-	// cannot tell it from one that was refused.
+	// machine declined to answer it, and nobody has since.
+	//
+	// Only the undecided domains belonging to NOBODY reach this list. A question raised by a
+	// colleague's mail is addressed to that colleague and waits on their own queue, where the
+	// verbs answering it live; carrying it here too would put one question on two surfaces and
+	// invite an operator to answer for mail they cannot read. A domain whose owner has since
+	// been deleted keeps no such addressee — the column is cleared with the account — and those
+	// rows would otherwise be visible to nobody at all, which is what this list is for.
 	Domain BlockedDomain `json:"domain"`
 }
 

@@ -5653,7 +5653,7 @@ export const vi = {
 
   "blockedDomains.title": "Tên miền bị từ chối",
   "blockedDomains.sub":
-    "Những tên miền mà bản cài đặt này không cho thành công ty, và điều gì đã quyết định từng trường hợp — một phán định của mô hình, một quy tắc suy đoán, hay một con người. Cho một tên miền vào lại sẽ mở lại câu hỏi về công ty, chứ không chỉ xoá một dấu hiệu.",
+    "Những tên miền mà bản cài đặt này không cho thành công ty, và điều gì đã quyết định từng trường hợp — một phán định của mô hình, một quy tắc suy đoán, hay một con người. Cho một tên miền vào lại sẽ mở lại câu hỏi về công ty, chứ không chỉ xoá một dấu hiệu. Câu hỏi còn ngỏ chỉ xuất hiện ở đây khi không ai sở hữu chúng; câu hỏi phát sinh từ thư của một đồng nghiệp sẽ nằm trên danh sách của chính họ.",
   "blockedDomains.listTitle": "Các quyết định đã lưu",
   "blockedDomains.record": "Ghi một quyết định",
   "blockedDomains.recordOpen": "Ghi một quyết định",

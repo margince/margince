@@ -5852,7 +5852,7 @@ export const en = {
 
   "blockedDomains.title": "Refused domains",
   "blockedDomains.sub":
-    "Which domains this installation refuses a company, and what decided each one — a model verdict, a heuristic, or a person. Letting a domain back in re-opens the company question rather than merely clearing a flag.",
+    "Which domains this installation refuses a company, and what decided each one — a model verdict, a heuristic, or a person. Letting a domain back in re-opens the company question rather than merely clearing a flag. Open questions appear here only when nobody owns them; one raised by a colleague's mail waits on their own list.",
   "blockedDomains.listTitle": "Decisions on record",
   "blockedDomains.record": "Record a decision",
   "blockedDomains.recordOpen": "Record a decision",
