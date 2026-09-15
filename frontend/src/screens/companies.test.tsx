@@ -1712,6 +1712,36 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
     );
   });
 
+  // Content-driven cards of unequal height never share a row: a tall needs
+  // list beside a short Ask box left a gap the height of the difference. So
+  // the glance is one column at every width, in the order a rep works it.
+  it("stacks the glance in one column: what needs a contact, the money, what the account is, then the questions", async () => {
+    stubFetch(companyBackstop, { company360 });
+    const { container } = render(<CompanyScreen id="o-1" />);
+    await screen.findByText("Brandt Automotive GmbH");
+
+    const stack = container.querySelector(".co-overview-stack");
+    expect(container.querySelector(".co-glance-cols")).toBeNull();
+    if (!(stack instanceof HTMLElement)) {
+      throw new Error("overview stack did not render");
+    }
+
+    // Each pane's own title, in DOM order: "Commercial" also names a health
+    // dimension elsewhere on the page, so the panel's own heading is what is
+    // compared rather than the word wherever it appears.
+    const headings = within(stack)
+      .getAllByRole("heading")
+      .map((heading) => heading.textContent);
+    const needsAt = headings.indexOf("What needs you");
+    const moneyAt = headings.indexOf("Commercial");
+    const dossierAt = headings.indexOf("What this company is");
+    const askAt = headings.indexOf("Ask about this account");
+    expect(needsAt).toBeGreaterThanOrEqual(0);
+    expect(moneyAt).toBeGreaterThan(needsAt);
+    expect(dossierAt).toBeGreaterThan(moneyAt);
+    expect(askAt).toBeGreaterThan(dossierAt);
+  });
+
   // The drawer opens OVER the record rather than into a column of it: it is
   // portalled above a scrim and takes none of the page's width, so the details
   // pane under it neither folds away nor comes back — it is exactly where the
