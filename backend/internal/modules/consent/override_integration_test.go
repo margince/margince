@@ -186,8 +186,7 @@ func TestAllowRejectsAnUnknownCategory(t *testing.T) {
 func TestAllowRejectsASubjectServingCategory(t *testing.T) {
 	e := setupChannelConsent(t)
 
-	err := e.store.Allow(e.ctx, AllowInput{
-		ContactID: e.contact, Category: "security_notice", Reason: "a reason"})
+	err := e.store.Allow(e.ctx, AllowInput{ContactID: e.contact, Category: "security_notice", Reason: "a reason"})
 	var invalid *ValidationError
 	if !errors.As(err, &invalid) {
 		t.Fatalf("a subject-serving category was refused with %v, want a validation error", err)
