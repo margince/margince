@@ -2732,6 +2732,8 @@ export const de = {
     "Dieser Deal ist archiviert und nimmt keine Änderungen an.",
   "deal.notYoursToChange":
     "Du kannst diesen Deal nicht ändern. Bitte den Inhaber, ihn mit dir zu teilen, oder eine Admin-Person um das Recht, ihn zu bearbeiten.",
+  "deal.closedTakesNoStage":
+    "Dieser Deal ist abgeschlossen. Öffne ihn wieder, um ihn in eine andere Phase zu bewegen.",
   "deal.reopen": "Wieder öffnen",
   "deal.reopenPick": "Diesen Deal in eine offene Phase zurücksetzen",
   "deal.reopenConfirm": "Wieder öffnen",

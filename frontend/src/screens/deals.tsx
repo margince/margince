@@ -63,7 +63,6 @@ import {
   useTimelineFilters,
 } from "../design-system/recordtimeline";
 import { Select } from "../design-system/select";
-import { StageLadder, type StageStep } from "../design-system/stageladder";
 import { TimelineFilterBar } from "../design-system/timelinefilterbar";
 import { useToast } from "../design-system/toast";
 import { AutonomyDot, ProvenanceTag } from "../design-system/trust";
@@ -143,6 +142,7 @@ import {
   useProjectsOfCompany,
 } from "./dealproject";
 import { DealRoomAside } from "./dealroom";
+import { DealStageLadder } from "./deals.stepper";
 import { DealStatusCardPanel, useDealStatusCard } from "./dealstatus";
 import {
   EntityRef,
@@ -3152,39 +3152,6 @@ export function OffersPanel({
 const DEAL_TABS = ["overview", "files", "history"] as const;
 type DealTab = (typeof DEAL_TABS)[number];
 
-// The pipeline's stages as ladder rungs: what is behind the deal, where it
-// stands, and the ways out.
-//
-// `position` orders the pipeline and is what the trail is read from — a stage
-// earlier in the pipeline than the deal's own has been passed. A deal whose
-// stage the pipeline cannot name (one archived out from under it) leaves
-// every rung unpassed rather
-// than guessing a position, because a trail drawn from a guess says the deal
-// went through stages it may never have seen.
-function dealStageSteps({
-  deal,
-  stages,
-  refused,
-  onAdvance,
-}: Readonly<{
-  deal: Deal;
-  stages: readonly Stage[];
-  refused: boolean;
-  onAdvance: (toStage: Stage) => void;
-}>): StageStep[] {
-  const here = stages.find((stage) => stage.id === deal.stage_id);
-  return stages.map((stage) => ({
-    key: stage.id,
-    label: stage.name,
-    done: here !== undefined && stage.position < here.position,
-    current: stage.id === deal.stage_id,
-    // Won and lost are the two ways out rather than two more rungs.
-    terminal: stage.semantic !== "open",
-    disabled: refused,
-    onPick: () => onAdvance(stage),
-  }));
-}
-
 // The deal 360's "overview" pane, split out of DealScreen so the tab switch
 // doesn't push the render-prop closure over the cognitive-complexity budget.
 // Every prop here is a value already resolved by DealScreen — no new
@@ -3276,7 +3243,6 @@ function DealOverviewPane({
   // Opens a cited message in the page's own email drawer; see `Citations`.
   onOpenEmail?: (activityId: string) => void;
 }>) {
-  const t = useT();
   return (
     // The same stack every record's overview reads down, with its rhythm.
     <div className="record-stack">
@@ -3305,14 +3271,13 @@ function DealOverviewPane({
           makes a deal closable from its own page rather than only by dragging
           its card on the board. */}
       {stages.length > 0 && (
-        <StageLadder
-          label={t("deals.stage")}
-          steps={dealStageSteps({
-            deal,
-            stages,
-            refused: advancing || advanceRefused,
-            onAdvance,
-          })}
+        <DealStageLadder
+          deal={deal}
+          stages={stages}
+          advancing={advancing}
+          advanceRefused={advanceRefused}
+          refusedReasonId={refusedReasonId}
+          onAdvance={onAdvance}
         />
       )}
       {/* ONE READING, IN PARTS, below the stage bar on purpose: a reader

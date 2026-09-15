@@ -129,7 +129,6 @@ type EntityRef struct {
 // adapter that cannot serve a v2 verb returns ErrUnsupportedBySoR. The
 // freeze is pinned by TestSystemOfRecordProviderV1MethodSetIsFrozen.
 type SystemOfRecordProvider interface {
-	// Reads are mirror-served in overlay mode to meet P4 read budgets.
 	Read(ctx context.Context, ref EntityRef) (Record, error)
 	Search(ctx context.Context, q SearchQuery) (SearchResult, error)
 	ListObjects(ctx context.Context) ([]ObjectDef, error)
@@ -138,13 +137,10 @@ type SystemOfRecordProvider interface {
 
 	// StageSemantic resolves a stage id to its canonical semantic
 	// (open|won|lost) plus owning pipeline — the lookup the advance_deal
-	// tier resolver trusts instead of labels or request args; in overlay
-	// mode it resolves through the incumbent→canonical stage mapping.
+	// tier resolver trusts instead of labels or request args.
 	StageSemantic(ctx context.Context, stageID ids.UUID) (semantic string, pipelineID ids.UUID, err error)
 
-	// Writes are canonical in SoR-mode and write BACK to the incumbent in
-	// overlay mode. Every write carries provenance and the acting
-	// Principal from ctx.
+	// Every write carries provenance and the acting Principal from ctx.
 	Create(ctx context.Context, in CreateInput) (EntityRef, error)
 	Update(ctx context.Context, in UpdateInput) (EntityRef, error)
 	AdvanceDeal(ctx context.Context, in AdvanceDealInput) (EntityRef, error)
@@ -252,9 +248,10 @@ type MergeInput struct {
 	TargetID ids.UUID
 }
 
-// FreshnessInfo travels in tool responses so an agent knows mirror
-// staleness (03e §2.3). Authoritative is false while pending_sync in
-// overlay mode; in SoR-mode it is always true.
+// FreshnessInfo travels in tool responses so an agent knows how stale the
+// record it is answering from may be. Authoritative is true for a provider
+// that holds the record itself, and an adapter serving a copy of somebody
+// else's system answers false while that copy is behind.
 type FreshnessInfo struct {
 	LastSyncedAt  time.Time
 	Authoritative bool
@@ -276,8 +273,8 @@ type SearchResult struct {
 	HasMore    bool
 }
 
-// ObjectDef / FieldDef expose schema introspection — ours in SoR-mode,
-// the incumbent's in overlay mode.
+// ObjectDef / FieldDef expose schema introspection — whichever system the
+// provider answers for.
 type ObjectDef struct {
 	Type   EntityType
 	Label  string

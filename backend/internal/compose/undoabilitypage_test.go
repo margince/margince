@@ -14,8 +14,7 @@ import (
 
 // The page decides whether to draw a restore button; the write decides whether
 // to honour it. A port the write consults and the page does not is a button
-// drawn enabled over a refusal — the reader presses it and gets a 409, which is
-// exactly what happened to ExternallyGoverned.
+// drawn enabled over a refusal — the reader presses it and gets a 409.
 //
 // Two halves, because the page's evaluator is a COPY of the write's with four
 // ports replaced. Checking only that the copy's fields are non-nil proves
@@ -81,9 +80,9 @@ func TestTheAdvisoryPathAnswersFromThePageFacts(t *testing.T) {
 	}
 
 	// Whatever the page does NOT derive it inherits, and a port left unbound
-	// is a branch the write asks and the page skips — the ExternallyGoverned
-	// shape. Derived from the struct, so a new port is covered the day it
-	// is added rather than the day someone remembers this test.
+	// is a branch the write asks and the page skips. Derived from the struct,
+	// so a new port is covered the day it is added rather than the day someone
+	// remembers this test.
 	bound := reflect.ValueOf(advisory)
 	for i := range bound.NumField() {
 		if bound.Field(i).IsNil() {
