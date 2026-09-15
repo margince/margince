@@ -189,7 +189,9 @@ export function ContactDealsTab({
   const state = sectionState(
     view,
     "deal_roles",
-    Boolean(view?.deal_roles),
+    // A card appended from the commercial deal counts as presence too, or
+    // an absent deal_roles section would hide a deal the page can show.
+    Boolean(view?.deal_roles) || cards.length > 0,
     cards.length,
     loading,
   );

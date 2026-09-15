@@ -6,19 +6,19 @@ import type { components } from "../api/schema";
 import { useRecordWriteRefusal } from "../app/capability";
 import { PageAsideToggle, usePageAside } from "../app/pageaside";
 import { useRecordZone } from "../app/recordzone";
-import { reveal, scrollPageToTop } from "../app/reveal";
+import { revealOnceMounted, scrollPageToTop } from "../app/reveal";
 import { navigate } from "../app/router";
 import { useHasUnsavedChanges } from "../app/unsaved";
 import { useUrlParams } from "../app/urlstate";
 import { useFoldedViewport } from "../app/viewport";
 import { Badge, Button, Modal } from "../design-system/atoms";
 import { ContactLink } from "../design-system/contactlink";
-import { Eyebrow } from "../design-system/eyebrow";
 import { IdentityLine } from "../design-system/identityline";
 import { OffsiteLink } from "../design-system/offsitelink";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { Popover } from "../design-system/popover";
 import { liveProjects } from "../design-system/projectpicker";
+import { Fact, RecordFacts } from "../design-system/recordfacts";
 import { RecordTabs } from "../design-system/recordtabs";
 import { RecordView } from "../design-system/recordview";
 import { useTooltip } from "../design-system/tooltip";
@@ -438,7 +438,7 @@ export function ContactPageV2({
           and everything on the page, the rail included, answers a pressed
           address with this page's own composer. */}
       <ContactWriteTo contactId={id} onWrite={() => openComposer("")}>
-        <div className="pe-sheet">
+        <div className="record-sheet">
           <RecordView
             // The contact's context, in the details pane beside the work: what is
             // true of the CONTACT does not belong to whichever part of them is open,
@@ -456,7 +456,7 @@ export function ContactPageV2({
             // registers a reader takes in one glance rather than a stack of
             // lines under a masthead.
             nameBadge={<ContactSubtitle view={view.data} />}
-            pulse={<ContactMarks view={view.data} />}
+            pulse={<ContactMarks view={view.data} tab={tab} />}
             badges={<ContactFacts view={view.data} />}
             actions={
               // refusedReasonId is the SAME sentence the band below states —
@@ -802,16 +802,27 @@ function ContactSubtitle({ view }: Readonly<{ view: Contact360 }>): ReactNode {
 // ONE badge, nothing when the touch dates are withheld from this reader) and
 // who may read the record, with its Share verb. Both are the values a rep
 // glances for before anything else, and both are pills, so they share a line.
-function ContactMarks({ view }: Readonly<{ view: Contact360 }>): ReactNode {
+function ContactMarks({
+  view,
+  tab,
+}: Readonly<{ view: Contact360; tab: ContactTab }>): ReactNode {
   const t = useT();
   const { locale } = useLocale();
   const standing = contactStanding(view, t);
+  // The brief lives on the overview: from any other tab the press goes there
+  // first, and the reveal waits for the anchor to be drawn.
+  const showBrief = () => {
+    if (tab !== "overview") {
+      navigate(contactTabRoute(view.contact.id, "overview"));
+    }
+    revealOnceMounted(BRIEF_ANCHOR);
+  };
   return (
     <IdentityLine separator="space">
       {standing && (
         <StandingChip
           text={standingSentences(view, t, locale)}
-          onPress={reveal(BRIEF_ANCHOR)}
+          onPress={showBrief}
         >
           <Badge tone={standing.tone}>{standing.words}</Badge>
         </StandingChip>
@@ -865,7 +876,7 @@ function ContactFacts({ view }: Readonly<{ view: Contact360 }>): ReactNode {
   const phone = contact.phones?.[0]?.phone;
   const role = view.commercial?.role;
   return (
-    <dl className="pe-facts">
+    <RecordFacts>
       {email && (
         <Fact label={t("history.field.email")}>
           <ContactLink
@@ -925,21 +936,7 @@ function ContactFacts({ view }: Readonly<{ view: Contact360 }>): ReactNode {
           <p className="t-body">{contact.source || t("trust.sourceUnknown")}</p>
         </Popover>
       </Fact>
-    </dl>
-  );
-}
-
-function Fact({
-  label,
-  children,
-}: Readonly<{ label: string; children: ReactNode }>) {
-  return (
-    <div className="pe-fact">
-      <dt>
-        <Eyebrow>{label}</Eyebrow>
-      </dt>
-      <dd>{children}</dd>
-    </div>
+    </RecordFacts>
   );
 }
 

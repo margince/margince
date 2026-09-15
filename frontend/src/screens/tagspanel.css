@@ -33,8 +33,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  inline-size: 1.25rem;
-  block-size: 1.25rem;
+  min-inline-size: var(--control-h-sm);
+  min-block-size: var(--control-h-sm);
   margin-inline-start: var(--space-1);
   padding: 0;
   border: 0;

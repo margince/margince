@@ -12,6 +12,7 @@ import { TagPill } from "../design-system/tagpill";
 import { formatDate, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
+import { problemMessageOf } from "./common";
 import { AddTagDialog } from "./tagpicker";
 import type { RecordTag, TaggableType } from "./tags.queries";
 import { useRecordTags, useRemoveTag } from "./tags.queries";
@@ -245,6 +246,7 @@ function TagOnRecord({
             confirmLabel={t("tags.removeFromRecord")}
             confirmVariant="danger"
             pending={remove.isPending}
+            error={remove.isError ? problemMessageOf(remove.error, t) : null}
             onConfirm={() =>
               remove.mutate(tag.tag_id, {
                 onSuccess: () => setConfirming(false),

@@ -33,6 +33,25 @@ export function reveal(anchor: string): () => void {
 }
 
 /**
+ * Reveals an anchor that may not be on the page yet: a press that also
+ * switches to the tab rendering it finds nothing on the first frame. Looked
+ * for once per frame for a moment, then given up rather than kept forever.
+ */
+export function revealOnceMounted(anchor: string, frames = 30): void {
+  const look = (left: number) => {
+    const target = document.getElementById(anchor);
+    if (target) {
+      target.scrollIntoView?.({ behavior: "smooth", block: "start" });
+      return;
+    }
+    if (left > 0) {
+      requestAnimationFrame(() => look(left - 1));
+    }
+  };
+  look(frames);
+}
+
+/**
  * Takes the reader back to the top of the page pane, smoothly: for a tab
  * strip stuck under the top bar, where a reader deep in one tab's body
  * chooses another and would otherwise land part-way down the new one.

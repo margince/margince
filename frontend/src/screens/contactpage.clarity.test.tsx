@@ -61,7 +61,7 @@ describe("a contact with little context", () => {
     expect(
       screen.queryByRole("heading", { name: "What needs you" }),
     ).toBeNull();
-    const sourceFact = screen.getByText("Source").closest(".pe-fact");
+    const sourceFact = screen.getByText("Source").closest(".record-fact");
     if (!(sourceFact instanceof HTMLElement)) {
       throw new Error("the Source fact is not on the page");
     }

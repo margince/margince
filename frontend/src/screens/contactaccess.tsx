@@ -74,32 +74,34 @@ export function ContactAccess({ contact }: Readonly<{ contact: Contact }>) {
           isPrivate ? t("contactAccess.privateTip") : t("contactAccess.company")
         }
       >
-        <VisibilityLine
-          state={isPrivate ? "private" : "team"}
-          action={
-            mayChange && (
-              <Button
-                variant="link"
-                className="contact-access-action"
-                aria-describedby={descriptionId}
-                pending={setVisibility.isPending}
-                onClick={() =>
-                  setVisibility.mutate({
-                    id: contact.id,
-                    version: contact.version,
-                    visibility: isPrivate ? "workspace" : "owner",
-                  })
-                }
-              >
-                {t(
-                  isPrivate
-                    ? "contactAccess.share"
-                    : "contactAccess.makePrivate",
-                )}
-              </Button>
-            )
-          }
-        />
+        {(tipId) => (
+          <VisibilityLine
+            state={isPrivate ? "private" : "team"}
+            action={
+              mayChange && (
+                <Button
+                  variant="link"
+                  className="contact-access-action"
+                  aria-describedby={describedBy(descriptionId, tipId)}
+                  pending={setVisibility.isPending}
+                  onClick={() =>
+                    setVisibility.mutate({
+                      id: contact.id,
+                      version: contact.version,
+                      visibility: isPrivate ? "workspace" : "owner",
+                    })
+                  }
+                >
+                  {t(
+                    isPrivate
+                      ? "contactAccess.share"
+                      : "contactAccess.makePrivate",
+                  )}
+                </Button>
+              )
+            }
+          />
+        )}
       </AccessTip>
       <span id={descriptionId} className="sr-only">
         {description}
@@ -117,14 +119,24 @@ export function ContactAccess({ contact }: Readonly<{ contact: Contact }>) {
 
 // The tooltip's anchor: one span around the line, so the badge and the verb
 // share the one explanation rather than each hanging its own.
+// Both descriptions on the one control: the sr-only sentence it always
+// carries and the tip while it is open.
+function describedBy(...ids: (string | undefined)[]): string | undefined {
+  const joined = ids.filter(Boolean).join(" ");
+  return joined || undefined;
+}
+
+// The tip's id is handed to the children, because `aria-describedby` does
+// not inherit: set on the span alone, the button inside it stayed
+// undescribed for a screen reader.
 function AccessTip({
   text,
   children,
-}: Readonly<{ text: string; children: ReactNode }>) {
+}: Readonly<{ text: string; children: (tipId?: string) => ReactNode }>) {
   const { ref, trigger, tip } = useTooltip<HTMLSpanElement>(text);
   return (
     <span className="contact-access-tip" ref={ref} {...trigger}>
-      {children}
+      {children(trigger["aria-describedby"])}
       {tip}
     </span>
   );

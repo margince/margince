@@ -3630,7 +3630,7 @@ export const vi = {
     "Riêng của bạn. Hộp thư của bạn đã tạo liên hệ này, và không ai khác trong tổ chức xem được — kể cả nhóm của bạn và quản trị viên.",
   "contactAccess.company": "Mọi người trong tổ chức đều xem được liên hệ này.",
   "contactAccess.privateTip":
-    "Chỉ bạn thấy được liên hệ này. Chia sẻ với công ty để đồng nghiệp cũng thấy.",
+    "Chỉ bạn thấy được liên hệ này. Chia sẻ với tổ chức để đồng nghiệp cũng thấy.",
   "contactAccess.share": "Chia sẻ với tổ chức",
   "contactAccess.published": "Tổ chức đã xem được liên hệ này.",
   "contactAccess.makePrivate": "Đặt ở chế độ riêng tư",

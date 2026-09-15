@@ -271,9 +271,13 @@ export function Employers({ view }: Readonly<{ view: Contact360 }>) {
               // can confirm it as the role at THIS company. `stillHeld`
               // rather than the raw `is_current_primary` flag, so this
               // matches exactly the row the "current" badge below marks:
-              // a former job whose flag was never cleared gets neither.
+              // a former job whose flag was never cleared gets neither, and
+              // only the primary one: the title is contact-wide, and offered
+              // on every live row it would be saved to each of them.
               fallbackRole={
-                stillHeld(employment) ? (contact.title ?? undefined) : undefined
+                stillHeld(employment) && employment.is_current_primary
+                  ? (contact.title ?? undefined)
+                  : undefined
               }
               canEdit={canEdit}
               readOnlyReason={readOnlyReason}

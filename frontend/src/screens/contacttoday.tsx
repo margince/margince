@@ -224,14 +224,18 @@ function suggestionFor(
   });
   switch (moment.rule) {
     case "gone_quiet": {
+      // Counted from our last message: the silence is how long we have been
+      // waiting. With no such date the server's own sentence stands, rather
+      // than a suggestion with a blank where the count goes.
       const since = view.last_outbound_at;
+      if (!since) {
+        return situation;
+      }
       return lead("contact.moment.suggest.goneQuiet", {
-        days: since
-          ? formatNumber(
-              calendarDaysBetween(new Date(since), new Date(view.as_of)),
-              locale,
-            )
-          : "",
+        days: formatNumber(
+          calendarDaysBetween(new Date(since), new Date(view.as_of)),
+          locale,
+        ),
       });
     }
     case "re_engaged":
