@@ -2450,6 +2450,7 @@ func (e BillingContactRole) Valid() bool {
 const (
 	BlockedDomainAdmissionAdmitted   BlockedDomainAdmission = "admitted"
 	BlockedDomainAdmissionSuppressed BlockedDomainAdmission = "suppressed"
+	BlockedDomainAdmissionUndecided  BlockedDomainAdmission = "undecided"
 )
 
 // Valid indicates whether the value is a known member of the BlockedDomainAdmission enum.
@@ -2459,6 +2460,8 @@ func (e BlockedDomainAdmission) Valid() bool {
 		return true
 	case BlockedDomainAdmissionSuppressed:
 		return true
+	case BlockedDomainAdmissionUndecided:
+		return true
 	default:
 		return false
 	}
@@ -2466,9 +2469,11 @@ func (e BlockedDomainAdmission) Valid() bool {
 
 // Defines values for BlockedDomainSource.
 const (
-	BlockedDomainSourceHeuristic BlockedDomainSource = "heuristic"
-	BlockedDomainSourceHuman     BlockedDomainSource = "human"
-	BlockedDomainSourceVerdict   BlockedDomainSource = "verdict"
+	BlockedDomainSourceHeuristic     BlockedDomainSource = "heuristic"
+	BlockedDomainSourceHuman         BlockedDomainSource = "human"
+	BlockedDomainSourceStaleEvidence BlockedDomainSource = "stale_evidence"
+	BlockedDomainSourceUnevidenced   BlockedDomainSource = "unevidenced"
+	BlockedDomainSourceVerdict       BlockedDomainSource = "verdict"
 )
 
 // Valid indicates whether the value is a known member of the BlockedDomainSource enum.
@@ -2477,6 +2482,10 @@ func (e BlockedDomainSource) Valid() bool {
 	case BlockedDomainSourceHeuristic:
 		return true
 	case BlockedDomainSourceHuman:
+		return true
+	case BlockedDomainSourceStaleEvidence:
+		return true
+	case BlockedDomainSourceUnevidenced:
 		return true
 	case BlockedDomainSourceVerdict:
 		return true
@@ -21352,31 +21361,49 @@ type BillingContact struct {
 // One contact may hold several, and each is a separate edge.
 type BillingContactRole string
 
-// BlockedDomain One domain carrying a standing admission decision. `suppressed` refuses it a company —
+// BlockedDomain One domain and where its company question stands. `suppressed` refuses it a company —
 // a vendor or bulk sender the business does not sell to — while `admitted` is a human
 // deliberately letting one in, which no later verdict may undo.
+//
+// `undecided` is the third state and it is not a decision: the question was asked, the
+// machine declined to answer it, and nobody has since. Those rows are why this list
+// exists rather than being a record of refusals alone — a domain nothing decided is
+// invisible everywhere else, and an operator hunting a company that never appeared
+// cannot tell it from one that was refused.
 type BlockedDomain struct {
-	// Admission `suppressed` — never a company. `admitted` — allowed, and sticky against later machine refusals.
+	// Admission `suppressed` — never a company. `admitted` — allowed, and sticky against later machine
+	// refusals. `undecided` — the question is open and waiting to be answered; nothing is stored
+	// on the row for this state, it is what the absence of a decision is called on the wire.
 	Admission BlockedDomainAdmission `json:"admission"`
 
 	// CompanyId The company on this domain, when one exists — an admitted domain usually has one.
 	CompanyId *openapi_types.UUID `json:"company_id,omitempty"`
-	DecidedAt time.Time           `json:"decided_at"`
+
+	// DecidedAt When the decision was recorded. For an `undecided` domain, when the row last moved.
+	DecidedAt time.Time `json:"decided_at"`
 
 	// Domain The registrable domain the decision is about.
 	Domain string `json:"domain"`
 
-	// Reason One sentence an operator can act on: why this domain was refused or let in.
+	// Reason One sentence an operator can act on: why this domain was refused, let in, or left open.
 	Reason string `json:"reason"`
 
-	// Source What decided it. `human` decisions outrank every machine one.
+	// Source What decided it, or — for an `undecided` domain — what stopped the machine deciding.
+	// `human` decisions outrank every machine one. `unevidenced` means nothing the crawl
+	// found named a company; `stale_evidence` means the newest mail from the domain is too
+	// old to mint one from today's site.
 	Source BlockedDomainSource `json:"source"`
 }
 
-// BlockedDomainAdmission `suppressed` — never a company. `admitted` — allowed, and sticky against later machine refusals.
+// BlockedDomainAdmission `suppressed` — never a company. `admitted` — allowed, and sticky against later machine
+// refusals. `undecided` — the question is open and waiting to be answered; nothing is stored
+// on the row for this state, it is what the absence of a decision is called on the wire.
 type BlockedDomainAdmission string
 
-// BlockedDomainSource What decided it. `human` decisions outrank every machine one.
+// BlockedDomainSource What decided it, or — for an `undecided` domain — what stopped the machine deciding.
+// `human` decisions outrank every machine one. `unevidenced` means nothing the crawl
+// found named a company; `stale_evidence` means the newest mail from the domain is too
+// old to mint one from today's site.
 type BlockedDomainSource string
 
 // BlockedDomainListResponse defines model for BlockedDomainListResponse.
@@ -34645,9 +34672,15 @@ type RejectCompanyResponse struct {
 	// Company A company. Mirrors the `company` table.
 	Company Company `json:"company"`
 
-	// Domain One domain carrying a standing admission decision. `suppressed` refuses it a company —
+	// Domain One domain and where its company question stands. `suppressed` refuses it a company —
 	// a vendor or bulk sender the business does not sell to — while `admitted` is a human
 	// deliberately letting one in, which no later verdict may undo.
+	//
+	// `undecided` is the third state and it is not a decision: the question was asked, the
+	// machine declined to answer it, and nobody has since. Those rows are why this list
+	// exists rather than being a record of refusals alone — a domain nothing decided is
+	// invisible everywhere else, and an operator hunting a company that never appeared
+	// cannot tell it from one that was refused.
 	Domain BlockedDomain `json:"domain"`
 }
 
@@ -56743,12 +56776,15 @@ type ServerInterface interface {
 	// The same window for the workspace's shared channel connections.
 	// (GET /capture/activity/workspace)
 	ListWorkspaceCaptureActivity(w http.ResponseWriter, r *http.Request, params ListWorkspaceCaptureActivityParams)
-	// The domains refused a company, and why.
+	// Where each domain's company question stands.
 	// (GET /capture/blocked-domains)
 	ListBlockedDomains(w http.ResponseWriter, r *http.Request)
 	// Block a domain, or unblock one (admin/ops).
 	// (PUT /capture/blocked-domains)
 	SetBlockedDomain(w http.ResponseWriter, r *http.Request)
+	// Ask about an undecided domain again (admin/ops).
+	// (POST /capture/blocked-domains/{domain}/reopen)
+	ReopenWithheldDomain(w http.ResponseWriter, r *http.Request, domain string)
 	// Search the shipped consumer-mail baseline (CAP-PARAM-5).
 	// (GET /capture/consumer-mail-baseline)
 	ListConsumerMailBaseline(w http.ResponseWriter, r *http.Request, params ListConsumerMailBaselineParams)
@@ -59062,7 +59098,7 @@ func (_ Unimplemented) ListWorkspaceCaptureActivity(w http.ResponseWriter, r *ht
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// The domains refused a company, and why.
+// Where each domain's company question stands.
 // (GET /capture/blocked-domains)
 func (_ Unimplemented) ListBlockedDomains(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -59071,6 +59107,12 @@ func (_ Unimplemented) ListBlockedDomains(w http.ResponseWriter, r *http.Request
 // Block a domain, or unblock one (admin/ops).
 // (PUT /capture/blocked-domains)
 func (_ Unimplemented) SetBlockedDomain(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Ask about an undecided domain again (admin/ops).
+// (POST /capture/blocked-domains/{domain}/reopen)
+func (_ Unimplemented) ReopenWithheldDomain(w http.ResponseWriter, r *http.Request, domain string) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -66609,6 +66651,38 @@ func (siw *ServerInterfaceWrapper) SetBlockedDomain(w http.ResponseWriter, r *ht
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.SetBlockedDomain(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ReopenWithheldDomain operation middleware
+func (siw *ServerInterfaceWrapper) ReopenWithheldDomain(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "domain" -------------
+	var domain string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "domain", chi.URLParam(r, "domain"), &domain, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "domain", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReopenWithheldDomain(w, r, domain)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -91013,6 +91087,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/capture/blocked-domains", wrapper.SetBlockedDomain)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/capture/blocked-domains/{domain}/reopen", wrapper.ReopenWithheldDomain)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/capture/consumer-mail-baseline", wrapper.ListConsumerMailBaseline)

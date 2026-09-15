@@ -5671,6 +5671,7 @@ export const de = {
   "blockedDomains.admissionLabel": "Entscheidung",
   "blockedDomains.admission.suppressed": "Nie eine Firma",
   "blockedDomains.admission.admitted": "Zugelassen, und zwar dauerhaft",
+  "blockedDomains.admission.undecided": "Niemand hat entschieden",
   "blockedDomains.reasonLabel": "Begründung",
   "blockedDomains.reasonHint":
     "Ein Satz, mit dem jemand später etwas anfangen kann.",
@@ -5695,8 +5696,16 @@ export const de = {
   "blockedDomains.source.verdict": "Ein Modellurteil",
   "blockedDomains.source.heuristic": "Eine Heuristik",
   "blockedDomains.source.human": "Ein Mensch",
+  "blockedDomains.source.unevidenced":
+    "Auf der Website stand kein Unternehmensname",
+  "blockedDomains.source.staleEvidence":
+    "Die Post, die dafür spricht, ist zu alt",
   "blockedDomains.rowAdmit": "Diese zulassen",
   "blockedDomains.rowRefuse": "Diese ablehnen",
+  "blockedDomains.rowReopen": "Erneut fragen",
+  "blockedDomains.reopened": "{domain} wird erneut geprüft",
+  "blockedDomains.reopenFailed":
+    "Diese Domain konnte nicht erneut geprüft werden",
 
   "ob.s4.googleFailed": "Die Google-Verbindung wurde nicht abgeschlossen",
   "ob.s4.imapHost": "IMAP-Host",
