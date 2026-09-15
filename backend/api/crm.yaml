@@ -41638,6 +41638,7 @@ components:
         - deal/lost
         - deal/won
         - ai_call_payload/content
+        - raw_capture
 
     RetentionAction:
       type: string
