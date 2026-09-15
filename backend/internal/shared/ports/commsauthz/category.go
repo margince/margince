@@ -132,7 +132,7 @@ func (c Category) ServesTheSubject() bool {
 //
 // It reads the SAME categories map Valid and Categories() both read, rather
 // than a retyped list: the migration's CHECK on communication_override.category
-// (backend/migrations/core/1789363454_a_rep_may_vouch_for_a_send.up.sql) repeats
+// (backend/migrations/core/1789437489_a_rep_may_vouch_for_a_send.up.sql) repeats
 // those fourteen values by hand, because SQL cannot call this package, and a
 // caller here must answer to the vocabulary Categories() already enumerates
 // rather than a second copy of it.

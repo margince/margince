@@ -143,8 +143,11 @@ type Decision struct {
 	// visible in the row rather than only in a metric.
 	LegacyVerdict string
 	// OverrideID names the communication_override that flipped a machine
-	// refusal to allow, or the zero UUID when none did. It is the audit trail
-	// for a send that only went because a seat vouched for it.
+	// refusal to allow, or the zero UUID when none did. It rides the in-memory
+	// decision so the gate can report which override applied; it is not itself
+	// persisted. The durable trail lives elsewhere — reason_code
+	// 'allowed_by_override' on communication_decision, and the vouching seat and
+	// level in audit_log from the Allow write, which survives erasure.
 	OverrideID ids.UUID
 }
 
