@@ -1,12 +1,6 @@
 /* SPDX-License-Identifier: BUSL-1.1
  * SPDX-FileCopyrightText: 2026 Gradion */
 
-/* Every quiet line here reads --textMeta, not --textMuted: --textMuted is the
-   placeholder-grade ink and measures 1.54:1 on this surface, while tokens.css
-   names --textMeta the canonical AA small-text role. These are the column
-   headers, the counts and the per-row reasons a reader weighs immediately
-   before committing the least reversible write in the product. */
-
 .import {
   display: flex;
   flex-direction: column;

@@ -1111,7 +1111,7 @@
   margin-top: 5px; /* ds:ignore optical centring of an 8px dot on a 13px line */
   border-radius: var(--r-full);
   corner-shape: round;
-  background: var(--textTertiary);
+  background: var(--borderStrong);
 }
 .co-dot-warn {
   background: var(--warn);
@@ -1428,7 +1428,7 @@
 .co-360-dims .popover-trigger.co-dim:hover,
 .co-360-dims .popover-trigger.co-dim[aria-expanded="true"] {
   color: var(--textPrimary);
-  text-decoration-color: var(--textMeta);
+  text-decoration-color: currentColor;
 }
 
 /* The aside behind a chip: what the dimension weighs, then the reading its
@@ -1454,7 +1454,7 @@
   block-size: 7px;
   border-radius: var(--r-full);
   corner-shape: round;
-  background: var(--textTertiary);
+  background: var(--borderStrong);
 }
 .co-dim-calm::before {
   background: var(--success);

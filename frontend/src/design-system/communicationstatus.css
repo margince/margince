@@ -24,10 +24,8 @@
 
 .commstatus.popover-trigger:hover,
 .commstatus.popover-trigger:focus-visible {
-  /* --bgHover, not --bgChip: the chip fill is measured against a closed list of
-   * inks and --textMeta is not one of them, so painting it here would be a
-   * contrast pair nobody has checked. This is a pointer resting on a control,
-   * which is exactly what --bgHover is for. */
+  /* --bgHover, not --bgChip: this is a pointer resting on a control, which is
+   * exactly what --bgHover is for. */
   background: var(--bgHover);
 }
 

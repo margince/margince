@@ -520,7 +520,7 @@
   margin-top: 5px; /* ds:ignore optical centring of an 8px dot on a 13px line */
   border-radius: 50%;
   corner-shape: round;
-  background: var(--textTertiary);
+  background: var(--borderStrong);
 }
 
 .pe-dot-good {

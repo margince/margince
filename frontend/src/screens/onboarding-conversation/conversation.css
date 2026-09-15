@@ -722,7 +722,7 @@
 }
 
 .ob-decision-skip:hover {
-  border-color: var(--textTertiary);
+  border-color: var(--borderStrong);
   color: var(--textPrimary);
 }
 

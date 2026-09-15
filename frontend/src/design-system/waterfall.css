@@ -36,7 +36,7 @@
 /* The two anchors are the totals, drawn recessed so the movement between them
    is what the eye lands on. */
 .waterfall-anchor .waterfall-fill {
-  background: var(--textMuted);
+  background: var(--borderSubtle);
 }
 .waterfall-up .waterfall-fill {
   background: var(--success);

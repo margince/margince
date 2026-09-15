@@ -264,7 +264,7 @@
   height: 3px;
   border-radius: var(--r-full);
   corner-shape: round;
-  background: var(--textMuted);
+  background: var(--borderSubtle);
   transition:
     background var(--dur-move) var(--ease-out),
     width var(--dur-move) var(--ease-out);

@@ -68,7 +68,7 @@
  * .t-eyebrow class the element carries. All this adds is what that class
  * cannot say inside an SVG, where text takes `fill` and not `color`. */
 .rmap-lane {
-  fill: var(--textTertiary);
+  fill: currentColor;
 }
 
 .rmap-name {
@@ -76,7 +76,7 @@
 }
 
 .rmap-sub {
-  fill: var(--textMeta);
+  fill: currentColor;
 }
 
 .rmap-pill-waiting {
@@ -92,7 +92,7 @@
 }
 
 .rmap-pill-untried {
-  fill: var(--textMeta);
+  fill: var(--borderStrong);
 }
 
 .rmap-box {

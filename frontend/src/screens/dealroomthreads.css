@@ -97,7 +97,7 @@
 .board-doc-page-head {
   width: 55%;
   height: 7px;
-  background: var(--textTertiary);
+  background: var(--borderStrong);
 }
 
 .board-doc-page-short {

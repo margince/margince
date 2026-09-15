@@ -921,8 +921,8 @@
   block-size: 0.5rem;
   border-radius: var(--r-full);
   corner-shape: round;
-  background: var(--textMeta);
-  border: 1px solid var(--textMeta);
+  background: var(--borderStrong);
+  border: 1px solid var(--borderStrong);
 }
 
 .timeline .tl-dot-quiet {
