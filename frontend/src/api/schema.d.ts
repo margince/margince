@@ -17520,7 +17520,6 @@ export interface components {
                 skipped?: number;
                 contacts_created?: number;
                 companies_created?: number;
-                dedupe_candidates?: number;
             };
             /** Format: date-time */
             started_at?: string | null;

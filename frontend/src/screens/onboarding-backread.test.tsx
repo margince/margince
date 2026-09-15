@@ -461,7 +461,6 @@ describe("the tallies", () => {
         skipped: 88,
         contacts_created: 90,
         companies_created: 20,
-        dedupe_candidates: 7,
       },
     });
 

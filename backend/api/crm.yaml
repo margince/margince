@@ -25288,7 +25288,6 @@ components:
             skipped: { type: integer }
             contacts_created: { type: integer }
             companies_created: { type: integer }
-            dedupe_candidates: { type: integer }
         started_at: { type: [string, 'null'], format: date-time }
         completed_at: { type: [string, 'null'], format: date-time }
         updated_at: { type: [string, 'null'], format: date-time, description: 'Staleness stamp — a killed worker leaves this honest ("last updated Xs ago").' }

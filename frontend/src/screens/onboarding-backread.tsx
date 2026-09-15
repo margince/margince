@@ -45,8 +45,10 @@ type Provider = components["schemas"]["CaptureConnection"]["provider"];
 const FALLBACK_CURRENCY = "USD";
 
 // Declaration order is render order. Every entry names a persisted count on the
-// wire and the copy for it; `dedupe_candidates` is deliberately absent — it is
-// review work, not a finding, and has no sentence in this step.
+// wire and the copy for it, and the list is now the whole of what the wire
+// carries: the backfill's dedupe counter was served as a constant zero — no
+// writer ever set it — and has been removed from the contract rather than left
+// as a tally this step deliberately declined to render.
 const TALLIES: readonly { key: keyof BackfillCounts; label: MessageKey }[] = [
   { key: "messages_scanned", label: "ob.backread.tallyMessages" },
   { key: "captured", label: "ob.backread.tallyCaptured" },

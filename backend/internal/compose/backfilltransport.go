@@ -418,12 +418,11 @@ func backfillStatusPayload(run *capture.BackfillRun) crmcontracts.BackfillStatus
 		Captured         *int `json:"captured,omitempty"`
 		CompaniesCreated *int `json:"companies_created,omitempty"`
 		ContactsCreated  *int `json:"contacts_created,omitempty"`
-		DedupeCandidates *int `json:"dedupe_candidates,omitempty"`
 		MessagesScanned  *int `json:"messages_scanned,omitempty"`
 		Skipped          *int `json:"skipped,omitempty"`
 	}{
 		MessagesScanned: &run.Scanned, Captured: &run.Captured, Skipped: &run.Skipped,
-		ContactsCreated: &run.Contacts, CompaniesCreated: &run.Companies, DedupeCandidates: &run.DedupeCands,
+		ContactsCreated: &run.Contacts, CompaniesCreated: &run.Companies,
 	}
 	st.LastErrorClass = run.ErrorClass
 	return st
