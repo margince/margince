@@ -5,7 +5,8 @@ and two scopes, **Mine** and **Team**. The team scope appears only for a seat
 whose row scope reaches past its own records.
 
 The **Worklist** is the work queue behind Home. It has no navigation row of its
-own: you open it from Home, and it arrives as a panel over it.
+own: you open it from Home, and it arrives as a panel over it. The old `#/worklist`
+address still works and lands you in the same place.
 
 ## The Worklist
 
@@ -21,7 +22,9 @@ Work is grouped into bands, drawn in this order:
 | **Now** | "No urgent interruptions. Check the remaining work below." |
 | **Keep momentum** | "Nothing agreed is drifting." |
 | **Build pipeline** | "No new pipeline work waiting." |
-| **Review** | "Nothing to review." |
+
+Review work is the fourth kind, and it does not draw a band in the queue — it has
+its own panel beneath, headed **To review**.
 
 A band you have cleared still shows its heading and says so — but only when the
 whole day is loaded. Half a day cannot honestly report an empty band.
@@ -35,18 +38,19 @@ to Keep momentum rather than being promoted past work that was already urgent.
 
 ### Why a row is where it is
 
-Each row explains itself three ways:
+Each row explains itself three ways, in sentences rather than under headings:
 
-- **Because** — the facts that put it there: a buyer wrote last, a promise is
-  due, a meeting is soon, nobody has replied in so many days.
-- **Above the next one** — what makes this row outrank the one below it. A pin,
-  a level, a deadline, expected revenue, waiting days, or simply that the band
-  was crowded.
-- **If you do nothing** — the consequence, stated plainly.
+- **The facts that put it there** — a buyer wrote last, a promise is due, a
+  meeting is soon, nobody has replied in so many days.
+- **Why it outranks the row below**, written out: "Above the next because you
+  pinned it."
+- **What happens if you leave it**: "If you do nothing, they keep waiting."
 
 Ranking is a fixed ladder of comparisons, not a score: a pin first, then the
-band, then whether the row was crowded, then how hard the work is, then its
-deadline, then expected revenue, and so on down. **Levels are hard.** Nothing
+band, then whether the row was crowded, then what **kind** of work it is — waiting on
+somebody, a promise, a risk to real money, something agreed, something blocking
+a colleague, or routine — then its deadline, then expected revenue, and so on
+down. **Levels are hard.** Nothing
 adds up into a single number you cannot take apart.
 
 ### Pinning
@@ -56,7 +60,7 @@ pinning reorders what you can already read, and changes nothing for anybody
 else.
 
 **A pin never expires.** It survives the row it names, and nothing removes one
-but you. An installation keeps your newest 50.
+but you. Fifty is the most you can hold; the newest 50 win.
 
 ### Taking something off the list
 
@@ -99,7 +103,7 @@ The second one prints **no fraction**, deliberately. The denominator would be a
 floor, and "200 of 200 shown · 1 source has more" contradicts itself.
 
 If a source could not be read at all, a callout says so above the queue: "This
-is not the whole day." And the empty state changes with it — not "Nothing is
+is not the whole day". And the empty state changes with it — not "Nothing is
 waiting on you" but **"Nothing is waiting among the sources that answered."**
 
 That distinction is the page in miniature. A quiet day and an unread source look
@@ -119,7 +123,13 @@ it was.
 
 ## For a team lead
 
-Four more sections appear for a seat whose scope reaches a team.
+More appears for a seat whose scope reaches past its own records, and where it
+appears matters.
+
+On **Home → Team** you get the team board and the coaching suggestions. The other
+two live in the Worklist panel, which carries its own scope dial — mine,
+unassigned, team, all — and **"What the queue is not showing" appears only at
+All**.
 
 **What needs me** — team work that has crossed a line: a first reply is late,
 revenue at risk, nobody has taken it, or the same thing keeps failing. Each row
@@ -245,10 +255,13 @@ it stands and nothing has come back, the row reads "Help requested · awaiting a
 response." The answer arrives on that same row, with the name of whoever wrote
 it.
 
-Know how this actually travels: **there is no notification.** Nothing pages your
-lead. The request is found when they open your plan, or on the next Monday, where
-it becomes the first thing on their agenda for you. If you need an answer sooner
+Know how this actually travels: **nothing in the product notifies your lead.**
+The request is found when they open your plan, or on the next Monday, where it
+becomes the first thing on their agenda for you. If you need an answer sooner
 than that, ask them directly as well.
+
+(An installation that has wired its own automation to Margince's events can be
+told about the ask; nothing built in does that.)
 
 A lead may answer a commitment and nothing else — not settle it, reword it, or
 drop it.
@@ -272,6 +285,8 @@ Two honest notes carried on the page itself:
 - Where nobody was measured: "No rep snapshots are available for this week.
   Performance is not measured." — rather than a page of zeroes.
 
-A team's week needs a grant that reaches past your own rows. Asking for one you
-do not lead answers **not found**, exactly as a team that does not exist would,
-so the org chart cannot be mapped by trying.
+A team's week needs a grant that reaches past your own rows, and the two ways of
+lacking one answer differently. A seat that reaches only its own records is told
+plainly that this is not theirs. A seat that *could* read a team, asking about
+one it does not lead, gets **not found** — exactly what a team that does not
+exist returns, so the org chart cannot be mapped by trying.

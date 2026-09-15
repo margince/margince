@@ -58,8 +58,9 @@ replaces.
 "Creates a new agreement and marks this one superseded. Its own terms — nothing
 carries over but the counterparty."
 
-The successor and the supersede land in one step, and **the predecessor is never
-edited**. If you cannot open the company, the renewal still works and says what
+The successor and the supersede land in one step. **The predecessor's terms are
+never touched** — only its status and the pointer to what replaced it. If you
+cannot open the company, the renewal still works and says what
 it did instead: it keeps the counterparty and records no deal.
 
 ### Recording a cancellation
@@ -76,7 +77,7 @@ effect after the term already ends.
 
 ### Archiving
 
-"It leaves the lists and the account totals. The record and its history stay, so
+"“{title}” leaves the lists and the account totals. The record and its history stay, so
 what was true stays answerable — nothing is deleted."
 
 ### What makes a contract count as a signed win

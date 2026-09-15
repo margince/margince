@@ -8,7 +8,7 @@ company from its own website.
 
 A contact's page shows which colleagues have corresponded with them, strongest
 first, with the number of exchanges behind each. When nobody has: "Nobody here
-has corresponded with them yet."
+has corresponded with them."
 
 The order is the answer, and it is never re-sorted on screen.
 
@@ -80,7 +80,8 @@ never offered.
 
 Three things, and the form is explicit about who reads which:
 
-- **Why you are asking** — required. "Your colleague reads this, not the contact."
+- **Why you are asking** — required. "Your colleague reads this, not the contact.
+  Say what makes the introduction worth making."
 - **What is in it for them** — the reason the contact would want the
   conversation.
 - **A note your colleague can forward** — "The only part the reader reads. Write

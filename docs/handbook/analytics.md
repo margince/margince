@@ -19,8 +19,9 @@ Two of them are conditional, and their absence means something:
   one seat and a manager's lens covers more. Reaching its address anyway says
   so: "This view answers for one seat. Your lens covers more than your own
   records, so the wider sections carry your numbers."
-- **Data coverage** appears only where you hold the grant *and* the nightly
-  check has actually run.
+- **Data coverage** appears where you hold the grant and the server answered at
+  all — including on a fresh installation where no check has ever run, which the
+  page then says in words rather than by being absent.
 
 The section is part of the address, so a link to one opens it.
 
@@ -102,7 +103,7 @@ rows stay in their native currency and are grouped by company *and* currency, so
 two currencies on one account are two rows.
 
 Where not every deal carries an amount, a footnote says so: "{priced} of {total}
-priced."
+priced".
 
 ## Performance
 

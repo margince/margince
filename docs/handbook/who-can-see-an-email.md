@@ -30,9 +30,9 @@ Every message row carries one mark:
 named group. Who may discover the linked record still decides whether the row
 appears at all.
 
-A withheld message is **not hidden**. You see a row with its date and its kind,
-and nothing else. You learn that a conversation happened and nothing about what
-was in it.
+A withheld message is **not hidden**. You see the row — its date, its direction,
+and the record it is filed against — with the content withheld. You learn that a
+conversation happened and nothing about what was said in it.
 
 ## Why this one is held
 
@@ -133,7 +133,7 @@ the company, participants only, or named people.
 message only — not to the thread and not to the contact."
 
 That is the difference from sharing, above. **Share with the company** on a
-thread "applies to the whole thread", and releases your own hold on all of it;
+thread "Applies to the whole thread." and releases your own hold on all of it;
 changing a message's visibility moves that one row.
 
 ## What you can see of other seats' capture

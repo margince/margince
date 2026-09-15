@@ -1,8 +1,12 @@
 # Offers and the rate card
 
 An **offer** is the priced document you put in front of a buyer. It belongs to a
-deal, is written in that deal's currency, and carries revisions rather than
-being edited in place once it has gone out.
+deal and carries revisions rather than being edited in place once it has gone
+out.
+
+It starts in the deal's currency, and while it is a draft you can change that —
+the currency is the offer's own, not a copy of the deal's that the product keeps
+in step.
 
 ## Starting one
 
@@ -77,19 +81,21 @@ offer and the deal.
 offer.
 
 **Regenerate revision.** Mints the next revision as a fresh **draft**, copying
-the header and every line verbatim, and marks the old revision superseded.
+the header and every line verbatim, and marks the old revision superseded. One
+thing does not come across: the **template**, which the new revision does not
+carry over — re-pick it before rendering.
 Nothing is re-derived from today's rate card: a price that changed last week
 does not silently rewrite the offer you already sent.
 
 You can render a **PDF** at any point, draft included. Where the deployment has
 no file store wired, it says so plainly — "PDF rendering not available on this
-deployment" — rather than failing as an error.
+deployment." — rather than failing as an error.
 
 ## What an offer refuses
 
-- **An empty offer cannot be sent.** "The offer has no line items to send."
-- **A repeating line must say how many periods.** "Line 3 repeats, so the offer
-  has to say how many periods the buyer commits to." It is checked on send and
+- **An empty offer cannot be sent.** "the offer has no line items to send".
+- **A repeating line must say how many periods.** "line 3 repeats, so the offer
+  has to say how many periods the buyer commits to". It is checked on send and
   names the line by its position on the paper.
 - **A product priced in another currency needs an explicit price.** You cannot
   quietly mix currencies inside one offer.
@@ -104,7 +110,8 @@ repeat"; "a commitment covers at least one period".
 
 ## What an agent may do
 
-An agent can draft: create an offer, edit it, add and remove lines.
+An agent can draft: create an offer, list and read offers, edit one, add and
+remove lines, and archive one.
 
 **An agent may not send, accept, reject, regenerate or render one.** Those are
 human-only at the door — there is no staged path to them, and no approval card
@@ -137,10 +144,11 @@ that could rewrite last quarter's paperwork would make it something else.
 ## Offer templates
 
 A template is a branded layout, German or English, with at most one default per
-locale. An offer that names a template it no longer has falls back to the locale
-default.
+locale.
 
-**Two honest limits today.** Header and footer text typed into a template is
+**Three honest limits today.** An offer whose template has gone does **not**
+fall back to your locale default — it renders from an empty layout. Header and
+footer text typed into a template is
 stored but never reaches the rendered PDF, and there is no field at all for the
 terms text the renderer does print. A logo referenced in a template is not
 fetched or embedded either — the renderer works offline by design.

@@ -16,9 +16,12 @@ Then **documents**, drawn from the deal's own Files area and grouped as
 Commercial, Legal, Security & Privacy, and Delivery & Operations; and **threads**
 the two sides talk in.
 
-## The five states
+## The five live states
 
 **Live**, **Paused**, **Closed**, **Expired**, **Archived**.
+
+(You may see four more names — draft, building, ready, publishing — carried for
+old records. Nothing produces them any more.)
 
 There is no publish step. A room is live from the moment you open it, and an edit
 to its title or welcome reaches the buyer on their next load.
@@ -53,9 +56,9 @@ west of UTC you lose part of that last day.
 ## Letting a buyer in
 
 You invite one address at a time. Each buyer gets a **personal, one-time link.
-It works once, on one device. Each person needs their own invitation.**
+It works once, on one device**, and every buyer needs an invitation of their own.
 
-Two levels: **Read only** — "Can read the documents and the conversation" — and
+Two levels: **Read only** — "Can read the documents and the conversation." — and
 **Read and comment** — "Can also ask questions and reply."
 
 **Whether the link is emailed depends on your installation.** Where a mail relay
@@ -128,8 +131,8 @@ An agent may **open** a room, list rooms, read one, read its participants and
 documents, and post a thread or comment on your side.
 
 **An agent may not** edit a room, pause, resume, close or archive one, set its
-expiry, preview it, or touch a participant in any way — invite, correct, resend
-or revoke. The rule is stated once in the product: deciding which outsider reads
+expiry, preview it, add or remove a document, resolve a thread, or touch a
+participant in any way — invite, correct, resend or revoke. The rule is stated once in the product: deciding which outsider reads
 a deal's material is not a judgement an agent makes.
 
 Nor may an agent touch the buyer-facing door at all.

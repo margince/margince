@@ -53,8 +53,8 @@ If the profile could not be loaded, it refuses to pretend:
 > **This draft is not in your voice.** Your voice profile couldn't be loaded, so
 > this draft is not written in your voice. Draft again, or edit before sending.
 
-**Discard draft** tells your voice profile the draft missed. The generated text
-is never kept.
+**Discard draft**: "Tells your Voice DNA this draft missed. The generated text is
+never kept."
 
 ### The four rewrites
 
@@ -69,9 +69,9 @@ text rather than yours.
 > **The record decides what is allowed; this says what you are doing so the
 > answer can be checked against it.**
 
-Eight answers: they asked me to get in touch · about a deal we are working on · a
-quote or proposal they asked for · support for something they bought · about an
-invoice or a payment · about their contract · about their account · marketing.
+Eight answers: They asked me to get in touch · About a deal we are working on ·
+A quote or proposal they asked for · Support for something they bought · About an
+invoice or a payment · About their contract · About their account · Marketing.
 
 **You are not asked at all when you are replying** to their own message: "This
 continues their own message, so it needs no reason from you."
@@ -88,8 +88,9 @@ marketing up as a security notice.
 
 **No consent** is a refusal:
 
-> **Send blocked — no consent.** A recipient has not granted consent for this
-> purpose, so the send was suppressed (default-deny).
+> **Send blocked — no consent** — "A recipient has not granted consent for this
+> purpose, so the send was suppressed (default-deny)."
+
 
 The reason is specific, and several of them say plainly that nobody here can
 overrule them — "They asked not to receive marketing. Nobody here can lift that,
@@ -210,7 +211,8 @@ An unsubscribe link **never acts on arrival**. It shows a page and asks, because
 a scanner following a link must not unsubscribe somebody.
 
 Whatever they choose, the exact sentence they were shown is stored with the
-decision: "We record the exact wording you saw and a timestamp as proof."
+decision: "We record the exact wording you saw and a timestamp as proof — then
+it applies to every future send."
 
 ## Asking somebody to confirm their own details
 
