@@ -5015,6 +5015,7 @@ export const en = {
   "retention.scopeDealWon": "Won deals",
   "retention.scopeAiCallPayloadContent": "AI call payloads",
 
+  "retention.scopeRawCapture": "Stored message originals",
   "settings.pipelines": "Pipelines",
   "settings.pipelinesReadOnly":
     "Read-only view — you may not change pipelines or their stages.",

@@ -12055,6 +12055,7 @@ const (
 	RetentionScopeDeallost               RetentionScope = "deal/lost"
 	RetentionScopeDealwon                RetentionScope = "deal/won"
 	RetentionScopeLeadunconverted        RetentionScope = "lead/unconverted"
+	RetentionScopeRawCapture             RetentionScope = "raw_capture"
 )
 
 // Valid indicates whether the value is a known member of the RetentionScope enum.
@@ -12073,6 +12074,8 @@ func (e RetentionScope) Valid() bool {
 	case RetentionScopeDealwon:
 		return true
 	case RetentionScopeLeadunconverted:
+		return true
+	case RetentionScopeRawCapture:
 		return true
 	default:
 		return false
