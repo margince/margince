@@ -21299,7 +21299,6 @@ type BackfillStatus struct {
 		Captured         *int `json:"captured,omitempty"`
 		CompaniesCreated *int `json:"companies_created,omitempty"`
 		ContactsCreated  *int `json:"contacts_created,omitempty"`
-		DedupeCandidates *int `json:"dedupe_candidates,omitempty"`
 		MessagesScanned  *int `json:"messages_scanned,omitempty"`
 		Skipped          *int `json:"skipped,omitempty"`
 	} `json:"counts,omitempty"`

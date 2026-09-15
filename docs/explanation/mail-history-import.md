@@ -182,9 +182,8 @@ One thing does fire on the completing edge: the same-day digest, so a freshly im
 on the morning screen instead of waiting for the nightly pass. It fires only on the single step that
 moves a live run to `done`, so a lost race can never produce a spurious digest.
 
-While it runs, the status surface reports `messages_scanned`, `captured`, `skipped`, `contacts_created`,
-`companies_created` and `dedupe_candidates`, alongside the estimate the run started with as the
-progress denominator.
+While it runs, the status surface reports `messages_scanned`, `captured`, `skipped`, `contacts_created`
+and `companies_created`, alongside the estimate the run started with as the progress denominator.
 
 ## Honest limitations
 
