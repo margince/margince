@@ -9894,6 +9894,7 @@ export const de = {
   "contact.readings.title": "Wo dieser Kontakt steht",
   "deal360.brief": "Was dieser Deal ist",
   "deal.strip.lastTouch": "Letzter Kontakt",
+  "lead.brief.title": "Lead-Briefing",
   "lead.standing.qualified": "Qualifiziert",
   "lead.standing.qualifiedOn":
     "Qualifiziert am {at}. Dieser Lead ist jetzt ein Kontakt.",

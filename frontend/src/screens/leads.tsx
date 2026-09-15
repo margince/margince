@@ -56,6 +56,7 @@ import type { CreateField } from "./create";
 import { EntityRef, useEntityName } from "./entityref";
 import { RecordHistoryTab, useRecordHistory } from "./history";
 import { leadBand } from "./leadband";
+import { LeadBrief } from "./leadbrief";
 import { LeadFacts, LeadPulse, LeadSubtitle } from "./leadheader";
 import { MergedLeadPanel } from "./leadmerged";
 import {
@@ -74,7 +75,6 @@ import { leadStanding } from "./leadstanding";
 import { LogActivity } from "./logactivity";
 import { useOpenEmail, withEmailOpener } from "./openemail";
 import {
-  CallCard,
   RecordReading,
   RecordReadingPair,
   TimelineThread,
@@ -806,14 +806,13 @@ function LeadCall({
   const { locale } = useLocale();
   const standing = leadStanding(lead, t, locale, viewerZone());
   return (
-    <CallCard
-      name={leadIdentityName(lead) || t("lead.unnamed")}
+    <LeadBrief
       standing={{ label: standing.label, tone: standing.tone }}
       because={standing.because}
       restsOn={standing.restsOn}
     >
       <TimelineThread thread={thread} onOpenEmail={onOpenEmail} />
-    </CallCard>
+    </LeadBrief>
   );
 }
 

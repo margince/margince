@@ -10052,6 +10052,7 @@ export const en = {
   "contact.readings.title": "Where this contact stands",
   "deal360.brief": "What this deal is",
   "deal.strip.lastTouch": "Last touch",
+  "lead.brief.title": "Lead brief",
   "lead.standing.qualified": "Qualified",
   "lead.standing.qualifiedOn": "Qualified on {at}. This lead is a contact now.",
   "lead.standing.qualifiedUndated": "This lead is a contact now.",

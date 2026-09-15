@@ -78,6 +78,7 @@ export function VerdictHead({
   tone,
   because,
   restsOn,
+  scale = "record",
 }: Readonly<{
   label: string;
   tone: StandingTone;
@@ -88,10 +89,21 @@ export function VerdictHead({
   // anything a reader could be shown — which is a real state, and different
   // from a call resting on nothing.
   restsOn?: readonly Grounding[];
+  // "record" is the deal/company call's own weight: the loudest word on the
+  // page. "compact" is for a caller whose card is a smaller reading among
+  // others rather than the page's one verdict: the ladder's fs-h3 rather
+  // than a display face, same as RecordView's own `scale` vocabulary.
+  scale?: "record" | "compact";
 }>) {
   return (
     <PanelBody>
-      <div className="r360-verdict">
+      <div
+        className={
+          scale === "compact"
+            ? "r360-verdict r360-verdict-compact"
+            : "r360-verdict"
+        }
+      >
         <span className={`r360-standing r360-standing-${tone}`}>{label}</span>
         {/* Three columns, not a row that wraps: the word, the line that says
             why, and the working at the far end where the head has room for it.

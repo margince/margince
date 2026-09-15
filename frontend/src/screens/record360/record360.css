@@ -67,6 +67,19 @@
   color: var(--danger);
 }
 
+/* The compact weight: a caller whose card is one reading among several rather
+   than the page's one verdict draws the same word at the record ladder's own
+   card-value size instead of the display face reserved for a page's single
+   loudest claim. */
+.r360-verdict-compact .r360-standing {
+  font-size: var(--fs-h3);
+  font-weight: var(--fw-semibold);
+}
+
+.r360-verdict-compact .r360-because {
+  font-size: var(--fs-body);
+}
+
 /* The call in words, and the loudest type on the record. It is the sentence
    the whole card exists to produce, so it is set as a headline rather than as
    a caption beside the pill — drawn quiet, a reader scanned past the one thing

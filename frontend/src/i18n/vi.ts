@@ -9739,6 +9739,7 @@ export const vi = {
   "contact.readings.title": "Vị thế của liên hệ này",
   "deal360.brief": "Deal này là gì",
   "deal.strip.lastTouch": "Lần chạm cuối",
+  "lead.brief.title": "Tóm tắt lead",
   "lead.standing.qualified": "Đã đủ điều kiện",
   "lead.standing.qualifiedOn":
     "Đủ điều kiện ngày {at}. Khách hàng tiềm năng này giờ là liên hệ trong CRM.",
