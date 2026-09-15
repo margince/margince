@@ -19398,12 +19398,6 @@ export interface components {
             /** @description WHAT THE COMPANY IS to us (PO-DDL-4b, ADR-0079). Multi-valued, because a company is legitimately several things at once — the partner program is built on companies that are simultaneously partners and customers. A company IS a partner iff it carries `partner` here AND has a `partner` row; removing the type while that row lives is refused (422). */
             relationship_types?: ("customer" | "partner" | "supplier" | "investor" | "portfolio_company" | "competitor" | "other")[];
             /**
-             * @deprecated
-             * @description RETIRED (ADR-0079) — superseded by `lifecycle` + `relationship_types`, which split the two questions this one value tried to answer at once. Carried one release, written by nothing; read it for migration comparison only.
-             * @enum {string|null}
-             */
-            classification?: null | "prospect" | "customer" | "agency" | "reseller" | "tech_vendor" | "platform" | "partner" | "competitor" | "other";
-            /**
              * @description Where to fetch the company's logo image (A55) — the `getCompanyLogo`
              *     path for this record, cookie-authenticated and same-origin. A revision query changes
              *     with the stored image so a replacement cannot remain hidden behind an older cached
@@ -30477,7 +30471,8 @@ export interface components {
         };
         /**
          * @description First-class partner state as a 1:1 extension of a company (a company IS a partner iff it
-         *     has a `partner` row + classification='partner'). Company identity is never duplicated.
+         *     has a `partner` row AND carries `partner` in its `relationship_types` — ADR-0079 split that
+         *     second half out of the retired `classification`). Company identity is never duplicated.
          *     ADR-0053 adds the relationship-in-flight layer: lifecycle stage, relationship health,
          *     partner fit, next step, and served segments. Behavior is Fast-follow, but the V1 schema is
          *     forward-compatible.

@@ -3256,45 +3256,6 @@ func (e CommunicationReviewState) Valid() bool {
 	}
 }
 
-// Defines values for CompanyClassification.
-const (
-	CompanyClassificationAgency     CompanyClassification = "agency"
-	CompanyClassificationCompetitor CompanyClassification = "competitor"
-	CompanyClassificationCustomer   CompanyClassification = "customer"
-	CompanyClassificationOther      CompanyClassification = "other"
-	CompanyClassificationPartner    CompanyClassification = "partner"
-	CompanyClassificationPlatform   CompanyClassification = "platform"
-	CompanyClassificationProspect   CompanyClassification = "prospect"
-	CompanyClassificationReseller   CompanyClassification = "reseller"
-	CompanyClassificationTechVendor CompanyClassification = "tech_vendor"
-)
-
-// Valid indicates whether the value is a known member of the CompanyClassification enum.
-func (e CompanyClassification) Valid() bool {
-	switch e {
-	case CompanyClassificationAgency:
-		return true
-	case CompanyClassificationCompetitor:
-		return true
-	case CompanyClassificationCustomer:
-		return true
-	case CompanyClassificationOther:
-		return true
-	case CompanyClassificationPartner:
-		return true
-	case CompanyClassificationPlatform:
-		return true
-	case CompanyClassificationProspect:
-		return true
-	case CompanyClassificationReseller:
-		return true
-	case CompanyClassificationTechVendor:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for CompanyLifecycle.
 const (
 	CompanyLifecycleCustomer       CompanyLifecycle = "customer"
@@ -22594,10 +22555,6 @@ type Company struct {
 	// CapturedBy Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.
 	CapturedBy *string `json:"captured_by,omitempty"`
 
-	// Classification RETIRED (ADR-0079) — superseded by `lifecycle` + `relationship_types`, which split the two questions this one value tried to answer at once. Carried one release, written by nothing; read it for migration comparison only.
-	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-	Classification *CompanyClassification `json:"classification,omitempty"`
-
 	// ComputedFields S-E15.8c formula-field display rows (RD-AC-6/RD-AC-7/RD-AC-N-1). Populated on
 	// `getCompany` only; the key is absent entirely (not an empty array) when the
 	// viewer's role lacks computed_field:read visibility (STATE-4).
@@ -22650,7 +22607,8 @@ type Company struct {
 	ParentCompanyId *openapi_types.UUID `json:"parent_company_id,omitempty"`
 
 	// Partner First-class partner state as a 1:1 extension of a company (a company IS a partner iff it
-	// has a `partner` row + classification='partner'). Company identity is never duplicated.
+	// has a `partner` row AND carries `partner` in its `relationship_types` — ADR-0079 split that
+	// second half out of the retired `classification`). Company identity is never duplicated.
 	// ADR-0053 adds the relationship-in-flight layer: lifecycle stage, relationship health,
 	// partner fit, next step, and served segments. Behavior is Fast-follow, but the V1 schema is
 	// forward-compatible.
@@ -22684,9 +22642,6 @@ type Company struct {
 	Writable             *bool                  `json:"writable,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
-
-// CompanyClassification RETIRED (ADR-0079) — superseded by `lifecycle` + `relationship_types`, which split the two questions this one value tried to answer at once. Carried one release, written by nothing; read it for migration comparison only.
-type CompanyClassification string
 
 // CompanyLifecycle WHERE THE ACCOUNT STANDS with us (PO-DDL-4, ADR-0079). Single-valued: an account is at one point in a sales motion at a time. `unknown` is the default and means it — the retired `classification` defaulted to `prospect` and, having no writer, rendered that default on every unassessed account as though someone had judged it.
 type CompanyLifecycle string
@@ -32997,7 +32952,8 @@ type PageInfo struct {
 }
 
 // Partner First-class partner state as a 1:1 extension of a company (a company IS a partner iff it
-// has a `partner` row + classification='partner'). Company identity is never duplicated.
+// has a `partner` row AND carries `partner` in its `relationship_types` — ADR-0079 split that
+// second half out of the retired `classification`). Company identity is never duplicated.
 // ADR-0053 adds the relationship-in-flight layer: lifecycle stage, relationship health,
 // partner fit, next step, and served segments. Behavior is Fast-follow, but the V1 schema is
 // forward-compatible.
@@ -46946,14 +46902,6 @@ func (a *Company) UnmarshalJSON(b []byte) error {
 		delete(object, "captured_by")
 	}
 
-	if raw, found := object["classification"]; found {
-		err = json.Unmarshal(raw, &a.Classification)
-		if err != nil {
-			return fmt.Errorf("error reading 'classification': %w", err)
-		}
-		delete(object, "classification")
-	}
-
 	if raw, found := object["computed_fields"]; found {
 		err = json.Unmarshal(raw, &a.ComputedFields)
 		if err != nil {
@@ -47230,13 +47178,6 @@ func (a Company) MarshalJSON() ([]byte, error) {
 	object["captured_by"], err = json.Marshal(a.CapturedBy)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'captured_by': %w", err)
-	}
-
-	if a.Classification != nil {
-		object["classification"], err = json.Marshal(a.Classification)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling 'classification': %w", err)
-		}
 	}
 
 	if a.ComputedFields != nil {

@@ -27576,14 +27576,6 @@ components:
             legitimately several things at once — the partner program is built on companies that are
             simultaneously partners and customers. A company IS a partner iff it carries `partner` here AND
             has a `partner` row; removing the type while that row lives is refused (422).
-        classification:
-          type: [string, 'null']
-          enum: [null, prospect, customer, agency, reseller, tech_vendor, platform, partner, competitor, other]
-          deprecated: true
-          description: >-
-            RETIRED (ADR-0079) — superseded by `lifecycle` + `relationship_types`, which split the
-            two questions this one value tried to answer at once. Carried one release, written by
-            nothing; read it for migration comparison only.
         logo_url:
           type: [string, 'null']
           readOnly: true
@@ -41275,7 +41267,8 @@ components:
       type: object
       description: |
         First-class partner state as a 1:1 extension of a company (a company IS a partner iff it
-        has a `partner` row + classification='partner'). Company identity is never duplicated.
+        has a `partner` row AND carries `partner` in its `relationship_types` — ADR-0079 split that
+        second half out of the retired `classification`). Company identity is never duplicated.
         ADR-0053 adds the relationship-in-flight layer: lifecycle stage, relationship health,
         partner fit, next step, and served segments. Behavior is Fast-follow, but the V1 schema is
         forward-compatible.
