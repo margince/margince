@@ -272,7 +272,7 @@ type DSRCase struct {
 // deadline first, bounded. Gated exactly as DSRs is — the same
 // privacy_request object — and the lane renders that refusal as withheld.
 type NoticeCases interface {
-	OpenDueSoonest(ctx context.Context, limit int) ([]NoticeCase, error)
+	OpenDueSoonest(ctx context.Context, limit int, scope TaskScope, owner ids.UUID, team []ids.UUID) ([]NoticeCase, error)
 }
 
 // NoticeCase is one disclosure still owed: which article obliges it, and by
@@ -284,8 +284,9 @@ type NoticeCases interface {
 // the wire does not publish, which is how a reader comes to believe a lane
 // filters on something it never sees.
 type NoticeCase struct {
-	ID   ids.UUID
-	Rule string
+	OwnerID *ids.UUID
+	ID      ids.UUID
+	Rule    string
 	// ContactID is whose duty this is. Carried where the DSR case carries no
 	// subject at all, and the difference is the reason: a subject request has
 	// its own queue screen to route to, and a notice case has none — the
