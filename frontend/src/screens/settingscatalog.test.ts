@@ -202,7 +202,7 @@ describe("what each page lets a reader change", () => {
     // The OAuth cards save through `capture_settings`, a different grant from
     // the sign-in card's.
     authentication:
-      "all(full-seat, any(any(installation_settings:update), any(capture_settings:update)))",
+      "all(full-seat, any(any(installation_settings:update), any(authentication_policy:update), any(capture_settings:update)))",
 
     members:
       "all(full-seat, any(any(user_admin:update, user_admin:create), user_admin:delete))",

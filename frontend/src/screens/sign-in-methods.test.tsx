@@ -4,7 +4,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { meFixture } from "../app/mefixture";
+import { type GrantSpec, meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
 import { SignInMethodsCard } from "./sign-in-methods";
 
@@ -27,7 +27,7 @@ function jsonResponse(body: unknown, status = 200) {
 // takes the admin-only authentication_policy:update. The default holds both, so
 // a caller who can work the whole card is the common case; a test that wants to
 // prove the map is withheld passes an allow that omits the sign-in-policy grant.
-const fullSignInGrants = {
+const fullSignInGrants: GrantSpec = {
   installation_settings: ["read", "update"],
   authentication_policy: ["read", "update"],
 };
@@ -35,7 +35,7 @@ const fullSignInGrants = {
 function mount(
   providers: { key: string; label: string; enabled: boolean }[],
   groupRoleMap: Record<string, string> = {},
-  allow: Record<string, string[]> = fullSignInGrants,
+  allow: GrantSpec = fullSignInGrants,
 ) {
   const calls: unknown[] = [];
   const fetchMock = vi.fn(async (request: Request) => {
