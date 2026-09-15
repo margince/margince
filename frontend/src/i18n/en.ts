@@ -3270,16 +3270,6 @@ export const en = {
   "brief.weekly.outcome.lost": "lost",
   "brief.act": "Done",
   "brief.dismiss": "Dismiss",
-  "brief.actedState": "acted",
-  "brief.dismissedState": "dismissed",
-  "brief.evidence_other": "{count} evidence rows",
-  "brief.evidence_one": "{count} evidence row",
-  "brief.openDeal": "Open deal",
-  "brief.factorWinnability": "Winnability",
-  "brief.factorRevenue": "Revenue",
-  "brief.factorTiming": "Timing",
-  "brief.factorMomentum": "Momentum",
-  "brief.factorWarmth": "Warmth",
 
   "brief.digestFor": "digest for {date}",
   "brief.digestSynced": "Sync details",
@@ -3355,7 +3345,6 @@ export const en = {
   "brief.readings.leadsBasis": "assigned and awaiting first contact",
   "brief.readings.leadsDue": "next due {value}",
   "brief.rail": "Context",
-  "brief.pct": "{pct}%",
   "brief.deck.later": "Later",
   "brief.deck.showMore": "Show the whole message",
   "brief.deck.showLess": "Show less",
@@ -3400,18 +3389,10 @@ export const en = {
   "brief.deck.empty": "Nothing is waiting on you.",
   "brief.deck.bundleSummary": "One decision · {count} items",
   "brief.deck.bundleMembers": "Show the {count} items",
-  "brief.rank": "Rank",
-  "brief.composite": "Score",
   // A deal the rep dismissed, come back. The suppression rule holds a dismissed
   // deal out until a linked activity arrives after the mark, so the sentence
   // states that rule rather than guessing: it can only ever name an activity.
-  "brief.previouslyDismissed": "Flagged {day} — you dismissed it.",
-  "brief.returnedWith": "It came back with activity on",
-  "brief.revenueBasis": "Revenue measured against {amount}",
-  "brief.resurfaces": "Back",
-  "brief.evidenceNone": "no evidence recorded",
   "brief.snooze": "Snooze",
-  "brief.snoozedState": "snoozed",
 
   "enrich.toInbox": "Open the Worklist",
 

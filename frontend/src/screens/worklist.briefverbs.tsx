@@ -16,9 +16,23 @@ import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { BriefMarkRequest } from "./brief.queries";
 import { useBriefItemMark } from "./brief.queries";
-import { tomorrowMorning } from "./briefqueue";
 import { problemMessageOf } from "./common";
 import type { WorklistItem } from "./worklist.queries";
+
+/**
+ * When a set-aside item returns: tomorrow at eight, in the reader's own zone.
+ *
+ * It used to live beside the brief queue's card, spelled once so two surfaces
+ * would answer "when does this come back" the same way. Only this one draws the
+ * verbs now, so the policy lives with them rather than in a module kept alive
+ * to hold it.
+ */
+export function tomorrowMorning(nowMs: number): string {
+  const next = new Date(nowMs);
+  next.setDate(next.getDate() + 1);
+  next.setHours(8, 0, 0, 0);
+  return next.toISOString();
+}
 
 // A brief item's three verbs, answered where the row sits — and the ONE write
 // behind all three.
