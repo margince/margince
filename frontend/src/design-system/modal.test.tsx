@@ -463,10 +463,10 @@ describe("a dialog that is leaving", () => {
       ]);
     try {
       const onClose = vi.fn();
-      const { rerender } = render(twoStops(true, onClose));
+      const { baseElement, rerender } = render(twoStops(true, onClose));
       rerender(twoStops(false, onClose));
 
-      const overlay = document.querySelector(".overlay");
+      const overlay = baseElement.querySelector(".overlay");
       expect(overlay?.getAttribute("data-state")).toBe("closing");
       // Painted, and nothing else: no tab stop, no hit target, and no ROLE. A
       // dialog mid-exit that still took a click would swallow the first press
@@ -485,7 +485,12 @@ describe("a dialog that is leaving", () => {
         finish();
         await exit;
       });
-      expect(screen.queryByRole("dialog")).toBeNull();
+      // The OVERLAY, not the role: `aria-hidden` above already takes the dialog
+      // out of every role query, so asking for the role again would have been
+      // true the whole way through and would pass just as happily over an inert
+      // overlay left on the page for the rest of the session — which is the one
+      // failure this spec exists to catch.
+      expect(baseElement.querySelector(".overlay")).toBeNull();
     } finally {
       animations.mockRestore();
     }

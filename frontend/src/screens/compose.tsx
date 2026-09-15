@@ -1224,8 +1224,10 @@ function useProjectFiling(input: {
   projects: readonly PickableProject[];
   subject: string;
   setSubject: (next: string) => void;
+  /** Whether the composer is showing; a shut one reads nothing. */
+  open: boolean;
 }): { projectId: string; setProjectId: (next: string) => void } {
-  const thread = useThreadProject(input.activityId);
+  const thread = useThreadProject(input.activityId, input.open);
   // Empty string is a real answer ("None"), so unanswered is undefined.
   const filingKey = input.activityId ?? "";
   const [picks, setPicks] = useState<Record<string, string>>({});
@@ -1260,7 +1262,7 @@ function useProjectFiling(input: {
     chosen === "" ||
     input.projects.some((project) => project.project_id === chosen);
   const projectId = offered ? chosen : "";
-  const { project } = useProjectRecord(projectId || undefined);
+  const { project } = useProjectRecord(projectId || undefined, input.open);
   const tag = subjectTag(project);
   // Keeping the tag in the subject is a rule about the FIELD, not an action
   // taken once when the picker moves. A subject is replaced wholesale — by a
@@ -1273,8 +1275,13 @@ function useProjectFiling(input: {
   // editing the text, because that state is not one the send could honour.
   const setSubject = input.setSubject;
   const subject = input.subject;
+  const open = input.open;
   const previousTag = useRef("");
   useEffect(() => {
+    // A SHUT composer does not edit its own subject. Its reads are off, so the
+    // project behind the tag reads as absent, and this rule left running would
+    // take the tag off a draft nobody is looking at.
+    if (!open) return;
     const priorTag = previousTag.current;
     previousTag.current = tag;
     const withoutOld = priorTag ? stripSubjectTag(subject, priorTag) : subject;
@@ -1282,7 +1289,7 @@ function useProjectFiling(input: {
     if (wanted !== subject) {
       setSubject(wanted);
     }
-  }, [tag, subject, setSubject]);
+  }, [open, tag, subject, setSubject]);
   return { projectId, setProjectId: setPicked };
 }
 
@@ -1789,6 +1796,7 @@ export function ComposeModal({
     projects: reachableProjects,
     subject,
     setSubject,
+    open,
   });
 
   // An emptied body no longer holds the served draft, so everything that

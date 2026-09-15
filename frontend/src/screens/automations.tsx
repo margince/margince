@@ -395,12 +395,16 @@ export function AutomationRow({
             {canEdit && entry && (
               <Button
                 small
-                onClick={() =>
+                onClick={() => {
+                  // Only a refused SAVE is stale on reopen. A refused FLIP is
+                  // the row's own report and the only one it gets, so opening
+                  // the editor must not clear it.
+                  if (refused === "definition") patch.reset();
                   setEditing((was) => ({
                     open: true,
                     seq: (was?.seq ?? 0) + 1,
-                  }))
-                }
+                  }));
+                }}
               >
                 {t("trust.edit")}
               </Button>
@@ -463,8 +467,6 @@ export function AutomationsAdmin() {
   const queryClient = useQueryClient();
   const createTitleId = useId();
   const [staged, setStaged] = useState<StagedTemplate | null>(null);
-  const stage = (entry: CatalogEntry) =>
-    setStaged((prior) => ({ entry, seq: (prior?.seq ?? 0) + 1, open: true }));
   // Grants come from the session (/v1/me); until they arrive every predicate
   // is false, so the section shows no mutation affordance until one is confirmed.
   const me = useMe();
@@ -530,6 +532,15 @@ export function AutomationsAdmin() {
       queryClient.invalidateQueries({ queryKey: ["automations"] });
     },
   });
+
+  // Reset on OPEN, not on close: the dialog outlives its own close, so a reader
+  // can still read why the save was refused while it leaves — and the next
+  // opening must not arrive with that refusal already printed under it. `seq`
+  // re-seeds the form; nothing re-seeds the mutation.
+  const stage = (entry: CatalogEntry) => {
+    create.reset();
+    setStaged((prior) => ({ entry, seq: (prior?.seq ?? 0) + 1, open: true }));
+  };
 
   const entryFor = (key: string): CatalogEntry | undefined =>
     catalog.data?.data.find((entry) => entry.key === key);

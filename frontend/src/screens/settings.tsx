@@ -746,7 +746,10 @@ function SignatureSettingRow({ toast }: Readonly<{ toast: Toast }>) {
   // The same comparison the Save button already made, now also the claim that
   // stops a sidebar click throwing the draft away.
   const dirty = shown !== stored;
-  useUnsavedGuard(dirty);
+  // Only while the dialog is SHOWING. It outlives its own close, so a draft the
+  // reader already walked away from would otherwise go on blocking navigation
+  // from behind a dialog that is no longer on screen.
+  useUnsavedGuard(open && dirty);
   // The first line, because a sign-off is several lines and only the first one
   // identifies it. `.split` on a string always yields at least one element, so
   // the empty signature reads as the empty string and the row says so instead —
@@ -763,10 +766,15 @@ function SignatureSettingRow({ toast }: Readonly<{ toast: Toast }>) {
   // Leaving discards the draft rather than keeping it: the reader closed the
   // form, and a sign-off half-typed into a dialog nobody reopened is not an
   // edit anybody is coming back to.
-  const close = () => {
+  // Closing only CLOSES. The dialog outlives it so it can animate out, and a
+  // draft cleared on the way out snaps back to the stored sign-off in front of
+  // a reader still watching the dialog leave. The discarding happens on the
+  // next OPEN, which is the same moment the reader asks for a blank form.
+  const close = () => setOpen(false);
+  const edit = () => {
     setBody(null);
     save.reset();
-    setOpen(false);
+    setOpen(true);
   };
 
   return (
@@ -776,7 +784,7 @@ function SignatureSettingRow({ toast }: Readonly<{ toast: Toast }>) {
         description={t("settings.signatureSub")}
         value={answer}
         control={
-          <Button small variant="ghost" onClick={() => setOpen(true)}>
+          <Button small variant="ghost" onClick={edit}>
             {t("settings.signatureEdit")}
           </Button>
         }
