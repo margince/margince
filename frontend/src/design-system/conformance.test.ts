@@ -180,9 +180,6 @@ function scannableSource(file: string, text: string): string {
  * Sans"` was read as naming only Outfit. A gate that only sees what biome happens to
  * emit today stops seeing the day that changes — and it is the same shape of
  * miss as the capture group: under-recognition, reported as PASS.
- *
- * Exported to the fixture test below rather than inlined in the scan, so the
- * spellings this gate can see are asserted rather than assumed.
  */
 function familiesIn(text: string): string[] {
   const found: string[] = [];
@@ -191,20 +188,13 @@ function familiesIn(text: string): string[] {
   )) {
     for (const family of (declared ?? quoted ?? templated ?? "").split(",")) {
       const name = family.trim().replace(/^["'`]|["'`]$/g, "");
-      // A family assembled at run time names nothing this scan can judge, so
-      // reporting `${x}` as a font would be a false positive — the same reason
-      // a `var()` reference is skipped, and the same limit: neither spelling is
-      // checkable here, and both are checkable where the value comes from.
-      // `inherit` names no family either: it defers to whatever the root
-      // already resolved, which is the one place a family is chosen.
-      if (
-        name !== "" &&
-        name !== "inherit" &&
-        !name.startsWith("var(") &&
-        !name.includes("${")
-      ) {
-        found.push(name);
-      }
+      // Three spellings name no family this scan can judge: a `var()` token
+      // reference, a family assembled at run time, and `inherit`, which takes
+      // whatever the root resolved. Each is checkable where its value comes
+      // from, and reporting one here would be a finding about nothing.
+      if (name === "" || name === "inherit") continue;
+      if (name.startsWith("var(") || name.includes("${")) continue;
+      found.push(name);
     }
   }
   return found;
@@ -258,14 +248,11 @@ describe("design-system conformance gates (B-EP09.1)", scanBudget, () => {
       "DM Sans",
       "sans-serif",
     ]);
-    // A token reference is the ALLOWED spelling and names no family, so it
-    // must not be reported as one. Neither does a family assembled at run
-    // time: reporting the literal `${chosenFamily}` would be a finding about
-    // nothing.
+    // The spellings that name nothing come back EMPTY: the allowed token
+    // reference, a family built at run time, and the `inherit` the UA reset
+    // writes on every control so the root's family reaches it.
     expect(familiesIn("font-family: var(--f-body);")).toEqual([]);
     expect(familiesIn("fontFamily: `${chosenFamily}`")).toEqual([]);
-    // Nor does `inherit`, which the UA reset writes on every control so the
-    // root's family reaches it.
     expect(familiesIn("font-family: inherit;")).toEqual([]);
     expect(familiesIn("fontFamily: `inherit`")).toEqual([]);
   });
