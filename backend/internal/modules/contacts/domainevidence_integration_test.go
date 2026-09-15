@@ -153,6 +153,46 @@ func TestAFutureDatedHeaderDoesNotPassAsFreshEvidence(t *testing.T) {
 	}
 }
 
+// The guard above is against a FORGED date, and a clock that runs fast is not
+// forgery. The header's timestamp and the horizon it is measured against come
+// from two different machines, so without an allowance this gate fired on how
+// far apart those two clocks were — dropping mail that had just arrived, ageing
+// the domain and withholding the company it had earned. That failure is silent:
+// the domain simply goes on waiting, with nothing recorded to say why.
+func TestASenderWhoseClockRunsFastIsStillEvidence(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	old := time.Now().AddDate(-(staleEvidenceYears + 2), 0, 0)
+	if _, err := e.store.EnsureCounterparty(ctx,
+		e.datedEnsureInput(ctx, t, "hans@fastclock.test", "fastclock.test", old)); err != nil {
+		t.Fatalf("first ensure: %v", err)
+	}
+	// A minute ahead of this process, and therefore ahead of the database's own
+	// clock by about that much however the two have drifted — well inside the
+	// allowance, and nothing like the forged date the test above uses.
+	if _, err := e.store.EnsureCounterparty(ctx,
+		e.datedEnsureInput(ctx, t, "eilig@fastclock.test", "fastclock.test", time.Now().Add(time.Minute))); err != nil {
+		t.Fatalf("fast-clock ensure: %v", err)
+	}
+
+	if at := e.lastEvidenceAt(ctx, t, "fastclock.test"); at == nil ||
+		time.Since(*at) > staleEvidenceYears*365*24*time.Hour {
+		t.Fatalf("last_evidence_at = %v, want the newly arrived mail recorded", at)
+	}
+	readID := e.startTriageRead(ctx, t, "fastclock.test")
+	res, err := e.store.ResolveDomainTriage(ctx, ResolveDomainTriageInput{
+		Domain: "fastclock.test", Status: DomainCompany, Source: DomainSourceSiteRead,
+		Evidence: "the site states a legal entity", ReadID: readID,
+		DossierName: "Fastclock GmbH", SeedURL: "https://fastclock.test",
+	})
+	if err != nil {
+		t.Fatalf("resolve: %v", err)
+	}
+	if !res.CompanyCreated || res.CompanyID == nil {
+		t.Fatalf("resolve = %+v, want the company created — the mail arrived, the sender's clock is merely fast", res)
+	}
+}
+
 // Evidence is dated from every address UNDER the domain, not only from the
 // registrable domain itself. freemail.Hostname narrows to eTLD+1, so a match on
 // the address's exact host would drop `alice@mail.acme.test` — and dropping
