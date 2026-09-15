@@ -4,8 +4,9 @@ import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import { activityTimeline } from "../design-system/activitytimeline";
-import { Badge, Button, SegmentedControl } from "../design-system/atoms";
+import { Avatar, Badge, Button } from "../design-system/atoms";
 import { EmailEntry } from "../design-system/emailentry";
+import { FilterPills } from "../design-system/filterpills";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import {
   formatDayMonth,
@@ -15,7 +16,7 @@ import {
 import { type Locale, useLocale, useT } from "../i18n";
 import { ChannelReplyAction } from "./compose";
 import { contactTabRoute } from "./contacttab";
-import { interactionGlyph, useInteractionLabel } from "./interactionchrome";
+import { interactionIcon, useInteractionLabel } from "./interactionchrome";
 import { groupChronology } from "./timelinegroups";
 
 // Conversation memory (concept §5.10, ADR-0097 D3).
@@ -80,7 +81,14 @@ export function ContactMemory({
   const rows =
     entries.length > 0
       ? entries.map((entry) =>
-          fromEntry(entry, t, interactionLabel, locale, recordZone),
+          fromEntry(
+            entry,
+            t,
+            interactionLabel,
+            locale,
+            recordZone,
+            view.contact.full_name,
+          ),
         )
       : foldActivities(view, t, interactionLabel, locale, recordZone);
   // Filter first, then cut: three of what the reader asked for, not whichever
@@ -102,11 +110,10 @@ export function ContactMemory({
       // ledger a reader is sent to.
       footer={
         <Button
-          small
-          variant="ghost"
+          variant="link"
           onClick={() => navigate(contactTabRoute(view.contact.id, "timeline"))}
         >
-          {t("contact.memory.viewAll")}{" "}
+          {t("contact.memory.showAll")}{" "}
           <ChevronRight size={13} aria-hidden="true" />
         </Button>
       }
@@ -115,19 +122,19 @@ export function ContactMemory({
           the title on the one band a panel head is, and a strip that wrapped to
           a second row gave this card a head taller than every other card in the
           stack. Under it, the row reads as what it is: what narrows the list
-          below it. */}
+          below it. FilterPills rather than a SegmentedControl, because these
+          are cuts THROUGH a list and not a setting: the same row the History
+          tab draws over the same conversations, so one record teaches one
+          control. */}
       <PanelBody>
-        <SegmentedControl
-          options={FILTERS}
+        <FilterPills
+          pills={FILTERS.map((value) => ({
+            value,
+            label: t(`contact.memory.${value}`),
+          }))}
           value={filter}
           onChange={setFilter}
-          labels={{
-            all: t("contact.memory.all"),
-            email: t("contact.memory.email"),
-            meetings: t("contact.memory.meetings"),
-            calls: t("contact.memory.calls"),
-            notes: t("contact.memory.notes"),
-          }}
+          label={t("contact.memory.title")}
         />
       </PanelBody>
       {matching.length === 0 && (
@@ -137,49 +144,47 @@ export function ContactMemory({
       )}
       {shown.map((row) => (
         <PanelRow className="pe-memory-row" key={row.key}>
-          <span className="pe-memory-date t-sub">{row.date}</span>
-          {/* The icon reads the KIND and the label reads the transport: a chat
-              message drawn from its provider key alone fell through to the
-              envelope, which told a contact with no email address that they
-              had been mailed. */}
-          <Badge icon={interactionGlyph(row.kind)}>{row.channelLabel}</Badge>
-          {/* A retained email is the canonical row, whatever surface it is on.
-              The card keeps its own date, channel, badge and time columns —
-              those place the message in this card's reading — and hands the
-              message itself to the one component that draws one. */}
-          {row.emailSummary ? (
-            <EmailEntry
-              summary={row.emailSummary}
-              timestamp={row.time}
-              onOpen={openerFor(row, onOpenEmail)}
-              // `openerFor` withholds an opener on two honest grounds: a page
-              // that mounts no drawer, and a row the projection gave no
-              // activity id. The second is the narrower claim, so it is the
-              // one stated.
-              whyNotOpenable="noDetail"
-            />
-          ) : (
-            <span>
-              <span className="pe-memory-title">{row.title}</span>
-              <span className="pe-memory-summary">{row.summary}</span>
+          {/* Who the row is with, as a face rather than a fact in the meta
+              line: the counterparty on an email row, the contact themself on
+              every other kind, so the column reads the same way a reader
+              scans any list of contacts on this product. */}
+          <Avatar name={row.who} size="sm" />
+          {/* The meta line, as words: who the row is with, the transport the
+              message came by (the directory's name for it with the kind's
+              glyph, the one rule every source on this page follows, so a chat
+              thread never reads as mail), how much of the conversation is
+              folded behind the row, and its standing. A pill per fact made
+              three rows carry nine pills. */}
+          <span className="pe-memory-meta t-caption">
+            <strong className="pe-memory-who">{row.who}</strong>
+            <span className="pe-source">
+              {interactionIcon(row.kind)}
+              {row.channelLabel}
             </span>
-          )}
-          {row.messageCount != null && row.messageCount > 1 ? (
-            <span className="t-caption">
-              {t("co.spine.exchangeCount", {
-                count: formatNumber(row.messageCount, locale),
-              })}
-            </span>
-          ) : row.status ? (
-            <Badge tone={row.tone}>{row.statusLabel}</Badge>
-          ) : (
-            <span />
-          )}
-          <span className="pe-memory-time t-sub">{row.time}</span>
+            {row.messageCount != null && row.messageCount > 1 && (
+              <span>
+                {t("co.spine.exchangeCount", {
+                  count: formatNumber(row.messageCount, locale),
+                })}
+              </span>
+            )}
+            {row.status && (
+              <span className="pe-memory-standing">
+                <Badge tone={row.tone}>{row.statusLabel}</Badge>
+              </span>
+            )}
+          </span>
+          {/* The row's place in time, at the far end of the meta line rather
+              than in its own gutter now that the gutter carries a face: the
+              day and the hour, read together the way the History tab's
+              chronology reads them. */}
+          <span className="pe-memory-time t-caption">
+            {row.date} {row.time}
+          </span>
           {/* Reply, on the same terms the 360 timelines offer it: available on
               any row, and WITHHELD on a channel row whose contact cannot be
               reached on the transport that carried it. Mail behaves exactly as
-              it does there — the composer picks send-message over send-email
+              it does there, the composer picks send-message over send-email
               from the row's kind, and nothing else about the interaction
               differs. A row with no anchor renders nothing. */}
           <span className="pe-memory-action">
@@ -194,6 +199,28 @@ export function ContactMemory({
               />
             )}
           </span>
+          {/* A retained email is the canonical row, whatever surface it is on.
+              The card keeps its own avatar, meta line and time, those place
+              the message in this card's reading, and hands the message
+              itself to the one component that draws one. No timestamp on the
+              entry: the meta line already says when, and the same figure
+              twice on one row read as two events. */}
+          {row.emailSummary ? (
+            <EmailEntry
+              summary={row.emailSummary}
+              onOpen={openerFor(row, onOpenEmail)}
+              // `openerFor` withholds an opener on two honest grounds: a page
+              // that mounts no drawer, and a row the projection gave no
+              // activity id. The second is the narrower claim, so it is the
+              // one stated.
+              whyNotOpenable="noDetail"
+            />
+          ) : (
+            <span className="pe-memory-entry">
+              <span className="pe-memory-title">{row.title}</span>
+              <span className="pe-memory-summary">{row.summary}</span>
+            </span>
+          )}
         </PanelRow>
       ))}
     </Panel>
@@ -203,6 +230,10 @@ export function ContactMemory({
 type Row = {
   messageCount?: number;
   key: string;
+  // Who the row is drawn beside: the other party on a retained email, and the
+  // contact themself on every other kind, since a note or a call has no
+  // second name of its own to show.
+  who: string;
   date: string;
   time: string;
   // What a reply anchors on, and the transport it would leave by. Null when the
@@ -272,16 +303,31 @@ function channelKeyOf(
 // hook, so the zone is read once in ContactMemory and passed down.
 type InteractionLabel = ReturnType<typeof useInteractionLabel>;
 
+// The row's counterparty, or the contact when the message names none of its
+// own. A retained email carries who it was with; every other kind, and an
+// email the server could not resolve a name for, reads as a conversation
+// with the record the card is on.
+function whoFor(
+  emailSummary: EmailSummary | null,
+  contactName: string,
+): string {
+  return emailSummary?.counterparty ?? contactName;
+}
+
 function fromEntry(
   entry: NonNullable<Contact360["conversation_memory"]>[number],
   t: ReturnType<typeof useT>,
   interactionLabel: InteractionLabel,
   locale: Locale,
   recordZone: string,
+  contactName: string,
 ): Row {
   const status = entry.status ?? null;
   return {
     key: entry.key,
+    // A thread-projection entry carries no email summary of its own, so the
+    // counterparty it reads is always the contact this card is on.
+    who: whoFor(null, contactName),
     date: formatDayMonth(entry.occurred_at, locale, recordZone),
     time: formatTimeOfDay(entry.occurred_at, locale, recordZone),
     // first_activity_id is what "expand to original" opens, and it is the right
@@ -328,6 +374,7 @@ function foldActivities(
     return {
       key: row.id,
       messageCount: group.entries.length,
+      who: whoFor(row.email_summary ?? null, view.contact.full_name),
       date: formatDayMonth(row.occurred_at, locale, recordZone),
       time: formatTimeOfDay(row.occurred_at, locale, recordZone),
       activityId: row.id,

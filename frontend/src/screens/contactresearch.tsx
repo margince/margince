@@ -1,26 +1,25 @@
 import type { components } from "../api/schema";
-import { useRecordZone } from "../app/recordzone";
-import { EvidenceMark } from "../design-system/evidencemark";
-import { Panel, PanelBody, PanelRow } from "../design-system/panel";
+import { Panel, PanelBody } from "../design-system/panel";
 import { SurfaceState, sectionState } from "../design-system/surfacestate";
-import { confidenceLevel, ProvenanceTag } from "../design-system/trust";
-import { formatDateAbbrev } from "../format/format";
-import { useLocale, useT } from "../i18n";
-import { provenanceOf } from "./common";
+import { useT } from "../i18n";
 import { omitted } from "./contact360";
+import { EnrichedFields } from "./contactcorrections";
 import { ContactProviderSection } from "./contactprovider";
+import { ContactHoldSection } from "./contactrail";
 import "./contact360.css";
 
-// The Research tab (a PURE READ of the 360, like its siblings in
-// contacttabs.tsx): what a machine read about this contact, kept beside the
-// canonical record rather than folded into it. Two different kinds of
-// research sit here — a bought provider snapshot and the enrichment evidence
-// this app's own capture read off a page or a signature — and each carries
-// its own receipt, because a value the reader cannot check is a claim, not a
-// fact.
+// The Data & tools tab: what a machine read about this contact, kept beside
+// the canonical record rather than folded into it, and the record-keeping a
+// rep does not need on the overview. Two kinds of research sit here: a bought
+// provider snapshot and the enrichment evidence this app's own capture read
+// off a page or a signature. The enrichment rows are the SAME panel that
+// takes a verdict on each value (EnrichedFields), so the tab is where a
+// reader both checks a reading and corrects it; a second, read-only spelling
+// of the same list stood here before, and the two drifted. Under them, the
+// correspondence hold and the tags: filing, which the overview used to carry
+// in its rail.
 
 type Contact360 = components["schemas"]["Contact360"];
-type ProfileField = components["schemas"]["ContactProfileField"];
 
 export function ContactResearchTab({
   view,
@@ -84,57 +83,26 @@ export function ContactResearchTab({
             profiles={view.provider_profiles}
           />
         ))}
-      <Panel title={t("contact.research.fields")}>
-        <PanelBody>
-          <SurfaceState
-            loadingLabel={t("contact.research.fields")}
-            state={fieldsState}
-            emptyLabel={t("contact.research.fieldsEmpty")}
-          >
-            {rows.map((field) => (
-              <ProfileFieldRow
-                key={field.claim_key ?? `${field.field}:${field.captured_at}`}
-                field={field}
-              />
-            ))}
-          </SurfaceState>
-        </PanelBody>
-      </Panel>
+      {/* Rows only when there are rows to judge; the withheld and loading
+          states keep the panel's own shell, because EnrichedFields draws
+          nothing for an empty list and a grant boundary must not read as
+          "nothing was captured". */}
+      {view && fieldsState === "ready" ? (
+        <EnrichedFields contactId={view.contact.id} view={view} />
+      ) : (
+        <Panel title={t("contact.research.fields")}>
+          <PanelBody>
+            <SurfaceState
+              loadingLabel={t("contact.research.fields")}
+              state={fieldsState}
+              emptyLabel={t("contact.research.fieldsEmpty")}
+            >
+              {null}
+            </SurfaceState>
+          </PanelBody>
+        </Panel>
+      )}
+      {view && <ContactHoldSection view={view} />}
     </div>
-  );
-}
-
-/**
- * One enrichment-evidence row: the field's label, the value it holds with its
- * provenance mark, and who captured it. The label reuses the lookup the
- * correction card already carries (contact.enriched.field.*) rather than a
- * second spelling of the same five field names.
- */
-function ProfileFieldRow({ field }: Readonly<{ field: ProfileField }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const recordZone = useRecordZone();
-  const provenance = provenanceOf(field.captured_by);
-  return (
-    <PanelRow className="pe-row">
-      <span className="pe-row-label">
-        {t(`contact.enriched.field.${field.field}`)}
-      </span>
-      <span className="pe-row-value">
-        <EvidenceMark
-          value={field.value}
-          source={{
-            provenance,
-            confidence: confidenceLevel(field.confidence) ?? undefined,
-            snippet: field.evidence_snippet,
-            at: formatDateAbbrev(field.captured_at, locale, recordZone),
-          }}
-        />
-      </span>
-      <span className="pe-row-label">
-        {t("contact.research.capturedBy")}:{" "}
-        <ProvenanceTag provenance={provenance} />
-      </span>
-    </PanelRow>
   );
 }

@@ -1,23 +1,16 @@
 import { useQueryClient } from "@tanstack/react-query";
 import type { components } from "../api/schema";
-import { useCanWrite } from "../app/capability";
 import { useRecordZone } from "../app/recordzone";
-import { navigate } from "../app/router";
-import { activityTimeline } from "../design-system/activitytimeline";
-import { Avatar, Button } from "../design-system/atoms";
 import { GroupedTimelineList } from "../design-system/composed";
-import { Eyebrow } from "../design-system/eyebrow";
-import { Panel, PanelBody, PanelRow } from "../design-system/panel";
+import { Panel, PanelBody } from "../design-system/panel";
 import {
   hasTimelineFilters,
   useRecordTimeline,
 } from "../design-system/recordtimeline";
-import { SurfaceState, sectionState } from "../design-system/surfacestate";
+import { SurfaceState } from "../design-system/surfacestate";
 import { TimelineFilterBar } from "../design-system/timelinefilterbar";
-import { formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { useViewerId } from "./common";
-import { ContactCommercialCard, readableRole } from "./contactcards";
+import { MeetingBriefAction } from "./contactmeetings";
 import { timelineState } from "./contacttimelinestate";
 import { RecordHistoryTab } from "./history";
 import {
@@ -29,7 +22,6 @@ import {
   useRecordChronology,
 } from "./recordchronology";
 import { ConversationList, useChronologyCut } from "./recordconversations";
-import { AddRelationshipAction } from "./relationships";
 import { TimelineActions } from "./timelineactions";
 import { groupChronology } from "./timelinegroups";
 import "./contact360.css";
@@ -42,7 +34,6 @@ import { invalidateRecord } from "./recordwritekeys";
 // neither.
 
 type Contact360 = components["schemas"]["Contact360"];
-type Activity = components["schemas"]["Activity"];
 
 // --- Timeline ---------------------------------------------------------------
 
@@ -209,252 +200,5 @@ export function ContactTimelineTab({
         )}
       </PanelBody>
     </Panel>
-  );
-}
-
-// --- Deals ------------------------------------------------------------------
-
-/**
- * ContactDealsTab answers two different questions and keeps them apart: which
- * deals this contact is recorded on at all, and what the one that matters looks
- * like right now.
- *
- * The second half is the overview's own commercial card, rendered again rather
- * than re-spelled — a second wording of the same figures is how two surfaces
- * start disagreeing about one deal.
- */
-export function ContactDealsTab({
-  view,
-  loading = false,
-}: Readonly<{ view?: Contact360; loading?: boolean }>) {
-  const t = useT();
-  // The object half of the gate, asked as the server asks it. The row half —
-  // whether this caller may write THIS contact — is the anchor's own, and the
-  // server applies it to the write; a tab that second-guessed it here would
-  // withhold the verb on a record the write would have accepted.
-  const canSeat = useCanWrite("relationship", "create");
-  const roles = view?.deal_roles?.data ?? [];
-  const state = sectionState(
-    view,
-    "deal_roles",
-    Boolean(view?.deal_roles),
-    roles.length,
-    loading,
-  );
-  return (
-    <div className="record-stack">
-      <Panel
-        title={t("tab.deals")}
-        // THE TAB'S OWN VERB, and the same one the relationships tab offers —
-        // reached from where a reader is already asking the question rather
-        // than spelled a second time. Narrowed to the deal edge: a kind
-        // selector offering "employment" on a Deals tab would ask the reader to
-        // answer what the tab already answered.
-        //
-        // Withheld outright without the grant, as the relationships tab does:
-        // there is no fact about this contact to report, so a disabled button
-        // would be an affordance that says nothing.
-        titleAction={
-          view?.contact.id && canSeat ? (
-            <AddRelationshipAction
-              scope={{ contact_id: view.contact.id }}
-              only={{ kind: "deal_stakeholder", label: "rel.seatOnDeal" }}
-            />
-          ) : undefined
-        }
-      >
-        <SurfaceState
-          state={state}
-          emptyLabel={t("contact.deals.empty")}
-          loadingLabel={t("tab.deals")}
-        >
-          {roles.map((role) => (
-            <PanelRow className="pe-row" key={role.relationship_id}>
-              {/* The seat first, in the row grid's own label column: which
-                  deal it is answers "where", and the seat answers the question
-                  a reader opened this tab with — what am I to them there. */}
-              <span className="pe-row-label">{readableRole(role.role)}</span>
-              <span className="pe-row-value">
-                <button
-                  type="button"
-                  className="link-button"
-                  onClick={() =>
-                    navigate({ screen: "deals", id: role.deal_id })
-                  }
-                >
-                  {role.deal_title ?? t("contact.deals.untitled")}
-                </button>
-              </span>
-              <span className="pe-row-label">
-                {role.deal_stage ?? t("contact.deals.noStage")}
-              </span>
-            </PanelRow>
-          ))}
-        </SurfaceState>
-      </Panel>
-      {view && <ContactCommercialCard view={view} />}
-    </div>
-  );
-}
-
-// --- Meetings ---------------------------------------------------------------
-
-// The brief verb for one meeting, booked or already held — the backend
-// assembles a brief for any meeting activity, and reading one afterwards is
-// how a reader recovers what a room agreed.
-//
-// Every reason NOT to offer it is decided here rather than at each call site,
-// because a third caller that forgets one of them ships a button that fails:
-//
-//   - no id, or a surface with no drawer to open — nothing to ask for.
-//   - a row that is not a meeting — the endpoint answers 404 for any other
-//     kind, by design.
-//   - a meeting the reader may DISCOVER but not READ. The timeline carries
-//     those deliberately, as `content_state: "withheld"`, so the reader knows
-//     a conversation happened without seeing it. The brief endpoint applies
-//     the stricter content gate, so offering the verb here would promise a
-//     reader something their own grant refuses.
-function MeetingBriefAction({
-  activity,
-  onBriefMeeting,
-}: Readonly<{
-  activity: Pick<Activity, "id" | "kind" | "content_state"> | undefined;
-  onBriefMeeting?: (activityId: string) => void;
-}>) {
-  const t = useT();
-  if (!activity?.id || !onBriefMeeting) {
-    return null;
-  }
-  if (activity.kind !== "meeting" || activity.content_state === "withheld") {
-    return null;
-  }
-  const activityId = activity.id;
-  return (
-    <Button small onClick={() => onBriefMeeting(activityId)}>
-      {t("contact.meeting.brief")}
-    </Button>
-  );
-}
-
-/**
- * ContactMeetingsTab puts the meeting that has not happened yet above the ones
- * that have. The booked meeting is the server's own next-meeting read, taken
- * through this contact's activity link rather than their account's — the company's
- * answer names a meeting this contact may not be in.
- */
-export function ContactMeetingsTab({
-  view,
-  loading = false,
-  onBriefMeeting,
-}: Readonly<{
-  view?: Contact360;
-  loading?: boolean;
-  onBriefMeeting?: (activityId: string) => void;
-}>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const recordZone = useRecordZone();
-  const viewerId = useViewerId();
-  // The booked meeting is drawn above, from the server's own next-meeting
-  // read. It is also an activity, so an unfiltered list draws it a second time
-  // under "already held" — which was merely untidy while the rows were inert
-  // and becomes two identical brief buttons for one room now that they carry a
-  // verb.
-  const booked = view?.next_meeting?.activity_id;
-  const met = (view?.activities?.data ?? []).filter(
-    (activity: Activity) =>
-      activity.kind === "meeting" && activity.id !== booked,
-  );
-  const hasMore = view?.activities?.page.has_more ?? false;
-  const past = sectionState(
-    view,
-    "activities",
-    Boolean(view?.activities),
-    met.length,
-    loading,
-  );
-  const next = view?.next_meeting;
-  return (
-    <div className="record-stack">
-      <Panel title={t("contact.meetings.next")}>
-        <PanelBody>
-          <SurfaceState
-            loadingLabel={t("contact.meetings.next")}
-            state={sectionState(
-              view,
-              "next_meeting",
-              Boolean(view),
-              next ? 1 : 0,
-              loading,
-            )}
-            emptyLabel={t("contact.meetings.noneBooked")}
-          >
-            {next && (
-              <>
-                <p className="pe-prose t-body">
-                  {next.subject ?? t("contact.meetings.untitled")}
-                </p>
-                <p className="pe-brief-line">
-                  {formatDateTime(next.starts_at, locale, recordZone)}
-                </p>
-                {/* next_meeting carries no content_state because the 360
-                    withholds the whole section rather than a redacted row, so
-                    a booked meeting the reader can see here is one they can
-                    read. The kind is stated for the same reason: this section
-                    IS the meeting. */}
-                <MeetingBriefAction
-                  activity={{ id: next.activity_id, kind: "meeting" }}
-                  onBriefMeeting={onBriefMeeting}
-                />
-                {next.participants && next.participants.length > 0 && (
-                  <>
-                    <Eyebrow as="h3">
-                      {t("contact.meetings.participants")}
-                    </Eyebrow>
-                    <div className="pe-chiprow">
-                      {next.participants.map((who) => (
-                        <span
-                          className="pe-memory-channel t-caption"
-                          key={who.contact_id}
-                        >
-                          <Avatar
-                            name={who.full_name}
-                            identity={who.contact_id}
-                            size="xs"
-                          />
-                          {who.full_name}
-                        </span>
-                      ))}
-                    </div>
-                  </>
-                )}
-              </>
-            )}
-          </SurfaceState>
-        </PanelBody>
-      </Panel>
-      <Panel title={t("contact.meetings.past")}>
-        <PanelBody>
-          <SurfaceState
-            loadingLabel={t("contact.meetings.past")}
-            state={past === "ready" && hasMore ? "partial" : past}
-            emptyLabel={t("contact.meetings.noneLogged")}
-          >
-            <GroupedTimelineList
-              groups={groupChronology(
-                activityTimeline(met, viewerId, (activity) => (
-                  <MeetingBriefAction
-                    activity={activity}
-                    onBriefMeeting={onBriefMeeting}
-                  />
-                )),
-                hasMore,
-              )}
-              zone={recordZone}
-            />
-          </SurfaceState>
-        </PanelBody>
-      </Panel>
-    </div>
   );
 }

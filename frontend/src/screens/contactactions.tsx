@@ -127,6 +127,9 @@ export function ContactActions({
           navigate({ screen: "contacts", id: contactId, id2: "meetings" })
         }
       />
+      {/* A hairline between reaching the record and recording what happened
+          to it: two groups of verbs, not one toolbar. */}
+      <span className="record-actions-sep" aria-hidden="true" />
       {logRefused && (
         <p className="t-caption" id={logRefusedId}>
           {t("record.logActivityRefused")}

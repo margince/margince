@@ -49,35 +49,35 @@ function record(screen: ReactNode = <Record />) {
 // The details pane is where a reader goes for the attributes, not what they
 // open a record to see, so it starts folded until they say otherwise — and
 // what they say is remembered.
-describe("the details pane is closed until asked", () => {
-  it("starts folded when nothing is remembered", () => {
-    const { pane } = record();
-    expect(pane()).toBeNull();
-  });
-
-  it("starts open when the reader last left it open", () => {
-    localStorage.setItem(KEY, "0");
+describe("the details pane is open until folded", () => {
+  it("starts open when nothing is remembered", () => {
     const { pane } = record();
     expect(pane()).not.toBeNull();
   });
 
-  it("remembers a fold and an unfold", async () => {
+  it("starts folded when the reader last folded it", () => {
+    localStorage.setItem(KEY, "1");
+    const { pane } = record();
+    expect(pane()).toBeNull();
+  });
+
+  it("remembers a fold and an unfold, and says which it offers", async () => {
     const user = userEvent.setup();
     const { pane, getByRole } = record();
-    await user.click(getByRole("button", { name: "Details" }));
-    expect(pane()).not.toBeNull();
-    expect(localStorage.getItem(KEY)).toBe("0");
-    await user.click(getByRole("button", { name: "Details" }));
+    await user.click(getByRole("button", { name: "Hide details" }));
     expect(pane()).toBeNull();
     expect(localStorage.getItem(KEY)).toBe("1");
+    await user.click(getByRole("button", { name: "Show details" }));
+    expect(pane()).not.toBeNull();
+    expect(localStorage.getItem(KEY)).toBe("0");
   });
 
-  it("starts folded when storage refuses to answer", () => {
+  it("starts open when storage refuses to answer", () => {
     vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
       throw new Error("storage refused");
     });
     const { pane } = record();
-    expect(pane()).toBeNull();
+    expect(pane()).not.toBeNull();
   });
 });
 

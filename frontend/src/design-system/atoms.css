@@ -229,7 +229,10 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-weight: 700;
+  /* Semibold, the heading weight: initials are a label for the name beside
+     them, and --fw-bold is reserved for the rare word that must outrank a
+     heading. */
+  font-weight: var(--fw-semibold);
   flex: none;
 }
 
@@ -981,7 +984,10 @@
 .segmented button {
   font-family: var(--f-body);
   font-size: var(--fs-sm);
-  font-weight: 600;
+  /* Medium at rest and semibold only when pressed, as FilterPills does: a row
+     of options all set semibold reads as a row of headings, and the weight
+     step is what marks the chosen one beside its plate. */
+  font-weight: var(--fw-medium);
   border: 0;
   /* Transparent, so an unpressed option is read on the TRACK's --bgChip and
      takes the chip's ink accordingly. The pressed one below lifts onto its own
@@ -995,6 +1001,7 @@
 .segmented button[aria-pressed="true"] {
   background: var(--bgElevated);
   color: var(--textPrimary);
+  font-weight: var(--fw-semibold);
   box-shadow: var(--shadow-rest);
 }
 /* How much is behind an option, beside its name. It keeps the quiet ink on the
@@ -2165,7 +2172,10 @@
   border: 0;
   background: none;
   font: inherit;
-  color: var(--accent);
+  /* The text ink of the accent, as every other pressable word on a page wears
+     it: the fill token beside it is a second green a reader cannot tell from
+     the first and it fails AA at this size. */
+  color: var(--accentText);
   white-space: nowrap;
   /* The card's own `cursor` cannot reach this control: the overlay that
      stretches the door over the tile is the BUTTON's pseudo-element, so what a
@@ -2173,9 +2183,10 @@
      platform cursor beats a value the card set. The tile read as a plain arrow
      over every part of it the door actually answered for. */
   cursor: pointer;
-  /* The door says its word at the meta size and in the bold weight: it is the
-     smallest text on the card and the only thing on it to press, so weight is
-     what carries it rather than size.
+  /* The door says its word at the meta size and in the heading weight: it is
+     the smallest text on the card and the only thing on it to press, so weight
+     is what carries it rather than size: semibold, because --fw-bold is
+     reserved for the word that must outrank a heading, and a door does not.
      24px tall, which is the AA target floor (WCAG 2.5.8, and axe runs it in the
      wcag22aa sweep) — the same rung the worklist's rank button takes. The words
      box to 15px at this size, and axe measures the BUTTON's own rectangle: the
@@ -2191,7 +2202,7 @@
      node between two items is not a flex item — the space simply vanished. */
   gap: var(--space-1);
   font-size: var(--fs-meta);
-  font-weight: var(--fw-bold);
+  font-weight: var(--fw-semibold);
 }
 /* The arrow LEANS toward the door on the way in: the one movement on the tile,
    3px, at the state duration — a card that answers the pointer reads as one a

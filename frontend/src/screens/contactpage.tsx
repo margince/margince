@@ -1,5 +1,4 @@
 import { useQuery } from "@tanstack/react-query";
-import { Link as LinkIcon, Mail, MapPin, Phone } from "lucide-react";
 import type { ReactNode } from "react";
 import { useId, useRef, useState } from "react";
 import { api } from "../api/client";
@@ -7,48 +6,46 @@ import type { components } from "../api/schema";
 import { useRecordWriteRefusal } from "../app/capability";
 import { PageAsideToggle, usePageAside } from "../app/pageaside";
 import { useRecordZone } from "../app/recordzone";
+import { revealOnceMounted, scrollPageToTop } from "../app/reveal";
 import { navigate } from "../app/router";
 import { useHasUnsavedChanges } from "../app/unsaved";
 import { useUrlParams } from "../app/urlstate";
 import { useFoldedViewport } from "../app/viewport";
-import { Modal } from "../design-system/atoms";
-import { RecordView } from "../design-system/composed";
+import { Badge, Modal } from "../design-system/atoms";
 import { ContactLink } from "../design-system/contactlink";
-import {
-  IdentityFact,
-  IdentityLine,
-  IdentityMeta,
-} from "../design-system/identityline";
+import { IdentityLine } from "../design-system/identityline";
 import { OffsiteLink } from "../design-system/offsitelink";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { Popover } from "../design-system/popover";
 import { liveProjects } from "../design-system/projectpicker";
+import { Fact, RecordFacts } from "../design-system/recordfacts";
 import { RecordTabs } from "../design-system/recordtabs";
+import { RecordView } from "../design-system/recordview";
+import { useTooltip } from "../design-system/tooltip";
 import { ProvenanceTag } from "../design-system/trust";
 import { formatDateAbbrev } from "../format/format";
 import { linkedinUrl } from "../format/weburl";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { BriefQueue } from "./brief.queue";
 import { provenanceOf, throwProblem, useViewerId } from "./common";
 import { ComposeModal } from "./compose";
 import { ContactActions } from "./contactactions";
+import { ContactDealsTab } from "./contactdeals";
 import { ContactResearchDrawer } from "./contactdrawers";
 import { ContactFilesTab } from "./contactfiles";
+import { ContactMeetingsTab } from "./contactmeetings";
 import { ContactNetworkTab } from "./contactnetwork";
-import { ContactOverview } from "./contactoverview";
+import { BRIEF_ANCHOR, ContactOverview } from "./contactoverview";
 import {
   BRIEF_PARAM,
   COMPOSE_PARAM,
   THREAD_PARAM,
 } from "./contactpage.address";
-import { ContactRail } from "./contactrail";
+import { ContactRail, contactStanding, standingSentences } from "./contactrail";
 import { ContactResearchTab } from "./contactresearch";
 import { CONTACT_TABS, type ContactTab, contactTabRoute } from "./contacttab";
-import {
-  ContactDealsTab,
-  ContactMeetingsTab,
-  ContactTimelineTab,
-} from "./contacttabs";
+import { ContactTimelineTab } from "./contacttabs";
 import { transportForActivity, useTransports } from "./contacttransports";
 import { currentEmployer } from "./employmentcurrency";
 import { rosterOwnerName, useRoster, useRosterPartial } from "./entityref";
@@ -56,7 +53,6 @@ import { LogActivityAction } from "./logactivity";
 import { ContactMeetingBrief } from "./meetingbrief";
 import { useOpenEmail } from "./openemail";
 import { RecordAccess } from "./recordaccess";
-import { RecordEmailAside } from "./recordemail";
 import {
   useMailboxConnected,
   useWriteTo,
@@ -158,6 +154,7 @@ function ContactTabPanel({
   contactId,
   view,
   onBriefMeeting,
+  onAction,
   refusedReasonId,
 }: Readonly<{
   tab: ContactTab;
@@ -166,6 +163,10 @@ function ContactTabPanel({
   onBriefMeeting: (activityId: string) => void;
   /** Opens one message in the record's drawer, which the page owns. */
   onOpenEmail?: (activityId: string) => void;
+  // The page's one action loop, for the tab whose moment carries a verb of
+  // its own: the Meetings tab's agenda button today, the door every moment
+  // action opens through.
+  onAction?: (action: ContactMomentAction) => void;
   // The page's one sentence about why this contact takes no changes, for
   // the tab whose verb writes the record: the upload on Documents.
   refusedReasonId?: string;
@@ -191,7 +192,13 @@ function ContactTabPanel({
     case "deals":
       return <ContactDealsTab view={view} />;
     case "meetings":
-      return <ContactMeetingsTab view={view} onBriefMeeting={onBriefMeeting} />;
+      return (
+        <ContactMeetingsTab
+          view={view}
+          onBriefMeeting={onBriefMeeting}
+          onAction={onAction}
+        />
+      );
     case "research":
       return <ContactResearchTab view={view} />;
     case "documents":
@@ -282,6 +289,12 @@ export function ContactPageV2({
   const t = useT();
   const recordZone = useRecordZone();
   const details = usePageAside();
+  // What the pane's switch says in each state: this page's pane holds the
+  // permissions as well as the details, and the button names both.
+  const paneWords = {
+    show: t("contact.overview.detailsShow"),
+    hide: t("contact.overview.detailsHide"),
+  };
   const narrow = useFoldedViewport();
   const [mobileDetails, setMobileDetails] = useState(false);
   const detailsTitle = useId();
@@ -381,7 +394,6 @@ export function ContactPageV2({
   }
 
   const contact = view.data.contact;
-  const firstName = contact.full_name.split(" ")[0];
   // The guard is the RAIL'S, not the hero button's. It answers one verdict per
   // purpose, and the button used to refuse when none of them was `allowed` —
   // which asked a question this page cannot answer, because whether a message
@@ -400,25 +412,19 @@ export function ContactPageV2({
       nextMeetingId: view.data.next_meeting?.activity_id ?? null,
     });
 
+  // The pane is the rail alone. It used to end in an email box with its own
+  // "Draft the reply": the same verb the head's Email button already carries,
+  // drawn a second time as the pane's one filled control.
   const contactDetails = (
-    <>
-      <ContactRail
-        view={view.data}
-        guard={guard.data}
-        guardLoading={guard.isPending}
-        guardFailed={guard.isError}
-        onRetryGuard={() => {
-          void guard.refetch();
-        }}
-        firstName={firstName}
-        onExplain={() => navigate({ screen: "contacts", id })}
-      />
-      <ContactEmailPanel
-        contactId={id}
-        recordAddress={contact.primary_email ?? undefined}
-        archived={Boolean(contact.archived_at)}
-      />
-    </>
+    <ContactRail
+      view={view.data}
+      guard={guard.data}
+      guardLoading={guard.isPending}
+      guardFailed={guard.isError}
+      onRetryGuard={() => {
+        void guard.refetch();
+      }}
+    />
   );
 
   return (
@@ -427,152 +433,172 @@ export function ContactPageV2({
           and everything on the page, the rail included, answers a pressed
           address with this page's own composer. */}
       <ContactWriteTo contactId={id} onWrite={() => openComposer("")}>
-        <RecordView
-          // The contact's context, in the details pane beside the work: what is
-          // true of the CONTACT does not belong to whichever part of them is open,
-          // so it does not move when a tab changes. The same pane, fold and
-          // memory of it as every other record page.
-          // At phone width there is no column to fold: the same cards open as
-          // the drawer below instead, so the record hands the view no pane at
-          // all rather than one that folds to nothing beside nothing.
-          aside={narrow ? undefined : contactDetails}
-          asideOpen={details.open}
-          name={contact.full_name}
-          avatarSrc={null}
-          subtitle={<ContactSubtitle view={view.data} />}
-          pulse={<ContactIdentityLine view={view.data} />}
-          actions={
-            // refusedReasonId is the SAME sentence the band below states —
-            // one write-gate for the whole header, not a narrower one per
-            // verb. Edit, merge and archive ride inside the header's menu,
-            // so they read it too.
-            <ContactActions
-              view={view.data}
+        <div className="record-sheet">
+          <RecordView
+            // The contact's context, in the details pane beside the work: what is
+            // true of the CONTACT does not belong to whichever part of them is open,
+            // so it does not move when a tab changes. The same pane, fold and
+            // memory of it as every other record page.
+            // At phone width there is no column to fold: the same cards open as
+            // the drawer below instead, so the record hands the view no pane at
+            // all rather than one that folds to nothing beside nothing.
+            aside={narrow ? undefined : contactDetails}
+            asideOpen={details.open}
+            name={contact.full_name}
+            avatarSrc={null}
+            // One rung under the record scale: the name is still the largest
+            // thing on the page, but beside a work column that opens on the
+            // agent's ask it no longer needs to be the size of a masthead.
+            scale="compact"
+            // The role and the company on the name's own line, the marks under
+            // it, and the ways to reach them as a strip across the head: three
+            // registers a reader takes in one glance rather than a stack of
+            // lines under a masthead.
+            nameBadge={<ContactSubtitle view={view.data} />}
+            pulse={<ContactMarks view={view.data} tab={tab} />}
+            badges={<ContactFacts view={view.data} />}
+            actions={
+              // refusedReasonId is the SAME sentence the band below states —
+              // one write-gate for the whole header, not a narrower one per
+              // verb. Edit, merge and archive ride inside the header's menu,
+              // so they read it too.
+              <ContactActions
+                view={view.data}
+                contactId={id}
+                onWrite={() => openComposer("")}
+                onResearch={() => setDrawer("research")}
+                onLogActivity={() => setDrawer("activity_log")}
+                onAddTask={() => setDrawer("activity_task")}
+                refusedReasonId={refusedReasonId}
+              />
+            }
+            actionsInline
+            zone={recordZone}
+            // Stated ONCE for the page, where both columns and every tab can see
+            // it. Every control the record refuses points at this element by id.
+            // Absent while the contact takes changes: a line always reserved
+            // would read as a record with something to say about itself and
+            // nothing said.
+            band={
+              readOnlyReason ? (
+                <p id={readOnlyReasonId} className="t-caption">
+                  {readOnlyReason}
+                </p>
+              ) : undefined
+            }
+            tabs={
+              <RecordTabs
+                options={CONTACT_TABS}
+                value={tab}
+                onChange={(next) => {
+                  navigate(contactTabRoute(id, next));
+                  scrollPageToTop();
+                }}
+                // The switch for the details pane, at the end of the tab row: it
+                // chooses what the page shows beside the work, so it stands with
+                // the controls that choose what the work column shows.
+                trailing={
+                  <PageAsideToggle
+                    quiet
+                    labels={paneWords}
+                    controlled={
+                      narrow
+                        ? {
+                            open: mobileDetails,
+                            labels: paneWords,
+                            onToggle: () => setMobileDetails((open) => !open),
+                          }
+                        : undefined
+                    }
+                  />
+                }
+                labels={{
+                  overview: t(TAB_LABEL_KEYS.overview),
+                  timeline: t(TAB_LABEL_KEYS.timeline),
+                  network: t(TAB_LABEL_KEYS.network),
+                  deals: t(TAB_LABEL_KEYS.deals),
+                  meetings: t(TAB_LABEL_KEYS.meetings),
+                  research: t(TAB_LABEL_KEYS.research),
+                  documents: t(TAB_LABEL_KEYS.documents),
+                }}
+                // At least one connected provider has never been asked about this
+                // contact, so there is a lookup waiting behind the tab. ANY of them
+                // is enough: the reader still has somebody to ask, even if another
+                // provider already answered. A CANCELLED run reads as never_run
+                // too, and the dot coming back is right — nothing was bought.
+                marks={{
+                  research: (view.data.provider_profiles ?? []).some(
+                    (profile) => profile.state === "never_run",
+                  ),
+                }}
+              />
+            }
+          >
+            {tab === "overview" && (
+              <ContactOverview
+                view={view.data}
+                brief={brief.data}
+                briefLoading={brief.isLoading}
+                briefFailed={brief.isError}
+                onRetryBrief={() => {
+                  brief.refetch();
+                }}
+                onAction={runAction}
+                onOpenEmail={setOpenEmail}
+              />
+            )}
+
+            <ContactTabPanel
+              tab={tab}
               contactId={id}
-              onWrite={() => openComposer("")}
-              onResearch={() => setDrawer("research")}
-              onLogActivity={() => setDrawer("activity_log")}
-              onAddTask={() => setDrawer("activity_task")}
-              refusedReasonId={refusedReasonId}
-            />
-          }
-          actionsInline
-          zone={recordZone}
-          // Stated ONCE for the page, where both columns and every tab can see
-          // it. Every control the record refuses points at this element by id.
-          // Absent while the contact takes changes: a line always reserved
-          // would read as a record with something to say about itself and
-          // nothing said.
-          band={
-            readOnlyReason ? (
-              <p id={readOnlyReasonId} className="t-caption">
-                {readOnlyReason}
-              </p>
-            ) : undefined
-          }
-          tabs={
-            <RecordTabs
-              options={CONTACT_TABS}
-              value={tab}
-              onChange={(next) => navigate(contactTabRoute(id, next))}
-              // The switch for the details pane, at the end of the tab row: it
-              // chooses what the page shows beside the work, so it stands with
-              // the controls that choose what the work column shows.
-              trailing={
-                <PageAsideToggle
-                  label={t("contact.overview.detailsPermissions")}
-                  controlled={
-                    narrow
-                      ? {
-                          open: mobileDetails,
-                          label: t("contact.overview.detailsPermissions"),
-                          onToggle: () => setMobileDetails((open) => !open),
-                        }
-                      : undefined
-                  }
-                />
-              }
-              labels={{
-                overview: t(TAB_LABEL_KEYS.overview),
-                timeline: t(TAB_LABEL_KEYS.timeline),
-                network: t(TAB_LABEL_KEYS.network),
-                deals: t(TAB_LABEL_KEYS.deals),
-                meetings: t(TAB_LABEL_KEYS.meetings),
-                research: t(TAB_LABEL_KEYS.research),
-                documents: t(TAB_LABEL_KEYS.documents),
-              }}
-              // At least one connected provider has never been asked about this
-              // contact, so there is a lookup waiting behind the tab. ANY of them
-              // is enough: the reader still has somebody to ask, even if another
-              // provider already answered. A CANCELLED run reads as never_run
-              // too, and the dot coming back is right — nothing was bought.
-              marks={{
-                research: (view.data.provider_profiles ?? []).some(
-                  (profile) => profile.state === "never_run",
-                ),
-              }}
-            />
-          }
-        >
-          {tab === "overview" && (
-            <ContactOverview
               view={view.data}
-              brief={brief.data}
-              briefLoading={brief.isLoading}
-              briefFailed={brief.isError}
-              onRetryBrief={() => {
-                brief.refetch();
-              }}
+              onBriefMeeting={openBrief}
               onAction={runAction}
               onOpenEmail={setOpenEmail}
+              refusedReasonId={refusedReasonId}
             />
-          )}
-
-          <ContactTabPanel
-            tab={tab}
-            contactId={id}
-            view={view.data}
-            onBriefMeeting={openBrief}
-            onOpenEmail={setOpenEmail}
-            refusedReasonId={refusedReasonId}
-          />
-          {/* One drawer over the record. The timeline's rows and the rail's
+            {/* One drawer over the record. The timeline's rows and the rail's
             citations both open into it, so a reader who finds a message in the
             aside and one who finds it in the body land in the same place. */}
-          <OpenEmailDrawer
-            activityId={openEmail}
-            zone={recordZone}
-            onClose={() => setOpenEmail(null)}
-          />
-          <ContactMailDrawer
-            contactId={id}
-            view={view.data}
-            recordAddress={contact.primary_email ?? undefined}
-            open={composer.open}
-            intent={composer.intent}
-            threadId={composer.threadId}
-            onClose={composer.close}
-          />
-          <ContactResearchDrawer
-            contactId={id}
-            contactName={contact.full_name}
-            providerProfiles={view.data.provider_profiles}
-            open={drawer === "research"}
-            onClose={() => setDrawer(null)}
-          />
-          <ContactMeetingBrief
-            activityId={briefedMeeting}
-            open={briefedMeeting !== null}
-            onClose={() => openBrief(null)}
-            projects={liveProjects(view.data.projects)}
-            onOpenEmail={setOpenEmail}
-          />
-          <ContactActivityDrawer
-            contactId={id}
-            drawer={drawer}
-            onClose={() => setDrawer(null)}
-          />
-        </RecordView>
+            <OpenEmailDrawer
+              activityId={openEmail}
+              zone={recordZone}
+              onClose={() => setOpenEmail(null)}
+            />
+            <ContactMailDrawer
+              contactId={id}
+              view={view.data}
+              recordAddress={contact.primary_email ?? undefined}
+              open={composer.open}
+              intent={composer.intent}
+              threadId={composer.threadId}
+              onClose={composer.close}
+            />
+            <ContactResearchDrawer
+              contactId={id}
+              contactName={contact.full_name}
+              providerProfiles={view.data.provider_profiles}
+              open={drawer === "research"}
+              onClose={() => setDrawer(null)}
+            />
+            <ContactMeetingBrief
+              activityId={briefedMeeting}
+              open={briefedMeeting !== null}
+              onClose={() => openBrief(null)}
+              projects={liveProjects(view.data.projects)}
+              onOpenEmail={setOpenEmail}
+            />
+            <ContactActivityDrawer
+              contactId={id}
+              drawer={drawer}
+              onClose={() => setDrawer(null)}
+            />
+            {/* The work queue, over the record: the same drawer the Home page
+              opens, driven by the same address, so a link to it from here
+              and from there is one link. */}
+            <BriefQueue />
+          </RecordView>
+        </div>
         {/* Rendered whether or not it is showing, and told so by `open`: a
             drawer whose caller conditions its ELEMENT can only ever appear —
             there is nothing left on the page to animate on its way out. */}
@@ -745,7 +771,7 @@ function ContactSubtitle({ view }: Readonly<{ view: Contact360 }>): ReactNode {
   const contact = view.contact;
   const employment = currentEmployer(view.employments?.data);
   return (
-    <div>
+    <div className="record-sub record-sub-inline">
       {contact.title}
       {employment?.company_name && (
         <>
@@ -768,19 +794,78 @@ function ContactSubtitle({ view }: Readonly<{ view: Contact360 }>): ReactNode {
   );
 }
 
-// The identity line under the name: how to reach them, and who holds the
-// relationship. ONE wrapping line rather than two — a reader takes the whole
-// line in at once, and splitting it made the header three deep for facts that
-// are each a few words long. Standing is quieter than a contact method within
-// that line: it qualifies the record rather than being a way to act on it.
-function ContactIdentityLine({
+// The marks under the name: the relationship's standing (verdict and trend as
+// ONE badge, nothing when the touch dates are withheld from this reader) and
+// who may read the record, with its Share verb. Both are the values a rep
+// glances for before anything else, and both are pills, so they share a line.
+function ContactMarks({
   view,
-}: Readonly<{ view: Contact360 }>): ReactNode {
+  tab,
+}: Readonly<{ view: Contact360; tab: ContactTab }>): ReactNode {
+  const t = useT();
+  const { locale } = useLocale();
+  const standing = contactStanding(view, t);
+  // The brief lives on the overview: from any other tab the press goes there
+  // first, and the reveal waits for the anchor to be drawn.
+  const showBrief = () => {
+    if (tab !== "overview") {
+      navigate(contactTabRoute(view.contact.id, "overview"));
+    }
+    revealOnceMounted(BRIEF_ANCHOR);
+  };
+  return (
+    <IdentityLine separator="space">
+      {standing && (
+        <StandingChip
+          text={standingSentences(view, t, locale)}
+          onPress={showBrief}
+        >
+          <Badge tone={standing.tone}>{standing.words}</Badge>
+        </StandingChip>
+      )}
+      <RecordAccess
+        key={view.contact.id}
+        kind="contact"
+        record={view.contact}
+      />
+    </IdentityLine>
+  );
+}
+
+// The standing chip: a tooltip says why it reads as it does, and pressing it
+// takes the reader to the brief, where the readings behind the word are laid
+// out in full. A button and not a link, because the brief is on this page.
+function StandingChip({
+  text,
+  onPress,
+  children,
+}: Readonly<{ text: string; onPress: () => void; children: ReactNode }>) {
+  const { ref, trigger, tip } = useTooltip<HTMLButtonElement>(text);
+  return (
+    <button
+      type="button"
+      className="pe-standing-chip"
+      ref={ref}
+      {...trigger}
+      onClick={onPress}
+    >
+      {children}
+      {tip}
+    </button>
+  );
+}
+
+// The facts strip across the head: how to reach them and who holds the
+// record, each as a caption over its value. The address opens this page's own
+// composer (the same drawer the Write verb opens, behind the same consent
+// gate) and the number dials; the rest are read. The role is what the
+// relationship edge records, never inferred from a title, so a contact with a
+// title can still have no buying role and the strip simply omits the cell.
+function ContactFacts({ view }: Readonly<{ view: Contact360 }>): ReactNode {
   const t = useT();
   const { locale } = useLocale();
   const zone = useRecordZone();
   const viewerId = useViewerId();
-  // The owner off the roster's first page, as the deal's facts read theirs.
   const roster = useRoster("user", Boolean(view.contact.owner_id));
   const rosterPartial = useRosterPartial(
     "user",
@@ -791,126 +876,67 @@ function ContactIdentityLine({
   const phone = contact.phones?.[0]?.phone;
   const role = view.commercial?.role;
   return (
-    <IdentityMeta>
-      {/* Ways to REACH her, each one its own handle rather than clauses of one
-          sentence about her — so the facts stand apart on whitespace instead of
-          being strung together on dots. */}
-      <IdentityLine separator="space">
-        {/* The address and the number are ways to ACT: a reader who sees an
-            address expects to click it, and a header that showed one and did
-            nothing taught them the record was a printout. The address opens
-            this page's own composer — the same drawer the Write verb above
-            opens, behind the same consent gate — and the number dials. */}
-        {email && (
+    <RecordFacts>
+      {email && (
+        <Fact label={t("history.field.email")}>
           <ContactLink
             kind="email"
             value={email}
             record={{ entityType: "contact", entityId: contact.id }}
             readOnly={Boolean(contact.archived_at)}
             className="pe-meta-link"
-            textClassName="identity-fact"
           >
-            <Mail size={13} aria-hidden="true" />
             {email}
           </ContactLink>
-        )}
-        {phone && (
-          <ContactLink
-            kind="phone"
-            value={phone}
-            className="pe-meta-link"
-            textClassName="identity-fact"
-          >
-            <Phone size={13} aria-hidden="true" />
+        </Fact>
+      )}
+      {phone && (
+        <Fact label={t("create.phone")}>
+          <ContactLink kind="phone" value={phone} className="pe-meta-link">
             {phone}
           </ContactLink>
+        </Fact>
+      )}
+      {contact.address?.city && (
+        <Fact label={t("create.city")}>{contact.address.city}</Fact>
+      )}
+      {typeof contact.social?.linkedin === "string" && (
+        <Fact label={t("contact.page.linkedin")}>
+          <ProfileLink href={contact.social.linkedin} />
+        </Fact>
+      )}
+      <Fact label={t("contact.page.owner")}>
+        {rosterOwnerName(
+          contact.owner_id,
+          roster,
+          rosterPartial,
+          t,
+          t("contact.page.ownerUnassigned"),
         )}
-        {contact.address?.city && (
-          <IdentityFact icon={<MapPin size={13} aria-hidden="true" />}>
-            {contact.address.city}
-          </IdentityFact>
-        )}
-        {/* `social` is an open map on the wire, so its values are unknown to
-            the type system. The fact renders only when there is a string to
-            stand behind it — a link with nothing at the end is worse than no
-            link at all.
-
-            It IS a link, because it wears a link's icon: a reader who sees the
-            chain and the word clicks it, and for a while this row answered that
-            click with nothing. OffsiteLink falls back to plain text when the
-            value is not a web address, so a malformed one degrades to what this
-            row used to be rather than to a dead anchor. */}
-        {typeof contact.social?.linkedin === "string" && (
-          <IdentityFact icon={<LinkIcon size={13} aria-hidden="true" />}>
-            <ProfileLink href={contact.social.linkedin} />
-          </IdentityFact>
-        )}
-        {/* The role is what the relationship edge records — never inferred from
-            a job title, which is why a contact with a title can still have no
-            buying role and the line simply omits it. */}
-        {role && (
-          <IdentityFact quiet>
-            {t("contact.page.buyingRole")}: {buyingRoleLabel(role, t)}
-          </IdentityFact>
-        )}
-        <IdentityFact quiet>
-          {t("contact.page.owner")}:{" "}
-          {rosterOwnerName(
-            view.contact.owner_id,
-            roster,
-            rosterPartial,
-            t,
-            t("contact.page.ownerUnassigned"),
-          )}
-        </IdentityFact>
-        <IdentityFact quiet>
-          <Popover
-            label={
-              <>
-                {t("history.field.source")}:{" "}
-                <ProvenanceTag
-                  provenance={provenanceOf(contact.captured_by, viewerId)}
-                />
-              </>
-            }
-          >
-            <p className="t-body">
-              {contact.source || t("trust.sourceUnknown")}
-            </p>
-          </Popover>
-        </IdentityFact>
-        <IdentityFact quiet>
-          {t("list.created")}:{" "}
-          {formatDateAbbrev(contact.created_at, locale, zone)}
-        </IdentityFact>
-        <RecordAccess key={contact.id} kind="contact" record={contact} />
-      </IdentityLine>
-    </IdentityMeta>
-  );
-}
-
-// The rail's email box, and when the page may not draw it: not on an archived
-// contact, whose page offers no writes.
-function ContactEmailPanel({
-  contactId,
-  recordAddress,
-  archived,
-}: Readonly<{
-  contactId: string;
-  recordAddress?: string;
-  archived: boolean;
-}>) {
-  if (archived) {
-    return null;
-  }
-  return (
-    <RecordEmailAside
-      entityType="contact"
-      entityId={contactId}
-      contactId={contactId}
-      recordAddress={recordAddress}
-      detectWaitingReply
-    />
+      </Fact>
+      {role && (
+        <Fact label={t("contact.page.buyingRole")}>
+          {buyingRoleLabel(role, t)}
+        </Fact>
+      )}
+      <Fact label={t("list.created")}>
+        {formatDateAbbrev(contact.created_at, locale, zone)}
+      </Fact>
+      {/* The provenance pill names the KIND of source (the sparkle, the
+          words); the popover behind it answers WHICH one, which for a mailbox
+          capture is a message id no reader should have to scan past. */}
+      <Fact label={t("history.field.source")}>
+        <Popover
+          label={
+            <ProvenanceTag
+              provenance={provenanceOf(contact.captured_by, viewerId)}
+            />
+          }
+        >
+          <p className="t-body">{contact.source || t("trust.sourceUnknown")}</p>
+        </Popover>
+      </Fact>
+    </RecordFacts>
   );
 }
 

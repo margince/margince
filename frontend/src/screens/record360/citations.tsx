@@ -560,7 +560,9 @@ export function SentenceList({
     <>
       {lead ? (
         <p className="co-brief-lead">
-          <NatureBadge sentence={lead} />
+          {/* No nature word on the lead: being set apart IS its mark. The
+              lines under it keep theirs, where a suggestion sits beside a
+              fact and the word is what tells them apart. */}
           {lead.text}
           {citations === "per-sentence" && (
             <Citations
@@ -610,23 +612,21 @@ export function SentenceList({
  * looked like a stored fact would be the one thing a reader could not check —
  * and the prose is allowed to judge now.
  *
- * It rides the leading sentence too, so a promoted judgement keeps its mark
- * rather than losing it to the promotion. A fact leading a block carries no
- * badge and is meant to — that is a block with nothing to judge, and the
- * absence of the mark is what says so.
+ * The leading sentence carries none: being set apart at the top IS its mark.
  */
 function NatureBadge({ sentence }: Readonly<{ sentence: BriefSentence }>) {
   const t = useT();
   if (!sentence.nature || sentence.nature === "fact") {
     return null;
   }
-  return (
-    <>
-      <Badge tone={sentence.nature === "recommendation" ? "accent" : undefined}>
-        {t(NATURE_LABELS[sentence.nature])}
-      </Badge>{" "}
-    </>
-  );
+  // A word in the sentence's own line, not a pill in front of it: "Suggested:
+  // use the call to…" reads as prose with its kind named, where a pill per
+  // sentence made a four-line brief carry four boxes.
+  const cls =
+    sentence.nature === "recommendation"
+      ? "co-brief-nature co-brief-nature-suggested"
+      : "co-brief-nature";
+  return <span className={cls}>{t(NATURE_LABELS[sentence.nature])}: </span>;
 }
 
 /**

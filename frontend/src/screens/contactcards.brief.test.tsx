@@ -3,7 +3,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
-import { ContactBriefCard } from "./contactcards";
+import { ContactBriefCard } from "./contactbrief";
 import { installFetchStub, meRoute, StoryProviders } from "./story-utils";
 
 type Contact360 = components["schemas"]["Contact360"];
@@ -73,21 +73,20 @@ function card(by: WrittenByWriter | undefined) {
 }
 
 describe("the relationship brief discloses the machine that reads it", () => {
-  it("tints and discloses a model's prose, and names the writer", () => {
+  // The claim is the panel's AI tone plus the WrittenBy mark in its head,
+  // once. No "AI-assisted" pill on top of those: the tone already says a
+  // machine wrote the prose, and the mark names which one.
+  it("discloses a model's prose by naming the writer, once", () => {
     const panel = card("model");
     expect(panel.classList).toContain("panel-ai");
-    expect(within(panel).getByText("AI-assisted")).toBeInTheDocument();
+    expect(within(panel).queryByText("AI-assisted")).toBeNull();
     expect(within(panel).getByText("Written by Margince")).toBeInTheDocument();
   });
 
-  it("keeps both over a composition, and says it was assembled", () => {
-    // The mirror, and the case the conditional treatment got wrong: the same
-    // read degrades to a composition over the same records, and a card that
-    // dropped the tint there would hand the reader a machine's paragraphs with
-    // nothing on the panel saying so.
+  it("says a composition was assembled, and names no model", () => {
+    // The same read degrades to a composition over the same records, and the
+    // foot says so rather than naming a writer that did not write.
     const panel = card("deterministic");
-    expect(panel.classList).toContain("panel-ai");
-    expect(within(panel).getByText("AI-assisted")).toBeInTheDocument();
     expect(
       within(panel).getByText("Assembled from your records"),
     ).toBeInTheDocument();
@@ -97,8 +96,6 @@ describe("the relationship brief discloses the machine that reads it", () => {
   it("names no writer and stamps nothing when there is no brief", () => {
     // An empty brief falls back to the recorded profile, without AI provenance.
     const panel = card(undefined);
-    expect(panel.classList).not.toContain("panel-ai");
-    expect(within(panel).queryByText("AI-assisted")).toBeNull();
     expect(within(panel).queryByText(/Margince|Assembled/)).toBeNull();
     expect(
       screen.getByRole("heading", { name: "About this contact" }),

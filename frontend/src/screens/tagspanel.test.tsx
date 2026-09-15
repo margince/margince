@@ -117,16 +117,14 @@ describe("the tags panel", () => {
   // Applying a tag writes to the RECORD, so a reader who may only look at one
   // sees the words and no verb to change them.
   it("offers no remove verb to a reader who may not edit the record", async () => {
-    const user = userEvent.setup();
     mount([KEY_ACCOUNT], false, false);
     await screen.findByText("Key Account");
 
-    await user.click(
-      screen.getByRole("button", {
-        name: en["tags.options"].replace("{name}", "Key Account"),
+    expect(
+      screen.queryByRole("button", {
+        name: en["tags.removeTag"].replace("{name}", "Key Account"),
       }),
-    );
-    expect(screen.queryByText(en["tags.removeFromRecord"])).toBeNull();
+    ).toBeNull();
   });
 
   it("names who applied a tag, and when", async () => {
@@ -136,7 +134,7 @@ describe("the tags panel", () => {
 
     await user.click(
       screen.getByRole("button", {
-        name: en["tags.options"].replace("{name}", "Key Account"),
+        name: en["tags.removeTag"].replace("{name}", "Key Account"),
       }),
     );
     expect(await screen.findByText(/Lena Fischer/)).toBeInTheDocument();
@@ -156,7 +154,7 @@ describe("the tags panel", () => {
 
     await user.click(
       screen.getByRole("button", {
-        name: en["tags.options"].replace("{name}", "Key Account"),
+        name: en["tags.removeTag"].replace("{name}", "Key Account"),
       }),
     );
     expect(screen.queryByText(/Lena Fischer/)).toBeNull();

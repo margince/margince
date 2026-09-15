@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
-import { ContactBriefCard } from "./contactcards";
+import { ContactBriefCard } from "./contactbrief";
 import { installFetchStub, meRoute, StoryProviders } from "./story-utils";
 
 // The relationship brief.

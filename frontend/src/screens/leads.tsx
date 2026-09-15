@@ -19,7 +19,6 @@ import {
   Textarea,
   TextInput,
 } from "../design-system/atoms";
-import { RecordView } from "../design-system/composed";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { ContactLink } from "../design-system/contactlink";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
@@ -30,6 +29,7 @@ import {
   useRecordTimeline,
   useTimelineFilters,
 } from "../design-system/recordtimeline";
+import { RecordView } from "../design-system/recordview";
 import { Select } from "../design-system/select";
 import { TimelineFilterBar } from "../design-system/timelinefilterbar";
 import { useToast } from "../design-system/toast";

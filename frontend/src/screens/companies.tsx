@@ -16,11 +16,7 @@ import {
   Modal,
   Skeleton,
 } from "../design-system/atoms";
-import {
-  RecordView,
-  type TimelineEntry,
-  type TimelineGroup,
-} from "../design-system/composed";
+import type { TimelineEntry, TimelineGroup } from "../design-system/composed";
 import type { ListChip } from "../design-system/listsurface";
 import { CellStrip } from "../design-system/listtable";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
@@ -31,6 +27,7 @@ import {
   hasTimelineFilters,
   useRecordTimeline,
 } from "../design-system/recordtimeline";
+import { RecordView } from "../design-system/recordview";
 import { sectionState } from "../design-system/surfacestate";
 import { TimelineFilterBar } from "../design-system/timelinefilterbar";
 import { formatDateTime, formatMoney, formatNumber } from "../format/format";

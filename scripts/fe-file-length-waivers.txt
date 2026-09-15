@@ -107,7 +107,6 @@
 560 frontend/src/screens/contractform.tsx
 671 frontend/src/screens/users-admin.tsx
 676 frontend/src/screens/worklist.dispositions.tsx
-682 frontend/src/screens/contactcards.tsx
 682 frontend/src/format/format.ts
 702 frontend/src/screens/settingsnav.tsx
 737 frontend/src/screens/companytoday.tsx

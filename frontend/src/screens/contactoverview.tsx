@@ -1,8 +1,8 @@
 import type { components } from "../api/schema";
-import { navigate } from "../app/router";
+import { useUrlParams } from "../app/urlstate";
 import { useT } from "../i18n";
+import { ContactBriefCard } from "./contactbrief";
 import {
-  ContactBriefCard,
   ContactCommercialCard,
   ContactCommitmentsCard,
   ContactMattersCard,
@@ -10,14 +10,14 @@ import {
   hasMatters,
   hasOpenCommitments,
 } from "./contactcards";
-import { EnrichedFields } from "./contactcorrections";
 import { ContactMemory } from "./contactmemory";
-import { owedPromises } from "./contactowed";
-import { ContactReadings } from "./contactreadings";
-import { contactTabRoute } from "./contacttab";
 import { ContactToday, hasContactWork } from "./contacttoday";
 
 type Contact360 = components["schemas"]["Contact360"];
+
+// Where the relationship brief stands on the page: the standing chip in the
+// head leads here (app/reveal), so the id is one constant the two share.
+export const BRIEF_ANCHOR = "contact-relationship-brief";
 
 export function ContactOverview({
   view,
@@ -36,6 +36,15 @@ export function ContactOverview({
   onAction: (action: components["schemas"]["ContactMomentAction"]) => void;
   onOpenEmail: (id: string) => void;
 }>) {
+  // The whole queue opens as a drawer OVER the record, the same one the Home
+  // page draws, rather than as a page in its place: a reader who leaves the
+  // record to see everything owed has just lost the reason they opened it.
+  const [params, setParams] = useUrlParams();
+  const openQueue = () => {
+    const next = new Map(params);
+    next.set("queue", "1");
+    setParams(next);
+  };
   const commitments = hasOpenCommitments(view);
   const work = hasContactWork(view) || commitments;
   const today = (
@@ -44,15 +53,8 @@ export function ContactOverview({
       view={view}
       onAction={onAction}
       onOpenEmail={onOpenEmail}
-      onOpenTasks={() => navigate({ screen: "worklist" })}
+      onOpenTasks={openQueue}
     />
-  );
-  const readings = Boolean(
-    view.last_inbound_at ||
-      view.last_outbound_at ||
-      view.next_meeting ||
-      hasCommercial(view) ||
-      owedPromises(view).length,
   );
   return (
     <div className="record-stack">
@@ -64,22 +66,18 @@ export function ContactOverview({
           includeTasks={false}
         />
       )}
-      <ContactBriefCard
-        brief={brief}
-        loading={briefLoading}
-        failed={briefFailed}
-        onRetry={onRetryBrief}
-        view={view}
-        onOpenEmail={onOpenEmail}
-      />
+      <div id={BRIEF_ANCHOR} className="pe-brief-anchor">
+        <ContactBriefCard
+          brief={brief}
+          loading={briefLoading}
+          failed={briefFailed}
+          onRetry={onRetryBrief}
+          view={view}
+          onOpenEmail={onOpenEmail}
+        />
+      </div>
       {!work && today}
       <ContactOverviewCoverage view={view} />
-      {readings && (
-        <ContactReadings
-          view={view}
-          onOpenTab={(tab) => navigate(contactTabRoute(view.contact.id, tab))}
-        />
-      )}
       <ContactMemory view={view} onOpenEmail={onOpenEmail} hideEmpty />
       {hasCommercial(view) && <ContactCommercialCard view={view} />}
       {hasMatters(view) && (
@@ -88,7 +86,6 @@ export function ContactOverview({
           firstName={view.contact.full_name.split(" ")[0]}
         />
       )}
-      <EnrichedFields contactId={view.contact.id} view={view} />
     </div>
   );
 }
