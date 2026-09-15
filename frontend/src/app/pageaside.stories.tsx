@@ -4,10 +4,10 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { expect, userEvent, within } from "storybook/test";
-import { RecordView } from "../design-system/composed";
-import { InlineText } from "../design-system/inlinechoice";
+import { InlineText } from "../design-system/inlinetext";
 import { Panel, PanelBody } from "../design-system/panel";
 import { RecordTabs } from "../design-system/recordtabs";
+import { RecordView } from "../design-system/recordview";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { installFetchStub } from "../screens/story-utils";
@@ -105,16 +105,22 @@ export const Folded: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const user = userEvent.setup();
-    await expect(canvasElement.querySelector("aside")).toBeNull();
     // The switch renders nothing until the screen's `usePageAside` effect has
     // claimed the pane, which is a commit past mount: the query has to wait for
-    // it rather than assume the first paint carried it.
+    // it rather than assume the first paint carried it. The pane is open by
+    // default, so the first press folds it.
     await user.click(
-      await canvas.findByRole("button", { name: en["record.panel.details"] }),
+      await canvas.findByRole("button", {
+        name: en["record.panel.hideDetails"],
+      }),
+    );
+    await expect(canvasElement.querySelector("aside")).toBeNull();
+    await user.click(
+      canvas.getByRole("button", { name: en["record.panel.showDetails"] }),
     );
     await expect(canvasElement.querySelector("aside")).not.toBeNull();
     await expect(
-      canvas.getByRole("button", { name: en["record.panel.details"] }),
+      canvas.getByRole("button", { name: en["record.panel.hideDetails"] }),
     ).toHaveAttribute("aria-pressed", "true");
   },
 };
@@ -132,7 +138,7 @@ function ControlledQueue() {
         <PageAsideToggle
           controlled={{
             open,
-            label: "Work queue",
+            labels: { show: "Show work queue", hide: "Hide work queue" },
             onToggle: () => setOpen(!open),
           }}
         />

@@ -203,13 +203,19 @@
 /* The block's leading claim: the one sentence a reader takes away, set as a
    claim rather than as the first item of a list. The hairline under it is the
    card-to-content seam this block owns — it divides the read from the working,
-   which is two pieces of CONTENT, so it stops at the body's own padding. */
+   which is two pieces of CONTENT, so it stops at the body's own padding.
+   Its size stays UNDER the panel's title rung (--fs-panel-title, 16px): the
+   lead is the first line of the panel's content, and at --fs-h2 it outranked
+   the heading of the panel it sits in. */
 .co-brief-lead {
   margin: 0 0 var(--space-3);
   padding-bottom: var(--space-3);
   border-bottom: 1px solid var(--borderSubtle);
-  font-family: var(--f-display);
-  font-size: var(--fs-h2);
+  /* The body face, as the lead card's ask above it: in the display face at
+     medium weight this sentence read as bold while the ask beside it did not,
+     and the two are the same kind of line: the one sentence to take away. */
+  font-family: var(--f-body);
+  font-size: var(--fs-lead);
   font-weight: var(--fw-medium);
   line-height: 1.35;
   letter-spacing: var(--tracking-display);
@@ -226,16 +232,28 @@
   line-height: 1.55;
   color: var(--textContent);
 }
-/* A sentence's citations sit in their own wrapping row after the prose, each
-   one visibly a separate chip. Run together without a gap they read as one
-   corrupted word ("activityactivityactivity"), which is what an unseparated
-   list of same-typed citations looked like. */
+/* What kind of claim a line is, as the line's first word in a firmer weight:
+   a suggestion in the accent's text ink, an assessment in the quiet one. */
+.co-brief-nature {
+  font-weight: var(--fw-medium);
+  color: var(--textMeta);
+}
+/* Indigo, not green: "Suggested" names a sentence the agent proposed, and
+   the ink that says a machine wrote something is the product's one indigo. */
+.co-brief-nature-suggested {
+  color: var(--aiText);
+}
+/* A sentence's citations sit on their own line UNDER the prose, one per row,
+   each visibly a separate chip. Trailing the sentence inline, two cited
+   messages with their dates ran the line to the panel's edge and wrapped
+   mid-citation, and the row read as one long corrupted clause; stacked, each
+   reads as what it is: one source, one date. */
 .co-brief-cites {
-  display: inline-flex;
-  flex-wrap: wrap;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
   gap: var(--space-1);
-  margin-inline-start: var(--space-2);
-  vertical-align: baseline;
+  margin-block-start: var(--space-1);
 }
 .co-brief-cite {
   background: none;
@@ -276,15 +294,6 @@
   text-underline-offset: 3px;
 }
 
-/* Collected citations START their own row under the prose instead of trailing a
-   sentence, so they drop the inline gap that separates a chip from the words
-   before it. Kept, it indents the first chip against the paragraph above it,
-   and two left edges that nearly agree read as a mistake rather than a
-   hierarchy. */
-.co-brief-sources > .co-brief-cites {
-  margin-inline-start: 0;
-}
-
 /* "Worth doing next": the overview's lead panel. The tint that says a rule
    wrote every row of it is Panel's own tone="ai" now — this class no longer
    reaches into .panel-head or .panel-foot, and what is left of it is only the
@@ -323,10 +332,16 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
+  /* The badge's rung: the byline is the same kind of claim as the AI badge
+     in the head above it, and at the eyebrow rung it read a size smaller
+     than the pill it echoes. */
+  font-size: var(--fs-meta);
+  /* A caption, not an eyebrow: sentence case at the meta size. Set as a
+     tracked uppercase kicker it was the loudest thing on a row whose ask it
+     only qualifies, and two of them inside one small card read as chrome. */
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--tracking-normal);
+  text-transform: none;
   color: var(--aiText);
 }
 
@@ -373,7 +388,9 @@
 .co-move-basis {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  /* Centred, not on the baseline: the sources lead with a glyph, and a
+     caption sat on the glyph's baseline hung under the words beside it. */
+  align-items: center;
   gap: var(--space-1) var(--space-2);
   margin-top: var(--space-1);
 }
@@ -1308,7 +1325,11 @@
    names the move, and the two lines below it are the case FOR that move, so
    they belong closer to each other than to the thing they argue for. */
 .co-lead .co-move-ask {
-  font-size: var(--fs-body);
+  /* The lead rung, the same as the brief's first sentence beside it: the ask
+     and the lead are the same kind of line, the one sentence to take away
+     from each card, and at the body rung the ask read as a caption to its own
+     verbs. */
+  font-size: var(--fs-lead);
   font-weight: var(--fw-medium);
   line-height: var(--lh-snug);
   margin-bottom: var(--space-1);
@@ -1332,13 +1353,23 @@
    -1 resolves to the first line and the verbs land in row one alone — sizing
    that row to the button and pushing the ask half a button away from its own
    reason. The count follows what the left column actually holds, because an
-   explicit row with nothing in it still draws its gap. */
+   explicit row with nothing in it still draws its gap, and it holds the
+   byline too: left out of the count, the verbs spanned two rows while the
+   column had three, and the two they spanned stretched to the verbs' height,
+   opening a button's worth of air between the byline and the ask. */
+.co-lead .co-move-body:has(.co-move-by),
 .co-lead .co-move-body:has(.co-move-reason),
 .co-lead .co-move-body:has(.co-move-basis) {
   grid-template-rows: auto auto;
 }
+.co-lead .co-move-body:has(.co-move-by):has(.co-move-reason),
+.co-lead .co-move-body:has(.co-move-by):has(.co-move-basis),
 .co-lead .co-move-body:has(.co-move-reason):has(.co-move-basis) {
   grid-template-rows: auto auto auto;
+}
+.co-lead
+  .co-move-body:has(.co-move-by):has(.co-move-reason):has(.co-move-basis) {
+  grid-template-rows: auto auto auto auto;
 }
 /* An equal `gap` does NOT draw equal gutters: half-leading lives inside each
    line's own box, so three lines at three sizes push their neighbours apart by
@@ -1350,6 +1381,7 @@
 .co-lead .co-move-reason {
   text-box: trim-both cap alphabetic;
 }
+.co-lead .co-move-by,
 .co-lead .co-move-ask,
 .co-lead .co-move-reason,
 .co-lead .co-move-basis {

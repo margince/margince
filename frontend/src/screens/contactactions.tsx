@@ -68,10 +68,9 @@ export function ContactActions({
   contactId: string;
   // Read at screen level and handed down so the custom-field schema request
   // runs BESIDE the contact's. See ContactRecordActions's own prop.
-  // LogActivityAction itself renders nothing in overlay — a mirrored
-  // workspace has no activity write of its own, the same fact
-  // ContactEmailPanel already states for the record's email box — so a
-  // trigger drawn here would set drawer state a mount elsewhere refuses.
+  // LogActivityAction itself renders nothing in overlay: a mirrored
+  // workspace has no activity write of its own, so a trigger drawn here
+  // would set drawer state a mount elsewhere refuses.
   overlay: boolean;
   onWrite: () => void;
   onResearch: () => void;
@@ -135,6 +134,9 @@ export function ContactActions({
           navigate({ screen: "contacts", id: contactId, id2: "meetings" })
         }
       />
+      {/* A hairline between reaching the record and recording what happened
+          to it: two groups of verbs, not one toolbar. */}
+      <span className="record-actions-sep" aria-hidden="true" />
       {/* Neither verb is drawn in overlay: LogActivityAction, the form both
           open, renders nothing there — a mirrored workspace has no activity
           write of its own — so a trigger here would set drawer state a mount

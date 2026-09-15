@@ -192,13 +192,13 @@ it("protects changed Details drafts without blocking an unchanged editor or anot
     </UnsavedGuard>,
     { wrapper },
   );
-  const toggle = await screen.findByRole("button", { name: "Details" });
+  const toggle = await screen.findByRole("button", { name: "Hide details" });
   await user.click(screen.getByRole("button", { name: "Change Name" }));
   expect(toggle).toBeEnabled();
   await user.type(screen.getByRole("textbox", { name: "Name" }), " changed");
-  expect(screen.getByRole("button", { name: "Details" })).toBeDisabled();
+  expect(screen.getByRole("button", { name: "Hide details" })).toBeDisabled();
   await user.keyboard("{Escape}");
-  expect(screen.getByRole("button", { name: "Details" })).toBeEnabled();
+  expect(screen.getByRole("button", { name: "Hide details" })).toBeEnabled();
 });
 it("focuses a refused email draft after blur so Escape can cancel it", async () => {
   const user = userEvent.setup();

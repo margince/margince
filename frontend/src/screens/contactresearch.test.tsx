@@ -91,7 +91,7 @@ describe("the research tab's enrichment evidence", () => {
     expect(screen.getByText("+493012345678")).toBeTruthy();
   });
 
-  it("carries each row's provenance: who captured it and a receipt to check it against", () => {
+  it("carries each row's receipt: the text the value was read from, and when", () => {
     withProviders(
       <ContactResearchTab
         view={view({
@@ -107,13 +107,13 @@ describe("the research tab's enrichment evidence", () => {
         })}
       />,
     );
-    expect(screen.getByText("Captured by:")).toBeTruthy();
-    expect(screen.getByText("Automated by enrich")).toBeTruthy();
-    // The value itself is the evidence affordance's trigger: opening it is
-    // what surfaces the snippet, so the row's receipt is reachable through
-    // the value rather than a separate widget.
-    const trigger = screen.getByRole("button", { name: /Head of Fleet/ });
-    expect(trigger.getAttribute("aria-expanded")).toBe("false");
+    // The receipt stands under the value in the open, not behind a trigger:
+    // the row is the one a reader corrects, and what was misread is the
+    // reason a correction would be needed.
+    expect(
+      screen.getByText(/Dana Buyer, Head of Fleet at Brandt Automotive GmbH/),
+    ).toBeTruthy();
+    expect(screen.getByText(/Read from site_read on/)).toBeTruthy();
   });
 
   it("keeps two readings of the same field as separate rows rather than one colliding on the key", () => {

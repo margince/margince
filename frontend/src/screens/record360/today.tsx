@@ -86,19 +86,22 @@ export function TodayPanel({
   return (
     <Panel
       tone="ai"
-      className="co-reading-today"
+      // `co-lead` is the company lead's two-column move: the claim on the
+      // left, the verbs opposite it. Without it a contact's verbs fell UNDER
+      // the claim, right-aligned, and the whole width beside them was empty.
+      className="co-reading-today co-lead"
       title={t("today.title")}
       titleAction={
         <div className="co-reading-today-actions">
-          {/* The rows under this head are the agent's reading of the record —
-              what it found and what it prepared — so the claim is read before
-              any of them. */}
-          <Badge tone="ai">{t("co.assistant.aiTag")}</Badge>
           {onOpenTasks && (
             <button type="button" className="link-button" onClick={onOpenTasks}>
               {tasksLabel ?? t("co.suggest.viewTasks")}
             </button>
           )}
+          {/* The rows under this head are the agent's reading of the record,
+              what it found and what it prepared. The claim closes the band,
+              after the way out, so the head reads verb then mark. */}
+          <Badge tone="ai">{t("co.assistant.aiTag")}</Badge>
         </div>
       }
       footer={footer}
@@ -217,7 +220,7 @@ export function FoundMove({
         {why && <span className="co-move-reason t-sub">{why}</span>}
         {basis && (
           <div className="co-move-basis">
-            <span className="co-move-basis-head t-eyebrow">
+            <span className="co-move-basis-head t-caption">
               {t("co.suggest.basedOn")}
             </span>
             {basis}

@@ -45,7 +45,6 @@ import {
   type BoardDeal,
   type BoardMoneyColumn,
   PipelineBoard,
-  RecordView,
 } from "../design-system/composed";
 import { IconAction } from "../design-system/iconaction";
 import type { ListChip } from "../design-system/listsurface";
@@ -62,6 +61,7 @@ import {
   useRecordTimeline,
   useTimelineFilters,
 } from "../design-system/recordtimeline";
+import { RecordView } from "../design-system/recordview";
 import { Select } from "../design-system/select";
 import { StageLadder, type StageStep } from "../design-system/stageladder";
 import { TimelineFilterBar } from "../design-system/timelinefilterbar";

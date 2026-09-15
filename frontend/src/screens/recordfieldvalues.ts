@@ -40,6 +40,12 @@ export function groupValue(
 ): string {
   const values = prefillFromRecord(fields, record);
   const rows = prefillRowsFromRecord(fields, record);
+  if (
+    isAddressGroup(fields) &&
+    !fields.some((f) => maskedFields.includes(f.key))
+  ) {
+    return postalLines(values);
+  }
   return fields
     .map((field) => {
       if (field.searchTargets)
@@ -78,4 +84,30 @@ function repeatableValue(field: CreateField, rows: FormRows): string {
     .map((row) => row[key])
     .filter(Boolean)
     .join(", ");
+}
+
+// An address group is every field of the six the record's address is split
+// into, and nothing else: the one group whose parts have a shape of their own.
+function isAddressGroup(fields: CreateField[]): boolean {
+  return (
+    fields.length > 0 &&
+    fields.every((field) => field.key.startsWith("address_"))
+  );
+}
+
+// The address the way a reader writes it on an envelope: street lines, then
+// the postal code before the city, then region and country. One value per
+// line rather than six clauses on dots, which read as a list of unrelated
+// facts. The lines are joined on a newline the value column keeps
+// (`white-space: pre-line`, fieldgrid.css).
+function postalLines(values: Record<string, string>): string {
+  const place = [values.address_postal_code, values.address_city]
+    .filter(Boolean)
+    .join(" ");
+  const area = [values.address_region, values.address_country]
+    .filter(Boolean)
+    .join(", ");
+  return [values.address_line1, values.address_line2, place, area]
+    .filter(Boolean)
+    .join("\n");
 }

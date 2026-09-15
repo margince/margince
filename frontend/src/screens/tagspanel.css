@@ -26,21 +26,41 @@
   outline-offset: 2px;
 }
 
-.tagspanel-more {
-  opacity: 0.6;
+/* The cross that removes the tag: hidden until the pill is hovered or holds
+   focus, so a row of tags is a row of words and not a row of verbs. A coarse
+   pointer has no hover, so there it stays on. */
+.tagspanel-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 1.25rem;
+  block-size: 1.25rem;
+  margin-inline-start: var(--space-1);
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-full);
+  corner-shape: round;
+  background: none;
+  color: var(--textMeta);
+  opacity: 0;
+  cursor: pointer;
 }
-
-.tagspanel-more:hover,
-.tagspanel-more:focus-visible {
+.tagspanel-combo:hover .tagspanel-remove,
+.tagspanel-combo:focus-within .tagspanel-remove {
   opacity: 1;
 }
-
-.tagspanel-menu {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  min-width: 15rem;
-  padding: var(--space-1);
+.tagspanel-remove:hover {
+  background: var(--bgHover);
+  color: var(--textPrimary);
+}
+.tagspanel-remove:focus-visible {
+  outline: var(--focus-ring);
+  opacity: 1;
+}
+@media (hover: none) {
+  .tagspanel-remove {
+    opacity: 1;
+  }
 }
 
 .tagspanel-note {
@@ -68,4 +88,16 @@
   flex-wrap: wrap;
   gap: var(--gapActions);
   margin-top: var(--space-3);
+}
+/* With nothing above it the pill stands on the row's own line. */
+.tagspanel-actions:first-child {
+  margin-top: 0;
+}
+
+/* The way to add a tag is drawn as the outline of the chip it would add:
+   a dashed pill, so it reads as a slot rather than as one more verb. */
+.tagspanel-actions > .btn {
+  border-style: dashed;
+  border-radius: var(--r-full);
+  corner-shape: round;
 }

@@ -11,7 +11,8 @@ import "@testing-library/jest-dom/vitest";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { ProblemError } from "../screens/common";
-import { InlineChoice, InlineText } from "./inlinechoice";
+import { InlineChoice } from "./inlinechoice";
+import { InlineText } from "./inlinetext";
 
 // The rules this control keeps are failure modes, not polish. Each one here
 // is a way a reader gets told something untrue about their own edit.

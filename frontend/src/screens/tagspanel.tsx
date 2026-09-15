@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { MoreHorizontal, Plus } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
 
 import { Button } from "../design-system/atoms";
+import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelBody } from "../design-system/panel";
-import { Popover } from "../design-system/popover";
 import { TagPill } from "../design-system/tagpill";
 import { formatDate, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
@@ -94,11 +94,17 @@ export function TagsPanel({
       sub={tags.length > 0 ? t("tags.panelSub") : undefined}
       bare={bare}
     >
+      {/* In a card of its own the empty panel teaches what tags are for. As
+          a row of the Details card the label already says "Tags" and the
+          dashed pill under it is the whole invitation, so the lesson would
+          be two sentences beside every untagged record. */}
       {tags.length === 0 ? (
-        <div className="tagspanel-empty">
-          <p className="tagspanel-empty-title">{t("tags.emptyTitle")}</p>
-          <p className="tagspanel-note">{t("tags.emptyBody")}</p>
-        </div>
+        !bare && (
+          <div className="tagspanel-empty">
+            <p className="tagspanel-empty-title">{t("tags.emptyTitle")}</p>
+            <p className="tagspanel-note">{t("tags.emptyBody")}</p>
+          </div>
+        )
       ) : (
         <div className="tagspanel-set">
           {visible.map((tag) => (
@@ -161,8 +167,11 @@ function TagsFrame({
   bare: boolean;
   children: ReactNode;
 }>) {
+  // Bare is the set alone, for a host that already frames it: a row of the
+  // record's Details card, where the card's own padding and the row's label
+  // are the frame.
   if (bare) {
-    return <PanelBody>{children}</PanelBody>;
+    return <>{children}</>;
   }
   return (
     <Panel title={title} sub={sub}>
@@ -194,52 +203,59 @@ function TagOnRecord({
   const { locale } = useLocale();
   const zone = viewerZone();
   const remove = useRemoveTag(entityType, entityID);
+  const [confirming, setConfirming] = useState(false);
+  const added = tag.assigned_by?.display_name
+    ? t("tags.addedBy", {
+        who: tag.assigned_by.display_name,
+        when: formatDate(tag.assigned_at, locale, zone),
+      })
+    : // No name where the row records none: an assignment written before
+      // the product recorded WHO has nobody to credit, and inventing one
+      // would put a choice on somebody.
+      t("tags.addedOn", {
+        when: formatDate(tag.assigned_at, locale, zone),
+      });
 
   return (
     <span className="tagspanel-combo">
       <a className="tagspanel-open" href={`#/tags/${tag.tag_id}`}>
         <TagPill name={tag.name} tone={tag.color} archived={tag.archived} />
       </a>
-      <Popover
-        variant="ghost"
-        className="tagspanel-more"
-        label={
-          <>
-            <MoreHorizontal aria-hidden />
-            <span className="sr-only">
-              {t("tags.options", { name: tag.name })}
-            </span>
-          </>
-        }
-      >
-        <div className="tagspanel-menu">
-          <strong>{tag.name}</strong>
-          <p className="t-caption">
-            {tag.assigned_by?.display_name
-              ? t("tags.addedBy", {
-                  who: tag.assigned_by.display_name,
-                  when: formatDate(tag.assigned_at, locale, zone),
-                })
-              : // No name where the row records none: an assignment written
-                // before the product kept one has nobody to credit, and
-                // inventing a name would put a choice on somebody.
-                t("tags.addedOn", {
-                  when: formatDate(tag.assigned_at, locale, zone),
-                })}
-          </p>
-          <span className="t-caption">{t("tags.visibleWorkspaceWide")}</span>
-          {canEdit && (
-            <Button
-              small
-              variant="ghost"
-              disabled={remove.isPending}
-              onClick={() => remove.mutate(tag.tag_id)}
-            >
-              {t("tags.removeFromRecord")}
-            </Button>
-          )}
-        </div>
-      </Popover>
+      {/* The one verb a tag on a record has, as the cross the pill grows on
+          hover and on focus, rather than a menu of one item. It asks before
+          it acts: who applied the tag and when is shown there, so a reader
+          about to undo a colleague's filing sees whose it was. */}
+      {canEdit && (
+        <>
+          <button
+            type="button"
+            className="tagspanel-remove"
+            aria-label={t("tags.removeTag", { name: tag.name })}
+            onClick={() => setConfirming(true)}
+          >
+            <X aria-hidden size={13} />
+          </button>
+          <ConfirmModal
+            open={confirming}
+            onClose={() => {
+              setConfirming(false);
+              remove.reset();
+            }}
+            title={t("tags.removeTitle", { name: tag.name })}
+            confirmLabel={t("tags.removeFromRecord")}
+            confirmVariant="danger"
+            pending={remove.isPending}
+            onConfirm={() =>
+              remove.mutate(tag.tag_id, {
+                onSuccess: () => setConfirming(false),
+              })
+            }
+          >
+            <p className="t-body">{added}</p>
+            <p className="t-caption">{t("tags.visibleWorkspaceWide")}</p>
+          </ConfirmModal>
+        </>
+      )}
     </span>
   );
 }

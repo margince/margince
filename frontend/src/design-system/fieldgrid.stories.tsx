@@ -5,7 +5,8 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Building2, Globe, Landmark, MapPin, User, Users } from "lucide-react";
 import { LocaleProvider } from "../i18n";
 import { FieldGrid, FieldRow } from "./fieldgrid";
-import { InlineChoice, InlineText } from "./inlinechoice";
+import { InlineChoice } from "./inlinechoice";
+import { InlineText } from "./inlinetext";
 
 // FieldGrid is the grid around a value, not the value itself: a read-only row
 // takes a plain node, an editable row wraps InlineText or InlineChoice.

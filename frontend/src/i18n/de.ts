@@ -28,6 +28,8 @@ export const de = {
   "brief.focus.back": "Zurück zum Fokus",
   "brief.queue.back": "Zurück zur Liste",
   "brief.queue.title": "Arbeitsliste",
+  "brief.queue.show": "Arbeitsliste einblenden",
+  "brief.queue.hide": "Arbeitsliste ausblenden",
   "brief.queue.close": "Zur Startseite",
   "brief.focus.urgentRemaining_one":
     "{count} weitere dringende Aufgabe in der Liste",
@@ -479,7 +481,6 @@ export const de = {
   "record.fieldsLoading": "Benutzerdefinierte Felder werden geladen…",
   "record.fieldsRetry": "Erneut versuchen",
 
-  "record.visibilityOwner": "Nur Eigentümer",
   "record.companyRoutingKey": "Zuordnungsschlüssel des Unternehmens",
   "record.finishFieldEdit":
     "Speichern oder verwerfen Sie die aktuelle Änderung, bevor Sie Details schließen.",
@@ -690,7 +691,6 @@ export const de = {
   "rel.empty": "Noch keine Beziehungen",
   "rel.counterparty": "Verknüpft mit",
   "rel.dates": "Zeitraum",
-  "rel.pickCounterparty": "Die andere Seite auswählen",
   "rel.addConfirm": "{kind}-Verknüpfung zu {target} hinzufügen.",
   "rel.kind.employment": "Anstellung",
   "rel.kind.dealStakeholder": "Deal-Beteiligter",
@@ -1214,7 +1214,8 @@ export const de = {
   "record.restsOn.source_one": "Quelle",
   "record.restsOn.source_other": "Quellen",
   "record.tabs": "Bereiche dieses Datensatzes",
-  "record.panel.details": "Details",
+  "record.panel.showDetails": "Details einblenden",
+  "record.panel.hideDetails": "Details ausblenden",
   "room.editorial":
     "Ein Dokument, das Sie hinzufügen, ist sofort geteilt; Kommentare ebenso.",
   "room.readOnly": "Sie können diesen Raum lesen, aber nicht ändern.",
@@ -2244,7 +2245,8 @@ export const de = {
   "tags.add": "Tag hinzufügen",
   "tags.more": "+{count} weitere",
   "tags.showLess": "Weniger anzeigen",
-  "tags.options": "Optionen für {name}",
+  "tags.removeTag": "{name} entfernen",
+  "tags.removeTitle": "{name} von diesem Datensatz entfernen?",
   "tags.addedBy": "Hinzugefügt von {who} · {when}",
   "tags.addedOn": "Hinzugefügt {when}",
   "tags.visibleWorkspaceWide": "Tag-Namen sind in der gesamten Firma sichtbar.",
@@ -3672,6 +3674,8 @@ export const de = {
   "contactAccess.privateToYou":
     "Nur für Sie. Ihr Postfach hat diesen Kontakt angelegt, und niemand sonst im Unternehmen sieht ihn — auch nicht Ihr Team und keine Administration.",
   "contactAccess.company": "Alle im Unternehmen sehen diesen Kontakt.",
+  "contactAccess.privateTip":
+    "Nur Sie können diesen Kontakt sehen. Teilen Sie ihn mit dem Unternehmen, damit andere ihn ebenfalls sehen.",
   "contactAccess.share": "Mit dem Unternehmen teilen",
   "contactAccess.published": "Das Unternehmen sieht diesen Kontakt jetzt.",
   "contactAccess.makePrivate": "Privat setzen",
@@ -8343,6 +8347,11 @@ export const de = {
     "Hinterlegen Sie den Arbeitgeber, dann liest Margince dessen Website nach ihrer Rolle.",
   "contact.thin.logFirst": "Ersten Kontakt erfassen",
   "contact.enriched.title": "Was Margince gelesen hat",
+  "contact.confirm.title_one": "{count} Angabe zu bestätigen",
+  "contact.confirm.title_other": "{count} Angaben zu bestätigen",
+  "contact.confirm.body":
+    "{fields} wurden am {when} aus ihren E-Mails gelesen.",
+  "contact.confirm.review": "Prüfen",
   "contact.enriched.sub":
     "Jeder Wert mit dem Text, aus dem er gelesen wurde. Eine Korrektur bleibt bestehen.",
   "contact.enriched.field.title": "Position",
@@ -8357,7 +8366,6 @@ export const de = {
   "contact.enriched.replaced": "Ersetzt „{was}“ — der ältere Stand.",
   "contact.enriched.correctedByYou": "Von Ihnen korrigiert",
   "contact.enriched.confirmed": "Best\u00e4tigt",
-  "contact.enriched.correct": "Korrigieren",
   "contact.enriched.confirm": "Das stimmt",
   "contact.enriched.save": "Korrektur speichern",
   "contact.enriched.cancel": "Abbrechen",
@@ -8621,6 +8629,11 @@ export const de = {
   "contact.rail.employmentTitle": "Unternehmen",
   "contact.rail.noEmployment": "Keine Beschäftigung erfasst.",
   "contact.rail.addEmployment": "Unternehmen hinzufügen",
+  "contact.employer.contacts_one": "{count} Kontakt",
+  "contact.employer.contacts_other": "{count} Kontakte",
+  "contact.employer.openDeals_one": "{count} offener Deal",
+  "contact.employer.openDeals_other": "{count} offene Deals",
+  "contact.employer.noOpenDeals": "keine offenen Deals",
   "contact.rail.employer": "Arbeitgeber",
   "contact.rail.allCompaniesConnected":
     "Jeder Treffer ist bereits mit diesem Kontakt verknüpft.",
@@ -8634,39 +8647,30 @@ export const de = {
   "contact.deals.empty": "Sie sind auf keinem Deal erfasst.",
   "contact.deals.untitled": "Deal ohne Titel",
   "contact.deals.noStage": "Noch keine Phase",
-  "contact.meetings.next": "Nächster Termin",
+  "contact.meetings.upcoming": "Bevorstehend",
   "contact.meetings.past": "Bisherige Termine",
   "contact.meetings.noneBooked": "Mit ihnen ist nichts gebucht.",
   "contact.meetings.noneLogged": "Es ist kein Termin mit ihnen erfasst.",
   "contact.meetings.untitled": "Termin ohne Betreff",
-  "contact.meetings.participants": "Im Raum",
   "contact.documents.empty": "Zu diesem Kontakt liegt keine Datei.",
   "contact.research.empty": "Zu ihnen wurde noch nichts recherchiert.",
   "contact.research.fields": "Belege der Anreicherung",
   "contact.research.fieldsEmpty":
     "Noch trägt kein angereichertes Feld einen Beleg.",
-  "contact.research.capturedBy": "Erfasst von",
   "contact.action.email": "E-Mail",
   "contact.action.write": "Schreiben",
   "contact.action.messageOn": "Über {transport} schreiben",
   "contact.action.noTransport":
     "Keine Adresse und keine Unterhaltung, auf die sich antworten ließe.",
   "contact.action.call": "Anrufen",
-  "contact.action.meetings": "Termine ansehen",
+  "contact.action.meetings": "Termine",
   "contact.action.addTask": "Aufgabe",
   "contact.action.research": "Recherche",
 
-  "contact.strip.lastInbound": "Zuletzt eingehend",
-  "contact.strip.lastOutbound": "Zuletzt ausgehend",
-  "contact.strip.reciprocity": "Gegenseitigkeit",
-  "contact.strip.inOut": "{inbound} ein · {outbound} aus",
-  "contact.strip.nextMeeting": "Nächster Termin",
   "contact.strip.never": "Nie",
   "contact.strip.today": "Heute",
   "contact.strip.yesterday": "Gestern",
   "contact.strip.days": "vor {count} Tagen",
-  "contact.strip.noOpenDeal": "Kein offener Deal",
-  "contact.strip.noMeeting": "Keiner",
   "contact.consent.allowedWord": "Erlaubt",
   "contact.consent.blockedWord": "Gesperrt",
   "contact.consent.unknownWord": "Unbekannt",
@@ -8680,6 +8684,20 @@ export const de = {
   "contact.moment.rule.public_signal": "Öffentlich gesagt",
   "contact.moment.rule.missing_next_step": "Nichts geplant",
   "contact.moment.rule.thin_relationship": "Keine Interaktionen erfasst",
+  "contact.moment.suggest.goneQuiet":
+    "Jetzt nachfassen: seit {days} Tagen kam nichts zurück.",
+  "contact.moment.suggest.reEngaged":
+    "Jetzt antworten: sie haben geschrieben und warten auf uns.",
+  "contact.moment.suggest.overduePromise":
+    "Das Versprochene liefern: es ist überfällig.",
+  "contact.moment.suggest.openPromise":
+    "Das Versprochene liefern, bevor es fällig wird.",
+  "contact.moment.suggest.jobChange":
+    "Melden: sie haben die Stelle gewechselt.",
+  "contact.moment.suggest.publicSignal":
+    "Melden: es gibt Neuigkeiten über sie.",
+  "contact.moment.suggest.missingNextStep":
+    "Nächsten Schritt festlegen: mit ihnen ist nichts geplant.",
   "contact.moment.rule.nothing_needed": "Nichts zu tun",
   "contact.moment.evidence.activity": "Aus einem Austausch",
   "contact.moment.evidence.task": "Aus einer Aufgabe",
@@ -8687,6 +8705,8 @@ export const de = {
     "Aus einer Änderung am Datensatz",
 
   "contact.overview.detailsPermissions": "Details & Berechtigungen",
+  "contact.overview.detailsShow": "Details & Berechtigungen einblenden",
+  "contact.overview.detailsHide": "Details & Berechtigungen ausblenden",
   "contact.overview.partial":
     "Einige Bereiche sind für Ihre Rolle nicht verfügbar. Diese Zusammenfassung umfasst die für Sie sichtbaren Einträge.",
   "contact.overview.coverage":
@@ -8698,6 +8718,8 @@ export const de = {
     "Der Beziehungsüberblick konnte nicht geladen werden.",
 
   "contact.brief.title": "Beziehungs-Briefing",
+  "contact.brief.sources": "Quellen",
+  "contact.brief.updatedAt": "Letzte Aktualisierung {when}",
   "contact.brief.reading": "Die Beziehung wird gelesen…",
   "contact.brief.sourceActivity": "Gespräch",
   "contact.brief.sourceDeal": "Deal-Notizen",
@@ -8730,10 +8752,9 @@ export const de = {
   "contact.loops.dueInDays": "in {count} Tagen",
   "contact.loops.waiting": "Wartet",
   "contact.loops.openBadge": "Offen",
-  "contact.loops.atLeast": "mindestens {count}",
 
-  "contact.memory.title": "Gesprächsgedächtnis",
-  "contact.memory.viewAll": "Alle Aktivitäten ansehen",
+  "contact.memory.title": "Aktivität",
+  "contact.memory.showAll": "Gesamte Aktivität anzeigen",
   "contact.memory.empty": "Auf diesem Kanal wurde noch nichts erfasst.",
   "contact.memory.all": "Alle",
   "contact.memory.email": "E-Mail",
@@ -8749,21 +8770,19 @@ export const de = {
   "contact.memory.replied": "Beantwortet",
   "contact.memory.unanswered": "Unbeantwortet",
 
-  "contact.rail.reviewFirst": "Erst prüfen",
   "contact.rail.blocked": "Gesperrt",
-  "contact.rail.pulseTitle": "Beziehungspuls",
-  "contact.rail.explain": "Erklären",
   "contact.rail.direction": "Richtung",
+  "contact.rail.lastReply": "Letzte Antwort",
+  "contact.rail.trend": "Tendenz",
   "contact.rail.twoWay": "Beidseitig",
   "contact.rail.noDirection": "Keine Richtung erfasst",
   "contact.overview.unavailable": "Nicht angezeigt: {sections}.",
   "contact.rail.inboundOnly": "Nur eingehend",
   "contact.rail.outboundOnly": "Nur ausgehend",
-  "contact.rail.lastReply": "Letzte Antwort",
   "contact.rail.coverage": "Abdeckung",
+  "contact.rail.exchanges": "{count} Kontakte",
   "contact.rail.colleagues_one": "{count} Kollegin oder Kollege",
   "contact.rail.colleagues_other": "{count} Kolleginnen und Kollegen",
-  "contact.rail.trend": "Tendenz",
   "contact.rail.noInbound": "Nichts eingehend",
   "contact.rail.cooling": "Kühlt ab",
   "contact.rail.warming": "Wird wärmer",
@@ -8771,16 +8790,24 @@ export const de = {
   "contact.rail.thin": "Dünn",
   "contact.rail.atRisk": "Gefährdet",
   "contact.rail.strong": "Stark",
-  "contact.rail.whoKnows": "Wer kennt {name}",
-  "contact.rail.nobodyYet": "Bisher hatte hier niemand Kontakt mit ihnen.",
-  "contact.rail.exchanges": "{count} Kontakte",
-  "contact.rail.signals": "Signale & Risiken",
-  "contact.rail.noSignals": "An dieser Beziehung fällt nichts auf.",
-  "contact.rail.noReplyDays": "Seit {count} Tagen keine Antwort",
-  "contact.rail.repliedDaysAgo_one": "Antwort vor {count} Tag",
-  "contact.rail.repliedDaysAgo_other": "Antwort vor {count} Tagen",
-  "contact.rail.singleThreaded": "Nur ein Kontakt in diesem Deal",
-  "contact.rail.noMeetingBooked": "Kein nächster Termin vereinbart",
+  "contact.standing.why.strong":
+    "Sie haben in den letzten {days} Tagen geschrieben, die Beziehung gilt als stark.",
+  "contact.standing.why.atRisk":
+    "Seit mehr als {days} Tagen nichts von ihnen, die Beziehung gilt als gefährdet.",
+  "contact.standing.why.thin":
+    "Sie haben noch nie geschrieben, daher noch kein Urteil.",
+  "contact.standing.trend.warming":
+    "Wird wärmer: ihre letzte Nachricht ist neuer als unsere.",
+  "contact.standing.trend.cooling":
+    "Kühlt ab: wir haben zuletzt geschrieben und warten auf sie.",
+  "contact.standing.direction.twoWay":
+    "Beide Seiten haben geschrieben: sie haben geantwortet und wir haben uns gemeldet.",
+  "contact.standing.direction.inboundOnly":
+    "Bisher haben nur sie geschrieben; von uns ist nichts rausgegangen.",
+  "contact.standing.direction.outboundOnly":
+    "Bisher haben nur wir geschrieben; von ihnen kam noch nichts zurück.",
+  "contact.standing.direction.none":
+    "Noch keine Nachrichten in beide Richtungen.",
   "contact.rail.consentTitle": "Kommunikationsberechtigungen",
   "contact.rail.email": "E-Mail",
   "contact.rail.phone": "Telefon",
@@ -9945,17 +9972,6 @@ export const de = {
     "Gerade beim Anbieter gelesen, nicht aus deiner Preisliste. Beim Binden landet er in deinem Freigabe-Eingang, damit Verbrauch und Kosten ihn nach deiner Bestätigung bepreisen können.",
   "firstRun.ai.foot": "Vor dem Klick auf Weiter geht nichts an Ihren Anbieter.",
   "contact.readings.title": "Wo dieser Kontakt steht",
-  "contact.readings.lastMessage": "Letzte Nachricht",
-  "contact.readings.fromThem": "Vom Kontakt",
-  "contact.readings.fromUs": "Von uns",
-  "contact.readings.quiet": "Verstummt",
-  "contact.readings.neverSpoke": "Noch nie gesprochen",
-  "contact.readings.lastFromThem": "zuletzt von ihnen: {when}",
-  "contact.readings.neverReplied": "bisher nichts von ihnen",
-  "contact.readings.promises": "Offene Zusagen",
-  "contact.readings.nothingOwed": "nichts offen",
-  "contact.readings.onTime": "noch nichts überfällig",
-  "contact.readings.deal": "Deals, die sie entscheiden",
   "deal360.brief": "Was dieser Deal ist",
   "deal.strip.lastTouch": "Letzter Kontakt",
   "lead.standing.qualified": "Qualifiziert",

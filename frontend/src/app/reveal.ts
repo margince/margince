@@ -31,3 +31,20 @@ export function reveal(anchor: string): () => void {
       ?.scrollIntoView?.({ behavior: "smooth", block: "start" });
   };
 }
+
+/**
+ * Takes the reader back to the top of the page pane, smoothly: for a tab
+ * strip stuck under the top bar, where a reader deep in one tab's body
+ * chooses another and would otherwise land part-way down the new one.
+ *
+ * `.scroll` is the shell's one scrolling pane (app/shell.css); the window
+ * itself never scrolls. Motion follows the reader's own setting: a reduced-
+ * motion preference makes the jump instant rather than skipping it.
+ */
+export function scrollPageToTop(): void {
+  const pane = document.querySelector(".scroll");
+  const reduced = globalThis.matchMedia?.(
+    "(prefers-reduced-motion: reduce)",
+  ).matches;
+  pane?.scrollTo?.({ top: 0, behavior: reduced ? "auto" : "smooth" });
+}

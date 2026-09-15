@@ -48,17 +48,16 @@ const PageAsideContext = createContext<PageAsideState | null>(null);
 const COLLAPSE_KEY = "margince.pageAside.collapsed";
 
 function readCollapsed(): boolean {
-  // Closed until asked: the details pane is where a reader goes for the
-  // attributes and the short lists, not what they open a record to see, so a
-  // reader who has never chosen finds it folded. A private window, cleared
-  // site data, or a browser refusing storage all throw here rather than
-  // returning null. None of them is a reason to fail to render a record, so
-  // the answer is the default and the reader simply does not get their
-  // remembered choice.
+  // Open until folded: the pane holds the record's own facts, and a reader
+  // who has never chosen came for the whole record. Only a remembered fold
+  // closes it. A private window, cleared site data, or a browser refusing
+  // storage all throw here rather than returning null. None of them is a
+  // reason to fail to render a record, so the answer is the default and the
+  // reader simply does not get their remembered choice.
   try {
-    return window.localStorage.getItem(COLLAPSE_KEY) !== "0";
+    return window.localStorage.getItem(COLLAPSE_KEY) === "1";
   } catch {
-    return true;
+    return false;
   }
 }
 
@@ -163,7 +162,25 @@ export function usePageAside(available = true): { open: boolean } {
     setFilled(available);
     return () => setFilled(false);
   }, [available, setFilled]);
-  return { open: filled && available && !collapsed };
+  const open = filled && available && !collapsed;
+  // Once the columns fold (pagezones.css, ≤1200px) the pane stacks UNDER the
+  // work column, so a reader who presses the toggle sees nothing change: the
+  // switch reads pressed and the pane it opened is a screen below. Bring it
+  // to them on the press that opened it, and only then: a pane whose top is
+  // already on screen (beside the work, or stacked but in view) is left
+  // where it is, because a pane taller than the window would otherwise drag
+  // the page to its own top. The first render is left alone too, so a
+  // remembered open pane does not scroll a record the reader just arrived at.
+  const wasOpen = useRef(open);
+  useEffect(() => {
+    const opened = open && !wasOpen.current;
+    wasOpen.current = open;
+    if (!opened) return;
+    const pane = document.querySelector(".page-zones-aside-column");
+    if (!pane || pane.getBoundingClientRect().top < window.innerHeight) return;
+    pane.scrollIntoView?.({ block: "start" });
+  }, [open]);
+  return { open };
 }
 
 /**
@@ -180,11 +197,18 @@ export function usePageAside(available = true): { open: boolean } {
  * supplies a pane.
  */
 export function PageAsideToggle({
-  label,
+  labels,
+  quiet = false,
   controlled,
 }: Readonly<{
-  label?: string;
-  controlled?: { open: boolean; label: string; onToggle: () => void };
+  // What the switch says in each state, naming what the pane holds. The
+  // default is the record's details pane; a page whose pane holds more names
+  // it in both verbs.
+  labels?: PaneWords;
+  // Drawn as a link in the row rather than as a boxed control: for a strip
+  // whose other end is a row of tabs, a box there reads as one more verb.
+  quiet?: boolean;
+  controlled?: { open: boolean; labels: PaneWords; onToggle: () => void };
 }> = {}) {
   const t = useT();
   const dirty = useHasUnsavedChanges("details");
@@ -192,24 +216,32 @@ export function PageAsideToggle({
   if (!filled && !controlled) {
     return null;
   }
-  // Named, not a bare glyph: this control ends a row of words and a lone
-  // square at the end of a tab strip reads as chrome rather than as the way to
-  // the record's own details. It names the REGION it governs — the panel icon
-  // and "Details" together — and `aria-pressed` carries which way it is set,
-  // because folded away and standing open look identical otherwise.
+  // Named for what pressing it DOES, not a bare glyph: this control ends a
+  // row of words, and a lone square at the end of a tab strip reads as chrome
+  // rather than as the way to the record's own details. "Show details" while
+  // folded and "Hide details" while open, because the two states look
+  // identical from the button alone; `aria-pressed` carries the same answer
+  // to a screen reader.
+  const open = controlled?.open ?? !collapsed;
+  const words = controlled?.labels ??
+    labels ?? {
+      show: t("record.panel.showDetails"),
+      hide: t("record.panel.hideDetails"),
+    };
   return (
     <Button
       className="record-details-toggle"
-      reason={
-        (controlled?.open ?? !collapsed) && dirty
-          ? t("record.finishFieldEdit")
-          : undefined
-      }
-      aria-pressed={controlled?.open ?? !collapsed}
+      variant={quiet ? "link" : undefined}
+      reason={open && dirty ? t("record.finishFieldEdit") : undefined}
+      aria-pressed={open}
       onClick={controlled?.onToggle ?? toggle}
     >
       <PanelRight aria-hidden="true" />
-      {controlled?.label ?? label ?? t("record.panel.details")}
+      {open ? words.hide : words.show}
     </Button>
   );
 }
+
+/** The two things the switch can say: the verb that opens the pane and the
+ *  verb that folds it, each naming what the pane holds. */
+export type PaneWords = Readonly<{ show: string; hide: string }>;

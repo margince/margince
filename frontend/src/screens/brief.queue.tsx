@@ -25,7 +25,12 @@ export function WorklistRedirect({ opensOn }: Readonly<{ opensOn?: string }>) {
   return null;
 }
 
-export function BriefQueue() {
+// `closeLabel` names where closing LEAVES the reader: "Back to Home" on the
+// Home page the drawer was written for, and the plain word on a record page
+// that mounts the same drawer over itself.
+export function BriefQueue({
+  closeLabel,
+}: Readonly<{ closeLabel?: string }> = {}) {
   const t = useT();
   const titleId = useId();
   const scroll = useRef(0);
@@ -48,7 +53,7 @@ export function BriefQueue() {
           {t("brief.queue.title")}
         </h2>
         <Button variant="ghost" onClick={close}>
-          {t("brief.queue.close")}
+          {closeLabel ?? t("brief.queue.close")}
         </Button>
       </div>
       <div

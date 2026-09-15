@@ -1,19 +1,17 @@
-import {
-  CalendarDays,
-  CheckSquare,
-  FileText,
-  Search,
-  Send,
-  Users,
-} from "lucide-react";
+import { CheckSquare, FileText, Search, Send, Users } from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import { Button } from "../design-system/atoms";
-import { formatDate } from "../format/format";
+import {
+  calendarDaysBetween,
+  formatDate,
+  formatNumber,
+} from "../format/format";
 import { daysPast } from "../format/lateness";
 import { type Locale, useLocale, useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import { contactTabRoute } from "./contacttab";
 import { useRoster } from "./entityref";
 import { interactionIcon } from "./interactionchrome";
@@ -68,6 +66,14 @@ export function ContactToday({
     />
   );
   if (!actionableMoment(moment) && taskRows.length === 0) {
+    // A quiet record already says so in the brief (its headline IS the
+    // moment's) so the moment's second sentence under the brief card was the
+    // same news twice, as a line floating between two panels. Only what the
+    // brief cannot say stays: the thin-relationship coverage, and what was
+    // withheld.
+    if (moment?.rule === "nothing_needed") {
+      return withheld;
+    }
     return (
       <div className="contact-coverage t-sub">
         <p>
@@ -115,11 +121,19 @@ function MomentMove({
   onAction: (action: ContactMomentAction) => void;
   onOpenEmail?: (activityId: string) => void;
 }>) {
+  const t = useT();
+  const { locale } = useLocale();
   const secondary = moment.secondary_actions ?? [];
+  const suggestion = suggestionFor(moment, view, t, locale);
   return (
     <FoundMove
       suggested
-      title={moment.headline}
+      // The line under "Margince suggests" has to BE a suggestion. The
+      // server's headline names the situation ("No reply for 174 days"), so
+      // the card leads with the move that situation calls for and keeps the
+      // situation as the reason under it.
+      title={suggestion.ask}
+      why={suggestion.why}
       basis={
         <ul className="pe-today-evidence">
           {[
@@ -129,33 +143,43 @@ function MomentMove({
                 item,
               ]),
             ).values(),
-          ].map((item) => (
-            <li
-              key={`${item.type}-${item.id ?? item.label}`}
-              className="t-body"
-            >
-              {evidenceIcon(item.type)}
-              {item.id ? (
-                <Button
-                  small
-                  variant="ghost"
-                  onClick={() => {
-                    const activity = view.activities?.data.find(
-                      (row) => row.id === item.id,
-                    );
-                    if (activity?.kind === "email" && onOpenEmail && item.id)
-                      onOpenEmail(item.id);
-                    else navigate(contactTabRoute(view.contact.id, "timeline"));
-                  }}
-                >
-                  {item.label}
-                </Button>
-              ) : (
-                <span>{item.label}</span>
-              )}
-              {item.snippet && <q>{item.snippet}</q>}
-            </li>
-          ))}
+          ].map((item) => {
+            // The glyph names the KIND of record the move rests on, the same
+            // way the brief's sources and the timeline's rows name theirs.
+            const activity = view.activities?.data.find(
+              (row) => row.id === item.id,
+            );
+            const glyph = interactionIcon(
+              item.type === "activity" ? activity?.kind : item.type,
+            );
+            return (
+              <li
+                key={`${item.type}-${item.id ?? item.label}`}
+                className="t-sub"
+              >
+                {item.id ? (
+                  <Button
+                    variant="link"
+                    onClick={() => {
+                      if (activity?.kind === "email" && onOpenEmail && item.id)
+                        onOpenEmail(item.id);
+                      else
+                        navigate(contactTabRoute(view.contact.id, "timeline"));
+                    }}
+                  >
+                    {glyph}
+                    {item.label}
+                  </Button>
+                ) : (
+                  <span className="pe-source">
+                    {glyph}
+                    {item.label}
+                  </span>
+                )}
+                {item.snippet && <q>{item.snippet}</q>}
+              </li>
+            );
+          })}
         </ul>
       }
       action={
@@ -179,6 +203,52 @@ function MomentMove({
       }
     />
   );
+}
+
+// The ask and the reason for it, by rule. The server sends a headline that
+// states the situation and a why_now that cites the rule; a reader under a
+// "Margince suggests" label wants the move, so each rule leads with its verb
+// and keeps the situation as the reason. A rule whose headline already IS a
+// move (meeting prep) keeps it. The day count is read off the record's own
+// dates rather than parsed back out of the server's sentence.
+function suggestionFor(
+  moment: ContactMoment,
+  view: Contact360,
+  t: ReturnType<typeof useT>,
+  locale: Locale,
+): { ask: string; why: string } {
+  const situation = { ask: moment.headline, why: moment.why_now };
+  const lead = (key: MessageKey, params?: Record<string, string>) => ({
+    ask: t(key, params),
+    why: moment.headline,
+  });
+  switch (moment.rule) {
+    case "gone_quiet": {
+      const since = view.last_outbound_at;
+      return lead("contact.moment.suggest.goneQuiet", {
+        days: since
+          ? formatNumber(
+              calendarDaysBetween(new Date(since), new Date(view.as_of)),
+              locale,
+            )
+          : "",
+      });
+    }
+    case "re_engaged":
+      return lead("contact.moment.suggest.reEngaged");
+    case "overdue_promise":
+      return lead("contact.moment.suggest.overduePromise");
+    case "open_promise":
+      return lead("contact.moment.suggest.openPromise");
+    case "job_change":
+      return lead("contact.moment.suggest.jobChange");
+    case "public_signal":
+      return lead("contact.moment.suggest.publicSignal");
+    case "missing_next_step":
+      return lead("contact.moment.suggest.missingNextStep");
+    default:
+      return situation;
+  }
 }
 
 // The open tasks already on this contact's record, quieter than the move
@@ -265,27 +335,29 @@ function ActionVerb({
 }>) {
   const t = useT();
   const blocked = action.state === "blocked";
-  const state = readiness(action, t);
+  // Every verb on this card is one the agent proposed and one the agent
+  // carries out on the press: the brief it assembles, the research it runs,
+  // the draft it writes into the composer. So the leading verb wears the AI
+  // fill and the rest the plain outline, whatever the verb: one colour rule
+  // for the column, read once. A green verb among them said "a human does
+  // this one" about a draft the agent writes.
+  const variant = primary ? "ai" : "ghost";
   return (
     <span className="pe-today-verb">
-      {/* Readiness is stated rather than left to a disabled button, because
-          "you may not do this yet" and "this will ask you to confirm" are
-          different answers. A blocked verb hands its sentence to the Button,
-          whose `reason` bars the press AND describes the control with it — a
-          `title` on a disabled button reaches no screen reader. The other
-          states keep the caption under the verb. */}
+      {/* A blocked verb hands its sentence to the Button, whose `reason`
+          bars the press AND describes the control with it: a `title` on a
+          disabled button reaches no screen reader. A verb that will ask for
+          confirmation says nothing here; the confirmation IS the saying, and
+          a caption announcing it under the button was the same step twice. */}
       <Button
-        variant={primary ? "primary" : "ghost"}
+        variant={variant}
         small
         onClick={() => onAction(action)}
-        reason={blocked ? state : undefined}
+        reason={blocked ? blockedReason(action, t) : undefined}
       >
         {actionIcon(action.kind)}
         {action.label}
       </Button>
-      {!blocked && state && (
-        <span className="pe-today-verb-state t-caption">{state}</span>
-      )}
     </span>
   );
 }
@@ -311,41 +383,11 @@ function actionIcon(kind: string): ReactNode {
   }
 }
 
-// What pressing it will do, when that is not already obvious from the control.
-// A blocked action says so in words, not only by being unpressable: a disabled
-// button carries no title a keyboard or touch reader ever sees, so the
-// server's own reason (WHY this one is blocked) renders here when it sent
-// one, and the generic word is the fallback for the rare blocked action that
-// carries none.
-//
-// An available verb says nothing. A pressable button IS the whole of "ready",
-// and the word under it read as a status the record had reached — one more
-// machine noun on a card that already carries three, under the one control a
-// reader came to press.
-function readiness(
+// Why this verb may not be pressed: the server's own reason when it sent one,
+// and the generic word for the rare blocked action that carries none.
+function blockedReason(
   action: ContactMomentAction,
   t: ReturnType<typeof useT>,
-): string | undefined {
-  if (action.state === "will_confirm") {
-    return t("contact.rail.reviewFirst");
-  }
-  if (action.state === "blocked") {
-    return action.blocked_reason ?? t("contact.rail.blocked");
-  }
-  return undefined;
-}
-
-// A moment's evidence names a record TYPE and nothing about the transport, so
-// there is no honest envelope to draw beside an activity: it is as likely to
-// be a chat message or a call as a mail, and on a contact reached only over a
-// channel the envelope was simply wrong. It is drawn as the record it is.
-function evidenceIcon(type: string): ReactNode {
-  switch (type) {
-    case "task":
-      return <CalendarDays size={15} aria-hidden="true" />;
-    case "relationship_change":
-      return <Users size={15} aria-hidden="true" />;
-    default:
-      return interactionIcon(null, 15);
-  }
+): string {
+  return action.blocked_reason ?? t("contact.rail.blocked");
 }

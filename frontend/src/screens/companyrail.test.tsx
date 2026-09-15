@@ -175,9 +175,11 @@ describe("CompanyRail", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("Automotive")).toBeInTheDocument();
     expect(screen.getByText("51-200")).toBeInTheDocument();
-    // Address draws one row per part now rather than one combined "Munich, DE"
-    // summary.
-    expect(screen.getByText("Munich · DE")).toBeInTheDocument();
+    // Address draws as postal lines now, city then country on their own line
+    // (recordfieldvalues.ts's `postalLines`), rather than one combined
+    // "Munich, DE" summary. The default text normalizer collapses that line
+    // break to a single space, so the two parts still read as one match.
+    expect(screen.getByText("Munich DE")).toBeInTheDocument();
     expect(screen.getByText("brandt.example")).toBeInTheDocument();
     // The owner cell resolves through the roster read, same as EntityRef
     // does everywhere else: not shown until the read lands.

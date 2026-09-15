@@ -247,7 +247,7 @@ function useTip<T extends HTMLElement>(
   }, [worthShowing]);
   // Pointer reveal waits for intent; focus does not. A reader who tabbed here
   // has said what they want outright, and there is no pointer to measure.
-  const hover = useHoverIntent(reveal, close);
+  const hover = useHoverIntent(reveal, close, { ownsState: true });
 
   return {
     ref: anchor,

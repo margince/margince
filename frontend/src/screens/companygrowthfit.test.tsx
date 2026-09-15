@@ -171,8 +171,11 @@ describe("how well this company fits what we sell", () => {
 
     expect(screen.getByText("Argues for")).toBeTruthy();
     // A judgment that read as a stored fact would be the one claim the reader
-    // could not check, so only the assessment carries a label.
-    expect(screen.getByText("Our read")).toBeTruthy();
+    // could not check, so only the assessment carries a label. The nature word
+    // now sits in the sentence's own line with a trailing colon
+    // (NatureBadge, record360/citations.tsx), so the matcher only needs the
+    // word rather than the exact rendered text.
+    expect(screen.getByText(/Our read/)).toBeTruthy();
     // "Fact" is the label a fact WOULD carry if facts were labelled, so its
     // absence is what proves the badge is reserved for judgments. Asserting a
     // string the panel never renders under any nature would prove nothing.

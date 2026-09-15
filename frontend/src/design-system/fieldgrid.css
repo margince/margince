@@ -34,6 +34,15 @@
 .fieldgrid-value {
   color: var(--textContent);
   min-width: 0;
+  /* A grouped value may arrive as lines (an address, one part per line):
+     the newline is kept, and everything else still wraps as text. Stated
+     on the control too, because a button keeps its label on one line. */
+  white-space: pre-line;
+}
+.fieldgrid-value .inline-editable,
+.fieldgrid-value .inlinetext {
+  white-space: pre-line;
+  text-align: left;
 }
 /* A value is user data, and a legal name or a domain can arrive as one run with
    no space in it to break at. `min-width: 0` above lets the COLUMN shrink; this
@@ -74,12 +83,40 @@
 }
 /* An address or a number is a `ContactLink`, a button in the accent, and it
    KEEPS the accent: it is an action, not a fact the row edits. What it gives
-   up is the button's centring. `overflow-wrap: anywhere` above lets a long
-   address break inside the rung, and a button centres every line it breaks
-   into, so the tail of a wrapped address floated to the middle of the column
-   under a first line that started at the edge. Left, like every other value. */
+   up is the button's centring and the link affordance's own type: at
+   `.link-button`'s meta size and semibold it was the one value in the column
+   smaller and heavier than its neighbours, and read as a verb among facts.
+   The row's size and weight, the accent kept. `overflow-wrap: anywhere` above
+   lets a long address break inside the rung, and a button centres every line
+   it breaks into, so the tail of a wrapped address floated to the middle of
+   the column under a first line that started at the edge. Left, like every
+   other value. The trailing pad is what keeps its edit verb off it when the
+   two share a line; on the value's own box rather than as a margin on the
+   verb, so a verb that wraps to the next line starts at the column's edge. */
 .fieldgrid-value .link-button {
   text-align: left;
+  font-size: inherit;
+  font-weight: var(--fw-regular);
+  padding-inline: 0;
+}
+/* A handle and its edit verb stack, always: the verb on its own line under
+   the value, whether or not the two would have fit side by side. Inline, a
+   short number kept its verb beside it while a long address pushed its own
+   under, and two rows of one card read as two layouts. */
+.fieldgrid-value:has(> .link-button + .inline-editable),
+.fieldgrid-value:has(> .fieldgrid-handle) {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+}
+/* A handle and the kind of handle it is, on one line: the address or
+   number first, its kind after it as a caption. */
+.fieldgrid-handle {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-width: 0;
 }
 /* An empty row states an absence, and it states it the way a form's own
    placeholder does: the "Add …" text sits BELOW the filled values in weight

@@ -218,6 +218,32 @@ describe("the contact page's memory card", () => {
     // The row stays, saying it is limited. Drawing it as absent would leave a
     // reader unable to tell a private conversation from one that never was.
     expect(screen.getByText("Withheld")).toBeTruthy();
+    // A withheld message names no counterparty, so the row reads as a
+    // conversation with the record it is on rather than inventing, or
+    // leaking, who it was actually with.
+    expect(screen.getByText("Dana Buyer")).toBeTruthy();
+  });
+
+  it("draws the row against its counterparty, not the contact", () => {
+    renderCard(
+      viewWith([
+        emailRow({
+          email_summary: emailSummary({ counterparty: "Sabine Mayer" }),
+        }),
+      ]),
+    );
+
+    // The avatar and the meta line both name who the exchange was with, not
+    // the record the card is on.
+    expect(screen.getByText("SM")).toBeTruthy();
+    expect(screen.getByText("Sabine Mayer")).toBeTruthy();
+  });
+
+  it("draws the row against the contact when the kind names no counterparty", () => {
+    renderCard(viewWith([noteRow]));
+
+    expect(screen.getByText("DB")).toBeTruthy();
+    expect(screen.getByText("Dana Buyer")).toBeTruthy();
   });
 
   // Five cuts do not fit beside the title on the one band a panel head is, so
@@ -228,7 +254,7 @@ describe("the contact page's memory card", () => {
     const user = userEvent.setup();
     const { container } = renderCard(viewWith([emailRow(), noteRow]));
 
-    const strip = container.querySelector(".segmented");
+    const strip = container.querySelector(".filterpills");
     expect(strip).not.toBeNull();
     expect(strip?.closest(".panel-head")).toBeNull();
     expect(strip?.closest(".panel-body")).not.toBeNull();
@@ -257,7 +283,7 @@ describe("the contact page's memory card", () => {
     const navigate = vi.spyOn(router, "navigate").mockImplementation(() => {});
     renderCard(viewWith(notes(5)));
 
-    await user.click(screen.getByRole("button", { name: /View all activity/ }));
+    await user.click(screen.getByRole("button", { name: /Show all activity/ }));
 
     // The tab that holds the exchanges whole, which is also where the rail's
     // own glance leads: one record, one ledger to be sent to.

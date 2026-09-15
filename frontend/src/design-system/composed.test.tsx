@@ -17,8 +17,8 @@ import {
   type BoardMoneyColumn,
   DealCard,
   PipelineBoard,
-  RecordView,
 } from "./composed";
+import { RecordView } from "./recordview";
 
 // B-EP09.3b acceptance: the composed surfaces consume the 3a primitives and
 // the staged / real / human-typed three-way distinction carries through.

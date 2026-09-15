@@ -134,6 +134,10 @@ export function Popover({
       setOpen(true);
     },
     () => setOpen(false),
+    // The open flag is this popover's own: a close that fires after a
+    // neighbour became the open one still has to land here, or the panel a
+    // reader just left stays on the page.
+    { ownsState: true },
   );
   const press = () => {
     setOpenedBy("press");

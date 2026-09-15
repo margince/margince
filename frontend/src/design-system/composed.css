@@ -569,16 +569,59 @@
 .record-head-wide .record-actions > .btn {
   padding-inline: var(--space-4);
 }
+/* The compact head: one rung under the masthead. The name takes the h1 rung
+   rather than the record's fluid one, and its tracking follows, because the
+   record rung's tighter setting was chosen for the larger size. The mark is
+   `lg`, set by RecordHead; nothing else about the wide head changes, so the
+   verbs, the subtitle and the identity lines keep their places. */
+.record-head-wide.record-head-compact h1 {
+  font-size: var(--fs-h1);
+  letter-spacing: var(--tracking-display);
+}
+/* The compact head's second register: a caption line on the name's own row
+   (the role and the company), the pills under it, and the facts strip as a
+   full row across the head under a rule. The strip is the `badges` slot,
+   drawn after the verbs so the verbs keep the name's line; `order` here is
+   the one place the head's reading order and its drawn order differ, and it
+   is the facts that step back, not the verbs. */
+.record-head-compact .record-name-row {
+  align-items: baseline;
+  gap: var(--space-3);
+}
+.record-sub-inline {
+  font-size: var(--fs-body);
+  color: var(--textMeta);
+  min-width: 0;
+}
+.record-head-compact .record-pulse {
+  margin-top: var(--space-2);
+}
+.record-head-compact .record-badges {
+  flex-basis: 100%;
+  order: 1;
+  margin-top: var(--space-1);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--borderSubtle);
+}
+/* A hairline between two groups of verbs: reaching the record, and recording
+   what happened to it. */
+.record-actions-sep {
+  inline-size: 1px;
+  align-self: stretch;
+  margin-inline: var(--space-1);
+  background: var(--borderSubtle);
+}
 .record-head .record-sub {
   font-size: var(--fs-sm);
   line-height: 1.5;
   color: var(--textMeta);
 }
-/* One quiet line under the name, at the same size as the facts beside it. Set
-   larger it competed with the name above and read as a second title; the facts
-   row under it carries what a reader actually scans for. */
+/* One quiet line under the name, at the same size as the facts under it (the
+   identity line's body rung). Set larger it competed with the name above and
+   read as a second title; the facts row under it carries what a reader
+   actually scans for. */
 .record-head-wide .record-sub {
-  font-size: var(--fs-sm);
+  font-size: var(--fs-body);
   line-height: 1.45;
   color: var(--textMeta);
   max-width: 62ch;
