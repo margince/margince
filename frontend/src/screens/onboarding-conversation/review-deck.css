@@ -99,20 +99,6 @@
   padding: var(--space-5);
 }
 
-/* Whether this card is needed, named on the card. The chip's own fill is
-   translucent, so its ink sits over the staged tint and takes `--aiText`:
-   `--ai` fails AA on the ground its own family paints. */
-.rdeck-tag {
-  padding: var(--space-1) var(--space-3);
-  border-radius: var(--r-full);
-  corner-shape: round;
-  background: var(--bgChip);
-  color: var(--aiText);
-}
-.rdeck-tag[data-required="true"] {
-  background: var(--dangerBg);
-  color: var(--dangerText);
-}
 .rdeck-question {
   color: var(--textPrimary);
   font-family: var(--f-display);
@@ -155,8 +141,9 @@
   resize: vertical;
 }
 
-/* What this answer will store, in the words it will be stored in. Mono and
-   verbatim: a paraphrase here would defeat the point of showing it at all. */
+/* What this answer will store, in the words it will be stored in. Verbatim, in
+   a <code> because it is a stored string: a paraphrase here would defeat the
+   point of showing it at all. */
 .rdeck-writes {
   display: flex;
   align-items: baseline;
@@ -171,7 +158,6 @@
 .rdeck-writes code {
   overflow-wrap: anywhere;
   color: var(--textPrimary);
-  font-family: var(--f-mono);
 }
 
 .rdeck-source {
@@ -181,7 +167,6 @@
   border-radius: var(--r-full);
   corner-shape: round;
   background: var(--bgElevated);
-  font-family: var(--f-mono);
 }
 
 /* The way onward is a foot, not a button loose under the prose: it is the one

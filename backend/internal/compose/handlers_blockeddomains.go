@@ -102,3 +102,33 @@ func (h blockedDomainHandlers) SetBlockedDomain(w http.ResponseWriter, r *http.R
 	}
 	httperr.WriteJSON(w, http.StatusOK, contacts.ToContractBlockedDomain(stored))
 }
+
+// ReopenWithheldDomain asks about an undecided domain again.
+//
+// It carries no body. A decision owes a reason somebody can review, which is
+// why the PUT above demands one — but re-asking asserts nothing about what the
+// domain IS. It says only that the machine's grounds for giving up are not the
+// last word, and the crawl is what answers.
+func (h blockedDomainHandlers) ReopenWithheldDomain(w http.ResponseWriter, r *http.Request, domain string) {
+	// Human-only (x-agent-access): capture posture, not record data.
+	if err := auth.RequireHuman(r.Context()); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	// Shape is the transport's job, checked here so a caller learns which field
+	// is wrong rather than reading a 500 the store meant as an internal fault.
+	if _, ok := freemail.Hostname(domain); !ok {
+		httperr.Write(w, r, httperr.Validation("domain", "invalid",
+			"expected a domain name like example.com; a full email address or a URL is not one"))
+		return
+	}
+	// The store answers with where the domain stands NOW, in the same shape the
+	// list showed it: an operator who pressed this reads back the row they were
+	// looking at, with the question open again.
+	stored, err := h.contacts.ReopenWithheldDomain(r.Context(), domain)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, contacts.ToContractBlockedDomain(stored))
+}

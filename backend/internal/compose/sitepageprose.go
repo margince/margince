@@ -25,10 +25,15 @@ import (
 // of them the author happened to be looking at. Kind, and anything the crawl
 // decides rather than the fetch, stays with the caller.
 func pageFrom(url string, kind crmcontracts.SiteReadPageKind, page webread.Page) crawlPage {
+	var sections []string
+	if kind == crmcontracts.SiteReadPageKindImpressum {
+		sections = page.Sections
+	}
 	return crawlPage{
 		URL:             url,
 		Kind:            kind,
 		Text:            page.Text,
+		Sections:        sections,
 		Bytes:           page.Bytes,
 		Fingerprint:     page.Fingerprint,
 		HeadText:        page.HeadText,

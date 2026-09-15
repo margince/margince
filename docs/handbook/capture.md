@@ -56,7 +56,7 @@ reduced later, the connection's reach is reduced with them on its next poll.
 ## Importing your mail history
 
 When you connect a mailbox you are offered a one-time backward scan. You choose
-a window: **3 months, 6 months, 12 months, 2 years or 5 years** — or skip it.
+a window: **3 months, 6 months, 1 year, 2 years, 3 years, 5 years, 7 years or 10 years** — or skip it.
 Six months is the default.
 
 Before it runs, it counts. The count reads message ids only, not bodies, and

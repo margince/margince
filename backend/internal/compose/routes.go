@@ -218,11 +218,11 @@ func operationalMux(srv Server, pool *pgxpool.Pool, log *slog.Logger, identitySv
 	// shared/kernel/capabilitypath, not named at each mount. The booking
 	// page's slug is deliberately absent from that list; it is a public
 	// identifier the host hands out, not a credential.
-	// extendDeadlineForModelRoutes sits OUTSIDE the handler chain because a
+	// boundByResponseDeadline sits OUTSIDE the handler chain because a
 	// write deadline has to be set before anything starts writing — including
 	// the access log's own wrapper, which is what holds the ResponseWriter the
 	// controller reaches through.
-	mux.Handle("/v1/", extendDeadlineForModelRoutes(httpserver.Correlate(
+	mux.Handle("/v1/", boundByResponseDeadline(httpserver.Correlate(
 		httpserver.AccessLog(log, authH.Middleware(publicEdge)))))
 	// The remote MCP connector, mounted as ONE group behind the deployment
 	// gate: the A2 transport, the A2 authorization server (ADR-0013) and

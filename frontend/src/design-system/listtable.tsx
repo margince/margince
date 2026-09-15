@@ -180,9 +180,9 @@ function IdentityCell<Row>({
  * It does NOT wrap, which is the whole of why it exists: a cell that grows a
  * second line pushes every row below it down, and a page of fifty rows stops
  * being a scannable grid — the reasoning `RowTags` already states for a tag
- * strip. What does not fit is CLIPPED at the column edge, because the reader's
- * answer to a strip cut short is to widen the column, which this table offers,
- * and every other answer costs the rows their rhythm.
+ * strip. What does not fit ends in an ellipsis, text before badges (why, in
+ * listtable.css): the reader's answer to a strip cut short is to widen the
+ * column, and every other answer costs the rows their rhythm.
  *
  * A `<span>`, so a column renderer can return it wherever it returns text.
  * Offered rather than applied: the table wraps the identity cell and nothing

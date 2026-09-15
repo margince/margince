@@ -102,6 +102,15 @@ type Verb struct {
 	// absent: an action with no object names no grant, and an object with no
 	// action would have to be enforced with a guessed verb.
 	RbacAction RbacAction
+
+	// HumanOnly is the extension spelling of a contract's x-agent-access:
+	// human-only — an operation with no x-mcp-tool. It still declares Tool
+	// (the registry dispatch key REST invokes it by) and still owes RBAC on
+	// every mutating method, but declares no Tier, RequestedScope or Subject:
+	// those are requests for AGENT authority, and a human-only operation asks
+	// for none. Never true alongside a non-zero Tier/RequestedScope/Subject —
+	// Validate holds the two mutually exclusive.
+	HumanOnly bool
 }
 
 // RbacAction is one of the four object-level verbs a grant carries. The values
@@ -219,12 +228,6 @@ func (v Verb) validateGovernance() error {
 			return fmt.Errorf("operation %s: %w", v.OperationID, err)
 		}
 	}
-	if err := v.Tier.Validate(); err != nil {
-		return fmt.Errorf("operation %s: %w", v.OperationID, err)
-	}
-	if err := v.RequestedScope.Validate(); err != nil {
-		return fmt.Errorf("operation %s: %w", v.OperationID, err)
-	}
 	for _, schema := range []struct {
 		field string
 		raw   json.RawMessage
@@ -233,31 +236,73 @@ func (v Verb) validateGovernance() error {
 			return fmt.Errorf("operation %s: %w", v.OperationID, err)
 		}
 	}
-	// AFTER the scope and the schemas, because both rules read them: the pairing
-	// compares the method against a scope that has to be in the vocabulary first,
-	// and the query check walks a schema that has to be an object first. Ordered
-	// the other way, an author with a typo'd scope would be told about their
-	// method instead.
-	if err := v.validateMethodAuthority(); err != nil {
-		return err
-	}
 	if !CarriesBody(v.Method) {
 		if err := validateQueryEncodable(v.Method, v.InputSchema); err != nil {
 			return fmt.Errorf("operation %s: %w", v.OperationID, err)
 		}
 	}
-	// AFTER the tier and the schemas, because it reads both: a subject is owed
-	// by the confirm-first tier and names a property of the input schema, so an
-	// author with a typo'd tier would otherwise be told about their subject.
+	if v.HumanOnly {
+		return v.validateHumanOnlyGovernance()
+	}
+	if err := v.Tier.Validate(); err != nil {
+		return fmt.Errorf("operation %s: %w", v.OperationID, err)
+	}
+	if err := v.RequestedScope.Validate(); err != nil {
+		return fmt.Errorf("operation %s: %w", v.OperationID, err)
+	}
+	// AFTER the scope, because the pairing compares the method against a scope
+	// that has to be in the vocabulary first.
+	if err := v.validateMethodAuthority(); err != nil {
+		return err
+	}
+	// AFTER the tier, because it reads it: a subject is owed by the
+	// confirm-first tier, so an author with a typo'd tier would otherwise be
+	// told about their subject.
 	if err := v.validateSubject(); err != nil {
 		return err
 	}
-	// The NAMESPACE only. The object-name grammar and the collision rules
-	// against the core vocabulary belong to the module that owns that
-	// vocabulary (identity's internal policy package), and restating them here
-	// would be a second copy that could drift. What this surface owns is the
-	// rule that a unit's identifiers are namespaced to the unit — the same rule
-	// Name.Namespace() states for SQL identifiers.
+	return v.validateRbacObject()
+}
+
+// validateHumanOnlyGovernance is validateGovernance's other branch: an
+// operation with no x-mcp-tool requests no agent authority, so it carries
+// none of Tier/RequestedScope/Subject — and because there is no
+// RequestedScope to key the RBAC-object rule on (validateRbacObject's
+// write/draft check), a human-only verb keys it on HTTP method instead. The
+// underlying incident (cited on validateRbacObject's own rule) is
+// method-shaped either way: a mutation with no object nobody can withhold is
+// admitted on RBAC seat alone, whatever asks for it.
+func (v Verb) validateHumanOnlyGovernance() error {
+	if v.Tier != "" {
+		return fmt.Errorf("operation %s declares x-agent-access: human-only and a Tier — the two are mutually exclusive requests for authority", v.OperationID)
+	}
+	if v.RequestedScope != "" {
+		return fmt.Errorf("operation %s declares x-agent-access: human-only and a RequestedScope — the two are mutually exclusive requests for authority", v.OperationID)
+	}
+	if !v.Subject.IsZero() {
+		return fmt.Errorf("operation %s declares x-agent-access: human-only and a staging Subject — a human-only operation is never staged for an agent's approval", v.OperationID)
+	}
+	if v.RbacObject != "" {
+		return v.validateRbacObject()
+	}
+	if v.RbacAction != "" {
+		return fmt.Errorf("operation %s declares RBAC action %q but no object — an action names a verb ON something, and there is nothing here for a role document to grant", v.OperationID, string(v.RbacAction))
+	}
+	if isMutatingMethod(v.Method) {
+		return fmt.Errorf("operation %s is human-only and %s but declares no RBAC object — a mutating operation must name something a role document can withhold, or it is admitted on RBAC seat alone. Declare x-rbac-object (ext_%s_<object>) and x-rbac-action",
+			v.OperationID, v.Method, strings.ReplaceAll(string(v.Unit), "-", "_"))
+	}
+	return nil
+}
+
+// validateRbacObject checks the RBAC object/action pair a tool-verb operation
+// declares. The NAMESPACE is all this owns — the object-name grammar and the
+// collision rules against the core vocabulary belong to the module that owns
+// that vocabulary (identity's internal policy package), and restating them
+// here would be a second copy that could drift. What this surface owns is the
+// rule that a unit's identifiers are namespaced to the unit — the same rule
+// Name.Namespace() states for SQL identifiers.
+func (v Verb) validateRbacObject() error {
 	if v.RbacObject != "" {
 		if want := NamespacePrefix + strings.ReplaceAll(string(v.Unit), "-", "_") + "_"; !strings.HasPrefix(v.RbacObject, want) {
 			return fmt.Errorf("operation %s declares RBAC object %q, which is outside extension %q's %s namespace", v.OperationID, v.RbacObject, v.Unit, want)

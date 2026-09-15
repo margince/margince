@@ -7,12 +7,12 @@ import { type GrantSpec, meFixture } from "../app/mefixture";
 import { AiCallsCard, CallDetailPanel } from "./aicalls";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
-// The card is gated on automation:update, so /me decides which of its two
+// The card is gated on ai_diagnostics:read, so /me decides which of its two
 // branches renders. Left unrouted, the fetch stub answers with an empty list
 // page, useMe rejects that as malformed, and every grant fails closed — which
 // is how the List and Empty stories below both used to draw the same probe
 // error under two names that promised the trace table.
-const OPERATOR: GrantSpec = { automation: ["read", "update"] };
+const OPERATOR: GrantSpec = { ai_diagnostics: ["read"] };
 
 const summary = {
   id: "call-1",
@@ -92,7 +92,7 @@ type Story = StoryObj<typeof AiCallsCard>;
 export const List: Story = { render: list([summary]) };
 export const Empty: Story = { render: list([]) };
 
-// No automation grant: the trace keeps its place and says it is withheld. An
+// No ai_diagnostics grant: the trace keeps its place and says it is withheld. An
 // absent card would read as "this installation made no model calls".
 export const Withheld: Story = { render: list([summary], true, {}) };
 

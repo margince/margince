@@ -9,7 +9,7 @@
     "tokens_served_but_never_driven": 12685,
     "use_case_cases": 21,
     "acceptance_criteria_named": 49,
-    "tools_added_by_shipped_units": 7,
+    "tools_added_by_shipped_units": 0,
     "never_driven_but_graded_elsewhere": 18
   },
   "models": [
@@ -3150,36 +3150,7 @@
       }
     }
   ],
-  "unit_tools": [
-    {
-      "Name": "openchannel_list_inbound",
-      "Unit": "openchannel"
-    },
-    {
-      "Name": "openchannel_list_outbound",
-      "Unit": "openchannel"
-    },
-    {
-      "Name": "openchannel_mint_secret",
-      "Unit": "openchannel"
-    },
-    {
-      "Name": "openchannel_open",
-      "Unit": "openchannel"
-    },
-    {
-      "Name": "openchannel_read_endpoint",
-      "Unit": "openchannel"
-    },
-    {
-      "Name": "openchannel_register_url",
-      "Unit": "openchannel"
-    },
-    {
-      "Name": "openchannel_set_enabled",
-      "Unit": "openchannel"
-    }
-  ],
+  "unit_tools": null,
   "scheduled_agent_surface": [
     {
       "name": "morning_brief",

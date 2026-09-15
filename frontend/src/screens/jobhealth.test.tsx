@@ -195,10 +195,10 @@ describe("JobHealthCard", () => {
     stubRoutes();
     render(<JobHealthCard />);
     // The class is the token an alert is keyed on and the log is grepped by, so
-    // it is rendered verbatim and mono — the same treatment as the kind — and
-    // never as a second status pill beside the state badge.
+    // it is rendered verbatim — the same treatment as the kind, underscores
+    // kept — and never as a second status pill beside the state badge.
     const shownClass = await screen.findByText("provider_unavailable");
-    expect(shownClass).toHaveClass("t-mono");
+    expect(screen.queryByText(/provider unavailable/i)).not.toBeInTheDocument();
     expect(shownClass).not.toHaveClass("badge");
     // What to do about it, which is the half a failure list is useless without.
     expect(
@@ -310,8 +310,12 @@ describe("JobHealthCard", () => {
     // Nothing to say about a week that holds no more than the day does.
     expect(alert).not.toHaveTextContent(/7 days/i);
     // And the count itself carries the tone on the row it belongs to.
-    expect(screen.getByText("3 dead")).toHaveClass("badge-danger");
-    expect(screen.getByText("discarded")).toHaveClass("badge-danger");
+    expect(screen.getByText("3 dead").closest(".badge")).toHaveClass(
+      "badge-danger",
+    );
+    expect(screen.getByText("Discarded").closest(".badge")).toHaveClass(
+      "badge-danger",
+    );
   });
 
   // The case the window exists for: a settled outage. The rows are still there

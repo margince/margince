@@ -140,7 +140,7 @@ function ReviewCard({
   return (
     <div className="outcome-review">
       <div className="outcome-review-head">
-        <Badge quiet tone={review.outcome === "won" ? "success" : "danger"}>
+        <Badge tone={review.outcome === "won" ? "success" : "danger"}>
           {t(
             review.outcome === "won"
               ? "outcomeReview.outcomeWon"
@@ -167,7 +167,9 @@ function ReviewCard({
                 than a missing row, so the reader sees WHICH question went
                 unanswered instead of a shorter list. */}
             <dd>
-              {review.answers?.[question.key] || (
+              {(question.type === "multiselect"
+                ? review.choice_answers?.[question.key]?.join(", ")
+                : review.answers?.[question.key]) || (
                 <span className="muted">{t("outcomeReview.noAnswer")}</span>
               )}
             </dd>

@@ -256,7 +256,7 @@ function DecisionCell({ row }: Readonly<{ row: SenderDecision }>) {
   }
   return (
     <>
-      <Badge tone={admitted.has(kind) ? "success" : undefined} quiet>
+      <Badge tone={admitted.has(kind) ? "success" : undefined}>
         {words || t("senders.kind.undecided")}
       </Badge>
       {/* The deadline, not just the verdict. A personal verdict does not hide

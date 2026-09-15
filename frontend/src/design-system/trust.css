@@ -23,7 +23,6 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-family: var(--f-mono);
   font-size: var(--fs-meta);
   color: var(--textChip);
   background: var(--bgChip);
@@ -82,7 +81,6 @@ button.evidence-chip:hover {
 .evidence-chip-snippet {
   display: block;
   max-width: 100%;
-  font-family: var(--f-mono);
   font-size: var(--fs-meta);
   color: var(--textMeta);
   overflow-wrap: anywhere;
@@ -103,53 +101,6 @@ button.evidence-chip:hover {
 }
 .confidence-low .dot {
   background: var(--dnd);
-}
-
-.provenance {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: var(--fs-meta);
-  font-weight: 600;
-  padding: 1px 8px;
-  border-radius: var(--r-full);
-  corner-shape: round;
-}
-.provenance-agent {
-  background: var(--aiLight);
-  color: var(--aiText);
-}
-.provenance-human {
-  background: var(--bgChip);
-  /* --tealText, not --teal: the two are byte-identical in light, and only
-     --tealText is lifted for dark. Unlifted teal on a dark card measures
-     2.74:1 at this size — under the 4.5:1 text floor, on the most-rendered
-     arm of the five. */
-  color: var(--tealText);
-}
-/* The installation's own housekeeping: neither a contact nor a model, so it
-   borrows neither the human teal nor the AI tint. Plain ink on the neutral chip
-   fill is the quietest thing that is still a claim — a scheduled sweep drawn in
-   the AI colour would tell a reader a model decided something here. */
-.provenance-system {
-  background: var(--bgChip);
-  color: var(--textPrimary);
-}
-/* A buyer typed it, so the tag keeps the human arm's neutral chip fill and
-   never the AI tint — a contact did this. The ink is the accent rather than the
-   colleague teal because a buyer is a contact from OUTSIDE the company, and
-   the accent is already how the product marks a buyer's own contribution (the
-   stripe on their Deal Room comment). */
-.provenance-buyer {
-  background: var(--bgChip);
-  color: var(--accentText);
-}
-/* An unrecorded source claims neither a contact nor a machine, and reads as
-   the absence it is rather than borrowing either one's colour. */
-.provenance-unknown {
-  background: var(--bgChip);
-  color: var(--textChip);
-  font-style: italic;
 }
 
 /* The agent's row: a staged proposal is visibly NOT yet real. Its ground, its
@@ -233,7 +184,6 @@ button.evidence-chip:hover {
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
-  font-family: var(--f-mono);
   font-size: var(--fs-meta);
 }
 
@@ -303,18 +253,6 @@ button.evidence-chip:hover {
  * struck-through and pill-green for everyone else. */
 .field-diff-arrow {
   color: var(--textTertiary);
-}
-
-.passport-chip {
-  display: inline-flex;
-  align-items: center;
-  font-family: var(--f-mono);
-  font-size: var(--fs-eyebrow);
-  color: var(--aiText);
-  background: var(--aiLight);
-  border-radius: var(--r-full);
-  corner-shape: round;
-  padding: 1px 8px;
 }
 
 /*

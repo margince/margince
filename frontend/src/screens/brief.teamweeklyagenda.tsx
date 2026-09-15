@@ -200,7 +200,6 @@ export function AgendaPanel({
             </span>
             <span className="teamweekly-agenda-focus">
               <Badge
-                quiet
                 tone={
                   rep.focus_kind === "quiet_week"
                     ? undefined

@@ -68,7 +68,7 @@ func boundedSources(day crmcontracts.Attention) map[crmcontracts.WorklistItemSou
 	// The health and receipt lanes share one bound.
 	atCap("failed_approval", day.DidNotRun, doneCap)
 	atCap("dsr", day.Dsr, doneCap)
-	atCap("notice_case", day.NoticeCases, doneCap)
+	atCap(sourceNoticeCase, day.NoticeCases, doneCap)
 	atCap("ai_work_health", day.AiWorkHealth, doneCap)
 	atCap("notice", day.Notices, doneCap)
 	atCap("automation_run", day.AutomationHealth, doneCap)
@@ -140,7 +140,7 @@ func unavailable(day crmcontracts.Attention) []crmcontracts.WorklistSourceUnavai
 // same reason, and the caveat above applies to each identically.
 const (
 	laneDSR        = crmcontracts.AttentionLanesOmitted("dsr")
-	laneNoticeCase = crmcontracts.AttentionLanesOmitted("notice_case")
+	laneNoticeCase = crmcontracts.AttentionLanesOmitted(sourceNoticeCase)
 )
 
 // plannedWindowAtCap reports whether either half of the planned lane was cut.

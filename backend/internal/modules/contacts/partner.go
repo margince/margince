@@ -154,8 +154,8 @@ func (s *Store) UpsertPartner(ctx context.Context, in UpsertPartnerInput) (partn
 	if err := auth.Require(ctx, "partner", principal.ActionUpdate); err != nil {
 		return partnerRow{}, err
 	}
-	// Promotion flips company.classification — that is a company
-	// mutation, so the company's own write grant is required too; the
+	// Promotion adds `partner` to the company's relationship types — that is a
+	// company mutation, so the company's own write grant is required too; the
 	// partner grant alone must not become a side door onto companies.
 	if err := auth.Require(ctx, "company", principal.ActionUpdate); err != nil {
 		return partnerRow{}, err

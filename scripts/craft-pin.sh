@@ -83,7 +83,12 @@ craft_bin() {
 	# redirect to plain http would fetch the gate over a tamperable channel. The
 	# digest below would still catch a swap; the download refuses to leave TLS in
 	# the first place.
-	if ! curl -fsSL --proto '=https' --proto-redir '=https' -o "$staged" "$url"; then
+	# --retry: the release host answers 504 often enough to have twice reported a
+	# red gate against an unchanged tree, and a reader cannot tell that from a
+	# real finding. curl's own backoff covers the 5xx family and a refused
+	# connection; a digest mismatch is still fatal on the first try, because that
+	# one means the artifact changed.
+	if ! curl -fsSL --proto '=https' --proto-redir '=https' --retry 5 --retry-delay 2 --retry-connrefused --connect-timeout 10 -o "$staged" "$url"; then
 		rm -f "$staged"
 		echo "craft-pin: could not download $url" >&2
 		return 1

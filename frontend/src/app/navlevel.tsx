@@ -12,6 +12,7 @@ import {
   useEffect,
   useRef,
 } from "react";
+import { Badge } from "../design-system/atoms";
 import { useHoverIntent } from "../design-system/hoverintent";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
@@ -236,7 +237,13 @@ function NavLevelRow({
           either way. */}
       <span className="navlabel">{label}</span>
       {count !== undefined && count > 0 && (
-        <span className="count">{formatNumber(count, locale)}</span>
+        // The wrapper only places the figure: trailing in a row, pinned to
+        // the glyph's corner when the rail is collapsed or a phone bar.
+        <span className="count">
+          <Badge variant="primary" tone="accent">
+            {formatNumber(count, locale)}
+          </Badge>
+        </span>
       )}
       {/* Inside the row, not beside it: the tooltip sits outside the row's box
           but within its subtree, so moving the pointer onto it never leaves the

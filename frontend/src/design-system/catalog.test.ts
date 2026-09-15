@@ -42,8 +42,8 @@
 // prose would need a second copy of the prose to judge it against, which is the
 // defect this directory exists to avoid.
 //
-// The name may appear in any cell, the `For` column included — `BriefItemCard`
-// documents `BriefItemCardPending` inside its own row, and splitting a variant
+// The name may appear in any cell, the `For` column included — `FilePreview`
+// documents its provider and hook inside its own row, and splitting a variant
 // onto a line of its own would make the table longer without making it findable.
 //
 // ## Why this is a parser and not a shell gate

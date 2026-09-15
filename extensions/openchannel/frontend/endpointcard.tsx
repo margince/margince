@@ -223,10 +223,7 @@ function SigningSecret({ endpointId }: Readonly<{ endpointId: string }>) {
           >
             {t("extOpenchannel.secret.shownOnce")}
           </Callout>
-          <pre
-            className="code-block t-mono"
-            data-testid="openchannel-signing-secret"
-          >
+          <pre className="code-block" data-testid="openchannel-signing-secret">
             {secret}
           </pre>
         </>

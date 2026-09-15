@@ -42,7 +42,7 @@ func (c *planCompiler) bind(at string, field Field, raw json.RawMessage) (any, s
 		return bindTemporal(at, field, raw, dateLayout, "::date", "a date, as YYYY-MM-DD")
 	case KindTimestamp:
 		return bindTemporal(at, field, raw, time.RFC3339, "", "an instant, as RFC 3339 (2026-08-08T09:00:00Z)")
-	case KindText:
+	case KindText, KindMultiselect:
 		var value string
 		return value, "", decodeOperand(at, field, raw, &value, "text")
 	case KindGeo:

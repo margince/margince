@@ -242,7 +242,7 @@ function CommissionLedger({
             key: "status",
             header: t("commission.column.status"),
             render: (entry) => (
-              <Badge tone={STATUS_TONES[entry.status]} quiet>
+              <Badge tone={STATUS_TONES[entry.status]}>
                 {t(STATUS_LABELS[entry.status])}
               </Badge>
             ),

@@ -4,7 +4,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
 import { CompanyFinanceCard } from "./companyfinance";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
+import {
+  installFetchStub,
+  jsonResponse,
+  meRoute,
+  StoryProviders,
+} from "./story-utils";
 
 // The finance card's own rule: no figure is invented, and the absence of one
 // is never drawn as a zero. `no_connection` and `connected` render as
@@ -69,6 +74,9 @@ function Finance({
   lifecycle,
 }: Readonly<{ summary: FinanceSummary; lifecycle?: string }>) {
   installFetchStub({
+    // The billing panel inside the card asks for the session; a reader of the
+    // company's finance, with no standing to name its billing contacts.
+    "GET /me": meRoute({ company: ["read"] }),
     "GET /companies/o-1/finance-summary": () => jsonResponse(summary),
   });
   return (

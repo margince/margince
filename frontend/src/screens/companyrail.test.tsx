@@ -480,7 +480,7 @@ describe("CompanyRail", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: "Change Domains" }),
     );
-    await userEvent.click(screen.getByRole("button", { name: "Remove" }));
+    await userEvent.click(screen.getByRole("button", { name: /^Remove row/ }));
     expect(onSave).not.toHaveBeenCalled();
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
     await waitFor(() => expect(onSave).toHaveBeenCalledWith({ domains: [] }));

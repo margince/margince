@@ -66,6 +66,7 @@ const TYPE_ICON: Record<CfType, LucideIcon> = {
   date: Calendar,
   currency: Euro,
   picklist: List,
+  multiselect: List,
   boolean: ToggleRight,
 };
 
@@ -102,7 +103,8 @@ export function FieldBuilder({
   // needs a well-formed 3-letter ISO-4217 code — Confirm stays disabled until
   // the type-specific shape is valid, not just the label.
   const typeShapeValid =
-    (type !== "picklist" || options.some((opt) => opt.trim().length > 0)) &&
+    ((type !== "picklist" && type !== "multiselect") ||
+      options.some((opt) => opt.trim().length > 0)) &&
     (type !== "currency" || /^[A-Za-z]{3}$/.test(currency.trim()));
   const canConfirm =
     !pending && label.trim().length > 0 && !structural && typeShapeValid;
@@ -155,7 +157,6 @@ export function FieldBuilder({
           {(control) => (
             <TextInput
               {...control}
-              className="t-mono"
               value={apiKey(object, label)}
               disabled
               readOnly
@@ -190,7 +191,6 @@ export function FieldBuilder({
           {(control) => (
             <TextInput
               {...control}
-              className="t-mono"
               value={currency}
               maxLength={3}
               onChange={(event) =>
@@ -201,7 +201,7 @@ export function FieldBuilder({
         </Field>
       )}
 
-      {type === "picklist" && (
+      {(type === "picklist" || type === "multiselect") && (
         <div className="field">
           <span className="t-label">{t("cf.options")}</span>
           <div className="cf-options">
@@ -330,7 +330,7 @@ export function FieldTable({
 
   const typeChip = (field: CustomField): string => {
     const base = t(`cf.type.${field.type}`);
-    if (field.type === "picklist") {
+    if (field.type === "picklist" || field.type === "multiselect") {
       return `${base} · ${field.options?.length ?? 0}`;
     }
     if (field.type === "currency") {
@@ -368,7 +368,7 @@ export function FieldTable({
                   <Badge tone="warn">{t("cf.retired")}</Badge>
                 )}
               </span>
-              <span className="cf-key t-mono">
+              <span className="cf-key">
                 {`${field.object}.${field.column_name}`}
               </span>
             </div>
@@ -380,13 +380,7 @@ export function FieldTable({
       key: "type",
       header: t("cf.col.type"),
       render: (field) => {
-        const Icon = TYPE_ICON[field.type];
-        return (
-          <span className="cf-typechip t-caption">
-            <Icon aria-hidden />
-            {typeChip(field)}
-          </span>
-        );
+        return <Badge icon={TYPE_ICON[field.type]}>{typeChip(field)}</Badge>;
       },
     },
     {
@@ -518,7 +512,7 @@ function createBody(
     type: draft.type,
     source: "manual",
     ...(draft.type === "currency" ? { currency: draft.currency } : {}),
-    ...(draft.type === "picklist"
+    ...(draft.type === "picklist" || draft.type === "multiselect"
       ? { options: cleanOptions(draft.options) }
       : {}),
   };
@@ -555,7 +549,10 @@ function stagedField(draft: NewFieldDraft, createdBy: string): CustomField {
     status: "active",
     column_name: columnName(draft.label),
     currency: draft.type === "currency" ? draft.currency : null,
-    options: draft.type === "picklist" ? cleanOptions(draft.options) : null,
+    options:
+      draft.type === "picklist" || draft.type === "multiselect"
+        ? cleanOptions(draft.options)
+        : null,
     created_by: createdBy,
     created_at: now,
     updated_at: now,

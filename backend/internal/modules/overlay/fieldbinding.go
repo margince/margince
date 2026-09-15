@@ -271,10 +271,6 @@ var companyBindings = EntityBinding{
 			Reason: "Counted from native deal rows, the same rows computed_fields' open pipeline sums.",
 		},
 		{
-			WireSlot: "classification", Disposition: DispositionNativeOnly,
-			Reason: "Retired by ADR-0079/A124 and written by nothing; it survives only so a native row's pre-migration value can be compared, and a mirrored record has no such value.",
-		},
-		{
 			WireSlot: "logo_url", Disposition: DispositionNativeOnly,
 			Reason: "The getCompanyLogo path for this record, which streams a resolved asset out of this installation's own object storage; the mirror holds no asset there.",
 		},

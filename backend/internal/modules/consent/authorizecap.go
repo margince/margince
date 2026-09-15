@@ -176,6 +176,22 @@ func normalizeCapAddress(address string) string {
 // advertisingMessagesReceived counts what the recipient has GOT or is ABOUT TO
 // GET, and both halves are load-bearing.
 //
+// WHAT WENT OUT, not what was authorized. The count asks how much advertising
+// reached one mailbox in a day, and a statute's ceiling is about the mail that
+// arrived — the engine's verdict is about whether it should have. Those come
+// apart: a send carrying a recorded communication exception ships with its
+// decision row still reading `deny` (modules/comms/gates.go returns
+// outcomeUndecided rather than parking it), so a filter on `verdict = 'allow'`
+// dropped every exception-directed send from the count. An address could take
+// the full statutory three, then any number more by exception, and the count
+// still read three.
+//
+// Nothing is lost by dropping that filter, because the two clauses below
+// already do the work the comment beneath attributes to it: a decision with no
+// delivery cannot pass the JOIN, and one whose delivery was parked matches
+// neither status. `parked` is its own status, so it is excluded by saying
+// nothing about it.
+//
 // The delivered half is the obvious one, and the join under it is the rule. A
 // count over communication_decision alone would include a decision taken in
 // observe mode (which records what the engine would have said while the old
@@ -193,11 +209,18 @@ func normalizeCapAddress(address string) string {
 // message is going out and no 'sent' row says so. Counting only delivered mail
 // would let every worker in that window read the same number and each send,
 // and the ceiling would be exceeded by however many workers happened to be
-// running. An allowing transmit decision against a delivery that is still
-// pending IS that message: it was written under the address lock, it exists
-// exactly once per attempt, and it resolves within the ladder to either a
-// 'sent' row (which the first half then counts, and DISTINCT keeps from
-// counting twice) or a park (which stops matching, returning the allowance).
+// running. A transmit decision against a delivery that is still pending IS that
+// message: it was written under the address lock, it exists exactly once per
+// attempt, and it resolves within the ladder to either a 'sent' row (which the
+// first half then counts, and DISTINCT keeps from counting twice) or a park
+// (which stops matching, returning the allowance).
+//
+// That resolution is also why the in-flight half needs no verdict test. A
+// refused message that is going out anyway — the exception case — resolves to
+// 'sent' like any other, and a refused message that is genuinely stopped
+// resolves to 'parked' and stops matching. Holding the allowance during the
+// window costs at worst a transient over-count that returns itself, which is
+// the safe direction for a ceiling somebody's compliance rests on.
 //
 // Art. 17 erasure rewrites recipient_address to a placeholder, so a subject's
 // advertising history stops matching this count and a re-captured address
@@ -212,7 +235,6 @@ func advertisingMessagesReceived(ctx context.Context, tx pgx.Tx, address string,
 		  FROM comms_outbound o
 		  JOIN communication_decision d ON d.delivery_id = o.id
 		 WHERE d.phase = 'transmit'
-		   AND d.verdict = 'allow'
 		   AND d.resolved_category = $3
 		   -- Trimmed and lowered on BOTH sides, matching normalizeCapAddress.
 		   -- The stored key is the address as the caller supplied it (the

@@ -268,10 +268,18 @@ func readWeekDeals(ctx context.Context, tx pgx.Tx, userID ids.UUID, start, end t
 		dealScope = sqlUnbounded
 	}
 
+	// The week's closed list prints each deal's figure beside its name, so the
+	// mask reaches it here as it does the deal list. The `moved` leg below
+	// already selects a typed NULL for this column, so a masked row lines up
+	// with a shape this UNION carries anyway.
+	amountSQL, err := auth.MaskedColumnSQL(ctx, "deal", "amount_minor", "d", "amount_minor", arg)
+	if err != nil {
+		return nil, err
+	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		WITH closed AS (
 			SELECT d.id, d.name, d.status AS outcome, NULL::text AS to_stage,
-			       d.amount_minor, d.currency, d.closed_at AS at
+			       %[6]s, d.currency, d.closed_at AS at
 			  FROM deal d
 			 WHERE d.status IN ('won', 'lost')
 			   AND d.closed_at >= $%[1]d AND d.closed_at < $%[2]d
@@ -298,7 +306,7 @@ func readWeekDeals(ctx context.Context, tx pgx.Tx, userID ids.UUID, start, end t
 		  FROM (SELECT * FROM closed UNION ALL SELECT * FROM moved) lines
 		 ORDER BY (outcome = 'moved'), at DESC, id
 		 LIMIT $%[4]d`,
-		startPos, endPos, userPos, capPos, dealScope), args...)
+		startPos, endPos, userPos, capPos, dealScope, amountSQL), args...)
 	if err != nil {
 		return nil, fmt.Errorf("weekly: reading the week's deals: %w", err)
 	}

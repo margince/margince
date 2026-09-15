@@ -175,6 +175,38 @@ func TestAFindingIsVisibleExactlyWhereItsDealIs(t *testing.T) {
 		t.Error("a finding about an ARCHIVED deal was listed — the deal is gone from " +
 			"every live read and its finding has to go with it")
 	}
+
+	// And the OBJECT half, on the same fixture so the two halves cannot be
+	// confused for one another. Every finding here carries its deal's name, so
+	// a seat whose role grants forecast and no deal read must be answered
+	// nothing — and the only caller of this read is a model tool
+	// (list_input_checks), which is where a list of deal names would have gone.
+	//
+	// RowScopeAll deliberately: it is the configuration that makes the row half
+	// above a no-op, so a pass here cannot be the row scope doing the work.
+	noDealCtx := principal.WithWorkspaceID(context.Background(), ws)
+	noDealCtx = principal.WithCorrelationID(noDealCtx, ids.NewV7())
+	noDealCtx = principal.WithActor(noDealCtx, principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + mine.String(), UserID: mine,
+		Permissions: principal.Permissions{
+			RoleKeys: []string{"rep"},
+			Objects:  map[string]principal.ObjectGrant{"forecast": {Read: true}},
+			RowScope: principal.RowScopeAll,
+		},
+	})
+	if err := database.WithWorkspaceTx(noDealCtx, database.BindTo(pool, wsTyped).Pool(),
+		func(tx pgx.Tx) error {
+			rows, err := AssuranceExceptions(noDealCtx, tx)
+			if err != nil {
+				return err
+			}
+			for _, row := range rows {
+				t.Errorf("a seat with no deal grant was listed a finding on deal %s", row.SubjectID)
+			}
+			return nil
+		}); err != nil {
+		t.Fatalf("listing the findings without a deal grant: %v", err)
+	}
 }
 
 type assuranceExceptionSubject struct{ subject ids.UUID }

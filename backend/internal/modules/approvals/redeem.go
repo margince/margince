@@ -11,6 +11,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/approvalsubject"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -225,7 +226,7 @@ var contextTargetKinds = map[string]string{
 		"inbox, which is exactly the window a rep moves the stage, edits the amount or " +
 		"corrects the close date in — and any one of those cancelled the follow-up they " +
 		"had just approved.",
-	"capture_counterparty": "The proposal is filed under the ACTIVITY that carried the " +
+	approvalsubject.KindCounterparty: "The proposal is filed under the ACTIVITY that carried the " +
 		"unrecognized sender, because that message is the evidence a human judges it on. " +
 		"The effect creates a contact and a company and closes the capture " +
 		"disposition; it never writes the activity. Pinning bound the answer to a row " +

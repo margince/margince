@@ -510,9 +510,6 @@ function AttentionLine({
 // The row's status clause, on its own line under the facts. A sentence in the
 // meta row would read as one more chip beside the stage and the money; this
 // is the row saying why it is here, so it gets its own line.
-//
-// `quiet` on the badge for the same reason: one per row, in a column of rows,
-// and a stack of filled pills is decoration a reader learns to skip.
 function StatusLine({
   tone,
   children,
@@ -520,9 +517,7 @@ function StatusLine({
   if (tone) {
     return (
       <span className="co-work-status">
-        <Badge tone={tone} quiet>
-          {children}
-        </Badge>
+        <Badge tone={tone}>{children}</Badge>
       </span>
     );
   }

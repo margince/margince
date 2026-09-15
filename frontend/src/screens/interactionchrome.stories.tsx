@@ -2,7 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { interactionIcon, useInteractionLabel } from "./interactionchrome";
+import { Badge } from "../design-system/atoms";
+import { interactionGlyph, useInteractionLabel } from "./interactionchrome";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 /**
@@ -50,13 +51,12 @@ function Catalog() {
   return (
     <div className="pe-chiprow">
       {CATALOG.map((entry) => (
-        <span
-          className="pe-memory-channel t-caption"
+        <Badge
           key={`${entry.kind}-${entry.provider ?? "none"}`}
+          icon={interactionGlyph(entry.kind)}
         >
-          {interactionIcon(entry.kind)}
           {interactionLabel(entry.kind, entry.provider)}
-        </span>
+        </Badge>
       ))}
     </div>
   );

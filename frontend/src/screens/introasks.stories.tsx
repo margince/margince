@@ -94,7 +94,7 @@ export const Requester: Story = {
 };
 
 /**
- * Dark, because the pane's ground and the quiet status badge on each row are
+ * Dark, because the pane's ground and the soft status badge on each row are
  * two elevations a darker palette compresses toward each other.
  */
 export const BeingAskedDark: Story = {

@@ -110,8 +110,8 @@ export const OpenSeveralCurrencies: Story = {
 // over the page ground with no scrim and no arrow, so the only thing separating
 // lineage from the figures underneath it is the step between --bgCard and
 // --bgPage plus one hairline — and that step is what a darker palette
-// compresses. The mono amounts and the rate line are the two inks on trial with
-// it.
+// compresses. The tabular amounts and the rate line are the two inks on trial
+// with it.
 export const OpenSeveralCurrenciesDark: Story = {
   globals: { theme: "dark" },
   args: { money: severalCurrencies, workspaceZone: "Europe/Berlin" },

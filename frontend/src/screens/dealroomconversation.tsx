@@ -130,7 +130,9 @@ export function DealRoomConversation({
     id: doc.id,
     groupKey: doc.group_key,
     title: doc.title,
+    filename: doc.filename,
     meta: doc.filename && doc.filename !== doc.title ? doc.filename : "",
+    byteSize: doc.byte_size,
     actions: <RemoveButton room={room} doc={doc} refusal={refusal} />,
   }));
   return (

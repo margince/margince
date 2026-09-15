@@ -202,6 +202,8 @@ type Service struct {
 	// taskOwner is whose queue TasksOwnedBy means. Zero for every other scope,
 	// and never read by them.
 	taskOwner ids.UUID
+	// noticeOwners is a team roster; nil leaves the visible agenda unrestricted.
+	noticeOwners []ids.UUID
 }
 
 // forOwner returns a copy that reads one named contact's queue. Same

@@ -331,7 +331,7 @@ function SendRow({
         {send.status === "held" ? (
           <Badge tone="warn">{t(STATUS_LABEL[send.status])}</Badge>
         ) : (
-          <Badge quiet>{t(STATUS_LABEL[send.status])}</Badge>
+          <Badge>{t(STATUS_LABEL[send.status])}</Badge>
         )}
         {actionable && (
           <MoveControl send={send} pending={movePending} onMove={onMove} />

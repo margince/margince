@@ -145,7 +145,7 @@ func scalarOperand(value any, field Field, name, op string) (any, error) {
 		}
 	}
 	switch field.Type {
-	case FieldText, FieldPicklist:
+	case FieldText, FieldPicklist, FieldMultiselect:
 		return scalarStringOperand(value, invalid, "a string")
 	case FieldDomain:
 		return scalarDomainOperand(value, invalid)

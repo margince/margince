@@ -309,15 +309,13 @@ function ContractRow({
             name: which paper it is, how long it runs, what is about to happen
             to it. Read after the name, not beside it. */}
         <span className="rec-meta t-caption">
-          {contract.contract_number && (
-            <span className="t-mono">{contract.contract_number}</span>
-          )}
+          {contract.contract_number && <span>{contract.contract_number}</span>}
           <ContractTerm contract={contract} />
           <ContractTermState contract={contract} />
           <ContractTerms contract={contract} />
           {/* A bare EntityRef here would read as a company name or a contact —
               the other siblings on this line are all self-identifying by
-              format (a mono number, a date range, a state pill), and a deal's
+              format (a contract number, a date range, a state pill), and a deal's
               name is not. Same {label}{" "}<EntityRef/> shape deals.tsx uses
               for its own second, non-obvious reference (partner_company_id). */}
           {contract.deal_id && (

@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -102,8 +103,8 @@ func TestSeatDerivedBudget(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if budget != seats*perSeatBaseTokens*budgetSafetyFactor {
-		t.Fatalf("%d-seat budget = %d, want %d", seats, budget, seats*perSeatBaseTokens*budgetSafetyFactor)
+	if budget != seats*int64(ai.DefaultMonthlyTokens) {
+		t.Fatalf("%d-seat budget = %d, want %d", seats, budget, seats*int64(ai.DefaultMonthlyTokens))
 	}
 	// An installation with no live full seat floors at one rather than
 	// refusing. Reached by deactivating the seats, which is how it actually
@@ -121,7 +122,7 @@ func TestSeatDerivedBudget(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if budget != perSeatBaseTokens*budgetSafetyFactor {
+	if budget != int64(ai.DefaultMonthlyTokens) {
 		t.Fatalf("seatless-installation budget = %d, want the single-seat floor", budget)
 	}
 }

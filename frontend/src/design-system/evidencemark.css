@@ -5,7 +5,6 @@
    legible without colour vision and against every theme. */
 
 .evmark {
-  position: relative;
   display: inline-block;
 }
 
@@ -33,13 +32,20 @@
   border-radius: var(--r-sm);
 }
 
+/* Fixed and portalled to the body (evidencemark.tsx), placed against the
+   trigger's own viewport rectangle (anchored.ts) rather than the value's own
+   box. A value near the bottom of a `Panel` sits inside `overflow: hidden`
+   (panel.css); a panel positioned relative to that box was clipped at the
+   panel's edge before a reader ever saw the receipt. */
 .evmark-panel {
-  position: absolute;
-  z-index: 20;
-  top: calc(100% + 6px);
-  left: 0;
+  position: fixed;
+  z-index: 70;
   min-width: 240px;
   max-width: min(300px, 80vw);
+  /* anchored.ts caps the height to whichever side of the trigger it opened
+     on, so a receipt with a long snippet scrolls inside itself rather than
+     running past the viewport edge. */
+  overflow-y: auto;
   /* Solid ground and the one shadow a popover takes: it floats over the
      pane, which a translucent surface over translucent ground cannot do. */
   background: var(--bgElevated);

@@ -44,6 +44,13 @@ defaults:
   run:
     working-directory: backend
 
+# A module the proxy cannot serve is not a broken build: the PIPE falls through
+# to the source on any error, where Go's default comma falls through only on a
+# 404. Why that distinction reached `main` as a product break:
+# backend/gates/buildinputfetch_test.go, which holds this line.
+env:
+  GOPROXY: https://proxy.golang.org|direct
+
 jobs:
   # The no-database half of the merge gate, run against main's tip unconditionally.
   # Unconditionally is the whole point: the classifier that makes a pull request

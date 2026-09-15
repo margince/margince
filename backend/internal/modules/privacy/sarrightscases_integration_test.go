@@ -203,8 +203,40 @@ func TestTheErasedCaseKeepsItsDeadline(t *testing.T) {
 	}
 }
 
-// eraseCapabilities runs the real Art. 17 consent cascade on its own
-// transaction, which is the shape it runs in production.
+// eraseCapabilities runs the real Art. 17 consent cascade on a STANDALONE
+// transaction, on the migration-owner connection, holding nothing.
+//
+// That is not the shape production runs it in, and the difference is worth
+// stating because these cases rest on it. EraseContact calls
+// deleteConsentCapabilities NESTED inside ONE transaction, opened on the
+// application handle rather than the owner's, after storekit.LockSubjectKeys
+// has taken the subject hold and held it to the commit. That shape has its own
+// lane — backend/internal/compose/integration/dsr_erasure_fulfil_integration_test.go
+// drives EraseContact end to end — and this helper is not a second one.
+//
+// So four classes of erasure defect cannot fail a case below, and a case
+// written here to catch one of them would pass while production broke:
+//
+//   - ROLE. Grants are enumerated per table in the baseline migration, and this
+//     runs as owner. A new arm touching a table with no margince_app grant
+//     passes here and aborts a real subject's erasure in the field.
+//   - LOCK ORDER. backend/gates/subjectlockorder_test.go states subject-hold
+//     first, and erasure_consent.go records a deadlock incident where an
+//     unqualified retireRightsCases update collided with its own caller's
+//     FOR UPDATE. Nothing is held here, so no lock-order regression can fail.
+//   - THE FULFILLING-CASE EXCLUSION. `reason: "test"` carries no `dsr:` prefix,
+//     so fulfillingCase answers the zero uuid and the `id IS DISTINCT FROM $2`
+//     clause excludes nothing. The branch that incident comment exists for is
+//     never taken.
+//   - THE ADDRESS HALF OF EVERY KEYED ARM. `emails: nil` makes
+//     `lower(address) = ANY($2)` match nothing, in communication_suppression,
+//     clearRefusedSendReviews and tombstoneExceptionExplanations alike. Those
+//     halves exist precisely for rows carrying no contact_id — the
+//     machine-written bounce suppression — so what runs here is the contact_id
+//     half only.
+//
+// What it IS good for is the contact-keyed arms, which is what the cases below
+// ask of it.
 func eraseCapabilities(
 	ctx context.Context, t *testing.T, owner *pgx.Conn, contact ids.ContactID,
 ) {

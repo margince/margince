@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import { userEvent, within } from "storybook/test";
 import { Field } from "./atoms";
 import { ComboBox, type ComboBoxSuggestion } from "./combobox";
 
@@ -80,6 +81,20 @@ export const Default: Story = {
       />
     </div>
   ),
+};
+
+/**
+ * The list open. Every row's value — a model id included — reads in the body
+ * face at the list's own size: an id is read, not run, and mono is for code.
+ */
+export const Open: Story = {
+  render: Default.render,
+  play: async ({ canvasElement }) => {
+    const box = await within(canvasElement).findByRole("combobox", {
+      name: "Model",
+    });
+    await userEvent.click(box);
+  },
 };
 
 /** A value the list does not carry — an operator who knows their own vendor. */

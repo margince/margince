@@ -185,7 +185,7 @@ function RouteRow({
           {/* A route that cannot be used says so beside itself. Rendering it
               identically to an open one would send a rep to ask a colleague who
               has already declined. */}
-          {blocked ? <Badge quiet>{blocked}</Badge> : null}
+          {blocked ? <Badge>{blocked}</Badge> : null}
         </p>
         <p className="pn-counts t-sub">
           {evidenceSentence(route.evidence, t, plural, locale)}

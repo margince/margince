@@ -56,10 +56,11 @@ import (
 // faults, so the transport's 502 branch and the engine's error-class
 // recording are drivable from a test.
 type backfillFakeConnector struct {
-	name        string
-	messages    int
-	pageSize    int
-	estimateErr error
+	name           string
+	messages       int
+	pageSize       int
+	estimateErr    error
+	estimatedAfter time.Time
 	// estimateFloor makes the fake answer the way Gmail does on a mailbox
 	// past the scan cap: the count is a bound, not a total.
 	estimateFloor bool
@@ -89,7 +90,8 @@ func (f *backfillFakeConnector) Normalize(context.Context, connector.RawRecord) 
 
 func (f *backfillFakeConnector) HealthCheck(context.Context, connector.Auth) error { return nil }
 
-func (f *backfillFakeConnector) EstimateBackfill(context.Context, connector.Auth, time.Time) (connector.BackfillEstimate, error) {
+func (f *backfillFakeConnector) EstimateBackfill(_ context.Context, _ connector.Auth, after time.Time) (connector.BackfillEstimate, error) {
+	f.estimatedAfter = after
 	if f.estimateErr != nil {
 		return connector.BackfillEstimate{}, f.estimateErr
 	}
@@ -488,6 +490,9 @@ func assertPreviewValidatesItsWindowAndPricesHonestly(t *testing.T, b *backfillW
 			}
 			// And it comes back as itself: the months→enum direction is the
 			// same mapping, and a window it cannot name serializes empty.
+			if out.AfterDate == nil || out.AfterDate.Format(time.DateOnly) != b.gmail.estimatedAfter.Format(time.DateOnly) {
+				t.Errorf("%s preview omitted the queried date", window)
+			}
 			if string(out.Window) != window {
 				t.Errorf("%s preview answered window %q, want it back", window, out.Window)
 			}
@@ -499,7 +504,7 @@ func assertPreviewValidatesItsWindowAndPricesHonestly(t *testing.T, b *backfillW
 		if code, _ := b.do(b.human, t, b.previewBackfill(crmcontracts.CaptureProviderGmail), `{"window":"none"}`, &out); code != http.StatusOK {
 			t.Fatalf("none preview = %d, want 200", code)
 		}
-		if out.EstimatedMessages != 0 || string(out.Window) != "none" {
+		if out.EstimatedMessages != 0 || string(out.Window) != "none" || out.AfterDate != nil {
 			t.Fatalf("none preview = %+v, want zero estimate", out)
 		}
 	})

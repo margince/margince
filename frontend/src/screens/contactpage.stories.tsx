@@ -1137,10 +1137,10 @@ export const RailThin: Story = {
 };
 
 // Every profile field DetailsGrid can hold, unset at once: title, linkedin,
-// city, email and phone all blank. Email and phone are always read-only
-// (contactrail.tsx's CONTACT_METHOD_IMMUTABLE), so they read `field.unset`
-// here whether or not the reader can edit; title, linkedin and city ARE
-// editable under this fixture's granted /me, so they read as the "Add …"
+// city, email and phone all blank. Email and phone have no inline editor in the
+// rail (editing them is the record's Edit action, not a control here), so they
+// read `field.unset` whether or not the reader can edit; title, linkedin and city
+// ARE editable under this fixture's granted /me, so they read as the "Add …"
 // placeholder instead: the two empty-field states side by side.
 const unsetFields: View = {
   ...populated,

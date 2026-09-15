@@ -119,6 +119,13 @@ func parseDisplayName(displayName string) (ParsedName, bool) {
 	if name == "" {
 		return ParsedName{}, false
 	}
+	// A display name that is itself an address names nobody: `office@tinohaller.com`
+	// in the header is the mailbox repeated, not what its owner calls themselves.
+	// Refusing here falls through to the local part, where the role vocabulary
+	// gets its say — which is how `office@` stops being a contact called "Office".
+	if strings.ContainsRune(name, '@') {
+		return ParsedName{}, false
+	}
 	// A display name made only of department words is not somebody's name.
 	// Storing "Billing" or "Support Team" as a full name invents a contact, and
 	// the address underneath is a queue the local-part path describes honestly.
@@ -133,6 +140,7 @@ func parseDisplayName(displayName string) (ParsedName, bool) {
 		// original as the display string rather than storing an empty full_name.
 		return ParsedName{Full: name}, true
 	}
+	tokens = unshout(tokens)
 	full := strings.Join(tokens, " ")
 	parsed := ParsedName{Honorific: honorific, Full: full}
 	if first, last, ok := splitFirstLast(tokens); ok {
@@ -401,7 +409,7 @@ func displayNameWithoutAffiliation(name string) string {
 			trimmed = cut
 		}
 	}
-	return trimmed
+	return withoutSlashedUnit(trimmed)
 }
 
 // titleCaseToken capitalizes one word the way a name is written, and only when
@@ -442,7 +450,10 @@ func capitalizeParts(lower string) string {
 		case upcomingUpper && unicode.IsLetter(r):
 			out.WriteRune(unicode.ToUpper(r))
 			upcomingUpper = false
-		case r == '-' || r == '\'' || r == '’':
+		case r == '-' || r == '\'' || r == '’' || r == '.':
+			// A period separates initials — "j.r." is J.R., not J.r. It is not a
+			// token boundary anywhere else in the parser, so it only ever reaches
+			// here inside one word.
 			out.WriteRune(r)
 			upcomingUpper = true
 		default:

@@ -84,11 +84,11 @@
   }
 }
 
-/* WHAT KIND of work, as the catalog's quiet badge: a dot in the tone's colour
-   and the label as plain text. This span is the CELL and not the mark, so it
-   declares nothing the badge already owns — only that a kind may be narrower
-   than its own words. Without that floor an unbreakable one sets the column's
-   width and pushes every title on the page to the right.
+/* WHAT KIND of work, as the catalog's soft badge: a tint of the tone with its
+   hairline, one weight down the column. This span is the CELL and not the
+   mark, so it declares nothing the badge already owns — only that a kind may
+   be narrower than its own words. Without that floor an unbreakable one sets
+   the column's width and pushes every title on the page to the right.
    No interval above it: the badge's own 20px box and the title's 21px line box
    put the two texts on the same centre, which is what "beside the title" means
    to a reader running down the column. */

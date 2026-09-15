@@ -6,6 +6,7 @@ import {
   briefOmitted,
   briefWithPlan,
 } from "../src/screens/meetingbrief/fixtures";
+import { aiAdminFixture } from "./ai-admin-fixture";
 import { type MockProject, projectMock } from "./projectmock";
 
 // The booked meeting the contact record offers a brief for. Its id is the one
@@ -125,6 +126,7 @@ const E2E_ADMIN_GRANTS: GrantSpec = {
   extension_access: ["read"],
   // AI usage, model calls and the health card, all three.
   ai_diagnostics: ["read"],
+  ai_budget: ["read", "update"],
   // The purposes card's own verb. The READ stays on `contact` above, which is
   // the gate the endpoint actually applies, and nothing here updates or deletes
   // a purpose.
@@ -249,7 +251,6 @@ export const brandt = {
   display_name: "Brandt Automotive GmbH",
   industry: "Automotive",
   size_band: "201-500",
-  classification: "customer",
   writable: true,
   captured_by: "human:u1",
   source: "manual",
@@ -1193,6 +1194,11 @@ export type MockApiOptions = Readonly<{
   // page draws the one sentence that says so — and every seeded record being
   // writable is why a sweep looking for a band found none.
   project?: "writable" | "read-only";
+  // Whether the embedding index matches the model that is bound. "current" (the
+  // default) is every other AC's world; "needed" is the identity mismatch that
+  // raises the shell's standing advisory — the one banner the sweep had never
+  // rendered, because nothing mocked the read it keys on.
+  embedReindex?: "current" | "needed";
 }>;
 
 export async function mockApi(
@@ -1476,6 +1482,21 @@ export async function mockApi(
     // The two anonymous reads the unauthenticated surface makes. Both answer
     // before a session exists, by design: the surface has to show a stranger the
     // installation's posture and its working sign-in methods.
+    if (path === "/embeddings/reindex/status") {
+      // The banner keys on the two identities DIFFERING and on nothing else —
+      // not on `reindex_needed`, which a drift-cancelled rebuild leaves stuck.
+      const populated =
+        options?.embedReindex === "needed"
+          ? "nomic-embed-text@768"
+          : "bge-m3@1024";
+      return json({
+        configured_identity: "bge-m3@1024",
+        populated_identity: populated,
+        reindex_needed: options?.embedReindex === "needed",
+        status: "idle",
+      });
+    }
+
     if (path === "/auth/capabilities") {
       // oidc_providers is empty by default because the OIDC flow does not exist
       // (§19), and an empty list is what proves no provider button renders. A
@@ -2782,6 +2803,10 @@ export async function mockApi(
     if (path === "/ai/routing" && method === "GET") {
       return json(aiRouting);
     }
+    if (path === "/ai/status")
+      return json(aiAdminFixture(aiRouting.tiers, aiUsage.budget));
+    if (path === "/ai/budget")
+      return json(aiAdminFixture(aiRouting.tiers, aiUsage.budget).budget);
     if (path === "/ai/health") {
       return json(aiHealth);
     }

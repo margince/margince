@@ -140,3 +140,36 @@ export const AboutAnEarlierClosing: Story = {
     );
   },
 };
+
+export const MultipleChoices: Story = {
+  render: () => {
+    backend([
+      review({
+        questions: [
+          {
+            key: "reasons",
+            label: "Reasons",
+            type: "multiselect",
+            required: false,
+            options: ["Fit, scope", "Trust"],
+          },
+        ],
+        answers: {},
+        choice_answers: { reasons: ["Fit, scope", "Trust"] },
+      }),
+    ]);
+    return (
+      <StoryProviders>
+        <OutcomeReviewPanel
+          dealId="d-1"
+          status="won"
+          closingOccurrenceId={CLOSING}
+        />
+      </StoryProviders>
+    );
+  },
+};
+export const MultipleChoicesDark: Story = {
+  ...MultipleChoices,
+  globals: { theme: "dark" },
+};

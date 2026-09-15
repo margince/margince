@@ -150,3 +150,64 @@ func TestBlockedDomainsSplitTheReadFromTheWrite(t *testing.T) {
 		t.Fatalf("read-seat PUT → %d, want 403 — deciding is admin/ops", status)
 	}
 }
+
+// Re-asking about a domain the machine gave up on, over the real wire.
+//
+// The list is the only place an undecided domain is visible at all — its retry
+// cursor is cleared, so nothing asks again on its own — and this endpoint is the
+// only way somebody can put the question back.
+func TestReopeningAnUndecidedDomainOverHTTP(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+
+	// A domain nothing has ever asked about has no question to re-open.
+	if status := e.Call(t, "POST", "/v1/capture/blocked-domains/stranger.example/reopen",
+		nil, nil, nil); status != http.StatusNotFound {
+		t.Fatalf("reopen of an unknown domain → %d, want 404", status)
+	}
+
+	// A decided domain answers 409: the request is intelligible and the domain
+	// well formed, it is the row's state that refuses.
+	if status := e.Call(t, "PUT", "/v1/capture/blocked-domains",
+		map[string]string{
+			"domain": "expensify.example", "admission": "suppressed",
+			"reason": "a tool we use, not a customer",
+		}, nil, nil); status != http.StatusOK {
+		t.Fatalf("PUT → %d, want 200", status)
+	}
+	if status := e.Call(t, "POST", "/v1/capture/blocked-domains/expensify.example/reopen",
+		nil, nil, nil); status != http.StatusConflict {
+		t.Fatalf("reopen of a decided domain → %d, want 409", status)
+	}
+
+	// A malformed domain is refused by the transport, so the caller learns
+	// which field is wrong rather than reading a fault the store meant
+	// internally.
+	if status := e.Call(t, "POST", "/v1/capture/blocked-domains/not%20a%20domain/reopen",
+		nil, nil, nil); status != http.StatusUnprocessableEntity {
+		t.Fatalf("reopen of a non-domain → %d, want 422", status)
+	}
+}
+
+// Re-asking is a decision's gate, not a reader's. What it re-opens is what
+// creates the company, so a seat that may not decide a domain may not queue one
+// either — and it is refused rather than hidden, like every other write here.
+func TestReopeningIsRefusedToAReadSeat(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+
+	if status := e.Call(t, "PUT", "/v1/capture/blocked-domains",
+		map[string]string{
+			"domain": "vendor.example", "admission": "suppressed",
+			"reason": "a tool we use, not a customer",
+		}, nil, nil); status != http.StatusOK {
+		t.Fatalf("PUT → %d, want 200", status)
+	}
+
+	e.SetWorkspaceSeat(t, "read")
+
+	if status := e.Call(t, "POST", "/v1/capture/blocked-domains/vendor.example/reopen",
+		nil, nil, nil); status != http.StatusForbidden {
+		t.Fatalf("read-seat reopen → %d, want 403 — re-asking is admin/ops", status)
+	}
+}

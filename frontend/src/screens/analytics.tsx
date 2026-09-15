@@ -535,9 +535,7 @@ function CompanyTable({
         {
           key: FIELD_CURRENCY,
           header: t("analytics.currency"),
-          render: (row: ReportRow) => (
-            <span className="t-mono">{rowCurrency(row) ?? MONEY_ABSENT}</span>
-          ),
+          render: (row: ReportRow) => rowCurrency(row) ?? MONEY_ABSENT,
         },
         {
           key: "count",
@@ -565,7 +563,7 @@ function CompanyTable({
           key: "raw",
           header: t("analytics.unweighted"),
           render: (row: ReportRow) => (
-            <span className="t-mono">
+            <span className="t-num">
               {formatMoneyOrAbsent(
                 rowMoney(row, "raw_minor"),
                 rowCurrency(row),
@@ -680,10 +678,10 @@ function StageTable({
                 ? null
                 : pricedFootnote(row.pricedDeals, row.count, locale, t);
             return (
-              <span className="t-mono analytics-money-cell">
+              <span className="t-num analytics-money-cell">
                 {formatMoneyOrAbsent(row.rawMinor, baseCurrency, locale)}
                 {footnote && (
-                  <span className="t-caption t-mono">{footnote}</span>
+                  <span className="t-caption t-num">{footnote}</span>
                 )}
               </span>
             );
@@ -693,7 +691,7 @@ function StageTable({
           key: "weighted",
           header: t("analytics.weighted"),
           render: (row: StageAgg) => (
-            <span className="t-mono">
+            <span className="t-num">
               {formatMoneyOrAbsent(row.weightedMinor, baseCurrency, locale)}
             </span>
           ),

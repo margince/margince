@@ -3,9 +3,14 @@ task: capture_counterparty_verdict
 site: verdict
 source: hand_authored
 sanitized_by: hand_authored/claude-opus-5
+# The address is deliberately one no deterministic gate settles. A `noreply@`
+# local part is answered off the address before any model call — nobody replies
+# there — so authored at one, this scenario would certify a judgment production
+# never makes. What it measures is the BODY: whether an automated invoice from a
+# paid supplier reads as a contact.
 fixture:
   display_name: Ledgerly Billing
-  email: noreply@billing.ledgerly.example
+  email: ledgerly-system@billing.ledgerly.example
   subject: "Invoice R-2026-11487 for your subscription"
   body: |
     Your invoice R-2026-11487 for EUR 149.00 is now available.
