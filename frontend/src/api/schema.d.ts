@@ -12574,6 +12574,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/activity-review-templates/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Edit the questions for future outcome reviews.
+         * @description Requires custom_field update permission. Version conflicts return 409; submitted reviews retain their frozen questions and answers.
+         */
+        patch: operations["updateActivityReviewTemplate"];
+        trace?: never;
+    };
     "/deals/{id}/offers": {
         parameters: {
             query?: never;
@@ -26468,10 +26491,12 @@ export interface components {
             /** @description What the question asks, worded as the reader sees it. */
             label: string;
             /**
-             * @description Only free text for now. The vocabulary is closed so a client never meets a control it cannot render.
+             * @description Text answers use answers; multiple-choice answers use choice_answers.
              * @enum {string}
              */
-            type: "text";
+            type: "text" | "multiselect";
+            /** @description Allowed choices, required for multiselect. Frozen alongside the question in each submitted review. */
+            options?: string[];
             required: boolean;
         };
         ActivityReviewTemplate: {
@@ -26493,6 +26518,14 @@ export interface components {
             created_at: string;
             /** Format: date-time */
             updated_at: string;
+        };
+        UpdateActivityReviewTemplateRequest: {
+            /**
+             * Format: int64
+             * @description Last read template version.
+             */
+            version: number;
+            questions: components["schemas"]["ReviewQuestion"][];
         };
         ActivityReviewTemplateListResponse: {
             data: components["schemas"]["ActivityReviewTemplate"][];
@@ -26521,6 +26554,10 @@ export interface components {
             template_version: number;
             /** @description The questions as they were asked, FROZEN at submission. The template they came from is editable, and an edit must not change what this review appears to have asked. */
             questions: components["schemas"]["ReviewQuestion"][];
+            /** @description Selected options by question key; values must belong to the frozen question vocabulary. */
+            choice_answers?: {
+                [key: string]: string[];
+            };
             /** @description Keyed by question key. Every key here has a question in `questions`. */
             answers: {
                 [key: string]: string;
@@ -26536,6 +26573,11 @@ export interface components {
         };
         CreateOutcomeReviewRequest: {
             /**
+             * Format: int64
+             * @description Version shown when the form opened. A changed template returns 409 rather than filing answers against new questions.
+             */
+            template_version?: number;
+            /**
              * Format: uuid
              * @description The closing being reviewed. Must be the one the deal is on now, else 409.
              */
@@ -26545,6 +26587,10 @@ export interface components {
              * @description The client's own id for this submission. Retrying with the same id returns the review that already exists rather than writing a second one; a deliberate second review uses a new id.
              */
             submission_id: string;
+            /** @description Selected options by question key; values must belong to the frozen question vocabulary. */
+            choice_answers?: {
+                [key: string]: string[];
+            };
             /** @description Keyed by question key. An answer to a question the template does not ask is refused 422, because the frozen questions beside it could not explain it. */
             answers: {
                 [key: string]: string;
@@ -27295,7 +27341,7 @@ export interface components {
              *     a folded value has no fragment to match against.
              * @enum {string}
              */
-            type: "text" | "number" | "date" | "currency" | "picklist" | "boolean" | "id" | "domain";
+            type: "text" | "number" | "date" | "currency" | "picklist" | "multiselect" | "boolean" | "id" | "domain";
             /**
              * @description The operator subset this field's type admits (LVS-PARAM-1), in one
              *     stable order. An operator absent here is one the engine refuses for
@@ -28927,10 +28973,10 @@ export interface components {
             /** @description Admin-facing key the column_name derives from. */
             slug: string;
             /**
-             * @description The closed set of six scalar types (CUSTOM-FIELDS-PARAM-1). Immutable once created.
+             * @description The supported field types. Multiselect values are JSON string arrays; empty arrays clear the selection. Immutable once created.
              * @enum {string}
              */
-            type: "text" | "number" | "date" | "currency" | "picklist" | "boolean";
+            type: "text" | "number" | "date" | "currency" | "picklist" | "multiselect" | "boolean";
             /**
              * @description retired = soft: hidden from the API and filtering, column and values preserved (CUSTOM-FIELDS-AC-13).
              * @enum {string}
@@ -28972,7 +29018,7 @@ export interface components {
             object: "contact" | "company" | "deal" | "lead" | "project" | "contract";
             label: string;
             /** @enum {string} */
-            type: "text" | "number" | "date" | "currency" | "picklist" | "boolean";
+            type: "text" | "number" | "date" | "currency" | "picklist" | "multiselect" | "boolean";
             currency?: string | null;
             options?: string[] | null;
             source: string;
@@ -55649,6 +55695,37 @@ export interface operations {
                     "application/json": components["schemas"]["ActivityReviewTemplateListResponse"];
                 };
             };
+        };
+    };
+    updateActivityReviewTemplate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateActivityReviewTemplateRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated template. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityReviewTemplate"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     listDealOffers: {

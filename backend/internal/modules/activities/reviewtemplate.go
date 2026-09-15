@@ -35,10 +35,11 @@ import (
 // translation, so a reader comparing an old review against the current template
 // is comparing like with like.
 type ReviewQuestion struct {
-	Key      string `json:"key"`
-	Label    string `json:"label"`
-	Type     string `json:"type"`
-	Required bool   `json:"required"`
+	Key      string   `json:"key"`
+	Label    string   `json:"label"`
+	Type     string   `json:"type"`
+	Required bool     `json:"required"`
+	Options  []string `json:"options,omitempty"`
 }
 
 // ReviewTemplate is one set of questions, for one outcome.
@@ -150,6 +151,7 @@ func wireQuestions(questions []ReviewQuestion) []crmcontracts.ReviewQuestion {
 			Key: q.Key, Label: q.Label,
 			Type:     crmcontracts.ReviewQuestionType(q.Type),
 			Required: q.Required,
+			Options:  &q.Options,
 		})
 	}
 	return out

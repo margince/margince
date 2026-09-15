@@ -350,3 +350,20 @@ export const CardReadOnly: Story = {
     );
   },
 };
+
+export const BuilderMultipleChoices: Story = {
+  ...BuilderPicklist,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.type(canvas.getByLabelText("Label"), "Capabilities");
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Multiple choice" }),
+    );
+    const [first] = await canvas.findAllByLabelText("Option label");
+    await userEvent.type(first, "Fit, scope");
+  },
+};
+export const BuilderMultipleChoicesDark: Story = {
+  ...BuilderMultipleChoices,
+  globals: { theme: "dark" },
+};
