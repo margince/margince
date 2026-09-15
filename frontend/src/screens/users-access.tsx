@@ -313,7 +313,6 @@ function TeamRow({
   const count = team.member_count ?? 0;
   return (
     <Disclosure
-      className="users-team"
       summary={
         <span className="users-team-summary">
           <span className="t-body">{team.name}</span>

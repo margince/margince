@@ -299,7 +299,7 @@ function DeckCardFace({
         <Badge tone={card.required ? "danger" : "default"}>
           {t(card.required ? "ob.deck.needed" : "ob.deck.optional")}
         </Badge>
-        <span className="rdeck-count t-caption">
+        <span className="t-caption">
           {t("ob.deck.counter", {
             n: formatNumber(index + 1, locale),
             m: formatNumber(total, locale),
@@ -391,7 +391,7 @@ function DeckFoot({
         {/* The quiet half of the sentence: the reader did not have to do this,
             and saying so is what makes the short list of cards credible rather
             than suspicious. */}
-        <span className="rdeck-settled t-caption">
+        <span className="t-caption">
           {t("ob.deck.settled", { count: formatNumber(settled, locale) })}
         </span>
       </p>

@@ -112,7 +112,10 @@ it("draws checking as busy and never as a resolved answer", () => {
       name="Communication status: checking. View details."
     />,
   );
-  expect(container.querySelector(".commstatus-busy")).toBeTruthy();
+  // `.busy-mark` is what BusyMark itself carries and what the sheet draws, so
+  // this asks whether the turning mark is on screen rather than whether a
+  // caller remembered to label it.
+  expect(container.querySelector(".busy-mark")).toBeTruthy();
   // NO ENVELOPE GLYPH AT ALL while the answer is outstanding. Asserting only
   // the busy mark's presence let the check glyph sit beside it and still pass,
   // which is the exact misreading this guards: a reader glancing at a tick

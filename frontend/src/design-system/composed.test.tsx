@@ -399,7 +399,7 @@ describe("RecordView's chrome", () => {
       />,
     );
 
-    const tabs = chrome(".record-tabs");
+    const tabs = chrome("[data-testid='record-tabs']");
     const band = chrome(".record-band");
     // The work column, which every shape of `PageZones` draws; the grid class
     // itself is absent on a record that has neither rail nor aside.
@@ -422,9 +422,12 @@ describe("RecordView's chrome", () => {
     );
 
     expect(document.querySelector(".record-band")).toBeNull();
-    expect(precedes(chrome(".record-tabs"), chrome(".page-zones-main"))).toBe(
-      true,
-    );
+    expect(
+      precedes(
+        chrome("[data-testid='record-tabs']"),
+        chrome(".page-zones-main"),
+      ),
+    ).toBe(true);
   });
 });
 
