@@ -31,7 +31,8 @@ import (
 // hiding their mail alone would leave that record standing for good.
 func TestANoiseVerdictRetractsTheContactItsSenderAlreadyHad(t *testing.T) {
 	e := integration.Setup(t)
-	const junk = "receipts@spesen.example"
+	// A machine address settles before the model; this exercises a model verdict.
+	const junk = "updates@spesen.example"
 	contactID := seedCaptureOnlyContact(t, e, junk, e.Rep1)
 	mail := seedCapturedMail(t, e, junk, "Ihre Abrechnung")
 	dispositionID := seedPendingDisposition(t, e, junk, "spesen.example", mail)
