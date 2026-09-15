@@ -51,7 +51,7 @@ import {
   throwProblem,
   useViewerId,
 } from "./common";
-import { ContactsChips, MoneyPane, ThreadFold } from "./company/glance";
+import { MoneyPane, ThreadFold } from "./company/glance";
 import {
   DealsCard,
   NextSteps,
@@ -1967,74 +1967,69 @@ function CompanyOverviewStack({
           onOpenRecord={onOpenRecord}
         />
       </Company360Call>
-      {/* Two columns under the 360. Left: what needs a contact, then the money.
-          Right: Ask, then what the account is, then who is there. Each is one
-          pane, and the order is the order a rep works them. */}
-      <div className="co-glance-cols">
-        <div className="co-glance-col">
-          <NeedsList reading={reading} onOpenTasks={onOpenTasks} />
-          <MoneyPane
-            companyId={company.id}
-            view={view}
-            loading={loading}
-            readOnly={readOnly}
-            onAllDeals={onAllDeals}
-            onOpenRecord={onOpenRecord}
-            onOpenEmail={onOpenEmail}
-            // The verbs ride with the WORK rather than with the figures:
-            // this is the pane that names every open deal, so it is where a
-            // reader is standing when they notice one is missing. Each is
-            // gated on its own section being READABLE, and the guard is here
-            // rather than inside the verb: NewDealAction reads the pipelines
-            // the moment it mounts, which is itself a disclosure to a reader
-            // who may not see deals.
-            verbs={workVerbs({ view, company, readOnly })}
-          />
-        </div>
-        <div className="co-glance-col">
-          {/* The prepared questions are the ones the 360 answers in prose,
-                and both are written server-side from this reader's own 360
-                and cite records through the same receipt. Beside the reading
-                rather than at the foot of the page, so a reader does not
-                discover at the bottom that they could have asked at the top. */}
-          <div className="co-glance-ask">
-            <AssistantPanel
-              companyId={company.id}
-              onOpenRecord={onOpenRecord}
-              onOpenEmail={onOpenEmail}
-              projects={view?.projects}
-            />
-          </div>
-          {/* The account in prose, beside the reading of it: the 360 answers
-                what to DO, this answers what the account IS, in sentences with
-                their sources under them. */}
-          <DossierPanel
-            companyId={company.id}
-            nameOf={records}
-            onOpenRecord={onOpenRecord}
-            onOpenEmail={onOpenEmail}
-          />
-          {/* Is this an account we should be selling to at all — the
-                question an account with nothing in flight is actually asking.
-                Its own card rather than a section of the money pane: it
-                carries its own attribution and its own reassess verb in a
-                footer band. */}
-          {!hasWorkInFlight(view) && (
-            <GrowthFitPanel
-              companyId={company.id}
-              onOpenRecord={onOpenRecord}
-              onOpenEmail={onOpenEmail}
-            />
-          )}
-          {/* What Margince noticed on this account that nobody asked it to
-                look for — promises made, blockers named, risks read out of
-                meetings, mail and invoices. */}
-          <Panel className="co-signals">
-            <SignalsSection companyId={company.id} />
-          </Panel>
-          <ContactsChips view={view} loading={loading} onOpenTab={onOpenTab} />
-        </div>
+      {/* One column under the 360, full width at every measure: content-driven
+          cards of unequal height never share a row, so a tall needs list and a
+          short Ask box beside it would leave the short one's row half empty.
+          The order is the order a rep works them: what needs a contact, then
+          the money, then what the account is, then the questions the 360
+          already answers. */}
+      <NeedsList reading={reading} onOpenTasks={onOpenTasks} />
+      <MoneyPane
+        companyId={company.id}
+        view={view}
+        loading={loading}
+        readOnly={readOnly}
+        onAllDeals={onAllDeals}
+        onOpenRecord={onOpenRecord}
+        onOpenEmail={onOpenEmail}
+        // The verbs ride with the WORK rather than with the figures:
+        // this is the pane that names every open deal, so it is where a
+        // reader is standing when they notice one is missing. Each is
+        // gated on its own section being READABLE, and the guard is here
+        // rather than inside the verb: NewDealAction reads the pipelines
+        // the moment it mounts, which is itself a disclosure to a reader
+        // who may not see deals.
+        verbs={workVerbs({ view, company, readOnly })}
+      />
+      {/* The account in prose, beside the reading of it: the 360 answers what
+          to DO, this answers what the account IS, in sentences with their
+          sources under them. */}
+      <DossierPanel
+        companyId={company.id}
+        nameOf={records}
+        onOpenRecord={onOpenRecord}
+        onOpenEmail={onOpenEmail}
+      />
+      {/* The prepared questions are the ones the 360 answers in prose, and
+          both are written server-side from this reader's own 360 and cite
+          records through the same receipt. Beside the reading rather than at
+          the foot of the page, so a reader does not discover at the bottom
+          that they could have asked at the top. */}
+      <div className="co-glance-ask">
+        <AssistantPanel
+          companyId={company.id}
+          onOpenRecord={onOpenRecord}
+          onOpenEmail={onOpenEmail}
+          projects={view?.projects}
+        />
       </div>
+      {/* Is this an account we should be selling to at all: the question an
+          account with nothing in flight is actually asking. Its own card
+          rather than a section of the money pane: it carries its own
+          attribution and its own reassess verb in a footer band. */}
+      {!hasWorkInFlight(view) && (
+        <GrowthFitPanel
+          companyId={company.id}
+          onOpenRecord={onOpenRecord}
+          onOpenEmail={onOpenEmail}
+        />
+      )}
+      {/* What Margince noticed on this account that nobody asked it to look
+          for: promises made, blockers named, risks read out of meetings,
+          mail and invoices. */}
+      <Panel className="co-signals">
+        <SignalsSection companyId={company.id} />
+      </Panel>
     </div>
   );
 }
