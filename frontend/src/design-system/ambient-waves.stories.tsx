@@ -46,10 +46,8 @@ export const BehindAWelcome: Story = {
       }}
     >
       <div style={{ display: "grid", gap: "var(--space-3)", maxWidth: "32ch" }}>
-        <h2 style={{ margin: 0, fontSize: "var(--fs-h2)" }}>
-          Welcome to Margince
-        </h2>
-        <p style={{ margin: 0, color: "var(--textMeta)" }}>
+        <h2 style={{ margin: 0 }}>Welcome to Margince</h2>
+        <p style={{ margin: 0 }}>
           Your agent reads what you already do and stages what it finds.
         </p>
       </div>
@@ -73,9 +71,7 @@ export const BehindAShortLine: Story = {
         background: "var(--bgElevated)",
       }}
     >
-      <p style={{ margin: 0, fontSize: "var(--fs-lead)" }}>
-        Reading your first fortnight of activity.
-      </p>
+      <p style={{ margin: 0 }}>Reading your first fortnight of activity.</p>
       <AmbientWaves />
     </div>
   ),
