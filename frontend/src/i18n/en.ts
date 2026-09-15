@@ -5789,6 +5789,7 @@ export const en = {
   "blockedDomains.admissionLabel": "Decision",
   "blockedDomains.admission.suppressed": "Never a company",
   "blockedDomains.admission.admitted": "Allowed, and kept",
+  "blockedDomains.admission.undecided": "Nobody has decided",
   "blockedDomains.reasonLabel": "Why",
   "blockedDomains.reasonHint":
     "One sentence somebody reviewing this later can act on.",
@@ -5811,8 +5812,13 @@ export const en = {
   "blockedDomains.source.verdict": "A model verdict",
   "blockedDomains.source.heuristic": "A heuristic",
   "blockedDomains.source.human": "A person",
+  "blockedDomains.source.unevidenced": "Nothing on the site named a company",
+  "blockedDomains.source.staleEvidence": "The mail arguing for it is too old",
   "blockedDomains.rowAdmit": "Allow this one",
   "blockedDomains.rowRefuse": "Refuse this one",
+  "blockedDomains.rowReopen": "Ask again",
+  "blockedDomains.reopened": "Asking again about {domain}",
+  "blockedDomains.reopenFailed": "That domain could not be re-asked",
 
   "ob.s4.googleFailed": "The Google connection didn't complete",
   "ob.s4.imapHost": "IMAP host",

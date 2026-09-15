@@ -5592,6 +5592,7 @@ export const vi = {
   "blockedDomains.admissionLabel": "Quyết định",
   "blockedDomains.admission.suppressed": "Không bao giờ là công ty",
   "blockedDomains.admission.admitted": "Được cho vào, và giữ nguyên",
+  "blockedDomains.admission.undecided": "Chưa ai quyết định",
   "blockedDomains.reasonLabel": "Lý do",
   "blockedDomains.reasonHint":
     "Một câu mà người xem lại sau này có thể dựa vào.",
@@ -5615,8 +5616,13 @@ export const vi = {
   "blockedDomains.source.verdict": "Phán định của mô hình",
   "blockedDomains.source.heuristic": "Quy tắc suy đoán",
   "blockedDomains.source.human": "Một con người",
+  "blockedDomains.source.unevidenced": "Trang web không nêu tên công ty nào",
+  "blockedDomains.source.staleEvidence": "Thư ủng hộ điều đó đã quá cũ",
   "blockedDomains.rowAdmit": "Cho tên miền này vào",
   "blockedDomains.rowRefuse": "Từ chối tên miền này",
+  "blockedDomains.rowReopen": "Hỏi lại",
+  "blockedDomains.reopened": "Đang hỏi lại về {domain}",
+  "blockedDomains.reopenFailed": "Không thể hỏi lại tên miền này",
 
   "ob.s4.googleFailed": "Kết nối Google chưa hoàn tất",
   "ob.s4.imapHost": "Máy chủ IMAP",

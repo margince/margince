@@ -8894,11 +8894,19 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * The domains refused a company, and why.
-         * @description Every domain carrying a standing admission decision: the vendors and bulk senders the
-         *     system refused a company, and the ones a human deliberately let back in. Each entry says
-         *     WHAT decided it — a model verdict, a heuristic, or a human — so an operator can tell an
-         *     automatic refusal from somebody's deliberate one.
+         * Where each domain's company question stands.
+         * @description Every domain whose company question has an answer or is waiting for one: the vendors and
+         *     bulk senders the system refused, the ones a human deliberately let back in, and the ones
+         *     the machine declined to decide. Each entry says WHAT decided it — a model verdict, a
+         *     heuristic, or a human — so an operator can tell an automatic refusal from somebody's
+         *     deliberate one.
+         *
+         *     An `undecided` entry is a question, not a decision. The crawl found nothing that named a
+         *     company (`unevidenced`), or the newest mail from the domain is too old to mint one from
+         *     today's site (`stale_evidence`). Such a domain is dropped from the retry sweep — a
+         *     re-crawl cannot make old mail newer — so it stays open until new mail arrives or somebody
+         *     here answers it. Without this list those rows are invisible, and a company that never
+         *     appeared looks the same as one nobody ever asked about.
          *
          *     Every human role may read the list; changing an entry demands `company:update`
          *     (admin/ops). Human-only: this is capture posture, not record data.
@@ -8921,6 +8929,40 @@ export interface paths {
          */
         put: operations["setBlockedDomain"];
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/capture/blocked-domains/{domain}/reopen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask about an undecided domain again (admin/ops).
+         * @description Puts an `undecided` domain back in the triage sweep's path. The machine cleared its retry
+         *     cursor because re-crawling could not help — nothing on the site named a company, or the
+         *     mail arguing for one is too old to trust today's site about. Somebody may know otherwise,
+         *     and this is how they say so.
+         *
+         *     Only an `undecided` domain can be re-asked. A domain carrying a decision has an answer, and
+         *     changing it is `PUT /capture/blocked-domains`, which demands the reason a decision owes.
+         *     Re-asking records no reason because it asserts nothing: it spends an attempt, and the crawl
+         *     answers or withholds again. A domain that already carries a decision answers `409`: the
+         *     request is intelligible and the domain well formed, it is the row's state that refuses.
+         *
+         *     The caller is stamped as the domain's owner where it had none — triage refuses to mint
+         *     records for a domain nobody is accountable for. Demands `company:update`, the same gate a
+         *     decision takes: what this re-opens is what creates the company. Audit-only write (no event
+         *     stream, EVT-NOEVT-3).
+         */
+        post: operations["reopenWithheldDomain"];
         delete?: never;
         options?: never;
         head?: never;
@@ -16574,26 +16616,40 @@ export interface components {
             shared_posture_allowed?: boolean;
         };
         /**
-         * @description One domain carrying a standing admission decision. `suppressed` refuses it a company —
+         * @description One domain and where its company question stands. `suppressed` refuses it a company —
          *     a vendor or bulk sender the business does not sell to — while `admitted` is a human
          *     deliberately letting one in, which no later verdict may undo.
+         *
+         *     `undecided` is the third state and it is not a decision: the question was asked, the
+         *     machine declined to answer it, and nobody has since. Those rows are why this list
+         *     exists rather than being a record of refusals alone — a domain nothing decided is
+         *     invisible everywhere else, and an operator hunting a company that never appeared
+         *     cannot tell it from one that was refused.
          */
         BlockedDomain: {
             /** @description The registrable domain the decision is about. */
             domain: string;
             /**
-             * @description `suppressed` — never a company. `admitted` — allowed, and sticky against later machine refusals.
+             * @description `suppressed` — never a company. `admitted` — allowed, and sticky against later machine
+             *     refusals. `undecided` — the question is open and waiting to be answered; nothing is stored
+             *     on the row for this state, it is what the absence of a decision is called on the wire.
              * @enum {string}
              */
-            admission: "suppressed" | "admitted";
-            /** @description One sentence an operator can act on: why this domain was refused or let in. */
+            admission: "suppressed" | "admitted" | "undecided";
+            /** @description One sentence an operator can act on: why this domain was refused, let in, or left open. */
             reason: string;
             /**
-             * @description What decided it. `human` decisions outrank every machine one.
+             * @description What decided it, or — for an `undecided` domain — what stopped the machine deciding.
+             *     `human` decisions outrank every machine one. `unevidenced` means nothing the crawl
+             *     found named a company; `stale_evidence` means the newest mail from the domain is too
+             *     old to mint one from today's site.
              * @enum {string}
              */
-            source: "verdict" | "heuristic" | "human";
-            /** Format: date-time */
+            source: "verdict" | "heuristic" | "human" | "unevidenced" | "stale_evidence";
+            /**
+             * Format: date-time
+             * @description When the decision was recorded. For an `undecided` domain, when the row last moved.
+             */
             decided_at: string;
             /**
              * Format: uuid
@@ -49936,6 +49992,34 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    reopenWithheldDomain: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The domain to ask about again; normalized to its registrable form. */
+                domain: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Where the domain stands now that the question is open again. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BlockedDomain"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };
