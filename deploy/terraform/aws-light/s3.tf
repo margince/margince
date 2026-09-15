@@ -136,6 +136,21 @@ resource "aws_iam_user_policy" "blobstore" {
         Action   = ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"]
         Resource = ["${aws_s3_bucket.blobstore.arn}/*"]
       },
+      # This credential is handed to the api/worker containers for
+      # attachment storage (arbitrary caller-supplied keys — the blobstore
+      # client has no built-in prefix restriction of its own). The instance
+      # role's own ReadConfigObject grant (iam.tf) is the ONLY intended
+      # reader of config/margince.yaml, and neither role has any legitimate
+      # reason to write or delete it — an explicit Deny here closes the gap
+      # a bug in attachment-key handling (or a leaked blobstore key) would
+      # otherwise leave open to overwrite the boot config this same stack
+      # fetches at every instance start.
+      {
+        Sid      = "DenyConfigObjectAccess"
+        Effect   = "Deny"
+        Action   = ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"]
+        Resource = ["${aws_s3_bucket.blobstore.arn}/config/*"]
+      },
     ]
   })
 }
