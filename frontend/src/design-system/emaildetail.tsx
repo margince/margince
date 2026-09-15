@@ -2,7 +2,6 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useQuery } from "@tanstack/react-query";
-import { X } from "lucide-react";
 import { Fragment, type ReactNode, useId } from "react";
 
 import { api } from "../api/client";
@@ -11,7 +10,7 @@ import { ENTITY } from "../app/entity";
 import { routeHash } from "../app/router";
 import { formatBytes, formatNumber } from "../format/format";
 import { translatePlural, useLocale, useT } from "../i18n";
-import { Button, Modal } from "./atoms";
+import { Modal } from "./atoms";
 import { EmailText } from "./emailtext";
 import { FileChip } from "./filechip";
 import { SurfaceState } from "./surfacestate";
@@ -56,6 +55,7 @@ export function emailDetailKey(activityId: string) {
  */
 export function EmailDetail({
   activityId,
+  open = true,
   onClose,
   formatWhen,
   renderAccess,
@@ -63,6 +63,15 @@ export function EmailDetail({
   renderReply,
 }: Readonly<{
   activityId: string;
+  /**
+   * Whether the drawer is showing. It stays MOUNTED when it is not, which is
+   * what lets `Modal` animate it out — and what makes `enabled` below the thing
+   * that asks the server again on the next open.
+   *
+   * Defaults to open: a caller that draws this on its own, a story included, is
+   * drawing an open drawer.
+   */
+  open?: boolean;
   onClose: () => void;
   /** The caller owns the reader's timezone, so it owns the formatting. */
   formatWhen: (iso: string) => string;
@@ -119,6 +128,14 @@ export function EmailDetail({
     // invalidation does not purge an inactive query's data; the answer there
     // was to state it, and the answer here has to be stronger, because what
     // this one would repaint is somebody's mail.
+    //
+    // The drawer outlives its own close now, so the unmount that used to make
+    // every open a fresh ask is gone. `enabled` replaces it: the query is off
+    // while the drawer is shut, and a disabled query turning enabled over stale
+    // data refetches — so a reopen asks again rather than repainting the answer
+    // the last open got. It also stops a shut drawer refetching somebody's mail
+    // in the background.
+    enabled: open,
     staleTime: 0,
     gcTime: 0,
     queryFn: async () => {
@@ -144,16 +161,12 @@ export function EmailDetail({
 
   return (
     <Modal
-      open
+      open={open}
       onClose={onClose}
       labelledBy={titleId}
       placement="right"
       size="wide"
     >
-      {/* A visible way out. On a phone the drawer is the whole viewport, so
-          there is no backdrop to tap and usually no Escape key — the trap the
-          Modal builds for keyboard users becomes a trap in the ordinary sense
-          without this. */}
       <div className="emaildetail__head">
         <div className="emaildetail__heading">
           <h2 id={titleId} className="emaildetail__title">
@@ -172,24 +185,16 @@ export function EmailDetail({
               never one whose access nobody asked about. */}
           {read.data && renderAccess?.(read.data)}
         </div>
-        {/* The verb that ANSWERS the message, beside the one that puts it
-            away. A reader who has just read a mail and wants to reply had to
-            close the drawer, find the row again on the timeline behind it and
-            press Reply there — the message they were answering no longer on
-            screen. It sits with the close button rather than under the body
-            for the reason the date and the access line moved up: a message
-            runs past a screen, and an action found only at the end of one is
-            an action most readers never reach. */}
+        {/* The verb that ANSWERS the message, at the head rather than under
+            the body — for the reason the date and the access line moved up: a
+            message runs past a screen, and an action found only at the end of
+            one is an action most readers never reach. A reader who has just
+            read a mail and wants to reply had to close the drawer, find the row
+            again on the timeline behind it and press Reply there, with the
+            message they were answering no longer on screen. It sits beside the
+            way out, which the dialog itself draws. */}
         <div className="emaildetail__actions">
           {read.data && renderReply?.(read.data)}
-          <Button
-            small
-            iconOnly
-            onClick={onClose}
-            aria-label={t("email.detail.close")}
-          >
-            <X aria-hidden="true" />
-          </Button>
         </div>
       </div>
       {read.isPending ? (

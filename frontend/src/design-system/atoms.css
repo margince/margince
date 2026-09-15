@@ -525,6 +525,37 @@
      action buttons overflow off-screen, unreachable. */
   max-height: calc(100dvh - 40px);
   overflow-y: auto;
+  /* The containing block for the close control below, which is drawn at this
+     box's own trailing corner rather than in the flow the caller fills. */
+  position: relative;
+}
+
+/* The way out, on every dialog in the product.
+ *
+ * Escape has always closed one and always will; this is the same verb for the
+ * reader who is holding a pointer, and for the one who did not arrive by
+ * keyboard and has no reason to guess that a key does anything. It is the LAST
+ * element in the box (atoms.tsx) so it is the last tab stop, and drawn over the
+ * corner rather than in the flow so no dialog has to leave a slot for it.
+ *
+ * `--space-2` inside a `22px` padding puts the 32px control's glyph on roughly
+ * the same optical corner the padding names, without the control's own hit
+ * target — which is larger than the glyph, and deliberately so — crowding the
+ * edge. */
+.modal-close {
+  position: absolute;
+  inset-block-start: var(--space-2);
+  inset-inline-end: var(--space-2);
+  /* Above the drawer's sticky head band (z-index 1), which it is drawn on. */
+  z-index: 2;
+}
+
+/* The dialog's first line stops short of the control drawn over it. A heading
+   is what that line nearly always is — ConfirmModal's, the drawer head's — and
+   a title running under the glyph is a title with a button on its last word. */
+.modal > :is(h1, h2, h3, .modal-title):first-child,
+.modal > .drawer-head > :is(h1, h2, h3, .modal-title):first-child {
+  padding-inline-end: var(--control-h-sm);
 }
 /* Roomier variant for content-dense dialogs (e.g. the cert-scenario export's
    YAML + response previews) that read cramped at the compact form width. */
@@ -577,23 +608,45 @@
     overflow: visible;
     box-shadow: none;
   }
+  /* A way out is a thing to press, and paper takes no presses. */
+  .modal-close {
+    display: none;
+  }
 }
 
-/* The right-anchored drawer: the composer and the evidence receipt. Full
-   height against the right edge so the record behind stays legible as
-   context. The width is a share of the viewport with both ends pinned —
-   below 320px a form field stops being usable, above 460px the drawer starts
-   covering the page it is meant to sit beside. */
+/* The right-anchored drawer: the composer and the evidence receipt. Anchored to
+   the trailing edge so the record behind stays legible as context. The width is
+   a share of the viewport with both ends pinned — below 320px a form field
+   stops being usable, above 460px the drawer starts covering the page it is
+   meant to sit beside.
+
+   The drawer FLOATS rather than being welded to the edge: one --space-4 gap on
+   its three outer sides, so the scrim runs all the way round it and the record
+   behind reads as a page the drawer is sitting ON rather than a page it has
+   been cut out of. The gap is paid by the overlay, which already spans the
+   viewport — a margin on the drawer itself would have to be subtracted from
+   every height and width rule below, four of them, each a chance to disagree. */
 .overlay-right {
   place-items: stretch end;
+  padding: var(--space-4);
 }
 .modal-drawer {
   width: clamp(320px, 36vw, 560px);
-  height: 100dvh;
-  max-height: 100dvh;
-  border-radius: 0;
+  /* Of the overlay's CONTENT box, which is the viewport less the gap above. */
+  height: 100%;
+  max-height: 100%;
+  border-radius: var(--r-lg);
   box-shadow: var(--shadow-pop);
   padding: var(--space-5);
+}
+/* A drawer that keeps its head and foot as bands to its own edge needs the
+   corners clipped, or the two sticky bands square off the radius they sit in.
+   `clip` rather than `hidden`: it clips without making the drawer a scroll
+   container, which is the body's job below. An unbanded drawer is one scrolling
+   column and keeps `.modal`'s own `overflow-y: auto` — taking its scrollbar
+   away would bury the end of a long form. */
+.modal-drawer:has(> .drawer-head) {
+  overflow: clip;
 }
 /* The WIDE drawer: research, the composer and the meeting brief.
  *
@@ -675,6 +728,11 @@
  * The close control stays visible because the sheet scrolls INSIDE itself —
  * the header does not scroll away with the body. */
 @media (max-width: 720px) {
+  /* The gap the drawer floats in on every other screen. A phone is short of
+     exactly the two dimensions it would spend, so the sheet takes the glass. */
+  .overlay-right {
+    padding: 0;
+  }
   .modal,
   .modal-wide,
   .modal-drawer {
@@ -710,6 +768,93 @@
     bottom: 0;
     background: var(--bgElevated);
     padding-top: var(--space-3);
+  }
+}
+
+/*
+ * How a dialog arrives, and how it leaves.
+ *
+ * DESIGN.md §9: transform and opacity only, nothing animates its own layout,
+ * and `prefers-reduced-motion` jumps every one of these to its end state. That
+ * last one is why the whole block sits behind `no-preference` rather than being
+ * undone inside it — a reader who asked for less motion creates no animations
+ * at all, and `usePresence` (presence.ts) reads exactly that to take the dialog
+ * off the page the instant it is dismissed, rather than waiting out an exit
+ * nobody is watching. The `data-state` attribute is that hook's, and it is the
+ * only thing here that knows the dialog is on its way out.
+ *
+ * Arrivals and exits are different lengths on purpose. A dialog arrives over
+ * --dur-move and a drawer, which travels the width of itself, over --dur-enter;
+ * both leave one rung faster, because an exit is a thing the reader has already
+ * finished with and every millisecond of it is spent on a decision they made.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .overlay[data-state="open"] {
+    animation: overlay-arrive var(--dur-move) var(--ease-out) both;
+  }
+  .overlay[data-state="closing"] {
+    animation: overlay-leave var(--dur-state) var(--ease-out) both;
+  }
+  .overlay[data-state="open"] > .modal {
+    animation: dialog-arrive var(--dur-move) var(--ease-out) both;
+  }
+  .overlay[data-state="closing"] > .modal {
+    animation: dialog-leave var(--dur-state) var(--ease-out) both;
+  }
+
+  /* The drawer's scrim travels with the drawer, so it takes the same pair of
+     lengths — a scrim that had settled while the panel was still sliding would
+     read as two things happening rather than one thing arriving. */
+  .overlay-right[data-state="open"] {
+    animation-duration: var(--dur-enter);
+  }
+  .overlay-right[data-state="closing"] {
+    animation-duration: var(--dur-move);
+  }
+  .overlay-right[data-state="open"] > .modal-drawer {
+    animation: drawer-arrive var(--dur-enter) var(--ease-out) both;
+  }
+  .overlay-right[data-state="closing"] > .modal-drawer {
+    animation: drawer-leave var(--dur-move) var(--ease-out) both;
+  }
+}
+
+/* Each of these names a START or an END and lets the other side be whatever the
+   rules above computed. Spelling both ends would put a second copy of the
+   drawer's resting transform in the stylesheet, and the copy that goes stale is
+   always the one inside the keyframes. */
+@keyframes overlay-arrive {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes overlay-leave {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes dialog-arrive {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(8px);
+  }
+}
+@keyframes dialog-leave {
+  to {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+}
+/* Past its own trailing edge AND past the gap it floats in, or the last
+   --space-4 of the drawer sits on the glass before it has started to move. */
+@keyframes drawer-arrive {
+  from {
+    transform: translateX(calc(100% + var(--space-4)));
+  }
+}
+@keyframes drawer-leave {
+  to {
+    transform: translateX(calc(100% + var(--space-4)));
   }
 }
 

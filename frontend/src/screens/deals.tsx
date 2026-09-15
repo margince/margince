@@ -3789,18 +3789,17 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
   const coverageRead = useDealCoverage(id, !overlay);
   // The channel catalog, for the side pane's label. Same cache entry the edit
   // form reads, so opening one after the other costs a single request.
-  // The pane's content, or nothing while it is folded: an aside handed to the
-  // view reserves its column, so a closed pane hands it none.
-  const dealContext = (deal: Deal) =>
-    details.open ? (
-      <DealContext
-        deal={deal}
-        coverage={coverageRead}
-        overlay={overlay}
-        companies={companies.data?.data ?? []}
-        meId={me.data?.user.id ?? ""}
-      />
-    ) : undefined;
+  // The pane's content, handed over whether or not it is showing: `asideOpen`
+  // folds the column, and its cards mount only while it is open or leaving.
+  const dealContext = (deal: Deal) => (
+    <DealContext
+      deal={deal}
+      coverage={coverageRead}
+      overlay={overlay}
+      companies={companies.data?.data ?? []}
+      meId={me.data?.user.id ?? ""}
+    />
+  );
   const [timelineFilters, setTimelineFilters] = useTimelineFilters(id);
   const timelineQuery = useRecordTimeline("deal", id, {
     filters: timelineFilters,
@@ -3889,6 +3888,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
               // one every record page draws, with the same fold and the same
               // memory of it.
               aside={dealContext(deal)}
+              asideOpen={details.open}
               name={deal.name}
               pulse={
                 <DealIdentityLine deal={deal} stages={stages} locale={locale} />

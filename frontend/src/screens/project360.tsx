@@ -169,30 +169,29 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
       // column the rail's own rhythm, and a wrapper of ours inside it was a
       // second answer to how far apart a record's rail cards sit.
       aside={
-        details.open ? (
-          <>
-            <ProjectCompanies
-              projectId={project.id}
-              companies={project.companies}
-              readOnly={readOnly}
-            />
-            <RecordTeam
-              recordType="project"
-              recordId={project.id}
-              readOnly={readOnly}
-            />
-            <StakeholdersCard
-              view={view}
-              projectId={project.id}
-              readOnly={readOnly}
-            />
-            <ProjectContractsCard view={view} />
-            <ProjectDocumentsCard view={view} />
-            <PhaseHistoryCard view={view} />
-            <CustomFieldsPanel object="project" record={project} />
-          </>
-        ) : undefined
+        <>
+          <ProjectCompanies
+            projectId={project.id}
+            companies={project.companies}
+            readOnly={readOnly}
+          />
+          <RecordTeam
+            recordType="project"
+            recordId={project.id}
+            readOnly={readOnly}
+          />
+          <StakeholdersCard
+            view={view}
+            projectId={project.id}
+            readOnly={readOnly}
+          />
+          <ProjectContractsCard view={view} />
+          <ProjectDocumentsCard view={view} />
+          <PhaseHistoryCard view={view} />
+          <CustomFieldsPanel object="project" record={project} />
+        </>
       }
+      asideOpen={details.open}
       name={project.name}
       subtitle={<ProjectSubtitle view={view} />}
       zone={recordZone}

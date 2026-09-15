@@ -793,52 +793,50 @@ function SignatureSettingRow({ toast }: Readonly<{ toast: Toast }>) {
           </Button>
         }
       />
-      {open && (
-        <Modal open onClose={close} labelledBy={titleId}>
-          {/* A real form, so Enter from the field commits it — and the Save
+      <Modal open={open} onClose={close} labelledBy={titleId}>
+        {/* A real form, so Enter from the field commits it — and the Save
               button keeps the semantics it had as a card action: nothing is
               written until it is pressed. */}
-          <form
-            className="form-stack"
-            onSubmit={(event) => {
-              event.preventDefault();
-              if (dirty && !save.isPending) save.mutate(shown);
-            }}
-          >
-            <h2 className="t-h3 modal-title" id={titleId}>
-              {t("settings.signature")}
-            </h2>
-            <WriteRefused titleKey="settings.saveFailed" error={save.error} />
-            <Field label={t("settings.signatureLabel")}>
-              {(control) => (
-                <Textarea
-                  {...control}
-                  rows={5}
-                  value={shown}
-                  placeholder={t("settings.signaturePlaceholder")}
-                  onChange={(event) => setBody(event.target.value)}
-                />
-              )}
-            </Field>
-            <p className="t-caption">{t("settings.signatureHint")}</p>
-            <div className="form-actions">
-              <Button small variant="ghost" onClick={close}>
-                {t("settings.signatureCancel")}
-              </Button>
-              <Button
-                small
-                type="submit"
-                variant="primary"
-                disabled={!save.isPending && !dirty}
-                pending={save.isPending}
-                busyLabel={t("settings.signatureSaving")}
-              >
-                {t("record.save")}
-              </Button>
-            </div>
-          </form>
-        </Modal>
-      )}
+        <form
+          className="form-stack"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (dirty && !save.isPending) save.mutate(shown);
+          }}
+        >
+          <h2 className="t-h3 modal-title" id={titleId}>
+            {t("settings.signature")}
+          </h2>
+          <WriteRefused titleKey="settings.saveFailed" error={save.error} />
+          <Field label={t("settings.signatureLabel")}>
+            {(control) => (
+              <Textarea
+                {...control}
+                rows={5}
+                value={shown}
+                placeholder={t("settings.signaturePlaceholder")}
+                onChange={(event) => setBody(event.target.value)}
+              />
+            )}
+          </Field>
+          <p className="t-caption">{t("settings.signatureHint")}</p>
+          <div className="form-actions">
+            <Button small variant="ghost" onClick={close}>
+              {t("settings.signatureCancel")}
+            </Button>
+            <Button
+              small
+              type="submit"
+              variant="primary"
+              disabled={!save.isPending && !dirty}
+              pending={save.isPending}
+              busyLabel={t("settings.signatureSaving")}
+            >
+              {t("record.save")}
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </>
   );
 }

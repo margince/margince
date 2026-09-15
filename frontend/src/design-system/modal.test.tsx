@@ -7,7 +7,7 @@ import {
   screen,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { Button, Modal } from "./atoms";
 import { Popover } from "./popover";
@@ -17,6 +17,15 @@ import { Popover } from "./popover";
 // attribute cannot discharge on its own.
 
 afterEach(cleanup);
+
+/**
+ * The dialog's own way out: one per dialog, named by the shared close key, and
+ * the last stop in the box. Found by role rather than by class because what
+ * these specs are about is what a reader can reach.
+ */
+function closeControl(): HTMLElement {
+  return screen.getByRole("button", { name: "Close" });
+}
 
 function Harness() {
   const [open, setOpen] = useState(false);
@@ -44,7 +53,7 @@ function ProseReceipt() {
         <Popover label="Basis">
           <p>Six of nine, since April.</p>
         </Popover>
-        <Button onClick={() => setOpen(false)}>Close</Button>
+        <Button onClick={() => setOpen(false)}>Done</Button>
       </Modal>
     </>
   );
@@ -67,7 +76,7 @@ function TwoReceipts() {
         <Popover label="Rows">
           <button type="button">Only row</button>
         </Popover>
-        <Button onClick={() => setOpen(false)}>Close</Button>
+        <Button onClick={() => setOpen(false)}>Done</Button>
       </Modal>
     </>
   );
@@ -111,6 +120,11 @@ describe("a dialog holds the keyboard", () => {
     expect(document.activeElement).toBe(
       screen.getByRole("button", { name: "Last" }),
     );
+    // The way out is the LAST stop of every dialog: drawn over the trailing
+    // corner, rendered after the content, so the reader walks what they came
+    // for before they are offered the door.
+    await userEvent.tab();
+    expect(document.activeElement).toBe(closeControl());
     await userEvent.tab();
     expect(document.activeElement).toBe(
       screen.getByRole("button", { name: "First" }),
@@ -124,9 +138,14 @@ describe("a dialog holds the keyboard", () => {
     render(<Harness />);
     await userEvent.click(screen.getByRole("button", { name: "Open" }));
     await userEvent.tab({ shift: true });
-    expect(document.activeElement).toBe(
-      screen.getByRole("button", { name: "Last" }),
-    );
+    expect(document.activeElement).toBe(closeControl());
+  });
+
+  it("closes from the control drawn in its own corner", async () => {
+    render(<Harness />);
+    await userEvent.click(screen.getByRole("button", { name: "Open" }));
+    await userEvent.click(closeControl());
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 
   it("pulls Tab back in when focus is already outside, in either direction", async () => {
@@ -145,9 +164,7 @@ describe("a dialog holds the keyboard", () => {
 
     behind.focus();
     await userEvent.tab({ shift: true });
-    expect(document.activeElement).toBe(
-      screen.getByRole("button", { name: "Last" }),
-    );
+    expect(document.activeElement).toBe(closeControl());
   });
 
   it("keeps Tab working when a popover in the dialog is prose", async () => {
@@ -162,7 +179,7 @@ describe("a dialog holds the keyboard", () => {
 
     await userEvent.tab();
     expect(document.activeElement).toBe(
-      screen.getByRole("button", { name: "Close" }),
+      screen.getByRole("button", { name: "Done" }),
     );
   });
 
@@ -189,6 +206,44 @@ describe("a dialog holds the keyboard", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  // A dialog whose body is prose or an empty list has ONE control: the way out.
+  // Landing a reader on it made the control name itself in a tip, and the tip
+  // answered their first Escape — one press doing nothing in front of a surface
+  // covering the page. These two pin both halves of the fix.
+  function NothingToAnswer() {
+    const [open, setOpen] = useState(true);
+    return (
+      <Modal open={open} onClose={() => setOpen(false)} labelledBy="n">
+        <h2 id="n">Nothing to answer</h2>
+      </Modal>
+    );
+  }
+
+  it("takes Escape on the first press when the way out is all it has", async () => {
+    render(<NothingToAnswer />);
+    // The box, not the door: a dialog with nothing to answer still receives
+    // focus — that is what its tabIndex of -1 is for — and raises no tip.
+    expect(document.activeElement).toBe(screen.getByRole("dialog"));
+    expect(screen.queryByRole("tooltip")).toBeNull();
+
+    await userEvent.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("takes Escape on the first press from the way out itself", async () => {
+    render(<NothingToAnswer />);
+    await userEvent.tab();
+    expect(document.activeElement).toBe(closeControl());
+    // The control names itself when focus arrives, and that tip is content the
+    // reader did not ask for: it goes with the same press that closes the
+    // dialog, rather than spending the press on itself.
+    expect(screen.getByRole("tooltip").textContent).toBe("Close");
+
+    await userEvent.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.queryByRole("tooltip")).toBeNull();
   });
 
   it("gives focus back to whatever opened it, so the reader keeps their place", async () => {
@@ -315,6 +370,108 @@ describe("a dialog whose mutation removes its own opener", () => {
   });
 });
 
+// The exit an animation needs time to play, and the frames after the reader
+// dismissed it are frames the dialog is still painted over the page. jsdom runs
+// no animations, so the Modal specs above see an unmount and nothing else —
+// which is the behaviour a browser without motion also gets. This is the other
+// half: what the dialog owes the page while it is leaving it.
+describe("a dialog that is leaving", () => {
+  function twoStops(open: boolean, onClose: () => void) {
+    return (
+      <Modal open={open} onClose={onClose} labelledBy="x">
+        <h2 id="x">Log activity</h2>
+        <button type="button">First</button>
+      </Modal>
+    );
+  }
+
+  // A mount-count probe, because "the same element" is only half the claim: a
+  // dialog that left the tree for one render would put its CHILDREN back new,
+  // re-firing their reads and replaying their entry animations on a surface
+  // that is leaving.
+  let mounts = 0;
+  function Probe() {
+    useEffect(() => {
+      mounts += 1;
+    }, []);
+    return <p>Body</p>;
+  }
+
+  it("never leaves the tree between open and closing", async () => {
+    mounts = 0;
+    const exit = new Promise<void>(() => undefined);
+    const animations = vi
+      .spyOn(HTMLElement.prototype, "getAnimations")
+      .mockReturnValue([
+        {
+          finished: exit,
+          effect: { getComputedTiming: () => ({ iterations: 1 }) },
+        } as unknown as Animation,
+      ]);
+    try {
+      const withProbe = (open: boolean) => (
+        <Modal open={open} onClose={() => undefined} labelledBy="p">
+          <h2 id="p">Log activity</h2>
+          <Probe />
+        </Modal>
+      );
+      const { rerender } = render(withProbe(true));
+      const box = screen.getByRole("dialog");
+      expect(mounts).toBe(1);
+
+      rerender(withProbe(false));
+
+      // Answered during the render that carried the flip, so React never got a
+      // commit saying this dialog was gone.
+      expect(screen.getByRole("dialog")).toBe(box);
+      expect(mounts).toBe(1);
+    } finally {
+      animations.mockRestore();
+    }
+  });
+
+  it("stays on the page, inert and deaf to the backdrop, until its exit ends", async () => {
+    let finish: () => void = () => undefined;
+    const exit = new Promise<void>((resolve) => {
+      finish = resolve;
+    });
+    const animations = vi
+      .spyOn(HTMLElement.prototype, "getAnimations")
+      // The two properties `usePresence` reads: whether this animation can end
+      // at all, and when it did.
+      .mockReturnValue([
+        {
+          finished: exit,
+          effect: { getComputedTiming: () => ({ iterations: 1 }) },
+        } as unknown as Animation,
+      ]);
+    try {
+      const onClose = vi.fn();
+      const { rerender } = render(twoStops(true, onClose));
+      rerender(twoStops(false, onClose));
+
+      const overlay = document.querySelector(".overlay");
+      expect(overlay?.getAttribute("data-state")).toBe("closing");
+      // Painted, and nothing else: no tab stop, no accessible node, no hit
+      // target. A dialog mid-exit that still took a click would swallow the
+      // first press meant for the page it is uncovering.
+      expect(overlay?.hasAttribute("inert")).toBe(true);
+      if (overlay !== null) {
+        fireEvent.click(overlay);
+      }
+      expect(onClose).not.toHaveBeenCalled();
+
+      await act(async () => {
+        finish();
+        await exit;
+      });
+      expect(screen.queryByRole("dialog")).toBeNull();
+    } finally {
+      animations.mockRestore();
+    }
+  });
+});
+
 // A right-anchored dialog is the same dialog: same portal, same Esc, same
 // trap. Only where it sits changes.
 describe("a drawer is a dialog anchored to the right edge", () => {
@@ -329,6 +486,10 @@ describe("a drawer is a dialog anchored to the right edge", () => {
           placement="right"
         >
           <h2 id="d">Write email</h2>
+          {/* A drawer a rep works IN always has a control before the way out,
+              and that is what puts the initial focus somewhere other than the
+              close — see the tip spec below for why that distinction matters. */}
+          <button type="button">Send</button>
         </Modal>
       );
     }

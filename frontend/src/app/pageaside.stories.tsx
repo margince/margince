@@ -52,8 +52,9 @@ function contextCards() {
   );
 }
 
-// A record screen's shape: it claims the pane, hands the view its content only
-// while the pane is open, and carries the switch at the end of the tab row.
+// A record screen's shape: it claims the pane, hands the view its content
+// whether or not the pane is showing and says which, and carries the switch at
+// the end of the tab row.
 function Record({ available }: Readonly<{ available: boolean }>) {
   const details = usePageAside(available);
   return (
@@ -69,7 +70,8 @@ function Record({ available }: Readonly<{ available: boolean }>) {
           trailing={<PageAsideToggle />}
         />
       }
-      aside={details.open ? contextCards() : undefined}
+      aside={contextCards()}
+      asideOpen={details.open}
     >
       <Panel title={en["co.commercial.title"]}>
         <PanelBody>{en["co.work.noDeals"]}</PanelBody>

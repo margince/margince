@@ -600,6 +600,11 @@ export function CustomFieldsAdmin() {
   // second Confirm resubmitting the same, now-committed, draft (m6): a
   // successful create closes the dialog and the form's state goes with it.
   const [adding, setAdding] = useState(false);
+  // Bumped on every open so the builder below is re-keyed and starts empty.
+  // The dialog stays mounted now, so remounting on open is what discards a
+  // half-typed label instead of leaving it waiting under an object nobody
+  // re-chose.
+  const [addSeq, setAddSeq] = useState(0);
   const renameId = useId();
   const addId = useId();
 
@@ -747,7 +752,13 @@ export function CustomFieldsAdmin() {
       // being there.
       titleAction={
         canCreate && (
-          <Button small onClick={() => setAdding(true)}>
+          <Button
+            small
+            onClick={() => {
+              setAddSeq((seq) => seq + 1);
+              setAdding(true);
+            }}
+          >
             {t("cf.builder.open")}
           </Button>
         )
@@ -839,34 +850,29 @@ export function CustomFieldsAdmin() {
         )}
       </PanelBody>
 
-      {/* Mounted only while it is open, so a half-typed label is gone the next
-          time the dialog opens rather than waiting there under an object
-          nobody re-chose.
-
-          `wide` is the variant's stated case: the builder carries the pending
+      {/* `wide` is the variant's stated case: the builder carries the pending
           DDL, and a 440px dialog wraps
           `ALTER company ADD COLUMN cf_contract_end_date (date)` into an
           unreadable stack — the one line a reader is meant to check before
           confirming a live schema change. It also keeps the label and the API
           key derived from it side by side. */}
-      {adding && (
-        <Modal
-          open
-          size="wide"
-          onClose={() => setAdding(false)}
-          labelledBy={addId}
-        >
-          <h2 id={addId} className="t-h2 modal-title">
-            {t("cf.builder.addTo", { object: objectName })}
-          </h2>
-          <FieldBuilder
-            object={object}
-            pending={create.isPending}
-            onSubmit={(draft) => create.mutate(draft)}
-            onCancel={() => setAdding(false)}
-          />
-        </Modal>
-      )}
+      <Modal
+        open={adding}
+        size="wide"
+        onClose={() => setAdding(false)}
+        labelledBy={addId}
+      >
+        <h2 id={addId} className="t-h2 modal-title">
+          {t("cf.builder.addTo", { object: objectName })}
+        </h2>
+        <FieldBuilder
+          key={addSeq}
+          object={object}
+          pending={create.isPending}
+          onSubmit={(draft) => create.mutate(draft)}
+          onCancel={() => setAdding(false)}
+        />
+      </Modal>
 
       <Modal
         open={renaming !== null}

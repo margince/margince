@@ -4,7 +4,7 @@
 import { useEffect, useId, useRef } from "react";
 import { navigateReplacing } from "../app/router";
 import { useUrlParams } from "../app/urlstate";
-import { Button, Modal } from "../design-system/atoms";
+import { Modal } from "../design-system/atoms";
 import { useT } from "../i18n";
 import { WorklistScreen } from "./worklist";
 import "./brief.css";
@@ -47,9 +47,6 @@ export function BriefQueue() {
         <h2 id={titleId} className="t-h2">
           {t("brief.queue.title")}
         </h2>
-        <Button variant="ghost" onClick={close}>
-          {t("brief.queue.close")}
-        </Button>
       </div>
       <div
         className="drawer-body brief-queue-body"

@@ -1370,7 +1370,8 @@ export function ComposeModal({
 }>) {
   const t = useT();
   const queryClient = useQueryClient();
-  const voiceProfile = useVoiceProfile();
+  // A shut composer asks for nothing it does not share with the page behind it.
+  const voiceProfile = useVoiceProfile(open);
   const subjectId = useId();
   const bodyId = useId();
   // WHICH WAY THIS IS GOING, when the record offers more than one. The caller's
@@ -1425,7 +1426,7 @@ export function ComposeModal({
     }));
   };
   // Warn about carriage bounds before staging can refuse the message.
-  const carriageBlocks = useCarriageBlocks(channel?.id, files, body);
+  const carriageBlocks = useCarriageBlocks(channel?.id, files, body, open);
   const [intent, setIntent] = useState(askedIntent ?? "");
   // Keyed on what the CALLER asked for, so a second moment action opening the
   // same composer replaces the first one's reason instead of leaving the reader
@@ -1584,7 +1585,7 @@ export function ComposeModal({
         : [...current, threadRecipient];
     });
   }, [threadRecipient, answering]);
-  const viewerId = useViewerId();
+  const viewerId = useViewerId(open);
   // What the conversation's rows are CALLED. An activity link carries ids, and
   // "Sent to 8f21c4…" is not a reader telling you who was on a message. Two
   // sources, because a thread has two sides: colleagues come from the workspace
@@ -1623,7 +1624,7 @@ export function ComposeModal({
     replyMailboxes.includes(viewerId);
   const answeringColleaguesMail =
     colleagueMailboxes.length > 0 && !ownMailboxTookIt;
-  const anchorRead = useThreadProject(answering);
+  const anchorRead = useThreadProject(open ? answering : undefined);
   const anchorActivity = anchorRead.activity;
   const conversation = useThreadMessages(open ? anchorActivity : undefined);
   // An anchor named but not yet read. The pane holds its place on this, so
@@ -1744,15 +1745,15 @@ export function ComposeModal({
     : ((account.recipientId || undefined) ??
       (entityType === "contact" ? entityId : undefined));
   const contact = useContact360(
-    recipientContact as string,
-    recipientContact != null,
+    recipientContact ?? "",
+    open && recipientContact != null,
   );
   const anchorProject = useAnchorProject(entityType, entityId);
   // The project a message written from a PROJECT page is about: itself. Read as
   // a record rather than assumed, because the picker names it, and a name this
   // composer invented could disagree with the page behind the drawer.
   const ownProject = useProjectRecord(
-    entityType === "project" ? entityId : undefined,
+    open && entityType === "project" ? entityId : undefined,
   );
   // The account this message is around, whichever record it was started from: a
   // company IS one, a deal names one, a project names one. Its 360 answers two

@@ -240,14 +240,24 @@ function useTip<T extends HTMLElement>(
     return () => globalThis.removeEventListener("resize", measure);
   }, [earnsTabStop, worthShowing]);
 
-  const reveal = useCallback(() => {
-    const worth = worthShowing(anchor.current);
-    setReachable(worth);
-    setOpen(worth);
-  }, [worthShowing]);
+  // WHICH of the two ways the tip is up matters to the Escape key alone, below.
+  const raisedBy = useRef<"pointer" | "focus">("focus");
+  const reveal = useCallback(
+    (by: "pointer" | "focus") => {
+      const worth = worthShowing(anchor.current);
+      setReachable(worth);
+      if (worth) {
+        raisedBy.current = by;
+      }
+      setOpen(worth);
+    },
+    [worthShowing],
+  );
+  const revealForPointer = useCallback(() => reveal("pointer"), [reveal]);
+  const revealForFocus = useCallback(() => reveal("focus"), [reveal]);
   // Pointer reveal waits for intent; focus does not. A reader who tabbed here
   // has said what they want outright, and there is no pointer to measure.
-  const hover = useHoverIntent(reveal, close);
+  const hover = useHoverIntent(revealForPointer, close);
 
   return {
     ref: anchor,
@@ -259,15 +269,26 @@ function useTip<T extends HTMLElement>(
       tabIndex: earnsTabStop && reachable ? 0 : undefined,
       onPointerEnter: hover.onPointerEnter,
       onPointerLeave: hover.onPointerLeave,
-      onFocus: reveal,
+      onFocus: revealForFocus,
       onBlur: close,
       onKeyDown: (event: ReactKeyboardEvent<HTMLElement>) => {
-        if (event.key === "Escape" && open) {
-          // Stopped, because a tip dismissed by Escape must not also close the
-          // dialog or panel the anchor happens to sit in.
-          event.stopPropagation();
-          close();
+        if (event.key !== "Escape" || !open) {
+          return;
         }
+        // A tip the POINTER raised is content the reader asked for and can ask
+        // to be rid of (WCAG 2.2 SC 1.4.13), so Escape spends itself on the tip
+        // and the dialog or panel around it keeps standing.
+        //
+        // A tip raised by FOCUS is not asked for: it arrived because the reader
+        // walked here, or because a dialog opened and put them here. Swallowing
+        // their Escape then answers a question they did not ask with the one
+        // key that means "get me out of this surface" — and where the anchor is
+        // the dialog's own close control, the first press did nothing at all.
+        // The tip still goes; the key carries on to whatever was listening.
+        if (raisedBy.current === "pointer") {
+          event.stopPropagation();
+        }
+        close();
       },
     },
     tip: open

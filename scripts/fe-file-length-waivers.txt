@@ -27,7 +27,6 @@
 1035 frontend/src/App.tsx
 1037 frontend/src/screens/automations.test.tsx
 1042 frontend/src/screens/installation-setup.tsx
-1051 frontend/src/screens/automations.tsx
 1081 frontend/src/screens/auth.tsx
 1092 frontend/src/screens/onboarding-conversation/connect-act.test.tsx
 1098 frontend/src/screens/worklist.test.tsx
@@ -43,7 +42,6 @@
 1200 frontend/src/screens/privacy.test.tsx
 1208 frontend/src/screens/contactprovider.test.tsx
 1208 frontend/src/screens/worklist.row.tsx
-1075 frontend/src/design-system/atoms.stories.tsx
 1245 frontend/src/screens/privacy.tsx
 1278 frontend/src/screens/connectors.tsx
 1302 frontend/src/screens/analytics.test.tsx
@@ -59,7 +57,7 @@
 1728 frontend/src/screens/onboarding-facts.test.tsx
 1917 frontend/src/screens/contactpage.stories.tsx
 1913 frontend/src/screens/analytics.tsx
-2002 frontend/src/design-system/atoms.tsx
+1888 frontend/src/design-system/atoms.tsx
 2062 frontend/src/screens/company360.tsx
 1931 frontend/src/design-system/composed.tsx
 2185 frontend/src/screens/leads.tsx
@@ -133,6 +131,7 @@
 919 frontend/src/screens/customfields.tsx
 941 frontend/src/screens/contactprovider.tsx
 948 frontend/src/screens/share.tsx
+950 frontend/src/screens/automations.tsx
 965 frontend/src/screens/integrations-provider.tsx
 546 frontend/src/design-system/decisiondeck.tsx
 982 frontend/src/screens/ai-routing.tsx

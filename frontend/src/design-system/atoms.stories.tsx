@@ -4,7 +4,6 @@ import {
   type CSSProperties,
   type ReactNode,
   useEffect,
-  useId,
   useRef,
   useState,
 } from "react";
@@ -19,7 +18,6 @@ import {
   EmptyState,
   Field,
   Kbd,
-  Modal,
   OverflowMenu,
   Radio,
   SearchField,
@@ -873,43 +871,6 @@ export const Tables: Story = {
   ),
 };
 
-// Open on mount, because a dialog rendered closed screenshots as an empty
-// canvas. The trigger stays so the reader can reopen it after dismissing.
-function ModalDemo() {
-  const [open, setOpen] = useState(true);
-  const titleId = useId();
-  return (
-    <>
-      <Button variant="primary" onClick={() => setOpen(true)}>
-        Open the dialog
-      </Button>
-      <Modal open={open} onClose={() => setOpen(false)} labelledBy={titleId}>
-        <h2
-          id={titleId}
-          className="t-h2"
-          style={{ marginBottom: "var(--space-3)" }}
-        >
-          Merge these companies?
-        </h2>
-        <p className="t-caption">
-          Globex GmbH keeps its record; the duplicate's activities, deals and
-          contacts move onto it. This cannot be undone.
-        </p>
-        <div className="actions">
-          <Button onClick={() => setOpen(false)}>Cancel</Button>
-          <Button variant="danger" onClick={() => setOpen(false)}>
-            Merge
-          </Button>
-        </div>
-      </Modal>
-    </>
-  );
-}
-
-export const Dialog: Story = {
-  render: () => <ModalDemo />,
-};
-
 // OverflowMenu mounts its items only once opened, so the story presses the
 // trigger on mount rather than giving the component a prop it does not have.
 function OverflowMenuDemo({
@@ -989,57 +950,6 @@ export const Overflow: Story = {
       </Button>
     </OverflowMenuDemo>
   ),
-};
-
-// placement="right" is the drawer form of the SAME Modal: full height on the
-// right edge, the record behind it still legible. One component, one prop
-// between it and the centred dialog everyone pictures when they read "Modal".
-function DrawerDemo() {
-  const [open, setOpen] = useState(true);
-  const titleId = useId();
-  return (
-    <>
-      {/* Something behind the drawer, because "the record stays legible" is
-          the whole claim the placement makes and an empty canvas cannot show
-          it being kept. */}
-      <SectionHeader title="Globex GmbH" sub="Enterprise · Munich" />
-      <p className="t-body">
-        Anna Brandt replied on Tuesday and is waiting on pricing. Nobody has
-        written since.
-      </p>
-      <Button variant="primary" onClick={() => setOpen(true)}>
-        Open the drawer
-      </Button>
-      <Modal
-        open={open}
-        onClose={() => setOpen(false)}
-        labelledBy={titleId}
-        placement="right"
-      >
-        <h2
-          id={titleId}
-          className="t-h2"
-          style={{ marginBottom: "var(--space-3)" }}
-        >
-          Write to Anna Brandt
-        </h2>
-        <p className="t-caption">
-          The draft sits beside the record it is about, so a rep can read the
-          history while writing rather than remembering it.
-        </p>
-        <div className="actions">
-          <Button onClick={() => setOpen(false)}>Discard</Button>
-          <Button variant="primary" onClick={() => setOpen(false)}>
-            Send
-          </Button>
-        </div>
-      </Modal>
-    </>
-  );
-}
-
-export const Drawer: Story = {
-  render: () => <DrawerDemo />,
 };
 
 // The one spelling of a search input, empty and filled: the affordance is the

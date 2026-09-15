@@ -142,13 +142,22 @@ export function RecordEmailVerb({
   disabledReasonId?: string;
 }>) {
   const [composing, setComposing] = useState(false);
+  // Whether the verb has ever been pressed; see the guard below.
+  const [everComposed, setEverComposed] = useState(false);
   return (
     <>
       <EmailVerb
         reasonId={disabledReasonId}
-        onClick={() => setComposing(true)}
+        onClick={() => {
+          setEverComposed(true);
+          setComposing(true);
+        }}
       />
-      {composing && (
+      {/* Not drawn until the verb has been pressed once, and mounted from
+          then on. A composer mounted with the record would read on every
+          render of a page nobody is writing from; one unmounted the moment it
+          closes has no frame left to animate out on. */}
+      {everComposed && (
         // Keyed by the record, so navigating to another one while the
         // composer is open remounts it rather than re-pointing it.
         <ComposeModal

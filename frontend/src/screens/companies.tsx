@@ -1227,10 +1227,11 @@ function CompanyPage({
   // all while one is open, so the column is absent for exactly as long as the
   // drawer holds that space, rather than standing open around nothing.
   const details = usePageAside(!composerOpen);
-  // The rail, or nothing while a composer holds its column. Both drawers open
-  // into this space, so a rail beside them would be two things in one place —
-  // and absent rather than narrowed, because a rail squeezed to a third of its
-  // width is a column of broken cards.
+  // The pane's content. Whether the pane stands open is `details.open`, which
+  // a composer closes: both drawers open into this space, so a rail beside
+  // them would be two things in one place — and folded away rather than
+  // narrowed, because a rail squeezed to a third of its width is a column of
+  // broken cards.
   const rail = (
     <CompanyRail
       companyId={company.id}
@@ -1328,7 +1329,8 @@ function CompanyPage({
       // The account's context, beside the work under the tab row: what is
       // true of the ACCOUNT does not belong to whichever part of it is open,
       // so the pane stays put when a tab changes.
-      aside={details.open ? rail : undefined}
+      aside={rail}
+      asideOpen={details.open}
       // The bar that chooses which part of the account to read, across the
       // page above the columns: the details pane opens under it, from the
       // control at its end.
@@ -1421,15 +1423,6 @@ function CompanyPage({
             }}
           />
         )}
-        {/* card-actions, not form-actions: what stands above this row is a
-            history timeline, which sets its own top margin to 0 and carries no
-            bottom one — so the form's row, which brings no top margin because a
-            field above it normally does, put Close against the last entry. */}
-        <div className="card-actions">
-          <Button onClick={() => setAuditOpen(false)}>
-            {t("common.close")}
-          </Button>
-        </div>
       </Modal>
     </RecordView>
   );

@@ -1827,9 +1827,8 @@ function LeadRecord({
       // — in the details pane beside the work, so the work column stays the
       // work and the context does not move when the tab does. The same pane,
       // fold and memory of it as every other record page.
-      aside={
-        details.open ? <LeadRail lead={lead} writer={writer} /> : undefined
-      }
+      aside={<LeadRail lead={lead} writer={writer} />}
+      asideOpen={details.open}
       name={leadIdentityName(lead) || t("lead.unnamed")}
       avatarSrc={null}
       // The "Lead" marker rides the identity, not a badge among badges: a

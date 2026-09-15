@@ -45,6 +45,13 @@ it("traps Tab in the reader and lets Escape close only the reader", async () => 
   expect(document.activeElement).toBe(
     screen.getByRole("link", { name: "Attachment" }),
   );
+  // Every dialog draws its own way out as its last stop, and the composer
+  // underneath draws one too — so the stop Tab finds here has to be the
+  // READER's, not the one on the layer below it.
+  await user.tab();
+  const reader = screen.getByRole("dialog", { name: "Email reader" });
+  expect(document.activeElement?.getAttribute("aria-label")).toBe("Close");
+  expect(reader.contains(document.activeElement)).toBe(true);
   await user.tab();
   expect(document.activeElement).toBe(
     screen.getByRole("button", { name: "Close reader" }),

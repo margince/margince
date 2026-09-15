@@ -104,7 +104,6 @@ export const vi = {
   "brief.focus.back": "Quay lại ưu tiên",
   "brief.queue.back": "Quay lại danh sách",
   "brief.queue.title": "Danh sách công việc",
-  "brief.queue.close": "Về Trang chủ",
   "brief.focus.urgentRemaining_one":
     "Còn {count} việc khẩn cấp trong danh sách",
   "brief.focus.urgentRemaining_other":
@@ -809,7 +808,6 @@ export const vi = {
   "state.partialCount": "Còn {count} mục chưa hiển thị",
   "filePreview.download": "Tải xuống",
   "filePreview.print": "In",
-  "filePreview.close": "Đóng bản xem trước",
   "filePreview.loading": "Đang mở tệp này…",
   "filePreview.failedTitle": "Không thể hiển thị tệp này ở đây",
   "filePreview.failed": "Hãy tải xuống để mở bằng ứng dụng khác.",
@@ -1960,7 +1958,6 @@ export const vi = {
   "email.detail.attachments_one": "{count} tệp đính kèm",
   "email.detail.attachments_other": "{count} tệp đính kèm",
   "email.detail.showQuoted": "Hiện phần trích dẫn",
-  "email.detail.close": "Đóng",
   "email.detail.withheldReason": "Thư này không được chia sẻ với bạn",
   "email.detail.from": "Từ",
   "email.detail.to": "Tới",
@@ -5918,7 +5915,6 @@ export const vi = {
   "ob.conv.connect.appSetupLink": "Thiết lập trong Cài đặt",
   "ob.conv.connect.dialogIntro":
     "{brings}. Tôi đọc một lần để dựng liên hệ và lịch sử của bạn, rồi giữ đồng bộ về sau.",
-  "ob.conv.connect.dialogClose": "Đóng",
   "ob.conv.connect.linkedinName": "LinkedIn",
   "ob.conv.connect.linkedinSaved": "Đã lưu hồ sơ",
   "ob.conv.connect.linkedinSkippedNote": "Đã bỏ qua: bổ sung sau trong Cài đặt",
