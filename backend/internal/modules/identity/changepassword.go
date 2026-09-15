@@ -113,7 +113,7 @@ func (s *Service) ChangePassword(ctx context.Context, current, next string) (str
 		if tag.RowsAffected() != 1 {
 			return apperrors.ErrNotFound
 		}
-		if err := endCredentialAuthority(passwordOwnerCtx(ctx, userID), tx, userID,
+		if err := endCredentialAuthority(selfActorCtx(ctx, userID), tx, userID,
 			passwordChangeRevokeReason); err != nil {
 			return err
 		}

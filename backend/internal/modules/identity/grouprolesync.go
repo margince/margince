@@ -23,7 +23,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // WithGroupRoleMap injects the group→role grant map reader, read fresh per
@@ -132,15 +131,13 @@ func (s *Service) grantMappedRoles(ctx context.Context, tx pgx.Tx, userID ids.Us
 // from_role stays absent on every one: nothing was removed, so there is no
 // "from", the same absence a multi-role history gets in ChangeUserRole.
 //
-// The actor is the member whose sign-in triggered the grant — the shape
-// passwordOwnerCtx documents for the reset cascade: there is no admin in the
+// The actor is the member whose sign-in triggered the grant — selfActorCtx,
+// the same self-attribution the reset cascade uses: there is no admin in the
 // room, and the correlation id rides in from the request's own scope.
 func auditMappedGrants(ctx context.Context, tx pgx.Tx, userID ids.UserID, before, granted []string) error {
 	after := make([]string, 0, len(before)+len(granted))
 	after = append(append(after, before...), granted...)
-	actorCtx := principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalHuman, ID: "human:" + userID.String(), UserID: userID.UUID,
-	})
+	actorCtx := selfActorCtx(ctx, userID)
 	auditID, err := storekit.Audit(actorCtx, tx, "assign", "user", userID.UUID,
 		map[string]any{"roles": before}, map[string]any{"roles": after})
 	if err != nil {
