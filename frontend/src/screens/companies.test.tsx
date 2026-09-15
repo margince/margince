@@ -827,7 +827,11 @@ describe("CompanyScreen — overlay mode write affordances", () => {
     await userEvent.clear(industry);
     await userEvent.type(industry, "Manufacturing{Enter}");
 
-    expect(await screen.findByText("Manufacturing")).toBeTruthy();
+    // The saved industry reads in both the name line's subtitle and the
+    // facts strip's own Industry cell, from the one record both draw.
+    await waitFor(() =>
+      expect(screen.getAllByText("Manufacturing").length).toBeGreaterThan(0),
+    );
   });
 
   it("names the partial write-back in the edit form", async () => {

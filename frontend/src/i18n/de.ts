@@ -1335,7 +1335,6 @@ export const de = {
   "room.state.closed": "Abgeschlossen",
   "room.state.expired": "Abgelaufen",
   "room.state.archived": "Archiviert",
-  "co.pulse.created": "Erstellt {when}",
   "co.pulse.owner": "Betreut von",
   "co.pulse.sizeBand": "{band} Mitarbeitende",
   "co.pulse.strongestLead": "Zugang \u00fcber",

@@ -1401,7 +1401,6 @@ export const en = {
   "room.state.closed": "Closed",
   "room.state.expired": "Expired",
   "room.state.archived": "Archived",
-  "co.pulse.created": "Created {when}",
   // The later of the two directions \u2014 which side wrote last moved to the
   // daily brief's own detail line, so the header states only that the
   // relationship is or is not live.

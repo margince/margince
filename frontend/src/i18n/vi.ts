@@ -1314,7 +1314,6 @@ export const vi = {
   "room.state.closed": "Đã đóng",
   "room.state.expired": "Đã hết hạn",
   "room.state.archived": "Đã lưu trữ",
-  "co.pulse.created": "Tạo {when}",
   "co.pulse.owner": "Người phụ trách",
   "co.pulse.sizeBand": "{band} nhân viên",
   "co.pulse.strongestLead": "Đường tiếp cận",

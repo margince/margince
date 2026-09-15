@@ -871,8 +871,10 @@
   gap: var(--space-1);
 }
 .co-figure-value {
-  font-size: var(--fs-h1);
-  font-weight: var(--fw-medium);
+  /* The record page's own card-value rung: a headline figure inside a card,
+     the same size every card value on the page carries. */
+  font-size: var(--fs-h3);
+  font-weight: var(--fw-semibold);
   font-variant-numeric: tabular-nums;
 }
 /* The finance panel: one decision figure with its reasons, a quieter column
@@ -914,17 +916,20 @@
   gap: var(--space-1);
 }
 .fin-amount {
-  font-size: var(--fs-h2);
-  font-weight: var(--fw-medium);
+  /* The record page's own card-value rung: a headline figure inside a card,
+     the same size every card value on the page carries. */
+  font-size: var(--fs-h3);
+  font-weight: var(--fw-semibold);
   font-variant-numeric: tabular-nums;
 }
-/* The one figure on the panel that asks for a decision, at the size that says
-   so. Overdue money is drawn in the danger tone whatever its value: unlike a
-   badge, the figure is the reading itself, and a reader who has to check
-   whether it is coloured has already read it. */
+/* The one figure on the panel that asks for a decision. Overdue money is
+   drawn in the danger tone whatever its value: unlike a badge, the figure is
+   the reading itself, and a reader who has to check whether it is coloured
+   has already read it — so the emphasis is the colour, not a size the record
+   page's own card-value rung does not otherwise carry. */
 .fin-amount-hero {
-  font-size: var(--fs-display);
-  font-weight: var(--fw-medium);
+  font-size: var(--fs-h3);
+  font-weight: var(--fw-semibold);
   color: var(--danger);
   line-height: 1.1;
 }
@@ -1611,14 +1616,6 @@
 }
 .co-dim-danger::before {
   background: var(--danger);
-}
-
-/* When the row was written and by whom, closing the facts line: the date
-   and the provenance mark beside it, in the line's own ink. */
-.co-record-provenance {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
 }
 
 /* THE CARD'S CLAIM OF AUTHORSHIP, and what it is a claim about: the mark on

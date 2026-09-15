@@ -19,10 +19,11 @@ import { company, jsonResponse, stubFetch } from "./company.fixtures";
 // companies.test.tsx (already past the 1000-line ceiling frontend/AGENTS.md
 // sets for a test file) rather than grown there.
 //
-// CompanyPrimaryActions and CompanyActionBadges are unit-tested directly in
-// companyheader.test.tsx; the bug this file pins lived one level up, in how
-// CompanyScreen composes them — a leaf-component test with a hand-supplied
-// prop would have exercised the fix, not the defect.
+// CompanyHeaderActions and CompanyActionBadges are unit-tested directly in
+// companyheaderactions.test.tsx and companyheader.test.tsx; the bug this file
+// pins lived one level up, in how CompanyScreen composes them, so a
+// leaf-component test with a hand-supplied prop would have exercised the fix,
+// not the defect.
 
 afterEach(() => {
   cleanup();
