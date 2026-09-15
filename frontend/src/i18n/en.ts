@@ -3990,6 +3990,7 @@ export const en = {
   "tasks.moveTo": "Move to",
   "tasks.detail": "Task",
   "tasks.source": "The meeting",
+  "tasks.sourceEmail": "The email this came from",
   "tasks.openSource": "Open original",
   "tasks.detailLoading": "Reading this task…",
   "tasks.isDone": "Completed",

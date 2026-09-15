@@ -91,8 +91,7 @@ test("a task nobody read out of a meeting offers no way back", async () => {
   expect(screen.queryByRole("button", { name: "Open original" })).toBeNull();
 });
 
-test("an email request opens the canonical message reader", async () => {
-  const user = userEvent.setup();
+test("an email request is read in the task, with no click to open it", async () => {
   installFetchStub({
     "GET /activities/task-1": () =>
       jsonResponse({
@@ -145,9 +144,23 @@ test("an email request opens the canonical message reader", async () => {
       }),
   });
   openTask();
-  await user.click(
-    await screen.findByRole("button", { name: "Open original" }),
-  );
+
+  // The message itself, with nothing pressed. It used to sit behind "Open
+  // original", which put a second drawer over the task and cost a click to see
+  // the one fact the task rests on.
   expect(await screen.findByText("Please send the report.")).toBeTruthy();
+  // The presentation's body, never the raw activity's — that endpoint is the
+  // normalised read, and the plain activity carries an unparsed copy.
   expect(screen.queryByText("Unparsed body must not be displayed")).toBeNull();
+  // And no button, because there is nothing left for one to open.
+  expect(screen.queryByRole("button", { name: "Open original" })).toBeNull();
+
+  // WHERE it sits is the requirement, not merely that it is present: the
+  // message reads under the task's own verbs, so a mail long enough to scroll
+  // cannot push the Done button and the date picker off the panel.
+  const moveTo = screen.getByText("Move to");
+  const message = screen.getByText("Please send the report.");
+  expect(
+    moveTo.compareDocumentPosition(message) & Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
 });
