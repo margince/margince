@@ -79,13 +79,10 @@ func approvalsServiceWithEffects(pool *pgxpool.Pool) *approvals.Service {
 		svc.WithDeclinedEffect(heldScheduledSendKind, heldDeclineEffect(sendStore))
 	}
 	// The provider is rebuilt exactly as workflows.go builds the one an
-	// automation writes through, rather than a plainer one: a released
-	// reassignment must reach the same overlay-aware dispatcher the 🟢 branch
-	// reaches, or approving at scale would write into a different record surface
-	// than reassigning a single record does.
+	// automation writes through: a released reassignment must reach the same
+	// record surface reassigning a single record does.
 	svc.WithEffect(string(workflow.ActionAssignOwner), assignOwnerReleaseEffect(svc,
-		NewDispatcher(NewProvider(pool), NewOverlayProvider(pool, failClosedOverlayMeter(), nil), pool),
-		InstallationDB(pool)))
+		NewProvider(pool), InstallationDB(pool)))
 	svc.WithEffect(deals.CloseDateCorrectionKind, closeDateConfirmEffect(svc, deals.NewStore(InstallationDB(pool), DealsInstallation())))
 	svc.WithEffect(deals.FollowUpReconcileKind, followUpConfirmEffect(svc, activities.NewStore(InstallationDB(pool))))
 	svc.WithPrecheck(deals.FollowUpReconcileKind, followUpPrecheck())

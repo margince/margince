@@ -38,13 +38,11 @@ async function searchContactsTargets(
 export function ContactRecordActions({
   contact,
   disabledReasonId,
-  overlay,
   beforeArchive,
 }: Readonly<{
   contact: Contact;
   // The page's shared explanation for refused record actions.
   disabledReasonId?: string;
-  overlay: boolean;
   // The caller's own menu rows, drawn between Merge and Archive. The position
   // is the whole prop: Archive is destructive and goes last in any menu, so a
   // caller appending its rows after this fragment would seat them past the one
@@ -63,43 +61,37 @@ export function ContactRecordActions({
   const queryClient = useQueryClient();
   return (
     <>
-      {/* Merge has no incumbent-first projection — the seam
-          refuses it outright (overlay/provider_writes.go
-          Merge) — unlike edit/archive below, which it
-          serves, so it stays hidden here. */}
-      {!overlay && (
-        <MergeAction
-          disabledReasonId={disabledReasonId}
-          label={t("merge.contact")}
-          sourceId={contact.id}
-          sourceName={contact.full_name}
-          searchTargets={searchContactsTargets}
-          merge={async (targetId) => {
-            const { data, error } = await api.POST("/contacts/{id}/merge", {
-              params: {
-                path: { id: contact.id },
-                ...ifMatch(requireVersion(contact.version)),
-              },
-              body: { target_id: targetId },
-            });
-            if (error) {
-              throwProblem(error, t);
-            }
-            // Both ends of the merge: the source is gone and the survivor
-            // may now carry fields the source contributed — a reader landing
-            // on either via survivorRoute must not see pre-merge state.
-            await invalidateRecord(queryClient, "contact", contact.id);
-            await invalidateRecord(queryClient, "contact", targetId);
-            return data;
-          }}
-          invalidate="contacts"
-          recordKey="contact"
-          survivorRoute={(targetId) => ({
-            screen: "contacts",
-            id: targetId,
-          })}
-        />
-      )}
+      <MergeAction
+        disabledReasonId={disabledReasonId}
+        label={t("merge.contact")}
+        sourceId={contact.id}
+        sourceName={contact.full_name}
+        searchTargets={searchContactsTargets}
+        merge={async (targetId) => {
+          const { data, error } = await api.POST("/contacts/{id}/merge", {
+            params: {
+              path: { id: contact.id },
+              ...ifMatch(requireVersion(contact.version)),
+            },
+            body: { target_id: targetId },
+          });
+          if (error) {
+            throwProblem(error, t);
+          }
+          // Both ends of the merge: the source is gone and the survivor
+          // may now carry fields the source contributed — a reader landing
+          // on either via survivorRoute must not see pre-merge state.
+          await invalidateRecord(queryClient, "contact", contact.id);
+          await invalidateRecord(queryClient, "contact", targetId);
+          return data;
+        }}
+        invalidate="contacts"
+        recordKey="contact"
+        survivorRoute={(targetId) => ({
+          screen: "contacts",
+          id: targetId,
+        })}
+      />
       {beforeArchive}
       <ArchiveAction
         disabledReasonId={disabledReasonId}

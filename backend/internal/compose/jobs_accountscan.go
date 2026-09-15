@@ -81,7 +81,7 @@ func WithAccountScan(inserter *jobs.Runner, brain completer, routingVersion func
 		}
 		s.companyScanSvc = companyscan.NewService(pool, s.company360Svc, s.company360Svc, brain, enqueue, routingVersion, time.Now, s.log).
 			WithEmailSummaries(emailRows(pool))
-		s.companyScanHandlers = companyscan.NewHandlers(s.companyScanSvc, s.sorDispatch.isOverlay)
+		s.companyScanHandlers = companyscan.NewHandlers(s.companyScanSvc)
 		s.company360Svc.RecogniseScanFindings(s.companyScanSvc)
 	}
 }

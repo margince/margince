@@ -450,7 +450,7 @@ export const AMailboxThatStopped: Story = {
     ...baseArgs,
     item: {
       id: "sh1",
-      source: "sync_health",
+      source: "capture_health",
       category: "system",
       level: 6,
       consequence: "data_drifts",

@@ -28,7 +28,7 @@ import {
 } from "./activitybody";
 import { entityTimelineKeys, taskWriteKeys } from "./activitykeys";
 import { TaskAssigneeField } from "./assigneepicker";
-import { problemMessageOf, throwProblem, useMe, useSorMode } from "./common";
+import { problemMessageOf, throwProblem, useMe } from "./common";
 
 // Log a note or task from a 360 (contact/company/deal/lead): the contract's
 // logActivity POST, linked to the record being viewed, occurred_at stamped
@@ -419,14 +419,6 @@ export function LogActivity({
   const me = useMe();
   const canLog = useCanWrite("activity", "create");
   const logRefused = me.data?.authorization !== undefined && !canLog;
-  // Logging an activity writes to a mirrored record; in overlay every write
-  // answers unsupported_by_sor, so the form would only fail on submit. Guarded
-  // to render nothing rather than an affordance that can't work (P1/A107,
-  // ADR-0018).
-  const overlay = useSorMode() === "overlay";
-  if (overlay) {
-    return null;
-  }
   if (logRefused) {
     return (
       <Panel title={t("log.title")} sub={t("log.sub")}>
@@ -501,14 +493,10 @@ export function LogActivityAction({
   const t = useT();
   const titleId = useId();
   const [open, setOpen] = useState(Boolean(openOnMount));
-  const overlay = useSorMode() === "overlay";
   const close = () => {
     setOpen(false);
     onClose?.();
   };
-  if (overlay) {
-    return null;
-  }
   return (
     <>
       {!openOnMount && (

@@ -38,10 +38,7 @@ func (s *stubNoticeCases) OpenDueSoonest(_ context.Context, _ int, scope TaskSco
 }
 
 func noticeCaseLaneService(cases NoticeCases) *Service {
-	return NewService(
-		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
-		stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock,
-		WithNoticeCases(cases))
+	return NewService(stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock, WithNoticeCases(cases))
 }
 
 func TestAnUndischargedDutyReachesTheAdminWithItsDeadline(t *testing.T) {

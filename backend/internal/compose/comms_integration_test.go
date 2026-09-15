@@ -123,7 +123,6 @@ func TestCommsAdapterSharesTheGovernedPaths(t *testing.T) {
 		// This installation holds its own records, which the send guard asks
 		// before it composes anything (comms_soraut.go). An adapter with no
 		// seam refuses rather than passes, so a suite that sends says so.
-		externalSoR: nativeSoR,
 	}
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.SchedulerPerms)
 

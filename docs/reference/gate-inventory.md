@@ -133,7 +133,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `worklistbounds_test.go` | H2 | The worklist reports a source as possibly having more work behind it when its lane came back exactly at its bound. |
 | `worklistverdictstandings_test.go` | H2 | The queue's verdict standings ARE the deal card's, and this derives them from the card rather than keeping a second list of them. |
 
-## Census (153)
+## Census (151)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -200,7 +200,6 @@ The eight shapes, what each is for, and how each one silently passes:
 | `eventtypeownership_test.go` | H3 | One module owns an event type. |
 | `extensioncapabilitycensus_test.go` | H2 | Every capability the extension tier publishes must have a live unit declaring it. |
 | `extensionsignored_test.go` | H3 | The enabled set must be a set git actually has. |
-| `fliponehandle_test.go` | H2 | The overlay flip runs on ONE workspace binding, and this is what keeps it so. |
 | `forecastscopeauthority_test.go` | H2 | Every forecasting store entry point that RECORDS against a scope asks whether its caller answers for that scope. |
 | `frontendsendpermission_test.go` | H2 | Every surface that posts to a send door asks the engine first, through the one component that says what it answered. |
 | `gatecensus_test.go` | H2 | The census over this repo's own gate machinery: a gate's exceptions are held to the standard the gate holds its subjects to. |
@@ -239,7 +238,6 @@ The eight shapes, what each is for, and how each one silently passes:
 | `onestringfolder_test.go` | H2 | A census over the censuses: nobody writes a second reader for "what string does this Go expression hold". |
 | `onevoiceversionwriter_test.go` | H2 | voice\_profile\_version and voice\_profile\_delta each have ONE writer. |
 | `outboundanonymity_test.go` | H2 | Every outbound HTTP request either says who is calling, or is registered as deliberately anonymous with the reason. |
-| `overlaywritecoverage_test.go` | H2 | Every field a caller may PATCH either projects onto the incumbent or says why it does not. |
 | `ownerprivatepairing_test.go` | H2 | A table whose visibility admits 'owner' names the owner, or the record it marks most-private is the one nobody can read. |
 | `parallelgates_test.go` | H3 | Every gate here runs in parallel with the others, and this is what keeps that true as gates are added. |
 | `passportlessagents_test.go` | H1 | An agent principal carrying no passport is a principal nobody can revoke. |

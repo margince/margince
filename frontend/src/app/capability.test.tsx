@@ -174,7 +174,7 @@ describe("useCan", () => {
     // an all-false grant. An absent key must deny, not read as unrestricted.
     stubMe(meFixture({ allow: { automation: ["update"] } }));
 
-    expect(await can("overlay_connection", "read")).toBe(false);
+    expect(await can("webhook_subscription", "read")).toBe(false);
   });
 
   it("denies while /me is still loading", async () => {

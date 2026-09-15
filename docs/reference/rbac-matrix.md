@@ -103,7 +103,6 @@ changes none.
 | `oauth_application` | CRUD | -R-- | ---- | ---- | ---- | CRUD |
 | `offer` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |
 | `offer_template` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |
-| `overlay_connection` | CRUD | -R-- | -R-- | -R-- | -R-- | CRUD |
 | `partner` | CRUD | CRUD | CRUD | -R-- | -R-- | CRUD |
 | `pipeline` | CRUD | -R-- | -R-- | -R-- | -R-- | CRUD |
 | `privacy_request` | -RU- | ---- | ---- | ---- | ---- | ---- |

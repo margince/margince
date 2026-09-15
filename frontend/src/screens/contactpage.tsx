@@ -29,7 +29,7 @@ import { formatDateAbbrev } from "../format/format";
 import { linkedinUrl } from "../format/weburl";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { provenanceOf, throwProblem, useSorMode, useViewerId } from "./common";
+import { provenanceOf, throwProblem, useViewerId } from "./common";
 import { ComposeModal } from "./compose";
 import { ContactActions } from "./contactactions";
 import { ContactResearchDrawer } from "./contactdrawers";
@@ -361,9 +361,6 @@ export function ContactPageV2({
     setDrawer("composer");
   };
 
-  // Read before the loading returns: a hook below an early return renders a
-  // different hook count per state, which React rejects.
-  const overlay = useSorMode() === "overlay";
   // Every write affordance on this page that changes the RECORD answers one
   // question, asked once: an archived contact takes no changes, and one this
   // caller cannot write takes none from them. The rail's inline fields ask
@@ -419,7 +416,6 @@ export function ContactPageV2({
       <ContactEmailPanel
         contactId={id}
         recordAddress={contact.primary_email ?? undefined}
-        overlay={overlay}
         archived={Boolean(contact.archived_at)}
       />
     </>
@@ -449,7 +445,6 @@ export function ContactPageV2({
             <ContactActions
               view={view.data}
               contactId={id}
-              overlay={overlay}
               onWrite={() => openComposer("")}
               onResearch={() => setDrawer("research")}
               onLogActivity={() => setDrawer("activity_log")}
@@ -892,22 +887,18 @@ function ContactIdentityLine({
   );
 }
 
-// The rail's email box, and when the page may not draw it: not in overlay — a
-// mirrored workspace has no thread data, and the server refuses the
-// waiting-reply read there outright — and not on an archived contact, whose
-// page offers no writes.
+// The rail's email box, and when the page may not draw it: not on an archived
+// contact, whose page offers no writes.
 function ContactEmailPanel({
   contactId,
   recordAddress,
-  overlay,
   archived,
 }: Readonly<{
   contactId: string;
   recordAddress?: string;
-  overlay: boolean;
   archived: boolean;
 }>) {
-  if (overlay || archived) {
+  if (archived) {
     return null;
   }
   return (

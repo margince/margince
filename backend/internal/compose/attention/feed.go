@@ -99,10 +99,6 @@ type Service struct {
 	// noticeCases is OPTIONAL and withheld-by-grant exactly as dsrs is — the
 	// same privacy_request object gates both reads.
 	noticeCases NoticeCases
-	// syncHealth is OPTIONAL like the lanes above it, and mode-gated on top:
-	// even where it is bound, a workspace not in overlay mode answers
-	// ErrModeNotOverlay and the lane stays absent (optionallanes.go).
-	syncHealth SyncHealth
 	// captureHealth is OPTIONAL like the lanes above it, and per-user on top:
 	// the seam refuses a principal with no human behind it, and the lane
 	// renders that as withheld.
@@ -242,12 +238,12 @@ func (s *Service) forUnowned() *Service {
 // NewService binds the feed to its readers.
 func NewService(
 	a Approvals, d Duplicates, t Tasks, r Receipts, b Briefing,
-	c Commitments, k AtRisk, q Decay, m Meetings, f FailedEffects, s DSRs, h SyncHealth, g CaptureHealth, w AIWork, o Bounces, u AutomationHealth, e Notices, n Names, now Clock,
+	c Commitments, k AtRisk, q Decay, m Meetings, f FailedEffects, s DSRs, g CaptureHealth, w AIWork, o Bounces, u AutomationHealth, e Notices, n Names, now Clock,
 	opts ...Option,
 ) *Service {
 	svc := &Service{
 		approvals: a, duplicates: d, tasks: t, receipts: r, briefing: b,
-		commitments: c, atRisk: k, decay: q, meetings: m, failed: f, dsrs: s, syncHealth: h, captureHealth: g, aiWork: w, bounces: o, automations: u, notices: e, names: n, now: now,
+		commitments: c, atRisk: k, decay: q, meetings: m, failed: f, dsrs: s, captureHealth: g, aiWork: w, bounces: o, automations: u, notices: e, names: n, now: now,
 	}
 	for _, opt := range opts {
 		opt(svc)

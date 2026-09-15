@@ -261,15 +261,6 @@ func (w *briefGenerateWorker) assembleFor(ctx context.Context, wsID, userID ids.
 func (w *briefGenerateWorker) morningPassFor(ctx context.Context, wsID ids.UUID, now time.Time) (morningPass, error) {
 	var pass morningPass
 	err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
-		overlay, err := overlayModeOf(ctx, tx)
-		if err != nil {
-			return fmt.Errorf("resolving the workspace's system-of-record mode: %w", err)
-		}
-		if overlay {
-			w.log.InfoContext(ctx, "overnight brief skipped: the workspace keeps its deals in the incumbent",
-				"workspace", wsID)
-			return nil
-		}
 		// The engine's own day arithmetic, not a second copy of it: this decides
 		// which reps are due, and the store then dates the run it writes. Two
 		// spellings would let the pair disagree about which morning a run belongs

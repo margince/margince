@@ -103,7 +103,7 @@ export function useCanMutate(): boolean {
  *
  * Use `useCan` alone only where the control issues a GET whose RBAC action
  * happens to be a write verb (`GET /ai/usage` gates on `automation:update`;
- * the overlay user-map listing gates on `overlay_connection:update`). Folding
+ * the webhook list gates on `webhook_subscription:update`). Folding
  * the seat into those would hide a page a read seat may genuinely see.
  */
 export function useCanWrite(object: RbacObject, action: RbacAction): boolean {

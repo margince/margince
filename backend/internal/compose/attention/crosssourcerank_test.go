@@ -130,7 +130,6 @@ func TestSystemNewsNeverLeadsACustomerWaiting(t *testing.T) {
 		crmcontracts.Attention{
 			AsOf:             rankInstant,
 			AutomationHealth: lane(item("automation", "automation_failed")),
-			SyncHealth:       lane(item("sync", "sync_health")),
 			CaptureHealth:    lane(item("capture", "capture_health")),
 		},
 	)

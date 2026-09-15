@@ -265,7 +265,7 @@ func (s *Server) wireExportSurface(pool *pgxpool.Pool, log *slog.Logger) {
 		pool:        pool,
 		collections: collectionsStore,
 	}
-	s.overlayExportHandlers = newOverlayExportHandlers(pool, log)
+	s.exportBundleHandlers = newExportBundleHandlers(pool, log)
 }
 
 // wireOnboardingSurface binds the first-run group: the installation's own
@@ -286,22 +286,9 @@ func (s *Server) wireOnboardingSurface(pool *pgxpool.Pool) {
 	}
 }
 
-// wireSystemOfRecordReads builds the per-workspace native/overlay dispatch
-// and the reads that ride it — the company view and its grounded prose.
+// wireSystemOfRecordReads builds the reads over this system of record — the
+// company view and its grounded prose.
 func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
-	// The overlay read dispatch is built with a nil live-incumbent resolver
-	// here (force-fresh degrades to the mirror). WithKeyvault injects the
-	// vault-backed resolver once the vault is known — the vault arrives via
-	// an option applied AFTER newServer returns, and the dispatch/provider/
-	// freshness reader are pointers shared across that return, so a
-	// boot-time SetOverlayIncumbentResolver reaches the same instance this
-	// field serves reads through.
-	s.sorDispatch = NewDispatcher(NewProvider(pool), NewOverlayProvider(pool, s.overlayMeter, nil), pool)
-	// The company view (company360) is assembled from THIS system of record;
-	// it asks the same dispatch every other overlay-aware read asks, so a
-	// workspace running on the incumbent mirror gets one honest refusal
-	// instead of a page that quietly omits most of itself. Wired after the
-	// dispatch because it needs it.
 	// The contacts store carries the SAME fieldcatalog seam contactsHandlers
 	// gets: the 360 serves the company object, and without it the
 	// company view would silently omit the cf_* columns GET
@@ -340,7 +327,7 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 	s.company360Svc = company360.NewService(pool, s.contactsStore, s.dealsStore, ProjectsStore(pool), approvals.NewService(InstallationDB(pool)), time.Now)
 	s.companyBriefSvc = companybrief.NewService(pool, s.company360Svc, s.contactsStore, nil, "", time.Now).
 		WithEmailSummaries(emailRows(pool))
-	s.companyBriefHandlers = companybrief.NewHandlers(s.companyBriefSvc, s.sorDispatch.isOverlay)
+	s.companyBriefHandlers = companybrief.NewHandlers(s.companyBriefSvc)
 	// The dossier reads the SAME contacts store the 360 and the brief read, so
 	// the three cannot drift about what a company's facts are. No model lane is
 	// wired yet: every assembly is the deterministic floor and says so.
@@ -355,14 +342,14 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 		pool, s.contactsStore, offeringConfirmed(s.contactsStore), nil, "", time.Now,
 	).WithEmailSummaries(emailRows(pool))
 	s.companyDossierHandlers = companydossier.NewHandlers(
-		s.companyDossierSvc, s.companyGrowthFitSvc, s.sorDispatch.isOverlay,
+		s.companyDossierSvc, s.companyGrowthFitSvc,
 	)
 	// The account scan over the same composite read and the same dismissals.
 	// No lane and no job runner here: an ensure on this role settles the
 	// rules' floor in-request, and WithAccountScan binds the api role's.
 	s.companyScanSvc = companyscan.NewService(pool, s.company360Svc, s.company360Svc, nil, nil, nil, time.Now, s.log).
 		WithEmailSummaries(emailRows(pool))
-	s.companyScanHandlers = companyscan.NewHandlers(s.companyScanSvc, s.sorDispatch.isOverlay)
+	s.companyScanHandlers = companyscan.NewHandlers(s.companyScanSvc)
 	s.company360Svc.RecogniseScanFindings(s.companyScanSvc)
 	// AFTER the dossier service exists: the drafter takes it as a dependency,
 	// and a nil *Service handed through the interface is not the nil INTERFACE
@@ -377,18 +364,12 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 		accountdraft.NewService(s.company360Svc, nil).
 			WithEnvelope(draftEnvelope(pool, s.log)).
 			WithEmailSummaries(emailRows(pool)).
-			WithDossier(s.companyDossierSvc), s.sorDispatch.isOverlay,
+			WithDossier(s.companyDossierSvc),
 	)
-	s.company360Handlers = company360.NewHandlers(
-		s.company360Svc,
-		s.sorDispatch.isOverlay,
-	)
-	// The contact page is the company page's sibling and rides the same
-	// dispatch, so it is wired here rather than beside the handler sets: a
-	// workspace on the incumbent mirror refuses both the same way.
+	s.company360Handlers = company360.NewHandlers(s.company360Svc)
+	// The contact page is the company page's sibling, so it is wired here
+	// rather than beside the handler sets.
 	s.wireContact360(pool)
-	// After sorDispatch exists: the reversal reads the SAME dispatcher every
-	// other write on this server does.
 	s.wireReversal(pool)
 	s.wireProject360(pool)
 }

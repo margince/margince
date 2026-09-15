@@ -21,7 +21,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/modules/notices"
-	"github.com/margince/margince/backend/internal/modules/overlay"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -76,29 +75,6 @@ func (n attentionNoticeCases) OpenDueSoonest(ctx context.Context, limit int, sco
 		out = append(out, attention.NoticeCase{
 			ID: duty.ID, Rule: string(duty.Rule), OwnerID: duty.OwnerID,
 			ContactID: duty.ContactID.UUID, DueAt: duty.DueAt,
-		})
-	}
-	return out, nil
-}
-
-// attentionSyncHealth binds the sync-health lane to the overlay module's own
-// aggregated read; the mode gate and the every-role read posture live there.
-type attentionSyncHealth struct{ svc *overlay.Service }
-
-func (h attentionSyncHealth) Concerns(ctx context.Context) ([]attention.SyncConcern, error) {
-	concerns, err := h.svc.SyncHealth(ctx)
-	if err != nil {
-		return nil, err
-	}
-	out := make([]attention.SyncConcern, 0, len(concerns))
-	for _, concern := range concerns {
-		out = append(out, attention.SyncConcern{
-			Kind:        concern.Kind,
-			ErrorClass:  concern.ErrorClass,
-			Failures:    concern.Failures,
-			NextSweepAt: concern.NextSweepAt,
-			Band:        concern.Band,
-			Objects:     concern.Objects,
 		})
 	}
 	return out, nil

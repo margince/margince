@@ -63,7 +63,6 @@ function ContactMenu({
       <ContactRecordActions
         contact={contact}
         disabledReasonId={disabledReasonId}
-        overlay={false}
         beforeArchive={
           // What `beforeArchive` is for: the caller's own quieter rows, seated
           // ahead of the destructive one. On the record page this is Share,

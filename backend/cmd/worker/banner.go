@@ -35,10 +35,6 @@ func jobRunnerBanner(cfg workerConfig, watchCfg compose.GmailWatchConfig, graphW
 		captureNote = fmt.Sprintf("capture sweep every %s: %s (watch off: no pubsub topic)", cfg.gmailSyncInterval, providers)
 	}
 	captureNote += graphWatchNote(cfg, graphWatchRuns)
-	overlayNote := "overlay reconcile off (no keyvault configured)"
-	if vault != nil {
-		overlayNote = fmt.Sprintf("overlay reconcile every %s", cfg.overlayInterval)
-	}
 	// The Telegram poller is gated on the same vault (it unseals each bot's
 	// token), and it must say so by name: a worker booted without the key
 	// registers no poller at all, while an api that HAS the key still accepts
@@ -70,9 +66,9 @@ func jobRunnerBanner(cfg workerConfig, watchCfg compose.GmailWatchConfig, graphW
 	if runnerSvc != nil {
 		schedulerNote = fmt.Sprintf("agent scheduler every %s", cfg.runnerInterval)
 	}
-	return fmt.Sprintf("worker running River jobs (close-date every %s, reconcile every %s, time-scan every %s, retention every %s, %s, %s, %s, %s, %s, %s)",
+	return fmt.Sprintf("worker running River jobs (close-date every %s, reconcile every %s, time-scan every %s, retention every %s, %s, %s, %s, %s, %s)",
 		cfg.closeDateInterval, cfg.reconcileInterval, cfg.timeScanInterval, cfg.retentionInterval,
-		captureNote, channelNote, overlayNote, deepReadNote, webhookNote, schedulerNote)
+		captureNote, channelNote, deepReadNote, webhookNote, schedulerNote)
 }
 
 // graphWatchNote says what the Graph push lane is doing, in the banner's own

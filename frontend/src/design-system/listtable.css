@@ -174,11 +174,6 @@
   border-color: var(--borderSubtle);
 }
 
-.lt-note {
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
-}
-
 .lt-toggle {
   display: inline-flex;
   align-items: center;

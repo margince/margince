@@ -72,7 +72,7 @@ func TestANamedOwnersQueueCarriesTheirWaitingCustomersAndNotTheReadersOwn(t *tes
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
 		stubBriefing{}, nil, nil, nil, nil,
-		nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+		nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
 	svc.waiting = waitingOwnedBy{
 		{
 			ActivityID: ids.NewV7(), Subject: "the rep's customer",

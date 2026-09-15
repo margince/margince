@@ -272,7 +272,7 @@ function stubFetch(
     // The record's verbs and the relationships panel ask the grant before
     // they draw, so a responder that never named a session gets one holding
     // what a rep working their own contacts holds. A spec that answers /me
-    // itself — overlay mode, a refusal — is passed through untouched.
+    // itself — a refusal, say — is passed through untouched.
     if (pathname.endsWith("/me") && answer.ok) {
       const body: unknown = await answer.clone().json();
       if (typeof body === "object" && body !== null && "user" in body) {

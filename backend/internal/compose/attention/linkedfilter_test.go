@@ -39,7 +39,7 @@ func TestTheChangedFilterReachesThePageThroughWorklist(t *testing.T) {
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
 		stubBriefing{ran: true, asOf: cutoff},
-		nil, nil, nil, nil, nil, nil, nil, nil, nil,
+		nil, nil, nil, nil, nil, nil, nil, nil,
 		&stubBounces{rows: []BouncedSend{
 			{ID: ids.NewV7(), Subject: "after the night", BouncedAt: cutoff.Add(time.Hour)},
 			{ID: ids.NewV7(), Subject: "before the night", BouncedAt: cutoff.Add(-time.Hour)},
@@ -375,7 +375,7 @@ func TestAFoldedGroupReachesTheChangedPageThroughWorklist(t *testing.T) {
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
 		stubBriefing{ran: true, asOf: cutoff},
-		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
+		nil, nil, nil, nil, nil, nil, nil, nil, nil,
 		&stubAutomations{rows: runs},
 		nil, nil, fixedClock)
 

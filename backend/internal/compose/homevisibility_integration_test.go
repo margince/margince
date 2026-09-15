@@ -90,7 +90,7 @@ func TestHomeNoticeAgendaUsesResponsibilityAndOpenableContacts(t *testing.T) {
 	if err != nil || len(rows) != 1 || rows[0].ID != mine.ID {
 		t.Fatalf("personal bounded agenda = %+v, %v; want the reader's duty behind colleagues' earlier deadlines", rows, err)
 	}
-	feed := newAttentionService(e.Pool, approvals.NewService(e.DB()), failClosedOverlayMeter(), func() time.Time { return homeReadTime })
+	feed := newAttentionService(e.Pool, approvals.NewService(e.DB()), func() time.Time { return homeReadTime })
 	day, err := feed.Worklist(e.Admin(), "mine", "all", ids.Nil, 100, "")
 	if err != nil {
 		t.Fatal(err)
@@ -213,7 +213,7 @@ func TestHomeTeamDutiesAreBoundedAfterMembership(t *testing.T) {
 	}
 	teammate := homeNotice(t, e, e.Rep2, false, homeReadTime)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
-	feed := newAttentionService(e.Pool, approvals.NewService(e.DB()), failClosedOverlayMeter(), func() time.Time { return homeReadTime })
+	feed := newAttentionService(e.Pool, approvals.NewService(e.DB()), func() time.Time { return homeReadTime })
 	day, err := feed.Worklist(ctx, "team", "all", ids.Nil, 100, "")
 	if err != nil {
 		t.Fatal(err)
@@ -249,7 +249,7 @@ func TestNoticeLaneRejectsAMissingNamedOwner(t *testing.T) {
 func TestUnownedDisclosureDutyAppearsOnlyInUnassignedHome(t *testing.T) {
 	e := integration.Setup(t)
 	duty := homeNotice(t, e, ids.Nil, false, homeReadTime)
-	feed := newAttentionService(e.Pool, approvals.NewService(e.DB()), failClosedOverlayMeter(), func() time.Time { return homeReadTime })
+	feed := newAttentionService(e.Pool, approvals.NewService(e.DB()), func() time.Time { return homeReadTime })
 	for _, scope := range []string{"mine", "unassigned"} {
 		day, err := feed.Worklist(e.Admin(), scope, "all", ids.Nil, 100, "")
 		if err != nil {

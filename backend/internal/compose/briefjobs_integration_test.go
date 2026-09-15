@@ -163,27 +163,6 @@ func TestOvernightPassWaitsForTheLocalMorning(t *testing.T) {
 	}
 }
 
-func TestOvernightPassSkipsAWorkspaceWhoseDealsLiveInTheIncumbent(t *testing.T) {
-	b := setupBriefJob(t)
-	morning := time.Date(2026, 6, 4, 7, 0, 0, 0, time.UTC)
-	b.now = morning
-
-	// An overlay installation keeps its deals in the incumbent, so a run assembled
-	// from these tables would be an empty queue — which reads on the screen
-	// exactly like a quiet morning while being a different fact entirely.
-	if _, err := integration.OwnerConn(t).Exec(context.Background(),
-		`UPDATE overlay_mode SET sor_mode = 'overlay', incumbent = 'hubspot'`); err != nil {
-		t.Fatal(err)
-	}
-
-	if err := b.run(t); err != nil {
-		t.Fatalf("the pass over an overlay workspace failed: %v — it must decline, not error", err)
-	}
-	if n := b.runsFor(t, b.Rep1, morning); n != 0 {
-		t.Fatalf("the overlay workspace got %d runs, want none — an empty queue there is a lie, not a quiet morning", n)
-	}
-}
-
 func TestOvernightPassLeavesReadSeatsAndAgentsWithoutAMorning(t *testing.T) {
 	b := setupBriefJob(t)
 	morning := time.Date(2026, 6, 4, 7, 0, 0, 0, time.UTC)

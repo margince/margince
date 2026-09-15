@@ -75,12 +75,9 @@ const view: Contact360 = {
 // column they sit in, not about the viewport.
 function tab(record: Contact360 | undefined) {
   return () => {
-    // The paged read asks the session which system of record this workspace
-    // runs on — an overlay installation answers from the incumbent mirror and
-    // drops dials the mirror refuses. Routed with no object grants, which is
-    // the ordinary native seat this tab is drawn for; unrouted, the session
-    // reads as malformed and the tab draws a branch these stories are not
-    // named for.
+    // Routed with no object grants, which is the ordinary seat this tab is
+    // drawn for; unrouted, the session reads as malformed and the tab draws a
+    // branch these stories are not named for.
     installFetchStub({ "GET /me": meRoute({}) });
     return (
       <StoryProviders>

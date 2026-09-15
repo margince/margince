@@ -50,7 +50,6 @@ const (
 	recordTypeOffer               agentRecordType = "offer"
 	recordTypeOfferTemplate       agentRecordType = "offer_template"
 	recordTypeCompany             agentRecordType = "company"
-	recordTypeOverlayConnection   agentRecordType = "overlay_connection"
 	recordTypePartner             agentRecordType = "partner"
 	recordTypeContact             agentRecordType = "contact"
 	recordTypeProduct             agentRecordType = "product"
@@ -135,8 +134,6 @@ var agentPolicies = map[string]agentPolicy{
 	"DELETE /v1/offer-templates/{id}":                                       {Op: "archiveOfferTemplate", Access: "tool", Tool: "archive_record", RecordType: "offer_template", Tier: "auto_execute", Scope: "write"},
 	"DELETE /v1/offers/{id}":                                                {Op: "archiveOffer", Access: "tool", Tool: "archive_record", RecordType: "offer", Tier: "auto_execute", Scope: "write"},
 	"DELETE /v1/offers/{id}/line-items/{lineItemId}":                        {Op: "removeOfferLineItem", Access: "tool", Tool: "update_record", RecordType: "offer", Tier: "auto_execute", Scope: "write"},
-	"DELETE /v1/overlay/connection":                                         {Op: "disconnectOverlay", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
-	"DELETE /v1/overlay/user-map/{id}":                                      {Op: "deleteOverlayUserMap", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"DELETE /v1/passports/{id}":                                             {Op: "revokePassport", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"DELETE /v1/pipelines/{id}":                                             {Op: "archivePipeline", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"DELETE /v1/products/{id}":                                              {Op: "archiveProduct", Access: "tool", Tool: "archive_record", RecordType: "product", Tier: "auto_execute", Scope: "write"},
@@ -265,6 +262,7 @@ var agentPolicies = map[string]agentPolicy{
 	"GET /v1/deals/{id}/status":                                             {Op: "getDealStatus", Access: "tool", Tool: "read_record", RecordType: "deal", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/embeddings/reindex/preview":                                    {Op: "EmbedReindexPreview", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/embeddings/reindex/status":                                     {Op: "EmbedReindexStatus", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"GET /v1/exports/bundle":                                                {Op: "downloadExportBundle", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/extensions":                                                    {Op: "listExtensions", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/field-history":                                                 {Op: "getFieldHistory", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/forecast":                                                      {Op: "getForecast", Access: "tool", Tool: "forecast_readings", RecordType: "", Tier: "auto_execute", Scope: "read"},
@@ -304,9 +302,6 @@ var agentPolicies = map[string]agentPolicy{
 	"GET /v1/offers/{id}/pdf":                                               {Op: "downloadOfferPdf", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/onboarding/company/proposal":                                   {Op: "getOnboardingCompanyProposal", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/onboarding/state":                                              {Op: "getOnboardingState", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
-	"GET /v1/overlay/export":                                                {Op: "downloadOverlayExport", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
-	"GET /v1/overlay/owners":                                                {Op: "listOverlayOwners", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
-	"GET /v1/overlay/user-map":                                              {Op: "listOverlayUserMap", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/partners":                                                      {Op: "listPartners", Access: "tool", Tool: "search_records", RecordType: "partner", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/passports":                                                     {Op: "listPassports", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/privacy/controller-particulars":                                {Op: "getControllerParticulars", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
@@ -590,10 +585,6 @@ var agentPolicies = map[string]agentPolicy{
 	"POST /v1/offers/{id}/render":                                           {Op: "renderOffer", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/offers/{id}/send":                                             {Op: "sendOffer", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/onboarding/company/messages":                                  {Op: "messageOnboardingCompany", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
-	"POST /v1/overlay/connection":                                           {Op: "connectOverlay", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
-	"POST /v1/overlay/flip":                                                 {Op: "executeOverlayFlip", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
-	"POST /v1/overlay/flip:preflight":                                       {Op: "preflightOverlayFlip", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
-	"POST /v1/overlay/reconcile":                                            {Op: "reconcileOverlay", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/passports":                                                    {Op: "issuePassport", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/pipelines":                                                    {Op: "createPipeline", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/pipelines/{id}/restore":                                       {Op: "restorePipeline", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
@@ -682,7 +673,6 @@ var agentPolicies = map[string]agentPolicy{
 	"PUT /v1/me/working-hours":                                              {Op: "saveMyWorkingHours", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/offer-templates/{id}":                                          {Op: "updateOfferTemplate", Access: "tool", Tool: "update_record", RecordType: "offer_template", Tier: "auto_execute", Scope: "write"},
 	"PUT /v1/onboarding/state":                                              {Op: "putOnboardingState", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
-	"PUT /v1/overlay/user-map/{id}":                                         {Op: "setOverlayUserMap", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/privacy/controller-particulars":                                {Op: "setControllerParticulars", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/projects/{id}/companies":                                       {Op: "setProjectCompany", Access: "tool", Tool: "update_record", RecordType: "project", Tier: "auto_execute", Scope: "write"},
 	"PUT /v1/projects/{id}/stakeholders":                                    {Op: "setProjectStakeholder", Access: "tool", Tool: "update_record", RecordType: "project", Tier: "auto_execute", Scope: "write"},

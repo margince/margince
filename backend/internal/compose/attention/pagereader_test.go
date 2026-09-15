@@ -39,8 +39,7 @@ func pageReader() context.Context {
 // shape a clear morning has, which is why the absence had to become a
 // refusal rather than an empty answer.
 func TestThePageRefusesACallerWithNoSeat(t *testing.T) {
-	svc := NewService(stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
-		stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+	svc := NewService(stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
 
 	// The control: a seated reader is answered, so the refusal below is the
 	// missing seat and not a service this fixture failed to wire.

@@ -271,7 +271,7 @@ func everyWorklistSource() []crmcontracts.WorklistItemSource {
 	all := []crmcontracts.WorklistItemSource{
 		"approval", "dedupe_candidate", "task", "brief_item", "conversation_claim",
 		"customer_waiting", "deal_at_risk", "meeting", "relationship_decay",
-		"failed_approval", "dsr", "sync_health", "capture_health", "ai_work_health",
+		"failed_approval", "dsr", "capture_health", "ai_work_health",
 		"bounce", "undelivered", "automation_run", "notice", "introduction_request",
 		"batch",
 	}
@@ -389,9 +389,6 @@ func everyLane() []struct {
 		{"brief_item", crmcontracts.Attention{AsOf: rankInstant, ThisMorning: []crmcontracts.AttentionItem{
 			item("x", "brief_item"),
 		}}},
-		{"sync_health", crmcontracts.Attention{AsOf: rankInstant, SyncHealth: lane(
-			item("x", "sync_health"),
-		)}},
 		{"capture_health", crmcontracts.Attention{AsOf: rankInstant, CaptureHealth: lane(
 			item("x", "capture_health"),
 		)}},

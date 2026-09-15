@@ -127,7 +127,6 @@ export const de = {
   "brief.coverage.source.bounce": "Unzustellbare E-Mails",
   "brief.coverage.source.ai_work_health": "Automatisierungsprüfungen",
   "brief.coverage.source.capture_health": "Postfachverbindungen",
-  "brief.coverage.source.sync_health": "CRM-Synchronisationsprüfungen",
   "brief.coverage.source.failed_approval":
     "Fehlgeschlagene freigegebene Aktionen",
   "brief.coverage.source.relationship_decay": "Ruhende Beziehungen",
@@ -808,8 +807,6 @@ export const de = {
   "state.withheld": "Ausgeblendet — deine Rolle darf das nicht lesen",
   "state.unavailable":
     "Konnte nicht geladen werden — das ist möglicherweise nicht das ganze Bild",
-  "state.unsupported":
-    "In diesem Modus nicht verfügbar — das angebundene System führt es nicht",
   "state.failed": "Dieser Abschnitt wurde nicht geladen.",
   "state.loading": "Dieser Abschnitt wird geladen…",
   "state.retry": "Erneut versuchen",
@@ -831,8 +828,6 @@ export const de = {
   "list.loadMore": "Mehr laden",
   "list.viewAll": "Alle",
   "list.viewHot": "Heiß",
-  "list.overlayReadOnly":
-    "Sortierung und Filter laufen über HubSpot — dort öffnen",
 
   "table.range": "{first}–{last} von {count} {unit}",
   "table.pagination": "Seiten",
@@ -877,160 +872,6 @@ export const de = {
   "table.filterSearchFailed":
     "Die Suche ist fehlgeschlagen. Bitte erneut versuchen.",
   "table.filterNoMatches": "Keine Treffer.",
-  "overlay.unavailable":
-    "In der HubSpot-Ansicht nicht verfügbar — in HubSpot öffnen",
-  "overlay.chipLabel": "Liest aus HubSpot",
-  "overlay.chipAria":
-    "Diese Installation liest Datensätze aus einem HubSpot-Spiegel statt aus nativen Tabellen. Öffne Einstellungen → Integrationen, um die Verbindung zu verwalten.",
-  "overlay.refused":
-    "Beim Lesen aus HubSpot nicht verfügbar — der Spiegel kann diesen Schreibvorgang nicht ausführen.",
-  "overlay.filterUnsupported":
-    "Dieser Filter oder diese Sortierung ist beim Lesen aus HubSpot nicht verfügbar — bitte entfernen und erneut versuchen.",
-  "overlay.emptyOwnerHint":
-    "Eine leere Liste bedeutet hier meist, dass die HubSpot-E-Mail des Owners keinem Benutzer dieser Firma entspricht — nicht, dass das HubSpot-Portal leer ist.",
-  "overlay.partialWriteBack":
-    "Nur die Felder, die HubSpot akzeptiert, werden zurückgeschrieben — alles andere hier, einschließlich Custom Fields und Owner, wird überhaupt nicht angewendet; der aktuelle Wert in HubSpot bleibt bestehen.",
-
-  "overlay.title": "HubSpot-Spiegel",
-  "overlay.sub":
-    "Verbindet das führende CRM der Firma, damit Datensätze aus dessen Spiegel statt aus nativen Tabellen gelesen werden.",
-  "overlay.loading": "Lade die Anbieter-Verbindung…",
-  "overlay.notConfigured":
-    "Overlay-Modus ist in diesem Deployment nicht konfiguriert.",
-  "overlay.loadFailed": "Die Anbieter-Verbindung konnte nicht geladen werden.",
-  "overlay.empty":
-    "Kein führendes System verbunden. Verbinde HubSpot, um Datensätze aus dessen Spiegel zu lesen.",
-  "overlay.adminOnly":
-    "Du hast keine Berechtigung, die HubSpot-Verbindung zu ändern.",
-  "overlay.loadFailedTitle": "Die Verbindung konnte nicht gelesen werden",
-  "overlay.region": "Region",
-  "overlay.regionEu1": "EU",
-  "overlay.connectionLabel": "Verbindung",
-  "overlay.notConnectedYet": "Nicht verbunden",
-  "overlay.regionUs": "USA",
-  "overlay.token": "Private-App-Token",
-  "overlay.tokenHint": "Wird im Vault versiegelt; wird nie wieder angezeigt.",
-  "overlay.connect": "HubSpot verbinden",
-  "overlay.reconnect": "Erneut verbinden",
-  "overlay.connectConfirmTitle": "HubSpot für die ganze Firma verbinden?",
-  "overlay.reconnectConfirmTitle":
-    "HubSpot für die ganze Firma erneut verbinden?",
-  "overlay.connectConfirmBody":
-    "Dies schaltet die Lesezugriffe aller Sitze sofort auf den HubSpot-Spiegel um, und Datensätze werden schreibgeschützt, wo immer der Spiegel kein Schreiben unterstützt. Dies betrifft die gesamte Installation, nicht nur die eigene Sitzung.",
-  "overlay.statusActive": "Verbunden",
-  "overlay.statusRevoked": "Widerrufen",
-  "overlay.statusError": "Sync-Fehler",
-  "overlay.connectedAt": "Verbunden {at}",
-  "overlay.syncTitle": "Spiegel-Synchronisierung",
-  "overlay.syncLoadFailed": "Sync-Status konnte nicht geladen werden.",
-  "overlay.syncLoadFailedTitle": "Sync-Status konnte nicht gelesen werden",
-  "overlay.syncEmpty": "Noch nichts synchronisiert.",
-  "overlay.syncStateFresh": "Aktuell",
-  "overlay.syncStatePending": "Sync ausstehend",
-  "overlay.syncStateStale": "Veraltet",
-  "overlay.backfillDone": "Backfill abgeschlossen",
-  "overlay.backfillPending": "Backfill läuft",
-  "overlay.lastSynced": "Zuletzt synchronisiert {at}",
-  "overlay.neverSynced": "Noch nie synchronisiert",
-  "overlay.budgetTitle": "API-Budget",
-  "overlay.budgetLoadFailed": "Das Budget-Fenster konnte nicht geladen werden.",
-  "overlay.budgetLoadFailedTitle":
-    "Das Budget-Fenster konnte nicht gelesen werden",
-  "overlay.budgetHeadroom": "Spielraum: {headroom}",
-  "overlay.budgetUnmeasured":
-    "Live-Aufrufe pausieren vorsorglich. Das ist kein HubSpot-Quotendruck — der Zähler selbst liefert keine Werte.",
-  "overlay.budgetUnmeasuredTitle":
-    "Das Aufrufbudget kann nicht gemessen werden",
-  "overlay.budgetEmpty":
-    "Das Altsystem hat für diesen Zeitraum kein Budgetfenster gemeldet.",
-  "overlay.budgetSources":
-    "Force-Fresh {forceFresh} · Poller {poller} · Capture {capture}",
-  "overlay.budgetSearch": "Such-API: {consumed} / {limit} pro Sekunde",
-  "overlay.bandOk": "Gesund",
-  "overlay.bandWarn": "Nähert sich dem Limit",
-  "overlay.bandShed": "Drosselt Last",
-  "overlay.reconcile": "Jetzt synchronisieren",
-  "overlay.reconcileQueued":
-    "Abgleich eingereiht — der Worker holt ihn beim nächsten Poll ab (etwa alle 2 Minuten).",
-  "overlay.reconcileFailedTitle": "Der Abgleich wurde nicht eingeplant",
-  "overlay.disconnect": "Trennen",
-  "overlay.disconnectTitle": "HubSpot trennen?",
-  "overlay.disconnectBody":
-    "Dies löscht die gespiegelten Daten und schaltet die Firma zurück auf native Datensätze. Das Audit-Protokoll bleibt erhalten.",
-
-  "overlay.userMap.title": "Nutzerzuordnung des Spiegels",
-  "overlay.userMap.sub":
-    "Wer jede Person in dieser Firma als {principal}-Nutzer ist. Diese Zuordnung entscheidet allein darüber, was sie im Spiegel sieht.",
-  "overlay.userMap.cost":
-    "Wer nicht zugeordnet ist, sieht überhaupt keine gespiegelten Datensätze — alle Listen bleiben leer.",
-  "overlay.userMap.costTitle": "Ohne Zuordnung sieht ein Nutzer nichts",
-  "overlay.userMap.loading": "Lade die Nutzerzuordnung…",
-  "overlay.userMap.loadFailed":
-    "Die Nutzerzuordnung konnte nicht geladen werden.",
-  "overlay.userMap.loadFailedTitle":
-    "Die Nutzerzuordnung konnte nicht gelesen werden",
-  "overlay.userMap.adminOnly":
-    "Du hast keine Berechtigung, die Zuordnung zu prüfen.",
-  "overlay.userMap.notOverlay":
-    "Diese Firma liest aus nativen Tabellen, es gibt also nichts zuzuordnen.",
-  "overlay.userMap.notConfigured":
-    "Overlay-Modus ist in diesem Deployment nicht konfiguriert.",
-  "overlay.userMap.empty": "Diese Firma hat keine Nutzer zum Zuordnen.",
-  "overlay.userMap.view": "Gruppierung",
-  "overlay.userMap.viewByUser": "Nach Nutzer",
-  "overlay.userMap.viewByOwner": "Nach {principal}-Nutzer",
-  "overlay.userMap.principal.hubspot": "HubSpot",
-  "overlay.userMap.principal.generic": "verbundenes CRM",
-  "overlay.userMap.you": "Du",
-  "overlay.userMap.matchEmail": "Über E-Mail zugeordnet",
-  "overlay.userMap.matchManual": "Manuell gesetzt",
-  "overlay.userMap.map": "Zuordnen",
-  "overlay.userMap.change": "Ändern",
-  "overlay.userMap.unmap": "Zuordnung aufheben",
-  "overlay.userMap.cancel": "Abbrechen",
-  "overlay.userMap.pickerLabel": "{principal}-Nutzer suchen",
-  "overlay.userMap.pickTitle": "Einem {principal}-Nutzer zuordnen",
-  "overlay.userMap.truncated":
-    "Das {principal}-Verzeichnis ist länger als diese Liste — wen du hier nicht findest, liegt vielleicht hinter der Grenze.",
-  "overlay.userMap.directoryFailed":
-    "Das {principal}-Verzeichnis konnte nicht gelesen werden, deshalb lässt sich gerade niemand auswählen.",
-  "overlay.userMap.directoryFailedTitle":
-    "Das Verzeichnis konnte nicht gelesen werden",
-  "overlay.userMap.saveFailedTitle": "Die Zuordnung wurde nicht gespeichert",
-  "overlay.userMap.notMapped": "Nicht zugeordnet",
-  "overlay.userMap.chip.noEmailMatch": "Keine E-Mail-Übereinstimmung",
-  "overlay.userMap.chip.ambiguousEmail": "Mehrdeutige E-Mail",
-  "overlay.userMap.chip.blockedByAdmin": "Von Admin aufgehoben",
-  "overlay.userMap.chip.notYetSynced": "Noch nicht synchronisiert",
-  "overlay.userMap.chip.directoryUnavailable": "Grund unbekannt",
-  "overlay.userMap.reason.noEmailMatch":
-    "Kein {principal}-Nutzer hat diese E-Mail-Adresse.",
-  "overlay.userMap.reason.ambiguousEmail":
-    "Zwei oder mehr {principal}-Nutzer teilen sich diese E-Mail-Adresse, eine automatische Zuordnung wäre also nicht sicher.",
-  "overlay.userMap.reason.blockedByAdmin":
-    "Eine Admin-Person hat die Zuordnung aufgehoben; die automatische Zuordnung setzt sie nicht erneut.",
-  "overlay.userMap.reason.notYetSynced":
-    "Das {principal}-Verzeichnis führt diese Person noch nicht.",
-  "overlay.userMap.reason.directoryUnavailable":
-    "Das {principal}-Verzeichnis konnte nicht vollständig gelesen werden, deshalb lässt sich kein Grund ableiten.",
-  "overlay.userMap.staleChip": "Nicht mehr im {principal}-Verzeichnis",
-  "overlay.userMap.staleNote":
-    "Diese manuelle Zuordnung gewährt keine Sichtbarkeit. Sie wird gemeldet, aber nie automatisch zurückgenommen — die Entscheidung bleibt bei dir.",
-  "overlay.userMap.unmapTitle": "Zuordnung dieser Person aufheben?",
-  "overlay.userMap.unmapSelfTitle": "Deine eigene Zuordnung aufheben?",
-  "overlay.userMap.unmapBody":
-    "{user} sieht dann keine gespiegelten Datensätze mehr, bis die Zuordnung wieder gesetzt ist.",
-  "overlay.userMap.unmapSelfBody":
-    "Du siehst dann keine gespiegelten Datensätze mehr, bis du wieder zugeordnet bist. Dieser Tab bleibt erreichbar, du kannst es hier rückgängig machen.",
-  "overlay.userMap.sharedSeat": "Geteilter Sitz — {count} Nutzer",
-  "overlay.userMap.ownerEmpty":
-    "Bisher ist niemand einem {principal}-Nutzer zugeordnet.",
-  "overlay.userMap.unmappedCount_one":
-    "1 Person ist nicht zugeordnet und fehlt hier — wechsle zu Nach Nutzer, um das zu beheben.",
-  "overlay.userMap.unmappedCount_other":
-    "{count} Personen sind nicht zugeordnet und fehlen hier — wechsle zu Nach Nutzer, um das zu beheben.",
-  "overlay.userMap.partialView":
-    "Diese Gruppierung und die Zählung umfassen nur die bisher geladenen Nutzer. Lade mehr, um den Rest zu sehen.",
 
   "contacts.name": "Name",
   "contacts.email": "E-Mail",
@@ -2343,8 +2184,6 @@ export const de = {
   "tagResult.noneLeft": "Trägt niemand mehr",
   "tagResult.unnamed": "Ohne Namen",
   "co.timeline.empty": "Zu diesem Account ist noch nichts erfasst.",
-  "co.overlayFallback":
-    "Dieser Account wird aus dem verbundenen führenden System bedient; die Firmenansicht wird hier nicht zusammengestellt. \u00d6ffne ihn dort für das vollständige Bild.",
   "company.domains": "Domains",
   "company.factCategory.company": "Unternehmen",
   "company.factCategory.offering": "Angebot",
@@ -2477,8 +2316,6 @@ export const de = {
     "Dieser Lead ist abgeschlossen und nimmt keine Änderungen an.",
   "lead.notYoursToChange":
     "Du kannst diesen Lead nicht ändern. Bitte den Inhaber, ihn mit dir zu teilen, oder eine Admin-Person um das Recht, ihn zu bearbeiten.",
-  "lead.callNotInOverlay":
-    "Dieser Lead ist eine Spiegelung des führenden Systems und nimmt von hier aus keine Aktivität an \u2014 erfasse den Anruf dort, wo der Datensatz liegt.",
   "lead.boardCountsUnavailable":
     "Die Z\u00e4hler f\u00fcr Qualifiziert und Disqualifiziert konnten nicht gelesen werden.",
   "lead.boardTerminalRowsUnavailable":
@@ -2646,8 +2483,6 @@ export const de = {
   "lead.viewEngaged": "Im Gespräch",
   "lead.ladder": "Lead-Status",
   "lead.ladder.new": "Neu — noch niemand hat Kontakt aufgenommen.",
-  "lead.ladder.overlay":
-    "Der Spiegel ändert den Lead-Status nicht; im Quellsystem ändern.",
   "lead.ladder.automatic":
     "{label} · automatisch aus erfasster Aktivität gesetzt",
   "lead.ladder.automaticWith": "{label} · automatisch gesetzt — {what} am {at}",
@@ -2710,7 +2545,6 @@ export const de = {
   "deals.winReasonOther": "Etwas anderes",
   "deals.winReasonDetail": "Was war es?",
   "deals.confirm": "Bestätigen",
-  "deals.loading": "Deals werden gelesen…",
   "deals.cancel": "Abbrechen",
   "deals.advanced": "Nach {stage} verschoben",
   "deal.pendingApprovals": "Wartet auf deine Bestätigung",
@@ -9773,33 +9607,6 @@ export const de = {
   "worklist.untitled.dsr": "Eine offene Datenschutzanfrage",
   "worklist.untitled.notice_case":
     "Eine Auskunft, die dieser Kontakt zu bekommen hat",
-  "worklist.untitled.sync_health":
-    "Die CRM-Synchronisierung braucht Aufmerksamkeit",
-  "worklist.sync.class.contacts": "Kontakte",
-  "worklist.sync.class.companies": "Firmen",
-  "worklist.sync.class.deals": "Deals",
-  "worklist.sync.class.leads": "Interessenten",
-  "worklist.sync.class.calls": "Anrufe",
-  "worklist.sync.class.meetings": "Termine",
-  "worklist.sync.class.emails": "E-Mails",
-  "worklist.sync.class.notes": "Notizen",
-  "worklist.sync.class.tasks": "Aufgaben",
-  "worklist.sync.error.rate_limited":
-    "das andere System begrenzt, wie oft wir fragen dürfen",
-  "worklist.sync.error.unreachable": "das andere System ist nicht erreichbar",
-  "worklist.sync.error.auth": "die Verbindung muss neu angemeldet werden",
-  "worklist.sync.error.history_gone":
-    "das andere System hat diesen Verlauf nicht mehr",
-  "worklist.sync.error.internal": "auf unserer Seite ist etwas schiefgelaufen",
-  "worklist.sync.band.warn":
-    "Nahe am Lesebudget – manche Abfragen kommen aus der Kopie.",
-  "worklist.sync.band.shed":
-    "Über dem Lesebudget: Abfragen kommen aus der Kopie statt live.",
-  "worklist.sync.failing": "Kein Abgleich – {reason}.",
-  "worklist.sync.objects_stale": "Hier nicht aktuell: {classes}.",
-  "worklist.sync.backfill_incomplete": "Wird noch importiert: {classes}.",
-  "worklist.sync.records_overwritten":
-    "Hier geändert und vom anderen System überschrieben: {classes}.",
   "worklist.untitled.capture_health":
     "Eine Postfachverbindung braucht Aufmerksamkeit",
   "worklist.untitled.ai_work_health": "KI-Arbeit braucht einen Blick",

@@ -50,7 +50,7 @@ var catalogRow = regexp.MustCompile("^\\|\\s*`([a-z0-9_]+)`\\s*\\|\\s*([^|]+?)\\
 // that took every matching row read `enrich` as tier "1", which is that table's
 // route count. Rows are therefore read only between this header and the blank
 // line that ends its table.
-const catalogHeader = "| Tool | Tier | Scope | Egress | In overlay mode |"
+const catalogHeader = "| Tool | Tier | Scope | Egress |"
 
 // The marks the page uses, and what each means in the contract's own
 // vocabulary. Spelled here rather than inferred, because the mapping IS the

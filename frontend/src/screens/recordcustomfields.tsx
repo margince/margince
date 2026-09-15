@@ -2,7 +2,6 @@ import { useCanWriteRecord } from "../app/capability";
 import { Button } from "../design-system/atoms";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useT } from "../i18n";
-import { useSorMode } from "./common";
 import { useObjectCustomFields } from "./customfields.form";
 import { saveRecordEdit } from "./recordedit";
 import { type FieldRecord, RecordFields } from "./recordfields";
@@ -18,7 +17,6 @@ export function RecordCustomFields({
   const t = useT();
   const cf = useObjectCustomFields(kind);
   const canEdit = useCanWriteRecord(kind, record) && !record.archived_at;
-  const overlay = useSorMode() === "overlay";
   if (cf.loading || cf.failed)
     return (
       <Panel title={t("cf.formSection")}>
@@ -54,7 +52,6 @@ export function RecordCustomFields({
       )}
       record={record}
       canEdit={canEdit}
-      notice={overlay ? t("overlay.partialWriteBack") : undefined}
       save={async (values, _rows, opened) => {
         return saveRecordEdit(kind, opened, cf.toPatch(values, opened));
       }}

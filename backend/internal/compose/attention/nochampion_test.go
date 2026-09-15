@@ -75,7 +75,7 @@ func oneRiskRow(t *testing.T, deal RiskyDeal) crmcontracts.WorklistItem {
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
 		stubBriefing{}, nil, stubAtRisk{rows: []RiskyDeal{deal}}, nil, nil,
-		nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+		nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
 	out, err := svc.Worklist(meetingPrepReader(), "", "", ids.UUID{}, 25, "")
 	if err != nil {
 		t.Fatalf("worklist: %v", err)

@@ -25,7 +25,7 @@ func worklistOverDeals(fx BaseMoney, rows []RiskyDeal) *Service {
 	return NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
 		stubBriefing{}, nil, stubAtRisk{rows: rows}, nil, nil,
-		nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock).
+		nil, nil, nil, nil, nil, nil, nil, nil, fixedClock).
 		WithBaseMoney(fx)
 }
 

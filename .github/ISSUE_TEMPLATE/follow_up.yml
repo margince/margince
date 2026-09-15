@@ -30,7 +30,7 @@ body:
     attributes:
       label: Where it was deferred
       description: The pull request, commit, or file and line that this came out of.
-      placeholder: "#1039, or backend/internal/modules/overlay/mapping.go:214"
+      placeholder: "#1039, or backend/internal/modules/deals/store.go:214"
     validations:
       required: true
 
@@ -43,8 +43,8 @@ body:
         the gate that would catch it, or the fact that no caller exercises it
         yet. If nothing bounds it, say so plainly and label this a bug instead.
       placeholder: >-
-        No production installation runs the overlay yet, so the only affected
-        rows are in dev fixtures.
+        No caller reaches this path yet, so the only affected rows are in dev
+        fixtures.
     validations:
       required: true
 
