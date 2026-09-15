@@ -8,7 +8,7 @@
 // the record.
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { watchStartedAiRun } from "../app/ai-activity";
@@ -21,6 +21,7 @@ import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, throwProblem } from "./common";
+import { factsKey } from "./companyfactspanel";
 import { type ConfiguredStopReason, stopIsConfigured } from "./sitereadkind";
 
 type SiteReadReport = components["schemas"]["SiteReadReport"];
@@ -193,6 +194,7 @@ function SiteReadPanel({
   const plural = usePlural();
   const t = useT();
   const { locale } = useLocale();
+  const queryClient = useQueryClient();
   const reportQuery = useQuery({
     queryKey: ["site-read", companyId, readId],
     queryFn: async () => {
@@ -214,6 +216,29 @@ function SiteReadPanel({
     },
   });
 
+  // Terminal, computed off the STATUS rather than the report itself, because
+  // this has to stay a hook called on every render — including the pending
+  // and error ones below — and the report is only defined once neither of
+  // those early returns fires.
+  const status = reportQuery.data?.status;
+  const terminal =
+    status === "done" || status === "partial" || status === "failed";
+  // The facts this read staged land on the SAME query the Facts and
+  // Technology panels already hold, and nothing else watches this read for
+  // them: the start mutation invalidates `site-read-latest`, not the facts
+  // themselves, because at that moment there are none yet. This is the one
+  // place that learns a read has actually finished — for a read this tab
+  // started AND for one already in flight when the tab was opened, since
+  // both poll through here — so it is the one place that can tell the two
+  // panels to stop answering from before the read ran.
+  const wasTerminal = useRef(false);
+  useEffect(() => {
+    if (terminal && !wasTerminal.current) {
+      queryClient.invalidateQueries({ queryKey: factsKey(companyId) });
+    }
+    wasTerminal.current = terminal;
+  }, [terminal, companyId, queryClient]);
+
   if (reportQuery.isPending) {
     return <Skeleton width="60%" />;
   }
@@ -226,10 +251,6 @@ function SiteReadPanel({
   }
 
   const report = reportQuery.data;
-  const terminal =
-    report.status === "done" ||
-    report.status === "partial" ||
-    report.status === "failed";
 
   return (
     <div style={{ marginTop: "var(--space-3)" }}>
