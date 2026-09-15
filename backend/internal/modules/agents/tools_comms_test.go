@@ -235,7 +235,7 @@ func TestSendMessageToolRefusesToStageAMirroredConversation(t *testing.T) {
 	_, err := tool.StageInfo(context.Background(),
 		json.RawMessage(`{"activity_id":"`+ids.NewV7().String()+`","body":"b","consent_purpose":"support"}`))
 	if !errors.Is(err, apperrors.ErrUnsupportedBySoR) {
-		t.Errorf("StageInfo err = %v, want ErrUnsupportedBySoR for a mirror-backed conversation", err)
+		t.Errorf("StageInfo err = %v, want ErrUnsupportedBySoR for a non-authoritative conversation", err)
 	}
 }
 

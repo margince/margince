@@ -428,7 +428,7 @@ func priceEvidenced(currency string, priceMinor int64) bool {
 	}
 	return priceMinor/scale > 0
 }`},
-	{"the loop that shipped in overlay, digits read inline", true, "", `
+	{"the loop that shipped with digits read inline", true, "", `
 func amountFor(code, amount string) int64 {
 	scale := int64(1)
 	for i := 0; i < values.MinorUnitDigits(code); i++ {

@@ -79,11 +79,11 @@ type Freshness struct {
 	// no record contributed (a tool answering from product-generated
 	// configuration has nothing to be stale).
 	LastSyncedAt *time.Time `json:"last_synced_at,omitempty"`
-	// Authoritative is false when ANY contributing record was mirror-backed and
-	// pending sync, and when the answer was computed without the system that
-	// holds the facts it reports at all (noteAnswerLacksItsSource). Both are one
-	// claim: this product is not the authority for what it just said. In
-	// system-of-record mode, with every source it needs, it is true.
+	// Authoritative is false when ANY contributing record was a copy that had
+	// fallen behind the system holding it, and when the answer was computed
+	// without the system that holds the facts it reports at all
+	// (noteAnswerLacksItsSource). Both are one claim: this product is not the
+	// authority for what it just said.
 	Authoritative bool `json:"authoritative"`
 }
 
@@ -227,7 +227,7 @@ func (f *envelopeFacts) servedCount() int {
 // place this surface is allowed to learn it from.
 //
 // Two things can lower it and nothing raises it. A record the seam reported as
-// non-authoritative is mirror-backed content from another system, which is T2 by
+// non-authoritative is a copy of content another system holds, which is T2 by
 // definition. Otherwise the writer decides: a human typing into this product is
 // T1, and every automated writer — a connector sync, an agent, a system job — is
 // T2, because their content originates outside a contact's keyboard and the
