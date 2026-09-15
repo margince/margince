@@ -78,8 +78,13 @@ func FixedOIDCProvider(p OIDCProvider) OIDCProviderSource {
 // OIDCVerifier is what ssologin needs from an ID-token verifier — defined
 // here, not imported from compose, so identity never depends on compose (a
 // module never imports a sibling; compose injects the edge instead).
+//
+// groups is the token's standard `groups` claim, feeding the additive
+// group→role grants (OidcGroupRoleMap). An absent claim is an EMPTY list,
+// never an error: most Google tokens carry none, and a token with no groups
+// simply grants nothing.
 type OIDCVerifier interface {
-	Verify(ctx context.Context, idToken string) (email, sub string, emailVerified bool, err error)
+	Verify(ctx context.Context, idToken string) (email, sub string, emailVerified bool, groups []string, err error)
 }
 
 // OIDCExchanger is what ssologin needs from the code exchange.
@@ -357,13 +362,13 @@ func (h Handlers) OidcSignInCallback(w http.ResponseWriter, r *http.Request, pro
 		return
 	}
 
-	email, sub, reason, err := h.exchangeAndVerify(ctx, provider, p, code, codeVerifier)
+	email, sub, groups, reason, err := h.exchangeAndVerify(ctx, provider, p, code, codeVerifier)
 	if reason != "" {
 		fail(ctx, reason, err)
 		return
 	}
 
-	token, err := h.svc.LoginViaFederatedIdentity(ctx, provider, sub, email)
+	token, err := h.svc.LoginViaFederatedIdentity(withUserAgent(ctx, r.UserAgent()), provider, sub, email, groups)
 	if err != nil {
 		fail(ctx, "resolve/link account", err)
 		return
@@ -376,28 +381,29 @@ func (h Handlers) OidcSignInCallback(w http.ResponseWriter, r *http.Request, pro
 // token it returns, split out of OidcSignInCallback so that function's own
 // branching stays over the state/cookie plumbing rather than growing to
 // cover the token round trip too. A non-empty reason means refuse; email/sub
-// are meaningful only when reason is empty.
-func (h Handlers) exchangeAndVerify(ctx context.Context, provider string, p OIDCProvider, code, codeVerifier string) (email, sub, reason string, err error) {
+// and groups are meaningful only when reason is empty.
+func (h Handlers) exchangeAndVerify(ctx context.Context, provider string, p OIDCProvider, code, codeVerifier string) (email, sub string, groups []string, reason string, err error) {
 	idToken, err := p.Exchanger.Exchange(ctx, code, codeVerifier, h.callbackURI(provider))
 	if err != nil {
-		return "", "", "token exchange", err
+		return "", "", nil, "token exchange", err
 	}
-	email, sub, emailVerified, err := p.Verifier.Verify(ctx, idToken)
+	email, sub, emailVerified, groups, err := p.Verifier.Verify(ctx, idToken)
 	if err != nil {
-		return "", "", "id token verification", err
+		return "", "", nil, "id token verification", err
 	}
 	if !emailVerified {
-		return "", "", "email not verified", nil
+		return "", "", nil, "email not verified", nil
 	}
 	// email/sub are both required to reach here (they identify who signed
 	// in and are what LoginViaFederatedIdentity resolves/links against) —
 	// the verifier contract does not itself guarantee either is non-empty,
 	// so an unchecked blank value would resolve/link a blank identity
-	// rather than being refused here.
+	// rather than being refused here. groups is not: a token naming none is
+	// the common case and grants nothing.
 	if email == "" || sub == "" {
-		return "", "", "missing email or subject claim", nil
+		return "", "", nil, "missing email or subject claim", nil
 	}
-	return email, sub, "", nil
+	return email, sub, groups, "", nil
 }
 
 // logOidcFailure writes one system_log row for a refused/failed OIDC

@@ -66,7 +66,7 @@ func (h Handlers) serveAsHuman(ctx context.Context, w http.ResponseWriter, r *ht
 	// (A62/ADR-0047): a read seat may read but never mutate over REST,
 	// whatever its role grants. Method-based — the contract has no
 	// mutating GET.
-	if id.SeatType == string(principal.SeatRead) && isMutating(r.Method) && !isOwnCredentialRequest(r) {
+	if id.SeatType == string(principal.SeatRead) && isMutating(r.Method) && !readSeatMayMutate(r) {
 		httperr.Write(w, r, apperrors.ErrSeatTierInsufficient)
 		return
 	}
@@ -82,6 +82,14 @@ func (h Handlers) serveAsHuman(ctx context.Context, w http.ResponseWriter, r *ht
 	// still visible to whoever holds the one the operator typed into a file.
 	if id.MustChangePassword && !isOwnCredentialRequest(r) {
 		httperr.Write(w, r, forcedRotationRefusal())
+		return
+	}
+
+	// A member the installation requires a second factor from, who holds none,
+	// reaches only the MFA enrolment routes until they set one up — the same
+	// confinement the forced password change above uses.
+	if id.MustEnrolMFA && !isMFAEnrolRequest(r) {
+		httperr.Write(w, r, mfaEnrolmentRequiredRefusal())
 		return
 	}
 
@@ -145,6 +153,16 @@ func (h Handlers) serveAsOptionalHuman(ctx context.Context, w http.ResponseWrite
 		return
 	}
 	next.ServeHTTP(w, r.WithContext(withHumanPrincipal(ctx, id)))
+}
+
+// readSeatMayMutate reports the mutations a read seat is allowed despite the
+// tier ceiling: replacing its own password, and ending one of its own sessions.
+// Both are credential self-management scoped to the caller by the store, not
+// authority over any record — so a read seat may sign a compromised device out.
+// Kept separate from the must-change-password gate's isOwnCredentialRequest,
+// which stays confined to the one route that replaces the credential.
+func readSeatMayMutate(r *http.Request) bool {
+	return isOwnCredentialRequest(r) || isOwnSessionRevoke(r) || isMFAEnrolRequest(r)
 }
 
 // isMutating is the transport-level write test the agent and read-seat

@@ -129,6 +129,7 @@ var namesTheSeatRatherThanOffersIt = gatekit.Waive(map[string]string{
 	"internal/modules/identity/actoridentity.go": "resolves the display name and address of whoever performed a past action; the actor of an audit row does not stop having a name",
 	"internal/modules/identity/seatnames.go":     "answers \"what is this id called\" for ids the caller already holds; a name that blanks on deactivation makes historical rows unreadable",
 	"internal/modules/identity/userlocale.go":    "reads a seat's locale to format a stored string; the formatting of last month's number does not depend on whether they still work here",
+	"internal/modules/identity/usersessions.go":  "ensureUserExists resolves the admin's named target for a session review; a deactivated member is exactly whose sessions an admin inspects after suspending them, and their live sessions are what the revoke beside it exists to end. archived_at alone, because an archived row is genuinely gone",
 	"internal/modules/identity/users.go":         "ChangeUserRole reads what the target IS because an agent seat holds no role; changing a deactivated member's role is how an admin prepares a reactivation",
 })
 

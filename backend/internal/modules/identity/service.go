@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity/internal/password"
 	"github.com/margince/margince/backend/internal/modules/identity/internal/policy"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -56,6 +57,25 @@ type Service struct {
 	// module identity never imports. Nil ⟹ nothing caps seats, which is what
 	// a role that resolved no license posture means.
 	seatCeiling SeatCeiling
+	// requireSSO answers whether this installation has switched password sign-in
+	// off (enforced-SSO mode). Nil when unwired — a deployment that never
+	// composed the reader behaves exactly as one whose policy is off, so the
+	// password path stays open. See ssoenforcement.go.
+	requireSSO func(ctx context.Context) (bool, error)
+	// requireMFA answers whether this installation makes a second factor
+	// mandatory. Nil when unwired — no enforcement, and Authenticate then reads
+	// nothing extra per request. See mfachallenge.go.
+	requireMFA func(ctx context.Context) (bool, error)
+	// groupRoleMap answers the admin's group→role grant map for federated
+	// sign-in. Nil when unwired — no grants, the same posture as an empty map —
+	// and it is only ever read when a token actually carried groups, so the
+	// common groupless login costs no extra query. See grouprolesync.go.
+	groupRoleMap func(ctx context.Context) (map[string]string, error)
+	// vault seals a member's TOTP secret at rest: the secret must be recoverable
+	// to verify a code (unlike a password, which is only ever compared), so it is
+	// sealed rather than hashed. Nil when unwired, which is what the MFA methods
+	// check before they touch it. See mfa.go.
+	vault keyvault.Vault
 }
 
 func NewService(pool *pgxpool.Pool) *Service {
@@ -99,9 +119,14 @@ type Identity struct {
 	// somebody else chose — a configured bootstrap's operator-supplied
 	// credential. Every authenticated route is refused until it is replaced.
 	MustChangePassword bool
-	Roles              []string
-	Teams              []ids.TeamID
-	Permissions        principal.Permissions
+	// MustEnrolMFA is true while require-MFA is on and this account has no
+	// confirmed second factor: every route but MFA enrolment is refused until
+	// one is set up, the same confinement MustChangePassword uses. Derived per
+	// request from the policy and the enrolment, not a stored column.
+	MustEnrolMFA bool
+	Roles        []string
+	Teams        []ids.TeamID
+	Permissions  principal.Permissions
 }
 
 // systemRoles is the seeded default role set (data-model §2.4, ADR-0110);
@@ -238,80 +263,6 @@ func mustRandomSecret() string {
 	return base64.RawURLEncoding.EncodeToString(buf)
 }
 
-// Login verifies credentials inside the tenant transaction and mints an
-// opaque session. Every attempt outcome — success or failure — lands in
-// audit_log (the failure row commits in its own transaction, because the
-// attempt's transaction rolls back with the error).
-func (s *Service) Login(ctx context.Context, email, plaintext string) (Identity, string, error) {
-	rawWsID, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		// The middleware binds the singleton company on every request
-		// (installation.go); an unbound context means the installation is
-		// not bootstrapped — and the answer must not disclose that:
-		// credentials against a not-yet-existing company read exactly
-		// like wrong credentials.
-		return Identity{}, "", ErrBadCredentials
-	}
-	wsID := ids.From[ids.WorkspaceKind](rawWsID)
-	token, tokenHash, err := mintSessionToken()
-	if err != nil {
-		return Identity{}, "", err
-	}
-
-	var id Identity
-	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		account, err := s.checkCredentials(ctx, tx, email, plaintext)
-		if err != nil {
-			return err
-		}
-		if err := insertSession(ctx, tx, account.UserID, tokenHash); err != nil {
-			return err
-		}
-		if err := auditLogin(ctx, tx, account.UserID, "password login"); err != nil {
-			return err
-		}
-
-		id = Identity{UserID: account.UserID, WorkspaceID: wsID, Email: email, DisplayName: account.DisplayName, SeatType: account.SeatType}
-		// Failing here would answer correct credentials with a 500 while
-		// wrong ones still got 401 — telling an attacker which passwords
-		// are right — so InstallationNameOf coalesces an absent row to
-		// the empty string rather than erroring.
-		var nameErr error
-		if id.WorkspaceName, nameErr = InstallationNameOf(ctx, tx); nameErr != nil {
-			return nameErr
-		}
-		var loadErr error
-		id.Roles, id.Teams, id.Permissions, loadErr = loadGrants(ctx, tx, account.UserID)
-		return loadErr
-	})
-	if errors.Is(err, errAccountLocked) {
-		// A §27-locked account is refused, but INDISTINGUISHABLY from bad
-		// credentials: same 401, same body, same Argon2 timing (the decoy
-		// verify already ran in checkCredentials). It is deliberately NOT
-		// run through recordFailedLogin — a probe against a locked account
-		// must neither extend its own lock nor append another failure row
-		// (an attacker-drivable DoS, and a distinct audit cadence would
-		// itself be an oracle). The in-memory per-IP+email limiter still
-		// counts it (the handler Records every 401), so a locked account is
-		// no longer a rate-limit blind spot either.
-		return Identity{}, "", ErrBadCredentials
-	}
-	if errors.Is(err, ErrBadCredentials) {
-		// The attempt's transaction rolled back with the error, so the
-		// failure audit needs its own transaction — an invisible
-		// brute-force is exactly what the audit trail exists to catch.
-		// A failure writing it outranks the 401.
-		if auditErr := s.recordFailedLogin(ctx, email); auditErr != nil {
-			return Identity{}, "", auditErr
-		}
-		return Identity{}, "", err
-	}
-	if err != nil {
-		return Identity{}, "", err
-	}
-	return id, token, nil
-}
-
 // Authenticate resolves a session cookie value to its Identity, enforcing
 // revocation + idle + absolute expiry at lookup, and rolls the idle window
 // forward.
@@ -323,6 +274,12 @@ func (s *Service) Authenticate(ctx context.Context, rawToken string) (Identity, 
 	// session and app_user, and a request already carries this same value from
 	// the middleware before any session is looked up.
 	wsID, err := s.InstallationWorkspace(ctx)
+	if err != nil {
+		return Identity{}, err
+	}
+	// Read before the tx (like the login gates), so the per-request enrolment
+	// check below runs only when the installation actually requires a factor.
+	requireMFA, err := s.mfaMandatory(ctx)
 	if err != nil {
 		return Identity{}, err
 	}
@@ -380,7 +337,20 @@ func (s *Service) Authenticate(ctx context.Context, rawToken string) (Identity, 
 		}
 		var loadErr error
 		id.Roles, id.Teams, id.Permissions, loadErr = loadGrants(ctx, tx, userID)
-		return loadErr
+		if loadErr != nil {
+			return loadErr
+		}
+		// Confine a member with no confirmed factor while the installation
+		// requires one — the enrolment check runs only when the policy is on, so
+		// an installation that never required MFA pays nothing for it.
+		if requireMFA {
+			confirmed, err := hasConfirmedMFA(ctx, tx, userID)
+			if err != nil {
+				return err
+			}
+			id.MustEnrolMFA = !confirmed
+		}
+		return nil
 	})
 	if err != nil {
 		return Identity{}, err
