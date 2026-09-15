@@ -100,6 +100,7 @@ export const vi = {
   "home.change.stageUnknown": "Giai đoạn không rõ",
   "home.change.unidentified": "Không rõ",
   "home.change.by": "Người thực hiện: {actor}",
+  "brief.focus.startHere": "Bắt đầu từ đây",
   "brief.focus.context": "Mở ngữ cảnh",
   "brief.focus.back": "Quay lại ưu tiên",
   "brief.queue.back": "Quay lại danh sách",

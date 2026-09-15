@@ -10,6 +10,7 @@
 // them are one thing: a lane the strip offers and the address cannot spell, or
 // the reverse, is a link somebody pastes that opens the wrong day.
 
+import { type RefObject, useLayoutEffect, useRef, useState } from "react";
 import { routeHash } from "../app/router";
 import { hashWithParams } from "../app/urlstate";
 import { SegmentedControl } from "../design-system/atoms";
@@ -125,6 +126,45 @@ export function worklistLaneHref(
   return hashWithParams(routeHash({ screen: "home" }), params);
 }
 
+// The widest a lanes column ever is. worklist.css gives the column 14rem when
+// the page draws two columns; anything wider than this is the head standing
+// across the page on its own.
+const LANES_COLUMN_MAX_PX = 320;
+
+/**
+ * Whether this head stands in the LANES COLUMN beside the day, or across the
+ * page above it — read off the head's own width rather than the window's,
+ * because the same queue is drawn on a page of its own and inside the Brief's
+ * drawer, and the stylesheet decides the columns from the page's width
+ * (worklist.css). The cuts are a list in the column and a strip across the
+ * page: eight rows of lanes over a phone's queue would push the first row past
+ * the fold the phone rules exist to keep it above.
+ *
+ * Measured once wherever the observer is unavailable (jsdom): the answer is
+ * right for the render that just happened, it simply stops following a
+ * resize, and a head that was never measured reads as across the page.
+ */
+function useLanesColumn(): [RefObject<HTMLDivElement | null>, boolean] {
+  const head = useRef<HTMLDivElement>(null);
+  const [inColumn, setInColumn] = useState(false);
+  useLayoutEffect(() => {
+    const element = head.current;
+    if (!element) {
+      return;
+    }
+    const measure = () =>
+      setInColumn(element.getBoundingClientRect().width <= LANES_COLUMN_MAX_PX);
+    measure();
+    if (typeof ResizeObserver === "undefined") {
+      return;
+    }
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+  return [head, inColumn];
+}
+
 /**
  * The day's own head: the sentence, the dials over it, the cuts under it.
  *
@@ -155,8 +195,9 @@ export function WorklistHeader({
   const { locale } = useLocale();
   const scopes = day.scope_options;
   const completeness = completenessText(day, filter, t, locale, loaded);
+  const [head, inColumn] = useLanesColumn();
   return (
-    <div className="worklist-header">
+    <div className="worklist-header" ref={head}>
       {/* The facts line and the dials on one line: what the day holds, and
           whose day. A dial belongs beside the sentence it changes rather than
           under it, where it read as a control over the pills below. */}
@@ -231,6 +272,7 @@ export function WorklistHeader({
           value={filter}
           onChange={onFilter}
           label={t("worklist.filter.label")}
+          layout={inColumn ? "list" : "row"}
         />
         {/* A narrowing that came by LINK names itself, because no pill is
             pressed to name it. Without this the reader arrives from Brief at a

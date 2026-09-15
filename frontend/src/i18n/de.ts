@@ -94,6 +94,7 @@ export const de = {
   "home.change.stageUnknown": "Unbekannte Phase",
   "home.change.unidentified": "Unbekannt",
   "home.change.by": "Verantwortlich: {actor}",
+  "brief.focus.startHere": "Hier anfangen",
   "brief.focus.context": "Kontext öffnen",
   "brief.focus.back": "Zurück zum Fokus",
   "brief.queue.back": "Zurück zur Liste",

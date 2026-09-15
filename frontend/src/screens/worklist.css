@@ -16,8 +16,33 @@
    be wrong for most of those combinations the day it was written. `--gapCards`
    is the role between sibling surfaces, so the shell's own rule and this one
    resolve to the one interval and retune together. */
-.wrap.worklist > * + * {
+.wrap.worklist > * + *,
+.worklist-lanes > * + *,
+.worklist-day > * + * {
   margin-block-start: var(--gapCards);
+}
+
+/* TWO COLUMNS WHERE THE PAGE HAS THE WIDTH: the lanes beside the day. The
+   page measures ITSELF rather than the window, because this same queue is
+   drawn on a page of its own and inside the Brief's drawer, which are two
+   widths on one screen. 52rem is where a 14rem lanes column still leaves the
+   rows a reading measure. The lanes STICK to the top of whatever scrolls —
+   the page, or the drawer's body — so a reader ten rows down changes the cut
+   without going back up. */
+.wrap.worklist {
+  container-type: inline-size;
+}
+@container (min-width: 52rem) {
+  .worklist-columns {
+    display: grid;
+    grid-template-columns: 14rem minmax(0, 1fr);
+    column-gap: var(--space-6);
+    align-items: start;
+  }
+  .worklist-lanes {
+    position: sticky;
+    top: 0;
+  }
 }
 
 /* No interval of its own: the stack above owns what follows the head. Carrying
@@ -27,7 +52,7 @@
 .worklist-header {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-4);
 }
 
 /* The sentence and the scope share a line: the sentence takes the room, the
@@ -38,6 +63,23 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2) var(--space-4);
+}
+/* In the lanes column the line is a STACK: the sentence, then the dials under
+   it at the column's width, because a 14rem column holds neither beside the
+   other. The dials take the column and the picker its whole line. */
+@container (min-width: 52rem) {
+  .worklist-header-line {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .worklist-header-dials {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .worklist-owner-field {
+    max-width: none;
+    min-inline-size: 0;
+  }
 }
 
 /* The day's verdict in figures, in the display face: it is the one sentence
@@ -487,6 +529,15 @@
   .wrap.worklist {
     display: flex;
     flex-direction: column;
+  }
+
+  /* The two wrappers dissolve: `display: contents` hands their children to
+     the column above, which is what lets the readings and the trailing
+     panels take the order the rules below give them. */
+  .worklist-columns,
+  .worklist-lanes,
+  .worklist-day {
+    display: contents;
   }
 
   .worklist-readings {

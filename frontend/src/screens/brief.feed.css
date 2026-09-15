@@ -1,6 +1,6 @@
 /* The morning's one feed: a ranked list in the Focus panel. The rows carry
    their own layout from worklist.row.css; this sheet is the list they sit in,
-   the rank tile beside each, and the lead's own size. */
+   the rank tile beside each, and the lead's own shape. */
 .brief-feed-list {
   display: flex;
   flex-direction: column;
@@ -48,7 +48,8 @@
    specificity rather than on sheet order. `align-items: start` because the
    text column is two lines here — the name, then what the line says — and a
    kind badge centred on two lines floats between them. */
-.brief-focus-list .worklist-row.worklist-row-compact {
+.brief-focus-list .worklist-row.worklist-row-compact,
+.brief-focus-list .brief-focus-lead > .worklist-row {
   padding: 0;
   align-items: start;
 }
@@ -70,17 +71,36 @@
   flex: none;
 }
 
-/* THE LEAD. The first row is where the day starts, and the page's opening
-   sentence has already said so; the list says it again in shape rather than in
-   words — the tile filled in the accent, in the display face, and the name one
-   rung up. Accent here is the one filled mark on the list, which is what the
-   design language spends it on: the move the page names. */
+/* ── THE LEAD ─────────────────────────────────────────────────────────────
+ * The first row is where the day starts, and the page's opening sentence has
+ * already said so; the list says it again in shape. It is a BAND on the
+ * accent wash rather than a card inside the panel — the one enclosed shape a
+ * pane admits is a tinted row — under a kicker that names it, drawn at the
+ * row's full density with its rank in the accent and its name a rung up. The
+ * wash is the accent's, which the language spends on the move the page
+ * names: this row is that move. */
 .brief-focus-lead {
+  display: block;
+  background: var(--accentLight);
   padding-block: var(--space-5);
 }
 
-.brief-focus-lead .brief-focus-rank {
-  inline-size: var(--space-8);
+/* No seam under a tinted band: its ground is already the boundary. */
+.brief-focus-lead + .brief-focus-item::before {
+  content: none;
+}
+
+.brief-focus-kicker {
+  display: block;
+  color: var(--accentText);
+  margin-bottom: var(--space-3);
+}
+
+/* The lead's rank is the queue's own tile (worklist.css) a size up and in
+   the accent — the same mark the queue lights on the row in hand, because
+   this is the row in hand before the reader has chosen one. */
+.brief-focus-lead .worklist-rank {
+  min-width: var(--space-8);
   block-size: var(--space-8);
   border-radius: var(--r-control);
   background: var(--accent);
@@ -90,9 +110,24 @@
   letter-spacing: var(--tracking-display);
 }
 
+/* The lead's name in the display face at the card-title rung: it is the
+   one line on the page the reader is meant to act on first. */
 .brief-focus-lead .worklist-row-title {
-  font-size: var(--fs-lead);
-  font-weight: var(--fw-medium);
+  font-family: var(--f-display);
+  font-size: var(--fs-h3);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--tracking-display);
+}
+
+/* The lead's row keeps the kind beside the rank and gives the work the rest;
+   the verbs go under the work whatever the container says, because the band
+   is a card's worth of reading and the verbs are its foot. */
+.brief-focus-lead .worklist-row {
+  grid-template-columns: auto auto minmax(0, 1fr);
+}
+.brief-focus-lead .worklist-row > .worklist-row-acts {
+  grid-column: 1 / -1;
+  padding-top: var(--space-2);
 }
 
 /* Dates and evidence stay readable beside the action, at every width: the
@@ -129,6 +164,16 @@
   overflow-wrap: anywhere;
 }
 
+/* The way into the whole queue, at the panel's foot: a button with its
+   arrow, because it is the panel's one destination and a bare link at the
+   foot of a list of verbs read as a caption. The glyph and the word are one
+   flow. */
+.brief-focus-open {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
 /* Swipe gestures keep a real wrapper on phones; it follows the row's layout. */
 .brief-focus-list .swipe-row {
   width: 100%;
@@ -141,9 +186,7 @@
   .brief-focus-item {
     column-gap: var(--space-2);
   }
-}
 
-@media (max-width: 720px) {
   /* THE VERBS GO UNDER THE WORK on a phone. The compact row's own phone
      arrangement keeps them on the kind's line, which holds one glyph on the
      queue; a focus row carries the way into its context as well, and three
@@ -153,5 +196,9 @@
     flex: 1 1 100%;
     order: 3;
     margin-inline-start: 0;
+  }
+
+  .brief-focus-lead .worklist-row-title {
+    font-size: var(--fs-lead);
   }
 }

@@ -178,7 +178,7 @@ export function BriefGlance({
     <header className="glance arrive" data-testid="brief-glance">
       <h1 className="glance-greeting t-display">{greeting}</h1>
       {date && (
-        <p className="t-caption glance-date">
+        <p className="t-eyebrow glance-date">
           <time dateTime={date}>
             {/* The morning names its day the way a page over a greeting does
                 — the weekday and the month written out — because a reader

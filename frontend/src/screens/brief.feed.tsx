@@ -2,9 +2,11 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useQueryClient } from "@tanstack/react-query";
+import { ArrowRight } from "lucide-react";
 import { useState } from "react";
 import { navigate } from "../app/router";
 import { Badge, Button } from "../design-system/atoms";
+import { Eyebrow } from "../design-system/eyebrow";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { Panel, PanelBody } from "../design-system/panel";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
@@ -132,8 +134,12 @@ function AgendaFoot({ day }: Readonly<{ day: Worklist }>) {
   const hidden = day.focus?.urgent_remaining ?? 0;
   return (
     <>
-      <a className="entity-link" href={worklistLaneHref("all", day.scope)}>
+      <a
+        className="btn btn-sm brief-focus-open"
+        href={worklistLaneHref("all", day.scope)}
+      >
         {t("brief.feed.fullWorklist")}
+        <ArrowRight size={14} aria-hidden="true" />
       </a>
       {hidden > 0 && (
         <a className="entity-link" href={worklistLaneHref("urgent", day.scope)}>
@@ -186,18 +192,25 @@ function AgendaRows({
   const draw = (item: WorklistItem, at: number) => {
     const context =
       focus && onContext && (hasPane(item) || item.source === "task");
+    // THE LEAD IS DRAWN WHOLE. The first row is where the day starts, so it
+    // takes the row's full density — its rank, its reasons, what doing
+    // nothing costs — under a kicker that says so; every row after it is one
+    // line with a rank tile, because the reader has already been told where
+    // to begin and is now only scanning what comes next.
+    const lead = focus && at === 0;
+    const details = context ? (
+      <Button small variant="ghost" onClick={() => onContext(item)}>
+        {t("brief.focus.context")}
+      </Button>
+    ) : undefined;
     return (
-      <li
-        key={`${item.source}-${item.id}`}
-        className={
-          focus
-            ? at === 0
-              ? "brief-focus-item brief-focus-lead"
-              : "brief-focus-item"
-            : undefined
-        }
-      >
-        {focus && (
+      <li key={`${item.source}-${item.id}`} className={itemClass(focus, lead)}>
+        {lead && (
+          <Eyebrow className="brief-focus-kicker">
+            {t("brief.focus.startHere")}
+          </Eyebrow>
+        )}
+        {focus && !lead && (
           // Readable, not decorative: the list carries the order for a
           // screen reader and the tile states it for everybody else — the
           // same reason the queue's own rank is text.
@@ -208,7 +221,7 @@ function AgendaRows({
         <WorklistRow
           allowPin={!focus}
           item={item}
-          density="compact"
+          {...(lead ? { position: 1 } : { density: "compact" })}
           owner=""
           onOpenEmail={onOpenEmail}
           onReview={() =>
@@ -217,13 +230,7 @@ function AgendaRows({
               new Map([["filter", item.category]]),
             )
           }
-          context={
-            context ? (
-              <Button small variant="ghost" onClick={() => onContext(item)}>
-                {t("brief.focus.context")}
-              </Button>
-            ) : undefined
-          }
+          context={details}
         />
       </li>
     );
@@ -235,6 +242,12 @@ function AgendaRows({
       {rows.map(draw)}
     </ol>
   );
+}
+
+/** The focus list's items carry a class; the updates list's carry none. */
+function itemClass(focus: boolean, lead: boolean): string | undefined {
+  if (!focus) return undefined;
+  return lead ? "brief-focus-item brief-focus-lead" : "brief-focus-item";
 }
 
 export function BriefUpdates({ day }: Readonly<{ day: Worklist | undefined }>) {

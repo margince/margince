@@ -152,12 +152,12 @@ function PersonalMorning({
       : "ready";
   return (
     <>
-      {/* The figures FIRST, then the work: what the day holds as five readings
-          under the greeting, and the ranked list under those — the order every
-          page with figures reads in, and the order the opening sentence
-          promises ("First: … Then 5 more"). The overview also carries what the
-          read could not see and when it was assembled, because both qualify
-          the figures before they qualify the rows. */}
+      {/* The figures FIRST, as the lower band of the briefing: what the day
+          holds as five readings under the greeting, then the ranked list —
+          the order every page with figures reads in, and the order the
+          opening sentence promises ("First: … Then 5 more"). The overview
+          also carries what the read could not see and when it was assembled,
+          because both qualify the figures before they qualify the rows. */}
       {day && (
         <div className="brief-overview">
           <BriefReadingsStrip day={day} />
@@ -182,14 +182,6 @@ function PersonalMorning({
           </p>
         </div>
       )}
-      <BriefFeed
-        day={day}
-        onContext={(item) => setSelected(`${item.source}-${item.id}`)}
-        state={state}
-        changed={changedSinceBrief(day)}
-        refreshFailed={query.isRefetchError}
-        onRetry={() => void query.refetch()}
-      />
       <PageZones
         shape="aside"
         className="brief-followthrough"
@@ -198,6 +190,18 @@ function PersonalMorning({
         asideLabel={t("brief.rail")}
         main={
           <>
+            {/* The work leads the column and the rail reads beside it: the
+                schedule and the night are the context the ranked list is
+                read against, so they stand next to it rather than under
+                everything else. */}
+            <BriefFeed
+              day={day}
+              onContext={(item) => setSelected(`${item.source}-${item.id}`)}
+              state={state}
+              changed={changedSinceBrief(day)}
+              refreshFailed={query.isRefetchError}
+              onRetry={() => void query.refetch()}
+            />
             <BriefChanges />
             <BriefUpdates day={day} />
           </>
