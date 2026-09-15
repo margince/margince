@@ -48,8 +48,6 @@ a.record-card-open:focus-visible {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: var(--fs-body);
-  font-weight: var(--fw-semibold);
 }
 
 /* Across BOTH tracks: the aside sits on the first row only, and a facts row
@@ -71,8 +69,6 @@ a.record-card-open:focus-visible {
    two lines of it costs. */
 .record-card-position {
   margin: 0;
-  color: var(--textMeta);
-  font-size: var(--fs-sm);
 }
 
 /* Truncated in TWO places, because the handle has two shapes. A value
@@ -84,7 +80,6 @@ a.record-card-open:focus-visible {
    only the link's, a refused one overflowed the card entirely. */
 .record-card-handles {
   margin: 0;
-  font-size: var(--fs-sm);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

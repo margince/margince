@@ -21,7 +21,6 @@
   border: 1px solid var(--paneEdge);
   border-radius: var(--r-md);
   background: var(--pane);
-  color: var(--textContent);
 }
 
 .callout-icon {
@@ -29,11 +28,11 @@
   flex: none;
   align-items: center;
   /* The glyph centres on the heading's OWN first line, rather than on an offset
-   * typed once and left behind: the box is exactly that line tall, so the pair
-   * stays aligned when the ramp or the leading moves. A 2px nudge was the
+   * typed once and left behind: the box is exactly one line of body text tall,
+   * so the pair stays aligned when the root type moves. A 2px nudge was the
    * previous answer, and it sat the glyph below the cap it was meant to be
    * beside. */
-  block-size: calc(var(--fs-sm) * var(--lh-snug));
+  block-size: calc(var(--fs-base) * var(--lh-base));
 }
 
 /* Everything between the icon and the dismiss: the words, then the verbs on the
@@ -65,14 +64,6 @@
 
 .callout-title {
   margin: 0;
-  font-weight: var(--fw-semibold);
-  font-size: var(--fs-sm);
-  line-height: var(--lh-snug);
-}
-
-.callout-text {
-  font-size: var(--fs-sm);
-  line-height: var(--lh-normal);
 }
 
 /* A callout's body is prose the caller supplies, so the paragraph reset lives

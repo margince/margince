@@ -138,8 +138,6 @@
   background: var(--bgWell);
 }
 .board-col-head .stage {
-  font-size: var(--fs-sm);
-  font-weight: 600;
   color: var(--textPrimary);
   flex: 1;
   /* A STAGE NAME IS DATA of unbounded length, and it shares this line with the
@@ -157,14 +155,10 @@
    any length. `flex: none` is what keeps the name's ellipsis from eating it. */
 .board-col-head .board-col-count {
   flex: none;
-  font-size: var(--fs-sm);
-  font-weight: 600;
   color: var(--textPrimary);
 }
 .board-col-head .prob {
   font-variant-numeric: tabular-nums;
-  font-size: var(--fs-eyebrow);
-  color: var(--textMeta);
 }
 /* Two lines rather than three figures fighting for one: a stage column is
  * narrow by design, and a money figure broken across lines is unreadable. */
@@ -172,8 +166,6 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
   padding: 0 4px 4px;
 }
 /* A MONEY FIGURE IS ONE LINE AND ELLIPSISES; A SENTENCE WRAPS.
@@ -189,8 +181,6 @@
   overflow: hidden;
 }
 .board-col-money {
-  font-weight: 600;
-  color: var(--textContent);
   font-variant-numeric: tabular-nums;
   /* A flex item's floor is its own min-content width unless it is told
      otherwise, and a `nowrap` amount has no shrink in it at all. */
@@ -262,7 +252,6 @@
      carries the deal's link and the company's without nesting one inside the
      other. The colour and decoration resets stay: they cover the anchors this
      card contains, which `a:not([class])` in base.css does not reach. */
-  color: inherit;
   text-decoration: none;
   /* The containing block the stretched link measures itself against. Without
      it the deal anchor would spread to the nearest positioned ancestor — the
@@ -320,7 +309,6 @@
 .deal-company-link {
   position: relative;
   z-index: 1;
-  color: inherit;
   text-decoration: none;
 }
 .deal-company-link:hover {
@@ -351,7 +339,6 @@
 /* The size of the stall, in the stall's own tone: it sits beside the word, and
    only ever beside it. */
 .deal-card .deal-age {
-  font-size: var(--fs-sm);
   color: var(--warnText);
   font-variant-numeric: tabular-nums;
 }
@@ -360,8 +347,6 @@
   align-items: center;
   gap: var(--space-2);
   min-width: 0;
-  font-size: var(--fs-body);
-  font-weight: var(--fw-semibold);
   color: var(--textPrimary);
 }
 /* The card is one line of company in a narrow column, so a long name elides
@@ -384,14 +369,10 @@
 }
 /* Tabular so a column of figures lines up digit for digit. */
 .deal-card .deal-value {
-  font-size: var(--fs-lead);
-  font-weight: var(--fw-semibold);
   color: var(--textPrimary);
   font-variant-numeric: tabular-nums;
 }
 .deal-card .deal-closes {
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
   white-space: nowrap;
 }
 /* A warning about the DATE, not about the deal: one nobody has confirmed, or
@@ -401,7 +382,6 @@
   color: var(--warnText);
 }
 .deal-card .deal-name {
-  font-size: var(--fs-sm);
   color: var(--textPrimary);
 }
 /* The company and, at the far edge of its line, who carries the deal: a mark
@@ -528,28 +508,11 @@
    standing badge beside it on the same row. */
 .record-head h1 {
   font-family: var(--f-display);
-  font-size: var(--fs-h1);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-display);
   color: var(--textPrimary);
   min-width: 0;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-}
-/* The RECORD page's identity block, at the scale the mockups draw it: the name
-   is the largest thing on the page and the mark beside it is a logo rather
-   than the list-row avatar it shares a component with. The list keeps its own
-   compact sizes — this applies only where the header runs wide. */
-.record-head-wide h1 {
-  font-size: var(--fs-record-fluid);
-  /* The head box is `overflow: hidden` for the ellipsis, so a line box shorter
-     than the glyphs crops them: at 1.05 the record rung's fluid size cut the
-     descenders and accents out of a name. `--lh-tight` gives them their box. */
-  line-height: var(--lh-tight);
-  /* Tighter than the display rung's tracking: a name set this large wears the
-     scale's own spacing as gaps between its letters. */
-  letter-spacing: -0.035em; /* ds:ignore optical, at the record rung's fluid size: --tracking-display reads as gaps between letters this large */
 }
 /* The record page's verbs are the page's own rather than a toolbar's: one rung
    taller than a control in a form, beside a name at the record rung. Below
@@ -570,18 +533,10 @@
 .record-head-wide .record-actions > .btn {
   padding-inline: var(--space-4);
 }
-.record-head .record-sub {
-  font-size: var(--fs-sm);
-  line-height: 1.5;
-  color: var(--textMeta);
-}
 /* One quiet line under the name, at the same size as the facts beside it. Set
    larger it competed with the name above and read as a second title; the facts
    row under it carries what a reader actually scans for. */
 .record-head-wide .record-sub {
-  font-size: var(--fs-sm);
-  line-height: 1.45;
-  color: var(--textMeta);
   max-width: 62ch;
 }
 .record-badges {
@@ -595,8 +550,6 @@
   gap: 8px;
   flex-wrap: wrap;
   margin-top: 4px;
-  font-size: var(--fs-sm);
-  color: var(--textMeta);
 }
 /* A wide header's pulse is a STACK, not a row: the record page puts two blocks
    here — what the account is, then the figures it stands on — and side by side
@@ -925,8 +878,6 @@
    beside it rather than floating at the top of a three-line row. */
 .timeline .tl-when {
   padding-top: var(--space-3);
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
   white-space: nowrap;
   /* Right against the rail. The eye reads the date and the mark it belongs to
      as one thing; ranged left, a short date and a long one pointed at
@@ -1020,7 +971,6 @@
   border: 1px solid var(--borderStrong);
   display: grid;
   place-items: center;
-  color: var(--textMeta);
   flex: none;
 }
 .timeline .tl-icon svg {
@@ -1039,9 +989,6 @@
    with, what changed — qualifies this line, and set at the same weight as its
    qualifiers the reader had to read all four to find out what happened. */
 .timeline .tl-title {
-  font-size: var(--fs-body);
-  font-weight: var(--fw-semibold);
-  line-height: 1.35;
   color: var(--textPrimary);
   text-wrap: pretty;
 }
@@ -1052,7 +999,6 @@
   align-items: center;
   gap: 6px;
   font-style: italic;
-  color: var(--textMeta);
 }
 .timeline .tl-withheld svg {
   width: 14px;
@@ -1062,8 +1008,6 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
 }
 
 /* Lead segregation (§3.5): the lead surface is visibly apart from the
@@ -1082,12 +1026,6 @@
   flex-direction: column;
   gap: 2px;
 }
-/* The term in a firmographics pair is an eyebrow: the markup carries
-   .t-eyebrow, so this sheet no longer keeps its own near-copy of that type. */
-.firmo dd {
-  font-size: var(--fs-body);
-  color: var(--textContent);
-}
 
 /* Partner detail's longer field list (partners.tsx PartnerDetail) wraps
  * unevenly in .firmo's flex-wrap layout — a two-column definition grid reads
@@ -1096,17 +1034,6 @@
   display: grid;
   grid-template-columns: 140px 1fr;
   gap: 8px 16px;
-}
-.detail-grid dt {
-  font-size: var(--fs-eyebrow);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-eyebrow);
-  color: var(--textMeta);
-}
-.detail-grid dd {
-  font-size: var(--fs-body);
-  color: var(--textContent);
 }
 
 /* A timeline list whose rows carry no date gutter or rail of their own —
@@ -1146,17 +1073,12 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
   white-space: pre-wrap;
-  color: var(--textMeta);
-  font-size: var(--fs-sm);
-  line-height: 1.45;
 }
 
 .tl-text-full {
   display: block;
   white-space: pre-wrap;
   color: var(--textPrimary);
-  font-size: var(--fs-sm);
-  line-height: 1.45;
 }
 
 .tl-text-toggle {
@@ -1164,8 +1086,6 @@
   border: none;
   padding: 0;
   margin-top: var(--space-1);
-  font: inherit;
-  font-size: var(--fs-meta);
   color: var(--accentText);
   cursor: pointer;
 }
@@ -1179,7 +1099,6 @@
    of buttons doing the same thing. */
 .tl-text-tail-toggle {
   display: block;
-  color: var(--textMeta);
 }
 
 /* The folded tail, once asked for. Quieter than the message and inset, because
@@ -1190,9 +1109,6 @@
   padding-inline-start: var(--space-2);
   border-inline-start: 2px solid var(--borderSubtle);
   white-space: pre-wrap;
-  color: var(--textMeta);
-  font-size: var(--fs-sm);
-  line-height: 1.45;
 }
 
 /* A link the sender wrote, not one we generated: it carries the address as its
@@ -1201,24 +1117,6 @@
   color: var(--accentText);
   text-decoration: underline;
   overflow-wrap: anywhere;
-}
-
-/* Which way it went is carried by `.tl-direction`'s own words beside the kind.
-   The coloured edge these classes used to draw fought the date column for the
-   row's left margin, and two hues on a spine is a distinction a reader has to
-   learn where a phrase is one they already know. The classes stay because the
-   row still declares its direction for anything else reading it. */
-
-.tl-direction {
-  font-size: var(--fs-eyebrow);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
-  color: var(--textMeta);
-}
-
-/* A collapsed conversation states what it is before what it says. */
-.tl-group-count {
-  font-weight: 500;
 }
 
 /* A thread's members are a card on the body side of the rail: the
@@ -1251,8 +1149,6 @@
    would compete with it, where this only has to be findable when a reader is
    scanning for one deal among several. */
 .timeline .tl-about {
-  font-size: var(--fs-eyebrow);
-  color: var(--textMeta);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-sm);
   padding: 0 var(--space-2);
@@ -1275,8 +1171,6 @@
 .timeline .tl-when-time {
   display: block;
   margin-top: var(--space-1);
-  font-size: var(--fs-eyebrow);
-  color: var(--textTertiary);
 }
 
 /* A conversation on the chronology: one card on the body side of the rail,
@@ -1291,11 +1185,6 @@
   border: 1px solid var(--borderStrong);
   border-radius: var(--r-lg);
   background: var(--pane);
-}
-
-/* Who the thread was with, beside the count. */
-.tl-thread-with {
-  color: var(--textMeta);
 }
 
 /* The thread's verbs sit at the end of its own head line — Reply belongs to
@@ -1341,18 +1230,13 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
-  font-size: var(--fs-sm);
-  color: var(--textMeta);
 }
 .tl-msg-who {
-  font-weight: var(--fw-medium);
   color: var(--textPrimary);
 }
 /* The moment holds its width: it is what tells two replies apart, so it is
    the last thing that may be squeezed. */
 .tl-msg-when {
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
   white-space: nowrap;
 }
 /* The mark for a message that is not their word — ours, or one the reader
@@ -1367,7 +1251,6 @@
   corner-shape: round;
   background: var(--bgElevated);
   border: 1px solid var(--borderStrong);
-  color: var(--textMeta);
 }
 .tl-msg-mark svg {
   width: 11px;
@@ -1377,11 +1260,6 @@
    than one because a message is read here, not scanned past; two rather than
    more because the whole thread stands open and a message that grew with
    its text would decide the card's height. */
-/* The withheld sentence inside a thread has no title to sit on, so it takes
-   the message's own size. */
-.tl-msg-body > .tl-withheld {
-  font-size: var(--fs-sm);
-}
 /* A message that opens its drawer is the same grid as one that does not;
    the button chrome goes and the ground answers the pointer, as on the
    canonical email row. */
@@ -1390,8 +1268,6 @@
   border: 0;
   border-radius: var(--r-sm);
   background: none;
-  font: inherit;
-  color: inherit;
   text-align: left;
   cursor: pointer;
   transition: background var(--dur-state) var(--ease-out);

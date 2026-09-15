@@ -15,8 +15,6 @@
   padding: 0;
   border: 0;
   background: none;
-  font: inherit;
-  color: inherit;
   text-align: left;
   cursor: pointer;
 }
@@ -68,7 +66,4 @@
      rather than its own. */
   background: var(--bgElevated);
   box-shadow: var(--shadow-pop);
-  font-size: var(--fs-meta);
-  line-height: 1.5;
-  color: var(--textContent);
 }

@@ -25,9 +25,6 @@
   corner-shape: round;
   background: var(--bgElevated);
   font-family: var(--f-body);
-  font-size: var(--fs-meta);
-  font-weight: var(--fw-medium);
-  color: var(--textContent);
   white-space: nowrap;
   cursor: pointer;
 }
@@ -48,19 +45,5 @@
 .filterpill[aria-pressed="true"] {
   border-color: var(--borderStrong);
   background: var(--bgChip);
-  font-weight: var(--fw-semibold);
   color: var(--textPrimary);
-}
-
-/* The figure in tabular digits (`.t-num`), each one width — a row of counts
-   keeps its rhythm instead of shifting pill to pill. Quieter than the word it
-   follows: the reader is looking for the cut and checks the number after. */
-.filterpill-count {
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-regular);
-  color: var(--textMeta);
-}
-
-.filterpill[aria-pressed="true"] .filterpill-count {
-  color: var(--textContent);
 }

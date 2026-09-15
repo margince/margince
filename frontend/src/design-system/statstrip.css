@@ -70,8 +70,6 @@
  * product and stretches its own press target over the tile. A slot wrapped in
  * an anchor was tried on the Brief and taken out. */
 .stat-strip > button {
-  font: inherit;
-  color: inherit;
   text-align: inherit;
   padding: 0;
   border: 0;

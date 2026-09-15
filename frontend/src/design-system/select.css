@@ -20,7 +20,6 @@
 }
 .select-control:disabled {
   cursor: not-allowed;
-  color: var(--textTertiary);
   background: var(--bgCard);
 }
 /* The face never pushes the chevron out of the control: a long label ellipsizes
@@ -35,18 +34,8 @@
      three children and the swatch drifts off its own label. */
   flex: 1 1 auto;
 }
-/* A placeholder is not a value, and it must not read like one — but it is text a
-   reader has to be able to read, so it stops at --textMeta, the canonical AA
-   small-text role, rather than the decorative tier below it. This is text on an
-   active control, so 1.4.3's inactive-control exemption does not cover it: the
-   axe sweep failed on `.select-face-placeholder` the moment a screen shipped a
-   control resting on its placeholder. */
-.select-face-placeholder {
-  color: var(--textMeta);
-}
 .select-chevron {
   flex: none;
-  color: var(--textMeta);
 }
 /* The turn itself is unconditional — it is the state, and a reader who asked for
    less motion still needs the chevron to point at an open list. Only the tween is
@@ -100,7 +89,6 @@
   padding: 7px 9px;
   border-radius: var(--r-sm);
   font-family: var(--f-body);
-  font-size: var(--fs-body);
   color: var(--textPrimary);
   cursor: pointer;
 }
@@ -133,7 +121,6 @@
 }
 .select-option[aria-selected="true"] {
   color: var(--accentText);
-  font-weight: 500;
 }
 .select-option[aria-selected="true"].is-active {
   background: var(--accentLight);
@@ -142,7 +129,6 @@
    cannot make right now is information — but it takes no hover treatment,
    because a highlight is a promise that a click will do something. */
 .select-option.is-disabled {
-  color: var(--textTertiary);
   cursor: not-allowed;
   background: none;
 }

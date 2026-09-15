@@ -21,27 +21,16 @@
    never mistakes a permission boundary for an empty account. */
 .surfacestate-empty {
   margin-top: 6px;
-  font-size: var(--fs-body);
-  color: var(--textMeta);
 }
 /* What would be here, under the line saying there is none. Not italic: it is a
    fact about the RECORD — what puts a row here — where the italic voice below
-   is the surface talking about itself.
-
-   --textMeta, the AA small-text role. It is set below the sentence it hangs
-   from, and small plus muted is a sentence a reader has to lean in for, so it
-   takes the step down from body rather than two. */
+   is the surface talking about itself. */
 .surfacestate-empty-detail {
   margin-top: var(--space-1);
-  font-size: var(--fs-sm);
-  line-height: 1.45;
-  color: var(--textMeta);
   text-wrap: pretty;
 }
-/* Reads --textMeta, the canonical AA small-text role: this text says a
-   permission boundary or a failed read, which is exactly the text a reader
-   must not have to squint at. Italic carries the "this is about the page,
-   not the record" tone without leaning on colour.
+/* Italic carries the "this is about the page, not the record" tone without
+   leaning on colour.
 
    Shared by withheld, unavailable, unsupported and the sentence inside
    failed — four causes, one voice, because what they have in common is that
@@ -49,8 +38,6 @@
    tells them apart is the words, which is where that belongs. */
 .surfacestate-withheld {
   margin-top: 6px;
-  font-size: var(--fs-body);
-  color: var(--textMeta);
   font-style: italic;
 }
 
@@ -69,7 +56,6 @@
    current. The warn tone marks it as a caveat and not as prose. */
 .surfacestate-stale {
   margin-bottom: var(--space-2);
-  font-size: var(--fs-sm);
   color: var(--warnText);
 }
 

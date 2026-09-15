@@ -341,20 +341,6 @@
   }
 }
 
-/* How many are still behind, and how to answer without a pointer. Both are
-   drawn rather than hidden: a count nobody can see turns a finite queue into an
-   endless one, and a shortcut nobody is told about belongs to whoever wrote it. */
-.ddeck-behind {
-  color: var(--textMeta);
-}
-
-/* --textMeta, not --textTertiary: at 12px the tertiary ink measures
- * 2.5:1 against the page, and this line is the only place a reader is told the
- * keyboard exists. A legend nobody can read is a legend that is not there. */
-.ddeck-keys {
-  color: var(--textMeta);
-}
-
 /*
  * The tray: what has been staged and not yet sent. Sticky at the foot of the
  * deck, because it is the only undo there is and a reader who has scrolled a
@@ -411,8 +397,6 @@
 
 .ddeck-tray-count {
   flex: 1;
-  font-size: var(--fs-sm);
-  font-weight: var(--fw-semibold);
   color: var(--textPrimary);
 }
 
@@ -428,10 +412,6 @@
   gap: var(--space-3);
 }
 
-.ddeck-cleared-time {
-  color: var(--textMeta);
-}
-
 /* The way into a bundle's members, under the count its meta line carries. */
 .ddeck-bundle-open {
   margin-top: var(--space-3);
@@ -445,7 +425,6 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  color: var(--textContent);
 }
 
 /*

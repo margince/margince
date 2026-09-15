@@ -21,17 +21,7 @@
   /* Type is stated, never inherited: a badge in an eyebrow heading or inside a
      code sample must read as the badge beside it everywhere else. */
   font-family: var(--f-body);
-  font-size: var(--fs-meta);
   font-style: normal;
-  /* Medium at 20px: the pill states one standing fact beside a name and must
-     not outweigh the name. Semibold at this size reads as a warning. */
-  font-weight: var(--fw-medium);
-  letter-spacing: var(--tracking-normal);
-  text-transform: none;
-  /* 20px tall and the label centred in it: a 1px hairline top and bottom
-     leaves 18px, and a line box of exactly that height is centred by
-     construction. No line-height rung is a length, hence the px. */
-  line-height: 18px; /* ds:ignore the 20px pill less its two 1px edges */
   min-block-size: 20px;
   padding: 0 8px;
   /* Every variant reserves the edge; soft draws it in its tone and primary
@@ -40,7 +30,6 @@
   border-radius: var(--r-full);
   corner-shape: round;
   background: var(--bgChip);
-  color: var(--textChip);
 }
 .badge-label {
   min-inline-size: 0;
@@ -168,22 +157,15 @@
 .table {
   width: 100%;
   border-collapse: collapse;
-  font-size: var(--fs-body);
 }
 .table th {
   text-align: left;
-  font-size: var(--fs-meta);
-  font-weight: 600;
-  color: var(--textMeta);
   padding: 8px 12px;
   border-bottom: 1px solid var(--borderStrong);
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-eyebrow);
 }
 .table td {
   padding: 10px 12px;
   border-bottom: 1px solid var(--borderSubtle);
-  color: var(--textContent);
 }
 /* A rule DIVIDES rows, so the last row has nothing to divide from and draws
    none. Without this every table in the tree ended on a hairline pointing at
@@ -229,7 +211,6 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-weight: 700;
   flex: none;
 }
 
@@ -244,20 +225,17 @@
 .avatar-xs {
   width: 20px;
   height: 20px;
-  font-size: var(--fs-eyebrow);
 }
 /* The default: every list row, every name a chip sits beside, the account
    block in the rail. */
 .avatar-sm {
   width: 28px;
   height: 28px;
-  font-size: var(--fs-eyebrow);
 }
 /* A record header. */
 .avatar-md {
   width: 44px;
   height: 44px;
-  font-size: var(--fs-h3);
 }
 /* A WIDE record header, where the chip is the page's own mark rather than a
    marker beside a name. Sized to sit beside the name rather than to tower over
@@ -266,7 +244,6 @@
 .avatar-lg {
   width: 46px;
   height: 46px;
-  font-size: var(--fs-h2);
 }
 /* The mark of a record PAGE: the one picture in the head, beside a name set
    at the record rung. Sized to the reference's 72, which reads as the page's
@@ -277,7 +254,6 @@
   width: 72px;
   height: 72px;
   border-radius: var(--r-lg);
-  font-size: var(--fs-h1);
 }
 /* A round mark keeps its circle at every rung: a contact is a portrait, an
    company is a tile. `.avatar-company` squares the small rungs and this one
@@ -405,7 +381,6 @@
 }
 .pending-note {
   margin: 0;
-  color: var(--textMeta);
 }
 .pending-line {
   height: 14px;
@@ -442,8 +417,6 @@
 .empty {
   text-align: start;
   padding: var(--space-5) var(--padCard);
-  color: var(--textMeta);
-  font-size: var(--fs-body);
 }
 /* The instructional variant: a heading in the primary ink, a measured
    paragraph under it, the one verb below. The measure keeps the explanation
@@ -475,8 +448,6 @@
 }
 .empty-plate-title {
   margin: 0;
-  font-size: var(--fs-sm);
-  font-weight: var(--fw-medium);
   color: var(--textPrimary);
 }
 /* What this kind of thing is FOR, under the line saying there is none of it.
@@ -486,15 +457,10 @@
 .empty-plate-note {
   margin: 0;
   max-inline-size: 46ch;
-  font-size: var(--fs-meta);
-  line-height: 1.5;
-  color: var(--textMeta);
   text-wrap: pretty;
 }
 .empty-body {
   max-width: 52ch;
-  font-size: var(--fs-body);
-  line-height: 1.5;
 }
 .empty-body p {
   margin: 0;
@@ -776,7 +742,6 @@
   border: 0;
   background: none;
   color: var(--accentText);
-  font: inherit;
   cursor: pointer;
   text-align: left;
   text-decoration: none;
@@ -803,14 +768,11 @@
 }
 .segmented button {
   font-family: var(--f-body);
-  font-size: var(--fs-sm);
-  font-weight: 600;
   border: 0;
   /* Transparent, so an unpressed option is read on the TRACK's --bgChip and
      takes the chip's ink accordingly. The pressed one below lifts onto its own
      --bgElevated and answers to that instead. */
   background: transparent;
-  color: var(--textChip);
   padding: 5px 12px;
   border-radius: var(--r-sm);
   cursor: pointer;
@@ -820,18 +782,8 @@
   color: var(--textPrimary);
   box-shadow: var(--shadow-rest);
 }
-/* How much is behind an option, beside its name. It keeps the quiet ink on the
-   pressed option too: the label says where you are, and a count that lit up
-   with it would read as the selection's own figure rather than as the size of
-   what is under it. Lighter weight for the same reason — it qualifies the
-   label, it does not compete with it. One ink across both states rather than
-   --textChip on the track and --textMeta on the plate, because a figure that
-   changed tone as the reader moved between options would read as a different
-   figure; --textChip is the darker of the two on either ground. */
 .segmented button > .segmented-count {
   margin-left: 6px;
-  font-weight: 400;
-  color: var(--textChip);
 }
 
 /* Something waits behind this option. An accent dot rather than an indigo one:
@@ -868,8 +820,6 @@
 .link-button,
 .btn.btn-link {
   font-family: var(--f-body);
-  font-size: var(--fs-meta);
-  font-weight: 600;
   color: var(--accentText);
   background: transparent;
   border: 0;
@@ -925,8 +875,6 @@
 }
 
 .kbd {
-  font-size: var(--fs-eyebrow);
-  color: var(--textChip);
   background: var(--bgChip);
   border: 1px solid var(--borderStrong);
   border-bottom-width: 2px;
@@ -983,27 +931,11 @@
 .filter-tabs > .sub {
   display: block;
   margin-top: var(--space-2);
-  font-size: var(--fs-sm);
-  line-height: var(--lh-normal);
-  color: var(--textMeta);
 }
 .section-header h2 {
-  /* --fs-lead IS 15px: the same value the raw number held, now named. The
-     app's section titles and the token ramp's --fs-h2 (20px) disagree, and
-     that disagreement is a decision about the house scale rather than
-     something to settle inside one rule — so this names the size it draws
-     and does not change it. */
-  font-size: var(--fs-lead);
-  font-weight: 600;
   color: var(--textPrimary);
 }
-/* SectionHeader level={3}: a section inside a section. It steps down in size
-   as well as in outline depth — a nested heading drawn at its parent's size
-   tells the eye they are peers while the document says they are not, and the
-   eye is the one the reader believes. */
 .section-header h3 {
-  font-size: var(--fs-sm);
-  font-weight: 600;
   color: var(--textPrimary);
 }
 /* The page-naming variant (SectionHeader level={1}): a record whose surface
@@ -1013,16 +945,11 @@
 .section-header h1 {
   margin: 0;
   font-family: var(--f-display);
-  font-size: var(--fs-h1);
-  font-weight: 600;
   color: var(--textPrimary);
 }
 /* A measure, not a width: a description that runs the whole width of a wide
    card is a line the eye loses its place in. */
 .section-header .sub {
-  font-size: var(--fs-sm);
-  color: var(--textMeta);
-  line-height: var(--lh-snug);
   max-width: 78ch;
 }
 
@@ -1071,8 +998,6 @@
   border-radius: var(--r-sm);
   background: var(--accentLight);
   color: var(--textPrimary);
-  font-weight: 600;
-  font-size: var(--fs-body);
 }
 .recordpicker-selected-check {
   color: var(--accentText);
@@ -1181,7 +1106,6 @@
   margin: 4px 0 0;
   padding-top: 12px;
   border-top: 1px solid var(--borderSubtle);
-  color: var(--textMeta);
 }
 
 /* The horizontal padding is 11px rather than the button's 14px on purpose: a
@@ -1192,8 +1116,6 @@
    existed they computed 40.25px and 38.25px independently. */
 .input {
   font-family: var(--f-body);
-  font-size: var(--fs-body);
-  line-height: 1.25;
   color: var(--textPrimary);
   background: var(--bgElevated);
   border: 1px solid var(--borderSubtle);
@@ -1269,7 +1191,6 @@
 .input[aria-disabled="true"],
 .textarea:disabled,
 .textarea[aria-disabled="true"] {
-  color: var(--textTertiary);
   background: var(--bgCard);
   cursor: not-allowed;
 }
@@ -1277,21 +1198,7 @@
    is the shell that has to dim — the input within it draws no fill of its own. */
 .field-shell:has(:disabled),
 .field-shell:has([aria-disabled="true"]) {
-  color: var(--textTertiary);
   background: var(--bgCard);
-}
-
-/* iOS Safari zooms the page whenever a focused input's text is under 16px, and
-   the field is 13.5px — so on an iPhone every form in this product jerked the
-   viewport on focus. The sign-in screens were the only surface that ever fixed
-   it, in their own sheet, for their own fork of the field; declared here it
-   reaches every input instead of one screen's. Only below the width where a
-   phone is what is holding the page: at desk widths 13.5px is the size the rest
-   of the type scale is set against. */
-@media (max-width: 35rem) {
-  .input {
-    font-size: 16px; /* ds:ignore iOS zooms any field under 16px — a platform floor, not a rung */
-  }
 }
 
 /* The field's OUTLINE, moved off the input, for the fields that have something
@@ -1365,7 +1272,6 @@
 .field-shell-icon {
   display: inline-flex;
   flex: none;
-  color: var(--textMeta);
 }
 .field-shell-icon svg {
   inline-size: 15px;
@@ -1382,9 +1288,7 @@
 /* A refusal is not a caption. It reads in the danger tone at the caption's
    size, under the control it belongs to and above the rule that still applies. */
 .field-error {
-  font-size: var(--fs-sm);
   color: var(--dangerText);
-  font-weight: var(--fw-medium);
 }
 /* No `select.input` rule: there is no native dropdown in this product. The
    Margince select's trigger is a button that reads `.input` for the same field
@@ -1438,7 +1342,6 @@
    is not pointing never receives. */
 .checkfield:has(input:disabled) {
   cursor: not-allowed;
-  color: var(--textTertiary);
 }
 /* The box is native, so it was taking the PLATFORM's focus ring — the one blue
    this product otherwise refuses (see the caret and accent-color declarations in
@@ -1472,7 +1375,6 @@
   left: 9px;
   width: 15px;
   height: 15px;
-  color: var(--textMeta);
   pointer-events: none;
 }
 .input-icon .input {
@@ -1496,12 +1398,6 @@
   border-radius: 0;
   height: auto;
   padding: 0 0 0 24px;
-  /* NO font-size, and NOT the nearest rung either. The flush variant strips the
-     field's chrome — border, ground, radius — and the type is not chrome. A size
-     here, whatever its value, outranks the iOS floor above by specificity while
-     sitting outside that floor's media query, so a flush field was the one input
-     on a phone that still zoomed the viewport on focus. Inheriting is what keeps
-     the floor reachable; naming a rung passes the type gate and leaves the zoom. */
 }
 .input-icon-flush .input:focus,
 .input-icon-flush .input:focus-visible {
@@ -1522,7 +1418,6 @@
    logger) rendered a short box in a wide field. */
 .textarea {
   font-family: var(--f-body);
-  font-size: var(--fs-body);
   color: var(--textPrimary);
   background: var(--bgElevated);
   border: 1px solid var(--borderSubtle);
@@ -1562,7 +1457,6 @@
   place-items: center;
   border: 0;
   background: transparent;
-  color: var(--textMeta);
   border-radius: var(--r-sm);
   cursor: pointer;
 }
@@ -1613,7 +1507,6 @@
   gap: var(--space-2);
   cursor: pointer;
   list-style: none;
-  color: var(--textMeta);
 }
 .disclosure-summary::-webkit-details-marker {
   display: none;
@@ -1771,8 +1664,6 @@
   border-radius: var(--r-sm);
   background: none;
   box-shadow: none;
-  font-size: var(--fs-body);
-  font-weight: 500;
   color: var(--textPrimary);
   /* A verb long enough to need the ceiling above wraps onto a second line
      rather than being cut off: a menu item the reader cannot finish reading is
@@ -1846,7 +1737,6 @@
 .overflow-menu-items .btn[aria-pressed="true"] {
   background: var(--accentLight);
   color: var(--accentText);
-  font-weight: 600;
 }
 .overflow-menu-items .btn-primary:hover:not(:disabled),
 .overflow-menu-items .btn[aria-expanded="true"]:hover:not(:disabled),
@@ -1909,7 +1799,6 @@
   -webkit-line-clamp: 2;
   line-clamp: 2;
   overflow: hidden;
-  line-height: 1.25;
   text-wrap: pretty;
 }
 /* A detail of two facts — how much is failing, and why — is two nodes, and the
@@ -1932,8 +1821,6 @@
   align-items: baseline;
   justify-content: space-between;
   gap: var(--space-2);
-  font-size: var(--fs-meta);
-  line-height: 1.25;
 }
 /* The name itself clamps to ONE line, and the chips beside it do not: a row of
    readings whose labels wrap to two lines puts every figure in the row at a
@@ -1965,11 +1852,7 @@
    this tier owns. */
 .stat-card-value {
   font-family: var(--f-display);
-  font-size: clamp(var(--fs-h3), 1.5vw, var(--fs-h2));
-  font-weight: var(--fw-medium);
   font-variant-numeric: tabular-nums;
-  letter-spacing: var(--tracking-display);
-  line-height: 1.1;
   color: var(--textPrimary);
   overflow-wrap: anywhere;
 }
@@ -1987,7 +1870,6 @@
   padding: 0;
   border: 0;
   background: none;
-  font: inherit;
   color: var(--accent);
   white-space: nowrap;
   /* The card's own `cursor` cannot reach this control: the overlay that
@@ -2013,8 +1895,6 @@
      as a space in the markup: this is a flex line, and a whitespace-only text
      node between two items is not a flex item — the space simply vanished. */
   gap: var(--space-1);
-  font-size: var(--fs-meta);
-  font-weight: var(--fw-bold);
 }
 /* The arrow LEANS toward the door on the way in: the one movement on the tile,
    3px, at the state duration — a card that answers the pointer reads as one a
@@ -2215,7 +2095,6 @@
    choose looked exactly like one they could, and the whole control's job is
    telling the reader what is choosable. */
 .segmented button:disabled {
-  color: var(--textTertiary);
   cursor: not-allowed;
 }
 

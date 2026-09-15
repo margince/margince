@@ -26,6 +26,4 @@
 }
 .avatar-stack-more {
   margin-left: var(--space-2);
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
 }

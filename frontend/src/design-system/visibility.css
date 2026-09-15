@@ -17,9 +17,6 @@
   corner-shape: round;
   background: var(--bgElevated);
   color: var(--textPrimary);
-  font-size: var(--fs-sm);
-  font-weight: var(--fw-medium);
-  line-height: 1;
   white-space: nowrap;
 }
 
@@ -27,13 +24,6 @@
   flex: none;
   width: 14px;
   height: 14px;
-  color: var(--textMeta);
-}
-
-/* Open: outlined and in the secondary ink, so a column of shared rows reads as
-   a column and not as a stripe of pills. */
-.visibility-open {
-  color: var(--textMeta);
 }
 
 /* Limited: filled and in the primary ink. A sealed thing is the exception in
@@ -54,10 +44,6 @@
   background: linear-gradient(var(--warnBg), var(--warnBg)), var(--bgElevated);
   border-color: transparent;
   color: var(--warnText);
-}
-
-.visibility-withheld > svg {
-  color: currentColor;
 }
 
 /* The mark and its verb on one line, the verb immediately AFTER the fact it

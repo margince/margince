@@ -29,7 +29,6 @@
   padding: 7px 9px; /* ds:ignore the option's own row rhythm, shared with Select's list */
   border-radius: var(--r-sm);
   font-family: var(--f-body);
-  font-size: var(--fs-body);
   color: var(--textPrimary);
   cursor: pointer;
 }
@@ -40,8 +39,6 @@
 }
 .suggest-option-hint {
   flex: none;
-  color: var(--textMeta);
-  font-size: var(--fs-meta);
 }
 /* Where the keyboard is, and what a pointer is hovering — one state, because
    the popup tracks one active option through `aria-activedescendant` whichever
@@ -51,7 +48,6 @@
 }
 .suggest-option[aria-selected="true"] {
   color: var(--accentText);
-  font-weight: 500;
 }
 .suggest-option[aria-selected="true"].is-active {
   background: var(--accentLight);

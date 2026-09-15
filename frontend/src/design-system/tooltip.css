@@ -11,8 +11,6 @@
   border-radius: var(--r-sm);
   background: var(--textPrimary);
   color: var(--bgCard);
-  font-size: var(--fs-meta);
-  line-height: 1.4;
   /* The tip carries the string the row truncated, so it is the one place the
      whole of it must fit: it wraps, and breaks a run with no spaces in it
      rather than growing past its own max-width. */

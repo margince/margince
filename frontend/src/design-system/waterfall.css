@@ -24,8 +24,6 @@
    nothing, and there are few enough of them that two lines is affordable. */
 .waterfall-label {
   order: 2;
-  font-size: var(--fs-meta);
-  color: var(--textMuted);
   overflow-wrap: anywhere;
 }
 .waterfall-fill {
@@ -49,5 +47,4 @@
 .waterfall-warning {
   margin: var(--space-2) 0 0;
   color: var(--dangerText);
-  font-size: var(--fs-sm);
 }

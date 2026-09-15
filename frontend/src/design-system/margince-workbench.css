@@ -159,10 +159,8 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  /* The type is .t-eyebrow's, carried by the element rather than restated here.
-     Only the face is set: this chrome runs on the body font where the shared
-     class is agnostic, and the colour it brings (--textMeta) is the AA floor
-     tokens.css names for everything under 13px, which every label here is. */
+  /* The face only: this chrome runs on the body font, where the shared
+     `.t-eyebrow` class the element carries is agnostic. */
   font-family: var(--f-body);
 }
 
@@ -182,15 +180,12 @@
   width: 17px;
   height: 17px;
   place-items: center;
-  color: var(--textMeta);
   /* --borderStrong, matching the connector between stops: the discs and the
      hairline joining them are one drawing, and two greys made it two. */
   border: 1px solid var(--borderStrong);
   border-radius: var(--r-full);
   corner-shape: round;
   background: var(--bgElevated);
-  font-size: var(--fs-meta);
-  font-weight: var(--fw-semibold);
 }
 
 /* Done carries no label colour of its own: at this size every label needs the
@@ -266,9 +261,6 @@
   margin: 2px 0 0;
   color: var(--textPrimary);
   font-family: var(--f-display);
-  font-size: var(--fs-h3);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-display);
 }
 
 .mw-identity p {
@@ -276,8 +268,6 @@
   align-items: center;
   gap: 6px;
   margin: 2px 0 0;
-  color: var(--textMeta);
-  font-size: var(--fs-meta);
 }
 
 .mw-identity i {
@@ -360,7 +350,6 @@
 
 .mw-aistat-btn strong {
   color: var(--aiText);
-  font-size: var(--fs-meta);
   font-variant-numeric: tabular-nums;
 }
 
@@ -387,12 +376,7 @@
 .mw-aistat-h,
 .mw-aistat-f {
   margin: 0;
-  color: var(--textMeta);
   font-family: var(--f-body);
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
 }
 
 /* The popover's subject is the machine, so its header reads the AI family
@@ -405,8 +389,6 @@
   margin-top: var(--space-3);
   padding-top: var(--space-2);
   border-top: 1px solid var(--borderSubtle);
-  letter-spacing: var(--tracking-normal);
-  text-transform: none;
 }
 
 .mw-aistat-rows {
@@ -425,15 +407,9 @@
   border-top: 0;
 }
 
-.mw-aistat-r dt {
-  color: var(--textMeta);
-  font-size: var(--fs-meta);
-}
-
 .mw-aistat-r dd {
   margin: 0;
   color: var(--textPrimary);
-  font-size: var(--fs-meta);
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
 }
@@ -443,7 +419,6 @@
   margin-top: 2px;
   color: var(--warnText);
   font-family: var(--f-body);
-  font-size: var(--fs-meta);
 }
 
 /* --- right column: the artifact --------------------------------------- */
@@ -552,14 +527,9 @@
 }
 
 .mw-progress-label {
-  color: var(--textMeta);
   font-family: var(--f-body);
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-eyebrow);
   overflow: hidden;
   text-overflow: ellipsis;
-  text-transform: uppercase;
   white-space: nowrap;
 }
 
@@ -645,12 +615,7 @@
 }
 
 .mw-shell.is-rail .mw-aifooter-label {
-  color: var(--textMeta);
   font-family: var(--f-body);
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
 }
 
 .mw-shell.is-rail .mw-aistat,
@@ -668,8 +633,6 @@
 }
 
 .mw-aistat-tok {
-  color: var(--textMeta);
-  font-size: var(--fs-meta);
   font-variant-numeric: tabular-nums;
 }
 
@@ -678,9 +641,7 @@
    line never has to carry them. */
 .mw-shell.is-rail .mw-aifooter-model {
   overflow: hidden;
-  color: var(--textMeta);
   font-family: var(--f-body);
-  font-size: var(--fs-meta);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -709,8 +670,6 @@
 
 .mw-shell.is-rail .mw-contact-id b {
   color: var(--textPrimary);
-  font-size: var(--fs-meta);
-  font-weight: var(--fw-semibold);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -727,9 +686,7 @@
 }
 
 .mw-shell.is-rail .mw-contact-id small {
-  color: var(--textMeta);
   font-family: var(--f-body);
-  font-size: var(--fs-meta);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
