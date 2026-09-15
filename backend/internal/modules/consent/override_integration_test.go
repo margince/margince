@@ -178,6 +178,34 @@ func TestAllowRejectsAnUnknownCategory(t *testing.T) {
 	}
 }
 
+// TestAllowRejectsASubjectServingCategory bounds the door below Valid: a
+// security_notice (or any ServesTheSubject category) is never refused for lack
+// of evidence, so a machine refusal never resolves to one and an override
+// naming it is a row liveOverride could never match. The door refuses it up
+// front rather than writing a dead row.
+func TestAllowRejectsASubjectServingCategory(t *testing.T) {
+	e := setupChannelConsent(t)
+
+	err := e.store.Allow(e.ctx, AllowInput{
+		ContactID: e.contact, Category: "security_notice", Reason: "a reason"})
+	var invalid *ValidationError
+	if !errors.As(err, &invalid) {
+		t.Fatalf("a subject-serving category was refused with %v, want a validation error", err)
+	}
+	if invalid.Field != "category" {
+		t.Errorf("refused on field %q, want %q", invalid.Field, "category")
+	}
+
+	var rows int
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT count(*) FROM communication_override WHERE contact_id = $1`, e.contact).Scan(&rows); err != nil {
+		t.Fatal(err)
+	}
+	if rows != 0 {
+		t.Errorf("a refused subject-serving category still wrote %d row(s)", rows)
+	}
+}
+
 // TestAllowThenTheSendGoesThrough is the end-to-end proof: the writer door
 // this file tests and the reader door override_gate_integration_test.go
 // already proved are the same table, so a rep's own Allow call must flip the

@@ -28,7 +28,7 @@ import (
 // is about what liveOverride reads, not about who may write the row.
 //
 // Always at user level: liveOverride treats every level above machine alike
-// (outranksMachine), so the read path this file exercises has no arm that
+// (levelsAboveMachine), so the read path this file exercises has no arm that
 // distinguishes user from admin — that distinction belongs to
 // override_integration_test.go, which drives the real writer.
 func (e *resolveEnv) seedOverride(t *testing.T, category string, revoked bool) ids.UUID {
@@ -142,6 +142,31 @@ func TestAnOverrideCannotFlipAHardBounce(t *testing.T) {
 	}
 	if got.ReasonCode != commsauthz.ReasonHardBounce {
 		t.Errorf("reason = %q, want %q", got.ReasonCode, commsauthz.ReasonHardBounce)
+	}
+}
+
+// An override never answers an unknown-purpose refusal. A send naming a purpose
+// key nothing defines resolves to no category, so Resolved stays at its default
+// (marketing) — a per-category vouch has nothing to answer, and a live marketing
+// override for the same contact must NOT flip it. CanBeOverruledByCategory
+// excludes it before liveOverride is ever consulted.
+func TestAnOverrideCannotFlipAnUnknownPurpose(t *testing.T) {
+	e := setupResolve(t)
+	// No seedPurpose: the key is undefined, so the engine cannot resolve what
+	// this send is and refuses with unknown_purpose.
+	e.seedOverride(t, "marketing", false)
+
+	got := e.decide(t, commsauthz.Request{LegacyPurposeKey: "not-a-real-purpose"})
+	if got.Verdict != commsauthz.VerdictDeny {
+		t.Fatalf("verdict = %q, want deny: an unknown-purpose send resolves to no category, so a "+
+			"marketing vouch has nothing to answer", got.Verdict)
+	}
+	if got.ReasonCode != commsauthz.ReasonUnknownPurpose {
+		t.Errorf("reason = %q, want %q: the unknown-purpose refusal must stand",
+			got.ReasonCode, commsauthz.ReasonUnknownPurpose)
+	}
+	if got.OverrideID != (ids.UUID{}) {
+		t.Errorf("override id = %s, want the zero value: nothing vouched for this send", got.OverrideID)
 	}
 }
 

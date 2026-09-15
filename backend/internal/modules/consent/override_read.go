@@ -45,7 +45,7 @@ func liveOverride(
 		   AND (contact_id = $1 OR lead_id = $1)
 		 ORDER BY recorded_at DESC
 		 LIMIT 1`,
-		contactID, string(category), outranksMachine()).Scan(&id)
+		contactID, string(category), levelsAboveMachine).Scan(&id)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ids.UUID{}, false, nil
 	}
@@ -55,10 +55,13 @@ func liveOverride(
 	return id, true, nil
 }
 
-// outranksMachine is the set of levels strictly above LevelMachine, derived
-// from the same ladder AuthorityLevel.CanOverrule itself compares against,
-// rather than a second ranking of its own that could fall out of step with it.
-func outranksMachine() []string {
+// levelsAboveMachine is the authority levels strictly above LevelMachine,
+// computed once from the same ladder AuthorityLevel.CanOverrule compares
+// against. A standing override is written only at a seat level, but the query
+// states the rule rather than trusting the writer.
+var levelsAboveMachine = computeLevelsAboveMachine()
+
+func computeLevelsAboveMachine() []string {
 	var above []string
 	for _, l := range commsauthz.LevelsWeakestFirst() {
 		if l.CanOverrule(commsauthz.LevelMachine) {

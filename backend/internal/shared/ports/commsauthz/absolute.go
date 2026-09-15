@@ -229,6 +229,19 @@ func (d Decision) CanBeOverruled() bool {
 	return LevelForReason(d.ReasonCode) == LevelMachine && !Absolute(d.ReasonCode)
 }
 
+// CanBeOverruledByCategory reports whether a standing, per-category override may
+// answer this refusal. Stricter than CanBeOverruled: an override names ONE
+// category, so it can only answer a refusal that resolved to one.
+// ReasonUnknownPurpose resolved to no category — the request named a purpose key
+// the engine does not know, so Resolved is left at its default rather than a
+// genuinely resolved value — and a per-category vouch has nothing to answer; the
+// remedy is to resend with a recognised purpose (see LevelForReason).
+//
+// Held by: TestUnknownPurposeIsOverrulableButNotByCategory (override_test.go)
+func (d Decision) CanBeOverruledByCategory() bool {
+	return d.CanBeOverruled() && d.ReasonCode != ReasonUnknownPurpose
+}
+
 // HasEnforcedRecipient reports whether any recipient's resolved category is at
 // enforce, and so whether the engine's own answer is the one that decides.
 //

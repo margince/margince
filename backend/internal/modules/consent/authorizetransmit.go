@@ -307,7 +307,13 @@ func (g *Gate) decideOne(ctx context.Context, tx pgx.Tx, r connector.Recipient, 
 	// applySuppression and so already carries a reason CanBeOverruled refuses.
 	// Only a bare machine reading — no evidence, no purpose, an unknown key —
 	// can still be sitting in d here.
-	if d.CanBeOverruled() {
+	//
+	// CanBeOverruledByCategory, not CanBeOverruled: an unknown_purpose refusal is
+	// machine-level and non-absolute, so CanBeOverruled is true, but it resolved
+	// to no category — Resolved is left at its default — and liveOverride matches
+	// on that default. A per-category vouch has nothing to answer there, so it is
+	// excluded rather than allowed to flip a send on a category it never named.
+	if d.CanBeOverruledByCategory() {
 		id, ok, err := liveOverride(ctx, tx, contactID, d.Resolved)
 		if err != nil {
 			return d, err
