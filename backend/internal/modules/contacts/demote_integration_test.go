@@ -17,6 +17,8 @@ import (
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -401,5 +403,94 @@ func TestPromotePreviewWithholdsTheContactWithoutTheContactReadGrant(t *testing.
 	if preview.Contact != nil || preview.ContactWithheld == nil || !*preview.ContactWithheld {
 		t.Errorf("contact=%v withheld=%v; a caller without contact.read must get no contact and be told so",
 			preview.Contact, preview.ContactWithheld)
+	}
+}
+
+// The version pin an agent's approval was released against is applied in the
+// transaction that writes, under the locks the reversal already takes.
+//
+// A reversal is where a stale pin costs most. Redemption commits its own
+// transaction and the handler then opens a fresh one, so a check anywhere
+// earlier proves the row was right when the approval was CONSUMED, not when the
+// unwind lands — and the agent controls both sides of that window, since its own
+// auto-execute writes can commit inside it. Unpinned, the demotion reverses a
+// promotion the approval was no longer describing.
+func TestDemoteRefusesAVersionThePinNoLongerNames(t *testing.T) {
+	e := setupPromoteConsent(t)
+	lead := e.seedLead(t, "demotepin@example.test")
+	if _, _, err := e.store.PromoteLead(e.ctx, lead, PromoteLeadInput{Trigger: "human_qualify"}); err != nil {
+		t.Fatalf("promote: %v", err)
+	}
+
+	promoted, err := e.store.GetLead(e.ctx, lead, storekit.IncludeArchived)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if promoted.Version == nil {
+		t.Fatal("the promoted lead carries no version, so this case can pin nothing")
+	}
+	at := *promoted.Version
+
+	stale := at - 1
+	if _, err := e.store.DemoteLead(e.ctx, lead, "stale", OnlyAtVersion(&stale)); !errors.Is(err, apperrors.ErrVersionSkew) {
+		t.Fatalf("a stale pin err = %v, want ErrVersionSkew — the reversal ran on a row the approval "+
+			"does not describe", err)
+	}
+	out, err := e.store.DemoteLead(e.ctx, lead, "current", OnlyAtVersion(&at))
+	if err != nil {
+		t.Fatalf("the current version was refused: %v", err)
+	}
+	if out.Lead.Status != crmcontracts.LeadStatusEngaged {
+		t.Errorf("status = %v, want engaged", out.Lead.Status)
+	}
+}
+
+// No pin attaches no precondition, so the REST caller and an agent whose
+// approval carried no version spell the call the same way.
+func TestDemoteWithNoPinIsUnconditioned(t *testing.T) {
+	e := setupPromoteConsent(t)
+	lead := e.seedLead(t, "demoteunpinned@example.test")
+	if _, _, err := e.store.PromoteLead(e.ctx, lead, PromoteLeadInput{Trigger: "human_qualify"}); err != nil {
+		t.Fatalf("promote: %v", err)
+	}
+
+	out, err := e.store.DemoteLead(e.ctx, lead, "no pin", OnlyAtVersion(nil))
+	if err != nil {
+		t.Fatalf("a nil pin refused the write: %v", err)
+	}
+	if out.Lead.Status != crmcontracts.LeadStatusEngaged {
+		t.Errorf("status = %v, want engaged", out.Lead.Status)
+	}
+}
+
+// And the promotion's own pin, on the lead it graduates.
+//
+// The cost this closes is the opposite direction from the reversal's: unpinned,
+// the promotion mints a contact from lead fields a concurrent edit may have
+// changed since the human approved — content nobody released.
+func TestPromoteRefusesAVersionThePinNoLongerNames(t *testing.T) {
+	e := setupPromoteConsent(t)
+	lead := e.seedLead(t, "promotepin@example.test")
+
+	born, err := e.store.GetLead(e.ctx, lead, storekit.LiveOnly)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if born.Version == nil {
+		t.Fatal("the seeded lead carries no version, so this case can pin nothing")
+	}
+	at := *born.Version
+
+	stale := at - 1
+	if _, _, err := e.store.PromoteLead(e.ctx, lead, PromoteLeadInput{
+		Trigger: "human_qualify", IfVersion: &stale,
+	}); !errors.Is(err, apperrors.ErrVersionSkew) {
+		t.Fatalf("a stale pin err = %v, want ErrVersionSkew — the promotion read lead fields the "+
+			"approval does not describe", err)
+	}
+	if _, _, err := e.store.PromoteLead(e.ctx, lead, PromoteLeadInput{
+		Trigger: "human_qualify", IfVersion: &at,
+	}); err != nil {
+		t.Fatalf("the current version was refused: %v", err)
 	}
 }

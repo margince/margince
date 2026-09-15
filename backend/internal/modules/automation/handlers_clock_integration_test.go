@@ -86,7 +86,7 @@ func (p *fakeCreateTaskProvider) Merge(context.Context, datasource.MergeInput) (
 	panic("fakeCreateTaskProvider: Merge not stubbed for this test")
 }
 
-func (p *fakeCreateTaskProvider) PromoteLead(context.Context, ids.UUID, string, *string) (datasource.EntityRef, bool, error) {
+func (p *fakeCreateTaskProvider) PromoteLead(context.Context, ids.UUID, string, *string, *int64) (datasource.EntityRef, bool, error) {
 	panic("fakeCreateTaskProvider: PromoteLead not stubbed for this test")
 }
 

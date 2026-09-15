@@ -241,7 +241,7 @@ func TestAcceptance_AC_OV_2_BoundedEquivalence_ReadSubset(t *testing.T) {
 		if _, err := overlayProvider.Merge(ctx, datasource.MergeInput{Type: datasource.EntityContact}); !errors.Is(err, apperrors.ErrUnsupportedBySoR) {
 			t.Errorf("Merge = %v, want ErrUnsupportedBySoR", err)
 		}
-		if _, merged, err := overlayProvider.PromoteLead(ctx, ids.NewV7(), "manual", nil); !errors.Is(err, apperrors.ErrUnsupportedBySoR) || merged {
+		if _, merged, err := overlayProvider.PromoteLead(ctx, ids.NewV7(), "manual", nil, nil); !errors.Is(err, apperrors.ErrUnsupportedBySoR) || merged {
 			t.Errorf("PromoteLead = (merged=%v, err=%v), want (false, ErrUnsupportedBySoR)", merged, err)
 		}
 		if _, err := overlayProvider.RunReport(ctx, datasource.ReportPlan{Entity: datasource.EntityDeal}); !errors.Is(err, apperrors.ErrUnsupportedBySoR) {

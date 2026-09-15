@@ -414,15 +414,17 @@ func (d *Dispatcher) Merge(ctx context.Context, in datasource.MergeInput) (datas
 // PromoteLead dispatches to the overlay mirror or the native SoR
 // modules per ctx's overlay_mode.sor_mode; see Create's doc on the uncached
 // mode read.
-func (d *Dispatcher) PromoteLead(ctx context.Context, id ids.UUID, trigger string, evidenceNote *string) (datasource.EntityRef, bool, error) {
+func (d *Dispatcher) PromoteLead(
+	ctx context.Context, id ids.UUID, trigger string, evidenceNote *string, ifVersion *int64,
+) (datasource.EntityRef, bool, error) {
 	ov, err := d.isOverlayUncached(ctx)
 	if err != nil {
 		return datasource.EntityRef{}, false, err
 	}
 	if ov {
-		return d.overlay.PromoteLead(ctx, id, trigger, evidenceNote)
+		return d.overlay.PromoteLead(ctx, id, trigger, evidenceNote, ifVersion)
 	}
-	return d.native.PromoteLead(ctx, id, trigger, evidenceNote)
+	return d.native.PromoteLead(ctx, id, trigger, evidenceNote, ifVersion)
 }
 
 // Freshness dispatches to the overlay mirror or the native SoR modules

@@ -326,7 +326,9 @@ type demoterGuard struct {
 	inner agents.LeadDemoter
 }
 
-func (g demoterGuard) DemoteLead(ctx context.Context, id ids.UUID, reason string) (json.RawMessage, error) {
+func (g demoterGuard) DemoteLead(
+	ctx context.Context, id ids.UUID, reason string, ifVersion *int64,
+) (json.RawMessage, error) {
 	overlay, err := g.mode.isOverlayUncached(ctx)
 	if err != nil {
 		return nil, err
@@ -334,7 +336,7 @@ func (g demoterGuard) DemoteLead(ctx context.Context, id ids.UUID, reason string
 	if overlay {
 		return nil, apperrors.ErrUnsupportedBySoR
 	}
-	return g.inner.DemoteLead(ctx, id, reason)
+	return g.inner.DemoteLead(ctx, id, reason, ifVersion)
 }
 
 // nativeOnlyResolver guards resolve_entities. The match ladder reads the native
