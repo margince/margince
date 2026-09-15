@@ -73,17 +73,31 @@ func ToContractBlockedDomain(e BlockedDomain) crmcontracts.BlockedDomain {
 const domainStanding = `
 	CASE WHEN pending_reason IS NOT NULL THEN '` + DomainUndecided + `'
 	     ELSE COALESCE(admission, '') END,
-	COALESCE(admission_reason,
-	         CASE pending_reason
-	           WHEN '` + PendingUnevidenced + `'
-	             THEN 'Nothing on the site named a company, and the sender''s name did not explain the domain.'
-	           WHEN '` + PendingStaleEvidence + `'
-	             THEN 'The newest mail from this domain is too old to trust today''s site as evidence about it.'
-	           ELSE '' END, ''),
+	COALESCE(admission_reason, ` + domainPendingReason + `, ''),
 	CASE WHEN pending_reason IS NOT NULL THEN pending_reason
 	     ELSE COALESCE(admission_source, '') END,
 	COALESCE(admission_at, updated_at),
 	company_id`
+
+// domainPendingReason turns a withholding reason into the sentence a reader
+// gets told, for the two reasons the machine has for leaving a question open.
+//
+// Its own fragment because two surfaces render it: the operator's list above,
+// which shows decisions and open questions together, and the owner's own
+// backlog in domainquestionlist.go. A second spelling would be free to describe
+// one withholding two ways, and the reader meeting both would have no way to
+// tell which was the real ground.
+//
+// It answers the empty string for a row carrying no reason, which is every
+// decided domain — the caller above COALESCEs that away behind the decision's
+// own reason.
+const domainPendingReason = `
+	CASE pending_reason
+	  WHEN '` + PendingUnevidenced + `'
+	    THEN 'Nothing on the site named a company, and the sender''s name did not explain the domain.'
+	  WHEN '` + PendingStaleEvidence + `'
+	    THEN 'The newest mail from this domain is too old to trust today''s site as evidence about it.'
+	  ELSE '' END`
 
 // domainStandingWhere selects the rows that have something to say: a decision,
 // or an open question somebody must answer.

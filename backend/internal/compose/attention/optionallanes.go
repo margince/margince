@@ -215,6 +215,17 @@ func (s *Service) operationalLanes(
 			into: &out.CaptureHealth, count: &out.Counts.CaptureHealth,
 		},
 		{
+			name: "domain_questions", bound: s.domainQuestions != nil,
+			read: func() ([]crmcontracts.AttentionItem, error) {
+				// No window and no page cut: an open question waits until
+				// somebody answers it, and a bound would hide the oldest —
+				// which are exactly the reader's real backlog.
+				questions, err := s.domainQuestions.OpenDomainQuestions(ctx)
+				return renderEach(questions, domainQuestionItem), err
+			},
+			into: &out.DomainQuestions, count: &out.Counts.DomainQuestions,
+		},
+		{
 			name: "ai_work_health", bound: s.aiWork != nil,
 			read: func() ([]crmcontracts.AttentionItem, error) {
 				// Failures age out with the window; a day is the widest a

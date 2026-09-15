@@ -9799,6 +9799,11 @@ export const de = {
   "worklist.untitled.undelivered": "Eine E-Mail wurde nie gesendet",
   "worklist.untitled.automation_run": "Eine Regel hat nicht funktioniert",
   "worklist.untitled.notice": "Ein Hinweis für dich",
+  // Eine Domain-Frage trägt immer die Domain als Titel, daher sollte dieser
+  // Ersatztext nie erscheinen. Er existiert, weil die Zuordnung alle bekannten
+  // Quellen abdecken muss.
+  "worklist.untitled.domain_question":
+    "Eine Domain, die noch niemand beurteilt hat",
   "worklist.untitled.introduction_request":
     "Ein Kollege bittet dich um eine Vorstellung",
   "worklist.verb.decide": "Entscheiden",
@@ -9825,6 +9830,14 @@ export const de = {
   "worklist.verb.retryStarted": "Die Regel l\u00e4uft erneut.",
   "worklist.verb.retryFailed":
     "Das konnte nicht erneut ausgef\u00fchrt werden.",
+  "worklist.verb.keep": "Ist eine Firma",
+  "worklist.verb.discard": "Nichts f\u00fcr mich",
+  "worklist.verb.domainKept": "Firma aus dieser Domain angelegt.",
+  "worklist.verb.domainKeepFailed": "Diese Firma konnte nicht angelegt werden.",
+  "worklist.verb.domainDiscarded":
+    "Ihre Nachrichten von dieser Domain werden nicht mehr erfasst.",
+  "worklist.verb.domainDiscardFailed":
+    "Diese Domain konnte nicht ausgeschlossen werden.",
   "worklist.verb.retryRefusedNotFailed":
     "Nichts zu wiederholen \u2014 dieser Lauf wurde absichtlich gestoppt, nicht durch einen Fehler.",
   "worklist.verb.retryRefusedRepeats":
