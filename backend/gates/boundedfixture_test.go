@@ -87,7 +87,7 @@ var suitesWithNoBoundedActor = gatekit.Waive(map[string]string{
 
 func TestEveryIntegrationSuiteCanProveSomethingAboutRowScope(t *testing.T) {
 	t.Parallel()
-	scopes, files, suites := readIntegrationFixtures(t)
+	scopes, files, suites, positions := readIntegrationFixtures(t)
 
 	// Asked about the OFFENDER — a value already found unreadable — never about
 	// a candidate, so an entry decays when the fixture gains a literal as well
@@ -113,6 +113,19 @@ func TestEveryIntegrationSuiteCanProveSomethingAboutRowScope(t *testing.T) {
 			continue
 		}
 		name := filepath.Base(dir)
+		// A suite reads as bare, so an inline permissions value whose RowScope
+		// this cannot read is the one thing that could make that verdict wrong
+		// — and a ratified suite would carry it past unnoticed. Reported HERE,
+		// where it can change the answer, rather than everywhere: a
+		// table-driven case that parameterises its scope is an ordinary fixture
+		// in a suite that already holds bounded actors, and refusing those
+		// would be noise in front of the finding that matters.
+		for _, where := range unreadableInlineScopes(files[dir], positions) {
+			t.Errorf("the %s suite reads as holding no bounded principal, and %s writes a "+
+				"principal.Permissions whose RowScope this scan cannot read — so the verdict rests on "+
+				"a fixture it never read. Name the scope with a principal.RowScope constant",
+				name, where)
+		}
 		if suitesWithNoBoundedActor.Waived(t, name) {
 			continue
 		}
@@ -138,40 +151,123 @@ func sortedFixtureNames(scopes map[string]string) []string {
 	return names
 }
 
-// holdsABoundedActor reports whether any file in the package names a bounded
-// permissions value or writes one inline.
+// holdsABoundedActor reports whether the package ACTS as a bounded principal
+// anywhere — inside a function body, and not as a system principal.
+//
+// Both qualifications are refusals to over-recognise, and over-recognition is
+// the one direction this census must not fail in: it would report a suite as
+// able to prove something about row scope when every case in it walks past the
+// checks unconditionally.
+//
+//   - Inside a body, because a bounded permissions value DECLARED and never used
+//     proves nothing. The declaration is a fixture nobody acts as.
+//   - Not a system principal, because auth.Unbounded short-circuits on the TYPE
+//     before it ever reads the row scope. A bounded scope inside a
+//     `principal.Principal{Type: principal.PrincipalSystem}` is decoration: the
+//     checks answer yes for that caller whatever the scope says.
 func holdsABoundedActor(pkg []*ast.File, scopes map[string]string) bool {
-	found := false
 	for _, file := range pkg {
-		ast.Inspect(file, func(n ast.Node) bool {
-			switch node := n.(type) {
-			case *ast.Ident:
-				if scope, known := scopes[node.Name]; known && known2(scope) {
-					found = true
-				}
-			case *ast.CompositeLit:
-				if isPermissionsLiteral(node.Type) && known2(rowScopeOf(node)) {
-					found = true
-				}
+		for _, decl := range file.Decls {
+			fn, ok := decl.(*ast.FuncDecl)
+			if !ok || fn.Body == nil {
+				continue
 			}
-			return !found
-		})
-		if found {
-			return true
+			if actsBounded(fn.Body, scopes) {
+				return true
+			}
 		}
 	}
 	return false
 }
 
-// known2 reports whether a resolved scope is a BOUNDED one. An unreadable value
-// ("") is not bounded here: the loop above has already failed for it, and
+// actsBounded walks one function body for a bounded actor, skipping the subtree
+// of any system principal it meets.
+func actsBounded(body *ast.BlockStmt, scopes map[string]string) bool {
+	found := false
+	ast.Inspect(body, func(n ast.Node) bool {
+		if found {
+			return false
+		}
+		if literal, ok := n.(*ast.CompositeLit); ok {
+			if isSystemPrincipal(literal) {
+				// Not descended into: whatever scope its permissions carry,
+				// Unbounded answered before reading them.
+				return false
+			}
+			if isPermissionsLiteral(literal.Type) {
+				if scope, readable := rowScopeOf(literal); readable && isBounded(scope) {
+					found = true
+					return false
+				}
+			}
+		}
+		if ident, ok := n.(*ast.Ident); ok {
+			if scope, known := scopes[ident.Name]; known && isBounded(scope) {
+				found = true
+				return false
+			}
+		}
+		return true
+	})
+	return found
+}
+
+// unreadableInlineScopes names every inline permissions literal whose row scope
+// is not a constant, in file:line form, sorted so a run reports the same way
+// twice.
+func unreadableInlineScopes(pkg []*ast.File, positions *token.FileSet) []string {
+	var out []string
+	for _, file := range pkg {
+		ast.Inspect(file, func(n ast.Node) bool {
+			literal, ok := n.(*ast.CompositeLit)
+			if !ok || !isPermissionsLiteral(literal.Type) {
+				return true
+			}
+			if _, readable := rowScopeOf(literal); !readable {
+				out = append(out, positions.Position(literal.Pos()).String())
+			}
+			return true
+		})
+	}
+	sort.Strings(out)
+	return out
+}
+
+// isSystemPrincipal reports whether a literal is a principal.Principal declaring
+// the system type — the caller auth.Unbounded admits on its type alone.
+func isSystemPrincipal(literal *ast.CompositeLit) bool {
+	sel, ok := literal.Type.(*ast.SelectorExpr)
+	if !ok {
+		return false
+	}
+	if pkg, ok := sel.X.(*ast.Ident); !ok || pkg.Name != "principal" || sel.Sel.Name != "Principal" {
+		return false
+	}
+	for _, element := range literal.Elts {
+		pair, ok := element.(*ast.KeyValueExpr)
+		if !ok {
+			continue
+		}
+		if key, ok := pair.Key.(*ast.Ident); !ok || key.Name != "Type" {
+			continue
+		}
+		value, ok := pair.Value.(*ast.SelectorExpr)
+		return ok && value.Sel.Name == "PrincipalSystem"
+	}
+	return false
+}
+
+// isBounded reports whether a resolved scope is a BOUNDED one. An unreadable
+// value ("") is not bounded here: the caller has already failed for it, and
 // answering yes would let the very fixture this cannot read satisfy the census.
-func known2(scope string) bool { return scope != "" && scope != unboundedScope }
+func isBounded(scope string) bool { return scope != "" && scope != unboundedScope }
 
 // readIntegrationFixtures parses the integration tree once and returns every
 // declared permissions value's row scope, the files of each package, and the
 // packages that actually hold a suite.
-func readIntegrationFixtures(t *testing.T) (map[string]string, map[string][]*ast.File, []string) {
+func readIntegrationFixtures(
+	t *testing.T,
+) (map[string]string, map[string][]*ast.File, []string, *token.FileSet) {
 	t.Helper()
 	scopes := map[string]string{}
 	files := map[string][]*ast.File{}
@@ -198,7 +294,7 @@ func readIntegrationFixtures(t *testing.T) (map[string]string, map[string][]*ast
 		if strings.HasSuffix(path, "_integration_test.go") {
 			suiteSet[dir] = true
 		}
-		collectPermissionsValues(parsed, scopes)
+		collectPermissionsValues(t, parsed, scopes)
 		return nil
 	})
 	if err != nil {
@@ -225,13 +321,29 @@ func readIntegrationFixtures(t *testing.T) (map[string]string, map[string][]*ast
 		suites = append(suites, dir)
 	}
 	sort.Strings(suites)
-	return scopes, files, suites
+	return scopes, files, suites, fset
 }
 
 // collectPermissionsValues records every package-level `X = principal.Permissions{…}`
 // with its row scope. A value that is not a literal is recorded as unreadable
 // ("") rather than skipped, so the caller can refuse it by name.
-func collectPermissionsValues(file *ast.File, into map[string]string) {
+func collectPermissionsValues(t *testing.T, file *ast.File, into map[string]string) {
+	t.Helper()
+	// The dictionary is keyed by NAME, which two packages could both declare.
+	// Whichever won would answer for the other's suites, so a name carrying two
+	// different scopes fails rather than resolving to one of them. There is one
+	// such name today and both declarations agree; a disagreement is the drift
+	// this refuses.
+	record := func(name, scope string) {
+		if was, seen := into[name]; seen && was != scope {
+			t.Errorf("%s is declared as a principal.Permissions in more than one integration package "+
+				"with different row scopes (%q and %q), so a suite referring to it would be classified "+
+				"by whichever declaration this read last — qualify the names, or give them distinct ones",
+				name, was, scope)
+		}
+		into[name] = scope
+	}
+
 	for _, decl := range file.Decls {
 		gen, ok := decl.(*ast.GenDecl)
 		if !ok || gen.Tok != token.VAR {
@@ -248,12 +360,16 @@ func collectPermissionsValues(file *ast.File, into map[string]string) {
 				}
 				if literal, ok := value.Values[i].(*ast.CompositeLit); ok {
 					if isPermissionsLiteral(literal.Type) {
-						into[name.Name] = rowScopeOf(literal)
+						scope, readable := rowScopeOf(literal)
+						if !readable {
+							scope = ""
+						}
+						record(name.Name, scope)
 					}
 					continue
 				}
 				if isPermissionsLiteral(value.Type) {
-					into[name.Name] = ""
+					record(name.Name, "")
 				}
 			}
 		}
@@ -309,10 +425,15 @@ func isPermissionsLiteral(expr ast.Expr) bool {
 	return ok && pkg.Name == "principal" && sel.Sel.Name == "Permissions"
 }
 
-// rowScopeOf reads the RowScope field's constant name. An absent field is the
-// zero value "", which Unbounded does not short-circuit on — so it is reported
-// as a bounded scope under its own name rather than as unreadable.
-func rowScopeOf(literal *ast.CompositeLit) string {
+// rowScopeOf reads the RowScope field's constant name, and says whether it
+// could read it at all.
+//
+// An absent field is the zero value "", which Unbounded does not short-circuit
+// on — so it is READABLE, and reported as a bounded scope under its own name.
+// A value that is not a constant selector is not: a computed scope could be
+// anything, and answering "not RowScopeAll" for it would let the one fixture
+// this cannot read satisfy the census.
+func rowScopeOf(literal *ast.CompositeLit) (scope string, readable bool) {
 	for _, element := range literal.Elts {
 		pair, ok := element.(*ast.KeyValueExpr)
 		if !ok {
@@ -322,9 +443,9 @@ func rowScopeOf(literal *ast.CompositeLit) string {
 			continue
 		}
 		if sel, ok := pair.Value.(*ast.SelectorExpr); ok {
-			return sel.Sel.Name
+			return sel.Sel.Name, true
 		}
-		return ""
+		return "", false
 	}
-	return "RowScopeUnset"
+	return "RowScopeUnset", true
 }
