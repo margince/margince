@@ -9657,6 +9657,10 @@ export const vi = {
   "worklist.untitled.undelivered": "Một email chưa từng được gửi",
   "worklist.untitled.automation_run": "Một quy tắc đã không chạy",
   "worklist.untitled.notice": "Một thông báo cho bạn",
+  // Câu hỏi về tên miền luôn lấy chính tên miền làm tiêu đề, nên chuỗi dự phòng
+  // này lẽ ra không bao giờ hiển thị. Nó tồn tại vì bảng ánh xạ phải bao gồm
+  // mọi nguồn mà bản dựng này biết.
+  "worklist.untitled.domain_question": "Một tên miền chưa ai đánh giá",
   "worklist.untitled.introduction_request":
     "Một đồng nghiệp nhờ bạn giới thiệu",
   "worklist.verb.decide": "Quyết định",
@@ -9681,6 +9685,13 @@ export const vi = {
   "worklist.verb.retry": "Chạy lại",
   "worklist.verb.retryStarted": "Quy tắc đang chạy lại.",
   "worklist.verb.retryFailed": "Không thể chạy lại.",
+  "worklist.verb.keep": "Là một công ty",
+  "worklist.verb.discard": "Không dành cho tôi",
+  "worklist.verb.domainKept": "Đã tạo công ty từ tên miền này.",
+  "worklist.verb.domainKeepFailed": "Không thể tạo công ty này.",
+  "worklist.verb.domainDiscarded":
+    "Thư của bạn từ tên miền này không còn được lưu nữa.",
+  "worklist.verb.domainDiscardFailed": "Không thể loại trừ tên miền này.",
   "worklist.verb.retryRefusedNotFailed":
     "Không có gì để chạy lại — lần chạy này bị dừng có chủ đích, không phải do lỗi.",
   "worklist.verb.retryRefusedRepeats":

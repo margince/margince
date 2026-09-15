@@ -314,6 +314,13 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 	s.contactsStore = contacts.NewStore(InstallationDB(pool)).WithFieldCatalog(customfields.NewService(pool, nil))
 	s.blockedDomainHandlers = blockedDomainHandlers{contacts: s.contactsStore}
 	s.captureExclusionHandlers = captureExclusionHandlers{store: capture.NewExclusionStore(InstallationDB(pool))}
+	// Both stores, because answering a domain question is two different acts:
+	// keeping it settles the triage ledger, discarding it writes the caller's
+	// own capture exclusion.
+	s.domainQuestionHandlers = domainQuestionHandlers{
+		contacts:   s.contactsStore,
+		exclusions: capture.NewExclusionStore(InstallationDB(pool)),
+	}
 	s.threadAudience = NewThreadAudienceSetter(pool)
 	s.captureSenderHandlers = captureSenderHandlers{
 		db:         InstallationDB(pool),

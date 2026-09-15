@@ -40,6 +40,7 @@ import {
   whenText,
 } from "./worklist.copy";
 import { PutDownByThumb } from "./worklist.dispositions";
+import { DomainQuestionAnswer } from "./worklist.domainquestion";
 import { WaitingEmailLine } from "./worklist.emailtitle";
 import { conditionOf, eyebrowKeyFor, kindClass } from "./worklist.eyebrow";
 import { leadFactsText } from "./worklist.leadfacts";
@@ -470,6 +471,14 @@ const ANSWER_BY_SOURCE: Partial<
   automation_run: {
     verb: "retry",
     draw: (item) => ({ primary: <AutomationRetry id={item.id} /> }),
+  },
+  // Keyed on `keep`, which is the server's signal that this row may be
+  // answered at all; the control then asks the row again for each button, so a
+  // seat offered only one of the two draws only that one. The same one-entry
+  // shape meeting_outcome uses — one entry per source, not one per button.
+  domain_question: {
+    verb: "keep",
+    draw: (item) => ({ equals: <DomainQuestionAnswer item={item} /> }),
   },
   // THREE verbs of equal weight, so the row has no primary. Held, no-show and
   // cancelled are equally likely records of what already happened, and leading

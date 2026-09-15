@@ -9932,6 +9932,10 @@ export const en = {
   "worklist.untitled.undelivered": "An email was never sent",
   "worklist.untitled.automation_run": "A rule did not do its work",
   "worklist.untitled.notice": "A notice for you",
+  // A domain question always carries the domain itself as its title, so this
+  // fallback should never render. It exists because the map is total over the
+  // sources this build knows.
+  "worklist.untitled.domain_question": "A domain nobody has judged yet",
   "worklist.untitled.introduction_request":
     "A colleague asked you for an introduction",
   "worklist.verb.decide": "Decide",
@@ -9957,6 +9961,21 @@ export const en = {
   "worklist.verb.retry": "Run it again",
   "worklist.verb.retryStarted": "Running the rule again.",
   "worklist.verb.retryFailed": "That could not be run again.",
+  // An undecided domain, answered from the row. Two verbs of equal weight,
+  // because the question genuinely has two answers and neither is the
+  // product's expectation: a domain one colleague works with is noise to the
+  // next, and leading with either would be the machine guessing again.
+  "worklist.verb.keep": "It's a company",
+  "worklist.verb.discard": "Not for me",
+  "worklist.verb.domainKept": "Company created from this domain.",
+  "worklist.verb.domainKeepFailed": "That company could not be created.",
+  // The discard wording says WHOSE mail stops being captured, because the
+  // colleague reading it shares this installation with people whose answer may
+  // differ — and a sentence that said "excluded" flatly would read as a
+  // workspace-wide act it is not.
+  "worklist.verb.domainDiscarded":
+    "Your mail from this domain is no longer captured.",
+  "worklist.verb.domainDiscardFailed": "That domain could not be excluded.",
   "worklist.verb.retryRefusedNotFailed":
     "Nothing to run again \u2014 this firing was stopped on purpose, not by an error.",
   "worklist.verb.retryRefusedRepeats":

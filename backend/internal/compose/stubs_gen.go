@@ -507,6 +507,14 @@ func (stubs) DeleteCaptureCounterpartyHold(w nethttp.ResponseWriter, r *nethttp.
 	httperr.NotImplemented(w, r, "DeleteCaptureCounterpartyHold")
 }
 
+func (stubs) DiscardDomainQuestion(w nethttp.ResponseWriter, r *nethttp.Request, domain string) {
+	httperr.NotImplemented(w, r, "DiscardDomainQuestion")
+}
+
+func (stubs) KeepDomainQuestion(w nethttp.ResponseWriter, r *nethttp.Request, domain string) {
+	httperr.NotImplemented(w, r, "KeepDomainQuestion")
+}
+
 func (stubs) ListWorkspaceEmailDomains(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ListWorkspaceEmailDomains")
 }

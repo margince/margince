@@ -90,6 +90,11 @@ var destinationOfSource = map[crmcontracts.WorklistItemSource]crmcontracts.Workl
 	crmcontracts.WorklistItemSourceIntroductionRequest: destinationReview,
 	crmcontracts.WorklistItemSourceDsr:                 destinationReview,
 	crmcontracts.WorklistItemSourceNoticeCase:          destinationReview,
+	// An undecided domain is a judgement, not a broken pipe. The capture health
+	// lane reports machinery an administrator restores; this asks the colleague
+	// whose mail raised the question whether a company should exist, and nobody
+	// else can answer it for them.
+	crmcontracts.WorklistItemSourceDomainQuestion: destinationReview,
 
 	// The product reporting on itself. An administrator restores these.
 	crmcontracts.WorklistItemSourceSyncHealth:    destinationSystemHealth,

@@ -13061,6 +13061,86 @@ paths:
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /capture/domain-questions/{domain}/keep:
+    post:
+      tags: [Capture]
+      operationId: keepDomainQuestion
+      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: Answer an open domain question by keeping the company.
+      description: |
+        Settles an `undecided` domain as a company, and creates the record the triage withheld.
+
+        The company is named from the domain's own registrable label, because nothing on the
+        site named it and a human pressing this is not asked to type one. That is a worse name
+        than a site would have given and never a fabricated one — the same name the pre-triage
+        path always produced — and renaming the company afterwards is ordinary record editing.
+
+        Only an `undecided` domain can be answered this way. A domain already carrying a
+        decision answers `409`: the request is intelligible and the domain well formed, it is
+        the row's state that refuses.
+
+        Demands `company:update`, the gate every domain decision takes, because what this
+        creates is a company.
+      parameters:
+        - name: domain
+          in: path
+          required: true
+          schema: { type: string }
+          description: 'The domain to keep; normalized to its registrable form.'
+      responses:
+        '200':
+          description: Where the domain stands now that it has an answer.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BlockedDomain' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /capture/domain-questions/{domain}/discard:
+    post:
+      tags: [Capture]
+      operationId: discardDomainQuestion
+      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: Answer an open domain question by excluding the domain from your own capture.
+      description: |
+        Writes a capture exclusion for the caller's OWN mailboxes, so mail from this domain
+        stops being stored for them. It is the same rule `POST /capture/exclusions` writes with
+        `scope: user`, reached from the question rather than by typing the domain again.
+
+        ONE COLLEAGUE'S ANSWER, and deliberately not the workspace's. Two colleagues on one
+        installation may judge the same domain differently — a consultancy that is noise to one
+        seat and a live account to another — so this binds only the connections the caller
+        granted. Excluding a domain for everybody is a different act with a different gate:
+        `POST /capture/exclusions` with `scope: workspace`, which takes the capture-settings
+        grant.
+
+        It does not destroy mail already captured. Purging what a rule matched is
+        `POST /capture/exclusions/{id}/purge`, a separate and irreversible act.
+
+        Takes a human seat and nothing more, because a personal exclusion is the caller's own
+        boundary. Idempotent: pressing it twice answers the rule that already exists.
+      parameters:
+        - name: domain
+          in: path
+          required: true
+          schema: { type: string }
+          description: 'The domain to stop capturing; normalized to its registrable form.'
+      responses:
+        '200':
+          description: The exclusion rule now binding this caller's mailboxes.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CaptureExclusion' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /capture/consumer-mail-baseline:
     get:
       tags: [Capture]
@@ -45071,6 +45151,31 @@ components:
             else's. Withheld — named in `lanes_omitted` — for a caller with no human
             behind it. Absent — not empty — on an installation whose feed does not read
             capture connections.
+        domain_questions:
+          type: array
+          items: { $ref: '#/components/schemas/AttentionItem' }
+          description: |
+            Domains the capture triage could not judge, whose mail belongs to THIS
+            reader — the machine read the site, found nothing that named a company,
+            and left the question open rather than inventing a record.
+
+            Each card names the domain as `title` and why the machine stopped as
+            `detail`. The two verbs are the whole answer a human owes: `keep` makes
+            the company from the domain's own label, and `discard` writes a capture
+            exclusion for this reader's mailboxes alone. Neither needs anything
+            typed, which is why this lane can settle from a queue row where a
+            free-text answer could not.
+
+            OWNED, and that is the point of the lane. Every open question carries
+            the mailbox owner whose mail raised it (`company_domain_disposition.owner_id`,
+            stamped when the question opens), so it reaches the reader whose mail it
+            is about rather than a shared pile nobody answers for. One installation's
+            two colleagues may answer the same domain differently, and the exclusion
+            a `discard` writes binds only the colleague who pressed it.
+
+            Withheld — named in `lanes_omitted` — for a caller with no human behind
+            it. Absent — not empty — on an installation whose feed does not read
+            domain questions.
         ai_work_health:
           type: array
           items: { $ref: '#/components/schemas/AttentionItem' }
@@ -45187,7 +45292,7 @@ components:
             not read introductions.
         lanes_omitted:
           type: array
-          items: { type: string, enum: [this_morning, needs_you, planned, done_for_you, commitments, at_risk, meetings, relationship_decay, did_not_run, dsr, notice_case, sync_health, capture_health, ai_work_health, bounces, undelivered, automation_health, notices, introductions, meetings_unreported] }
+          items: { type: string, enum: [this_morning, needs_you, planned, done_for_you, commitments, at_risk, meetings, relationship_decay, did_not_run, dsr, notice_case, sync_health, capture_health, domain_questions, ai_work_health, bounces, undelivered, automation_health, notices, introductions, meetings_unreported] }
           description: "Lanes withheld because the caller may not read what they contain. Never returned empty instead."
         counts: { $ref: '#/components/schemas/AttentionCounts' }
 
@@ -45281,6 +45386,13 @@ components:
           description: >-
             How many capture connections need the reader's hand — one per connection,
             the full count rather than a bounded page.
+        domain_questions:
+          type: integer
+          minimum: 0
+          description: >-
+            How many open domain questions belong to this reader — the full count
+            rather than a bounded page, because a reader with thirty must be told
+            thirty and the lane offers no second page to find the rest by.
         ai_work_health:
           type: integer
           minimum: 0
@@ -45351,7 +45463,7 @@ components:
         id: { type: string, description: "The owning record's id, as its own endpoint spells it." }
         source:
           type: string
-          enum: [approval, dedupe_candidate, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, notice_case, sync_health, capture_health, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome]
+          enum: [approval, dedupe_candidate, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, notice_case, sync_health, capture_health, domain_question, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome]
           description: "Which producer raised it, and therefore which endpoint its verbs go to."
         kind: { type: string, description: 'The producer''s own sub-type (an approval kind, a dedupe entity type) — for the icon and the label, never for authority.' }
         title:
@@ -45519,11 +45631,18 @@ components:
             telling and so has to carry the way back with it.
         actions:
           type: array
-          items: { type: string, enum: [decide, merge, complete, snooze, open, act, dismiss, set_aside, acknowledge, retry, reply, undo] }
+          items: { type: string, enum: [decide, merge, complete, snooze, open, act, dismiss, set_aside, acknowledge, retry, reply, undo, keep, discard] }
           description: |
             What this item offers. `decide` and `merge` mean the verb is irreversible and a
             contact must choose; `complete` and `snooze` are a task's own verbs; `open` is
             the read-only fallback for a receipt.
+
+            `keep` and `discard` are an undecided domain's pair, and they always travel
+            together: keeping it creates the company the triage withheld, discarding it stops
+            the caller's OWN mailboxes capturing that domain. Neither carries a body, because
+            a domain question has no field to fill in — which is what lets it be answered from
+            a queue row. They route to `/capture/domain-questions/{domain}/…`, keyed on the
+            domain because an open question is named by the domain rather than by a record id.
 
             `act`, `dismiss` and `set_aside` are the briefing queue's three, and they route
             to `/brief/items/{itemId}/…`. `acknowledge` is a notice's one verb and routes
@@ -45805,7 +45924,7 @@ components:
       properties:
         source:
           type: string
-          enum: [approval, dedupe_candidate, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, notice_case, sync_health, capture_health, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome, weekly_commitment, batch]
+          enum: [approval, dedupe_candidate, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, notice_case, sync_health, capture_health, domain_question, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome, weekly_commitment, batch]
           description: 'Which producer these numbers are about. The same vocabulary as an item source.'
         considered:
           type: integer
@@ -46596,7 +46715,7 @@ components:
         id: { type: string, description: "The owning record's id, as its own endpoint spells it." }
         source:
           type: string
-          enum: [approval, dedupe_candidate, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, notice_case, sync_health, capture_health, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome, weekly_commitment, batch]
+          enum: [approval, dedupe_candidate, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, notice_case, sync_health, capture_health, domain_question, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome, weekly_commitment, batch]
           description: |
             Which producer raised it, and therefore which endpoint its verbs go to.
 
@@ -46762,7 +46881,7 @@ components:
             telling and so has to carry the way back with it.
         actions:
           type: array
-          items: { type: string, enum: [decide, merge, complete, snooze, open, act, dismiss, set_aside, acknowledge, retry, reply, undo] }
+          items: { type: string, enum: [decide, merge, complete, snooze, open, act, dismiss, set_aside, acknowledge, retry, reply, undo, keep, discard] }
           description: 'What this item offers, routed to the endpoint that owns the verb.'
         band:
           type: string

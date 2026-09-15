@@ -279,6 +279,12 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, meter *over
 		// dispatcher's park records on the row.
 		WithUndelivered(attentionUndelivered{store: comms.NewStore(db, time.Now, activities.NewStore(db))}).
 		WithMachineSender(capture.IsMachineAddress).
+		// The reader's OWN undecided domains. Bound to the contacts store the
+		// rest of this seam already reads: the question is opened by capture and
+		// answered against the same disposition ledger the admin list shows, so
+		// a second store over the same pool would be a second answer to "what is
+		// still open".
+		WithDomainQuestions(attentionDomainQuestions{store: contacts.NewStore(db)}).
 		// The figures behind a deal a row names but does not carry — the
 		// overnight brief's rows, which rank ids and keep their evidence
 		// behind the brief's own endpoint.
@@ -342,6 +348,31 @@ func attentionZone(pool *pgxpool.Pool) attention.Zone {
 // queue's seam is declared over a type it owns. A shared type would be a
 // sibling-module import in one direction or the other, which is the edge every
 // seam in this file exists to avoid.
+// attentionDomainQuestions binds the reader's own undecided domains to the
+// contacts store that owns the triage ledger.
+type attentionDomainQuestions struct{ store *contacts.Store }
+
+// OpenDomainQuestions answers the acting human's own open questions.
+//
+// The port takes no owner argument on purpose: the store reads the acting
+// human's id itself, which is what lets the queue row claim the reader as its
+// owner without a second field restating it.
+func (a attentionDomainQuestions) OpenDomainQuestions(ctx context.Context) ([]attention.DomainQuestion, error) {
+	rows, err := a.store.OpenDomainQuestionsForOwner(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]attention.DomainQuestion, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, attention.DomainQuestion{
+			Domain:  row.Domain,
+			Reason:  row.Reason,
+			AskedAt: row.AskedAt,
+		})
+	}
+	return out, nil
+}
+
 type attentionDealStandings struct {
 	cards *dealstatus.Service
 }
