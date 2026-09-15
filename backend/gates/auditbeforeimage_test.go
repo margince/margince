@@ -214,7 +214,7 @@ var unresolvableAuditActions = gatekit.Waive(map[string]string{
 	"internal/modules/consent/recordadmitted.go:recordAdmittedTx":                       "a grant and a withdrawal are separate verbs, and both record the consent state they moved from",
 	"internal/modules/dealrooms/lifecycle.go:moveRoom":                                  "each room transition names its own verb and carries the patch images the move built",
 	"internal/modules/privacy/retentionpolicystore.go:Delete":                           "the verb is an archive of the policy row, and the image is the policy as it stood",
-	"internal/platform/settings/store.go:SetRawTx":                                      "each setting declares its own verb, and the value on either side is rendered by the same declaration",
+	"internal/platform/settings/store.go:SetRawTxReceipt":                               "each setting declares its own verb, and the value on either side is rendered by the same declaration",
 
 	// The one site no static reading could ever judge, and the reason the
 	// chokepoint is not optional.

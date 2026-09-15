@@ -48,7 +48,8 @@ func TestStreamsMatchSpecList(t *testing.T) {
 	// belongs here for the resettability half: a reset that left a rep's
 	// reading history behind would outlive the data it describes.
 	want := append(append([]string{}, coreFamilyStreams...),
-		"gw:events:crm:extension", "gw:events:crm:aitask", "gw:events:crm:brief")
+		"gw:events:crm:extension", "gw:events:crm:aitask",
+		"gw:events:crm:aibudget", "gw:events:crm:brief")
 	sort.Strings(want)
 	if got := Streams(); !reflect.DeepEqual(got, want) {
 		t.Errorf("Streams() = %v, want the events.md stream set plus the extension stream %v", got, want)
@@ -285,14 +286,15 @@ func TestGroupStreamSetsMatchSpecTable(t *testing.T) {
 		// The AI-activity projection (ai_task_run). Its own group, and the only
 		// group on the aitask stream: a projection backlog must not be able to
 		// stall a consumer that spends money or moves a record.
-		"cg:ai-activity":     {"gw:events:crm:aitask"},
-		"cg:overnight-agent": {"gw:events:crm:activity", "gw:events:crm:approval", "gw:events:crm:deal", "gw:events:crm:lead"},
-		"cg:workflows":       all,
-		"cg:capture":         {"gw:events:crm:capture"},
-		"cg:flow-bridge":     {"gw:events:crm:activity", "gw:events:crm:contact", "gw:events:crm:deal"},
-		"cg:read-model":      all,
-		"cg:audit-stream":    all,
-		"cg:webhooks":        all,
+		"cg:ai-budget-resume": {"gw:events:crm:aibudget"},
+		"cg:ai-activity":      {"gw:events:crm:aitask"},
+		"cg:overnight-agent":  {"gw:events:crm:activity", "gw:events:crm:approval", "gw:events:crm:deal", "gw:events:crm:lead"},
+		"cg:workflows":        all,
+		"cg:capture":          {"gw:events:crm:capture"},
+		"cg:flow-bridge":      {"gw:events:crm:activity", "gw:events:crm:contact", "gw:events:crm:deal"},
+		"cg:read-model":       all,
+		"cg:audit-stream":     all,
+		"cg:webhooks":         all,
 		// How each proposed stage move was received. The APPROVAL stream: a
 		// verdict rides there, including the `expired` one the sweep writes
 		// when nobody answers a card.
@@ -403,6 +405,24 @@ func TestAiTaskStateChangedRoutesToItsOwnStream(t *testing.T) {
 	}
 	if !IsPipelineEvent("ai_task.state_changed") {
 		t.Fatal("ai_task.state_changed must be an entity-less pipeline event: an AI task names no domain record")
+	}
+}
+
+func TestBudgetRecoveryNoticeStaysInternal(t *testing.T) {
+	if !IsPipelineEvent("ai_budget.updated") {
+		t.Fatal("an allowance revision must not be offered as a subscribable domain event")
+	}
+	stream, err := StreamFor("ai_budget.updated")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Contains(Streams(), stream) || slices.Contains(coreStreams(), stream) {
+		t.Fatal("budget notices must be enumerable without reaching all-stream consumers")
+	}
+	for _, group := range Groups() {
+		if slices.Contains(group.Streams, stream) != (group.Name == "cg:ai-budget-resume") {
+			t.Fatalf("unexpected budget notice subscription for %s", group.Name)
+		}
 	}
 }
 

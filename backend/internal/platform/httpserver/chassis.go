@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"runtime/debug"
 	"strings"
+	"time"
 
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/capabilitypath"
@@ -26,6 +27,16 @@ import (
 // hand-copies this string from a package it is forbidden to import, and the two
 // then drift with nothing to notice.
 const BaseURL = "/v1"
+
+// ResponseDeadline is how long an ordinary response has to be written, and
+// therefore how long the handler behind it is allowed to run.
+//
+// It lives in the chassis rather than beside http.Server for the same reason
+// BaseURL does: two mechanisms enforce this one fact — the server's
+// WriteTimeout, and the request context the composition layer bounds — and a
+// value hand-copied into the second drifts from the first with nothing to
+// notice. A route that needs longer says so per route and sets both together.
+const ResponseDeadline = 30 * time.Second
 
 // Healthz answers the unauthenticated liveness probe.
 func Healthz(w http.ResponseWriter, _ *http.Request) {

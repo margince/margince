@@ -13957,6 +13957,24 @@ func (e UpdateCompanyRequestSizeBand) Valid() bool {
 	}
 }
 
+// Defines values for UpdateCompanyRequestVisibility.
+const (
+	UpdateCompanyRequestVisibilityOwner     UpdateCompanyRequestVisibility = "owner"
+	UpdateCompanyRequestVisibilityWorkspace UpdateCompanyRequestVisibility = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the UpdateCompanyRequestVisibility enum.
+func (e UpdateCompanyRequestVisibility) Valid() bool {
+	switch e {
+	case UpdateCompanyRequestVisibilityOwner:
+		return true
+	case UpdateCompanyRequestVisibilityWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for UpdateContactRequestVisibility.
 const (
 	UpdateContactRequestVisibilityOwner     UpdateContactRequestVisibility = "owner"
@@ -19122,6 +19140,42 @@ type AiActivityItemState string
 // edits one.
 type AiActivityKind string
 
+// AiBudgetChange defines model for AiBudgetChange.
+type AiBudgetChange struct {
+	Config           AiBudgetConfig `json:"config"`
+	ExpectedRevision string         `json:"expected_revision"`
+}
+
+// AiBudgetConfig defines model for AiBudgetConfig.
+type AiBudgetConfig struct {
+	CompanyMonthlyTokens *int64 `json:"company_monthly_tokens"`
+	TokensPerFullUser    int64  `json:"tokens_per_full_user"`
+}
+
+// AiBudgetPreview defines model for AiBudgetPreview.
+type AiBudgetPreview struct {
+	Current      AiBudgetSnapshot `json:"current"`
+	DeferredWork []AiDeferredWork `json:"deferred_work"`
+	Features     []AiFeatureRoute `json:"features"`
+	Proposed     AiBudgetSnapshot `json:"proposed"`
+}
+
+// AiBudgetSnapshot defines model for AiBudgetSnapshot.
+type AiBudgetSnapshot struct {
+	Band              string         `json:"band"`
+	BudgetedFullUsers int64          `json:"budgeted_full_users"`
+	Config            AiBudgetConfig `json:"config"`
+	EligibleFullUsers int64          `json:"eligible_full_users"`
+	MonthStartAt      time.Time      `json:"month_start_at"`
+	MonthlyTokens     int64          `json:"monthly_tokens"`
+	ObservedAt        time.Time      `json:"observed_at"`
+	RemainingTokens   int64          `json:"remaining_tokens"`
+	ResetsAt          time.Time      `json:"resets_at"`
+	Revision          string         `json:"revision"`
+	Source            string         `json:"source"`
+	SpentTokens       int64          `json:"spent_tokens"`
+}
+
 // AiCall defines model for AiCall.
 type AiCall struct {
 	AgentRunId *openapi_types.UUID `json:"agent_run_id,omitempty"`
@@ -19241,6 +19295,14 @@ type AiCallSummary struct {
 	TokensOut int    `json:"tokens_out"`
 }
 
+// AiDeferredWork defines model for AiDeferredWork.
+type AiDeferredWork struct {
+	Available bool   `json:"available"`
+	Carrier   string `json:"carrier"`
+	Count     *int64 `json:"count,omitempty"`
+	Unit      string `json:"unit"`
+}
+
 // AiEmbeddingsBinding defines model for AiEmbeddingsBinding.
 type AiEmbeddingsBinding struct {
 	// BaseUrl Endpoint override; empty means the provider default.
@@ -19261,6 +19323,18 @@ type AiEmbeddingsBinding struct {
 	// Provider The adapter serving this tier: fake | anthropic | ollama | vllm | openai_compatible
 	// | openai | gemini. The credential is never part of this document.
 	Provider string `json:"provider"`
+}
+
+// AiFeatureRoute defines model for AiFeatureRoute.
+type AiFeatureRoute struct {
+	BudgetExempt        bool               `json:"budget_exempt"`
+	DisplayName         string             `json:"display_name"`
+	EffectiveCandidates []AiRouteCandidate `json:"effective_candidates"`
+	ExecutionMode       string             `json:"execution_mode"`
+	Impact              string             `json:"impact"`
+	LeadingTier         string             `json:"leading_tier"`
+	NormalCandidates    []AiRouteCandidate `json:"normal_candidates"`
+	Task                string             `json:"task"`
 }
 
 // AiHealth defines model for AiHealth.
@@ -19350,6 +19424,14 @@ type AiProviderKeyStatus struct {
 	Provider string `json:"provider"`
 }
 
+// AiRouteCandidate defines model for AiRouteCandidate.
+type AiRouteCandidate struct {
+	Model      string `json:"model"`
+	Processing string `json:"processing"`
+	Provider   string `json:"provider"`
+	Tier       string `json:"tier"`
+}
+
 // AiRouting The installation's tier-to-model binding. `tiers` is keyed by tier name; the closed set
 // of names is the one the task contract declares (api/ai-tasks.yaml), and the server
 // refuses an unknown key with a 422 naming it — restating the set here would be a second
@@ -19368,6 +19450,13 @@ type AiRouting struct {
 // AiRoutingProfile The location ladder (§4). `sovereign` means zero egress by construction: a cloud
 // provider on any tier is refused, and so is a local provider pointed at another host.
 type AiRoutingProfile string
+
+// AiRoutingPreview defines model for AiRoutingPreview.
+type AiRoutingPreview struct {
+	CurrentVersion string           `json:"current_version"`
+	Features       []AiFeatureRoute `json:"features"`
+	UnusedTiers    []string         `json:"unused_tiers"`
+}
 
 // AiRunModelUsage One task, route, and served-model slice within a correlated AI run.
 type AiRunModelUsage struct {
@@ -19440,6 +19529,18 @@ type AiRungHealth struct {
 	Tier string `json:"tier"`
 }
 
+// AiStatus defines model for AiStatus.
+type AiStatus struct {
+	Budget               AiBudgetSnapshot `json:"budget"`
+	DeferredWork         []AiDeferredWork `json:"deferred_work"`
+	DeferredWorkCoverage string           `json:"deferred_work_coverage"`
+	Features             []AiFeatureRoute `json:"features"`
+	ObservedAt           time.Time        `json:"observed_at"`
+	RoutingVersion       string           `json:"routing_version"`
+	TaskContractHash     string           `json:"task_contract_hash"`
+	UnusedTiers          *[]string        `json:"unused_tiers,omitempty"`
+}
+
 // AiTierBinding defines model for AiTierBinding.
 type AiTierBinding struct {
 	// BaseUrl Endpoint override; empty means the provider default.
@@ -19484,7 +19585,8 @@ type AiUsage struct {
 			CostEstMinor *int `json:"cost_est_minor,omitempty"`
 
 			// Task capture_classify, enrich, summarize, …
-			Task string `json:"task"`
+			Task            string  `json:"task"`
+			TaskDisplayName *string `json:"task_display_name,omitempty"`
 
 			// Tier local_small, cheap_cloud, premium, frontier, local_large.
 			Tier      string `json:"tier"`
@@ -20549,8 +20651,7 @@ type AttentionItem struct {
 	// handles `snooze` generically write the wrong endpoint.
 	Actions []AttentionItemActions `json:"actions"`
 
-	// AssigneeId Who holds this work, null when nobody has taken it. Sent by `task` and `notice_case`.
-	// A disclosure duty uses its assigned officer, falling back to its contact owner.
+	// AssigneeId Who holds this task, null when nobody has taken it. Sent by `task`.
 	//
 	// The lane serves three scopes and only one is the reader's own queue: an
 	// unassigned sweep and a named colleague's queue both put work on the page that
@@ -22714,7 +22815,7 @@ type Company struct {
 	// not only overlay mode.
 	Version *RowVersion `json:"version,omitempty"`
 
-	// Visibility Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the workspace through a sender verdict, and never travels back. There is no owner-driven door for a company: `POST /contacts/{id}/publish` is a contact's.
+	// Visibility Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the workspace through a sender verdict, or through `visibility` on `PATCH /companies/{id}`, which moves it BOTH ways for anybody the write gate admits. Read-only HERE, on the read schema, the same as the contact column beside it: the update request carries the writable copy.
 	Visibility *CompanyVisibility `json:"visibility,omitempty"`
 
 	// WebsiteUrl The company's readable website, DERIVED from its primary domain row. There is deliberately no website column — a second store for a fact company_domain already owns is the duplication ADR-0085 closes. Not accepted on write.
@@ -22734,7 +22835,7 @@ type CompanyRelationshipTypes string
 // CompanySizeBand defines model for Company.SizeBand.
 type CompanySizeBand string
 
-// CompanyVisibility Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the workspace through a sender verdict, and never travels back. There is no owner-driven door for a company: `POST /contacts/{id}/publish` is a contact's.
+// CompanyVisibility Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the workspace through a sender verdict, or through `visibility` on `PATCH /companies/{id}`, which moves it BOTH ways for anybody the write gate admits. Read-only HERE, on the read schema, the same as the contact column beside it: the update request carries the writable copy.
 type CompanyVisibility string
 
 // Company360 The company record page in one payload. Every section except `company` is
@@ -37650,9 +37751,30 @@ type UpdateCompanyRequest struct {
 	ParentCompanyId *openapi_types.UUID `json:"parent_company_id,omitempty"`
 
 	// RelationshipTypes Replace-set of what the company is to us (add new, archive removed), the same shape as `domains`. Absent = untouched; an empty array clears every type. Removing `partner` while the company still has a `partner` extension row is refused with 422 — the invariant binds both ways, and an invariant nothing enforces is a comment.
-	RelationshipTypes    *[]UpdateCompanyRequestRelationshipTypes `json:"relationship_types,omitempty"`
-	SizeBand             *UpdateCompanyRequestSizeBand            `json:"size_band,omitempty"`
-	AdditionalProperties map[string]interface{}                   `json:"-"`
+	RelationshipTypes *[]UpdateCompanyRequestRelationshipTypes `json:"relationship_types,omitempty"`
+	SizeBand          *UpdateCompanyRequestSizeBand            `json:"size_band,omitempty"`
+
+	// Visibility Who may see this company: `workspace` for everyone holding the read grant, `owner` for
+	// the seat named by `owner_id` alone. Absent = untouched.
+	//
+	// An ORDINARY field, writable in BOTH directions by anybody the write gate admits, on the
+	// same terms as `visibility` on `PATCH /contacts/{id}`. Capture mints a company
+	// owner-scoped from a message nothing has judged yet, and until this field existed the
+	// only way out was a sender verdict — so a company the classifier never asked about, or
+	// judged wrong, stayed private to its mailbox owner with no door at all. A machine's
+	// decision no human could undo is the same reasoning that made the contact column
+	// writable both ways.
+	//
+	// Narrowing a company does not retract what was already done with it. Deals, contacts and
+	// mail filed against it keep their own audiences; what changes is who finds the company
+	// from here on.
+	//
+	// A company that reads `owner` and names no owner is invisible to EVERY seat, including
+	// its author and an admin, so the pair is refused rather than written: sending
+	// `{"visibility":"owner","owner_id":null}`, or narrowing a company that has no owner,
+	// answers 422 naming `owner_id`.
+	Visibility           *UpdateCompanyRequestVisibility `json:"visibility,omitempty"`
+	AdditionalProperties map[string]interface{}          `json:"-"`
 }
 
 // UpdateCompanyRequestLifecycle Where the account stands with us (ADR-0079). Absent = untouched.
@@ -37663,6 +37785,27 @@ type UpdateCompanyRequestRelationshipTypes string
 
 // UpdateCompanyRequestSizeBand defines model for UpdateCompanyRequest.SizeBand.
 type UpdateCompanyRequestSizeBand string
+
+// UpdateCompanyRequestVisibility Who may see this company: `workspace` for everyone holding the read grant, `owner` for
+// the seat named by `owner_id` alone. Absent = untouched.
+//
+// An ORDINARY field, writable in BOTH directions by anybody the write gate admits, on the
+// same terms as `visibility` on `PATCH /contacts/{id}`. Capture mints a company
+// owner-scoped from a message nothing has judged yet, and until this field existed the
+// only way out was a sender verdict — so a company the classifier never asked about, or
+// judged wrong, stayed private to its mailbox owner with no door at all. A machine's
+// decision no human could undo is the same reasoning that made the contact column
+// writable both ways.
+//
+// Narrowing a company does not retract what was already done with it. Deals, contacts and
+// mail filed against it keep their own audiences; what changes is who finds the company
+// from here on.
+//
+// A company that reads `owner` and names no owner is invisible to EVERY seat, including
+// its author and an admin, so the pair is refused rather than written: sending
+// `{"visibility":"owner","owner_id":null}`, or narrowing a company that has no owner,
+// answers 422 naming `owner_id`.
+type UpdateCompanyRequestVisibility string
 
 // UpdateContactRequest Partial update. Omitted fields are unchanged.
 type UpdateContactRequest struct {
@@ -45950,6 +46093,12 @@ type ResetDataJSONRequestBody ResetDataJSONBody
 // SetAiModelRateJSONRequestBody defines body for SetAiModelRate for application/json ContentType.
 type SetAiModelRateJSONRequestBody = SetAiModelRateRequest
 
+// ReplaceAiBudgetJSONRequestBody defines body for ReplaceAiBudget for application/json ContentType.
+type ReplaceAiBudgetJSONRequestBody = AiBudgetChange
+
+// PreviewAiBudgetJSONRequestBody defines body for PreviewAiBudget for application/json ContentType.
+type PreviewAiBudgetJSONRequestBody = AiBudgetChange
+
 // RecordAIFeedbackJSONRequestBody defines body for RecordAIFeedback for application/json ContentType.
 type RecordAIFeedbackJSONRequestBody = AIFeedbackInput
 
@@ -45958,6 +46107,9 @@ type SetAiProviderKeyJSONRequestBody = AiProviderKeyInput
 
 // ReplaceAiRoutingJSONRequestBody defines body for ReplaceAiRouting for application/json ContentType.
 type ReplaceAiRoutingJSONRequestBody = AiRouting
+
+// PreviewAiRoutingJSONRequestBody defines body for PreviewAiRouting for application/json ContentType.
+type PreviewAiRoutingJSONRequestBody = AiRouting
 
 // ExplainAnalyticsCellJSONRequestBody defines body for ExplainAnalyticsCell for application/json ContentType.
 type ExplainAnalyticsCellJSONRequestBody = AnalyticsExplainRequest
@@ -54171,6 +54323,14 @@ func (a *UpdateCompanyRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "size_band")
 	}
 
+	if raw, found := object["visibility"]; found {
+		err = json.Unmarshal(raw, &a.Visibility)
+		if err != nil {
+			return fmt.Errorf("error reading 'visibility': %w", err)
+		}
+		delete(object, "visibility")
+	}
+
 	if len(object) != 0 {
 		a.AdditionalProperties = make(map[string]interface{})
 		for fieldName, fieldBuf := range object {
@@ -54271,6 +54431,13 @@ func (a UpdateCompanyRequest) MarshalJSON() ([]byte, error) {
 		object["size_band"], err = json.Marshal(a.SizeBand)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'size_band': %w", err)
+		}
+	}
+
+	if a.Visibility != nil {
+		object["visibility"], err = json.Marshal(a.Visibility)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'visibility': %w", err)
 		}
 	}
 
@@ -56494,6 +56661,15 @@ type ServerInterface interface {
 	// What one vendor says it serves today (admin/ops).
 	// (GET /ai/available-models/{provider})
 	ListAvailableModels(w http.ResponseWriter, r *http.Request, provider string, params ListAvailableModelsParams)
+	// Read the shared company allowance (ai_budget read).
+	// (GET /ai/budget)
+	GetAiBudget(w http.ResponseWriter, r *http.Request)
+	// Replace the shared company allowance (ai_budget update).
+	// (PUT /ai/budget)
+	ReplaceAiBudget(w http.ResponseWriter, r *http.Request)
+	// Preview an allowance change (ai_budget read/update).
+	// (POST /ai/budget/preview)
+	PreviewAiBudget(w http.ResponseWriter, r *http.Request)
 	// The AI call trace — every terminal model call, newest first.
 	// (GET /ai/calls)
 	ListAiCalls(w http.ResponseWriter, r *http.Request, params ListAiCallsParams)
@@ -56524,6 +56700,12 @@ type ServerInterface interface {
 	// Replace the tier-to-model binding (admin/ops).
 	// (PUT /ai/routing)
 	ReplaceAiRouting(w http.ResponseWriter, r *http.Request)
+	// Preview affected features without calling a model (ai_routing read/update and ai_budget read).
+	// (POST /ai/routing/preview)
+	PreviewAiRouting(w http.ResponseWriter, r *http.Request)
+	// Read AI administration status (ai_diagnostics and ai_budget read).
+	// (GET /ai/status)
+	GetAiStatus(w http.ResponseWriter, r *http.Request)
 	// AI usage + budget — the spend is never invisible.
 	// (GET /ai/usage)
 	GetAiUsage(w http.ResponseWriter, r *http.Request, params GetAiUsageParams)
@@ -58585,6 +58767,24 @@ func (_ Unimplemented) ListAvailableModels(w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Read the shared company allowance (ai_budget read).
+// (GET /ai/budget)
+func (_ Unimplemented) GetAiBudget(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Replace the shared company allowance (ai_budget update).
+// (PUT /ai/budget)
+func (_ Unimplemented) ReplaceAiBudget(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Preview an allowance change (ai_budget read/update).
+// (POST /ai/budget/preview)
+func (_ Unimplemented) PreviewAiBudget(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // The AI call trace — every terminal model call, newest first.
 // (GET /ai/calls)
 func (_ Unimplemented) ListAiCalls(w http.ResponseWriter, r *http.Request, params ListAiCallsParams) {
@@ -58642,6 +58842,18 @@ func (_ Unimplemented) GetAiRouting(w http.ResponseWriter, r *http.Request) {
 // Replace the tier-to-model binding (admin/ops).
 // (PUT /ai/routing)
 func (_ Unimplemented) ReplaceAiRouting(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Preview affected features without calling a model (ai_routing read/update and ai_budget read).
+// (POST /ai/routing/preview)
+func (_ Unimplemented) PreviewAiRouting(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Read AI administration status (ai_diagnostics and ai_budget read).
+// (GET /ai/status)
+func (_ Unimplemented) GetAiStatus(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -64005,6 +64217,66 @@ func (siw *ServerInterfaceWrapper) ListAvailableModels(w http.ResponseWriter, r 
 	handler.ServeHTTP(w, r)
 }
 
+// GetAiBudget operation middleware
+func (siw *ServerInterfaceWrapper) GetAiBudget(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAiBudget(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ReplaceAiBudget operation middleware
+func (siw *ServerInterfaceWrapper) ReplaceAiBudget(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReplaceAiBudget(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PreviewAiBudget operation middleware
+func (siw *ServerInterfaceWrapper) PreviewAiBudget(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PreviewAiBudget(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListAiCalls operation middleware
 func (siw *ServerInterfaceWrapper) ListAiCalls(w http.ResponseWriter, r *http.Request) {
 
@@ -64277,6 +64549,46 @@ func (siw *ServerInterfaceWrapper) ReplaceAiRouting(w http.ResponseWriter, r *ht
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ReplaceAiRouting(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PreviewAiRouting operation middleware
+func (siw *ServerInterfaceWrapper) PreviewAiRouting(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PreviewAiRouting(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAiStatus operation middleware
+func (siw *ServerInterfaceWrapper) GetAiStatus(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAiStatus(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -90592,6 +90904,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/ai/available-models/{provider}", wrapper.ListAvailableModels)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/ai/budget", wrapper.GetAiBudget)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/ai/budget", wrapper.ReplaceAiBudget)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/ai/budget/preview", wrapper.PreviewAiBudget)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/ai/calls", wrapper.ListAiCalls)
 	})
 	r.Group(func(r chi.Router) {
@@ -90620,6 +90941,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/ai/routing", wrapper.ReplaceAiRouting)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/ai/routing/preview", wrapper.PreviewAiRouting)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/ai/status", wrapper.GetAiStatus)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/ai/usage", wrapper.GetAiUsage)

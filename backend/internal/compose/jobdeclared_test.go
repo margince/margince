@@ -511,6 +511,7 @@ func TestArgsOwnedAttemptCapsMatchTheirDeclaration(t *testing.T) {
 // constructed one from its name would be asserting against its own reflection
 // rather than against the type the runtime registers.
 var argsForKind = map[string]river.JobArgs{
+	AIBudgetResumeArgs{}.Kind():          AIBudgetResumeArgs{},
 	WebhookRetryArgs{}.Kind():            WebhookRetryArgs{},
 	GeocodeBackfillArgs{}.Kind():         GeocodeBackfillArgs{},
 	TechnicalEnrichBackfillArgs{}.Kind(): TechnicalEnrichBackfillArgs{},

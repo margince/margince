@@ -242,6 +242,12 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "sendPermission.reason.withdrawn",
   ],
   vi: [
+    // Human account holders whose full seats determine the shared allowance.
+    "aiAdmin.fixed",
+    "aiAdmin.formula",
+    "aiAdmin.floor",
+    "aiAdmin.perUser",
+    "aiAdmin.overrideHint",
     // The human who made a change, not a CRM contact record.
     "home.change.by",
     // "Người khác" — SOMEBODY ELSE, a third party who passed on this reader's
@@ -322,7 +328,8 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "contact.intro.lanePeers",
     "contact.intro.laneTarget",
     "contact.intro.stepRoutePick",
-    "contactAccess.company",
+    "recordAccess.company.shared",
+    "recordAccess.contact.shared",
     "release.skewBody",
     "retention.lawfulBasisHint",
     "retention.withheld",

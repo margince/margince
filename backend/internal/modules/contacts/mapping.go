@@ -160,6 +160,17 @@ func contactVisibilityArg(v *crmcontracts.UpdateContactRequestVisibility) *strin
 	return &s
 }
 
+// companyVisibilityArg is contactVisibilityArg for the other record. Two
+// functions rather than one generic: the wire enums are distinct generated
+// types, and the thing they share is that neither needs translating.
+func companyVisibilityArg(v *crmcontracts.UpdateCompanyRequestVisibility) *string {
+	if v == nil {
+		return nil
+	}
+	s := string(*v)
+	return &s
+}
+
 func contactUpdateInput(req crmcontracts.UpdateContactRequest, ifVersion *int64) UpdateContactInput {
 	in := UpdateContactInput{
 		FullName:     req.FullName,
@@ -225,6 +236,7 @@ func companyUpdateInput(req crmcontracts.UpdateCompanyRequest, ifVersion *int64)
 		IfVersion:       ifVersion,
 		CustomFields:    req.AdditionalProperties,
 		LinkedInURL:     req.LinkedinUrl,
+		Visibility:      companyVisibilityArg(req.Visibility),
 	}
 	in.Address = req.Address
 	if req.SizeBand != nil {

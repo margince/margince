@@ -5,6 +5,74 @@ import type { MessageKey } from "./en";
 // build without typechecking still fails loudly. Register: informal "du",
 // natural spoken-adjacent German, no translationese, no corporate filler.
 export const de = {
+  "aiAdmin.allowance": "Monatliches KI-Kontingent",
+  "aiAdmin.pool":
+    "Ein gemeinsamer Firmenpool. Kein persönliches Kontingent und kein Dollar-Ausgabenlimit.",
+  "aiAdmin.consumption": "{spent} von {total} Tokens verbraucht · {pct}%",
+  "aiAdmin.remaining": "{tokens} Tokens verbleibend",
+  "aiAdmin.reset": "Zurücksetzung: {date} UTC",
+  "aiAdmin.fixed":
+    "Das feste Firmenkontingent ersetzt die Berechnung pro Nutzer.",
+  "aiAdmin.formula":
+    "{users} aktive Vollnutzer × {tokens} Tokens pro Nutzer und Monat.",
+  "aiAdmin.floor": "Ohne berechtigte Nutzer wird ein Nutzer angesetzt.",
+  "aiAdmin.normal": "Im normalen Kontingentbereich",
+  "aiAdmin.degraded":
+    "80%-Schwelle erreicht: Routing auf niedrigere Stufen aktiv",
+  "aiAdmin.queued": "Kontingent erreicht: Hintergrund-KI wird verschoben",
+  "aiAdmin.policy":
+    "Ab 80% verwendet das Routing niedrigere Stufen. Das tatsächliche Modell kann gleich bleiben. Ab 100% warten Hintergrund-Aufgaben; interaktive KI nutzt die niedrigste Stufe. Such-Embeddings laufen weiter und zählen zum Verbrauch.",
+  "aiAdmin.saved": "Kontingent gespeichert",
+  "aiAdmin.recovery":
+    "Berechtigte Website-Lesevorgänge, Account-Scans und Stimmerstellungen werden beim nächsten Abgleich ausführbar, normalerweise innerhalb einer Minute. Abschluss abhängig von Worker-Kapazität, aktuellen Rechten und Anbieter-Verfügbarkeit. Andere Hintergrundläufe behalten ihren Zeitplan.",
+  "aiAdmin.edit": "Kontingent bearbeiten",
+  "aiAdmin.perUser": "Tokens pro Vollnutzer und Monat",
+  "aiAdmin.range": "Ganze Tokens von 1 bis 1.000.000.000.000.",
+  "aiAdmin.company": "Festes Firmenkontingent (optional)",
+  "aiAdmin.overrideHint":
+    "Leer lassen für die Berechnung pro Nutzer. Der Wert pro Nutzer bleibt gespeichert.",
+  "aiAdmin.routingStale":
+    "Die Modellzuordnungen wurden während Ihrer Bearbeitung geändert",
+  "aiAdmin.stale": "Das Kontingent wurde während der Bearbeitung geändert",
+  "aiAdmin.staleHelp":
+    "Abbrechen und den Editor erneut öffnen, um die aktuellen Einstellungen zu verwenden.",
+  "aiAdmin.failed": "Die Änderung konnte nicht angewendet werden",
+  "aiAdmin.preview": "Auswirkungen prüfen",
+  "aiAdmin.previewHint":
+    "Vorschau aktueller Bedingungen. Beim Speichern werden Einstellungen und Verbrauch erneut geprüft. Dies reserviert keine Kapazität und ruft kein Modell auf.",
+  "aiAdmin.features": "KI nach Tätigkeit",
+  "aiAdmin.save": "Kontingent speichern",
+  "aiAdmin.cancel": "Abbrechen",
+  "aiAdmin.prospective":
+    "Von der aktuellen Richtlinie gewähltes Modell. Aufrufe können ausweichen oder fehlschlagen; dies zeigt weder Anbieterzustand noch ein bereits verwendetes Modell.",
+  "aiAdmin.calls": "Tatsächliche Modellaufrufe ansehen",
+  "aiAdmin.website": "Website-Lesevorgänge",
+  "aiAdmin.scans": "Account-Scans",
+  "aiAdmin.voice": "Stimmerstellungen",
+  "aiAdmin.waiting": "Erfasste Arbeit, die auf Kontingent wartet",
+  "aiAdmin.coverage":
+    "Zahlen umfassen nur dauerhafte Website-Lesevorgänge, Account-Scans und Stimmerstellungen. Sie zählen nicht jeden KI-Lauf und garantieren keine fortbestehende Ausführungsberechtigung.",
+  "aiAdmin.unavailable": "Nicht verfügbar",
+  "aiAdmin.impact.blocked": "Wartet auf Kontingent",
+  "aiAdmin.impact.model": "Anderes Modell gewählt",
+  "aiAdmin.impact.fallback": "Ausweichkette geändert",
+  "aiAdmin.impact.unconfigured": "Kein Modell konfiguriert",
+  "aiAdmin.impact.exempt": "Läuft über das Kontingent hinaus",
+  "aiAdmin.impact.same": "Gleiche Modellauswahl",
+  "aiAdmin.activity": "Tätigkeit",
+  "aiAdmin.model": "Von Richtlinie gewähltes Modell",
+  "aiAdmin.cloud": "Cloud-Anbieter",
+  "aiAdmin.endpoint": "Konfigurierter Endpunkt; Standort nicht geprüft",
+  "aiAdmin.editBinding": "Gemeinsame Bindung bearbeiten",
+  "aiAdmin.effect": "Auswirkung",
+  "aiAdmin.advanced": "Erweitert: gemeinsame Modellbindungen",
+  "aiAdmin.shared":
+    "Diese Bindungen werden gemeinsam genutzt. Vor dem Speichern alle betroffenen Tätigkeiten prüfen.",
+  "aiAdmin.unused":
+    "Von aktuellen ausgelieferten Tätigkeiten nicht genutzt: {tiers}",
+  "aiAdmin.inputRate": "Eingabe {input} pro 1 Mio. Tokens",
+  "aiAdmin.rates": "Eingabe {input} · Ausgabe {output} pro 1 Mio. Tokens",
+
   "brief.weekly.tasksCompleted": "Aufgaben erledigt",
   "teamweekly.noPriority": "Die erfassten Kennzahlen zeigen keine Priorität",
   "teamweekly.basis":
@@ -479,7 +547,6 @@ export const de = {
   "record.fieldsLoading": "Benutzerdefinierte Felder werden geladen…",
   "record.fieldsRetry": "Erneut versuchen",
 
-  "record.visibilityOwner": "Nur Eigentümer",
   "record.companyRoutingKey": "Zuordnungsschlüssel des Unternehmens",
   "record.finishFieldEdit":
     "Speichern oder verwerfen Sie die aktuelle Änderung, bevor Sie Details schließen.",
@@ -3189,16 +3256,6 @@ export const de = {
   "brief.weekly.outcome.lost": "verloren",
   "brief.act": "Erledigt",
   "brief.dismiss": "Ausblenden",
-  "brief.actedState": "erledigt",
-  "brief.dismissedState": "ausgeblendet",
-  "brief.evidence_other": "{count} Belege",
-  "brief.evidence_one": "{count} Beleg",
-  "brief.openDeal": "Deal öffnen",
-  "brief.factorWinnability": "Gewinnchance",
-  "brief.factorRevenue": "Umsatz",
-  "brief.factorTiming": "Timing",
-  "brief.factorMomentum": "Momentum",
-  "brief.factorWarmth": "Nähe",
 
   "brief.digestFor": "Digest vom {date}",
   "brief.digestSynced": "Synchronisationsdetails",
@@ -3256,7 +3313,6 @@ export const de = {
   "brief.readings.leadsBasis": "zugewiesen, erster Kontakt steht aus",
   "brief.readings.leadsDue": "nächste fällig {value}",
   "brief.rail": "Kontext",
-  "brief.pct": "{pct} %",
   "brief.deck.later": "Später",
   "brief.deck.showMore": "Ganze Nachricht anzeigen",
   "brief.deck.showLess": "Weniger anzeigen",
@@ -3287,15 +3343,7 @@ export const de = {
   "brief.deck.empty": "Es wartet nichts auf dich.",
   "brief.deck.bundleSummary": "Eine Entscheidung · {count} Vorgänge",
   "brief.deck.bundleMembers": "Die {count} Vorgänge anzeigen",
-  "brief.rank": "Rang",
-  "brief.composite": "Bewertung",
-  "brief.previouslyDismissed": "Am {day} markiert — du hast es weggeklickt.",
-  "brief.returnedWith": "Zurück durch Aktivität am",
-  "brief.revenueBasis": "Umsatz gemessen an {amount}",
-  "brief.resurfaces": "Zurück",
-  "brief.evidenceNone": "keine Belege erfasst",
   "brief.snooze": "Zurückstellen",
-  "brief.snoozedState": "zurückgestellt",
 
   "enrich.toInbox": "Arbeitsliste öffnen",
 
@@ -3687,15 +3735,27 @@ export const de = {
   "log.save": "Erfassen",
   "log.saving": "Wird erfasst…",
 
-  "contactAccess.title": "Wer diesen Kontakt sieht",
-  "contactAccess.privateToYou":
+  "recordAccess.contact.title": "Wer diesen Kontakt sieht",
+  "recordAccess.contact.privateToYou":
     "Nur für Sie. Ihr Postfach hat diesen Kontakt angelegt, und niemand sonst im Unternehmen sieht ihn — auch nicht Ihr Team und keine Administration.",
-  "contactAccess.company": "Alle im Unternehmen sehen diesen Kontakt.",
-  "contactAccess.share": "Mit dem Unternehmen teilen",
-  "contactAccess.published": "Das Unternehmen sieht diesen Kontakt jetzt.",
-  "contactAccess.makePrivate": "Privat setzen",
-  "contactAccess.madePrivate":
+  "recordAccess.contact.shared": "Alle im Unternehmen sehen diesen Kontakt.",
+  "recordAccess.contact.share": "Mit dem Unternehmen teilen",
+  "recordAccess.contact.published":
+    "Das Unternehmen sieht diesen Kontakt jetzt.",
+  "recordAccess.contact.makePrivate": "Privat setzen",
+  "recordAccess.contact.madePrivate":
     "Dieser Kontakt gehört wieder seinem Besitzer. Wer den Datensatz ausdrücklich freigegeben bekommen hat, behält den Zugriff.",
+  "recordAccess.company.title": "Wer dieses Unternehmen sieht",
+  "recordAccess.company.privateToYou":
+    "Nur für Sie. Ihr Postfach hat dieses Unternehmen angelegt, und niemand sonst im Unternehmen sieht es — auch nicht Ihr Team und keine Administration.",
+  "recordAccess.company.shared":
+    "Alle im Unternehmen sehen dieses Unternehmen.",
+  "recordAccess.company.share": "Mit dem Unternehmen teilen",
+  "recordAccess.company.published":
+    "Das Unternehmen sieht diesen Datensatz jetzt.",
+  "recordAccess.company.makePrivate": "Privat setzen",
+  "recordAccess.company.madePrivate":
+    "Dieses Unternehmen gehört wieder seinem Besitzer. Deals, Kontakte und E-Mails, die bereits dazu abgelegt sind, behalten ihre eigene Sichtbarkeit.",
   "compose.reply": "Antworten",
   "compose.writeEmail": "E-Mail schreiben",
   "compose.relink": "Neu verknüpfen",
@@ -7754,17 +7814,11 @@ export const de = {
   "tools.scopedTo": "Erreichbar durch {label}",
   "tools.unreachable": "Bereich nicht gewährt",
 
-  "aiusage.title": "KI-Nutzung & Budget",
+  "aiusage.title": "Geschätzte KI-Kosten und Nutzungsverlauf",
   "aiusage.withheld":
     "Nur ein Betreiber sieht, was die KI-Laufzeit ausgegeben hat. Die Zahlen umfassen die ganze Installation und werden deshalb nicht breiter gezeigt.",
   "aiusage.sub":
-    "Ihre eigene Rechnung sichtbar — nach Aufgabe und Stufe, in Tokens.",
-  "aiusage.budget": "{spent} von {budget} Tokens · {pct}%",
-  "aiusage.budgetMeter": "Verbrauchtes Monats-Tokenbudget",
-  "aiusage.band.normal": "Normal",
-  "aiusage.band.degraded": "Sparmodus",
-  "aiusage.band.queued": "Budget erreicht — Hintergrund-KI wartet",
-  "aiusage.band.unknown": "Unbekannter Budgetstatus",
+    "Nutzungsverlauf des gewählten Monats. Schätzungen sind unabhängig vom aktuellen Token-Kontingent und der Anbieterrechnung.",
   "aiusage.col.task": "Aufgabe",
   "aiusage.col.tier": "Stufe",
   "aiusage.col.calls": "Aufrufe",
@@ -7782,10 +7836,11 @@ export const de = {
   "aiusage.prevMonth": "Vorheriger Monat",
   "aiusage.nextMonth": "Nächster Monat",
 
-  "aibanner.degraded": "KI läuft im Sparmodus",
-  "aibanner.queued": "KI-Budget erreicht — Hintergrund-KI wartet",
+  "aibanner.degraded":
+    "80%-Schwelle des KI-Kontingents erreicht — Auswirkungen prüfen",
+  "aibanner.queued": "KI-Kontingent erreicht — verschobene Arbeit prüfen",
   "aibanner.unknown": "Der KI-Budgetstatus ist unbekannt",
-  "aibanner.link": "Nutzung anzeigen",
+  "aibanner.link": "Kontingent verwalten",
   "aibanner.dismiss": "Schließen",
 
   "aicalls.title": "KI-Aufrufprotokoll",
@@ -8002,13 +8057,15 @@ export const de = {
   "elapsed.minutes": "vor {minutes} Min.",
   "elapsed.hours": "vor {hours} Std.",
   "elapsed.days": "vor {days} T.",
-  "aiRouting.lane.local_small": "Massen-Klassifikation auf eigener Hardware",
+  "aiRouting.lane.local_small":
+    "Niedrigste Routing-Stufe; die Bindung bestimmt den Verarbeitungsort",
   "aiRouting.lane.cheap_cloud":
     "Alltag — Anreicherung, Zusammenfassungen, Triage",
   "aiRouting.lane.premium": "Alles, was ein Kunde liest",
-  "aiRouting.lane.frontier": "Das schwierigste Denken, sparsam eingesetzt",
+  "aiRouting.lane.frontier":
+    "Stufe für komplexes Denken; Verfügbarkeit bedeutet nicht Nutzung",
   "aiRouting.lane.local_large":
-    "Schwerere Arbeit, die die eigenen Hosts nicht verlässt",
+    "Höhere lokale Routing-Stufe; konfigurierten Endpunkt prüfen",
   "aiRouting.lane.embeddings": "Suche und Retrieval über die eigenen Daten",
   "aiRouting.lanes.title": "Routing-Bahnen",
   "aiRouting.lanes.sub":
@@ -8094,7 +8151,8 @@ export const de = {
   "aiRouting.savedTitle": "Routing gespeichert",
   "aiRouting.saved": "Jeder Prozess bedient es jetzt.",
   "aiRouting.saveFailed": "Routing konnte nicht gespeichert werden",
-  "aiRouting.adminOnly": "Nur Admin oder Ops können das Modell-Routing ändern.",
+  "aiRouting.adminOnly":
+    "Modell-Routing ändern erfordert Berechtigungen zum Ändern des Routings und Lesen des Kontingents.",
   "workingHours.title": "Wann du buchbar bist",
   "workingHours.sub":
     "Nur deine Sache. Niemand stellt das für dich ein, und du stellst es für niemanden ein.",

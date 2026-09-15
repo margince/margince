@@ -219,28 +219,24 @@ func TestSovereignRefusesACloudBindingOnEveryTier(t *testing.T) {
 // localTiers is the second line, and it is written as an allowlist of what is
 // SAFE so that an unclassified tier is remapped rather than let through. This
 // keeps it agreeing with the naming convention: a rung named local_* that
-// applyProfile would needlessly remap is a bug in the other direction, and one
+// profileLadder would needlessly remap is a bug in the other direction, and one
 // NOT named local_* that it would pass through is the dangerous one.
 func TestEveryLocallyNamedTierIsClassifiedLocal(t *testing.T) {
 	for tier := range knownTiers {
 		named := strings.HasPrefix(string(tier), "local_")
 		if named != localTiers[tier] {
-			t.Errorf("tier %q: named local=%v but classified local=%v — applyProfile would %s under sovereign",
+			t.Errorf("tier %q: named local=%v but classified local=%v — profileLadder would %s under sovereign",
 				tier, named, localTiers[tier],
 				map[bool]string{true: "remap a local rung needlessly", false: "leave a cloud-named rung on the ladder"}[named])
 		}
 	}
 }
 
-// applyProfile is exercised directly here because no task ladder names frontier
+// profileLadder is exercised directly here because no task ladder names frontier
 // yet: the sovereign guarantee has to hold for the rung BEFORE something routes
 // to it, not after.
 func TestApplyProfileRemapsFrontierUnderSovereign(t *testing.T) {
-	r := testRouter(map[Tier]model.Client{
-		TierLocalSmall: NewFakeClient(),
-		TierLocalLarge: NewFakeClient(),
-	}, &memMeter{}, DefaultMonthlyTokens, ProfileSovereign)
-	got := r.applyProfile([]Tier{TierFrontier, TierPremium})
+	got := profileLadder(ProfileSovereign, true, []Tier{TierFrontier, TierPremium})
 	if len(got) != 1 || got[0] != TierLocalLarge {
 		t.Fatalf("a frontier-led ladder must collapse to the local rung under sovereign, got %v", got)
 	}

@@ -248,7 +248,7 @@ describe("what each page lets a reader change", () => {
     automations:
       "all(full-seat, any(any(automation:update, automation:create), automation:delete))",
     usage:
-      "all(full-seat, any(any(ai_model_rate:update, ai_model_rate:create)))",
+      "all(full-seat, any(any(any(ai_model_rate:update, ai_model_rate:create), any(ai_budget:update))))",
     "model-calls": "same-as-requires",
 
     privacy:

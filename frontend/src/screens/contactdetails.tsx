@@ -60,21 +60,17 @@ export function ContactDetails({ contact }: Readonly<{ contact: Contact }>) {
           ...contactEditFields(t),
           ...ADDRESS_FIELDS,
           {
+            // Still reads visibility, and does not offer it: an owner-private
+            // contact must name an owner, so the rule the header's toggle
+            // obeys is the rule this field states. The toggle is the one place
+            // the value CHANGES — a second control for it here was the same
+            // fact in two shapes, one of which said nothing about what the
+            // change would do.
             key: "owner_id",
             required: contact.visibility === "owner",
             label: "list.owner",
             type: "select",
             options: owners,
-          },
-          {
-            key: "visibility",
-            label: "history.field.visibility",
-            type: "select",
-            required: true,
-            options: [
-              { value: "workspace", label: t("visibility.team") },
-              { value: "owner", label: t("record.visibilityOwner") },
-            ],
           },
         ]}
         groups={[

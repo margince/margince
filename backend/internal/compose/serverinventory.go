@@ -104,6 +104,7 @@ type Server struct {
 	connectorHandlers
 	backfillHandlers
 	aiRoutingHandlers
+	aiAdminHandlers
 	captureSettingsHandlers
 	integrationsSettingsHandlers
 	ownDomainHandlers
