@@ -644,7 +644,7 @@ function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
         line.price_grounded === false ? (
           <UnpricedCaption label={t("offer.unpriced")} />
         ) : (
-          <span className="t-mono">
+          <span className="t-num">
             {formatMoney(line.line_total_minor, offer.currency, locale)}
           </span>
         ),
@@ -1111,7 +1111,7 @@ function DiffLine({
       {line.price_grounded === false ? null : (
         <>
           {" — "}
-          <span className="t-mono">
+          <span className="t-num">
             {formatMoney(line.line_total_minor, currency, locale)}
           </span>
         </>

@@ -141,3 +141,60 @@ func (w *linkReconcileWorker) retractNoiseJudgedContacts(ctx context.Context) (i
 	}
 	return retracted, failed
 }
+
+// retractPrivateThreadPerTick bounds the threads one tick re-checks, on the
+// same reasoning as the noise bound above: the population shrinks as it is
+// worked, so a small bound costs one probe a tick once it is empty.
+const retractPrivateThreadPerTick = 200
+
+// retractPrivateThreadContacts withdraws the contacts a private thread earned
+// AFTER the verdict about it had already retracted.
+//
+// ConfidentialityVerdictEngine.retractPrivateContactsTx runs once, in the
+// transaction that settles the thread, which is right for every contact that
+// exists by then. It is the whole of the coverage, and one ordering of two
+// background passes escapes it: the thread verdict settles first and retracts,
+// the SENDER verdict lands second, and createContactForVerdict mints a fresh
+// owner-scoped record — ThreadHoldsItsCounterparty is true of a settled
+// `personal` thread, so it takes the narrow arm rather than refusing. Nothing
+// looks at that record again.
+//
+// The record is owner-scoped, so no colleague sees it. The promise is that a
+// private correspondent gets no record at all, which is what this keeps.
+//
+// The bound is re-read per thread inside the retraction's own transaction,
+// because the scan committed before it opened and because the bound can change:
+// an ordinary conversation at the same address, arriving between the two, makes
+// them a business contact who also has a private thread — and that contact
+// stays.
+func (w *linkReconcileWorker) retractPrivateThreadContacts(ctx context.Context) (int, error) {
+	threads, err := w.pending.SettledPersonalThreads(ctx, retractPrivateThreadPerTick)
+	if err != nil {
+		return 0, err
+	}
+	retracted := 0
+	var failed error
+	for _, thread := range threads {
+		// Per thread, each on its own transaction, like every drain in this
+		// job: one thread's failure costs that thread, not the sweep.
+		if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
+			orphaned, err := capture.ContactsOrphanedByPrivacyTx(ctx, tx, thread.ThreadKey, thread.UserID)
+			if err != nil {
+				return err
+			}
+			for _, contact := range orphaned {
+				done, err := w.store.RetractCaptureOnlyContactTx(ctx, tx, contact.ContactID, contact.OwnerID)
+				if err != nil {
+					return err
+				}
+				if done {
+					retracted++
+				}
+			}
+			return nil
+		}); err != nil {
+			failed = errors.Join(failed, fmt.Errorf("retracting the contacts of %s: %w", thread.ThreadKey, err))
+		}
+	}
+	return retracted, failed
+}

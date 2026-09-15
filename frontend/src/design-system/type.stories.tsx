@@ -26,6 +26,10 @@ import type { CSSProperties } from "react";
  *
  * Flip the theme in the toolbar: the ramp does not move, but the ink does, and
  * the eyebrow is the one rung whose legibility depends on both.
+ *
+ * Mono is for code: `code`, `pre`, `samp` and `.code-block` wear Geist Mono and
+ * nothing else does. A figure keeps the body face and lines up through
+ * `.t-num`; an id or a key is read, not run, so it is body text too.
  */
 const meta = {
   title: "Design System/Type",
@@ -74,7 +78,6 @@ const line: CSSProperties = {
 };
 const key: CSSProperties = {
   fontSize: "var(--fs-meta)",
-  fontFamily: "var(--f-mono)",
   color: "var(--textMeta)",
   minWidth: "170px",
   flex: "none",
@@ -154,6 +157,61 @@ export const TheTrackingFamily: Story = {
           </span>
         </div>
       ))}
+    </div>
+  ),
+};
+
+const FIGURES = ["€1,284,500.00", "€48,000.00", "€711.10", "€9,999.99"];
+
+const figureColumn: CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "flex-end",
+  fontSize: "var(--fs-body)",
+};
+
+/**
+ * Mono is for code, and only for code. A column of figures lines up in the body
+ * face through `.t-num` (`font-variant-numeric: tabular-nums`) — the mono face
+ * is never the way to align digits. The column beside it is what a figure
+ * without `.t-num` does: every digit its own width, so the column drifts. Code
+ * — and only an element that IS code — takes the code face, from one base rule.
+ * `design-system/mono.test.ts` and `check-font-lock.sh` fail mono anywhere else.
+ */
+export const MonoIsForCode: Story = {
+  render: () => (
+    <div style={column}>
+      <div style={line}>
+        <span style={key}>.t-num · tabular digits</span>
+        <div style={figureColumn}>
+          {FIGURES.map((figure) => (
+            <span key={figure} className="t-num">
+              {figure}
+            </span>
+          ))}
+        </div>
+        <span style={key}>not this · proportional</span>
+        <div style={figureColumn}>
+          {FIGURES.map((figure) => (
+            <span key={figure}>{figure}</span>
+          ))}
+        </div>
+      </div>
+      <div style={line}>
+        <span style={key}>an id · body face</span>
+        <span>psp_7Q3fa91</span>
+        <span style={note}>read, not run: no code face</span>
+      </div>
+      <div style={line}>
+        <span style={key}>code · samp</span>
+        <span>
+          Call <code>deals.update</code> and expect <samp>HTTP 200</samp>
+        </span>
+      </div>
+      <div style={line}>
+        <span style={key}>pre.code-block</span>
+        <pre className="code-block">{'{ "stage": "proposal" }'}</pre>
+      </div>
     </div>
   ),
 };

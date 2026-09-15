@@ -125,6 +125,7 @@ type SiteReadStopReason = NonNullable<SiteReadReport["stopped_reason"]>;
 const SITE_READ_CAPPED_LABELS: Record<ConfiguredStopReason, MessageKey> = {
   page_cap: "deepread.statusPageCapped",
   byte_cap: "deepread.statusByteCapped",
+  deadline: "deepread.statusTimeCapped",
 };
 
 /**
@@ -139,7 +140,6 @@ const SITE_READ_STOP_LABELS: Record<
   MessageKey
 > = {
   budget: "deepread.stopBudget",
-  deadline: "deepread.stopDeadline",
 };
 
 /**

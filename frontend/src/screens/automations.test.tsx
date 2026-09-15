@@ -388,7 +388,7 @@ describe("AutomationsAdmin (B-EP09.15)", () => {
     // No switch to flip, and the badge in its place so the state is still a
     // read this row answers.
     expect(screen.queryByRole("switch")).toBeNull();
-    expect(screen.getByText("paused")).toBeTruthy();
+    expect(screen.getByText("Paused")).toBeTruthy();
     await openRowMenu();
     expect(screen.queryByRole("button", { name: "Edit" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Delete" })).toBeNull();
@@ -506,7 +506,7 @@ describe("AutomationsAdmin (B-EP09.15)", () => {
   });
 
   // Every library entry is one ROW of the same language, so the hairlines do the
-  // separating. As a bare `<ul>` an entry ran a name, a sentence and a mono
+  // separating. As a bare `<ul>` an entry ran a name, a sentence and a
   // trigger/action pair together with no interval between the lines and no rule
   // between entries, and its verb floated at the right of the first line.
   it("gives every library entry a row, its recipe, and its verb in the answer column", async () => {

@@ -53,7 +53,7 @@ function TemplateRow({ template }: Readonly<{ template: ReviewTemplate }>) {
     <div className="review-template">
       <div className="review-template-head">
         <span className="t-label">{template.label}</span>
-        <Badge quiet tone={template.outcome === "won" ? "success" : "danger"}>
+        <Badge tone={template.outcome === "won" ? "success" : "danger"}>
           {t(
             template.outcome === "won"
               ? "outcomeReview.outcomeWon"
@@ -63,9 +63,7 @@ function TemplateRow({ template }: Readonly<{ template: ReviewTemplate }>) {
         {/* Retired templates stay listed. An old review names the template it
             came from, so a reader who finds that name here learns it is no
             longer offered rather than meeting a name the product denies. */}
-        {!template.active && (
-          <Badge quiet>{t("reviewTemplates.retired")}</Badge>
-        )}
+        {!template.active && <Badge>{t("reviewTemplates.retired")}</Badge>}
       </div>
       <ol className="review-template-questions">
         {template.questions.map((question) => (

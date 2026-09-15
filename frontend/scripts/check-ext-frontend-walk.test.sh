@@ -69,6 +69,10 @@ CASES=(
 #                           name each, which is this file's property proved in
 #                           the shape that gate reads.
 #   check-ds-spacing-roles.test.sh — that suite; a test, not a gate.
+#   check-font-lock.test.sh — the font-lock gate's verdict suite: it plants each
+#                           mono shape in a fixture SRC tree and requires the
+#                           gate to name it. A test, not a gate; the gate itself
+#                           is measured above.
 #   check-contract-fetch.test.sh — the contract-fetch gate's own census, which
 #                           holds the two properties this file cannot see: that
 #                           the refused mount is DERIVED from crm.yaml, and that
@@ -81,6 +85,7 @@ EXCUSED=(
   check-ds-spacing-roles.sh
   check-ds-spacing-roles.test.sh
   check-contract-fetch.test.sh
+  check-font-lock.test.sh
   check-ext-frontend-walk.test.sh
 )
 

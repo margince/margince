@@ -744,3 +744,66 @@ func (e *resolveEnv) dropGrant(t *testing.T, object string) {
 	actor.Permissions.Objects = narrowed
 	e.ctx = principal.WithActor(e.ctx, actor)
 }
+
+// A STOP THAT DOES NOT REACH THIS MESSAGE LEAVES ITS GROUND ON THE RECORD.
+//
+// The basis write asked whether the subject carried any live suppression at
+// all, which is a different question from whether one binds THIS send. An
+// objection to direct marketing does not reach a reply on a thread the subject
+// started: the reply goes out, lawfully, and the ground it went out on was not
+// written down. Their own Art. 15 export then answered "we relied on nothing"
+// for a send that was in fact lawful — the exact gap recordBasis exists to
+// close, reopened one condition to the left.
+//
+// The pair is the point. The objection binds nothing here and the ground is
+// recorded; the restriction binds the same message and it is not. One case
+// alone would pass against a writer that had stopped consulting suppression at
+// all, which is the failure on the other side of this one.
+func TestAStopThatBindsNothingHereStillLeavesTheGroundRecorded(t *testing.T) {
+	e := setupResolve(t)
+	e.suppress(t, commsauthz.ReasonObjection)
+	anchor := e.inboundFrom(t, "thread-1", e.address, time.Now().Add(-time.Hour))
+
+	if d := e.decide(t, commsauthz.Request{AnchorActivityID: anchor}); d.Verdict != commsauthz.VerdictAllow {
+		t.Fatalf("a reply on a thread the subject started was refused by an objection to "+
+			"marketing, which does not reach it: %q", d.ReasonCode)
+	}
+
+	var rows int
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT count(*) FROM communication_basis WHERE contact_id = $1`, e.contact).Scan(&rows); err != nil {
+		t.Fatalf("reading the recorded ground: %v", err)
+	}
+	if rows != 1 {
+		t.Fatalf("the allowed send recorded %d grounds, want 1 — a live objection that binds no "+
+			"part of this message is not a reason to leave the subject's export saying we relied "+
+			"on nothing", rows)
+	}
+}
+
+// The other side of it: a stop that DOES bind leaves no basis behind.
+//
+// A restriction reaches a reply — Art. 18(2) leaves no room for it — so the
+// send is refused and nothing about a lawful ground is written. A basis row
+// here would be a claim made after the subject said stop, in their own export.
+func TestAStopThatBindsThisMessageWritesNoGround(t *testing.T) {
+	e := setupResolve(t)
+	// The STORED kind, which is what the table's own check constraint admits;
+	// liveSuppression maps it onto commsauthz.ReasonRestricted on the way in.
+	e.suppress(t, "processing_restriction")
+	anchor := e.inboundFrom(t, "thread-1", e.address, time.Now().Add(-time.Hour))
+
+	if d := e.decide(t, commsauthz.Request{AnchorActivityID: anchor}); d.Verdict != commsauthz.VerdictDeny {
+		t.Fatalf("a restriction did not refuse the reply: %q", d.Verdict)
+	}
+
+	var rows int
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT count(*) FROM communication_basis WHERE contact_id = $1`, e.contact).Scan(&rows); err != nil {
+		t.Fatalf("reading the recorded ground: %v", err)
+	}
+	if rows != 0 {
+		t.Errorf("a restricted subject carries %d recorded ground(s) — writing one is itself "+
+			"processing, and it lands in their export as a claim made after they said stop", rows)
+	}
+}

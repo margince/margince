@@ -119,7 +119,7 @@ export const Active: Story = {
   render: cardStory(baseRoutes()),
 };
 
-// A subscription row is the densest line in the settings tree: a `.t-mono`
+// A subscription row is the densest line in the settings tree: a
 // target URL nobody promised would be short as its label, a state badge and
 // three event-type chips as its value, and three verbs as its control. Below
 // 640px `SettingRow` gives up the two-column alignment and stacks, so what to
@@ -416,7 +416,7 @@ export const DeliveriesPanelOpenPhone: Story = {
 // The delivery statuses in situ rather than as a swatch row: `delivered`,
 // `retrying` and `dead_lettered` are three badge tones whose whole job is to be
 // told apart at a glance, and they sit here on the table's own striping, inside
-// the dead-letter group's tinted block, beside the `.t-mono` event ids. On a dark
+// the dead-letter group's tinted block, beside the event ids. On a dark
 // ground a badge surface token and a table row token can converge, and that is
 // what this watches for — the pure `DeliveryStatusBadges` story below cannot,
 // because it shows the tones with nothing to be confused with.

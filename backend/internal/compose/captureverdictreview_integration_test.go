@@ -38,7 +38,7 @@ func TestCounterpartyAcceptCreatesTheRecordsAndClosesTheDisposition(t *testing.T
 	retireToUnsure(t, e, dispositionID)
 
 	svc := approvalsServiceWithEffects(e.Pool)
-	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{}, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{}, CaptureConfig{}, slog.Default())
 	if err := engine.StageReviewsWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("staging reviews: %v", err)
 	}
@@ -82,7 +82,7 @@ func TestEditingTheCapturedMessageDoesNotCancelItsWaitingReview(t *testing.T) {
 	retireToUnsure(t, e, dispositionID)
 
 	svc := approvalsServiceWithEffects(e.Pool)
-	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{}, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{}, CaptureConfig{}, slog.Default())
 	if err := engine.StageReviewsWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("staging reviews: %v", err)
 	}
@@ -175,7 +175,7 @@ func TestAnExhaustedDispositionIsRetiredRatherThanStranded(t *testing.T) {
 	dispositionID := seedPendingDisposition(t, e, "stuck@limbo.example", "limbo.example", activityID)
 	spendAttempts(t, e, dispositionID, capture.PendingMaxAttempts)
 
-	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{}, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{}, CaptureConfig{}, slog.Default())
 	if err := engine.ReconcileLedgerWorkspace(principal.WithWorkspaceID(context.Background(), e.WS)); err != nil {
 		t.Fatalf("reconciling the ledger: %v", err)
 	}
@@ -203,7 +203,7 @@ func TestADeclinedReviewClosesTheDispositionInsteadOfReasking(t *testing.T) {
 	retireToUnsure(t, e, dispositionID)
 
 	svc := approvalsServiceWithEffects(e.Pool)
-	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{}, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{}, CaptureConfig{}, slog.Default())
 	if err := engine.StageReviewsWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("staging reviews: %v", err)
 	}
@@ -257,7 +257,7 @@ func TestAnUnansweredReviewAgesOutAndTakesItsOfferWithIt(t *testing.T) {
 	dispositionID := seedPendingDisposition(t, e, "ignored@maybe.example", "maybe.example", activityID)
 	retireToUnsure(t, e, dispositionID)
 
-	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{}, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{}, CaptureConfig{}, slog.Default())
 	if err := engine.StageReviewsWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("staging reviews: %v", err)
 	}
@@ -318,7 +318,7 @@ func TestAgeingOutLosesToAHumanWhoDecidedFirst(t *testing.T) {
 	retireToUnsure(t, e, dispositionID)
 
 	svc := approvalsServiceWithEffects(e.Pool)
-	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{}, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{}, CaptureConfig{}, slog.Default())
 	if err := engine.StageReviewsWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("staging reviews: %v", err)
 	}

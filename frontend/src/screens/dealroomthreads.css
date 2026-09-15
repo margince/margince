@@ -30,6 +30,11 @@
   color: var(--textMeta);
 }
 
+.thread-author-name {
+  font-weight: var(--fw-semibold);
+  color: var(--textContent);
+}
+
 .thread-reply,
 .thread-composer {
   display: flex;
@@ -37,52 +42,199 @@
   gap: var(--space-2);
 }
 
-/* The document board: a document is a card, and the threads about it live
-   inside the card, indented under the document they are about. */
+/* The document board: a document is a tile in a gallery, and the threads
+   about it live inside the tile, under the document they are about. */
 
 .board-group {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--gapCards);
+  align-items: start;
   margin-top: var(--space-2);
 }
 
 .board-doc {
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
-  padding: var(--space-3);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-md);
+  background: var(--bgElevated);
+  overflow: hidden;
+  transition: border-color var(--dur-state) var(--ease-out);
+}
+
+/* Hover lifts nothing; the edge turns accent, as a file card's does. */
+.board-doc:hover,
+.board-doc:focus-within {
+  border-color: var(--accent);
+}
+
+/* The stage: a page-shaped placeholder on the well ground, the kind stamped
+   in one corner and, when somebody is waiting, the count in the other. It is
+   what lets a reader tell eight tiles apart before opening any of them. */
+.board-doc-stage {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  height: 112px;
+  overflow: hidden;
   background: var(--bgCard);
+  border-bottom: 1px solid var(--borderSubtle);
+}
+
+.board-doc-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  width: 58%;
+  height: 96px;
+  padding: var(--space-3) var(--space-3) 0;
+  background: var(--bgElevated);
+  border-radius: var(--r-xs) var(--r-xs) 0 0;
+  box-shadow: var(--shadow-card);
+}
+
+.board-doc-page-line {
+  display: block;
+  height: 4px;
+  border-radius: var(--r-xs);
+  background: var(--borderStrong);
+}
+
+.board-doc-page-head {
+  width: 55%;
+  height: 7px;
+  background: var(--textTertiary);
+}
+
+.board-doc-page-short {
+  width: 78%;
+}
+
+.board-doc-kind {
+  position: absolute;
+  top: var(--space-3);
+  left: var(--space-3);
+  background: var(--bgElevated);
+  border: 1px solid var(--borderStrong);
+}
+
+.board-doc-unanswered {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+}
+
+.board-doc-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--padCard);
 }
 
 .board-doc-title {
-  font-weight: 600;
+  margin: 0;
+  font-weight: var(--fw-semibold);
+  overflow-wrap: anywhere;
+}
+
+/* The tile's door, stretched over the whole tile the way a deal card's name
+   is: the text stays where the title belongs, the ::after is what makes the
+   paper clickable. A button rather than a link because what opens is a
+   dialog over this page, not another page. */
+.board-doc-open {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: var(--fw-semibold);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.board-doc-open::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+
+.board-doc-open:focus-visible {
+  outline: none;
+}
+
+/* The ring goes on the tile, because the tile is what the press opens. */
+.board-doc:has(.board-doc-open:focus-visible) {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* Everything with a press of its own sits ABOVE the stretched door, which is
+   the only reason those presses can reach it at all. The unanswered mark is
+   already placed on the stage and only needs the layer. */
+.board-doc-status,
+.board-doc-verbs,
+.board-doc-threads,
+.board-doc > .thread-composer,
+.board-doc > .card-actions {
+  position: relative;
+  z-index: 1;
+}
+
+.board-doc-unanswered {
+  z-index: 1;
+}
+
+.board-doc-meta {
+  overflow-wrap: anywhere;
 }
 
 .board-doc-status {
   margin-top: var(--space-1);
 }
 
-/* The conversation about ONE document, indented under it so the belonging is
-   visible at a glance rather than inferred from the order of two panels. */
+/* The document's own verbs — read, download, remove — on one row under the
+   facts. Not `.card-actions`: that row carries a top margin for prose above it,
+   and here the body's own gap already places it. */
+.board-doc-verbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gapActions);
+}
+
+/* The conversation about ONE document, and the place to add to it, under the
+   document's facts and separated from them by a hairline rather than a
+   coloured rule: the belonging is already said by the tile the thread is in. */
+.board-doc-threads,
+.board-doc > .thread-composer,
+.board-doc > .card-actions {
+  /* ds:ignore the tile's inner gutter, shared by everything under the stage */
+  padding: var(--space-3) var(--padCard) var(--padCard);
+  border-top: 1px solid var(--borderSubtle);
+}
+
 .board-doc-threads {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  padding-left: var(--space-3);
-  border-left: 2px solid var(--accent);
 }
 
-/* The composer sits at the same indent as the thread it joins, so "ask about
-   this document" reads as part of that document's conversation and not as a
-   second, unrelated form under the card. */
-.board-doc > .thread-composer,
 .board-doc > .card-actions {
-  /* ds:ignore the composer's indent, shared with the thread beside it */
-  padding-left: var(--space-3);
-  border-left: 2px solid var(--borderSubtle);
+  margin-top: 0;
+}
+
+/* Under a conversation, the place to add to it joins that conversation rather
+   than opening a second section: one hairline above the threads, none between
+   them and the composer. */
+.board-doc-threads + .thread-composer,
+.board-doc-threads + .card-actions {
+  /* ds:ignore joining the composer to the threads above it */
+  padding-top: 0;
+  border-top: 0;
 }
 
 .board-doc-threads-head {
@@ -91,18 +243,30 @@
   gap: var(--space-1);
 }
 
+.board-doc-threads-head svg {
+  flex: none;
+  color: var(--textTertiary);
+}
+
 .board-threads {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
 }
 
+/* A comment is a face and a column of text, and nothing else — no fill and no
+   coloured rule. Which side wrote it is said in words beside the name, which
+   is the one place a reader looks for it. */
 .thread-comments li {
-  padding: var(--space-2);
-  border-radius: var(--r-sm);
-  background: var(--bgHover);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-2);
+  align-items: start;
 }
 
-.thread-comments li.thread-buyer {
-  border-left: 3px solid var(--accent);
+.thread-comment {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
 }

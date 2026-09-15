@@ -118,7 +118,7 @@ afterEach(() => {
 it("renders call badges and expands the attempt and payload detail", async () => {
   mount();
   expect(await screen.findByText("provider_unavailable")).toBeTruthy();
-  expect(screen.getByText("retry ×2")).toBeTruthy();
+  expect(screen.getByText("Retry ×2")).toBeTruthy();
   // One element, not the second of two: the task name used to appear in the
   // filter's option list as well as in the row, and the row is what expands.
   // The disclosure is a real button now, not the row: a `<tr onClick>`

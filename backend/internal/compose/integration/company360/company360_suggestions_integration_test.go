@@ -298,6 +298,49 @@ func TestSuggestionsSurviveWithoutTheActivityGrant(t *testing.T) {
 	}
 }
 
+// The pipeline arm of the advice band is gated on the DEAL grant, and this
+// holds that after the object half moved to one spelling.
+//
+// gatherSuggestionInputs used to ask it through a package-local `granted`
+// helper that ran auth.Require and folded ErrPermissionDenied into a boolean —
+// the sixth spelling of "may this caller read this object at all" in a tree
+// that now has auth.ReadGranted. Swapping one for the other is only safe if
+// the answer is identical, and the answer here decides whether a seat with no
+// deal grant is advised about deals by name, stage and amount.
+//
+// Everything the advice path asks for EXCEPT the deal grant, at RowScopeAll so
+// a pass cannot be the row clause doing the work.
+func TestStalledDealAdviceIsWithheldWithoutTheDealGrant(t *testing.T) {
+	e := integration.Setup(t)
+	svc := company360Service(e)
+	pipelineID, stage, _ := integration.DealFixture(t, e)
+	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme", &e.Rep1))
+	deal := e.SeedDeal(t, "Fleet retrofit", pipelineID, stage, &e.Rep1)
+	e.WsExec(t, `UPDATE deal SET company_id = $2, created_at = $3, last_activity_at = $3
+		WHERE id = $1`, deal, company.UUID, company360Clock.AddDate(0, 0, -200))
+
+	noDeals := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
+		RoleKeys: []string{"rep"},
+		Objects: map[string]principal.ObjectGrant{
+			"company": {Read: true}, "activity": {Read: true}, "pipeline": {Read: true},
+			"installation_settings": {Read: true},
+		},
+		RowScope: principal.RowScopeAll,
+	})
+	view, err := svc.Assemble(noDeals, company)
+	if err != nil {
+		t.Fatalf("assemble: %v", err)
+	}
+	if view.Suggestions == nil {
+		t.Fatalf("the band was withheld entirely (sections_omitted=%v) — this reader holds "+
+			"the timeline, so the assertion below would not have run", view.SectionsOmitted)
+	}
+	if got := stalledFingerprints(*view.Suggestions); len(got) != 0 {
+		t.Errorf("a seat with no deal grant was advised about %d stalled deal(s): %+v",
+			len(got), *view.Suggestions)
+	}
+}
+
 // A caller shown neither the timeline nor the pipeline has nothing to be advised
 // from, so the section is omitted and named rather than answering empty.
 func TestSuggestionsAreOmittedWhenNeitherInputReachesTheCaller(t *testing.T) {

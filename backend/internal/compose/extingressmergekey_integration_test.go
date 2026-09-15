@@ -138,7 +138,7 @@ func admitPendingSender(t *testing.T, e *ingressEnv, email string) {
 	})
 
 	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindContact}}
-	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("admitting %s by verdict: %v", email, err)
 	}

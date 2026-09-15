@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { isMessageKey, useT } from "../i18n";
+import { Badge } from "./atoms";
 import { Select, type SelectOption } from "./select";
 
 // Shared between the tool console's passport filter and the OAuth consent
@@ -39,9 +40,7 @@ export function ScopeChips({ labels }: Readonly<{ labels: string[] }>) {
   return (
     <>
       {labels.map((label) => (
-        <span key={label} className="badge">
-          {label}
-        </span>
+        <Badge key={label}>{label}</Badge>
       ))}
     </>
   );

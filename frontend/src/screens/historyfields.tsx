@@ -92,10 +92,11 @@ export function useFieldHistory(
   });
 }
 
-// Every actor type gets a base ProvenanceTag (human/agent — system and
-// connector read as "agent", same as the record-level HistoryEntryRow and
-// settings.tsx's AuditLogRow), so no actor ever renders a blank attribution;
-// the passport/evidence chips layer on top only when the change carries them.
+// Every actor type gets a base ProvenanceTag through `provenanceOfEntry`, the
+// same reading the record-level HistoryEntryRow takes, so no actor ever renders
+// a blank attribution: each of human, buyer, agent, system and connector keeps
+// its own arm, and only an agent's change wears the AI tone. The
+// passport/evidence chips layer on top only when the change carries them.
 function ChangeWho({ change }: Readonly<{ change: FieldHistoryEntry }>) {
   const viewerId = useViewerId();
   return (

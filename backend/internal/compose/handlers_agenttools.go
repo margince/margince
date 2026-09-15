@@ -23,6 +23,17 @@ func (s Server) ListAgentTools(w http.ResponseWriter, _ *http.Request) {
 func agentToolsFromSpecs(specs []mcp.ToolSpec) []crmcontracts.AgentTool {
 	out := make([]crmcontracts.AgentTool, 0, len(specs))
 	for _, spec := range specs {
+		if spec.HumanOnly {
+			// Not an agent capability — it requests no agent authority, so
+			// there is nothing here for an operator to review. Registry.Specs()
+			// (which this reads from) stays unfiltered for in-process readers
+			// that need the full registered set; this is the one rendering
+			// surface that would otherwise show fabricated governance (tierWire
+			// maps an unset Tier to confirmation_required, and AgentTool.tier is
+			// a required wire field — "list it with empty governance" was never
+			// representable).
+			continue
+		}
 		out = append(out, crmcontracts.AgentTool{
 			// Name doubles as the action verb in this registry (e.g.
 			// "search_records", "send_email"); OpenAPIOp is the

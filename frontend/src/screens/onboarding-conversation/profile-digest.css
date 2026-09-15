@@ -284,7 +284,6 @@
 }
 .pdigest-source-path {
   overflow-wrap: anywhere;
-  font-family: var(--f-mono);
 }
 .pdigest-source-label {
   color: var(--textTertiary);

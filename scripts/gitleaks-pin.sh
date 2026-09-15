@@ -76,7 +76,12 @@ gitleaks_bin() {
 	# redirect to plain http would fetch the scanner over a tamperable channel.
 	# The digest below would still catch a swap; the download refuses to leave
 	# TLS in the first place.
-	if ! curl -fsSL --proto '=https' --proto-redir '=https' -o "$tarball" "$url"; then
+	# --retry: the release host answers 504 often enough to have twice reported a
+	# red gate against an unchanged tree, and a reader cannot tell that from a
+	# real finding. curl's own backoff covers the 5xx family and a refused
+	# connection; a digest mismatch is still fatal on the first try, because that
+	# one means the artifact changed.
+	if ! curl -fsSL --proto '=https' --proto-redir '=https' --retry 5 --retry-delay 2 --retry-connrefused --connect-timeout 10 -o "$tarball" "$url"; then
 		rm -f "$tarball"
 		echo "gitleaks-pin: could not download $url" >&2
 		return 1

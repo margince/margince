@@ -133,27 +133,12 @@
   gap: var(--space-1);
 }
 
-.ext-chip {
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-sm);
-  background: var(--bgHover);
-  color: var(--textContent);
-  padding: var(--space-1) var(--space-2);
-  font-size: var(--fs-meta);
-  overflow-wrap: anywhere;
-}
-
 /* The verb on a route chip. It is not decoration: one entry per operation
    means a path can appear twice, and the method is the only thing that tells a
    DELETE from the GET beside it. */
 .ext-method {
   font-weight: 600;
-  color: var(--textPrimary);
   margin-right: var(--space-1);
-}
-
-.ext-route-path {
-  color: var(--textContent);
 }
 
 /* One registered object's grid and whatever it has to say about itself, in the

@@ -95,7 +95,7 @@ export function EmailAccessEditor({
     <div className="emailaccess">
       <VisibilityLine
         state={access.display_status}
-        marks={reasonKey && <Badge quiet>{t(reasonKey)}</Badge>}
+        marks={reasonKey && <Badge>{t(reasonKey)}</Badge>}
         action={changeable && <ChangeAccess presentation={presentation} />}
       />
       {sentence && <p className="emailaccess__sentence">{t(sentence)}</p>}

@@ -145,7 +145,7 @@ function BillingContactRow({
     <li className="billing-row">
       <div className="billing-who">
         <span className="billing-name">{contact.full_name}</span>
-        <Badge quiet>{t(ROLE_LABEL[contact.role])}</Badge>
+        <Badge>{t(ROLE_LABEL[contact.role])}</Badge>
         {canWrite && (
           <span className="billing-verbs">
             {/* Named with the row's contact, because a list of billing

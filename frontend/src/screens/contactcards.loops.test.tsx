@@ -122,12 +122,12 @@ describe("the commitments card's due status", () => {
     // A due date nothing can parse names no deadline; "overdue NaN days" is
     // the one reading that must not reach a reader.
     renderDue("whenever");
-    expect(screen.getByText("open")).toBeTruthy();
+    expect(screen.getByText("Open")).toBeTruthy();
   });
 
   it("shows the open badge when there is no due date at all", () => {
     renderDue(null);
-    expect(screen.getByText("open")).toBeTruthy();
+    expect(screen.getByText("Open")).toBeTruthy();
   });
 });
 
@@ -167,7 +167,7 @@ describe("open tasks are commitments too", () => {
     expect(
       screen.getAllByText(/Send the MCP whitepaper/).length,
     ).toBeGreaterThan(0);
-    expect(screen.getByText("open")).toBeDefined();
+    expect(screen.getByText("Open")).toBeDefined();
     expect(screen.queryByText(/Nothing has been promised/)).toBeNull();
   });
 

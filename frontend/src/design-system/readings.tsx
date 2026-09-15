@@ -251,7 +251,7 @@ export function BarList({
               dense
               flat
             />
-            <span className="barlist-amount num">{row.amount}</span>
+            <span className="barlist-amount t-num">{row.amount}</span>
           </li>
         ))}
       </ul>

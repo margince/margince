@@ -9395,10 +9395,11 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Which kinds of proposal the caller has put on automatic.
+         * The caller's automatic-change settings and review history.
          * @description One row per kind that CAN apply without asking, whether or not this reader has
-         *     ever met it — a kind nobody has decided yet reads `manual`, which is what will
-         *     happen to it. Listing only stored rows would hide exactly the choices a reader
+         *     ever met it. Eligible kinds default to `auto`; any stored mode takes precedence,
+         *     including modes recorded with decision history before these defaults changed.
+         *     Listing only stored rows would hide exactly the choices a reader
          *     opens this page to make.
          *
          *     The rows are the reader's own. This takes no user id and reads the policy of
@@ -9701,6 +9702,12 @@ export interface paths {
          *     against `due_at`, not a fact anybody writes: a stored one would make a case overdue only
          *     once a sweep had run, so a job that failed to fire would leave every late case looking on
          *     time. Order is by `due_at`, and the reader compares it to now.
+         *
+         *     The queue is PAGED, and every page says whether there is another. An installation owing
+         *     more duties than one page holds is ordinary — this is a legal obligation per contact, not
+         *     a task list somebody chose to keep short — and a `limit` with no continuation made every
+         *     duty past the ceiling unreachable through this route at all, for every caller, with the
+         *     screen giving no sign a tail existed. Walk `page.next_cursor` until `has_more` is false.
          */
         get: operations["listNoticeCases"];
         put?: never;
@@ -17823,15 +17830,15 @@ export interface components {
         };
         BackfillPreviewRequest: {
             /**
-             * @description The CAP-PARAM-4 window; default UI selection is 6m. 24m/60m added by ADR-0106 — the set stays closed, and the preview is what keeps a multi-year reach consented.
+             * @description Bounded mail-history window, up to ten years. The default UI selection is six months.
              * @enum {string}
              */
-            window: "none" | "3m" | "6m" | "12m" | "24m" | "60m";
+            window: "none" | "3m" | "6m" | "12m" | "24m" | "36m" | "60m" | "84m" | "120m";
         };
         /** @description The scope before the spend (ADR-0063/ADR-0020): what starting this window would touch and roughly cost. An estimate, labeled as such — actual spend is metered per task. */
         BackfillPreview: {
             /** @enum {string} */
-            window: "none" | "3m" | "6m" | "12m" | "24m" | "60m";
+            window: "none" | "3m" | "6m" | "12m" | "24m" | "36m" | "60m" | "84m" | "120m";
             /** @description Provider-side message count for the window. Read `estimate_is_floor` before presenting it: the two providers answer different KINDS of number. */
             estimated_messages: number;
             /** @description True when `estimated_messages` is a LOWER BOUND rather than a total — the window holds at least that many and how many more was not counted. Gmail counts by paging message ids under a cap, so a large mailbox hits it; Graph answers an exact `$count` and never does. A client MUST qualify the number when this is true ("at least 20,000"), because a floor shown as a count is short by multiples and a reader has no way to tell which kind they are looking at — and this is the number they are consenting to. Absent means the count is exact. It is NOT a reason to refuse: the scope being consented to is the mailbox and the period, and the count is supporting detail. */
@@ -17847,6 +17854,11 @@ export interface components {
             estimate_quality?: "observed" | "heuristic";
             /** @description ISO-4217; "USD" in v1. */
             currency?: string;
+            /**
+             * Format: date
+             * @description Calendar day of the preview query boundary; time within that day remains provider-specific. Omitted for none. Starting later recalculates the rolling window.
+             */
+            after_date?: string;
             /** Format: date-time */
             computed_at: string;
         };
@@ -17855,7 +17867,7 @@ export interface components {
              * @description `none` is expressed by never calling this op. Widen-only versus a prior run.
              * @enum {string}
              */
-            window: "3m" | "6m" | "12m" | "24m" | "60m";
+            window: "3m" | "6m" | "12m" | "24m" | "36m" | "60m" | "84m" | "120m";
         };
         /** @description The CAP-DDL-4 single-row activation read: every count is a persisted-row count, never a fabricated counter (closes CAP-AC-OPEN-1). */
         BackfillStatus: {
@@ -17864,7 +17876,7 @@ export interface components {
             /** Format: uuid */
             backfill_id?: string | null;
             /** @enum {string|null} */
-            window?: "3m" | "6m" | "12m" | "24m" | "60m" | null;
+            window?: "3m" | "6m" | "12m" | "24m" | "36m" | "60m" | "84m" | "120m" | null;
             /** @description The previewed count the user consented to — the progress fraction's denominator. */
             estimated_messages?: number | null;
             /** @description True when `estimated_messages` is a floor (see BackfillPreview): the denominator can be passed, so a client shows counts rather than a percentage instead of drawing a bar past its end. Persisted with the run, because the preview that produced the number is long gone by the time progress is read. */
@@ -17875,7 +17887,6 @@ export interface components {
                 skipped?: number;
                 contacts_created?: number;
                 companies_created?: number;
-                dedupe_candidates?: number;
             };
             /** Format: date-time */
             started_at?: string | null;
@@ -19753,12 +19764,6 @@ export interface components {
             lifecycle?: "unknown" | "target" | "prospect" | "opportunity" | "customer" | "former_customer" | "disqualified";
             /** @description WHAT THE COMPANY IS to us (PO-DDL-4b, ADR-0079). Multi-valued, because a company is legitimately several things at once — the partner program is built on companies that are simultaneously partners and customers. A company IS a partner iff it carries `partner` here AND has a `partner` row; removing the type while that row lives is refused (422). */
             relationship_types?: ("customer" | "partner" | "supplier" | "investor" | "portfolio_company" | "competitor" | "other")[];
-            /**
-             * @deprecated
-             * @description RETIRED (ADR-0079) — superseded by `lifecycle` + `relationship_types`, which split the two questions this one value tried to answer at once. Carried one release, written by nothing; read it for migration comparison only.
-             * @enum {string|null}
-             */
-            classification?: null | "prospect" | "customer" | "agency" | "reseller" | "tech_vendor" | "platform" | "partner" | "competitor" | "other";
             /**
              * @description Where to fetch the company's logo image (A55) — the `getCompanyLogo`
              *     path for this record, cookie-authenticated and same-origin. A revision query changes
@@ -30710,9 +30715,10 @@ export interface components {
              */
             kind: string;
             /**
-             * @description `manual` asks every time, and is what a kind stands at until the reader
-             *     says otherwise. `auto` applies on sight, undoably, under the authority of
-             *     whoever owns the record at the time.
+             * @description `auto` is the default for eligible kinds and applies changes under the
+             *     authority of whoever owns the record at the time. Saved choices take
+             *     precedence. `manual` disables automatic application: proposals wait for
+             *     review, and close-date maintenance stops for the owner.
              *
              *     `veto` is a third rung the policy table admits and nothing writes yet: it
              *     would apply after a stated delay unless the reader stops it first. It is
@@ -30832,7 +30838,8 @@ export interface components {
         };
         /**
          * @description First-class partner state as a 1:1 extension of a company (a company IS a partner iff it
-         *     has a `partner` row + classification='partner'). Company identity is never duplicated.
+         *     has a `partner` row AND carries `partner` in its `relationship_types` — ADR-0079 split that
+         *     second half out of the retired `classification`). Company identity is never duplicated.
          *     ADR-0053 adds the relationship-in-flight layer: lifecycle stage, relationship health,
          *     partner fit, next step, and served segments. Behavior is Fast-follow, but the V1 schema is
          *     forward-compatible.
@@ -35371,7 +35378,7 @@ export interface components {
              *
              *     Only rows carrying a verb the reader may press. A duplicate pair whose two
              *     records the reader cannot both write is somebody else's decision, and
-             *     counting it here tells them a contact is blocked on an answer they are not
+             *     counting it here tells them a contact is waiting on an answer they are not
              *     able to give.
              */
             review: number;
@@ -51231,6 +51238,8 @@ export interface operations {
                 state?: components["schemas"]["NoticeCaseState"][];
                 /** @description Max items in the page. */
                 limit?: components["parameters"]["Limit"];
+                /** @description Opaque keyset cursor from a prior response's `page.next_cursor`. It encodes the last row's `due_at` and id — both, because the order is by both, and an id alone cannot continue it when two duties fall due in the same second. Changing `state` mid-walk changes which rows the remaining pages see, so re-issue without the cursor when the filter changes. A token this endpoint did not mint returns `422 code: malformed_cursor`. */
+                cursor?: string;
             };
             header?: never;
             path?: never;
@@ -51246,6 +51255,7 @@ export interface operations {
                 content: {
                     "application/json": {
                         data: components["schemas"]["NoticeCase"][];
+                        page: components["schemas"]["PageInfo"];
                     };
                 };
             };

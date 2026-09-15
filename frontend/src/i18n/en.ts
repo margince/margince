@@ -153,11 +153,11 @@ export const en = {
   "trust.edit": "Edit",
   "trust.dismiss": "Dismiss",
   "trust.save": "Save",
-  "trust.typedByYou": "typed by you",
-  "trust.typedByHuman": "typed by a person",
-  "trust.typedByBuyer": "typed by a buyer",
-  "trust.typedByPrefix": "typed by",
-  "trust.sourceUnknown": "source not recorded",
+  "trust.typedByYou": "Typed by you",
+  "trust.typedByHuman": "Typed by a person",
+  "trust.typedByBuyer": "Typed by a buyer",
+  "trust.typedByPrefix": "Typed by",
+  "trust.sourceUnknown": "Source not recorded",
   "trust.agentTag": "Automated by {agent}",
   // A passport call stamps an opaque id and nothing on this side resolves it to
   // a name, so the tag says the kind and stops rather than printing an
@@ -168,7 +168,7 @@ export const en = {
   // system did its housekeeping" are different answers to "who do I ask".
   "trust.systemTag": "System task {job}",
   "trust.systemUnnamed": "System task",
-  "trust.connectorTag": "via {connector}",
+  "trust.connectorTag": "Via {connector}",
   "trust.dismissed": "Suggestion dismissed.",
   "trust.stagedProposal": "staged proposal",
   "trust.resolvedValue": "resolved value",
@@ -417,8 +417,8 @@ export const en = {
   "search.filter.all": "Everything",
   "search.pending": "Searching…",
   "search.tag.carriedBy": "On {count} records",
-  "search.tier.mirrored": "from a connected system",
-  "search.tier.unverified": "unverified",
+  "search.tier.mirrored": "From a connected system",
+  "search.tier.unverified": "Unverified",
 
   "context.recentTouches": "Recent conversations",
   "context.openTasks": "Open tasks",
@@ -460,9 +460,10 @@ export const en = {
   "dealfiles.hidden": "Hidden from this deal",
   "dealfiles.unhidden": "Shown on this deal again",
   "deal.stalled": "stalled",
-  "deal.singleThreaded": "single-threaded",
-  "deal.staged": "staged",
-  "deal.archived": "archived",
+  "deal.stalledBadge": "Stalled",
+  "deal.singleThreaded": "Single-threaded",
+  "deal.staged": "Staged",
+  "deal.archived": "Archived",
   "deal.closes": "closes {date}",
   "deal.undated": "no close date",
   "deal.lastMail": "Last email",
@@ -1267,7 +1268,10 @@ export const en = {
   "co.routeIn.band.strong": "in regular contact",
   "co.routeIn.band.some": "some contact",
   "co.routeIn.band.faint": "barely in contact",
-  "co.routeIn.band.unknown": "contact on file, no pattern yet",
+  "co.routeIn.bandBadge.strong": "In regular contact",
+  "co.routeIn.bandBadge.some": "Some contact",
+  "co.routeIn.bandBadge.faint": "Barely in contact",
+  "co.routeIn.bandBadge.unknown": "Contact on file, no pattern yet",
   "record.profile": "Profile",
   "record.context": "Context",
   "record.restsOn": "What this rests on",
@@ -1341,6 +1345,7 @@ export const en = {
   "access.state.invited": "invited",
   "access.state.active": "signed in",
   "access.state.revoked": "revoked",
+  "access.state.revokedBadge": "Revoked",
   "access.lastSeen": "last seen {when}",
   "access.downloads": "Downloaded {count} document(s)",
   "access.linkRequested":
@@ -2128,6 +2133,11 @@ export const en = {
   "co.role.blocker": "blocker",
   "co.role.influencer": "influencer",
   "co.role.user": "end user",
+  "co.roleLabel.champion": "Champion",
+  "co.roleLabel.economic_buyer": "Economic buyer",
+  "co.roleLabel.blocker": "Blocker",
+  "co.roleLabel.influencer": "Influencer",
+  "co.roleLabel.user": "End user",
   "co.evidence.extractedUnconfirmed": "AI extracted · not yet confirmed",
   "co.evidence.previous": "Previous claim",
   "co.evidence.next": "Next claim",
@@ -2380,7 +2390,7 @@ export const en = {
   "leadSources.intentHint":
     "High adds points to the score, Low subtracts; a change applies on each lead's next rescore.",
   "leadSources.leadCount": "{count} leads",
-  "leadSources.builtIn": "built-in",
+  "leadSources.builtIn": "Built-in",
   "leadSources.builtInKept":
     "Built-in sources can be renamed and switched off, not removed.",
   "leadSources.inUse": "{count} leads use this source — switch it off instead.",
@@ -2856,6 +2866,8 @@ export const en = {
   "recordRoles.builtIn": "Built in",
   "recordRoles.addOpen": "Add role",
   "recordRoles.addTitle": "Add a responsibility role",
+  "recordRoles.recordTypes": "Applies to",
+  "recordRoles.assigneeKinds": "Can be assigned to",
   "recordRoles.addLabel": "Name",
   "recordRoles.addHint":
     "What the responsible party is accountable for, as a reader would say it.",
@@ -3424,6 +3436,7 @@ export const en = {
   // page limit, and saying so would be wrong about which budget ran out.
   "deepread.statusPageCapped": "Read up to the page limit",
   "deepread.statusByteCapped": "Read up to the size limit",
+  "deepread.statusTimeCapped": "Read up to the time limit",
   "deepread.statusFailed": "Failed",
   "deepread.statusCancelled": "Cancelled",
   "deepread.resumesAt": "Resumes automatically {when}.",
@@ -3436,7 +3449,6 @@ export const en = {
   "deepread.step.running": "under way",
   "deepread.step.queued": "waiting",
   "deepread.stopBudget": "model budget",
-  "deepread.stopDeadline": "deadline",
   "deepread.factCount_one": "{count} evidenced fact staged",
   "deepread.factCount_other": "{count} evidenced facts staged",
   "deepread.proposals_other": "{count} proposals waiting for your review",
@@ -4523,9 +4535,9 @@ export const en = {
   "agents.disconnect": "Disconnect",
   "agents.disconnectOpen": "Disconnect",
   "agents.disconnectNamed": "Disconnect {client}",
-  "agents.disconnected": "disconnected",
-  "agents.lapsed": "credential expired",
-  "agents.renewing": "renewing",
+  "agents.disconnected": "Disconnected",
+  "agents.lapsed": "Credential expired",
+  "agents.renewing": "Renewing",
   "agents.renewsBy": "credential renews by {date}",
   "agents.expiredOn": "credential expired {date}",
   "agents.revokeGrantOpen": "End connection",
@@ -4551,13 +4563,13 @@ export const en = {
     "Enrichment, custom fields, webhooks, merging tags — these wait in your inbox.",
   "settings.tierAdvance":
     "Advance a deal stage — waits only when the move closes the deal as won or lost.",
-  "settings.locked": "locked",
+  "settings.locked": "Locked",
   "settings.purposes": "Consent purposes",
   "settings.purposesSub":
     "What this installation asks consent for, and which lawful basis each purpose stands on.",
   "settings.created": "created {date}",
   "settings.expires": "expires {date}",
-  "settings.revoked": "revoked",
+  "settings.revoked": "Revoked",
   "settings.revoke": "Revoke",
   "settings.revokeConfirm":
     "This passport's credential is invalidated immediately — the agent loses access on its next call.",
@@ -4698,9 +4710,9 @@ export const en = {
   "jobs.failuresSub":
     "Most recent first, capped at 50. A bounded list, not a log.",
   "jobs.failuresEmpty": "No failures recorded.",
-  "jobs.state.retryable": "retrying",
-  "jobs.state.discarded": "discarded",
-  "jobs.state.cancelled": "cancelled",
+  "jobs.state.retryable": "Retrying",
+  "jobs.state.discarded": "Discarded",
+  "jobs.state.cancelled": "Cancelled",
   "jobs.attempt": "attempt {attempt} of {max} · {when}",
   "jobs.remedy": "What to do: {remedy}",
   "jobs.jobId": "job {id}",
@@ -5339,9 +5351,17 @@ export const en = {
   "backfill.intro":
     "Choose how far back to import. You'll see the scope and estimated cost before anything runs — and you can skip this entirely.",
   "backfill.windowLabel": "Import window",
+  "backfill.window36m": "3 years",
+  "backfill.window84m": "7 years",
+  "backfill.window120m": "10 years",
+  "backfill.since": "Import emails since {date}.",
+  "backfill.extendNote":
+    "You can extend the history later. Emails already imported are kept and will not be duplicated.",
+  "backfill.costFloorNote":
+    "This estimate covers only the messages counted so far. The full import can contain more messages and cost more.",
   "backfill.window3m": "3 months",
   "backfill.window6m": "6 months",
-  "backfill.window12m": "12 months",
+  "backfill.window12m": "1 year",
   "backfill.window24m": "2 years",
   "backfill.window60m": "5 years",
   "backfill.previewLoading": "Counting your mailbox…",
@@ -5940,11 +5960,13 @@ export const en = {
   "ob.conv.triage.stateEmpty": "empty",
   "ob.conv.triage.stateTyped": "typed by you",
   "ob.conv.triage.stateStored": "from your profile",
+  "ob.conv.triage.stateStoredBadge": "From your profile",
   // A value the entity census read off the legal notice — the one company the
   // site names, or the candidate the human picked from several. Nothing ever
   // scored it, so the word names WHERE it came from; "chosen by you" would be
   // false on the sole-candidate path, where nobody was asked anything.
   "ob.conv.triage.stateQuoted": "read from your legal notice",
+  "ob.conv.triage.stateQuotedBadge": "Read from your legal notice",
   // Where a value would stand on an empty row. It says only that the row is
   // empty: the same line serves the manual path, where nothing ever read the
   // site, and a read-backed board, where the wire says nothing about why any
@@ -5997,7 +6019,7 @@ export const en = {
   "ob.conv.connect.networkTitle": "Your network",
   "ob.conv.connect.networkHint":
     "Save your profile so the network you import later is attributed to you. The import itself lives in Settings.",
-  "ob.conv.connect.recommended": "recommended",
+  "ob.conv.connect.recommended": "Recommended",
   // Neither grant carries calendar or contacts — those are their own,
   // separate consent (Settings → Calendar) — and neither carries sign-in:
   // both connect the SAME two things here, mail read and send, so the two
@@ -6184,17 +6206,12 @@ export const en = {
     "Setup is complete. Anyone you add can train their voice and connect their accounts from Settings.",
   "ob.conv.team.persistFailed":
     "I couldn't record that setup is complete. Try again, or leave it and finish from Settings later.",
-  // The basis act: the installation's reporting basis and the agent's
-  // autonomy, asked once the company is confirmed and before any step about
-  // the contact answering.
+  // Reporting settings are settled after the company is confirmed.
   "ob.conv.basis.title": "First, the basis.",
   "ob.conv.basis.body":
-    "Base currency and reporting timezone are the installation's: every deal, report and brief is priced and dated on them. What it may change without asking is yours to decide. All of it is prefilled and can be changed later in Settings, until a deal has frozen the currency.",
+    "Base currency and reporting timezone are the installation's: every deal, report and brief is priced and dated on them. All of it is prefilled and can be changed later in Settings, until a deal has frozen the currency.",
   "ob.conv.basis.reportingTitle": "Reporting basis",
   "ob.conv.basis.timezoneNeeded": "A reporting timezone is needed.",
-  "ob.conv.basis.autonomyTitle": "What it may change on its own",
-  "ob.conv.basis.autonomyBody":
-    "Each kind of change below is proposed to you first. Switch one on and it applies without asking; switch it back any time.",
   "ob.conv.basis.continue": "Continue",
   "ob.conv.basis.done": "Reporting basis settled.",
 
@@ -6307,20 +6324,17 @@ export const en = {
   // separate: connecting grants access, the backread spends budget reading
   // history. Read-only, and it writes nothing until the reader approves.
   "ob.backread.heading": "How far back should I read?",
-  "ob.backread.window3m": "3 months — recent context",
-  "ob.backread.window6m": "6 months — recommended",
-  "ob.backread.window12m": "12 months — full sales cycle",
-  "ob.backread.window24m": "2 years — the relationship, not just the deal",
-  "ob.backread.window60m": "5 years — everything the mailbox still holds",
   "ob.backread.estimating": "Counting the messages in that window…",
   "ob.backread.estimate": "About {messages} messages in that window.",
+  "ob.backread.estimateAtLeast":
+    "At least {messages} messages in that window; counting stopped before the end.",
   "ob.backread.estimateHeuristic":
     "Estimated from the mailbox, not counted yet.",
   "ob.backread.estimateCost": "Roughly {cost} in model calls.",
   "ob.backread.estimateFailed":
     "I could not estimate that window: {detail} You can still start, or pick another.",
   "ob.backread.note":
-    "The backread only reads. You see every contact and company I found before anything is written.",
+    "Your mailbox stays unchanged. Imported emails and contacts appear in Margince as the import progresses.",
   "ob.backread.start": "Connect and read",
   "ob.backread.startFailed":
     "I could not start the backread: {detail} Try again, or continue and start it later in Settings.",
@@ -6546,7 +6560,7 @@ export const en = {
   "client.unknownDetail":
     "This sender matches no contact you can see. Nothing was fetched from anywhere else.",
   "client.createLead": "Capture as lead",
-  "client.isolation": "talks only to YOUR company",
+  "client.isolation": "Talks only to YOUR company",
   "client.attribution": "Every capture is attributed and auditable.",
 
   "book.title": "Book a meeting",
@@ -6638,6 +6652,11 @@ export const en = {
   "buyer.closedNote": "This room is now read-only.",
   "buyer.stewardUnknown": "your contact",
   "buyer.signOut": "Sign out",
+  "buyer.signedInAs": "Signed in as {name}.",
+  "buyer.contactEyebrow": "Your contact",
+  "buyer.contactBody":
+    "Ask under the document your question is about; it reaches {steward} directly.",
+  "buyer.closedOn": "Closed on {date}",
   "room.docs.title": "Documents",
   "room.docs.sub":
     "What the buyer can read, with the conversation about each document under it.",
@@ -6670,6 +6689,10 @@ export const en = {
   "threads.aboutThis_other": "{count} threads about this document",
   "threads.aboutThis_one": "{count} thread about this document",
   "threads.askAbout": "Ask about this document",
+  "threads.read": "Read",
+  "threads.readTitle": "Read {title}",
+  "threads.unanswered_one": "{count} unanswered",
+  "threads.unanswered_other": "{count} unanswered",
   "threads.cancel": "Cancel",
   "threads.empty": "Nothing said yet.",
   "threads.requiredChange": "Change required",
@@ -6709,7 +6732,7 @@ export const en = {
   "prefs.rateLimited":
     "Too many attempts from here just now. Wait a minute and reload.",
   "prefs.subscribed": "On — you asked for these",
-  "prefs.alwaysOn": "always on",
+  "prefs.alwaysOn": "Always on",
   // The public confirm-your-details page. Margince speaks in first contact here,
   // as it does in onboarding: short flat sentences, says what it will and will
   // not do, no em dashes.
@@ -6788,8 +6811,8 @@ export const en = {
   "prefs.undoExplicit":
     "Re-subscribing is an explicit opt-in — we won't silently turn it back on. Save below to record your consent, or discard.",
 
-  "auto.tier.runs": "runs",
-  "auto.tier.approval": "approval",
+  "auto.tier.runs": "Runs",
+  "auto.tier.approval": "Approval",
   "auto.sub":
     'A rule marked "runs" acts on its own. One marked "approval" stages into the approval inbox.',
   "auto.readOnly":
@@ -6802,8 +6825,8 @@ export const en = {
   "auto.create": "Create",
   "auto.createdPaused": "Created paused — nothing runs until you enable it.",
   "auto.delete": "Delete",
-  "auto.statusEnabled": "enabled",
-  "auto.statusPaused": "paused",
+  "auto.statusEnabled": "Enabled",
+  "auto.statusPaused": "Paused",
   "auto.dateField.placeholder": "Select date field",
   "auto.dateField.needsObject":
     "Choose an object first to list its date fields.",
@@ -6833,11 +6856,11 @@ export const en = {
   "auto.runs.target": "Target",
   "auto.runs.result": "Result",
   "auto.runs.reason": "Reason",
-  "auto.runs.outcomeFired": "fired",
-  "auto.runs.outcomeFailed": "failed",
-  "auto.runs.outcomeBlocked": "blocked",
-  "auto.runs.outcomeSkipped": "skipped",
-  "auto.runs.outcomeQueued": "queued",
+  "auto.runs.outcomeFired": "Fired",
+  "auto.runs.outcomeFailed": "Failed",
+  "auto.runs.outcomeBlocked": "Blocked",
+  "auto.runs.outcomeSkipped": "Skipped",
+  "auto.runs.outcomeQueued": "Queued",
 
   "auto.preview.open": "Preview",
   "auto.preview.title": "Dry-run blast radius",
@@ -6926,7 +6949,7 @@ export const en = {
   "cf.type.boolean": "Yes / No",
   "cf.builder.addTo": "Add a field to {object}",
   "cf.builder.open": "Add a field",
-  "cf.builder.noCode": "no code",
+  "cf.builder.noCode": "No code",
   "cf.builder.intro":
     "A new field is a real column on the existing table — it filters, reports, exports, and is in the API like any core field. It is not a new object.",
   "cf.label": "Label",
@@ -7441,10 +7464,10 @@ export const en = {
     "Add roughly {count} more words to reach the sharp band.",
   "voice.insights.next.atTarget":
     "Your corpus is at target; keep it fresh by adding recent writing occasionally.",
-  "voice.status.active": "active",
-  "voice.status.candidate": "awaiting review",
-  "voice.status.superseded": "superseded",
-  "voice.status.rejected": "rejected",
+  "voice.status.active": "Active",
+  "voice.status.candidate": "Awaiting review",
+  "voice.status.superseded": "Superseded",
+  "voice.status.rejected": "Rejected",
   "voice.classification.routine": "routine change",
   "voice.classification.material": "material change",
   "voice.outcome.autoActivated": "activated automatically",
@@ -7461,7 +7484,7 @@ export const en = {
   "voice.insights.thinkingLabel": "How you think",
   "voice.insights.movesLabel": "Your signature moves \u2014 in your own words",
   "voice.insights.samplesLabel": "Sample drafts in your voice",
-  "voice.insights.draftOnly": "draft only \u2014 never sent",
+  "voice.insights.draftOnly": "Draft only \u2014 never sent",
   "voice.insights.disclosure":
     "AI-assisted drafts; every send stays a human decision.",
   "voice.insights.nextBestLabel": "To make it better:",
@@ -7832,7 +7855,7 @@ export const en = {
   "tools.title": "Agent tools",
   "tools.sub":
     "The governed surface a passport can call — same inventory an MCP client sees.",
-  "tools.egress": "reaches out",
+  "tools.egress": "Reaches out",
   "tools.scopeAll": "All passports",
   "tools.inventory": "All {count} tools",
   "tools.scopeLabel": "Scope to a passport",
@@ -7846,10 +7869,10 @@ export const en = {
     "Your own bill, made visible — per task and tier, token-denominated.",
   "aiusage.budget": "{spent} of {budget} tokens · {pct}%",
   "aiusage.budgetMeter": "Monthly token budget used",
-  "aiusage.band.normal": "normal",
-  "aiusage.band.degraded": "economy mode",
-  "aiusage.band.queued": "budget reached — background AI queued",
-  "aiusage.band.unknown": "unknown budget state",
+  "aiusage.band.normal": "Normal",
+  "aiusage.band.degraded": "Economy mode",
+  "aiusage.band.queued": "Budget reached — background AI queued",
+  "aiusage.band.unknown": "Unknown budget state",
   "aiusage.col.task": "Task",
   "aiusage.col.tier": "Tier",
   "aiusage.col.calls": "Calls",
@@ -7888,9 +7911,9 @@ export const en = {
   "aicalls.col.tokens": "Tokens",
   "aicalls.col.latency": "Latency",
   "aicalls.ms": "{value} ms",
-  "aicalls.badge.cacheHit": "cache hit",
-  "aicalls.badge.degraded": "degraded",
-  "aicalls.badge.retries": "retry ×{count}",
+  "aicalls.badge.cacheHit": "Cache hit",
+  "aicalls.badge.degraded": "Degraded",
+  "aicalls.badge.retries": "Retry ×{count}",
   "aicalls.callsLabel": "Recent calls",
   "aicalls.filter.all": "All tasks",
   "aicalls.loadMore": "Load more",
@@ -8121,21 +8144,21 @@ export const en = {
   "aiRouting.provider.label": "Provider",
   "aiRouting.change": "Change",
   "aiRouting.done": "Done",
-  "aiRouting.noKey": "no key",
-  "aiRouting.unpriced": "unpriced",
+  "aiRouting.noKey": "No key",
+  "aiRouting.unpriced": "Unpriced",
   "aiRouting.effect":
     "Saved bindings reach every process within a minute, without a restart.",
   "aiProviderKeys.title": "Model provider keys",
   "aiProviderKeys.sub":
     "The credentials this installation calls each model vendor with. A key is sealed in the key vault and never shown again — replace it if you need to change it.",
-  "aiProviderKeys.keyless": "no key needed",
+  "aiProviderKeys.keyless": "No key needed",
   "aiProviderKeys.field": "API key",
   "aiProviderKeys.save": "Save key",
   "aiProviderKeys.adminOnly":
     "Only an admin or ops can change a provider credential.",
   "aiProviderKeys.saveFailed": "This provider could not be updated",
-  "aiProviderKeys.configured": "configured",
-  "aiProviderKeys.absent": "not set",
+  "aiProviderKeys.configured": "Configured",
+  "aiProviderKeys.absent": "Not set",
   "aiProviderKeys.configuredHint":
     "Sealed in the key vault. It cannot be read back — paste a new one to replace it. It may also arrive as {envVar}.",
   "aiProviderKeys.absentHint":
@@ -8224,23 +8247,23 @@ export const en = {
   "workingHours.day.7": "Sunday",
   "autonomy.title": "What answers itself",
   "autonomy.sub":
-    "Small corrections you have been confirming by hand. Switch one on and it applies as soon as it comes up, with the change and an Undo waiting on your day.",
-  "autonomy.noneDecidedYetTitle": "Nothing decided yet",
+    "Automatic changes start on. Existing settings are kept. You can change each switch here. Your choices apply to your work, not the whole team.",
+  "autonomy.noneDecidedYetTitle": "No reviews yet",
   "autonomy.updateFailed": "That switch could not be saved",
   "autonomy.noneDecidedYet":
-    "You have not decided any of these yet. What reaches this list depends on the records you own and the work your team routes to you, so a seat with neither stays empty. The switches still decide what happens when something appears.",
+    "You have not decided any of these proposals yourself yet. Automatic changes can already run according to the switches below. Proposals depend on the records you own and the work routed to you.",
   "autonomy.noRecord": "You have not decided one of these yet.",
   "autonomy.record":
     "So far: {clean} approved as proposed, {edited} after an edit, {rejected} turned down.",
   "autonomy.kind.close_date_correction.label": "Close dates",
   "autonomy.kind.close_date_correction.help":
-    "A deal's close date moved by what was said on a call or written in a mail.",
+    "Maintain your deals overnight: estimate missing or overdue close dates from pipeline pace and review deals that have gone quiet. Turn off to stop this maintenance.",
   "autonomy.kind.company_name_promotion.label": "Company names",
   "autonomy.kind.company_name_promotion.help":
-    "A company recorded under its domain takes the name its own website gives.",
+    "Accept proposed company names from email signatures for companies named after their domain. Turn off to review these proposals yourself. Names confirmed by independent sources can still be updated automatically.",
   "autonomy.kind.lifecycle_change.label": "Lifecycle stages",
   "autonomy.kind.lifecycle_change.help":
-    "A company moves stage on what has happened with it. This one can also change who sees the account and which automations run.",
+    "Move a company to another lifecycle stage based on activity. Turn off to review these proposals yourself. Stage changes can affect who sees the account and which automations run.",
   "captureSettings.title": "Enrichment",
   "captureSettings.sub":
     "How captured companies and contacts are enriched after they are created.",
@@ -8415,9 +8438,9 @@ export const en = {
   "embedreindex.estimateQualityHeuristic":
     "Heuristic estimate — a cold work-shape floor, not observed spend.",
   "embedreindex.utilizationTitle": "Budget impact",
-  "embedreindex.impact.normal": "normal",
-  "embedreindex.impact.degraded": "would enter economy mode",
-  "embedreindex.impact.queued": "would be queued",
+  "embedreindex.impact.normal": "Normal",
+  "embedreindex.impact.degraded": "Would enter economy mode",
+  "embedreindex.impact.queued": "Would be queued",
 
   "consent.title": "Authorize access",
   "consent.asks":
@@ -8682,6 +8705,10 @@ export const en = {
   "contact.band.weak": "weak",
   "contact.band.moderate": "moderate",
   "contact.band.strong": "strong",
+  "contact.bandBadge.none": "No contact",
+  "contact.bandBadge.weak": "Weak",
+  "contact.bandBadge.moderate": "Moderate",
+  "contact.bandBadge.strong": "Strong",
   "contact.pulse.title": "Relationship",
   "contact.pulse.warmestIs": "{name} has the warmest relationship here.",
   "contact.pulse.nobodyYet":
@@ -8848,8 +8875,8 @@ export const en = {
   "contact.loops.dueToday": "today",
   "contact.loops.dueTomorrow": "tomorrow",
   "contact.loops.dueInDays": "in {count} days",
-  "contact.loops.waiting": "waiting",
-  "contact.loops.open": "open",
+  "contact.loops.waiting": "Waiting",
+  "contact.loops.openBadge": "Open",
   "contact.loops.atLeast": "at least {count}",
 
   "contact.memory.title": "Conversation memory",
@@ -8933,7 +8960,28 @@ export const en = {
   "contact.research.stats": "{sources} sources read · {claims} cited claims",
   "contact.research.dismiss": "Dismiss",
   "contact.research.discard": "Discard",
-  "contact.research.save": "Review & save {count} claims",
+  "contact.research.save_one": "Review & save {count} claim",
+  "contact.research.save_other": "Review & save {count} claims",
+  // A prose claim becomes a stored value only once a reader says which field it
+  // fills — the judgement the closed field enum exists to force. The value and
+  // its citation are prefilled from the run and stay editable.
+  "contact.research.mapField": "Profile field",
+  "contact.research.mapFieldPlaceholder": "Choose a field",
+  "contact.research.mapValue": "Value",
+  "contact.research.mapQuote": "Source quote",
+  "contact.research.mapUrl": "Source link",
+  "contact.research.mapUrlInvalid": "Enter an http or https link.",
+  "contact.research.mapIncomplete":
+    "Add a value, a quote and a link to save this claim.",
+  "contact.research.saved_one": "{count} claim added to the record",
+  "contact.research.saved_other": "{count} claims added to the record",
+  "contact.research.field.title": "Job title",
+  "contact.research.field.role": "Role",
+  "contact.research.field.company_name": "Company",
+  "contact.research.field.phone": "Phone",
+  "contact.research.field.linkedin": "LinkedIn",
+  "contact.research.field.address": "Address",
+  "contact.research.field.website": "Website",
   "contact.research.evidenceOrOmit":
     "AI-assisted · evidence-or-omit · public information only",
   "contact.meeting.title": "Meeting brief",
@@ -9166,7 +9214,7 @@ export const en = {
     "No clauses yet \u2014 an empty group matches nothing, so add one.",
   "filters.field": "Field",
   "filters.choosePlaceholder": "Choose a field",
-  "filters.customBadge": "custom field",
+  "filters.customBadge": "Custom field",
   "filters.operator": "Operator",
   "filters.value": "Value",
   "filters.values": "Values",
@@ -9441,7 +9489,7 @@ export const en = {
   "project.commitments.title": "Open commitments",
   "project.commitments.empty":
     "No open task is filed under this project. Tasks linked to it land here, soonest due first.",
-  "project.commitments.overdue": "overdue",
+  "project.commitments.overdue": "Overdue",
   "project.timeline.empty":
     "Nothing is filed under this project yet. Mail carrying the key in its subject, and activities linked to it, land here.",
   "project.advance.title": "Move to {phase}",
@@ -10068,7 +10116,7 @@ export const en = {
   "firstRun.ignite.title": "It has a pulse.",
   "firstRun.ignite.sub":
     "The key is sealed and the model answered. Here is what that changes.",
-  "firstRun.ignite.sealed": "sealed in the vault · {vendor}",
+  "firstRun.ignite.sealed": "Sealed in the vault · {vendor}",
   "firstRun.ignite.reaching": "reaching the model for the first time…",
   "firstRun.ignite.canNow": "can now",
   "firstRun.ignite.cannot": "cannot",

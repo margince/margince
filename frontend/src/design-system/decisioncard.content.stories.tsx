@@ -84,7 +84,6 @@ export const ADraftedMessage: Story = {
       diffs={[]}
       lead="Anna asked for two dates and has not had them."
       rest={[]}
-      raw={false}
       labels={LABELS}
     />
   ),
@@ -102,15 +101,14 @@ export const ValuesThatWouldMove: Story = {
       ]}
       lead="Three signals put this deal past qualification."
       rest={[{ key: "basis", label: "Basis", value: "the buyer's own date" }]}
-      raw={false}
       labels={LABELS}
     />
   ),
 };
 
 // A kind that declared NO display policy keeps the raw reading: wire keys as
-// written, in the mono face so they read as identifiers rather than as captions
-// somebody chose. Honest rather than lazy — half the stageable kinds carry an
+// written, in the body face like every other label, because a key is read and
+// not compiled. Honest rather than lazy — half the stageable kinds carry an
 // agent's tool arguments with no typed payload to describe.
 export const WireKeysAsWritten: Story = {
   render: () => (
@@ -123,7 +121,6 @@ export const WireKeysAsWritten: Story = {
         { key: "flags", label: "flags", value: '["unrealistic_stale"]' },
         { key: "target_version", label: "target_version", value: "4" },
       ]}
-      raw
       labels={LABELS}
     />
   ),

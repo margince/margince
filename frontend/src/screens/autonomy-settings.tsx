@@ -26,7 +26,7 @@ import { problemMessageOf, QueryGate, throwProblem } from "./common";
 
 type KindAutonomy = components["schemas"]["KindAutonomy"];
 
-export function useAutonomy() {
+function useAutonomy() {
   return useQuery({
     queryKey: ["autonomy"],
     queryFn: async () => {
@@ -197,14 +197,7 @@ export function AutonomySettingsCard() {
   );
 }
 
-/**
- * The switches themselves, one per kind, each writing the moment it moves.
- * Shared by the settings card and the onboarding's preferences act, so the
- * two cannot disagree about what a row says or when it writes. `rows` is the
- * loaded, non-empty set: the caller decides what an empty one means on its
- * own surface (the card says so, the onboarding says nothing).
- */
-export function AutonomyChoices({
+function AutonomyChoices({
   rows,
 }: Readonly<{ rows: readonly KindAutonomy[] }>) {
   const t = useT();

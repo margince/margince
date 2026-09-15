@@ -72,11 +72,11 @@ func TestForgetCachedToleratesAMissingWorkspace(t *testing.T) {
 		if err != nil {
 			t.Fatalf("deriving the cache key for %s: %v", seeded.name, err)
 		}
-		r.cache.put(key, seeded.wsID, model.Response{Text: `{"ok":true}`}, TierCheapCloud)
+		r.cache.put(key, seeded.wsID, r.binding().generation, model.Response{Text: `{"ok":true}`}, TierCheapCloud)
 
 		r.forgetCached(context.Background(), TaskColdStart, structuredReq())
 
-		if _, _, ok := r.cache.get(key, seeded.wsID); !ok {
+		if _, _, ok := r.cache.get(key, seeded.wsID, r.binding().generation); !ok {
 			t.Errorf("a workspace-less eviction dropped %s; it must derive no key at all", seeded.name)
 		}
 	}

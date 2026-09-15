@@ -254,6 +254,30 @@ func (c *Connector) backfill(ctx context.Context, access string) ([]string, stri
 // only a real Sink write fault returns a non-nil error (which stops the pull).
 // It is a package function (no receiver) so a pull holds no shared state.
 func captureOne(ctx context.Context, fetched Message, sink connector.Sink, bounces connector.BounceSink, owner string) (captured bool, err error) {
+	// A DRAFT was never sent, so putting one on a customer's timeline records
+	// a message that does not exist — and reads as one that does, because an
+	// outbound row with no delivery beside it IS a send as far as every reader
+	// downstream is concerned.
+	//
+	// Checked HERE rather than at either enumeration because both paths meet
+	// here: the initial backfill's messages.list and the incremental
+	// history.list. A rule spelled at one of them is a rule the other puts
+	// back.
+	//
+	// The Graph connector keeps the same invariant by walking delta per
+	// well-known folder rather than /me/messages/delta, and says why in the
+	// same words (capture/graph/client.go). Gmail has no folders to walk, so
+	// the label is where the rule lives on this side.
+	//
+	// Gmail mints a NEW message id on every autosave, so one message under
+	// composition arrives as a stream of distinct ids — which is why the
+	// reported symptom was five "sent" rows in eleven minutes for one email
+	// nobody had sent, rather than a single wrong row.
+	//
+	// Before the parse: a draft needs no reading to be refused.
+	if hasDraftLabel(fetched.Labels) {
+		return false, nil
+	}
 	msg, err := mailmap.Parse(fetched.RFC822, owner)
 	if err != nil {
 		return false, nil //nolint:nilerr // a single unparseable message is a skip, not a fatal pull error (mirrors the IMAP connector)

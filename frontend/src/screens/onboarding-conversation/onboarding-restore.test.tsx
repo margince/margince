@@ -298,11 +298,6 @@ function stubApi(options: StubOptions = {}) {
       if (path.endsWith("/connectors") && request.method === "GET") {
         return jsonResponse({ data: [] });
       }
-      // The preferences act asks what this seat may decide on its own; a seat
-      // nothing is routed to has no switches, and the act says nothing.
-      if (path.endsWith("/autonomy") && request.method === "GET") {
-        return jsonResponse({ data: [] });
-      }
       // No grants: the reporting basis is an admin's to change, and these
       // fixtures never claim to be one.
       if (path.endsWith("/me") && request.method === "GET") {

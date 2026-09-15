@@ -30,7 +30,7 @@ package compose
 // Guessing it turns legitimate retries into 403s, which is a worse failure
 // than the gap.
 type replayTarget struct {
-	object      string // RBAC object governing the body (recorded, not yet re-checked)
+	object      string // RBAC object governing the body, re-required on every replay
 	objectNote  string // …or why no object grant governs it
 	table       string // row-scoped table the body's record lives in
 	tableField  string // …or the body field naming that table, for a polymorphic reference

@@ -872,9 +872,9 @@ function ShareScreenBody({
                         <span className="t-caption">{g.reason}</span>
                       )}
                       {g.expires_at && (
-                        <span className="share-expiry-badge">
+                        <Badge tone="warn">
                           {formatDate(g.expires_at, locale, zone)}
-                        </span>
+                        </Badge>
                       )}
                     </div>
                   </div>

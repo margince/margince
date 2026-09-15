@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import type { components } from "../api/schema";
 import { useInstallationSettings } from "../app/uploadlimit";
 import { Button, Field, Modal } from "../design-system/atoms";
@@ -9,13 +9,13 @@ import { useT } from "../i18n";
 import { uploadAttachment } from "./attachmentupload";
 import { problemMessageOf } from "./common";
 import { ContractCustomFields } from "./contractcustomfields";
+import { useSeededCustomFields } from "./contractcustomseed";
 import { paperState, useContractPaper } from "./contractpaper";
 import { contractTermsBody } from "./contracttermsbody";
 import { ContractTermsFields } from "./contracttermsfields";
 import { createContract, patchContract } from "./contractwrites";
 // The installation read every form shares: one query, one key, so the currency
 // this form writes is the same fact the settings screen shows.
-import type { CreateField } from "./create";
 import { useObjectCustomFields } from "./customfields.form";
 
 // Recording an agreement.
@@ -152,33 +152,27 @@ export function ContractForm({
   // first. And re-running the whole seed when it arrives would throw away the
   // terms the reader had already typed, and the file they had already picked.
   //
-  // `seededFor` is the catalog this draft was filled from. A catalog that
-  // swaps one field for another keeps the same COUNT, so a count would leave
-  // the draft holding a retired field's value while the controls draw the new
-  // one; the column names cannot collide that way.
-  const catalogKey = cf.fields.map((field) => field.column_name).join(",");
-  const seededFor = useRef<string | null>(null);
-  useEffect(() => {
-    if (!open) {
-      seededFor.current = null;
-      return;
-    }
-    if (seededFor.current === catalogKey) {
-      return;
-    }
-    seededFor.current = catalogKey;
-    // RAW for the baseline, converted for the controls. customFieldsToPatch
-    // puts the baseline through customFieldFormValue itself, so handing it an
-    // already-converted value converts a currency twice — a stored 10000 reads
-    // as "100", re-converts to "1", and a genuine edit to 1 compares EQUAL and
-    // disappears without a trace.
-    const stored = cf.recordSlice(contract ?? {});
-    setOpenedCustom(stored);
-    setDraft((current) => ({
-      ...current,
-      customValues: customFormValues(cf.formFields, stored),
-    }));
-  }, [open, catalogKey, contract, cf]);
+  // The custom half, seeded SEPARATELY from the terms above: the catalog is a
+  // second read, and what a reader has already typed has to survive its arrival.
+  useSeededCustomFields({
+    open,
+    recordId: contract?.id ?? null,
+    stored: cf.recordSlice(contract ?? {}),
+    formFields: cf.formFields,
+    catalogKey: cf.fields.map((field) => field.column_name).join(","),
+    values: draft.customValues,
+    replace: (values, baseline) => {
+      setOpenedCustom(baseline);
+      setDraft((current) => ({ ...current, customValues: values }));
+    },
+    add: (values, baseline) => {
+      setOpenedCustom((current) => ({ ...current, ...baseline }));
+      setDraft((current) => ({
+        ...current,
+        customValues: { ...current.customValues, ...values },
+      }));
+    },
+  });
 
   // The draft is a VARIABLE, never a closure over render state: a click that
   // lands before React re-arms the mutation's options would otherwise submit
@@ -293,28 +287,6 @@ export function ContractForm({
 // draftOf reads an existing agreement back into the form's shape, so correcting
 // one starts from what is recorded rather than from a blank the reader has to
 // retype — and might get wrong a second time.
-// Seed each control with what it should DISPLAY, through the same toInput the
-// create/edit harness uses: a currency field converts minor units to major
-// here, so an untouched field writes back exactly what it was given instead of
-// being scaled a second time.
-function customFormValues(
-  formFields: CreateField[],
-  stored: Record<string, unknown>,
-): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const field of formFields) {
-    if (field.divider) {
-      continue;
-    }
-    const raw = stored[field.key];
-    out[field.key] = field.toInput
-      ? field.toInput(raw)
-      : raw == null
-        ? ""
-        : String(raw);
-  }
-  return out;
-}
 
 function draftOf(contract: Contract | undefined): ContractDraft {
   if (!contract) {

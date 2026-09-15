@@ -25,23 +25,13 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
-// BackfillWindowMonths is the CAP-PARAM-4 window set, in reach order.
-// "none" is expressed by never starting a run.
-//
-// The set is CLOSED and stays a picker (ADR-0063, widened to 24/60 by
-// ADR-0106): an unbounded window is an unbounded bill, and the picker is
-// where the customer consents to it.
-//
-// Exported because the transport used to keep its own switch over the same
-// values — the `<n>m` wire enum in one file, the months here — and a
-// widening that reached this one and not that one made every new window
-// answer 422 at the door while every gate stayed green. There is one
-// statement of the set in Go now, and the wire mapping is derived from it.
-// The contract enums and the capture_backfill CHECK are pinned against it
-// by TestTheBackfillWindowSetIsOneSet.
+// BackfillWindowMonths returns the supported history windows in reach order.
+// The closed set bounds how much mail a user consents to read and pay for.
+// The contract enums and database constraint are checked against this set by
+// TestTheBackfillWindowSetIsOneSet; transport names derive from these months.
 func BackfillWindowMonths() []int { return slices.Clone(backfillWindowMonths) }
 
-var backfillWindowMonths = []int{3, 6, 12, 24, 60}
+var backfillWindowMonths = []int{3, 6, 12, 24, 36, 60, 84, 120}
 
 var backfillWindows = windowSet(backfillWindowMonths)
 
@@ -86,7 +76,6 @@ type BackfillRun struct {
 	Skipped         int
 	Contacts        int
 	Companies       int
-	DedupeCands     int
 	StartedAt       *time.Time
 	CompletedAt     *time.Time
 	UpdatedAt       time.Time
@@ -106,13 +95,19 @@ func (r *Registry) connectionForUser(ctx context.Context, tx pgx.Tx, provider st
 	return id, err
 }
 
+// BackfillPreview binds the provider's count to the date it actually queried.
+type BackfillPreview struct {
+	connector.BackfillEstimate
+	AfterDate time.Time
+}
+
 // EstimateBackfill previews a window's scope: the provider-side message count
 // newer than the window boundary. The consent number (preview before spend,
 // ADR-0020). Pricing the projected spend is the estimator's job now (ADR-0068),
 // so this returns the raw message count only.
-func (r *Registry) EstimateBackfill(ctx context.Context, provider string, userID ids.UserID, windowMonths int) (connector.BackfillEstimate, error) {
+func (r *Registry) EstimateBackfill(ctx context.Context, provider string, userID ids.UserID, windowMonths int) (BackfillPreview, error) {
 	if !backfillWindows[windowMonths] {
-		return connector.BackfillEstimate{}, fmt.Errorf("%w: %d months", ErrWindowInvalid, windowMonths)
+		return BackfillPreview{}, fmt.Errorf("%w: %d months", ErrWindowInvalid, windowMonths)
 	}
 	var connID ids.UUID
 	var name string
@@ -129,21 +124,26 @@ func (r *Registry) EstimateBackfill(ctx context.Context, provider string, userID
 			Scan(&name, &credentialRef, &authBytes)
 	})
 	if err != nil {
-		return connector.BackfillEstimate{}, err
+		return BackfillPreview{}, err
 	}
 	c, err := r.connector(name)
 	if err != nil {
-		return connector.BackfillEstimate{}, err
+		return BackfillPreview{}, err
 	}
 	bf, ok := c.(connector.Backfiller)
 	if !ok {
-		return connector.BackfillEstimate{}, ErrBackfillUnsupported
+		return BackfillPreview{}, ErrBackfillUnsupported
 	}
 	auth, err := r.resolveCredential(ctx, credentialRef, authBytes)
 	if err != nil {
-		return connector.BackfillEstimate{}, err
+		return BackfillPreview{}, err
 	}
-	return bf.EstimateBackfill(ctx, auth, r.now().AddDate(0, -windowMonths, 0))
+	after := r.now().AddDate(0, -windowMonths, 0)
+	estimate, err := bf.EstimateBackfill(ctx, auth, after)
+	if err != nil {
+		return BackfillPreview{}, err
+	}
+	return BackfillPreview{BackfillEstimate: estimate, AfterDate: after}, nil
 }
 
 // EnqueueBackfill schedules the worker job that will page a run. It runs
@@ -268,13 +268,12 @@ func latestBackfill(ctx context.Context, tx pgx.Tx, connID ids.UUID) (*BackfillR
 		SELECT b.id, b.connection_id, b.window_months, b.after_date, b.status, b.cursor, b.total_estimate, b.total_estimate_is_floor,
 		       b.scanned + b.inflight_scanned, b.captured + b.inflight_captured, b.skipped + b.inflight_skipped,
 		       b.contacts_created, b.companies_created,
-		       b.dedupe_candidates,
 		       b.started_at, b.completed_at, b.updated_at, b.last_error_class
 		FROM capture_backfill b WHERE b.connection_id = $1
 		ORDER BY b.created_at DESC LIMIT 1`, connID)
 	var b BackfillRun
 	err := row.Scan(&b.ID, &b.ConnectionID, &b.WindowMonths, &b.AfterDate, &b.Status, &b.Cursor, &b.Estimate, &b.EstimateIsFloor,
-		&b.Scanned, &b.Captured, &b.Skipped, &b.Contacts, &b.Companies, &b.DedupeCands,
+		&b.Scanned, &b.Captured, &b.Skipped, &b.Contacts, &b.Companies,
 		&b.StartedAt, &b.CompletedAt, &b.UpdatedAt, &b.ErrorClass)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil //nolint:nilnil // absence IS the answer: the contract's state "none", not an error

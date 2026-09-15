@@ -105,9 +105,9 @@ func scanNoticeCase(row pgx.Row) (NoticeCase, error) {
 // when it asks for nothing in particular. A caller that wants closed cases has
 // to name them, so a screen cannot accidentally show a duty as owed because it
 // forgot to filter.
-func (s *Store) ListNoticeCases(ctx context.Context, states []NoticeState, limit int) ([]NoticeCase, error) {
+func (s *Store) ListNoticeCases(ctx context.Context, states []NoticeState, limit int, cursor string) ([]NoticeCase, storekit.Page, error) {
 	if err := requireDSRAdmin(ctx, principal.ActionRead); err != nil {
-		return nil, err
+		return nil, storekit.Page{}, err
 	}
 	if limit <= 0 || limit > noticeCaseListMax {
 		limit = noticeCaseListMax
@@ -115,7 +115,7 @@ func (s *Store) ListNoticeCases(ctx context.Context, states []NoticeState, limit
 	wanted := make([]string, 0, len(states))
 	for _, st := range states {
 		if !knownNoticeState(st) {
-			return nil, &ValidationError{Field: fieldState, Reason: "not a notice-case state"}
+			return nil, storekit.Page{}, &ValidationError{Field: fieldState, Reason: "not a notice-case state"}
 		}
 		wanted = append(wanted, string(st))
 	}
@@ -123,13 +123,13 @@ func (s *Store) ListNoticeCases(ctx context.Context, states []NoticeState, limit
 		wanted = unresolvedNoticeStates()
 	}
 	var out []NoticeCase
+	var page storekit.Page
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, `
-			SELECT`+noticeCaseColumns+`
-			  FROM privacy_notice_case
-			 WHERE state = ANY($1)
-			 ORDER BY due_at, id
-			 LIMIT $2`, wanted, limit)
+		sql, args, err := noticeCaseListQuery(wanted, cursor, limit)
+		if err != nil {
+			return err
+		}
+		rows, err := tx.Query(ctx, sql, args...)
 		if err != nil {
 			return err
 		}
@@ -141,9 +141,66 @@ func (s *Store) ListNoticeCases(ctx context.Context, states []NoticeState, limit
 			}
 			out = append(out, c)
 		}
-		return rows.Err()
+		if err := rows.Err(); err != nil {
+			return err
+		}
+		if len(out) <= limit {
+			return nil
+		}
+		out = out[:limit]
+		last := out[limit-1]
+		token, err := storekit.EncodeOpaque(noticeCaseCursor{DueAt: last.DueAt, ID: last.ID})
+		if err != nil {
+			return err
+		}
+		page = storekit.Page{HasMore: true, NextCursor: token}
+		return nil
 	})
-	return out, err
+	return out, page, err
+}
+
+// noticeCaseCursor is where a page of the queue stopped: the last row's
+// deadline and its id.
+//
+// BOTH, because the queue is ordered by both. The subject-request queue beside
+// this one pages on a bare id and can, since it orders by id alone; here an id
+// is not a position. Two duties can fall due in the same second, and a walk
+// resumed on id would skip every case whose deadline is later and whose id
+// happens to be smaller — silently, which is the shape of defect this queue
+// already had at a larger scale.
+type noticeCaseCursor struct {
+	DueAt time.Time `json:"due"`
+	ID    ids.UUID  `json:"id"`
+}
+
+// noticeCaseListQuery assembles the keyset-paged queue SQL and its args: the
+// state filter, an optional "after this deadline and id" arm, and the +1
+// over-fetch ListNoticeCases uses to tell a full page from a last one.
+//
+// The row comparison is spelled as a tuple rather than as an OR of two arms,
+// which is the same ordering the index reads and one fewer place to get the
+// tie-break wrong. A malformed cursor is the client's mistake and says so,
+// rather than answering an empty queue — a privacy officer told there is
+// nothing left to do is the one answer this route must never guess at.
+func noticeCaseListQuery(states []string, cursor string, limit int) (string, []any, error) {
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	sql := "SELECT" + noticeCaseColumns + storekit.SQLf(" FROM privacy_notice_case WHERE state = ANY($%d)", arg(states))
+	if cursor != "" {
+		after, err := storekit.DecodeOpaque[noticeCaseCursor](cursor)
+		// BOTH halves, not the id alone. The envelope proves the token is one
+		// of ours, not that it names a position in THIS queue: a created_at
+		// cursor from any other route shares the `id` field and decodes
+		// cleanly here, leaving the deadline at its zero value — which pages
+		// from the year zero and hands the officer the whole queue again as
+		// though it were their next page.
+		if err != nil || after.DueAt.IsZero() || after.ID.IsZero() {
+			return "", nil, &storekit.MalformedCursorError{}
+		}
+		sql += storekit.SQLf(" AND (due_at, id) > ($%d, $%d)", arg(after.DueAt), arg(after.ID))
+	}
+	sql += storekit.SQLf(" ORDER BY due_at, id LIMIT $%d", arg(limit+1))
+	return sql, args, nil
 }
 
 // GetNoticeCase reads one duty, for a surface that opens a single case rather

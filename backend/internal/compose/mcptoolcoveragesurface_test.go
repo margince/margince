@@ -464,13 +464,18 @@ func writeCoverageSurfaces(p *strings.Builder, r mcpToolCoverage) {
 	p.WriteString("\n")
 
 	p.WriteString("### What this page cannot see\n\n")
-	fmt.Fprintf(p, "**The shipped units add %d more tools to the same registry**, and this page "+
+	fmt.Fprintf(p, "**The shipped units add %d more MCP tools to the same registry**, and this page "+
 		"cannot price them.\n", r.Totals.UnitTools)
 	p.WriteString("A unit is its own Go module and the architecture forbids the core importing one, " +
 		"so the composed catalog is unreachable\n")
 	p.WriteString("from the package that generates this page. The names below come from what each " +
 		"unit published; the token cost is an\n")
 	p.WriteString("installation's own arithmetic. No use case requires any of them.\n\n")
+	p.WriteString("**Zero is not the same claim as \"a unit ships no operations.\"** A unit operation " +
+		"declaring `x-agent-access: human-only`\n")
+	p.WriteString("stays REST/UI-reachable but is never agent-reachable — it requests no MCP tool at " +
+		"all, so it carries no entry here to count\n")
+	p.WriteString("or price, on a vanilla install or otherwise (`docs/how-to/add-an-extension.md`).\n\n")
 	p.WriteString("| Tool | Unit |\n|---|---|\n")
 	for _, tool := range r.UnitTools {
 		fmt.Fprintf(p, "| `%s` | `%s` |\n", tool.Name, tool.Unit)

@@ -48,7 +48,7 @@ export function ExplainNumber({
             {money.rows.map((row) => (
               <li key={`${row.label}-${row.rateDate}`}>
                 <span className="t-caption">{row.label}</span>
-                <span className="t-mono">
+                <span className="t-num">
                   {formatMoney(
                     row.nativeAmountMinor,
                     row.nativeCurrency,

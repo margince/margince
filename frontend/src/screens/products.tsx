@@ -339,7 +339,7 @@ export function ProductsAdmin() {
             header: t("product.unitPrice"),
             sort: "unit_price_minor",
             cell: (p: Product) => (
-              <span className="t-mono">
+              <span className="t-num">
                 {formatMoney(p.unit_price_minor, p.currency, locale)}
               </span>
             ),

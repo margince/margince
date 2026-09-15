@@ -148,7 +148,7 @@ export const DeadWorkDark: Story = {
 // 480px (factlist.css) the two columns stop splitting and the term becomes a
 // LABEL above its value. That rule is what this story is here to show landing on
 // real content, because this card is the hardest case for it — the term is a
-// River job kind in mono with underscores and nothing to break on, and the value
+// River job kind with underscores and nothing to break on, and the value
 // is four pills that are always all four drawn, since a zero is a reading an
 // operator came for. What to check is that the pill row wraps inside the width it
 // has just been given, and that a kind and its counts still read as one row once

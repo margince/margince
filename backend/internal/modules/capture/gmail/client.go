@@ -82,9 +82,13 @@ type OAuth interface {
 	AuthCodeURL(state, redirectURI string) string
 }
 
-// sentLabelID is Gmail's system label for the mailbox owner's own sent mail.
-// System label ids are stable strings, not localized names.
-const sentLabelID = "SENT"
+// sentLabelID is Gmail's system label for the mailbox owner's own sent mail,
+// and draftLabelID the one for a message still being composed. System label ids
+// are stable strings, not localized names.
+const (
+	sentLabelID  = "SENT"
+	draftLabelID = "DRAFT"
+)
 
 // Message is one fetched Gmail message: the decoded RFC822 bytes plus the one
 // thing the bytes cannot honestly tell us — whether Gmail itself filed the
@@ -315,6 +319,14 @@ func (a *httpAPI) GetRaw(ctx context.Context, accessToken, msgID string) (Messag
 // why the T1 correspondence gate (ADR-0072 §1) reads this and not the header.
 func hasSentLabel(labelIDs []string) bool {
 	return slices.Contains(labelIDs, sentLabelID)
+}
+
+// hasDraftLabel reports whether Gmail filed this message under DRAFT — a
+// message the owner is still writing and has not sent. The provider's own word
+// for it, like SENT above: the RFC822 bytes of a draft are indistinguishable
+// from those of a message that went, so the header cannot tell us.
+func hasDraftLabel(labelIDs []string) bool {
+	return slices.Contains(labelIDs, draftLabelID)
 }
 
 // Watch registers a users.watch so Gmail publishes change notifications for

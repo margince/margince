@@ -47,10 +47,10 @@ type Contact = Readonly<{ contact_id: string; full_name: string }>;
 const COLUMN_CAP = 8;
 
 const BAND_LABELS: Record<StrengthBucket, MessageKey> = {
-  strong: "co.routeIn.band.strong",
-  moderate: "co.routeIn.band.some",
-  weak: "co.routeIn.band.faint",
-  none: "co.routeIn.band.unknown",
+  strong: "co.routeIn.bandBadge.strong",
+  moderate: "co.routeIn.bandBadge.some",
+  weak: "co.routeIn.bandBadge.faint",
+  none: "co.routeIn.bandBadge.unknown",
 };
 
 export function CoverageExplorer({

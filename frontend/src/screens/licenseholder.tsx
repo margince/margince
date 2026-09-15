@@ -115,9 +115,8 @@ export function LicenseHolderCard({
           />
           <SettingRow
             label={t("license.holder.id")}
-            // The support reference. Monospace because somebody reads it aloud
-            // or copies it into a ticket, and a proportional font turns a
-            // character into a guess.
+            // The support reference, verbatim: somebody reads it aloud or
+            // copies it into a ticket.
             value={<span className="license-id">{holder.id}</span>}
             control={null}
           />

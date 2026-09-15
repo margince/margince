@@ -48,6 +48,12 @@ type binding struct {
 	// into that digest would regenerate every stored brief in the installation
 	// through paid models on every key rotation.
 	credentialVersion string
+	// generation identifies THIS binding among the ones this Router has
+	// served, and it is what the result cache scopes its entries to. It is
+	// deliberately not derived from the config: rebinding to an identical
+	// config still rebuilds every client, and two runs of the same config
+	// are still two different sets of provider connections.
+	generation uint64
 }
 
 // binding returns the configuration this call must serve itself from. Load it
@@ -111,9 +117,20 @@ func (r *Router) Rebind(cfg RoutingConfig) error {
 		clients: clients, embedder: embedder,
 		profile: cfg.Profile, routeMeta: embedInclusiveMeta(cfg),
 	}.withConfigSnapshot(cfg)
-	r.bound.Store(&next)
+	r.install(next)
 	r.cache.clear()
 	return nil
+}
+
+// install publishes a binding, stamping it with the generation that scopes the
+// result cache. Every assembly path goes through it, so none can publish a
+// binding sharing a generation with the one it replaces — which would let an
+// answer the old binding produced be read back under the new one.
+//
+// Held by: TestOnlyOneFunctionPublishesARouterBinding (backend/gates/onebindingpublisher_test.go)
+func (r *Router) install(next binding) {
+	next.generation = r.generations.Add(1)
+	r.bound.Store(&next)
 }
 
 // CredentialVersion is a digest of the provider credentials this Router's

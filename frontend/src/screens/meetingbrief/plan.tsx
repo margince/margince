@@ -242,7 +242,7 @@ export function LikelyAsks({
           <div className="mb-ask">
             <div className="mb-ask-head">
               <strong>{ask.question}</strong>
-              <Badge tone={ask.relevance === "high" ? "warn" : undefined} quiet>
+              <Badge tone={ask.relevance === "high" ? "warn" : undefined}>
                 {t(`contact.meeting.relevance.${ask.relevance}`)}
               </Badge>
             </div>
@@ -329,7 +329,7 @@ export function Scenarios({ plan }: Readonly<{ plan: MeetingPlan }>) {
       {plan.scenarios.map((scenario) => (
         <PanelRow key={scenario.label}>
           <div className="mb-path-row">
-            <Badge quiet>{scenario.label}</Badge>
+            <Badge>{scenario.label}</Badge>
             <span>{scenario.play}</span>
           </div>
         </PanelRow>

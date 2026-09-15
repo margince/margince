@@ -25,8 +25,8 @@ import {
 //
 // The fallback is the half worth pinning: the roster walk is bounded and the
 // list it walks excludes archived members, so a name that cannot be resolved
-// must go back to "typed by a person" rather than forward to the raw uuid.
-// "typed by 3f2b8c…" is not more information than "typed by a person", it is the
+// must go back to "Typed by a person" rather than forward to the raw uuid.
+// "Typed by 3f2b8c…" is not more information than "Typed by a person", it is the
 // same non-answer with a reader-hostile spelling.
 
 type Company = components["schemas"]["Company"];
@@ -178,13 +178,16 @@ function stubRosterRefused() {
   );
 }
 
-// The tag is one span carrying "typed by" and the name as sibling text nodes, so
-// the reading a human gets is the span's whole text — asserting on the name alone
+// The tag is one badge carrying "Typed by" and the name as sibling text nodes, so
+// the reading a human gets is the badge's whole text — asserting on the name alone
 // would pass on markup that never says what the name is doing there.
 function provenanceText(): string {
-  const tag = document.querySelector(".provenance-human");
+  const tag = document.querySelector(".co-record-provenance .badge");
   if (!tag) {
-    throw new Error("the identity line rendered no human provenance tag");
+    throw new Error("the identity line rendered no provenance badge");
+  }
+  if (tag.classList.contains("badge-ai")) {
+    throw new Error("a human-captured record carries the agent tone");
   }
   return tag.textContent?.replace(/\s+/g, " ").trim() ?? "";
 }
@@ -220,18 +223,18 @@ describe("who wrote this record", () => {
     ]);
     renderLine();
 
-    await waitFor(() => expect(provenanceText()).toBe("typed by Sofia Meier"));
-    expect(screen.queryByText("typed by a person")).toBeNull();
+    await waitFor(() => expect(provenanceText()).toBe("Typed by Sofia Meier"));
+    expect(screen.queryByText("Typed by a person")).toBeNull();
   });
 
   it("says a contact wrote it, not a uuid, when the roster cannot resolve them", async () => {
     stub([{ id: "u-owner", display_name: "Mira Voss" }]);
     renderLine();
 
-    expect(await screen.findByText("typed by a person")).toBeTruthy();
+    expect(await screen.findByText("Typed by a person")).toBeTruthy();
     // The id must not reach the page in any form — neither whole nor truncated,
     // which is what the generic record reference would have rendered.
-    expect(provenanceText()).toBe("typed by a person");
+    expect(provenanceText()).toBe("Typed by a person");
     expect(document.body.textContent).not.toContain("u-author");
   });
 });

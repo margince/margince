@@ -55,6 +55,7 @@ export const Setup: Story = {
         jsonResponse({
           window: "6m",
           estimated_messages: 1234,
+          after_date: "2026-01-23",
           computed_at: "2026-07-23T10:00:00Z",
         }),
     },
@@ -161,7 +162,7 @@ export const RestartAfterCancel: Story = {
     await userEvent.click(
       await canvas.findByRole("button", { name: /Start another import/ }),
     );
-    await canvas.findByText(/~890/);
+    await canvas.findByText("890 messages in that period.");
   },
 };
 
@@ -225,4 +226,28 @@ export const Narrowing: Story = {
     );
     await canvas.findByText(/only be widened/i);
   },
+};
+
+export const CappedHistory: Story = {
+  render: panelStory(
+    "gmail",
+    { state: "none" },
+    {
+      "POST /connectors/gmail/backfill/preview": () =>
+        jsonResponse({
+          window: "6m",
+          after_date: "2026-01-23",
+          computed_at: "2026-07-23T10:00:00Z",
+          estimated_messages: 20000,
+          estimate_is_floor: true,
+          estimated_cost_minor: 300,
+          currency: "USD",
+        }),
+    },
+  ),
+};
+
+export const CappedHistoryDark: Story = {
+  ...CappedHistory,
+  globals: { theme: "dark" },
 };

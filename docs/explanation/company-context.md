@@ -63,11 +63,17 @@ round-trip reconstructs the same scene.
 The creator's rail reads **Read · Confirm · Basis · Voice · Connect**. Basis is
 what the setup settles right after the company is confirmed and before any step
 about the contact answering: the installation's reporting basis — base currency
-and reporting timezone — and what the agent may change on its own. An admin can
-change any of it later in Settings, and a currency a deal has already frozen is
-shown locked there as it is here. Connect is the last stop: leaving it writes
-completion and plays the handoff, as leaving the team act does for a creator who
-will not work in Margince themselves.
+and reporting timezone. An admin can change the reporting basis later in
+Settings; a currency a deal has already frozen is shown locked there as it is
+here. Connect is the last stop: leaving it writes completion and plays the
+handoff, as leaving the team act does for a creator who will not work in Margince
+themselves.
+
+Personal automatic-change preferences stay in Settings → Agents. All three
+default to on when no policy is stored. Existing stored modes are preserved,
+including modes recorded with decision history before these defaults changed:
+those rows cannot be distinguished from deliberate opt-outs. Eligible pending
+proposals follow the effective mode when the next automatic pass runs.
 
 **An invited member walks the personal stops.** Their company and its basis are
 already settled, so their rail reads Voice · Connect and the restore plan lands

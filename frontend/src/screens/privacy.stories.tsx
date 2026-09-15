@@ -118,7 +118,7 @@ export const RowExpanded: Story = {
 };
 
 // The narrow render of the row privacy.css's `.dsr-row-toggle` rule exists for:
-// a kind badge, a mono subject reference, a status badge, a due date and an
+// a kind badge, a subject reference, a status badge, a due date and an
 // overdue badge are five nowrap children in one flex line, and before the wrap
 // they pushed the card's scroll width past the phone viewport. That comment
 // describes a fix no story has ever pictured. Expanded, because the case-work
@@ -212,7 +212,7 @@ export const LegalHoldBlocked: Story = {
 // that this is a documented refusal and not a routine note, so if the danger
 // surface flattens into the card behind it the refusal stops reading as one. The
 // row underneath is still expanded, so the callout is judged against the panel,
-// the transition verbs and the mono subject reference it interrupts.
+// the transition verbs and the subject reference it interrupts.
 export const LegalHoldBlockedDark: Story = {
   globals: { theme: "dark" },
   render: inbox(legalHoldRoutes),

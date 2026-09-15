@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/authz"
@@ -88,6 +89,49 @@ func TestInvokeGatesBeforeHandle(t *testing.T) {
 	var unknown *UnknownToolError
 	if _, err := r.Invoke(ctx, "nope", nil); !errors.As(err, &unknown) {
 		t.Fatalf("unknown tool → %v", err)
+	}
+}
+
+// TestInvokeRefusesAnAgentPrincipalOnAHumanOnlyTool: RequireHuman runs before
+// splitReserved/tightened/Admit — a call with no authority to be made is
+// refused before anything about its arguments is even parsed.
+func TestInvokeRefusesAnAgentPrincipalOnAHumanOnlyTool(t *testing.T) {
+	r := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}))
+	stub := &fakeTool{spec: mcp.ToolSpec{Name: "human_only_op", Title: "human_only_op", Version: testToolVersion, Description: describedForRegistration, InputSchema: json.RawMessage(`{"type":"object"}`), HumanOnly: true}}
+	r.Register(stub)
+
+	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx = principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalAgent, ID: "agent:t", OnBehalfOf: ids.NewV7(),
+		Scopes: principal.NewScopeSet(principal.ScopeRead),
+	})
+	_, err := r.Invoke(ctx, "human_only_op", json.RawMessage(`{}`))
+	if err == nil || !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("an Agent principal calling a human-only tool must be refused permission_denied, got %v", err)
+	}
+	if stub.handled {
+		t.Fatal("Handle ran despite the Agent principal being refused")
+	}
+}
+
+// TestInvokeAdmitsAHumanPrincipalOnAHumanOnlyTool: a human principal is
+// unaffected — the same shape the REST path serves today.
+func TestInvokeAdmitsAHumanPrincipalOnAHumanOnlyTool(t *testing.T) {
+	r := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}))
+	stub := &fakeTool{spec: mcp.ToolSpec{Name: "human_only_op", Title: "human_only_op", Version: testToolVersion, Description: describedForRegistration, InputSchema: json.RawMessage(`{"type":"object"}`), HumanOnly: true}}
+	r.Register(stub)
+
+	human := ids.NewV7()
+	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx = principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + human.String(), OnBehalfOf: human,
+		Scopes: principal.NewScopeSet(principal.ScopeRead),
+	})
+	if _, err := r.Invoke(ctx, "human_only_op", json.RawMessage(`{}`)); err != nil {
+		t.Fatalf("a human principal must reach the handler: %v", err)
+	}
+	if !stub.handled {
+		t.Fatal("Handle did not run for a human principal")
 	}
 }
 

@@ -231,7 +231,6 @@
   overflow: hidden;
   max-width: 100%;
   color: var(--textContent);
-  font-family: var(--f-mono);
   font-size: var(--fs-meta);
   font-weight: var(--fw-medium);
 }
@@ -418,20 +417,17 @@
 .ob-scan-cost-line {
   margin: 0;
   min-height: 15px;
-  font-family: var(--f-mono);
   font-variant-numeric: tabular-nums;
 }
 /* Warn, not the line's own meta tone: the figure beside it is missing a call
    the provider billed with no effective rate, so it reads as a caveat on the
    number rather than more of the same disclosure. */
 .ob-scan-cost-unpriced {
-  font-family: var(--f-body);
   font-variant-numeric: normal;
   color: var(--warnText);
 }
 .ob-scan-cost-model {
   margin: 0;
-  font-family: var(--f-mono);
   overflow-wrap: anywhere;
 }
 
@@ -484,7 +480,6 @@
   min-width: 0;
   overflow: hidden;
   color: var(--textContent);
-  font-family: var(--f-mono);
   font-size: var(--fs-meta);
   text-overflow: ellipsis;
   white-space: nowrap;

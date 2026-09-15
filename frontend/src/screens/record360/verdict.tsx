@@ -171,7 +171,7 @@ export function Proof({
         {label}
         {count ? (
           <span className="r360-rests-count">
-            <span className="t-mono">{formatNumber(items.length, locale)}</span>{" "}
+            <span className="t-num">{formatNumber(items.length, locale)}</span>{" "}
             {/* The unit as a word, not a bare figure. "What this rests on 2"
                 asks the reader to guess what was counted; the count is only
                 worth putting on a shut block if it says what it counts. */}
@@ -232,7 +232,7 @@ export function SignalStrip({ signals }: Readonly<{ signals: Signal[] }>) {
           <li key={signal.key}>
             <Badge tone={signal.tone}>{signal.label}</Badge>
             {signal.figure ? (
-              <span className="t-mono r360-figure">{signal.figure}</span>
+              <span className="r360-figure">{signal.figure}</span>
             ) : null}
           </li>
         ))}

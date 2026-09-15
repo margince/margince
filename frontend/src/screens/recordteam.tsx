@@ -28,6 +28,7 @@ export function RecordTeam({
   recordType,
   recordId,
   readOnly = false,
+  bare = false,
 }: Readonly<{
   recordType: AssignmentRecordType;
   recordId: string;
@@ -37,6 +38,12 @@ export function RecordTeam({
   // whatever this says, and a second implementation of the gate here is the
   // defect rather than the protection.
   readOnly?: boolean;
+  // Drawn as the body of a section something else names, rather than as a
+  // panel of its own. The company rail is ONE pane of headed slices, and a
+  // titled card standing among them read as a box inside the pane — the one
+  // shape the design language refuses. The deal and project pages, columns of
+  // cards, keep the panel.
+  bare?: boolean;
 }>) {
   const t = useT();
   const { data, isPending, isError } = useRecordAssignments(
@@ -53,17 +60,22 @@ export function RecordTeam({
   // list that could not be fetched invites a duplicate of a responsibility
   // that may already be there.
   const canWrite = !readOnly && !isPending && !isError;
-  return (
-    <Panel
-      title={t("assignments.title")}
-      actions={
-        canWrite ? (
-          <Button variant="ghost" onClick={() => setEditing("new")}>
-            {t("assignments.add")}
-          </Button>
-        ) : undefined
-      }
-    >
+  const assign = canWrite ? (
+    <Button small={bare} variant="ghost" onClick={() => setEditing("new")}>
+      {t("assignments.add")}
+    </Button>
+  ) : undefined;
+  const modal = (
+    <RecordTeamAssign
+      open={editing !== null}
+      onClose={() => setEditing(null)}
+      recordType={recordType}
+      recordId={recordId}
+      existing={editing === "new" ? undefined : (editing ?? undefined)}
+    />
+  );
+  const body = (
+    <>
       <PanelBody>
         <p className="t-caption mute">{t("assignments.noAccessNote")}</p>
         {/* A refused end is the one failure here a reader must not have to
@@ -100,13 +112,19 @@ export function RecordTeam({
           </ul>
         )}
       </PanelBody>
-      <RecordTeamAssign
-        open={editing !== null}
-        onClose={() => setEditing(null)}
-        recordType={recordType}
-        recordId={recordId}
-        existing={editing === "new" ? undefined : (editing ?? undefined)}
-      />
+      {/* Under the rows in the bare shape too, where the panel's own verb band
+          would have put it: the rail's other slices end in their verb the same
+          way, at the same size. */}
+      {bare && assign && <div className="card-actions">{assign}</div>}
+      {modal}
+    </>
+  );
+  if (bare) {
+    return body;
+  }
+  return (
+    <Panel title={t("assignments.title")} actions={assign}>
+      {body}
     </Panel>
   );
 }

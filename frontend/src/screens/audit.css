@@ -56,7 +56,7 @@
  * 11px — the size that most needs the AA token, not the least. */
 .audit-when {
   margin-left: auto;
-  font-family: var(--f-mono);
+  font-variant-numeric: tabular-nums;
   font-size: var(--fs-eyebrow);
   color: var(--textMeta);
 }

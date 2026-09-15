@@ -135,7 +135,7 @@ function AcquisitionSourceRow({
       {/* The KEY, shown because it is what deals actually store and what a
           report groups by — a reader renaming the label needs to see that the
           thing underneath does not move. */}
-      <span className="t-mono t-caption lead-vocab-key">{source.key}</span>
+      <span className="t-caption lead-vocab-key">{source.key}</span>
       <span className="lead-vocab-flags">
         {source.system && <Badge>{t("acqSources.builtIn")}</Badge>}
         <Switch

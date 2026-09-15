@@ -249,7 +249,6 @@ export const brandt = {
   display_name: "Brandt Automotive GmbH",
   industry: "Automotive",
   size_band: "201-500",
-  classification: "customer",
   writable: true,
   captured_by: "human:u1",
   source: "manual",

@@ -95,7 +95,6 @@
 
 .confirm-receipt-ref {
   margin-inline-start: var(--space-2);
-  font-family: var(--f-mono);
   background: var(--bgChip);
   border-radius: var(--r-sm);
   padding: 0 var(--space-1);

@@ -57,6 +57,16 @@ func CarriesBody(method string) bool {
 	return false
 }
 
+// isMutatingMethod reports whether method changes installation state — the
+// same four methods the human seat ceiling classifies a mutation by.
+func isMutatingMethod(method string) bool {
+	switch method {
+	case http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete:
+		return true
+	}
+	return false
+}
+
 // validateMethodAuthority holds the method and the requested scope to each
 // other. It is the rule that makes the method authoritative again, and it is
 // load-bearing rather than tidy: the human seat ceiling classifies a mutation by

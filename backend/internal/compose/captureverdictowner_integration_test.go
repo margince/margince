@@ -32,7 +32,7 @@ func TestAnAdvisorVerdictMakesTheRecordAndKeepsItTheOwnersAlone(t *testing.T) {
 	dispositionID := seedPendingDisposition(t, e, "k.bauer@kanzlei.example", "kanzlei.example", activityID)
 
 	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindAdvisor}}
-	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
@@ -65,7 +65,7 @@ func TestAPersonalVerdictMakesNoRecordAtAll(t *testing.T) {
 	dispositionID := seedPendingDisposition(t, e, "s.renner@webmail.example", "webmail.example", activityID)
 
 	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindPersonal}}
-	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
