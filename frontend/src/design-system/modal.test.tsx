@@ -389,16 +389,25 @@ describe("a dialog that is leaving", () => {
   // dialog that left the tree for one render would put its CHILDREN back new,
   // re-firing their reads and replaying their entry animations on a surface
   // that is leaving.
-  let mounts = 0;
-  function Probe() {
+  //
+  // The counter belongs to the ONE test that reads it and is handed in, rather
+  // than living beside this component where every other test in the file shares
+  // its identity. A count that survives the test that owns it is a fact about
+  // the whole file, and a fact about the whole file is what a full run changes
+  // and an isolated run does not.
+  function Probe({ mounted }: Readonly<{ mounted: { count: number } }>) {
     useEffect(() => {
-      mounts += 1;
-    }, []);
+      mounted.count += 1;
+    }, [mounted]);
     return <p>Body</p>;
   }
 
-  it("never leaves the tree between open and closing", async () => {
-    mounts = 0;
+  // Synchronous, and deliberately so: every fact below is settled by the commit
+  // `render` and `rerender` each flush inside `act`. An `async` test with no
+  // `await` in it still hands the runner a microtask boundary to schedule
+  // around, and there is nothing here that needs one.
+  it("never leaves the tree between open and closing", () => {
+    const mounted = { count: 0 };
     const exit = new Promise<void>(() => undefined);
     const animations = vi
       .spyOn(HTMLElement.prototype, "getAnimations")
@@ -412,19 +421,26 @@ describe("a dialog that is leaving", () => {
       const withProbe = (open: boolean) => (
         <Modal open={open} onClose={() => undefined} labelledBy="p">
           <h2 id="p">Log activity</h2>
-          <Probe />
+          <Probe mounted={mounted} />
         </Modal>
       );
-      const { rerender } = render(withProbe(true));
-      const box = screen.getByRole("dialog");
-      expect(mounts).toBe(1);
+      const { baseElement, rerender } = render(withProbe(true));
+      // Scoped to THIS render's own root rather than the document: a dialog is
+      // portalled to the body, which is also where anything another test in
+      // this file left would be, and a document-wide query answers with
+      // whichever of them the DOM holds first.
+      const box = baseElement.querySelector('[role="dialog"]');
+      expect(box).not.toBeNull();
+      expect(mounted.count).toBe(1);
 
       rerender(withProbe(false));
 
+      // Read off the DOM rather than by role: a leaving dialog is deliberately
+      // out of the accessibility tree, and the subject here is the NODE.
       // Answered during the render that carried the flip, so React never got a
       // commit saying this dialog was gone.
-      expect(screen.getByRole("dialog")).toBe(box);
-      expect(mounts).toBe(1);
+      expect(baseElement.querySelector('[role="dialog"]')).toBe(box);
+      expect(mounted.count).toBe(1);
     } finally {
       animations.mockRestore();
     }
@@ -452,10 +468,14 @@ describe("a dialog that is leaving", () => {
 
       const overlay = document.querySelector(".overlay");
       expect(overlay?.getAttribute("data-state")).toBe("closing");
-      // Painted, and nothing else: no tab stop, no accessible node, no hit
-      // target. A dialog mid-exit that still took a click would swallow the
-      // first press meant for the page it is uncovering.
+      // Painted, and nothing else: no tab stop, no hit target, and no ROLE. A
+      // dialog mid-exit that still took a click would swallow the first press
+      // meant for the page it is uncovering; one that still answered to
+      // "dialog" would be a second dialog for as long as the exit lasts, which
+      // is what a verb opening the next dialog straight from this one finds.
       expect(overlay?.hasAttribute("inert")).toBe(true);
+      expect(overlay?.getAttribute("aria-hidden")).toBe("true");
+      expect(screen.queryByRole("dialog")).toBeNull();
       if (overlay !== null) {
         fireEvent.click(overlay);
       }

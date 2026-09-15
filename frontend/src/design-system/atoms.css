@@ -632,9 +632,18 @@
 }
 .modal-drawer {
   width: clamp(320px, 36vw, 560px);
-  /* Of the overlay's CONTENT box, which is the viewport less the gap above. */
-  height: 100%;
-  max-height: 100%;
+  /* The glass less the gap it floats in, as a LENGTH, and it has to be one.
+     `height: 100%` is 100% of the overlay's grid row, and that row is
+     auto-sized: it stretches to the TALLER of the viewport and the drawer's own
+     content. A meeting brief with more in it than fits made the row 1321px on
+     an 800px screen, took its 100% of that, and hung its last third below the
+     glass — where the clip below put it permanently out of reach, because the
+     scrolling band inside had been given nothing to scroll. A percentage cannot
+     bound a box whose own content is what sizes the thing it is a percentage
+     OF. The `--space-4` here is the same gap `.overlay-right` pays as padding
+     above; the two are one measurement and have to move together. */
+  height: calc(100dvh - var(--space-4) * 2);
+  max-height: calc(100dvh - var(--space-4) * 2);
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-pop);
   padding: var(--space-5);
