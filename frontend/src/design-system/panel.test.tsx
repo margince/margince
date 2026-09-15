@@ -462,7 +462,7 @@ describe("panel.css is the only sheet that shapes the head band", () => {
     const inside = bandRules(`
       .ext-unit > .panel-head > .ext-unit-actions { flex: 0 1 auto; }
       .panel-head-text { gap: 0; }
-      .panel-head-sub { font-size: var(--fs-meta); }
+      .panel-head-sub { color: var(--textPrimary); }
     `);
     expect(inside).toEqual([]);
   });
@@ -473,8 +473,8 @@ describe("panel.css is the only sheet that shapes the head band", () => {
   // would fail a sheet that never touched a panel.
   it("reads a title rule as the title, wherever it hangs", () => {
     const css = `
-      .co-glance-cols .panel > .panel-head .panel-title { font-size: var(--fs-h2); }
-      .rmap-panel-title { font-size: var(--fs-h3); }
+      .co-glance-cols .panel > .panel-head .panel-title { font-family: var(--f-body); }
+      .rmap-panel-title { font-family: var(--f-body); }
       .pe-memory .panel-head .panel-title:hover { color: var(--accent); }
     `;
     expect(bandRules(css)).toEqual([]);

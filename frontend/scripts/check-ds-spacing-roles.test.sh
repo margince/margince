@@ -20,7 +20,10 @@
 #      it carries spacing, or the gate has quietly become a second copy of a
 #      design system it will stop tracking;
 #   4. the unit tier is read to the bottom. A gate that reads a smaller tree
-#      than it claims reports PASS and there is no failing assertion to notice.
+#      than it claims reports PASS and there is no failing assertion to notice;
+#      and the sized arm sleeps ONLY when the tier declares no type, so the two
+#      readings of that question — declarations in the sheets, a corpus out of
+#      the scanner — have to agree or the gate fails closed.
 #
 # Usage: bash frontend/scripts/check-ds-spacing-roles.test.sh
 
@@ -326,6 +329,58 @@ elif ! grep -q "corpus is empty" "$TMP/out"; then
   sed 's/^/      /' "$TMP/out" >&2
 fi
 
+# The sized arm sleeps when the tier declares no type at all, which is the state
+# the type reset left it in: role hooks with no rules on them. An empty sized
+# corpus is then the truth about the tier rather than a scanner that stopped
+# reading, so the gate says so in one line and holds only the spaced corpus.
+CORE="$TMP/dormant-sized-arm"
+build_fixture "$CORE"
+cat >"$CORE/design-system/atoms.css" <<'CSS'
+.panel-head {
+  padding: 0 var(--padPanel);
+}
+.novel-primitive {
+  gap: var(--gapActions);
+}
+/* A role hook with no rule on it yet. The comment is the second half of the
+   case: the rule that will set font-size: here is a later change, and prose
+   about a declaration must not be read as one and wake the arm. */
+.t-caption {
+  font: inherit;
+}
+CSS
+if ! MARGINCE_CORE_DIR="$CORE" MARGINCE_EXT_DIR="$TMP/no-units" "$GATE" >"$TMP/out" 2>&1; then
+  fail "the gate failed a design system that spaces primitives and declares no type:"
+  sed 's/^/      /' "$TMP/out" >&2
+elif ! grep -q "the sized arm is dormant" "$TMP/out"; then
+  fail "the gate slept the sized arm without saying so:"
+  sed 's/^/      /' "$TMP/out" >&2
+fi
+
+# ...and it sleeps ONLY then. A tier that DOES declare type while the sized
+# corpus comes out empty is a scanner that has stopped reading — here the
+# declaration sits on a class this tier does not own on its own, which is the
+# one shape that produces a `sized` claim and no corpus entry.
+CORE="$TMP/type-without-a-corpus"
+build_fixture "$CORE"
+cat >"$CORE/design-system/atoms.css" <<'CSS'
+.panel-head {
+  padding: 0 var(--padPanel);
+}
+.novel-primitive {
+  gap: var(--gapActions);
+}
+.host-surface .x-guest {
+  font-size: 13px;
+}
+CSS
+if MARGINCE_CORE_DIR="$CORE" MARGINCE_EXT_DIR="$TMP/no-units" "$GATE" >"$TMP/out" 2>&1; then
+  fail "the gate passed with type declared in the tier and an empty sized corpus — the arm would clear every screen"
+elif ! grep -q "corpus is empty" "$TMP/out"; then
+  fail "the gate failed on a type declaration with no corpus without saying so:"
+  sed 's/^/      /' "$TMP/out" >&2
+fi
+
 CORE="$TMP/no-sheets"
 mkdir -p "$CORE/design-system"
 cp "$TMP/actions-rung/design-system/tokens.css" "$CORE/design-system/tokens.css"
@@ -348,4 +403,4 @@ if [[ "$FAILURES" -ne 0 ]]; then
   exit 1
 fi
 
-echo "==> DS spacing roles: both arms fire, the exempt shapes stay silent, the unit tier is read at both depths, and the primitive corpus is read from the design system"
+echo "==> DS spacing roles: both arms fire, the exempt shapes stay silent, the unit tier is read at both depths, the primitive corpus is read from the design system, and the sized arm sleeps only while the tier declares no type"

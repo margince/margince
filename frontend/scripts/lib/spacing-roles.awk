@@ -105,9 +105,9 @@ function spacing_prop(p) {
 # re-sizes `.badge` or re-tracks `.t-label` has made the same second opinion a
 # re-spaced `.panel-head` is. Each kind is owned separately — a class the tier
 # only sizes has no interval a screen could contradict — so the two arms read
-# two corpora. The vocabulary of a size is held elsewhere (type.test.ts, one
-# ramp) and its spelling elsewhere again (type-one-spelling.test.ts); this is
-# only the question of WHOSE it is.
+# two corpora. This is only the question of WHOSE a size is; what sizes exist at
+# all is the root's, and a tier declaring none simply yields an empty `sized`
+# set, which the gate reads as a dormant arm rather than as a broken reader.
 function type_prop(p) {
   return p ~ /^(font-size|line-height|letter-spacing)$/
 }

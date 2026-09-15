@@ -226,7 +226,7 @@ describe("Badge", () => {
     it("sets its label in sentence case at normal tracking, and nowhere else", () => {
       const resets: Record<string, string[]> = {
         "text-transform": ["none"],
-        "letter-spacing": ["normal", "0", "var(--tracking-normal)"],
+        "letter-spacing": ["normal", "0"],
       };
       const shouted = rules.flatMap(({ selector, declarations }) =>
         Object.entries(resets)
