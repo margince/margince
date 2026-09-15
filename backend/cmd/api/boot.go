@@ -30,6 +30,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/netguard"
 	"github.com/margince/margince/backend/internal/platform/overlaybudget"
 	"github.com/margince/margince/backend/internal/shared/buildinfo"
+	"github.com/margince/margince/backend/internal/shared/runtimeenv"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -55,7 +56,14 @@ import (
 //
 // The pool is closed on a failed assertion rather than handed back for the
 // caller to close, so a boot that stops here leaves no connections behind.
-func boundPool(ctx context.Context, dsn string) (*pgxpool.Pool, error) {
+func boundPool(ctx context.Context, dsn string, env runtimeenv.Environment) (*pgxpool.Pool, error) {
+	// Before anything dials: a production installation whose Postgres DSN
+	// cannot guarantee TLS refuses here rather than serving a single request
+	// over it. compose/dbtls.go carries why "cannot guarantee" rather than
+	// "did not request".
+	if err := compose.AssertDatabaseTLS(dsn, env); err != nil {
+		return nil, err
+	}
 	pool, err := database.NewPool(ctx, dsn)
 	if err != nil {
 		return nil, err
