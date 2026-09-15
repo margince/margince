@@ -207,7 +207,7 @@ scales with headcount instead of needing a manual bump on every hire. With no
 eligible user the calculation floors at one.
 
 - *Growing startup*: 20 reps today, hiring 10 more next quarter — the budget
-  grows itself as people get added, nobody has to remember to bump a number.
+  grows itself as seats get added, nobody has to remember to bump a number.
 - *Seasonal contractors*: 15 temp reps added for a busy season, deactivated
   after — the pool expands and contracts with who's actually active, so
   nobody overpays for AI capacity during the quiet months.
@@ -221,14 +221,14 @@ per-user value underneath it — clearing it restores what was there before, so
 this is a toggle with memory, not a one-way migration.
 
 - *Finance wants a hard ceiling*: "at most N tokens this month, period" —
-  regardless of whether the team is 5 people or 50. (Cost is priced read-side,
+  regardless of whether the team has 5 seats or 50. (Cost is priced read-side,
   never the gate itself — see Cost, below — so the ceiling is always named in
   tokens, never dollars.) A fixed total is a budget line item, not a per-seat
   formula finance has to recompute.
 - *Cost control after a spike*: usage got surprisingly high one month; an
   admin caps it at a fixed number while investigating, without discarding the
   per-user rate that was working before.
-- *Small team, heavy AI users*: a 3-person team running lots of automated
+- *Small team, heavy AI users*: a 3-seat team running lots of automated
   scans/voice builds gets a tiny pool under Mode 1 (3 × the per-user rate); a
   fixed total lets them size the budget to actual usage instead of headcount.
 - *Enterprise contract terms*: a customer's contract names a flat monthly
