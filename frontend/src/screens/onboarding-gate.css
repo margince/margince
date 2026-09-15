@@ -65,7 +65,7 @@
   border: 1px solid var(--borderControl);
   border-radius: var(--r-md);
   background: var(--bgElevated);
-  box-shadow: var(--shadow-card);
+  box-shadow: var(--shadow-rest);
   transition:
     border-color 0.15s,
     box-shadow 0.15s;

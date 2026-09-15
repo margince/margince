@@ -60,6 +60,10 @@
      and the field beside it share one token and land on one line. */
   line-height: 1;
   min-block-size: var(--control-h);
+  /* The one resting layer, so a verb has a top side. Every variant carries a
+     fill — the ghost's is the pane — except `link`, which is text and takes it
+     straight back off below. */
+  box-shadow: var(--shadow-rest);
   /* Named properties, not `all`. `transition: <time>` alone is the shorthand
      for `transition-property: all`, which put min-block-size, padding, width
      and font-size on a timer too — so a button whose label changed ("Save" →
@@ -137,6 +141,9 @@
 .btn:focus-visible {
   outline: var(--focus-ring);
   outline-offset: 2px;
+  /* Pressed in like every other interaction — the ring is drawn outside the
+     box and does not stand in for the layer the way a field's glow does. */
+  box-shadow: none;
 }
 /* An icon a caller drops into a button arrives from lucide at its own default
    of 24px, which is taller than the 13.5px label beside it — 31 call sites
@@ -353,6 +360,15 @@
 .iconbtn:active:not(:disabled) {
   transform: translateY(1px);
   transition-duration: var(--dur-tap);
+}
+/* The other half of the press, and the half a hover already starts: the
+   resting layer is the gap between the control and the page, so dropping it
+   is the control going INTO the page rather than chrome arriving around it.
+   `:not(:disabled)` for the same reason the travel above excludes it — a
+   control refusing the press is still at rest, and keeps its layer. */
+.btn:hover:not(:disabled),
+.btn:active:not(:disabled) {
+  box-shadow: none;
 }
 .iconbtn:active:not(:disabled) {
   background: var(--bgCard);
