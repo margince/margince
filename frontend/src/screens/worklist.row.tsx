@@ -99,8 +99,12 @@ export function WorklistRow({
   onSelect,
   onReview,
   onOpenEmail,
+  context,
 }: Readonly<{
   item: WorklistItem;
+  /** The way into what this row is ABOUT, drawn among its verbs. The Brief
+   *  has no pane beside its list, so its focus rows open a drawer instead. */
+  context?: ReactNode;
   // Whose queue this row is on, empty for the reader's own. It names the
   // contact a reassignment moves work AWAY from, which on the reader's own
   // queue is the reader — ReassignControl resolves that rather than this
@@ -292,6 +296,7 @@ export function WorklistRow({
           primary={answer.primary}
           equals={answer.equals}
           onReview={onReview}
+          context={context}
         />
         {/* An answer that is not a VERB: a duplicate pair, whose two buttons
             each name the record they keep and cannot leave the list that names

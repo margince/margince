@@ -152,14 +152,12 @@ function PersonalMorning({
       : "ready";
   return (
     <>
-      <BriefFeed
-        day={day}
-        onContext={(item) => setSelected(`${item.source}-${item.id}`)}
-        state={state}
-        changed={changedSinceBrief(day)}
-        refreshFailed={query.isRefetchError}
-        onRetry={() => void query.refetch()}
-      />
+      {/* The figures FIRST, then the work: what the day holds as five readings
+          under the greeting, and the ranked list under those — the order every
+          page with figures reads in, and the order the opening sentence
+          promises ("First: … Then 5 more"). The overview also carries what the
+          read could not see and when it was assembled, because both qualify
+          the figures before they qualify the rows. */}
       {day && (
         <div className="brief-overview">
           <BriefReadingsStrip day={day} />
@@ -184,6 +182,14 @@ function PersonalMorning({
           </p>
         </div>
       )}
+      <BriefFeed
+        day={day}
+        onContext={(item) => setSelected(`${item.source}-${item.id}`)}
+        state={state}
+        changed={changedSinceBrief(day)}
+        refreshFailed={query.isRefetchError}
+        onRetry={() => void query.refetch()}
+      />
       <PageZones
         shape="aside"
         className="brief-followthrough"

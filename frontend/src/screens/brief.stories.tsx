@@ -198,7 +198,7 @@ export const DecisionApproved: Story = {
         within(canvasElement).queryByRole("button", { name: "Decide" }),
       ).toBeNull(),
     );
-    await within(canvasElement).findByText("2 focus cards");
+    await within(canvasElement).findByText("2 priorities in focus");
   },
 };
 

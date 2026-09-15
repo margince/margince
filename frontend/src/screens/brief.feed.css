@@ -1,5 +1,6 @@
-/* The morning's one feed. The rows carry their own layout from worklist.css;
-   this is the list they sit in and the run-length section label above them. */
+/* The morning's one feed: a ranked list in the Focus panel. The rows carry
+   their own layout from worklist.row.css; this sheet is the list they sit in,
+   the rank tile beside each, and the lead's own size. */
 .brief-feed-list {
   display: flex;
   flex-direction: column;
@@ -8,60 +9,101 @@
   padding: 0;
 }
 
-/* The label sits ABOVE its first row rather than beside it, so a reader
-   scanning the left edge sees the morning's shape without the badges competing
-   with the rank numbers for the same column.
-
-   It takes the PANEL'S OWN MARGIN. The list is a direct child of the panel and
-   the rows under it are `PanelRow`s, which carry that margin themselves — so
-   an unpadded label started at the card's edge, 20px left of everything it
-   labels, and read as chrome on the card rather than as a heading over rows.
-
-   The interval is asymmetric because a run-length label binds DOWNWARD: it
-   takes its air from the section it ends, not from the row it names. */
-.brief-feed-section {
-  margin: var(--space-4) 0 var(--space-1);
-  padding-inline: var(--padPanel);
-}
-
-/* The first label has the header's hairline above it rather than a row, so it
-   pays for its own interval — the same one the first row would have taken.
-   At zero the badge sat against that line and read as part of the band. */
-.brief-feed-list > li:first-child .brief-feed-section {
-  margin-top: var(--space-3);
-}
-
-/* THE RULE BETWEEN TWO ROWS, put back at the boundary it belongs to.
-   `PanelRow` draws its hairline against whatever precedes it and drops it on a
-   panel's first row. Wrapping each row in its own <li> handed that reset to
-   EVERY row, so the queue drew no rule between rows at all — and a labelled
-   row is no longer its item's first child, so the one rule the feed did draw
-   fell between a label and the row it labels, which is the one place panel.css
-   says a rule must never fall. A section boundary takes air and no line, like
-   every other boundary in a card that wants one. */
-.brief-feed-section + .panel-row::before {
-  content: none;
-}
-
+/* THE RULE BETWEEN TWO ROWS of the plain feed (the updates list), put back at
+   the boundary it belongs to. `PanelRow` draws its hairline against whatever
+   precedes it and drops it on a panel's first row. Wrapping each row in its own
+   <li> handed that reset to EVERY row, so the list drew no rule between rows at
+   all. The focus list below draws its own rule on the item and never reaches
+   this one: its row is not its item's first child. */
 .brief-feed-list > li + li > .panel-row:first-child::before {
   content: "";
 }
 
-/* What the remainder is made of, under the link that counts it. A block rather
-   than a second inline run: the count IS the link and this is a gloss on it,
-   and side by side a reader reads the two as one sentence and clicks the wrong
-   half. Meta size comes from `t-caption`; this owns only the interval. */
-.brief-feed-rest-kinds {
-  display: block;
-  margin-top: var(--space-1);
+/* ── The focus list ──────────────────────────────────────────────────────
+ * One item is a rank tile in the gutter and the work beside it. The item pays
+ * the panel's inset itself and draws the rule between items, because the row
+ * inside it is stripped of both: a `PanelRow` inside a list item inside a
+ * panel would pay the inset twice and rule the wrong boundary. */
+.brief-focus-item {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: var(--space-3);
+  align-items: start;
+  padding: var(--space-4) var(--padPanel);
 }
 
-/* Dates and evidence remain readable beside the action, including on a phone. */
+/* The seam rule, inset to the panel's padding like every other rule inside a
+   card. A pseudo-element rather than a border so it can be inset. */
+.brief-focus-item + .brief-focus-item::before {
+  content: "";
+  position: absolute;
+  inset: 0 var(--padPanel) auto;
+  height: 1px;
+  background: var(--borderSubtle);
+}
+
+/* The row, stripped of the inset the item already paid. Three classes so this
+   outranks `.panel-row.worklist-row-compact` (worklist.row.compact.css) on
+   specificity rather than on sheet order. `align-items: start` because the
+   text column is two lines here — the name, then what the line says — and a
+   kind badge centred on two lines floats between them. */
+.brief-focus-list .worklist-row.worklist-row-compact {
+  padding: 0;
+  align-items: start;
+}
+
+/* The rank tile: a small square in the gutter so the order reads as a column
+   of markers rather than as digits that happen to lead each sentence. Type
+   comes from `t-label` and `t-num` on the element; this owns the box and the
+   ink the chip ground asks for. Sized to the row's first line so the digit and
+   the badge beside it sit on one centre. */
+.brief-focus-rank {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--space-6);
+  block-size: var(--space-6);
+  border-radius: var(--r-sm);
+  background: var(--bgChip);
+  color: var(--textChip);
+  flex: none;
+}
+
+/* THE LEAD. The first row is where the day starts, and the page's opening
+   sentence has already said so; the list says it again in shape rather than in
+   words — the tile filled in the accent, in the display face, and the name one
+   rung up. Accent here is the one filled mark on the list, which is what the
+   design language spends it on: the move the page names. */
+.brief-focus-lead {
+  padding-block: var(--space-5);
+}
+
+.brief-focus-lead .brief-focus-rank {
+  inline-size: var(--space-8);
+  block-size: var(--space-8);
+  border-radius: var(--r-control);
+  background: var(--accent);
+  color: var(--textOnAccentControl);
+  font-family: var(--f-display);
+  font-size: var(--fs-h3);
+  letter-spacing: var(--tracking-display);
+}
+
+.brief-focus-lead .worklist-row-title {
+  font-size: var(--fs-lead);
+  font-weight: var(--fw-medium);
+}
+
+/* Dates and evidence stay readable beside the action, at every width: the
+   name on one line, what the line says on the next, both wrapping. One line
+   with an ellipsis is the queue's density, and a glance page is read, not
+   scanned. */
 .brief-feed-list .worklist-row-line {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   align-items: start;
-  gap: var(--space-2);
+  gap: var(--space-1);
 }
 
 .brief-feed-list .worklist-row-line > .worklist-row-title {
@@ -87,73 +129,29 @@
   overflow-wrap: anywhere;
 }
 
-/* Focus cards keep the shared row actions and the server's reading order. */
-.brief-focus-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
-  gap: var(--space-3);
-  padding: var(--padPanel);
+/* Swipe gestures keep a real wrapper on phones; it follows the row's layout. */
+.brief-focus-list .swipe-row {
+  width: 100%;
 }
 
-.brief-focus-grid > li {
-  min-width: 0;
-}
-
-.brief-focus-grid > li > .panel {
-  height: 100%;
-}
-
-@media (max-width: 640px) {
-  .brief-focus-grid {
-    grid-template-columns: minmax(0, 1fr);
+@media (max-width: 720px) {
+  /* The tile keeps the gutter; the work takes the rest, and the row's own
+     phone arrangement (kind and verbs on the first line, the work under them)
+     does the rest. */
+  .brief-focus-item {
+    column-gap: var(--space-2);
   }
 }
 
-/* Cards give the subject a full line and keep controls below its evidence. */
-.brief-focus-grid .panel-row.worklist-row-compact {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: var(--space-3);
-}
-
-.brief-focus-grid .worklist-row-text {
-  width: 100%;
-}
-
-.brief-focus-grid .worklist-row-kind {
-  align-self: flex-start;
-}
-
-.brief-focus-grid .worklist-row-acts {
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  width: 100%;
-}
-
-/* Keep the mobile card in the same reading order as its desktop version. */
-.brief-focus-grid .worklist-row-text,
-.brief-focus-grid .worklist-row-acts {
-  order: 0;
-  flex: none;
-}
-
-.brief-focus-grid > li > .panel {
-  display: flex;
-  flex-direction: column;
-}
-.brief-focus-grid .panel-foot {
-  margin-top: auto;
-}
-.brief-focus-grid .worklist-row-title {
-  font-weight: var(--fw-medium);
-}
-
-/* Swipe gestures keep a real wrapper on phones; it follows the card layout. */
-.brief-focus-grid .swipe-row {
-  flex: none;
-  flex-direction: column;
-  flex-wrap: nowrap;
-  align-items: stretch;
-  width: 100%;
+@media (max-width: 720px) {
+  /* THE VERBS GO UNDER THE WORK on a phone. The compact row's own phone
+     arrangement keeps them on the kind's line, which holds one glyph on the
+     queue; a focus row carries the way into its context as well, and three
+     controls beside the kind left the name a strip. One class more than the
+     row's rule so it wins on weight rather than on sheet order. */
+  .brief-focus-list .worklist-row-compact .worklist-row-acts {
+    flex: 1 1 100%;
+    order: 3;
+    margin-inline-start: 0;
+  }
 }

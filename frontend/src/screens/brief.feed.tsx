@@ -168,20 +168,43 @@ function AgendaRows({
   onContext?: (item: WorklistItem) => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   // A list of nothing is only its own padding: under the sentence saying the
   // read was incomplete it stood as a blank band the height of two gutters.
   if (rows.length === 0) return null;
-  const draw = (item: WorklistItem) => (
-    <li key={`${item.source}-${item.id}`}>
-      <Panel
-        footer={
-          focus && onContext && (hasPane(item) || item.source === "task") ? (
-            <Button small variant="ghost" onClick={() => onContext(item)}>
-              {t("brief.focus.context")}
-            </Button>
-          ) : undefined
+  // ONE RANKED LIST, not a grid of cards. The sentence over the page says
+  // "First: X. Then N more", and a grid asked the reader to re-derive that
+  // order from a Z-shaped walk across four columns. Each row carries its rank
+  // as a tile in the gutter, and the first row is the lead: the tile in the
+  // accent, the title at the lead size — so the eye lands where the day
+  // starts and runs down from there.
+  //
+  // The rows sit in the panel DIRECTLY. Each was a `Panel` of its own inside
+  // the Focus panel, which is the one shape the design language refuses (a
+  // pane inside a pane), and the footer band each card paid for one ghost
+  // button was more chrome than content.
+  const draw = (item: WorklistItem, at: number) => {
+    const context =
+      focus && onContext && (hasPane(item) || item.source === "task");
+    return (
+      <li
+        key={`${item.source}-${item.id}`}
+        className={
+          focus
+            ? at === 0
+              ? "brief-focus-item brief-focus-lead"
+              : "brief-focus-item"
+            : undefined
         }
       >
+        {focus && (
+          // Readable, not decorative: the list carries the order for a
+          // screen reader and the tile states it for everybody else — the
+          // same reason the queue's own rank is text.
+          <span className="brief-focus-rank t-label t-num">
+            {formatNumber(at + 1, locale)}
+          </span>
+        )}
         <WorklistRow
           allowPin={!focus}
           item={item}
@@ -194,13 +217,20 @@ function AgendaRows({
               new Map([["filter", item.category]]),
             )
           }
+          context={
+            context ? (
+              <Button small variant="ghost" onClick={() => onContext(item)}>
+                {t("brief.focus.context")}
+              </Button>
+            ) : undefined
+          }
         />
-      </Panel>
-    </li>
-  );
+      </li>
+    );
+  };
   return (
     <ol
-      className={focus ? "brief-feed-list brief-focus-grid" : "brief-feed-list"}
+      className={focus ? "brief-feed-list brief-focus-list" : "brief-feed-list"}
     >
       {rows.map(draw)}
     </ol>

@@ -56,6 +56,7 @@ export function RowActs({
   equals,
   onReview,
   onOpenEmail,
+  context,
 }: Readonly<{
   item: WorklistItem;
   href: string | undefined;
@@ -81,9 +82,16 @@ export function RowActs({
   /** Where a grouped row is reviewed, on the surface that has a filter. */
   onReview?: () => void;
   onOpenEmail?: (id: string) => void;
+  /**
+   * The way into what the row is ABOUT, where the surface has one. FIRST on
+   * the line: it opens a reading rather than acting on the row, so it stands
+   * with the quiet verbs and never near the answer at the end.
+   */
+  context?: ReactNode;
 }>) {
   return (
     <div className="worklist-row-acts">
+      {context}
       {item.batch && onReview ? (
         <BatchVerb onReview={onReview} />
       ) : (

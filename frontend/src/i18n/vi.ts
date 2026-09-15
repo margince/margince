@@ -198,8 +198,8 @@ export const vi = {
   "brief.feed.incomplete":
     "Chưa tải được mục nào. Không thể kiểm tra một phần công việc.",
   "brief.feed.fullWorklist": "Mở danh sách công việc đầy đủ",
-  "brief.feed.visible_one": "{count} thẻ ưu tiên",
-  "brief.feed.visible_other": "{count} thẻ ưu tiên",
+  "brief.feed.visible_one": "{count} ưu tiên trong tiêu điểm",
+  "brief.feed.visible_other": "{count} ưu tiên trong tiêu điểm",
   "brief.week.workRecorded": "Có công việc hoàn thành trong tuần.",
   "brief.week.leads": "Đã phân công {count} khách hàng tiềm năng.",
   "brief.week.responses":

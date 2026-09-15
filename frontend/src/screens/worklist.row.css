@@ -3,9 +3,22 @@
    rules travel with the component rather than with either page's sheet. */
 /* The selected row, marked on its edge rather than by a fill. The first row is
    selected on arrival, so a fill would paint a block of colour across the top of
-   every day rather than answering which row is in hand. */
+   every day rather than answering which row is in hand. The rank tile goes to
+   the accent with it (worklist.css), so the mark is read on the row's gutter
+   as well as on its edge. */
 .worklist-row-selected {
   box-shadow: inset 3px 0 0 0 var(--accent);
+}
+
+/* A row lights under the pointer: the queue is a list of things to press —
+   the rank, the name, the verbs — and the wash says which row a pointer is
+   over before it commits to a control on it. Only in the QUEUE's own list, and
+   never on a row already in hand, whose wash is the accent's. */
+.worklist-list > li > .worklist-row {
+  transition: background-color var(--dur-state) var(--ease-out);
+}
+.worklist-list > li > .worklist-row:not(.worklist-row-selected):hover {
+  background: var(--bgHover);
 }
 
 /* Three columns a reader runs down as three lists: the rank, the KIND of work,

@@ -193,8 +193,8 @@ export const de = {
   "brief.feed.incomplete":
     "Keine Einträge geladen. Ein Teil der Arbeit konnte nicht geprüft werden.",
   "brief.feed.fullWorklist": "Vollständige Arbeitsliste öffnen",
-  "brief.feed.visible_one": "{count} Fokuskarte",
-  "brief.feed.visible_other": "{count} Fokuskarten",
+  "brief.feed.visible_one": "{count} Priorität im Fokus",
+  "brief.feed.visible_other": "{count} Prioritäten im Fokus",
   "brief.week.workRecorded": "Diese Woche wurde Arbeit erledigt.",
   "brief.week.leads": "{count} Leads zugewiesen.",
   "brief.week.responses": "{count} Leads innerhalb der Zielzeit beantwortet.",
