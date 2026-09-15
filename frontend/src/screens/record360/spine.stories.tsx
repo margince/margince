@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../../api/schema";
 import { Panel } from "../../design-system/panel";
+import { company360 } from "../company.fixtures";
 import { StoryProviders } from "../story-utils";
 import { RecordSpine } from "./spine";
 
@@ -18,7 +19,8 @@ type View = components["schemas"]["Company360"];
 const page = { has_more: false, next_cursor: null };
 const AS_OF = "2026-08-25T09:00:00Z";
 
-const base = {
+const base: View = {
+  ...company360,
   as_of: AS_OF,
   company: {
     id: "o-1",
@@ -39,12 +41,17 @@ const base = {
         subject: "Erstgespräch Matthias Ortner — Plaud-Transkript",
         occurred_at: "2026-08-18T09:00:00Z",
         links: [],
+        is_done: true,
+        source: "manual",
+        captured_by: "human:u-1",
+        created_at: "2026-08-18T09:00:00Z",
+        updated_at: "2026-08-18T09:00:00Z",
       },
     ],
     page,
   },
   next_steps: { data: [], page },
-} as unknown as View;
+};
 
 function Card({
   view,
@@ -68,7 +75,8 @@ function Card({
 // The shape this component exists for: one conversation, then nothing. The
 // day count is the largest thing on the card because the silence is the fact
 // a reader must not skim past.
-const goneQuiet = {
+const goneQuiet: View = {
+  ...company360,
   ...base,
   last_outbound_at: "2026-08-18T09:00:00Z",
   last_inbound_at: null,
@@ -102,17 +110,18 @@ const goneQuiet = {
     ],
     page,
   },
-} as unknown as View;
+};
 
 export const GoneQuiet: Story = { render: () => <Card view={goneQuiet} /> };
 
 // They wrote back after the meeting, so there is no silence to draw: a
 // conversation in progress is not a gap, and drawing one would tell a reader
 // to chase somebody who has already answered.
-const inConversation = {
+const inConversation: View = {
+  ...company360,
   ...goneQuiet,
   last_inbound_at: "2026-08-24T09:00:00Z",
-} as unknown as View;
+};
 
 export const InConversation: Story = {
   render: () => <Card view={inConversation} />,
@@ -120,7 +129,8 @@ export const InConversation: Story = {
 
 // Nothing has been said at all. The thread has only what is dated ahead, and
 // no stop is drawn for a silence that has no conversation to start from.
-const neverSpoken = {
+const neverSpoken: View = {
+  ...company360,
   ...base,
   last_outbound_at: null,
   last_inbound_at: null,
@@ -135,14 +145,15 @@ const neverSpoken = {
       next_close_on: "2026-10-20",
     },
   },
-} as unknown as View;
+};
 
 export const NeverSpoken: Story = { render: () => <Card view={neverSpoken} /> };
 
 // An account with a past. Two conversations ran here before the invoice
 // question, and the roll-up says how many the thread did not draw — the shape
 // a reader who does not remember the account actually arrives at.
-const withHistory = {
+const withHistory: View = {
+  ...company360,
   ...goneQuiet,
   activities: {
     data: [
@@ -154,6 +165,11 @@ const withHistory = {
         occurred_at: "2026-08-18T09:00:00Z",
         thread_key: "t-invoice",
         links: [],
+        is_done: true,
+        source: "manual",
+        captured_by: "human:u-1",
+        created_at: "2026-08-18T09:00:00Z",
+        updated_at: "2026-08-18T09:00:00Z",
       },
       {
         id: "m-5",
@@ -163,6 +179,11 @@ const withHistory = {
         occurred_at: "2026-08-16T09:00:00Z",
         thread_key: "t-invoice",
         links: [],
+        is_done: true,
+        source: "manual",
+        captured_by: "human:u-1",
+        created_at: "2026-08-18T09:00:00Z",
+        updated_at: "2026-08-18T09:00:00Z",
       },
       {
         id: "m-4",
@@ -172,6 +193,11 @@ const withHistory = {
         occurred_at: "2026-07-26T09:00:00Z",
         thread_key: "t-kickoff",
         links: [],
+        is_done: true,
+        source: "manual",
+        captured_by: "human:u-1",
+        created_at: "2026-08-18T09:00:00Z",
+        updated_at: "2026-08-18T09:00:00Z",
       },
       {
         id: "m-3",
@@ -181,6 +207,11 @@ const withHistory = {
         occurred_at: "2026-07-21T09:00:00Z",
         thread_key: "t-kickoff",
         links: [],
+        is_done: true,
+        source: "manual",
+        captured_by: "human:u-1",
+        created_at: "2026-08-18T09:00:00Z",
+        updated_at: "2026-08-18T09:00:00Z",
       },
       {
         id: "m-2",
@@ -190,6 +221,11 @@ const withHistory = {
         occurred_at: "2026-06-30T09:00:00Z",
         thread_key: "t-quote",
         links: [],
+        is_done: true,
+        source: "manual",
+        captured_by: "human:u-1",
+        created_at: "2026-08-18T09:00:00Z",
+        updated_at: "2026-08-18T09:00:00Z",
       },
       {
         id: "m-1",
@@ -199,11 +235,16 @@ const withHistory = {
         occurred_at: "2026-06-02T09:00:00Z",
         thread_key: "t-intro",
         links: [],
+        is_done: true,
+        source: "manual",
+        captured_by: "human:u-1",
+        created_at: "2026-08-18T09:00:00Z",
+        updated_at: "2026-08-18T09:00:00Z",
       },
     ],
     page,
   },
-} as unknown as View;
+};
 
 export const WithHistory: Story = { render: () => <Card view={withHistory} /> };
 
@@ -213,7 +254,8 @@ export const WithHistory: Story = { render: () => <Card view={withHistory} /> };
 // own stretch of the axis — the state this exists to hold, because a subject
 // that escaped its column printed straight across the stops beside it and the
 // thread became one smear of overlapping words.
-const longSubjects = {
+const longSubjects: View = {
+  ...company360,
   ...goneQuiet,
   activities: {
     data: [
@@ -225,8 +267,20 @@ const longSubjects = {
           "Apartment Management Services — Invoice for June, July and August 2026",
         occurred_at: "2026-08-18T09:00:00Z",
         thread_key: "t-invoice",
-        email_summary: { display_status: "visible" },
+        email_summary: {
+          activity_id: "m-invoice",
+          display_status: "team",
+          occurred_at: "2026-08-18T09:00:00Z",
+          attachment_count: 0,
+          move: "none",
+          version: 1,
+        },
         links: [],
+        is_done: true,
+        source: "manual",
+        captured_by: "human:u-1",
+        created_at: "2026-08-18T09:00:00Z",
+        updated_at: "2026-08-18T09:00:00Z",
       },
       {
         id: "m-2",
@@ -235,8 +289,20 @@ const longSubjects = {
         subject: "YoSC-eSNpTHBr7_A0H0t_p16FBCWDD5389B22k64593Hmlet",
         occurred_at: "2026-08-14T09:00:00Z",
         thread_key: "t-receipt",
-        email_summary: { display_status: "visible" },
+        email_summary: {
+          activity_id: "m-invoice",
+          display_status: "team",
+          occurred_at: "2026-08-18T09:00:00Z",
+          attachment_count: 0,
+          move: "none",
+          version: 1,
+        },
         links: [],
+        is_done: true,
+        source: "manual",
+        captured_by: "human:u-1",
+        created_at: "2026-08-18T09:00:00Z",
+        updated_at: "2026-08-18T09:00:00Z",
       },
       {
         id: "m-1",
@@ -245,13 +311,25 @@ const longSubjects = {
         subject: "Receipt for Lars Jankowsky (Re:Fly)",
         occurred_at: "2026-08-06T09:00:00Z",
         thread_key: "t-fly",
-        email_summary: { display_status: "visible" },
+        email_summary: {
+          activity_id: "m-invoice",
+          display_status: "team",
+          occurred_at: "2026-08-18T09:00:00Z",
+          attachment_count: 0,
+          move: "none",
+          version: 1,
+        },
         links: [],
+        is_done: true,
+        source: "manual",
+        captured_by: "human:u-1",
+        created_at: "2026-08-18T09:00:00Z",
+        updated_at: "2026-08-18T09:00:00Z",
       },
     ],
     page: { has_more: true, next_cursor: null },
   },
-} as unknown as View;
+};
 
 export const LongSubjects: Story = {
   render: () => <Card view={longSubjects} onOpenEmail={() => {}} />,

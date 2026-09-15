@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
+import { company360 } from "./company.fixtures";
 import { CompanyFacts } from "./companyfacts";
 import {
   installFetchStub,
@@ -24,7 +25,7 @@ type Company = components["schemas"]["Company"];
 
 const page = { has_more: false, next_cursor: null };
 
-const company = {
+const company: Company = {
   id: "o-1",
   display_name: "Brandt Automotive GmbH",
   captured_by: "human:u1",
@@ -32,9 +33,10 @@ const company = {
   version: 1,
   created_at: "2026-06-01T08:00:00Z",
   updated_at: "2026-08-01T08:00:00Z",
-} as unknown as Company;
+};
 
-const base = {
+const base: View = {
+  ...company360,
   as_of: "2026-08-25T09:00:00Z",
   company: company,
   sections_omitted: [],
@@ -55,7 +57,7 @@ const base = {
       converted_count: 0,
     },
   },
-} as unknown as View;
+};
 
 // The owner control is a live editor, so it reads the session for its own
 // write grant and the roster for its options. Every story routes both: without
@@ -93,31 +95,48 @@ type Story = StoryObj<typeof Box>;
 export const Populated: Story = {
   render: () => (
     <Box
-      view={
-        {
-          ...base,
-          deals: {
-            data: [{ deal_id: "d-1" }, { deal_id: "d-2" }],
-            page,
-            won_lifetime: { amount_minor: 18_000_000, currency: "EUR" },
-            lost_count: 1,
-          },
-          projects: [
-            { project_id: "p-1", name: "Rollout", phase: "delivering" },
-          ],
-          state_strip: {
-            account: { lifecycle: "customer", relationship_types: [] },
-            commercial: {
-              open_count: 2,
-              stalled_count: 0,
-              priced_count: 2,
-              converted_count: 0,
-              open_pipeline_minor_base: 6_400_000,
-              base_currency: "EUR",
+      view={{
+        ...company360,
+        ...base,
+        deals: {
+          data: [
+            {
+              deal_id: "d-1",
+              name: "Depot rollout",
+              status: "open",
+              stalled: false,
             },
+            {
+              deal_id: "d-2",
+              name: "Depot rollout",
+              status: "open",
+              stalled: false,
+            },
+          ],
+          page,
+          won_lifetime: { amount_minor: 18_000_000, currency: "EUR" },
+          lost_count: 1,
+        },
+        projects: [
+          {
+            project_id: "p-1",
+            name: "Rollout",
+            phase: "delivering",
+            quiet: false,
           },
-        } as unknown as View
-      }
+        ],
+        state_strip: {
+          account: { lifecycle: "customer", relationship_types: [] },
+          commercial: {
+            open_count: 2,
+            stalled_count: 0,
+            priced_count: 2,
+            converted_count: 0,
+            open_pipeline_minor_base: 6_400_000,
+            base_currency: "EUR",
+          },
+        },
+      }}
     />
   ),
 };
@@ -127,20 +146,31 @@ export const Populated: Story = {
 export const OneOfEach: Story = {
   render: () => (
     <Box
-      view={
-        {
-          ...base,
-          deals: {
-            data: [{ deal_id: "d-1" }],
-            page,
-            won_lifetime: { amount_minor: 0, currency: "EUR" },
-            lost_count: 0,
-          },
-          projects: [
-            { project_id: "p-1", name: "Rollout", phase: "delivering" },
+      view={{
+        ...company360,
+        ...base,
+        deals: {
+          data: [
+            {
+              deal_id: "d-1",
+              name: "Depot rollout",
+              status: "open",
+              stalled: false,
+            },
           ],
-        } as unknown as View
-      }
+          page,
+          won_lifetime: { amount_minor: 0, currency: "EUR" },
+          lost_count: 0,
+        },
+        projects: [
+          {
+            project_id: "p-1",
+            name: "Rollout",
+            phase: "delivering",
+            quiet: false,
+          },
+        ],
+      }}
     />
   ),
 };
@@ -150,26 +180,44 @@ export const OneOfEach: Story = {
 export const UnpricedPipeline: Story = {
   render: () => (
     <Box
-      view={
-        {
-          ...base,
-          deals: {
-            data: [{ deal_id: "d-1" }, { deal_id: "d-2" }, { deal_id: "d-3" }],
-            page,
-            won_lifetime: { amount_minor: 0, currency: "EUR" },
-            lost_count: 0,
-          },
-          state_strip: {
-            account: { lifecycle: "opportunity", relationship_types: [] },
-            commercial: {
-              open_count: 3,
-              stalled_count: 0,
-              priced_count: 0,
-              converted_count: 0,
+      view={{
+        ...company360,
+        ...base,
+        deals: {
+          data: [
+            {
+              deal_id: "d-1",
+              name: "Depot rollout",
+              status: "open",
+              stalled: false,
             },
+            {
+              deal_id: "d-2",
+              name: "Depot rollout",
+              status: "open",
+              stalled: false,
+            },
+            {
+              deal_id: "d-3",
+              name: "Depot rollout",
+              status: "open",
+              stalled: false,
+            },
+          ],
+          page,
+          won_lifetime: { amount_minor: 0, currency: "EUR" },
+          lost_count: 0,
+        },
+        state_strip: {
+          account: { lifecycle: "opportunity", relationship_types: [] },
+          commercial: {
+            open_count: 3,
+            stalled_count: 0,
+            priced_count: 0,
+            converted_count: 0,
           },
-        } as unknown as View
-      }
+        },
+      }}
     />
   ),
 };
@@ -188,16 +236,15 @@ export const NothingOpen: Story = { render: () => <Box view={base} /> };
 export const PipelineWithheld: Story = {
   render: () => (
     <Box
-      view={
-        {
-          ...base,
-          deals: undefined,
-          sections_omitted: ["deals"],
-          state_strip: {
-            account: { lifecycle: "customer", relationship_types: [] },
-          },
-        } as unknown as View
-      }
+      view={{
+        ...company360,
+        ...base,
+        deals: undefined,
+        sections_omitted: ["deals"],
+        state_strip: {
+          account: { lifecycle: "customer", relationship_types: [] },
+        },
+      }}
     />
   ),
 };
@@ -207,13 +254,12 @@ export const PipelineWithheld: Story = {
 export const InFlightWithheld: Story = {
   render: () => (
     <Box
-      view={
-        {
-          ...base,
-          projects: undefined,
-          sections_omitted: ["projects"],
-        } as unknown as View
-      }
+      view={{
+        ...company360,
+        ...base,
+        projects: undefined,
+        sections_omitted: ["projects"],
+      }}
     />
   ),
 };
