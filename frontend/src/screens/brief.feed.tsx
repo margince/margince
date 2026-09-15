@@ -239,7 +239,7 @@ function AgendaRows({
     <ol
       className={focus ? "brief-feed-list brief-focus-list" : "brief-feed-list"}
     >
-      {rows.map(draw)}
+      {rows.map((item, at) => draw(item, at))}
     </ol>
   );
 }

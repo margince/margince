@@ -119,15 +119,33 @@
   letter-spacing: var(--tracking-display);
 }
 
-/* The lead's row keeps the kind beside the rank and gives the work the rest;
-   the verbs go under the work whatever the container says, because the band
-   is a card's worth of reading and the verbs are its foot. */
+/* The lead's row is the ASK and the verbs that answer it, side by side: the
+   rank and the kind lead, the work takes the room, and the verbs stand in a
+   column at the far edge — one width, every verb filling it, so a short
+   label never reads as a smaller button than the long one above it. The same
+   shape a record's "What needs you" lead takes, so the two pages agree about
+   what an ask looks like. */
 .brief-focus-lead .worklist-row {
-  grid-template-columns: auto auto minmax(0, 1fr);
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  column-gap: var(--space-4);
 }
 .brief-focus-lead .worklist-row > .worklist-row-acts {
+  grid-column: 4;
+  grid-row: 1;
+  flex-direction: column;
+  align-items: stretch;
+  min-width: 10rem;
+}
+/* A glyph-only verb keeps its square and stands at the column's trailing
+   edge, where the answer's own edge is: stretched, a square with one glyph
+   in it read as a button with its label missing. */
+.brief-focus-lead .worklist-row > .worklist-row-acts > .icon-action {
+  align-self: flex-end;
+}
+/* Anything the lead carries after its verbs — a duplicate pair drawn inside
+   it — still takes the full width under the line. */
+.brief-focus-lead .worklist-row > :nth-child(n + 5) {
   grid-column: 1 / -1;
-  padding-top: var(--space-2);
 }
 
 /* Dates and evidence stay readable beside the action, at every width: the
@@ -200,5 +218,15 @@
 
   .brief-focus-lead .worklist-row-title {
     font-size: var(--fs-lead);
+  }
+}
+
+@media (max-width: 720px) {
+  /* The verbs' column has no room beside the work on a phone; they take
+     their own line under it, the way every other row's do. */
+  .brief-focus-lead .worklist-row > .worklist-row-acts {
+    flex-direction: row;
+    flex-wrap: wrap;
+    min-width: 0;
   }
 }

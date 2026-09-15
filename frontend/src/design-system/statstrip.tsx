@@ -29,7 +29,6 @@ export function StatStrip({
   testId,
   label,
   floor,
-  flat = false,
 }: Readonly<{
   children: ReactNode;
   // How the strip SITS in the layout around it — it lands on the strip's
@@ -48,13 +47,6 @@ export function StatStrip({
   // row is read across as one statement, and a caveat attached to one figure
   // invites the reading where the others are exact.
   floor?: ReactNode;
-  /**
-   * The row as RULED SLOTS on the ground it stands on rather than a row of
-   * panes: no box round a reading, a hairline between two, and the figure a
-   * size up. For a strip that is already inside a surface — the briefing's
-   * lower band — where five boxed cards would be five panes inside a pane.
-   */
-  flat?: boolean;
 }>) {
   // The column count follows the slots the caller actually drew. A fixed
   // template reserves cells nobody fills, and an empty cell on a plate reads
@@ -76,7 +68,7 @@ export function StatStrip({
   };
   const row = (
     <section
-      className={flat ? "stat-strip stat-strip-flat" : "stat-strip"}
+      className="stat-strip"
       style={vars}
       aria-label={label}
       data-testid={testId}

@@ -77,15 +77,11 @@
 }
 
 /* ── The briefing ──────────────────────────────────────────────────────────
- * THE ONE SURFACE THE PAGE OPENS ON. A greeting, the day in one sentence, the
- * controls on the far edge — and under them, as the same surface's lower
- * band, the five readings. It is a pane rather than a heading standing on the
- * page, because it is the thing a reader signs in to: the morning, handed
- * over whole, before the work under it starts asking for anything. It is not
- * a `Panel` — a zone pane has a head band with a title, and this surface IS
- * the title — so it draws the pane's own ground, edge and corner itself, with
- * the page's own light in its leading corner so it reads as lit rather than
- * as one more box.
+ * The head of the sheet, composed the way a record's head is: the greeting
+ * where a record's name stands, the day over it as the one uppercase line,
+ * the sentence under it where a record's subtitle goes, and the controls on
+ * the far edge where a record's verbs stand. A hairline closes it, the way
+ * the facts strip closes a record's head, and the readings band follows.
  *
  * The first line: the greeting takes the room, the controls sit at the far
  * edge on the greeting's own top line, and on a phone they drop under it. */
@@ -95,23 +91,8 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--space-3) var(--space-5);
-  margin-top: var(--space-6);
-  padding: var(--space-8) var(--space-8) var(--space-6);
-  background:
-    radial-gradient(48rem 24rem at 0 0, var(--accentLight), transparent 70%),
-    var(--pane);
-  border: 1px solid var(--paneEdge);
-  border-radius: var(--r-lg);
-  box-shadow: var(--shadow-rest);
-  backdrop-filter: blur(12px);
-}
-/* Joined to the readings band under it into one surface: the corner and the
-   edge between the two go, and the band carries the rest of the pane. */
-.brief-head:has(+ .brief-overview) {
-  border-end-start-radius: 0;
-  border-end-end-radius: 0;
-  border-bottom: 0;
-  padding-bottom: var(--space-5);
+  padding-block: var(--space-2) var(--space-5);
+  border-bottom: 1px solid var(--borderSubtle);
 }
 .brief-head > .glance {
   flex: 1 1 32rem;
@@ -135,13 +116,13 @@
   color: var(--accentText);
 }
 
-/* THE GREETING RUNG, fluid: this is the page a day opens on and the first
+/* THE DISPLAY RUNG, fluid: this is the page a day opens on and the first
  * thing anyone sees after signing in, so the greeting is the one heading in
- * the product allowed the greeting's own rung — larger than a record's name,
- * as large as the signed-out door's. */
+ * the product allowed the full-viewport rung — a step over a record's name,
+ * and in the same face. */
 .glance-greeting {
   margin: 0;
-  font-size: var(--fs-greeting-fluid);
+  font-size: var(--fs-display-fluid);
   line-height: var(--lh-tight);
   letter-spacing: var(--tracking-display);
   text-wrap: balance;
@@ -157,7 +138,7 @@
   color: var(--textContent);
   font-size: var(--fs-lead);
   line-height: var(--lh-normal);
-  margin: var(--space-2) 0 0;
+  margin: var(--space-1) 0 0;
   max-width: 62ch;
   /* TWO LINES, the same clamp `.stat-card-detail` takes. A row title is user
      data of unbounded length and it is embedded in this sentence, so a long
@@ -187,35 +168,29 @@
 /* The controls: the two dials, and under them the way into the whole queue.
    A column at the far edge, on the greeting's top line, so a reader scanning
    the head meets the greeting first and the controls where the hand expects
-   them. */
+   them — where a record keeps its verbs. */
 .brief-controls {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   gap: var(--space-3);
+  padding-top: var(--space-1);
 }
 .brief-controls .brief-dials {
   margin: 0;
 }
 
 /* ── The readings band ─────────────────────────────────────────────────────
- * The briefing's lower band, and the rest of its pane: the five readings as
- * a FLAT strip — ruled slots on the pane's ground rather than five boxes
- * inside it — over a hairline that divides them from the greeting above. The
- * interval under the band is a register change, briefing to work, so it is
- * one rung wider than any gap INSIDE either register. */
+ * Between the head and the columns, what describes the WHOLE day: the five
+ * readings as the house's reading cards, the way a record's band draws its
+ * readings, with the strip's own footnotes under them. The interval under
+ * the band is the register change from the briefing to the work, one rung
+ * wider than any gap inside either register. */
 .brief-overview {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  margin: 0 0 var(--space-6);
-  padding: var(--space-3) var(--space-8) var(--space-4);
-  background: var(--pane);
-  border: 1px solid var(--paneEdge);
-  border-top: 1px solid var(--borderSubtle);
-  border-radius: 0 0 var(--r-lg) var(--r-lg);
-  box-shadow: var(--shadow-rest);
-  backdrop-filter: blur(12px);
+  margin: var(--space-5) 0 var(--space-6);
 }
 .brief-readings {
   margin: 0;
@@ -238,6 +213,12 @@
  * the register change from the briefing, one rung wider than any gap inside
  * either register. */
 .brief-followthrough {
+  margin-top: 0;
+}
+/* A view with no readings band — the weekly, the team — meets the columns
+   straight under the head, so the register change is paid here instead. */
+.brief-head + .brief-followthrough,
+.brief-head + #brief-weekly {
   margin-top: var(--space-6);
 }
 
@@ -488,19 +469,8 @@
  * A display-size greeting on a phone costs three lines before a reader has
  * learned anything. */
 @media (max-width: 720px) {
-  /* The pane pays a phone's inset, and the greeting steps down a rung: at the
-     greeting rung it cost three lines before a reader learned anything. */
-  .brief-head {
-    margin-top: var(--space-3);
-    padding: var(--space-5) var(--space-4) var(--space-4);
-  }
-  .brief-head:has(+ .brief-overview) {
-    padding-bottom: var(--space-3);
-  }
-  .brief-overview {
-    padding: var(--space-2) var(--space-4) var(--space-3);
-  }
-
+  /* The greeting steps down a rung: at the display rung it cost three lines
+     before a reader learned anything. */
   .glance-greeting {
     font-size: var(--fs-h1);
   }
@@ -515,5 +485,6 @@
     flex-direction: row;
     flex-wrap: wrap;
     align-items: center;
+    padding-top: 0;
   }
 }

@@ -51,53 +51,60 @@ export function BriefScreen() {
   const firstName = me.data?.user?.display_name?.trim().split(/\s+/)[0] ?? null;
   return (
     <div className="wrap brief-wrap">
-      <div className="brief-head">
-        <BriefGlance
-          view={address.view}
-          scope={address.scope}
-          day={
-            address.scope === "mine" && day
-              ? {
-                  ...day,
-                  focus: day.focus
-                    ? {
-                        ...day.focus,
-                        items: day.focus.items.map((item) =>
-                          readerTask(item, me.data?.user, t),
-                        ),
-                      }
-                    : undefined,
-                }
-              : undefined
-          }
-          week={address.scope === "mine" ? review.data : undefined}
-          firstName={firstName}
-          now={new Date(nowMs)}
-        />
-        <div className="brief-controls">
-          <BriefDials
-            address={address}
-            offered={teamOffered}
-            onChange={(next) => setParams(paramsFor(next, params))}
+      {/* ONE SHEET, the way a record page is one sheet: the head, the
+          readings and the columns on one raised surface with a hairline
+          round it, so the morning reads as a document on the page ground
+          rather than as loose cards on it. `record-sheet` is the house's
+          sheet (composed.css); what is inside is the Brief's own. */}
+      <div className="record-sheet">
+        <div className="brief-head">
+          <BriefGlance
+            view={address.view}
+            scope={address.scope}
+            day={
+              address.scope === "mine" && day
+                ? {
+                    ...day,
+                    focus: day.focus
+                      ? {
+                          ...day.focus,
+                          items: day.focus.items.map((item) =>
+                            readerTask(item, me.data?.user, t),
+                          ),
+                        }
+                      : undefined,
+                  }
+                : undefined
+            }
+            week={address.scope === "mine" ? review.data : undefined}
+            firstName={firstName}
+            now={new Date(nowMs)}
           />
-          <PageAsideToggle
-            controlled={{
-              open: params.get("queue") === "1",
-              labels: {
-                show: t("brief.queue.show"),
-                hide: t("brief.queue.hide"),
-              },
-              onToggle: () => {
-                const next = new Map(params);
-                if (next.get("queue") === "1") next.delete("queue");
-                else next.set("queue", "1");
-                navigate({ screen: "home" }, next);
-              },
-            }}
-          />
+          <div className="brief-controls">
+            <BriefDials
+              address={address}
+              offered={teamOffered}
+              onChange={(next) => setParams(paramsFor(next, params))}
+            />
+            <PageAsideToggle
+              controlled={{
+                open: params.get("queue") === "1",
+                labels: {
+                  show: t("brief.queue.show"),
+                  hide: t("brief.queue.hide"),
+                },
+                onToggle: () => {
+                  const next = new Map(params);
+                  if (next.get("queue") === "1") next.delete("queue");
+                  else next.set("queue", "1");
+                  navigate({ screen: "home" }, next);
+                },
+              }}
+            />
+          </div>
         </div>
+        <BriefBody address={address} teamOffered={teamOffered} query={query} />
       </div>
-      <BriefBody address={address} teamOffered={teamOffered} query={query} />
       <BriefQueue />
     </div>
   );
@@ -185,8 +192,8 @@ function PersonalMorning({
       <PageZones
         shape="aside"
         className="brief-followthrough"
-        mainClassName="brief-main"
-        asideClassName="brief-rail"
+        mainClassName="record-stack brief-main"
+        asideClassName="record-aside brief-rail"
         asideLabel={t("brief.rail")}
         main={
           <>

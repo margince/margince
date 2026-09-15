@@ -31,6 +31,15 @@ it("renders the server focus even when the queue page contains different rows", 
     ),
   ).toEqual(rows.slice(0, 6).map((row) => row.title));
   expect(screen.getByText("6 priorities in focus")).toBeTruthy();
+  // Every focus row carries its rank, in the reader's own numerals: the lead
+  // through the queue's own rank, the rows after it through the list's tile.
+  expect(
+    [...container.querySelectorAll(".brief-focus-list > li")].map(
+      (item) =>
+        item.querySelector(".worklist-rank, .brief-focus-rank")?.textContent,
+    ),
+  ).toEqual(["1", "2", "3", "4", "5", "6"]);
+  expect(screen.getByText(en["brief.focus.startHere"])).toBeTruthy();
 });
 
 it("opens the full queue instead of growing focus when more pages exist", () => {
