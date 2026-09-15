@@ -82,7 +82,7 @@ var satelliteLifecyclePaths = []satellitePath{
 	},
 	{
 		name:    "retention_anonymize",
-		file:    "internal/modules/privacy/retentionanonymize.go",
+		file:    "internal/modules/privacy/retentionactions.go",
 		remedy:  "delete its rows in the contact/anonymize executor — the sweep anonymizes the contact row and would leave this satellite's copy of the subject behind",
 		piiOnly: true,
 	},
