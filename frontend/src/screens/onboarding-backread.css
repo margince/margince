@@ -30,8 +30,6 @@
 }
 
 .ob-backread-h {
-  line-height: var(--lh-snug);
-  letter-spacing: var(--tracking-display);
   text-wrap: balance;
 }
 
@@ -52,7 +50,6 @@
 }
 
 .ob-backread-estimate {
-  font-size: var(--fs-sm);
   color: var(--textPrimary);
   font-variant-numeric: tabular-nums;
 }
@@ -60,18 +57,11 @@
    green means the user acts, indigo means the machine cost something. */
 .ob-backread-cost {
   font-family: var(--f-body);
-  font-size: var(--fs-meta);
   font-variant-numeric: tabular-nums;
   color: var(--aiText);
 }
 
-.ob-backread-note {
-  line-height: var(--lh-relaxed);
-}
-
 .ob-backread-problem {
-  font-size: var(--fs-meta);
-  line-height: var(--lh-relaxed);
   color: var(--dangerText);
 }
 
@@ -86,7 +76,6 @@
 
 .ob-backread-scanned {
   font-family: var(--f-body);
-  font-size: var(--fs-meta);
   font-variant-numeric: tabular-nums;
   color: var(--textPrimary);
 }
@@ -130,19 +119,12 @@
 
 .ob-backread-tally-value {
   font-family: var(--f-body);
-  font-size: var(--fs-h3);
-  font-weight: var(--fw-semibold);
   font-variant-numeric: tabular-nums;
   color: var(--textPrimary);
 }
 
 .ob-backread-tally-label {
   font-family: var(--f-body);
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
-  color: var(--textTertiary);
 }
 
 /* ---- leaving ----------------------------------------------------------- */

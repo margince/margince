@@ -17,9 +17,6 @@
   border: 1px solid var(--warnBorder);
   border-radius: var(--r-sm);
   background: var(--warnSurface);
-  color: var(--textContent);
-  font-size: var(--fs-meta);
-  line-height: var(--lh-normal);
   text-wrap: pretty;
 }
 .ob-facts-cap:empty {

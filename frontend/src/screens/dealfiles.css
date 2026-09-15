@@ -12,10 +12,6 @@
   gap: var(--space-1);
 }
 
-.deal-file-origin {
-  color: var(--textMeta);
-}
-
 .deal-file-side {
   display: flex;
   align-items: center;

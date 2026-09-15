@@ -58,11 +58,6 @@
   gap: var(--space-3);
   margin-top: var(--space-2);
 }
-.company-context-resolutions label {
-  color: var(--textMeta);
-  /* ds:ignore Radio owns this <label>; the call site passes words, not a class */
-  font-size: var(--fs-sm);
-}
 .company-context-resolutions .input {
   flex: 1 1 240px;
 }

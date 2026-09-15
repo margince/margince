@@ -4,27 +4,13 @@
  *
  * It sits in RecordView's `pulse` slot, which is styled as a meta line —
  * right for the company page's identity facts, wrong for a headline. The
- * override is scoped to this class, so the slot keeps its own size everywhere
- * else. The lead half carries the weight and the rest stays quiet, because the
- * two answer different questions: "whose move" is the verdict a scanner needs,
- * "when they wrote" is the evidence under it. */
+ * override is scoped to this class, so the slot keeps its own type everywhere
+ * else. */
 .d360-pulse {
   margin: var(--space-2) 0 0;
   font-family: var(--f-display);
-  font-size: var(--fs-h3);
-  line-height: var(--lh-snug);
-  letter-spacing: var(--tracking-display);
   color: var(--textPrimary);
   text-wrap: balance;
-}
-
-.d360-pulse-lead {
-  font-weight: var(--fw-semibold);
-}
-
-.d360-pulse-rest {
-  font-weight: var(--fw-regular);
-  color: var(--textMeta);
 }
 
 /* Outcome review — what a closed deal recorded about how it went. One block per

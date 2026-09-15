@@ -194,13 +194,7 @@ function EnrichedField({
 
       {/* The evidence stays visible after a correction, not instead of it:
           what the machine read is the reason the correction was needed. */}
-      <p
-        style={{
-          margin: "var(--space-1) 0 0",
-          fontSize: "var(--fs-body)",
-          opacity: 0.75,
-        }}
-      >
+      <p style={{ margin: "var(--space-1) 0 0" }}>
         {t("contact.enriched.readFrom", {
           source: field.source,
           // The record's zone: when the machine read this is a fact about the
@@ -215,13 +209,7 @@ function EnrichedField({
           reader who remembers typing the old value needs to see where it went
           rather than doubt what they typed. */}
       {field.superseded_value && (
-        <p
-          style={{
-            margin: "var(--space-1) 0 0",
-            fontSize: "var(--fs-body)",
-            opacity: 0.75,
-          }}
-        >
+        <p style={{ margin: "var(--space-1) 0 0" }}>
           {t("contact.enriched.replaced", { was: field.superseded_value })}{" "}
           {mayCorrect && (
             <Button

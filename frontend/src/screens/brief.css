@@ -101,17 +101,11 @@
   padding: var(--space-6) 0 var(--space-5);
 }
 
-/* THE DISPLAY SIZE, fluid: this is the page a day opens on and the first thing
- * anyone sees after signing in, so the greeting is the one heading in the
- * product allowed the full-viewport rung. It used to stop one step under it so
- * as not to out-shout the readings — which were then five panes; they are a
- * ruled row now (statstrip.css, `flat`), and a quiet row under a large
- * greeting is the order the page reads in. */
+/* The page a day opens on, and the first thing anyone sees after signing in:
+ * the greeting leads it, and the readings are the quiet row underneath
+ * (statstrip.css, `flat`). */
 .glance-greeting {
   margin: 0;
-  font-size: var(--fs-display-fluid);
-  line-height: var(--lh-tight);
-  letter-spacing: var(--tracking-display);
   text-wrap: balance;
 }
 
@@ -180,8 +174,6 @@
   padding: 0;
   border: 0;
   background: none;
-  color: inherit;
-  font: inherit;
   text-align: left;
   cursor: pointer;
 }
@@ -194,12 +186,10 @@
 .rail-count-label {
   flex: 1;
   min-width: 0;
-  color: var(--textMeta);
 }
 
 .rail-count-value {
   flex: none;
-  font-weight: var(--fw-semibold);
 }
 
 .rail-money {
@@ -207,11 +197,6 @@
   flex-direction: column;
   gap: var(--space-1);
   width: 100%;
-}
-
-.rail-money-raw {
-  font-size: var(--fs-lead);
-  font-weight: var(--fw-semibold);
 }
 
 .rail-projects {
@@ -250,7 +235,6 @@
 /* Tabular figures so 09:30 and 11:00 occupy the same width — a column of times
    that shifts by a digit reads as a ragged edge rather than as a rail. */
 .rail-schedule-when {
-  color: var(--textMeta);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -267,7 +251,6 @@
 /* What the panel cannot tell you, under what it can. Quiet like every other
    line where a surface reports on its own limits. */
 .rail-promise-note {
-  color: var(--textMeta);
   margin: 0;
 }
 
@@ -282,10 +265,6 @@
      and `.brief-head`'s own row gap is then the whole interval. */
   .glance {
     padding: var(--space-4) 0 0;
-  }
-
-  .glance-greeting {
-    font-size: var(--fs-h2);
   }
 
   /* THE DIALS HAVE WRAPPED, so the offset that aligned them with the
@@ -328,7 +307,6 @@
    fallback drew as a caption, which read as a footnote under a heading where
    the morning read as the page's opening. */
 .glance-sentence {
-  color: var(--textContent);
   margin: 0 0 var(--space-3);
   max-width: 62ch;
   /* TWO LINES, the same clamp `.stat-card-detail` takes. A row title is user

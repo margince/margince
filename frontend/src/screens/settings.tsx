@@ -1824,9 +1824,7 @@ function ResetDataCard() {
           <p className="t-caption">
             {t("settings.resetDataConfirmName")}{" "}
             {/* userSelect:all lets one click select the whole name to copy */}
-            <code style={{ userSelect: "all", fontWeight: 600 }}>
-              {workspaceName}
-            </code>
+            <code style={{ userSelect: "all" }}>{workspaceName}</code>
           </p>
         ) : null}
         <TextInput

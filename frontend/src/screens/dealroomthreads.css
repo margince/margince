@@ -26,15 +26,6 @@
   white-space: pre-wrap;
 }
 
-.thread-author {
-  color: var(--textMeta);
-}
-
-.thread-author-name {
-  font-weight: var(--fw-semibold);
-  color: var(--textContent);
-}
-
 .thread-reply,
 .thread-composer {
   display: flex;
@@ -136,7 +127,6 @@
 
 .board-doc-title {
   margin: 0;
-  font-weight: var(--fw-semibold);
   overflow-wrap: anywhere;
 }
 
@@ -148,9 +138,6 @@
   padding: 0;
   border: 0;
   background: none;
-  font: inherit;
-  font-weight: var(--fw-semibold);
-  color: inherit;
   text-align: left;
   cursor: pointer;
 }
@@ -245,7 +232,6 @@
 
 .board-doc-threads-head svg {
   flex: none;
-  color: var(--textTertiary);
 }
 
 .board-threads {

@@ -112,16 +112,11 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  color: var(--textMeta);
 }
 
 .ext-brings-def {
   margin: 0;
   min-width: 0;
-}
-
-.ext-none {
-  color: var(--textMeta);
 }
 
 .ext-chips {
@@ -137,7 +132,6 @@
    means a path can appear twice, and the method is the only thing that tells a
    DELETE from the GET beside it. */
 .ext-method {
-  font-weight: 600;
   margin-right: var(--space-1);
 }
 
@@ -169,7 +163,6 @@
   border-bottom: 1px solid var(--borderSubtle);
   padding: var(--space-2);
   text-align: left;
-  font-size: var(--fs-sm);
 }
 
 /* The last row has nothing under it to be ruled off from, so it does not end the
@@ -180,13 +173,10 @@
 }
 
 .ext-matrix thead th {
-  color: var(--textMeta);
-  font-weight: 500;
   white-space: nowrap;
 }
 
 .ext-matrix tbody th {
-  font-weight: 500;
   color: var(--textPrimary);
   white-space: nowrap;
 }
@@ -197,7 +187,6 @@
 
 .ext-role-note {
   display: block;
-  color: var(--textMeta);
 }
 
 /* Each cell is one Switch whose label is screen-reader-only, so what the cell
@@ -223,6 +212,5 @@
 }
 
 .ext-note {
-  color: var(--textMeta);
   margin: var(--space-2) 0 0;
 }

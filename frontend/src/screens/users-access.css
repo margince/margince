@@ -36,10 +36,6 @@
   min-width: 0;
 }
 
-.users-team-count {
-  color: var(--textMuted);
-}
-
 /* Who is in the team, inside the section that opens. A fieldset for the same
    reason the invite dialog uses one — the boxes are one named group — and
    stripped of the border a browser draws around it, which is the only default

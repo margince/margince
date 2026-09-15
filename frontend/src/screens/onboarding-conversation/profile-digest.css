@@ -18,7 +18,6 @@
 
 .pdigest-eyebrow {
   margin: 0;
-  color: var(--textMeta);
 }
 
 .pdigest-count {
@@ -37,9 +36,6 @@
 
 .pdigest-line {
   margin: 0;
-  color: var(--textContent);
-  font-size: var(--fs-sm);
-  line-height: var(--lh-normal);
 }
 
 /* The line the deck is deciding right now, marked in the agent's colour
@@ -55,16 +51,12 @@
   color: var(--aiText);
 }
 
-.pdigest-label {
-  color: var(--textMeta);
-}
 .pdigest-line[data-active="true"] .pdigest-label {
   color: var(--aiText);
 }
 
 .pdigest-value {
   color: var(--textPrimary);
-  font-weight: var(--fw-medium);
 }
 .pdigest-line[data-active="true"] .pdigest-value {
   color: var(--aiText);
@@ -74,7 +66,6 @@
    draws one un-actionably. The deck is what fills these, and a row of blanks
    beside it would be the outstanding work listed a second time. */
 .pdigest-blank {
-  color: var(--textTertiary);
   font-style: italic;
 }
 
@@ -82,7 +73,6 @@
 .pdigest-ref {
   margin-inline-start: var(--space-1);
   color: var(--aiText);
-  font-size: var(--fs-eyebrow);
 }
 
 /* No page behind it: typed by a contact, or carried in from a profile that was
@@ -105,7 +95,6 @@
   align-items: center;
   gap: var(--space-2);
   margin: 0;
-  font-size: var(--fs-sm);
 }
 /* What is left here is the MEASURE — this is a ROW in the document's rhythm,
    where the staged card's reading padding and 16px corner would make one gap
@@ -168,8 +157,6 @@
 .pdigest-hero-name {
   margin: 0;
   color: var(--textPrimary);
-  font-size: var(--fs-h2);
-  font-weight: var(--fw-semibold);
 }
 
 .pdigest-hero-sub {
@@ -190,8 +177,6 @@
 
 .pdigest-figure-value {
   color: var(--textPrimary);
-  font-size: var(--fs-h2);
-  font-weight: var(--fw-semibold);
   font-variant-numeric: tabular-nums;
 }
 
@@ -202,7 +187,6 @@
 }
 
 .pdigest-figure-caption {
-  color: var(--textMeta);
   white-space: nowrap;
 }
 
@@ -253,7 +237,6 @@
 
 .pdigest-subhead {
   margin: 0;
-  font-weight: var(--fw-medium);
 }
 
 .pdigest-sources {
@@ -280,14 +263,9 @@
 .pdigest-source-n {
   flex: none;
   color: var(--aiText);
-  font-size: var(--fs-eyebrow);
 }
 .pdigest-source-path {
   overflow-wrap: anywhere;
-}
-.pdigest-source-label {
-  color: var(--textTertiary);
-  font-size: var(--fs-meta);
 }
 .pdigest-source-note {
   margin: 0;
@@ -318,13 +296,10 @@
 .pdigest-side-label {
   display: block;
   margin: 0 0 var(--space-1);
-  color: var(--textMeta);
 }
 
 .pdigest-side-value {
   margin: 0;
-  color: var(--textContent);
-  font-size: var(--fs-sm);
   overflow-wrap: anywhere;
 }
 
@@ -370,7 +345,6 @@
   border-radius: var(--r-sm);
   background: none;
   cursor: text;
-  font: inherit;
   text-align: start;
 }
 .pdigest-editable:hover {

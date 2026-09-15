@@ -56,7 +56,6 @@
   border: 1px solid var(--accent);
   border-radius: var(--r-sm);
   box-shadow: var(--shadow-pop);
-  font-size: var(--fs-sm);
 }
 /* :focus, not :focus-visible — the point is that it appears whenever it holds
    focus, and a heuristic about whether the focus "should" be visible is exactly
@@ -474,13 +473,9 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: var(--fs-h3);
 }
 .rail .ws-logo-product {
   font-family: var(--f-display);
-  font-size: var(--fs-meta);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-display);
   color: var(--textPrimary);
 }
 .rail.collapsed .ws-logo {
@@ -540,9 +535,6 @@
 .rail .ws-chip-company .avatar {
   width: 100%;
   height: 100%;
-  /* ds:ignore the brand slot is a 40px box no avatar rung sizes, and the
-     monogram that fits it is the body glyph */
-  font-size: var(--fs-body);
 }
 /* The head row is a column when collapsed, so flex-basis cannot squeeze this
    shut the way it does the nav labels — the width has to be explicit, or the
@@ -582,21 +574,10 @@
   opacity: 0;
 }
 .rail .ws-name b {
-  /* A step up from the rows: the workspace's name heads the column and reads
-     first, and at the rows' own size it was one more label among them. */
-  font-size: var(--fs-lead);
-  font-weight: var(--fw-semibold);
   color: var(--textPrimary);
-  /* Set tight, because a company name is a NAME rather than prose: two lines of
-     it are one object and the reading leading between them pulled it apart. The
-     air the lockup needs is the gap above, which belongs to the block. */
-  line-height: 1.1;
 }
 /* The head's second line: what this installation runs on, and which build of it
-   this is. One row for both, because they are one statement — and in the same
-   small voice as the name above them, in the same face: an uppercase kicker in
-   another family would stand in the corner of every screen saying nothing the
-   name did not.
+   this is. One row for both, because they are one statement.
    It is a SIBLING of the brand anchor and not a child of it: the marker is a
    fact about the build, and a fact inside a link is a fact a press carries you
    away from. */
@@ -604,8 +585,6 @@
   display: flex;
   align-items: center;
   gap: var(--space-1);
-  font-size: var(--fs-eyebrow);
-  line-height: 1;
 }
 /* The ellipsis is the TEXT's, not the row's: an installation name is user data
    of unbounded length in a narrow column, and a row that clipped itself would
@@ -760,7 +739,6 @@
 .rail .navitem.active {
   background: var(--accentLight);
   color: var(--textPrimary);
-  font-weight: var(--fw-semibold);
 }
 .rail .navitem.active svg {
   color: var(--accentText);
@@ -819,7 +797,6 @@
   color: var(--railIconActive);
   padding: var(--space-1) var(--space-2);
   border-radius: var(--r-sm);
-  font-size: var(--fs-sm);
   white-space: nowrap;
   box-shadow: var(--shadow-pop);
   z-index: 50;
@@ -893,14 +870,11 @@
   background: var(--bgCard);
   color: var(--textPrimary);
   font-family: var(--f-body);
-  font-size: var(--fs-body);
-  font-weight: var(--fw-medium);
   text-align: left;
 }
 /* The chevron leads the movement it stands for: it pulls back the way the reader
    is about to go, which is the whole gesture in 2px. */
 .rail .navback svg {
-  color: var(--textMeta);
   transition: transform var(--dur-state) var(--ease-out);
 }
 .rail .navback:hover svg,
@@ -984,7 +958,6 @@
 .pagetitle h1 {
   margin: 0;
   font-family: var(--f-display);
-  line-height: 1.15;
   /* This heading names a SECTION, never a record — a record's own surface prints
      its name. Section titles are translated strings, so wrapping here guards
      against a long translation, not against user data. */
@@ -997,7 +970,6 @@
 .pagesub {
   margin: 0;
   max-width: 68ch;
-  line-height: var(--lh-normal);
 }
 /* The heading IS the switcher at phone width: the h1 carries no type of its own
    there, because the control inside it brings the page's name at the size the
@@ -1046,8 +1018,6 @@
   background: var(--bgElevated);
   color: var(--textPrimary);
   font-family: var(--f-body);
-  font-size: var(--fs-body);
-  font-weight: var(--fw-medium);
   text-align: left;
   cursor: pointer;
 }
@@ -1068,7 +1038,6 @@
 }
 .pageswitch svg {
   flex: none;
-  color: var(--textMeta);
 }
 
 /* The list inside the sheet: the section's groups and their entries, which are
@@ -1100,15 +1069,13 @@
 }
 .sectionpickgroup a svg {
   flex: none;
-  color: var(--textMeta);
 }
-/* The entry the reader came from, in the same three signals the sidebar's rows
-   use — a tint, a weight and the accent on the glyph — because a tint alone is
-   colour-only (WCAG 1.4.1). */
+/* The entry the reader came from, in the same signals the sidebar's rows use —
+   a tint and the accent on the glyph — because a tint alone is colour-only
+   (WCAG 1.4.1). */
 .sectionpickgroup a[aria-current="page"] {
   background: var(--accentLight);
   color: var(--textPrimary);
-  font-weight: var(--fw-semibold);
 }
 .sectionpickgroup a[aria-current="page"] svg {
   color: var(--accentText);
@@ -1139,7 +1106,6 @@
 .palette-input svg {
   width: 16px;
   height: 16px;
-  color: var(--textMeta);
   flex: none;
 }
 .palette-input input {
@@ -1148,7 +1114,6 @@
   outline: none;
   background: transparent;
   font-family: var(--f-body);
-  font-size: var(--fs-body);
   color: var(--textPrimary);
 }
 .palette-list {
@@ -1172,7 +1137,6 @@
 .palette-row svg {
   width: 14px;
   height: 14px;
-  color: var(--textMeta);
   flex: none;
 }
 .palette-row.selected,
@@ -1232,7 +1196,6 @@
      are the whole of what this surface offers on a phone. */
   .palette-row {
     min-height: 44px;
-    font-size: var(--fs-body);
   }
 }
 
@@ -1250,8 +1213,6 @@
 .client-back {
   color: var(--railIconActive);
   text-decoration: none;
-  font-size: var(--fs-sm);
-  font-weight: 600;
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
@@ -1445,7 +1406,6 @@
     border: 0;
     border-radius: var(--r-control);
     background: transparent;
-    color: var(--textMeta);
     cursor: pointer;
   }
   .rail .railmore svg {
@@ -1626,7 +1586,6 @@
     top: auto;
     transform: none;
     max-width: none;
-    font-size: var(--fs-body);
     text-align: left;
   }
   /* The count is a trailing figure in a list row, not a badge pinned to a tab. */
@@ -1641,7 +1600,6 @@
      out. Later in the file than that rule and weighing the same, so it wins. */
   .rail.sheetopen .navheading {
     display: block;
-    color: var(--textMeta);
   }
   /* In the sheet the level is a column again — the sheet is the phone's whole
      sidebar, and a bar's row of tabs is not a list of ten places. The collapsed
@@ -1779,7 +1737,6 @@
   left: var(--space-2);
   width: 16px;
   height: 16px;
-  color: var(--textMeta);
   /* Decoration over the field: it must not eat a click aimed at the box. */
   pointer-events: none;
 }
@@ -1793,7 +1750,6 @@
   background: var(--bgElevated);
   color: var(--textPrimary);
   font-family: var(--f-body);
-  font-size: var(--fs-body);
   /* A hand-rolled field, wearing the floor the design system's own fields wear
      — a reader cannot tell this box apart from theirs, so its depth may not
      disagree with them. */
@@ -1856,6 +1812,4 @@
 
 .settingssearch-empty {
   padding: var(--space-1) var(--space-2);
-  color: var(--textMeta);
-  font-size: var(--fs-body);
 }

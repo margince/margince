@@ -46,8 +46,6 @@
   color: var(--textOnAccent);
   box-shadow: var(--shadow-pop);
   text-decoration: none;
-  font-size: var(--fs-sm);
-  line-height: 1.25;
 }
 /* The rail-less variant is a status and not a target. It keeps the wrapper's
    own pointer transparency, so onboarding's composer and buttons under it keep
@@ -82,14 +80,11 @@
   min-width: 0;
 }
 .capturechip-line {
-  font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .capturechip-detail {
-  font-size: var(--fs-meta);
-  opacity: 0.78;
   /* Tabular figures, so the share and the count do not shuffle the words
      beside them on every poll. */
   font-variant-numeric: tabular-nums;

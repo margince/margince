@@ -24,7 +24,6 @@
   padding: 0;
   border: 0;
   background: none;
-  font: inherit;
   color: var(--accentText);
   cursor: pointer;
 }
@@ -54,9 +53,6 @@
 
 .pe-today-headline {
   margin: 0 0 var(--space-4);
-  font-size: var(--fs-h2);
-  font-weight: 650;
-  line-height: 1.3;
   color: var(--textPrimary);
 }
 
@@ -79,7 +75,6 @@
 
 .pe-today-evidence svg {
   flex: none;
-  color: var(--textMeta);
 }
 
 .pe-today-actions {
@@ -100,7 +95,6 @@
 }
 
 .pe-today-verb-state {
-  line-height: 1.3;
   text-align: center;
 }
 
@@ -138,11 +132,6 @@
   grid-template-columns: 120px minmax(0, 1fr) auto;
   gap: var(--space-3);
   align-items: center;
-  font-size: var(--fs-body);
-}
-
-.pe-row-label {
-  color: var(--textMeta);
 }
 
 .pe-row-value {
@@ -164,7 +153,6 @@
 /* The prose card (the relationship brief): sentences, not rows. */
 .pe-prose {
   margin: 0 0 var(--space-3);
-  line-height: 1.55;
 }
 
 /* The source chips under the brief — where each sentence was read from. */
@@ -186,18 +174,10 @@
 .pe-brief-label {
   margin-top: 0;
   margin-bottom: var(--space-1);
-  font-size: var(--fs-eyebrow);
-  font-weight: 600;
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
-  color: var(--textMeta);
 }
 
 .pe-brief-line {
   margin: 0;
-  font-size: var(--fs-sm);
-  line-height: 1.55;
-  color: var(--textContent);
 }
 
 @media (max-width: 900px) {
@@ -217,15 +197,11 @@
 }
 
 .pe-deal-title {
-  font-size: var(--fs-h3);
-  font-weight: 650;
   color: var(--textPrimary);
 }
 
 .pe-deal-figures {
   margin: var(--space-1) 0 var(--space-4);
-  font-size: var(--fs-body);
-  color: var(--textMeta);
 }
 
 .pe-committee-label {
@@ -258,7 +234,6 @@
   grid-template-columns: auto minmax(0, 1fr) auto;
   gap: var(--space-3);
   align-items: center;
-  font-size: var(--fs-body);
 }
 
 .pe-loop-body {
@@ -267,14 +242,12 @@
 }
 
 .pe-loop-due {
-  font-size: var(--fs-sm);
   color: var(--warnText);
   white-space: nowrap;
 }
 
 .pe-loop-overdue {
   color: var(--dangerText);
-  font-weight: 600;
 }
 
 /* ---------------------------------------------------------------------------
@@ -338,17 +311,12 @@
 
 .pe-memory-title {
   display: block;
-  font-size: var(--fs-body);
-  font-weight: 600;
   color: var(--textPrimary);
 }
 
 .pe-memory-summary {
   display: block;
   margin-top: 2px; /* ds:ignore optical, below the 4px scale's floor */
-  font-size: var(--fs-sm);
-  line-height: 1.5;
-  color: var(--textMeta);
 }
 
 .pe-memory-time {
@@ -386,11 +354,6 @@
 }
 .pe-rail .pe-sect > summary {
   padding: var(--space-3) var(--space-5);
-  font-size: var(--fs-meta);
-  font-weight: var(--fw-medium);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
-  color: var(--textMeta);
   transition: background 0.15s;
 }
 .pe-rail .pe-sect > summary:hover {
@@ -427,7 +390,6 @@
   gap: var(--space-3);
   align-items: baseline;
   padding: var(--space-2) 0;
-  font-size: var(--fs-body);
 }
 
 .pe-rail-row + .pe-rail-row {
@@ -438,7 +400,6 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  color: var(--textContent);
   min-width: 0;
 }
 
@@ -450,16 +411,10 @@
 
 .pe-rail-value-good {
   color: var(--successText);
-  font-weight: 600;
 }
 
 .pe-rail-value-warn {
   color: var(--warnText);
-  font-weight: 600;
-}
-
-.pe-rail-value-muted {
-  color: var(--textMeta);
 }
 
 /* The pulse card's overall reading sits under a rule: it summarizes the rows
@@ -482,7 +437,6 @@
    so the name needs to be a block or the two run together. */
 .pe-colleague-name {
   display: block;
-  font-size: var(--fs-body);
   color: var(--textPrimary);
 }
 
@@ -515,7 +469,6 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  font-size: var(--fs-body);
 }
 
 /* The role sits under the company name, on its own line — it is the ONE thing
@@ -523,8 +476,6 @@
    rather than fighting the company name and its badge for space. */
 .pe-employment-role {
   display: block;
-  font-size: var(--fs-sm);
-  color: var(--textContent);
   margin-top: var(--space-1);
 }
 
@@ -561,8 +512,6 @@
   gap: var(--space-3);
   align-items: start;
   padding: var(--space-2) 0;
-  font-size: var(--fs-sm);
-  color: var(--textContent);
 }
 
 .pe-dot {
@@ -592,7 +541,6 @@
   align-items: center;
   gap: var(--space-2);
   margin-top: var(--space-3);
-  font-size: var(--fs-sm);
   color: var(--accentText);
 }
 
@@ -608,8 +556,6 @@
    which draws an h2 — the level the dialog title already occupies. */
 .pe-section-title {
   margin: 0 0 var(--space-3);
-  font-size: var(--fs-lead);
-  font-weight: 650;
   color: var(--textPrimary);
 }
 
@@ -622,8 +568,6 @@
 
 .pe-drawer-title h2 {
   margin: 0;
-  font-size: var(--fs-h3);
-  font-weight: 650;
   color: var(--textPrimary);
 }
 
@@ -634,7 +578,6 @@
   align-items: center;
   gap: var(--space-2);
   margin-top: var(--space-3);
-  font-size: var(--fs-sm);
   color: var(--successText);
 }
 
@@ -677,7 +620,6 @@
    sits beside the control that produced it rather than replacing the drawer. */
 .pe-send-error {
   margin: var(--space-2) 0 0;
-  font-size: var(--fs-sm);
   color: var(--dangerText);
 }
 
@@ -693,9 +635,6 @@
 .pe-why-list {
   margin: 0;
   padding-left: var(--space-5);
-  font-size: var(--fs-sm);
-  line-height: 1.6;
-  color: var(--textContent);
 }
 
 .pe-disclosure {
@@ -709,8 +648,6 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  font-size: var(--fs-meta);
-  line-height: 1.4;
   color: var(--warnText);
 }
 
@@ -727,9 +664,6 @@
   padding: var(--space-3) var(--space-4);
   background: var(--accentLight);
   border-radius: var(--r-sm);
-  font-size: var(--fs-sm);
-  line-height: 1.5;
-  color: var(--textContent);
 }
 
 /* A numbered claim: the ordinal is what a conversation angle cites back. */
@@ -751,15 +685,11 @@
   border-radius: 50%;
   corner-shape: round;
   background: var(--accentLight);
-  font-size: var(--fs-meta);
-  font-weight: 600;
   color: var(--accentText);
 }
 
 .pe-claim-body {
   margin: 0 0 var(--space-2);
-  font-size: var(--fs-body);
-  line-height: 1.5;
   color: var(--textPrimary);
 }
 
@@ -771,10 +701,6 @@
   flex-direction: column;
   gap: var(--space-2);
   margin-top: var(--space-3);
-}
-
-.pe-claim-incomplete {
-  color: var(--textMuted);
 }
 
 .pe-brief-section {

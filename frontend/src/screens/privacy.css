@@ -12,10 +12,6 @@
   flex-wrap: wrap;
 }
 
-.purpose-form-warning {
-  color: var(--textMeta);
-}
-
 .purpose-form-error {
   color: var(--dangerText);
 }

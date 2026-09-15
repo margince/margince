@@ -92,10 +92,6 @@
   outline: var(--focus-ring);
   outline-offset: 2px;
 }
-.schedule-preset .t-caption {
-  color: var(--textMeta);
-}
-
 /* The calendar beside the readout it fills in, because the month is the thing
    being read and the date and hour are what it produces. Stacked on a narrow
    screen, where two columns would each be too tight to hold a week. */
@@ -133,7 +129,6 @@
   border-radius: var(--r-full);
   corner-shape: round;
   background: var(--bgElevated);
-  font-size: var(--fs-sm);
   color: var(--textPrimary);
   cursor: pointer;
 }
@@ -147,7 +142,6 @@
 .schedule-hour[aria-pressed="true"] {
   border-color: var(--borderStrong);
   background: var(--bgChip);
-  font-weight: var(--fw-semibold);
 }
 
 /* The sentence the whole dialog produces, above the control that commits it. */
@@ -208,5 +202,4 @@
    for the fields below, not a field of its own. */
 .mw-answering {
   margin: 0 0 var(--space-2);
-  color: var(--textMeta);
 }

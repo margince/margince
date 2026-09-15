@@ -6,11 +6,6 @@
 .co-work-status {
   display: block;
   width: 100%;
-  color: var(--textMeta);
-}
-
-.co-work-incomplete {
-  color: var(--textMeta);
 }
 
 /* The card's own footer band: two short caveats about the reading, side by
@@ -19,7 +14,6 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
-  color: var(--textMeta);
 }
 
 /* The pieces of work, as a grid of items rather than a stack of rows.
@@ -50,7 +44,6 @@
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-sm);
   background: var(--bgCard);
-  font-size: var(--fs-sm);
   color: var(--textPrimary);
 }
 
@@ -64,7 +57,6 @@
    wrapping anchor, because the attention line below carries links of its own
    and a control inside a control is neither. */
 .co-work-item-name {
-  font-weight: var(--fw-medium);
   text-align: left;
 }
 
@@ -80,9 +72,6 @@
 .co-work-figure {
   margin: 0;
   font-family: var(--f-display);
-  font-size: var(--fs-h3);
-  font-weight: var(--fw-medium);
-  letter-spacing: var(--tracking-display);
   color: var(--textPrimary);
 }
 

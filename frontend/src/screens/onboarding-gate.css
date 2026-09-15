@@ -96,11 +96,7 @@
   outline: 0;
   padding: var(--space-3) var(--space-3) var(--space-3) 0;
   font-family: var(--f-body);
-  font-size: var(--fs-lead);
   color: var(--textPrimary);
-}
-.ob-gate-input::placeholder {
-  color: var(--textMeta);
 }
 .ob-gate-submit {
   flex: none;
@@ -114,8 +110,6 @@
   background: var(--accent);
   color: var(--textOnAccentControl);
   font-family: var(--f-body);
-  font-size: var(--fs-sm);
-  font-weight: var(--fw-semibold);
   cursor: pointer;
   transition: background 0.12s ease;
 }
@@ -151,7 +145,6 @@
 }
 .ob-gate-trust {
   margin: 0;
-  line-height: var(--lh-relaxed);
   text-wrap: pretty;
 }
 .ob-gate-link {
@@ -160,8 +153,6 @@
   padding: var(--space-1);
   cursor: pointer;
   font-family: var(--f-body);
-  font-size: var(--fs-sm);
-  font-weight: var(--fw-medium);
   color: var(--accentText);
 }
 .ob-gate-link:hover,
@@ -180,9 +171,6 @@
   border: 1px solid var(--danger);
   border-radius: var(--r-sm);
   padding: var(--space-3) var(--space-4);
-  font-size: var(--fs-meta);
-  line-height: var(--lh-normal);
-  color: var(--textContent);
 }
 
 /* A paused read wears the warn family, not the danger family: the server will
@@ -200,7 +188,6 @@
 .ob-gate-alert.is-resumed {
   border-color: var(--borderStrong);
   background: var(--bgCard);
-  color: var(--textMeta);
 }
 
 /* Which model is about to read the site, stated before the address is handed
@@ -216,10 +203,6 @@
 .ob-gate-ai span {
   color: var(--aiText);
   font-family: var(--f-body);
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
 }
 
 /* A routing label names every model the installation can reach, so it can be a
@@ -233,9 +216,6 @@
   line-clamp: 2;
   overflow: hidden;
   max-width: 100%;
-  color: var(--textContent);
-  font-size: var(--fs-meta);
-  font-weight: var(--fw-medium);
 }
 
 /* ===== the read theatre ================================================= */
@@ -288,8 +268,6 @@
   align-items: center;
   gap: var(--space-2);
   font-family: var(--f-body);
-  font-size: var(--fs-meta);
-  letter-spacing: var(--tracking-normal);
   color: var(--aiText);
 }
 @keyframes ob-scan-fade {
@@ -361,10 +339,6 @@
   order: 1;
   margin: 0;
   font-family: var(--f-display);
-  font-size: var(--fs-display);
-  font-weight: var(--fw-semibold);
-  line-height: var(--lh-tight);
-  letter-spacing: var(--tracking-display);
   color: var(--textPrimary);
 }
 /* A drawn separator rather than a character: a middot in a string would be copy
@@ -411,10 +385,6 @@
 .ob-scan-cost-label {
   margin: 0;
   font-family: var(--f-body);
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
   color: var(--aiText);
 }
 .ob-scan-cost-line {
@@ -482,14 +452,11 @@
   max-width: 100%;
   min-width: 0;
   overflow: hidden;
-  color: var(--textContent);
-  font-size: var(--fs-meta);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .ob-scan-ticker-entry[data-page-status="skipped"] .ob-scan-ticker-path {
-  color: var(--textMeta);
   text-decoration: line-through;
 }
 
@@ -538,10 +505,6 @@
 @media (max-width: 899px) {
   .ob-gate {
     gap: var(--space-4);
-  }
-  .ob-gate-input {
-    /* Never below 16px, or iOS zooms the page on focus. */
-    font-size: var(--fs-h3);
   }
 }
 

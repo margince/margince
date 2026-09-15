@@ -69,7 +69,6 @@
   border: 0;
   border-radius: var(--r-sm);
   background: transparent;
-  color: var(--textMeta);
   /* The cursor says which way the panel will move, the way a pane divider does:
      expanded this control narrows the sidebar, collapsed it widens it. `pointer`
      said only "pressable", which every control in the bar already is. */
@@ -114,11 +113,6 @@
   /* Named, never `all` — the border and ink this button changes on hover have
      always snapped, and only the depth is introduced here. */
   transition: box-shadow var(--dur-state) var(--ease-out);
-  /* Pinned the way `.btn` pins it, and for the same reason: this button is a
-     row of unlike boxes — a glyph, a label and two key caps on `line-height: 1`
-     — and the body's 1.55 puts half a line of leading under the label alone, so
-     its glyphs settle below the caps they sit beside. */
-  line-height: 1.25;
 }
 /* And a press takes it away, like every other verb: the button is a field to
    look at and a verb to use, so it rests as one and answers as the other. */
@@ -129,7 +123,6 @@
 }
 .topbar-search:hover {
   border-color: var(--borderStrong);
-  color: var(--textMeta);
 }
 .topbar-search:focus-visible {
   outline: var(--focus-ring);
@@ -161,10 +154,6 @@
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-sm);
   background: var(--bgPage);
-  color: var(--textMeta);
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-medium);
-  line-height: 1;
 }
 
 /* Focus rings in this strip take `--accent`, the THEMED state colour, not

@@ -17,7 +17,6 @@
 
 .tagspanel-open {
   text-decoration: none;
-  color: inherit;
   border-radius: var(--r-md);
 }
 
@@ -44,7 +43,6 @@
 }
 
 .tagspanel-note {
-  color: var(--textMeta);
   margin: 0;
 }
 
@@ -58,7 +56,6 @@
 
 .tagspanel-empty-title {
   margin: 0;
-  font-weight: 500;
 }
 
 /* The verb under the words it adds to, spaced off them so it reads as an

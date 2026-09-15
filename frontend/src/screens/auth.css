@@ -219,26 +219,12 @@
   box-shadow: none;
   padding: 0;
 }
-/* The one thing on this half of the page that is allowed to be big. It scales
-   with the viewport because the column it sits in does — at a fixed 28px the
-   heading read as a label on a wide display and as a headline on a laptop. */
 .auth-card h1 {
   font-family: var(--f-display);
-  font-weight: 600;
-  font-size: clamp(var(--fs-h1), 2.2vw, var(--fs-display));
-  letter-spacing: var(--tracking-display);
-  line-height: 1.15;
   color: var(--textPrimary);
 }
-/* --textContent, not --textMeta: read at 15px this is body copy under the
-   heading, and meta grey is the role for the 11-13px lines ABOUT a thing rather
-   than the thing itself — it made the only three sentences on the screen the
-   quietest text on it. */
 .auth-card .card-sub {
   margin-top: var(--space-2);
-  font-size: var(--fs-lead);
-  color: var(--textContent);
-  line-height: 1.55;
   /* Balanced, not merely orphan-free: two lines of roughly equal length under a
      centred heading read as part of the same block; a long line over a short one
      reads as text that ran out. */
@@ -295,11 +281,6 @@
   align-items: center;
   gap: var(--space-3);
   margin: var(--space-6) 0 var(--space-1);
-  font-size: var(--fs-eyebrow);
-  font-weight: 500;
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
-  color: var(--textMeta);
 }
 .auth-or::before,
 .auth-or::after {
@@ -356,12 +337,8 @@
   background: transparent;
   border: 0;
   cursor: pointer;
-  font-size: var(--fs-sm);
-  font-weight: 500;
   color: var(--accentText);
   padding: 0;
-  text-transform: none;
-  letter-spacing: var(--tracking-normal);
 }
 .auth-link:hover,
 .auth-link:focus-visible {
@@ -382,13 +359,10 @@
   padding: var(--space-3);
 }
 .auth-error .ae-t {
-  font-size: var(--fs-sm);
-  font-weight: 600;
   color: var(--dangerText);
 }
 .auth-error .ae-m {
   margin-top: var(--space-1);
-  line-height: 1.45;
 }
 .auth-error:focus-visible {
   outline: 2px solid var(--danger);
@@ -413,12 +387,10 @@
   justify-content: center;
   flex-wrap: wrap;
   gap: var(--space-2);
-  color: var(--textTertiary);
   margin-top: auto;
 }
 .auth-footer .auth-link[aria-pressed="true"] {
   color: var(--textPrimary);
-  font-weight: 600;
 }
 
 /* Bottom row of the task region's grid, on every outcome. In flow rather than
@@ -443,9 +415,6 @@
   width: 100%;
   max-width: 400px;
   padding-top: calc(var(--space-6) * 1.5);
-  font-size: var(--fs-eyebrow);
-  line-height: 1.5;
-  color: var(--textMeta);
 }
 .auth-legal > p {
   min-width: 0;
@@ -462,7 +431,6 @@
   gap: var(--space-2);
 }
 .auth-legal a {
-  color: var(--textContent);
   text-decoration: underline;
   text-underline-offset: 2px;
 }
@@ -573,15 +541,6 @@
      what they say. */
   margin-top: var(--space-1);
   font-family: var(--f-display);
-  /* The greeting's own fluid rung (tokens.css): the one line in the product
-     with nothing else competing for the screen. Display type set at its own
-     leading rather than the column's: the shared leading is chosen for a line
-     that wraps three times, and at this size it opens a gap a reader reads as
-     two separate lines. */
-  font-size: var(--fs-greeting-fluid);
-  font-weight: 500;
-  line-height: 1.04;
-  letter-spacing: var(--tracking-display);
   color: var(--textPrimary);
 }
 /* ZERO layout shift while typing. The ghost is the full sentence rendered
@@ -626,9 +585,6 @@
   max-width: 30ch;
   margin-inline: auto;
   font-family: var(--f-display);
-  font-size: var(--fs-h2);
-  font-weight: 500;
-  line-height: 1.4;
   color: var(--textPrimary);
   text-wrap: pretty;
 }

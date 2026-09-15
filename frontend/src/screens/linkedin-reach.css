@@ -17,10 +17,3 @@
 .li-reach-figure {
   font-variant-numeric: tabular-nums;
 }
-
-/* The account name is the row's identity, not a link inviting a click away from
-   the table, so it takes the content ink rather than the accent every other
-   anchor carries. */
-.li-reach-link {
-  color: var(--textContent);
-}

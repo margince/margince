@@ -17,18 +17,12 @@
 }
 
 .brief-weekly-deal-name {
-  font-weight: 500;
   color: var(--textPrimary);
-}
-
-.brief-weekly-deal-outcome {
-  color: var(--textMeta);
 }
 
 /* Pushed to the end of the row so the dates line up down the list. */
 .brief-weekly-deal-when {
   margin-left: auto;
-  color: var(--textMeta);
 }
 
 /* The week's sentence, above its numbers. The indigo edge and the badge in the
@@ -46,8 +40,6 @@
 
 .brief-weekly-narrative-text > p {
   margin: 0;
-  color: var(--textContent);
-  line-height: 1.5;
 }
 
 /* The honest degrade reads quieter: it explains an absence rather than being
@@ -55,7 +47,6 @@
    with the week's own numbers for the reader's eye. */
 .brief-weekly-narrative-absent {
   margin: 0;
-  color: var(--textMeta);
 }
 
 /* ── The week's workings ───────────────────────────────────────────────────
@@ -75,9 +66,6 @@
   /* The block above pays the interval, not this list: the outcomes body is a
      stack and a margin here would be a second gap on top of its one. */
   margin: 0;
-  /* ONE row at the meta rung. Label and value used to carry two different
-     rungs, which read as two lines of type sharing a baseline. */
-  font-size: var(--fs-meta);
 }
 
 .brief-weekly-working {
@@ -86,16 +74,9 @@
   gap: var(--space-2);
 }
 
-.brief-weekly-working dt {
-  color: var(--textMeta);
-}
-
-/* The browser's own indent on a `dd` would stagger every pair by 40px. The
-   value keeps the reading ink while the label beside it stays grey, so the row
-   still reads label-then-figure at one size. */
+/* The browser's own indent on a `dd` would stagger every pair by 40px. */
 .brief-weekly-working dd {
   margin: 0;
-  color: var(--textContent);
   font-variant-numeric: tabular-nums;
 }
 
@@ -110,12 +91,6 @@
   gap: var(--space-2);
   flex-wrap: wrap;
   justify-content: flex-end;
-}
-
-/* Quieter than the badge beside it: the badge is the claim, this is its
-   footnote, and a reader who wants the moment goes looking for it. */
-.brief-weekly-written {
-  color: var(--textMeta);
 }
 
 /* ── The blocks inside the week's panel ────────────────────────────────────
@@ -167,7 +142,6 @@
 /* The absence, as the prose it is: the body's own gutter is the interval. */
 .weekly-learnings-empty {
   margin: 0;
-  color: var(--textMeta);
 }
 
 /* What a lesson RESTS ON, beside the claim: a set of references rather than a
@@ -179,5 +153,4 @@
   gap: var(--space-2);
   margin: var(--space-2) 0 0;
   padding: 0;
-  color: var(--textMeta);
 }

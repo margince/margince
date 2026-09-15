@@ -58,19 +58,11 @@
    line moves into the body — where it is the first thing read, above the form
    or the rows it describes, and it pays for its own interval to them.
 
-   Its type is `SettingRow`'s description size, deliberately: a card's own
-   description says what the whole card is for, so it is never smaller than the
-   description of one row inside it. Seventy panels across twenty screens carry
-   this line, which makes it a primitive stranded in a screen sheet rather than a
-   screen's caption — the design system is where it belongs, as Panel's own
-   intro line, and until it moves there this rule is the one place its type is
-   set. */
+   Seventy panels across twenty screens carry this line, which makes it a
+   primitive stranded in a screen sheet rather than a screen's caption — the
+   design system is where it belongs, as Panel's own intro line. */
 p.settings-panel-sub {
   margin-bottom: var(--space-4);
-  color: var(--textMeta);
-  /* ds:ignore a panel's intro line is a role of its own, until Panel owns it */
-  font-size: var(--fs-sm);
-  line-height: 1.45;
 }
 
 /* Inside a container that owns its intervals, the description's own margin ADDS
@@ -411,7 +403,6 @@ p.settings-panel-sub {
   gap: var(--space-1);
   padding: var(--space-2);
   border-radius: var(--r-sm);
-  color: inherit;
   text-decoration: none;
 }
 .settings-home-row:hover {
@@ -427,20 +418,14 @@ p.settings-panel-sub {
   flex-wrap: wrap;
   min-width: 0;
 }
-.settings-home-rowname {
-  font-weight: var(--fw-medium);
-}
-/* One group's heading inside a panel that holds several. Quieter than the
-   panel's own title, because the panel already said whether these are pages the
-   reader can change or only read, and this only says which part of the product
-   they belong to. */
+/* One group's heading inside a panel that holds several. The panel already said
+   whether these are pages the reader can change or only read; this only says
+   which part of the product they belong to. */
 .settings-home-group + .settings-home-group {
   margin-top: var(--space-4);
 }
 .settings-home-groupname {
   margin: 0 0 var(--space-2);
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-eyebrow);
 }
 /* A term and its answer, where the answer is a FACT rather than a setting: who
    the reader is on the settings home, what the mail-sharing rule currently says
@@ -452,9 +437,6 @@ p.settings-panel-sub {
   grid-template-columns: auto 1fr;
   gap: var(--space-2) var(--space-4);
   margin: 0;
-}
-.settings-facts dt {
-  color: var(--textMuted);
 }
 .settings-facts dd {
   margin: 0;

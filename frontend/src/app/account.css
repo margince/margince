@@ -62,8 +62,6 @@
   white-space: nowrap;
 }
 .acctwho b {
-  font-size: var(--fs-sm);
-  font-weight: var(--fw-semibold);
   color: var(--textPrimary);
 }
 /* ===== the menu =====
@@ -147,9 +145,7 @@
   border: 0;
   border-radius: var(--r-sm);
   background: transparent;
-  color: var(--textContent);
   font-family: var(--f-body);
-  font-size: var(--fs-sm);
   text-align: left;
   text-decoration: none;
   cursor: pointer;
@@ -164,7 +160,6 @@
 }
 .acctrow:disabled:hover {
   background: transparent;
-  color: var(--textContent);
 }
 .acctrow:focus-visible {
   outline: var(--focus-ring);
@@ -179,7 +174,6 @@
 }
 .acctmore {
   flex: none;
-  color: var(--textMeta);
 }
 /* The groups: who you are, where you go, then the way out. An <hr> rather than a
    border on the first row of a group — it is a separator, and a screen reader is
@@ -266,11 +260,6 @@
   justify-content: center;
   width: 14px;
   color: var(--accentText);
-}
-
-.acctthemelabel {
-  font-size: var(--fs-sm);
-  color: var(--textContent);
 }
 
 /* ===== the flyout at phone width =====

@@ -36,7 +36,6 @@
   background: transparent;
   border: 0;
   font-family: var(--f-body);
-  font-size: var(--fs-sm);
   text-align: left;
   color: var(--textPrimary);
   cursor: pointer;
@@ -49,7 +48,6 @@
 
 .ob-live-card-glyph {
   flex: none;
-  color: var(--textTertiary);
 }
 
 .ob-live-card[data-done="true"] .ob-live-card-glyph {
@@ -57,7 +55,6 @@
 }
 
 .ob-live-card-title {
-  font-weight: var(--fw-medium);
   flex: 1 1 auto;
   overflow-wrap: anywhere;
 }
@@ -80,16 +77,11 @@
 .ob-live-card-toggle {
   flex: none;
   font-family: var(--f-body);
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
   color: var(--accentText);
 }
 
 .ob-live-card-chev {
   flex: none;
-  color: var(--textTertiary);
   transition: transform 0.16s ease;
 }
 
@@ -117,9 +109,6 @@
 
 .ob-live-empty {
   margin: 0;
-  font-size: var(--fs-meta);
-  line-height: var(--lh-relaxed);
-  color: var(--textContent);
 }
 
 .ob-live-coverage {
@@ -130,23 +119,15 @@
 
 .ob-live-coverage-label {
   font-family: var(--f-body);
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
 }
 
-/* Four gaps, four voices. A note is a bound the read was configured with and
-   carries no alarm at all; a skipped page is routine and must not shout; a page
-   that could not be read is a hole in the dossier and reads danger; a warning
-   about the read as a whole reads warn. One alarm colour for all four would
-   make a robots.txt skip indistinguishable from a failure, and would paint a
-   page cap — the read doing exactly what it was told — as a fault. The label
-   itself states which in words; the colour only makes it scannable. */
-.ob-live-coverage[data-kind="note"] .ob-live-coverage-label,
-.ob-live-coverage[data-kind="skip"] .ob-live-coverage-label {
-  color: var(--textMeta);
-}
+/* Four gaps, and only the two faults are tinted. A page that could not be read
+   is a hole in the dossier and reads danger; a warning about the read as a
+   whole reads warn. A note is a bound the read was configured with and a
+   skipped page is routine — one alarm colour for all four would make a
+   robots.txt skip indistinguishable from a failure, and would paint a page cap
+   — the read doing exactly what it was told — as a fault. The label itself
+   states which in words; the colour only makes it scannable. */
 
 .ob-live-coverage[data-kind="fail"] .ob-live-coverage-label {
   color: var(--dangerText);
@@ -159,20 +140,12 @@
 /* What was missed, in the reader's vocabulary. It leads the row; the URL below
    it is corroboration for whoever wants the exact path. */
 .ob-live-coverage-name {
-  font-size: var(--fs-meta);
-  font-weight: var(--fw-medium);
   color: var(--textPrimary);
   overflow-wrap: anywhere;
 }
 
 .ob-live-coverage-url {
   overflow-wrap: anywhere;
-}
-
-.ob-live-coverage-reason {
-  font-size: var(--fs-meta);
-  line-height: var(--lh-normal);
-  color: var(--textContent);
 }
 
 /* A narrow pane: the glyph, the title, the count, the disclosure word and the

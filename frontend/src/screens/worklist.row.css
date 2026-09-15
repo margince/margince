@@ -135,7 +135,6 @@
 }
 
 .worklist-row-facts-line > * + *::before {
-  color: var(--textMeta);
   content: "·";
   margin-inline-end: var(--space-2);
 }
@@ -156,7 +155,6 @@
 .worklist-row-because,
 .worklist-row-consequence,
 .worklist-row-above {
-  color: var(--textMeta);
   margin: 0;
 }
 
@@ -202,18 +200,12 @@
 
    Laid out as a row rather than as prose so the badge reads as a label on the
    sentence beside it, and wrapping so a long line falls under the badge rather
-   than pushing the row wide. The "Margince believes" half is dimmed against the
-   sentence itself: it is attribution, and the reader is here for the claim. */
+   than pushing the row wide. */
 .worklist-row-verdict {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   gap: var(--space-1);
-}
-
-.worklist-row-verdict-source,
-.worklist-row-verdict-when {
-  color: var(--textTertiary, var(--textMeta));
 }
 
 .worklist-row-verdict-line {

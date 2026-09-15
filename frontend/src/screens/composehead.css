@@ -18,7 +18,6 @@
   border-block-end: 1px solid var(--borderSubtle);
 }
 .mailrow-label {
-  color: var(--textMeta);
   /* The name sits on the field's own line rather than on the top of a box that
      grows: a To row holding three recipients is two lines tall, and a label
      aligned to its top drifts away from the row it names. */
@@ -48,7 +47,6 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  color: var(--textMeta);
 }
 .compose-transport > :last-child {
   flex: 1;
