@@ -79,11 +79,13 @@ func (o *OutcomeReviews) Write(ctx context.Context, dealID ids.DealID, req crmco
 			ClosingOccurrenceID: occurrence.ID,
 			// From the CLOSING, never from the request. A caller naming their
 			// own outcome could file a win review against a loss.
-			Outcome:      occurrence.Outcome,
-			SubmissionID: ids.UUID(req.SubmissionId),
-			Answers:      answersOf(req.Answers),
-			Body:         req.Body,
-			Source:       "ui",
+			Outcome:         occurrence.Outcome,
+			SubmissionID:    ids.UUID(req.SubmissionId),
+			Answers:         answersOf(req.Answers),
+			ChoiceAnswers:   reviewChoices(req.ChoiceAnswers),
+			TemplateVersion: req.TemplateVersion,
+			Body:            req.Body,
+			Source:          "ui",
 		})
 		return err
 	})
@@ -125,4 +127,11 @@ func answersOf(answers map[string]string) map[string]string {
 		return map[string]string{}
 	}
 	return answers
+}
+
+func reviewChoices(choices *map[string][]string) map[string][]string {
+	if choices == nil {
+		return nil
+	}
+	return *choices
 }

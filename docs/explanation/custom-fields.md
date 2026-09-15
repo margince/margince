@@ -190,3 +190,28 @@ choice belongs upstream in the spec, not to whoever implements it next.
 The owner-pool flag and its `/readyz` probe: [reference/configuration.md](../reference/configuration.md).
 The write shape these mutations still ride: [write-backbone.md](write-backbone.md). The role matrix
 behind the admin/ops posture: [rbac-roles-and-teams.md](rbac-roles-and-teams.md).
+
+### Multiple-choice fields
+
+`multiselect` is a governed custom-field type alongside `picklist`. Its values
+are JSON arrays of strings, stored in a nullable `text[]` column. Administrators
+provide the allowed choices when creating the field; the product ships no
+installation-specific field definitions or vocabularies. The generated CHECK
+refuses unknown choices. Editing the vocabulary refuses removal of any choice
+still stored on a record, including retired records.
+
+Create and edit forms offer independent checkboxes. Labels containing commas
+remain single choices. Omitting a key on PATCH preserves its value; `null` clears
+the field, and `[]` stores an explicitly empty selection. Duplicate selections
+are normalized on record writes.
+
+The collections filter vocabulary and query plans use `eq`/`neq` for exact
+membership and its negation, and `in` for overlap with any listed choice. These compare complete, case-sensitive
+choices rather than substrings of a flattened label.
+
+Outcome-review questions can separately use `multiselect`. Administrators edit
+the questions in Settings with `custom_field:update`; template versions prevent
+concurrent overwrites. Text answers retain the existing `answers` map, while
+`choice_answers` carries arrays keyed by question key. Each submitted review
+freezes its questions and allowed choices, so a later template edit never
+rewrites a previous closing's review.

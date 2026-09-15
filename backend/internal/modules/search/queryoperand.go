@@ -115,7 +115,7 @@ func operandShape(kind FieldKind) string {
 		return "boolean"
 	case KindGeo:
 		return `{"center": <text>, "radius_km": <number>} or {"lat": <number>, "lon": <number>, "radius_km": <number>}`
-	case KindText, KindID, KindDate, KindTimestamp:
+	case KindText, KindMultiselect, KindID, KindDate, KindTimestamp:
 		return "string"
 	default:
 		return "string"
@@ -143,7 +143,7 @@ func operandMatches(kind FieldKind, raw json.RawMessage) bool {
 		return json.Unmarshal(raw, &v) == nil
 	case KindGeo:
 		return geoOperandMatches(raw)
-	case KindText, KindID, KindDate, KindTimestamp:
+	case KindText, KindMultiselect, KindID, KindDate, KindTimestamp:
 		var v string
 		return json.Unmarshal(raw, &v) == nil
 	default:

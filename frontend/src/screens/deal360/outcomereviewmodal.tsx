@@ -1,5 +1,11 @@
 import { useEffect, useId, useRef, useState } from "react";
-import { Button, Field, Modal, Textarea } from "../../design-system/atoms";
+import {
+  Button,
+  Checkbox,
+  Field,
+  Modal,
+  Textarea,
+} from "../../design-system/atoms";
 import { useT } from "../../i18n";
 import { problemMessageOf } from "../common";
 import {
@@ -43,6 +49,9 @@ export function OutcomeReviewModal({
   const t = useT();
   const headingId = useId();
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [choiceAnswers, setChoiceAnswers] = useState<Record<string, string[]>>(
+    {},
+  );
   const [body, setBody] = useState("");
   // One id per OPENING of the modal, not one per submission attempt. It is what
   // makes a retry idempotent: a save that timed out and was pressed again
@@ -76,6 +85,9 @@ export function OutcomeReviewModal({
   // stale-closing refusal fire, which is the answer the reader needs: these
   // questions were about a closing that is no longer the one in play.
   const [draftClosing, setDraftClosing] = useState(closingOccurrenceId);
+  const [draftTemplate, setDraftTemplate] = useState(template);
+  const openingRef = useRef({ template, closingOccurrenceId });
+  openingRef.current = { template, closingOccurrenceId };
 
   // The prefill as it is RIGHT NOW, readable from the effect WITHOUT the
   // effect depending on it. Depending on the object would re-seed the form
@@ -88,14 +100,20 @@ export function OutcomeReviewModal({
     if (open) {
       setAnswers({ ...prefillRef.current });
       setBody("");
+      setChoiceAnswers({});
       setSubmissionId(crypto.randomUUID());
-      setDraftClosing(closingOccurrenceId);
+      setDraftClosing(openingRef.current.closingOccurrenceId);
+      setDraftTemplate(openingRef.current.template);
       resetCreate();
     }
-  }, [open, closingOccurrenceId, resetCreate]);
+  }, [open, resetCreate]);
 
-  const missing = template.questions.filter(
-    (q) => q.required && !answers[q.key]?.trim(),
+  const missing = draftTemplate.questions.filter(
+    (q) =>
+      q.required &&
+      (q.type === "multiselect"
+        ? !choiceAnswers[q.key]?.length
+        : !answers[q.key]?.trim()),
   );
 
   function close() {
@@ -109,6 +127,8 @@ export function OutcomeReviewModal({
       closing_occurrence_id: draftClosing,
       submission_id: submissionId,
       answers,
+      choice_answers: choiceAnswers,
+      template_version: draftTemplate.version,
       body: body.trim() ? body : null,
     });
     // Only close the submission that actually landed. A save over a slow link
@@ -129,31 +149,59 @@ export function OutcomeReviewModal({
         className="t-h2"
         style={{ marginBottom: "var(--space-3)" }}
       >
-        {template.label}
+        {draftTemplate.label}
       </h2>
       <div className="form-stack">
-        {template.questions.map((question) => (
-          <Field
-            key={question.key}
-            label={question.label}
-            required={question.required}
-          >
-            {(control) => (
-              <Textarea
-                {...control}
-                rows={3}
-                value={answers[question.key] ?? ""}
-                disabled={create.isPending}
-                onChange={(event) =>
-                  setAnswers((prev) => ({
-                    ...prev,
-                    [question.key]: event.target.value,
-                  }))
-                }
-              />
-            )}
-          </Field>
-        ))}
+        {draftTemplate.questions.map((question) =>
+          question.type === "multiselect" ? (
+            <fieldset key={question.key} className="field-multiselect">
+              <legend className="t-label">
+                {question.label}
+                {question.required ? " *" : ""}
+              </legend>
+              {(question.options ?? []).map((option) => (
+                <Checkbox
+                  key={option}
+                  label={option}
+                  disabled={create.isPending}
+                  checked={(choiceAnswers[question.key] ?? []).includes(option)}
+                  onChange={() =>
+                    setChoiceAnswers((prev) => {
+                      const selected = prev[question.key] ?? [];
+                      return {
+                        ...prev,
+                        [question.key]: selected.includes(option)
+                          ? selected.filter((value) => value !== option)
+                          : [...selected, option],
+                      };
+                    })
+                  }
+                />
+              ))}
+            </fieldset>
+          ) : (
+            <Field
+              key={question.key}
+              label={question.label}
+              required={question.required}
+            >
+              {(control) => (
+                <Textarea
+                  {...control}
+                  rows={3}
+                  value={answers[question.key] ?? ""}
+                  disabled={create.isPending}
+                  onChange={(event) =>
+                    setAnswers((prev) => ({
+                      ...prev,
+                      [question.key]: event.target.value,
+                    }))
+                  }
+                />
+              )}
+            </Field>
+          ),
+        )}
         {/* Prose beside the answers, not instead of them. The review is written
             as a note on the timeline, and this is that note's own words. */}
         <Field label={t("outcomeReview.notes")}>

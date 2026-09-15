@@ -17,12 +17,13 @@ type FieldType string
 // The filterable field types. Six of them are what a custom field may be; the
 // last two are core-only, because the catalogue offers neither.
 const (
-	FieldText     FieldType = "text"
-	FieldNumber   FieldType = "number"
-	FieldDate     FieldType = "date"
-	FieldCurrency FieldType = "currency"
-	FieldPicklist FieldType = "picklist"
-	FieldBoolean  FieldType = "boolean"
+	FieldText        FieldType = "text"
+	FieldNumber      FieldType = "number"
+	FieldDate        FieldType = "date"
+	FieldCurrency    FieldType = "currency"
+	FieldPicklist    FieldType = "picklist"
+	FieldMultiselect FieldType = "multiselect"
+	FieldBoolean     FieldType = "boolean"
 	// FieldID covers the allow-list's UUID reference columns (owner_id,
 	// stage_id, …): equality/membership only, value must parse as a UUID
 	// so a malformed id fails validation (422), never query execution.

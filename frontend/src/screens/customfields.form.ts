@@ -14,7 +14,11 @@ import { formatMoneyOrAbsent } from "../format/format";
 import { toMajorUnits, toMinorUnits } from "../format/minorunits";
 import { webUrl } from "../format/weburl";
 import { type Locale, useT } from "../i18n";
-import type { CreateField } from "./create";
+import {
+  type CreateField,
+  joinMultiselectValue,
+  splitMultiselectValue,
+} from "./create";
 import type { CfObject } from "./customfields.logic";
 
 export type CustomField = components["schemas"]["CustomField"];
@@ -38,6 +42,17 @@ export function customFieldToFormField(
         ...base,
         type: "number",
         toInput: (raw) => customFieldFormValue(field, raw),
+      };
+    case "multiselect":
+      return {
+        ...base,
+        type: "multiselect",
+        multiselectEncoding: "json",
+        toInput: (raw) => customFieldFormValue(field, raw),
+        options: (field.options ?? []).map((option) => ({
+          value: option,
+          label: option,
+        })),
       };
     case "picklist":
       return {
@@ -118,6 +133,9 @@ export function customFieldFormValue(
   if (stored == null || stored === "") {
     return "";
   }
+  if (field.type === "multiselect") {
+    return joinMultiselectValue(Array.isArray(stored) ? stored : [], "json");
+  }
   if (field.type === "currency") {
     return String(toMajorUnits(Number(stored), field.currency ?? ""));
   }
@@ -149,6 +167,8 @@ function coerceWrite(field: CustomField, raw: string): unknown {
       }
       return minor;
     }
+    case "multiselect":
+      return splitMultiselectValue(value, "json");
     case "boolean":
       return value === "true" ? true : value === "false" ? false : null;
     default:
@@ -225,6 +245,8 @@ export function customFieldDisplay(
       return raw === true || raw === "true"
         ? opts.boolLabels.yes
         : opts.boolLabels.no;
+    case "multiselect":
+      return Array.isArray(raw) && raw.length ? raw.join(", ") : null;
     default:
       // text / picklist / number / date (a plain YYYY-MM-DD, shown verbatim to
       // avoid a timezone shift a datetime formatter would introduce).

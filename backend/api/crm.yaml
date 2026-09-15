@@ -18218,6 +18218,31 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/ActivityReviewTemplateListResponse' }
 
+  /activity-review-templates/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    patch:
+      tags: [Activities]
+      operationId: updateActivityReviewTemplate
+      summary: Edit the questions for future outcome reviews.
+      description: Requires custom_field update permission. Version conflicts return 409; submitted reviews retain their frozen questions and answers.
+      x-agent-access: human-only
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateActivityReviewTemplateRequest' }
+      responses:
+        '200':
+          description: Updated template.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ActivityReviewTemplate' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /deals/{id}/offers:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -36057,7 +36082,8 @@ components:
       properties:
         key: { type: string, description: 'Stable within a template. An answer is filed under it and a frozen response keeps both, so rewording a label never orphans an answer.' }
         label: { type: string, description: 'What the question asks, worded as the reader sees it.' }
-        type: { type: string, enum: [text], description: 'Only free text for now. The vocabulary is closed so a client never meets a control it cannot render.' }
+        type: { type: string, enum: [text, multiselect], description: 'Text answers use answers; multiple-choice answers use choice_answers.' }
+        options: { type: array, items: { type: string }, description: 'Allowed choices, required for multiselect. Frozen alongside the question in each submitted review.' }
         required: { type: boolean }
 
     ActivityReviewTemplate:
@@ -36074,6 +36100,13 @@ components:
         system: { type: boolean, description: 'Shipped with the product. A system template can be retired but not deleted, so an old review always has a template to name.' }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
+
+    UpdateActivityReviewTemplateRequest:
+      type: object
+      required: [version, questions]
+      properties:
+        version: { type: integer, format: int64, minimum: 1, description: Last read template version. }
+        questions: { type: array, minItems: 1, items: { $ref: '#/components/schemas/ReviewQuestion' } }
 
     ActivityReviewTemplateListResponse:
       type: object
@@ -36096,6 +36129,7 @@ components:
           type: array
           items: { $ref: '#/components/schemas/ReviewQuestion' }
           description: 'The questions as they were asked, FROZEN at submission. The template they came from is editable, and an edit must not change what this review appears to have asked.'
+        choice_answers: { type: object, additionalProperties: { type: array, items: { type: string } }, description: 'Selected options by question key; values must belong to the frozen question vocabulary.' }
         answers: { type: object, additionalProperties: { type: string }, description: 'Keyed by question key. Every key here has a question in `questions`.' }
         revision: { type: integer }
         created_at: { type: string, format: date-time }
@@ -36111,8 +36145,10 @@ components:
       type: object
       required: [closing_occurrence_id, submission_id, answers]
       properties:
+        template_version: { type: integer, format: int64, description: 'Version shown when the form opened. A changed template returns 409 rather than filing answers against new questions.' }
         closing_occurrence_id: { type: string, format: uuid, description: 'The closing being reviewed. Must be the one the deal is on now, else 409.' }
         submission_id: { type: string, format: uuid, description: 'The client''s own id for this submission. Retrying with the same id returns the review that already exists rather than writing a second one; a deliberate second review uses a new id.' }
+        choice_answers: { type: object, additionalProperties: { type: array, items: { type: string } }, description: 'Selected options by question key; values must belong to the frozen question vocabulary.' }
         answers: { type: object, additionalProperties: { type: string }, description: 'Keyed by question key. An answer to a question the template does not ask is refused 422, because the frozen questions beside it could not explain it.' }
         body: { type: [string, 'null'], description: 'Free prose for the note itself, beside the structured answers. Optional: the answers are the review.' }
 
@@ -36924,7 +36960,7 @@ components:
             since the catalog owns labels and this vocabulary does not.
         type:
           type: string
-          enum: [text, number, date, currency, picklist, boolean, id, domain]
+          enum: [text, number, date, currency, picklist, multiselect, boolean, id, domain]
           description: |
             The six custom-field types, plus `id` for a reference to another record and
             `domain` for a host column. The type decides the operators, which is why it is here.
@@ -39387,8 +39423,8 @@ components:
         slug: { type: string, description: Admin-facing key the column_name derives from. }
         type:
           type: string
-          enum: [text, number, date, currency, picklist, boolean]
-          description: The closed set of six scalar types (CUSTOM-FIELDS-PARAM-1). Immutable once created.
+          enum: [text, number, date, currency, picklist, multiselect, boolean]
+          description: The supported field types. Multiselect values are JSON string arrays; empty arrays clear the selection. Immutable once created.
         status:
           type: string
           enum: [active, retired]
@@ -39443,7 +39479,7 @@ components:
         label: { type: string }
         type:
           type: string
-          enum: [text, number, date, currency, picklist, boolean]
+          enum: [text, number, date, currency, picklist, multiselect, boolean]
         currency: { type: [string, 'null'], pattern: '^[A-Z]{3}$' }
         options: { type: [array, 'null'], items: { type: string } }
         source: { type: string }
