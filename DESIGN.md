@@ -274,9 +274,10 @@ alignment mono was bought for.
   nothing, and neither does a text affordance. A FIELD is a place to put
   something, so it has a floor rather than a top side and takes
   `--shadow-well`, the same layer turned inside — a text box, a textarea, a
-  field shell. The one exception is the `Select` trigger: it holds a closed
-  face rather than a place to type, so it is verb-shaped and takes the resting
-  layer. Either way a control closes the gap on hover, active and focus — a
+  field shell, and anything DRAWN as a field, the topbar's search included,
+  because a reader reads the shape and not the element. The one exception runs
+  the other way: the `Select` trigger holds a closed face rather than a place
+  to type, so it is verb-shaped and takes the resting layer. Either way a control closes the gap on hover, active and focus — a
   verb presses into the page, a field's floor comes up to meet the pointer. A
   popover, menu or drawer takes `--shadow-pop` instead. Nothing at rest glows
   or has a gradient, and nothing stacks a shadow under a shadow.
