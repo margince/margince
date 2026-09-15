@@ -133,7 +133,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `worklistbounds_test.go` | H2 | The worklist reports a source as possibly having more work behind it when its lane came back exactly at its bound. |
 | `worklistverdictstandings_test.go` | H2 | The queue's verdict standings ARE the deal card's, and this derives them from the card rather than keeping a second list of them. |
 
-## Census (152)
+## Census (153)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -159,6 +159,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `basecurrencyguard_test.go` | H2 | The base-currency lock as a fitness function. |
 | `belowtheauthgate_test.go` | H2 | What can be reached without credentials is a declared list, not whatever the routing code happens to allow. |
 | `bootcomposition_test.go` | H2 | The fitness gate on the boot sequence: a process role that composes extensions also records what it composed. |
+| `boundedfixture_test.go` | H3 | An integration suite that only ever acts unbounded proves nothing about row scope. |
 | `briefevidencestrip_test.go` | H2 | "Never persist an email summary" is spelled once, and every writer that caches evidence says it that way. |
 | `briefsectioncensus_test.go` | H2 | Every worklist category reaches a section of the morning. |
 | `buildinputfetch_test.go` | H3 | A build input fetched over the network survives a transient failure. |
