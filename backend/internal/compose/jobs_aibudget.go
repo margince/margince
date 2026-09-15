@@ -128,10 +128,10 @@ func resumeSiteReadAuthority(ctx context.Context, tx pgx.Tx, users *identity.Ser
 			return err
 		}
 	} else if !isSystemRead(read.Requester) {
-		// isSystemRead already gates the page ceiling (deepreadstop.go,
-		// deepread.go); checking the same predicate here, instead of one
-		// actor's own sentinel, means a new automatic lane only ever needs to
-		// extend isSystemRead once to resume correctly too.
+		// isSystemRead is the single place a lane declares itself automatic; an
+		// automatic lane's requester resumes here on the same predicate that
+		// already gates its page ceiling, so a new lane only ever needs one
+		// declaration to resume correctly too.
 		return fmt.Errorf("site read %s: requester cannot be resolved", read.ID)
 	}
 	return contacts.RequireSiteReadAuthority(requesterCtx, tx, read.CompanyID, read.TargetKind)

@@ -21,10 +21,9 @@ import (
 
 // TestAllowanceOverflowLockoutRecoversThroughReplaceBudget proves a
 // TokensPerFullUser that is valid against today's full-user count can start overflowing
-// MaxMonthlyTokens once the workspace's full-user count grows, and — before this fix —
-// every admin entry point that could correct it (ReadBudget, PreviewBudget, ReplaceBudget)
-// computed the STORED config's MonthlyTokens first and errored before ever looking at the
-// correction being submitted.
+// MaxMonthlyTokens once the workspace's full-user count grows, and every admin entry
+// point that can correct it (ReadBudget, PreviewBudget, ReplaceBudget) observes the
+// stored config saturated rather than erroring, so the correction is reachable.
 //
 // The growth is driven through the real identity writer (deactivate, then reactivate a
 // seat), not a hand-rolled full-user count, and the correction goes through ReplaceBudget

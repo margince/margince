@@ -19,7 +19,6 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/platform/jobs"
@@ -47,12 +46,15 @@ func TestDomainTriageReadResumesAfterBudgetDeferral(t *testing.T) {
 	// openTriageQuestion starts the dossier without going through the
 	// production enqueue callback (capturedomaintriage.go's
 	// startDomainTriageRead), so the retry job the sweep resumes has to be
-	// inserted here, exactly as production's worker snooze would have left it.
+	// inserted here — through the same siteDeepReadInsertOpts production uses,
+	// with only ScheduledAt overridden to the deferral the worker recorded.
 	runner, err := jobs.NewInserter(e.Pool, slog.New(slog.DiscardHandler))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := runner.Enqueue(e.Admin(), args, &river.InsertOpts{ScheduledAt: next, MaxAttempts: 3}); err != nil {
+	opts := *siteDeepReadInsertOpts(DeepReadPriorityHousekeeping)
+	opts.ScheduledAt = next
+	if err := runner.Enqueue(e.Admin(), args, &opts); err != nil {
 		t.Fatal(err)
 	}
 

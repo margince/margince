@@ -35,6 +35,12 @@ type seatBudget struct {
 // NewSeatBudget is the production BudgetPolicy.
 func NewSeatBudget(pool *pgxpool.Pool) ai.BudgetPolicy { return seatBudget{pool: pool} }
 
+// MonthlyTokenBudget reads an already-stored config, so it saturates rather than
+// erroring on a workspace that has grown past MaxMonthlyTokens since the config
+// was written — that clamp can only ever authorize less spend than configured,
+// never more, and letting it error would halt every routed model call, the
+// budget resume sweep, and usage reporting for as long as the config stays
+// over-cap. A NEW value being written still validates strictly, in ReplaceBudget.
 func (b seatBudget) MonthlyTokenBudget(ctx context.Context, workspaceID ids.WorkspaceID) (int64, error) {
 	var monthly int64
 	err := database.WithWorkspaceTx(principal.WithWorkspaceID(ctx, workspaceID.UUID), b.pool, func(tx pgx.Tx) error {
@@ -46,7 +52,7 @@ func (b seatBudget) MonthlyTokenBudget(ctx context.Context, workspaceID ids.Work
 		if err != nil {
 			return err
 		}
-		monthly, err = config.MonthlyTokens(users)
+		monthly, err = config.SaturatingMonthlyTokens(users)
 		return err
 	})
 	return monthly, err

@@ -64,12 +64,12 @@ func budgetSnapshot(config BudgetConfig, users, spent int64, now time.Time) (crm
 }
 
 // observedSnapshot never errors on a stored config that has grown past the overflow
-// ceiling (see BudgetConfig.saturatingMonthlyTokens) — it exists for surfaces that must
+// ceiling (see BudgetConfig.SaturatingMonthlyTokens) — it exists for surfaces that must
 // render a workspace's CURRENT allowance so an admin can correct it, as opposed to
 // budgetSnapshot's strict/fail-closed contract used to gate real spend and to validate a
 // NEW value being written.
 func observedSnapshot(config BudgetConfig, users, spent int64, now time.Time) (crmcontracts.AiBudgetSnapshot, error) {
-	monthly, err := config.saturatingMonthlyTokens(users)
+	monthly, err := config.SaturatingMonthlyTokens(users)
 	if err != nil {
 		return crmcontracts.AiBudgetSnapshot{}, err
 	}
@@ -94,12 +94,13 @@ func (s *AdminStore) loadBudgetInputs(ctx context.Context, tx pgx.Tx) (BudgetCon
 	return config, users, spent, now, nil
 }
 
-// observedTx backs every read surface (ReadStatus, PreviewRouting, ReadBudget,
-// ReplaceBudget's optimistic-concurrency read, PreviewBudget's Current) so a
-// workspace whose stored config has grown past the overflow ceiling can still be
-// read and corrected, rather than failing every one of the entry points that exist
-// to fix it. Real spend (compose's seatBudget.MonthlyTokenBudget) reads
-// BudgetConfig.MonthlyTokens directly and keeps the strict, fail-closed contract.
+// observedTx backs this store's read surfaces (ReadStatus, PreviewRouting,
+// ReadBudget, ReplaceBudget's optimistic-concurrency read, PreviewBudget's
+// Current) through BudgetConfig.SaturatingMonthlyTokens, so a workspace whose
+// stored config has grown past the overflow ceiling can still be read and
+// corrected rather than failing every one of the entry points that exist to fix
+// it. compose's seatBudget.MonthlyTokenBudget reads the same saturating method
+// directly for real spend, outside this store.
 func (s *AdminStore) observedTx(ctx context.Context, tx pgx.Tx) (crmcontracts.AiBudgetSnapshot, error) {
 	config, users, spent, now, err := s.loadBudgetInputs(ctx, tx)
 	if err != nil {
@@ -141,13 +142,17 @@ func (s *AdminStore) ReplaceBudget(ctx context.Context, change BudgetChange) (cr
 		if current.Revision != change.ExpectedRevision {
 			return apperrors.ErrVersionSkew
 		}
-		if current.Revision == change.Config.Revision() {
-			out = current
-			return nil
-		}
+		// Validate the submitted config strictly BEFORE the no-op short-circuit
+		// below, so resubmitting an over-cap config unchanged is refused exactly
+		// like a fresh submission would be — the observed snapshot it would
+		// otherwise echo back is saturated, and reporting that as a successful
+		// save would tell an admin the problem is fixed when it is not.
 		out, err = previewBudget(current, change.Config)
 		if err != nil {
 			return err
+		}
+		if current.Revision == change.Config.Revision() {
+			return nil
 		}
 		raw, err := json.Marshal(change.Config)
 		if err != nil {
