@@ -133,6 +133,8 @@ export function RecordEmailVerb({
   contactId,
   recordAddress,
   disabledReasonId,
+  open,
+  onOpenChange,
 }: Readonly<{
   entityType: RelinkKind;
   entityId: string;
@@ -140,18 +142,31 @@ export function RecordEmailVerb({
   /** The record's own address, for a first message to it. See ComposeModal. */
   recordAddress?: string;
   disabledReasonId?: string;
+  /**
+   * Lifts the composer's open state to the caller, for a page with a second
+   * control that opens this SAME composer: a lead's "Answer" row hands its
+   * Reply verb the header's own modal rather than mounting a copy of it.
+   * Absent for every caller with no such second control, which keeps the
+   * state here as before.
+   */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }>) {
-  const [composing, setComposing] = useState(false);
-  // Whether the verb has ever been pressed; see the guard below.
-  const [everComposed, setEverComposed] = useState(false);
+  const [ownComposing, setOwnComposing] = useState(false);
+  const composing = open ?? ownComposing;
+  const setComposing = onOpenChange ?? setOwnComposing;
+  // Whether the composer has ever been asked for, open state included: a
+  // caller that opens it from elsewhere on the page still has to mount it
+  // here, the one place this component's own modal lives.
+  const [everComposed, setEverComposed] = useState(composing);
+  if (composing && !everComposed) {
+    setEverComposed(true);
+  }
   return (
     <>
       <EmailVerb
         reasonId={disabledReasonId}
-        onClick={() => {
-          setEverComposed(true);
-          setComposing(true);
-        }}
+        onClick={() => setComposing(true)}
       />
       {/* Not drawn until the verb has been pressed once, and mounted from
           then on. A composer mounted with the record would read on every

@@ -1,10 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight, CheckSquare, FileText } from "lucide-react";
 import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
-import { useRecordWriteRefusal } from "../app/capability";
+import { useCanWrite, useRecordWriteRefusal } from "../app/capability";
 import { PageAsideToggle, usePageAside } from "../app/pageaside";
 import { useRecordZone } from "../app/recordzone";
 import { scrollPageToTop } from "../app/reveal";
@@ -39,7 +39,7 @@ import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useClaimRecord } from "./claimrecord";
-import { problemMessageOf, QueryGate, throwProblem } from "./common";
+import { problemMessageOf, QueryGate, throwProblem, useMe } from "./common";
 import type { CreateField } from "./create";
 import { EntityRef, useEntityName } from "./entityref";
 import { useRecordHistory } from "./history";
@@ -62,12 +62,12 @@ import { LeadStepper } from "./leads.stepper";
 import { LeadManualSignals } from "./leadsignals";
 import { leadStanding } from "./leadstanding";
 import { leadTodoRows } from "./leadtoday";
-import { LogActivity } from "./logactivity";
+import { LogActivityAction } from "./logactivity";
 import { useOpenEmail } from "./openemail";
 import { RecordReading, TimelineThread, TodayPanel } from "./record360";
 import { RecordCustomFields } from "./recordcustomfields";
 import { saveRecordEdit } from "./recordedit";
-import { RecordEmailAside, RecordEmailVerb } from "./recordemail";
+import { RecordEmailVerb } from "./recordemail";
 import { RecordFields } from "./recordfields";
 import { searchProjectReferences, useRecordOwners } from "./recordreferences";
 import { ShareAction } from "./share";
@@ -1092,7 +1092,7 @@ function LeadOverviewPane({
   thread,
   onQualify,
   onDisqualify,
-  onTouchLogged,
+  onReply,
   onOpenEmail,
 }: Readonly<{
   lead: Lead;
@@ -1105,43 +1105,16 @@ function LeadOverviewPane({
   thread: RecordTimeline;
   onQualify: () => void;
   onDisqualify: () => void;
-  // Owned by LeadScreen, ABOVE the tab switch: the refresh timers this
-  // schedules must survive this pane unmounting when the reader flips to
-  // History mid-climb.
-  onTouchLogged: () => void;
+  // The "Answer" row's own verb: opens the SAME composer the header's Email
+  // verb opens, owned by LeadRecord so both controls answer to one open
+  // state rather than each mounting its own copy of it.
+  onReply: () => void;
   // The page's one email drawer, for the thread under the call.
   onOpenEmail: (activityId: string) => void;
 }>) {
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
-  // The verb the reader arrived to perform, named by the address rather than
-  // guessed: a caller that sends somebody here to log a call says so, and the
-  // composer opens on that kind instead of on a note the reader has to change.
-  //
-  // Left in the address rather than consumed, like every other dial this
-  // product carries: the link is one somebody can paste, and Back returns to
-  // the same screen it described.
-  const [params] = useUrlParams();
-  const askedToLogCall = params.get(ACTION_PARAM) === CALL_ACTION;
-  const composer = useRef<HTMLDivElement | null>(null);
-  useEffect(() => {
-    if (!askedToLogCall) {
-      return;
-    }
-    // The composer follows the facts, so a reader who arrived FOR it lands
-    // above it. jsdom has no scrollIntoView; the browser always does.
-    composer.current?.scrollIntoView?.({ block: "start" });
-  }, [askedToLogCall]);
-  // The "Answer" row's own verb: the same landing the address above gives a
-  // reader sent here to reply, but reached by a press rather than a link, so
-  // it hands the reader the field too rather than leaving them to find it.
-  function focusComposer() {
-    composer.current?.scrollIntoView?.({ block: "start" });
-    composer.current
-      ?.querySelector<HTMLElement>("input, textarea, select, button")
-      ?.focus();
-  }
   // The lead carries no task id of its own, so both the panel head's "View
   // tasks" and the "Next task" row's own verb open the same queue.
   const onOpenTasks = () => navigate({ screen: "worklist" });
@@ -1177,7 +1150,7 @@ function LeadOverviewPane({
             t,
             locale,
             recordZone,
-            focusComposer,
+            onReply,
             onOpenTasks,
             writer.readOnly ? terminalReasonId : undefined,
           )}
@@ -1204,29 +1177,6 @@ function LeadOverviewPane({
           </PanelBody>
         </Panel>
       </RecordReading>
-      {/* The composer follows the facts so opening a lead answers "what
-          should I do" before asking the rep to type. */}
-      {!lead.archived_at && (
-        <div ref={composer}>
-          <LogActivity
-            entityType="lead"
-            entityId={id}
-            askedKind={askedToLogCall ? "call" : undefined}
-            onLogged={onTouchLogged}
-          />
-        </div>
-      )}
-      {!lead.archived_at && (
-        <RecordEmailAside
-          entityType="lead"
-          entityId={id}
-          // A lead IS the recipient: the address is on the record itself
-          // rather than on a contact behind it, and a first message to one
-          // has no thread to resolve a counterparty from.
-          recordAddress={lead.email ?? undefined}
-          detectWaitingReply
-        />
-      )}
     </div>
   );
 }
@@ -1240,13 +1190,20 @@ function LeadActions({
   id,
   onQualify,
   onDisqualify,
+  onLogged,
   terminalReasonId,
   refusedReasonId,
+  emailOpen,
+  onEmailOpenChange,
 }: Readonly<{
   lead: Lead;
   id: string;
   onQualify: () => void;
   onDisqualify: () => void;
+  // Fires once the Log activity/Add task drawer actually logs something, so
+  // the page can re-poll the ladder fields an activity can move (status,
+  // score, the next task), the same rule the drawer's own `onLogged` states.
+  onLogged: () => void;
   // The id of the ONE sentence this page prints about why the lead takes no
   // changes. Every refused control points at it rather than repeating it,
   // which is what stops a terminal lead printing the same line five times.
@@ -1256,8 +1213,47 @@ function LeadActions({
   // Email is the one verb here that writes no lead row, so it keeps reading
   // the closure alone.
   refusedReasonId?: string;
+  // The header's composer, lifted to LeadRecord: the "Answer" row's own Reply
+  // verb opens this SAME state rather than a copy of it.
+  emailOpen: boolean;
+  onEmailOpenChange: (open: boolean) => void;
 }>) {
   const t = useT();
+  // useCanWrite, not useCan: the drawer below issues a POST, and a read seat
+  // is refused before RBAC is consulted, the same rule contactactions.tsx
+  // and companyheaderactions.tsx state for the identical pair of verbs.
+  // Independent of the terminal check: a live lead a seat may not log
+  // against is refused for THIS reason, not that one.
+  const me = useMe();
+  const canLog = useCanWrite("activity", "create");
+  const logRefusedId = useId();
+  // A guard that has not answered yet refuses nothing: claiming a refusal
+  // `/me` has not decided is worse than a control that is briefly quiet.
+  const logGrantKnown = me.data?.authorization !== undefined;
+  const archived = lead.archived_at ? terminalReasonId : undefined;
+  const logRefused =
+    archived ?? (logGrantKnown && !canLog ? logRefusedId : undefined);
+  const logPending = !archived && !logGrantKnown;
+  // The verb the reader arrived to perform, named by the address rather than
+  // guessed: a caller that sends somebody here to log a call says so, and the
+  // drawer opens already showing it instead of the note they would have to
+  // change it to.
+  //
+  // Left in the address rather than consumed, like every other dial this
+  // product carries: the link is one somebody can paste, and Back returns to
+  // the same screen it described.
+  const [params] = useUrlParams();
+  const askedToLogCall = params.get(ACTION_PARAM) === CALL_ACTION;
+  const [drawer, setDrawer] = useState<"log" | "task" | null>(
+    askedToLogCall ? "log" : null,
+  );
+  // A link pressed on the record the reader is ALREADY on changes the address
+  // and nothing else, no remount, so the initializer above never runs again.
+  useEffect(() => {
+    if (askedToLogCall) {
+      setDrawer("log");
+    }
+  }, [askedToLogCall]);
   return (
     <>
       {/* Promote is the page's ONE primary action and it leads, in the header
@@ -1281,16 +1277,58 @@ function LeadActions({
           <ArrowUpRight aria-hidden="true" /> {t("lead.promote")}
         </Button>
       )}
-      {/* The shared Email verb every record header carries. */}
+      {/* The shared Email verb every record header carries. Its open state is
+          lifted so the overview's "Answer" row can open this SAME composer. */}
       <RecordEmailVerb
         entityType="lead"
         entityId={id}
         recordAddress={lead.email ?? undefined}
-        disabledReasonId={lead.archived_at ? terminalReasonId : undefined}
+        disabledReasonId={archived}
+        open={emailOpen}
+        onOpenChange={onEmailOpenChange}
       />
       {/* A hairline between reaching the record and recording what happened
           to it: two groups of verbs, not one toolbar. */}
       <span className="record-actions-sep" aria-hidden="true" />
+      {!archived && logGrantKnown && !canLog && (
+        <p className="t-caption" id={logRefusedId}>
+          {t("record.logActivityRefused")}
+        </p>
+      )}
+      {/* A CRM a rep cannot write a meeting into is a CRM that only reads.
+          This is the standing way in, the same pair contactactions.tsx and
+          companyheaderactions.tsx carry: what happened, and what happens
+          next. The drawer stays local to this header, unlike company's own
+          daily-brief card, because nothing else on the lead page opens it. */}
+      <Button
+        small
+        disabled={logPending}
+        reasonId={logRefused}
+        onClick={() => setDrawer("log")}
+      >
+        <FileText size={15} aria-hidden="true" /> {t("log.title")}
+      </Button>
+      <Button
+        small
+        disabled={logPending}
+        reasonId={logRefused}
+        onClick={() => setDrawer("task")}
+      >
+        <CheckSquare size={15} aria-hidden="true" /> {t("log.addTask")}
+      </Button>
+      {drawer && (
+        <LogActivityAction
+          entityType="lead"
+          entityId={id}
+          askedKind={
+            drawer === "task" ? "task" : askedToLogCall ? "call" : undefined
+          }
+          triggerLabel={drawer === "task" ? "log.addTask" : undefined}
+          openOnMount
+          onLogged={onLogged}
+          onClose={() => setDrawer(null)}
+        />
+      )}
       {/* Everything else this lead offers, behind one trigger. Qualify and
           Email are what a rep reaches for between calls; the rest are rare
           enough that a reader hunting one of them should not have to read
@@ -1428,6 +1466,10 @@ function LeadRecord({ lead, id }: Readonly<{ lead: Lead; id: string }>) {
       queryClient.invalidateQueries({ queryKey: key });
     }
   });
+  // The header's composer, lifted here so the overview's "Answer" row opens
+  // the SAME one rather than a copy of it (RecordEmailVerb's own controlled
+  // mode).
+  const [composing, setComposing] = useState(false);
 
   return (
     <div className="record-sheet">
@@ -1481,6 +1523,9 @@ function LeadRecord({ lead, id }: Readonly<{ lead: Lead; id: string }>) {
             refusedReasonId={writer.readOnly ? terminalReasonId : undefined}
             onQualify={() => setDialog("qualify")}
             onDisqualify={() => setDialog("disqualify")}
+            onLogged={refreshAfterTouch}
+            emailOpen={composing}
+            onEmailOpenChange={setComposing}
           />
         }
         actionsInline
@@ -1532,7 +1577,7 @@ function LeadRecord({ lead, id }: Readonly<{ lead: Lead; id: string }>) {
             onOpenEmail={setOpenEmail}
             onQualify={() => setDialog("qualify")}
             onDisqualify={() => setDialog("disqualify")}
-            onTouchLogged={refreshAfterTouch}
+            onReply={() => setComposing(true)}
           />
         )}
         <LeadDialogs

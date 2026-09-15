@@ -1606,10 +1606,11 @@ describe("LeadScreen — disqualify (P-3)", () => {
 });
 
 // The address may name the verb the reader arrived to perform. A rep sent here
-// to log a call attempt lands on the composer already set to one; a rep who
-// simply opened the lead gets the ordinary note.
+// to log a call attempt lands on the header's Log activity drawer already
+// open and set to Call; a rep who simply opened the lead finds the drawer
+// closed, the same standing way in every other record header offers.
 describe("LeadScreen — arriving to log a call", () => {
-  it("opens the composer on a call when the address asks for one", async () => {
+  it("opens the header's Log activity drawer on a call when the address asks for one", async () => {
     stubFetch(async () => jsonResponse(lead));
     window.location.hash = "#/leads/l-1?action=call";
     render(<LeadScreen id="l-1" />);
@@ -1619,27 +1620,37 @@ describe("LeadScreen — arriving to log a call", () => {
     );
   });
 
-  it("opens on a note for a reader who only opened the lead", async () => {
+  it("leaves the drawer closed for a reader who only opened the lead, open on a note from the header verb", async () => {
     stubFetch(async () => jsonResponse(lead));
     window.location.hash = "#/leads/l-1";
     render(<LeadScreen id="l-1" />);
 
+    await screen.findByRole("button", { name: "Log activity" });
+    expect(screen.queryByLabelText("Type")).toBeNull();
+
+    await waitFor(() =>
+      expect(
+        screen
+          .getByRole("button", { name: "Log activity" })
+          .hasAttribute("disabled"),
+      ).toBe(false),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Log activity" }));
     await waitFor(() =>
       expect(screen.getByLabelText("Type").textContent).toContain("Note"),
     );
   });
 
   // A link pressed on the record the reader is ALREADY on changes the address
-  // and nothing else — no remount, so a kind read once at mount stays put and
-  // the reader is handed the composer they asked for set to the wrong verb.
-  it("follows a call the address asks for after the composer is already open", async () => {
+  // and nothing else, no remount, so the drawer opens on the kind the address
+  // now names rather than staying shut.
+  it("opens the drawer on a call the address asks for after the page is already open", async () => {
     stubFetch(async () => jsonResponse(lead));
     window.location.hash = "#/leads/l-1";
     render(<LeadScreen id="l-1" />);
 
-    await waitFor(() =>
-      expect(screen.getByLabelText("Type").textContent).toContain("Note"),
-    );
+    await screen.findByRole("button", { name: "Log activity" });
+    expect(screen.queryByLabelText("Type")).toBeNull();
 
     // What a second link does: the hash moves under a mounted screen. The
     // event is dispatched rather than waited for, because jsdom delivers its
