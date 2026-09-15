@@ -940,6 +940,7 @@ export const de = {
   "company.rejectDone":
     "„{name}“ archiviert, und {domain} legt kein Unternehmen mehr an",
   "company.name": "Firma",
+  "company.brief.title": "Kontobriefing",
   "company.description": "Was sie tun",
   "company.website": "Website",
   "company.contactCount": "Kontakte",

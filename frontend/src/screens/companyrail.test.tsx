@@ -737,7 +737,7 @@ describe("CompanyRail", () => {
     // no compare at all.
     const names = within(dealsPanel)
       .getAllByRole("link")
-      .map((link) => link.textContent);
+      .map((link) => link.querySelector(".record-card-name")?.textContent);
     expect(names).toEqual([
       "Support renewal",
       "Berlin expansion",
@@ -792,7 +792,7 @@ describe("CompanyRail", () => {
     }
     const names = within(dealsPanel)
       .getAllByRole("link")
-      .map((link) => link.textContent);
+      .map((link) => link.querySelector(".record-card-name")?.textContent);
     // The larger EUR figure leads; the unpriced deal ranks after the priced.
     expect(names).toEqual([
       "Fleet renewal",

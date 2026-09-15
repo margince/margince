@@ -285,27 +285,30 @@ export function useTodayReading({
 function DimensionChip({ dimension }: Readonly<{ dimension: TodayDimension }>) {
   const t = useT();
   return (
-    <Popover
-      onHover
-      className={
-        dimension.tone
-          ? `co-dim co-dim-${dimension.tone} t-sub`
-          : "co-dim t-sub"
-      }
-      label={`${dimension.label} · ${dimension.reading}`}
-    >
-      <p className="co-dim-means">{dimension.means}</p>
-      {dimension.because ? (
-        <>
-          {/* The same words the verdict's own grounding uses, over the same
-              quote: two names for one working would read as two readings. A
-              label beside a value, not a heading: the panel is already named
-              by the chip that opened it. */}
-          <Eyebrow className="co-dim-restson">{t("record.restsOn")}</Eyebrow>
-          <p className="co-dim-quote">{dimension.because}</p>
-        </>
-      ) : null}
-    </Popover>
+    <div className="co-360-reading">
+      <dt className="t-caption">{dimension.label}</dt>
+      <dd
+        className={
+          dimension.tone ? `co-360-reading-${dimension.tone}` : undefined
+        }
+      >
+        <Popover onHover label={dimension.reading}>
+          <p className="co-dim-means">{dimension.means}</p>
+          {dimension.because ? (
+            <>
+              {/* The same words the verdict's own grounding uses, over the
+                  same quote: two names for one working would read as two
+                  readings. A label beside a value, not a heading: the panel
+                  is already named by the value that opened it. */}
+              <Eyebrow className="co-dim-restson">
+                {t("record.restsOn")}
+              </Eyebrow>
+              <p className="co-dim-quote">{dimension.because}</p>
+            </>
+          ) : null}
+        </Popover>
+      </dd>
+    </div>
   );
 }
 
@@ -321,18 +324,26 @@ function DimensionChip({ dimension }: Readonly<{ dimension: TodayDimension }>) {
 export function Company360Call({
   reading,
   name,
+  title,
+  titleAction,
+  scale,
   footer,
   children,
 }: Readonly<{
   reading: TodayReading;
   name?: string;
+  // Forwarded to `CallCard`; see its own doc. Absent draws the kit's default
+  // head for every caller that does not opt in.
+  title?: string;
+  titleAction?: ReactNode;
+  scale?: "record" | "compact";
   footer?: ReactNode;
   children?: ReactNode;
 }>) {
   const t = useT();
   if (reading.state === "loading") {
     return (
-      <CallCard name={name}>
+      <CallCard name={name} title={title} titleAction={titleAction}>
         <PanelBody>
           <Skeleton width="100%" height={64} />
         </PanelBody>
@@ -341,7 +352,7 @@ export function Company360Call({
   }
   if (reading.state === "failed") {
     return (
-      <CallCard name={name}>
+      <CallCard name={name} title={title} titleAction={titleAction}>
         <PanelBody>
           <EmptyState>{t("co.section.unavailable")}</EmptyState>
         </PanelBody>
@@ -351,15 +362,20 @@ export function Company360Call({
   return (
     <CallCard
       name={name}
+      title={title}
+      titleAction={titleAction}
       standing={reading.standing}
       because={reading.because}
       restsOn={reading.restsOn}
+      scale={scale}
       footer={footer}
     >
       <PanelBody className="co-360-dims">
-        {reading.dimensions.map((dimension) => (
-          <DimensionChip key={dimension.key} dimension={dimension} />
-        ))}
+        <dl className="co-360-readings">
+          {reading.dimensions.map((dimension) => (
+            <DimensionChip key={dimension.key} dimension={dimension} />
+          ))}
+        </dl>
       </PanelBody>
       {children}
     </CallCard>

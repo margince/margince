@@ -989,6 +989,7 @@ export const en = {
   "company.rejectDone":
     "“{name}” archived, and {domain} will not create a company again",
   "company.name": "Company",
+  "company.brief.title": "Account brief",
   "company.description": "What they do",
   "company.website": "Website",
   "company.contactCount": "Contacts",

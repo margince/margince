@@ -926,6 +926,7 @@ export const vi = {
   "company.rejectDone":
     "Đã lưu trữ “{name}”, và {domain} sẽ không tạo công ty nữa",
   "company.name": "Công ty",
+  "company.brief.title": "Tóm tắt tài khoản",
   "company.description": "Họ làm gì",
   "company.website": "Trang web",
   "company.contactCount": "Liên hệ",

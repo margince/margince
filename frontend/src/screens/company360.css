@@ -120,6 +120,33 @@
   color: var(--textPrimary);
 }
 
+/* A listed deal on the record-card face (design-system/recordcard.css): the
+   name and its amount share the card's own two tracks, and the note that
+   qualifies them takes the full width under both — the same split
+   `.record-card-facts` draws for a listed contact. The card is itself the
+   link (recordcard.css's own `.record-card-open` only wraps a contact's mark
+   because a popover trigger sits beside it; a deal carries no such control to
+   collide with). */
+.co-deal-card {
+  color: inherit;
+  text-decoration: none;
+}
+.co-deal-card:hover .record-card-name {
+  text-decoration: underline;
+}
+.co-deal-card:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+.co-deal-amount {
+  grid-column: 2;
+  grid-row: 1;
+}
+.co-deal-meta {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
 /* A row's own line: the icon sits with the text rather than on its baseline. */
 .co-row-main {
   display: inline-flex;
@@ -1535,13 +1562,9 @@
   gap: var(--gapActions);
   flex: none;
 }
-/* The three rated dimensions under the verdict: a dot in the dimension's
-   tone, the dimension, its rating. Inline, because they qualify the word
-   above them rather than standing as readings of their own. */
+/* The three rated dimensions under the verdict, as a row of readings the
+   card's own body separates from the word above it. */
 .co-360-dims {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2) var(--space-4);
   padding-top: var(--space-3);
 }
 /* And no seam over them, which is the other half of the same point: the
@@ -1616,6 +1639,51 @@
 }
 .co-dim-danger::before {
   background: var(--danger);
+}
+
+/* The three dimensions as term-over-value cells, on the contact brief's own
+   readings ladder: a caption names what was rated, the value under it is the
+   rating and the trigger for its own working. Content is unchanged from the
+   chip row above — only the shape moved, from an inline run to a grid a
+   reader can scan column by column. */
+.co-360-readings {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3) var(--space-4);
+  margin: 0;
+}
+.co-360-reading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.co-360-reading dd {
+  margin: 0;
+  font-size: var(--fs-body);
+  font-weight: var(--fw-medium);
+  color: var(--textPrimary);
+}
+/* The same dotted-underline mark the contact brief's own readings wear for
+   "there is more behind this value", scoped here so the reset it works
+   against is the popover's own and not `.co-dim`'s chip face. */
+.co-360-reading .popover-trigger {
+  text-decoration: underline dotted;
+  text-decoration-color: var(--textMeta);
+  text-underline-offset: 0.2em;
+  font: inherit;
+  color: inherit;
+}
+.co-360-reading dd.co-360-reading-warn {
+  color: var(--warnText);
+}
+.co-360-reading dd.co-360-reading-danger {
+  color: var(--dangerText);
+}
+@media (max-width: 720px) {
+  .co-360-readings {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 /* THE CARD'S CLAIM OF AUTHORSHIP, and what it is a claim about: the mark on

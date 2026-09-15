@@ -25,7 +25,6 @@ import {
   SectionSummary,
   sectionAnswered,
 } from "./companyrailshared";
-import { CompanyTagsSection } from "./companyrailtags";
 import { CounterpartyHoldRow } from "./counterparty-hold";
 import { signalKindLabel, signalTone } from "./record360";
 import { RecordCustomFields } from "./recordcustomfields";
@@ -41,12 +40,14 @@ import "./company360.css";
 // so it takes the wider of the two rail shares (page-zones-rail: 3fr/7fr)
 // rather than the narrower `aside` share a right-hand column would get.
 //
-// Drawn as SIX separate panels, each answering one question about the
-// account — its open deals, its contacts, its facts, its lists and tags — in
-// the order a reader works down the column, rather than the disclosures the
-// rail used to fold into one card: a hairline inside a panel reads as one
-// story about that panel's own subject, and a panel's own edge is what tells
-// a reader they have moved on to a different one.
+// Drawn as separate panels, each answering one question about the account —
+// its details and tags, its registration, its team, its open deals, its
+// contacts, its hold — in the order a reader works down the column, rather
+// than the disclosures the rail used to fold into one card: a hairline
+// inside a panel reads as one story about that panel's own subject, and a
+// panel's own edge is what tells a reader they have moved on to a different
+// one. Tags file under Details rather than in their own panel: a tag is a
+// fact about the account, on the same card as the rest of them.
 //
 // Health moved to the readings row above the tabs, so it is not repeated
 // here — two copies of the same verdict is a value the reader has to
@@ -152,13 +153,6 @@ export function CompanyRail({
         <DealsSection view={view} loading={loading} onTab={onTab} />
         <ContactsSection view={view} loading={loading} onTab={onTab} />
         <CompanyHoldSection company={resolved} />
-        <Disclosure
-          className="co-sect"
-          open
-          summary={<SectionSummary title={t("tags.panelTitle")} />}
-        >
-          <CompanyTagsSection company={resolved} companyId={companyId} bare />
-        </Disclosure>
       </Panel>
     </div>
   );

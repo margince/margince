@@ -32,7 +32,12 @@ import {
 import { RecordView } from "../design-system/recordview";
 import { sectionState } from "../design-system/surfacestate";
 import { TimelineFilterBar } from "../design-system/timelinefilterbar";
-import { formatDateTime, formatMoney, formatNumber } from "../format/format";
+import {
+  formatDate,
+  formatDateTime,
+  formatMoney,
+  formatNumber,
+} from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -123,7 +128,7 @@ import {
 import { ContactMeetingBrief } from "./meetingbrief";
 import { useOpenEmail } from "./openemail";
 import { PartnerTab } from "./partners";
-import { RecordSpine } from "./record360";
+import { RecordSpine, WrittenBy } from "./record360";
 import { RecordAccess } from "./recordaccess";
 import {
   ChronologyFilter,
@@ -1795,6 +1800,9 @@ function CompanyOverviewStack({
   onOpenTab: (tab: CompanyTab) => void;
   onPerform: (action: SuggestionAction) => void;
 }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const recordZone = useRecordZone();
   // The names the reading resolves ids against: the account's own records, and
   // the workspace roster for the colleague who held a meeting. Read here rather
   // than inside the thread, because the roster is a workspace read and the
@@ -1858,6 +1866,24 @@ function CompanyOverviewStack({
       <Company360Call
         reading={reading}
         name={company.display_name}
+        title={t("company.brief.title")}
+        titleAction={
+          view && (
+            <>
+              <span className="t-caption">
+                {t("contact.brief.updatedAt", {
+                  when: formatDate(view.as_of, locale, recordZone),
+                })}
+              </span>
+              {/* The 360 call is a composition read off this account's own
+                  records rather than model prose, so its claim of authorship
+                  is the deterministic one — the same distinction the sources
+                  under the dossier and the brief already carry. */}
+              <WrittenBy by="deterministic" />
+            </>
+          )
+        }
+        scale="compact"
         footer={sinceLastVisitFooter(view)}
       >
         <RecordSpine

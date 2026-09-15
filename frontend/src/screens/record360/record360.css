@@ -44,6 +44,18 @@
   white-space: nowrap;
 }
 
+/* `VerdictHead`'s "compact" scale: the record ladder's own heading rung
+   rather than the kit's display face, for a caller whose head already
+   carries its own claim of authorship and so does not need the verdict
+   shouting a second one. */
+.r360-verdict-compact .r360-standing {
+  font-family: inherit;
+  font-size: var(--fs-h3);
+  font-weight: var(--fw-semibold);
+  line-height: 1.2;
+  letter-spacing: normal;
+}
+
 .r360-standing-calm {
   color: var(--success);
 }
