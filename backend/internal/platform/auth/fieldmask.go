@@ -200,6 +200,14 @@ const sqlNoRow = "FALSE"
 // The alias names the row like the caller's FROM clause does. Both field and
 // column are formatted into SQL, so each must be a compile-time literal or a
 // catalog name, never a string off a request body.
+//
+// ALIAS THE RESULT where the column's NAME is read again. A masked rendering is
+// an expression, and Postgres gives an unaliased expression a placeholder name
+// — so a derived table selecting this and an outer query reading the column by
+// name resolves nothing, and the masked caller gets an error instead of a
+// withheld figure. `%s AS amount_minor` costs nothing where the name is not
+// read, and `sum(...)` cannot take an alias at all, so this is the caller's
+// call rather than something to bake in here.
 func MaskedColumnSQL(ctx context.Context, object, field, alias, column string, arg func(any) int) (string, error) {
 	qualified := column
 	if alias != "" {

@@ -61,8 +61,13 @@ const (
 // deal folded by deals.OpenDealBaseValueSQL over the token the engine binds
 // the installation's base currency to. A variable because the fold is built
 // by a function the deals module owns.
+//
+// It takes the same mask filter as the won side. The two have to move
+// together: a mask that withheld a deal from the closed total and let it
+// through the open one would put the same figure back on the same page.
 var openDealValueBaseExpr = "(SELECT coalesce(sum(" + deals.OpenDealBaseValueSQL("d", reportBaseCurrencyToken) +
-	"), 0)::bigint FROM deal d WHERE d.project_id = t.id AND d.status = 'open' AND d.archived_at IS NULL AND " +
+	") FILTER (WHERE " + reportDealMaskToken + "), 0)::bigint" +
+	" FROM deal d WHERE d.project_id = t.id AND d.status = 'open' AND d.archived_at IS NULL AND " +
 	reportDealScopeToken + ")"
 
 // projectRowDimensions is the vocabulary the two listing-shaped project keys

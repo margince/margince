@@ -240,7 +240,11 @@ const meetingQuery = `
 	  LIMIT 1
 	) pr ON TRUE
 	LEFT JOIN LATERAL (
-	  SELECT dd.id, dd.name, s.name AS stage_name, %[8]s, dd.currency, dd.expected_close_date
+	  -- ALIASED, because %[8]s is a CASE when a mask applies and Postgres names
+	  -- an unaliased expression as a placeholder name. The outer select reads the
+	  -- amount from this derived table, so without the alias a masked caller gets a
+	  -- column-not-found error rather than a withheld figure.
+	  SELECT dd.id, dd.name, s.name AS stage_name, %[8]s AS amount_minor, dd.currency, dd.expected_close_date
 	  FROM activity_link dl
 	  JOIN deal dd ON dd.id = dl.deal_id AND dd.archived_at IS NULL
 	  LEFT JOIN stage s ON s.id = dd.stage_id

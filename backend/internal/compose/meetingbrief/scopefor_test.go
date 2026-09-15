@@ -5,6 +5,7 @@ package meetingbrief
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -58,5 +59,24 @@ func TestScopeForAdmitsTheGrantedObject(t *testing.T) {
 	}
 	if clause != scopeAll {
 		t.Errorf("scopeFor(deal) = %q, want %q for a granted seat at row_scope=all", clause, scopeAll)
+	}
+}
+
+// The room's deal amount is read back by NAME from a derived table, so the
+// masked rendering has to be aliased.
+//
+// A masked rendering is an expression, and Postgres names an unaliased
+// expression with a placeholder — so the outer select resolves nothing and a
+// masked caller gets a column-not-found error instead of a withheld figure.
+// That is a failure only a masked seat ever sees, which is exactly the kind
+// that ships.
+//
+// A template assertion rather than a database run: what broke was the SQL's
+// own text, and this fails the moment somebody drops the alias.
+func TestTheRoomStatementAliasesTheMaskedAmount(t *testing.T) {
+	t.Parallel()
+	if !strings.Contains(meetingQuery, "%[8]s AS amount_minor") {
+		t.Error("the deal amount in the room's LATERAL is no longer aliased — a masked caller " +
+			"reads a placeholder column name and the statement fails for them alone")
 	}
 }

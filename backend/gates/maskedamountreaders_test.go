@@ -9,6 +9,7 @@ import (
 	"go/ast"
 	"path"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 
@@ -128,13 +129,49 @@ func readsADealAmount(filePath string, file *ast.File) bool {
 	return false
 }
 
+// dealAmountBuilders are helpers that RENDER a deal's money for a caller
+// outside the deals module.
+//
+// They are part of the subject because their text is not. The builder is
+// declared inside modules/deals, which this census exempts as the mask's own
+// owner, so a statement composing one names no amount column of its own and a
+// literal-only subject cannot see the figure it sums. The project report's
+// open-value total was exactly that: `sum(deals.OpenDealBaseValueSQL(...))`
+// over every open deal, with no mask and nothing here to say so. A reviewer
+// found it; this is what would have.
+var dealAmountBuilders = []string{"OpenDealBaseValueSQL", "BaseValueSQL"}
+
 // dealAmountReadsIn is the site extraction the subject predicate above states.
 func dealAmountReadsIn(decl ast.Decl) []gatekit.TableRead {
 	amounts := gatekit.DeclReads(decl, dealAmountColumn)
+	if len(amounts) == 0 {
+		amounts = builtAmountsIn(decl)
+	}
 	if len(amounts) == 0 || len(gatekit.DeclReads(decl, dealTableRead)) == 0 {
 		return nil
 	}
 	return amounts
+}
+
+// builtAmountsIn reports a site for a declaration that composes one of the
+// builders rather than naming a column, so the report reads as a read.
+func builtAmountsIn(decl ast.Decl) []gatekit.TableRead {
+	name := ""
+	if fn, isFunc := decl.(*ast.FuncDecl); isFunc {
+		name = fn.Name.Name
+	}
+	var found []gatekit.TableRead
+	ast.Inspect(decl, func(n ast.Node) bool {
+		call, isCall := n.(*ast.CallExpr)
+		if !isCall {
+			return true
+		}
+		if slices.Contains(dealAmountBuilders, calleeName(call)) {
+			found = append(found, gatekit.TableRead{Function: name, SQL: calleeName(call) + "(...)"})
+		}
+		return true
+	})
+	return found
 }
 
 func TestEveryReaderOfADealAmountCarriesTheMaskOrAVerdict(t *testing.T) {
