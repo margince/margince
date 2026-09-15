@@ -33659,9 +33659,15 @@ export interface components {
              */
             meetings?: components["schemas"]["AttentionItem"][];
             /**
-             * @description Today's meetings that have already started and whose result nobody has
-             *     recorded, longest unanswered first. The counterpart of `meetings`: that lane
-             *     is what to prepare for, this is what to close off.
+             * @description Meetings that have already started and whose result nobody has recorded,
+             *     longest unanswered first. The counterpart of `meetings`: that lane is what to
+             *     prepare for, this is what to close off.
+             *
+             *     It reaches back a FORTNIGHT, where `meetings` is today only. The two bound
+             *     differently because they expire differently: preparation stops being possible
+             *     once a meeting begins, while an unrecorded outcome stays owed until somebody
+             *     records it. Bounded at all so that the first read after a quiet month is a
+             *     queue a reader can clear rather than a history of everything never answered.
              *
              *     A meeting carrying no status at all is here. A captured calendar event
              *     arrives without one, so treating an absent status as settled would empty this
@@ -33929,7 +33935,7 @@ export interface components {
             duplicates_open?: number;
             /** @description How many of today's meetings are still ahead — the bounded page, as the other lanes report. */
             meetings?: number;
-            /** @description How many of today's meetings have started with nobody saying how they went — the bounded page, as the other lanes report. Not in `required`: a client reading an installation whose feed does not carry this lane gets no number rather than a zero, which would claim the day is clear. */
+            /** @description How many meetings of the last fortnight have started with nobody saying how they went — the bounded page, as the other lanes report. Not in `required`: a client reading an installation whose feed does not carry this lane gets no number rather than a zero, which would claim the day is clear. */
             meetings_unreported?: number;
             /** @description How many at-risk deals this lane is CARRYING, the bounded page rather than every deal at risk — the same bound the other lanes report under. */
             at_risk?: number;
