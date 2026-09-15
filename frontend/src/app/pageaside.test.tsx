@@ -4,6 +4,7 @@
 /** @vitest-environment happy-dom */
 import { cleanup, render } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { PageAsideProvider, PageAsideToggle, usePageAside } from "./pageaside";
@@ -18,8 +19,8 @@ afterEach(() => {
 
 // A record screen's shape: it claims the pane, draws its content only while
 // the pane is open, and carries the switch at the end of its tab row.
-function Record({ available = true }: Readonly<{ available?: boolean }>) {
-  const details = usePageAside(available);
+function Record() {
+  const details = usePageAside();
   return (
     <>
       <PageAsideToggle />
@@ -28,12 +29,15 @@ function Record({ available = true }: Readonly<{ available?: boolean }>) {
   );
 }
 
-function record(available?: boolean) {
+// A screen that offers no pane at all — it never claims one.
+function Plain() {
+  return <PageAsideToggle />;
+}
+
+function record(screen: ReactNode = <Record />) {
   const view = render(
     <LocaleProvider initial="en">
-      <PageAsideProvider>
-        <Record available={available} />
-      </PageAsideProvider>
+      <PageAsideProvider>{screen}</PageAsideProvider>
     </LocaleProvider>,
   );
   return {
@@ -80,9 +84,9 @@ describe("the details pane is open until folded", () => {
 // A switch for a pane that does not exist is a control that does nothing: a
 // screen whose composer holds the pane's place offers neither.
 describe("the switch goes with the pane", () => {
-  it("is absent while the screen has no pane to offer", () => {
+  it("is absent on a screen that claims no pane", () => {
     localStorage.setItem(KEY, "0");
-    const { pane, queryByRole } = record(false);
+    const { pane, queryByRole } = record(<Plain />);
     expect(pane()).toBeNull();
     expect(queryByRole("button")).toBeNull();
   });

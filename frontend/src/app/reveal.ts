@@ -41,7 +41,7 @@ export function revealOnceMounted(anchor: string, frames = 30): void {
   const look = (left: number) => {
     const target = document.getElementById(anchor);
     if (target) {
-      target.scrollIntoView?.({ behavior: "smooth", block: "start" });
+      target.scrollIntoView?.({ behavior: scrollBehavior(), block: "start" });
       return;
     }
     if (left > 0) {
@@ -62,8 +62,14 @@ export function revealOnceMounted(anchor: string, frames = 30): void {
  */
 export function scrollPageToTop(): void {
   const pane = document.querySelector(".scroll");
+  pane?.scrollTo?.({ top: 0, behavior: scrollBehavior() });
+}
+
+// Motion follows the reader's own setting: a reduced-motion preference makes
+// every reveal on this page an instant jump rather than a glide.
+function scrollBehavior(): ScrollBehavior {
   const reduced = globalThis.matchMedia?.(
     "(prefers-reduced-motion: reduce)",
   ).matches;
-  pane?.scrollTo?.({ top: 0, behavior: reduced ? "auto" : "smooth" });
+  return reduced ? "auto" : "smooth";
 }

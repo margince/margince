@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { CheckSquare, FileText } from "lucide-react";
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import type { components } from "../api/schema";
 import { useCanWrite } from "../app/capability";
 import { Button } from "../design-system/atoms";
@@ -127,12 +127,22 @@ function CompanyWriteEmail({
   onOpen: (open: boolean) => void;
   disabledReasonId?: string;
 }>) {
+  // Whether the verb has ever been pressed. `open` belongs to the page, so
+  // this is the composer's own memory of having been asked for.
+  const everOpened = useRef(false);
+  if (open) {
+    everOpened.current = true;
+  }
   return (
     <>
       {/* The shared Email verb: icon-only with its name on hover, the same
           control every record header draws, found by its place and its word. */}
       <EmailVerb reasonId={disabledReasonId} onClick={() => onOpen(true)} />
-      {open && (
+      {/* Not drawn until the verb has been pressed once, and mounted from
+          then on. A composer mounted with the record would read on every
+          render of a page nobody is writing from; one unmounted the moment it
+          closes has no frame left to animate out on. */}
+      {everOpened.current && (
         // Keyed by the record, so navigating to another company while the
         // composer is open remounts it rather than re-pointing it. Without
         // the key the form keeps the text written for the previous account

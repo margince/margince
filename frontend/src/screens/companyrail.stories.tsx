@@ -139,7 +139,6 @@ function Rail({ view }: Readonly<{ view: View }>) {
           companyId="o-1"
           view={view}
           loading={false}
-          composerOpen={false}
           onTab={() => {}}
         />
       </div>

@@ -152,35 +152,19 @@ export function useDetailsFieldTarget(field: string) {
  * pane is open — the one answer a screen needs to decide whether to hand
  * `RecordView` its aside.
  *
- * `available` is whether the screen has a pane to offer right now: a record
- * whose composer has taken the column's place passes false, and the switch
- * goes with the pane rather than standing beside a drawer it cannot open.
+ * Claiming it is mounting: a screen has a pane to offer for as long as it is
+ * on the page, and nothing else takes the pane away from it. An overlay does
+ * not — a drawer is portalled over a scrim and takes none of the page's
+ * width, so folding the column beneath one would animate the record behind
+ * its own backdrop and leave the pane shut once it closed.
  */
-export function usePageAside(available = true): { open: boolean } {
+export function usePageAside(): { open: boolean } {
   const { filled, setFilled, collapsed } = usePageAsideState();
   useEffect(() => {
-    setFilled(available);
+    setFilled(true);
     return () => setFilled(false);
-  }, [available, setFilled]);
-  const open = filled && available && !collapsed;
-  // Once the columns fold (pagezones.css, ≤1200px) the pane stacks UNDER the
-  // work column, so a reader who presses the toggle sees nothing change: the
-  // switch reads pressed and the pane it opened is a screen below. Bring it
-  // to them on the press that opened it, and only then: a pane whose top is
-  // already on screen (beside the work, or stacked but in view) is left
-  // where it is, because a pane taller than the window would otherwise drag
-  // the page to its own top. The first render is left alone too, so a
-  // remembered open pane does not scroll a record the reader just arrived at.
-  const wasOpen = useRef(open);
-  useEffect(() => {
-    const opened = open && !wasOpen.current;
-    wasOpen.current = open;
-    if (!opened) return;
-    const pane = document.querySelector(".page-zones-aside-column");
-    if (!pane || pane.getBoundingClientRect().top < window.innerHeight) return;
-    pane.scrollIntoView?.({ block: "start" });
-  }, [open]);
-  return { open };
+  }, [setFilled]);
+  return { open: filled && !collapsed };
 }
 
 /**

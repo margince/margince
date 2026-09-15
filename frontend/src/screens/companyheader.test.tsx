@@ -63,9 +63,13 @@ function stub(roster: ReadonlyArray<{ id: string; display_name: string }>) {
     "fetch",
     vi.fn(async (request: Request) => {
       const { pathname } = new URL(request.url);
+      // The details card also reads the record's tags; a roster handed back
+      // there would draw colleagues as tags.
       const body = pathname.endsWith("/me")
         ? { user: { id: "u-reader", display_name: "The Reader" }, ...READER }
-        : { data: roster, page: { has_more: false, next_cursor: null } };
+        : pathname.includes("/tags")
+          ? { data: [], page: { has_more: false, next_cursor: null } }
+          : { data: roster, page: { has_more: false, next_cursor: null } };
       return new Response(JSON.stringify(body), {
         status: 200,
         headers: { "content-type": "application/json" },

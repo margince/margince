@@ -16,7 +16,10 @@ import type { Project } from "./projects.form";
  *
  * Undefined id means no read: a caller with nothing to look up asks nothing.
  */
-export function useProjectRecord(id?: string): {
+export function useProjectRecord(
+  id?: string,
+  enabled = true,
+): {
   project: Project | null;
   settled: boolean;
 } {
@@ -35,7 +38,7 @@ export function useProjectRecord(id?: string): {
       // composer down over a record it only wanted to name.
       return error ? null : data;
     },
-    enabled: Boolean(id),
+    enabled: enabled && Boolean(id),
     staleTime: 60_000,
   });
   return {

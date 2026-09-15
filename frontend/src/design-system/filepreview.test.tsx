@@ -262,9 +262,7 @@ describe("FilePreview", () => {
     expect(
       within(dialog).queryByRole("button", { name: "Download" }),
     ).toBeNull();
-    expect(
-      within(dialog).getByRole("button", { name: "Close preview" }),
-    ).toBeTruthy();
+    expect(within(dialog).getByRole("button", { name: "Close" })).toBeTruthy();
   });
 
   it("says a file could not be shown without saying why", async () => {
@@ -286,9 +284,7 @@ describe("FilePreview", () => {
     serving(bytes);
     const { user, dialog } = await openPreview("GR-2026-0092.pdf");
     await waitFor(() => expect(minted).toHaveLength(1));
-    await user.click(
-      within(dialog).getByRole("button", { name: "Close preview" }),
-    );
+    await user.click(within(dialog).getByRole("button", { name: "Close" }));
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(revoked).toEqual(["blob:preview/0"]);
   });

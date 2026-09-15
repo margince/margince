@@ -25,13 +25,8 @@ import { createPortal } from "react-dom";
 import { useAnchoredToTrigger } from "./anchored";
 import { Button, type ButtonVariant } from "./atoms";
 import { useHoverIntent } from "./hoverintent";
+import { usePortalPanelFocus } from "./portalfocus";
 import "./popover.css";
-
-// The first thing in a panel a reader can land on. The same set the dialog
-// trap uses (atoms.tsx), kept in the two places that need it rather than
-// exported from one — this is a CSS selector, not a shared rule about focus.
-const FOCUSABLE =
-  'a[href], button, input, select, textarea, [tabindex]:not([tabindex="-1"])';
 
 /**
  * Popover is one trigger and the aside behind it.
@@ -102,21 +97,13 @@ export function Popover({
   // at the margin with nothing under it.
   const at = useAnchoredToTrigger(open, trigger, panel, "start");
 
-  // Focus moves into the panel when it opens, IF there is anything in it to
-  // focus. A panel of controls a keyboard reader could see and not reach is
-  // the failure this prevents; a panel of prose has no stops at all and takes
-  // no focus, so the reader stays on the trigger they pressed.
-  useEffect(() => {
-    if (!open || openedBy === "hover") {
-      return;
-    }
-    // Never on a hover-opened panel: the pointer is somewhere else on the page
-    // and taking focus off what the reader was doing to put it in a panel they
-    // merely passed over is the page grabbing at them. A panel that ALSO opens
-    // on hover still hands focus over when a key or a click opened it: the
-    // control in it has to be reachable by the reader who asked for it.
-    panel.current?.querySelector<HTMLElement>(FOCUSABLE)?.focus();
-  }, [open, openedBy]);
+  // Focus, shared with the evidence mark's own portalled panel: into the panel
+  // when a press opened it, back to the trigger if the close dropped it, and
+  // Tab measured from where the trigger sits on the page rather than from where
+  // the portal puts the panel. Never on a hover-opened panel — the pointer is
+  // somewhere else and taking focus off what the reader was doing would be the
+  // page grabbing at them.
+  const panelFocus = usePortalPanelFocus({ open, openedBy, trigger, panel });
 
   const hover = useHoverIntent(
     () => {
@@ -232,6 +219,7 @@ export function Popover({
             className="popover-panel"
             aria-labelledby={triggerId}
             {...(onHover ? hover : {})}
+            {...panelFocus}
             style={{
               top: `${at.top}px`,
               left: `${at.left}px`,

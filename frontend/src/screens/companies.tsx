@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { PageAsideToggle, usePageAside } from "../app/pageaside";
@@ -1117,10 +1117,13 @@ function unreachableAction(kind: never): never {
 // page does not carry a branch per anchor kind in its own JSX.
 function AccountComposer({
   anchor,
+  open,
   companyId,
   onClose,
 }: Readonly<{
   anchor: ComposeAnchor;
+  /** Closed, it stays MOUNTED so the drawer can animate out. */
+  open: boolean;
   companyId: string;
   onClose: () => void;
 }>) {
@@ -1132,7 +1135,7 @@ function AccountComposer({
       entityType="company"
       entityId={companyId}
       kind="email"
-      open
+      open={open}
       onClose={onClose}
     />
   );
@@ -1204,20 +1207,11 @@ function CompanyPage({
   // 360 renders it, not a `["activities", …]` query of its own), the
   // workspace-wide queue, and the task's own detail.
   const taskUpdate = useTaskUpdate(taskWriteKeys("company", company.id));
-  // Either composer holds the rail's column, and the rail does not care
-  // which. Computed once so both `CompanyRail` and the layout below share
-  // the one decision, rather than the page rendering a rail element that
-  // itself returns null while `RecordView` still reserves the column for it.
-  const composerOpen = Boolean(composing) || writingEmail;
-  // The details pane yields to the composer, which opens as its own drawer
-  // (ComposeModal's `placement="right"` is a portalled overlay): no pane at
-  // all while one is open, so the column is absent for exactly as long as the
-  // drawer holds that space, rather than standing open around nothing.
-  const details = usePageAside(!composerOpen);
-  // The rail, or nothing while a composer holds its column. Both drawers open
-  // into this space, so a rail beside them would be two things in one place —
-  // and absent rather than narrowed, because a rail squeezed to a third of its
-  // width is a column of broken cards.
+  // The pane answers to its own switch and to nothing else. A composer is a
+  // portalled drawer over a scrim, so it takes none of the page's width: an
+  // overlay that folded the column beneath it would animate the record behind
+  // its own backdrop, and leave the reader's pane shut when they closed it.
+  const details = usePageAside();
   const rail = (
     <CompanyRail
       companyId={company.id}
@@ -1228,7 +1222,6 @@ function CompanyPage({
       // undefined `view` alone, and both drawing the loading skeleton is not
       // the same defect as both drawing "could not be loaded".
       loading={loading}
-      composerOpen={composerOpen}
       onTab={onTab}
     />
   );
@@ -1326,7 +1319,8 @@ function CompanyPage({
         // The account's context, beside the work under the tab row: what is
         // true of the ACCOUNT does not belong to whichever part of it is open,
         // so the pane stays put when a tab changes.
-        aside={details.open ? rail : undefined}
+        aside={rail}
+        asideOpen={details.open}
         // The bar that chooses which part of the account to read, across the
         // page above the columns: the details pane opens under it, from the
         // control at its end.
@@ -1418,15 +1412,6 @@ function CompanyPage({
               }}
             />
           )}
-          {/* card-actions, not form-actions: what stands above this row is a
-            history timeline, which sets its own top margin to 0 and carries no
-            bottom one — so the form's row, which brings no top margin because a
-            field above it normally does, put Close against the last entry. */}
-          <div className="card-actions">
-            <Button onClick={() => setAuditOpen(false)}>
-              {t("common.close")}
-            </Button>
-          </div>
         </Modal>
       </RecordView>
     </div>
@@ -1487,6 +1472,14 @@ function CompanyRecordBody({
   // company is read-only for everyone, but a LIVE company somebody else owns is
   // read-only too, and the page had no way to know that until the record
   // started carrying the answer.
+  // The anchor the composer is drawn from, kept after `composing` clears: the
+  // drawer stays mounted so it can animate out, and an anchor dropped at the
+  // moment of closing would empty it in front of the reader. Null only before
+  // the first composer is ever opened, so nothing is mounted until then.
+  const shownAnchor = useRef<ComposeAnchor | null>(null);
+  if (composing !== null) {
+    shownAnchor.current = composing;
+  }
   // The meeting whose brief is open. "Prepare meeting" used to open the
   // composer on the meeting, which is a reply to a room nobody has sat in
   // yet; the brief drawer is what prepares a reader for one.
@@ -1556,9 +1549,10 @@ function CompanyRecordBody({
       {/* The composer, anchored on the message a draft_reply suggestion named.
           It is the same modal the timeline's own Reply opens — the advice
           shortcuts to it rather than inventing a second way to answer. */}
-      {composing && (
+      {shownAnchor.current !== null && (
         <AccountComposer
-          anchor={composing}
+          anchor={shownAnchor.current}
+          open={composing !== null}
           companyId={company.id}
           onClose={() => onCompose(null)}
         />
