@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { PageAsideToggle, usePageAside } from "../app/pageaside";
@@ -1128,10 +1128,13 @@ function unreachableAction(kind: never): never {
 // page does not carry a branch per anchor kind in its own JSX.
 function AccountComposer({
   anchor,
+  open,
   companyId,
   onClose,
 }: Readonly<{
   anchor: ComposeAnchor;
+  /** Closed, it stays MOUNTED so the drawer can animate out. */
+  open: boolean;
   companyId: string;
   onClose: () => void;
 }>) {
@@ -1143,7 +1146,7 @@ function AccountComposer({
       entityType="company"
       entityId={companyId}
       kind="email"
-      open
+      open={open}
       onClose={onClose}
     />
   );
@@ -1484,6 +1487,14 @@ function CompanyRecordBody({
   // company is read-only for everyone, but a LIVE company somebody else owns is
   // read-only too, and the page had no way to know that until the record
   // started carrying the answer.
+  // The anchor the composer is drawn from, kept after `composing` clears: the
+  // drawer stays mounted so it can animate out, and an anchor dropped at the
+  // moment of closing would empty it in front of the reader. Null only before
+  // the first composer is ever opened, so nothing is mounted until then.
+  const shownAnchor = useRef<ComposeAnchor | null>(null);
+  if (composing !== null) {
+    shownAnchor.current = composing;
+  }
   // The meeting whose brief is open. "Prepare meeting" used to open the
   // composer on the meeting, which is a reply to a room nobody has sat in
   // yet; the brief drawer is what prepares a reader for one.
@@ -1562,9 +1573,10 @@ function CompanyRecordBody({
       {/* The composer, anchored on the message a draft_reply suggestion named.
           It is the same modal the timeline's own Reply opens — the advice
           shortcuts to it rather than inventing a second way to answer. */}
-      {composing && (
+      {shownAnchor.current !== null && (
         <AccountComposer
-          anchor={composing}
+          anchor={shownAnchor.current}
+          open={composing !== null}
           companyId={company.id}
           onClose={() => onCompose(null)}
         />

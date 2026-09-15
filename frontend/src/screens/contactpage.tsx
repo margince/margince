@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link as LinkIcon, Mail, MapPin, Phone } from "lucide-react";
 import type { ReactNode } from "react";
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useRecordWriteRefusal } from "../app/capability";
@@ -967,7 +967,15 @@ function ContactMailDrawer({
   // lead. A worklist row is about one message, and opening on whatever the
   // contact happens to lead with would draft a reply into a different thread.
   const anchored = transportForActivity(transports, view, threadId);
-  if (!open) {
+  // Nothing until the drawer is first opened, and mounted from then on: a
+  // composer mounted with the page would read on every render of a contact
+  // nobody is writing to, and one unmounted the moment it closes has no frame
+  // left to animate out on.
+  const everOpened = useRef(false);
+  if (open) {
+    everOpened.current = true;
+  }
+  if (!everOpened.current) {
     return null;
   }
   return (
@@ -981,7 +989,7 @@ function ContactMailDrawer({
       initialTransportId={anchored.chosen?.id}
       staleThread={anchored.stale}
       intent={intent}
-      open
+      open={open}
       onClose={onClose}
     />
   );
