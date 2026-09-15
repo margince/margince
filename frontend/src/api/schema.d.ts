@@ -8969,6 +8969,73 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/capture/domain-questions/{domain}/keep": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Answer an open domain question by keeping the company.
+         * @description Settles an `undecided` domain as a company, and creates the record the triage withheld.
+         *
+         *     The company is named from the domain's own registrable label, because nothing on the
+         *     site named it and a human pressing this is not asked to type one. That is a worse name
+         *     than a site would have given and never a fabricated one — the same name the pre-triage
+         *     path always produced — and renaming the company afterwards is ordinary record editing.
+         *
+         *     Only an `undecided` domain can be answered this way. A domain already carrying a
+         *     decision answers `409`: the request is intelligible and the domain well formed, it is
+         *     the row's state that refuses.
+         *
+         *     Demands `company:update`, the gate every domain decision takes, because what this
+         *     creates is a company.
+         */
+        post: operations["keepDomainQuestion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/capture/domain-questions/{domain}/discard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Answer an open domain question by excluding the domain from your own capture.
+         * @description Writes a capture exclusion for the caller's OWN mailboxes, so mail from this domain
+         *     stops being stored for them. It is the same rule `POST /capture/exclusions` writes with
+         *     `scope: user`, reached from the question rather than by typing the domain again.
+         *
+         *     ONE COLLEAGUE'S ANSWER, and deliberately not the workspace's. Two colleagues on one
+         *     installation may judge the same domain differently — a consultancy that is noise to one
+         *     seat and a live account to another — so this binds only the connections the caller
+         *     granted. Excluding a domain for everybody is a different act with a different gate:
+         *     `POST /capture/exclusions` with `scope: workspace`, which takes the capture-settings
+         *     grant.
+         *
+         *     It does not destroy mail already captured. Purging what a rule matched is
+         *     `POST /capture/exclusions/{id}/purge`, a separate and irreversible act.
+         *
+         *     Takes a human seat and nothing more, because a personal exclusion is the caller's own
+         *     boundary. Idempotent: pressing it twice answers the rule that already exists.
+         */
+        post: operations["discardDomainQuestion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/capture/consumer-mail-baseline": {
         parameters: {
             query?: never;
@@ -16728,10 +16795,14 @@ export interface components {
          *     deliberately letting one in, which no later verdict may undo.
          *
          *     `undecided` is the third state and it is not a decision: the question was asked, the
-         *     machine declined to answer it, and nobody has since. Those rows are why this list
-         *     exists rather than being a record of refusals alone — a domain nothing decided is
-         *     invisible everywhere else, and an operator hunting a company that never appeared
-         *     cannot tell it from one that was refused.
+         *     machine declined to answer it, and nobody has since.
+         *
+         *     Only the undecided domains belonging to NOBODY reach this list. A question raised by a
+         *     colleague's mail is addressed to that colleague and waits on their own queue, where the
+         *     verbs answering it live; carrying it here too would put one question on two surfaces and
+         *     invite an operator to answer for mail they cannot read. A domain whose owner has since
+         *     been deleted keeps no such addressee — the column is cleared with the account — and those
+         *     rows would otherwise be visible to nobody at all, which is what this list is for.
          */
         BlockedDomain: {
             /** @description The registrable domain the decision is about. */
@@ -34116,6 +34187,30 @@ export interface components {
              */
             capture_health?: components["schemas"]["AttentionItem"][];
             /**
+             * @description Domains the capture triage could not judge, whose mail belongs to THIS
+             *     reader — the machine read the site, found nothing that named a company,
+             *     and left the question open rather than inventing a record.
+             *
+             *     Each card names the domain as `title` and why the machine stopped as
+             *     `detail`. The two verbs are the whole answer a human owes: `keep` makes
+             *     the company from the domain's own label, and `discard` writes a capture
+             *     exclusion for this reader's mailboxes alone. Neither needs anything
+             *     typed, which is why this lane can settle from a queue row where a
+             *     free-text answer could not.
+             *
+             *     OWNED, and that is the point of the lane. Every open question carries
+             *     the mailbox owner whose mail raised it (`company_domain_disposition.owner_id`,
+             *     stamped when the question opens), so it reaches the reader whose mail it
+             *     is about rather than a shared pile nobody answers for. One installation's
+             *     two colleagues may answer the same domain differently, and the exclusion
+             *     a `discard` writes binds only the colleague who pressed it.
+             *
+             *     Withheld — named in `lanes_omitted` — for a caller with no human behind
+             *     it. Absent — not empty — on an installation whose feed does not read
+             *     domain questions.
+             */
+            domain_questions?: components["schemas"]["AttentionItem"][];
+            /**
              * @description The reader's OWN AI work that went wrong: runs that failed in the recent
              *     window, and live runs past the lease their source declared (stalled).
              *     Read from the AI-task projection, so it claims ONLY AI work — email
@@ -34224,7 +34319,7 @@ export interface components {
              */
             introductions?: components["schemas"]["AttentionItem"][];
             /** @description Lanes withheld because the caller may not read what they contain. Never returned empty instead. */
-            lanes_omitted?: ("this_morning" | "needs_you" | "planned" | "done_for_you" | "commitments" | "at_risk" | "meetings" | "relationship_decay" | "did_not_run" | "dsr" | "notice_case" | "sync_health" | "capture_health" | "ai_work_health" | "bounces" | "undelivered" | "automation_health" | "notices" | "introductions" | "meetings_unreported")[];
+            lanes_omitted?: ("this_morning" | "needs_you" | "planned" | "done_for_you" | "commitments" | "at_risk" | "meetings" | "relationship_decay" | "did_not_run" | "dsr" | "notice_case" | "sync_health" | "capture_health" | "domain_questions" | "ai_work_health" | "bounces" | "undelivered" | "automation_health" | "notices" | "introductions" | "meetings_unreported")[];
             counts: components["schemas"]["AttentionCounts"];
         };
         /**
@@ -34265,6 +34360,8 @@ export interface components {
             sync_health?: number;
             /** @description How many capture connections need the reader's hand — one per connection, the full count rather than a bounded page. */
             capture_health?: number;
+            /** @description How many open domain questions belong to this reader — the full count rather than a bounded page, because a reader with thirty must be told thirty and the lane offers no second page to find the rest by. */
+            domain_questions?: number;
             /** @description How many troubled AI runs the lane is CARRYING — the bounded page, as the other lanes report. A reader past the bound sees the newest failures. */
             ai_work_health?: number;
             /** @description How many hard-bounced sends the lane is CARRYING — the bounded page, as the other lanes report. A reader past the bound sees the newest reports. */
@@ -34311,7 +34408,7 @@ export interface components {
              * @description Which producer raised it, and therefore which endpoint its verbs go to.
              * @enum {string}
              */
-            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "sync_health" | "capture_health" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome";
+            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "sync_health" | "capture_health" | "domain_question" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome";
             /** @description The producer's own sub-type (an approval kind, a dedupe entity type) — for the icon and the label, never for authority. */
             kind?: string;
             /**
@@ -34474,6 +34571,13 @@ export interface components {
              *     contact must choose; `complete` and `snooze` are a task's own verbs; `open` is
              *     the read-only fallback for a receipt.
              *
+             *     `keep` and `discard` are an undecided domain's pair, and they always travel
+             *     together: keeping it creates the company the triage withheld, discarding it stops
+             *     the caller's OWN mailboxes capturing that domain. Neither carries a body, because
+             *     a domain question has no field to fill in — which is what lets it be answered from
+             *     a queue row. They route to `/capture/domain-questions/{domain}/…`, keyed on the
+             *     domain because an open question is named by the domain rather than by a record id.
+             *
              *     `act`, `dismiss` and `set_aside` are the briefing queue's three, and they route
              *     to `/brief/items/{itemId}/…`. `acknowledge` is a notice's one verb and routes
              *     to `/notices/{id}/read` — the reader has seen it, and it leaves the lane. `set_aside` rather than reusing `snooze`: a task's
@@ -34481,7 +34585,7 @@ export interface components {
              *     suggestion until later in the day. One word for both would make a client that
              *     handles `snooze` generically write the wrong endpoint.
              */
-            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry" | "reply" | "undo")[];
+            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry" | "reply" | "undo" | "keep" | "discard")[];
         };
         /**
          * @description The two records a duplicate item proposes to merge, with the detection-time
@@ -34749,7 +34853,7 @@ export interface components {
              * @description Which producer these numbers are about. The same vocabulary as an item source.
              * @enum {string}
              */
-            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "sync_health" | "capture_health" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome" | "weekly_commitment" | "batch";
+            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "sync_health" | "capture_health" | "domain_question" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome" | "weekly_commitment" | "batch";
             /** @description How many candidates from this source were read and ranked. */
             considered: number;
             /** @description How many of them the queue is carrying after folding, filtering and the page cut. */
@@ -35495,7 +35599,7 @@ export interface components {
              *     row rather than a hundred. Its own facts ride in `batch`.
              * @enum {string}
              */
-            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "sync_health" | "capture_health" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome" | "weekly_commitment" | "batch";
+            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "sync_health" | "capture_health" | "domain_question" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome" | "weekly_commitment" | "batch";
             /**
              * @description The badge, and the filter it answers to. A reader groups by this; the ORDER never does.
              * @enum {string}
@@ -35638,7 +35742,7 @@ export interface components {
              */
             undo?: components["schemas"]["AppliedUndo"];
             /** @description What this item offers, routed to the endpoint that owns the verb. */
-            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry" | "reply" | "undo")[];
+            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry" | "reply" | "undo" | "keep" | "discard")[];
             /**
              * @description The heading this row sits under, as an OUTCOME rather than a priority number.
              *
@@ -50254,6 +50358,61 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    keepDomainQuestion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The domain to keep; normalized to its registrable form. */
+                domain: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Where the domain stands now that it has an answer. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BlockedDomain"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    discardDomainQuestion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The domain to stop capturing; normalized to its registrable form. */
+                domain: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The exclusion rule now binding this caller's mailboxes. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaptureExclusion"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
         };
     };

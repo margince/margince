@@ -1,12 +1,14 @@
 /* Panel — the ZONE PANE: one zone of a record on translucent ground over the
- * lit page, with a hairline edge and the pane's corner. Its whole elevation
- * is the ground and the edge; nothing at rest casts a shadow. The blur is
- * what makes the ground read as glass rather than as a grey box when the
- * page's glow runs under it. */
+ * lit page, with a hairline edge and the pane's corner. The ground and the
+ * edge still carry the separation; --shadow-rest only gives the pane a top
+ * side, and it is the same one layer every resting surface in the product
+ * wears. The blur is what makes the ground read as glass rather than as a
+ * grey box when the page's glow runs under it. */
 .panel {
   background: var(--pane);
   border: 1px solid var(--paneEdge);
   border-radius: var(--r-lg);
+  box-shadow: var(--shadow-rest);
   backdrop-filter: blur(12px);
   overflow: hidden;
 }

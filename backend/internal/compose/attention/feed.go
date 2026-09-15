@@ -163,6 +163,10 @@ type Service struct {
 	// routine contact decision joins. Nil means every address reads as a
 	// contact's, which under-groups rather than hiding anything.
 	machine MachineSender
+	// domainQuestions is the reader's own undecided domains. Optional in the
+	// ordinary way: nil is a feed that does not read the triage ledger at all,
+	// which the queue reports as an absent source rather than an empty one.
+	domainQuestions DomainQuestions
 	// teammates answers whether a team-scoped reader may open a named contact's
 	// queue. Unlike the lanes above it, nil does NOT mean "absent lane": it
 	// means the question has no answer, and resolveOwner refuses rather than

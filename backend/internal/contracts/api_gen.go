@@ -1510,6 +1510,7 @@ const (
 	AttentionLanesOmittedCaptureHealth      AttentionLanesOmitted = "capture_health"
 	AttentionLanesOmittedCommitments        AttentionLanesOmitted = "commitments"
 	AttentionLanesOmittedDidNotRun          AttentionLanesOmitted = "did_not_run"
+	AttentionLanesOmittedDomainQuestions    AttentionLanesOmitted = "domain_questions"
 	AttentionLanesOmittedDoneForYou         AttentionLanesOmitted = "done_for_you"
 	AttentionLanesOmittedDsr                AttentionLanesOmitted = "dsr"
 	AttentionLanesOmittedIntroductions      AttentionLanesOmitted = "introductions"
@@ -1541,6 +1542,8 @@ func (e AttentionLanesOmitted) Valid() bool {
 	case AttentionLanesOmittedCommitments:
 		return true
 	case AttentionLanesOmittedDidNotRun:
+		return true
+	case AttentionLanesOmittedDomainQuestions:
 		return true
 	case AttentionLanesOmittedDoneForYou:
 		return true
@@ -1600,7 +1603,9 @@ const (
 	AttentionItemActionsAct         AttentionItemActions = "act"
 	AttentionItemActionsComplete    AttentionItemActions = "complete"
 	AttentionItemActionsDecide      AttentionItemActions = "decide"
+	AttentionItemActionsDiscard     AttentionItemActions = "discard"
 	AttentionItemActionsDismiss     AttentionItemActions = "dismiss"
+	AttentionItemActionsKeep        AttentionItemActions = "keep"
 	AttentionItemActionsMerge       AttentionItemActions = "merge"
 	AttentionItemActionsOpen        AttentionItemActions = "open"
 	AttentionItemActionsReply       AttentionItemActions = "reply"
@@ -1621,7 +1626,11 @@ func (e AttentionItemActions) Valid() bool {
 		return true
 	case AttentionItemActionsDecide:
 		return true
+	case AttentionItemActionsDiscard:
+		return true
 	case AttentionItemActionsDismiss:
+		return true
+	case AttentionItemActionsKeep:
 		return true
 	case AttentionItemActionsMerge:
 		return true
@@ -1681,6 +1690,7 @@ const (
 	AttentionItemSourceCustomerWaiting     AttentionItemSource = "customer_waiting"
 	AttentionItemSourceDealAtRisk          AttentionItemSource = "deal_at_risk"
 	AttentionItemSourceDedupeCandidate     AttentionItemSource = "dedupe_candidate"
+	AttentionItemSourceDomainQuestion      AttentionItemSource = "domain_question"
 	AttentionItemSourceDsr                 AttentionItemSource = "dsr"
 	AttentionItemSourceFailedApproval      AttentionItemSource = "failed_approval"
 	AttentionItemSourceIntroductionRequest AttentionItemSource = "introduction_request"
@@ -1717,6 +1727,8 @@ func (e AttentionItemSource) Valid() bool {
 	case AttentionItemSourceDealAtRisk:
 		return true
 	case AttentionItemSourceDedupeCandidate:
+		return true
+	case AttentionItemSourceDomainQuestion:
 		return true
 	case AttentionItemSourceDsr:
 		return true
@@ -15760,7 +15772,9 @@ const (
 	WorklistItemActionsAct         WorklistItemActions = "act"
 	WorklistItemActionsComplete    WorklistItemActions = "complete"
 	WorklistItemActionsDecide      WorklistItemActions = "decide"
+	WorklistItemActionsDiscard     WorklistItemActions = "discard"
 	WorklistItemActionsDismiss     WorklistItemActions = "dismiss"
+	WorklistItemActionsKeep        WorklistItemActions = "keep"
 	WorklistItemActionsMerge       WorklistItemActions = "merge"
 	WorklistItemActionsOpen        WorklistItemActions = "open"
 	WorklistItemActionsReply       WorklistItemActions = "reply"
@@ -15781,7 +15795,11 @@ func (e WorklistItemActions) Valid() bool {
 		return true
 	case WorklistItemActionsDecide:
 		return true
+	case WorklistItemActionsDiscard:
+		return true
 	case WorklistItemActionsDismiss:
+		return true
+	case WorklistItemActionsKeep:
 		return true
 	case WorklistItemActionsMerge:
 		return true
@@ -16061,6 +16079,7 @@ const (
 	WorklistItemSourceCustomerWaiting     WorklistItemSource = "customer_waiting"
 	WorklistItemSourceDealAtRisk          WorklistItemSource = "deal_at_risk"
 	WorklistItemSourceDedupeCandidate     WorklistItemSource = "dedupe_candidate"
+	WorklistItemSourceDomainQuestion      WorklistItemSource = "domain_question"
 	WorklistItemSourceDsr                 WorklistItemSource = "dsr"
 	WorklistItemSourceFailedApproval      WorklistItemSource = "failed_approval"
 	WorklistItemSourceIntroductionRequest WorklistItemSource = "introduction_request"
@@ -16100,6 +16119,8 @@ func (e WorklistItemSource) Valid() bool {
 	case WorklistItemSourceDealAtRisk:
 		return true
 	case WorklistItemSourceDedupeCandidate:
+		return true
+	case WorklistItemSourceDomainQuestion:
 		return true
 	case WorklistItemSourceDsr:
 		return true
@@ -16196,6 +16217,7 @@ const (
 	WorklistReachSourceCustomerWaiting     WorklistReachSource = "customer_waiting"
 	WorklistReachSourceDealAtRisk          WorklistReachSource = "deal_at_risk"
 	WorklistReachSourceDedupeCandidate     WorklistReachSource = "dedupe_candidate"
+	WorklistReachSourceDomainQuestion      WorklistReachSource = "domain_question"
 	WorklistReachSourceDsr                 WorklistReachSource = "dsr"
 	WorklistReachSourceFailedApproval      WorklistReachSource = "failed_approval"
 	WorklistReachSourceIntroductionRequest WorklistReachSource = "introduction_request"
@@ -16235,6 +16257,8 @@ func (e WorklistReachSource) Valid() bool {
 	case WorklistReachSourceDealAtRisk:
 		return true
 	case WorklistReachSourceDedupeCandidate:
+		return true
+	case WorklistReachSourceDomainQuestion:
 		return true
 	case WorklistReachSourceDsr:
 		return true
@@ -20298,6 +20322,29 @@ type Attention struct {
 	// failure marks.
 	DidNotRun *[]AttentionItem `json:"did_not_run,omitempty"`
 
+	// DomainQuestions Domains the capture triage could not judge, whose mail belongs to THIS
+	// reader — the machine read the site, found nothing that named a company,
+	// and left the question open rather than inventing a record.
+	//
+	// Each card names the domain as `title` and why the machine stopped as
+	// `detail`. The two verbs are the whole answer a human owes: `keep` makes
+	// the company from the domain's own label, and `discard` writes a capture
+	// exclusion for this reader's mailboxes alone. Neither needs anything
+	// typed, which is why this lane can settle from a queue row where a
+	// free-text answer could not.
+	//
+	// OWNED, and that is the point of the lane. Every open question carries
+	// the mailbox owner whose mail raised it (`company_domain_disposition.owner_id`,
+	// stamped when the question opens), so it reaches the reader whose mail it
+	// is about rather than a shared pile nobody answers for. One installation's
+	// two colleagues may answer the same domain differently, and the exclusion
+	// a `discard` writes binds only the colleague who pressed it.
+	//
+	// Withheld — named in `lanes_omitted` — for a caller with no human behind
+	// it. Absent — not empty — on an installation whose feed does not read
+	// domain questions.
+	DomainQuestions *[]AttentionItem `json:"domain_questions,omitempty"`
+
 	// DoneForYou What the system did on its own, most recent first. Receipts, not questions.
 	DoneForYou []AttentionItem `json:"done_for_you"`
 
@@ -20526,6 +20573,9 @@ type AttentionCounts struct {
 	// DidNotRun How many failed decisions this lane is CARRYING — the bounded page, as the other lanes report.
 	DidNotRun *int `json:"did_not_run,omitempty"`
 
+	// DomainQuestions How many open domain questions belong to this reader — the full count rather than a bounded page, because a reader with thirty must be told thirty and the lane offers no second page to find the rest by.
+	DomainQuestions *int `json:"domain_questions,omitempty"`
+
 	// Dsr How many unresolved data-subject requests this lane is CARRYING — the bounded page, as the other lanes report. A reader past the bound sees the soonest deadlines, which is the order the lane is in.
 	Dsr *int `json:"dsr,omitempty"`
 
@@ -20603,6 +20653,13 @@ type AttentionItem struct {
 	// Actions What this item offers. `decide` and `merge` mean the verb is irreversible and a
 	// contact must choose; `complete` and `snooze` are a task's own verbs; `open` is
 	// the read-only fallback for a receipt.
+	//
+	// `keep` and `discard` are an undecided domain's pair, and they always travel
+	// together: keeping it creates the company the triage withheld, discarding it stops
+	// the caller's OWN mailboxes capturing that domain. Neither carries a body, because
+	// a domain question has no field to fill in — which is what lets it be answered from
+	// a queue row. They route to `/capture/domain-questions/{domain}/…`, keyed on the
+	// domain because an open question is named by the domain rather than by a record id.
 	//
 	// `act`, `dismiss` and `set_aside` are the briefing queue's three, and they route
 	// to `/brief/items/{itemId}/…`. `acknowledge` is a notice's one verb and routes
@@ -21461,10 +21518,14 @@ type BillingContactRole string
 // deliberately letting one in, which no later verdict may undo.
 //
 // `undecided` is the third state and it is not a decision: the question was asked, the
-// machine declined to answer it, and nobody has since. Those rows are why this list
-// exists rather than being a record of refusals alone — a domain nothing decided is
-// invisible everywhere else, and an operator hunting a company that never appeared
-// cannot tell it from one that was refused.
+// machine declined to answer it, and nobody has since.
+//
+// Only the undecided domains belonging to NOBODY reach this list. A question raised by a
+// colleague's mail is addressed to that colleague and waits on their own queue, where the
+// verbs answering it live; carrying it here too would put one question on two surfaces and
+// invite an operator to answer for mail they cannot read. A domain whose owner has since
+// been deleted keeps no such addressee — the column is cleared with the account — and those
+// rows would otherwise be visible to nobody at all, which is what this list is for.
 type BlockedDomain struct {
 	// Admission `suppressed` — never a company. `admitted` — allowed, and sticky against later machine
 	// refusals. `undecided` — the question is open and waiting to be answered; nothing is stored
@@ -34719,10 +34780,14 @@ type RejectCompanyResponse struct {
 	// deliberately letting one in, which no later verdict may undo.
 	//
 	// `undecided` is the third state and it is not a decision: the question was asked, the
-	// machine declined to answer it, and nobody has since. Those rows are why this list
-	// exists rather than being a record of refusals alone — a domain nothing decided is
-	// invisible everywhere else, and an operator hunting a company that never appeared
-	// cannot tell it from one that was refused.
+	// machine declined to answer it, and nobody has since.
+	//
+	// Only the undecided domains belonging to NOBODY reach this list. A question raised by a
+	// colleague's mail is addressed to that colleague and waits on their own queue, where the
+	// verbs answering it live; carrying it here too would put one question on two surfaces and
+	// invite an operator to answer for mail they cannot read. A domain whose owner has since
+	// been deleted keeps no such addressee — the column is cleared with the account — and those
+	// rows would otherwise be visible to nobody at all, which is what this list is for.
 	Domain BlockedDomain `json:"domain"`
 }
 
@@ -56873,6 +56938,12 @@ type ServerInterface interface {
 	// Lift a counterparty hold.
 	// (DELETE /capture/counterparty-holds/{id})
 	DeleteCaptureCounterpartyHold(w http.ResponseWriter, r *http.Request, id Id)
+	// Answer an open domain question by excluding the domain from your own capture.
+	// (POST /capture/domain-questions/{domain}/discard)
+	DiscardDomainQuestion(w http.ResponseWriter, r *http.Request, domain string)
+	// Answer an open domain question by keeping the company.
+	// (POST /capture/domain-questions/{domain}/keep)
+	KeepDomainQuestion(w http.ResponseWriter, r *http.Request, domain string)
 	// The workspace's own email domains.
 	// (GET /capture/email-domains)
 	ListWorkspaceEmailDomains(w http.ResponseWriter, r *http.Request)
@@ -59231,6 +59302,18 @@ func (_ Unimplemented) ShareCaptureCounterpartyHoldHistory(w http.ResponseWriter
 // Lift a counterparty hold.
 // (DELETE /capture/counterparty-holds/{id})
 func (_ Unimplemented) DeleteCaptureCounterpartyHold(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Answer an open domain question by excluding the domain from your own capture.
+// (POST /capture/domain-questions/{domain}/discard)
+func (_ Unimplemented) DiscardDomainQuestion(w http.ResponseWriter, r *http.Request, domain string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Answer an open domain question by keeping the company.
+// (POST /capture/domain-questions/{domain}/keep)
+func (_ Unimplemented) KeepDomainQuestion(w http.ResponseWriter, r *http.Request, domain string) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -67028,6 +67111,70 @@ func (siw *ServerInterfaceWrapper) DeleteCaptureCounterpartyHold(w http.Response
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.DeleteCaptureCounterpartyHold(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DiscardDomainQuestion operation middleware
+func (siw *ServerInterfaceWrapper) DiscardDomainQuestion(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "domain" -------------
+	var domain string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "domain", chi.URLParam(r, "domain"), &domain, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "domain", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DiscardDomainQuestion(w, r, domain)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// KeepDomainQuestion operation middleware
+func (siw *ServerInterfaceWrapper) KeepDomainQuestion(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "domain" -------------
+	var domain string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "domain", chi.URLParam(r, "domain"), &domain, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "domain", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.KeepDomainQuestion(w, r, domain)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -91066,6 +91213,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/capture/counterparty-holds/{id}", wrapper.DeleteCaptureCounterpartyHold)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/capture/domain-questions/{domain}/discard", wrapper.DiscardDomainQuestion)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/capture/domain-questions/{domain}/keep", wrapper.KeepDomainQuestion)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/capture/email-domains", wrapper.ListWorkspaceEmailDomains)
