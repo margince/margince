@@ -2805,6 +2805,8 @@ export const de = {
   "recordRoles.builtIn": "Vorinstalliert",
   "recordRoles.addOpen": "Rolle hinzuf\u00fcgen",
   "recordRoles.addTitle": "Verantwortungsrolle hinzuf\u00fcgen",
+  "recordRoles.recordTypes": "Gilt für",
+  "recordRoles.assigneeKinds": "Zuweisbar an",
   "recordRoles.addLabel": "Name",
   "recordRoles.addHint":
     "Wof\u00fcr die zust\u00e4ndige Seite verantwortlich ist, in verst\u00e4ndlichen Worten.",

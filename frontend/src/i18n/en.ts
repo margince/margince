@@ -2866,6 +2866,8 @@ export const en = {
   "recordRoles.builtIn": "Built in",
   "recordRoles.addOpen": "Add role",
   "recordRoles.addTitle": "Add a responsibility role",
+  "recordRoles.recordTypes": "Applies to",
+  "recordRoles.assigneeKinds": "Can be assigned to",
   "recordRoles.addLabel": "Name",
   "recordRoles.addHint":
     "What the responsible party is accountable for, as a reader would say it.",
