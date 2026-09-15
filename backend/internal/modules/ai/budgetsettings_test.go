@@ -117,6 +117,12 @@ func TestObservedSnapshotSaturatesWhereBudgetSnapshotErrors(t *testing.T) {
 	if observed.MonthlyTokens != MaxMonthlyTokens || observed.Revision != config.Revision() || observed.EligibleFullUsers != 2 {
 		t.Fatalf("observed snapshot %+v", observed)
 	}
+	// A config that fails validateBudget itself, not merely a growth overflow,
+	// is still an error out of observedSnapshot — saturation only covers the
+	// overflow case, never an out-of-range stored value.
+	if _, err := observedSnapshot(BudgetConfig{TokensPerFullUser: -1}, 2, 0, now); err == nil {
+		t.Fatal("observedSnapshot must still error on an out-of-range stored value")
+	}
 }
 
 func TestAllowanceSnapshotIsUTCAndDoesNotHideOverspend(t *testing.T) {

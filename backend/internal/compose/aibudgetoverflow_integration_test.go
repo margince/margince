@@ -6,8 +6,11 @@
 package compose
 
 import (
+	"context"
 	"errors"
 	"testing"
+
+	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -130,5 +133,19 @@ func TestAllowanceOverflowLockoutRecoversThroughReplaceBudget(t *testing.T) {
 	after, err := store.ReadBudget(ctx)
 	if err != nil || after.Revision != fixed.Revision || after.MonthlyTokens != fixed.MonthlyTokens {
 		t.Fatalf("recovered config did not persist: %+v %v", after, err)
+	}
+}
+
+// TestAllowanceReadFailsClosedWhenFullUserCountingErrors proves a failure from the
+// full-user counter (NewAdminStore's own composition seam) reaches the caller
+// rather than being swallowed — a genuine DB-side failure counting seats must
+// surface as a read error, not a silent zero that understates the workspace.
+func TestAllowanceReadFailsClosedWhenFullUserCountingErrors(t *testing.T) {
+	e := integration.Setup(t)
+	errCounting := errors.New("full-user count unavailable")
+	failingUsers := func(context.Context, pgx.Tx) (int64, error) { return 0, errCounting }
+	store := ai.NewAdminStore(e.DB(), NewSettingsStore(e.Pool), failingUsers, aiDeferredWork(e.Pool))
+	if _, err := store.ReadBudget(e.Admin()); !errors.Is(err, errCounting) {
+		t.Fatalf("ReadBudget must surface the counting failure, got %v", err)
 	}
 }

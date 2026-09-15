@@ -41,6 +41,14 @@ func TestAllowanceReadingsPreserveTheirIndependentPermissions(t *testing.T) {
 	if _, err := store.PreviewRouting(e.As(e.Rep1, nil, perms), ai.RoutingConfig{}); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("routing preview without allowance read: %v", err)
 	}
+	perms.Objects["ai_budget"] = principal.ObjectGrant{Read: true}
+	routingPreview, err := store.PreviewRouting(e.As(e.Rep1, nil, perms), ai.RoutingConfig{})
+	if err != nil {
+		t.Fatalf("routing preview with allowance read: %v", err)
+	}
+	if routingPreview.CurrentVersion == "" {
+		t.Fatal("routing preview did not report a current version")
+	}
 	perms.Objects = map[string]principal.ObjectGrant{"ai_budget": {Read: true, Update: true}}
 	ctx := e.As(e.Rep1, nil, perms)
 	budget, err := store.ReadBudget(ctx)
