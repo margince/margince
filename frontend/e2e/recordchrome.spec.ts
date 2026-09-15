@@ -176,7 +176,7 @@ test.describe("the record's rhythm", () => {
 
     const step = await recordStep(page);
     const head = await present(page, ".record-head");
-    const tabs = await present(page, ".record-tabs");
+    const tabs = await present(page, "[data-testid='record-tabs']");
     const band = await edge(page, ".record-band");
     // The work column rather than the grid around it: a record with neither
     // rail nor aside draws no `.page-zones` at all, and this column is the
@@ -266,7 +266,7 @@ test.describe("the record's details pane", () => {
 
       const paneBox = await pane.boundingBox();
       const work = await page.locator(".page-zones-main").boundingBox();
-      const tabs = await page.locator(".record-tabs").boundingBox();
+      const tabs = await page.locator("[data-testid='record-tabs']").boundingBox();
       if (!paneBox || !work || !tabs) {
         throw new Error(
           "the pane, the work column and the tab row are visible but one has no box",

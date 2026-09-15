@@ -82,6 +82,44 @@ function modules(): string[] {
  * explained in prose and then deleted leaves its name in the paragraph above
  * the gap.
  */
+/**
+ * The class names a suite's selector strings walk.
+ *
+ * A SELECTOR IS RECOGNISED BY ITS SHAPE rather than by the call around it:
+ * Playwright reaches one through `locator`, `querySelector`, `$$eval` and a
+ * handful of each suite's own helpers, and a gate that listed those would miss
+ * the next one. A selector opens with `.`, `#` or `[` and carries nothing but
+ * selector punctuation, which is what keeps `page.locator` — a property access
+ * that happens to contain a dot — from reading as one.
+ */
+function selectorClassesIn(source: ts.SourceFile): string[] {
+  const out: string[] = [];
+  const visit = (node: ts.Node) => {
+    if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) {
+      if (/^[.#[][\w.#[\]='"\s>+~:()-]*$/.test(node.text)) {
+        for (const found of node.text.matchAll(/\.([a-z][\w-]*)/g)) {
+          out.push(found[1]);
+        }
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  return out;
+}
+
+function declaredClasses(): Set<string> {
+  const out = new Set<string>();
+  for (const sheet of sheets()) {
+    for (const name of declaredIn(
+      readFileSync(join(frontendRoot, sheet), "utf8"),
+    )) {
+      out.add(name);
+    }
+  }
+  return out;
+}
+
 function declaredIn(css: string): Set<string> {
   const out = new Set<string>();
   for (const chunk of withoutComments(css).split("{")) {
@@ -232,6 +270,51 @@ function isClassToken(name: string): boolean {
 // The census above can only report what this resolves, so a reader that quietly
 // stopped seeing one shape would take the whole gate down to PASS with nothing
 // failing. Each case below is a shape the tree actually writes.
+// AND NOTHING SELECTS A CLASS NO SHEET DECLARES.
+//
+// The other direction, and the one that bit while this was being written. A
+// suite that pins itself to a class name turns that name into a handle the page
+// has to keep — so the class is no longer dead, it is dead-and-load-bearing,
+// and the census above would have it deleted. Three Playwright journeys were
+// walking `.record-tabs`, `.co-tabs` and `.worklist-row-decision`, none of
+// which any sheet has ever drawn; removing them broke eleven browser cases
+// eleven minutes into CI rather than here.
+//
+// A handle a page does not style is a `data-testid`. It says what it is for,
+// nothing styles it by accident, and a stylist reading the markup is not told a
+// rule exists.
+describe("no suite pins itself to a class that styles nothing", () => {
+  it("finds every selector the browser journeys walk", () => {
+    const suites = filesMatching(join(frontendRoot, "e2e"), /\.ts$/);
+    expect(
+      suites.length,
+      "no browser suites were found, so this arm read nothing",
+    ).toBeGreaterThan(5);
+
+    const declared = declaredClasses();
+    const pinned: string[] = [];
+    for (const suite of suites) {
+      const source = parseSource(suite, readFileSync(suite, "utf8"));
+      // READ AS A SYNTAX TREE, for the reason the census above is: the two
+      // leaks a text scan produced here were both prose — "`[].every()`" and
+      // "a `.cf-count`" — written in comments explaining the very cases this
+      // asks about.
+      for (const name of selectorClassesIn(source)) {
+        if (!declared.has(name)) {
+          pinned.push(`${relative(frontendRoot, suite)} walks .${name}`);
+        }
+      }
+    }
+
+    expect(
+      [...new Set(pinned)].sort(),
+      "these suites walk a class no stylesheet declares, so the page is carrying " +
+        "the name for the suite's sake alone — give the element a data-testid and " +
+        "walk that instead",
+    ).toEqual([]);
+  });
+});
+
 describe("what a className can be shown to produce", () => {
   const names = (markup: string) =>
     renderedIn(
@@ -303,14 +386,7 @@ describe("every class an element carries is declared by a sheet", () => {
   });
 
   it("finds no class that styles nothing", () => {
-    const declared = new Set<string>();
-    for (const sheet of sheetFiles) {
-      for (const name of declaredIn(
-        readFileSync(join(frontendRoot, sheet), "utf8"),
-      )) {
-        declared.add(name);
-      }
-    }
+    const declared = declaredClasses();
     expect(
       declared.size,
       "the sheets parsed to almost no class names, so this gate is reading them wrong",

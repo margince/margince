@@ -1503,7 +1503,7 @@ test.describe("§3.8: 390px mobile", () => {
     const tall = await page.evaluate(() => {
       return Array.from(document.querySelectorAll(".worklist-list li"))
         .map((row) => {
-          const decides = row.querySelector(".worklist-row-decision") !== null;
+          const decides = row.querySelector("[data-testid='worklist-row-decision']") !== null;
           return {
             height: row.getBoundingClientRect().height,
             ceiling: decides ? 208 : 176,
