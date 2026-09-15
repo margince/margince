@@ -1,10 +1,14 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { useState } from "react";
 
-import { api } from "../api/client";
+import { api, FIRST_PAGE } from "../api/client";
 import type { components } from "../api/schema";
 import { useCanWrite } from "../app/capability";
 import { Button, EmptyState, Textarea } from "../design-system/atoms";
@@ -12,7 +16,7 @@ import { Panel, PanelBody } from "../design-system/panel";
 import { formatDate } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
-import { problemMessageOf, throwProblem } from "./common";
+import { LoadMoreButton, problemMessageOf, throwProblem } from "./common";
 
 type ConfirmSubmission = components["schemas"]["ConfirmSubmission"];
 
@@ -50,17 +54,25 @@ export function ConfirmSubmissionsPanel() {
   const [note, setNote] = useState("");
   const [failure, setFailure] = useState("");
 
-  const query = useQuery({
+  // PAGED, because the queue is as long as the subjects make it. A limit with
+  // no continuation answered the first page and said nothing about the rest, so
+  // a reviewer who worked to the bottom of the list had seen the oldest fifty
+  // and none of what arrived after — and the screen gave no sign a tail
+  // existed. The screen is what a reviewer actually works, so the fix has to
+  // reach here and not only the wire.
+  const query = useInfiniteQuery({
     queryKey: ["confirm-submissions"],
-    queryFn: async () => {
+    initialPageParam: FIRST_PAGE,
+    queryFn: async ({ pageParam }) => {
       const { data, error } = await api.GET("/confirm-submissions", {
-        params: { query: { resolved: false } },
+        params: { query: { resolved: false, cursor: pageParam ?? undefined } },
       });
       if (error) {
         throwProblem(error);
       }
       return data;
     },
+    getNextPageParam: (last) => last.page.next_cursor ?? null,
   });
 
   const resolve = useMutation({
@@ -102,7 +114,7 @@ export function ConfirmSubmissionsPanel() {
   });
 
   const tz = viewerZone();
-  const rows = query.data?.data ?? [];
+  const rows = query.data?.pages.flatMap((page) => page.data) ?? [];
   return (
     <Panel title={t("privacy.corrections")}>
       <PanelBody>
@@ -147,6 +159,7 @@ export function ConfirmSubmissionsPanel() {
                 }
               />
             ))}
+            <LoadMoreButton query={query} />
           </ul>
         )}
       </PanelBody>

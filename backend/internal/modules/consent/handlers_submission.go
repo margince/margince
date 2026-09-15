@@ -27,7 +27,10 @@ func (h Handlers) ListConfirmSubmissions(
 	if params.Limit != nil {
 		in.Limit = *params.Limit
 	}
-	subs, err := h.store.ListSubmissions(r.Context(), in)
+	if params.Cursor != nil {
+		in.Cursor = *params.Cursor
+	}
+	subs, page, err := h.store.ListSubmissions(r.Context(), in)
 	if err != nil {
 		writeConsentErr(w, r, err)
 		return
@@ -36,7 +39,11 @@ func (h Handlers) ListConfirmSubmissions(
 	for _, sub := range subs {
 		out = append(out, wireSubmission(sub))
 	}
-	httperr.WriteJSON(w, http.StatusOK, map[string]any{"data": out})
+	info := crmcontracts.PageInfo{HasMore: page.HasMore}
+	if page.NextCursor != "" {
+		info.NextCursor = &page.NextCursor
+	}
+	httperr.WriteJSON(w, http.StatusOK, map[string]any{keyData: out, keyPage: info})
 }
 
 // ResolveConfirmSubmission implements (POST /confirm-submissions/{id}/resolve).
