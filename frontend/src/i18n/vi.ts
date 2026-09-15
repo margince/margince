@@ -9327,6 +9327,8 @@ export const vi = {
   "worklist.pair.ask": "Giữ lại bản ghi nào?",
   "worklist.pair.keep": "Giữ {name}",
   "worklist.pair.notDuplicate": "Không trùng nhau",
+  "worklist.pair.mergeBlocked":
+    "Không thể gộp hai bản ghi này: cả hai đều đang có dự án chạy, và dữ liệu không cho biết công việc nào thuộc về đâu. Nếu chúng không trùng nhau, bạn vẫn có thể ghi nhận điều đó.",
   "worklist.pair.related": "{count} liên kết",
   "worklist.pair.failed": "Không quyết định được cặp này. Hãy thử lại.",
   "worklist.pair.refused":
