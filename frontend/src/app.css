@@ -9,22 +9,85 @@
    component's own `animation` has to be seen before it. */
 @import "./design-system/enter.css";
 
-/* The document is not a scroller here. `.app` is exactly one viewport tall and
-   every screen scrolls inside its own pane, so a gesture that runs past the end
-   of a pane has nowhere to chain to — and a root that still answers it bounces
-   the entire app upward and shows a band of bare ground beneath it. Declared on
-   the root rather than on each pane because it is a fact about the SHELL: no
-   surface in this product scrolls the document, so none of them should be able
-   to make it move. Panes that must not chain say `contain` for themselves. */
+/* THE root type declaration. Every element in the product inherits its font
+   styling and its neutral ink from this one rule; a role-level type rule is
+   layered ON TOP of it and never beside it, so there is exactly one place the
+   document's size, leading, weight, face and ink are decided. */
 html {
+  font: var(--fw-base) var(--fs-base) / var(--lh-base) var(--f-body);
+  color: var(--textPrimary);
+  /* The document is not a scroller here. `.app` is exactly one viewport tall and
+     every screen scrolls inside its own pane, so a gesture that runs past the end
+     of a pane has nowhere to chain to — and a root that still answers it bounces
+     the entire app upward and shows a band of bare ground beneath it. Declared on
+     the root rather than on each pane because it is a fact about the SHELL: no
+     surface in this product scrolls the document, so none of them should be able
+     to make it move. Panes that must not chain say `contain` for themselves. */
   overscroll-behavior: none;
 }
 
+/* The browser's own type scale is not a source of truth here. A user-agent
+   sheet (and the part of Tailwind's preflight that does not already say so)
+   gives a heading, a `<small>`, a `<th>` or a form control a size, a weight or
+   an ink of its own, which is a second author for text this product decides in
+   one place. Everything listed inherits instead. `font-style` is deliberately
+   absent: `em` and `i` still lean. */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+small,
+sub,
+sup,
+b,
+strong,
+th,
+td,
+legend,
+label,
+kbd,
+samp,
+code,
+pre,
+blockquote,
+figcaption,
+address,
+cite,
+dfn,
+em,
+i,
+button,
+input,
+select,
+textarea,
+optgroup {
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+  letter-spacing: inherit;
+  text-transform: none;
+  color: inherit;
+}
+
+/* A sub- or superscript must not grow the line it sits in; the size still
+   inherits from the root above. */
+sub,
+sup {
+  line-height: 0;
+}
+
+button,
+input,
+select,
+textarea,
+optgroup {
+  font-family: inherit;
+}
+
 body {
-  font-family: var(--f-body);
-  font-size: var(--fs-body);
-  line-height: var(--lh-normal);
-  color: var(--textContent);
   background: var(--bgPage);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
