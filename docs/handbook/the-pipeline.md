@@ -319,6 +319,27 @@ If a partner is involved, name them and say how:
 Naming a partner without saying which treats it as "brought us the deal".
 Commission accrues on that first case only.
 
+### The commission ledger
+
+A partner's own page carries **Commission** — "What this partner has earned on
+deals they brought" — with a row per deal: the deal, what was earned, the rate,
+the deal value it was taken from, and a status. Above it sits **Still owed**.
+
+Four statuses, and a row moves through them by somebody deciding:
+
+| Status | What it means |
+|---|---|
+| **Accrued** | Earned, nobody has approved it |
+| **Approved** | Approved for payment |
+| **Paid** | Paid |
+| **Reversed** | Undone, with the original left standing |
+
+The verbs are Approve, Mark as paid and Reverse. Where a decision is not yours,
+the cell says **"Not yours to decide"** rather than offering a button that
+refuses.
+
+Nothing earned yet reads "Nothing earned yet".
+
 The partner's margin tier is frozen onto the commission at the moment it accrues,
 so changing a partner's tier later does not rewrite what they have already
 earned. A partner with no tier earns nothing, and no commission row is written at all —

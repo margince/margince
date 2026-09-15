@@ -106,7 +106,13 @@ from Home. When there is nothing, it says "Nothing is waiting on you" rather
 than showing you an empty grid.
 
 **Ask Margince** is the question box, reachable from anywhere with a keyboard
-shortcut.
+shortcut. The same shortcut opens the command palette — "Find everything or get
+answers from Margince" — which is the fastest way to any screen.
+
+**Search** groups what it finds by kind: Contacts, Companies, Deals, Leads,
+Projects, Activities, Products, Offer templates and Tags. A result that came
+from a connected system says so, rather than looking like something somebody
+here typed.
 
 You will notice no counters or badges on the navigation. That is deliberate: the
 queues that would carry them are lanes inside Worklist, which reports its own

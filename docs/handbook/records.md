@@ -348,6 +348,27 @@ An administrator names the field; what sits behind it is derived from that name
 once and never changes, so renaming moves the label and leaves your reporting
 intact. They are set up at **Settings → Fields**.
 
+## Tags
+
+A tag is a shared word this company files records under. **Anyone can apply one;
+only admin and ops seats add, rename or retire them.**
+
+Every tag has its own page listing the records carrying it, grouped by type.
+
+Renaming a tag renames it everywhere — there is one word, not a copy per record.
+
+Two administrator actions are worth knowing:
+
+- **Retire** takes a tag out of use without touching the records that carry it,
+  and **Restore** brings it back.
+- **Merge** folds one tag into another and **cannot be undone**: "Records
+  carrying {name} will carry the other tag instead, and the name is released for
+  anyone to use again." Afterwards it reports what actually moved — "{moved}
+  records moved to the surviving tag. {collapsed} already carried both, so their
+  duplicate was dropped."
+
+An agent may not merge tags on its own; a merge is staged for a human.
+
 ## Money
 
 Amounts are stored as whole minor units plus a currency code. There is no
