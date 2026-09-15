@@ -10211,6 +10211,12 @@ export interface paths {
          *
          *     Unresolved first by default, oldest first within that: a correction somebody sent three
          *     weeks ago is the one still waiting.
+         *
+         *     The queue is PAGED, and every page says whether there is another. A `limit` with no
+         *     continuation made every submission past the ceiling unreachable through this route at
+         *     all — and the ones that fell off the end were the newest, with the screen giving no sign
+         *     a tail existed. The resolved archive was truncated the same way, permanently. Walk
+         *     `page.next_cursor` until `has_more` is false.
          */
         get: operations["listConfirmSubmissions"];
         put?: never;
@@ -17756,7 +17762,7 @@ export interface components {
         };
         DedupeCandidateListResponse: {
             data: components["schemas"]["DedupeCandidate"][];
-            page?: components["schemas"]["PageInfo"];
+            page: components["schemas"]["PageInfo"];
         };
         DedupeDispositionRequest: {
             /** @enum {string} */
@@ -51306,6 +51312,8 @@ export interface operations {
                 resolved?: boolean;
                 /** @description Max items in the page. */
                 limit?: components["parameters"]["Limit"];
+                /** @description Opaque keyset cursor from a prior response's `page.next_cursor`. It encodes all three parts of this queue's order — whether the row is resolved, its `submitted_at`, and its id — because two subjects can send in the same second and an id alone cannot continue an order it is only the tie-break of. Changing `contact_id` or `resolved` mid-walk changes which rows the remaining pages see, so re-issue without the cursor when a filter changes. A token this endpoint did not mint returns `422 code: malformed_cursor`. */
+                cursor?: string;
             };
             header?: never;
             path?: never;
@@ -51313,12 +51321,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /**
-             * @description The submissions, bounded by the limit. NO CURSOR: this is a queue somebody works
-             *     through rather than an archive to page, and a cursor the handler did not read would
-             *     answer a wider page than the one that was asked for. When the queue grows past one
-             *     screen, the paging lands with the reader that needs it.
-             */
+            /** @description A page of submissions. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -51326,6 +51329,7 @@ export interface operations {
                 content: {
                     "application/json": {
                         data: components["schemas"]["ConfirmSubmission"][];
+                        page: components["schemas"]["PageInfo"];
                     };
                 };
             };

@@ -589,7 +589,7 @@ describe("what the ranked queue tells a reader", () => {
         created_at: "2026-08-31T08:00:00Z",
       },
     );
-    const { container } = renderWorklist();
+    renderWorklist();
 
     await screen.findByText(/Send the follow-up/);
     // A queue that can rank a decision and not answer it sends the reader to a
@@ -601,9 +601,7 @@ describe("what the ranked queue tells a reader", () => {
     // ceiling and pushed the page's first action off a phone screen. So the row
     // offers the verb and the drawer holds the card, and this asserts both
     // halves — a row that opened nothing would pass on the button alone.
-    await waitFor(() => {
-      expect(container.querySelector(".worklist-row-decision")).toBeTruthy();
-    });
+    await screen.findByRole("button", { name: "Decide" });
     // Not answerable until the reader asks: the queue draws no Accept.
     expect(screen.queryByRole("button", { name: "Approve email" })).toBeNull();
     await userEvent.click(

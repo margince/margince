@@ -94,7 +94,6 @@ export function CallCard({
   return (
     <Panel
       tone="ai"
-      className="co-reading-call"
       title={title ?? <BriefTitle name={name} />}
       titleAction={title ? titleAction : undefined}
       footer={footer}

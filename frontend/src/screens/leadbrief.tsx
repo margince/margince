@@ -49,7 +49,7 @@ export function LeadBrief({
 }>) {
   const t = useT();
   return (
-    <Panel tone="ai" className="co-reading-call" title={t("lead.brief.title")}>
+    <Panel tone="ai" title={t("lead.brief.title")}>
       {standing ? (
         <VerdictHead
           label={standing.label}

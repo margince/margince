@@ -861,7 +861,9 @@ function RowDecision({ item }: Readonly<{ item: WorklistItem }>) {
   const approval = useApproval(item.id, open);
   const usable = approval.data?.kind ? approval.data : undefined;
   return (
-    <div className="worklist-row-decision">
+    // A TEST ID rather than a class: which rows offer a decision is what a
+    // screen journey counts, and nothing draws this wrapper.
+    <div data-testid="worklist-row-decision">
       <Button
         ref={opener}
         variant="primary"

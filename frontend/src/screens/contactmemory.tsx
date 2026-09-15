@@ -100,7 +100,6 @@ export function ContactMemory({
 
   return (
     <Panel
-      className="pe-memory"
       title={t("contact.memory.title")}
       // The way out of the glance, in the band that belongs to the whole card
       // rather than to any row. It lands on the Timeline tab — this record's

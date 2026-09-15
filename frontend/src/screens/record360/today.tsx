@@ -89,7 +89,7 @@ export function TodayPanel({
       // `co-lead` is the company lead's two-column move: the claim on the
       // left, the verbs opposite it. Without it a contact's verbs fell UNDER
       // the claim, right-aligned, and the whole width beside them was empty.
-      className="co-reading-today co-lead"
+      className="co-lead"
       title={t("today.title")}
       titleAction={
         <div className="co-reading-today-actions">
@@ -286,7 +286,7 @@ export function TodoRow({
       {who && <Avatar name={who} size="xs" />}
       <span className="co-todo-body">
         <span className="co-todo-title">{title}</span>
-        {meta && <span className="co-todo-meta t-caption">{meta}</span>}
+        {meta && <span className="t-caption">{meta}</span>}
       </span>
       {due && (
         <span

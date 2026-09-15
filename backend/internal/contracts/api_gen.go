@@ -28213,7 +28213,7 @@ type DedupeCandidateStatus string
 // DedupeCandidateListResponse defines model for DedupeCandidateListResponse.
 type DedupeCandidateListResponse struct {
 	Data []DedupeCandidate `json:"data"`
-	Page *PageInfo         `json:"page,omitempty"`
+	Page PageInfo          `json:"page"`
 }
 
 // DedupeDispositionRequest defines model for DedupeDispositionRequest.
@@ -41913,6 +41913,9 @@ type ListConfirmSubmissionsParams struct {
 
 	// Limit Max items in the page.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. It encodes all three parts of this queue's order — whether the row is resolved, its `submitted_at`, and its id — because two subjects can send in the same second and an id alone cannot continue an order it is only the tie-break of. Changing `contact_id` or `resolved` mid-walk changes which rows the remaining pages see, so re-issue without the cursor when a filter changes. A token this endpoint did not mint returns `422 code: malformed_cursor`.
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
 }
 
 // ResolveConfirmSubmissionJSONBody defines parameters for ResolveConfirmSubmission.
@@ -70758,6 +70761,19 @@ func (siw *ServerInterfaceWrapper) ListConfirmSubmissions(w http.ResponseWriter,
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
 		}
 		return
 	}

@@ -75,7 +75,7 @@ export function IntroAsksPanel({
       sub={t("contact.intro.asksSub")}
     >
       <PanelBody>
-        <ul className="pn-asks">
+        <ul>
           {rows.map((ask) => (
             <AskRow
               key={ask.id}
@@ -142,7 +142,7 @@ function AskRow({
   // leaving it focused and inert) and `disabled` for the sibling's, so a
   // press on each before the first answer returns cannot fire both at once.
   return (
-    <li className="pn-ask">
+    <li>
       <Badge>{t(STATUS_LABEL[ask.status])}</Badge> {ask.internal_reason}
       {mine && ask.status === "requested" ? (
         <Button onClick={onAnswer}>{t("contact.intro.answerAction")}</Button>
