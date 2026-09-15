@@ -1600,7 +1600,7 @@ function CompanyRecordBody({
           )}
           {/* Who handles the invoices belongs beside the roster, not only under
               Finance: naming an invoice recipient is a fact about the account's
-              people, and the reader working the contacts is the one who knows
+              contacts, and the reader working them is the one who knows
               it. The same panel the Finance tab shows, reading its rows off the
               Company360 the tab already holds — so the write path and its
               refusals stay in one place. */}

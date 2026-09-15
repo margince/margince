@@ -406,7 +406,7 @@ export const CompanyDeals: Story = {
 
 // The Contacts tab: the roster a rep works from, and beneath it the billing
 // panel. Who the invoices are addressed to is a fact about the account's
-// people, so it is nameable here as well as under Finance — the same panel, fed
+// contacts, so it is nameable here as well as under Finance — the same panel, fed
 // from the 360 the tab already holds. The reader here holds the relationship
 // grant, so the panel draws its Name/Change/Remove verbs.
 //

@@ -190,7 +190,7 @@ func TestAGrouplessTokenNeverReadsTheMap(t *testing.T) {
 	svc, _, _, email := seedSSOEnv(t, "sso-group-none")
 	svc.WithGroupRoleMap(func(context.Context) (map[string]string, error) {
 		t.Error("the group-role map was read for a token that carried no groups")
-		return nil, nil
+		return map[string]string{}, nil
 	})
 
 	if _, err := svc.LoginViaFederatedIdentity(groupSyncCtx(), "google", "sub-1", email, nil); err != nil {

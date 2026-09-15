@@ -25,6 +25,11 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// roleAuditKey names the before/after role set in the assign audit — the same
+// key ChangeUserRole's audit uses, so a reader of the ledger sees one shape
+// whether a role was granted at sign-in or set by an admin.
+const roleAuditKey = "roles"
+
 // WithGroupRoleMap injects the group→role grant map reader, read fresh per
 // federated sign-in so an admin's change takes effect without a restart — the
 // same wiring shape as WithRequireSSO. Unset grants nothing, exactly like an
@@ -139,7 +144,7 @@ func auditMappedGrants(ctx context.Context, tx pgx.Tx, userID ids.UserID, before
 	after = append(append(after, before...), granted...)
 	actorCtx := selfActorCtx(ctx, userID)
 	auditID, err := storekit.Audit(actorCtx, tx, "assign", "user", userID.UUID,
-		map[string]any{"roles": before}, map[string]any{"roles": after})
+		map[string]any{roleAuditKey: before}, map[string]any{roleAuditKey: after})
 	if err != nil {
 		return err
 	}

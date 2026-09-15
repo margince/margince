@@ -55,31 +55,8 @@ func (s *Service) Login(ctx context.Context, email, plaintext string) (Identity,
 		if loadErr != nil {
 			return loadErr
 		}
-		// Enforced SSO closes the password path to everyone but an admin, and
-		// only AFTER the credential check above — so a wrong password is still
-		// refused first and neutrally, never answered differently because the
-		// mode is on. Rolls back before any session is minted.
-		if sso && !id.hasRole(roleAdmin) {
-			return errSSORequired
-		}
-		// A member with an active second factor gets no session from the password
-		// alone: the flow stops here and resumes at /auth/mfa. Checked after the
-		// SSO gate so an admin break-glass password login is still challenged for
-		// its factor if they hold one.
-		//
-		// Only where a vault exists: with none, /auth/mfa could never verify the
-		// factor, so challenging would turn a misconfigured deployment (enrolled
-		// members, seal since removed) into a lockout of exactly those members.
-		// The composition root reports that state at boot; here the password
-		// alone completes, the posture the account had before it enrolled.
-		if s.vault != nil {
-			mfaConfirmed, err := hasConfirmedMFA(ctx, tx, account.UserID)
-			if err != nil {
-				return err
-			}
-			if mfaConfirmed {
-				return errMFARequired
-			}
+		if err := s.enforceSignInPolicy(ctx, tx, id, sso); err != nil {
+			return err
 		}
 		if err := insertSession(ctx, tx, account.UserID, tokenHash); err != nil {
 			return err
@@ -127,4 +104,39 @@ func (s *Service) Login(ctx context.Context, email, plaintext string) (Identity,
 		return Identity{}, "", err
 	}
 	return id, token, nil
+}
+
+// enforceSignInPolicy applies the two installation gates that stand between a
+// verified password and a session — enforced SSO and a required second factor —
+// on the already-authenticated Identity, inside the login transaction so a
+// refusal rolls back before any session is minted. Split out of Login to keep
+// that function over the credential/session/audit spine rather than the policy
+// branches; each gate's own reasoning lives at its return below.
+func (s *Service) enforceSignInPolicy(ctx context.Context, tx pgx.Tx, id Identity, sso bool) error {
+	// Enforced SSO closes the password path to everyone but an admin, and only
+	// AFTER the credential check — so a wrong password is still refused first and
+	// neutrally, never answered differently because the mode is on.
+	if sso && !id.hasRole(roleAdmin) {
+		return errSSORequired
+	}
+	// A member with an active second factor gets no session from the password
+	// alone: the flow stops here and resumes at /auth/mfa. Checked after the SSO
+	// gate so an admin break-glass login is still challenged for its factor.
+	//
+	// Only where a vault exists: with none, /auth/mfa could never verify the
+	// factor, so challenging would turn a misconfigured deployment (enrolled
+	// members, seal since removed) into a lockout of exactly those members. The
+	// composition root reports that state at boot; here the password alone
+	// completes, the posture the account had before it enrolled.
+	if s.vault == nil {
+		return nil
+	}
+	mfaConfirmed, err := hasConfirmedMFA(ctx, tx, id.UserID)
+	if err != nil {
+		return err
+	}
+	if mfaConfirmed {
+		return errMFARequired
+	}
+	return nil
 }
