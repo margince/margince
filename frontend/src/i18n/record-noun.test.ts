@@ -242,6 +242,12 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "sendPermission.reason.withdrawn",
   ],
   vi: [
+    // Human account holders whose full seats determine the shared allowance.
+    "aiAdmin.fixed",
+    "aiAdmin.formula",
+    "aiAdmin.floor",
+    "aiAdmin.perUser",
+    "aiAdmin.overrideHint",
     // The human who made a change, not a CRM contact record.
     "home.change.by",
     // "Người khác" — SOMEBODY ELSE, a third party who passed on this reader's

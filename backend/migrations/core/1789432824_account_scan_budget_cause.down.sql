@@ -1,0 +1,2 @@
+-- Forward-only data clarification. Removing the cause would make saved budget
+-- deferrals indistinguishable from other retry reasons.

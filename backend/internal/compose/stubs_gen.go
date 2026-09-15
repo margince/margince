@@ -163,6 +163,18 @@ func (stubs) ListAvailableModels(w nethttp.ResponseWriter, r *nethttp.Request, p
 	httperr.NotImplemented(w, r, "ListAvailableModels")
 }
 
+func (stubs) GetAiBudget(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetAiBudget")
+}
+
+func (stubs) ReplaceAiBudget(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ReplaceAiBudget")
+}
+
+func (stubs) PreviewAiBudget(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "PreviewAiBudget")
+}
+
 func (stubs) ListAiCalls(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListAiCallsParams) {
 	httperr.NotImplemented(w, r, "ListAiCalls")
 }
@@ -201,6 +213,14 @@ func (stubs) GetAiRouting(w nethttp.ResponseWriter, r *nethttp.Request) {
 
 func (stubs) ReplaceAiRouting(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ReplaceAiRouting")
+}
+
+func (stubs) PreviewAiRouting(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "PreviewAiRouting")
+}
+
+func (stubs) GetAiStatus(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetAiStatus")
 }
 
 func (stubs) GetAiUsage(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetAiUsageParams) {

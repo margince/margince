@@ -13,7 +13,7 @@ import (
 // jobContractHash is the sha256 of api/jobs.yaml this file was generated
 // from — the same fingerprint jobs.JobContractHash carries, so a stale
 // half of the pair is visible without diffing the two tables.
-const jobContractHash = "17806bdbd07fc40960fd483cd85ef25ee68cbde58056cabb1295092ddb71cf9b"
+const jobContractHash = "251583216d8bdb78add0fa510c4b71b87faaf491cad181b4121f19c1edfcd333"
 
 // declaredJobArgs is every args type api/jobs.yaml declares, and nothing
 // else. A job kind the file has never heard of cannot satisfy it, so it
@@ -30,6 +30,7 @@ type declaredJobArgs interface {
 		AgentTaskRetentionArgs |
 		AIActivityReconcileArgs |
 		AIActivityRetentionArgs |
+		AIBudgetResumeArgs |
 		AiModelRateRefreshArgs |
 		ApprovalAutoApplyArgs |
 		ApprovalExpiryArgs |
@@ -131,6 +132,7 @@ func addDeclaredWorkerWithTimeout[T declaredJobArgs](reg *jobRegistry, w jobs.Wo
 // enumerates and enqueues; a collapsed pass walks the workspaces itself
 // (ADR-0103). Both own no workspace, which is what the marker asserts.
 var (
+	_ jobs.FleetWide = AIBudgetResumeArgs{}
 	_ jobs.FleetWide = AssuranceSweepArgs{}
 	_ jobs.FleetWide = BriefGenerateArgs{}
 	_ jobs.FleetWide = CaptureAutoEnrichSweepArgs{}

@@ -67,6 +67,7 @@ import (
 var managerObjects = grid(crud, map[string]grant{
 	objAiModelRate:          none,
 	objAiRouting:            none,
+	objAiBudget:             none,
 	"automation":            readOnly,
 	objCaptureSettings:      createRead,
 	objCaptureTrace:         readOnly,
@@ -124,6 +125,7 @@ var managementObjects = func() map[string]grant {
 	out := maps.Clone(managerObjects)
 	for _, object := range []string{
 		objAiDiagnostics,
+		objAiBudget,
 		objConsentConfig,
 		objAuthenticationPolicy,
 		objOauthApplication,
@@ -145,6 +147,7 @@ var defaults = map[string]Document{
 		Objects: grid(crud, map[string]grant{
 			objAiModelRate:          writeNoDelete,
 			objAiRouting:            readUpdate,
+			objAiBudget:             readUpdate,
 			objCaptureSettings:      writeNoDelete,
 			objCaptureTrace:         readOnly,
 			objComputedField:        readOnly,
@@ -231,6 +234,7 @@ var defaults = map[string]Document{
 			"activity":          writeNoDelete,
 			objAiModelRate:      none,
 			objAiRouting:        none,
+			objAiBudget:         none,
 			objCaptureSettings:  createRead,
 			objCaptureTrace:     none,
 			"contract":          writeNoDelete,
@@ -287,6 +291,7 @@ var defaults = map[string]Document{
 		Objects: grid(readOnly, map[string]grant{
 			objAiModelRate:      none,
 			objAiRouting:        none,
+			objAiBudget:         none,
 			objCaptureTrace:     none,
 			objDataCoverage:     none,
 			objEmbeddingReindex: none,
@@ -325,6 +330,7 @@ var defaults = map[string]Document{
 		Objects: grid(crud, map[string]grant{
 			objAiModelRate:          writeNoDelete,
 			objAiRouting:            readUpdate,
+			objAiBudget:             readUpdate,
 			objCaptureSettings:      writeNoDelete,
 			objCaptureTrace:         readOnly,
 			objComputedField:        readOnly,

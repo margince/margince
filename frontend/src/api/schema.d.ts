@@ -9027,6 +9027,85 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ai/budget": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read the shared company allowance (ai_budget read). */
+        get: operations["getAiBudget"];
+        /** Replace the shared company allowance (ai_budget update). */
+        put: operations["replaceAiBudget"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai/budget/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview an allowance change (ai_budget read/update).
+         * @description Model feature rows are included only with ai_routing read; deferred-work
+         *     counts are included only with ai_diagnostics read. Otherwise those arrays
+         *     are empty. The allowance preview remains available to budget-only editors.
+         */
+        post: operations["previewAiBudget"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read AI administration status (ai_diagnostics and ai_budget read).
+         * @description Requires both diagnostics and allowance read permissions. Without ai_routing
+         *     read, features and unused_tiers are empty and routing_version is an empty
+         *     string; routing settings are not read. Deferred-work counts cover the company.
+         */
+        get: operations["getAiStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai/routing/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Preview affected features without calling a model (ai_routing read/update and ai_budget read). */
+        post: operations["previewAiRouting"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ai/usage": {
         parameters: {
             query?: never;
@@ -9095,7 +9174,12 @@ export interface paths {
         get: operations["getAiRouting"];
         /**
          * Replace the tier-to-model binding (admin/ops).
-         * @description Replaces the WHOLE binding, deliberately: a sparse patch of `tiers` cannot say whether
+         * @description Optional If-Match carries the configuration revision returned in the GET ETag header.
+         *     A stale revision returns 409 without changing settings. Omitting If-Match
+         *     is an unconditional replacement for legacy clients; * matches the existing
+         *     routing resource, including its unconfigured default. An empty supplied tag is refused.
+         *
+         *     Replaces the WHOLE binding, deliberately: a sparse patch of `tiers` cannot say whether
          *     an omitted tier is unchanged or unbound, and the two differ by whether a task can be
          *     served at all. Send the document you want to be true.
          *
@@ -17823,6 +17907,87 @@ export interface components {
             /** @description The window's middle latency, which tells a slow lane from a dead one. */
             median_latency_ms: number;
         };
+        AiBudgetConfig: {
+            /** Format: int64 */
+            tokens_per_full_user: number;
+            /** Format: int64 */
+            company_monthly_tokens: number | null;
+        };
+        AiBudgetChange: {
+            config: components["schemas"]["AiBudgetConfig"];
+            expected_revision: string;
+        };
+        AiBudgetSnapshot: {
+            config: components["schemas"]["AiBudgetConfig"];
+            revision: string;
+            /** Format: int64 */
+            eligible_full_users: number;
+            /** Format: int64 */
+            budgeted_full_users: number;
+            /** @enum {string} */
+            source: "per_user" | "company_override";
+            /** Format: int64 */
+            monthly_tokens: number;
+            /** Format: int64 */
+            spent_tokens: number;
+            /** Format: int64 */
+            remaining_tokens: number;
+            /** @enum {string} */
+            band: "normal" | "degraded" | "queued";
+            /** Format: date-time */
+            month_start_at: string;
+            /** Format: date-time */
+            resets_at: string;
+            /** Format: date-time */
+            observed_at: string;
+        };
+        AiRouteCandidate: {
+            tier: string;
+            provider: string;
+            model: string;
+            /** @enum {string} */
+            processing: "cloud_provider" | "configured_endpoint";
+        };
+        AiFeatureRoute: {
+            task: string;
+            display_name: string;
+            execution_mode: string;
+            leading_tier: string;
+            normal_candidates: components["schemas"]["AiRouteCandidate"][];
+            effective_candidates: components["schemas"]["AiRouteCandidate"][];
+            /** @enum {string} */
+            impact: "unchanged" | "model_changed" | "fallback_changed" | "budget_blocked" | "unconfigured";
+            budget_exempt: boolean;
+        };
+        AiDeferredWork: {
+            carrier: string;
+            unit: string;
+            available: boolean;
+            /** Format: int64 */
+            count?: number;
+        };
+        AiStatus: {
+            /** Format: date-time */
+            observed_at: string;
+            budget: components["schemas"]["AiBudgetSnapshot"];
+            routing_version: string;
+            task_contract_hash: string;
+            features: components["schemas"]["AiFeatureRoute"][];
+            deferred_work: components["schemas"]["AiDeferredWork"][];
+            deferred_work_coverage: string;
+            unused_tiers?: string[];
+        };
+        AiBudgetPreview: {
+            current: components["schemas"]["AiBudgetSnapshot"];
+            proposed: components["schemas"]["AiBudgetSnapshot"];
+            features: components["schemas"]["AiFeatureRoute"][];
+            deferred_work: components["schemas"]["AiDeferredWork"][];
+        };
+        AiRoutingPreview: {
+            current_version: string;
+            features: components["schemas"]["AiFeatureRoute"][];
+            unused_tiers: string[];
+        };
         /** @description AI usage + budget (AIRT-WIRE-1): the AIRT-PARAM-33 meter aggregated per day × task × tier, plus the budget band. Token-denominated; cost_est_minor is computed on read from the workspace's ai_model_rate price sheet as of each call's day (ADR-0067, price-on-read) — omitted, never a fabricated 0, when a task line's window carries no priced call, and accompanied by unpriced_calls when it is a partial total. */
         AiUsage: {
             days: {
@@ -17831,6 +17996,7 @@ export interface components {
                 tasks: {
                     /** @description capture_classify, enrich, summarize, … */
                     task: string;
+                    task_display_name?: string;
                     /** @description local_small, cheap_cloud, premium, frontier, local_large. */
                     tier: string;
                     calls: number;
@@ -28406,7 +28572,7 @@ export interface components {
          *     The SERVER does not derive from it. `identity/internal/policy.coreObjects` is maintained separately (oapi-codegen emits nothing for a top-level standalone string enum, so there are no generated Go constants to derive from), and a typo there is an ordinary runtime value, not a compile error. What keeps the two honest is a merge-blocking parity test, `backend/gates/rbacvocabulary_test.go`, which holds this enum equal to that list. Editing this enum alone changes what clients can express, never what the server enforces — change both, and the gate will say so if you do not.
          * @enum {string}
          */
-        RbacObject: "contact" | "company" | "deal" | "lead" | "activity" | "pipeline" | "list" | "tag" | "relationship" | "partner" | "automation" | "voice_profile" | "product" | "offer" | "signal" | "saved_view" | "custom_field" | "computed_field" | "offer_template" | "overlay_connection" | "embedding_reindex" | "webhook_subscription" | "fx_rate" | "ai_model_rate" | "capture_settings" | "project" | "channel_connection" | "import_run" | "installation_settings" | "finance" | "integrations" | "retention_policy" | "capture_trace" | "license" | "contract" | "ai_routing" | "commission" | "deal_room" | "knowledge_corpus" | "knowledge_document" | "introduction" | "weekly_plan" | "forecast" | "data_coverage" | "user_admin" | "role_admin" | "team_admin" | "privacy_request" | "audit_log" | "job_health" | "extension_access" | "system_reset" | "ai_diagnostics" | "consent_config" | "communication_exception" | "authentication_policy" | "oauth_application" | "seat_usage";
+        RbacObject: "contact" | "company" | "deal" | "lead" | "activity" | "pipeline" | "list" | "tag" | "relationship" | "partner" | "automation" | "voice_profile" | "product" | "offer" | "signal" | "saved_view" | "custom_field" | "computed_field" | "offer_template" | "overlay_connection" | "embedding_reindex" | "webhook_subscription" | "fx_rate" | "ai_model_rate" | "capture_settings" | "project" | "channel_connection" | "import_run" | "installation_settings" | "finance" | "integrations" | "retention_policy" | "capture_trace" | "license" | "contract" | "ai_routing" | "ai_budget" | "commission" | "deal_room" | "knowledge_corpus" | "knowledge_document" | "introduction" | "weekly_plan" | "forecast" | "data_coverage" | "user_admin" | "role_admin" | "team_admin" | "privacy_request" | "audit_log" | "job_health" | "extension_access" | "system_reset" | "ai_diagnostics" | "consent_config" | "communication_exception" | "authentication_policy" | "oauth_application" | "seat_usage";
         /**
          * @description The four object-level verbs a grant carries (data-model §2.4). These are RBAC actions, not HTTP methods: the seat ceiling is clamped on the method independently, and the two diverge in both directions — a read-seat GET that the object grants, and a mutating route whose RBAC action is `read`.
          * @enum {string}
@@ -50092,6 +50258,168 @@ export interface operations {
             403: components["responses"]["PermissionDenied"];
         };
     };
+    getAiBudget: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current AI administration state. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiBudgetSnapshot"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            /** @description The configuration changed; reload before saving. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    replaceAiBudget: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AiBudgetChange"];
+            };
+        };
+        responses: {
+            /** @description Current AI administration state. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiBudgetSnapshot"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            /** @description The configuration changed; reload before saving. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    previewAiBudget: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AiBudgetChange"];
+            };
+        };
+        responses: {
+            /** @description Current AI administration state. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiBudgetPreview"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            /** @description The configuration changed; reload before saving. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getAiStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current AI administration state. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiStatus"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            /** @description The configuration changed; reload before saving. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    previewAiRouting: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AiRouting"];
+            };
+        };
+        responses: {
+            /** @description Current AI administration state. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiRoutingPreview"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            /** @description The configuration changed; reload before saving. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
     getAiUsage: {
         parameters: {
             query?: {
@@ -50188,6 +50516,13 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
+            /** @description The supplied configuration revision is stale. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             422: components["responses"]["ValidationError"];
         };
     };

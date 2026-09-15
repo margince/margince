@@ -14,6 +14,72 @@ import type { MessageKey } from "./en";
 //     "pháp nhân" (onboarding's legal-block copy). The two senses share no
 //     string in this catalog and must stay that way.
 export const vi = {
+  "aiAdmin.allowance": "Hạn mức AI hàng tháng",
+  "aiAdmin.pool":
+    "Hạn mức chung của công ty, không phải hạn mức cá nhân hay giới hạn chi tiêu bằng đô la.",
+  "aiAdmin.consumption": "Đã dùng {spent}/{total} token · {pct}%",
+  "aiAdmin.remaining": "Còn {tokens} token",
+  "aiAdmin.reset": "Đặt lại lúc {date} UTC",
+  "aiAdmin.fixed":
+    "Hạn mức cố định của công ty thay thế cách tính theo người dùng.",
+  "aiAdmin.formula":
+    "{users} người dùng đầy đủ đang hoạt động × {tokens} token mỗi người mỗi tháng.",
+  "aiAdmin.floor":
+    "Khi chưa có người dùng đủ điều kiện, tính tối thiểu một người.",
+  "aiAdmin.normal": "Trong ngưỡng hạn mức bình thường",
+  "aiAdmin.degraded": "Đã đạt ngưỡng 80%: định tuyến sang tầng thấp hơn",
+  "aiAdmin.queued": "Đã hết hạn mức: AI nền được hoãn lại",
+  "aiAdmin.policy":
+    "Từ 80%, định tuyến dùng tầng thấp hơn; mô hình thực tế có thể không đổi. Từ 100%, tác vụ nền chờ, AI tương tác dùng tầng thấp nhất. Embedding tìm kiếm vẫn chạy và vẫn tính vào mức dùng.",
+  "aiAdmin.saved": "Đã lưu hạn mức",
+  "aiAdmin.recovery":
+    "Các lần đọc website, quét tài khoản và tạo giọng văn đủ điều kiện sẽ sẵn sàng chạy trong lần đối soát kế tiếp, thường trong một phút. Hoàn thành tùy thuộc năng lực xử lý, quyền hiện tại và nhà cung cấp. Các tác vụ nền khác giữ lịch thường lệ.",
+  "aiAdmin.edit": "Sửa hạn mức",
+  "aiAdmin.perUser": "Token mỗi người dùng đầy đủ mỗi tháng",
+  "aiAdmin.range": "Số token nguyên từ 1 đến 1.000.000.000.000.",
+  "aiAdmin.company": "Tổng cố định của công ty (tùy chọn)",
+  "aiAdmin.overrideHint":
+    "Để trống để tính theo người dùng. Giá trị theo người dùng vẫn được giữ.",
+  "aiAdmin.routingStale":
+    "Liên kết mô hình đã thay đổi trong khi bạn chỉnh sửa",
+  "aiAdmin.stale": "Hạn mức đã thay đổi trong khi bạn chỉnh sửa",
+  "aiAdmin.staleHelp": "Hủy rồi mở lại trình sửa để dùng cài đặt mới nhất.",
+  "aiAdmin.failed": "Không thể áp dụng thay đổi",
+  "aiAdmin.preview": "Xem trước tác động",
+  "aiAdmin.previewHint":
+    "Xem trước điều kiện hiện tại. Khi lưu, hệ thống kiểm tra lại cài đặt và mức dùng. Thao tác này không giữ chỗ năng lực hay gọi mô hình.",
+  "aiAdmin.features": "AI theo hoạt động",
+  "aiAdmin.save": "Lưu hạn mức",
+  "aiAdmin.cancel": "Hủy",
+  "aiAdmin.prospective":
+    "Mô hình được chính sách hiện tại chọn. Lời gọi thực tế có thể dùng dự phòng hoặc thất bại; đây không phải trạng thái nhà cung cấp hay bằng chứng mô hình đã được dùng.",
+  "aiAdmin.calls": "Xem các lời gọi mô hình thực tế",
+  "aiAdmin.website": "Đọc website",
+  "aiAdmin.scans": "Quét tài khoản",
+  "aiAdmin.voice": "Tạo giọng văn",
+  "aiAdmin.waiting": "Công việc đã ghi nhận đang chờ hạn mức",
+  "aiAdmin.coverage":
+    "Chỉ đếm các lần đọc website, quét tài khoản và tạo giọng văn được lưu bền vững. Không bao gồm mọi lượt AI theo lịch và không đảm bảo yêu cầu vẫn đủ điều kiện chạy.",
+  "aiAdmin.unavailable": "Không khả dụng",
+  "aiAdmin.impact.blocked": "Chờ hạn mức",
+  "aiAdmin.impact.model": "Đã chọn mô hình khác",
+  "aiAdmin.impact.fallback": "Chuỗi dự phòng đã đổi",
+  "aiAdmin.impact.unconfigured": "Chưa cấu hình mô hình",
+  "aiAdmin.impact.exempt": "Tiếp tục khi vượt hạn mức",
+  "aiAdmin.impact.same": "Giữ nguyên lựa chọn mô hình",
+  "aiAdmin.activity": "Hoạt động",
+  "aiAdmin.model": "Mô hình được chính sách chọn",
+  "aiAdmin.cloud": "Nhà cung cấp đám mây",
+  "aiAdmin.endpoint": "Điểm cuối đã cấu hình; vị trí chưa xác minh",
+  "aiAdmin.editBinding": "Sửa liên kết dùng chung",
+  "aiAdmin.effect": "Tác động",
+  "aiAdmin.advanced": "Nâng cao: liên kết mô hình dùng chung",
+  "aiAdmin.shared":
+    "Các liên kết này được dùng chung. Kiểm tra mọi hoạt động bị ảnh hưởng trước khi lưu.",
+  "aiAdmin.unused": "Không được hoạt động hiện có sử dụng: {tiers}",
+  "aiAdmin.inputRate": "Đầu vào {input} mỗi 1 triệu token",
+  "aiAdmin.rates": "Đầu vào {input} · Đầu ra {output} mỗi 1 triệu token",
+
   "brief.weekly.tasksCompleted": "Công việc đã hoàn thành",
   "teamweekly.noPriority": "Các chỉ số đã ghi nhận chưa cho thấy ưu tiên",
   "teamweekly.basis":
@@ -7644,17 +7710,11 @@ export const vi = {
   "tools.scopedTo": "{label} gọi được",
   "tools.unreachable": "chưa được cấp phạm vi",
 
-  "aiusage.title": "Mức dùng và hạn mức AI",
+  "aiusage.title": "Chi phí AI ước tính và lịch sử sử dụng",
   "aiusage.withheld":
     "Chỉ người vận hành mới thấy được chi phí AI. Số liệu bao trùm cả bản cài đặt, nên không hiển thị rộng hơn.",
   "aiusage.sub":
-    "Hoá đơn của chính bạn, hiện rõ — theo từng tác vụ và bậc, tính bằng token.",
-  "aiusage.budget": "{spent} trên {budget} token · {pct}%",
-  "aiusage.budgetMeter": "Ngân sách token hằng tháng đã dùng",
-  "aiusage.band.normal": "Bình thường",
-  "aiusage.band.degraded": "Chế độ tiết kiệm",
-  "aiusage.band.queued": "Đã chạm hạn mức — AI chạy nền bị xếp hàng",
-  "aiusage.band.unknown": "Không rõ trạng thái hạn mức",
+    "Mức dùng của tháng đã chọn. Ước tính tách biệt với hạn mức token hiện tại và hóa đơn nhà cung cấp.",
   "aiusage.col.task": "Tác vụ",
   "aiusage.col.tier": "Bậc",
   "aiusage.col.calls": "Lượt gọi",
@@ -7672,10 +7732,10 @@ export const vi = {
   "aiusage.prevMonth": "Tháng trước",
   "aiusage.nextMonth": "Tháng sau",
 
-  "aibanner.degraded": "AI đang chạy ở chế độ tiết kiệm",
-  "aibanner.queued": "Đã chạm hạn mức AI — AI chạy nền bị xếp hàng",
+  "aibanner.degraded": "Đã đạt ngưỡng 80% hạn mức AI — xem tác động",
+  "aibanner.queued": "Đã hết hạn mức AI — xem công việc bị hoãn",
   "aibanner.unknown": "Không nhận diện được trạng thái hạn mức AI",
-  "aibanner.link": "Xem mức dùng",
+  "aibanner.link": "Quản lý hạn mức",
   "aibanner.dismiss": "Bỏ qua",
 
   "aicalls.title": "Dấu vết lượt gọi AI",
@@ -7889,12 +7949,15 @@ export const vi = {
   "elapsed.minutes": "{minutes} phút trước",
   "elapsed.hours": "{hours} giờ trước",
   "elapsed.days": "{days} ngày trước",
-  "aiRouting.lane.local_small": "Phân loại hàng loạt, trên phần cứng của bạn",
+  "aiRouting.lane.local_small":
+    "Tầng định tuyến thấp nhất; liên kết quyết định nơi xử lý",
   "aiRouting.lane.cheap_cloud":
     "Việc thường ngày — làm giàu, tóm tắt, phân loại",
   "aiRouting.lane.premium": "Bất cứ thứ gì khách hàng sẽ đọc",
-  "aiRouting.lane.frontier": "Suy luận khó nhất, dùng dè dặt",
-  "aiRouting.lane.local_large": "Việc nặng hơn, không được rời máy chủ của bạn",
+  "aiRouting.lane.frontier":
+    "Tầng suy luận nâng cao; khả dụng không có nghĩa đang được dùng",
+  "aiRouting.lane.local_large":
+    "Tầng định tuyến cục bộ cao hơn; kiểm tra điểm cuối",
   "aiRouting.lane.embeddings": "Tìm kiếm và truy hồi trên dữ liệu của bạn",
   "aiRouting.lanes.title": "Các làn định tuyến",
   "aiRouting.lanes.sub": "Rẻ nhất trước. Tác vụ chọn làn; làn chọn mô hình.",
@@ -7978,7 +8041,8 @@ export const vi = {
   "aiRouting.savedTitle": "Đã lưu định tuyến",
   "aiRouting.saved": "Mọi tiến trình đang phục vụ theo nó.",
   "aiRouting.saveFailed": "Không thể lưu định tuyến",
-  "aiRouting.adminOnly": "Chỉ admin hoặc ops mới đổi được định tuyến mô hình.",
+  "aiRouting.adminOnly":
+    "Đổi định tuyến mô hình cần quyền cập nhật định tuyến và đọc hạn mức.",
   "workingHours.title": "Khi nào bạn nhận lịch hẹn",
   "workingHours.sub":
     "Chỉ của riêng bạn. Không ai đặt giúp bạn, và bạn cũng không đặt cho ai.",

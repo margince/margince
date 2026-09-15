@@ -220,6 +220,7 @@ func (s *Server) wireCaptureSettingsSurface(pool *pgxpool.Pool) {
 		store: ai.NewRoutingStore(NewSettingsStore(pool), config.FromOS).
 			WithCatalogue(ai.NewModelCatalogue(systemClock{})),
 	}
+	s.aiAdminHandlers = aiAdminHandlers{store: ai.NewAdminStore(InstallationDB(pool), NewSettingsStore(pool), budgetFullUsers, aiDeferredWork(pool))}
 	s.ownDomainHandlers = ownDomainHandlers{store: capture.NewOwnDomainStore(InstallationDB(pool))}
 	// The installation's own identity and reporting basis (ADR-0090/A135):
 	// name, reporting zone, base currency — the last of which locks once a

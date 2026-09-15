@@ -70,7 +70,8 @@ type aiUsageTask = struct {
 	CostEstMinor *int `json:"cost_est_minor,omitempty"`
 
 	// Task capture_classify, enrich, summarize, …
-	Task string `json:"task"`
+	Task            string  `json:"task"`
+	TaskDisplayName *string `json:"task_display_name,omitempty"`
 
 	// Tier local_small, cheap_cloud, premium, frontier, local_large.
 	Tier          string `json:"tier"`
@@ -92,13 +93,18 @@ func wireAiUsage(days []DayUsage, budget BudgetStatus) crmcontracts.AiUsage {
 		}
 		for _, task := range day.Tasks {
 			cached := task.CachedHits
+			name := DisplayName(Task(task.Task))
+			if name == "" {
+				name = task.Task
+			}
 			wireTask := aiUsageTask{
-				Task:       task.Task,
-				Tier:       task.Tier,
-				Calls:      task.Calls,
-				CachedHits: &cached,
-				TokensIn:   task.TokensIn,
-				TokensOut:  task.TokensOut,
+				Task:            task.Task,
+				TaskDisplayName: &name,
+				Tier:            task.Tier,
+				Calls:           task.Calls,
+				CachedHits:      &cached,
+				TokensIn:        task.TokensIn,
+				TokensOut:       task.TokensOut,
 			}
 			// A task line that is ENTIRELY unpriced (every window call
 			// lacking a rate row, so the summed cost is exactly 0 with no

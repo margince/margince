@@ -657,11 +657,17 @@ export const SETTINGS_PAGES = [
     // The diagnostics read, or the price grant that authors the table beside it.
     // Both cards on this page ask `ai_diagnostics:read` now; `ai_model_rate`
     // stays in the union because its holder authors the rate sheet here.
-    requires: anyOf(reads("ai_diagnostics"), reads("ai_model_rate")),
+    requires: anyOf(
+      reads("ai_diagnostics"),
+      reads("ai_model_rate"),
+      reads("ai_budget"),
+    ),
     // ModelCostsCard writes `ai_model_rate` through `useCanUpsert`. The spend and
     // usage cards beside it are reads, so a reader without that grant consults
     // this page rather than owning it.
-    changes: acts(writes("ai_model_rate")),
+    changes: acts(
+      anyOf(writes("ai_model_rate"), writes("ai_budget", ["update"])),
+    ),
   },
   {
     id: "model-calls",
