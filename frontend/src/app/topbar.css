@@ -230,6 +230,9 @@
     padding: 0;
     border-color: transparent;
     background: transparent;
+    /* And the floor with them: nothing here is drawn as a field any more, and
+       a well under nothing is a line on the page. */
+    box-shadow: none;
   }
   .topbar-search:hover {
     border-color: transparent;

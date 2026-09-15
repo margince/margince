@@ -83,12 +83,19 @@ least risky once the tokens hold.
    their own px (they diverge today). Set `--fs-body` 13.5px, `--lh-normal`
    1.55, `--fs-display` 32px with `--tracking-display` -0.03em. `body` in
    `app.css` reads the tokens rather than `14px/1.5`.
-7. **Radius and depth.** `--r-md` 12→14px, `--r-lg` 20→18px (the pane). Three
-   depth tokens and no more: `--shadow-rest`, one tight 1px/2px layer worn by
-   every resting surface and filled control; `--shadow-well`, the same layer
-   turned `inset`, worn by every field, because a field has a floor rather than
-   a top side; and `--shadow-pop` for popovers and the drawer. A control drops
-   its layer on hover, active and focus.
+7. **Radius and depth.** Radius is by ROLE, and the ladder in `tokens.css` is
+   the contract: `--r-lg` 20px for a pane, the details panel and a reading
+   card; `--r-md` 16px for a board card and the agent's row; `--r-control`
+   12px; `--r-sm` 8px for a chip; `--r-xs` 4px for a keycap; `--r-full` for a
+   pill or a monogram (DESIGN.md §5). Where an engine has `corner-shape:
+   squircle` every rung except `--r-full` doubles, because a superellipse of
+   radius R reads about as round as a circular corner of R/2 — one `@supports`
+   block in `tokens.css`, and no call site's business. Three depth tokens and
+   no more: `--shadow-rest`, one tight 1px/2px layer worn by every resting
+   surface and filled control; `--shadow-well`, the same layer turned `inset`,
+   worn by every field, because a field has a floor rather than a top side; and
+   `--shadow-pop` for popovers and the drawer. A control drops its layer on
+   hover, active and focus.
 8. **Dark.** Add the new tokens to both dark arms with the dark values from
    `DESIGN.md` §3; the two arms must stay byte-identical to each other (the
    gate holds that), not to the light block.
