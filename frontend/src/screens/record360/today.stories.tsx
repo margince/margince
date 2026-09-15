@@ -61,10 +61,23 @@ function Pane({ width = 720 }: Readonly<{ width?: number }>) {
             when="06:52"
             title="Send the breakdown Lena promised on 5 August."
             why="Lena promised this breakdown in the 5 August session and it never went out. The sheet is generated, so this can go on its own."
+            // Two verbs and a defer, in the one column FoundMove itself owns:
+            // the leading verb ai-tinted, the second and the defer both
+            // ghost, every one the same width and stacked, never a verb
+            // beside the defer in a row of its own.
             action={
-              <Button small variant="ai">
-                Draft it
-              </Button>
+              <>
+                <span className="today-verb">
+                  <Button small variant="ai">
+                    Draft it
+                  </Button>
+                </span>
+                <span className="today-verb">
+                  <Button small variant="ghost">
+                    Open the thread
+                  </Button>
+                </span>
+              </>
             }
             defer={{ onDefer: () => {} }}
           />
@@ -102,6 +115,61 @@ export const FoundAndOwedDark: Story = {
 // takes the second line and the disclosure beside the verb stays whole. The
 // same pane the four record pages draw — none of them narrows it further.
 export const FoundAndOwedNarrow: Story = { render: () => <Pane width={390} /> };
+
+// A verb the record cannot back yet: `reason` bars the press and states why
+// under the button, in the same column a working verb draws in — never a
+// second control and never a caption floating loose beside it.
+export const FoundMoveRefused: Story = {
+  render: () => (
+    <StoryProviders>
+      <div style={{ maxWidth: 720 }}>
+        <TodayPanel onOpenTasks={() => {}}>
+          <FoundMove
+            when="06:52"
+            title="Send the breakdown Lena promised on 5 August."
+            why="Lena promised this breakdown in the 5 August session and it never went out."
+            action={
+              <span className="today-verb">
+                <Button
+                  small
+                  variant="ai"
+                  reason="Lena has no address on file to send this to."
+                >
+                  Draft it
+                </Button>
+              </span>
+            }
+          />
+        </TodayPanel>
+      </div>
+    </StoryProviders>
+  ),
+};
+
+// The ordinary case: one verb, no defer. The column is exactly as wide as
+// this one button, never wider for a second verb that is not there.
+export const FoundMoveOneVerb: Story = {
+  render: () => (
+    <StoryProviders>
+      <div style={{ maxWidth: 720 }}>
+        <TodayPanel onOpenTasks={() => {}}>
+          <FoundMove
+            when="06:52"
+            title="Send the breakdown Lena promised on 5 August."
+            why="Lena promised this breakdown in the 5 August session and it never went out."
+            action={
+              <span className="today-verb">
+                <Button small variant="ai">
+                  Draft it
+                </Button>
+              </span>
+            }
+          />
+        </TodayPanel>
+      </div>
+    </StoryProviders>
+  ),
+};
 
 export const NothingNeedsYou: Story = {
   // The honest quiet answer, which is a reading rather than an empty list —

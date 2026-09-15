@@ -28,6 +28,9 @@ import { type Grounding, Proof, type StandingTone } from "./verdict";
 // unstyled the first time a page draws it without that stylesheet in its
 // graph, which is a defect nothing fails on.
 import "../company360.css";
+// The verb column: `.today-actions` and `.today-verb`, the kit's own now that
+// two record pages draw one shape for it.
+import "./record360.css";
 
 type ContactMoment = components["schemas"]["ContactMoment"];
 type ContactMomentEvidence = components["schemas"]["ContactMomentEvidence"];
@@ -137,19 +140,29 @@ export function momentIsARow(
 /**
  * The moment as the lead row of the needs list: the rule it fired on as the
  * eyebrow, the headline in the display face, why now, the evidence one
- * disclosure away, and the one filled verb on the page.
+ * disclosure away, and a verb to answer it with.
  *
- * The button appears only where the server said the action can be taken AND
- * named somewhere to go. A card whose verb lands nowhere is worse than a card
- * with no verb: the reader clicks, nothing happens, and they stop trusting
- * the ones that work.
+ * The server's own verb draws first, and only where it said the action can be
+ * taken AND named somewhere to go. Where it did not, `action` is the page's
+ * own fallback — a verb the page can back with a control it already owns
+ * (a task modal, the composer) rather than a destination the server never
+ * named. A card that names what is owed and offers nothing to do about it is
+ * an answer with no working verb; the fallback is what keeps that promise
+ * even when the server's own move has nowhere to land.
  */
 export function MomentRow({
   moment,
   onOpenRecord,
+  action,
 }: Readonly<{
   moment: ContactMoment;
   onOpenRecord?: (entityType: string, entityId: string) => void;
+  // The page's own fallback verb, drawn only when the server named no
+  // destination of its own — zero or more verbs, each already in the shared
+  // `.today-verb` shape (record360.css). This row owns the `.today-actions`
+  // column itself, the same way `FoundMove` owns its own: a caller handing in
+  // a column of its own nested one inside the other.
+  action?: ReactNode;
 }>): ReactNode {
   const t = useT();
   const { locale } = useLocale();
@@ -162,6 +175,24 @@ export function MomentRow({
       ? { type: destination.entity_type, id: destination.entity_id }
       : undefined;
   const tone = standingTone(moment.rule);
+  const verb =
+    target && onOpenRecord ? (
+      <span className="today-verb">
+        {/* Indigo, because pressing it hands the work to Margince: the
+            hue is the product's one claim about who is acting, and a
+            verb the agent performs drawn in the accent would read as
+            the reader's own move. */}
+        <Button
+          small
+          variant="ai"
+          onClick={() => onOpenRecord(target.type, target.id)}
+        >
+          {moment.recommended_action.label}
+        </Button>
+      </span>
+    ) : (
+      action
+    );
   return (
     <PanelRow className="co-move co-move-lead">
       <span className="co-move-body">
@@ -177,21 +208,9 @@ export function MomentRow({
           items={momentGrounding(moment.evidence, t, locale, recordZone)}
           count
         />
-        {target && onOpenRecord && (
+        {verb && (
           <span className="co-move-do">
-            <span className="co-move-actions">
-              {/* Indigo, because pressing it hands the work to Margince: the
-                  hue is the product's one claim about who is acting, and a
-                  verb the agent performs drawn in the accent would read as
-                  the reader's own move. */}
-              <Button
-                small
-                variant="ai"
-                onClick={() => onOpenRecord(target.type, target.id)}
-              >
-                {moment.recommended_action.label}
-              </Button>
-            </span>
+            <div className="today-actions">{verb}</div>
           </span>
         )}
       </span>

@@ -3530,6 +3530,9 @@ export const en = {
   "today.silence.days": "no answer in {count} days",
   "today.draft.new": "Start a new email",
   "today.draft.act": "Draft",
+  "today.moment.act.openTask": "Open task",
+  "today.moment.act.followUp": "Follow up",
+  "today.moment.act.writeToThem": "Write to them",
 
   "evidence.mark": "read",
   "evidence.confirm": "Confirm",

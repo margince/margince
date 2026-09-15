@@ -108,43 +108,6 @@
   gap: var(--space-2);
 }
 
-/* One column of verbs, all one width: the column is as wide as its widest
-   verb and every verb fills it, so a short label never reads as a smaller
-   button than the long one above it. */
-.pe-today-actions {
-  display: flex;
-  flex-direction: column;
-  gap: var(--gapActions);
-  align-items: stretch;
-  min-width: 160px;
-}
-.pe-today-verb > .btn,
-.pe-today-verb > .btn-with-reason > .btn {
-  width: 100%;
-  justify-content: center;
-}
-/* A refused verb's sentence takes the column's width and wraps inside it;
-   left to its own measure it widened the column to the sentence and every
-   verb above it with it. `contain: inline-size` keeps the sentence out of
-   the column's measurement, the same device the record head's verb row uses. */
-.pe-today-verb > .btn-with-reason {
-  contain: inline-size;
-  display: flex;
-  flex-direction: column;
-  /* ds:ignore the column stacks the verb over its sentence, an interval the
-     row-shaped primitive does not carry */
-  gap: var(--space-1);
-}
-
-/* A verb and what pressing it will do, as one block: the readiness belongs to
-   its own button and must not drift next to the one below it. */
-.pe-today-verb {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  align-items: stretch;
-}
-
 /* Sources and freshness ride the panel's own footer band, quiet: they qualify
    the whole reading rather than any one line of it. */
 .pe-today-foot {
@@ -156,10 +119,6 @@
 @media (max-width: 900px) {
   .pe-today-lead {
     grid-template-columns: minmax(0, 1fr);
-  }
-
-  .pe-today-actions {
-    flex-direction: row;
   }
 }
 
