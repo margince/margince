@@ -123,7 +123,15 @@ function declaredClasses(): Set<string> {
 function declaredIn(css: string): Set<string> {
   const out = new Set<string>();
   for (const chunk of withoutComments(css).split("{")) {
-    for (const found of chunk.matchAll(/\.(-?[_a-zA-Z][\w-]*)/g)) {
+    // THE SELECTOR ONLY, which is the text after the previous rule closed.
+    // Splitting on `{` leaves the body of one rule in front of the next
+    // selector, and a body holds dotted text of its own: `url("./icons/a.svg")`
+    // would declare `icons` and `svg`. That widens what counts as declared,
+    // which is the direction this gate must not fail in — a class genuinely
+    // named `svg` would then pass as styled by a sheet that draws nothing of
+    // the kind.
+    const selector = chunk.slice(chunk.lastIndexOf("}") + 1);
+    for (const found of selector.matchAll(/\.(-?[_a-zA-Z][\w-]*)/g)) {
       out.add(found[1]);
     }
   }
@@ -411,5 +419,32 @@ describe("every class an element carries is declared by a sheet", () => {
         "that should be deleted — and until one of the two happens the page " +
         "draws something other than what the markup says",
     ).toEqual([]);
+  });
+});
+
+// THE DECLARED SET IS SELECTORS, NOT DECLARATIONS.
+//
+// Widening what counts as declared is the direction this gate must not fail
+// in: it reads a bigger set of "styled" names, reports PASS, and leaves no
+// failing assertion to notice. A rule body holds dotted text of its own — a
+// `url()` most often — and splitting a sheet on `{` leaves one rule's body
+// sitting in front of the next rule's selector.
+describe("what a stylesheet declares", () => {
+  it("reads the selector and not the rule body", () => {
+    const declared = declaredIn(
+      `.icon { background: url("./icons/arrow.svg"); }
+       .real { color: red; }`,
+    );
+
+    expect([...declared].sort()).toEqual(["icon", "real"]);
+  });
+
+  it("reads a selector nested inside a rule or a breakpoint", () => {
+    const declared = declaredIn(
+      `@media (min-width: 40rem) { .wide { display: grid; } }
+       .card { &.is-open { color: red; } }`,
+    );
+
+    expect([...declared].sort()).toEqual(["card", "is-open", "wide"]);
   });
 });
