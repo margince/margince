@@ -18,11 +18,11 @@ attributed.
 
 The governing rule is one sentence:
 
-> An agent can do what the contact behind it could do unaided — and nothing more.
-> It is checked against that contact on every call.
+> An agent can do what the colleague behind it could do unaided — and nothing
+> more. It is checked against that colleague on every call.
 
-An agent has no identity of its own. It acts on behalf of a contact, using a
-credential that colleague minted and can revoke. If you cannot see a record, neither
+An agent has no identity of its own. It acts on behalf of a colleague, using a
+credential they minted and can revoke. If you cannot see a record, neither
 can your agent. If you are not allowed to do something, it cannot do it for you.
 
 And there is a short list of things it can never do at all, however it is
@@ -70,7 +70,7 @@ You are meant to be able to check it. That is the design.
 
 Five kinds of record:
 
-- **Contacts** — contacts
+- **Contacts** — the individuals you sell to
 - **Companies** — the companies they work for
 - **Leads** — prospects, kept deliberately apart from contacts
 - **Deals** — pieces of business moving toward won or lost
@@ -83,26 +83,36 @@ all of them, and the documents that accumulate along the way.
 
 ## Getting around
 
-**Home** sits on its own at the top. Below it the navigation is grouped in three:
+**Home** sits on its own at the top. Below it the navigation is grouped in
+three:
 
-**Records** — Contacts, Companies, Leads, Filtered lists
+**Records** — Contacts, Companies, Leads, Deals
 
-**Work** — Worklist, Pipeline, Projects
+**Work** — Projects, Filters & views
 
-**Intelligence** — Reports, Ask Margince
+**Intelligence** — Analytics, Ask Margince
 
 **Settings** is in the account menu, not on the navigation rail.
 
+The **Deals** row is the pipeline board; there is no separate Pipeline row.
+
 Two screens are worth knowing on day one.
 
-**Worklist** is your day, and the only door to work that waits on a contact:
-decisions to answer, tasks to finish, duplicates to merge, today's meetings,
-deals going quiet, promises you made, and what ran on its own overnight. When
-there is nothing, it says "Your day is clear" rather than showing you an empty
-grid.
+**Home** is where your day starts, and the door to the **Worklist** — the work
+that waits on a human: decisions to answer, tasks to finish, duplicates to
+merge, today's meetings, deals going quiet, promises you made, and what ran on
+its own overnight. The Worklist has no navigation row of its own; you open it
+from Home. When there is nothing, it says "Nothing is waiting on you" rather
+than showing you an empty grid.
 
 **Ask Margince** is the question box, reachable from anywhere with a keyboard
-shortcut.
+shortcut. The same shortcut opens the command palette — "Find everything or get
+answers from Margince" — which is the fastest way to any screen.
+
+**Search** groups what it finds by kind: Contacts, Companies, Deals, Leads,
+Projects, Activities, Products, Offer templates and Tags. A result that came
+from a connected system says so, rather than looking like something somebody
+here typed.
 
 You will notice no counters or badges on the navigation. That is deliberate: the
 queues that would carry them are lanes inside Worklist, which reports its own
@@ -110,19 +120,21 @@ numbers on the page rather than nagging from the edge of the screen.
 
 ## Words this handbook uses
 
-**Company** — your tenant. The whole of your company's data in Margince. One
-installation serves one company.
+**Company** — the word does double duty, and the screen always makes clear
+which is meant. Your *own* company is the tenant: the whole of your data in
+Margince, and what a setting marked "Company" changes. A *company record* is
+someone you do business with, listed under Companies.
 
 **Installation** — the running deployment. Whoever operates it decides things
-like upload limits and whether sends need confirming.
+like upload limits and whether sends need confirming. One installation serves
+one company.
 
-**Company** — a record type. The word "company" is the underlying name for
-it and shows through on a few screens, which is confusing; when a search result
-group says "Companies", it means companies.
+**Contact** — an individual you do business with. One word everywhere: the
+screen, the address bar and the data behind them all say contact.
 
 **Passport** — the credential a colleague mints so an AI agent can act as them.
 
-**Staged** — an action that has not happened, and is waiting for a contact to
+**Staged** — an action that has not happened, and is waiting for a human to
 decide.
 
 **Archived** — removed from the live lists, still there. Almost everything in
