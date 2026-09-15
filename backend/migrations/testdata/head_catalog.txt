@@ -2032,7 +2032,7 @@ public.company_domain_disposition.company_domain_disposition_admission_source_ch
 public.company_domain_disposition.company_domain_disposition_company_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
 public.company_domain_disposition.company_domain_disposition_domain_check CHECK (((domain = lower(domain)) AND (domain <> ''::text)))
 public.company_domain_disposition.company_domain_disposition_owner_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE SET NULL (owner_id)
-public.company_domain_disposition.company_domain_disposition_pending_reason_check CHECK (((pending_reason IS NULL) OR (pending_reason = 'unevidenced'::text)))
+public.company_domain_disposition.company_domain_disposition_pending_reason_check CHECK (((pending_reason IS NULL) OR (pending_reason = ANY (ARRAY['unevidenced'::text, 'stale_evidence'::text]))))
 public.company_domain_disposition.company_domain_disposition_pending_reason_shape CHECK (((pending_reason IS NULL) OR ((status = 'pending'::text) AND (admission IS DISTINCT FROM 'suppressed'::text))))
 public.company_domain_disposition.company_domain_disposition_pkey PRIMARY KEY (id)
 public.company_domain_disposition.company_domain_disposition_settled_shape CHECK ((((status = 'pending'::text) AND (source IS NULL)) OR ((status = 'company'::text) AND (source IS NOT NULL) AND (company_id IS NOT NULL)) OR ((status = ANY (ARRAY['personal'::text, 'provider'::text, 'no_site'::text])) AND (source IS NOT NULL))))
@@ -2045,6 +2045,7 @@ public.company_domain_disposition.domain text NOT NULL gen=- def=-
 public.company_domain_disposition.evidence text gen=- def=-
 public.company_domain_disposition.id uuid NOT NULL gen=- def=uuidv7()
 public.company_domain_disposition.last_attempt_at timestamp with time zone gen=- def=-
+public.company_domain_disposition.last_evidence_at timestamp with time zone gen=- def=-
 public.company_domain_disposition.next_attempt_at timestamp with time zone gen=- def=now()
 public.company_domain_disposition.owner_id uuid gen=- def=-
 public.company_domain_disposition.pending_reason text gen=- def=-
