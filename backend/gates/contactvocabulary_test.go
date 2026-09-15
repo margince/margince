@@ -228,6 +228,8 @@ var retired = gatekit.Waive(map[string]string{
 	"frontend/src/screens/users-password-link.stories.tsx": "a page under the seats settings group",
 	"frontend/src/screens/share.tsx": "the share target kind: a colleague with a seat, or a team " +
 		"of them — never this record",
+	"docs/handbook/settings.md": "it names the seats settings group, which is the heading a " +
+		"reader navigating Settings actually sees",
 
 	"scripts/fe-file-length-waivers.txt": "its note explains which two words got wider, which it " +
 		"cannot do without saying them",

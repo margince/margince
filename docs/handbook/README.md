@@ -1,6 +1,6 @@
 # The Margince handbook
 
-How to operate Margince day to day. Written for the contact **using** the product
+How to operate Margince day to day. Written for whoever **uses** the product
 — a rep, an account owner, a delivery lead, an administrator. No code, no API: a
 sign-in and the app.
 
@@ -15,10 +15,12 @@ its own, so you can also come straight to the one you need.
 - **[Contacts, companies, leads, deals and projects](records.md)** — the five
   kinds of record, what each holds, and which connections between them are
   required and which are not. Includes the lead ladder, what qualifying a lead
-  actually does, and how to put a single change back from a record's history.
+  actually does, custom fields, and how to put a single change back from a
+  record's history.
 - **[The pipeline](the-pipeline.md)** — stages and what they mean, moving a deal,
-  what closing does and what winning requires, reopening, the 60-day stalled
-  rule, and how to read the weighted numbers.
+  what closing does and what winning requires, the outcome review, where a deal
+  came from, reopening, the 60-day stalled rule, stage automation, and how to
+  read the weighted numbers.
 - **[Capture](capture.md)** — how email, calendar and chat get in; what happens
   to a message step by step; the exact rules that file it against the right
   contact, deal and project; what happens when nothing matches; and what capture
@@ -39,8 +41,8 @@ its own, so you can also come straight to the one you need.
   override, consent, the audit trail, and what you can export.
 - **[Seats, roles and who can see what](seats-roles-and-access.md)** — full and
   read seats, the six roles, why reading a customer record ignores row scope,
-  teams, sharing one record, inviting and removing contacts, and what a refusal
-  looks like.
+  who can see one record, teams, sharing, inviting and removing colleagues, and
+  what a refusal looks like.
 - **[Settings](settings.md)** — every settings page, what is on it, whose state
   it changes, and which permission opens it.
 
