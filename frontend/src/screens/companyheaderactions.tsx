@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { CheckSquare, FileText } from "lucide-react";
-import { useId, useRef, useState } from "react";
+import { useId, useRef } from "react";
 import type { components } from "../api/schema";
 import { useCanWrite } from "../app/capability";
 import { Button } from "../design-system/atoms";
@@ -25,15 +25,20 @@ import { EmailVerb } from "./recordemail";
 type Company = components["schemas"]["Company"];
 
 // Which of LogActivityAction's two forms the drawer opens on: log what
-// happened, or set what happens next. Owned here rather than by two separate
-// LogActivityAction mounts, the same one-drawer-two-doors shape
-// contactpage.tsx's ContactActivityDrawer keeps for the identical pair.
-type ActivityDrawer = "log" | "task" | null;
+// happened, or set what happens next. Owned by the page rather than by two
+// separate LogActivityAction mounts, the same one-drawer-two-doors shape
+// contactpage.tsx's ContactActivityDrawer keeps for the identical pair — and
+// exported now that the daily brief's own leading card opens the same drawer,
+// so a rep who logs from the card and one who logs from the header meet one
+// drawer rather than two independent copies of it.
+export type ActivityDrawer = "log" | "task" | null;
 
 export function CompanyHeaderActions({
   company,
   composerOpen,
   onComposerOpen,
+  drawer,
+  onDrawer,
   archivedReasonId,
 }: Readonly<{
   company: Company;
@@ -42,6 +47,11 @@ export function CompanyHeaderActions({
   // open in order to stand down.
   composerOpen: boolean;
   onComposerOpen: (open: boolean) => void;
+  // The log/task drawer's own open state, on the same rule as the composer's:
+  // the daily brief's leading card opens it too, off this strip, so the page
+  // holds it rather than this component holding a copy the brief cannot reach.
+  drawer: ActivityDrawer;
+  onDrawer: (next: ActivityDrawer) => void;
   // The sentence the caller states once for the whole action strip. Both
   // groups in it refuse for the same reason on an archived record, so the
   // reason is the page's to say, not this component's to mint a second copy of.
@@ -64,7 +74,6 @@ export function CompanyHeaderActions({
   const logRefused =
     archived ?? (logGrantKnown && !canLog ? logRefusedId : undefined);
   const logPending = !archived && !logGrantKnown;
-  const [drawer, setDrawer] = useState<ActivityDrawer>(null);
   return (
     <>
       {archived && !archivedReasonId && (
@@ -87,14 +96,14 @@ export function CompanyHeaderActions({
       <Button
         disabled={logPending}
         reasonId={logRefused}
-        onClick={() => setDrawer("log")}
+        onClick={() => onDrawer("log")}
       >
         <FileText size={15} aria-hidden="true" /> {t("log.title")}
       </Button>
       <Button
         disabled={logPending}
         reasonId={logRefused}
-        onClick={() => setDrawer("task")}
+        onClick={() => onDrawer("task")}
       >
         <CheckSquare size={15} aria-hidden="true" /> {t("log.addTask")}
       </Button>
@@ -105,7 +114,7 @@ export function CompanyHeaderActions({
           askedKind={drawer === "task" ? "task" : undefined}
           triggerLabel={drawer === "task" ? "log.addTask" : undefined}
           openOnMount
-          onClose={() => setDrawer(null)}
+          onClose={() => onDrawer(null)}
         />
       )}
     </>

@@ -17,6 +17,7 @@ import { useRoster } from "./entityref";
 import { interactionIcon } from "./interactionchrome";
 import { MoveButton } from "./movebutton";
 import { FoundMove, TodayPanel, TodoRow, WithheldNotice } from "./record360";
+import "./record360/record360.css";
 
 // The server selects the recommendation. Empty relationship and quiet results
 // describe coverage; they do not describe outstanding work.
@@ -183,7 +184,11 @@ function MomentMove({
         </ul>
       }
       action={
-        <div className="pe-today-actions">
+        // A fragment, not a column of its own: FoundMove owns the one
+        // `.today-actions` column its row draws, defer included, so a second
+        // column nested inside it laid the defer button beside these verbs
+        // in a row instead of under them.
+        <>
           <ActionVerb
             action={moment.recommended_action}
             primary
@@ -199,7 +204,7 @@ function MomentMove({
               onAction={onAction}
             />
           ))}
-        </div>
+        </>
       }
     />
   );
@@ -347,7 +352,7 @@ function ActionVerb({
   // this one" about a draft the agent writes.
   const variant = primary ? "ai" : "ghost";
   return (
-    <span className="pe-today-verb">
+    <span className="today-verb">
       {/* A blocked verb hands its sentence to the Button, whose `reason`
           bars the press AND describes the control with it: a `title` on a
           disabled button reaches no screen reader. A verb that will ask for

@@ -91,7 +91,10 @@ import {
   displayHost,
   useCompanyVerbRefusal,
 } from "./companyheader";
-import { CompanyHeaderActions } from "./companyheaderactions";
+import {
+  type ActivityDrawer,
+  CompanyHeaderActions,
+} from "./companyheaderactions";
 import { CompanyIdentityFacts, CompanySubtitle } from "./companyheaderfacts";
 import {
   LIFECYCLE_LABELS,
@@ -712,7 +715,11 @@ function useCompanyTab(
 function useOpenTaskId(
   recordId: string,
   tab: CompanyTab,
-): [string | null, (next: string | null) => void] {
+): [
+  string | null,
+  (next: string | null) => void,
+  (onTab: CompanyTab, activityId: string) => void,
+] {
   const [openTaskId, setOpenTaskId] = useState<string | null>(null);
   const [openTaskFor, setOpenTaskFor] = useState(recordId);
   const [openTaskOn, setOpenTaskOn] = useState(tab);
@@ -721,7 +728,15 @@ function useOpenTaskId(
     setOpenTaskOn(tab);
     setOpenTaskId(null);
   }
-  return [openTaskId, setOpenTaskId];
+  // Opens a task from OFF the Tasks tab: the reset above fires the moment the
+  // route's own tab changes, which would otherwise wipe this same id back to
+  // null on the very next render. Priming `openTaskOn` to the tab the caller
+  // is about to navigate to keeps the guard's own comparison already true.
+  const openTaskInTab = (nextTab: CompanyTab, activityId: string) => {
+    setOpenTaskOn(nextTab);
+    setOpenTaskId(activityId);
+  };
+  return [openTaskId, setOpenTaskId, openTaskInTab];
 }
 
 // The company 360 badge/action bar. Archived records are read-only: the
@@ -1196,12 +1211,28 @@ function CompanyPage({
   // which anchors on a message or a contact — but the same consequence for the
   // layout, because both open into the rail's column.
   const [writingEmail, setWritingEmail] = useState(false);
+  // The header's Log-activity/Add-task drawer. Lifted here on the same rule as
+  // `writingEmail`: the daily brief's leading card opens the same drawer off
+  // its own verb, so the strip that used to hold this alone can no longer be
+  // the only door into it.
+  const [activityDrawer, setActivityDrawer] = useState<ActivityDrawer>(null);
   const [decisionsOpen, setDecisionsOpen] = useState(false);
   const [auditOpen, setAuditOpen] = useState(false);
   // Which open task the Tasks tab has expanded into its detail modal, keyed
   // by activity id rather than a bare boolean because the row that opened it
   // is also what the modal reads.
-  const [openTaskId, setOpenTaskId] = useOpenTaskId(company.id, tab);
+  const [openTaskId, setOpenTaskId, openTaskInTab] = useOpenTaskId(
+    company.id,
+    tab,
+  );
+  // Opens a task the daily brief named, from off the Tasks tab: the detail
+  // modal only mounts there (CompanyDealsAndTasksTabs), so the card sends the
+  // reader to it with the task already primed to open rather than switching
+  // the tab out from under an id the switch would otherwise wipe.
+  const openTaskFromToday = (activityId: string) => {
+    openTaskInTab("tasks", activityId);
+    onTab("tasks");
+  };
   const receipt = useCitedReceipt();
   // An archived company takes no new activity, so completing or snoozing a
   // task from here would only be refused server-side.
@@ -1303,6 +1334,8 @@ function CompanyPage({
               company={company}
               composerOpen={writingEmail}
               onComposerOpen={setWritingEmail}
+              drawer={activityDrawer}
+              onDrawer={setActivityDrawer}
               archivedReasonId={archivedReasonId}
             />
             {/* Last in the row, after the verbs it holds the remainder of: a
@@ -1380,6 +1413,8 @@ function CompanyPage({
           readOnly={readOnly}
           openTaskId={openTaskId}
           onOpenTask={setOpenTaskId}
+          onOpenTaskFromToday={openTaskFromToday}
+          onLogActivity={() => setActivityDrawer("log")}
           taskUpdate={taskUpdate}
           onOpenHistory={showChanges}
         />
@@ -1443,6 +1478,8 @@ function CompanyRecordBody({
   readOnly,
   openTaskId,
   onOpenTask,
+  onOpenTaskFromToday,
+  onLogActivity,
   taskUpdate,
   onOpenHistory,
   refusedReasonId,
@@ -1466,6 +1503,12 @@ function CompanyRecordBody({
   readOnly: boolean;
   openTaskId: string | null;
   onOpenTask: (activityId: string | null) => void;
+  // Opens a task the daily brief named, switching to the Tasks tab first:
+  // distinct from `onOpenTask` above, which the Tasks tab's own rows use once
+  // already there and needs no tab of its own to reach.
+  onOpenTaskFromToday: (activityId: string) => void;
+  // Opens the header's Log-activity drawer, off the daily brief's own verb.
+  onLogActivity: () => void;
   taskUpdate: ReturnType<typeof useTaskUpdate>;
   onOpenHistory: () => void;
   // The page's one sentence about why this account takes no changes, by id,
@@ -1524,6 +1567,8 @@ function CompanyRecordBody({
             onOpenEmail={receipt.openEmail}
             offerResearch={offerResearch}
             onOpenTasks={() => onTab("tasks")}
+            onOpenTask={onOpenTaskFromToday}
+            onLogActivity={onLogActivity}
             onPrepareMeeting={setPreparing}
             onDraftTo={(id) => onCompose({ kind: "account", id })}
             onPerform={onPerform}
@@ -1763,6 +1808,8 @@ function CompanyOverviewStack({
   onOpenRecord,
   onOpenEmail,
   onOpenTasks,
+  onOpenTask,
+  onLogActivity,
   onPrepareMeeting,
   onDraftTo,
   onOpenTab,
@@ -1793,6 +1840,10 @@ function CompanyOverviewStack({
   // over one page would open over each other.
   onOpenEmail: (activityId: string) => void;
   onOpenTasks: () => void;
+  // The leading card's own fallback verbs, threaded to `useTodayReading`: a
+  // named task's detail modal, and the header's Log-activity drawer.
+  onOpenTask: (activityId: string) => void;
+  onLogActivity: () => void;
   // Opens the meeting brief for the day's meeting — not the composer.
   onPrepareMeeting: (activityId: string) => void;
   onDraftTo: (contactId: string) => void;
@@ -1833,6 +1884,8 @@ function CompanyOverviewStack({
     onOpenRecord,
     onOpenEmail,
     onPerform,
+    onOpenTask,
+    onLogActivity,
     scan,
   });
   return (

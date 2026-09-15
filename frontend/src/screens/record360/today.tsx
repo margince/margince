@@ -28,6 +28,9 @@ import {
 import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
 import { useT } from "../../i18n";
 import "../company360.css";
+// The verb column: `.today-actions` and `.today-verb`, drawn here rather than
+// left to whichever page mounts a row that needs them.
+import "./record360.css";
 
 /**
  * TodayPanel is the panel: its head, the rows a caller hands in, and the one
@@ -193,11 +196,16 @@ export function FoundMove({
   // rest on one hover away. With no reason to hang under, the records are
   // listed in the reason's place.
   basis?: ReactNode;
-  // What performing the move means, as the caller's own control. Absent when
-  // the record cannot say — a rule that named no action draws nothing rather
-  // than a control that does nothing.
+  // What performing the move means, as the caller's own control — zero or
+  // more verbs, each already in the shared `.today-verb` shape (record360.css)
+  // rather than pre-wrapped in a column of its own: this row is the one place
+  // that owns the column, so a caller handing in its own `.today-actions`
+  // nested inside this one laid the defer button beside it in a row instead
+  // of under it. Absent when the record cannot say — a rule that named no
+  // action draws nothing rather than a control that does nothing.
   action?: ReactNode;
-  // Putting the move off. Not the row's verb and never drawn as one.
+  // Putting the move off. Not the row's verb and never drawn as one, but
+  // still one more item in the same column, last.
   defer?: { onDefer: () => void; pending?: boolean };
 }>) {
   const t = useT();
@@ -228,19 +236,22 @@ export function FoundMove({
         )}
         {(action || defer) && (
           <span className="co-move-do">
-            <span className="co-move-actions">
+            <div className="today-actions">
               {action}
               {defer && (
-                <Button
-                  small
-                  className="co-move-defer"
-                  onClick={defer.onDefer}
-                  disabled={defer.pending}
-                >
-                  {t("co.suggest.dismiss")}
-                </Button>
+                <span className="today-verb">
+                  <Button
+                    variant="ghost"
+                    small
+                    className="co-move-defer"
+                    onClick={defer.onDefer}
+                    disabled={defer.pending}
+                  >
+                    {t("co.suggest.dismiss")}
+                  </Button>
+                </span>
               )}
-            </span>
+            </div>
           </span>
         )}
       </div>

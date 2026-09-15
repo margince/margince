@@ -144,6 +144,8 @@ function Header({
             company={record}
             composerOpen={false}
             onComposerOpen={() => {}}
+            drawer={null}
+            onDrawer={() => {}}
           />
           <CompanyActionBadges
             company={record}

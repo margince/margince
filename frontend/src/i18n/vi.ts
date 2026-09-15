@@ -3372,6 +3372,9 @@ export const vi = {
   "today.silence.days": "không hồi âm trong {count} ngày",
   "today.draft.new": "Bắt đầu email mới",
   "today.draft.act": "Soạn thảo",
+  "today.moment.act.openTask": "Mở việc cần làm",
+  "today.moment.act.followUp": "Theo dõi tiếp",
+  "today.moment.act.writeToThem": "Viết cho họ",
 
   "evidence.mark": "đã đọc",
   "evidence.confirm": "Xác nhận",

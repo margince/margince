@@ -3404,6 +3404,9 @@ export const de = {
   "today.silence.days": "seit {count} Tagen keine Antwort",
   "today.draft.new": "Neue E-Mail beginnen",
   "today.draft.act": "Entwerfen",
+  "today.moment.act.openTask": "Aufgabe öffnen",
+  "today.moment.act.followUp": "Nachfassen",
+  "today.moment.act.writeToThem": "An sie schreiben",
 
   "evidence.mark": "gelesen",
   "evidence.confirm": "Bestätigen",

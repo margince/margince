@@ -2,13 +2,16 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { type GrantSpec, meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
-import { CompanyHeaderActions } from "./companyheaderactions";
+import {
+  type ActivityDrawer,
+  CompanyHeaderActions,
+} from "./companyheaderactions";
 
 // The account header's Email/Log activity/Add task strip, split out of
 // companyheader.test.tsx with CompanyHeaderActions itself: the same verbs
@@ -91,14 +94,25 @@ function renderInApp(ui: ReactNode) {
   );
 }
 
-function renderActions() {
-  renderInApp(
+// The drawer's open state moved to the page once the daily brief's own
+// leading card gained a door into it (companies.tsx); this wrapper stands in
+// for that page so the click-driven assertions below still exercise the real
+// open/close wiring rather than a state this test would otherwise own itself.
+function ActionsHost() {
+  const [drawer, setDrawer] = useState<ActivityDrawer>(null);
+  return (
     <CompanyHeaderActions
       company={COMPANY}
       composerOpen={false}
       onComposerOpen={() => undefined}
-    />,
+      drawer={drawer}
+      onDrawer={setDrawer}
+    />
   );
+}
+
+function renderActions() {
+  renderInApp(<ActionsHost />);
 }
 
 // The account page asks nothing before pressing Log activity/Add task, the

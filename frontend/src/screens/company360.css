@@ -500,17 +500,13 @@
   align-items: center;
   /* The verbs end the row, on the same margin down the whole list: a column of
      asks each with its verb wherever its own evidence happened to stop is a
-     list a reader has to hunt through for the thing to press. */
+     list a reader has to hunt through for the thing to press. Its one child
+     is `.today-actions` (record360.css) — the verb column every record page
+     draws the same way — so this only places that column at the row's end
+     rather than laying its own contents out. */
   justify-content: flex-end;
   gap: var(--space-2);
   margin-top: var(--space-3);
-}
-.co-move-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--gapActions);
-  margin-left: auto;
 }
 
 /* An open task: the tick at the row's own weight (it IS the primary verb,
@@ -1434,7 +1430,7 @@
 .co-lead .co-move-do {
   display: contents;
 }
-.co-lead .co-move-actions {
+.co-lead .today-actions {
   grid-column: 2;
   grid-row: 1 / -1;
 }
