@@ -551,7 +551,10 @@ func TestOnlyTheContactKindCreatesAContact(t *testing.T) {
 		// Real correspondence, no human to name. The mail stays visible; the
 		// contact is what is withheld.
 		{kind: capture.KindRoleMailbox, email: "support@respacio.example", wantContacts: 0, wantStatus: capture.PendingStatusReal},
-		{kind: capture.KindCompanySender, email: "contact@vinasa.example", wantContacts: 0, wantStatus: capture.PendingStatusReal},
+		// The address carries no role word: company_sender is the model's
+		// answer for a company writing under its own name, and a fixture the
+		// deterministic vocabulary already refuses would never reach it.
+		{kind: capture.KindCompanySender, email: "vinasa@vinasa.example", wantContacts: 0, wantStatus: capture.PendingStatusReal},
 		// These addresses reach the model; its bulk and automated verdicts hide the mail.
 		{kind: capture.KindNewsletter, email: "digest@saasweekly.example", wantContacts: 0, wantStatus: capture.PendingStatusNoise, wantHidden: true},
 		{kind: capture.KindTransactional, email: "updates@expense-tool.example", wantContacts: 0, wantStatus: capture.PendingStatusNoise, wantHidden: true},
