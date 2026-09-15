@@ -33,8 +33,9 @@ it answers only from the set of documents you filed, and a question that set
 does not cover is refused rather than guessed at.
 
 This one is **yours to ask, not an agent's.** Asking a document set is refused
-outright to an agent, however wide its passport — see "Things the AI is refused
-outright" below. The reason is the same one that earns the text box in the first
+outright to an agent, however wide its passport — see
+[Agents, passports and what they may
+do](agents-and-passports.md#things-the-ai-is-refused-outright). The reason is the same one that earns the text box in the first
 place: a reader of a grounded answer can see which passage each sentence
 rests on and go and check it, and an agent acting on that answer unattended
 cannot.
