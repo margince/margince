@@ -49,6 +49,43 @@ func TestAllowanceDefaultsAndBounds(t *testing.T) {
 	}
 }
 
+func TestAllowanceSaturatesInsteadOfErroringForAnAlreadyStoredOverflow(t *testing.T) {
+	config := BudgetConfig{TokensPerFullUser: MaxMonthlyTokens}
+	// A NEW value overflowing against the current count is still rejected outright —
+	// the ceiling on WRITES is unweakened.
+	if _, err := config.MonthlyTokens(2); err == nil {
+		t.Fatal("MonthlyTokens must still reject an overflowing product")
+	}
+	// The same overflow, OBSERVED rather than written, saturates instead.
+	got, err := config.SaturatingMonthlyTokens(2)
+	if err != nil || got != MaxMonthlyTokens {
+		t.Fatalf("saturating observation: %d %v", got, err)
+	}
+	// Within bounds, both report the identical value.
+	inBounds := BudgetConfig{TokensPerFullUser: 100}
+	strict, err := inBounds.MonthlyTokens(3)
+	if err != nil {
+		t.Fatal(err)
+	}
+	saturating, err := inBounds.SaturatingMonthlyTokens(3)
+	if err != nil || saturating != strict {
+		t.Fatalf("in-bounds divergence: strict=%d saturating=%d err=%v", strict, saturating, err)
+	}
+	// A CompanyMonthlyTokens override never overflows via multiplication, so both
+	// report the override untouched.
+	limit := int64(500)
+	overridden := BudgetConfig{TokensPerFullUser: 1, CompanyMonthlyTokens: &limit}
+	if got, err := overridden.SaturatingMonthlyTokens(9); err != nil || got != limit {
+		t.Fatalf("override: %d %v", got, err)
+	}
+	// A config that fails validateBudget itself (not merely a growth overflow) is
+	// still an error under both — saturating only covers the overflow case.
+	invalid := BudgetConfig{TokensPerFullUser: -1}
+	if _, err := invalid.SaturatingMonthlyTokens(1); err == nil {
+		t.Fatal("an out-of-range stored value must still error")
+	}
+}
+
 func TestAllowanceRequiresAnExplicitIntegerShape(t *testing.T) {
 	for _, raw := range []string{`{}`, `{"tokens_per_full_user":12}`, `{"tokens_per_full_user":1.5,"company_monthly_tokens":null}`, `{"tokens_per_full_user":12,"company_monthly_tokens":null,"extra":1}`, `{"tokens_per_full_user":null,"company_monthly_tokens":null}`} {
 		var config BudgetConfig
@@ -64,6 +101,21 @@ func TestAllowanceRequiresAnExplicitIntegerShape(t *testing.T) {
 	}
 	if a.Revision() != b.Revision() {
 		t.Fatal("JSON ordering changed the revision")
+	}
+}
+
+func TestObservedSnapshotSaturatesWhereBudgetSnapshotErrors(t *testing.T) {
+	now := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	config := BudgetConfig{TokensPerFullUser: MaxMonthlyTokens}
+	if _, err := budgetSnapshot(config, 2, 0, now); err == nil {
+		t.Fatal("budgetSnapshot must still fail closed on an overflowing product")
+	}
+	observed, err := observedSnapshot(config, 2, 0, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if observed.MonthlyTokens != MaxMonthlyTokens || observed.Revision != config.Revision() || observed.EligibleFullUsers != 2 {
+		t.Fatalf("observed snapshot %+v", observed)
 	}
 }
 

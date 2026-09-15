@@ -40,11 +40,7 @@ type BudgetChange struct {
 	ExpectedRevision string       `json:"expected_revision"`
 }
 
-func budgetSnapshot(config BudgetConfig, users, spent int64, now time.Time) (crmcontracts.AiBudgetSnapshot, error) {
-	monthly, err := config.MonthlyTokens(users)
-	if err != nil {
-		return crmcontracts.AiBudgetSnapshot{}, err
-	}
+func snapshotWithMonthly(config BudgetConfig, monthly, users, spent int64, now time.Time) crmcontracts.AiBudgetSnapshot {
 	now = now.UTC()
 	start := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
 	source := "per_user"
@@ -56,24 +52,67 @@ func budgetSnapshot(config BudgetConfig, users, spent int64, now time.Time) (crm
 		Revision: config.Revision(), EligibleFullUsers: users, BudgetedFullUsers: max(users, 1), Source: source,
 		MonthlyTokens: monthly, SpentTokens: spent, RemainingTokens: max(0, monthly-spent), Band: BudgetBand(spent, monthly),
 		MonthStartAt: start, ResetsAt: start.AddDate(0, 1, 0), ObservedAt: now,
-	}, nil
+	}
 }
 
-func (s *AdminStore) currentTx(ctx context.Context, tx pgx.Tx) (crmcontracts.AiBudgetSnapshot, error) {
-	config, err := settings.GetTx(ctx, tx, BudgetSettings)
+func budgetSnapshot(config BudgetConfig, users, spent int64, now time.Time) (crmcontracts.AiBudgetSnapshot, error) {
+	monthly, err := config.MonthlyTokens(users)
 	if err != nil {
 		return crmcontracts.AiBudgetSnapshot{}, err
 	}
-	users, err := s.fullUsers(ctx, tx)
+	return snapshotWithMonthly(config, monthly, users, spent, now), nil
+}
+
+// observedSnapshot never errors on a stored config that has grown past the overflow
+// ceiling (see BudgetConfig.SaturatingMonthlyTokens) — it exists for surfaces that must
+// render a workspace's CURRENT allowance so an admin can correct it, as opposed to
+// budgetSnapshot's strict/fail-closed contract used to gate real spend and to validate a
+// NEW value being written.
+func observedSnapshot(config BudgetConfig, users, spent int64, now time.Time) (crmcontracts.AiBudgetSnapshot, error) {
+	monthly, err := config.SaturatingMonthlyTokens(users)
 	if err != nil {
 		return crmcontracts.AiBudgetSnapshot{}, err
+	}
+	return snapshotWithMonthly(config, monthly, users, spent, now), nil
+}
+
+// loadBudgetInputs reads the pieces both the strict and the observed snapshot need, so
+// neither currentTx nor observedTx duplicates the settings/full-user/spend lookups.
+func (s *AdminStore) loadBudgetInputs(ctx context.Context, tx pgx.Tx) (BudgetConfig, int64, int64, time.Time, error) {
+	config, err := settings.GetTx(ctx, tx, BudgetSettings)
+	if err != nil {
+		return BudgetConfig{}, 0, 0, time.Time{}, err
+	}
+	users, err := s.fullUsers(ctx, tx)
+	if err != nil {
+		return BudgetConfig{}, 0, 0, time.Time{}, err
 	}
 	now := s.now().UTC()
 	spent, err := monthTokensTx(ctx, tx, now)
 	if err != nil {
+		return BudgetConfig{}, 0, 0, time.Time{}, err
+	}
+	return config, users, spent, now, nil
+}
+
+func (s *AdminStore) currentTx(ctx context.Context, tx pgx.Tx) (crmcontracts.AiBudgetSnapshot, error) {
+	config, users, spent, now, err := s.loadBudgetInputs(ctx, tx)
+	if err != nil {
 		return crmcontracts.AiBudgetSnapshot{}, err
 	}
 	return budgetSnapshot(config, users, spent, now)
+}
+
+// observedTx backs the admin recovery surfaces (ReadBudget, ReplaceBudget's
+// optimistic-concurrency read, PreviewBudget's Current) so a workspace whose stored
+// config has grown past the overflow ceiling can still be read and corrected, rather
+// than failing every one of the entry points that exist to fix it.
+func (s *AdminStore) observedTx(ctx context.Context, tx pgx.Tx) (crmcontracts.AiBudgetSnapshot, error) {
+	config, users, spent, now, err := s.loadBudgetInputs(ctx, tx)
+	if err != nil {
+		return crmcontracts.AiBudgetSnapshot{}, err
+	}
+	return observedSnapshot(config, users, spent, now)
 }
 
 // ReadBudget keeps editable policy and its live calculation in one observation.
@@ -82,7 +121,7 @@ func (s *AdminStore) ReadBudget(ctx context.Context) (crmcontracts.AiBudgetSnaps
 		return crmcontracts.AiBudgetSnapshot{}, err
 	}
 	var out crmcontracts.AiBudgetSnapshot
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error { var err error; out, err = s.currentTx(ctx, tx); return err })
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error { var err error; out, err = s.observedTx(ctx, tx); return err })
 	return out, err
 }
 
@@ -102,7 +141,7 @@ func (s *AdminStore) ReplaceBudget(ctx context.Context, change BudgetChange) (cr
 		if err := settings.LockForWrite(ctx, tx, BudgetKey); err != nil {
 			return err
 		}
-		current, err := s.currentTx(ctx, tx)
+		current, err := s.observedTx(ctx, tx)
 		if err != nil {
 			return err
 		}

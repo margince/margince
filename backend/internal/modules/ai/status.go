@@ -15,12 +15,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-func (s *AdminStore) current(ctx context.Context) (crmcontracts.AiBudgetSnapshot, RoutingConfig, error) {
+func (s *AdminStore) currentWith(ctx context.Context, budgetTx func(context.Context, pgx.Tx) (crmcontracts.AiBudgetSnapshot, error)) (crmcontracts.AiBudgetSnapshot, RoutingConfig, error) {
 	var budget crmcontracts.AiBudgetSnapshot
 	var cfg RoutingConfig
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		budget, err = s.currentTx(ctx, tx)
+		budget, err = budgetTx(ctx, tx)
 		if err != nil {
 			return err
 		}
@@ -30,6 +30,19 @@ func (s *AdminStore) current(ctx context.Context) (crmcontracts.AiBudgetSnapshot
 		return err
 	})
 	return budget, cfg, err
+}
+
+// current is the operational read: it fails closed on a stored budget that has grown
+// past the overflow ceiling, same as everything else that gates real spend.
+func (s *AdminStore) current(ctx context.Context) (crmcontracts.AiBudgetSnapshot, RoutingConfig, error) {
+	return s.currentWith(ctx, s.currentTx)
+}
+
+// observed is the admin recovery read PreviewBudget uses: it never errors on the
+// overflow case (see AdminStore.observedTx), so a workspace already over-cap can still
+// preview a correction.
+func (s *AdminStore) observed(ctx context.Context) (crmcontracts.AiBudgetSnapshot, RoutingConfig, error) {
+	return s.currentWith(ctx, s.observedTx)
 }
 
 // ReadStatus reports prospective routing separately from observed provider health.
@@ -67,7 +80,7 @@ func (s *AdminStore) PreviewBudget(ctx context.Context, change BudgetChange) (cr
 	if err := auth.Require(ctx, budgetObject, principal.ActionUpdate); err != nil {
 		return crmcontracts.AiBudgetPreview{}, err
 	}
-	current, cfg, err := s.current(ctx)
+	current, cfg, err := s.observed(ctx)
 	if err != nil {
 		return crmcontracts.AiBudgetPreview{}, err
 	}
