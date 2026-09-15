@@ -6,7 +6,6 @@ import { Panel, PanelBody } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { formatDateAbbrev } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import "./licenseholder.css";
 
 // Who holds the license, and how long it lasts. The card above the seat meter:
 // two subjects, two cards — who this license belongs to, then what it grants.

@@ -24,7 +24,6 @@
  * rather than pointing. */
 .token-input.is-disabled {
   cursor: not-allowed;
-  color: var(--textTertiary);
   background: var(--bgCard);
 }
 
@@ -36,8 +35,6 @@
   border: 0;
   padding: 0;
   background: transparent;
-  color: inherit;
-  font: inherit;
   /* Suppressed HERE and answered on the frame below, which is the only place it
      can be answered: the box is a borderless input inside a bordered span, so a
      ring on the box would be drawn in the middle of the field. */
@@ -68,11 +65,8 @@
   padding: 0 var(--space-1);
   border-radius: var(--r-sm);
   background: var(--bgChip);
-  color: var(--textContent);
   /* One step down from the field's own type: a token is a value inside a
    * control, not a heading over one. */
-  font-size: var(--fs-sm);
-  line-height: 1.6;
   white-space: nowrap;
 }
 
@@ -89,7 +83,6 @@
   border: 0;
   padding: 0;
   background: transparent;
-  color: var(--textMeta);
   cursor: pointer;
 }
 
@@ -107,7 +100,6 @@
 
 .token-remove:disabled {
   cursor: not-allowed;
-  color: var(--textTertiary);
 }
 
 /* The token SET on its own, with no field around it (TokenList).

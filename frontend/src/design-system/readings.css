@@ -82,12 +82,9 @@
   corner-shape: round;
   background: var(--bgElevated);
   color: var(--textPrimary);
-  font-size: var(--fs-sm);
-  line-height: 1.2;
   white-space: nowrap;
 }
 .chip svg {
-  color: var(--textMeta);
   flex: none;
 }
 /* dense: a chip that shares a cell with badges, at their geometry. A table
@@ -101,8 +98,6 @@
 .chip-dense {
   min-block-size: 20px;
   padding: 0 8px;
-  font-size: var(--fs-meta);
-  font-weight: var(--fw-medium);
 }
 .chip-link {
   text-decoration: none;
@@ -153,7 +148,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--textMuted);
 }
 /* Right-aligned so the digits form a column the eye can run down, which is
    the same reason the figures take tabular digits through `.t-num`. */

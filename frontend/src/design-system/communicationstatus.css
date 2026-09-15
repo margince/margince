@@ -10,7 +10,6 @@
   align-items: center;
   border: 0;
   background: transparent;
-  color: var(--textMeta);
   border-radius: var(--r-sm);
   cursor: pointer;
   padding: 0;
@@ -79,8 +78,6 @@
   color: var(--dangerText);
 }
 
-/* checking, context_only and external stay --textMeta: none of them is news. */
-
 .commstatus-panel {
   display: flex;
   flex-direction: column;
@@ -97,12 +94,10 @@
  * mark for it would say the refusal was resolved. */
 .commstatus-exception {
   margin: 0;
-  color: var(--textMeta);
 }
 
 .commstatus-freshness {
   margin: 0;
-  color: var(--textMeta);
 }
 
 /* The mark and the verbs it stands beside, in one row. The mark comes first

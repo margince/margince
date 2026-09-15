@@ -147,10 +147,6 @@
      being scaled. */
   perspective: 480px;
   font-family: var(--f-display);
-  font-size: var(--fs-hero-fluid);
-  font-weight: var(--fw-medium);
-  line-height: var(--lh-tight);
-  letter-spacing: var(--tracking-display);
   color: var(--textPrimary);
   animation: ob-build-letters-out calc(var(--obBuildMs) * 0.14)
     calc(var(--obBuildMs) * 0.56) ease both;

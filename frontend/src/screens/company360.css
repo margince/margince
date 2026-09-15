@@ -116,7 +116,6 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  font-size: var(--fs-sm);
   color: var(--textPrimary);
 }
 
@@ -143,7 +142,6 @@
   border: none;
   padding: 0;
   text-align: left;
-  font: inherit;
   color: var(--textPrimary);
   cursor: pointer;
 }
@@ -209,10 +207,6 @@
   padding-bottom: var(--space-3);
   border-bottom: 1px solid var(--borderSubtle);
   font-family: var(--f-display);
-  font-size: var(--fs-h2);
-  font-weight: var(--fw-medium);
-  line-height: 1.35;
-  letter-spacing: var(--tracking-display);
   color: var(--textPrimary);
 }
 
@@ -222,9 +216,6 @@
   flex-direction: column;
   gap: var(--space-2);
   margin: 0;
-  font-size: var(--fs-sm);
-  line-height: 1.55;
-  color: var(--textContent);
 }
 /* A sentence's citations sit in their own wrapping row after the prose, each
    one visibly a separate chip. Run together without a gap they read as one
@@ -241,9 +232,6 @@
   background: none;
   border: 0;
   padding: 0;
-  font: inherit;
-  font-size: var(--fs-eyebrow);
-  color: var(--textMeta);
   cursor: pointer;
   /* Indigo, because the sentence above it was written by the agent and this
      is where its working is. Green here would say a contact cited it. */
@@ -270,8 +258,6 @@
    what the border was there for. Neutral rather than indigo: the ink says
    whether a reader can follow it. */
 .co-brief-cite-flat {
-  font-size: var(--fs-eyebrow);
-  color: var(--textMeta);
   text-decoration: underline dotted var(--borderStrong);
   text-underline-offset: 3px;
 }
@@ -323,10 +309,6 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
   color: var(--aiText);
 }
 
@@ -335,16 +317,6 @@
   height: 0.75rem;
 }
 
-/* When the reading behind the row is dated — the day the thread went quiet,
-   the day the deal last moved. Never a deadline the system chose, and never
-   in the eyebrow's own voice, which is why it drops the tracking and the
-   case. */
-.co-move-when {
-  font-weight: var(--fw-regular);
-  letter-spacing: var(--tracking-normal);
-  text-transform: none;
-  color: var(--textMeta);
-}
 .co-move-body {
   display: flex;
   flex-direction: column;
@@ -353,9 +325,6 @@
   flex: 1 1 auto;
 }
 .co-move-ask {
-  font-size: var(--fs-h3);
-  font-weight: var(--fw-medium);
-  line-height: 1.35;
   max-width: 62ch;
   color: var(--textPrimary);
   text-wrap: pretty;
@@ -363,7 +332,6 @@
 /* The reason: the part a rep judges, in a quieter voice than the ask. */
 .co-move-reason {
   display: inline;
-  line-height: 1.55;
   max-width: 78ch;
   text-wrap: pretty;
 }
@@ -428,9 +396,6 @@
   margin: 0;
   border-left: 2px solid var(--aiMed);
   padding-left: var(--space-2);
-  font-size: var(--fs-sm);
-  line-height: 1.5;
-  color: var(--textContent);
   max-width: 48ch;
 }
 .co-cite-origin {
@@ -499,7 +464,6 @@
 }
 .co-ask-asked {
   margin: var(--space-2) 0 0;
-  font-weight: 600;
 }
 
 /* The proposals count is a way into the queue it counts, so it is a button —
@@ -509,7 +473,6 @@
   background: none;
   border: 0;
   padding: 0;
-  font: inherit;
   cursor: pointer;
 }
 .co-since-open:focus-visible {
@@ -555,7 +518,6 @@
 }
 
 .co-vat dt {
-  color: var(--textMeta);
   margin-bottom: var(--space-1);
 }
 
@@ -703,20 +665,10 @@
   flex-wrap: wrap;
   gap: var(--space-2);
 }
-/* The counts sit beside the band at the band's own weight, not beneath it in
-   fine print: they qualify the verdict rather than annotate it. */
-.co-growth-fit-completeness {
-  color: var(--textMeta);
-}
-/* What is missing sits in its own labelled row and needs no top margin; the
-   cap and the next step follow the band inside the verdict block. */
-.co-growth-fit-missing {
-  color: var(--textMeta);
-}
+/* The cap and the next step follow the band inside the verdict block. */
 .co-growth-fit-capped,
 .co-growth-fit-next {
   margin-top: var(--space-2);
-  color: var(--textMeta);
 }
 .co-part-foot {
   display: flex;
@@ -732,13 +684,9 @@
 
 /* The receipt behind one cited value. Read as a short record, not as prose:
    the reader is comparing what we stored against where we got it. */
-.co-evidence-value {
-  font-weight: 600;
-}
 .co-evidence-origin,
 .co-evidence-line {
   margin-top: var(--space-2);
-  color: var(--textMeta);
 }
 /* Quoted verbatim and set apart, because the reader is checking it word for
    word against the source. Any restyling that invited paraphrase would defeat
@@ -751,9 +699,6 @@
 .co-evidence-identity {
   margin-top: var(--space-3);
 }
-.co-evidence-identity dt {
-  color: var(--textMeta);
-}
 .co-evidence-identity dd {
   margin-bottom: var(--space-2);
   overflow-wrap: anywhere;
@@ -762,7 +707,6 @@
    worth knowing about, and a blank field would pass for having nothing to add. */
 .co-evidence-gaps {
   margin-top: var(--space-3);
-  color: var(--textMeta);
 }
 
 /* ---- The coverage grid on a narrow screen (plan §10.3) ----------------------
@@ -818,7 +762,6 @@
   }
   /* The contact's name heads its own card. */
   .coverage-table tbody th[scope="row"] {
-    font-weight: 600;
     padding: 0 0 var(--space-2);
     border-bottom: 1px solid var(--borderSubtle);
     margin-bottom: var(--space-2);
@@ -832,16 +775,13 @@
   }
   .coverage-table td::before {
     content: attr(data-label);
-    color: var(--textMeta);
-    /* ds:ignore generated content: no element exists to carry .t-caption */
-    font-size: var(--fs-meta);
   }
 }
 
-/* The shared figure-block anatomy: a small-caps eyebrow, then the figure
-   itself set large and tabular, then a one-line note where the caller has
-   one. Both the Commercial panel and the Finance panel draw their headline
-   numbers through this one shape, so a reader learns it once. */
+/* The shared figure-block anatomy: an eyebrow, then the figure itself set
+   tabular, then a one-line note where the caller has one. Both the Commercial
+   panel and the Finance panel draw their headline numbers through this one
+   shape, so a reader learns it once. */
 .co-figures {
   display: flex;
   flex-wrap: wrap;
@@ -854,8 +794,6 @@
   gap: var(--space-1);
 }
 .co-figure-value {
-  font-size: var(--fs-h1);
-  font-weight: var(--fw-medium);
   font-variant-numeric: tabular-nums;
 }
 /* The finance panel: one decision figure with its reasons, a quieter column
@@ -897,23 +835,17 @@
   gap: var(--space-1);
 }
 .fin-amount {
-  font-size: var(--fs-h2);
-  font-weight: var(--fw-medium);
   font-variant-numeric: tabular-nums;
 }
-/* The one figure on the panel that asks for a decision, at the size that says
-   so. Overdue money is drawn in the danger tone whatever its value: unlike a
-   badge, the figure is the reading itself, and a reader who has to check
-   whether it is coloured has already read it. */
+/* The one figure on the panel that asks for a decision. Overdue money is drawn
+   in the danger tone whatever its value: unlike a badge, the figure is the
+   reading itself, and a reader who has to check whether it is coloured has
+   already read it. */
 .fin-amount-hero {
-  font-size: var(--fs-display);
-  font-weight: var(--fw-medium);
   color: var(--danger);
-  line-height: 1.1;
 }
 .fin-lede {
   margin: 0;
-  color: var(--textContent);
 }
 /* The bar's two halves, named. Laid out as a row that wraps, so a long
    currency string moves the second half onto its own line instead of
@@ -932,9 +864,6 @@
 /* The invoice table. Its first and last cells align with the panel body's own
    padding, so the table reads as part of the panel rather than as a block
    inset inside it. */
-.fin-table {
-  font-size: var(--fs-sm);
-}
 .fin-table th:first-child,
 .fin-table td:first-child {
   padding-left: var(--space-5);
@@ -960,12 +889,8 @@
    day and month columns aligned down the table without a second typeface
    doing the work. */
 .fin-cell-dates {
-  color: var(--textMeta);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
-}
-.fin-cell-paid {
-  color: var(--textMeta);
 }
 /* Still owed, still past due: the rows that need chasing, findable without
    reading every status. */
@@ -1015,9 +940,6 @@
   text-align: left;
   min-width: 0;
 }
-.co-commercial-title {
-  font-weight: var(--fw-semibold);
-}
 /* The overview's chronology: a day heading above the run of entries that
    happened on it, so several messages read as how one day went rather than
    as an undifferentiated list. */
@@ -1056,7 +978,6 @@
   justify-content: space-between;
   align-items: baseline;
   gap: var(--space-2);
-  font-size: var(--fs-sm);
 }
 
 /* The bar carries the same weight as the health meters in the rail — one
@@ -1080,7 +1001,6 @@
 }
 
 .co-growth-fit-score-value {
-  font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 
@@ -1095,13 +1015,10 @@
    reads as two designs that met by accident.
    ========================================================================= */
 
-/* A card title NAMES its card; it is not competing with the record's name.
-   Demoted by SIZE and WEIGHT, not by ink — the shared .section-header h2 is
-   15px/600 — because a heading that gives up the heading ink stops reading as
+/* A card title NAMES its card; it is not competing with the record's name. It
+   keeps the heading ink, because a heading that gives that up stops reading as
    a heading at all. */
 .co-card .section-header h2 {
-  font-size: var(--fs-sm);
-  font-weight: var(--fw-medium);
   color: var(--textPrimary);
 }
 
@@ -1126,11 +1043,6 @@
      it: at the row's tighter interval the label sat against the rule and the
      five slices read as one crowded list rather than five sections. */
   padding: var(--space-4) var(--space-5) var(--space-3);
-  font-size: var(--fs-meta);
-  font-weight: var(--fw-medium);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
-  color: var(--textMeta);
   transition: background 0.15s;
 }
 .co-rail .co-sect > summary:hover {
@@ -1164,7 +1076,6 @@
   flex: 1;
   min-width: 0;
   margin: 0;
-  font: inherit;
 }
 .co-sect-summary {
   display: flex;
@@ -1216,7 +1127,6 @@
 }
 .co-signal-title {
   display: block;
-  font-size: var(--fs-sm);
   color: var(--textPrimary);
 }
 .co-signal-summary {
@@ -1224,7 +1134,6 @@
 }
 .co-signal-link {
   display: inline-block;
-  font-size: var(--fs-meta);
 }
 /* The brief's context is a STANDFIRST: one line under the panel's title that
    says why the moves below it are being asked, and then gets out of the way.
@@ -1246,9 +1155,6 @@
   align-items: baseline;
   gap: var(--space-1) var(--space-2);
   margin: 0;
-  font-size: var(--fs-sm);
-  font-weight: var(--fw-semibold);
-  color: var(--textContent);
 }
 /* The mark carries the state's colour so the block reads before it is read.
    It is 6px of ink rather than a token step: a dot sized off the spacing
@@ -1267,12 +1173,6 @@
 .today-lead-danger {
   color: var(--danger);
 }
-/* The state stays at the block's own colour even when the mark is coloured:
-   a whole line set in warning colour reads as an alarm, and the state is a
-   fact about the account rather than a fault in it. */
-.today-lead-state {
-  color: var(--textContent);
-}
 /* How long it has stood that way — quieter than the state, and never so long
    that it becomes the sentence.
 
@@ -1284,9 +1184,6 @@
   display: block;
   margin-block-start: var(--space-2);
   font-family: var(--f-body);
-  font-weight: var(--fw-regular);
-  line-height: 1.45;
-  letter-spacing: var(--tracking-normal);
 }
 /* What the day's work could NOT be read from, under whatever rows there are.
    Inset to the panel's own padding and set at meta size: it qualifies the
@@ -1294,7 +1191,6 @@
 .today-withheld {
   margin: 0;
   padding: var(--space-3) var(--space-5);
-  line-height: 1.45;
 }
 /* A move is the row's own paragraph: the ask, its reason under it, and the
    verbs at the row's end. Ask and reason ran inline as one wrapping line,
@@ -1308,9 +1204,6 @@
    names the move, and the two lines below it are the case FOR that move, so
    they belong closer to each other than to the thing they argue for. */
 .co-lead .co-move-ask {
-  font-size: var(--fs-body);
-  font-weight: var(--fw-medium);
-  line-height: var(--lh-snug);
   margin-bottom: var(--space-1);
 }
 /* Two columns for the whole row: the left is what the move CLAIMS — ask,
@@ -1371,11 +1264,9 @@
 .co-move-defer {
   border-color: transparent;
   background: none;
-  color: var(--textMeta);
 }
 .co-move-defer:hover:not(:disabled) {
   background: none;
-  color: var(--textContent);
 }
 /* The panel's own name, at body weight and laid out as a row, moved into
    Panel's tone="accent" (design-system/panel.css): the record's tabs and its
@@ -1417,7 +1308,6 @@
   margin-left: auto;
 }
 .rec-title {
-  font-weight: var(--fw-medium);
   overflow-wrap: anywhere;
   text-align: left;
 }
@@ -1434,7 +1324,6 @@
 .rec-meta > * + *::before {
   content: "·";
   margin-right: var(--space-2);
-  color: var(--textMeta);
 }
 .rec-term-dates {
   font-variant-numeric: tabular-nums;
@@ -1451,7 +1340,6 @@
 }
 .rec-amount {
   font-variant-numeric: tabular-nums;
-  font-weight: var(--fw-medium);
 }
 /* The paper sits under the agreement's own line, as its own row of cards: a
    label that stays put, and the cards wrapping in their own column beside it so
@@ -1527,9 +1415,6 @@
    to out-weigh the reset wherever the two sheets land in the bundle. */
 .co-360-dims .popover-trigger.co-dim {
   gap: var(--space-2);
-  /* ds:ignore .t-sub loses to .popover-trigger:not(.btn)'s font/color reset */
-  font-size: var(--fs-sm);
-  color: var(--textMeta);
   border-radius: var(--r-sm);
 }
 /* Pressable, and said so before it is pressed: a chip that answers a resting
@@ -1642,8 +1527,6 @@
    head answers once. */
 .co-360-title .co-360-subject {
   font-family: var(--f-display);
-  font-weight: var(--fw-medium);
-  letter-spacing: var(--tracking-display);
   color: var(--textPrimary);
 }
 
@@ -1675,10 +1558,9 @@
 }
 
 /* The stage under way is the one a reader is watching, so it is the one drawn
-   at full weight. The rest are context for it. */
+   in the reading ink. The rest are context for it. */
 .deepread-step.is-running {
   color: var(--textPrimary);
-  font-weight: var(--fw-medium);
 }
 
 .deepread-step-mark {
@@ -1697,12 +1579,6 @@
 
 .deepread-step.is-running .deepread-step-mark {
   border-color: var(--ai);
-}
-
-/* The state in words beside the mark, because three tinted circles are three
-   tinted circles to a reader who cannot tell the tints apart. */
-.deepread-step-state {
-  font-weight: var(--fw-regular);
 }
 
 /* A to-do already on somebody's list, under the move Margince found.
@@ -1725,7 +1601,6 @@
 }
 
 .co-todo-title {
-  font-size: var(--fs-sm);
   color: var(--textPrimary);
 }
 /* When the to-do is owed, at the row's far end. Quiet unless it is late: a
@@ -1791,8 +1666,6 @@
   flex-wrap: wrap;
 }
 .co-recent-title {
-  font-size: var(--fs-sm);
-  font-weight: var(--fw-medium);
   color: var(--textPrimary);
   overflow-wrap: anywhere;
 }
@@ -1814,7 +1687,6 @@
 
 .co-recent-empty {
   margin: 0;
-  color: var(--textMeta);
 }
 
 /* The read's own line under the needs list: who wrote the findings, what was
@@ -1855,9 +1727,6 @@
   gap: var(--space-2);
   flex-wrap: wrap;
   min-width: 0;
-}
-.billing-name {
-  font-weight: var(--fw-medium);
 }
 /* The row's own verbs, pushed to the end and never shrunk: a long name wraps,
    and Change/Remove keep their hit targets whatever the name does. Its own

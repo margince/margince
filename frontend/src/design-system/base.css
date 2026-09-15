@@ -41,10 +41,6 @@
 
 .btn {
   font-family: var(--f-body);
-  /* Medium, not semibold: a verb in a row of verbs is read, not shouted, and
-     the head of a record carries four of them beside a 32px name. */
-  font-weight: var(--fw-medium);
-  font-size: var(--fs-body);
   /* Transparent rather than absent, so the ghost variant RECOLOURS a border
      every variant already reserves space for. When only the ghost declared one,
      border-box added its 2px to that variant alone and every [Cancel][Save] pair
@@ -53,12 +49,6 @@
   cursor: pointer;
   border-radius: var(--r-control);
   padding: 8px 14px;
-  /* Pinned rather than inherited: an inherited line-height would make the box a
-     property of whatever the button happens to sit inside. Pinned to the label's
-     own size, so the label adds no leading of its own and `min-block-size` below
-     is the single thing that decides the height — which is what lets a button
-     and the field beside it share one token and land on one line. */
-  line-height: 1;
   min-block-size: var(--control-h);
   /* The one resting layer, so a verb has a top side. Every variant carries a
      fill — the ghost's is the pane — except `link`, which is text and takes it
@@ -66,10 +56,9 @@
   box-shadow: var(--shadow-rest);
   /* Named properties, not `all`. `transition: <time>` alone is the shorthand
      for `transition-property: all`, which put min-block-size, padding, width
-     and font-size on a timer too — so a button whose label changed ("Save" →
-     "Saving…") animated its own width, and the 16px phone field size arrived
-     over 140ms. The transform is the exception in the list: it is the press,
-     and a press releases on the spring rather than the decel. */
+     on a timer too — so a button whose label changed ("Save" → "Saving…")
+     animated its own width. The transform is the exception in the list: it is
+     the press, and a press releases on the spring rather than the decel. */
   transition:
     background-color var(--dur-state) var(--ease-out),
     border-color var(--dur-state) var(--ease-out),
@@ -127,10 +116,6 @@
 .btn-federated {
   white-space: normal;
   overflow-wrap: anywhere;
-  /* `.btn` pins the leading at 1 because a one-line label should add none of
-     its own to a box the control's height token decides. Two lines set solid
-     touch. */
-  line-height: 1.25;
 }
 /* Every button in the product had NO focus style: no rule here, none in
    app.css, none in tokens.css or brand.css, so a keyboard reader got whatever
@@ -219,7 +204,6 @@
    button reads as a label, and four of them as a sentence. */
 .btn-ghost {
   background: var(--pane);
-  color: var(--textContent);
   /* The hairline, not the control boundary: an outlined verb is a pane with
      a word on it, and the darker edge drew a row of them as a strip of
      cartoon buttons. The word is what identifies the control (WCAG 1.4.11
@@ -263,10 +247,8 @@
  * column of controls rather than two shapes; the border is `--borderControl`,
  * because an unfilled control on a same-coloured pane is defined entirely by
  * its border and that border owes 1.4.11 its 3:1; the ground is `--bgElevated`
- * and the ink `--textPrimary`, since a door the reader is invited to take
- * cannot be drawn in the muted ink `ghost` keeps for a dismissal; and the
- * weight is 500, because the label is the installation's own sentence rather
- * than one of our verbs.
+ * and the ink `--textPrimary`, since a door the reader is invited to take is
+ * not a dismissal.
  *
  * The 44px target is this variant's own floor rather than `--control-h`'s. That
  * token is the shared control height and sits below 44 for a fine pointer,
@@ -292,7 +274,6 @@
   border-color: var(--borderControl);
   background: var(--bgElevated);
   color: var(--textPrimary);
-  font-weight: 500;
 }
 /* The mark is another company's logo rather than one of our icons, so it keeps
    the size `provider-mark.css` gives it. `.btn svg` sizes a lucide glyph to the
@@ -309,7 +290,6 @@
 }
 .btn-sm {
   padding: 6px 11px;
-  font-size: var(--fs-sm);
   min-block-size: var(--control-h-sm);
   min-inline-size: 0;
 }
@@ -449,7 +429,6 @@
    specificity on purpose: a busy toggle should look busy, not hovered. */
 .btn-ghost[aria-busy="true"]:hover {
   background: transparent;
-  color: var(--textMeta);
 }
 /* An icon-only button is one control's width, and two 16px marks do not fit in
    it. The GLYPH gives way, in CSS rather than by dropping the button's children
@@ -500,11 +479,11 @@
  *
  * Tailwind's preflight strips an anchor back to inherited colour and no
  * underline, and no rule anywhere in this tree put either back — so every
- * inline link inside a sentence rendered as plain text at the same
- * --textMeta as the words around it. Copy that sends a reader somewhere was
- * telling them nothing was there: measured on the own-domains card, the "open
- * the company profile" link and its surrounding prose were the same colour with
- * no decoration between them.
+ * inline link inside a sentence rendered as plain text in the same ink as the
+ * words around it. Copy that sends a reader somewhere was telling them nothing
+ * was there: measured on the own-domains card, the "open the company profile"
+ * link and its surrounding prose were the same colour with no decoration
+ * between them.
  *
  * `:not([class])` is the whole scope, deliberately. Every anchor this product
  * styles — a nav entry, a row that navigates, a chip, `.entity-link` — carries
@@ -542,7 +521,6 @@ a:not([class]):focus-visible {
   border: 0;
   border-radius: var(--r-sm);
   background: transparent;
-  color: var(--textMeta);
   cursor: pointer;
   transition:
     background-color var(--dur-state) var(--ease-out),
@@ -570,90 +548,40 @@ a:not([class]):focus-visible {
   cursor: not-allowed;
 }
 
-/* The failure said in the surrounding type's size. Colour only: it is always
-   worn over a size class — `t-caption t-danger`, `t-sub t-danger` — and a
-   second font-size here would fight whichever one that is. */
+/* Colour only, and deliberately: a failure is said in the ink of the type it is
+   worn over — `t-caption t-danger`, `t-sub t-danger` — never in a shape of its
+   own. */
 .t-danger {
   color: var(--dangerText);
-  font-weight: var(--fw-medium);
 }
 
-/* Conservative type-scale realizing the hierarchy already implied by usage
- * across the app (record headings, field labels, captions, figures) —
- * no new sizes invented, just named. */
-.t-display {
-  font-family: var(--f-display);
-  font-size: var(--fs-h1);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-display);
-  color: var(--textPrimary);
-}
-.t-h2 {
-  font-family: var(--f-display);
-  font-size: var(--fs-h2);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-display);
-  color: var(--textPrimary);
-}
-/* The step between a heading and body text, which StatCard's reading has asked
-   for since it was written — the class was named there but never declared, so
-   the figure a tile exists to show was rendering at body size. */
+/* The type ROLES. Root type — size, leading, weight, face and neutral ink — is
+   one declaration in `app.css`'s `html` rule, and every element inherits it.
+   The ramp these classes used to name is gone; what is left is the role
+   vocabulary a component wears (`t-display`, `t-h3`, `t-caption`, `t-eyebrow`,
+   `t-num`), and its rules will be layered on top of the root in a later change.
+   Only the display FACE, which is a family and not a size, survives here. */
+.t-display,
+.t-h2,
 .t-h3 {
   font-family: var(--f-display);
-  font-size: var(--fs-h3);
-  font-weight: var(--fw-semibold);
-  color: var(--textPrimary);
 }
-.t-label {
-  font-size: var(--fs-meta);
-  font-weight: var(--fw-semibold);
-  color: var(--textMeta);
-}
-/* Quiet grey at the two dense sizes. `.t-caption` is the line under the thing
-   it qualifies — provenance, a count, a timestamp; `.t-sub` the aside beside a
-   control at the control's own size. Each is the ONE spelling of its pair:
-   components asked for `t-small`, `t-meta` and `t-muted` and every one meant
-   `.t-caption`, so typeclass-coverage.test.ts fails a name the scale does not
-   carry and type-one-spelling.test.ts fails a rule that spells the pair itself
-   instead of carrying the class. */
-.t-caption {
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
-}
-.t-sub {
-  font-size: var(--fs-sm);
-  color: var(--textMeta);
-}
-.t-body {
-  font-size: var(--fs-body);
-  color: var(--textContent);
+.t-label,
+.t-caption,
+.t-sub,
+.t-body,
+.t-eyebrow {
+  /* Role hooks; rules are defined on top of the root type in a later change.
+     `font: inherit` is the hook itself — the one shorthand this sheet keeps,
+     because it is what holds the class name declared rather than a style. */
+  font: inherit;
 }
 /* A figure that is read down a column — an amount, a count, a percentage, a
    duration, a date in a table — in the face around it, with every digit one
    width so the column lines up. The family is never changed for alignment:
-   mono is for code, and a figure is not code. No size either, so it rides on
-   whichever size class or context the figure already sits in. */
+   mono is for code, and a figure is not code. */
 .t-num {
   font-variant-numeric: tabular-nums;
-}
-/* The eyebrow: the micro-label above the thing it names. THE one spelling of
-   uppercase micro-type — five sheets used to carry their own copy of it, at
-   11px or 12px and 0.03em or 0.04em, and every copy looked right on its own.
-   The tracking reads --tracking-eyebrow, which is the token named for exactly
-   this: uppercase this small sets cramped at the default spacing.
-   `Eyebrow` (eyebrow.tsx) renders it with the element the caller means.
-
-   Held by: type-one-spelling.test.ts. A rule spelling this whole class fails;
-   a rule drawing uppercase micro-type with its own colour or weight is counted
-   per sheet, and the count can only shrink. The prose above recounted a
-   consolidation and two more copies then appeared inside the design system
-   itself, because nothing failed when they did. */
-.t-eyebrow {
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
-  color: var(--textMeta);
 }
 
 /* Mono is for code, and only for code: an element that IS code — `<code>`,
@@ -684,17 +612,13 @@ kbd {
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-sm);
   background: var(--bgCard);
-  color: var(--textContent);
   font-family: var(--f-mono);
-  font-size: var(--fs-meta);
-  line-height: 1.5;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
 /* Small uppercase label sitting above a code-block or preview section. It IS
-   an eyebrow, so it carries .t-eyebrow for the type and keeps only the one
-   thing that is its own: a span that has to take the full line above the
-   block it names. */
+   an eyebrow, so it carries .t-eyebrow and keeps only the one thing that is its
+   own: a span that has to take the full line above the block it names. */
 .code-label {
   display: block;
 }

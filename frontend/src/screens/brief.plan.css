@@ -16,17 +16,11 @@
   min-width: 0;
 }
 
-.plan-row-label {
-  color: var(--textContent);
-  font-weight: 500;
-}
-
 .plan-row-meta {
   display: flex;
   align-items: baseline;
   flex-wrap: wrap;
   gap: var(--space-2);
-  color: var(--textMeta);
 }
 
 .plan-help {
@@ -42,16 +36,11 @@
   margin: 0;
 }
 
-.plan-help-waiting {
-  color: var(--textMeta);
-}
-
 /* The seat's posture, stated once above the plan. `t-caption` carries the
    size; the reset is here because a `p` in a `PanelBody` otherwise pays a
    browser margin the panel's own gutter has already paid. */
 .plan-readonly {
   margin: 0;
-  color: var(--textMeta);
 }
 
 /* ── What the week is up against ───────────────────────────────────────────
@@ -87,7 +76,6 @@
   gap: var(--space-2);
   min-width: 0;
   flex: 1 1 auto;
-  color: var(--textContent);
 }
 
 /* The editor takes the whole row: a textarea in the answer's column would be a

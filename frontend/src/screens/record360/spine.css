@@ -58,16 +58,15 @@
   min-inline-size: 0;
 }
 
-/* Every date sits on ONE line across the axis, whatever size it is set at.
-   The track's row gives them a common height; they align to its FOOT, so the
-   gap stop's big number and a stop's small date sit on one baseline rather
-   than one hanging from the top of the row and the other from the bottom. */
+/* Every date sits on ONE line across the axis. The track's row gives them a
+   common height; they align to its FOOT, so the gap stop's big number and a
+   stop's small date sit on one baseline rather than one hanging from the top
+   of the row and the other from the bottom. */
 .co-spine-when {
   display: flex;
   align-items: flex-end;
   min-block-size: var(--space-6);
   padding-block-end: var(--space-1);
-  line-height: 1;
   white-space: nowrap;
 }
 
@@ -108,8 +107,6 @@
 
 .co-spine-title {
   display: block;
-  font-size: var(--fs-sm);
-  line-height: 1.4;
   color: var(--textPrimary);
   text-wrap: pretty;
   /* A subject is not prose: mail carries tracking ids and reference strings
@@ -120,28 +117,24 @@
 
 .co-spine-detail {
   display: block;
-  line-height: 1.45;
   margin-block-start: var(--space-1);
   text-wrap: pretty;
   overflow-wrap: anywhere;
 }
 
 /* THE WAITING — the one stop with no record behind it, and the reason this
-   shape exists. The day count is the largest thing on the axis because it is
-   the fact a reader must not be able to skim past, and the rule dashes through
-   it so the silence LOOKS like a broken thread rather than one more entry on
-   an unbroken one. No dot: nothing happened, so there is nothing to mark.
+   shape exists. The day count is the fact a reader must not be able to skim
+   past, and the rule dashes through it so the silence LOOKS like a broken
+   thread rather than one more entry on an unbroken one. No dot: nothing
+   happened, so there is nothing to mark.
 
    Amber, not indigo. The waiting is a warning about the account, not a thing
    Margince authored, and indigo means authorship everywhere else here. */
 .co-spine-gap .co-spine-when {
-  /* The one count in the display face: it is read as a word ("12 days")
-     and compared with nothing, so it takes the size the reading's own
-     figures use rather than the body's tabular figures. */
+  /* The one count in the display face: it is read as a word ("12 days") and
+     compared with nothing, rather than lined up with the body's tabular
+     figures. */
   font-family: var(--f-display);
-  font-size: var(--fs-h1);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-display);
   color: var(--warn);
 }
 .co-spine-gap .co-spine-rail {
@@ -152,7 +145,6 @@
   display: none;
 }
 .co-spine-gap .co-spine-title {
-  font-weight: var(--fw-medium);
   color: var(--warnText);
 }
 .co-spine-gap .co-spine-detail {
@@ -178,7 +170,6 @@
 }
 .co-spine-ahead .co-spine-when {
   color: var(--textPrimary);
-  font-weight: var(--fw-medium);
 }
 
 /* The newest stop says two things: what was said, and what kind of exchange
@@ -189,14 +180,6 @@
 .co-spine-relation {
   display: block;
 }
-.co-spine-relation {
-  /* --textMeta, the AA small-text role, never the muted one: this line carries
-     the kind of exchange and the contacts on it, which is the half of the stop a
-     reader is scanning for. Set lighter it failed contrast AND buried the
-     fact. */
-  color: var(--textMeta);
-}
-
 /* AHEAD OF TODAY — dotted and grey. Nothing has happened here yet, and the
    axis says so before the reader has read a date. */
 .co-spine-ahead .co-spine-rail {
@@ -255,13 +238,5 @@
   white-space: nowrap;
 }
 .co-spine-now-word {
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
   color: var(--textPrimary);
-}
-.co-spine-now-date {
-  font-size: var(--fs-eyebrow);
-  color: var(--textMeta);
 }

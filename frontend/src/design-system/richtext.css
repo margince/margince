@@ -41,7 +41,6 @@
 .richtext-hint {
   margin: 0;
   min-inline-size: 0;
-  color: var(--textMeta);
 }
 
 .richtext-bar {
@@ -64,7 +63,6 @@
   border: none;
   border-radius: var(--r-sm);
   background: transparent;
-  color: var(--textMeta);
   cursor: pointer;
   transition:
     border-color var(--dur-state) var(--ease-out),
@@ -108,7 +106,6 @@
  * scroll to them. A height shrinks; that is the difference. */
 .richtext-input {
   font-family: var(--f-body);
-  font-size: var(--fs-body);
   color: var(--textPrimary);
   padding: 9px 11px;
   outline: none;
@@ -122,7 +119,6 @@
 .richtext-input:empty::before,
 .richtext-input:has(> br:only-child)::before {
   content: attr(data-placeholder);
-  color: var(--textMuted);
   pointer-events: none;
 }
 
@@ -161,7 +157,6 @@
   margin: 0 0 8px;
   padding-left: 10px;
   border-left: 2px solid var(--borderSubtle);
-  color: var(--textMeta);
 }
 
 /* Not now. `contentEditable` has no disabled state of its own, so the refusal is
@@ -170,7 +165,6 @@
    looked live would invite text the returning reference never saw. */
 .richtext.is-disabled .richtext-input,
 .richtext.is-disabled .richtext-foot {
-  color: var(--textTertiary);
   background: var(--bgCard);
   cursor: not-allowed;
 }

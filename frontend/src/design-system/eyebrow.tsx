@@ -3,14 +3,14 @@
 
 import type { ReactNode } from "react";
 
-// The micro-label that sits above the thing it names: 11px, semibold, uppercase,
-// tracked open, in the meta role. It was spelled out five times across three
+// The micro-label that sits above the thing it names; its type rule is defined
+// on the `.t-eyebrow` role hook. It was spelled out five times across three
 // stylesheets — .co-part-label, .co-brief-section-label, .co-timeline-day-heading,
-// .code-label and `.firmo dt` — and no two of them agreed: 11px versus 12px,
-// 0.03em versus 0.04em. Every one looked right on its own.
+// .code-label and `.firmo dt` — and no two of them agreed. Every one looked
+// right on its own.
 //
 // It ships as BOTH a class and a component, and that is deliberate rather than
-// indecision. The declarations live exactly once, in base.css's type ramp beside
+// indecision. The declarations live exactly once, in base.css beside
 // .t-label and .t-caption, because two of the five sites are reached only by a
 // selector — `.firmo dt` names a <dt> the caller never writes a class on, and a
 // component cannot help there. This component is the other half: a TSX caller

@@ -59,7 +59,6 @@
   color: var(--textOnAccent);
   border-radius: var(--r-md);
   padding: 10px 14px;
-  font-size: var(--fs-sm);
   box-shadow: var(--shadow-pop);
   pointer-events: auto;
 }
@@ -111,8 +110,6 @@
   padding: 0;
   background: transparent;
   color: var(--textOnAccent);
-  font: inherit;
-  font-weight: var(--fw-semibold);
   text-decoration: underline;
   cursor: pointer;
 }

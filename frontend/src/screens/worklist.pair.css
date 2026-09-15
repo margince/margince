@@ -49,10 +49,6 @@
   overflow-wrap: anywhere;
 }
 
-.worklist-pair-name {
-  font-weight: var(--fw-semibold);
-}
-
 /* THE KEEP VERB AT ITS CARD'S FOOT, on the card's trailing edge and on the same
    baseline as the other card's.
    `auto` rather than an interval: the two records rarely carry the same number

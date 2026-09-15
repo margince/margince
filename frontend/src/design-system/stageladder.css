@@ -36,10 +36,6 @@
   min-width: 0;
 }
 
-.stage-ladder-sep {
-  color: var(--textMeta);
-}
-
 /* Where the record IS: a marker, not a control, so it takes the accent fill
    the row's one settled fact deserves and none of a button's affordances. Its
    height matches the small controls beside it — a marker set to its own text
@@ -53,8 +49,6 @@
   corner-shape: round;
   background: var(--accent);
   color: var(--textOnAccentControl);
-  font-size: var(--fs-sm);
-  font-weight: var(--fw-semibold);
 }
 
 /* The trail behind the current step. Weight rather than another fill: the row
@@ -62,7 +56,6 @@
    fill would make the reader find the current step twice. */
 .stage-ladder-step.is-done > .btn:not(:disabled) {
   color: var(--textPrimary);
-  font-weight: var(--fw-semibold);
 }
 
 /* A way OUT stands off from the run of open stages: won and lost are

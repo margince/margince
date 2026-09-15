@@ -42,7 +42,6 @@
   flex: none;
   margin: 0;
   font-family: var(--f-display);
-  line-height: 1.15;
 }
 
 .lt-views {
@@ -57,10 +56,6 @@
   flex-shrink: 0;
   border: 0;
   background: transparent;
-  color: var(--textMeta);
-  font: inherit;
-  font-size: var(--fs-sm);
-  font-weight: 500;
   padding: var(--space-1) var(--space-3);
   border-radius: var(--r-full);
   corner-shape: round;
@@ -81,8 +76,6 @@
   /* Holds its line while the rows are loading, so the header does not resize
    * under the reader when the count appears. */
   min-height: 1em;
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
   white-space: nowrap;
 }
 
@@ -101,8 +94,6 @@
 }
 .lt-caption {
   border-bottom: 1px solid var(--borderSubtle);
-  font-size: var(--fs-sm);
-  color: var(--textMeta);
 }
 
 /* ---- toolbar: search, chips, column picker, density ---- */
@@ -131,7 +122,6 @@
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-full);
   corner-shape: round;
-  color: var(--textTertiary);
 }
 .lt-search:focus-within {
   border-color: var(--accent);
@@ -142,21 +132,8 @@
   border: 0;
   outline: 0;
   background: transparent;
-  font: inherit;
-  font-size: var(--fs-sm);
   color: var(--textPrimary);
   width: 180px;
-}
-/* Placeholder text is still text: SC 1.4.3 exempts inactive controls, pure
- * decoration and invisible text, and a placeholder painted inside a live search
- * field is none of the three. --textTertiary is the 3:1 mark role and measures
- * 2.52:1 here, so it does not even carry a mark's floor — the AA small-text
- * role is what a word a reader reads asks for. (The --textMuted named
- * "placeholder-grade" in tokens.css is 1.54:1 and defensible nowhere paint
- * lands.) The magnifier beside it keeps --textTertiary from .lt-search: that
- * one IS a mark. */
-.lt-search-input::placeholder {
-  color: var(--textMeta);
 }
 
 /* Controls a body brings with it (the deals pipeline picker and its stage and
@@ -168,7 +145,6 @@
   width: auto;
   height: 30px;
   padding: 0 var(--space-3);
-  font-size: var(--fs-sm);
   border-radius: var(--r-full);
   corner-shape: round;
   border-color: var(--borderSubtle);
@@ -178,8 +154,6 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
   cursor: pointer;
 }
 /* Sized like every other tick in the product. Its box sits outside a
@@ -211,9 +185,6 @@
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-full);
   corner-shape: round;
-  font: inherit;
-  font-size: var(--fs-sm);
-  color: var(--textMeta);
   cursor: pointer;
   white-space: nowrap;
 }
@@ -249,7 +220,6 @@
    * open inside it and are simply never seen. The end segments carry the
    * rounding instead, so the row still reads as one control. */
   overflow: visible;
-  font-size: var(--fs-sm);
 }
 .lt-frow > :first-child {
   border-top-left-radius: var(--r-full);
@@ -268,7 +238,6 @@
   padding: 0 var(--space-3);
   background: var(--accentLight);
   color: var(--accentText);
-  font-weight: 600;
   white-space: nowrap;
 }
 
@@ -280,9 +249,6 @@
   border: 0;
   border-left: 1px solid var(--borderSubtle);
   background: transparent;
-  font: inherit;
-  font-size: var(--fs-sm);
-  color: var(--textMeta);
   cursor: pointer;
   white-space: nowrap;
 }
@@ -292,7 +258,6 @@
 }
 
 .lt-frow-value {
-  font-weight: 600;
   color: var(--textPrimary);
 }
 
@@ -312,7 +277,6 @@
   border: 0;
   border-left: 1px solid var(--borderSubtle);
   background: transparent;
-  color: var(--textMeta);
   cursor: pointer;
 }
 .lt-frow-more:hover {
@@ -325,8 +289,6 @@
 .lt-fvalue-status {
   margin: 0;
   padding: var(--space-2) var(--space-2);
-  font-size: var(--fs-sm);
-  color: var(--textMeta);
 }
 .lt-fvalue-status.error {
   color: var(--dangerText);
@@ -371,11 +333,6 @@
 
 .lt-mhead {
   padding: var(--space-1) var(--space-2);
-  font-size: var(--fs-eyebrow);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-eyebrow);
-  color: var(--textMeta);
 }
 
 /* The attribute search, at the top of the Filter button's first step. Full
@@ -391,8 +348,6 @@
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-sm);
   background: var(--bgPage);
-  font: inherit;
-  font-size: var(--fs-sm);
   color: var(--textPrimary);
 }
 .lt-fsearch-input:focus {
@@ -409,9 +364,6 @@
   border: 0;
   background: transparent;
   border-radius: var(--r-sm);
-  font: inherit;
-  font-size: var(--fs-sm);
-  color: var(--textContent);
   text-align: left;
   cursor: pointer;
 }
@@ -426,7 +378,6 @@
 .lt-mi-dir {
   display: inline-flex;
   align-items: center;
-  color: var(--textMeta);
 }
 
 /* WHICH ORDER IS IN FORCE, on the right edge where a reader checks it. Always
@@ -482,8 +433,6 @@
    for in the first place. */
 .lt-scope {
   align-self: center;
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
   white-space: nowrap;
 }
 
@@ -554,10 +503,6 @@
    * scrolls under it. Zero spacing keeps the grid looking the same. */
   border-collapse: separate;
   border-spacing: 0;
-  /* A cell is a scanned fact, not a read sentence: the rung the headers, the
-   * count line and the badges already sit on, so a row reads as one register
-   * rather than a body line with meta-sized pills stuck to it. */
-  font-size: var(--fs-meta);
 }
 
 /* With explicit widths in play a cell clips rather than growing a row: the row
@@ -625,9 +570,6 @@
   top: 0;
   z-index: 1;
   text-align: left;
-  font-size: var(--fs-meta);
-  font-weight: var(--fw-medium);
-  color: var(--textMeta);
   padding: var(--space-2) var(--space-3);
   background: var(--bgElevated);
   border-bottom: 1px solid var(--borderSubtle);
@@ -646,7 +588,6 @@
    * carrying one line of text read as the same row rather than two. */
   vertical-align: middle;
   border-bottom: 1px solid var(--borderSubtle);
-  color: var(--textContent);
 }
 
 /* Column dividers. The rows already have horizontal rules, so the verticals turn
@@ -717,7 +658,6 @@
  * as a link — the row already says it is clickable. */
 .lt-cellink {
   display: block;
-  color: inherit;
   text-decoration: none;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -805,7 +745,6 @@
 .lt-table.dense .avatar {
   width: 20px;
   height: 20px;
-  font-size: var(--fs-eyebrow);
 }
 
 /* Compact: the rows tighten, the type does not. Shrinking the text too would
@@ -868,10 +807,6 @@
   padding: 0;
   border: 0;
   background: transparent;
-  font: inherit;
-  color: inherit;
-  text-transform: inherit;
-  letter-spacing: inherit;
   cursor: pointer;
 }
 .lt-sort:hover {
@@ -903,14 +838,12 @@
 .lt-empty td {
   padding: var(--space-6);
   text-align: center;
-  color: var(--textMeta);
 }
 
 .lt-linkish {
   border: 0;
   background: transparent;
   padding: 0;
-  font: inherit;
   color: var(--accentText);
   text-decoration: underline;
   cursor: pointer;
@@ -925,8 +858,6 @@
   padding: var(--space-3) var(--space-4);
   border-top: 1px solid var(--borderSubtle);
   background: var(--bgPage);
-  font-size: var(--fs-sm);
-  color: var(--textMeta);
 }
 
 /* The paging slot the caller fills with its keyset "Load more". */
@@ -961,9 +892,6 @@
   padding: 0 var(--space-2);
   border: 0;
   background: none;
-  font: inherit;
-  font-size: var(--fs-sm);
-  color: var(--textMeta);
   border-radius: var(--r-sm);
   cursor: pointer;
 }
@@ -976,10 +904,8 @@
   /* A filled control, so it takes the control foreground: dark mode lightens
      the accent fill, and the non-control token goes thin against it. */
   color: var(--textOnAccentControl);
-  font-weight: 600;
 }
 .lt-pager button:disabled {
-  color: var(--textTertiary);
   cursor: default;
 }
 /* The pages this row is not showing. Sized like a page button so the row keeps
@@ -991,8 +917,6 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: var(--fs-sm);
-  color: var(--textTertiary);
   user-select: none;
 }
 
@@ -1005,14 +929,9 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: var(--fs-sm);
-  color: var(--textTertiary);
 }
 
 .lt-perpage .select-control {
-  font: inherit;
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
   background: var(--bgElevated);
   border: 1px solid var(--borderStrong);
   border-radius: var(--r-sm);
@@ -1094,10 +1013,6 @@
   .lt-table td::before {
     content: attr(data-label);
     flex: 0 0 38%;
-    font-size: var(--fs-eyebrow);
-    text-transform: uppercase;
-    letter-spacing: var(--tracking-eyebrow);
-    color: var(--textMeta);
   }
 
   /* The identity cell is the card's heading: no label, full width, and it reads
@@ -1112,8 +1027,6 @@
     position: static;
     background: none;
     padding-bottom: var(--space-2);
-    font-size: var(--fs-lead);
-    font-weight: 600;
     color: var(--textPrimary);
   }
   .lt-table td.lt-identity::before {
@@ -1167,7 +1080,6 @@
      page this is. */
   .lt-title {
     width: 100%;
-    font-size: var(--fs-h2);
   }
 
   /* The count stops competing with the tabs for the same line. */

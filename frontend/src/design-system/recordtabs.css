@@ -134,9 +134,6 @@
   border-block-end: 2px solid transparent;
   background: none;
   font-family: var(--f-body);
-  font-size: var(--fs-sm);
-  font-weight: var(--fw-medium);
-  color: var(--textMeta);
   white-space: nowrap;
   cursor: pointer;
 }
@@ -168,17 +165,6 @@
   color: var(--textPrimary);
   border-block-end-color: var(--accent);
   cursor: default;
-}
-
-/* The count is a figure, so it reads in tabular digits (`.t-num`, through
-   `OptionCount`) that share one width — a strip of counts lines up instead of
-   shifting tab to tab. Quieter
-   than the label it follows: the word is what a reader is looking for and the
-   number is what they check once they have found it. */
-.recordtabs-count {
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-regular);
-  color: var(--textMeta);
 }
 
 /* Something waits behind this tab. An accent dot rather than an indigo one:

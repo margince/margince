@@ -13,7 +13,6 @@
 }
 .pn-route {
   margin: 0;
-  line-height: 1.5;
 }
 /* The ways in, best first. An ordered list because the order is the meaning:
    the first row is the recommendation, and a reader who has to work out which
@@ -37,8 +36,6 @@
 }
 .pn-route-rank {
   font-variant-numeric: tabular-nums;
-  font-size: var(--fs-meta);
-  color: var(--textTertiary);
   min-width: 1.5em;
 }
 .pn-route-who {
@@ -54,7 +51,6 @@
   display: grid;
   gap: var(--space-1);
   justify-items: start;
-  text-transform: capitalize;
 }
 .pn-meter-bars {
   display: flex;
@@ -107,12 +103,10 @@
   white-space: normal;
   overflow-wrap: anywhere;
   text-align: start;
-  line-height: var(--lh-snug);
 }
 .pn-receipts {
   margin: var(--space-2) 0 0;
   padding-left: var(--space-4);
-  font-size: var(--fs-sm);
   overflow-wrap: anywhere;
 }
 /* A read that failed. Danger, because the reader is being told the answer on
@@ -159,17 +153,10 @@
 }
 .pn-reading b {
   font-family: var(--f-display);
-  font-size: var(--fs-lead);
-  font-weight: var(--fw-semibold);
-  line-height: 1.1;
   font-variant-numeric: tabular-nums;
 }
 .pn-reading b small {
   font-family: var(--f-body);
-  /* ds:ignore .t-caption loses to `.pn-reading b`'s display face */
-  font-size: var(--fs-meta);
-  font-weight: var(--fw-medium);
-  color: var(--textMeta);
   margin-left: var(--space-1);
 }
 /* Who sent what: the target's share in full accent, the colleague's in the
@@ -260,11 +247,9 @@
 }
 .pn-hero-who p {
   margin: var(--space-1) 0 0;
-  color: var(--textMeta);
 }
 .pn-hero-arrow {
   color: var(--accent);
-  font-size: var(--fs-lead);
 }
 .pn-facts {
   display: flex;
@@ -312,19 +297,12 @@
 }
 .pn-relay-step strong {
   display: block;
-  line-height: 26px;
-}
-.pn-relay-waiting strong {
-  color: var(--textMeta);
-  font-weight: var(--fw-medium);
 }
 .pn-relay-step small {
   display: block;
-  color: var(--textMeta);
 }
 .pn-relay-current small {
   color: var(--accentText);
-  font-weight: var(--fw-medium);
 }
 .pn-relay-num {
   position: relative;
@@ -358,24 +336,12 @@
   border-radius: var(--r-control);
   corner-shape: round;
   background: var(--bgChip);
-  font-size: var(--fs-sm);
 }
 .pn-relay-due {
   margin-left: auto;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
-/* The chip's own ink, because the date lands ON the fill above. `.t-caption`
-   carries the size and sets --textMeta with it, which reads 4.07:1 over the
-   chip on --bgCard — the fill spends exactly the headroom --textMeta has not
-   got, and --textChip is the token that exists for it. Both classes rather than
-   one: `.t-caption` sets its colour at a single class of specificity, so a rule
-   naming only `.pn-relay-due` would win or lose on whichever sheet the bundler
-   put last. */
-.pn-relay-owner .pn-relay-due {
-  color: var(--textChip);
-}
-
 /* What moved: a dated list, newest first. A column of dates because it is a
    chronology, and a reader scans it rather than reads it. */
 .pn-moments {
@@ -389,7 +355,6 @@
   gap: var(--space-3);
   align-items: baseline;
   padding: var(--space-2) 0;
-  font-size: var(--fs-sm);
 }
 .pn-moment + .pn-moment {
   border-top: 1px solid var(--borderSubtle);
@@ -402,11 +367,9 @@
   align-items: baseline;
   column-gap: var(--space-2);
   margin: 0;
-  color: var(--textContent);
 }
 .pn-moment:first-child p {
   color: var(--textPrimary);
-  font-weight: var(--fw-medium);
 }
 .pn-moment-when {
   font-variant-numeric: tabular-nums;

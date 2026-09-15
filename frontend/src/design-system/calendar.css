@@ -17,7 +17,6 @@
 }
 .calendar-month {
   flex: 1;
-  font-weight: var(--fw-medium);
 }
 
 .calendar-grid {
@@ -25,10 +24,6 @@
   grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: var(--space-1);
   justify-items: center;
-}
-
-.calendar-weekday {
-  color: var(--textMeta);
 }
 
 /* A day is a circle the size of the tap target, not a cell: the selected day
@@ -46,7 +41,6 @@
   corner-shape: round;
   background: none;
   font-family: var(--f-body);
-  font-size: var(--fs-sm);
   color: var(--textPrimary);
   cursor: pointer;
 }
@@ -58,24 +52,15 @@
   outline-offset: 2px;
 }
 
-/* A neighbouring month's day. Still pressable — a reader who wants the 1st of
-   next month should not have to page for it — but quiet, so the month on show
-   is legible as a block. */
-.calendar-day-outside {
-  color: var(--textMuted);
-}
-
 /* Today, unchosen: a quiet disc. It answers "where am I" without competing
    with the day the reader has actually picked. */
 .calendar-day-today {
   background: var(--bgHover);
-  font-weight: var(--fw-medium);
 }
 
 .calendar-day[aria-pressed="true"] {
   background: var(--accent);
   color: var(--textOnAccentControl);
-  font-weight: var(--fw-medium);
 }
 .calendar-day[aria-pressed="true"]:hover {
   background: var(--accent);

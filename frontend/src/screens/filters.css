@@ -41,40 +41,15 @@
 }
 
 .filters-count {
-  font-weight: 600;
-  color: var(--textContent);
   /* Tabular figures so the number does not shift the badge beside it as the
    * count crosses a digit — a count that recomputes on every keystroke would
    * otherwise nudge the row on each edit. */
   font-variant-numeric: tabular-nums;
 }
 
-/* A count being recomputed is the LAST answer, dimmed — not a spinner. It reads
- * as "this is a moment behind", which is true, where a spinner reads as "there
- * is no answer", which is not. */
-/* --textMeta, not --textMuted: this is a count a contact reads, and --textMuted
- * is the decorative tone (1.53:1 on the page). The stale state means "this
- * number is one edit behind", not "stop reading it". */
-.filters-count[data-stale="true"] {
-  color: var(--textMeta);
-}
-
-/* No complete clause yet: not a number at all, because zero would claim nothing
- * matches when in fact nothing has been asked. */
-.filters-count-unasked {
-  font-weight: 400;
-  /* The AA small-text role. This line is the whole instruction a reader has
-   * before they have authored anything, so it is the last text on the screen
-   * that may be unreadable. */
-  color: var(--textMeta);
-}
-
-/* Asked and refused. Not muted like the state above it: a reader with a finished
- * clause on screen would take a grey line as their own unfinished work, which is
- * the falsehood this reading exists to end. The reason and the retry are in the
- * results card, the only row wide enough for both. */
+/* Asked and refused. The reason and the retry are in the results card, the only
+ * row wide enough for both. */
 .filters-count-failed {
-  font-weight: 400;
   color: var(--dangerText);
 }
 
@@ -87,5 +62,4 @@
  * one a reader cannot act on. */
 .filters-export-error {
   color: var(--dangerText);
-  font-weight: var(--fw-medium);
 }

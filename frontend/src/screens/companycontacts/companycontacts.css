@@ -17,8 +17,6 @@
  * ground its own family paints. */
 .cp-seat-mark {
   margin: 0 0 var(--space-1);
-  font-size: var(--fs-meta);
-  font-weight: var(--fw-semibold);
   color: var(--aiText);
 }
 
@@ -39,7 +37,6 @@
  * already faded cannot tell them why nothing changed. */
 .cp-write-note {
   margin: 0 0 var(--space-2);
-  color: var(--textMeta);
 }
 
 /* The two verbs on an unconfirmed seat. */
@@ -53,7 +50,6 @@
  * the fields get room rather than the compact shape a confirm dialog uses. */
 .cp-intro-who {
   margin: 0 0 var(--space-3);
-  color: var(--textMeta);
 }
 
 .cp-intro-mark {
@@ -63,13 +59,10 @@
 .cp-intro-field {
   display: block;
   margin: var(--space-3) 0 var(--space-1);
-  font-size: var(--fs-meta);
-  font-weight: var(--fw-semibold);
 }
 
 .cp-intro-why {
   margin: var(--space-3) 0 var(--space-1);
-  color: var(--textMeta);
 }
 
 .cp-intro-error {

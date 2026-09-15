@@ -170,13 +170,7 @@ function StrengthBody({
           const pct = factorPercent(row.value);
           return (
             <div key={row.key}>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  fontSize: "var(--fs-sm)",
-                }}
-              >
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <span>{t(`strength.factor.${row.key}`)}</span>
                 <span className="t-num">{formatNumber(pct, locale)}%</span>
               </div>

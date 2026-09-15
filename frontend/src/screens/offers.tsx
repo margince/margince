@@ -462,11 +462,7 @@ function UnitPriceCell({
 // something a human free-types over. It stays ungrounded until a regenerate
 // re-grounds it, or the human removes it and re-adds it with a price.
 function UnpricedCaption({ label }: Readonly<{ label: string }>) {
-  return (
-    <span className="t-caption" style={{ color: "var(--textMeta)" }}>
-      {label}
-    </span>
-  );
+  return <span className="t-caption">{label}</span>;
 }
 
 function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {

@@ -96,14 +96,9 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  font-size: var(--fs-sm);
 }
 
 .dc-seat-name {
   flex: 1 1 auto;
   min-width: 0;
-}
-
-.dc-role {
-  color: var(--textMeta);
 }

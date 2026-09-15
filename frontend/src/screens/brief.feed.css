@@ -145,10 +145,6 @@
 .brief-focus-grid .panel-foot {
   margin-top: auto;
 }
-.brief-focus-grid .worklist-row-title {
-  font-weight: var(--fw-medium);
-}
-
 /* Swipe gestures keep a real wrapper on phones; it follows the card layout. */
 .brief-focus-grid .swipe-row {
   flex: none;

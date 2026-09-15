@@ -11,8 +11,6 @@
   gap: var(--space-2);
   min-width: 0;
   max-width: 100%;
-  font: inherit;
-  color: var(--textContent);
   text-align: left;
 }
 
@@ -20,7 +18,6 @@
   flex: none;
   width: 16px;
   height: 16px;
-  color: var(--textTertiary);
 }
 
 /* The subject takes the room and gives it back: a long one truncates rather
@@ -34,8 +31,6 @@
 
 .emailref__when {
   flex: none;
-  color: var(--textMeta);
-  font-size: var(--fs-meta);
 }
 
 /* The stacked shape: the glyph spans both lines, the subject takes the top and
@@ -54,7 +49,6 @@
 }
 .emailref--stacked .emailref__subject {
   grid-column: 2;
-  font-weight: var(--fw-medium);
   color: var(--textPrimary);
 }
 .emailref--stacked .emailref__when {

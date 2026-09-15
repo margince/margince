@@ -42,7 +42,6 @@
 
 .worklist-lead {
   margin: 0;
-  color: var(--textContent);
 }
 
 /* The two dials over the day, at the trailing end of the sentence they change.
@@ -159,18 +158,15 @@
   justify-content: flex-end;
 }
 
-/* What the page is not showing. Quiet on purpose: this is the surface reporting
-   on itself rather than a row of work, and it must not compete with the queue
-   for the reader's eye. */
+/* What the page is not showing: the surface reporting on itself rather than a
+   row of work. */
 .worklist-completeness {
-  color: var(--textMeta);
   margin: 0;
 }
 
 /* No interval of its own — it stands in the queue's place in the page's stack,
    and the stack spaces it. */
 .worklist-clear {
-  color: var(--textMeta);
   margin: 0;
 }
 
@@ -231,7 +227,6 @@
    which is what lets a band with no rows draw a heading and a line saying so.
    The first heading needs no gap above it. */
 .worklist-band {
-  color: var(--textMeta);
   display: block;
   margin: var(--space-5) 0 var(--space-2);
 }
@@ -241,30 +236,26 @@
 }
 
 /* The sub-heading inside a band: which day this run of work is due.
-   Quieter than the band above it and indented to the same gutter, so it reads
-   as a division WITHIN the band rather than as a band of its own. */
+   Indented to the same gutter as the band above it, so it reads as a division
+   WITHIN the band rather than as a band of its own. */
 .worklist-due-run {
-  color: var(--textMeta);
   display: block;
   margin: var(--space-4) 0 var(--space-2);
   padding-inline: var(--padPanel);
 }
 
-/* What an empty band says. Set in the meta ink so a clear band reads as a quiet
-   answer rather than as the same weight as work. */
+/* What an empty band says. */
 .worklist-band-clear {
-  color: var(--textMeta);
   margin: 0;
 }
 
 /* The rank reads as a marker beside the row rather than as part of the
-   sentence, so it is set in the muted tone at a fixed width: a two-digit
-   number must not shift the titles beside it.
+   sentence, so it is set at a fixed width: a two-digit number must not shift
+   the titles beside it.
    The width is the same rung `.worklist-rank-select` takes, because the two
    stand in the same column — a pressable rank and a bare one at different
    widths would put the titles beside them at two different x. */
 .worklist-rank {
-  color: var(--textMeta);
   display: inline-block;
   flex: 0 0 auto;
   min-width: var(--space-6);
@@ -279,15 +270,12 @@
   gap: var(--space-3);
 }
 
-/* Every figure is a floor when the read was cut. Stated before the numbers, and
-   in the tone the surface uses for warnings about itself. */
+/* Every figure is a floor when the read was cut. Stated before the numbers. */
 .worklist-hidden-truncated {
-  color: var(--textMeta);
   margin: 0;
 }
 
 .worklist-hidden-clear {
-  color: var(--textMeta);
   margin: 0;
 }
 
@@ -306,17 +294,15 @@
   grid-template-columns: auto 1fr;
 }
 
-/* The count leads, because the question a reader opens this for is "how much".
-   Tabular so four rows of figures line up rather than drifting by digit width. */
+/* Tabular so four rows of figures line up rather than drifting by digit
+   width. */
 .worklist-hidden-count {
   font-variant-numeric: tabular-nums;
-  font-weight: 600;
 }
 
 /* The detail sits under the label rather than beside it: it is a sentence about
    whose choice the rule was, and a third column would squeeze it to one word. */
 .worklist-hidden-detail {
-  color: var(--textMeta);
   grid-column: 2;
 }
 

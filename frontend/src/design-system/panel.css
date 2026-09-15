@@ -45,27 +45,10 @@
   border-bottom: 1px solid var(--borderSubtle);
 }
 /* The zone's title in the display face: the one word a reader finds a zone
- * by, so it is set as a heading rather than as a label on a card.
- *
- * ONE size, and this is the only rule in the product that states it. A title is
- * what a reader scans a column of panels for, so a pane that set its own read
- * as a different kind of card — and four sizes were in the tree, from body up
- * to a section rung. `--fs-panel-title` is the house's answer: a tone below and
- * a screen sheet anywhere in the tree may recolour this title and may not
- * resize it, which `panel.test.tsx` sweeps for. */
+ * by, so it is set as a heading rather than as a label on a card. */
 .panel-head .panel-title {
   font-family: var(--f-display);
-  font-size: var(--fs-panel-title);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-display);
   color: var(--textPrimary);
-  /* The band's own leading, tighter than the body scale: a single line
-     inherits its half-leading as air above and below, and at the reading
-     scale the title and the description together sat low in the 56px the
-     band gives them. Declared here rather than left to inherit, so the pair
-     is centred by the same number on every page whatever text scale the
-     surrounding screen sets. */
-  line-height: 1.25;
 }
 
 /* The title and its description are one stacked item, and that item absorbs the
@@ -86,19 +69,6 @@
   gap: 0;
   min-width: 0;
   margin-right: auto;
-}
-
-/* The description reads UNDER the title, not beside it at the same volume: the
- * title is what a reader scans a page of panels for, and the line under it is
- * what they read once they have found the one they want. It is meta type for
- * that reason and not only for room, though room is why the pair fits: 16px of
- * title over 12px of meta clears the band with air to spare. */
-.panel-head-sub {
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
-  /* The title's leading, so the two lines of the head are one block set on
-     one interval rather than two lines each spaced by its own rung. */
-  line-height: 1.25;
 }
 
 /* Both lines of the head end in an ellipsis rather than in a second row: the
@@ -308,8 +278,6 @@
   flex-wrap: wrap;
   padding: var(--space-3) var(--padPanel);
   border-top: 1px solid var(--borderSubtle);
-  font-size: var(--fs-sm);
-  color: var(--textMeta);
 }
 
 /* Verbs under the content they change: spaced off it so they read as an action
@@ -343,15 +311,9 @@
  * it, and the title carries it in ink alone.
  *
  * A TONE ONLY TINTS. The band's height, its padding and its alignment belong to
- * `.panel-head` above, and the title's size to `--fs-panel-title` — a lead that
- * changed size when its finding turned bad, or an indigo panel whose title
- * stood smaller than the one beside it, would read as a different card rather
- * than as the same card in a different mood. Each of these families did set its
- * own title size once, a rung DOWN, which is how a page could show the ask and
- * the report at two sizes and neither of them chosen. What is left for a tone
- * is the ground, the hairline's colour and the title's colour; the icon
- * alignment below is the tone's own, because only a toned head leads its title
- * with a mark. */
+ * `.panel-head` above. What is left for a tone is the ground, the hairline's
+ * colour and the title's colour; the icon alignment below is the tone's own,
+ * because only a toned head leads its title with a mark. */
 .panel-accent > .panel-head,
 .panel-warn > .panel-head {
   gap: var(--space-2);
