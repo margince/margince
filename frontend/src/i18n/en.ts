@@ -36,6 +36,8 @@ export const en = {
   "aiAdmin.previewHint":
     "Preview of current conditions. Saving checks the latest settings and usage again; this does not reserve capacity or call a model.",
   "aiAdmin.features": "AI by activity",
+  "aiAdmin.featuresWithheld":
+    "Only a reader who holds both AI diagnostics read and AI allowance read can see which features are live right now.",
   "aiAdmin.save": "Save allowance",
   "aiAdmin.cancel": "Cancel",
   "aiAdmin.prospective":

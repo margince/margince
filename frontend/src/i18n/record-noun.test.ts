@@ -261,6 +261,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "tab.relationships",
     // A colleague, a user, an admin, an operator — somebody with a seat here.
     "acctCoverage.columnCap",
+    "aiAdmin.featuresWithheld",
     "aiProviderKeys.withheld",
     "aiRouting.withheld",
     "analytics.share.liveHelp",

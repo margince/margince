@@ -41,6 +41,8 @@ export const de = {
   "aiAdmin.previewHint":
     "Vorschau aktueller Bedingungen. Beim Speichern werden Einstellungen und Verbrauch erneut geprüft. Dies reserviert keine Kapazität und ruft kein Modell auf.",
   "aiAdmin.features": "KI nach Tätigkeit",
+  "aiAdmin.featuresWithheld":
+    "Nur eine Leserin oder ein Leser mit den Leserechten für KI-Diagnose UND KI-Kontingent sieht, welche Funktionen gerade aktiv sind.",
   "aiAdmin.save": "Kontingent speichern",
   "aiAdmin.cancel": "Abbrechen",
   "aiAdmin.prospective":

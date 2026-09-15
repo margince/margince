@@ -15,12 +15,18 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-func (s *AdminStore) current(ctx context.Context) (crmcontracts.AiBudgetSnapshot, RoutingConfig, error) {
+// observed is the read surfaces' snapshot: it never errors on a stored budget that
+// has grown past the overflow ceiling (see AdminStore.observedTx), so a workspace
+// already over-cap can still be read and corrected. Real spend (compose's
+// seatBudget.MonthlyTokenBudget) stays on BudgetConfig.MonthlyTokens's strict,
+// fail-closed contract — only observing an already-stored value tolerates the
+// overflow, never authorizing more of it.
+func (s *AdminStore) observed(ctx context.Context) (crmcontracts.AiBudgetSnapshot, RoutingConfig, error) {
 	var budget crmcontracts.AiBudgetSnapshot
 	var cfg RoutingConfig
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		budget, err = s.currentTx(ctx, tx)
+		budget, err = s.observedTx(ctx, tx)
 		if err != nil {
 			return err
 		}
@@ -40,7 +46,7 @@ func (s *AdminStore) ReadStatus(ctx context.Context) (crmcontracts.AiStatus, err
 	if err := auth.Require(ctx, budgetObject, principal.ActionRead); err != nil {
 		return crmcontracts.AiStatus{}, err
 	}
-	budget, cfg, err := s.current(ctx)
+	budget, cfg, err := s.observed(ctx)
 	if err != nil {
 		return crmcontracts.AiStatus{}, err
 	}
@@ -67,7 +73,7 @@ func (s *AdminStore) PreviewBudget(ctx context.Context, change BudgetChange) (cr
 	if err := auth.Require(ctx, budgetObject, principal.ActionUpdate); err != nil {
 		return crmcontracts.AiBudgetPreview{}, err
 	}
-	current, cfg, err := s.current(ctx)
+	current, cfg, err := s.observed(ctx)
 	if err != nil {
 		return crmcontracts.AiBudgetPreview{}, err
 	}
@@ -99,7 +105,7 @@ func (s *AdminStore) PreviewRouting(ctx context.Context, next RoutingConfig) (cr
 	if err := validateStoredRouting(next); err != nil {
 		return crmcontracts.AiRoutingPreview{}, settings.InvalidValue{Setting: RoutingKey, Code: settings.CodeInvalidValue, Reason: err.Error()}
 	}
-	budget, cfg, err := s.current(ctx)
+	budget, cfg, err := s.observed(ctx)
 	if err != nil {
 		return crmcontracts.AiRoutingPreview{}, err
 	}

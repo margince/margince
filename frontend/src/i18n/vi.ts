@@ -49,6 +49,8 @@ export const vi = {
   "aiAdmin.previewHint":
     "Xem trước điều kiện hiện tại. Khi lưu, hệ thống kiểm tra lại cài đặt và mức dùng. Thao tác này không giữ chỗ năng lực hay gọi mô hình.",
   "aiAdmin.features": "AI theo hoạt động",
+  "aiAdmin.featuresWithheld":
+    "Chỉ người có cả quyền đọc chẩn đoán AI và quyền đọc hạn mức AI mới xem được các tính năng đang hoạt động.",
   "aiAdmin.save": "Lưu hạn mức",
   "aiAdmin.cancel": "Hủy",
   "aiAdmin.prospective":
