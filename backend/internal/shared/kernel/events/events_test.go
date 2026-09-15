@@ -159,6 +159,12 @@ func TestCatalogTypesObeyNamingConvention(t *testing.T) {
 		// password_link_issued does: this stream also carries the recording, and
 		// "lifted" alone would not say which of the two happened.
 		"suppression_lifted": true,
+		// A seat decided how one class of notification reaches them. The verb
+		// carries its object for the reason password_link_issued does: this
+		// stream also carries the notices themselves, so "changed" alone would
+		// leave a consumer unable to tell a notice moving from the routing that
+		// decides where the next one goes.
+		"preference_changed": true,
 	}
 
 	for _, typ := range Types() {
