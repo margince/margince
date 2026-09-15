@@ -1,10 +1,7 @@
 # Settings
 
-Settings is reached from the **account menu**, not from the main navigation.
-
-It has **seven groups** and 28 pages. Which of them you see depends on what your
-role lets you do, and the rule has two halves worth knowing, because they answer
-two different questions.
+Open Settings from the **account menu**. Its seven groups and 28 pages follow
+your permissions:
 
 **The sidebar lists what you can change.** A page whose every control is closed
 to you is not in it. That is about prominence, not permission — it keeps the list
@@ -172,8 +169,6 @@ What the installation is wired to, as opposed to what one contact connected.
   refresh policy.
 - **Webhooks** — "Outbound subscriptions that receive signed HTTP POSTs for
   chosen events." Deliveries can be inspected and replayed.
-- **HubSpot mirror** — connecting an existing HubSpot portal in read-and-sync
-  mode, and the one-way switch to running natively.
 
 ## Extensions
 
@@ -257,7 +252,47 @@ also run entirely against a local model with no cloud key at all.
 
 **Automations** — the trigger-and-action catalogue.
 
+**Monthly AI allowance** — Admin and Ops can edit the tokens per active full user,
+and optionally set a fixed company total. Tokens are pooled across the company;
+this is not an individual quota or a dollar spending cap. The default is 12 million
+tokens per active full user each month. With no eligible users, the calculation
+counts one user. A fixed company total overrides that calculation without deleting
+the per-user value. Management can read the allowance, but cannot change it.
+
+The allowance resets at the start of each calendar month in UTC. At 80% usage,
+routing moves to lower tiers; the actual model can stay the same when two tiers
+share a binding. At 100%, background completions wait and interactive calls use
+the lowest tier. Search embeddings continue and still count toward usage. The
+persistent allowance notice is shown to users who can manage the allowance and
+links to AI usage.
+
+Preview an allowance or model change before saving it. A save is refused when the stored configuration differs from the one previewed.
+Revisions identify configuration values: changing a value and restoring it restores its revision. Raising the allowance makes eligible saved website
+reads, account scans and voice builds runnable on the next reconciliation pass,
+normally within a minute. This preserves the original request, authority and
+attempt limits; it does not guarantee a provider will answer. Other scheduled
+passes keep their normal cadence. The waiting counts cover these durable carriers,
+not every AI task in the company.
+
+Models are presented by activity. The selection shown is the current policy,
+while Model calls shows what actually ran. Shared bindings remain under Advanced;
+changing one can affect several activities. Tier names do not prove where data is
+processed or how much it costs. Prices explicitly name input and output costs per
+one million tokens, rather than using an unexplained arrow.
+
 **AI usage**, **Model costs** and **AI calls** — what has been spent and on what.
+
+The allowance's configuration requires allowance-read permission. Routing details
+require routing-read; model previews also require routing-update. Saved-work
+counts require diagnostics-read permission. A budget-only editor can preview the
+allowance without gaining either of those readings. Counts describe saved budget
+deferrals, not a guarantee of execution: the original requester's current access
+is checked again before recovery. Revoked or inactive requesters remain parked;
+restoring access makes them eligible for a later pass. Missing jobs and database
+failures remain visible in job health.
+
+Feature routes describe the stored binding. Running processes converge on a saved
+binding at their reread interval; an in-flight call keeps the binding it started with.
 
 ## Knowledge
 
@@ -322,8 +357,6 @@ reading and "empty the installation" are no longer three buttons on one screen.
 Pages follow **permissions**, not role names. A custom role holding the right
 permission reaches the page with no change to the product, and an Admin whose
 role lost a permission stops reaching the page that needs it.
-
-Two questions, and they have different answers:
 
 - **Can I open it?** Search finds it, the settings home lists it, and its address
   works.

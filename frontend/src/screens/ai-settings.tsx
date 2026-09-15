@@ -150,7 +150,7 @@ export function ProvidersStat() {
     );
   }
   const keyed = providers.filter((p) => p.configured).length;
-  const bound = routing.data ? boundProviders(routing.data) : null;
+  const bound = routing.data ? boundProviders(routing.data.routing) : null;
   const missing =
     bound === null
       ? null
@@ -198,7 +198,7 @@ export function ProvidersStat() {
 // all real ways to get such a body, and none of them should cost a reader the
 // page. The caller already draws an unanswered read; this is one.
 function boundProviders(
-  routing: NonNullable<ReturnType<typeof useRouting>["data"]>,
+  routing: NonNullable<ReturnType<typeof useRouting>["data"]>["routing"],
 ): Set<string> | null {
   if (routing.tiers === undefined || routing.embeddings === undefined) {
     return null;

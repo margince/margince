@@ -42,9 +42,7 @@ func promisesDue(n int) []Commitment {
 // needs_you has always had: tell them forty, then show the few worth a sitting.
 func TestThePlannedBadgeCountsWhatThereIsNotWhatFits(t *testing.T) {
 	tasks := &stubTasks{rows: tasksDue(plannedCap), total: plannedCap + 1}
-	s := NewService(
-		stubApprovals{}, stubDuplicates{}, tasks, stubReceipts{},
-		stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+	s := NewService(stubApprovals{}, stubDuplicates{}, tasks, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
 
 	day, err := s.Assemble(pageReader())
 	if err != nil {
@@ -65,7 +63,7 @@ func TestTheCommitmentsBadgeCountsWhatThereIsNotWhatFits(t *testing.T) {
 	promises := &stubCommitments{rows: promisesDue(plannedCap), total: plannedCap + 5}
 	s := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
-		stubBriefing{}, promises, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+		stubBriefing{}, promises, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
 
 	day, err := s.Assemble(pageReader())
 	if err != nil {
@@ -84,9 +82,7 @@ func TestTheCommitmentsBadgeCountsWhatThereIsNotWhatFits(t *testing.T) {
 // that appears when the count breaks is the same bug with a rarer trigger.
 func TestACountThatWillNotAnswerIsNotReplacedByThePageLength(t *testing.T) {
 	tasks := &stubTasks{rows: tasksDue(3), countErr: context.DeadlineExceeded}
-	s := NewService(
-		stubApprovals{}, stubDuplicates{}, tasks, stubReceipts{},
-		stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+	s := NewService(stubApprovals{}, stubDuplicates{}, tasks, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
 
 	if _, err := s.Assemble(pageReader()); err == nil {
 		t.Error("the day assembled with a count that failed, so the badge came from somewhere else")
@@ -103,7 +99,7 @@ func TestACountThisReaderMayNotMakeWithholdsItsLane(t *testing.T) {
 	promises := &stubCommitments{rows: promisesDue(2), countErr: apperrors.ErrPermissionDenied}
 	s := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
-		stubBriefing{}, promises, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+		stubBriefing{}, promises, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
 
 	day, err := s.Assemble(pageReader())
 	if err != nil {

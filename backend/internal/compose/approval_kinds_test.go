@@ -191,13 +191,12 @@ func TestCollidingEffectKindsAreCoveredByProvenance(t *testing.T) {
 // Every confirm-first row the CONTRACT declares has a decision mapping too —
 // including a verb no tool implements.
 //
-// The registry sweep above walks what is registered, which is why it could not
-// see #484: `connect_incumbent` was declared confirmation_required by an
-// operation with no registered tool at all, so an agent's call cleared the
-// admission gate, reached stageRefusal, found no mapping and answered 403. It
-// was fail-closed and it was also unreachable capability the contract kept
-// advertising — a shape only the generated policy table shows, since that table
-// is the contract's own reading of itself.
+// The registry sweep above walks what is REGISTERED, so it cannot see a verb
+// declared confirmation_required by an operation with no registered tool at
+// all: an agent's call clears the admission gate, reaches stageRefusal, finds
+// no mapping and answers 403. That is fail-closed, and it is also unreachable
+// capability the contract keeps advertising — a shape only the generated policy
+// table shows, since that table is the contract's own reading of itself.
 //
 // There is deliberately NO waiver. A verb that cannot honestly be staged has
 // the wrong annotation, and the fix is `x-agent-access: human-only` in

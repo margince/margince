@@ -255,6 +255,58 @@ func TestDedupeQueuePagesByConfidence(t *testing.T) {
 	}
 }
 
+// An over-cap page ask is CLAMPED to the maximum, not reset to the default.
+//
+// One condition covering both ends answered the default of twenty-five rows to
+// a caller asking for more than the page maximum. The ranked queue on Home asks
+// for a census of two hundred, so it saw the twenty-five highest-confidence
+// pairs and no others — and because the cut falls on the confidence order, the
+// ones that stayed hidden were the low-confidence pairs nothing else on the
+// surface would ever mention.
+//
+// The seed is read back through the store's own count rather than assumed: a
+// fuzzy create records what it scores, so the case guards that it really did
+// leave more open pairs than one default page holds.
+func TestAnOverCapPageAskIsClampedRatherThanResetToTheDefault(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	for _, name := range surnamesPastOnePage {
+		lower := strings.ToLower(name)
+		_, _ = seedContactPair(ctx, t, e,
+			"Kim "+name, "kim@"+lower+".test",
+			"Kym "+name, "kym@"+lower+".test", lower+".test")
+	}
+
+	open, err := e.store.CountOpenDedupeCandidates(ctx)
+	if err != nil {
+		t.Fatalf("counting open pairs: %v", err)
+	}
+	if open <= dedupeQueueDefaultLimit {
+		t.Fatalf("the seed left %d open pairs, and this case needs more than one default page of %d",
+			open, dedupeQueueDefaultLimit)
+	}
+
+	rows, _, err := e.store.ListDedupeCandidates(ctx, DedupeQueueInput{Limit: dedupeQueueMaxLimit + 1})
+	if err != nil {
+		t.Fatalf("listing past the cap: %v", err)
+	}
+	if len(rows) != open {
+		t.Fatalf("asked for %d and got %d of %d open pairs — an ask past the maximum fell back to the default, "+
+			"so everything below the %dth highest confidence is unreachable",
+			dedupeQueueMaxLimit+1, len(rows), open, dedupeQueueDefaultLimit)
+	}
+}
+
+// One more surname than a default page holds, each unlike the others so a pair
+// is made with its own near-duplicate and not with the next entry.
+var surnamesPastOnePage = []string{
+	"Achterberg", "Blomqvist", "Castellanos", "Dimitrova", "Eriksen", "Fontaine",
+	"Grigoryan", "Hollanders", "Iwasaki", "Janowitz", "Kowalczyk", "Lindqvist",
+	"Mbeki", "Nakamura", "Oyelaran", "Pettersson", "Quintero", "Rasmussen",
+	"Schwarzkopf", "Thibodeaux", "Ueno", "Vandenberghe", "Wojciechowski",
+	"Xiaoping", "Yamaguchi", "Zaytseva",
+}
+
 // asAgent is a non-human principal — the disposition verbs are human-only
 // whatever the transport claims.
 func (e *dedupeEnv) asAgent() context.Context {

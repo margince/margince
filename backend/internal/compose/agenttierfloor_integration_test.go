@@ -151,9 +151,9 @@ func TestAnOrdinaryCompanyPatchStillRunsUnattended(t *testing.T) {
 // production supplies it.
 func composedRegistry(e *integration.Env) *agents.Registry {
 	// The nils are the readers this test's tools never reach: a drafter, an
-	// incumbent resolver, an embedder, a transcript enqueue, an imports reader, a
-	// meeting-brief reader and a logger. What it exercises is the tier floor.
-	return registryWithGate(e.DB(), auth.NewGate(adminSeat{}), nil, nil,
+	// embedder, a transcript enqueue, an imports reader, a meeting-brief reader
+	// and a logger. What it exercises is the tier floor.
+	return registryWithGate(e.DB(), auth.NewGate(adminSeat{}), nil,
 		SendPath{}, companyEnricher{}, nil, nil, nil, nil, nil)
 }
 

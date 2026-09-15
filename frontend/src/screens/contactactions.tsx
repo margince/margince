@@ -57,7 +57,6 @@ function writeRefusal(
 export function ContactActions({
   view,
   contactId,
-  overlay,
   onWrite,
   onResearch,
   onLogActivity,
@@ -66,12 +65,6 @@ export function ContactActions({
 }: Readonly<{
   view: Contact360;
   contactId: string;
-  // Read at screen level and handed down so the custom-field schema request
-  // runs BESIDE the contact's. See ContactRecordActions's own prop.
-  // LogActivityAction itself renders nothing in overlay: a mirrored
-  // workspace has no activity write of its own, so a trigger drawn here
-  // would set drawer state a mount elsewhere refuses.
-  overlay: boolean;
   onWrite: () => void;
   onResearch: () => void;
   onLogActivity: () => void;
@@ -137,43 +130,30 @@ export function ContactActions({
       {/* A hairline between reaching the record and recording what happened
           to it: two groups of verbs, not one toolbar. */}
       <span className="record-actions-sep" aria-hidden="true" />
-      {/* Neither verb is drawn in overlay: LogActivityAction, the form both
-          open, renders nothing there — a mirrored workspace has no activity
-          write of its own — so a trigger here would set drawer state a mount
-          elsewhere refuses to act on. */}
-      {!overlay && (
-        <>
-          {logRefused && (
-            <p className="t-caption" id={logRefusedId}>
-              {t("record.logActivityRefused")}
-            </p>
-          )}
-          {/* A CRM a rep cannot write a meeting into is a CRM that only
-              reads. This is the standing way in; the moment card offers the
-              same form when its rung decides logging is the thing to do
-              next. */}
-          <Button
-            disabled={logPending}
-            reasonId={logRefused}
-            onClick={onLogActivity}
-          >
-            <FileText size={15} aria-hidden="true" /> {t("log.title")}
-          </Button>
-          {/* Keeps its words. A tick box is the glyph for COMPLETING a task,
-              so squaring this one would name the opposite of what it does.
-              Files the task against THIS record — the same form Log activity
-              opens, started on its task kind, rather than a navigation to the
-              Worklist, which has no way to add one. */}
-          <Button
-            disabled={logPending}
-            reasonId={logRefused}
-            onClick={onAddTask}
-          >
-            <CheckSquare size={15} aria-hidden="true" />{" "}
-            {t("contact.action.addTask")}
-          </Button>
-        </>
+      {logRefused && (
+        <p className="t-caption" id={logRefusedId}>
+          {t("record.logActivityRefused")}
+        </p>
       )}
+      {/* A CRM a rep cannot write a meeting into is a CRM that only reads.
+          This is the standing way in; the moment card offers the same form
+          when its rung decides logging is the thing to do next. */}
+      <Button
+        disabled={logPending}
+        reasonId={logRefused}
+        onClick={onLogActivity}
+      >
+        <FileText size={15} aria-hidden="true" /> {t("log.title")}
+      </Button>
+      {/* Keeps its words. A tick box is the glyph for COMPLETING a task, so
+          squaring this one would name the opposite of what it does. Files the
+          task against THIS record — the same form Log activity opens, started
+          on its task kind, rather than a navigation to the Worklist, which has
+          no way to add one. */}
+      <Button disabled={logPending} reasonId={logRefused} onClick={onAddTask}>
+        <CheckSquare size={15} aria-hidden="true" />{" "}
+        {t("contact.action.addTask")}
+      </Button>
       {/* Every secondary verb, behind one control. A header that put edit,
           merge and archive beside the daily verbs made the destructive one as
           easy to reach as the routine one, and read as a toolbar rather than
@@ -188,7 +168,6 @@ export function ContactActions({
         <ContactRecordActions
           contact={view.contact}
           disabledReasonId={refusedReasonId}
-          overlay={overlay}
           beforeArchive={
             <>
               {/* Companies, deals, leads and projects all carry this. A contact

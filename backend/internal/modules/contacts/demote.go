@@ -62,7 +62,10 @@ const (
 // and only nulls the lineage. Activities stay where they are — captured
 // history is not rewritten backwards. One audit row, lead.demoted, all in one
 // transaction under the lead row lock.
-func (s *Store) DemoteLead(ctx context.Context, id ids.LeadID, reason string) (crmcontracts.DemoteLeadResponse, error) {
+func (s *Store) DemoteLead(
+	ctx context.Context, id ids.LeadID, reason string, opts ...WriteOption,
+) (crmcontracts.DemoteLeadResponse, error) {
+	options := collectWriteOptions(opts)
 	if err := auth.Require(ctx, "lead", principal.ActionUpdate); err != nil {
 		return crmcontracts.DemoteLeadResponse{}, err
 	}
@@ -94,17 +97,8 @@ func (s *Store) DemoteLead(ctx context.Context, id ids.LeadID, reason string) (c
 		// yours" — and then take a lock on a contact they cannot see. This is
 		// unwindContact's own rule, which its doc states for the deal probe, owed
 		// one frame earlier because the lock moved one frame earlier.
-		if err := auth.EnsureWritable(ctx, tx, "lead", id.UUID); err != nil {
-			return err
-		}
-		contactID, err := promotedContactOf(ctx, tx, id)
+		contactID, err := probeBothSidesAndNameTheContact(ctx, tx, id)
 		if err != nil {
-			return err
-		}
-		if err := auth.Require(ctx, "contact", principal.ActionUpdate); err != nil {
-			return err
-		}
-		if err := auth.EnsureWritable(ctx, tx, "contact", contactID.UUID); err != nil {
 			return err
 		}
 		if _, err := storekit.LockRow(ctx, tx, "contact", contactID.UUID, storekit.LiveOnly); err != nil {
@@ -119,19 +113,8 @@ func (s *Store) DemoteLead(ctx context.Context, id ids.LeadID, reason string) (c
 		if err != nil {
 			return fmt.Errorf("read lead before demote: %w", err)
 		}
-		// Re-checked UNDER the locks, against the contact actually locked. The
-		// unlocked read above can be overtaken — by a merge repointing this
-		// lead at the survivor, or by a demote that got there first — and
-		// proceeding on it would unwind a contact this lead no longer names.
-		if lead.Status != crmcontracts.LeadStatusPromoted || lead.PromotedContactId == nil {
-			return &NotPromotedError{}
-		}
-		if ids.UUID(*lead.PromotedContactId) != contactID.UUID {
-			// Somebody moved this lead's contact between the two reads. Refused
-			// rather than retried here: the caller re-issues against a lead
-			// whose state they can see, which is the same answer a second
-			// demote gets.
-			return &NotPromotedError{}
+		if err := stillTheLeadTheCallerDescribed(lead, contactID, options); err != nil {
+			return err
 		}
 
 		outcome, err := promotedOutcome(ctx, tx, id)
@@ -174,6 +157,75 @@ func (s *Store) DemoteLead(ctx context.Context, id ids.LeadID, reason string) (c
 		return nil
 	})
 	return out, err
+}
+
+// probeBothSidesAndNameTheContact runs the two row-scope probes and reads which
+// contact this lead was promoted into — everything the demotion must settle
+// BEFORE it takes a lock.
+//
+// CONTACT BEFORE LEAD is the lock order, which MergeContact also takes: it locks
+// the two contacts (LockPair) and then repoints lead.promoted_contact_id, and an
+// UPDATE locks the row it writes. Two writers taking the same pair in opposite
+// orders is the whole of a deadlock — each holds what the other waits for,
+// Postgres aborts one, and the caller gets a 5xx where the losing side of a
+// serialized race should get a clean refusal. Which contact to lock is written
+// on the lead, so the lead is read here, unlocked; that read is a hint, and the
+// caller re-reads under both locks and takes the answer from there.
+//
+// BOTH probes therefore run before either lock, and the lead's runs before
+// anything is read off it at all. Under lead-then-contact the scope check sat
+// behind the lead lock and ahead of every read, so nothing about the row could
+// be learned by a caller it would refuse. Reading the lead first to name the
+// contact moves that read in front of the check, and unprobed it would answer a
+// caller who may not see this lead whether it was ever promoted — "not
+// promoted" rather than "not yours" — and then take a lock on a contact they
+// cannot see. This is unwindContact's own rule, which its doc states for the
+// deal probe, owed one frame earlier because the lock moved one frame earlier.
+func probeBothSidesAndNameTheContact(
+	ctx context.Context, tx pgx.Tx, id ids.LeadID,
+) (ids.ContactID, error) {
+	var none ids.ContactID
+	if err := auth.EnsureWritable(ctx, tx, "lead", id.UUID); err != nil {
+		return none, err
+	}
+	contactID, err := promotedContactOf(ctx, tx, id)
+	if err != nil {
+		return none, err
+	}
+	if err := auth.Require(ctx, "contact", principal.ActionUpdate); err != nil {
+		return none, err
+	}
+	if err := auth.EnsureWritable(ctx, tx, "contact", contactID.UUID); err != nil {
+		return none, err
+	}
+	return contactID, nil
+}
+
+// stillTheLeadTheCallerDescribed re-asks, UNDER the locks, everything the
+// caller's decision rested on.
+//
+// All three questions have the same shape and the same window: the unlocked
+// read that chose which contact to lock can be overtaken — by a merge
+// repointing this lead at the survivor, by a demote that got there first, or by
+// an ordinary edit between an approval being redeemed and this transaction
+// opening. Proceeding on any of them unwinds a promotion the caller was not
+// describing.
+//
+// The version is the agent's half of it, and the one where a stale answer costs
+// most: redemption commits a transaction of its own, so the agent's own
+// auto-execute writes can land in the window before this one opens.
+func stillTheLeadTheCallerDescribed(
+	lead crmcontracts.Lead, contactID ids.ContactID, options writeOptions,
+) error {
+	if lead.Status != crmcontracts.LeadStatusPromoted || lead.PromotedContactId == nil {
+		return &NotPromotedError{}
+	}
+	// Refused rather than retried: the caller re-issues against a lead whose
+	// state they can see, which is the same answer a second demote gets.
+	if ids.UUID(*lead.PromotedContactId) != contactID.UUID {
+		return &NotPromotedError{}
+	}
+	return refuseIfVersionMoved("lead", lead.Version, options)
 }
 
 // promotedOutcome reads what the promotion actually did from its audit row.

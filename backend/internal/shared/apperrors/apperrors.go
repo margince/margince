@@ -139,16 +139,11 @@ var (
 	ErrSeatLimitReached = errors.New("seat limit reached")
 )
 
-// Overlay sentinels — only reachable when workspace.sor_mode = overlay
-// (interfaces.md §0, 03e). Registered now so the mapping table is complete;
-// the overlay work package supplies the callers.
-var (
-	ErrModeNotOverlay            = errors.New("workspace is not in overlay mode")
-	ErrUnsupportedBySoR          = errors.New("unsupported by system of record")
-	ErrIncumbentAlreadyConnected = errors.New("incumbent already connected")
-	ErrOverlayFlipBlocked        = errors.New("overlay flip preflight unsatisfied")
-	ErrIncumbentBudgetExhausted  = errors.New("incumbent API budget exhausted")
-)
+// ErrUnsupportedBySoR is the declared capability gap a system-of-record
+// adapter answers with: a verb the frozen datasource seam names and this
+// adapter cannot serve (interfaces.md §0). A refusal, never a silent empty
+// answer.
+var ErrUnsupportedBySoR = errors.New("unsupported by system of record")
 
 // ErrBaseCurrencyLocked is the currency-substrate sentinel (interfaces.md §0,
 // A130/ADR-0085). Every closed

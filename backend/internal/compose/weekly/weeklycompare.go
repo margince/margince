@@ -141,12 +141,20 @@ func openedInWeek(
 	if scope == "" {
 		scope = "true"
 	}
+	// The review prints the week's created value, so a mask that withholds a
+	// deal's figure has to withhold it from this sum too. A masked row arrives
+	// null and the NOT NULL filter beside it then drops the row, which is the
+	// honest arithmetic: the figure was never this reader's to add up.
+	amountSQL, err := auth.MaskedColumnSQL(ctx, "deal", "amount_minor", "d", "amount_minor", arg)
+	if err != nil {
+		return nil, err
+	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT d.amount_minor, d.currency FROM deal d
+		SELECT %[5]s, d.currency FROM deal d
 		 WHERE d.owner_id = $%[3]d AND d.archived_at IS NULL
 		   AND d.created_at >= $%[1]d AND d.created_at < $%[2]d
-		   AND d.amount_minor IS NOT NULL AND d.currency IS NOT NULL
-		   AND (%[4]s)`, startPos, endPos, userPos, scope), args...)
+		   AND %[5]s IS NOT NULL AND d.currency IS NOT NULL
+		   AND (%[4]s)`, startPos, endPos, userPos, scope, amountSQL), args...)
 	if err != nil {
 		return nil, fmt.Errorf("weekly: reading the week's new deals: %w", err)
 	}
@@ -182,15 +190,22 @@ func closedInWeek(
 	if scope == "" {
 		scope = "true"
 	}
+	// Both halves of the closed figure sum the converted amount, so both take
+	// the mask: a withheld number reappears whole in a total, and won-and-lost
+	// is the total a review is read for.
+	amountSQL, err := auth.MaskedColumnSQL(ctx, "deal", "amount_minor", "d", "amount_minor_base", arg)
+	if err != nil {
+		return 0, 0, err
+	}
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
 		SELECT
-		  (SELECT coalesce(sum(d.amount_minor_base), 0)::bigint FROM deal d
+		  (SELECT coalesce(sum(%[5]s), 0)::bigint FROM deal d
 		    WHERE d.status = 'won' AND d.owner_id = $%[3]d
 		      AND d.closed_at >= $%[1]d AND d.closed_at < $%[2]d AND (%[4]s)),
-		  (SELECT coalesce(sum(d.amount_minor_base), 0)::bigint FROM deal d
+		  (SELECT coalesce(sum(%[5]s), 0)::bigint FROM deal d
 		    WHERE d.status = 'lost' AND d.owner_id = $%[3]d
 		      AND d.closed_at >= $%[1]d AND d.closed_at < $%[2]d AND (%[4]s))`,
-		startPos, endPos, userPos, scope), args...).Scan(&won, &lost)
+		startPos, endPos, userPos, scope, amountSQL), args...).Scan(&won, &lost)
 	if err != nil {
 		return 0, 0, fmt.Errorf("weekly: summing the week's closed deals: %w", err)
 	}

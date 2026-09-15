@@ -7,6 +7,12 @@
         "read": true,
         "update": true
       },
+      "ai_budget": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": true
+      },
       "ai_diagnostics": {
         "create": false,
         "delete": false,
@@ -230,12 +236,6 @@
         "update": true
       },
       "offer_template": {
-        "create": true,
-        "delete": true,
-        "read": true,
-        "update": true
-      },
-      "overlay_connection": {
         "create": true,
         "delete": true,
         "read": true,
@@ -360,6 +360,12 @@
         "read": true,
         "update": true
       },
+      "ai_budget": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
       "ai_diagnostics": {
         "create": false,
         "delete": false,
@@ -587,12 +593,6 @@
         "delete": true,
         "read": true,
         "update": true
-      },
-      "overlay_connection": {
-        "create": false,
-        "delete": false,
-        "read": true,
-        "update": false
       },
       "partner": {
         "create": true,
@@ -713,6 +713,12 @@
         "read": true,
         "update": true
       },
+      "ai_budget": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
       "ai_diagnostics": {
         "create": false,
         "delete": false,
@@ -940,12 +946,6 @@
         "delete": true,
         "read": true,
         "update": true
-      },
-      "overlay_connection": {
-        "create": false,
-        "delete": false,
-        "read": true,
-        "update": false
       },
       "partner": {
         "create": true,
@@ -1066,6 +1066,12 @@
         "read": true,
         "update": true
       },
+      "ai_budget": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": true
+      },
       "ai_diagnostics": {
         "create": false,
         "delete": false,
@@ -1289,12 +1295,6 @@
         "update": true
       },
       "offer_template": {
-        "create": true,
-        "delete": true,
-        "read": true,
-        "update": true
-      },
-      "overlay_connection": {
         "create": true,
         "delete": true,
         "read": true,
@@ -1419,6 +1419,12 @@
         "read": true,
         "update": false
       },
+      "ai_budget": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
       "ai_diagnostics": {
         "create": false,
         "delete": false,
@@ -1642,12 +1648,6 @@
         "update": false
       },
       "offer_template": {
-        "create": false,
-        "delete": false,
-        "read": true,
-        "update": false
-      },
-      "overlay_connection": {
         "create": false,
         "delete": false,
         "read": true,
@@ -1772,6 +1772,12 @@
         "read": true,
         "update": true
       },
+      "ai_budget": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
       "ai_diagnostics": {
         "create": false,
         "delete": false,
@@ -1999,12 +2005,6 @@
         "delete": false,
         "read": true,
         "update": true
-      },
-      "overlay_connection": {
-        "create": false,
-        "delete": false,
-        "read": true,
-        "update": false
       },
       "partner": {
         "create": false,

@@ -1598,9 +1598,7 @@ export function ComposeModal({
       "display_name" in entry ? [[entry.id, entry.display_name] as const] : [],
     ),
   );
-  const records = recordNamesIn(
-    namesCompany.data?.state === "ready" ? namesCompany.data.view : undefined,
-  );
+  const records = recordNamesIn(namesCompany.data);
   const nameOf = (linkType: string, linkId: string) =>
     linkType === "user" ? colleagues.get(linkId) : records(linkType, linkId);
   const plural = usePlural();
@@ -1779,9 +1777,7 @@ export function ComposeModal({
       ? contact.data?.projects
       : entityType === "project"
         ? projectItself(ownProject.project)
-        : anchorCompany.data?.state === "ready"
-          ? anchorCompany.data.view.projects
-          : undefined,
+        : anchorCompany.data?.projects,
   );
   const projectFiling = useProjectFiling({
     activityId: answering,
@@ -2253,10 +2249,7 @@ export function ComposeModal({
   // disagree with the page behind it. A deal, a project and a company all reach
   // their account's contacts this way; only a record with no account behind it
   // offers nothing, which is honest rather than empty.
-  const recipients = recipientSuggestions(
-    contact.data,
-    anchorCompany.data?.state === "ready" ? anchorCompany.data.view : undefined,
-  );
+  const recipients = recipientSuggestions(contact.data, anchorCompany.data);
   return (
     <>
       <ScheduleDialog

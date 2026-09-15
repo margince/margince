@@ -34,8 +34,6 @@ import { usePasswordReveal } from "./passwordreveal";
 import { ProviderMark } from "./provider-mark";
 import { Select } from "./select";
 
-// fe-uat (frontend/scripts/fe-uat.mjs) maps atoms.tsx → atoms.stories.tsx and
-// fails a change to atoms.tsx whose stories here do not render clean.
 const meta: Meta = {
   title: "Design System/Atoms",
   parameters: { layout: "padded" },
@@ -44,8 +42,6 @@ export default meta;
 
 type Story = StoryObj;
 
-// The two shapes the stories below arrange things in: a wrapping row for
-// atoms that sit side by side, and a column for surfaces that stack.
 const row: CSSProperties = {
   display: "flex",
   gap: "0.75rem",
@@ -661,29 +657,20 @@ export const Placeholders: Story = {
   ),
 };
 
-// A header that names a block, and a disclosure in both states, because the
-// chevron is its only state indicator.
 export const Sections: Story = {
   render: () => (
     <div style={stack}>
       <SectionHeader title="Pipeline" />
       <SectionHeader title="Pipeline" sub="Six open deals · 1.2M weighted" />
-      {/* The description is a line of its own, so length is a reading matter
-          rather than a layout one — beside the title this sentence used to push
-          the heading around and then run out of room. */}
       <SectionHeader
         title="Reporting currency"
         sub="Every aggregate on this installation converts to it at the day's rate, and the rate that was used stays on the figure."
         actions={<Button small>Change</Button>}
       />
       <Card>
-        {/* As the card's first child, which is the pairing atoms.css styles.
-            Equivalent to passing title/sub to Card — that is what it renders. */}
         <SectionHeader title="Contacts" sub="Three contacts at this company" />
         <p className="t-caption">Carol Wagner · Bob Schmidt · Alice Müller</p>
       </Card>
-      {/* level={3} is a section INSIDE a section, and the type steps down
-          with the outline: at its parent's size it would read as a peer. */}
       <Card>
         <SectionHeader title="Delivery" sub="Where webhooks are sent" />
         <SectionHeader title="Endpoints" level={3} />
@@ -693,15 +680,11 @@ export const Sections: Story = {
       </Card>
       <Disclosure summary="Matching rules">
         <p className="t-caption">
-          Closed by default: the reader pays one line for a surface they rarely
-          open.
+          Closed by default for details the reader rarely needs.
         </p>
       </Disclosure>
       <Disclosure summary="Import log" open>
-        <p className="t-caption">
-          Forced open for a state the reader must not miss — a run in progress,
-          or a result that just arrived.
-        </p>
+        <p className="t-caption">Open for a run or a new result.</p>
       </Disclosure>
     </div>
   ),
@@ -1072,4 +1055,20 @@ export const Search: Story = {
       </Field>
     </div>
   ),
+};
+
+function ControlledDisclosureExample() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button onClick={() => setOpen(true)}>Open details</Button>
+      <Disclosure summary="Editable details" open={open} onToggle={setOpen}>
+        <p>The reader can close and reopen this section.</p>
+      </Disclosure>
+    </>
+  );
+}
+
+export const ControlledDisclosure: Story = {
+  render: () => <ControlledDisclosureExample />,
 };

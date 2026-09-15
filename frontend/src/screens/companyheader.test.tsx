@@ -217,7 +217,7 @@ describe("the owner in Details", () => {
   it("keeps the current owner when the roster failed", async () => {
     stubRosterRefused();
     const user = userEvent.setup();
-    renderInApp(<CompanyDetails company={COMPANY} overlay={false} />);
+    renderInApp(<CompanyDetails company={COMPANY} />);
     await user.click(
       await screen.findByRole("button", { name: "Change Owner" }),
     );
@@ -389,19 +389,14 @@ describe("the shape of the header's verbs", () => {
 
 it("names an owner for readers who cannot edit the company", async () => {
   stub([{ id: "u-owner", display_name: "Mira Voss" }]);
-  renderInApp(
-    <CompanyDetails
-      company={{ ...COMPANY, writable: false }}
-      overlay={false}
-    />,
-  );
+  renderInApp(<CompanyDetails company={{ ...COMPANY, writable: false }} />);
   expect(await screen.findByText("Mira Voss")).toBeTruthy();
   expect(screen.queryByRole("button", { name: "Change Owner" })).toBeNull();
 });
 it("does not offer to clear a company's lifecycle", async () => {
   stub([]);
   const user = userEvent.setup();
-  renderInApp(<CompanyDetails company={COMPANY} overlay={false} />);
+  renderInApp(<CompanyDetails company={COMPANY} />);
   await user.click(
     await screen.findByRole("button", { name: "Change Account lifecycle" }),
   );

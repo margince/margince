@@ -39,9 +39,9 @@ const undidAuditLogID = privacy.UndidAuditLogID
 // update seam, and nothing else: everything it needs to decide lives on the
 // audit spine, and everything it needs to write lives behind Update.
 type RestoreSeam struct {
-	pool       *pgxpool.Pool
-	dispatcher *Dispatcher
-	evaluator  Evaluator
+	pool      *pgxpool.Pool
+	provider  *Provider
+	evaluator Evaluator
 	// visible is the record's row-scope gate. It is a field rather than a
 	// direct call so the property that matters can be held by a test: that a
 	// caller who may not see the record is answered 404 and never a refusal,
@@ -251,7 +251,7 @@ func (s RestoreSeam) write(ctx context.Context, row AuditRow, patch map[string]j
 	if err != nil {
 		return fmt.Errorf("compose: assemble the restore patch: %w", err)
 	}
-	_, err = s.dispatcher.Update(ctx, datasource.UpdateInput{
+	_, err = s.provider.Update(ctx, datasource.UpdateInput{
 		Ref:       datasource.EntityRef{Type: datasource.EntityType(row.EntityType), ID: row.EntityID},
 		Patch:     json.RawMessage(body),
 		IfVersion: &ifVersion,

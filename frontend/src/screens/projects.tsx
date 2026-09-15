@@ -10,7 +10,7 @@ import { Badge, EmptyState } from "../design-system/atoms";
 import { Chip } from "../design-system/readings";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { throwProblem, useMe, useSorMode } from "./common";
+import { throwProblem, useMe } from "./common";
 import { CreateAction } from "./create";
 import { useObjectCustomFields } from "./customfields.form";
 import { EntityRef } from "./entityref";
@@ -181,7 +181,6 @@ export function ProjectsScreen() {
   const { locale } = useLocale();
   const recordZone = useRecordZone();
   const me = useMe();
-  const overlay = useSorMode() === "overlay";
   const companies = useCompanyOptions();
   const views = useSavedViews("projects");
   const savedViews = useSavedViewTabs("projects");
@@ -194,7 +193,7 @@ export function ProjectsScreen() {
   // mounts its own copy of this verb, and a button pressed in the table's
   // header a moment before the plate replaces it would open a dialog the
   // swap throws away.
-  const createAction = !overlay && !state.isPending && (
+  const createAction = !state.isPending && (
     <NewProjectAction companies={companies} me={me.data?.user.id ?? ""} />
   );
   // The first-run plate: nothing exists yet, and nothing is narrowing the

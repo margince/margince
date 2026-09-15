@@ -178,8 +178,11 @@ func lifecycleSeams(pool *pgxpool.Pool) (activityRelinker, leadDisqualifier, lea
 // DemoteLeadResult declares a subset of.
 type leadDemoter struct{ store *contacts.Store }
 
-func (l leadDemoter) DemoteLead(ctx context.Context, id ids.UUID, reason string) (json.RawMessage, error) {
-	out, err := l.store.DemoteLead(ctx, ids.From[ids.LeadKind](id), reason)
+func (l leadDemoter) DemoteLead(
+	ctx context.Context, id ids.UUID, reason string, ifVersion *int64,
+) (json.RawMessage, error) {
+	out, err := l.store.DemoteLead(ctx, ids.From[ids.LeadKind](id), reason,
+		contacts.OnlyAtVersion(ifVersion))
 	if err != nil {
 		return nil, err
 	}

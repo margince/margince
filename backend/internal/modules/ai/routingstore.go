@@ -13,10 +13,13 @@ package ai
 import (
 	"context"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/settings"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -99,6 +102,15 @@ func (s *RoutingStore) Get(ctx context.Context) (RoutingConfig, error) {
 // than what the caller sent, because that is what will be served, and because
 // the version is what a caller re-pointing a lane needs to see change.
 func (s *RoutingStore) Replace(ctx context.Context, next RoutingConfig) (RoutingConfig, error) {
+	return s.ReplaceIfVersion(ctx, next, "")
+}
+
+// Revision identifies the editable binding independently of credentials.
+func (cfg RoutingConfig) Revision() string { return cfg.bindingDigest() }
+
+// ReplaceIfVersion checks a supplied version under the same lock as the write.
+// An empty version preserves the existing unconditional API for legacy clients.
+func (s *RoutingStore) ReplaceIfVersion(ctx context.Context, next RoutingConfig, expected string) (RoutingConfig, error) {
 	if err := auth.Require(ctx, routingSettingsObject, principal.ActionUpdate); err != nil {
 		return RoutingConfig{}, err
 	}
@@ -113,7 +125,21 @@ func (s *RoutingStore) Replace(ctx context.Context, next RoutingConfig) (Routing
 			}
 		}
 	}
-	if err := settings.Set(ctx, s.settings, Routing, next); err != nil {
+	if err := s.settings.WriteTx(ctx, func(tx pgx.Tx) error {
+		if err := settings.LockForWrite(ctx, tx, RoutingKey); err != nil {
+			return err
+		}
+		if expected != "" {
+			current, err := settings.GetTx(ctx, tx, Routing)
+			if err != nil {
+				return err
+			}
+			if current.Revision() != expected {
+				return apperrors.ErrVersionSkew
+			}
+		}
+		return settings.SetTx(ctx, s.settings, tx, Routing, next)
+	}); err != nil {
 		return RoutingConfig{}, err
 	}
 	return next, nil

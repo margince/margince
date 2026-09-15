@@ -279,15 +279,12 @@ export const Empty: Story = {
   render: () => <Surface rows={[]} />,
 };
 
-// A caption says what a list IS when it needs saying, and a note says why a
-// dial is missing — over a read-only mirror the sort and filter dials are gone
-// because the source refuses them.
-export const CaptionAndNote: Story = {
+// A caption says what a list IS when it needs saying.
+export const Caption: Story = {
   render: () => (
     <Surface
       rows={companies(6)}
       caption="Companies the workspace has captured, newest first."
-      note="Sorting and filters read through the source system"
     />
   ),
 };

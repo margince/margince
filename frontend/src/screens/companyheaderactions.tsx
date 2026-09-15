@@ -7,7 +7,7 @@ import type { components } from "../api/schema";
 import { useCanWrite } from "../app/capability";
 import { Button } from "../design-system/atoms";
 import { useT } from "../i18n";
-import { useMe, useSorMode } from "./common";
+import { useMe } from "./common";
 import { ComposeModal } from "./compose";
 import { LogActivityAction } from "./logactivity";
 import { EmailVerb } from "./recordemail";
@@ -64,11 +64,6 @@ export function CompanyHeaderActions({
   const logRefused =
     archived ?? (logGrantKnown && !canLog ? logRefusedId : undefined);
   const logPending = !archived && !logGrantKnown;
-  // Neither log verb is drawn in overlay: LogActivityAction, the form both
-  // open, renders nothing there, a mirrored workspace has no activity write
-  // of its own, so a trigger here would set drawer state a mount elsewhere
-  // refuses to act on.
-  const overlay = useSorMode() === "overlay";
   const [drawer, setDrawer] = useState<ActivityDrawer>(null);
   return (
     <>
@@ -77,7 +72,7 @@ export function CompanyHeaderActions({
           {t("record.archivedReadOnly")}
         </p>
       )}
-      {!archived && logGrantKnown && !canLog && !overlay && (
+      {!archived && logGrantKnown && !canLog && (
         <p className="t-caption" id={logRefusedId}>
           {t("record.logActivityRefused")}
         </p>
@@ -89,33 +84,29 @@ export function CompanyHeaderActions({
         disabledReasonId={archived}
       />
       <span className="record-actions-sep" aria-hidden="true" />
-      {!overlay && (
-        <>
-          <Button
-            disabled={logPending}
-            reasonId={logRefused}
-            onClick={() => setDrawer("log")}
-          >
-            <FileText size={15} aria-hidden="true" /> {t("log.title")}
-          </Button>
-          <Button
-            disabled={logPending}
-            reasonId={logRefused}
-            onClick={() => setDrawer("task")}
-          >
-            <CheckSquare size={15} aria-hidden="true" /> {t("log.addTask")}
-          </Button>
-          {drawer && (
-            <LogActivityAction
-              entityType="company"
-              entityId={company.id}
-              askedKind={drawer === "task" ? "task" : undefined}
-              triggerLabel={drawer === "task" ? "log.addTask" : undefined}
-              openOnMount
-              onClose={() => setDrawer(null)}
-            />
-          )}
-        </>
+      <Button
+        disabled={logPending}
+        reasonId={logRefused}
+        onClick={() => setDrawer("log")}
+      >
+        <FileText size={15} aria-hidden="true" /> {t("log.title")}
+      </Button>
+      <Button
+        disabled={logPending}
+        reasonId={logRefused}
+        onClick={() => setDrawer("task")}
+      >
+        <CheckSquare size={15} aria-hidden="true" /> {t("log.addTask")}
+      </Button>
+      {drawer && (
+        <LogActivityAction
+          entityType="company"
+          entityId={company.id}
+          askedKind={drawer === "task" ? "task" : undefined}
+          triggerLabel={drawer === "task" ? "log.addTask" : undefined}
+          openOnMount
+          onClose={() => setDrawer(null)}
+        />
       )}
     </>
   );
@@ -125,12 +116,6 @@ export function CompanyHeaderActions({
 // send, the consent gate and the refusal vocabulary; this owns only whether
 // the surface is offered and the open/close state, so the account-started
 // and reply surfaces stay one component.
-//
-// It is NOT hidden in overlay mode, unlike the log verbs beside it, and the
-// difference is real rather than an oversight: writing to the account is a
-// side service, not a record write, so the server's overlay write guard never
-// reaches it. Hiding it would take a working capability away from a mirrored
-// workspace.
 function CompanyWriteEmail({
   company,
   open,

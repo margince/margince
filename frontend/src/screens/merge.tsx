@@ -6,7 +6,7 @@ import { useEffect, useId, useState } from "react";
 import { navigate, type Route } from "../app/router";
 import { Button, Modal, SearchField } from "../design-system/atoms";
 import { useT } from "../i18n";
-import { problemMessageOf, useSorMode } from "./common";
+import { problemMessageOf } from "./common";
 import "./candidatepicker.css";
 
 // The shared "Merge into…" affordance (P-2): a human direct call that folds
@@ -50,17 +50,12 @@ export function MergeAction<Survivor extends { id: string }>({
   // disabled question by CAUSE — a merge blocked by the source record's
   // STATE, an archived row the server will not fold into anything, stays
   // visible and disabled WITH the reason, because the reason is the
-  // information and hiding the control hides a fact the reader needs. The
-  // overlay refusal below is the other cause and keeps the other answer.
+  // information and hiding the control hides a fact the reader needs.
   disabledReasonId?: string;
 }>) {
   const t = useT();
   const queryClient = useQueryClient();
   const headingId = useId();
-  // Merge folds one mirrored record into another — a write the incumbent
-  // mirror refuses (unsupported_by_sor). Render nothing in overlay rather than
-  // a button that can only fail (guarded after the hooks below).
-  const overlay = useSorMode() === "overlay";
   const [open, setOpen] = useState(false);
   const [term, setTerm] = useState("");
   const [candidates, setCandidates] = useState<MergeCandidate[]>([]);
@@ -122,10 +117,6 @@ export function MergeAction<Survivor extends { id: string }>({
     setSearchFailure(null);
     mutation.reset();
   };
-
-  if (overlay) {
-    return null;
-  }
 
   return (
     <>

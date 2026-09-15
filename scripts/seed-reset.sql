@@ -52,7 +52,6 @@ DECLARE
     'event_outbox',
     'lead_disqualify_reason',
     'lead_source',
-    'overlay_mode',
     'passport',
     'project_health_assessment',
     'record_role',

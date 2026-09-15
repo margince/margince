@@ -72,7 +72,7 @@ export const Tones: Story = {
       <Callout tone="danger" title="That did not save">
         The role changed while you were editing. Re-read it and try again.
       </Callout>
-      <Callout tone="success" title="HubSpot is connected">
+      <Callout tone="success" title="The mailbox is connected">
         The first read starts within five minutes.
       </Callout>
     </Stack>
@@ -121,7 +121,7 @@ export const AlertAnatomy: Story = {
       <Callout
         tone="success"
         kind="outcome"
-        title="HubSpot is connected"
+        title="The mailbox is connected"
         dismiss={{ label: "Dismiss", onDismiss: () => {} }}
       />
 
@@ -162,7 +162,7 @@ export const Kinds: Story = {
       </Derives>
 
       <Derives announces='kind="event" → role="status"'>
-        <Callout tone="warn" kind="event" title="The HubSpot connector stopped">
+        <Callout tone="warn" kind="event" title="The mailbox connector stopped">
           It refused the last three reads. Nothing has been captured since
           09:12.
         </Callout>

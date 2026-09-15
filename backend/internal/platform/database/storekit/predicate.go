@@ -81,8 +81,9 @@ const (
 // ordered types, substring match only for text, membership only where
 // equality is meaningful.
 var operatorsByType = map[FieldType]map[string]bool{
-	FieldText:     {OpEq: true, OpNeq: true, OpIn: true, OpContains: true, OpExists: true},
-	FieldPicklist: {OpEq: true, OpNeq: true, OpIn: true, OpExists: true},
+	FieldText:        {OpEq: true, OpNeq: true, OpIn: true, OpContains: true, OpExists: true},
+	FieldMultiselect: {OpEq: true, OpNeq: true, OpIn: true, OpExists: true},
+	FieldPicklist:    {OpEq: true, OpNeq: true, OpIn: true, OpExists: true},
 	// No `contains`, and the omission is the type's whole point: folding
 	// `acme` yields a host and then substring-matching it would answer a
 	// question nobody asked. The equality family is what a normalized value
@@ -293,6 +294,9 @@ func compileLeaf(p Predicate, fields map[string]Field, arg func(any) int, leaves
 		}
 		// One array bind (= ANY) keeps the SQL text independent of the
 		// list length — same tree shape, same statement, plan-cache warm.
+		if field.Type == FieldMultiselect {
+			return fmt.Sprintf("%s && $%d::text[]", field.Expr, arg(values)), nil
+		}
 		return fmt.Sprintf("%s = ANY($%d)", field.Expr, arg(values)), nil
 
 	case OpContains:
@@ -312,6 +316,13 @@ func compileLeaf(p Predicate, fields map[string]Field, arg func(any) int, leaves
 		value, err := scalarOperand(p.Value, field, p.Field, p.Op)
 		if err != nil {
 			return "", err
+		}
+		if field.Type == FieldMultiselect {
+			member := fmt.Sprintf("COALESCE($%d = ANY(%s), false)", arg(value), field.Expr)
+			if p.Op == OpNeq {
+				return "NOT " + member, nil
+			}
+			return member, nil
 		}
 		if p.Op == OpNeq {
 			// IS DISTINCT FROM rather than <>: a column that is UNSET is

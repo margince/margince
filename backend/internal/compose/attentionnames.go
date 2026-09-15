@@ -87,11 +87,11 @@ func (n attentionNames) Labels(ctx context.Context, entityType string, want []id
 
 func (n attentionNames) read(ctx context.Context, entityType string, want []ids.UUID) (map[ids.UUID]string, error) {
 	switch entityType {
-	case flipObjectContact:
+	case entityContact:
 		return n.contacts.ContactLabels(ctx, want)
-	case flipObjectCompany:
+	case entityCompany:
 		return n.contacts.CompanyLabels(ctx, want)
-	case flipObjectLead:
+	case entityLead:
 		return n.contacts.LeadLabels(ctx, want)
 	case string(datasource.RecordDeal):
 		return n.deals.DealLabels(ctx, want)

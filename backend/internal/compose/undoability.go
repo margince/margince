@@ -219,13 +219,6 @@ type Evaluator struct {
 	// follows it: reversing a create archives the link and asks the delete grant,
 	// where reversing an update asks update.
 	EdgeWritable func(ctx context.Context, tx pgx.Tx, facts contacts.EdgeFacts, entryAction string) error
-	// ExternallyGoverned reports whether this workspace's records live in an
-	// incumbent system rather than here. A reversal there is a write-back, and
-	// the write-back path records its own verb and its own evidence — so the
-	// link naming the reversed row is never written, nothing reads as undone,
-	// and the change has already happened in two systems by the time anyone
-	// notices. Saying so first is the only honest answer available.
-	ExternallyGoverned func(ctx context.Context) (bool, error)
 }
 
 // Evaluate answers whether this row can be put back.
@@ -246,16 +239,6 @@ func (e Evaluator) Evaluate(ctx context.Context, tx pgx.Tx, row AuditRow, mode M
 	}
 	if !servesRecordType(row.EntityType) {
 		return refuse(ReasonUnsupportedRecordType, row.EntityType), nil
-	}
-	if e.ExternallyGoverned != nil {
-		external, err := e.ExternallyGoverned(ctx)
-		if err != nil {
-			return Undoability{}, err
-		}
-		if external {
-			return refuse(ReasonNotRestorableByThisPath,
-				"this workspace's records are held in an external system"), nil
-		}
 	}
 	patch, unspellable, err := filterImage(row.EntityType, row.Before)
 	if err != nil {

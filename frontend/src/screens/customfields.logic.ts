@@ -10,6 +10,7 @@ export type CfType =
   | "number"
   | "date"
   | "currency"
+  | "multiselect"
   | "picklist"
   | "boolean";
 
@@ -39,6 +40,7 @@ export const CF_TYPES: readonly CfType[] = [
   "date",
   "currency",
   "picklist",
+  "multiselect",
   "boolean",
 ];
 
@@ -70,6 +72,8 @@ function storageNote(type: CfType, currency: string): string {
       return "date";
     case "currency":
       return `numeric · cents · ${currency || "EUR"}`;
+    case "multiselect":
+      return "text[]";
     case "picklist":
       return "enum";
     case "boolean":

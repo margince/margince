@@ -1954,27 +1954,16 @@ export function Disclosure({
   summary,
   action,
   open,
+  onToggle,
   className,
   children,
 }: Readonly<{
   summary: ReactNode;
-  /**
-   * One verb belonging to this section, drawn on the summary's line and OUTSIDE
-   * the `<summary>` element.
-   *
-   * That is the whole point of the prop. A `<summary>` is itself the control
-   * that opens the section, so a button placed inside it is a control inside a
-   * control: axe fails it as `nested-interactive`, and a reader who presses the
-   * button also toggles the section under it. Two rail sections had done exactly
-   * that, and the verb they nested was the one that opens a form — so pressing
-   * "Add employment" collapsed the employments it was about to add to.
-   *
-   * It stays visible while the section is closed, which is what a section-level
-   * verb wants: "Add employment" is a thing to do whether or not the list is on
-   * screen.
-   */
+  /** A section-level action stays outside summary to avoid nested controls and
+   * remains visible while the section is closed. */
   action?: ReactNode;
   open?: boolean;
+  onToggle?: (open: boolean) => void;
   className?: string;
   children: ReactNode;
 }>) {
@@ -1982,6 +1971,7 @@ export function Disclosure({
     <details
       className={className ? `disclosure ${className}` : "disclosure"}
       open={open}
+      onToggle={(event) => onToggle?.(event.currentTarget.open)}
     >
       <summary className="disclosure-summary">
         <ChevronRight className="disclosure-chevron" aria-hidden="true" />

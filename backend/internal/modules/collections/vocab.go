@@ -408,12 +408,13 @@ func (s *Store) SegmentEngine(ctx context.Context, resource string) (storekit.Qu
 // seventh catalog type arrives with its own entry here, and
 // TestEveryCustomFieldTypeIsFilterable fails until it has one.
 var customFieldTypes = map[string]storekit.FieldType{
-	fieldcatalog.TypeText:     storekit.FieldText,
-	fieldcatalog.TypeNumber:   storekit.FieldNumber,
-	fieldcatalog.TypeDate:     storekit.FieldDate,
-	fieldcatalog.TypeCurrency: storekit.FieldCurrency,
-	fieldcatalog.TypePicklist: storekit.FieldPicklist,
-	fieldcatalog.TypeBoolean:  storekit.FieldBoolean,
+	fieldcatalog.TypeText:        storekit.FieldText,
+	fieldcatalog.TypeNumber:      storekit.FieldNumber,
+	fieldcatalog.TypeDate:        storekit.FieldDate,
+	fieldcatalog.TypeCurrency:    storekit.FieldCurrency,
+	fieldcatalog.TypeMultiselect: storekit.FieldMultiselect,
+	fieldcatalog.TypePicklist:    storekit.FieldPicklist,
+	fieldcatalog.TypeBoolean:     storekit.FieldBoolean,
 }
 
 // customField types one custom column for the predicate engine, and answers

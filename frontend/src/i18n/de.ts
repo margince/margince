@@ -5,6 +5,76 @@ import type { MessageKey } from "./en";
 // build without typechecking still fails loudly. Register: informal "du",
 // natural spoken-adjacent German, no translationese, no corporate filler.
 export const de = {
+  "aiAdmin.allowance": "Monatliches KI-Kontingent",
+  "aiAdmin.pool":
+    "Ein gemeinsamer Firmenpool. Kein persönliches Kontingent und kein Dollar-Ausgabenlimit.",
+  "aiAdmin.consumption": "{spent} von {total} Tokens verbraucht · {pct}%",
+  "aiAdmin.remaining": "{tokens} Tokens verbleibend",
+  "aiAdmin.reset": "Zurücksetzung: {date} UTC",
+  "aiAdmin.fixed":
+    "Das feste Firmenkontingent ersetzt die Berechnung pro Nutzer.",
+  "aiAdmin.formula":
+    "{users} aktive Vollnutzer × {tokens} Tokens pro Nutzer und Monat.",
+  "aiAdmin.floor": "Ohne berechtigte Nutzer wird ein Nutzer angesetzt.",
+  "aiAdmin.normal": "Im normalen Kontingentbereich",
+  "aiAdmin.degraded":
+    "80%-Schwelle erreicht: Routing auf niedrigere Stufen aktiv",
+  "aiAdmin.queued": "Kontingent erreicht: Hintergrund-KI wird verschoben",
+  "aiAdmin.policy":
+    "Ab 80% verwendet das Routing niedrigere Stufen. Das tatsächliche Modell kann gleich bleiben. Ab 100% warten Hintergrund-Aufgaben; interaktive KI nutzt die niedrigste Stufe. Such-Embeddings laufen weiter und zählen zum Verbrauch.",
+  "aiAdmin.saved": "Kontingent gespeichert",
+  "aiAdmin.recovery":
+    "Berechtigte Website-Lesevorgänge, Account-Scans und Stimmerstellungen werden beim nächsten Abgleich ausführbar, normalerweise innerhalb einer Minute. Abschluss abhängig von Worker-Kapazität, aktuellen Rechten und Anbieter-Verfügbarkeit. Andere Hintergrundläufe behalten ihren Zeitplan.",
+  "aiAdmin.edit": "Kontingent bearbeiten",
+  "aiAdmin.perUser": "Tokens pro Vollnutzer und Monat",
+  "aiAdmin.range": "Ganze Tokens von 1 bis 1.000.000.000.000.",
+  "aiAdmin.company": "Festes Firmenkontingent (optional)",
+  "aiAdmin.overrideHint":
+    "Leer lassen für die Berechnung pro Nutzer. Der Wert pro Nutzer bleibt gespeichert.",
+  "aiAdmin.routingStale":
+    "Die Modellzuordnungen wurden während Ihrer Bearbeitung geändert",
+  "aiAdmin.stale": "Das Kontingent wurde während der Bearbeitung geändert",
+  "aiAdmin.staleHelp":
+    "Abbrechen und den Editor erneut öffnen, um die aktuellen Einstellungen zu verwenden.",
+  "aiAdmin.failed": "Die Änderung konnte nicht angewendet werden",
+  "aiAdmin.preview": "Auswirkungen prüfen",
+  "aiAdmin.previewHint":
+    "Vorschau aktueller Bedingungen. Beim Speichern werden Einstellungen und Verbrauch erneut geprüft. Dies reserviert keine Kapazität und ruft kein Modell auf.",
+  "aiAdmin.features": "KI nach Tätigkeit",
+  "aiAdmin.featuresWithheld":
+    "Nur eine Leserin oder ein Leser mit den Leserechten für KI-Diagnose UND KI-Kontingent sieht, welche Funktionen gerade aktiv sind.",
+  "aiAdmin.save": "Kontingent speichern",
+  "aiAdmin.cancel": "Abbrechen",
+  "aiAdmin.prospective":
+    "Von der aktuellen Richtlinie gewähltes Modell. Aufrufe können ausweichen oder fehlschlagen; dies zeigt weder Anbieterzustand noch ein bereits verwendetes Modell.",
+  "aiAdmin.calls": "Tatsächliche Modellaufrufe ansehen",
+  "aiAdmin.website": "Website-Lesevorgänge",
+  "aiAdmin.scans": "Account-Scans",
+  "aiAdmin.voice": "Stimmerstellungen",
+  "aiAdmin.waiting": "Erfasste Arbeit, die auf Kontingent wartet",
+  "aiAdmin.coverage":
+    "Zahlen umfassen nur dauerhafte Website-Lesevorgänge, Account-Scans und Stimmerstellungen. Sie zählen nicht jeden KI-Lauf und garantieren keine fortbestehende Ausführungsberechtigung.",
+  "aiAdmin.unavailable": "Nicht verfügbar",
+  "aiAdmin.impact.blocked": "Wartet auf Kontingent",
+  "aiAdmin.impact.model": "Anderes Modell gewählt",
+  "aiAdmin.impact.fallback": "Ausweichkette geändert",
+  "aiAdmin.impact.unconfigured": "Kein Modell konfiguriert",
+  "aiAdmin.impact.exempt": "Läuft über das Kontingent hinaus",
+  "aiAdmin.impact.same": "Gleiche Modellauswahl",
+  "aiAdmin.activity": "Tätigkeit",
+  "aiAdmin.model": "Von Richtlinie gewähltes Modell",
+  "aiAdmin.cloud": "Cloud-Anbieter",
+  "aiAdmin.endpoint": "Konfigurierter Endpunkt; Standort nicht geprüft",
+  "aiAdmin.editBinding": "Gemeinsame Bindung bearbeiten",
+  "aiAdmin.effect": "Auswirkung",
+  "aiAdmin.advanced": "Erweitert: gemeinsame Modellbindungen",
+  "aiAdmin.shared":
+    "Diese Bindungen werden gemeinsam genutzt. Vor dem Speichern alle betroffenen Tätigkeiten prüfen.",
+  "aiAdmin.unused":
+    "Von aktuellen ausgelieferten Tätigkeiten nicht genutzt: {tiers}",
+  "aiAdmin.inputRate": "Eingabe {input} pro 1 Mio. Tokens",
+  "aiAdmin.rates": "Eingabe {input} · Ausgabe {output} pro 1 Mio. Tokens",
+
   "brief.weekly.tasksCompleted": "Aufgaben erledigt",
   "teamweekly.noPriority": "Die erfassten Kennzahlen zeigen keine Priorität",
   "teamweekly.basis":
@@ -59,7 +129,6 @@ export const de = {
   "brief.coverage.source.bounce": "Unzustellbare E-Mails",
   "brief.coverage.source.ai_work_health": "Automatisierungsprüfungen",
   "brief.coverage.source.capture_health": "Postfachverbindungen",
-  "brief.coverage.source.sync_health": "CRM-Synchronisationsprüfungen",
   "brief.coverage.source.failed_approval":
     "Fehlgeschlagene freigegebene Aktionen",
   "brief.coverage.source.relationship_decay": "Ruhende Beziehungen",
@@ -739,8 +808,6 @@ export const de = {
   "state.withheld": "Ausgeblendet — deine Rolle darf das nicht lesen",
   "state.unavailable":
     "Konnte nicht geladen werden — das ist möglicherweise nicht das ganze Bild",
-  "state.unsupported":
-    "In diesem Modus nicht verfügbar — das angebundene System führt es nicht",
   "state.failed": "Dieser Abschnitt wurde nicht geladen.",
   "state.loading": "Dieser Abschnitt wird geladen…",
   "state.retry": "Erneut versuchen",
@@ -762,8 +829,6 @@ export const de = {
   "list.loadMore": "Mehr laden",
   "list.viewAll": "Alle",
   "list.viewHot": "Heiß",
-  "list.overlayReadOnly":
-    "Sortierung und Filter laufen über HubSpot — dort öffnen",
 
   "table.range": "{first}–{last} von {count} {unit}",
   "table.pagination": "Seiten",
@@ -808,160 +873,6 @@ export const de = {
   "table.filterSearchFailed":
     "Die Suche ist fehlgeschlagen. Bitte erneut versuchen.",
   "table.filterNoMatches": "Keine Treffer.",
-  "overlay.unavailable":
-    "In der HubSpot-Ansicht nicht verfügbar — in HubSpot öffnen",
-  "overlay.chipLabel": "Liest aus HubSpot",
-  "overlay.chipAria":
-    "Diese Installation liest Datensätze aus einem HubSpot-Spiegel statt aus nativen Tabellen. Öffne Einstellungen → Integrationen, um die Verbindung zu verwalten.",
-  "overlay.refused":
-    "Beim Lesen aus HubSpot nicht verfügbar — der Spiegel kann diesen Schreibvorgang nicht ausführen.",
-  "overlay.filterUnsupported":
-    "Dieser Filter oder diese Sortierung ist beim Lesen aus HubSpot nicht verfügbar — bitte entfernen und erneut versuchen.",
-  "overlay.emptyOwnerHint":
-    "Eine leere Liste bedeutet hier meist, dass die HubSpot-E-Mail des Owners keinem Benutzer dieser Firma entspricht — nicht, dass das HubSpot-Portal leer ist.",
-  "overlay.partialWriteBack":
-    "Nur die Felder, die HubSpot akzeptiert, werden zurückgeschrieben — alles andere hier, einschließlich Custom Fields und Owner, wird überhaupt nicht angewendet; der aktuelle Wert in HubSpot bleibt bestehen.",
-
-  "overlay.title": "HubSpot-Spiegel",
-  "overlay.sub":
-    "Verbindet das führende CRM der Firma, damit Datensätze aus dessen Spiegel statt aus nativen Tabellen gelesen werden.",
-  "overlay.loading": "Lade die Anbieter-Verbindung…",
-  "overlay.notConfigured":
-    "Overlay-Modus ist in diesem Deployment nicht konfiguriert.",
-  "overlay.loadFailed": "Die Anbieter-Verbindung konnte nicht geladen werden.",
-  "overlay.empty":
-    "Kein führendes System verbunden. Verbinde HubSpot, um Datensätze aus dessen Spiegel zu lesen.",
-  "overlay.adminOnly":
-    "Du hast keine Berechtigung, die HubSpot-Verbindung zu ändern.",
-  "overlay.loadFailedTitle": "Die Verbindung konnte nicht gelesen werden",
-  "overlay.region": "Region",
-  "overlay.regionEu1": "EU",
-  "overlay.connectionLabel": "Verbindung",
-  "overlay.notConnectedYet": "Nicht verbunden",
-  "overlay.regionUs": "USA",
-  "overlay.token": "Private-App-Token",
-  "overlay.tokenHint": "Wird im Vault versiegelt; wird nie wieder angezeigt.",
-  "overlay.connect": "HubSpot verbinden",
-  "overlay.reconnect": "Erneut verbinden",
-  "overlay.connectConfirmTitle": "HubSpot für die ganze Firma verbinden?",
-  "overlay.reconnectConfirmTitle":
-    "HubSpot für die ganze Firma erneut verbinden?",
-  "overlay.connectConfirmBody":
-    "Dies schaltet die Lesezugriffe aller Sitze sofort auf den HubSpot-Spiegel um, und Datensätze werden schreibgeschützt, wo immer der Spiegel kein Schreiben unterstützt. Dies betrifft die gesamte Installation, nicht nur die eigene Sitzung.",
-  "overlay.statusActive": "Verbunden",
-  "overlay.statusRevoked": "Widerrufen",
-  "overlay.statusError": "Sync-Fehler",
-  "overlay.connectedAt": "Verbunden {at}",
-  "overlay.syncTitle": "Spiegel-Synchronisierung",
-  "overlay.syncLoadFailed": "Sync-Status konnte nicht geladen werden.",
-  "overlay.syncLoadFailedTitle": "Sync-Status konnte nicht gelesen werden",
-  "overlay.syncEmpty": "Noch nichts synchronisiert.",
-  "overlay.syncStateFresh": "Aktuell",
-  "overlay.syncStatePending": "Sync ausstehend",
-  "overlay.syncStateStale": "Veraltet",
-  "overlay.backfillDone": "Backfill abgeschlossen",
-  "overlay.backfillPending": "Backfill läuft",
-  "overlay.lastSynced": "Zuletzt synchronisiert {at}",
-  "overlay.neverSynced": "Noch nie synchronisiert",
-  "overlay.budgetTitle": "API-Budget",
-  "overlay.budgetLoadFailed": "Das Budget-Fenster konnte nicht geladen werden.",
-  "overlay.budgetLoadFailedTitle":
-    "Das Budget-Fenster konnte nicht gelesen werden",
-  "overlay.budgetHeadroom": "Spielraum: {headroom}",
-  "overlay.budgetUnmeasured":
-    "Live-Aufrufe pausieren vorsorglich. Das ist kein HubSpot-Quotendruck — der Zähler selbst liefert keine Werte.",
-  "overlay.budgetUnmeasuredTitle":
-    "Das Aufrufbudget kann nicht gemessen werden",
-  "overlay.budgetEmpty":
-    "Das Altsystem hat für diesen Zeitraum kein Budgetfenster gemeldet.",
-  "overlay.budgetSources":
-    "Force-Fresh {forceFresh} · Poller {poller} · Capture {capture}",
-  "overlay.budgetSearch": "Such-API: {consumed} / {limit} pro Sekunde",
-  "overlay.bandOk": "Gesund",
-  "overlay.bandWarn": "Nähert sich dem Limit",
-  "overlay.bandShed": "Drosselt Last",
-  "overlay.reconcile": "Jetzt synchronisieren",
-  "overlay.reconcileQueued":
-    "Abgleich eingereiht — der Worker holt ihn beim nächsten Poll ab (etwa alle 2 Minuten).",
-  "overlay.reconcileFailedTitle": "Der Abgleich wurde nicht eingeplant",
-  "overlay.disconnect": "Trennen",
-  "overlay.disconnectTitle": "HubSpot trennen?",
-  "overlay.disconnectBody":
-    "Dies löscht die gespiegelten Daten und schaltet die Firma zurück auf native Datensätze. Das Audit-Protokoll bleibt erhalten.",
-
-  "overlay.userMap.title": "Nutzerzuordnung des Spiegels",
-  "overlay.userMap.sub":
-    "Wer jede Person in dieser Firma als {principal}-Nutzer ist. Diese Zuordnung entscheidet allein darüber, was sie im Spiegel sieht.",
-  "overlay.userMap.cost":
-    "Wer nicht zugeordnet ist, sieht überhaupt keine gespiegelten Datensätze — alle Listen bleiben leer.",
-  "overlay.userMap.costTitle": "Ohne Zuordnung sieht ein Nutzer nichts",
-  "overlay.userMap.loading": "Lade die Nutzerzuordnung…",
-  "overlay.userMap.loadFailed":
-    "Die Nutzerzuordnung konnte nicht geladen werden.",
-  "overlay.userMap.loadFailedTitle":
-    "Die Nutzerzuordnung konnte nicht gelesen werden",
-  "overlay.userMap.adminOnly":
-    "Du hast keine Berechtigung, die Zuordnung zu prüfen.",
-  "overlay.userMap.notOverlay":
-    "Diese Firma liest aus nativen Tabellen, es gibt also nichts zuzuordnen.",
-  "overlay.userMap.notConfigured":
-    "Overlay-Modus ist in diesem Deployment nicht konfiguriert.",
-  "overlay.userMap.empty": "Diese Firma hat keine Nutzer zum Zuordnen.",
-  "overlay.userMap.view": "Gruppierung",
-  "overlay.userMap.viewByUser": "Nach Nutzer",
-  "overlay.userMap.viewByOwner": "Nach {principal}-Nutzer",
-  "overlay.userMap.principal.hubspot": "HubSpot",
-  "overlay.userMap.principal.generic": "verbundenes CRM",
-  "overlay.userMap.you": "Du",
-  "overlay.userMap.matchEmail": "Über E-Mail zugeordnet",
-  "overlay.userMap.matchManual": "Manuell gesetzt",
-  "overlay.userMap.map": "Zuordnen",
-  "overlay.userMap.change": "Ändern",
-  "overlay.userMap.unmap": "Zuordnung aufheben",
-  "overlay.userMap.cancel": "Abbrechen",
-  "overlay.userMap.pickerLabel": "{principal}-Nutzer suchen",
-  "overlay.userMap.pickTitle": "Einem {principal}-Nutzer zuordnen",
-  "overlay.userMap.truncated":
-    "Das {principal}-Verzeichnis ist länger als diese Liste — wen du hier nicht findest, liegt vielleicht hinter der Grenze.",
-  "overlay.userMap.directoryFailed":
-    "Das {principal}-Verzeichnis konnte nicht gelesen werden, deshalb lässt sich gerade niemand auswählen.",
-  "overlay.userMap.directoryFailedTitle":
-    "Das Verzeichnis konnte nicht gelesen werden",
-  "overlay.userMap.saveFailedTitle": "Die Zuordnung wurde nicht gespeichert",
-  "overlay.userMap.notMapped": "Nicht zugeordnet",
-  "overlay.userMap.chip.noEmailMatch": "Keine E-Mail-Übereinstimmung",
-  "overlay.userMap.chip.ambiguousEmail": "Mehrdeutige E-Mail",
-  "overlay.userMap.chip.blockedByAdmin": "Von Admin aufgehoben",
-  "overlay.userMap.chip.notYetSynced": "Noch nicht synchronisiert",
-  "overlay.userMap.chip.directoryUnavailable": "Grund unbekannt",
-  "overlay.userMap.reason.noEmailMatch":
-    "Kein {principal}-Nutzer hat diese E-Mail-Adresse.",
-  "overlay.userMap.reason.ambiguousEmail":
-    "Zwei oder mehr {principal}-Nutzer teilen sich diese E-Mail-Adresse, eine automatische Zuordnung wäre also nicht sicher.",
-  "overlay.userMap.reason.blockedByAdmin":
-    "Eine Admin-Person hat die Zuordnung aufgehoben; die automatische Zuordnung setzt sie nicht erneut.",
-  "overlay.userMap.reason.notYetSynced":
-    "Das {principal}-Verzeichnis führt diese Person noch nicht.",
-  "overlay.userMap.reason.directoryUnavailable":
-    "Das {principal}-Verzeichnis konnte nicht vollständig gelesen werden, deshalb lässt sich kein Grund ableiten.",
-  "overlay.userMap.staleChip": "Nicht mehr im {principal}-Verzeichnis",
-  "overlay.userMap.staleNote":
-    "Diese manuelle Zuordnung gewährt keine Sichtbarkeit. Sie wird gemeldet, aber nie automatisch zurückgenommen — die Entscheidung bleibt bei dir.",
-  "overlay.userMap.unmapTitle": "Zuordnung dieser Person aufheben?",
-  "overlay.userMap.unmapSelfTitle": "Deine eigene Zuordnung aufheben?",
-  "overlay.userMap.unmapBody":
-    "{user} sieht dann keine gespiegelten Datensätze mehr, bis die Zuordnung wieder gesetzt ist.",
-  "overlay.userMap.unmapSelfBody":
-    "Du siehst dann keine gespiegelten Datensätze mehr, bis du wieder zugeordnet bist. Dieser Tab bleibt erreichbar, du kannst es hier rückgängig machen.",
-  "overlay.userMap.sharedSeat": "Geteilter Sitz — {count} Nutzer",
-  "overlay.userMap.ownerEmpty":
-    "Bisher ist niemand einem {principal}-Nutzer zugeordnet.",
-  "overlay.userMap.unmappedCount_one":
-    "1 Person ist nicht zugeordnet und fehlt hier — wechsle zu Nach Nutzer, um das zu beheben.",
-  "overlay.userMap.unmappedCount_other":
-    "{count} Personen sind nicht zugeordnet und fehlen hier — wechsle zu Nach Nutzer, um das zu beheben.",
-  "overlay.userMap.partialView":
-    "Diese Gruppierung und die Zählung umfassen nur die bisher geladenen Nutzer. Lade mehr, um den Rest zu sehen.",
 
   "contacts.name": "Name",
   "contacts.email": "E-Mail",
@@ -2275,8 +2186,6 @@ export const de = {
   "tagResult.noneLeft": "Trägt niemand mehr",
   "tagResult.unnamed": "Ohne Namen",
   "co.timeline.empty": "Zu diesem Account ist noch nichts erfasst.",
-  "co.overlayFallback":
-    "Dieser Account wird aus dem verbundenen führenden System bedient; die Firmenansicht wird hier nicht zusammengestellt. \u00d6ffne ihn dort für das vollständige Bild.",
   "company.domains": "Domains",
   "company.factCategory.company": "Unternehmen",
   "company.factCategory.offering": "Angebot",
@@ -2409,8 +2318,6 @@ export const de = {
     "Dieser Lead ist abgeschlossen und nimmt keine Änderungen an.",
   "lead.notYoursToChange":
     "Du kannst diesen Lead nicht ändern. Bitte den Inhaber, ihn mit dir zu teilen, oder eine Admin-Person um das Recht, ihn zu bearbeiten.",
-  "lead.callNotInOverlay":
-    "Dieser Lead ist eine Spiegelung des führenden Systems und nimmt von hier aus keine Aktivität an \u2014 erfasse den Anruf dort, wo der Datensatz liegt.",
   "lead.boardCountsUnavailable":
     "Die Z\u00e4hler f\u00fcr Qualifiziert und Disqualifiziert konnten nicht gelesen werden.",
   "lead.boardTerminalRowsUnavailable":
@@ -2578,8 +2485,6 @@ export const de = {
   "lead.viewEngaged": "Im Gespräch",
   "lead.ladder": "Lead-Status",
   "lead.ladder.new": "Neu — noch niemand hat Kontakt aufgenommen.",
-  "lead.ladder.overlay":
-    "Der Spiegel ändert den Lead-Status nicht; im Quellsystem ändern.",
   "lead.ladder.automatic":
     "{label} · automatisch aus erfasster Aktivität gesetzt",
   "lead.ladder.automaticWith": "{label} · automatisch gesetzt — {what} am {at}",
@@ -2642,7 +2547,6 @@ export const de = {
   "deals.winReasonOther": "Etwas anderes",
   "deals.winReasonDetail": "Was war es?",
   "deals.confirm": "Bestätigen",
-  "deals.loading": "Deals werden gelesen…",
   "deals.cancel": "Abbrechen",
   "deals.advanced": "Nach {stage} verschoben",
   "deal.pendingApprovals": "Wartet auf deine Bestätigung",
@@ -2718,14 +2622,22 @@ export const de = {
   "settings.page.reviewtemplates.sub":
     "Die Fragen, die bei einem gewonnenen oder verlorenen Deal gestellt werden.",
   "settings.tab.reviewtemplates": "Abschlussreviews",
+  "reviewTemplates.editHint":
+    "Änderungen gelten für zukünftige Reviews. Bestehende Reviews behalten ihre ursprünglichen Fragen und Antworten.",
+  "reviewTemplates.question": "Frage",
+  "reviewTemplates.answerType": "Antworttyp",
+  "reviewTemplates.options": "Auswahlmöglichkeiten (eine pro Zeile)",
+  "reviewTemplates.requiredChoice": "Antwort erforderlich",
+  "reviewTemplates.removeQuestion": "Frage entfernen",
+  "reviewTemplates.addQuestion": "Frage hinzufügen",
+  "reviewTemplates.save": "Vorlage speichern",
+  "reviewTemplates.edit": "Fragen bearbeiten",
   "reviewTemplates.title": "Fragen zum Abschlussreview",
   "reviewTemplates.sub":
     "Was gefragt wird, wenn ein Deal gewonnen oder verloren wurde.",
   "reviewTemplates.empty": "Keine Reviewfragen eingerichtet",
   "reviewTemplates.retired": "Stillgelegt",
   "reviewTemplates.required": "(Pflicht)",
-  "reviewTemplates.readOnly":
-    "Diese Fragen gehören zum Produkt und sind hier noch nicht änderbar.",
   "outcomeReview.title": "Abschlussreview",
   "outcomeReview.add": "Review hinzufügen",
   "outcomeReview.save": "Review speichern",
@@ -2825,6 +2737,8 @@ export const de = {
     "Dieser Deal ist archiviert und nimmt keine Änderungen an.",
   "deal.notYoursToChange":
     "Du kannst diesen Deal nicht ändern. Bitte den Inhaber, ihn mit dir zu teilen, oder eine Admin-Person um das Recht, ihn zu bearbeiten.",
+  "deal.closedTakesNoStage":
+    "Dieser Deal ist abgeschlossen. Öffne ihn wieder, um ihn in eine andere Phase zu bewegen.",
   "deal.reopen": "Wieder öffnen",
   "deal.reopenPick": "Diesen Deal in eine offene Phase zurücksetzen",
   "deal.reopenConfirm": "Wieder öffnen",
@@ -3438,6 +3352,10 @@ export const de = {
   "field.phoneOther": "Sonstige",
   "field.primary": "Primär",
   "field.removeRow": "Entfernen",
+  "field.removeRowLabel": "Zeile {n} entfernen",
+  "field.moveRowUp": "Zeile {n} nach oben verschieben",
+  "field.moveRowDown": "Zeile {n} nach unten verschieben",
+  "field.rowMoved": "An Position {n} verschoben",
   "field.yes": "Ja",
   "field.no": "Nein",
 
@@ -3669,17 +3587,31 @@ export const de = {
   "log.save": "Erfassen",
   "log.saving": "Wird erfasst…",
 
-  "contactAccess.title": "Wer diesen Kontakt sieht",
-  "contactAccess.privateToYou":
+  "recordAccess.contact.title": "Wer diesen Kontakt sieht",
+  "recordAccess.contact.privateToYou":
     "Nur für Sie. Ihr Postfach hat diesen Kontakt angelegt, und niemand sonst im Unternehmen sieht ihn — auch nicht Ihr Team und keine Administration.",
-  "contactAccess.company": "Alle im Unternehmen sehen diesen Kontakt.",
-  "contactAccess.privateTip":
+  "recordAccess.contact.shared": "Alle im Unternehmen sehen diesen Kontakt.",
+  "recordAccess.contact.privateTip":
     "Nur Sie können diesen Kontakt sehen. Teilen Sie ihn mit dem Unternehmen, damit andere ihn ebenfalls sehen.",
-  "contactAccess.share": "Mit dem Unternehmen teilen",
-  "contactAccess.published": "Das Unternehmen sieht diesen Kontakt jetzt.",
-  "contactAccess.makePrivate": "Privat setzen",
-  "contactAccess.madePrivate":
+  "recordAccess.contact.share": "Mit dem Unternehmen teilen",
+  "recordAccess.contact.published":
+    "Das Unternehmen sieht diesen Kontakt jetzt.",
+  "recordAccess.contact.makePrivate": "Privat setzen",
+  "recordAccess.contact.madePrivate":
     "Dieser Kontakt gehört wieder seinem Besitzer. Wer den Datensatz ausdrücklich freigegeben bekommen hat, behält den Zugriff.",
+  "recordAccess.company.title": "Wer dieses Unternehmen sieht",
+  "recordAccess.company.privateToYou":
+    "Nur für Sie. Ihr Postfach hat dieses Unternehmen angelegt, und niemand sonst im Unternehmen sieht es — auch nicht Ihr Team und keine Administration.",
+  "recordAccess.company.shared":
+    "Alle im Unternehmen sehen dieses Unternehmen.",
+  "recordAccess.company.privateTip":
+    "Nur Sie können diesen Datensatz sehen. Teilen Sie ihn mit dem Unternehmen, damit andere ihn ebenfalls sehen.",
+  "recordAccess.company.share": "Mit dem Unternehmen teilen",
+  "recordAccess.company.published":
+    "Das Unternehmen sieht diesen Datensatz jetzt.",
+  "recordAccess.company.makePrivate": "Privat setzen",
+  "recordAccess.company.madePrivate":
+    "Dieses Unternehmen gehört wieder seinem Besitzer. Deals, Kontakte und E-Mails, die bereits dazu abgelegt sind, behalten ihre eigene Sichtbarkeit.",
   "compose.reply": "Antworten",
   "compose.writeEmail": "E-Mail schreiben",
   "compose.relink": "Neu verknüpfen",
@@ -4826,6 +4758,7 @@ export const de = {
   "retention.scopeDealWon": "Gewonnene Deals",
   "retention.scopeAiCallPayloadContent": "KI-Aufruf-Nutzdaten",
 
+  "retention.scopeRawCapture": "Gespeicherte Nachrichtenoriginale",
   "settings.pipelines": "Pipelines",
   "settings.pipelinesReadOnly":
     "Nur-Lese-Ansicht — du darfst Pipelines und ihre Phasen nicht ändern.",
@@ -5646,7 +5579,7 @@ export const de = {
 
   "blockedDomains.title": "Abgelehnte Domains",
   "blockedDomains.sub":
-    "Welchen Domains diese Installation die Firma verweigert und was das jeweils entschieden hat — ein Modellurteil, eine Heuristik oder ein Mensch. Eine Domain wieder zuzulassen stellt die Firmenfrage neu, statt nur eine Markierung zu entfernen.",
+    "Welchen Domains diese Installation die Firma verweigert und was das jeweils entschieden hat — ein Modellurteil, eine Heuristik oder ein Mensch. Eine Domain wieder zuzulassen stellt die Firmenfrage neu, statt nur eine Markierung zu entfernen. Offene Fragen erscheinen hier nur, wenn niemand sie besitzt; eine aus der Post einer Kollegin oder eines Kollegen wartet auf deren eigener Liste.",
   "blockedDomains.listTitle": "Erfasste Entscheidungen",
   "blockedDomains.record": "Entscheidung erfassen",
   "blockedDomains.recordOpen": "Entscheidung erfassen",
@@ -6789,6 +6722,7 @@ export const de = {
   "cf.type.number": "Zahl",
   "cf.type.date": "Datum",
   "cf.type.currency": "Währung",
+  "cf.type.multiselect": "Mehrfachauswahl",
   "cf.type.picklist": "Auswahlliste",
   "cf.type.boolean": "Ja / Nein",
   "cf.builder.addTo": "Feld zu {object} hinzufügen",
@@ -7738,17 +7672,11 @@ export const de = {
   "tools.scopedTo": "Erreichbar durch {label}",
   "tools.unreachable": "Bereich nicht gewährt",
 
-  "aiusage.title": "KI-Nutzung & Budget",
+  "aiusage.title": "Geschätzte KI-Kosten und Nutzungsverlauf",
   "aiusage.withheld":
     "Nur ein Betreiber sieht, was die KI-Laufzeit ausgegeben hat. Die Zahlen umfassen die ganze Installation und werden deshalb nicht breiter gezeigt.",
   "aiusage.sub":
-    "Ihre eigene Rechnung sichtbar — nach Aufgabe und Stufe, in Tokens.",
-  "aiusage.budget": "{spent} von {budget} Tokens · {pct}%",
-  "aiusage.budgetMeter": "Verbrauchtes Monats-Tokenbudget",
-  "aiusage.band.normal": "Normal",
-  "aiusage.band.degraded": "Sparmodus",
-  "aiusage.band.queued": "Budget erreicht — Hintergrund-KI wartet",
-  "aiusage.band.unknown": "Unbekannter Budgetstatus",
+    "Nutzungsverlauf des gewählten Monats. Schätzungen sind unabhängig vom aktuellen Token-Kontingent und der Anbieterrechnung.",
   "aiusage.col.task": "Aufgabe",
   "aiusage.col.tier": "Stufe",
   "aiusage.col.calls": "Aufrufe",
@@ -7766,10 +7694,11 @@ export const de = {
   "aiusage.prevMonth": "Vorheriger Monat",
   "aiusage.nextMonth": "Nächster Monat",
 
-  "aibanner.degraded": "KI läuft im Sparmodus",
-  "aibanner.queued": "KI-Budget erreicht — Hintergrund-KI wartet",
+  "aibanner.degraded":
+    "80%-Schwelle des KI-Kontingents erreicht — Auswirkungen prüfen",
+  "aibanner.queued": "KI-Kontingent erreicht — verschobene Arbeit prüfen",
   "aibanner.unknown": "Der KI-Budgetstatus ist unbekannt",
-  "aibanner.link": "Nutzung anzeigen",
+  "aibanner.link": "Kontingent verwalten",
   "aibanner.dismiss": "Schließen",
 
   "aicalls.title": "KI-Aufrufprotokoll",
@@ -7986,13 +7915,15 @@ export const de = {
   "elapsed.minutes": "vor {minutes} Min.",
   "elapsed.hours": "vor {hours} Std.",
   "elapsed.days": "vor {days} T.",
-  "aiRouting.lane.local_small": "Massen-Klassifikation auf eigener Hardware",
+  "aiRouting.lane.local_small":
+    "Niedrigste Routing-Stufe; die Bindung bestimmt den Verarbeitungsort",
   "aiRouting.lane.cheap_cloud":
     "Alltag — Anreicherung, Zusammenfassungen, Triage",
   "aiRouting.lane.premium": "Alles, was ein Kunde liest",
-  "aiRouting.lane.frontier": "Das schwierigste Denken, sparsam eingesetzt",
+  "aiRouting.lane.frontier":
+    "Stufe für komplexes Denken; Verfügbarkeit bedeutet nicht Nutzung",
   "aiRouting.lane.local_large":
-    "Schwerere Arbeit, die die eigenen Hosts nicht verlässt",
+    "Höhere lokale Routing-Stufe; konfigurierten Endpunkt prüfen",
   "aiRouting.lane.embeddings": "Suche und Retrieval über die eigenen Daten",
   "aiRouting.lanes.title": "Routing-Bahnen",
   "aiRouting.lanes.sub":
@@ -8078,7 +8009,8 @@ export const de = {
   "aiRouting.savedTitle": "Routing gespeichert",
   "aiRouting.saved": "Jeder Prozess bedient es jetzt.",
   "aiRouting.saveFailed": "Routing konnte nicht gespeichert werden",
-  "aiRouting.adminOnly": "Nur Admin oder Ops können das Modell-Routing ändern.",
+  "aiRouting.adminOnly":
+    "Modell-Routing ändern erfordert Berechtigungen zum Ändern des Routings und Lesen des Kontingents.",
   "workingHours.title": "Wann du buchbar bist",
   "workingHours.sub":
     "Nur deine Sache. Niemand stellt das für dich ein, und du stellst es für niemanden ein.",
@@ -9394,6 +9326,8 @@ export const de = {
   "worklist.pair.ask": "Welcher Datensatz soll bleiben?",
   "worklist.pair.keep": "{name} behalten",
   "worklist.pair.notDuplicate": "Nicht dieselben",
+  "worklist.pair.mergeBlocked":
+    "Diese beiden lassen sich nicht zusammenführen: In beiden laufen aktive Projekte, und die Daten sagen nicht, welche Arbeit wohin gehört. Wenn es nicht dieselben sind, kannst du das trotzdem festhalten.",
   "worklist.pair.related": "{count} verknüpft",
   "worklist.pair.failed":
     "Paar konnte nicht entschieden werden. Bitte erneut versuchen.",
@@ -9704,33 +9638,6 @@ export const de = {
   "worklist.untitled.dsr": "Eine offene Datenschutzanfrage",
   "worklist.untitled.notice_case":
     "Eine Auskunft, die dieser Kontakt zu bekommen hat",
-  "worklist.untitled.sync_health":
-    "Die CRM-Synchronisierung braucht Aufmerksamkeit",
-  "worklist.sync.class.contacts": "Kontakte",
-  "worklist.sync.class.companies": "Firmen",
-  "worklist.sync.class.deals": "Deals",
-  "worklist.sync.class.leads": "Interessenten",
-  "worklist.sync.class.calls": "Anrufe",
-  "worklist.sync.class.meetings": "Termine",
-  "worklist.sync.class.emails": "E-Mails",
-  "worklist.sync.class.notes": "Notizen",
-  "worklist.sync.class.tasks": "Aufgaben",
-  "worklist.sync.error.rate_limited":
-    "das andere System begrenzt, wie oft wir fragen dürfen",
-  "worklist.sync.error.unreachable": "das andere System ist nicht erreichbar",
-  "worklist.sync.error.auth": "die Verbindung muss neu angemeldet werden",
-  "worklist.sync.error.history_gone":
-    "das andere System hat diesen Verlauf nicht mehr",
-  "worklist.sync.error.internal": "auf unserer Seite ist etwas schiefgelaufen",
-  "worklist.sync.band.warn":
-    "Nahe am Lesebudget – manche Abfragen kommen aus der Kopie.",
-  "worklist.sync.band.shed":
-    "Über dem Lesebudget: Abfragen kommen aus der Kopie statt live.",
-  "worklist.sync.failing": "Kein Abgleich – {reason}.",
-  "worklist.sync.objects_stale": "Hier nicht aktuell: {classes}.",
-  "worklist.sync.backfill_incomplete": "Wird noch importiert: {classes}.",
-  "worklist.sync.records_overwritten":
-    "Hier geändert und vom anderen System überschrieben: {classes}.",
   "worklist.untitled.capture_health":
     "Eine Postfachverbindung braucht Aufmerksamkeit",
   "worklist.untitled.ai_work_health": "KI-Arbeit braucht einen Blick",
@@ -9738,6 +9645,11 @@ export const de = {
   "worklist.untitled.undelivered": "Eine E-Mail wurde nie gesendet",
   "worklist.untitled.automation_run": "Eine Regel hat nicht funktioniert",
   "worklist.untitled.notice": "Ein Hinweis für dich",
+  // Eine Domain-Frage trägt immer die Domain als Titel, daher sollte dieser
+  // Ersatztext nie erscheinen. Er existiert, weil die Zuordnung alle bekannten
+  // Quellen abdecken muss.
+  "worklist.untitled.domain_question":
+    "Eine Domain, die noch niemand beurteilt hat",
   "worklist.untitled.introduction_request":
     "Ein Kollege bittet dich um eine Vorstellung",
   "worklist.verb.decide": "Entscheiden",
@@ -9764,6 +9676,14 @@ export const de = {
   "worklist.verb.retryStarted": "Die Regel l\u00e4uft erneut.",
   "worklist.verb.retryFailed":
     "Das konnte nicht erneut ausgef\u00fchrt werden.",
+  "worklist.verb.keep": "Ist eine Firma",
+  "worklist.verb.discard": "Nichts f\u00fcr mich",
+  "worklist.verb.domainKept": "Firma aus dieser Domain angelegt.",
+  "worklist.verb.domainKeepFailed": "Diese Firma konnte nicht angelegt werden.",
+  "worklist.verb.domainDiscarded":
+    "Ihre Nachrichten von dieser Domain werden nicht mehr erfasst.",
+  "worklist.verb.domainDiscardFailed":
+    "Diese Domain konnte nicht ausgeschlossen werden.",
   "worklist.verb.retryRefusedNotFailed":
     "Nichts zu wiederholen \u2014 dieser Lauf wurde absichtlich gestoppt, nicht durch einen Fehler.",
   "worklist.verb.retryRefusedRepeats":

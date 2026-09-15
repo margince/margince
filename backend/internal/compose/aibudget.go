@@ -18,13 +18,9 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-)
-
-const (
-	perSeatBaseTokens  = 6_000_000
-	budgetSafetyFactor = 2
 )
 
 // seatBudget derives the pool live: seat changes move the budget at
@@ -39,25 +35,32 @@ type seatBudget struct {
 // NewSeatBudget is the production BudgetPolicy.
 func NewSeatBudget(pool *pgxpool.Pool) ai.BudgetPolicy { return seatBudget{pool: pool} }
 
+// MonthlyTokenBudget reads an already-stored config, so it saturates rather than
+// erroring on a workspace that has grown past MaxMonthlyTokens since the config
+// was written — that clamp can only ever authorize less spend than configured,
+// never more, and letting it error would halt every routed model call, the
+// budget resume sweep, and usage reporting for as long as the config stays
+// over-cap. A NEW value being written still validates strictly, in ReplaceBudget.
 func (b seatBudget) MonthlyTokenBudget(ctx context.Context, workspaceID ids.WorkspaceID) (int64, error) {
-	var fullSeats int64
+	var monthly int64
 	err := database.WithWorkspaceTx(principal.WithWorkspaceID(ctx, workspaceID.UUID), b.pool, func(tx pgx.Tx) error {
-		// Every full seat on the installation, which is every full seat there
-		// is: ADR-0091 §8 phase D took the tenant column off app_user, and a
-		// single-company installation has one workspace to charge.
-		return tx.QueryRow(ctx, `
-			SELECT count(*) FROM app_user
-			WHERE seat_type = 'full' AND `+identity.LiveMemberSQL("")+`
-			  AND NOT is_agent`).Scan(&fullSeats)
+		config, err := settings.ApplyTx(ctx, tx, ai.BudgetSettings)
+		if err != nil {
+			return err
+		}
+		users, err := budgetFullUsers(ctx, tx)
+		if err != nil {
+			return err
+		}
+		monthly, err = config.SaturatingMonthlyTokens(users)
+		return err
 	})
-	if err != nil {
-		return 0, err
-	}
-	if fullSeats == 0 {
-		// A workspace with no live full seat still gets the single-seat
-		// floor: onboarding flows call the model before the first seat
-		// settles, and zero would hard-refuse them.
-		fullSeats = 1
-	}
-	return fullSeats * perSeatBaseTokens * budgetSafetyFactor, nil
+	return monthly, err
+}
+
+func budgetFullUsers(ctx context.Context, tx pgx.Tx) (int64, error) {
+	var users int64
+	err := tx.QueryRow(ctx, `SELECT count(*) FROM app_user
+ WHERE seat_type = 'full' AND `+identity.LiveMemberSQL("")+` AND NOT is_agent`).Scan(&users)
+	return users, err
 }

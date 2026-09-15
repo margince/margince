@@ -25,6 +25,13 @@ func TestEveryObservedRoleAddressIsRefused(t *testing.T) {
 		// had written in. Sanitized to the shape, not the customer's domain.
 		"citygarden-cs6@example.com",
 		"support2@example.com",
+		// A live import produced a record called "Contact" off this shape. The
+		// German `kontakt` had been on the list since the start and its English
+		// twin had not, so one spelling of one mailbox was refused and the other
+		// was named as somebody.
+		"contact@bajricsanel.example",
+		// A numbered front door is the same front door.
+		"contact2@acme.example",
 	} {
 		if _, role := mailrole.Match(address); !role {
 			t.Errorf("%s: wanted a role mailbox, got a contact", address)
@@ -64,6 +71,10 @@ func TestAContactIsNotARoleMailbox(t *testing.T) {
 		"marketingsolutions@x.com", // one long word, not a role field
 		"jan.newsome@acme.com",     // "newsome" is not "news"
 		"connor.eply@acme.com",     // not "noreply"
+		// `contact` is refused only as the WHOLE local part. As a field beside
+		// a name it is somebody's address, and this tree is full of them.
+		"real.contact@example.com",
+		"contact.eu@acme.example",
 	} {
 		if token, role := mailrole.Match(address); role {
 			t.Errorf("%s: wanted a contact, got role mailbox %q", address, token)
@@ -103,14 +114,24 @@ func TestAHelpdeskVendorIsARoleMailboxWhateverTheLocalPart(t *testing.T) {
 // a full name. One that names somebody does not.
 func TestADepartmentDisplayNameNamesNobody(t *testing.T) {
 	t.Parallel()
-	for _, name := range []string{"Billing", "APAC Billing", "Support Team", "Sales Department"} {
+	for _, name := range []string{
+		"Billing", "APAC Billing", "Support Team", "Sales Department",
+		// A header of exactly this word is the front door naming itself. The
+		// address behind it may well be refused too, but the header is read
+		// first, so a gap here names somebody the local part never would.
+		"Contact",
+	} {
 		if !mailrole.DisplayName(name) {
 			t.Errorf("%q: wanted a department, got a contact's name", name)
 		}
 	}
 	// "Events The Sentry" is NOT here: "Sentry" is a company name, and a display
 	// name carrying one is beyond a word list for the same reason the address is.
-	for _, name := range []string{"Anna Weber", "Anna from Billing", "Lars Jankowfsky", "APAC"} {
+	for _, name := range []string{
+		"Anna Weber", "Anna from Billing", "Lars Jankowfsky", "APAC",
+		// Whole-only cuts both ways: as one word among others it is a surname.
+		"Anna Contact",
+	} {
 		if mailrole.DisplayName(name) {
 			t.Errorf("%q: wanted a contact's name, got a department", name)
 		}

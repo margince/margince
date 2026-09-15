@@ -296,9 +296,10 @@ func (s *PendingStore) NoiseMailForTx(ctx context.Context, tx pgx.Tx, email stri
 // writes the verbatim provider payload — full headers and body — to raw_capture,
 // keyed on the message's natural key. Nulling activity.subject/body while that
 // row survives would make "the content is destroyed" false, and raw_capture has
-// no retention sweep of its own; the only other purge is Art. 17 erasure, which
-// is scoped to a CONTACT and therefore structurally unreachable for a
-// noise-judged sender, who has no contact record by construction.
+// its own retention scope keyed on age, which ages an ORIGINAL rather than
+// answering an erase of the record; and Art. 17 erasure, which is scoped to a
+// CONTACT and therefore structurally unreachable for a noise-judged sender, who
+// has no contact record by construction.
 //
 // The activity row keeps its source key, so the capture natural key still
 // tombstones a replay — what goes is the content, not the fact of the message.

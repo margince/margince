@@ -367,8 +367,15 @@
   grid-template-columns: auto minmax(0, 1fr);
 }
 
+/* worklist.row.css spans the verbs and any child after them (a duplicate
+   pair's review card among them) to column 3 of its own three-column grid.
+   This override drops to two columns, so those children need the same
+   full-width span restated against THIS grid — column 3 does not exist here,
+   and without it the browser opens an implicit track sized to the child's own
+   content, crushing the title column beside it. */
 .brief-queue-body .worklist-row-text,
-.brief-queue-body .worklist-row > .worklist-row-acts {
+.brief-queue-body .worklist-row > .worklist-row-acts,
+.brief-queue-body .worklist-row > :nth-child(n + 5) {
   grid-column: 1 / -1;
 }
 

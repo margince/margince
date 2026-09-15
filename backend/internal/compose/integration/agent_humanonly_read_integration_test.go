@@ -68,7 +68,7 @@ func TestAgentBearerIsRefusedOnHumanOnlyReads(t *testing.T) {
 		"/v1/oauth/consent-request?client_id=night-agent&scope=read",
 		// The pre-flip export bundle: a full-estate read, audit log
 		// included, in a single GET.
-		"/v1/overlay/export",
+		"/v1/exports/bundle",
 		// The domains this installation refuses a company, and why: capture
 		// posture, and an inventory of who the workspace corresponds with.
 		"/v1/capture/blocked-domains",

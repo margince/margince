@@ -4,13 +4,9 @@
 package compose
 
 import (
-	"context"
-	"errors"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/contacts"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -44,61 +40,5 @@ func TestTheSeamCarriesWhetherAKeyOrASimilarityNamedTheRecord(t *testing.T) {
 				t.Errorf("ref = %+v, want the ladder's own id and score", got[0].Refs[0])
 			}
 		})
-	}
-}
-
-// The mode guard is why this tool is composed here rather than registered beside
-// its ladder: the ladder reads the native contact and company tables, which
-// hold none of an overlay workspace's records. `unresolved` is the answer that
-// leaves a caller free to create, so the unguarded call would turn the duplicate
-// guard into a duplicate factory.
-func TestAnOverlayWorkspaceIsRefusedRatherThanResolvedAgainstEmptyTables(t *testing.T) {
-	reached := false
-	guarded := nativeOnlyResolver(stubOverlayMode{overlay: true},
-		func(context.Context, []agents.ResolveCandidate) ([]agents.ResolveOutcome, error) {
-			reached = true
-			return nil, nil
-		})
-
-	_, err := guarded(t.Context(), []agents.ResolveCandidate{{Kind: "contact", Name: "Anna Weber"}})
-	if !errors.Is(err, apperrors.ErrUnsupportedBySoR) {
-		t.Errorf("err = %v, want the declared unsupported-by-SoR refusal", err)
-	}
-	if reached {
-		t.Error("the ladder ran for an overlay workspace, against tables holding none of its records")
-	}
-}
-
-// A native workspace reaches the ladder, so the guard above is a guard and not
-// an outage.
-func TestANativeWorkspaceReachesTheResolver(t *testing.T) {
-	reached := false
-	guarded := nativeOnlyResolver(stubOverlayMode{},
-		func(context.Context, []agents.ResolveCandidate) ([]agents.ResolveOutcome, error) {
-			reached = true
-			return []agents.ResolveOutcome{{}}, nil
-		})
-
-	out, err := guarded(t.Context(), []agents.ResolveCandidate{{Kind: "contact"}})
-	if err != nil {
-		t.Fatalf("a native workspace was refused: %v", err)
-	}
-	if !reached || len(out) != 1 {
-		t.Errorf("the ladder answered %d outcomes (reached=%v), want its own answer carried through", len(out), reached)
-	}
-}
-
-// A mode that cannot be read REFUSES rather than defaulting to native. Guessing
-// native for an overlay workspace is the silent-empty-answer failure this whole
-// family of guards exists to prevent.
-func TestAnUnresolvedModeRefusesRatherThanAssumingNative(t *testing.T) {
-	guarded := nativeOnlyResolver(stubOverlayMode{err: errors.New("the mode row is unreadable")},
-		func(context.Context, []agents.ResolveCandidate) ([]agents.ResolveOutcome, error) {
-			t.Error("the ladder ran for a workspace whose mode is unknown")
-			return nil, nil
-		})
-
-	if _, err := guarded(t.Context(), []agents.ResolveCandidate{{Kind: "contact"}}); err == nil {
-		t.Error("an unreadable mode was treated as native")
 	}
 }

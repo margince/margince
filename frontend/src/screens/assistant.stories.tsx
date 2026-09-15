@@ -45,7 +45,7 @@ export const Default: Story = {
     return (
       <StoryProviders>
         <div style={{ maxWidth: 640 }}>
-          <AssistantPanel companyId="o-1" enabled onOpenRecord={() => {}} />
+          <AssistantPanel companyId="o-1" onOpenRecord={() => {}} />
         </div>
       </StoryProviders>
     );

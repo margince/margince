@@ -9,8 +9,10 @@ package main
 
 import (
 	"fmt"
+	"io"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/platform/geocode"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 )
 
@@ -33,10 +35,6 @@ func jobRunnerBanner(cfg workerConfig, watchCfg compose.GmailWatchConfig, graphW
 		captureNote = fmt.Sprintf("capture sweep every %s: %s (watch off: no pubsub topic)", cfg.gmailSyncInterval, providers)
 	}
 	captureNote += graphWatchNote(cfg, graphWatchRuns)
-	overlayNote := "overlay reconcile off (no keyvault configured)"
-	if vault != nil {
-		overlayNote = fmt.Sprintf("overlay reconcile every %s", cfg.overlayInterval)
-	}
 	// The Telegram poller is gated on the same vault (it unseals each bot's
 	// token), and it must say so by name: a worker booted without the key
 	// registers no poller at all, while an api that HAS the key still accepts
@@ -68,9 +66,9 @@ func jobRunnerBanner(cfg workerConfig, watchCfg compose.GmailWatchConfig, graphW
 	if runnerSvc != nil {
 		schedulerNote = fmt.Sprintf("agent scheduler every %s", cfg.runnerInterval)
 	}
-	return fmt.Sprintf("worker running River jobs (close-date every %s, reconcile every %s, time-scan every %s, retention every %s, %s, %s, %s, %s, %s, %s)",
+	return fmt.Sprintf("worker running River jobs (close-date every %s, reconcile every %s, time-scan every %s, retention every %s, %s, %s, %s, %s, %s)",
 		cfg.closeDateInterval, cfg.reconcileInterval, cfg.timeScanInterval, cfg.retentionInterval,
-		captureNote, channelNote, overlayNote, deepReadNote, webhookNote, schedulerNote)
+		captureNote, channelNote, deepReadNote, webhookNote, schedulerNote)
 }
 
 // graphWatchNote says what the Graph push lane is doing, in the banner's own
@@ -96,4 +94,33 @@ func graphWatchNote(cfg workerConfig, runs bool) string {
 	default:
 		return ", graph push off: no graph app configured for this role"
 	}
+}
+
+// announceGeocoding says at boot whether company addresses become coordinates,
+// and it is the ONLY lane announcement that speaks when the feature is ABSENT.
+//
+// Every other one here says something when its half is configured and stays
+// quiet otherwise, which is right for a feature whose absence shows up the
+// moment it is asked for: an unconfigured blobstore answers 501, an
+// unconfigured webhook key answers 503. Geocoding has no such moment. An
+// address writes, the row is saved, nothing is queued, and no coordinate ever
+// appears — so the only symptom is that `within_radius` answers "unavailable"
+// weeks later, in a different surface, with nothing to search for.
+//
+// A line naming the variable is what turns that into a question an operator
+// can answer.
+func announceGeocoding(baseURL string, stdout io.Writer) {
+	if !geocode.Configured(baseURL) {
+		_, _ = fmt.Fprintln(stdout,
+			"worker geocoding OFF (MARGINCE_GEOCODE_BASE_URL unset) — company addresses "+
+				"keep no coordinates and every within_radius query answers unavailable")
+		return
+	}
+	where := baseURL
+	if baseURL == "public" {
+		// Named rather than echoed: "public" is the flag's word, and an
+		// operator reading the log wants to know whose service this is.
+		where = geocode.PublicBaseURL + " (OpenStreetMap's own; 4 requests/minute)"
+	}
+	_, _ = fmt.Fprintf(stdout, "worker geocoding company addresses via %s\n", where)
 }

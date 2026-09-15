@@ -109,7 +109,7 @@
   background: var(--bgElevated);
   border: 1px solid var(--borderStrong);
   border-radius: var(--r-md);
-  box-shadow: var(--shadow-card);
+  box-shadow: var(--shadow-rest);
   padding: var(--space-5);
   margin-top: var(--space-6);
   align-items: flex-start;
@@ -524,7 +524,7 @@
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-lg);
   background: var(--bgElevated);
-  box-shadow: var(--shadow-card);
+  box-shadow: var(--shadow-rest);
 }
 /* The facts block wraps its heading in a <section> of its own, so the card's
    inset reaches it only if that heading is named here too — a child selector
@@ -784,7 +784,7 @@
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-xs) var(--r-md) var(--r-md) var(--r-md);
   background: var(--bgElevated);
-  box-shadow: var(--shadow-card);
+  box-shadow: var(--shadow-rest);
 }
 .mw-message-assistant h2,
 .mw-message-assistant p {
@@ -873,7 +873,7 @@
   color: var(--textContent);
   border: 1px solid var(--borderSubtle);
   background: var(--bgCard);
-  box-shadow: var(--shadow-card);
+  box-shadow: var(--shadow-rest);
   backdrop-filter: none;
 }
 .ob-conv-artifact .ob-core-dialog h1 {

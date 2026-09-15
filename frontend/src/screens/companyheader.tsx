@@ -14,7 +14,7 @@ import { InlineChoice } from "../design-system/inlinechoice";
 import { useT } from "../i18n";
 import { ArchiveAction } from "./archive";
 import { useClaimRecord } from "./claimrecord";
-import { throwProblem, useSorMode, useViewerId } from "./common";
+import { throwProblem, useViewerId } from "./common";
 import { LIFECYCLE_LABELS, LIFECYCLE_OPTIONS } from "./companies";
 import { DecisionsChip } from "./companyapprovals";
 import { patchCompanyField, searchCompanyTargets } from "./companyform";
@@ -99,16 +99,14 @@ type CompanyFieldPress = Readonly<{
 }>;
 
 // companyReadOnlyReason says why this record cannot be edited, when there is
-// something worth saying. Archived first: it is the one a reader can act on
-// (restore it), where the overlay case is a property of the installation.
+// something worth saying.
 //
 // Exported for the same reason as useCompanyFieldPatch above: the rail's
-// Details grid gates its own edit affordances on `writable`, and the reason
-// an archived or overlay-mirrored account is read-only is a fact about the
-// RECORD, not about which component happens to be drawing it.
+// Details grid gates its own edit affordances on `writable`, and the reason an
+// archived account is read-only is a fact about the RECORD, not about which
+// component happens to be drawing it.
 export function useCompanyReadOnlyReason(company: Company): string | undefined {
   const t = useT();
-  const overlay = useSorMode() === "overlay";
   // The per-ROW question only. The object grant and the seat ceiling are the
   // caller's to apply — every mount point here already ANDs `useCan` with this
   // reason, and folding them in again would answer "no grant" as though it were
@@ -119,9 +117,6 @@ export function useCompanyReadOnlyReason(company: Company): string | undefined {
   // that is simply somebody else's is not a problem to solve, it is who owns it.
   if (company.archived_at) {
     return t("record.archivedReadOnly");
-  }
-  if (overlay) {
-    return t("overlay.partialWriteBack");
   }
   // An UNOWNED record is not "somebody else's" — it is nobody's yet, and the
   // claim door is deliberately open to every seat. Reporting it read-only here
@@ -300,12 +295,6 @@ export function CompanyOwnerControl({
 // answer: the verb stays visible and says why, because a missing button reads
 // as a build without the feature.
 //
-// Overlay is deliberately NOT one of them, which is why this is its own function
-// rather than useCompanyReadOnlyReason. Overlay's sentence says a write reaches
-// the incumbent only in part: a caveat on a write that still happens, not a
-// reason it is refused. Disabling these verbs on it would take away edits the
-// mirror does support.
-//
 // An UNOWNED record is refused like any other the server marks unwritable:
 // the write gate treats an ownerless row as nobody's to change, so Edit on it
 // could only fail. The way IN stays open regardless — the owner control keeps
@@ -377,7 +366,6 @@ export function CompanyActionBadges({
   archivedReasonId?: string;
 }>) {
   const t = useT();
-  const overlay = useSorMode() === "overlay";
   // An archived record is read-only: the backend rejects edit/merge/archive
   // on a non-live row (there is no unarchive path). The verbs stay VISIBLE
   // and refused rather than disappearing (STATE-4a) — a control blocked by
@@ -412,75 +400,59 @@ export function CompanyActionBadges({
           </p>
         )}
 
-        {/* Merge has no incumbent-first projection — the seam refuses it
-            outright (overlay/provider_writes.go Merge) — unlike edit and
-            archive, which it serves, so it stays hidden here.
-            Unsupported is the OTHER cause STATE-4a sorts, and absence is
-            its answer: there is no fact about this account to report. */}
-        {!overlay && (
-          <MergeAction
-            disabledReasonId={refusedByState}
-            label={t("merge.company")}
-            sourceId={company.id}
-            sourceName={company.display_name}
-            searchTargets={searchCompanyTargets}
-            merge={async (targetId) => {
-              const { data, error } = await api.POST("/companies/{id}/merge", {
-                params: {
-                  path: { id: company.id },
-                  ...ifMatch(requireVersion(company.version)),
-                },
-                body: { target_id: targetId },
-              });
-              if (error) {
-                throwProblem(error, t);
-              }
-              return data;
-            }}
-            invalidate="companies"
-            recordKey="company"
-            survivorRoute={(targetId) => ({
-              screen: "companies",
-              id: targetId,
-            })}
-          />
-        )}
-        {/* A record grant probes the native row via auth.EnsureLinkTarget,
-            which a mirrored record has no row for — sharing stays hidden
-            in overlay regardless of record type (see deals.tsx's
-            DealBadges). */}
-        {!overlay && (
-          <ShareAction
-            recordType="company"
-            recordId={company.id}
-            disabledReasonId={refusedByState}
-          />
-        )}
+        <MergeAction
+          disabledReasonId={refusedByState}
+          label={t("merge.company")}
+          sourceId={company.id}
+          sourceName={company.display_name}
+          searchTargets={searchCompanyTargets}
+          merge={async (targetId) => {
+            const { data, error } = await api.POST("/companies/{id}/merge", {
+              params: {
+                path: { id: company.id },
+                ...ifMatch(requireVersion(company.version)),
+              },
+              body: { target_id: targetId },
+            });
+            if (error) {
+              throwProblem(error, t);
+            }
+            return data;
+          }}
+          invalidate="companies"
+          recordKey="company"
+          survivorRoute={(targetId) => ({
+            screen: "companies",
+            id: targetId,
+          })}
+        />
+        <ShareAction
+          recordType="company"
+          recordId={company.id}
+          disabledReasonId={refusedByState}
+        />
         {/* The audit spine: who changed this record and when. It reads as an
             inspection of the record rather than part of its story, so it sits
             with the other rare verbs instead of beside the account's own
             timeline. */}
-        {!overlay && (
-          <Button
-            small
-            data-testid="company-full-history"
-            onClick={onOpenHistory}
-          >
-            {t("record.fullHistory")}
-          </Button>
-        )}
+        <Button
+          small
+          data-testid="company-full-history"
+          onClick={onOpenHistory}
+        >
+          {t("record.fullHistory")}
+        </Button>
         {/* The way in to the partner programme for an account that has none.
             The tab only shows once there IS one, so without this the first
             partner row would be unreachable — this is the same form, asked
             for rather than offered. Below Full history rather than beside
             Merge: every row above is a verb EVERY record carries, in the order
             they all carry them, and every row below is this account's own. */}
-        {!overlay &&
-          !(company.relationship_types ?? []).includes("partner") && (
-            <Button small reasonId={refusedByState} onClick={onSetUpPartner}>
-              {t("company.partnerSetUp")}
-            </Button>
-          )}
+        {!(company.relationship_types ?? []).includes("partner") && (
+          <Button small reasonId={refusedByState} onClick={onSetUpPartner}>
+            {t("company.partnerSetUp")}
+          </Button>
+        )}
         {/* The account's own waiting decisions. It reads as a count in the
               header, which is a state, and this is the verb that answers it —
               so it sits with the other rare verbs rather than as a chip beside
@@ -493,14 +465,11 @@ export function CompanyActionBadges({
             came from mail, so the same domain mints it again next week. Drawn
             only where there is a domain to refuse and only for a seat holding
             both halves — CompanyRejectAction decides both, and returns nothing
-            when either says no. Hidden in overlay with the rest of the native
-            verbs; the server refuses it there too. */}
-        {!overlay && (
-          <CompanyRejectAction
-            company={company}
-            disabledReasonId={refusedByState}
-          />
-        )}
+            when either says no. */}
+        <CompanyRejectAction
+          company={company}
+          disabledReasonId={refusedByState}
+        />
         {/* Last, and set apart by the panel's own seam (atoms.css). This is
             the one verb here a reader cannot walk back from the header, so it
             does not sit in the run of routine ones where a slipped pointer
@@ -544,12 +513,12 @@ export function displayHost(url: string): string {
   }
 }
 
-// `website_url` is derived server-side from the primary domain row, and an
-// overlay-mirrored company carries the domain without it. Falling back to
-// the row keeps the domain on those records rather than silently dropping
-// the one identifying fact the reader had before. Shared by every reader of
-// the company's web presence, so the fallback lives in one place rather than
-// being re-derived per caller.
+// `website_url` is derived server-side from the primary domain row, and a
+// company can carry the domain without it. Falling back to the row keeps the
+// domain on those records rather than silently dropping the one identifying
+// fact the reader had before. Shared by every reader of the company's web
+// presence, so the fallback lives in one place rather than being re-derived
+// per caller.
 export function companyWebsite(company: Company): string | undefined {
   const primaryDomain = (company.domains ?? []).find(
     (d) => d.is_primary,

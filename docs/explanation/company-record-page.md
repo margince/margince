@@ -85,13 +85,6 @@ Two further rules keep the read from lying by construction:
   ids, those ids carry *their own* scope — a task reachable through a visible
   contact must not hand back the id of a deal the caller may not read.
 
-An overlay-mode workspace is refused outright with
-`422 unsupported_in_overlay_mode`: the incumbent mirror holds records, not our
-relationship edges, tags, approvals or visit marks, so there is no honest 360 to
-assemble from it. A mode-resolution *failure* refuses too — serving native data
-because the lookup broke is exactly the silent fallback the overlay module
-exists to prevent. See [overlay-augmentation.md](overlay-augmentation.md).
-
 ## The work in flight, and the account brief behind it
 
 The overview's lead card is **the account's work in flight**
@@ -420,8 +413,8 @@ consuming their unread marker on their behalf.
 `VIEW_ACK_DWELL_MS` — 5 seconds — with the account open before firing, and
 leaving cancels the timer: opening a record and bouncing straight back out is
 not reading it, and an ack from that would mark unread activity as seen. Only an
-*assembled* 360 counts as a visit (in overlay mode there is no baseline to
-advance). Success deliberately does **not** invalidate the 360 query: the "new
+*assembled* 360 counts as a visit. Success deliberately does **not**
+invalidate the 360 query: the "new
 since your last visit" line describes the visit in progress, and refetching it
 out from under the reader would erase the thing they opened the page to see.
 When in doubt the baseline stays put — showing an item twice is a smaller wrong
@@ -590,7 +583,7 @@ list, approval, signal) and durably own no business entity. See
 | The account card, and the moment vocabulary every record page reads it with | `backend/internal/compose/company360/moment.go`, `frontend/src/screens/record360/moment.tsx` |
 | The live record cadence (FE-PARAM-5), and which reads it recognises | `frontend/src/app/queryclient.ts`, `frontend/src/screens/activitykeys.ts` |
 | The connections graph | `backend/internal/compose/company360/{graph,graphreads,graphplace,graphourside}.go` |
-| HTTP transport + the overlay refusal | `backend/internal/compose/company360/handlers.go` |
+| HTTP transport | `backend/internal/compose/company360/handlers.go` |
 | The brief: cache, input, fingerprint | `backend/internal/compose/companybrief/{service,input}.go` |
 | The brief: model path and its validator | `backend/internal/compose/companybrief/write.go` |
 | The deterministic floor | `backend/internal/compose/companybrief/deterministic.go` |
@@ -614,6 +607,5 @@ the connections card) · [company-context.md](company-context.md) (the
 [authorization.md](authorization.md) (the grants and row scopes every section
 asks) · [composition-layer.md](composition-layer.md) (why this lives in compose)
 · [ai-runtime.md](ai-runtime.md) (the model lane behind the brief and Ask) ·
-[overlay-augmentation.md](overlay-augmentation.md) (why an overlay workspace is
-refused) · [../reference/configuration.md](../reference/configuration.md) (object
-storage for the logo).
+[../reference/configuration.md](../reference/configuration.md) (object storage
+for the logo).

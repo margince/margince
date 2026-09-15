@@ -15,7 +15,7 @@ import { FieldGrid, FieldRow } from "../design-system/fieldgrid";
 import { InlineText } from "../design-system/inlinetext";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { throwProblem, useSorMode } from "./common";
+import { throwProblem } from "./common";
 import { CompanyDetails } from "./companydetails";
 import { useCompanyReadOnlyReason } from "./companyheader";
 import { VatMark } from "./companyvatmark";
@@ -241,7 +241,7 @@ export function CompanyProfileDetails({
 function DetailsGridBody({ company }: Readonly<{ company: Company }>) {
   return (
     <>
-      <CompanyDetails company={company} overlay={useSorMode() === "overlay"} />
+      <CompanyDetails company={company} />
       <CompanyProfileDetails company={company} />
     </>
   );

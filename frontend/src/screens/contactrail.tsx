@@ -5,7 +5,6 @@ import { Panel, PanelBody } from "../design-system/panel";
 import { omitted, type SectionState } from "../design-system/surfacestate";
 import { formatNumber } from "../format/format";
 import { type Locale, translatePlural, useT } from "../i18n";
-import { useSorMode } from "./common";
 import { ContactBillingRoles } from "./contactbillingroles";
 import { ContactConfirmCallout } from "./contactconfirm";
 import { ConsentAndChannels } from "./contactconsentpanel";
@@ -182,12 +181,8 @@ export function ContactTagsSection({ view }: Readonly<{ view: Contact360 }>) {
 
 export function useContactReadOnlyReason(contact: Contact): string | undefined {
   const t = useT();
-  const overlay = useSorMode() === "overlay";
   if (contact.archived_at) {
     return t("contact.rail.archivedReadOnly");
-  }
-  if (overlay) {
-    return t("overlay.partialWriteBack");
   }
   return undefined;
 }

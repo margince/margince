@@ -51,9 +51,10 @@ import (
 //     Target. Those can differ by design (gate.go's target-scoped arm says so),
 //     and no shipped handler produces an activity target that differs from its
 //     trigger today — contacts/leadrouting.go passes ev.Entity straight through.
-//     Nothing holds that, unlike the sibling below: it is a reading of every
-//     shipped handler at the time of writing, and a handler that diverges
-//     later arrives silently.
+//     Held by: TestNoHandlerTargetsAnActivityAwayFromItsTrigger
+//     (backend/gates/automationtarget_test.go), which asserts the shape rather
+//     than the handlers: a Target taken from the event's own subject, so a
+//     handler added in a module nobody thought of is covered too.
 //   - A signal carries activity-derived evidence with its own visibility
 //     (platform/auth's SignalScopeClause), and a signal-subject firing skips
 //     this gate. No human-owned signal workflow is registered

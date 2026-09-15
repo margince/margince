@@ -71,6 +71,15 @@ var _ migration.Writers = (*csvWriters)(nil)
 // newCSVWriters takes the run's mapping by pointer because a stored run may
 // carry none: the object and the duplicate policy then fall back to empty,
 // which is what every caller before this did by passing them separately.
+// skipReasonNaturalKeyTaken marks an imported row that could not land because
+// something else already holds its natural key.
+const skipReasonNaturalKeyTaken = "natural_key_already_taken"
+
+// skipReasonDuplicateEmail marks an imported contact whose email a stored
+// contact already holds — a merge candidate the run discloses rather than
+// resolves.
+const skipReasonDuplicateEmail = "duplicate_email"
+
 func newCSVWriters(db *database.DB, runID migration.RunID, mapping *migration.RunMapping) *csvWriters {
 	settled := migration.RunMapping{}
 	if mapping != nil {

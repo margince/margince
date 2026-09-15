@@ -8,7 +8,6 @@ package contactbrief
 // result to the sentinel error mapping.
 
 import (
-	"context"
 	"net/http"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -16,19 +15,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// OverlayMode answers whether the calling workspace reads from an incumbent
-// mirror instead of this system of record.
-type OverlayMode func(ctx context.Context) (bool, error)
-
 // Handlers shadows the generated contact-brief stubs.
 type Handlers struct {
-	svc     *Service
-	overlay OverlayMode
+	svc *Service
 }
 
 // NewHandlers binds the transport to a ready service.
-func NewHandlers(svc *Service, overlay OverlayMode) Handlers {
-	return Handlers{svc: svc, overlay: overlay}
+func NewHandlers(svc *Service) Handlers {
+	return Handlers{svc: svc}
 }
 
 // GetContactBrief implements GET /contacts/{id}/brief.
@@ -44,36 +38,10 @@ func (h Handlers) RegenerateContactBrief(w http.ResponseWriter, r *http.Request,
 }
 
 func (h Handlers) serve(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, force bool) {
-	if !h.native(w, r) {
-		return
-	}
 	brief, err := h.svc.Get(r.Context(), ids.From[ids.ContactKind](ids.UUID(id)), force)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, brief)
-}
-
-// native refuses the read in overlay mode.
-//
-// The check is repeated here rather than inherited: the 360's refusal lives in
-// ITS handler, and this route reaches the composite read through the service.
-// A mirror holds none of these conversations, so a brief written from it would
-// describe a relationship this installation does not own.
-func (h Handlers) native(w http.ResponseWriter, r *http.Request) bool {
-	if h.overlay == nil {
-		return true
-	}
-	overlay, err := h.overlay(r.Context())
-	if err != nil {
-		httperr.Write(w, r, err)
-		return false
-	}
-	if overlay {
-		httperr.Write(w, r, httperr.Validation("id", "unsupported_in_overlay_mode",
-			"the relationship brief is written from this system of record; while the workspace reads from the incumbent mirror, open the contact in the incumbent's own UI"))
-		return false
-	}
-	return true
 }

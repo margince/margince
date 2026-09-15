@@ -66,6 +66,15 @@ func DisplayName(name string) bool {
 	if len(fields) == 0 {
 		return false
 	}
+	// A header of exactly one whole-only word is that word's mailbox naming
+	// itself: "Contact" is the front door, not somebody called Contact. Only
+	// the WHOLE name, for the reason the local-part rule is whole-only — "Anna
+	// Contact" is a surname.
+	if len(fields) == 1 {
+		if _, whole := wholeRoleTokens[fields[0]]; whole {
+			return true
+		}
+	}
 	for _, field := range fields {
 		if _, role := roleTokens[field]; role {
 			continue
@@ -152,6 +161,17 @@ func localPartRole(local string) (string, bool) {
 		_ = token
 		return local, true
 	}
+	// Words that name a function only as the WHOLE local part. `contact@` is
+	// nobody; `real.contact@` is a human whose surname happens to be the word.
+	//
+	// A numbered queue is the same mailbox: `contact2@` is the second front
+	// door, and the digits say nothing the word in front of them has not
+	// already said. Stripped HERE rather than in the field loop below, because
+	// the whole-only rule is exactly what these words need — `real.contact2@`
+	// stays a human.
+	if token, whole := wholeRoleToken(local); whole {
+		return token, true
+	}
 	for _, field := range strings.FieldsFunc(local, isSeparator) {
 		if _, role := roleTokens[field]; role {
 			return field, true
@@ -168,6 +188,20 @@ func localPartRole(local string) (string, bool) {
 			if _, role := roleTokens[stem]; role {
 				return stem, true
 			}
+		}
+	}
+	return "", false
+}
+
+// wholeRoleToken reports whether a local part is one of the words that name a
+// function only when they are the whole of it, digits at the end allowed.
+func wholeRoleToken(local string) (string, bool) {
+	if _, whole := wholeRoleTokens[local]; whole {
+		return local, true
+	}
+	if stem, ok := withoutTrailingDigits(local); ok {
+		if _, whole := wholeRoleTokens[stem]; whole {
+			return stem, true
 		}
 	}
 	return "", false

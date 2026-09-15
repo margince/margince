@@ -140,7 +140,6 @@ var eventShapedUpdates = gatekit.Waive(map[string]string{
 	// an image. The runtime refusal found all three; no static reading could,
 	// because each reaches the door through a verb it does not spell.
 	"internal/modules/capture/owndomainstore.go:Add":                            "registering a domain nobody had seen adds an entry to the workspace list, so there is no prior source or verification for the row to name; confirming a candidate a mailbox already saw takes the other branch and records what moved",
-	"internal/modules/overlay/flipstate.go:auditFreeze":                         "a first seal freezes a mirror that was not frozen, so no field held a value to record; a reseal or a release passes the state it moved and takes the image door",
 	"internal/modules/contacts/domainadmission.go:recordHumanDomainAdmissionTx": "a first decision replaces no admission, no reason and nobody answerable for one; every later decision moved all three and records what they were",
 
 	"internal/modules/contacts/linkedinmatchapply.go:auditLinkedInHandleGained": "a gained LinkedIn handle lands in contact_social and no column of the human moves, so what the contact gained is the whole of what this write has to record. Both writers of the slot land here — the confirmed match and the empty-slot fill — so the waiver covers one function rather than following each caller",
@@ -191,9 +190,6 @@ var unresolvableAuditActions = gatekit.Waive(map[string]string{
 
 	// Wrappers whose images are computed by the caller and handed in whole.
 	"internal/modules/capture/lifecycleaudit.go:auditLifecycle":                         "both images are parameters, so the verb and what it changed arrive together from a caller that has the row",
-	"internal/modules/overlay/writeaudit.go:auditWriteBack":                             "both images are parameters, minimized for the entity before they land; a write-back that changed a field arrives holding what it replaced",
-	"internal/modules/overlay/usermapadmin.go:auditUserMapChange":                       "both images are parameters built from the mapping row on either side of the change",
-	"internal/modules/overlay/activation.go:activateConnection":                         "the images come from the connection row read in this transaction, whichever activation verb the caller resolved",
 	"internal/modules/identity/teams.go:recordTeamChange":                               "the verb spans create, update, archive and restore, and every one of them is handed the team row's own images",
 	"internal/modules/identity/onboarding.go:auditOnboardingState":                      "create and update share one writer, and both pass the onboarding row as it stood before the step",
 	"internal/modules/contacts/coldstartprofile.go:applyColdStartTx":                    "a created record diffs against an explicitly empty image and an existing one against its own columns, so both verbs carry a before-image by construction",
@@ -211,7 +207,7 @@ var unresolvableAuditActions = gatekit.Waive(map[string]string{
 	"internal/modules/consent/recordadmitted.go:recordAdmittedTx":                       "a grant and a withdrawal are separate verbs, and both record the consent state they moved from",
 	"internal/modules/dealrooms/lifecycle.go:moveRoom":                                  "each room transition names its own verb and carries the patch images the move built",
 	"internal/modules/privacy/retentionpolicystore.go:Delete":                           "the verb is an archive of the policy row, and the image is the policy as it stood",
-	"internal/platform/settings/store.go:SetRawTx":                                      "each setting declares its own verb, and the value on either side is rendered by the same declaration",
+	"internal/platform/settings/store.go:SetRawTxReceipt":                               "each setting declares its own verb, and the value on either side is rendered by the same declaration",
 
 	// The one site no static reading could ever judge, and the reason the
 	// chokepoint is not optional.
