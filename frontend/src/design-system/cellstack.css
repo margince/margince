@@ -1,0 +1,14 @@
+/* The stack itself. `display: flex` is what makes the difference from the bare
+   span this replaced: inline children have no gap and no line of their own, and
+   a timestamp followed by a failure code read as one unbroken word.
+
+   `align-items: flex-start` so a Badge on the first line keeps its own width
+   rather than stretching to the widest line under it — the pending state in the
+   held-threads table sits above a longer attempts caption, and a badge drawn to
+   that caption's width reads as a different component. */
+.cell-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  align-items: flex-start;
+}
