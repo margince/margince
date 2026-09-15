@@ -34,10 +34,10 @@ refused. Ask an operator to raise the seat."
 and never metered.
 
 Agents get seats too. An agent seat is always a full seat, and it is **not
-counted against your licence**. The licence defines a seat as a single
-identified natural person, and says that automated agents acting under the
-authority of a counted seat do not themselves count — so the meter follows the
-document a customer actually relies on.
+counted against your licence**. The licence defines a seat as one identified
+human being, and says that automated agents acting under the authority of a
+counted seat do not themselves count — so the meter follows the document a
+customer actually relies on.
 
 That does not let an installation work without limit through agents, which is
 the reading the exclusion invites: an agent may act only where it is

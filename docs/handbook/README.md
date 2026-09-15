@@ -25,8 +25,22 @@ its own, so you can also come straight to the one you need.
   to a message step by step; the exact rules that file it against the right
   contact, deal and project; what happens when nothing matches; and what capture
   refuses to store.
-- **[What the AI does, and what it does not](what-the-ai-does.md)** — the two
-  tiers and where the line actually falls, why sending is not held behind a
+- **[Your day and your week](your-day-and-your-week.md)** — the Worklist's
+  bands and how a row earns its place, pinning, snoozing and what each verb
+  reaches, the frozen weekly review, planning a week, and what a team lead sees.
+- **[Analytics and forecasting](analytics.md)** — the six report sections, what
+  each number covers and how to open the rows behind it, forecast calls, the
+  projected landing, and the pipeline-needed figure that is deliberately not a
+  target.
+- **[Who can see an email](who-can-see-an-email.md)** — record visibility
+  against a message's own audience, the nine reasons one is held and which a
+  verdict can clear, the three mailbox postures, the company floor, and how to
+  share a thread.
+- **[What the AI does, and what it does not](what-the-ai-does.md)** — what the
+  AI produces for you: drafts, document reads, the overnight brief, and how
+  every derived claim carries its evidence.
+- **[Agents, passports and what they may do](agents-and-passports.md)** — the
+  two tiers and where the line actually falls, why sending is not held behind a
   confirmation and what protects it instead, the rule that human edits win field
   by field, what an agent is refused outright, and passports.
 - **[Approvals](approvals.md)** — what a staged action looks like, the kinds that
