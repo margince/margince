@@ -249,6 +249,14 @@ right to share. Flat, explicit grants only. Every share and un-share is audited.
 Only an administrator can, and only a human — an agent may never create a human
 account.
 
+Inviting and deactivating answer to the `user_admin` permission, so a custom role
+holding it manages colleagues without being called Admin.
+
+**One ceiling stands above that permission.** Acting on an **Admin's** account —
+inviting one, changing their role, deactivating them — takes the literal Admin
+role, whatever else you hold. A grant that could reach an Admin would be a way to
+become one.
+
 **Inviting.** You choose a role, and the colleague is created with no password. If
 your installation sends email, they get a link. If not, the administrator mints a
 one-time link and hands it over directly: "Send this link to the member over a

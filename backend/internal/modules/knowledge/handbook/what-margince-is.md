@@ -26,8 +26,11 @@ credential they minted and can revoke. If you cannot see a record, neither
 can your agent. If you are not allowed to do something, it cannot do it for you.
 
 And there is a short list of things it can never do at all, however it is
-configured — chief among them: **an agent may never approve an action, including
-its own.**
+configured — chief among them: **an agent never releases a proposal that is not
+its own business.** It may not approve the card its own credential staged, nor
+one staged for a different colleague. It may answer a card staged for the
+colleague it acts for, which is exactly what they could have answered
+themselves; and it may always reject its own proposal.
 
 [What the AI does, and what it does not →](what-the-ai-does.md)
 

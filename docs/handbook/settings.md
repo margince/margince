@@ -288,16 +288,21 @@ records.
 
 | You are | You can change | You can also look up |
 |---|---|---|
-| A sales seat | Your own five pages, Products & offers, Outcome reviews, Company profile, Capture rules | The rest of the Sales group, and Knowledge |
+| A sales seat | Your own five pages, Products & offers, Outcome reviews, Company profile, Capture rules (adding only) | The rest of the Sales group, and Knowledge |
 | A team lead | The same | The same |
 | Management | The same | The above plus AI usage, model calls, seat counts and the sign-in status — all of them readable and none of them theirs to change |
 | Ops | Most of the operational catalog, including the model rates | The rest, the extension inventory among them — Ops reads it and cannot change the grants |
 | Admin | Everything the deployment has armed | — |
 
-That first row surprises readers, so it is worth saying plainly: a sales seat can
-edit **Capture rules** and the **company profile**, because those cards ask for a
-permission every sales role holds. If that is not what you want, the fix is the
-permission, not the page.
+That first row surprises readers, so it is worth saying plainly: a sales seat
+reaches **Capture rules** and the **company profile**, because those cards ask
+for a permission every sales role holds. If that is not what you want, the fix is
+the permission, not the page.
+
+What a sales seat can do there is narrower than "edit", and the difference
+matters: it may **add** — a consumer-mail domain the shipped list missed, for
+instance — and it may not change a setting or touch an entry that is already
+there. Changing what exists is Admin's and Ops's.
 
 The company-profile half also depends on the deployment: on an installation
 without the company-context capability, a sales seat has no writable card
@@ -305,9 +310,13 @@ there.
 
 Nearly everything is a permission now, including the three that used to be role
 checks: administering members answers to `user_admin`, the audit log to
-`audit_log`, and the privacy queue to `privacy_request`. Only a handful of paths
-still ask for the literal Admin role, and they are about recovering access
-rather than using the product: the last-admin rule, and deployment-level resets.
+`audit_log`, and the privacy queue to `privacy_request`. A custom role granted
+one of those reaches the page, and an Admin whose role lost it does not.
+
+Three things still ask for the literal Admin role rather than a permission, and
+one of them is not about recovery: **only an Admin may act on another Admin's
+account**, or hand out the Admin role. The other two are the last-admin rule and
+deployment-level resets.
 
 ## Two things administrators should decide early
 

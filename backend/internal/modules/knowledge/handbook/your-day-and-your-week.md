@@ -13,7 +13,7 @@ address still works and lands you in the same place.
 One ranked list. **The order is the server's**, and the screen never re-sorts
 it.
 
-### The four bands
+### The three bands
 
 Work is grouped into bands, drawn in this order:
 
@@ -59,8 +59,9 @@ A pin moves a row to the top of **Now** and keeps it there. It is yours alone â€
 pinning reorders what you can already read, and changes nothing for anybody
 else.
 
-**A pin never expires.** It survives the row it names, and nothing removes one
-but you. Fifty is the most you can hold; the newest 50 win.
+**A pin never expires.** It survives the row it names, and nothing takes one off
+for you â€” with one exception: fifty is the most you can hold, and pinning a
+fifty-first drops your oldest pin to make room.
 
 ### Taking something off the list
 

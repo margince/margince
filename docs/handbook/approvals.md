@@ -23,7 +23,8 @@ Nothing has happened yet. The card is a request, not a receipt.
 Below is every kind of card the product can raise, in its own words. Note the
 word *can*: which of these you actually see depends on what your agents attempt,
 and on whether your installation has set stricter floors. See
-[What the AI does](what-the-ai-does.md#what-actually-waits-for-a-human) for
+[Agents, passports and what they may do](agents-and-passports.md#what-actually-waits-for-a-human)
+for
 which actions wait by default.
 
 **Records**

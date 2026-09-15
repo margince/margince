@@ -83,7 +83,8 @@ You also see the governed tool list and connected agents here. Disconnecting an
 agent ends the whole connection, not one credential: "the agent loses access on
 its next call and cannot renew. Reconnecting means approving access again."
 
-See [What the AI does](what-the-ai-does.md#passports-how-an-agent-is-connected).
+See [Agents, passports and what they may
+do](agents-and-passports.md#passports-how-an-agent-is-connected).
 
 ## Connections
 

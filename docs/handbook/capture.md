@@ -288,8 +288,9 @@ rather than about any one message.
 
 ## Things you control yourself
 
-**Own email domains** (Settings → Capture, admin) — the domains that belong to
-your company. This is what makes internal mail internal. Changing it is
+**Own email domains** (Settings → Capture rules) — the domains that belong to
+your company. Adding one is open to a sales seat; changing or removing an entry
+that is already there is Admin's and Ops's. This is what makes internal mail internal. Changing it is
 irreversible in one direction: mail skipped while a domain was registered is
 never offered again by any mailbox.
 

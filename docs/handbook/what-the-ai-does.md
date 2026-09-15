@@ -94,7 +94,7 @@ steps from a transcript, and building your writing voice.
 
 Each shows as queued, running, done, degraded, failed — or **stalled**.
 
-There is a sixth state those five do not name: work can be **deferred** because
+There is a seventh state those six do not name: work can be **deferred** because
 the company's monthly AI allowance is spent. That is not a failure and not a
 stall — the request is kept whole, with its original authority and attempt
 limits, and a sweep picks it up when the allowance is raised or the month rolls.
