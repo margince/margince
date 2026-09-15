@@ -85,27 +85,110 @@ function modules(): string[] {
 /**
  * The class names a suite's selector strings walk.
  *
- * A SELECTOR IS RECOGNISED BY ITS SHAPE rather than by the call around it:
- * Playwright reaches one through `locator`, `querySelector`, `$$eval` and a
- * handful of each suite's own helpers, and a gate that listed those would miss
- * the next one. A selector opens with `.`, `#` or `[` and carries nothing but
- * selector punctuation, which is what keeps `page.locator` — a property access
- * that happens to contain a dot — from reading as one.
+ * TWO READINGS, because each covers the other's hole and the union can only
+ * over-recognise — which fails loudly, where missing a selector fails silently
+ * and lets a cleanup delete the class under a browser journey.
+ *
+ * By POSITION: the first argument of a call that takes a selector. That reads
+ * `button.auto-row` and `div > .x`, which no shape rule can tell from a
+ * property access. By SHAPE: a string opening with `.`, `#` or `[` and carrying
+ * nothing but selector punctuation. That reads a selector handed to a helper of
+ * the suite's own — `present(page, ".record-tabs")` — which no list of APIs
+ * names.
+ *
+ * A template is read for its whole tokens, dropping the one touching an
+ * interpolation: `` `.auto-row[data-id="${id}"]` `` names `.auto-row` and the
+ * attribute is nobody's class.
  */
 function selectorClassesIn(source: ts.SourceFile): string[] {
   const out: string[] = [];
-  const visit = (node: ts.Node) => {
+  // `openEnded` says the piece is followed by an interpolation, so a name
+  // running to its very end is half a name: `` `.row-${tone}` `` names no class
+  // this can look up, and reading `row-` would report one nothing declares.
+  const read = (text: string, openEnded = false) => {
+    for (const found of text.matchAll(/\.([a-z][\w-]*)/g)) {
+      if (openEnded && (found.index ?? 0) + found[0].length === text.length) {
+        continue;
+      }
+      out.push(found[1]);
+    }
+  };
+  // A string in selector POSITION is read whatever it looks like; one anywhere
+  // else has to look like a selector.
+  const readSelector = (node: ts.Node, positional: boolean) => {
     if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) {
-      if (/^[.#[][\w.#[\]='"\s>+~:()-]*$/.test(node.text)) {
-        for (const found of node.text.matchAll(/\.([a-z][\w-]*)/g)) {
-          out.push(found[1]);
+      if (positional || looksLikeSelector(node.text)) {
+        read(node.text);
+      }
+      return;
+    }
+    if (ts.isTemplateExpression(node)) {
+      if (!positional && !looksLikeSelector(node.head.text)) {
+        return;
+      }
+      read(node.head.text, true);
+      node.templateSpans.forEach((span, index) => {
+        read(span.literal.text, index < node.templateSpans.length - 1);
+      });
+    }
+  };
+  const visit = (node: ts.Node) => {
+    if (ts.isCallExpression(node) && node.arguments.length > 0) {
+      const callee = ts.isPropertyAccessExpression(node.expression)
+        ? node.expression.name.text
+        : node.expression.getText(source);
+      if (SELECTOR_CALLS.has(callee)) {
+        for (const argument of node.arguments) {
+          readSelector(argument, true);
         }
       }
     }
+    readSelector(node, false);
     ts.forEachChild(node, visit);
   };
   visit(source);
-  return out;
+  // A string in selector position that also LOOKS like one is read twice, which
+  // is the two readings meeting rather than two selectors.
+  return [...new Set(out)];
+}
+
+/**
+ * The calls that take a CSS selector.
+ *
+ * Playwright's own, the DOM's, and the two this tree's suites wrap them in. A
+ * name added here widens what is read; the shape rule beside it is what keeps a
+ * name NOT here from going unread.
+ */
+const SELECTOR_CALLS = new Set([
+  "locator",
+  "querySelector",
+  "querySelectorAll",
+  "closest",
+  "matches",
+  "$",
+  "$$",
+  "$eval",
+  "$$eval",
+  "present",
+  "edge",
+  "topOf",
+]);
+
+/**
+ * A string that is nothing but selector: punctuation, names, and spaces.
+ *
+ * One more thing is asked of it than the charset, because an `accept` attribute
+ * is a comma-separated list of file extensions and reads as a selector
+ * otherwise: `".txt,.md,.srt"`. So a shape-recognised selector has to carry a
+ * character only a selector uses, or a hyphenated class name — which is what
+ * every class in this tree is. A hyphen-free class in a bare list is still read
+ * where it matters, by POSITION, because that is a selector handed to a call.
+ */
+const SELECTOR_SHAPE = /^[.#[][\w.#[\]='"\s>+~:,()-]*$/;
+const SELECTOR_ONLY = /[#[\]>+~:\s]|\.[a-z]\w*-/;
+
+function looksLikeSelector(text: string): boolean {
+  return SELECTOR_SHAPE.test(text) && SELECTOR_ONLY.test(text);
 }
 
 function declaredClasses(): Set<string> {
@@ -167,6 +250,8 @@ type Rendered = { name: string; where: string; line: number };
  */
 function renderedIn(source: ts.SourceFile, where: string): Rendered[] {
   const out: Rendered[] = [];
+  const bound = bindingsIn(source);
+  const following = new Set<ts.Node>();
   const at = (node: ts.Node) =>
     source.getLineAndCharacterOfPosition(node.getStart(source)).line + 1;
   const add = (text: string, node: ts.Node) => {
@@ -233,6 +318,21 @@ function renderedIn(source: ts.SourceFile, where: string): Rendered[] {
       for (const element of node.elements) {
         value(element);
       }
+      return;
+    }
+    // A LOCAL BINDING IS FOLLOWED. `const classes = [...].join(" ")` and then
+    // `className={classes}` is the ordinary way a component with three or four
+    // conditional classes is written, and a reader that stopped at the
+    // identifier recorded nothing for it — an orphan in one of those was
+    // invisible. Followed ONCE per name, because a binding that refers to
+    // itself would otherwise be walked forever.
+    if (ts.isIdentifier(node)) {
+      const initializer = bound.get(node.text);
+      if (initializer && !following.has(initializer)) {
+        following.add(initializer);
+        value(initializer);
+        following.delete(initializer);
+      }
     }
   };
   const visit = (node: ts.Node) => {
@@ -243,6 +343,31 @@ function renderedIn(source: ts.SourceFile, where: string): Rendered[] {
     ) {
       value(node.initializer);
       return;
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  return out;
+}
+
+/**
+ * Every `const` in the module, by name, with what it was assigned.
+ *
+ * Read once per file rather than resolved through the checker: what a class
+ * list is assembled from is nearly always a literal in the same module, and a
+ * name shadowed in an inner scope resolves to whichever the walk saw last —
+ * which over-reads rather than under-reads, the direction this gate is allowed
+ * to be wrong in.
+ */
+function bindingsIn(source: ts.SourceFile): Map<string, ts.Expression> {
+  const out = new Map<string, ts.Expression>();
+  const visit = (node: ts.Node) => {
+    if (
+      ts.isVariableDeclaration(node) &&
+      ts.isIdentifier(node.name) &&
+      node.initializer
+    ) {
+      out.set(node.name.text, node.initializer);
     }
     ts.forEachChild(node, visit);
   };
@@ -301,6 +426,31 @@ describe("no suite pins itself to a class that styles nothing", () => {
 
     const declared = declaredClasses();
     const pinned: string[] = [];
+    // WALKED ON PURPOSE. A selector for a class nothing declares is normally a
+    // page carrying a name for a suite's sake — but not always, and a register
+    // is where the exceptions say which they are. It only shrinks.
+    const onPurpose = new Map<string, string>([
+      [
+        "e2e/contact-network.spec.ts walks .pn-ring",
+        "the retired drawing, asserted ABSENT: `toHaveCount(0)` over classes " +
+          "nothing declares is the point of that case rather than a mistake in it",
+      ],
+      [
+        "e2e/contact-network.spec.ts walks .pn-node",
+        "the same retired drawing",
+      ],
+      [
+        "e2e/contact-network.spec.ts walks .pn-edge",
+        "the same retired drawing",
+      ],
+      [
+        "e2e/company-record.spec.ts walks .co-standing",
+        "the class the company header retired in 1af81e93a, still walked by a " +
+          "suite CI never runs — it is skipped without a live BASE_URL, so the " +
+          "case is red for whoever next runs it. Repointing needs a stack to " +
+          "confirm against: issue 5732",
+      ],
+    ]);
     for (const suite of suites) {
       const source = parseSource(suite, readFileSync(suite, "utf8"));
       // READ AS A SYNTAX TREE, for the reason the census above is: the two
@@ -308,8 +458,9 @@ describe("no suite pins itself to a class that styles nothing", () => {
       // "a `.cf-count`" — written in comments explaining the very cases this
       // asks about.
       for (const name of selectorClassesIn(source)) {
-        if (!declared.has(name)) {
-          pinned.push(`${relative(frontendRoot, suite)} walks .${name}`);
+        const walked = `${relative(frontendRoot, suite)} walks .${name}`;
+        if (!declared.has(name) && !onPurpose.has(walked)) {
+          pinned.push(walked);
         }
       }
     }
@@ -371,6 +522,25 @@ describe("what a className can be shown to produce", () => {
 
   it("reads nothing out of an expression it cannot resolve", () => {
     expect(names("<p className={styles.row}>x</p>")).toEqual([]);
+  });
+
+  // The ordinary way a component with three or four conditional classes is
+  // written. A reader that stopped at the identifier recorded nothing for it,
+  // so an orphan assembled this way was invisible.
+  it("follows a class list assembled into a local binding", () => {
+    expect(
+      names(
+        'const classes = ["card", open && "card-open"].filter(Boolean).join(" ");\n' +
+          "<p className={classes}>x</p>",
+      ),
+    ).toEqual(["card", "card-open"]);
+  });
+
+  // And a binding that refers to itself is walked once rather than forever.
+  it("follows a self-referring binding without looping", () => {
+    expect(names('const a = [a, "row"];\n<p className={a}>x</p>')).toEqual([
+      "row",
+    ]);
   });
 });
 
@@ -446,5 +616,46 @@ describe("what a stylesheet declares", () => {
     );
 
     expect([...declared].sort()).toEqual(["card", "is-open", "wide"]);
+  });
+});
+
+// AND THE SELECTOR READER, asked about the forms a browser journey uses.
+//
+// The two readings cover each other's holes: a tag-qualified selector
+// (`button.auto-row`) has no shape a rule can tell from a property access, and
+// a selector handed to a helper of the suite's own is in no list of APIs.
+describe("what a browser journey can be shown to walk", () => {
+  const walks = (code: string) =>
+    selectorClassesIn(parseSource("probe.spec.ts", code));
+
+  it("reads a selector by the call that takes it", () => {
+    expect(walks('page.locator("button.auto-row")')).toEqual(["auto-row"]);
+    expect(walks('present(page, ".record-tabs")')).toEqual(["record-tabs"]);
+  });
+
+  it("reads a selector by its shape, wherever it is handed", () => {
+    expect(walks('const sel = ".co-tabs .recordtabs-tab";')).toEqual([
+      "co-tabs",
+      "recordtabs-tab",
+    ]);
+  });
+
+  it("reads a template's whole tokens and not its interpolation", () => {
+    expect(walks('page.locator(`.auto-row[data-id="${id}"]`)')).toEqual([
+      "auto-row",
+    ]);
+  });
+
+  // An `accept` attribute is a comma-separated list of file extensions, and it
+  // is nothing but selector characters. Reading it would name five classes no
+  // sheet declares and no page carries.
+  it("reads a list of file extensions as what it is", () => {
+    expect(
+      walks('expect(input).toHaveAttribute("accept", ".md,.srt,.pdf")'),
+    ).toEqual([]);
+  });
+
+  it("reads nothing out of a property access", () => {
+    expect(walks("page.locator")).toEqual([]);
   });
 });
