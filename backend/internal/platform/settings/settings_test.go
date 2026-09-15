@@ -28,9 +28,11 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-type overlayPair struct {
-	Mode      string `json:"mode"`
-	Incumbent string `json:"incumbent"`
+// A two-field composite, which is what makes it a jsonb round-trip subject:
+// one field cannot have its order reversed.
+type modePair struct {
+	Mode   string `json:"mode"`
+	Detail string `json:"detail"`
 }
 
 func TestValidateRefusesAValueOfTheWrongType(t *testing.T) {
@@ -86,12 +88,12 @@ func TestValidateAcceptsWhenTheEntryDeclaresNoValidator(t *testing.T) {
 // Comparing the two byte-for-byte makes an unchanged composite look changed,
 // so every write would store a row and an audit entry recording nothing.
 func TestCanonicalFormMakesAReEncodedValueComparable(t *testing.T) {
-	e := Define[overlayPair]("overlay.probe", "capture_settings", "update", overlayPair{}, nil)
+	e := Define[modePair]("mode.probe", "capture_settings", "update", modePair{}, nil)
 
 	// Field order reversed and whitespace added, exactly as a jsonb round-trip
 	// is free to hand it back.
-	stored := json.RawMessage(`{"incumbent": "hubspot",   "mode": "overlay"}`)
-	next, err := json.Marshal(overlayPair{Mode: "overlay", Incumbent: "hubspot"})
+	stored := json.RawMessage(`{"detail": "second",   "mode": "first"}`)
+	next, err := json.Marshal(modePair{Mode: "first", Detail: "second"})
 	if err != nil {
 		t.Fatalf("encoding the candidate value: %v", err)
 	}
@@ -107,13 +109,13 @@ func TestCanonicalFormMakesAReEncodedValueComparable(t *testing.T) {
 }
 
 func TestCanonicalFormStillDistinguishesAGenuineChange(t *testing.T) {
-	e := Define[overlayPair]("overlay.probe", "capture_settings", "update", overlayPair{}, nil)
-	next, err := json.Marshal(overlayPair{Mode: "native"})
+	e := Define[modePair]("mode.probe", "capture_settings", "update", modePair{}, nil)
+	next, err := json.Marshal(modePair{Mode: "other"})
 	if err != nil {
 		t.Fatalf("encoding the candidate value: %v", err)
 	}
 
-	canonical, err := e.CanonicalJSON(json.RawMessage(`{"mode":"overlay","incumbent":"hubspot"}`))
+	canonical, err := e.CanonicalJSON(json.RawMessage(`{"mode":"first","detail":"second"}`))
 	if err != nil {
 		t.Fatalf("canonicalizing the stored value: %v", err)
 	}

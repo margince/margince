@@ -169,8 +169,6 @@ What the installation is wired to, as opposed to what one contact connected.
   refresh policy.
 - **Webhooks** — "Outbound subscriptions that receive signed HTTP POSTs for
   chosen events." Deliveries can be inspected and replayed.
-- **HubSpot mirror** — connecting an existing HubSpot portal in read-and-sync
-  mode, and the one-way switch to running natively.
 
 ## Extensions
 
