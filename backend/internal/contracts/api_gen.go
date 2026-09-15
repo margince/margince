@@ -21351,7 +21351,7 @@ type BillingContactRole string
 // cannot tell it from one that was refused.
 type BlockedDomain struct {
 	// Admission `suppressed` — never a company. `admitted` — allowed, and sticky against later machine
-	// refusals. `undecided` — the question is open and waiting for a person; nothing is stored
+	// refusals. `undecided` — the question is open and waiting to be answered; nothing is stored
 	// on the row for this state, it is what the absence of a decision is called on the wire.
 	Admission BlockedDomainAdmission `json:"admission"`
 
@@ -21375,7 +21375,7 @@ type BlockedDomain struct {
 }
 
 // BlockedDomainAdmission `suppressed` — never a company. `admitted` — allowed, and sticky against later machine
-// refusals. `undecided` — the question is open and waiting for a person; nothing is stored
+// refusals. `undecided` — the question is open and waiting to be answered; nothing is stored
 // on the row for this state, it is what the absence of a decision is called on the wire.
 type BlockedDomainAdmission string
 

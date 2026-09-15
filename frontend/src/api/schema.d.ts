@@ -8948,7 +8948,7 @@ export interface paths {
          * Ask about an undecided domain again (admin/ops).
          * @description Puts an `undecided` domain back in the triage sweep's path. The machine cleared its retry
          *     cursor because re-crawling could not help — nothing on the site named a company, or the
-         *     mail arguing for one is too old to trust today's site about. A person may know otherwise,
+         *     mail arguing for one is too old to trust today's site about. Somebody may know otherwise,
          *     and this is how they say so.
          *
          *     Only an `undecided` domain can be re-asked. A domain carrying a decision has an answer, and
@@ -16631,7 +16631,7 @@ export interface components {
             domain: string;
             /**
              * @description `suppressed` — never a company. `admitted` — allowed, and sticky against later machine
-             *     refusals. `undecided` — the question is open and waiting for a person; nothing is stored
+             *     refusals. `undecided` — the question is open and waiting to be answered; nothing is stored
              *     on the row for this state, it is what the absence of a decision is called on the wire.
              * @enum {string}
              */
