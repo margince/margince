@@ -2800,6 +2800,8 @@ export const en = {
   "deal.archivedReadOnly": "This deal is archived and takes no changes.",
   "deal.notYoursToChange":
     "You cannot change this deal. Ask its owner to share it with you, or your administrator for the right to edit it.",
+  "deal.closedTakesNoStage":
+    "This deal is closed. Reopen it to move it to another stage.",
   "deal.reopen": "Reopen",
   "deal.reopenPick": "Move this deal back to an open stage",
   "deal.reopenConfirm": "Reopen",
