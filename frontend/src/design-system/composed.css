@@ -641,7 +641,9 @@
   /* The same step the work column keeps between its cards, so the first card
      stands off the strip exactly as the second stands off the first. */
   margin-bottom: var(--space-6);
-  box-shadow: 0 1px 0 var(--borderSubtle);
+  /* A hairline, not a shadow: the strip is part of the sheet's plane, and the
+     line under it is the seam the cards scroll beneath. */
+  border-block-end: 1px solid var(--borderSubtle);
 }
 .record-sheet .record-tabs .recordtabs {
   margin-block-end: 0;
