@@ -217,7 +217,6 @@ func dayOfEveryLane() crmcontracts.Attention {
 		DomainQuestions:    lane(item("example.com", "domain_question")),
 		AiWorkHealth:       lane(item("ai", "ai_work_health")),
 		AutomationHealth:   lane(item("automation", "automation_run")),
-		SyncHealth:         lane(item("sync", "sync_health")),
 		Notices:            lane(item("notice", "notice")),
 		Introductions:      lane(item("introduction", "introduction_request")),
 	}

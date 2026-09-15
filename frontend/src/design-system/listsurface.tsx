@@ -136,7 +136,6 @@ export function ListSurface({
   count,
   action,
   caption,
-  note,
   search,
   sort,
   sortOptions = [],
@@ -175,15 +174,13 @@ export function ListSurface({
    * and repeating it here would title the surface twice.
    */
   caption?: ReactNode;
-  /** Says why the dials are missing, when they are. */
-  note?: ReactNode;
   /** Omit for a list whose GET has no `q` param; the box is then not rendered. */
   search?: { value: string; onChange: (next: string) => void };
   chips?: readonly ListChip[];
   chosen?: Readonly<Record<string, string>>;
   /** Called with "" to clear. */
   onChipChange?: (key: string, value: string) => void;
-  /** Omit for a body with no server sort at all (an overlay read). */
+  /** Omit for a body with no server sort at all. */
   sort?: SortControl;
   /**
    * The attributes the sort menu offers. A column header stays the other route
@@ -248,7 +245,6 @@ export function ListSurface({
         chips={chips}
         chosen={chosen}
         onChipChange={onChipChange}
-        note={note}
         archived={archived}
         tools={tools}
         openMenu={openMenu}
@@ -1011,7 +1007,6 @@ function Toolbar({
   chips,
   chosen,
   onChipChange,
-  note,
   archived,
   tools,
   openMenu,
@@ -1023,7 +1018,6 @@ function Toolbar({
   chips: readonly ListChip[];
   chosen: Readonly<Record<string, string>>;
   onChipChange?: (key: string, value: string) => void;
-  note?: ReactNode;
   archived?: { checked: boolean; onChange: (next: boolean) => void };
   tools?: ReactNode;
   openMenu: string | null;
@@ -1094,8 +1088,6 @@ function Toolbar({
           hasApplied={applied.length > 0}
         />
       )}
-
-      {note && <span className="lt-note">{note}</span>}
 
       <span className="lt-spacer" />
 

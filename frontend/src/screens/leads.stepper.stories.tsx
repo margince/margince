@@ -103,15 +103,6 @@ export const Disqualified: Story = {
   }),
 };
 
-/** A mirrored lead: the incumbent owns the lifecycle, so every step reads and
- *  none of them writes. The refusal is a different sentence from a closure's,
- *  because it is a different fact. */
-export const MirrorRefusesTheWrite: Story = {
-  render: ladder({
-    readOnlyReason: "The connected system owns this lead's stage.",
-  }),
-};
-
 /** A step already sent: every control is inert while the write is in flight,
  *  so a second press cannot race the first for the same If-Match. */
 export const Saving: Story = { render: ladder({ pending: true }) };

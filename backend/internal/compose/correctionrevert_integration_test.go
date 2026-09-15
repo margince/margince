@@ -330,8 +330,7 @@ func TestTheGenericRestoreRouteHonorsACorrectionTheReceiptOffersUndoOn(t *testin
 	}
 	auditID := e.correctionAuditIDFor(t, deal)
 
-	seam := NewRestoreSeam(e.Pool, NewDispatcher(NewProvider(e.Pool),
-		NewOverlayProvider(e.Pool, failClosedOverlayMeter(), nil), e.Pool),
+	seam := NewRestoreSeam(e.Pool, NewProvider(e.Pool),
 		deals.NewStore(e.DB(), DealsInstallation()))
 	entry, err := seam.Restore(e.Admin(), "deal", deal, auditID, currentVersion(t, e.Env, "deal", deal))
 	if err != nil {
@@ -394,8 +393,7 @@ func TestTheGenericRestoreRouteRefusesACorrectionOverwrittenByALaterEdit(t *test
 		t.Fatal(err)
 	}
 
-	seam := NewRestoreSeam(e.Pool, NewDispatcher(NewProvider(e.Pool),
-		NewOverlayProvider(e.Pool, failClosedOverlayMeter(), nil), e.Pool),
+	seam := NewRestoreSeam(e.Pool, NewProvider(e.Pool),
 		deals.NewStore(e.DB(), DealsInstallation()))
 	_, err := seam.Restore(e.Admin(), "deal", deal, auditID, currentVersion(t, e.Env, "deal", deal))
 	var refused RefusedRestore
@@ -443,8 +441,7 @@ func TestTheGenericRestoreRouteRefusesAStaleVersionOnACorrection(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	seam := NewRestoreSeam(e.Pool, NewDispatcher(NewProvider(e.Pool),
-		NewOverlayProvider(e.Pool, failClosedOverlayMeter(), nil), e.Pool),
+	seam := NewRestoreSeam(e.Pool, NewProvider(e.Pool),
 		deals.NewStore(e.DB(), DealsInstallation()))
 	_, err := seam.Restore(e.Admin(), "deal", deal, auditID, stale)
 	if !errors.Is(err, apperrors.ErrVersionSkew) {

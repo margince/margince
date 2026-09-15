@@ -69,7 +69,7 @@ const SETTINGS_ALIASES: Readonly<
   tags: ["labels", "vocabulary"],
   products: ["price list", "rate card", "offer-templates"],
   capture: ["email capture", "inbox"],
-  integrations: ["webhook", "api", "overlay"],
+  integrations: ["webhook", "api"],
   knowledge: ["handbook", "corpus", "documents"],
   import: ["csv", "upload", "migration"],
   models: ["routing", "providers", "keys", "embeddings"],

@@ -2,7 +2,6 @@ import type { components } from "../api/schema";
 import { useCanWriteRecord } from "../app/capability";
 import { ContactLink } from "../design-system/contactlink";
 import { useT } from "../i18n";
-import { useSorMode } from "./common";
 import { ADDRESS_FIELDS, addressFrom } from "./companyform";
 import { contactEditFields, mapContactUpdate } from "./contactformfields";
 import { RecordCustomFields } from "./recordcustomfields";
@@ -15,7 +14,6 @@ export function ContactDetails({ contact }: Readonly<{ contact: Contact }>) {
   const t = useT();
   const canEdit = useCanWriteRecord("contact", contact) && !contact.archived_at;
   const owners = useRecordOwners(contact.owner_id);
-  const overlay = useSorMode() === "overlay";
   return (
     <>
       <RecordFields
@@ -55,7 +53,6 @@ export function ContactDetails({ contact }: Readonly<{ contact: Contact }>) {
             : undefined
         }
         canEdit={canEdit}
-        notice={overlay ? t("overlay.partialWriteBack") : undefined}
         fields={[
           ...contactEditFields(t),
           ...ADDRESS_FIELDS,

@@ -16,12 +16,7 @@ import { Panel, PanelBody } from "../design-system/panel";
 import { Meter } from "../design-system/readings";
 import { formatDateTime, formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import {
-  OverlayUnavailable,
-  problemMessageOf,
-  throwProblem,
-  useSorMode,
-} from "./common";
+import { problemMessageOf, throwProblem } from "./common";
 
 // The relationship-strength card (Phase 3, P-4): "no mystery number" — the
 // composite score NEVER renders alone. It always carries its bucket badge
@@ -83,21 +78,15 @@ export function StrengthPanel({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  // Relationship strength is computed over the native contacts graph, which the
-  // incumbent mirror does not hold (the endpoint 404s in overlay). Show the
-  // honest unavailable state and skip the doomed fetch.
-  const overlay = useSorMode() === "overlay";
   const query = useQuery({
     queryKey: ["strength", kind, id],
     queryFn: () => fetchStrength(kind, id),
-    enabled: !overlay,
   });
 
   return (
     <Panel title={t("strength.title")}>
       <PanelBody>
-        {overlay && <OverlayUnavailable />}
-        {!overlay && query.isPending && (
+        {query.isPending && (
           <div
             style={{
               display: "flex",
@@ -109,10 +98,10 @@ export function StrengthPanel({
             <Skeleton width="90%" />
           </div>
         )}
-        {!overlay && query.isError && (
+        {query.isError && (
           <EmptyState>{problemMessageOf(query.error, t)}</EmptyState>
         )}
-        {!overlay && query.isSuccess && (
+        {query.isSuccess && (
           <StrengthBody
             strength={query.data}
             locale={locale}

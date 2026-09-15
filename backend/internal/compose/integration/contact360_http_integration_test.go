@@ -31,16 +31,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// nativeWorkspace is the overlay predicate for a workspace on its own system
-// of record — which every fixture here is.
-func nativeWorkspace(context.Context) (bool, error) { return false, nil }
-
 func contactHandlers(e *Env) contact360.Handlers {
 	return contact360.NewHandlers(
 		contact360.NewService(e.Pool, e.Contacts, e.Deals, e.Projects, consent.NewStore(e.DB()),
-			comms.NewStore(e.DB(), time.Now, activities.NewStore(e.DB())), ai.NewFeedbackStore(e.DB()), func() time.Time { return roomFixedNow }),
-		nativeWorkspace,
-	)
+			comms.NewStore(e.DB(), time.Now, activities.NewStore(e.DB())), ai.NewFeedbackStore(e.DB()), func() time.Time { return roomFixedNow }))
 }
 
 // call drives one handler and returns the status and body.

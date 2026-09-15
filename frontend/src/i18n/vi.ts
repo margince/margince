@@ -131,7 +131,6 @@ export const vi = {
   "brief.coverage.source.bounce": "Email không gửi đến được",
   "brief.coverage.source.ai_work_health": "Kiểm tra tự động hóa",
   "brief.coverage.source.capture_health": "Kết nối hộp thư",
-  "brief.coverage.source.sync_health": "Kiểm tra đồng bộ CRM",
   "brief.coverage.source.failed_approval":
     "Hành động được duyệt nhưng thất bại",
   "brief.coverage.source.relationship_decay": "Mối quan hệ ít liên lạc",
@@ -797,8 +796,6 @@ export const vi = {
 
   "state.withheld": "Đã ẩn — vai trò của bạn không đọc được phần này",
   "state.unavailable": "Không tải được — đây có thể chưa phải toàn cảnh",
-  "state.unsupported":
-    "Không có ở chế độ này — hệ thống đang kết nối không lưu dữ liệu đó",
   "state.failed": "Phần này không tải được.",
   "state.loading": "Đang tải phần này…",
   "state.retry": "Thử lại",
@@ -818,7 +815,6 @@ export const vi = {
   "list.loadMore": "Tải thêm",
   "list.viewAll": "Tất cả",
   "list.viewHot": "Tiềm năng cao",
-  "list.overlayReadOnly": "Sắp xếp và bộ lọc đọc qua HubSpot — hãy mở bên đó",
   "table.range": "{first}–{last} trong {count} {unit}",
   "table.pagination": "Trang",
   "table.page": "Trang {number}",
@@ -861,153 +857,6 @@ export const vi = {
   "table.filterSearching": "Đang tìm…",
   "table.filterSearchFailed": "Tìm kiếm thất bại. Hãy thử lại.",
   "table.filterNoMatches": "Không có kết quả.",
-  "overlay.unavailable":
-    "Không dùng được khi đang đọc từ HubSpot — hãy mở bên HubSpot",
-  "overlay.chipLabel": "Đang đọc từ HubSpot",
-  "overlay.chipAria":
-    "Bản cài đặt này đọc bản ghi từ bản sao HubSpot thay vì các bảng gốc. Hãy mở Cài đặt → Tích hợp để quản lý kết nối.",
-  "overlay.refused":
-    "Không dùng được khi đang đọc từ HubSpot — bản sao không phục vụ được lượt ghi này.",
-  "overlay.filterUnsupported":
-    "Bộ lọc hay cách sắp xếp này không dùng được khi đang đọc từ HubSpot — hãy bỏ đi rồi thử lại.",
-  "overlay.emptyOwnerHint":
-    "Danh sách trống ở đây thường có nghĩa là email HubSpot của người phụ trách không khớp người dùng nào trong tổ chức, chứ không phải portal HubSpot trống.",
-  "overlay.partialWriteBack":
-    "Chỉ những trường HubSpot chấp nhận mới được ghi ngược lại — mọi thứ khác ở đây, kể cả trường tuỳ chỉnh và người phụ trách, hoàn toàn không được áp dụng; giá trị hiện tại bên HubSpot vẫn giữ nguyên.",
-
-  "overlay.title": "Bản sao HubSpot",
-  "overlay.sub":
-    "Kết nối CRM đang dùng của tổ chức để bản ghi được đọc từ bản sao của CRM đó thay vì các bảng gốc.",
-  "overlay.loading": "Đang tải kết nối tới CRM đang dùng…",
-  "overlay.notConfigured":
-    "Chế độ Overlay chưa được cấu hình trên bản triển khai này.",
-  "overlay.loadFailed": "Không tải được kết nối tới CRM đang dùng.",
-  "overlay.empty":
-    "Chưa kết nối CRM đang dùng nào. Hãy kết nối HubSpot để đọc bản ghi từ bản sao HubSpot.",
-  "overlay.adminOnly": "Bạn không có quyền thay đổi kết nối HubSpot.",
-  "overlay.loadFailedTitle": "Không đọc được kết nối",
-  "overlay.region": "Khu vực",
-  "overlay.regionEu1": "EU",
-  "overlay.connectionLabel": "Kết nối",
-  "overlay.notConnectedYet": "Chưa kết nối",
-  "overlay.regionUs": "Hoa Kỳ",
-  "overlay.token": "Token private app",
-  "overlay.tokenHint":
-    "Được niêm phong vào kho khoá; không hiển thị lại lần nào nữa.",
-  "overlay.connect": "Kết nối HubSpot",
-  "overlay.reconnect": "Kết nối lại",
-  "overlay.connectConfirmTitle": "Kết nối HubSpot cho cả tổ chức?",
-  "overlay.reconnectConfirmTitle": "Kết nối lại HubSpot cho cả tổ chức?",
-  "overlay.connectConfirmBody":
-    "Thao tác này chuyển ngay phần đọc dữ liệu của mọi người dùng sang bản sao HubSpot, và bản ghi trở thành chỉ đọc ở bất cứ đâu bản sao không phục vụ được lượt ghi. Việc này ảnh hưởng toàn bộ bản cài đặt, không chỉ phiên của riêng bạn.",
-  "overlay.statusActive": "Đã kết nối",
-  "overlay.statusRevoked": "Đã thu hồi",
-  "overlay.statusError": "Lỗi đồng bộ",
-  "overlay.connectedAt": "Kết nối {at}",
-  "overlay.syncTitle": "Đồng bộ bản sao",
-  "overlay.syncLoadFailed": "Không tải được trạng thái đồng bộ.",
-  "overlay.syncLoadFailedTitle": "Không đọc được trạng thái đồng bộ",
-  "overlay.syncEmpty": "Chưa đồng bộ được gì.",
-  "overlay.syncStateFresh": "Mới nhất",
-  "overlay.syncStatePending": "Chờ đồng bộ",
-  "overlay.syncStateStale": "Đã cũ",
-  "overlay.backfillDone": "Đã nạp xong dữ liệu cũ",
-  "overlay.backfillPending": "Đang nạp dữ liệu cũ",
-  "overlay.lastSynced": "Đồng bộ lần cuối {at}",
-  "overlay.neverSynced": "Chưa đồng bộ lần nào",
-  "overlay.budgetTitle": "Hạn mức API",
-  "overlay.budgetLoadFailed": "Không tải được cửa sổ hạn mức.",
-  "overlay.budgetLoadFailedTitle": "Không đọc được cửa sổ hạn mức",
-  "overlay.budgetHeadroom": "Còn dư: {headroom}",
-  "overlay.budgetUnmeasured":
-    "Các lệnh gọi trực tiếp tạm dừng để phòng ngừa. Đây không phải áp lực hạn mức HubSpot — bộ đếm không báo số liệu.",
-  "overlay.budgetUnmeasuredTitle": "Không đo được hạn mức lệnh gọi",
-  "overlay.budgetEmpty":
-    "Hệ thống cũ không báo cáo cửa sổ ngân sách nào cho kỳ này.",
-  "overlay.budgetSources":
-    "Force-fresh {forceFresh} · Poller {poller} · Capture {capture}",
-  "overlay.budgetSearch": "API tìm kiếm: {consumed} / {limit} mỗi giây",
-  "overlay.bandOk": "Ổn định",
-  "overlay.bandWarn": "Sắp chạm giới hạn",
-  "overlay.bandShed": "Đang giảm tải",
-  "overlay.reconcile": "Đồng bộ ngay",
-  "overlay.reconcileQueued":
-    "Đã xếp hàng lượt quét — worker sẽ nhận ở lần kiểm tra kế tiếp (khoảng 2 phút một lần).",
-  "overlay.reconcileFailedTitle": "Chưa xếp được lượt quét",
-  "overlay.disconnect": "Ngắt kết nối",
-  "overlay.disconnectTitle": "Ngắt kết nối HubSpot?",
-  "overlay.disconnectBody":
-    "Thao tác này xoá sạch dữ liệu đã sao và chuyển tổ chức về dùng bản ghi gốc. Nhật ký kiểm toán vẫn được giữ.",
-
-  "overlay.userMap.title": "Ánh xạ người dùng của bản sao",
-  "overlay.userMap.sub":
-    "Mỗi người dùng của tổ chức tương ứng với người dùng {principal} nào. Ánh xạ này quyết định toàn bộ những gì họ thấy trong bản sao.",
-  "overlay.userMap.cost":
-    "Người dùng không có ánh xạ sẽ không thấy bản ghi đã sao nào — danh sách của họ trả về trống.",
-  "overlay.userMap.costTitle": "Người dùng chưa ánh xạ không thấy gì",
-  "overlay.userMap.loading": "Đang tải ánh xạ người dùng…",
-  "overlay.userMap.loadFailed": "Không tải được ánh xạ người dùng.",
-  "overlay.userMap.loadFailedTitle": "Không đọc được ánh xạ người dùng",
-  "overlay.userMap.adminOnly": "Bạn không có quyền xem ai đã được ánh xạ.",
-  "overlay.userMap.notOverlay":
-    "Tổ chức này đọc từ các bảng gốc, nên không có gì để ánh xạ.",
-  "overlay.userMap.notConfigured":
-    "Chế độ Overlay chưa được cấu hình trên bản triển khai này.",
-  "overlay.userMap.empty": "Tổ chức này không có người dùng nào để ánh xạ.",
-  "overlay.userMap.view": "Nhóm theo",
-  "overlay.userMap.viewByUser": "Theo người dùng",
-  "overlay.userMap.viewByOwner": "Theo người dùng {principal}",
-  "overlay.userMap.principal.hubspot": "HubSpot",
-  "overlay.userMap.principal.generic": "CRM đã kết nối",
-  "overlay.userMap.you": "Bạn",
-  "overlay.userMap.matchEmail": "Khớp theo email",
-  "overlay.userMap.matchManual": "Đặt thủ công",
-  "overlay.userMap.map": "Gán ánh xạ",
-  "overlay.userMap.change": "Đổi ánh xạ",
-  "overlay.userMap.unmap": "Bỏ ánh xạ",
-  "overlay.userMap.cancel": "Huỷ",
-  "overlay.userMap.pickerLabel": "Tìm người dùng {principal}",
-  "overlay.userMap.pickTitle": "Ghép với người dùng {principal}",
-  "overlay.userMap.truncated":
-    "Danh bạ {principal} dài hơn danh sách này — người bạn không tìm thấy ở đây có thể nằm ngoài phần đã tải.",
-  "overlay.userMap.directoryFailed":
-    "Không đọc được danh bạ {principal}, nên hiện chưa chọn được ai.",
-  "overlay.userMap.directoryFailedTitle": "Không đọc được danh bạ",
-  "overlay.userMap.saveFailedTitle": "Ánh xạ chưa được lưu",
-  "overlay.userMap.notMapped": "Chưa ánh xạ",
-  "overlay.userMap.chip.noEmailMatch": "Không khớp email",
-  "overlay.userMap.chip.ambiguousEmail": "Email trùng nhiều người",
-  "overlay.userMap.chip.blockedByAdmin": "Quản trị viên đã bỏ ánh xạ",
-  "overlay.userMap.chip.notYetSynced": "Chưa đồng bộ",
-  "overlay.userMap.chip.directoryUnavailable": "Chưa rõ lý do",
-  "overlay.userMap.reason.noEmailMatch":
-    "Không người dùng {principal} nào có địa chỉ email này.",
-  "overlay.userMap.reason.ambiguousEmail":
-    "Hai người dùng {principal} trở lên dùng chung địa chỉ email này, nên không thể khớp tự động một cách an toàn.",
-  "overlay.userMap.reason.blockedByAdmin":
-    "Một quản trị viên đã bỏ ánh xạ người dùng này, và việc khớp tự động sẽ không ánh xạ lại.",
-  "overlay.userMap.reason.notYetSynced":
-    "Danh bạ {principal} chưa liệt kê người dùng này.",
-  "overlay.userMap.reason.directoryUnavailable":
-    "Không đọc được trọn danh bạ {principal}, nên không suy ra được lý do.",
-  "overlay.userMap.staleChip": "Không còn trong danh bạ {principal}",
-  "overlay.userMap.staleNote":
-    "Ánh xạ thủ công này không mở thêm quyền xem nào. Hệ thống chỉ báo lại, không bao giờ tự gỡ — quyết định vẫn thuộc về bạn.",
-  "overlay.userMap.unmapTitle": "Bỏ ánh xạ người dùng này?",
-  "overlay.userMap.unmapSelfTitle": "Bỏ ánh xạ của chính bạn?",
-  "overlay.userMap.unmapBody":
-    "{user} sẽ không còn thấy bản ghi đã sao nào cho đến khi được ánh xạ lại.",
-  "overlay.userMap.unmapSelfBody":
-    "Bạn sẽ không còn thấy bản ghi đã sao nào cho đến khi được ánh xạ lại. Tab này vẫn mở được, nên bạn có thể hoàn tác tại đây.",
-  "overlay.userMap.sharedSeat": "Dùng chung — {count} người dùng",
-  "overlay.userMap.ownerEmpty":
-    "Chưa ai được ánh xạ tới người dùng {principal}.",
-  "overlay.userMap.unmappedCount_one":
-    "1 người dùng chưa được ánh xạ và không hiện ở đây — hãy chuyển sang Theo người dùng để xử lý.",
-  "overlay.userMap.unmappedCount_other":
-    "{count} người dùng chưa được ánh xạ và không hiện ở đây — hãy chuyển sang Theo người dùng để xử lý.",
-  "overlay.userMap.partialView":
-    "Cách nhóm và số đếm này chỉ tính những người dùng đã tải. Hãy tải thêm để xem phần còn lại.",
 
   "contacts.name": "Tên",
   "contacts.email": "Email",
@@ -2313,8 +2162,6 @@ export const vi = {
   "tagResult.noneLeft": "Không còn bản ghi nào mang thẻ",
   "tagResult.unnamed": "Chưa có tên",
   "co.timeline.empty": "Chưa ghi nhận gì trên tài khoản này.",
-  "co.overlayFallback":
-    "Tài khoản này được phục vụ từ hệ thống ghi nhận đã kết nối, nên màn hình công ty không được dựng ở đây. Hãy mở bên hệ thống đó để xem toàn cảnh.",
   "company.domains": "Tên miền",
   "company.factCategory.company": "Công ty",
   "company.factCategory.offering": "Sản phẩm dịch vụ",
@@ -2449,8 +2296,6 @@ export const vi = {
     "Khách hàng tiềm năng này đã đóng và không nhận thay đổi.",
   "lead.notYoursToChange":
     "Bạn không thể thay đổi khách hàng tiềm năng này. Hãy đề nghị chủ sở hữu chia sẻ, hoặc quản trị viên cấp quyền chỉnh sửa.",
-  "lead.callNotInOverlay":
-    "Khách hàng tiềm năng này là bản phản chiếu của hệ thống gốc và không nhận hoạt động từ đây \u2014 hãy ghi cuộc gọi ở nơi lưu bản ghi.",
   "lead.boardCountsUnavailable":
     "Không đọc được số lượng ở cột Đã chuyển đổi và Đã loại.",
   "lead.boardTerminalRowsUnavailable":
@@ -2615,8 +2460,6 @@ export const vi = {
   "lead.viewEngaged": "Đang trao đổi",
   "lead.ladder": "Trạng thái khách hàng tiềm năng",
   "lead.ladder.new": "Mới — chưa ai liên hệ.",
-  "lead.ladder.overlay":
-    "Bản sao không đổi trạng thái khách hàng tiềm năng; hãy đổi trong hệ thống nguồn.",
   "lead.ladder.automatic": "{label} · tự động đặt từ hoạt động đã ghi nhận",
   "lead.ladder.automaticWith": "{label} · tự động đặt — {what} vào {at}",
   "lead.ladder.byHand": "{label} · đặt thủ công",
@@ -2679,7 +2522,6 @@ export const vi = {
   "deals.winReasonOther": "Trường hợp khác",
   "deals.winReasonDetail": "Cụ thể là gì?",
   "deals.confirm": "Xác nhận",
-  "deals.loading": "Đang đọc danh sách deal…",
   "deals.cancel": "Huỷ",
   "deals.advanced": "Đã chuyển sang {stage}",
   "deal.pendingApprovals": "Đang chờ bạn xác nhận",
@@ -9323,6 +9165,8 @@ export const vi = {
   "worklist.pair.ask": "Giữ lại bản ghi nào?",
   "worklist.pair.keep": "Giữ {name}",
   "worklist.pair.notDuplicate": "Không trùng nhau",
+  "worklist.pair.mergeBlocked":
+    "Không thể gộp hai bản ghi này: cả hai đều đang có dự án chạy, và dữ liệu không cho biết công việc nào thuộc về đâu. Nếu chúng không trùng nhau, bạn vẫn có thể ghi nhận điều đó.",
   "worklist.pair.related": "{count} liên kết",
   "worklist.pair.failed": "Không quyết định được cặp này. Hãy thử lại.",
   "worklist.pair.refused":
@@ -9624,31 +9468,6 @@ export const vi = {
   "worklist.untitled.failed_approval": "Điều bạn duyệt đã không chạy",
   "worklist.untitled.dsr": "Một yêu cầu quyền riêng tư",
   "worklist.untitled.notice_case": "Một thông báo cần gửi cho liên hệ này",
-  "worklist.untitled.sync_health": "Đồng bộ CRM cần chú ý",
-  "worklist.sync.class.contacts": "liên hệ",
-  "worklist.sync.class.companies": "công ty",
-  "worklist.sync.class.deals": "deal",
-  "worklist.sync.class.leads": "khách hàng tiềm năng",
-  "worklist.sync.class.calls": "cuộc gọi",
-  "worklist.sync.class.meetings": "cuộc họp",
-  "worklist.sync.class.emails": "email",
-  "worklist.sync.class.notes": "ghi chú",
-  "worklist.sync.class.tasks": "công việc",
-  "worklist.sync.error.rate_limited":
-    "hệ thống kia đang giới hạn số lần chúng ta được hỏi",
-  "worklist.sync.error.unreachable": "không kết nối được tới hệ thống kia",
-  "worklist.sync.error.auth": "kết nối cần đăng nhập lại",
-  "worklist.sync.error.history_gone": "hệ thống kia không còn giữ lịch sử đó",
-  "worklist.sync.error.internal": "có lỗi ở phía chúng ta",
-  "worklist.sync.band.warn":
-    "Gần chạm hạn mức đọc, một số truy vấn sẽ lấy từ bản sao.",
-  "worklist.sync.band.shed":
-    "Vượt hạn mức đọc: truy vấn lấy từ bản sao thay vì trực tiếp.",
-  "worklist.sync.failing": "Không đồng bộ được – {reason}.",
-  "worklist.sync.objects_stale": "Chưa cập nhật ở đây: {classes}.",
-  "worklist.sync.backfill_incomplete": "Đang nhập tiếp: {classes}.",
-  "worklist.sync.records_overwritten":
-    "Sửa ở đây và bị hệ thống kia ghi đè: {classes}.",
   "worklist.untitled.capture_health": "Kết nối hộp thư cần chú ý",
   "worklist.untitled.ai_work_health": "Công việc AI cần xem lại",
   "worklist.untitled.bounce": "Một email không đến nơi",

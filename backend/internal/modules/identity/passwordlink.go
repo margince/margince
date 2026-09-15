@@ -71,19 +71,17 @@ func (h Handlers) canSendPasswordLink() bool {
 // licence read seat is refused every mutating method by serveAsHuman before
 // their role is ever consulted, so advertising the action to them would offer a
 // button that answers 403 whatever their role says.
-func (h Handlers) canIssuePasswordLink(id Identity) bool {
+func (h Handlers) canIssuePasswordLink(ctx context.Context, id Identity) bool {
 	// The grant and not the role name, so an installation that delegates member
 	// administration advertises the action to the holder it delegated it to.
 	// The other three conditions are unchanged: this stays a caller capability
 	// folding authority, seat and deployment posture, because each of the three
 	// can refuse a call the other two would allow.
-	// A background context, because actorCtx builds everything auth.Require
-	// reads out of the identity itself — the grants, the seat, the teams. The
-	// request's context carries nothing this predicate consults, so threading it
-	// through meResponse for one caller would add a parameter that decides
-	// nothing.
-	ctx := actorCtx(context.Background(), id)
-	return auth.Require(ctx, objectUserAdmin, principal.ActionUpdate) == nil &&
+	//
+	// actorCtx binds everything auth.Require reads out of the identity itself —
+	// the grants, the seat, the teams — onto the caller's own context, so the
+	// predicate is decided under the request that asked it.
+	return auth.Require(actorCtx(ctx, id), objectUserAdmin, principal.ActionUpdate) == nil &&
 		principal.SeatType(id.SeatType).CanMutate() &&
 		h.resetMailer == nil &&
 		h.passwordLinkBaseURL != ""

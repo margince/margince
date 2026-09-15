@@ -38,13 +38,11 @@ const SECTION_LABELS: Record<SectionKind, MessageKey> = {
  */
 export function DossierPanel({
   companyId,
-  enabled,
   onOpenRecord,
   onOpenEmail,
   nameOf,
 }: Readonly<{
   companyId: string;
-  enabled: boolean;
   onOpenRecord?: (entityType: string, entityId: string) => void;
   // Opens a cited message in the page's email drawer; see `Citations`.
   onOpenEmail?: (activityId: string) => void;
@@ -59,7 +57,6 @@ export function DossierPanel({
   const recordZone = useRecordZone();
   const dossier = useQuery({
     queryKey: ["company-dossier", companyId],
-    enabled,
     queryFn: async () => {
       const { data, error } = await api.GET("/companies/{id}/dossier", {
         params: { path: { id: companyId } },
@@ -83,12 +80,6 @@ export function DossierPanel({
     onSuccess: (data) =>
       queryClient.setQueryData(["company-dossier", companyId], data),
   });
-
-  // A workspace reading from an incumbent mirror holds none of the facts this
-  // is assembled from, so the panel is absent rather than empty.
-  if (!enabled) {
-    return null;
-  }
 
   const written = dossier.data;
   // A payload this build cannot read is not a company we know nothing about.

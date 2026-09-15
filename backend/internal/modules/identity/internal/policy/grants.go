@@ -61,13 +61,7 @@ var (
 // input, not a locked-down schema surface, so reps create and work
 // templates like any other offer-adjacent record; delete stays manager/
 // admin/ops (archiveOfferTemplate carries no x-agent-access gate — any
-// role holding delete may call it directly). overlay_connection follows
-// the SAME posture as custom_field, and for the same reason:
-// connecting/disconnecting the workspace's incumbent binding is
-// destructive workspace-wide config (it purges the mirror and flips
-// sor_mode for everyone), so create/update/delete are admin/ops-only;
-// every role may read the connection status (a rep needs to see whether
-// overlay mode is live, the same as a custom_field catalog read).
+// role holding delete may call it directly).
 // embedding_reindex has no create/delete surface at all — it is a single
 // deployment-level trigger, not a record kind — so only read and update
 // are ever granted, and both are admin/ops-only: admin/ops may update
@@ -76,8 +70,8 @@ var (
 // human session, never an agent), and admin/ops alone may read it — the
 // banner/card that consumes the read is itself ops-gated in the SPA, so
 // manager/rep/read_only have no legitimate consumer of this object and
-// get the zero grant, unlike the custom_field catalog or
-// overlay_connection's status which every role legitimately reads.
+// get the zero grant, unlike the custom_field catalog, which every role
+// legitimately reads.
 // webhook_subscription follows the SAME admin/ops-owned posture: a
 // subscription registers outbound egress of governed events, so managing
 // the fan-out surface is workspace integration config (create/update/
@@ -85,16 +79,15 @@ var (
 // delivery health. (UC-E10-04 narrates a Rep registering one; that
 // posture question is tracked upstream against the spec, not settled
 // here.)
-// channel_connection follows overlay_connection's posture exactly: a bot
-// bound at the workspace level carries every seat's inbound channel traffic,
+// channel_connection: a bot bound at the workspace level carries every
+// seat's inbound channel traffic,
 // so create/update/delete are admin/ops-only, while every role may read the
 // binding's status (a rep needs to know whether the channel is live before
 // expecting a reply to arrive there).
 // import_run is admin/ops-only on EVERY verb, read included: a
-// migration run is a workspace-wide bulk mutation of the estate (the
-// overlay→native flip executes through it), and unlike custom_field or
-// overlay_connection there is no per-rep read surface — the mode-flip
-// and migrate-in screens are admin surfaces.
+// migration run is a workspace-wide bulk mutation of the estate, and unlike
+// custom_field there is no per-rep read surface — the migrate-in screen is an
+// admin surface.
 // grid builds one role's document: every core object at `base`, then the
 // objects that differ. It replaces a 44-argument positional zip in which the
 // object a grant belonged to was decided by COUNTING — a transposed pair
@@ -176,8 +169,7 @@ const (
 	// grant only ever fires from a human session, never an agent), and admin/ops
 	// alone may read it: the banner that consumes the read is itself ops-gated,
 	// so manager/rep/read_only have no legitimate consumer and get nothing —
-	// unlike the custom_field catalog or overlay_connection's status, which
-	// every role legitimately reads.
+	// unlike the custom_field catalog, which every role legitimately reads.
 	objEmbeddingReindex = "embedding_reindex"
 	// createRead everywhere it is held: a reading is derived, and a current
 	// call SUPERSEDES rather than being rewritten, so neither update nor delete
@@ -188,10 +180,8 @@ const (
 	// row prices a historical rollup.
 	objFxRate = "fx_rate"
 	// Admin/ops-only on EVERY verb, read included: a migration run is a
-	// workspace-wide bulk mutation of the estate (the overlay→native flip
-	// executes through it), and unlike custom_field or overlay_connection there
-	// is no per-rep read surface — the mode-flip and migrate-in screens are
-	// admin surfaces.
+	// workspace-wide bulk mutation of the estate, and unlike custom_field there
+	// is no per-rep read surface — the migrate-in screen is an admin surface.
 	objImportRun = "import_run"
 	// The company's own identity and reporting calendar (ADR-0090).
 	// Read is broad — the base currency and the business timezone shape what

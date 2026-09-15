@@ -65,12 +65,6 @@ import { TaskCompleteCheck, type useTaskUpdate } from "./taskactions";
 type Company360 = components["schemas"]["Company360"];
 type Deal360 = components["schemas"]["Company360Deal"];
 type NextStep = components["schemas"]["Company360NextStep"];
-const OVERLAY_REFUSAL = "unsupported_in_overlay_mode";
-
-export type Company360Result =
-  | { state: "ready"; view: Company360 }
-  | { state: "overlay" };
-
 /**
  * useCompany360 reads the whole company page in one round trip.
  *
@@ -79,20 +73,17 @@ export type Company360Result =
  * no record under it — an empty id is a 422, not an empty answer.
  */
 export function useCompany360(id: string, enabled = true) {
-  return useQuery<Company360Result>({
+  return useQuery<Company360>({
     queryKey: ["company360", id],
     enabled: enabled && id !== "",
     queryFn: async () => {
-      const { data, error, response } = await api.GET("/companies/{id}/360", {
+      const { data, error } = await api.GET("/companies/{id}/360", {
         params: { path: { id } },
       });
       if (error) {
-        if (response.status === 422 && isOverlayRefusal(error)) {
-          return { state: "overlay" };
-        }
         throwProblem(error);
       }
-      return { state: "ready", view: data };
+      return data;
     },
   });
 }
@@ -140,30 +131,6 @@ export function useAcknowledgeCompanyView(id: string, visited: boolean) {
     const timer = window.setTimeout(() => fire(id), VIEW_ACK_DWELL_MS);
     return () => window.clearTimeout(timer);
   }, [id, visited, fire]);
-}
-
-// isOverlayRefusal distinguishes "this workspace reads elsewhere" from every
-// other 422 (a malformed id, say), which stays an error the caller sees.
-//
-// It narrows by checking rather than asserting: a problem body that is not
-// the shape we expect — null, a string, an older server's payload — is not
-// an overlay refusal, and must read as one failure rather than throwing a
-// second one on the way to saying so.
-function isOverlayRefusal(problem: unknown): boolean {
-  const errors = asRecord(asRecord(problem)?.details)?.errors;
-  if (!Array.isArray(errors)) {
-    return false;
-  }
-  return errors.some((entry) => asRecord(entry)?.code === OVERLAY_REFUSAL);
-}
-
-// asRecord narrows an unknown to a readable object, or gives up. Truthiness
-// first, because typeof null is "object" — the one case that would otherwise
-// pass the guard and throw on the next property read.
-function asRecord(value: unknown): Record<string, unknown> | undefined {
-  return value && typeof value === "object"
-    ? (value as Record<string, unknown>)
-    : undefined;
 }
 
 /** DealsCard lists the open pipeline plus the two lifetime figures. */
@@ -652,13 +619,11 @@ const QUESTIONS: readonly Question[] = Object.keys({
  */
 export function AskSection({
   companyId,
-  enabled,
   onOpenRecord,
   onOpenEmail,
   projects,
 }: Readonly<{
   companyId: string;
-  enabled: boolean;
   onOpenRecord?: (entityType: string, entityId: string) => void;
   // Opens a cited message in the page's email drawer; see `Citations`.
   onOpenEmail?: (activityId: string) => void;
@@ -695,9 +660,6 @@ export function AskSection({
     },
   });
 
-  if (!enabled) {
-    return null;
-  }
   const answer: Answer | undefined = ask.data;
   // A payload without sentences is an answer this build cannot read, not an
   // account with nothing to say — the same distinction every card here keeps.

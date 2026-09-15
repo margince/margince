@@ -851,7 +851,7 @@ export function RecordView({
   // Controls above the timeline list (filters), and below it (load more).
   timelineHeader?: ReactNode;
   timelineFooter?: ReactNode;
-  // When set, replaces the timeline list — e.g. an overlay-mode "not available"
+  // When set, replaces the timeline list — e.g. a "not available"
   // note, since the mirror cannot serve entity-scoped activity reads. Keeps the
   // section honest instead of rendering an empty list that reads as "no activity".
   timelineNotice?: ReactNode;

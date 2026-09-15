@@ -21,13 +21,11 @@ import { AskSection } from "./company360";
  */
 export function AssistantPanel({
   companyId,
-  enabled,
   onOpenRecord,
   onOpenEmail,
   projects,
 }: Readonly<{
   companyId: string;
-  enabled: boolean;
   onOpenRecord?: (entityType: string, entityId: string) => void;
   // Opens a cited message in the page's email drawer; see `Citations`.
   onOpenEmail?: (activityId: string) => void;
@@ -35,9 +33,6 @@ export function AssistantPanel({
   projects?: readonly PickableProject[];
 }>) {
   const t = useT();
-  if (!enabled) {
-    return null;
-  }
   return (
     <Panel
       title={t("co.assistant.title")}
@@ -53,7 +48,6 @@ export function AssistantPanel({
       <PanelBody>
         <AskSection
           companyId={companyId}
-          enabled={enabled}
           onOpenRecord={onOpenRecord}
           onOpenEmail={onOpenEmail}
           projects={projects}

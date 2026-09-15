@@ -17,7 +17,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/overlay"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -25,7 +24,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
-	"github.com/margince/margince/backend/internal/platform/overlaybudget"
 	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -74,9 +72,6 @@ type dataResetHandlers struct {
 	// Server.resetRuntime for what a copy would silently cost. nil is the
 	// Postgres-only reset a role that wired no runtime performs.
 	runtime *ResetRuntime
-	// budget is the overlay budget meter whose per-workspace Redis counters
-	// must not survive the install they were spent by.
-	budget *overlaybudget.Meter
 	// blob is the object store holding the bytes the swept rows referenced.
 	blob blobstore.Store
 	// vault holds the sealed credentials the swept connection rows referenced.
@@ -119,7 +114,7 @@ func (h dataResetHandlers) run(ctx context.Context, confirmation string) (resetC
 }
 
 // runQuiesced performs the reset with the job fleet held down: drain the outbox,
-// purge the queue, the bus and the budget counters, sweep + re-seed Postgres in
+// purge the queue and the bus, sweep + re-seed Postgres in
 // one transaction, clear the surfaces no transaction can reach, and announce the
 // reset so every process drops its caches. clearOutbox and sweep are the two
 // Postgres halves the runtime ordering separates, taken as parameters so this
@@ -199,7 +194,7 @@ func (h dataResetHandlers) runQuiesced(ctx context.Context, wsID ids.UUID, clear
 		"tables_cleared", counts.TablesCleared, "jobs_deleted", counts.JobsDeleted,
 		"streams_purged", counts.StreamsPurged, "cache_keys_deleted", counts.CacheKeys,
 		"objects_deleted", counts.ObjectsDeleted, "drain_timed_out", counts.DrainTimedOut,
-		"sor_mode_reverted", counts.SorModeReverted, "secrets_purged", counts.SecretsPurged)
+		"secrets_purged", counts.SecretsPurged)
 	return counts, nil
 }
 
@@ -258,30 +253,12 @@ func (h dataResetHandlers) sweepAndReseed(ctx context.Context, wsID ids.UUID, co
 		// by exclusion now, so they are ordinary targets.
 		counts.TablesCleared = len(tables)
 
-		// A first-boot installation is native, and everything overlay mode
-		// depends on was just swept: the incumbent connection, the mirror, the
-		// budget counters. Left in overlay mode the workspace would claim to
-		// read from an incumbent it has no connection to, dispatching every
-		// read at an empty mirror — an installation that looks like it works.
-		//
-		// overlay's own function, not a local UPDATE: these are its fork-owned
-		// columns, and Disconnect flips them the same way. This is NOT that
-		// teardown, though — the connection and mirror rows are already gone
-		// with the sweep, the reset carries its own audit row, and
-		// incumbent.disconnected would be staged into an outbox this reset just
-		// drained.
-		reverted, err := overlay.RevertToNative(ctx, tx)
-		if err != nil {
-			return err
-		}
-		counts.SorModeReverted = reverted
-
 		// The workspace row itself carries nothing to reset. ADR-0090 moved its
-		// identity into `setting` and ADR-0091 moved the overlay mode into
-		// overlay_mode, leaving id and the lifecycle timestamps — which a reset
-		// preserves by definition, since it wipes an installation's DATA and does
-		// not re-create the installation. identity.ResetWorkspaceConfig retired
-		// with the last column it had to restore.
+		// identity into `setting`, leaving id and the lifecycle timestamps —
+		// which a reset preserves by definition, since it wipes an
+		// installation's DATA and does not re-create the installation.
+		// identity.ResetWorkspaceConfig retired with the last column it had to
+		// restore.
 
 		// The same obligation for the settings that no longer live on that row
 		// (ADR-0090/A135). `setting` carries no workspace_id, so the table
@@ -346,10 +323,6 @@ func resetEvidence(counts resetCounts) map[string]any {
 		"streams_purged":     counts.StreamsPurged,
 		"cache_keys_deleted": counts.CacheKeys,
 		"drain_timed_out":    counts.DrainTimedOut,
-		// Whether this reset also took the installation out of overlay mode.
-		// It belongs in the permanent record because it changes where every
-		// subsequent read is served from, which no other count here does.
-		"sor_mode_reverted": counts.SorModeReverted,
 		// Sealed credentials redeemed from the vault. Like objects_deleted this
 		// is tallied after the commit, so the number this row carries is the
 		// count the sweep COLLECTED — the work the reset committed itself to —

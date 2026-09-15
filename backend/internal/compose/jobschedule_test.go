@@ -98,9 +98,9 @@ func TestPeriodicForTakesTheOperatorsIntervalWhenDeclared(t *testing.T) {
 }
 
 func TestPeriodicForRegistersNothingWhenItsDependencyIsAbsent(t *testing.T) {
-	got := periodicFor(JobRunnerConfig{}, OverlayReconcileArgs{})
+	got := periodicFor(JobRunnerConfig{}, GmailSyncArgs{})
 	if len(got) != 0 {
-		t.Errorf("got %d periodic jobs, want 0 — overlay_reconcile declares registers_nothing without OverlayVault, and a row nothing can work must never be queued", len(got))
+		t.Errorf("got %d periodic jobs, want 0 — gmail_sync declares registers_nothing without GmailRegistry, and a row nothing can work must never be queued", len(got))
 	}
 }
 

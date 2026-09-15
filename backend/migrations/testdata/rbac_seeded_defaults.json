@@ -241,12 +241,6 @@
         "read": true,
         "update": true
       },
-      "overlay_connection": {
-        "create": true,
-        "delete": true,
-        "read": true,
-        "update": true
-      },
       "partner": {
         "create": true,
         "delete": true,
@@ -599,12 +593,6 @@
         "delete": true,
         "read": true,
         "update": true
-      },
-      "overlay_connection": {
-        "create": false,
-        "delete": false,
-        "read": true,
-        "update": false
       },
       "partner": {
         "create": true,
@@ -959,12 +947,6 @@
         "read": true,
         "update": true
       },
-      "overlay_connection": {
-        "create": false,
-        "delete": false,
-        "read": true,
-        "update": false
-      },
       "partner": {
         "create": true,
         "delete": true,
@@ -1313,12 +1295,6 @@
         "update": true
       },
       "offer_template": {
-        "create": true,
-        "delete": true,
-        "read": true,
-        "update": true
-      },
-      "overlay_connection": {
         "create": true,
         "delete": true,
         "read": true,
@@ -1677,12 +1653,6 @@
         "read": true,
         "update": false
       },
-      "overlay_connection": {
-        "create": false,
-        "delete": false,
-        "read": true,
-        "update": false
-      },
       "partner": {
         "create": false,
         "delete": false,
@@ -2035,12 +2005,6 @@
         "delete": false,
         "read": true,
         "update": true
-      },
-      "overlay_connection": {
-        "create": false,
-        "delete": false,
-        "read": true,
-        "update": false
       },
       "partner": {
         "create": false,

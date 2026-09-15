@@ -17,11 +17,11 @@ package identity
 // here reaches around the boot path.
 
 import (
+	"context"
 	"encoding/json"
 	"maps"
 	"testing"
 
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/identity/internal/policy"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -40,11 +40,11 @@ func registerForTest(t *testing.T, objects ...RbacObject) {
 // authorization.objects map exactly as a client receives it.
 func meObjects(t *testing.T, perms principal.Permissions) map[string]map[string]bool {
 	t.Helper()
-	raw, err := json.Marshal(NewHandlers(&Service{}).meResponse(Identity{
+	raw, err := json.Marshal(NewHandlers(&Service{}).meResponse(context.Background(), Identity{
 		Email:       "rep@example.com",
 		SeatType:    "full",
 		Permissions: perms,
-	}, crmcontracts.MeResponseSystemOfRecordModeNative))
+	}))
 	if err != nil {
 		t.Fatalf("marshalling /me: %v", err)
 	}

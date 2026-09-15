@@ -41,7 +41,6 @@ func TestParseWorkerFlagsRejectsNonPositiveIntervals(t *testing.T) {
 		"--gmail-sync-interval",
 		"--gmail-watch-interval",
 		"--graph-watch-interval",
-		"--overlay-reconcile-interval",
 	} {
 		for _, bad := range []string{"0", "-1s"} {
 			args := append(append([]string{}, base...), flag+"="+bad)
@@ -67,10 +66,6 @@ func TestParseWorkerFlagsRejectsNonPositiveIntervals(t *testing.T) {
 	}
 	if _, err := parseWorkerFlags(append(append([]string{}, base...), "--graph-watch-renew-within=-1s")); err == nil {
 		t.Error("parseWorkerFlags(--graph-watch-renew-within=-1s): want a boot error, got nil")
-	}
-	// A negative overlay backfill limit is rejected; zero (uncapped) is fine.
-	if _, err := parseWorkerFlags(append(append([]string{}, base...), "--overlay-backfill-limit=-1")); err == nil {
-		t.Error("parseWorkerFlags(--overlay-backfill-limit=-1): want a boot error, got nil")
 	}
 }
 

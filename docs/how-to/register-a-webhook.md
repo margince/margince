@@ -228,8 +228,8 @@ A paused subscription holds its retries until it resumes; an archived one stops 
    receiver's `data` field against that event's `PublicEvent<Event>` schema in
    `backend/api/public-events.yaml` — they must agree field-for-field (the compile-time seam that
    guarantees this is [explanation/outbound-webhooks.md §3](../explanation/outbound-webhooks.md)).
-7. **A ratified deferred-delivery type stays honestly silent.** Subscribe to `mirror.conflict` or
-   `retention.applied` and trigger the underlying overlay/retention action — confirm you receive nothing
+7. **A ratified deferred-delivery type stays honestly silent.** Subscribe to
+   `retention.applied` and trigger the underlying retention action — confirm you receive nothing
    for it; this is a documented gap ([explanation/outbound-webhooks.md §5](../explanation/outbound-webhooks.md)),
    not a bug in your setup.
 8. **The UI mirrors the API.** Everything above also works from Settings → Integrations — the create

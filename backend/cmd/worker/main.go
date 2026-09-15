@@ -181,7 +181,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	weeklyMail := weeklyMailConfig(ctx, cfg, deployCfg, pool, vault, logger)
 	_, _ = fmt.Fprintln(stdout, weeklyMailBanner(weeklyMail))
 
-	stopJobs, err := startJobRunner(ctx, pool, rdb, vault, compose.OverlayBudgetConfig(deployCfg.EffectiveOverlayBudget()),
+	stopJobs, err := startJobRunner(ctx, pool, vault,
 		logger, cfg, modelPath, boundModels, lanes, weeklyMail, stdout)
 	if err != nil {
 		return err

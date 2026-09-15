@@ -97,9 +97,6 @@ func TestRiverEncodesTheWorkspaceArgAsWorkspaceIDAndOmitsItOnADispatcher(t *test
 		compose.CaptureSyncArgs{
 			Workspace: ids.NewV7(), ConnectionID: ids.NewV7().String(), Provider: "gmail",
 		},
-		compose.OverlayRefetchArgs{
-			Workspace: ids.NewV7(), IncumbentClass: "hubspot", ExternalID: ids.NewV7().String(),
-		},
 	}
 	dispatcher := jobs.FleetWide(compose.TelegramPollSweepArgs{})
 

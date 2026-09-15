@@ -59,8 +59,11 @@ var performedBySource = map[string][]crmcontracts.AttentionItemActions{
 	// `snooze` opens the record, where the due date lives.
 	"task": {"complete", "snooze", "open"},
 	// Answered inline: the decision card is on the row itself.
-	"approval":             {"decide", "open"},
-	"dedupe_candidate":     {"merge", "open"},
+	"approval": {"decide", "open"},
+	// Both answered by PairDecision in worklist.pair.tsx, and each on its own
+	// guard: the Keep buttons ask for `merge`, and the "Not the same" line asks
+	// for `dismiss`. A pair no merge would accept still carries the second.
+	"dedupe_candidate":     {"merge", "dismiss", "open"},
 	"introduction_request": {"decide", "open"},
 	// Drawn by NoticeAcknowledge rather than through the routing table.
 	"notice": {"acknowledge", "open"},
@@ -71,7 +74,6 @@ var performedBySource = map[string][]crmcontracts.AttentionItemActions{
 	// Health and delivery rows navigate and nothing more: what fixes them lives
 	// on another screen, and a verb here would promise a repair this queue
 	// cannot make.
-	"sync_health":    {"open"},
 	"capture_health": {"open"},
 	"ai_work_health": {"open"},
 	// `retry` reaches AutomationRetry; a failed firing carries it and a blocked
@@ -292,7 +294,6 @@ func aDayWithEveryLaneCarryingARow(t *testing.T) crmcontracts.Attention {
 			FailedAt: readInstant, TargetType: "contact", TargetID: ids.NewV7(),
 		}}},
 		&stubDSRs{rows: []DSRCase{{ID: ids.NewV7(), Kind: "access", DueAt: readInstant}}},
-		&stubSyncHealth{rows: []SyncConcern{{Kind: "sync_failing", ErrorClass: "auth"}}},
 		&stubCaptureHealth{rows: []CaptureConcern{{ConnectionID: ids.NewV7(), Kind: "reauth_required", Provider: "gmail"}}},
 		&stubAIWork{rows: []TroubledRun{{ID: ids.NewV7(), State: "failed", OccurredAt: readInstant}}},
 		&stubBounces{rows: []BouncedSend{{ID: ids.NewV7(), Subject: "a bounced send", BouncedAt: readInstant, ContactID: ids.NewV7()}}},

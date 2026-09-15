@@ -38,8 +38,7 @@ import "./consumer-mail-domains.css";
 
 // The two things an entry can say, as ONE list: the type is derived from it and
 // the control's options are built from it, so the offered choices, their labels
-// and the runtime narrowing cannot drift apart (same shape as overlay.tsx's
-// region list).
+// and the runtime narrowing cannot drift apart.
 const KINDS = ["extra", "never"] as const;
 type Kind = (typeof KINDS)[number];
 const kindLabel: Record<Kind, MessageKey> = {

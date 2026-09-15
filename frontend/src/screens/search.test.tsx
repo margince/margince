@@ -339,9 +339,9 @@ describe("SearchScreen", () => {
     );
     const { container } = render(<SearchScreen q="acme" />);
     await waitFor(() => expect(screen.getByText("Dana Buyer")).toBeTruthy());
-    // The tier covers every overlay and connector source, so the badge names
-    // none of them: a hit carries no provider field, and a vendor name here
-    // would be stamped on rows mirrored from a different system.
+    // The tier covers every connector source, so the badge names none of
+    // them: a hit carries no provider field, and a vendor name here would be
+    // stamped on rows mirrored from a different system.
     expect(screen.getByText("From a connected system")).toBeTruthy();
     expect(screen.queryByText(/HubSpot/)).toBeNull();
     // authoritative's badge never renders alongside a mirrored hit.

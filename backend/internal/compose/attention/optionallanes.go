@@ -46,11 +46,6 @@ type optionalLane struct {
 //
 // A refusal NAMES the lane; any other failure is returned, because a lane that
 // is broken rather than withheld must not read as a quiet one.
-//
-// ErrModeNotOverlay is unbound-at-read: whether an installation runs in
-// overlay mode is a fact only the read can answer, and a workspace that is
-// not simply does not have the lane — absent like an unbound one, never
-// withheld, because nothing was hidden from this reader.
 func (l optionalLane) collect(
 	omitted []crmcontracts.AttentionLanesOmitted,
 ) ([]crmcontracts.AttentionLanesOmitted, error) {
@@ -59,8 +54,6 @@ func (l optionalLane) collect(
 	}
 	items, err := l.read()
 	switch {
-	case errors.Is(err, apperrors.ErrModeNotOverlay):
-		return omitted, nil
 	case errors.Is(err, apperrors.ErrPermissionDenied):
 		return append(omitted, crmcontracts.AttentionLanesOmitted(l.name)), nil
 	case err != nil:
@@ -76,8 +69,6 @@ func (l optionalLane) collect(
 		// lane both present and named as omitted.
 		count, err = l.total()
 		switch {
-		case errors.Is(err, apperrors.ErrModeNotOverlay):
-			return omitted, nil
 		case errors.Is(err, apperrors.ErrPermissionDenied):
 			return append(omitted, crmcontracts.AttentionLanesOmitted(l.name)), nil
 		case err != nil:
@@ -191,21 +182,13 @@ func (s *Service) optionalLanes(
 }
 
 // operationalLanes is the second half of the list: what is broken between
-// this reader and the world — the sync, their mailboxes, their delegated AI
-// work, their sends. Split from optionalLanes on the function-length
+// this reader and the world — their mailboxes, their delegated AI work, their
+// sends. Split from optionalLanes on the function-length
 // ceiling; the shared collect loop walks both halves as one list.
 func (s *Service) operationalLanes(
 	ctx context.Context, asOf time.Time, out *crmcontracts.Attention,
 ) []optionalLane {
 	return []optionalLane{
-		{
-			name: "sync_health", bound: s.syncHealth != nil,
-			read: func() ([]crmcontracts.AttentionItem, error) {
-				concerns, err := s.syncHealth.Concerns(ctx)
-				return renderEach(concerns, syncItem), err
-			},
-			into: &out.SyncHealth, count: &out.Counts.SyncHealth,
-		},
 		{
 			name: "capture_health", bound: s.captureHealth != nil,
 			read: func() ([]crmcontracts.AttentionItem, error) {

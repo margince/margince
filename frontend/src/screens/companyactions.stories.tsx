@@ -21,12 +21,9 @@ import {
 // or create.tsx) — there is no read-only or permission-denied variant to
 // cover, unlike companyraildetails' Archived story.
 //
-// The session still has to be stated, for a reason that is not object RBAC:
-// CreateAction reads the workspace's system-of-record mode off /me and renders
-// NOTHING on a mirrored screen in overlay mode (companies, deals — all three
-// controls here). Every story below is a NATIVE workspace, which is what
-// meFixture answers by default. The grants each one names are the ones its
-// flow actually spends, so the session reads as the rep the story is about.
+// The session still has to be stated: the grants each story names are the ones
+// its flow actually spends, so the session reads as the rep the story is
+// about.
 
 type Pipeline = components["schemas"]["Pipeline"];
 

@@ -751,7 +751,6 @@ export const KNOWN_SOURCES = {
   failed_approval: true,
   dsr: true,
   notice_case: true,
-  sync_health: true,
   capture_health: true,
   ai_work_health: true,
   bounce: true,

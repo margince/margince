@@ -14,7 +14,7 @@ import { type SectionState, SurfaceState } from "../design-system/surfacestate";
 import { formatDate, formatNumber } from "../format/format";
 import { webUrl } from "../format/weburl";
 import { useLocale, useT } from "../i18n";
-import { problemCodeOf, throwProblem, useSorMode } from "./common";
+import { problemCodeOf, throwProblem } from "./common";
 import { CompanyDetails } from "./companydetails";
 import { DealsSection } from "./companyraildeals";
 import { CompanyProfileDetails } from "./companyraildetails";
@@ -90,7 +90,6 @@ export function CompanyRail({
   onTab: (tab: "deals" | "contacts" | "profile") => void;
 }>) {
   const t = useT();
-  const overlay = useSorMode() === "overlay";
   // The same per-row answer the company's other verbs read: an archived
   // company, or one this seat may read but not write, takes no new
   // responsibilities.
@@ -110,7 +109,7 @@ export function CompanyRail({
             resolved record while the composite read below is still arriving. */}
       {resolved && (
         <>
-          <CompanyDetails company={resolved} overlay={overlay} />
+          <CompanyDetails company={resolved} />
           <RecordCustomFields kind="company" record={resolved} />
         </>
       )}

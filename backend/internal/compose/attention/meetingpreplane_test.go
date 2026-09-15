@@ -33,7 +33,7 @@ func meetingPrepService(rows []Meeting) *Service {
 	return NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
 		stubBriefing{}, nil, nil, nil, &stubMeetings{rows: rows},
-		nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+		nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
 }
 
 // reasonsOn is the reason vocabulary one meeting row published.

@@ -63,12 +63,10 @@ const BAND_TONES: Partial<Record<Band, "success" | "warn">> = {
  */
 export function GrowthFitPanel({
   companyId,
-  enabled,
   onOpenRecord,
   onOpenEmail,
 }: Readonly<{
   companyId: string;
-  enabled: boolean;
   onOpenRecord?: (entityType: string, entityId: string) => void;
   // Opens a cited message in the page's email drawer; see `Citations`.
   onOpenEmail?: (activityId: string) => void;
@@ -79,7 +77,6 @@ export function GrowthFitPanel({
   const recordZone = useRecordZone();
   const fit = useQuery({
     queryKey: ["company-growth-fit", companyId],
-    enabled,
     queryFn: async () => {
       const { data, error } = await api.GET("/companies/{id}/growth-fit", {
         params: { path: { id: companyId } },
@@ -103,12 +100,6 @@ export function GrowthFitPanel({
     onSuccess: (data) =>
       queryClient.setQueryData(["company-growth-fit", companyId], data),
   });
-
-  // A workspace reading from an incumbent mirror has none of the facts this is
-  // assembled from, so the panel is absent rather than empty.
-  if (!enabled) {
-    return null;
-  }
 
   const written = fit.data;
   // A payload this build cannot read is not a company we know nothing about.

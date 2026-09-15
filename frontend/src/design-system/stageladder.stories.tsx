@@ -65,9 +65,8 @@ export const AtTheStart: Story = {
 };
 
 /**
- * Every move refused for one cause — an archived record, a mirror the
- * incumbent will not let us write. The sentence belongs to the ladder rather
- * than to each step, so the page says it once.
+ * Every move refused for one cause — an archived record, say. The sentence
+ * belongs to the ladder rather than to each step, so the page says it once.
  */
 export const NoMoveAllowed: Story = {
   render: () => (
@@ -132,9 +131,9 @@ export const WithAHint: Story = {
 };
 
 /**
- * A record whose stage the pipeline cannot name — an overlay mirror carrying
- * the incumbent's stage id. No marker and no trail, because both would be
- * guesses about where it has been.
+ * A record whose stage the pipeline cannot name — one archived out from under
+ * it. No marker and no trail, because both would be guesses about where it has
+ * been.
  */
 export const StageNotInThisPipeline: Story = {
   render: () => (

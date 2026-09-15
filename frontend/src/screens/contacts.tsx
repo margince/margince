@@ -144,15 +144,6 @@ function profileUrlOrUndefined(raw: string | undefined) {
   return stated ? normalizeProfileUrl(stated) : undefined;
 }
 
-/**
- * ContactAside is the relationship column, and in overlay mode it SAYS it
- * cannot answer rather than disappearing.
- *
- * Both panels read the interaction projection, which is folded from natively
- * captured participants — a mirror-backed workspace has none. Rendering
- * nothing would let the page read as "nobody here knows them", which is a lie
- * about the relationship rather than an empty answer about the data.
- */
 export function ContactsScreen() {
   const t = useT();
   const pageName = usePageName("contacts");

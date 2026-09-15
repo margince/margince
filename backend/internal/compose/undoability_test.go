@@ -136,19 +136,6 @@ func TestAnImageTheShapeCannotSpellIsRefusedByNamingTheField(t *testing.T) {
 	}
 }
 
-// A restore in a workspace whose records live in an incumbent system is refused
-// before it writes. The write-back path records its own verb and its own
-// evidence, so the link naming the reversed row is never written — nothing
-// would read as undone, and the change would already have happened in two
-// systems by the time anyone noticed.
-func TestARecordHeldInAnExternalSystemIsRefusedBeforeAnythingIsWritten(t *testing.T) {
-	e := Evaluator{ExternallyGoverned: func(context.Context) (bool, error) { return true, nil }}
-	answer := evaluateWithoutTheTrail(t, e, contactRow(`{"title":"CTO"}`))
-	if answer.Reason != ReasonNotRestorableByThisPath {
-		t.Errorf("reason = %q, want %q", answer.Reason, ReasonNotRestorableByThisPath)
-	}
-}
-
 // An archived record's update path refuses on its own terms. Naming it here
 // makes the refusal legible instead of a surprise the reader reads as a bug.
 func TestAnArchivedRecordIsRefusedBeforeTheTrailIsRead(t *testing.T) {

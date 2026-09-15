@@ -8,7 +8,6 @@ package contactresearch
 // result to the sentinel error mapping.
 
 import (
-	"context"
 	"net/http"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -16,26 +15,18 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// OverlayMode answers whether the calling workspace reads from an incumbent
-// mirror instead of this system of record.
-type OverlayMode func(ctx context.Context) (bool, error)
-
 // Handlers shadows the generated research stubs.
 type Handlers struct {
-	svc     *Service
-	overlay OverlayMode
+	svc *Service
 }
 
 // NewHandlers binds the transport to a ready service.
-func NewHandlers(svc *Service, overlay OverlayMode) Handlers {
-	return Handlers{svc: svc, overlay: overlay}
+func NewHandlers(svc *Service) Handlers {
+	return Handlers{svc: svc}
 }
 
 // RunContactResearch implements POST /contacts/{id}/research.
 func (h Handlers) RunContactResearch(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	if !h.native(w, r) {
-		return
-	}
 	run, err := h.svc.Run(r.Context(), ids.From[ids.ContactKind](ids.UUID(id)))
 	if err != nil {
 		httperr.Write(w, r, err)
@@ -46,9 +37,6 @@ func (h Handlers) RunContactResearch(w http.ResponseWriter, r *http.Request, id 
 
 // SaveContactResearch implements POST /contacts/{id}/research/save.
 func (h Handlers) SaveContactResearch(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	if !h.native(w, r) {
-		return
-	}
 	var body crmcontracts.SaveContactResearchRequest
 	if !httperr.Decode(w, r, &body) {
 		return
@@ -61,23 +49,4 @@ func (h Handlers) SaveContactResearch(w http.ResponseWriter, r *http.Request, id
 	httperr.WriteJSON(w, http.StatusOK, struct {
 		Saved int `json:"saved"`
 	}{Saved: saved})
-}
-
-// native refuses in overlay mode: a mirror holds none of these records, so a
-// claim saved against it would name a contact this installation does not own.
-func (h Handlers) native(w http.ResponseWriter, r *http.Request) bool {
-	if h.overlay == nil {
-		return true
-	}
-	overlay, err := h.overlay(r.Context())
-	if err != nil {
-		httperr.Write(w, r, err)
-		return false
-	}
-	if overlay {
-		httperr.Write(w, r, httperr.Validation("id", "unsupported_in_overlay_mode",
-			"research is staged against this system of record; while the workspace reads from the incumbent mirror, open the contact in the incumbent's own UI"))
-		return false
-	}
-	return true
 }
