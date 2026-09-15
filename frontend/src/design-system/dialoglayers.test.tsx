@@ -3,7 +3,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
-import { Modal } from "./atoms";
+import { Button, Modal } from "./atoms";
 import { Popover } from "./popover";
 
 afterEach(cleanup);
@@ -13,20 +13,16 @@ function Layers({ close }: Readonly<{ close: () => void }>) {
   return (
     <Modal open onClose={close} labelledBy="composer-title">
       <h2 id="composer-title">Composer</h2>
-      <button type="button" onClick={() => setReading(true)}>
-        Read email
-      </button>
+      <Button onClick={() => setReading(true)}>Read email</Button>
       <Popover label="Preview">The whole message.</Popover>
-      <button type="button">Send</button>
+      <Button>Send</Button>
       <Modal
         open={reading}
         onClose={() => setReading(false)}
         labelledBy="reader-title"
       >
         <h2 id="reader-title">Email reader</h2>
-        <button type="button" onClick={() => setReading(false)}>
-          Close reader
-        </button>
+        <Button onClick={() => setReading(false)}>Close reader</Button>
         <a href="#attachment">Attachment</a>
       </Modal>
     </Modal>

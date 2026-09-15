@@ -50,8 +50,13 @@ export function ChannelReplyAction({
 }>) {
   const t = useT();
   // `null` until the verb is first pressed; the drawer stays mounted from then
-  // on, which is what lets it animate out rather than vanish.
-  const [reply, setReply] = useState<boolean | null>(null);
+  // on, which is what lets it animate out rather than vanish. `seq` counts the
+  // opens and keys the composer, so each press gets a composer of its own — a
+  // drawer that outlives its close would otherwise reopen on the draft the
+  // reader abandoned, and offer to send it again.
+  const [reply, setReply] = useState<{ seq: number; open: boolean } | null>(
+    null,
+  );
   const reachable = useChannelReachable(
     kind === "message",
     contactId,
@@ -62,11 +67,17 @@ export function ChannelReplyAction({
   }
   return (
     <>
-      <Button small onClick={() => setReply(true)}>
+      <Button
+        small
+        onClick={() =>
+          setReply((prior) => ({ seq: (prior?.seq ?? 0) + 1, open: true }))
+        }
+      >
         {contentWithheld ? t("compose.writeEmail") : t("compose.reply")}
       </Button>
       {reply !== null && (
         <ComposeModal
+          key={reply.seq}
           // No anchor when the content is withheld, which is what makes the
           // dialog match the button. `Write email` is an ACCOUNT-STARTED send
           // — ComposeModal's own word for one with no prior message to anchor
@@ -90,8 +101,8 @@ export function ChannelReplyAction({
           // email` is an account-started send, the same shape the composer
           // uses when there is no prior message at all.
           kind={contentWithheld ? "email" : kind}
-          open={reply}
-          onClose={() => setReply(false)}
+          open={reply.open}
+          onClose={() => setReply({ ...reply, open: false })}
           onSent={onSent}
         />
       )}

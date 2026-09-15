@@ -32,11 +32,11 @@ function Harness() {
   return (
     <>
       <Button onClick={() => setOpen(true)}>Open</Button>
-      <button type="button">Behind the dialog</button>
+      <Button>Behind the dialog</Button>
       <Modal open={open} onClose={() => setOpen(false)} labelledBy="t">
         <h2 id="t">Log activity</h2>
-        <button type="button">First</button>
-        <button type="button">Last</button>
+        <Button>First</Button>
+        <Button>Last</Button>
       </Modal>
     </>
   );
@@ -74,7 +74,7 @@ function TwoReceipts() {
           <p>Six of nine, since April.</p>
         </Popover>
         <Popover label="Rows">
-          <button type="button">Only row</button>
+          <Button>Only row</Button>
         </Popover>
         <Button onClick={() => setOpen(false)}>Done</Button>
       </Modal>
@@ -380,7 +380,7 @@ describe("a dialog that is leaving", () => {
     return (
       <Modal open={open} onClose={onClose} labelledBy="x">
         <h2 id="x">Log activity</h2>
-        <button type="button">First</button>
+        <Button>First</Button>
       </Modal>
     );
   }
@@ -509,7 +509,7 @@ describe("a drawer is a dialog anchored to the right edge", () => {
           {/* A drawer a rep works IN always has a control before the way out,
               and that is what puts the initial focus somewhere other than the
               close — see the tip spec below for why that distinction matters. */}
-          <button type="button">Send</button>
+          <Button>Send</Button>
         </Modal>
       );
     }

@@ -288,7 +288,10 @@ function useReplyRecipient(anchor: string | undefined): {
  * was filed — by capture or by a human relink — is the settled answer, and it
  * outranks anything the deal says.
  */
-function useThreadProject(activityId?: string): {
+function useThreadProject(
+  activityId?: string,
+  enabled = true,
+): {
   activity?: Activity;
   projectId?: string;
   settled: boolean;
@@ -306,7 +309,7 @@ function useThreadProject(activityId?: string): {
       }
       return data;
     },
-    enabled: Boolean(activityId),
+    enabled: enabled && Boolean(activityId),
   });
   return {
     // The anchor itself, not only its filing: the conversation pane needs the
@@ -1622,7 +1625,7 @@ export function ComposeModal({
     replyMailboxes.includes(viewerId);
   const answeringColleaguesMail =
     colleagueMailboxes.length > 0 && !ownMailboxTookIt;
-  const anchorRead = useThreadProject(open ? answering : undefined);
+  const anchorRead = useThreadProject(answering, open);
   const anchorActivity = anchorRead.activity;
   const conversation = useThreadMessages(open ? anchorActivity : undefined);
   // An anchor named but not yet read. The pane holds its place on this, so
@@ -1751,7 +1754,8 @@ export function ComposeModal({
   // a record rather than assumed, because the picker names it, and a name this
   // composer invented could disagree with the page behind the drawer.
   const ownProject = useProjectRecord(
-    open && entityType === "project" ? entityId : undefined,
+    entityType === "project" ? entityId : undefined,
+    open,
   );
   // The account this message is around, whichever record it was started from: a
   // company IS one, a deal names one, a project names one. Its 360 answers two

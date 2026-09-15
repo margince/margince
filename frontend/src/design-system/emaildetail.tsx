@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useQuery } from "@tanstack/react-query";
-import { Fragment, type ReactNode, useId } from "react";
+import { Fragment, type ReactNode, useId, useRef } from "react";
 
 import { api } from "../api/client";
 import type { components } from "../api/schema";
@@ -114,27 +114,27 @@ export function EmailDetail({
   // share an id, and a dialog labelled by a duplicate is labelled by whichever
   // one the browser found first.
   const titleId = useId();
+  // A FRESH KEY PER OPEN, which is what makes each open a fresh ask.
+  const opens = useRef(0);
+  const wasOpen = useRef(false);
+  if (open && !wasOpen.current) {
+    opens.current += 1;
+  }
+  wasOpen.current = open;
   const read = useQuery({
-    queryKey: emailDetailKey(activityId),
-    // A message's content is an AUTHORIZATION result, not a value that ages.
-    // The global 30-second staleTime would let a reopen skip the request
-    // entirely, and the default gcTime would let it paint the last open's
-    // subject and body while a refetch ran — both of which show a reader what
-    // they WERE allowed to see rather than what they are, and an audience
-    // narrowed by somebody else cannot invalidate this browser's cache at all.
-    //
-    // So: ask every time, and keep nothing to repaint. leadkeys.ts documents
-    // the same hazard for the promote preview and says plainly that
-    // invalidation does not purge an inactive query's data; the answer there
-    // was to state it, and the answer here has to be stronger, because what
-    // this one would repaint is somebody's mail.
-    //
-    // The drawer outlives its own close now, so the unmount that used to make
-    // every open a fresh ask is gone. `enabled` replaces it: the query is off
-    // while the drawer is shut, and a disabled query turning enabled over stale
-    // data refetches — so a reopen asks again rather than repainting the answer
-    // the last open got. It also stops a shut drawer refetching somebody's mail
-    // in the background.
+    queryKey: [...emailDetailKey(activityId), opens.current],
+    // A message's content is an AUTHORIZATION result, not a value that ages,
+    // and an audience somebody else narrowed cannot invalidate this browser's
+    // cache. So: ask every time, and keep nothing to repaint — the three
+    // settings here are one answer, not three. `enabled` keeps a shut drawer
+    // from reading somebody's mail in the background; `staleTime` refuses a
+    // cached answer; `gcTime` drops it. The KEY is what makes those bite now
+    // that the drawer outlives its own close: gcTime evicts only once a query
+    // has no observers, and this one never loses its observer, so without a
+    // segment of its own per open the next open would paint the last one's
+    // answer while its own request was still out. The segment is LAST, so
+    // `emailDetailKey`'s prefix still invalidates it for the audience writes.
+    // leadkeys.ts records the same hazard for the promote preview.
     enabled: open,
     staleTime: 0,
     gcTime: 0,
