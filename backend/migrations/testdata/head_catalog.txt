@@ -4502,9 +4502,12 @@ public.notice.body text NOT NULL gen=- def=''::text
 public.notice.captured_by text NOT NULL gen=- def=-
 public.notice.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.notice.dedupe_key text gen=- def=-
+public.notice.email_attempted_at timestamp with time zone gen=- def=-
+public.notice.email_error text gen=- def=-
 public.notice.id uuid NOT NULL gen=- def=uuidv7()
 public.notice.kind text NOT NULL gen=- def=-
 public.notice.notice_content_bounded CHECK (((length(subject) <= 200) AND (length(body) <= 2000)))
+public.notice.notice_email_error_after_attempt CHECK (((email_error IS NULL) OR (email_attempted_at IS NOT NULL)))
 public.notice.notice_pkey PRIMARY KEY (id)
 public.notice.notice_recipient_user_id_fkey FOREIGN KEY (recipient_user_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.notice.notice_subject_present CHECK ((subject <> ''::text))
@@ -4517,6 +4520,25 @@ public.notice.target_id uuid gen=- def=-
 public.notice.target_type text gen=- def=-
 public.notice_pkey CREATE UNIQUE INDEX notice_pkey ON public.notice USING btree (id)
 public.notice_unread CREATE INDEX notice_unread ON public.notice USING btree (recipient_user_id, created_at DESC) WHERE (read_at IS NULL)
+public.notification_digest_run acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.notification_digest_run.digest_date date NOT NULL gen=- def=-
+public.notification_digest_run.mail_attempted_at timestamp with time zone NOT NULL gen=- def=now()
+public.notification_digest_run.mail_error text gen=- def=-
+public.notification_digest_run.notification_digest_error_bounded CHECK ((length(mail_error) <= 500))
+public.notification_digest_run.notification_digest_run_pkey PRIMARY KEY (user_id, digest_date)
+public.notification_digest_run.notification_digest_run_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
+public.notification_digest_run.user_id uuid NOT NULL gen=- def=-
+public.notification_digest_run_pkey CREATE UNIQUE INDEX notification_digest_run_pkey ON public.notification_digest_run USING btree (user_id, digest_date)
+public.notification_preference acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.notification_preference.class text NOT NULL gen=- def=-
+public.notification_preference.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.notification_preference.delivery text NOT NULL gen=- def=-
+public.notification_preference.notification_preference_delivery_check CHECK ((delivery = ANY (ARRAY['off'::text, 'in_app'::text, 'email'::text, 'digest'::text])))
+public.notification_preference.notification_preference_pkey PRIMARY KEY (user_id, class)
+public.notification_preference.notification_preference_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
+public.notification_preference.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.notification_preference.user_id uuid NOT NULL gen=- def=-
+public.notification_preference_pkey CREATE UNIQUE INDEX notification_preference_pkey ON public.notification_preference USING btree (user_id, class)
 public.oauth_authorization_code acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.oauth_authorization_code.client_id text NOT NULL gen=- def=-
 public.oauth_authorization_code.code_challenge text NOT NULL gen=- def=-
