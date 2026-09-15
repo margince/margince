@@ -299,6 +299,9 @@ func sharedRedisClient(cfg apiConfig, logger *slog.Logger) (*redis.Client, func(
 			"addr", cfg.redisAddr, "err", err)
 		redisOpts = &redis.Options{Addr: cfg.redisAddr, Password: cfg.redisPassword}
 	}
+	if cfg.redisTLS == "true" {
+		redisOpts.TLSConfig = events.RedisTLSConfig()
+	}
 	rdb := redis.NewClient(redisOpts)
 	return rdb, func() {
 		if err := rdb.Close(); err != nil {
@@ -347,7 +350,7 @@ func inlineRelayLane(ctx context.Context, cfg apiConfig, pool *pgxpool.Pool, log
 		// No inline relay to stop: cmd/worker is running it.
 		return nil, func() {}, nil
 	}
-	busReady, stop, err := startInlineRelay(ctx, pool, cfg.redisAddr, cfg.redisPassword, cfg.webhookKey, logger)
+	busReady, stop, err := startInlineRelay(ctx, pool, cfg.redisAddr, cfg.redisPassword, cfg.redisTLS == "true", cfg.webhookKey, logger)
 	if err != nil {
 		return nil, nil, err
 	}
