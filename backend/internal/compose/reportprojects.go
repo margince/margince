@@ -37,10 +37,12 @@ const (
 
 	// The money a project's WON deals fold to, in the installation's base
 	// currency (the frozen base amount), read through the caller's deal row
-	// scope: a per-project total that counted a deal the caller's deal list
-	// would withhold discloses that deal through arithmetic (the rule
-	// ProjectDealTotalsTx keeps).
-	wonDealValueBaseExpr = "(SELECT coalesce(sum(d.amount_minor_base), 0)::bigint FROM deal d" +
+	// scope AND their field masks: a per-project total that counted a deal the
+	// caller's deal list would withhold discloses that deal through arithmetic
+	// (the rule ProjectDealTotalsTx keeps), and one that counted a FIGURE the
+	// list withholds discloses the figure the same way.
+	wonDealValueBaseExpr = "(SELECT coalesce(sum(d.amount_minor_base) FILTER (WHERE " + reportDealMaskToken +
+		"), 0)::bigint FROM deal d" +
 		" WHERE d.project_id = t.id AND d.status = 'won' AND d.archived_at IS NULL AND " + reportDealScopeToken + ")"
 
 	// A project's commitments are the open tasks filed under it. Overdue is
@@ -59,8 +61,13 @@ const (
 // deal folded by deals.OpenDealBaseValueSQL over the token the engine binds
 // the installation's base currency to. A variable because the fold is built
 // by a function the deals module owns.
+//
+// It takes the same mask filter as the won side. The two have to move
+// together: a mask that withheld a deal from the closed total and let it
+// through the open one would put the same figure back on the same page.
 var openDealValueBaseExpr = "(SELECT coalesce(sum(" + deals.OpenDealBaseValueSQL("d", reportBaseCurrencyToken) +
-	"), 0)::bigint FROM deal d WHERE d.project_id = t.id AND d.status = 'open' AND d.archived_at IS NULL AND " +
+	") FILTER (WHERE " + reportDealMaskToken + "), 0)::bigint" +
+	" FROM deal d WHERE d.project_id = t.id AND d.status = 'open' AND d.archived_at IS NULL AND " +
 	reportDealScopeToken + ")"
 
 // projectRowDimensions is the vocabulary the two listing-shaped project keys

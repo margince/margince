@@ -114,15 +114,23 @@ func (s *Service) leadingDealSeat(ctx context.Context, tx pgx.Tx, contactID ids.
 	// binary decoder for DATE into the generated **Date, and a wrapper type the
 	// driver does not know fails at runtime rather than at compile time.
 	var closeDate *time.Time
+	// The card prints the deal's figure, so a mask that withholds it on the
+	// deal list has to withhold it here: the commercial band of a contact page
+	// is the same number on a different screen. A masked row keeps its name and
+	// stage and loses the amount, which is what the list does too.
+	amountSQL, err := auth.MaskedColumnSQL(ctx, "deal", "amount_minor", "d", "amount_minor", arg)
+	if err != nil {
+		return dealSeat{}, false, err
+	}
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
-		SELECT d.id, r.role, d.name, s.name, d.amount_minor, d.currency, d.expected_close_date
+		SELECT d.id, r.role, d.name, s.name, %[4]s, d.currency, d.expected_close_date
 		FROM relationship r
 		JOIN deal d ON d.id = r.deal_id AND d.status = 'open' AND d.archived_at IS NULL
 		LEFT JOIN stage s ON s.id = d.stage_id
-		WHERE r.kind = 'deal_stakeholder' AND r.contact_id = $%d
-		  AND r.archived_at IS NULL AND (%s) AND (%s)
+		WHERE r.kind = 'deal_stakeholder' AND r.contact_id = $%[1]d
+		  AND r.archived_at IS NULL AND (%[2]s) AND (%[3]s)
 		ORDER BY d.expected_close_date NULLS LAST, d.id
-		LIMIT 1`, contactPos, edgeBound, dealScope), args...).
+		LIMIT 1`, contactPos, edgeBound, dealScope, amountSQL), args...).
 		Scan(&seat.dealID, &seat.role, &seat.deal.Title, &stage, &amount, &currency, &closeDate)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return dealSeat{}, false, nil
