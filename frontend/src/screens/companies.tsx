@@ -18,6 +18,7 @@ import {
   Skeleton,
 } from "../design-system/atoms";
 import type { TimelineEntry, TimelineGroup } from "../design-system/composed";
+import { IdentityLine } from "../design-system/identityline";
 import type { ListChip } from "../design-system/listsurface";
 import { CellStrip } from "../design-system/listtable";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
@@ -1258,13 +1259,13 @@ function CompanyPage({
         // where it STANDS (the editable lifecycle badge), both tags ON the
         // record, so both share the pills row under the name.
         pulse={
-          <>
+          <IdentityLine separator="space">
             <CompanyLifecycleControl company={company} />
             <CompanyRelationshipBadges company={company} />
             {/* Who may READ the account, on the same row the contact header
                 says it on, with the verb that changes it. */}
             <RecordAccess key={company.id} kind="company" record={company} />
-          </>
+          </IdentityLine>
         }
         zone={recordZone}
         // The way in, who holds the account and when its own row was written,
