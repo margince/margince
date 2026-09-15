@@ -330,12 +330,12 @@ function OverdueLead({ summary }: Readonly<{ summary: FinanceSummary }>) {
               infer which half is which from the tones alone, and the tones are
               what a reader who cannot distinguish them needs the words for. */}
           <p className="fin-legend">
-            <Badge tone="danger" quiet>
+            <Badge tone="danger">
               {t("finance.legendOverdue", {
                 amount: formatMoney(split.overdue, split.currency, locale),
               })}
             </Badge>
-            <Badge tone="accent" quiet>
+            <Badge tone="accent">
               {t("finance.legendOpen", {
                 amount: formatMoney(split.open, split.currency, locale),
               })}

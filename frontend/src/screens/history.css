@@ -15,9 +15,9 @@
 }
 
 /* The field's NAME, in the reader's own language — so it is set as a label
- * rather than as the identifier it used to be: a mono, upper-cased,
- * letter-spaced treatment reads as a column name however the word is spelled,
- * which is the thing this heading stopped being. */
+ * rather than as an identifier: an upper-cased, letter-spaced treatment
+ * reads as a column name however the word is spelled, and this heading is
+ * not one. */
 .fgroup-head {
   font-weight: 600;
   margin-bottom: var(--space-2);

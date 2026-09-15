@@ -279,18 +279,15 @@ export function useSuggestList({
  * that collects a set names none: every row on offer there is one the reader has
  * not taken, so a selected mark would point at nothing.
  *
- * `face` is the typeface the VALUE is drawn in and the only thing that varies
- * between the two hosts: a model id is a machine name and reads as one, an
- * address and a contact's name are words. It is not a density or a variant — the
- * geometry is stated once, so two lists cannot come to look like two controls.
+ * There is no face, density or variant to pick: a model id, an address and a
+ * contact's name are all read in the body face, and the geometry is stated once,
+ * so two lists cannot come to look like two controls.
  */
 export function SuggestPopup({
   list,
-  face = "text",
   selected,
 }: Readonly<{
   list: SuggestList & { frame: ReturnType<typeof useAnchoredPopup> };
-  face?: "text" | "mono";
   selected?: string;
 }>) {
   if (!list.open || !list.frame) {
@@ -337,7 +334,7 @@ export function SuggestPopup({
             onClick={() => list.pick(index)}
             onMouseEnter={() => list.setActive(index)}
           >
-            <span className={`suggest-option-value is-${face}`}>
+            <span className="suggest-option-value">
               {row.label ?? row.value}
             </span>
             {row.hint && (

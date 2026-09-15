@@ -1,6 +1,11 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render as rtlRender, screen } from "@testing-library/react";
+import {
+  cleanup,
+  render as rtlRender,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
@@ -19,13 +24,18 @@ afterEach(() => {
 
 const COMPANY = "o-1";
 
-function render(ui: React.ReactNode) {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return rtlRender(
-    <QueryClientProvider client={qc}>
-      <LocaleProvider>{ui}</LocaleProvider>
-    </QueryClientProvider>,
-  );
+function render(
+  ui: React.ReactNode,
+  qc = new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+) {
+  return {
+    qc,
+    ...rtlRender(
+      <QueryClientProvider client={qc}>
+        <LocaleProvider>{ui}</LocaleProvider>
+      </QueryClientProvider>,
+    ),
+  };
 }
 
 const PAT: BillingContact = {
@@ -178,11 +188,30 @@ function stubFetch(
   );
 }
 
-it("offers no verbs at all on a company this reader cannot write", () => {
-  stubFetch([]);
+// settled waits for the grant snapshot to have ARRIVED before an absence is
+// read as a refusal.
+//
+// The contacts arrive as a PROP, so the panel renders their names immediately
+// and every verb is absent until /me answers. An absence asserted against that
+// instant is true of a panel that has not decided yet, which is also true of a
+// panel whose gate was deleted — so the assertion cannot tell the two apart.
+// Waiting on the request the gate reads is what makes "no verbs" mean refused.
+async function settled(seen: Seen[]) {
+  await waitFor(() =>
+    expect(seen.some((entry) => entry.url.includes("/me"))).toBe(true),
+  );
+}
+
+it("offers no verbs at all on a company this reader cannot write", async () => {
+  const seen: Seen[] = [];
+  stubFetch(seen);
   render(
     <BillingContactsPanel contacts={[PAT]} companyId={COMPANY} readOnly />,
   );
+  // The seat here is fully granted: what refuses is the archived company, so
+  // the verbs would be drawn if readOnly were ignored. That only means
+  // something once the grant has landed.
+  await settled(seen);
   // Who is invoiced still renders: that is a fact a read-only reader is
   // entitled to. What goes is every way to change it.
   expect(screen.getByText("Pat Okafor")).toBeTruthy();
@@ -197,18 +226,54 @@ it("offers no verbs to a reader without the relationship grant", async () => {
   // the grant to write a relationship. Before this the panel drew three
   // enabled buttons from the archive flag alone, and a read-seat colleague
   // learned they could not use them from a refusal after submitting.
-  stubFetch([], {
+  const seen: Seen[] = [];
+  stubFetch(seen, {
     me: {
       user: { id: "u-2", email: "reader@example.com" },
       authorization: { seat_type: "read", objects: {} },
     },
   });
   render(<BillingContactsPanel contacts={[PAT]} companyId={COMPANY} />);
-  expect(await screen.findByText("Pat Okafor")).toBeTruthy();
+  await settled(seen);
+  expect(screen.getByText("Pat Okafor")).toBeTruthy();
   expect(screen.queryByRole("button", { name: "Name somebody" })).toBeNull();
   expect(
     screen.queryByRole("button", { name: /^Change the capacity/ }),
   ).toBeNull();
+  expect(
+    screen.queryByRole("button", { name: /^Take Pat Okafor off/ }),
+  ).toBeNull();
+});
+
+// The seat the create gate let through, and the commonest one in the product.
+//
+// `rep` holds writeNoDelete on relationship: it may name a billing contact and
+// change their capacity, and the server refuses it Remove. Sharing one gate
+// across the three verbs drew a button that answered "you do not have
+// permission" after the press — the same defect the read-seat case above fixed,
+// surviving for the seat that actually writes.
+it("offers naming and changing but not Remove to a seat that cannot delete", async () => {
+  stubFetch([], {
+    me: {
+      user: { id: "u-3", email: "rep@example.com" },
+      authorization: {
+        seat_type: "full",
+        objects: { relationship: { create: true, update: true } },
+      },
+    },
+  });
+  render(<BillingContactsPanel contacts={[PAT]} companyId={COMPANY} />);
+  expect(await screen.findByText("Pat Okafor")).toBeTruthy();
+  // AWAITED on a verb, not on the contact's name: the contacts arrive as a
+  // PROP and render before /me has answered, so anything awaited on them is
+  // true while the grant snapshot is still in flight — which makes an
+  // absence assertion pass against a panel that simply has not decided yet.
+  expect(
+    await screen.findByRole("button", { name: "Name somebody" }),
+  ).toBeTruthy();
+  expect(
+    screen.getByRole("button", { name: /^Change the capacity/ }),
+  ).toBeTruthy();
   expect(
     screen.queryByRole("button", { name: /^Take Pat Okafor off/ }),
   ).toBeNull();
@@ -270,6 +335,29 @@ it("narrows the version lookup to the one contact", async () => {
   );
   expect(lookup?.url).toContain("contact_id=c-1");
   expect(lookup?.url).toContain("company_id=o-1");
+});
+
+it("refreshes both the Finance and the Contacts projections after a write", async () => {
+  // The panel is read from two projections — the finance summary the Finance
+  // tab shows, and the Company360 the Contacts tab reads. A write that
+  // refreshed only the first would leave whichever tab the reader is not on
+  // showing the edit beside its own stale list.
+  const seen: Seen[] = [];
+  stubFetch(seen, { version: 5 });
+  const { qc } = render(
+    <BillingContactsPanel contacts={[PAT]} companyId={COMPANY} />,
+  );
+  const invalidate = vi.spyOn(qc, "invalidateQueries");
+  await userEvent.click(
+    await screen.findByRole("button", {
+      name: "Take Pat Okafor off this account's invoices",
+    }),
+  );
+  await waitFor(() => {
+    const keys = invalidate.mock.calls.map((call) => call[0]?.queryKey);
+    expect(keys).toContainEqual(["finance-summary", COMPANY]);
+    expect(keys).toContainEqual(["company360", COMPANY]);
+  });
 });
 
 it("says so rather than writing unpinned when the edge cannot be read back", async () => {

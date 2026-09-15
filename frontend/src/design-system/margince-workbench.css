@@ -360,7 +360,6 @@
 
 .mw-aistat-btn strong {
   color: var(--aiText);
-  font-family: var(--f-mono);
   font-size: var(--fs-meta);
   font-variant-numeric: tabular-nums;
 }
@@ -434,7 +433,6 @@
 .mw-aistat-r dd {
   margin: 0;
   color: var(--textPrimary);
-  font-family: var(--f-mono);
   font-size: var(--fs-meta);
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
@@ -671,14 +669,13 @@
 
 .mw-aistat-tok {
   color: var(--textMeta);
-  font-family: var(--f-mono);
   font-size: var(--fs-meta);
   font-variant-numeric: tabular-nums;
 }
 
 /* Plain language under the spend, one quiet line that never wraps — the
    exact identifiers are one hover (title) or one chip-press away, so this
-   line never has to carry them. Prose, not an id, so body rather than mono. */
+   line never has to carry them. */
 .mw-shell.is-rail .mw-aifooter-model {
   overflow: hidden;
   color: var(--textMeta);

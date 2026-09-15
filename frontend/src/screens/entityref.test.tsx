@@ -316,7 +316,7 @@ describe("EntityRef", () => {
     expect(screen.queryByRole("button", { name: "Platform Team" })).toBeNull();
   });
 
-  it("falls back to the mono id (no link) when the settled roster does not carry the user", async () => {
+  it("falls back to the raw id as plain text (no link) when the settled roster does not carry the user", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (request: Request) => {

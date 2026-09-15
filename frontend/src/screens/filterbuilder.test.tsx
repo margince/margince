@@ -195,7 +195,7 @@ describe("what the builder offers", () => {
 
     // The badge is what tells a reader this column is theirs rather than the
     // product's — AC-filters-and-views-3 asks for it by name.
-    expect(screen.getByText("custom field")).toBeTruthy();
+    expect(screen.getByText("Custom field")).toBeTruthy();
     expect(screen.queryByText("owner id")).toBeNull();
   });
 
@@ -205,7 +205,7 @@ describe("what the builder offers", () => {
       <Harness start={newGroup("and", [newLeaf("owner_id", "eq", "u1")])} />,
     );
 
-    expect(screen.queryByText("custom field")).toBeNull();
+    expect(screen.queryByText("Custom field")).toBeNull();
   });
 });
 

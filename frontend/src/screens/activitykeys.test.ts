@@ -72,12 +72,19 @@ describe("which reads a timeline write has to invalidate", () => {
 });
 
 describe("which reads a write to the record itself invalidates", () => {
-  it("reaches the deal status card, which is written from the deal's own fields", () => {
+  it("reaches the deal status card and the outcome reviews", () => {
     // The card names what the stage and the value MEAN. Advancing a stage
     // without this leaves it describing a stage the deal has left, stated with
     // the confidence of a current reading.
+    //
+    // The reviews are here for a different reason: they are read AGAINST the
+    // deal, each captioned as this closing's or an earlier one by comparing it
+    // with the deal's own closing_occurrence_id. A write that moves one half of
+    // that comparison and not the other is what leaves a closing somebody has
+    // reviewed showing as unreviewed.
     expect(dealRecordKeys("d1")).toEqual([
       ["deal", "d1"],
+      ["deals", "d1", "outcome-reviews"],
       ["deal-status", "d1"],
     ]);
   });

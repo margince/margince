@@ -255,6 +255,11 @@ func wire(lines []WrittenLine, f facts) []sentence {
 // citedRecord finds the record one citation names. An open task is an activity
 // row like any other, so it cites as one and the reader opens it the same way.
 func citedRecord(f facts, id string) (crmcontracts.Activity, bool) {
+	for _, a := range f.requests {
+		if a.Id.String() == id {
+			return a, true
+		}
+	}
 	for _, a := range f.timeline {
 		if a.Id.String() == id {
 			return a, true

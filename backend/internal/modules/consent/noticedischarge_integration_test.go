@@ -360,7 +360,7 @@ func TestAFailedDisclosureIsBackOnTheQueue(t *testing.T) {
 		t.Fatalf("sending and failing the disclosure: %v", err)
 	}
 
-	owedNow, err := e.store.OpenNoticeCasesDueSoonest(officerCtx(e), 0)
+	owedNow, err := e.store.OpenNoticeCasesDueSoonest(officerCtx(e), NoticeAgendaInput{})
 	if err != nil {
 		t.Fatalf("reading the queue: %v", err)
 	}

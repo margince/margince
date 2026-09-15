@@ -190,9 +190,7 @@ export function ActorTag({
       <span className="audit-actor-name">
         {name ?? (labelKey ? t(labelKey) : null)}
       </span>
-      {identifier && (
-        <span className="t-mono audit-actor-id">{identifier}</span>
-      )}
+      {identifier && <span className="audit-actor-id">{identifier}</span>}
       {qualifierName && (
         <span className="audit-behalf">
           {t("audit.viaNamed", { client: qualifierName })}

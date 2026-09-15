@@ -53,8 +53,8 @@ export function EvidenceReceipt({
       }
     >
       <PanelBody>
-        {/* Numeric: the counts are figures read down a column, and the mono
-            face is what lets a reader compare 40 against 52 at a glance. */}
+        {/* Numeric: the counts are figures read down a column, and tabular
+            digits are what let a reader compare 40 against 52 at a glance. */}
         <FactList facts={counts} numeric />
         {children}
         {/* Both or neither. A disclosure whose summary is missing has no name

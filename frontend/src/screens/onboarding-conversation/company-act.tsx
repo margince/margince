@@ -853,7 +853,7 @@ export function CompanyAct({
                 // registry identity and falls back to the tax one: an entity
                 // whose notice printed only a VAT ID would otherwise be a
                 // bare name at the moment somebody has to pick between two.
-                mono: entity.register_number ?? entity.vat_number,
+                identifier: entity.register_number ?? entity.vat_number,
                 snippet: entity.evidence_snippet,
                 source: entity.source_url,
               };

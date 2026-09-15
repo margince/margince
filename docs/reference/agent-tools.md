@@ -25,26 +25,29 @@ live surface differ from the table below:
   advertises what the gate will refuse is a surface that lies. It answers the
   **scope axis only** — the seat ceiling and the granting human's object RBAC are
   re-derived per call and can still refuse a tool the listing showed.
-- **Extensions register onto the same registry.** `registerComposedTools` runs
-  last in `internal/compose/registry.go`, after the core registrars, so an
-  extension unit can add verbs (and a name that collides with a core verb fails
-  loudly at boot). A served extension tool declares an inbound cap, and a
-  confirm-first one must also declare `x-mcp-tool.subject` — the argument
-  carrying a row id and the unit-owned table it lives in — because an approval
-  needs a row to park against and to show the approver. Boot refuses a
-  confirm-first declaration without one, and refuses `send`/`enrich` outright,
-  since neither could be staged for the human this surface has no way to ask.
-  That governs what a unit may CLAIM; what its handler does is bounded by the
-  composed set being a trust boundary, not by the gate. The
-  vanilla tree ships two first-party units: `extensions/de` registers no tools,
-  and `extensions/openchannel` adds seven: 🟢 for `openchannel_list_inbound`,
-  `openchannel_list_outbound` and `openchannel_read_endpoint` at `read`, and for
-  `openchannel_open` and `openchannel_set_enabled` at `write`; 🟡
-  confirmation-required for `openchannel_mint_secret` and
-  `openchannel_register_url`, also at `write` — the one hands back a durable
-  signing credential and the other re-points the member's whole outbound
-  channel, so neither runs unattended. So on a vanilla install the catalog
-  below plus those seven verbs is the whole surface.
+- **Extensions register onto the same registry, but not every operation
+  becomes a tool.** `registerComposedTools` runs last in
+  `internal/compose/registry.go`, after the core registrars, so an extension
+  unit can add verbs (and a name that collides with a core verb fails loudly
+  at boot). Every extension operation declares exactly one of `x-mcp-tool` or
+  `x-agent-access: human-only` — the same closed choice core operations make
+  (see "Operations an agent may not reach at all" below). A served
+  `x-mcp-tool` verb declares an inbound cap, and a confirm-first one must also
+  declare `x-mcp-tool.subject` — the argument carrying a row id and the
+  unit-owned table it lives in — because an approval needs a row to park
+  against and to show the approver. Boot refuses a confirm-first declaration
+  without one, and refuses `send`/`enrich` outright, since neither could be
+  staged for the human this surface has no way to ask. A `human-only`
+  operation requests no agent authority at all: it stays REST/UI-reachable,
+  but an Agent (or Buyer) principal calling it is refused outright, and it
+  never appears in `tools/list`. That governs what a unit may CLAIM; what its
+  handler does is bounded by the composed set being a trust boundary, not by
+  the gate. The vanilla tree ships two first-party units: `extensions/de`
+  registers no tools, and `extensions/openchannel` declares seven operations
+  — all `human-only` (it mints and returns a durable signing secret over an
+  anonymous edge, and re-points a member's whole outbound channel; neither is
+  a capability any agent should hold unattended) — so it adds **zero** agent
+  tools. On a vanilla install the catalog below is the whole agent surface.
 
 **Where it is served:** `cmd/api` mounts the tool surface at `/mcp` over
 Streamable HTTP, on the same origin as `/oauth/*` and the discovery documents.
@@ -55,9 +58,10 @@ the credential: [how-to/mint-a-passport.md](../how-to/mint-a-passport.md).
 
 ## The catalog
 
-Every core verb the surface serves. An enabled extension unit adds its own to
-the same listing — `openchannel`'s seven are not tabled here, because this page
-tracks the core surface.
+Every core verb the surface serves. An enabled extension unit's own SERVED
+verbs (`x-mcp-tool`) would add to this listing — none are tabled here because
+this page tracks the core surface, and on the vanilla tree there are none to
+table: `openchannel`'s seven operations are all `human-only`.
 
 The count is deliberately not written down. It said 35 while the surface served
 69, and a number in prose that nothing checks is one more thing to go quietly
@@ -244,8 +248,9 @@ The passport vocabulary is closed: `read`, `draft`, `write`, `send`, `enrich`
 passport's scopes and the granting human's live RBAC and seat — never the union,
 and never the passport alone.
 
-Counts are of the core catalog above; an enabled unit's verbs add to them
-(vanilla: `openchannel`'s seven make `read` 20 and `write` 16).
+Counts are of the core catalog above; an enabled unit's SERVED verbs
+(`x-mcp-tool`) would add to them. On the vanilla tree none do —
+`openchannel`'s seven operations are `human-only` and spend no scope at all.
 
 | Scope | Tools it unlocks | What it means |
 |---|---|---|
@@ -281,6 +286,13 @@ differ enough to be worth reading:
 | `connectOverlay`, `disconnectOverlay` | Sealing a credential and flipping the system-of-record mode is an installation decision, not an act an agent performs. |
 | `reconcileOverlay`, `renderOffer`, `regenerateOffer` | No tool backs them, and none can today. |
 | `sendOffer` | Human-only until the contract and the implementation agree on what sending an offer does — the description says it leaves the workspace; the code flips status, freezes `fx_rate_to_base` and snapshots buyer/issuer, with no transport (poc-v1#481). |
+
+The ten above are core operations; an extension declares the identical
+`x-agent-access: human-only` annotation for the same reason
+(`docs/how-to/add-an-extension.md`). `extensions/openchannel`'s seven
+operations are the worked example — it hands back a durable signing secret
+over an anonymous edge and re-points a member's whole outbound channel, and
+neither is a capability an agent should hold unattended.
 
 The traffic runs the other way too: eleven registered tools name no contract
 verb, because they are *intents* composed over several operations rather than a

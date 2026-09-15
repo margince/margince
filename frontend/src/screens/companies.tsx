@@ -40,6 +40,7 @@ import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { taskWriteKeys } from "./activitykeys";
 import { AssistantPanel } from "./assistant";
+import { BillingContactsPanel } from "./billingcontacts";
 import {
   coldFieldLabel,
   problemMessageOf,
@@ -501,11 +502,11 @@ function HierarchyRollupPanel({ companyId }: Readonly<{ companyId: string }>) {
         <dl className="firmo">
           <div>
             <dt className="t-eyebrow">{t("rollup.weightedPipeline")}</dt>
-            <dd className="t-mono">{money(rollup.weighted_pipeline)}</dd>
+            <dd className="t-num">{money(rollup.weighted_pipeline)}</dd>
           </div>
           <div>
             <dt className="t-eyebrow">{t("rollup.closedWon")}</dt>
-            <dd className="t-mono">{money(rollup.closed_won)}</dd>
+            <dd className="t-num">{money(rollup.closed_won)}</dd>
           </div>
           <div>
             <dt className="t-eyebrow">{t("rollup.activity30d")}</dt>
@@ -1597,6 +1598,19 @@ function CompanyRecordBody({
               )}
             />
           )}
+          {/* Who handles the invoices belongs beside the roster, not only under
+              Finance: naming an invoice recipient is a fact about the account's
+              contacts, and the reader working them is the one who knows it. The same panel the Finance tab shows, reading its rows off the
+              Company360 the tab already holds — so the write path and its
+              refusals stay in one place. */}
+          {!overlay &&
+            !view?.sections_omitted?.includes("billing_contacts") && (
+              <BillingContactsPanel
+                contacts={view?.billing_contacts}
+                companyId={company.id}
+                readOnly={readOnly}
+              />
+            )}
         </div>
       )}
       {/* Files get the whole column on their own tab, which is what the mockup

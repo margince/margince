@@ -172,7 +172,7 @@ function LastCell({ row, zone }: Readonly<{ row: RungHealth; zone: string }>) {
         <span className="t-caption">—</span>
       )}
       {row.last_sentinel ? (
-        <span className="t-caption t-mono">{row.last_sentinel}</span>
+        <span className="t-caption">{row.last_sentinel}</span>
       ) : null}
     </span>
   );

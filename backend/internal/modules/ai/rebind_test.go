@@ -61,24 +61,64 @@ func TestRebindReplacesTheBoundModelsAndTheVersionTogether(t *testing.T) {
 	}
 }
 
-// Every cached answer was produced by the binding being replaced. Serving one
-// afterwards would put a previous model's words under the model now bound.
+// Entries the replaced binding produced can never be read again, so a rebind
+// evicts them rather than leaving them resident to push live entries out
+// through the size cap. Read back under the generation that WROTE them: under
+// the new one the generation check would answer "miss" either way, and the
+// eviction itself would go unproven.
 func TestRebindDropsTheResultCache(t *testing.T) {
 	r, err := NewRouter(parsed(t, rebindFrom), nil, DefaultMonthlyTokens, nil, false, nil)
 	if err != nil {
 		t.Fatalf("NewRouter: %v", err)
 	}
 	ws := ids.From[ids.WorkspaceKind](ids.NewV7())
-	r.cache.put("some-key", ws, model.Response{Text: "an answer the previous binding produced"}, TierPremium)
-	if _, _, ok := r.cache.get("some-key", ws); !ok {
+	replaced := r.binding().generation
+	r.cache.put("some-key", ws, replaced, model.Response{Text: "an answer the previous binding produced"}, TierPremium)
+	if _, _, ok := r.cache.get("some-key", ws, replaced); !ok {
 		t.Fatal("the fixture did not land in the cache; the test proves nothing")
 	}
 
 	if err := r.Rebind(parsed(t, strings.ReplaceAll(rebindFrom, "first-", "second-"))); err != nil {
 		t.Fatalf("Rebind: %v", err)
 	}
-	if _, _, ok := r.cache.get("some-key", ws); ok {
+	if _, _, ok := r.cache.get("some-key", ws, replaced); ok {
 		t.Error("an answer produced by the previous binding survived the rebind")
+	}
+}
+
+// The interleaving the eviction alone cannot close: a completion that loaded
+// the old binding finishes AFTER the rebind cleared the cache, so its answer
+// lands in a cache the new binding is already serving from. RouteInfo names
+// the provider and model of the binding that serves a hit, and that identity
+// is what tells an operator "no AI provider is configured" apart from "the
+// model answered badly" — so the new binding must not serve those words.
+func TestAnAnswerLandingAfterARebindIsNotServedUnderTheNewBinding(t *testing.T) {
+	r, err := NewRouter(parsed(t, rebindFrom), nil, DefaultMonthlyTokens, nil, false, nil)
+	if err != nil {
+		t.Fatalf("NewRouter: %v", err)
+	}
+	ws := ids.From[ids.WorkspaceKind](ids.NewV7())
+	inFlight := r.binding().generation
+
+	if err := r.Rebind(parsed(t, strings.ReplaceAll(rebindFrom, "first-", "second-"))); err != nil {
+		t.Fatalf("Rebind: %v", err)
+	}
+	// The late write: the call resolved its tier and its model against the
+	// binding it loaded before the rebind, and only now returns.
+	r.cache.put("some-key", ws, inFlight, model.Response{Text: "first-large answered this"}, TierPremium)
+
+	rebound := r.binding().generation
+	if rebound == inFlight {
+		t.Fatal("the rebind reused the binding generation; every entry would stay readable across it")
+	}
+	if _, _, ok := r.cache.get("some-key", ws, rebound); ok {
+		t.Error("the new binding served an answer the previous binding produced")
+	}
+	// Not simply absent: the entry is resident, and it is the generation that
+	// withholds it. Without this the case would pass against a put that
+	// silently stored nothing.
+	if _, _, ok := r.cache.get("some-key", ws, inFlight); !ok {
+		t.Fatal("the late write never landed; the case proves nothing about the generation")
 	}
 }
 

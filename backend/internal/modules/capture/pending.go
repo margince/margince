@@ -440,6 +440,45 @@ func (s *PendingStore) Retire(
 	return nil
 }
 
+// TimesJudgedNotAContact counts the settled answers this workspace already has
+// for an address that named no contact.
+//
+// It exists because one stray answer is permanently enough. A ten-year import
+// asked about an expense tool's receipts address sixteen times: fifteen came
+// back `transactional`, one came back `contact` at 0.95, and the one created a
+// contact called "Receipts". Nothing re-read the fifteen — a verdict acts on
+// the answer in front of it, so the rare wrong answer wins by being last.
+//
+// Deliberately NOT bounded by noiseVerdictReach. That window governs how far a
+// `noise` answer reaches over MAIL, and expires because later mail is new
+// evidence about the message. This asks a different question — how often the
+// workspace has already concluded there is nobody here — and a sender judged
+// fifteen times does not become unjudged because the sixteenth message arrived
+// three weeks after the fifteenth.
+//
+// `unsure` is not counted: a row a human was asked about is an open question,
+// not a settled non-contact.
+func (s *PendingStore) TimesJudgedNotAContact(ctx context.Context, email string) (int, error) {
+	normalized := normalizeEmail(email)
+	if normalized == "" {
+		return 0, nil
+	}
+	var n int
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `
+			SELECT count(*)
+			  FROM capture_pending_counterparty
+			 WHERE email = $1
+			   AND status = $2
+			   AND kind IS NOT NULL
+			   AND kind <> $3`, normalized, PendingStatusNoise, KindContact).Scan(&n)
+	})
+	if err != nil {
+		return 0, fmt.Errorf("capture: counting settled non-contact answers for a sender: %w", err)
+	}
+	return n, nil
+}
+
 // normalizeEmail is the ONE spelling of the ledger's identity: lowercased and
 // trimmed, matching activity.counterparty_email and contact_email so the verdict,
 // the correspondence gate, and the dedupe chokepoint agree on what the same

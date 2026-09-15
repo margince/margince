@@ -34,6 +34,9 @@ const attendeeCap = 8
 // empty for "narrows nothing", and an empty string is not a legal SQL fragment.
 const scopeAll = "TRUE"
 
+// scopeNone matches no row, for an object the caller holds no read grant on.
+const scopeNone = "FALSE"
+
 // meeting is the room, as the brief reads it.
 type meeting struct {
 	ID        ids.UUID
@@ -355,6 +358,20 @@ func projectJoinPredicate(ctx context.Context, alias string, arg func(any) int) 
 }
 
 func scopeFor(ctx context.Context, object, alias string, arg func(any) int) (string, error) {
+	// The object half first. ScopeClauseFor answers WHICH rows and never
+	// whether this caller may read the kind at all — under row_scope=all it
+	// answers `scopeAll`, so a seat holding activity and contact and no DEAL
+	// grant would be handed the deal's name, stage, amount and close date in
+	// the brief. The brief's own entry asks the activity and contact grants and
+	// has never asked this one.
+	//
+	// A false clause rather than a refusal, which is the shape this file
+	// already chose one comment above: the join matches nothing, the band is
+	// simply absent, and the rest of the brief stands. Emptying the room over
+	// a band the caller was never entitled to would be the worse answer.
+	if !auth.ReadGranted(ctx, object) {
+		return scopeNone, nil
+	}
 	clause, err := auth.ScopeClauseFor(ctx, object, alias, arg)
 	if err != nil {
 		return "", err

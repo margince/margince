@@ -1,6 +1,6 @@
 import { Lock } from "lucide-react";
 
-import { Checkbox } from "../design-system/atoms";
+import { Badge, Checkbox } from "../design-system/atoms";
 import type { useT } from "../i18n";
 import { labelOf, type PurposeView, stateLineKey } from "./preferences.logic";
 
@@ -71,11 +71,8 @@ export function PreferenceRow({
     <li className="pref-row">
       <div className="pref-row-main">
         <div className="pref-row-head">
-          {purpose.locked && <Lock className="pref-lock-icon" aria-hidden />}
           <span className="pref-label">{labelOf(t, purpose)}</span>
-          {purpose.locked && (
-            <span className="pref-lock-badge">{t("prefs.alwaysOn")}</span>
-          )}
+          {purpose.locked && <Badge icon={Lock}>{t("prefs.alwaysOn")}</Badge>}
         </div>
         <p className="t-caption" data-testid={`wording-${purpose.key}`}>
           {wording}

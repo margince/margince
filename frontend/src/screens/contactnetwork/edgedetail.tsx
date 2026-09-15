@@ -73,7 +73,7 @@ export function EdgeDetail({
         return (
           <div key={`${edge.from}->${edge.to}`} className="pn-edge-facts">
             <p className="pn-band">
-              <Badge>{t(`contact.band.${edge.strength_bucket}`)}</Badge>
+              <Badge>{t(`contact.bandBadge.${edge.strength_bucket}`)}</Badge>
               {withWhom && <span>{withWhom}</span>}
             </p>
             <p className="pn-counts t-sub">
@@ -148,7 +148,9 @@ function RecordWorksWith({
             }
           }}
         >
-          {t("contact.graph.recordWorksWith", { name: peer.label })}
+          <span className="pn-suggest-label">
+            {t("contact.graph.recordWorksWith", { name: peer.label })}
+          </span>
         </Button>
       )}
     </p>

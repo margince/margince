@@ -56,7 +56,7 @@ func TestTheDealStatusCardFollowsTheDealsOwnRecords(t *testing.T) {
 		t.Fatalf("after creating the task the card went silent: %v", after)
 	}
 
-	// An unanswered inbound mail outranks the open task.
+	// Existing tasks remain actionable while a separate request can still be reviewed.
 	var mail AnyMap
 	if status := e.Call(t, "POST", "/v1/activities", AnyMap{
 		"kind": "email", "direction": "inbound", "subject": "Re: rollout", "body": "Can you send the DPA?",
@@ -69,19 +69,15 @@ func TestTheDealStatusCardFollowsTheDealsOwnRecords(t *testing.T) {
 	// plain read must serve the rewritten card, not the one from before.
 	replied := readStatus(t, e, dealID)
 	repliedNext, _ := replied["next"].(map[string]any)
-	repliedArgs, _ := repliedNext["arguments"].(map[string]any)
-	if repliedNext["action"] != "draft_email" || repliedArgs["activity_id"] != mail["id"] {
+	if repliedNext["action"] != "open_task" {
 		t.Fatalf("after an inbound mail the card still offers %v", repliedNext)
 	}
-	// And the email box now has a thread to answer. It names the same message
-	// the move does, because both read one rule — the box must not offer to
-	// start a fresh mail while an answer is owed.
-	if replied["reply_to"] != mail["id"] {
-		t.Fatalf("reply_to = %v, want the unanswered mail %v", replied["reply_to"], mail["id"])
+	// A hand-logged, unclassified email has no captured thread or request
+	// evidence. Do not turn it into a permanent obligation on the deal.
+	if replied["reply_to"] != nil {
+		t.Fatalf("unthreaded mail became an obligation: %v", replied["reply_to"])
 	}
 
-	// Answering it takes the thread away again: the box goes back to offering
-	// a fresh mail, which is the whole behaviour the two labels describe.
 	var reply AnyMap
 	if status := e.Call(t, "POST", "/v1/activities", AnyMap{
 		"kind": "email", "direction": "outbound", "subject": "Re: rollout", "body": "DPA attached.",
@@ -92,7 +88,7 @@ func TestTheDealStatusCardFollowsTheDealsOwnRecords(t *testing.T) {
 	}
 	answered := readStatus(t, e, dealID)
 	if answered["reply_to"] != nil {
-		t.Fatalf("reply_to = %v after the mail was answered, want null", answered["reply_to"])
+		t.Fatalf("unthreaded correspondence became an obligation: %v", answered["reply_to"])
 	}
 }
 

@@ -144,7 +144,7 @@ function LaneSlot({
         }
         detail={
           <>
-            <span className="t-mono">{modelId}</span>
+            <span>{modelId}</span>
             <span>{t("aiRates.perMTokInOut")}</span>
             <span>{t("aiRates.proposedDetail")}</span>
           </>
@@ -164,7 +164,7 @@ function LaneSlot({
         tone="warn"
         detail={
           <>
-            <span className="t-mono">{modelId}</span>
+            <span>{modelId}</span>
             <span>{t("aiRates.unpricedDetail")}</span>
           </>
         }
@@ -177,7 +177,7 @@ function LaneSlot({
       value={price}
       detail={
         <>
-          <span className="t-mono">{modelId}</span>
+          <span>{modelId}</span>
           <span>
             {rate.lane === "embeddings"
               ? t("aiRates.perMTok")

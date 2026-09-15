@@ -28,7 +28,14 @@ func (h Handlers) GetDealStatus(
 	w http.ResponseWriter, r *http.Request, id crmcontracts.Id, params crmcontracts.GetDealStatusParams,
 ) {
 	refresh := params.Refresh != nil && *params.Refresh
-	out, err := h.svc.Get(r.Context(), ids.From[ids.DealKind](ids.UUID(id)), refresh)
+	dealID := ids.From[ids.DealKind](ids.UUID(id))
+	var out crmcontracts.DealStatusCard
+	var err error
+	if params.FactsOnly != nil && *params.FactsOnly {
+		out, err = h.svc.ReadFacts(r.Context(), dealID)
+	} else {
+		out, err = h.svc.Get(r.Context(), dealID, refresh)
+	}
 	if err != nil {
 		httperr.Write(w, r, err)
 		return

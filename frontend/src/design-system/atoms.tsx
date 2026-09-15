@@ -1,8 +1,10 @@
 import {
   ChevronRight,
   LoaderCircle,
+  type LucideIcon,
   MoreHorizontal,
   Search,
+  Sparkles,
 } from "lucide-react";
 import {
   type ComponentPropsWithRef,
@@ -26,6 +28,7 @@ import { useAnchoredToTrigger } from "./anchored";
 import { useDialogFocus } from "./dialogfocus";
 import { Popover } from "./popover";
 import "./atoms.css";
+import "./evidencemark.css";
 
 // The Margince atom library (B-EP09.2, re-scoped to our own
 // system, no gw-ui port; atoms are added as screens need them). Copy always
@@ -366,44 +369,42 @@ function ButtonSentences({
   );
 }
 
+type BadgeTone = "default" | "accent" | "success" | "warn" | "danger" | "ai";
+// The leading slot holds ONE mark, a glyph or the `live` dot. An `ai` badge's
+// mark is always Sparkles, so that tone is given neither to choose.
+type BadgeMark =
+  | { tone?: Exclude<BadgeTone, "ai">; icon?: LucideIcon; live?: never }
+  | { tone?: Exclude<BadgeTone, "ai">; icon?: never; live?: boolean }
+  | { tone: "ai"; icon?: never; live?: never };
+
 export function Badge({
-  tone,
-  children,
-  quiet,
+  variant = "soft",
+  tone = "default",
+  icon,
   live,
-}: Readonly<{
-  tone?: "success" | "warn" | "danger" | "ai" | "accent";
-  children: ReactNode;
-  // The same status in a column of them. A pill states one status against
-  // surrounding prose; a table row states one per row, and a stack of filled
-  // pills reads as decoration a reader learns to skip. `quiet` keeps the tone
-  // and drops the fill: a dot in the tone's colour, and the label as plain
-  // text. Same vocabulary, so a status cannot be worded one way in a list and
-  // another on the record the list opens.
-  quiet?: boolean;
-  // A status that is true AT THIS MOMENT rather than one recorded earlier: a
-  // Deal Room an invited buyer can walk into as the page is read. It draws a
-  // breathing dot in the tone's own ink, which is the one place in this
-  // vocabulary where motion is a FACT — "this is happening now" — rather than
-  // decoration, so it belongs to a handful of states and not to a palette.
-  // Under `prefers-reduced-motion` the dot stays and stops moving: the mark is
-  // the claim, and removing it would take the claim with it.
-  live?: boolean;
-}>) {
-  const classes = ["badge"];
-  if (quiet) {
-    classes.push("badge-quiet");
-  }
-  if (tone) {
-    classes.push(`badge-${tone}`);
-  }
-  if (live) {
-    classes.push("badge-live");
-  }
+  children,
+}: Readonly<
+  {
+    // `soft` is the tint a status wears beside prose and down a column;
+    // `primary` the solid fill for the one status a reader must not miss.
+    variant?: "soft" | "primary";
+    children: ReactNode;
+  } & BadgeMark
+>) {
+  // `live` is true AS THE PAGE IS READ: the one place motion is a fact. The ai
+  // mark is decided here as well, for a tone that arrives untyped.
+  const provenance = tone === "ai";
+  const Icon = provenance ? Sparkles : icon;
+  const classes = [
+    "badge",
+    variant === "primary" && "badge-primary",
+    tone !== "default" && `badge-${tone}`,
+  ].filter(Boolean);
   return (
     <span className={classes.join(" ")}>
-      {live && <span className="badge-live-dot" aria-hidden />}
-      {children}
+      {live && !provenance && <span className="badge-live-dot" aria-hidden />}
+      {Icon && <Icon size={12} aria-hidden="true" />}
+      <span className="badge-label">{children}</span>
     </span>
   );
 }
@@ -908,7 +909,7 @@ export function StatCard({
   onOpen,
   openLabel,
   meter,
-  density,
+  narrow,
 }: Readonly<{
   label: string;
   value: string;
@@ -918,8 +919,8 @@ export function StatCard({
   detail?: ReactNode;
   // The way OUT of the reading: the tab that holds what it was read from. The
   // whole CARD is this button's target (atoms.css stretches it over the tile).
-  // ONE control and not two — the basis chip layers above that target and keeps
-  // its own press, so asking what a figure rests on never also leaves the page.
+  // ONE control and not two — the basis trigger layers above it and keeps its
+  // own press, so asking what a figure rests on never also leaves the page.
   onOpen?: () => void;
   // What the door SAYS, where "Open" is not enough. The default stays "Open"
   // and 90-odd callers keep it, because doors each inventing a destination were
@@ -950,12 +951,14 @@ export function StatCard({
   // stronger volume, it is a different judgement (the slot itself is bad
   // news, not just its figure).
   alert?: boolean;
-  // HOW MUCH AIR the tile keeps, and nothing about its TYPE — which is the
-  // whole licence for the prop, and why atoms.css spells the distinction where
-  // the intervals are. For a row read as ONE glance rather than a reading at a
-  // time. A closed word, not a boolean: `compact={false}` is a place for a
+  // What the reading becomes where its strip can no longer hold two tiles
+  // abreast: `row` folds it into one full-width line, label and basis leading,
+  // figure trailing (statstrip.css). Nothing about the tile's air or type at
+  // any wider width — this reading is the reading beside it on a record page,
+  // and a tighter tile here once made the same figure read as a different
+  // card. A closed word, not a boolean: `narrow={true}` is a place for a
   // second SIZE to arrive unnoticed, and a size here is the removed `hero`.
-  density?: "compact";
+  narrow?: "row";
 }>) {
   const t = useT();
   const labelId = useId();
@@ -969,15 +972,14 @@ export function StatCard({
   const cardClass = [
     "stat-card",
     alert && "stat-card-alert",
-    density && `stat-card-${density}`,
+    narrow && `stat-card-narrow-${narrow}`,
   ]
     .filter(Boolean)
     .join(" ");
   return (
     <section className={cardClass}>
       <span className="stat-card-label">
-        {/* The name in its own box: the row also holds the source badge and the
-            receipt chip, and a clamp on the row would take those with it. */}
+        {/* Its own box, so a clamp on the name spares the badge and trigger. */}
         <span className="stat-card-label-text" id={labelId}>
           {label}
         </span>
@@ -991,7 +993,7 @@ export function StatCard({
           // could reach. The door lives once, in the card's foot, where a
           // reader who has just read the working finds it directly below.
           <Popover
-            className="stat-card-basis"
+            className="stat-card-basis evmark-trigger"
             onHover
             label={t("stat.evidence")}
           >
@@ -1345,8 +1347,8 @@ export function SectionHeader({
  * The figure beside an option's name, in a strip that counts what is behind
  * each one.
  *
- * One component because the count is four decisions, not a number: the mono
- * face so a column of them lines up, the reader's own number format, the host's
+ * One component because the count is four decisions, not a number: tabular
+ * figures so a column of them lines up, the reader's own number format, the host's
  * class, and the SEPARATOR — which is the one that was missing. Both strips
  * rendered `{label}{count}` as adjacent nodes, so the accessible name a screen
  * reader speaks was "Contacts2", "Deals0", "Tasks0". The comma is
@@ -1364,7 +1366,7 @@ export function OptionCount({
   return (
     <>
       <span className="sr-only">, </span>
-      <span className={`${className} t-mono`}>
+      <span className={`${className} t-num`}>
         {formatNumber(count, locale)}
       </span>
     </>

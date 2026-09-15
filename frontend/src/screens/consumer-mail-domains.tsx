@@ -186,7 +186,7 @@ function BaselineRow() {
                   data-testid="consumer-mail-baseline-list"
                 >
                   {result.data.map((domain) => (
-                    <li key={domain} className="t-mono t-caption">
+                    <li key={domain} className="t-caption">
                       {domain}
                     </li>
                   ))}

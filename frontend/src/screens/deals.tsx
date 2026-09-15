@@ -49,7 +49,11 @@ import {
 } from "../design-system/composed";
 import { IconAction } from "../design-system/iconaction";
 import type { ListChip } from "../design-system/listsurface";
-import type { ListColumn, ListSelection } from "../design-system/listtable";
+import {
+  CellStrip,
+  type ListColumn,
+  type ListSelection,
+} from "../design-system/listtable";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { Panel, PanelBody } from "../design-system/panel";
 import { FieldGuard } from "../design-system/rbac";
@@ -71,7 +75,6 @@ import {
   formatMoneyOrAbsent,
   formatNumber,
 } from "../format/format";
-import { idleSince } from "../format/idlebase";
 import { toMajorUnits, toMinorUnits } from "../format/minorunits";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -83,6 +86,7 @@ import { dealRecordKeys, dealWinKeys } from "./activitykeys";
 import { approvalKindLabel } from "./approvalkind";
 import { usePendingApprovals } from "./approvals.queries";
 import { ArchiveAction } from "./archive";
+import { toBoardDeal } from "./boarddeal";
 import {
   LoadMoreButton,
   OverlayUnavailable,
@@ -133,6 +137,7 @@ import { DealBulkBar } from "./dealbulk";
 import { DealEmailAside } from "./dealemail";
 import { DealFiles } from "./dealfiles";
 import { DealIdentityLine } from "./dealidentity";
+import { dealMailAside, lastMailColumn } from "./dealmailaside";
 import {
   DealProjectChip,
   dealProjectFields,
@@ -575,75 +580,6 @@ export type CompanyNaming = Readonly<{
   marks: CompanyMarks;
   unreadable: ReadonlySet<string>;
 }>;
-
-/**
- * What a deal's company reads as on its card, in the four readings it has.
- *
- * Withheld carries the mask, the same control the table's company cell draws. A
- * company the screen has a name for is named. A company whose read FAILED says
- * so, because a deal that names a company the reader could not fetch is not a
- * deal with no company. Only a deal naming no company draws nothing.
- *
- * A name still in flight also draws nothing rather than a uuid: the card's
- * company line is a name a reader recognises and an id is not one. That is the
- * one case where an empty slot is a wait rather than a claim, and it resolves
- * itself.
- */
-function dealCompany(
-  deal: Deal,
-  naming: CompanyNaming,
-): Pick<
-  BoardDeal,
-  | "company"
-  | "companyHref"
-  | "companyLogoUrl"
-  | "companyWithheld"
-  | "companyUnreadable"
-> {
-  if (deal.masked_fields?.includes("company_id")) {
-    return { company: "", companyWithheld: true };
-  }
-  if (deal.company_id && naming.unreadable.has(deal.company_id)) {
-    return { company: "", companyUnreadable: true };
-  }
-  const mark = deal.company_id ? naming.marks.get(deal.company_id) : undefined;
-  return {
-    company: mark?.name ?? "",
-    // The company's address, built HERE because this is the tier that holds
-    // routes. A deal with no company, or one whose name has not resolved,
-    // gets none — the card then draws prose, which is what a slot with no
-    // name has to say anyway.
-    companyHref:
-      deal.company_id && mark?.name
-        ? routeHash({ screen: "companies", id: deal.company_id })
-        : undefined,
-    companyLogoUrl: mark?.logoUrl,
-  };
-}
-
-export function toBoardDeal(
-  deal: Deal,
-  naming: CompanyNaming,
-  owners?: OwnerNaming,
-): BoardDeal {
-  const since = idleSince(deal);
-  return {
-    id: deal.id,
-    name: deal.name,
-    ...dealCompany(deal, naming),
-    // Both halves as the wire sent them. Nobody has priced every deal, and a
-    // card that filled in either half would state a figure this deal does not
-    // have — a zero amount, or a euro sign over an unknown currency.
-    valueMinor: deal.amount_minor ?? null,
-    currency: deal.currency ?? null,
-    ageMs: Math.max(0, Date.now() - new Date(since).getTime()),
-    stalled: deal.stalled ?? false,
-    archived: deal.archived_at != null,
-    closeDate: deal.expected_close_date ?? null,
-    closeDateProvisional: deal.close_date_provisional ?? false,
-    owner: owners?.(deal.owner_id) ?? null,
-  };
-}
 
 type UpdateDealRequest = components["schemas"]["UpdateDealRequest"];
 type CreateDealRequest = components["schemas"]["CreateDealRequest"];
@@ -1510,7 +1446,7 @@ function AmountCell({
     return null;
   }
   return (
-    <span className="t-mono">
+    <span className="t-num">
       {formatMoney(deal.amount_minor, deal.currency, locale)}
     </span>
   );
@@ -1518,10 +1454,7 @@ function AmountCell({
 
 // The table-view column set. Module-level (not inlined in DealsScreen,
 // which is already at the cognitive-complexity ceiling) — stage_id → name
-// and amount/close formatting are the only per-row logic, everything else
-// is direct field access. Only amount_minor and expected_close_date are in
-// the deals list's sortable vocabulary (data-model.md DM-VOCAB-3); name,
-// stage and status carry no `sort` because the API has no column for them.
+// and amount/close formatting are the only per-row logic.
 function dealColumns(
   t: ReturnType<typeof useT>,
   locale: Locale,
@@ -1545,7 +1478,6 @@ function dealColumns(
       // reader may not read that company, and a blank cell cannot be told
       // apart from a deal nobody has linked.
       //
-      // No `sort`, for the reason the partner column below carries none: the
       // Ordered by the company's NAME, not by the id the field is called
       // after: the sort vocabulary names the reference and the server decides
       // what ordering it means. A company this reader may not open sorts last,
@@ -1560,7 +1492,6 @@ function dealColumns(
       // that runs no partner programme has an empty column, and hiding it
       // per-row is worse in a list than an empty cell — a column that comes
       // and goes cannot be scanned down.
-      //
       key: "partner",
       header: t("deal.partnerCompany"),
       sort: "partner_company_id",
@@ -1610,20 +1541,22 @@ function dealColumns(
       sort: "last_activity_at",
       cell: (deal) =>
         deal.last_activity_at ? (
-          <span className="deal-signal">
-            {formatDuration(
-              Math.max(
-                0,
-                Date.now() - new Date(deal.last_activity_at).getTime(),
-              ),
-              locale,
+          <CellStrip>
+            <span>
+              {formatDuration(
+                Math.max(0, Date.now() - Date.parse(deal.last_activity_at)),
+                locale,
+              )}
+            </span>
+            {deal.stalled && (
+              <Badge tone="warn">{t("deal.stalledBadge")}</Badge>
             )}
-            {deal.stalled && <Badge tone="warn">{t("deal.stalled")}</Badge>}
-          </span>
+          </CellStrip>
         ) : (
           <span className="t-caption">{t("deals.lastSignalNone")}</span>
         ),
     },
+    lastMailColumn(t),
     {
       key: "status",
       header: t("lead.status"),
@@ -1979,6 +1912,7 @@ function DealBoardBody({
                   rosterOwnerNaming(roster),
                 )}
                 onOpen={openDeal}
+                mailAside={dealMailAside}
                 cardDragHandlers={cardDragHandlers}
                 columnDropHandlers={columnDropHandlers}
               />
@@ -3421,7 +3355,7 @@ export function OffersPanel({
                   key: "gross",
                   header: t("deals.amount"),
                   render: (offer: Offer) => (
-                    <span className="t-mono">
+                    <span className="t-num">
                       {formatMoney(offer.gross_minor, offer.currency, locale)}
                     </span>
                   ),

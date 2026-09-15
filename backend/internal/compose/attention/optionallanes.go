@@ -165,13 +165,13 @@ func (s *Service) optionalLanes(
 			into: &out.Dsr, count: &out.Counts.Dsr,
 		},
 		{
-			name: "notice_case", bound: s.noticeCases != nil,
+			name: sourceNoticeCase, bound: s.noticeCases != nil,
 			read: func() ([]crmcontracts.AttentionItem, error) {
 				// No window, for the DSR lane's reason: the deadline is the
 				// law's and it does not stop running because a case got old.
 				// An Art. 14 duty that aged out of this lane would be one the
 				// installation had quietly decided not to meet.
-				owed, err := s.noticeCases.OpenDueSoonest(ctx, doneCap)
+				owed, err := s.noticeCases.OpenDueSoonest(ctx, doneCap, s.taskScope, s.taskOwner, s.noticeOwners)
 				return renderEach(owed, func(duty NoticeCase) crmcontracts.AttentionItem {
 					return noticeCaseItem(duty, asOf)
 				}), err

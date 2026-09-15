@@ -375,7 +375,7 @@ it("says why a dismissed deal is back, without claiming an agent wrote it", () =
   // Indigo is a claim that a model wrote something. Tagging a row-derived fact
   // that way would be false in the one place the product asks a reader to
   // trust the marking.
-  expect(document.querySelector(".provenance-agent")).toBeNull();
+  expect(document.querySelector(".badge-ai")).toBeNull();
 });
 
 it("says nothing about a dismissal for an item that never had one", () => {

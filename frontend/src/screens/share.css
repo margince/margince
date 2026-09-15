@@ -84,7 +84,7 @@
 }
 
 /* The body face, both values: an address is words a contact reads and a member
-   count is a sentence, and the mono face is for a machine name. */
+   count is a sentence, and the mono face is for code alone. */
 .share-subject-note {
   font-size: var(--fs-meta);
   color: var(--textTertiary);
@@ -106,16 +106,6 @@
   height: 15px;
   color: var(--textTertiary);
   flex: none;
-}
-
-.share-expiry-badge {
-  font-size: var(--fs-eyebrow);
-  font-family: var(--f-mono);
-  color: var(--warnText);
-  background: var(--warnBg);
-  border-radius: var(--r-full);
-  corner-shape: round;
-  padding: 2px 8px; /* ds:ignore the Badge atom's own box, which it stands beside */
 }
 
 /* A grant is a `PanelRow`, so the hairline between two of them and the panel's

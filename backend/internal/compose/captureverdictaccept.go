@@ -27,13 +27,14 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/platform/approvalsubject"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 const (
 	// counterpartyProposalKind names the staged offer in the review queue.
-	counterpartyProposalKind = "capture_counterparty"
+	counterpartyProposalKind = approvalsubject.KindCounterparty
 	// counterpartyTargetType is what the proposal points at: the captured
 	// message, not the sender — the sender has no record yet, which is the
 	// whole question being asked.
@@ -43,26 +44,11 @@ const (
 	counterpartyExecutorActor = "agent:" + counterpartyProposalKind
 )
 
-// counterpartyProposal is the staged offer's payload: enough to create the
-// records on accept, and enough for a human to recognize the sender.
-//
-// It carries the DISPOSITION id rather than only the address, because accepting
-// must resolve the very row that raised the question — an address alone would
-// let a stale proposal resolve a newer question about the same sender.
-type counterpartyProposal struct {
-	DispositionID ids.UUID `json:"disposition_id"`
-	Email         string   `json:"email"`
-	DisplayName   string   `json:"display_name"`
-	Domain        string   `json:"domain"`
-	OwnerID       ids.UUID `json:"owner_id"`
-	ActivityID    ids.UUID `json:"activity_id"`
-}
-
 // stageCounterpartyReview offers one unresolvable sender to a human. Returns the
 // staged proposal's id so the ledger row can point at it — a re-run then finds
 // the existing offer instead of stacking another copy in the inbox.
 func stageCounterpartyReview(ctx context.Context, svc *approvals.Service, row capture.PendingCounterparty) (ids.UUID, error) {
-	proposal := counterpartyProposal{
+	proposal := approvalsubject.Counterparty{
 		DispositionID: row.ID,
 		Email:         row.Email,
 		DisplayName:   row.DisplayName,
@@ -104,7 +90,7 @@ func counterpartyAcceptEffect(svc *approvals.Service, store *contacts.Store,
 	filer *connectorTagFiler, pending *capture.PendingStore, triage *domainTriageTrigger,
 ) approvals.ApprovedEffect {
 	return func(ctx context.Context, approvalID ids.ApprovalID, proposedChange json.RawMessage, diffHash string) error {
-		var proposal counterpartyProposal
+		var proposal approvalsubject.Counterparty
 		if err := json.Unmarshal(proposedChange, &proposal); err != nil {
 			return fmt.Errorf("compose: decoding the counterparty proposal: %w", err)
 		}
@@ -146,7 +132,7 @@ func counterpartyAcceptEffect(svc *approvals.Service, store *contacts.Store,
 // It reports the domain still owed a company verdict, for the caller to
 // queue once the redemption has committed.
 func applyCounterpartyAccept(ctx context.Context, tx pgx.Tx, store *contacts.Store,
-	filer *connectorTagFiler, pending *capture.PendingStore, proposal counterpartyProposal,
+	filer *connectorTagFiler, pending *capture.PendingStore, proposal approvalsubject.Counterparty,
 ) (string, error) {
 	created, err := createCounterpartyRecords(ctx, tx, store, filer, counterpartyCreation{
 		Email:       proposal.Email,

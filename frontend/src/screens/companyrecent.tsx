@@ -226,7 +226,7 @@ function RecentRow({
             ))}
         </span>
       </span>
-      <span className="co-recent-when t-mono t-caption">{when}</span>
+      <span className="co-recent-when t-caption">{when}</span>
     </li>
   );
 }

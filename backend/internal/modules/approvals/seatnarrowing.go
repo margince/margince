@@ -12,6 +12,7 @@
 package approvals
 
 import (
+	"github.com/margince/margince/backend/internal/platform/approvalsubject"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -100,6 +101,9 @@ var decidedByTheSeatStagedFor = map[string]bool{
 // (backend/gates/approvalselfonlyreaders_test.go) — it fails when a reader
 // filters rows with requireDecisionGrants and does not also call this.
 func withheldFromOtherSeats(p principal.Principal, a row) bool {
+	if approvalsubject.Withheld(a.Kind, a.ProposedChange, p.UserID) {
+		return true
+	}
 	if selfOnlyKinds[a.Kind] || stagedForStagerOnly(a.TargetType, a.TargetID != nil) {
 		return a.OnBehalfOf == nil || p.UserID == ids.Nil || a.OnBehalfOf.UUID != p.UserID
 	}

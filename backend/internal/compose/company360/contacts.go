@@ -18,8 +18,10 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // contactsSection lists the account's current employees with their §4
@@ -146,6 +148,24 @@ type contactCard struct {
 // contact with none on file still appears: the strength read already
 // decided who is on this list, and a join could only shorten it.
 func contactIdentity(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, contactIDs []ids.ContactID) (map[ids.ContactID]contactCard, error) {
+	// The CONTACT grant, here rather than at each of the six call sites.
+	//
+	// This function is where a contact's name, title, email and photo are read,
+	// and it is reached from six surfaces. The assembled section (readContacts)
+	// asked the grant; the roster endpoint, the coverage read, the intro draft
+	// and the role proposals did not — they ask company, or deal, or only that
+	// the caller is human, and then name the account's contacts anyway. The row
+	// scope inside the statement answers WHICH contacts and under row_scope=all
+	// answers all of them.
+	//
+	// Refusing rather than degrading, and the assembly turns that into the right
+	// answer on both sides: a section error is recorded in sections_omitted, so
+	// the 360 loses this band and keeps the page, while a standalone endpoint
+	// whose whole subject is the contacts answers 403. A blank card would be
+	// worse than either — a row that names nobody still says somebody is there.
+	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
+		return nil, err
+	}
 	// The purchased title rides the same correlated-subquery shape as the
 	// address, under two conditions.
 	//

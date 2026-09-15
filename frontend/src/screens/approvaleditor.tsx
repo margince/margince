@@ -226,7 +226,6 @@ function RawPayload({
         <FieldLine
           key={key}
           name={key}
-          mono
           value={typeof value === "string" ? value : JSON.stringify(value)}
         />
       ))}
@@ -238,10 +237,10 @@ function RawPayload({
  * When the question was raised, and when it was settled.
  *
  * These two used to sit behind the technical disclosure, labelled `created_at`
- * and `decided_at` in monospace beside a uuid. They are not technical: how long
- * a proposal has been waiting is one of the few things on this dialog a reader
- * actually weighs, and it was filed with the debugging material because it
- * arrived on the wire next to it.
+ * and `decided_at` beside a uuid. They are not technical: how long a proposal
+ * has been waiting is one of the few things on this dialog a reader actually
+ * weighs, and it was filed with the debugging material because it arrived on
+ * the wire next to it.
  *
  * The rest of that block is gone from this surface rather than moved. A target
  * version and a `proposed_by` of `agent:<id>` name no contact and describe no
@@ -269,20 +268,13 @@ function askedOn(
   return asked;
 }
 
-// `mono` marks a value the WIRE spells — a uuid, a version, a payload path.
-// A named field carries a contact's own words and a date they recognise, and
-// setting those in mono would dress a business fact as machine output.
-function FieldLine({
-  name,
-  value,
-  mono,
-}: Readonly<{ name: string; value: string; mono?: boolean }>) {
+// One label over one value, set as prose whether the value is a contact's own
+// words or a uuid the wire spells.
+function FieldLine({ name, value }: Readonly<{ name: string; value: string }>) {
   return (
     <div className="field">
       <span className="t-label">{name}</span>
-      <p className={mono ? "t-mono" : "approval-detail-value t-body"}>
-        {value}
-      </p>
+      <p className="approval-detail-value t-body">{value}</p>
     </div>
   );
 }

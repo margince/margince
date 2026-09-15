@@ -2283,26 +2283,35 @@ func (e BackfillPreviewEstimateQuality) Valid() bool {
 
 // Defines values for BackfillPreviewWindow.
 const (
-	BackfillPreviewWindowN12m BackfillPreviewWindow = "12m"
-	BackfillPreviewWindowN24m BackfillPreviewWindow = "24m"
-	BackfillPreviewWindowN3m  BackfillPreviewWindow = "3m"
-	BackfillPreviewWindowN60m BackfillPreviewWindow = "60m"
-	BackfillPreviewWindowN6m  BackfillPreviewWindow = "6m"
-	BackfillPreviewWindowNone BackfillPreviewWindow = "none"
+	BackfillPreviewWindowN120m BackfillPreviewWindow = "120m"
+	BackfillPreviewWindowN12m  BackfillPreviewWindow = "12m"
+	BackfillPreviewWindowN24m  BackfillPreviewWindow = "24m"
+	BackfillPreviewWindowN36m  BackfillPreviewWindow = "36m"
+	BackfillPreviewWindowN3m   BackfillPreviewWindow = "3m"
+	BackfillPreviewWindowN60m  BackfillPreviewWindow = "60m"
+	BackfillPreviewWindowN6m   BackfillPreviewWindow = "6m"
+	BackfillPreviewWindowN84m  BackfillPreviewWindow = "84m"
+	BackfillPreviewWindowNone  BackfillPreviewWindow = "none"
 )
 
 // Valid indicates whether the value is a known member of the BackfillPreviewWindow enum.
 func (e BackfillPreviewWindow) Valid() bool {
 	switch e {
+	case BackfillPreviewWindowN120m:
+		return true
 	case BackfillPreviewWindowN12m:
 		return true
 	case BackfillPreviewWindowN24m:
+		return true
+	case BackfillPreviewWindowN36m:
 		return true
 	case BackfillPreviewWindowN3m:
 		return true
 	case BackfillPreviewWindowN60m:
 		return true
 	case BackfillPreviewWindowN6m:
+		return true
+	case BackfillPreviewWindowN84m:
 		return true
 	case BackfillPreviewWindowNone:
 		return true
@@ -2313,26 +2322,35 @@ func (e BackfillPreviewWindow) Valid() bool {
 
 // Defines values for BackfillPreviewRequestWindow.
 const (
-	BackfillPreviewRequestWindowN12m BackfillPreviewRequestWindow = "12m"
-	BackfillPreviewRequestWindowN24m BackfillPreviewRequestWindow = "24m"
-	BackfillPreviewRequestWindowN3m  BackfillPreviewRequestWindow = "3m"
-	BackfillPreviewRequestWindowN60m BackfillPreviewRequestWindow = "60m"
-	BackfillPreviewRequestWindowN6m  BackfillPreviewRequestWindow = "6m"
-	BackfillPreviewRequestWindowNone BackfillPreviewRequestWindow = "none"
+	BackfillPreviewRequestWindowN120m BackfillPreviewRequestWindow = "120m"
+	BackfillPreviewRequestWindowN12m  BackfillPreviewRequestWindow = "12m"
+	BackfillPreviewRequestWindowN24m  BackfillPreviewRequestWindow = "24m"
+	BackfillPreviewRequestWindowN36m  BackfillPreviewRequestWindow = "36m"
+	BackfillPreviewRequestWindowN3m   BackfillPreviewRequestWindow = "3m"
+	BackfillPreviewRequestWindowN60m  BackfillPreviewRequestWindow = "60m"
+	BackfillPreviewRequestWindowN6m   BackfillPreviewRequestWindow = "6m"
+	BackfillPreviewRequestWindowN84m  BackfillPreviewRequestWindow = "84m"
+	BackfillPreviewRequestWindowNone  BackfillPreviewRequestWindow = "none"
 )
 
 // Valid indicates whether the value is a known member of the BackfillPreviewRequestWindow enum.
 func (e BackfillPreviewRequestWindow) Valid() bool {
 	switch e {
+	case BackfillPreviewRequestWindowN120m:
+		return true
 	case BackfillPreviewRequestWindowN12m:
 		return true
 	case BackfillPreviewRequestWindowN24m:
+		return true
+	case BackfillPreviewRequestWindowN36m:
 		return true
 	case BackfillPreviewRequestWindowN3m:
 		return true
 	case BackfillPreviewRequestWindowN60m:
 		return true
 	case BackfillPreviewRequestWindowN6m:
+		return true
+	case BackfillPreviewRequestWindowN84m:
 		return true
 	case BackfillPreviewRequestWindowNone:
 		return true
@@ -2373,25 +2391,34 @@ func (e BackfillStatusState) Valid() bool {
 
 // Defines values for BackfillStatusWindow.
 const (
-	BackfillStatusWindowN12m BackfillStatusWindow = "12m"
-	BackfillStatusWindowN24m BackfillStatusWindow = "24m"
-	BackfillStatusWindowN3m  BackfillStatusWindow = "3m"
-	BackfillStatusWindowN60m BackfillStatusWindow = "60m"
-	BackfillStatusWindowN6m  BackfillStatusWindow = "6m"
+	BackfillStatusWindowN120m BackfillStatusWindow = "120m"
+	BackfillStatusWindowN12m  BackfillStatusWindow = "12m"
+	BackfillStatusWindowN24m  BackfillStatusWindow = "24m"
+	BackfillStatusWindowN36m  BackfillStatusWindow = "36m"
+	BackfillStatusWindowN3m   BackfillStatusWindow = "3m"
+	BackfillStatusWindowN60m  BackfillStatusWindow = "60m"
+	BackfillStatusWindowN6m   BackfillStatusWindow = "6m"
+	BackfillStatusWindowN84m  BackfillStatusWindow = "84m"
 )
 
 // Valid indicates whether the value is a known member of the BackfillStatusWindow enum.
 func (e BackfillStatusWindow) Valid() bool {
 	switch e {
+	case BackfillStatusWindowN120m:
+		return true
 	case BackfillStatusWindowN12m:
 		return true
 	case BackfillStatusWindowN24m:
+		return true
+	case BackfillStatusWindowN36m:
 		return true
 	case BackfillStatusWindowN3m:
 		return true
 	case BackfillStatusWindowN60m:
 		return true
 	case BackfillStatusWindowN6m:
+		return true
+	case BackfillStatusWindowN84m:
 		return true
 	default:
 		return false
@@ -2423,6 +2450,7 @@ func (e BillingContactRole) Valid() bool {
 const (
 	BlockedDomainAdmissionAdmitted   BlockedDomainAdmission = "admitted"
 	BlockedDomainAdmissionSuppressed BlockedDomainAdmission = "suppressed"
+	BlockedDomainAdmissionUndecided  BlockedDomainAdmission = "undecided"
 )
 
 // Valid indicates whether the value is a known member of the BlockedDomainAdmission enum.
@@ -2432,6 +2460,8 @@ func (e BlockedDomainAdmission) Valid() bool {
 		return true
 	case BlockedDomainAdmissionSuppressed:
 		return true
+	case BlockedDomainAdmissionUndecided:
+		return true
 	default:
 		return false
 	}
@@ -2439,9 +2469,11 @@ func (e BlockedDomainAdmission) Valid() bool {
 
 // Defines values for BlockedDomainSource.
 const (
-	BlockedDomainSourceHeuristic BlockedDomainSource = "heuristic"
-	BlockedDomainSourceHuman     BlockedDomainSource = "human"
-	BlockedDomainSourceVerdict   BlockedDomainSource = "verdict"
+	BlockedDomainSourceHeuristic     BlockedDomainSource = "heuristic"
+	BlockedDomainSourceHuman         BlockedDomainSource = "human"
+	BlockedDomainSourceStaleEvidence BlockedDomainSource = "stale_evidence"
+	BlockedDomainSourceUnevidenced   BlockedDomainSource = "unevidenced"
+	BlockedDomainSourceVerdict       BlockedDomainSource = "verdict"
 )
 
 // Valid indicates whether the value is a known member of the BlockedDomainSource enum.
@@ -2450,6 +2482,10 @@ func (e BlockedDomainSource) Valid() bool {
 	case BlockedDomainSourceHeuristic:
 		return true
 	case BlockedDomainSourceHuman:
+		return true
+	case BlockedDomainSourceStaleEvidence:
+		return true
+	case BlockedDomainSourceUnevidenced:
 		return true
 	case BlockedDomainSourceVerdict:
 		return true
@@ -3223,45 +3259,6 @@ func (e CommunicationReviewState) Valid() bool {
 	case CommunicationReviewStateResolved:
 		return true
 	case CommunicationReviewStateSuperseded:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for CompanyClassification.
-const (
-	CompanyClassificationAgency     CompanyClassification = "agency"
-	CompanyClassificationCompetitor CompanyClassification = "competitor"
-	CompanyClassificationCustomer   CompanyClassification = "customer"
-	CompanyClassificationOther      CompanyClassification = "other"
-	CompanyClassificationPartner    CompanyClassification = "partner"
-	CompanyClassificationPlatform   CompanyClassification = "platform"
-	CompanyClassificationProspect   CompanyClassification = "prospect"
-	CompanyClassificationReseller   CompanyClassification = "reseller"
-	CompanyClassificationTechVendor CompanyClassification = "tech_vendor"
-)
-
-// Valid indicates whether the value is a known member of the CompanyClassification enum.
-func (e CompanyClassification) Valid() bool {
-	switch e {
-	case CompanyClassificationAgency:
-		return true
-	case CompanyClassificationCompetitor:
-		return true
-	case CompanyClassificationCustomer:
-		return true
-	case CompanyClassificationOther:
-		return true
-	case CompanyClassificationPartner:
-		return true
-	case CompanyClassificationPlatform:
-		return true
-	case CompanyClassificationProspect:
-		return true
-	case CompanyClassificationReseller:
-		return true
-	case CompanyClassificationTechVendor:
 		return true
 	default:
 		return false
@@ -7522,6 +7519,24 @@ func (e DealCoverageRiskKind) Valid() bool {
 	case DealCoverageRiskKindSingleThreadedTheirs:
 		return true
 	case DealCoverageRiskKindStakeholderLeft:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DealLastEmailDirection.
+const (
+	DealLastEmailDirectionInbound  DealLastEmailDirection = "inbound"
+	DealLastEmailDirectionOutbound DealLastEmailDirection = "outbound"
+)
+
+// Valid indicates whether the value is a known member of the DealLastEmailDirection enum.
+func (e DealLastEmailDirection) Valid() bool {
+	switch e {
+	case DealLastEmailDirectionInbound:
+		return true
+	case DealLastEmailDirectionOutbound:
 		return true
 	default:
 		return false
@@ -13356,25 +13371,34 @@ func (e StageEvidenceSource) Valid() bool {
 
 // Defines values for StartBackfillRequestWindow.
 const (
-	StartBackfillRequestWindowN12m StartBackfillRequestWindow = "12m"
-	StartBackfillRequestWindowN24m StartBackfillRequestWindow = "24m"
-	StartBackfillRequestWindowN3m  StartBackfillRequestWindow = "3m"
-	StartBackfillRequestWindowN60m StartBackfillRequestWindow = "60m"
-	StartBackfillRequestWindowN6m  StartBackfillRequestWindow = "6m"
+	StartBackfillRequestWindowN120m StartBackfillRequestWindow = "120m"
+	StartBackfillRequestWindowN12m  StartBackfillRequestWindow = "12m"
+	StartBackfillRequestWindowN24m  StartBackfillRequestWindow = "24m"
+	StartBackfillRequestWindowN36m  StartBackfillRequestWindow = "36m"
+	StartBackfillRequestWindowN3m   StartBackfillRequestWindow = "3m"
+	StartBackfillRequestWindowN60m  StartBackfillRequestWindow = "60m"
+	StartBackfillRequestWindowN6m   StartBackfillRequestWindow = "6m"
+	StartBackfillRequestWindowN84m  StartBackfillRequestWindow = "84m"
 )
 
 // Valid indicates whether the value is a known member of the StartBackfillRequestWindow enum.
 func (e StartBackfillRequestWindow) Valid() bool {
 	switch e {
+	case StartBackfillRequestWindowN120m:
+		return true
 	case StartBackfillRequestWindowN12m:
 		return true
 	case StartBackfillRequestWindowN24m:
+		return true
+	case StartBackfillRequestWindowN36m:
 		return true
 	case StartBackfillRequestWindowN3m:
 		return true
 	case StartBackfillRequestWindowN60m:
 		return true
 	case StartBackfillRequestWindowN6m:
+		return true
+	case StartBackfillRequestWindowN84m:
 		return true
 	default:
 		return false
@@ -20471,7 +20495,8 @@ type AttentionItem struct {
 	// handles `snooze` generically write the wrong endpoint.
 	Actions []AttentionItemActions `json:"actions"`
 
-	// AssigneeId Who holds this task, null when nobody has taken it. Sent by `task`.
+	// AssigneeId Who holds this work, null when nobody has taken it. Sent by `task` and `notice_case`.
+	// A disclosure duty uses its assigned officer, falling back to its contact owner.
 	//
 	// The lane serves three scopes and only one is the reader's own queue: an
 	// unassigned sweep and a named colleague's queue both put work on the page that
@@ -21198,7 +21223,9 @@ type AvailableModelListUnavailable string
 
 // BackfillPreview The scope before the spend (ADR-0063/ADR-0020): what starting this window would touch and roughly cost. An estimate, labeled as such — actual spend is metered per task.
 type BackfillPreview struct {
-	ComputedAt time.Time `json:"computed_at"`
+	// AfterDate Calendar day of the preview query boundary; time within that day remains provider-specific. Omitted for none. Starting later recalculates the rolling window.
+	AfterDate  *openapi_types.Date `json:"after_date,omitempty"`
+	ComputedAt time.Time           `json:"computed_at"`
 
 	// Currency ISO-4217; "USD" in v1.
 	Currency *string `json:"currency,omitempty"`
@@ -21228,11 +21255,11 @@ type BackfillPreviewWindow string
 
 // BackfillPreviewRequest defines model for BackfillPreviewRequest.
 type BackfillPreviewRequest struct {
-	// Window The CAP-PARAM-4 window; default UI selection is 6m. 24m/60m added by ADR-0106 — the set stays closed, and the preview is what keeps a multi-year reach consented.
+	// Window Bounded mail-history window, up to ten years. The default UI selection is six months.
 	Window BackfillPreviewRequestWindow `json:"window"`
 }
 
-// BackfillPreviewRequestWindow The CAP-PARAM-4 window; default UI selection is 6m. 24m/60m added by ADR-0106 — the set stays closed, and the preview is what keeps a multi-year reach consented.
+// BackfillPreviewRequestWindow Bounded mail-history window, up to ten years. The default UI selection is six months.
 type BackfillPreviewRequestWindow string
 
 // BackfillStatus The CAP-DDL-4 single-row activation read: every count is a persisted-row count, never a fabricated counter (closes CAP-AC-OPEN-1).
@@ -21243,7 +21270,6 @@ type BackfillStatus struct {
 		Captured         *int `json:"captured,omitempty"`
 		CompaniesCreated *int `json:"companies_created,omitempty"`
 		ContactsCreated  *int `json:"contacts_created,omitempty"`
-		DedupeCandidates *int `json:"dedupe_candidates,omitempty"`
 		MessagesScanned  *int `json:"messages_scanned,omitempty"`
 		Skipped          *int `json:"skipped,omitempty"`
 	} `json:"counts,omitempty"`
@@ -21314,31 +21340,49 @@ type BillingContact struct {
 // One contact may hold several, and each is a separate edge.
 type BillingContactRole string
 
-// BlockedDomain One domain carrying a standing admission decision. `suppressed` refuses it a company —
+// BlockedDomain One domain and where its company question stands. `suppressed` refuses it a company —
 // a vendor or bulk sender the business does not sell to — while `admitted` is a human
 // deliberately letting one in, which no later verdict may undo.
+//
+// `undecided` is the third state and it is not a decision: the question was asked, the
+// machine declined to answer it, and nobody has since. Those rows are why this list
+// exists rather than being a record of refusals alone — a domain nothing decided is
+// invisible everywhere else, and an operator hunting a company that never appeared
+// cannot tell it from one that was refused.
 type BlockedDomain struct {
-	// Admission `suppressed` — never a company. `admitted` — allowed, and sticky against later machine refusals.
+	// Admission `suppressed` — never a company. `admitted` — allowed, and sticky against later machine
+	// refusals. `undecided` — the question is open and waiting to be answered; nothing is stored
+	// on the row for this state, it is what the absence of a decision is called on the wire.
 	Admission BlockedDomainAdmission `json:"admission"`
 
 	// CompanyId The company on this domain, when one exists — an admitted domain usually has one.
 	CompanyId *openapi_types.UUID `json:"company_id,omitempty"`
-	DecidedAt time.Time           `json:"decided_at"`
+
+	// DecidedAt When the decision was recorded. For an `undecided` domain, when the row last moved.
+	DecidedAt time.Time `json:"decided_at"`
 
 	// Domain The registrable domain the decision is about.
 	Domain string `json:"domain"`
 
-	// Reason One sentence an operator can act on: why this domain was refused or let in.
+	// Reason One sentence an operator can act on: why this domain was refused, let in, or left open.
 	Reason string `json:"reason"`
 
-	// Source What decided it. `human` decisions outrank every machine one.
+	// Source What decided it, or — for an `undecided` domain — what stopped the machine deciding.
+	// `human` decisions outrank every machine one. `unevidenced` means nothing the crawl
+	// found named a company; `stale_evidence` means the newest mail from the domain is too
+	// old to mint one from today's site.
 	Source BlockedDomainSource `json:"source"`
 }
 
-// BlockedDomainAdmission `suppressed` — never a company. `admitted` — allowed, and sticky against later machine refusals.
+// BlockedDomainAdmission `suppressed` — never a company. `admitted` — allowed, and sticky against later machine
+// refusals. `undecided` — the question is open and waiting to be answered; nothing is stored
+// on the row for this state, it is what the absence of a decision is called on the wire.
 type BlockedDomainAdmission string
 
-// BlockedDomainSource What decided it. `human` decisions outrank every machine one.
+// BlockedDomainSource What decided it, or — for an `undecided` domain — what stopped the machine deciding.
+// `human` decisions outrank every machine one. `unevidenced` means nothing the crawl
+// found named a company; `stale_evidence` means the newest mail from the domain is too
+// old to mint one from today's site.
 type BlockedDomainSource string
 
 // BlockedDomainListResponse defines model for BlockedDomainListResponse.
@@ -22539,10 +22583,6 @@ type Company struct {
 	// CapturedBy Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.
 	CapturedBy *string `json:"captured_by,omitempty"`
 
-	// Classification RETIRED (ADR-0079) — superseded by `lifecycle` + `relationship_types`, which split the two questions this one value tried to answer at once. Carried one release, written by nothing; read it for migration comparison only.
-	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-	Classification *CompanyClassification `json:"classification,omitempty"`
-
 	// ComputedFields S-E15.8c formula-field display rows (RD-AC-6/RD-AC-7/RD-AC-N-1). Populated on
 	// `getCompany` only; the key is absent entirely (not an empty array) when the
 	// viewer's role lacks computed_field:read visibility (STATE-4).
@@ -22595,7 +22635,8 @@ type Company struct {
 	ParentCompanyId *openapi_types.UUID `json:"parent_company_id,omitempty"`
 
 	// Partner First-class partner state as a 1:1 extension of a company (a company IS a partner iff it
-	// has a `partner` row + classification='partner'). Company identity is never duplicated.
+	// has a `partner` row AND carries `partner` in its `relationship_types` — ADR-0079 split that
+	// second half out of the retired `classification`). Company identity is never duplicated.
 	// ADR-0053 adds the relationship-in-flight layer: lifecycle stage, relationship health,
 	// partner fit, next step, and served segments. Behavior is Fast-follow, but the V1 schema is
 	// forward-compatible.
@@ -22629,9 +22670,6 @@ type Company struct {
 	Writable             *bool                  `json:"writable,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
-
-// CompanyClassification RETIRED (ADR-0079) — superseded by `lifecycle` + `relationship_types`, which split the two questions this one value tried to answer at once. Carried one release, written by nothing; read it for migration comparison only.
-type CompanyClassification string
 
 // CompanyLifecycle WHERE THE ACCOUNT STANDS with us (PO-DDL-4, ADR-0079). Single-valued: an account is at one point in a sales motion at a time. `unknown` is the default and means it — the retired `classification` defaulted to `prospect` and, having no writer, rendered that default on every unassessed account as though someone had judged it.
 type CompanyLifecycle string
@@ -26603,11 +26641,14 @@ type CreateActivityRequest struct {
 	Raw           *map[string]interface{}             `json:"raw,omitempty"`
 
 	// RemindAt Task only.
-	RemindAt     *time.Time `json:"remind_at,omitempty"`
-	Source       string     `json:"source"`
-	SourceId     *string    `json:"source_id,omitempty"`
-	SourceSystem *string    `json:"source_system,omitempty"`
-	Subject      *string    `json:"subject,omitempty"`
+	RemindAt *time.Time `json:"remind_at,omitempty"`
+
+	// RequestActivityId Accept this inbound request for the authenticated human, with activity read and create authority. Task only; agents cannot accept and assignee_id must name the caller when provided. The server verifies source access and copies its links instead of caller-supplied links. Subject and body are honored on creation. Retries return the same personal reminder without changing it. Explicit acceptance can restore an archived unfinished reminder with update authority. Completion settles the source request; automatic reconciliation never restores a reminder.
+	RequestActivityId *openapi_types.UUID `json:"request_activity_id,omitempty"`
+	Source            string              `json:"source"`
+	SourceId          *string             `json:"source_id,omitempty"`
+	SourceSystem      *string             `json:"source_system,omitempty"`
+	Subject           *string             `json:"subject,omitempty"`
 }
 
 // CreateActivityRequestDirection defines model for CreateActivityRequest.Direction.
@@ -27315,7 +27356,10 @@ type CreateTaskRequest struct {
 		EntityId   openapi_types.UUID               `json:"entity_id"`
 		EntityType CreateTaskRequestLinksEntityType `json:"entity_type"`
 	} `json:"links,omitempty"`
-	Source string `json:"source"`
+
+	// RequestActivityId Accept this inbound request for the authenticated human, with activity read and create authority. Task only; agents cannot accept and assignee_id must name the caller when provided. The server verifies source access and copies its links instead of caller-supplied links. Subject and body are honored on creation. Retries return the same personal reminder without changing it. Explicit acceptance can restore an archived unfinished reminder with update authority. Completion settles the source request; automatic reconciliation never restores a reminder.
+	RequestActivityId *openapi_types.UUID `json:"request_activity_id,omitempty"`
+	Source            string              `json:"source"`
 
 	// Subject What has to be done, as one line.
 	Subject string `json:"subject"`
@@ -27525,6 +27569,9 @@ type Deal struct {
 	// LastActivityAt Drives the deterministic stalled flag. Counts workspace-audience activities only, so a deal whose only recent mail is limited to its participants reads as stalled.
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
 
+	// LastEmail The newest email on this deal that the whole workspace may see — what a board card states as "last mail, N days ago" beside the deal, so a rep reads the silence without opening every card. Null on a deal nobody has mailed about. Counts what `last_activity_at` counts, narrowed to mail: workspace-audience rows only, and never the product's own system writing — a message limited to its participants must not move a date every colleague reads, and a mail the installation sent itself is not the buyer engaging. The rows a reader may discover through `GET /activities` can therefore be newer than this instant.
+	LastEmail *DealLastEmail `json:"last_email,omitempty"`
+
 	// LostReason Required when status=lost.
 	LostReason *string `json:"lost_reason,omitempty"`
 
@@ -27685,6 +27732,16 @@ type DealDocumentOrigin struct {
 	OccurredAt time.Time `json:"occurred_at"`
 	Subject    *string   `json:"subject,omitempty"`
 }
+
+// DealLastEmail The newest workspace-visible email on a deal, as `Deal.last_email` carries it.
+type DealLastEmail struct {
+	// Direction Which way the mail went. Null on a logged email that named no direction, which is a fact about how it was captured rather than about the exchange.
+	Direction  *DealLastEmailDirection `json:"direction"`
+	OccurredAt time.Time               `json:"occurred_at"`
+}
+
+// DealLastEmailDirection Which way the mail went. Null on a logged email that named no direction, which is a fact about how it was captured rather than about the exchange.
+type DealLastEmailDirection string
 
 // DealListResponse defines model for DealListResponse.
 type DealListResponse struct {
@@ -28627,6 +28684,9 @@ type EmailSummary struct {
 	// Preview One line of the sender's own text, signature and quoted history already removed.
 	// Null when withheld, and when the message has no text of its own.
 	Preview *string `json:"preview,omitempty"`
+
+	// RequestHasReminder An unfinished reminder covers this readable source request. This obligation fact names no private task, owner, or task content. Absent when the source is withheld.
+	RequestHasReminder *bool `json:"request_has_reminder,omitempty"`
 
 	// Subject Null when the message has none, and when the content is withheld.
 	Subject *string `json:"subject,omitempty"`
@@ -30553,9 +30613,10 @@ type KindAutonomy struct {
 	// as reversibility does. A client renders the kinds it is sent.
 	Kind string `json:"kind"`
 
-	// Mode `manual` asks every time, and is what a kind stands at until the reader
-	// says otherwise. `auto` applies on sight, undoably, under the authority of
-	// whoever owns the record at the time.
+	// Mode `auto` is the default for eligible kinds and applies changes under the
+	// authority of whoever owns the record at the time. Saved choices take
+	// precedence. `manual` disables automatic application: proposals wait for
+	// review, and close-date maintenance stops for the owner.
 	//
 	// `veto` is a third rung the policy table admits and nothing writes yet: it
 	// would apply after a stated delay unless the reader stops it first. It is
@@ -30568,9 +30629,10 @@ type KindAutonomy struct {
 	Rejected int `json:"rejected"`
 }
 
-// KindAutonomyMode `manual` asks every time, and is what a kind stands at until the reader
-// says otherwise. `auto` applies on sight, undoably, under the authority of
-// whoever owns the record at the time.
+// KindAutonomyMode `auto` is the default for eligible kinds and applies changes under the
+// authority of whoever owns the record at the time. Saved choices take
+// precedence. `manual` disables automatic application: proposals wait for
+// review, and close-date maintenance stops for the owner.
 //
 // `veto` is a third rung the policy table admits and nothing writes yet: it
 // would apply after a stated delay unless the reader stops it first. It is
@@ -32918,7 +32980,8 @@ type PageInfo struct {
 }
 
 // Partner First-class partner state as a 1:1 extension of a company (a company IS a partner iff it
-// has a `partner` row + classification='partner'). Company identity is never duplicated.
+// has a `partner` row AND carries `partner` in its `relationship_types` — ADR-0079 split that
+// second half out of the retired `classification`). Company identity is never duplicated.
 // ADR-0053 adds the relationship-in-flight layer: lifecycle stage, relationship health,
 // partner fit, next step, and served segments. Behavior is Fast-follow, but the V1 schema is
 // forward-compatible.
@@ -34526,9 +34589,15 @@ type RejectCompanyResponse struct {
 	// Company A company. Mirrors the `company` table.
 	Company Company `json:"company"`
 
-	// Domain One domain carrying a standing admission decision. `suppressed` refuses it a company —
+	// Domain One domain and where its company question stands. `suppressed` refuses it a company —
 	// a vendor or bulk sender the business does not sell to — while `admitted` is a human
 	// deliberately letting one in, which no later verdict may undo.
+	//
+	// `undecided` is the third state and it is not a decision: the question was asked, the
+	// machine declined to answer it, and nobody has since. Those rows are why this list
+	// exists rather than being a record of refusals alone — a domain nothing decided is
+	// invisible everywhere else, and an operator hunting a company that never appeared
+	// cannot tell it from one that was refused.
 	Domain BlockedDomain `json:"domain"`
 }
 
@@ -40319,7 +40388,7 @@ type WorklistReadings struct {
 	//
 	// Only rows carrying a verb the reader may press. A duplicate pair whose two
 	// records the reader cannot both write is somebody else's decision, and
-	// counting it here tells them a contact is blocked on an answer they are not
+	// counting it here tells them a contact is waiting on an answer they are not
 	// able to give.
 	Review int `json:"review"`
 
@@ -43149,6 +43218,9 @@ type RevertStageProgressionParams struct {
 
 // GetDealStatusParams defines parameters for GetDealStatus.
 type GetDealStatusParams struct {
+	// FactsOnly Refresh the card and shared action cache from current facts without model calls. Takes precedence over refresh.
+	FactsOnly *bool `form:"facts_only,omitempty" json:"facts_only,omitempty"`
+
 	// Refresh Rewrite even when the fingerprint still matches. The reader asking for a second opinion.
 	Refresh *bool `form:"refresh,omitempty" json:"refresh,omitempty"`
 }
@@ -44055,6 +44127,9 @@ type ListNoticeCasesParams struct {
 
 	// Limit Max items in the page.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. It encodes the last row's `due_at` and id — both, because the order is by both, and an id alone cannot continue it when two duties fall due in the same second. Changing `state` mid-walk changes which rows the remaining pages see, so re-issue without the cursor when the filter changes. A token this endpoint did not mint returns `422 code: malformed_cursor`.
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
 }
 
 // ListProductsParams defines parameters for ListProducts.
@@ -46861,14 +46936,6 @@ func (a *Company) UnmarshalJSON(b []byte) error {
 		delete(object, "captured_by")
 	}
 
-	if raw, found := object["classification"]; found {
-		err = json.Unmarshal(raw, &a.Classification)
-		if err != nil {
-			return fmt.Errorf("error reading 'classification': %w", err)
-		}
-		delete(object, "classification")
-	}
-
 	if raw, found := object["computed_fields"]; found {
 		err = json.Unmarshal(raw, &a.ComputedFields)
 		if err != nil {
@@ -47145,13 +47212,6 @@ func (a Company) MarshalJSON() ([]byte, error) {
 	object["captured_by"], err = json.Marshal(a.CapturedBy)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'captured_by': %w", err)
-	}
-
-	if a.Classification != nil {
-		object["classification"], err = json.Marshal(a.Classification)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling 'classification': %w", err)
-		}
 	}
 
 	if a.ComputedFields != nil {
@@ -50393,6 +50453,14 @@ func (a *Deal) UnmarshalJSON(b []byte) error {
 		delete(object, "last_activity_at")
 	}
 
+	if raw, found := object["last_email"]; found {
+		err = json.Unmarshal(raw, &a.LastEmail)
+		if err != nil {
+			return fmt.Errorf("error reading 'last_email': %w", err)
+		}
+		delete(object, "last_email")
+	}
+
 	if raw, found := object["lost_reason"]; found {
 		err = json.Unmarshal(raw, &a.LostReason)
 		if err != nil {
@@ -50711,6 +50779,13 @@ func (a Deal) MarshalJSON() ([]byte, error) {
 		object["last_activity_at"], err = json.Marshal(a.LastActivityAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'last_activity_at': %w", err)
+		}
+	}
+
+	if a.LastEmail != nil {
+		object["last_email"], err = json.Marshal(a.LastEmail)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'last_email': %w", err)
 		}
 	}
 
@@ -56503,7 +56578,7 @@ type ServerInterface interface {
 	// Read-only run history for one automation — successes AND errored/blocked/skipped runs.
 	// (GET /automations/{id}/runs)
 	ListAutomationRuns(w http.ResponseWriter, r *http.Request, id Id, params ListAutomationRunsParams)
-	// Which kinds of proposal the caller has put on automatic.
+	// The caller's automatic-change settings and review history.
 	// (GET /autonomy)
 	GetAutonomy(w http.ResponseWriter, r *http.Request)
 	// Turn automatic application on or off for one kind.
@@ -56542,12 +56617,15 @@ type ServerInterface interface {
 	// The same window for the workspace's shared channel connections.
 	// (GET /capture/activity/workspace)
 	ListWorkspaceCaptureActivity(w http.ResponseWriter, r *http.Request, params ListWorkspaceCaptureActivityParams)
-	// The domains refused a company, and why.
+	// Where each domain's company question stands.
 	// (GET /capture/blocked-domains)
 	ListBlockedDomains(w http.ResponseWriter, r *http.Request)
 	// Block a domain, or unblock one (admin/ops).
 	// (PUT /capture/blocked-domains)
 	SetBlockedDomain(w http.ResponseWriter, r *http.Request)
+	// Ask about an undecided domain again (admin/ops).
+	// (POST /capture/blocked-domains/{domain}/reopen)
+	ReopenWithheldDomain(w http.ResponseWriter, r *http.Request, domain string)
 	// Search the shipped consumer-mail baseline (CAP-PARAM-5).
 	// (GET /capture/consumer-mail-baseline)
 	ListConsumerMailBaseline(w http.ResponseWriter, r *http.Request, params ListConsumerMailBaselineParams)
@@ -58753,7 +58831,7 @@ func (_ Unimplemented) ListAutomationRuns(w http.ResponseWriter, r *http.Request
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Which kinds of proposal the caller has put on automatic.
+// The caller's automatic-change settings and review history.
 // (GET /autonomy)
 func (_ Unimplemented) GetAutonomy(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -58831,7 +58909,7 @@ func (_ Unimplemented) ListWorkspaceCaptureActivity(w http.ResponseWriter, r *ht
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// The domains refused a company, and why.
+// Where each domain's company question stands.
 // (GET /capture/blocked-domains)
 func (_ Unimplemented) ListBlockedDomains(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -58840,6 +58918,12 @@ func (_ Unimplemented) ListBlockedDomains(w http.ResponseWriter, r *http.Request
 // Block a domain, or unblock one (admin/ops).
 // (PUT /capture/blocked-domains)
 func (_ Unimplemented) SetBlockedDomain(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Ask about an undecided domain again (admin/ops).
+// (POST /capture/blocked-domains/{domain}/reopen)
+func (_ Unimplemented) ReopenWithheldDomain(w http.ResponseWriter, r *http.Request, domain string) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -66316,6 +66400,38 @@ func (siw *ServerInterfaceWrapper) SetBlockedDomain(w http.ResponseWriter, r *ht
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.SetBlockedDomain(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ReopenWithheldDomain operation middleware
+func (siw *ServerInterfaceWrapper) ReopenWithheldDomain(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "domain" -------------
+	var domain string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "domain", chi.URLParam(r, "domain"), &domain, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "domain", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReopenWithheldDomain(w, r, domain)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -76220,6 +76336,19 @@ func (siw *ServerInterfaceWrapper) GetDealStatus(w http.ResponseWriter, r *http.
 	// Parameter object where we will unmarshal all parameters from the context
 	var params GetDealStatusParams
 
+	// ------------- Optional query parameter "facts_only" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "facts_only", r.URL.Query(), &params.FactsOnly, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "facts_only"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "facts_only", Err: err})
+		}
+		return
+	}
+
 	// ------------- Optional query parameter "refresh" -------------
 
 	err = runtime.BindQueryParameterWithOptions("form", true, false, "refresh", r.URL.Query(), &params.Refresh, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
@@ -81780,6 +81909,19 @@ func (siw *ServerInterfaceWrapper) ListNoticeCases(w http.ResponseWriter, r *htt
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
 		}
 		return
 	}
@@ -90486,6 +90628,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/capture/blocked-domains", wrapper.SetBlockedDomain)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/capture/blocked-domains/{domain}/reopen", wrapper.ReopenWithheldDomain)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/capture/consumer-mail-baseline", wrapper.ListConsumerMailBaseline)

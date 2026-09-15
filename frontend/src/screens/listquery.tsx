@@ -952,7 +952,7 @@ export function ListTable<Row>({
   const problem = isError ? (
     <>
       <p>{t("common.error")}</p>
-      <p className="t-mono" style={{ marginTop: "var(--space-1)" }}>
+      <p style={{ marginTop: "var(--space-1)" }}>
         {problemMessageOf(error, t)}
       </p>
       <Button

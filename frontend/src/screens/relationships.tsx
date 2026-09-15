@@ -648,7 +648,7 @@ export function RelationshipsTab({
                       return ref ? (
                         <EntityRef kind={ref.kind} id={ref.id} />
                       ) : (
-                        <span className="t-mono">—</span>
+                        <span>—</span>
                       );
                     },
                   },

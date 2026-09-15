@@ -62,13 +62,13 @@ function LeadBlockStrip({
       testId="scorecard-lead"
     >
       <StatCard
-        density="compact"
+        narrow="row"
         label={t("brief.weekly.scorecard.advanced")}
         value={n(block.advanced)}
         detail={t("brief.weekly.scorecard.advancedBasis")}
       />
       <StatCard
-        density="compact"
+        narrow="row"
         label={t("brief.weekly.scorecard.answeredInTarget")}
         value={n(block.answered_in_target)}
         detail={t("brief.weekly.scorecard.breachedDetail", {
@@ -76,7 +76,7 @@ function LeadBlockStrip({
         })}
       />
       <StatCard
-        density="compact"
+        narrow="row"
         label={t("brief.weekly.scorecard.meetingsHeld")}
         value={n(block.meetings_held)}
         detail={t("brief.weekly.scorecard.meetingsBasis", {
@@ -89,7 +89,7 @@ function LeadBlockStrip({
           asked for; a non-zero is a caveat the reader needs. */}
       {block.meetings_partial_history > 0 && (
         <StatCard
-          density="compact"
+          narrow="row"
           label={t("brief.weekly.scorecard.partialHistory")}
           value={n(block.meetings_partial_history)}
           detail={t("brief.weekly.scorecard.partialHistoryBasis")}
@@ -111,7 +111,7 @@ function DealBlockStrip({
       testId="scorecard-deal"
     >
       <StatCard
-        density="compact"
+        narrow="row"
         label={t("brief.weekly.scorecard.advances")}
         value={n(block.advances)}
         detail={t("brief.weekly.scorecard.regressionsDetail", {
@@ -122,21 +122,21 @@ function DealBlockStrip({
           days, so the card is omitted rather than drawn as 0. */}
       {block.median_days_in_stage != null && (
         <StatCard
-          density="compact"
+          narrow="row"
           label={t("brief.weekly.scorecard.medianDaysInStage")}
           value={n(block.median_days_in_stage)}
           detail={t("brief.weekly.scorecard.medianBasis")}
         />
       )}
       <StatCard
-        density="compact"
+        narrow="row"
         label={t("brief.weekly.scorecard.withNextStep")}
         value={n(block.with_next_step)}
         meter={{ filled: block.with_next_step, total: block.open }}
         detail={t("brief.weekly.scorecard.ofOpen", { total: n(block.open) })}
       />
       <StatCard
-        density="compact"
+        narrow="row"
         label={t("brief.weekly.scorecard.multiThreaded")}
         value={n(block.multi_threaded)}
         meter={{ filled: block.multi_threaded, total: block.open }}
@@ -145,14 +145,14 @@ function DealBlockStrip({
         })}
       />
       <StatCard
-        density="compact"
+        narrow="row"
         label={t("brief.weekly.scorecard.closeDateSound")}
         value={n(block.close_date_sound)}
         meter={{ filled: block.close_date_sound, total: block.open }}
         detail={t("brief.weekly.scorecard.ofOpen", { total: n(block.open) })}
       />
       <StatCard
-        density="compact"
+        narrow="row"
         label={t("brief.weekly.scorecard.forecastMoves")}
         value={n(block.forecast_up)}
         detail={t("brief.weekly.scorecard.forecastMovesBasis", {
@@ -166,7 +166,7 @@ function DealBlockStrip({
           shortfall to report, because the question was never asked of it. */}
       {block.unreconstructible != null && block.unreconstructible > 0 && (
         <StatCard
-          density="compact"
+          narrow="row"
           label={t("brief.weekly.scorecard.unreconstructible")}
           value={n(block.unreconstructible)}
           detail={t("brief.weekly.scorecard.unreconstructibleBasis")}

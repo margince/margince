@@ -530,11 +530,14 @@ type CreateActivityRequest struct {
 	Raw           *map[string]interface{}             `json:"raw,omitempty"`
 
 	// RemindAt Task only.
-	RemindAt     *time.Time `json:"remind_at,omitempty"`
-	Source       string     `json:"source"`
-	SourceId     *string    `json:"source_id,omitempty"`
-	SourceSystem *string    `json:"source_system,omitempty"`
-	Subject      *string    `json:"subject,omitempty"`
+	RemindAt *time.Time `json:"remind_at,omitempty"`
+
+	// RequestActivityId Accept this inbound request for the authenticated human, with activity read and create authority. Task only; agents cannot accept and assignee_id must name the caller when provided. The server verifies source access and copies its links instead of caller-supplied links. Subject and body are honored on creation. Retries return the same personal reminder without changing it. Explicit acceptance can restore an archived unfinished reminder with update authority. Completion settles the source request; automatic reconciliation never restores a reminder.
+	RequestActivityId *string `json:"request_activity_id,omitempty"`
+	Source            string  `json:"source"`
+	SourceId          *string `json:"source_id,omitempty"`
+	SourceSystem      *string `json:"source_system,omitempty"`
+	Subject           *string `json:"subject,omitempty"`
 }
 
 // CreateActivityRequestDirection defines model for CreateActivityRequest.Direction.
@@ -658,6 +661,9 @@ type EmailSummary struct {
 	// Preview One line of the sender's own text, signature and quoted history already removed.
 	// Null when withheld, and when the message has no text of its own.
 	Preview *string `json:"preview,omitempty"`
+
+	// RequestHasReminder An unfinished reminder covers this readable source request. This obligation fact names no private task, owner, or task content. Absent when the source is withheld.
+	RequestHasReminder *bool `json:"request_has_reminder,omitempty"`
 
 	// Subject Null when the message has none, and when the content is withheld.
 	Subject *string `json:"subject,omitempty"`

@@ -8894,11 +8894,19 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * The domains refused a company, and why.
-         * @description Every domain carrying a standing admission decision: the vendors and bulk senders the
-         *     system refused a company, and the ones a human deliberately let back in. Each entry says
-         *     WHAT decided it — a model verdict, a heuristic, or a human — so an operator can tell an
-         *     automatic refusal from somebody's deliberate one.
+         * Where each domain's company question stands.
+         * @description Every domain whose company question has an answer or is waiting for one: the vendors and
+         *     bulk senders the system refused, the ones a human deliberately let back in, and the ones
+         *     the machine declined to decide. Each entry says WHAT decided it — a model verdict, a
+         *     heuristic, or a human — so an operator can tell an automatic refusal from somebody's
+         *     deliberate one.
+         *
+         *     An `undecided` entry is a question, not a decision. The crawl found nothing that named a
+         *     company (`unevidenced`), or the newest mail from the domain is too old to mint one from
+         *     today's site (`stale_evidence`). Such a domain is dropped from the retry sweep — a
+         *     re-crawl cannot make old mail newer — so it stays open until new mail arrives or somebody
+         *     here answers it. Without this list those rows are invisible, and a company that never
+         *     appeared looks the same as one nobody ever asked about.
          *
          *     Every human role may read the list; changing an entry demands `company:update`
          *     (admin/ops). Human-only: this is capture posture, not record data.
@@ -8921,6 +8929,40 @@ export interface paths {
          */
         put: operations["setBlockedDomain"];
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/capture/blocked-domains/{domain}/reopen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask about an undecided domain again (admin/ops).
+         * @description Puts an `undecided` domain back in the triage sweep's path. The machine cleared its retry
+         *     cursor because re-crawling could not help — nothing on the site named a company, or the
+         *     mail arguing for one is too old to trust today's site about. Somebody may know otherwise,
+         *     and this is how they say so.
+         *
+         *     Only an `undecided` domain can be re-asked. A domain carrying a decision has an answer, and
+         *     changing it is `PUT /capture/blocked-domains`, which demands the reason a decision owes.
+         *     Re-asking records no reason because it asserts nothing: it spends an attempt, and the crawl
+         *     answers or withholds again. A domain that already carries a decision answers `409`: the
+         *     request is intelligible and the domain well formed, it is the row's state that refuses.
+         *
+         *     The caller is stamped as the domain's owner where it had none — triage refuses to mint
+         *     records for a domain nobody is accountable for. Demands `company:update`, the same gate a
+         *     decision takes: what this re-opens is what creates the company. Audit-only write (no event
+         *     stream, EVT-NOEVT-3).
+         */
+        post: operations["reopenWithheldDomain"];
         delete?: never;
         options?: never;
         head?: never;
@@ -9369,10 +9411,11 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Which kinds of proposal the caller has put on automatic.
+         * The caller's automatic-change settings and review history.
          * @description One row per kind that CAN apply without asking, whether or not this reader has
-         *     ever met it — a kind nobody has decided yet reads `manual`, which is what will
-         *     happen to it. Listing only stored rows would hide exactly the choices a reader
+         *     ever met it. Eligible kinds default to `auto`; any stored mode takes precedence,
+         *     including modes recorded with decision history before these defaults changed.
+         *     Listing only stored rows would hide exactly the choices a reader
          *     opens this page to make.
          *
          *     The rows are the reader's own. This takes no user id and reads the policy of
@@ -9675,6 +9718,12 @@ export interface paths {
          *     against `due_at`, not a fact anybody writes: a stored one would make a case overdue only
          *     once a sweep had run, so a job that failed to fire would leave every late case looking on
          *     time. Order is by `due_at`, and the reader compares it to now.
+         *
+         *     The queue is PAGED, and every page says whether there is another. An installation owing
+         *     more duties than one page holds is ordinary — this is a legal obligation per contact, not
+         *     a task list somebody chose to keep short — and a `limit` with no continuation made every
+         *     duty past the ceiling unreachable through this route at all, for every caller, with the
+         *     screen giving no sign a tail existed. Walk `page.next_cursor` until `has_more` is false.
          */
         get: operations["listNoticeCases"];
         put?: never;
@@ -16567,26 +16616,40 @@ export interface components {
             shared_posture_allowed?: boolean;
         };
         /**
-         * @description One domain carrying a standing admission decision. `suppressed` refuses it a company —
+         * @description One domain and where its company question stands. `suppressed` refuses it a company —
          *     a vendor or bulk sender the business does not sell to — while `admitted` is a human
          *     deliberately letting one in, which no later verdict may undo.
+         *
+         *     `undecided` is the third state and it is not a decision: the question was asked, the
+         *     machine declined to answer it, and nobody has since. Those rows are why this list
+         *     exists rather than being a record of refusals alone — a domain nothing decided is
+         *     invisible everywhere else, and an operator hunting a company that never appeared
+         *     cannot tell it from one that was refused.
          */
         BlockedDomain: {
             /** @description The registrable domain the decision is about. */
             domain: string;
             /**
-             * @description `suppressed` — never a company. `admitted` — allowed, and sticky against later machine refusals.
+             * @description `suppressed` — never a company. `admitted` — allowed, and sticky against later machine
+             *     refusals. `undecided` — the question is open and waiting to be answered; nothing is stored
+             *     on the row for this state, it is what the absence of a decision is called on the wire.
              * @enum {string}
              */
-            admission: "suppressed" | "admitted";
-            /** @description One sentence an operator can act on: why this domain was refused or let in. */
+            admission: "suppressed" | "admitted" | "undecided";
+            /** @description One sentence an operator can act on: why this domain was refused, let in, or left open. */
             reason: string;
             /**
-             * @description What decided it. `human` decisions outrank every machine one.
+             * @description What decided it, or — for an `undecided` domain — what stopped the machine deciding.
+             *     `human` decisions outrank every machine one. `unevidenced` means nothing the crawl
+             *     found named a company; `stale_evidence` means the newest mail from the domain is too
+             *     old to mint one from today's site.
              * @enum {string}
              */
-            source: "verdict" | "heuristic" | "human";
-            /** Format: date-time */
+            source: "verdict" | "heuristic" | "human" | "unevidenced" | "stale_evidence";
+            /**
+             * Format: date-time
+             * @description When the decision was recorded. For an `undecided` domain, when the row last moved.
+             */
             decided_at: string;
             /**
              * Format: uuid
@@ -16944,6 +17007,8 @@ export interface components {
          *     `display_status` says so — the row stays, the words do not.
          */
         EmailSummary: {
+            /** @description An unfinished reminder covers this readable source request. This obligation fact names no private task, owner, or task content. Absent when the source is withheld. */
+            request_has_reminder?: boolean;
             /** Format: uuid */
             activity_id: string;
             /** @description Null when the message has none, and when the content is withheld. */
@@ -17454,15 +17519,15 @@ export interface components {
         };
         BackfillPreviewRequest: {
             /**
-             * @description The CAP-PARAM-4 window; default UI selection is 6m. 24m/60m added by ADR-0106 — the set stays closed, and the preview is what keeps a multi-year reach consented.
+             * @description Bounded mail-history window, up to ten years. The default UI selection is six months.
              * @enum {string}
              */
-            window: "none" | "3m" | "6m" | "12m" | "24m" | "60m";
+            window: "none" | "3m" | "6m" | "12m" | "24m" | "36m" | "60m" | "84m" | "120m";
         };
         /** @description The scope before the spend (ADR-0063/ADR-0020): what starting this window would touch and roughly cost. An estimate, labeled as such — actual spend is metered per task. */
         BackfillPreview: {
             /** @enum {string} */
-            window: "none" | "3m" | "6m" | "12m" | "24m" | "60m";
+            window: "none" | "3m" | "6m" | "12m" | "24m" | "36m" | "60m" | "84m" | "120m";
             /** @description Provider-side message count for the window. Read `estimate_is_floor` before presenting it: the two providers answer different KINDS of number. */
             estimated_messages: number;
             /** @description True when `estimated_messages` is a LOWER BOUND rather than a total — the window holds at least that many and how many more was not counted. Gmail counts by paging message ids under a cap, so a large mailbox hits it; Graph answers an exact `$count` and never does. A client MUST qualify the number when this is true ("at least 20,000"), because a floor shown as a count is short by multiples and a reader has no way to tell which kind they are looking at — and this is the number they are consenting to. Absent means the count is exact. It is NOT a reason to refuse: the scope being consented to is the mailbox and the period, and the count is supporting detail. */
@@ -17478,6 +17543,11 @@ export interface components {
             estimate_quality?: "observed" | "heuristic";
             /** @description ISO-4217; "USD" in v1. */
             currency?: string;
+            /**
+             * Format: date
+             * @description Calendar day of the preview query boundary; time within that day remains provider-specific. Omitted for none. Starting later recalculates the rolling window.
+             */
+            after_date?: string;
             /** Format: date-time */
             computed_at: string;
         };
@@ -17486,7 +17556,7 @@ export interface components {
              * @description `none` is expressed by never calling this op. Widen-only versus a prior run.
              * @enum {string}
              */
-            window: "3m" | "6m" | "12m" | "24m" | "60m";
+            window: "3m" | "6m" | "12m" | "24m" | "36m" | "60m" | "84m" | "120m";
         };
         /** @description The CAP-DDL-4 single-row activation read: every count is a persisted-row count, never a fabricated counter (closes CAP-AC-OPEN-1). */
         BackfillStatus: {
@@ -17495,7 +17565,7 @@ export interface components {
             /** Format: uuid */
             backfill_id?: string | null;
             /** @enum {string|null} */
-            window?: "3m" | "6m" | "12m" | "24m" | "60m" | null;
+            window?: "3m" | "6m" | "12m" | "24m" | "36m" | "60m" | "84m" | "120m" | null;
             /** @description The previewed count the user consented to — the progress fraction's denominator. */
             estimated_messages?: number | null;
             /** @description True when `estimated_messages` is a floor (see BackfillPreview): the denominator can be passed, so a client shows counts rather than a percentage instead of drawing a bar past its end. Persisted with the run, because the preview that produced the number is long gone by the time progress is read. */
@@ -17506,7 +17576,6 @@ export interface components {
                 skipped?: number;
                 contacts_created?: number;
                 companies_created?: number;
-                dedupe_candidates?: number;
             };
             /** Format: date-time */
             started_at?: string | null;
@@ -19384,12 +19453,6 @@ export interface components {
             lifecycle?: "unknown" | "target" | "prospect" | "opportunity" | "customer" | "former_customer" | "disqualified";
             /** @description WHAT THE COMPANY IS to us (PO-DDL-4b, ADR-0079). Multi-valued, because a company is legitimately several things at once — the partner program is built on companies that are simultaneously partners and customers. A company IS a partner iff it carries `partner` here AND has a `partner` row; removing the type while that row lives is refused (422). */
             relationship_types?: ("customer" | "partner" | "supplier" | "investor" | "portfolio_company" | "competitor" | "other")[];
-            /**
-             * @deprecated
-             * @description RETIRED (ADR-0079) — superseded by `lifecycle` + `relationship_types`, which split the two questions this one value tried to answer at once. Carried one release, written by nothing; read it for migration comparison only.
-             * @enum {string|null}
-             */
-            classification?: null | "prospect" | "customer" | "agency" | "reseller" | "tech_vendor" | "platform" | "partner" | "competitor" | "other";
             /**
              * @description Where to fetch the company's logo image (A55) — the `getCompanyLogo`
              *     path for this record, cookie-authenticated and same-origin. A revision query changes
@@ -22914,6 +22977,16 @@ export interface components {
             data: components["schemas"]["Relationship"][];
             page: components["schemas"]["PageInfo"];
         };
+        /** @description The newest workspace-visible email on a deal, as `Deal.last_email` carries it. */
+        DealLastEmail: {
+            /** Format: date-time */
+            occurred_at: string;
+            /**
+             * @description Which way the mail went. Null on a logged email that named no direction, which is a fact about how it was captured rather than about the exchange.
+             * @enum {string|null}
+             */
+            direction: "inbound" | "outbound" | null;
+        };
         /** @description A deal. Mirrors the `deal` table. */
         Deal: {
             tags?: components["schemas"]["RowTag"][];
@@ -23029,6 +23102,8 @@ export interface components {
             last_activity_at?: string | null;
             /** @description Derived — no activity past the threshold (absolute duration). */
             readonly stalled?: boolean;
+            /** @description The newest email on this deal that the whole workspace may see — what a board card states as "last mail, N days ago" beside the deal, so a rep reads the silence without opening every card. Null on a deal nobody has mailed about. Counts what `last_activity_at` counts, narrowed to mail: workspace-audience rows only, and never the product's own system writing — a message limited to its participants must not move a date every colleague reads, and a mail the installation sent itself is not the buyer engaging. The rows a reader may discover through `GET /activities` can therefore be newer than this instant. */
+            readonly last_email?: components["schemas"]["DealLastEmail"] | null;
             source: string;
             /** @description Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied. */
             readonly captured_by: string;
@@ -24678,6 +24753,11 @@ export interface components {
         };
         /** @description What a task needs. Stored as an activity of kind `task`. */
         CreateTaskRequest: {
+            /**
+             * Format: uuid
+             * @description Accept this inbound request for the authenticated human, with activity read and create authority. Task only; agents cannot accept and assignee_id must name the caller when provided. The server verifies source access and copies its links instead of caller-supplied links. Subject and body are honored on creation. Retries return the same personal reminder without changing it. Explicit acceptance can restore an archived unfinished reminder with update authority. Completion settles the source request; automatic reconciliation never restores a reminder.
+             */
+            request_activity_id?: string;
             /** @description What has to be done, as one line. */
             subject: string;
             /** @description Detail, if one line is not enough. */
@@ -24702,6 +24782,11 @@ export interface components {
             source: string;
         };
         CreateActivityRequest: {
+            /**
+             * Format: uuid
+             * @description Accept this inbound request for the authenticated human, with activity read and create authority. Task only; agents cannot accept and assignee_id must name the caller when provided. The server verifies source access and copies its links instead of caller-supplied links. Subject and body are honored on creation. Retries return the same personal reminder without changing it. Explicit acceptance can restore an archived unfinished reminder with update authority. Completion settles the source request; automatic reconciliation never restores a reminder.
+             */
+            request_activity_id?: string;
             /** @enum {string} */
             kind: "email" | "call" | "meeting" | "note" | "task" | "message";
             /**
@@ -30319,9 +30404,10 @@ export interface components {
              */
             kind: string;
             /**
-             * @description `manual` asks every time, and is what a kind stands at until the reader
-             *     says otherwise. `auto` applies on sight, undoably, under the authority of
-             *     whoever owns the record at the time.
+             * @description `auto` is the default for eligible kinds and applies changes under the
+             *     authority of whoever owns the record at the time. Saved choices take
+             *     precedence. `manual` disables automatic application: proposals wait for
+             *     review, and close-date maintenance stops for the owner.
              *
              *     `veto` is a third rung the policy table admits and nothing writes yet: it
              *     would apply after a stated delay unless the reader stops it first. It is
@@ -30441,7 +30527,8 @@ export interface components {
         };
         /**
          * @description First-class partner state as a 1:1 extension of a company (a company IS a partner iff it
-         *     has a `partner` row + classification='partner'). Company identity is never duplicated.
+         *     has a `partner` row AND carries `partner` in its `relationship_types` — ADR-0079 split that
+         *     second half out of the retired `classification`). Company identity is never duplicated.
          *     ADR-0053 adds the relationship-in-flight layer: lifecycle stage, relationship health,
          *     partner fit, next step, and served segments. Behavior is Fast-follow, but the V1 schema is
          *     forward-compatible.
@@ -34109,7 +34196,8 @@ export interface components {
             deal?: components["schemas"]["AttentionDealFacts"];
             /**
              * Format: uuid
-             * @description Who holds this task, null when nobody has taken it. Sent by `task`.
+             * @description Who holds this work, null when nobody has taken it. Sent by `task` and `notice_case`.
+             *     A disclosure duty uses its assigned officer, falling back to its contact owner.
              *
              *     The lane serves three scopes and only one is the reader's own queue: an
              *     unassigned sweep and a named colleague's queue both put work on the page that
@@ -34980,7 +35068,7 @@ export interface components {
              *
              *     Only rows carrying a verb the reader may press. A duplicate pair whose two
              *     records the reader cannot both write is somebody else's decision, and
-             *     counting it here tells them a contact is blocked on an answer they are not
+             *     counting it here tells them a contact is waiting on an answer they are not
              *     able to give.
              */
             review: number;
@@ -42237,6 +42325,15 @@ export interface operations {
             };
         };
         responses: {
+            /** @description The existing source-linked reminder, including an explicitly restored reminder. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Activity"];
+                };
+            };
             /** @description The task, as an activity. */
             201: {
                 headers: {
@@ -49898,6 +49995,34 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    reopenWithheldDomain: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The domain to ask about again; normalized to its registrable form. */
+                domain: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Where the domain stands now that the question is open again. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BlockedDomain"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     listConsumerMailBaseline: {
         parameters: {
             query?: {
@@ -50777,6 +50902,8 @@ export interface operations {
                 state?: components["schemas"]["NoticeCaseState"][];
                 /** @description Max items in the page. */
                 limit?: components["parameters"]["Limit"];
+                /** @description Opaque keyset cursor from a prior response's `page.next_cursor`. It encodes the last row's `due_at` and id — both, because the order is by both, and an id alone cannot continue it when two duties fall due in the same second. Changing `state` mid-walk changes which rows the remaining pages see, so re-issue without the cursor when the filter changes. A token this endpoint did not mint returns `422 code: malformed_cursor`. */
+                cursor?: string;
             };
             header?: never;
             path?: never;
@@ -50792,6 +50919,7 @@ export interface operations {
                 content: {
                     "application/json": {
                         data: components["schemas"]["NoticeCase"][];
+                        page: components["schemas"]["PageInfo"];
                     };
                 };
             };
@@ -57465,6 +57593,8 @@ export interface operations {
     getDealStatus: {
         parameters: {
             query?: {
+                /** @description Refresh the card and shared action cache from current facts without model calls. Takes precedence over refresh. */
+                facts_only?: boolean;
                 /** @description Rewrite even when the fingerprint still matches. The reader asking for a second opinion. */
                 refresh?: boolean;
             };

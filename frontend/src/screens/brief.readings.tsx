@@ -176,10 +176,8 @@ function LaneReading({
       value={readingFigure(figure, marked)}
       tone={warn ? "warn" : undefined}
       detail={basis}
-      // The whole plate is read as ONE glance, so every slot on it keeps the
-      // same air. At the tile's default floor the day's own work started below
-      // the fold on a laptop.
-      density="compact"
+      // On a phone the plate is a list, not five boxes stacked.
+      narrow="row"
       onOpen={openable ? () => openLane(lane, scope) : undefined}
       openLabel={openLabel}
     />
@@ -457,7 +455,7 @@ function RiskReading({ day }: Readonly<{ day: Worklist }>) {
   const complete = !incomplete;
   return (
     <StatCard
-      density="compact"
+      narrow="row"
       label={t("brief.readings.risk")}
       value={
         amount != null && currency

@@ -73,7 +73,7 @@ export function ActivityReferenceList({
                     ? t("email.withheldSubject")
                     : (reference.subject?.trim() ?? "")}
                 </span>
-                <span className="activityrefs__when t-mono">{when}</span>
+                <span className="activityrefs__when t-num">{when}</span>
               </span>
             )}
           </li>

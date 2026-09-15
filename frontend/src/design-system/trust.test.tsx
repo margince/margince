@@ -74,7 +74,7 @@ describe("StagedProposal (B-EP09.3a)", () => {
       outcome: "edited",
       value: "€45.000",
     });
-    expect(screen.getByText("typed by you")).toBeTruthy();
+    expect(screen.getByText("Typed by you")).toBeTruthy();
     expect(screen.queryByText("Automated by capture")).toBeNull();
     // the original evidence snippet is still attached to the edited value
     expect(screen.getByText(/offer of 48k/)).toBeTruthy();
@@ -99,19 +99,29 @@ describe("ConfidenceMeter", () => {
   });
 });
 
+// The badge a label renders in. Its tone is the provenance claim: indigo says a
+// model wrote it, and every other arm is the neutral badge.
+function badgeReading(text: string): HTMLElement {
+  const badge = screen.getByText(text).closest<HTMLElement>(".badge");
+  if (!badge) {
+    throw new Error(`"${text}" rendered outside a badge`);
+  }
+  return badge;
+}
+
+function claimsAModel(text: string): boolean {
+  return badgeReading(text).classList.contains("badge-ai");
+}
+
 describe("ProvenanceTag", () => {
   it("distinguishes agent-written from human-typed", () => {
     render(<ProvenanceTag provenance={{ kind: "agent", agent: "runner" }} />);
     render(<ProvenanceTag provenance={{ kind: "human", self: true }} />);
-    expect(screen.getByText("Automated by runner").className).toContain(
-      "provenance-agent",
-    );
-    expect(screen.getByText("typed by you").className).toContain(
-      "provenance-human",
-    );
+    expect(claimsAModel("Automated by runner")).toBe(true);
+    expect(claimsAModel("Typed by you")).toBe(false);
   });
 
-  // "typed by you" over a colleague's entry is a false statement about who to
+  // "Typed by you" over a colleague's entry is a false statement about who to
   // ask, and it used to be what an UNATTRIBUTED row said too — the two cases a
   // reader most needs kept apart both read as their own handiwork.
   it("names another contact rather than claiming the reader typed it", () => {
@@ -121,59 +131,55 @@ describe("ProvenanceTag", () => {
         renderUser={(id) => <span>Christian ({id})</span>}
       />,
     );
-    expect(screen.getByText(/Christian \(u-2\)/)).toBeTruthy();
-    expect(screen.queryByText("typed by you")).toBeNull();
+    expect(badgeReading("Christian (u-2)").textContent).toBe(
+      "Typed by Christian (u-2)",
+    );
+    expect(screen.queryByText("Typed by you")).toBeNull();
   });
 
   it("says a contact entered it when it cannot say which contact", () => {
     render(<ProvenanceTag provenance={{ kind: "human", self: false }} />);
-    expect(screen.getByText("typed by a person")).toBeTruthy();
+    expect(claimsAModel("Typed by a person")).toBe(false);
   });
 
   it("reads an unrecorded source as unknown, not as the reader", () => {
     render(<ProvenanceTag provenance={{ kind: "unknown" }} />);
-    expect(screen.getByText("source not recorded").className).toContain(
-      "provenance-unknown",
-    );
+    expect(claimsAModel("Source not recorded")).toBe(false);
+    expect(screen.queryByText("Typed by you")).toBeNull();
   });
 
   // A buyer and an unrecorded source are one branch apart, and collapsing the
-  // first into the second is what put "source not recorded" on a row whose
+  // first into the second is what put "Source not recorded" on a row whose
   // source was a contact. The two are asserted together because that is the
   // distinction: `unknown` still has to mean nobody recorded a source.
   it("reads a buyer as a contact from outside, never as an unrecorded source", () => {
     render(<ProvenanceTag provenance={{ kind: "buyer" }} />);
     render(<ProvenanceTag provenance={{ kind: "unknown" }} />);
 
-    const buyer = screen.getByText("typed by a buyer");
-    expect(buyer.className).toContain("provenance-buyer");
-    // Not the colleague arm either: a buyer holds no seat, and "typed by a
-    // contact" would send a reader looking for them in the member directory.
-    expect(buyer.className).not.toContain("provenance-human");
-    expect(screen.getByText("source not recorded").className).toContain(
-      "provenance-unknown",
-    );
+    expect(claimsAModel("Typed by a buyer")).toBe(false);
+    // Not the colleague arm either: a buyer holds no seat, and the colleague
+    // arm's "Typed by a person" would send a reader to the member directory.
+    expect(screen.queryByText("Typed by a person")).toBeNull();
+    expect(claimsAModel("Source not recorded")).toBe(false);
   });
 
+  // A connector copies what a mailbox already held; no model decided it, so
+  // the badge names the connector without the AI tone.
   it("names the connector a record was imported through", () => {
     render(
       <ProvenanceTag provenance={{ kind: "connector", connector: "gmail" }} />,
     );
-    expect(screen.getByText("via gmail").className).toContain(
-      "provenance-agent",
-    );
+    expect(claimsAModel("Via gmail")).toBe(false);
   });
 
   // A background job and an AI agent are different answers to "who do I ask",
   // so they take different wording and different chrome. Drawn in the agent
-  // tint, a scheduled sweep would tell a reader a model decided something.
+  // tone, a scheduled sweep would tell a reader a model decided something.
   it("reads a job the installation ran as the system, not as an agent", () => {
     render(
       <ProvenanceTag provenance={{ kind: "system", job: "close-date" }} />,
     );
-    const tag = screen.getByText("System task close-date");
-    expect(tag.className).toContain("provenance-system");
-    expect(tag.className).not.toContain("provenance-agent");
+    expect(claimsAModel("System task close-date")).toBe(false);
   });
 
   // The two unnamed cases: an agent behind a passport uuid, and a job that
@@ -182,12 +188,8 @@ describe("ProvenanceTag", () => {
   it("says the kind and stops when the actor has no name to print", () => {
     render(<ProvenanceTag provenance={{ kind: "agent" }} />);
     render(<ProvenanceTag provenance={{ kind: "system" }} />);
-    expect(screen.getByText("Automated by an agent").className).toContain(
-      "provenance-agent",
-    );
-    expect(screen.getByText("System task").className).toContain(
-      "provenance-system",
-    );
+    expect(claimsAModel("Automated by an agent")).toBe(true);
+    expect(claimsAModel("System task")).toBe(false);
   });
 });
 

@@ -226,7 +226,7 @@ func TestTheReconcilingPassLeavesARealButNonContactSenderHeld(t *testing.T) {
 			dispositionID := seedPendingDisposition(t, e, sender, "kanzlei.example", mail)
 			settleDisposition(t, e, dispositionID, capture.PendingStatusReal, kind)
 
-			engine := NewCounterpartyVerdictEngine(e.Pool, nil, slog.Default())
+			engine := NewCounterpartyVerdictEngine(e.Pool, nil, CaptureConfig{}, slog.Default())
 			if err := engine.WidenClearedSendersWorkspace(
 				principal.WithWorkspaceID(context.Background(), e.WS)); err != nil {
 				t.Fatalf("the reconciling pass: %v", err)
@@ -251,7 +251,7 @@ func TestTheVerdictPassDrainsSendersClearedBeforeTheRelease(t *testing.T) {
 	dispositionID := seedPendingDisposition(t, e, sender, "fvhospital.example", mail)
 	settleDisposition(t, e, dispositionID, capture.PendingStatusReal, capture.KindContact)
 
-	engine := NewCounterpartyVerdictEngine(e.Pool, nil, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, nil, CaptureConfig{}, slog.Default())
 	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
 	if err := engine.WidenClearedSendersWorkspace(wsCtx); err != nil {
 		t.Fatalf("the reconciling pass: %v", err)
@@ -282,7 +282,7 @@ func TestTheReconcilingPassStopsAtItsBudgetAndFinishesOnTheNextTick(t *testing.T
 	dispositionID := seedPendingDisposition(t, e, sender, "fvhospital.example", last)
 	settleDisposition(t, e, dispositionID, capture.PendingStatusReal, capture.KindContact)
 
-	engine := NewCounterpartyVerdictEngine(e.Pool, nil, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, nil, CaptureConfig{}, slog.Default())
 	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
 	if err := engine.WidenClearedSendersWorkspace(wsCtx); err != nil {
 		t.Fatalf("the first reconciling pass: %v", err)

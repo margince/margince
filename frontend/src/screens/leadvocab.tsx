@@ -193,7 +193,7 @@ function LeadSourceRow({
         canEdit={canEdit}
         onSave={(label) => onUpdate({ label })}
       />
-      <span className="t-mono t-caption lead-vocab-key">{source.key}</span>
+      <span className="t-caption lead-vocab-key">{source.key}</span>
       <Select
         aria-label={t("leadSources.intentFor", { label: source.label })}
         value={source.intent}
@@ -459,7 +459,7 @@ export function LeadSourcesCard() {
                   {discovered.map((found) => (
                     <li key={found.key} className="lead-vocab-row">
                       <span>{sourceKeyLabel(found.key, administered, t)}</span>
-                      <span className="t-mono t-caption lead-vocab-key">
+                      <span className="t-caption lead-vocab-key">
                         {found.key}
                       </span>
                       <span className="t-caption lead-vocab-count">

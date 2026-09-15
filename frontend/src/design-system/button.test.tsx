@@ -457,7 +457,11 @@ describe("base.css draws the federated door without touching the mark", () => {
 
   it("floors the door at the touch target on a fine pointer too", () => {
     const css = readFileSync(join(here, "base.css"), "utf8");
-    const rule = /(?:^|\n)\.btn-federated\s*\{([^}]*)\}/.exec(css);
+    // The variant's OWN rule, not every rule whose selector list names it: the
+    // wrap it shares with `.btn-valuelabel` is declared under both, and a match
+    // on the first selector list would read that one's declarations instead.
+    const rule =
+      /(?:^|\n)\.btn-federated\s*\{([^}]*min-block-size[^}]*)\}/.exec(css);
     expect(rule).not.toBeNull();
     // `--control-h` sits below 44 for a fine pointer and rises to 44 only for a
     // coarse one, so leaning on the shared height alone lands this box short of

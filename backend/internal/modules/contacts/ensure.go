@@ -23,7 +23,6 @@ package contacts
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -206,8 +205,16 @@ func (s *Store) ensureContact(ctx context.Context, tx pgx.Tx, in EnsureCounterpa
 	if err != nil {
 		return err
 	}
+	// QueueNameCollisions is safe here for the reason it is safe on the manual
+	// create: the lane is consulted only AFTER DecisionExactCollision has
+	// returned below, so it can never decide where a message routes. It files a
+	// pair when capture is about to mint a SECOND record spelled exactly like
+	// one the workspace already has — a decade of mail puts two contacts both
+	// called "Michael Schmidt" in one workspace, and nothing was asking anybody
+	// about it.
 	match, err := DedupeContact(ctx, tx, ContactCandidate{
 		FullName: name, Emails: []string{in.Email}, ConsumerMail: consumerMail,
+		QueueNameCollisions: true,
 	})
 	if err != nil {
 		return err
@@ -270,26 +277,10 @@ func (s *Store) ensureContact(ctx context.Context, tx pgx.Tx, in EnsureCounterpa
 	res.ContactID = id
 	res.ContactCreated = true
 
-	if match.Decision == DecisionFuzzyReview {
-		// The detection-time snapshot the queue renders (DH-N-8): captured
-		// NOW, against the incumbent as it looked when the score was
-		// computed — never re-derived later.
-		var incumbentName string
-		if err := tx.QueryRow(ctx, `SELECT full_name FROM contact WHERE id = $1`, match.ContactID).Scan(&incumbentName); err != nil {
-			return fmt.Errorf("contacts: reading dedupe incumbent: %w", err)
-		}
-		evidence := []map[string]any{
-			{evidenceFieldKey: fieldFullName, evidenceLeftKey: name, evidenceRightKey: incumbentName, evidenceSignalKey: evidenceSignalCollide, evidenceScoreKey: match.Confidence},
-			{evidenceFieldKey: fieldEmail, evidenceLeftKey: in.Email, evidenceRightKey: nil, evidenceSignalKey: evidenceSignalOneSided},
-		}
-		recorded, err := recordDedupeCandidate(ctx, tx, entityContact, id.UUID, match.ContactID.UUID, match.Confidence,
-			evidence, in.Source, in.CapturedBy)
-		if err != nil {
-			return err
-		}
-		res.DedupeRecorded = recorded
-	}
-	return nil
+	return fileReviewPair(ctx, tx, match, reviewPair{
+		created: id, name: name, email: in.Email,
+		source: in.Source, by: in.CapturedBy,
+	}, res)
 }
 
 // ensureCompanyAndEmployment decides what this mail domain may create, and creates
@@ -390,108 +381,4 @@ func (s *Store) linkActivityToContact(ctx context.Context, tx pgx.Tx, activityID
 		return fmt.Errorf("contacts: linking activity to contact: %w", err)
 	}
 	return nameContactAmongParticipants(ctx, tx, activityID, contactID)
-}
-
-// recordDedupeCandidate stores the pair canonically (lower id left,
-// DH-DDL-1); the unique pair index makes a re-detection a no-op — reported
-// as recorded=false so counters stay honest.
-func recordDedupeCandidate(ctx context.Context, tx pgx.Tx, entityType string, a, b ids.UUID, confidence float64, evidence []map[string]any, source, by string) (bool, error) {
-	left, right := a, b
-	if right.String() < left.String() {
-		left, right = right, left
-	}
-	payload, err := json.Marshal(evidence)
-	if err != nil {
-		return false, err
-	}
-	leftCol, rightCol := "left_contact_id", "right_contact_id"
-	switch entityType {
-	case entityCompany:
-		leftCol, rightCol = "left_company_id", "right_company_id"
-	case entityLead:
-		leftCol, rightCol = "left_lead_id", "right_lead_id"
-	}
-	var candidateID ids.UUID
-	err = tx.QueryRow(ctx, fmt.Sprintf(`
-		INSERT INTO dedupe_candidate (entity_type, %s, %s, confidence, evidence, source, captured_by)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
-		ON CONFLICT DO NOTHING
-		RETURNING id`, leftCol, rightCol),
-		entityType, left, right, confidence, payload, source, by).Scan(&candidateID)
-	if errors.Is(err, pgx.ErrNoRows) {
-		// This pair is already proposed. Nothing was written, so nothing is
-		// audited — a no-op must not mint history.
-		return false, nil
-	}
-	if err != nil {
-		return false, fmt.Errorf("contacts: recording dedupe candidate: %w", err)
-	}
-	// Audited, NOT published. A dedupe candidate is a question the system is
-	// asking about two records, not something that happened to either — nothing
-	// downstream acts on one, and an outbox row nobody consumes would be an
-	// event kind invented to satisfy a rule rather than a reader. What the
-	// audit row buys is the part that was actually missing: who proposed this
-	// merge, when, and on what evidence, on the record's own history rather
-	// than only in operator telemetry.
-	if _, err := storekit.Audit(ctx, tx, "create", "dedupe_candidate", candidateID, nil, map[string]any{
-		"entity_type": entityType, "confidence": confidence, auditKeySource: source,
-	}); err != nil {
-		return false, fmt.Errorf("contacts: audit the dedupe candidate: %w", err)
-	}
-	return true, nil
-}
-
-// nameColumn renders a parsed name part for the nullable split-name columns.
-// An unconfident parse leaves them NULL rather than storing "" — a column that
-// says "we do not know" must not be spelled the same as one that says "empty".
-func nameColumn(part string) *string {
-	if part == "" {
-		return nil
-	}
-	return &part
-}
-
-// quarantineSuspect flags the cheap impersonation tells (ADR-0063): a
-// punycode domain (homoglyph vector) or a display name that embeds an
-// address on a DIFFERENT domain ("ceo@acme.com <attacker@evil.example>").
-// Flagged rows carry quarantined_at for the review surface; capture still
-// records them — hiding suspicious mail would be worse than labeling it.
-//
-// Both tells are statements ABOUT the sender's mail domain, so with no domain
-// there is nothing for either to contradict and the answer is no. Without that
-// floor the second tell compares an embedded address against "" and matches
-// every display name that merely contains an "@" — quarantining a record for a
-// reason that cannot apply to it.
-func quarantineSuspect(displayName, domain string) bool {
-	if domain == "" {
-		return false
-	}
-	if strings.HasPrefix(domain, "xn--") || strings.Contains(domain, ".xn--") {
-		return true
-	}
-	name := strings.ToLower(displayName)
-	at := strings.Index(name, "@")
-	if at < 0 {
-		return false
-	}
-	embedded := name[at+1:]
-	if end := strings.IndexAny(embedded, " >,;"); end >= 0 {
-		embedded = embedded[:end]
-	}
-	embedded = strings.Trim(embedded, ".")
-	return embedded != "" && embedded != strings.ToLower(domain)
-}
-
-// acquiredFromCapture names what capture actually observed.
-//
-// A reply is the contact writing to us, which is the strongest acquisition in
-// the vocabulary and the one a lawful reply is later argued from. Two outbound
-// threads with no answer is US writing to THEM: worth a record, and not
-// something the contact did. Unknown rather than a weaker positive kind, because
-// capture cannot see how the address was obtained in the first place.
-func acquiredFromCapture(replied bool) string {
-	if replied {
-		return AcquiredSubjectInitiated
-	}
-	return AcquiredUnknownLegacy
 }

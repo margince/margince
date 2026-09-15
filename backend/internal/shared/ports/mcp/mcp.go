@@ -119,6 +119,13 @@ type ToolSpec struct {
 	OutputSchema json.RawMessage
 	OpenAPIOp    string // the crm.yaml operationId (or logical op family) this maps to
 	Egress       bool   // true if the tool reaches outside the workspace (send_email, webhooks)
+	// HumanOnly marks a tool that exists in the registry so REST can dispatch
+	// it by name, but that no Agent or Buyer principal may ever invoke or be
+	// shown — the wire twin of a contract's x-agent-access: human-only. The
+	// zero value (false) is every tool exactly as it behaves today: Tier and
+	// RequiredScope are meaningless on a HumanOnly spec and must be left at
+	// their zero value by whatever registers one.
+	HumanOnly bool
 	// UI names the interactive view that renders this tool's result, and is
 	// nil on a tool that has none. It carries no authority: a view is a second
 	// renderer for an answer this tool already gives in text, never a second

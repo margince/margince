@@ -112,14 +112,7 @@ describe("the onboarding type scale", () => {
     }
   });
 
-  // Monospace is for a string a reader compares character by character: a
-  // model id, a URL, an address, a registry number, a token count. It was the
-  // most-used family on this surface at 71 declarations, two thirds of them
-  // over translated prose. The cap is a ratchet, not a target.
-  it("keeps monospace to the identifiers that earn it", () => {
-    const mono = sheets
-      .map((sheet) => readFileSync(sheet, "utf8").split("--f-mono").length - 1)
-      .reduce((total, count) => total + count, 0);
-    expect(mono).toBeLessThanOrEqual(15);
-  });
+  // Which family a rule may name is not this file's question: mono is for
+  // code on every surface, onboarding included, and design-system/mono.test.ts
+  // holds that for the whole tree.
 });

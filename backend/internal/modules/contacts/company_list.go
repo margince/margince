@@ -47,9 +47,11 @@ type ListCompaniesInput struct {
 	// listFilters.ownershipClause, which also refuses two of them at once.
 	OwnerTeamID *ids.TeamID
 	Unassigned  *bool
-	// Classification is RETIRED with the column (ADR-0079/A124) and reaches no
-	// wire parameter; Lifecycle and RelationshipType replace it.
-	Classification   *string
+	// Two questions, asked separately because one value could not answer both:
+	// Lifecycle is where the account stands with us and holds one value at a
+	// time, while RelationshipType is what the company IS to us and holds
+	// several — a partner is routinely a customer as well. They replaced a
+	// single classification field, now retired.
 	Lifecycle        *string
 	RelationshipType *string
 	// Industry is free text on the record; SizeBand is the contract's enum.
@@ -192,9 +194,6 @@ func (s *Store) ListCompanies(ctx context.Context, in ListCompaniesInput) ([]crm
 			// companies, and no contact or deal has one.
 			if !in.IncludeAnchor {
 				where = append(where, "NOT is_anchor")
-			}
-			if in.Classification != nil {
-				where = append(where, storekit.SQLf("classification = $%d", arg(*in.Classification)))
 			}
 			where = appendCompanyLinkClauses(ctx, where, in, arg)
 			// A value outside the enum is a client mistake, not a selection

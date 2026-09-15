@@ -90,6 +90,27 @@ func applySuppression(d commsauthz.Decision, kinds []string) commsauthz.Decision
 //     address accept mail, and a code this function does not know must refuse
 //     rather than pick a narrower rule — the direction liveSuppression,
 //     blockedReasonCode and the validators all already fail in.
+//
+// suppressionBindsAny reports whether ANY live stop binds this category.
+//
+// The same question applySuppression asks, asked earlier: the basis writers run
+// before the decision is assembled, and what they need to know is not whether
+// the subject carries a stop but whether one reaches THIS message. A contact
+// who objected to marketing and is being sent an invoice carries a live stop
+// that binds nothing here, and the send is lawful — so the ground it relied on
+// belongs on the record like any other.
+//
+// Built from suppressionBinds rather than repeating its cases, so the write and
+// the refusal cannot come to disagree about what a stop covers.
+func suppressionBindsAny(kinds []string, category commsauthz.Category) bool {
+	for _, kind := range kinds {
+		if suppressionBinds(kind, category) {
+			return true
+		}
+	}
+	return false
+}
+
 func suppressionBinds(kind string, category commsauthz.Category) bool {
 	switch kind {
 	case commsauthz.ReasonObjection:
