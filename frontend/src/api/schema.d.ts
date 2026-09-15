@@ -8935,6 +8935,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/capture/blocked-domains/{domain}/reopen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask about an undecided domain again (admin/ops).
+         * @description Puts an `undecided` domain back in the triage sweep's path. The machine cleared its retry
+         *     cursor because re-crawling could not help — nothing on the site named a company, or the
+         *     mail arguing for one is too old to trust today's site about. A person may know otherwise,
+         *     and this is how they say so.
+         *
+         *     Only an `undecided` domain can be re-asked. A domain carrying a decision has an answer, and
+         *     changing it is `PUT /capture/blocked-domains`, which demands the reason a decision owes.
+         *     Re-asking records no reason because it asserts nothing: it spends an attempt, and the crawl
+         *     answers or withholds again. A domain that already carries a decision answers `409`: the
+         *     request is intelligible and the domain well formed, it is the row's state that refuses.
+         *
+         *     The caller is stamped as the domain's owner where it had none — triage refuses to mint
+         *     records for a domain nobody is accountable for. Demands `company:update`, the same gate a
+         *     decision takes: what this re-opens is what creates the company. Audit-only write (no event
+         *     stream, EVT-NOEVT-3).
+         */
+        post: operations["reopenWithheldDomain"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/capture/consumer-mail-baseline": {
         parameters: {
             query?: never;
@@ -49958,6 +49992,34 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    reopenWithheldDomain: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The domain to ask about again; normalized to its registrable form. */
+                domain: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Where the domain stands now that the question is open again. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BlockedDomain"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };

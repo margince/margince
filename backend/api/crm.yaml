@@ -13017,6 +13017,50 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  # Re-asking a question the machine gave up on. Separate from the decision
+  # endpoint above because it is not a decision: nothing is recorded about what
+  # the domain IS, only that it is worth another look.
+  /capture/blocked-domains/{domain}/reopen:
+    post:
+      tags: [Capture]
+      operationId: reopenWithheldDomain
+      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: Ask about an undecided domain again (admin/ops).
+      description: |
+        Puts an `undecided` domain back in the triage sweep's path. The machine cleared its retry
+        cursor because re-crawling could not help — nothing on the site named a company, or the
+        mail arguing for one is too old to trust today's site about. A person may know otherwise,
+        and this is how they say so.
+
+        Only an `undecided` domain can be re-asked. A domain carrying a decision has an answer, and
+        changing it is `PUT /capture/blocked-domains`, which demands the reason a decision owes.
+        Re-asking records no reason because it asserts nothing: it spends an attempt, and the crawl
+        answers or withholds again. A domain that already carries a decision answers `409`: the
+        request is intelligible and the domain well formed, it is the row's state that refuses.
+
+        The caller is stamped as the domain's owner where it had none — triage refuses to mint
+        records for a domain nobody is accountable for. Demands `company:update`, the same gate a
+        decision takes: what this re-opens is what creates the company. Audit-only write (no event
+        stream, EVT-NOEVT-3).
+      parameters:
+        - name: domain
+          in: path
+          required: true
+          schema: { type: string }
+          description: 'The domain to ask about again; normalized to its registrable form.'
+      responses:
+        '200':
+          description: Where the domain stands now that the question is open again.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BlockedDomain' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /capture/consumer-mail-baseline:
     get:
       tags: [Capture]

@@ -447,6 +447,10 @@ func (stubs) SetBlockedDomain(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "SetBlockedDomain")
 }
 
+func (stubs) ReopenWithheldDomain(w nethttp.ResponseWriter, r *nethttp.Request, domain string) {
+	httperr.NotImplemented(w, r, "ReopenWithheldDomain")
+}
+
 func (stubs) ListConsumerMailBaseline(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListConsumerMailBaselineParams) {
 	httperr.NotImplemented(w, r, "ListConsumerMailBaseline")
 }

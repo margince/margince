@@ -56623,6 +56623,9 @@ type ServerInterface interface {
 	// Block a domain, or unblock one (admin/ops).
 	// (PUT /capture/blocked-domains)
 	SetBlockedDomain(w http.ResponseWriter, r *http.Request)
+	// Ask about an undecided domain again (admin/ops).
+	// (POST /capture/blocked-domains/{domain}/reopen)
+	ReopenWithheldDomain(w http.ResponseWriter, r *http.Request, domain string)
 	// Search the shipped consumer-mail baseline (CAP-PARAM-5).
 	// (GET /capture/consumer-mail-baseline)
 	ListConsumerMailBaseline(w http.ResponseWriter, r *http.Request, params ListConsumerMailBaselineParams)
@@ -58915,6 +58918,12 @@ func (_ Unimplemented) ListBlockedDomains(w http.ResponseWriter, r *http.Request
 // Block a domain, or unblock one (admin/ops).
 // (PUT /capture/blocked-domains)
 func (_ Unimplemented) SetBlockedDomain(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Ask about an undecided domain again (admin/ops).
+// (POST /capture/blocked-domains/{domain}/reopen)
+func (_ Unimplemented) ReopenWithheldDomain(w http.ResponseWriter, r *http.Request, domain string) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -66391,6 +66400,38 @@ func (siw *ServerInterfaceWrapper) SetBlockedDomain(w http.ResponseWriter, r *ht
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.SetBlockedDomain(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ReopenWithheldDomain operation middleware
+func (siw *ServerInterfaceWrapper) ReopenWithheldDomain(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "domain" -------------
+	var domain string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "domain", chi.URLParam(r, "domain"), &domain, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "domain", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReopenWithheldDomain(w, r, domain)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -90587,6 +90628,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/capture/blocked-domains", wrapper.SetBlockedDomain)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/capture/blocked-domains/{domain}/reopen", wrapper.ReopenWithheldDomain)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/capture/consumer-mail-baseline", wrapper.ListConsumerMailBaseline)
