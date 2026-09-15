@@ -6,7 +6,11 @@ import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
-import { filesMatching, parseSource } from "../../scripts/lib/source-tree";
+import {
+  filesMatching,
+  parseSource,
+  sourceFileAt,
+} from "../../scripts/lib/source-tree";
 
 // `as unknown as <a contract type>` DOES NOT WIDEN THE TYPE CHECK, IT REMOVES
 // IT.
@@ -100,7 +104,7 @@ function aliasesExportedBy(base: string): Set<string> {
   for (const suffix of [".ts", ".tsx", "/index.ts", "/index.tsx"]) {
     const path = base + suffix;
     if (existsSync(path)) {
-      found = declaredAliases(parseSource(path, readFileSync(path, "utf8")));
+      found = declaredAliases(sourceFileAt(path));
       break;
     }
   }
@@ -206,14 +210,30 @@ describe("a fixture is the shape the server sends", () => {
     ).toBeGreaterThan(500);
   });
 
+  // A WHOLE-TREE CENSUS IN ONE CASE, so the budget is the tree's and not a
+  // single assertion's. vitest's per-test default is ten seconds; this reads
+  // every module the bundler would, and on a loaded CI runner under coverage
+  // the same work that takes a second here took just over ten and failed on
+  // the clock rather than on a finding. A census that reports its own runner
+  // as a defect teaches the next reader to ignore it, so the budget is stated
+  // and generous. Splitting the loop across cases to fit would buy the same
+  // seconds by hiding where they go.
   it("finds no contract type cast through unknown", () => {
     const found: string[] = [];
     for (const path of modules) {
+      const text = readFileSync(path, "utf8");
+      // THE ONLY THING THIS SKIPS IS A FILE THAT CANNOT HOLD THE CONSTRUCT.
+      // `x as unknown as T` contains the token `unknown` whatever trivia sits
+      // between its parts, so a file without that word has no such cast to
+      // find — it is a necessary condition and not a heuristic, which is what
+      // separates it from a skip-list. It buys the census the headroom it
+      // needs: 619 of this tree's 2096 modules carry the word, and parsing the
+      // other 1477 is work whose answer is known before it starts.
+      if (!text.includes("unknown")) {
+        continue;
+      }
       const where = relative(frontendRoot, path).replaceAll("\\", "/");
-      for (const one of castsIn(
-        parseSource(path, readFileSync(path, "utf8")),
-        where,
-      )) {
+      for (const one of castsIn(parseSource(path, text), where)) {
         found.push(`${one.where}:${one.line} ${one.says}`);
       }
     }
@@ -225,7 +245,7 @@ describe("a fixture is the shape the server sends", () => {
         "never sends. Give the fixture the fields the type requires, or say why " +
         "the shape is wrong on purpose with `contract:cast <reason>`",
     ).toEqual([]);
-  });
+  }, 30_000);
 });
 
 // THE DETECTOR, asked about every shape it has to read.
