@@ -3,7 +3,7 @@
 
 import { Plus, X } from "lucide-react";
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { Button } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
@@ -51,6 +51,8 @@ export function TagsPanel({
   const { locale } = useLocale();
   const [expanded, setExpanded] = useState(false);
   const [adding, setAdding] = useState(false);
+  // The row the tags stand in, for focus to return to once a pill is gone.
+  const set = useRef<HTMLDivElement>(null);
   const read = useRecordTags(entityType, entityID);
 
   // The frame stands while the read is in flight. This panel sits in the record
@@ -107,7 +109,7 @@ export function TagsPanel({
           </div>
         )
       ) : (
-        <div className="tagspanel-set">
+        <div className="tagspanel-set" ref={set} tabIndex={-1}>
           {visible.map((tag) => (
             <TagOnRecord
               key={tag.tag_id}
@@ -115,6 +117,7 @@ export function TagsPanel({
               entityType={entityType}
               entityID={entityID}
               canEdit={canEdit}
+              returnFocusTo={() => set.current}
             />
           ))}
           {hidden > 0 && (
@@ -194,11 +197,16 @@ function TagOnRecord({
   entityType,
   entityID,
   canEdit,
+  returnFocusTo,
 }: Readonly<{
   tag: RecordTag;
   entityType: TaggableType;
   entityID: string;
   canEdit: boolean;
+  // Where focus lands after a removal: the row of tags, which survives the
+  // refetch, rather than the pill's own button, which the refetch takes away
+  // and would leave focus on the document body.
+  returnFocusTo: () => HTMLElement | null;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -247,6 +255,7 @@ function TagOnRecord({
             confirmVariant="danger"
             pending={remove.isPending}
             error={remove.isError ? problemMessageOf(remove.error, t) : null}
+            returnFocusTo={returnFocusTo}
             onConfirm={() =>
               remove.mutate(tag.tag_id, {
                 onSuccess: () => setConfirming(false),
