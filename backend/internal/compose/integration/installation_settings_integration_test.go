@@ -259,10 +259,30 @@ func TestInstallationSettingsRoundTripTheFiscalYearStart(t *testing.T) {
 func TestOidcGroupRoleMapRoundTripAndValidation(t *testing.T) {
 	e := SetupSearch(t)
 	store := identity.NewInstallationSettings(e.DB(), compose.NewSettingsStore(e.Pool))
-	admin := e.installationSettingsCtx(principal.ObjectGrant{Read: true, Update: true})
+	// Writing the map is granting roles, so it takes authentication_policy/update
+	// (admin), NOT the installation_settings/update that renames the company.
+	// This writer holds both: the patch's own top gate is installation_settings,
+	// the map field's is authentication_policy.
+	admin := e.authPolicyCtx(map[string]principal.ObjectGrant{
+		"installation_settings": {Read: true, Update: true},
+		"authentication_policy": {Read: true, Update: true},
+	})
 	policyReader := e.authPolicyCtx(map[string]principal.ObjectGrant{
 		"authentication_policy": {Read: true},
 	})
+
+	// The escalation this gate exists to refuse: a caller who administers
+	// installation settings (as ops does) but only READS the sign-in policy must
+	// not be able to map a group onto a role — otherwise they could map their own
+	// directory group to admin and collect it at their next sign-in.
+	opsShaped := e.authPolicyCtx(map[string]principal.ObjectGrant{
+		"installation_settings": {Read: true, Update: true},
+		"authentication_policy": {Read: true},
+	})
+	escalation := map[string]string{"crm-users": "admin"}
+	if _, err := store.UpdateInstallation(opsShaped, identity.InstallationPatch{OidcGroupRoleMap: &escalation}); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("a caller without authentication_policy/update wrote the group-role map: %v, want ErrPermissionDenied", err)
+	}
 
 	saved := map[string]string{"crm-users": "rep", "crm-admins": "admin"}
 	if _, err := store.UpdateInstallation(admin, identity.InstallationPatch{OidcGroupRoleMap: &saved}); err != nil {

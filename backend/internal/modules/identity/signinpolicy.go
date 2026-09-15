@@ -41,13 +41,19 @@ type SignInPolicyView struct {
 // enforces SSO or MFA, gated on `authentication_policy` rather than on the
 // settings aggregate around it.
 //
-// THE GATE HERE IS THE WHOLE SECURITY OF THIS READ. The entries are defined on
-// installation_settings — moving them would make every read of the aggregate
-// demand this grant and take the name, timezone and currency with it, which
-// every role is meant to read — so this checks the caller first and then reads
-// as the installation. A system principal bypasses object RBAC entirely, so
-// removing or weakening the Require below does not merely widen this endpoint,
-// it removes its only gate.
+// THE GATE HERE IS THE WHOLE SECURITY OF THIS READ. The provider/SSO/MFA
+// entries are defined on installation_settings — moving them would make every
+// read of the aggregate demand this grant and take the name, timezone and
+// currency with it, which every role is meant to read — so this checks the
+// caller first and then reads as the installation. A system principal bypasses
+// object RBAC entirely, so removing or weakening the Require below does not
+// merely widen this endpoint, it removes its only gate.
+//
+// OidcGroupRoleMap is the exception: it is defined on authentication_policy so
+// that WRITING it is admin-only (it grants roles), and it is safe there for a
+// read precisely because it is never read through the installation aggregate —
+// only here, behind this gate and then as the installation, and on the
+// anonymous login path.
 func (s *InstallationSettingsStore) SignInPolicy(ctx context.Context) (SignInPolicyView, error) {
 	if err := auth.Require(ctx, authenticationPolicyObject, principal.ActionRead); err != nil {
 		return SignInPolicyView{}, err

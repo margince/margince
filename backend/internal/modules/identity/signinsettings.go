@@ -130,9 +130,22 @@ const (
 // It SURVIVES A DATA RESET like its siblings above: who a directory group
 // makes an admin is a decision about who may do what, not customer data, and
 // a wipe must not silently stop granting what an admin deliberately mapped.
+//
+// GATED ON authentication_policy, NOT installation_settings like its siblings —
+// this is the one entry here that GRANTS ROLES, so writing it is granting them.
+// The role-granting paths are admin-only on purpose (ChangeUserRole takes
+// user_admin, SetRoleObjectGrant takes role_admin): a holder of a lesser editor
+// must not be able to grant themselves anything the editor can express. ops
+// holds installation_settings/update but only authentication_policy/READ, so
+// putting the map here refuses the ops-writes-itself-admin escalation that
+// installation_settings/update would have allowed. SetRawTx re-checks this
+// object per field, so the rest of the installation patch keeps its own gate.
+// The read stays free for the same reason its siblings' do — SignInPolicy takes
+// authentication_policy/read once and then reads as the installation, and the
+// login-path read is anonymous by construction.
 var OidcGroupRoleMap = settings.Define[map[string]string](
 	"identity.oidc_group_role_map",
-	installationSettingsObject,
+	authenticationPolicyObject,
 	"update",
 	nil,
 	validateGroupRoleMap,
@@ -169,9 +182,9 @@ func validateGroupRoleMap(m map[string]string) error {
 	return nil
 }
 
-// isSystemRoleKey answers from the seeded role set (service.go), the one
-// source of what a role key is — retyping the six keys here would be a second
-// list that drifts the day a role is renamed.
+// isSystemRoleKey answers from the seeded role set (service.go) rather than a
+// hand-typed copy of the keys here, which would drift the day a role is added
+// or renamed.
 func isSystemRoleKey(key string) bool {
 	for _, role := range systemRoles {
 		if role.key == key {

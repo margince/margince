@@ -43,11 +43,11 @@ import (
 // different places.
 var errUnknownObject = fmt.Errorf("%w: no RBAC object with this name is defined", apperrors.ErrNotFound)
 
-// roleIDByKey resolves a role key to its row id — the ONE spelling of the
-// lookup every role_assignment writer starts from (invite, re-role, the
-// sign-in group grants). An unknown key answers errUnknownRole; what that
-// MEANS differs per caller (an admin's typo is a 404, a stale group-role map
-// entry is skipped), so the verdict stays at the site.
+// roleIDByKey resolves a role key to its row id, the lookup a role_assignment
+// writer starts from — invite, re-role, and the sign-in group grants all call
+// it rather than each spelling the SELECT. An unknown key answers
+// errUnknownRole; what that MEANS differs per caller (an admin's typo is a 404,
+// a stale group-role map entry is skipped), so the verdict stays at the site.
 //
 // applyRoleObjectGrant below keeps its own SELECT rather than calling this: it
 // reads the role's version and permissions under FOR UPDATE in the same

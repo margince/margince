@@ -60,6 +60,7 @@ func totpCodeAt(secret string, t time.Time, digits int) (string, error) {
 		return "", fmt.Errorf("identity: totp secret is not base32: %w", err)
 	}
 	var msg [8]byte
+	// #nosec G115 -- totpStepIndex clamps its result at zero, so the counter is never negative and the conversion cannot wrap
 	binary.BigEndian.PutUint64(msg[:], uint64(totpStepIndex(t)))
 	mac := hmac.New(sha1.New, key)
 	mac.Write(msg[:])
