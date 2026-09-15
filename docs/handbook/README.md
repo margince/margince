@@ -56,6 +56,9 @@ its own, so you can also come straight to the one you need.
 - **[Contracts and invoices](contracts-and-invoices.md)** — the two value bases
   and why they are never summed, why a status is never inferred from a date,
   renewing and cancelling, what counts as a signed win, and the finance mirror.
+- **[Deal Rooms](deal-rooms.md)** — the buyer-facing page for one deal: what a
+  room holds, the five states and why Close is not a freeze, personal one-time
+  links, what a buyer never sees, and what an agent may not touch.
 - **[Documents and files](documents-and-files.md)** — documents on a company or
   deal, files a deal picks up from its email, having a file read for deal fields,
   and document sets you can ask questions of. Every size limit, with its number.
@@ -67,6 +70,13 @@ its own, so you can also come straight to the one you need.
   read seats, the six roles, why reading a customer record ignores row scope,
   who can see one record, teams, sharing, inviting and removing colleagues, and
   what a refusal looks like.
+- **[Relationships, introductions and research](relationships-and-research.md)** —
+  who here already knows somebody and how that is measured, asking a colleague
+  for a warm introduction and the four answers they can give, and what a website
+  read will and will not do.
+- **[Your own settings](your-own-settings.md)** — your account and signature,
+  your writing voice, your agent passports, your mailbox connections, and what
+  the last 24 hours of your mail turned into.
 - **[Settings](settings.md)** — every settings page, what is on it, whose state
   it changes, and which permission opens it.
 
