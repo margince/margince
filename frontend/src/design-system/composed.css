@@ -270,12 +270,13 @@
   position: relative;
   /* The pane over the column's ground, not the elevated surface: a card lifts
      off the stage it sits in by being translucent white over it, which is the
-     same separation every other pane in the product is drawn with. No
-     --shadow-card on top — that token is a hairline ring, and a ring behind a
-     1px border is the same edge drawn twice. */
+     same separation every other pane in the product is drawn with.
+     --shadow-rest on top of that is the top side every resting surface here
+     has, and it is one layer under a hairline rather than a second edge. */
   background: var(--pane);
   border: 1px solid var(--paneEdge);
   border-radius: var(--r-control);
+  box-shadow: var(--shadow-rest);
   padding: var(--space-3) var(--space-4);
   display: flex;
   flex-direction: column;
