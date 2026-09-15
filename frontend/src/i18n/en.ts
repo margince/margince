@@ -2,6 +2,71 @@
 // (compile-time via satisfies, runtime via i18n.test.ts). Placeholders use
 // {name} and are filled by t(key, params).
 export const en = {
+  "aiAdmin.allowance": "Monthly AI allowance",
+  "aiAdmin.pool":
+    "A shared company pool. This is not an individual quota or a dollar spending cap.",
+  "aiAdmin.consumption": "{spent} of {total} tokens used · {pct}%",
+  "aiAdmin.remaining": "{tokens} tokens remaining",
+  "aiAdmin.reset": "Resets {date} UTC",
+  "aiAdmin.fixed":
+    "Fixed company allowance overrides the per-user calculation.",
+  "aiAdmin.formula":
+    "{users} active full users × {tokens} tokens per user per month.",
+  "aiAdmin.floor": "With no eligible users, the allowance counts one user.",
+  "aiAdmin.normal": "Within the normal allowance band",
+  "aiAdmin.degraded": "80% threshold reached: reduced-tier routing is active",
+  "aiAdmin.queued": "Allowance reached: background AI is deferred",
+  "aiAdmin.policy":
+    "At 80%, routing moves to lower tiers. The actual model may stay the same. At 100%, background completions wait; interactive AI uses the lowest tier. Search embeddings continue and still count toward usage.",
+  "aiAdmin.saved": "Allowance saved",
+  "aiAdmin.recovery":
+    "Eligible website reads, account scans and voice builds become runnable on the next reconciliation pass, normally within a minute. Completion depends on worker capacity, current permissions and provider availability. Other background passes keep their normal schedule.",
+  "aiAdmin.edit": "Edit allowance",
+  "aiAdmin.perUser": "Tokens per full user per month",
+  "aiAdmin.range": "Whole tokens, from 1 to 1,000,000,000,000.",
+  "aiAdmin.company": "Fixed company total (optional)",
+  "aiAdmin.overrideHint":
+    "Leave blank to use the per-user calculation. The per-user value is retained.",
+  "aiAdmin.routingStale": "Model bindings changed while you were editing",
+  "aiAdmin.stale": "This allowance changed while you were editing",
+  "aiAdmin.staleHelp":
+    "Cancel and reopen the editor to use the latest settings.",
+  "aiAdmin.failed": "The change could not be applied",
+  "aiAdmin.preview": "Preview effects",
+  "aiAdmin.previewHint":
+    "Preview of current conditions. Saving checks the latest settings and usage again; this does not reserve capacity or call a model.",
+  "aiAdmin.features": "AI by activity",
+  "aiAdmin.save": "Save allowance",
+  "aiAdmin.cancel": "Cancel",
+  "aiAdmin.prospective":
+    "Model selected by current policy. Actual calls can use a fallback or fail; this is not provider health or proof of a model already used.",
+  "aiAdmin.calls": "Inspect actual model calls",
+  "aiAdmin.website": "Website reads",
+  "aiAdmin.scans": "Account scans",
+  "aiAdmin.voice": "Voice builds",
+  "aiAdmin.waiting": "Recorded work waiting on the allowance",
+  "aiAdmin.coverage":
+    "Counts cover durable website reads, account scans and voice builds only. They do not count every scheduled AI pass or guarantee that a request is still eligible to run.",
+  "aiAdmin.unavailable": "Unavailable",
+  "aiAdmin.impact.blocked": "Waiting on allowance",
+  "aiAdmin.impact.model": "Different model selected",
+  "aiAdmin.impact.fallback": "Fallback chain changed",
+  "aiAdmin.impact.unconfigured": "No model configured",
+  "aiAdmin.impact.exempt": "Continues beyond allowance",
+  "aiAdmin.impact.same": "Same model selection",
+  "aiAdmin.activity": "Activity",
+  "aiAdmin.model": "Model selected by policy",
+  "aiAdmin.cloud": "Cloud provider",
+  "aiAdmin.endpoint": "Configured endpoint; location not verified",
+  "aiAdmin.editBinding": "Edit shared binding",
+  "aiAdmin.effect": "Effect",
+  "aiAdmin.advanced": "Advanced: shared model bindings",
+  "aiAdmin.shared":
+    "These bindings are shared. Review every affected activity before saving.",
+  "aiAdmin.unused": "Not used by current shipped activities: {tiers}",
+  "aiAdmin.inputRate": "Input {input} per 1M tokens",
+  "aiAdmin.rates": "Input {input} · Output {output} per 1M tokens",
+
   "brief.weekly.tasksCompleted": "Tasks completed",
   "teamweekly.noPriority": "No priority indicated by the recorded metrics",
   "teamweekly.basis":
@@ -7868,17 +7933,11 @@ export const en = {
   "tools.scopedTo": "Reachable by {label}",
   "tools.unreachable": "scope not granted",
 
-  "aiusage.title": "AI usage & budget",
+  "aiusage.title": "Estimated AI spend & usage history",
   "aiusage.withheld":
     "Only an operator can see what the AI runtime spent. The figures cover the whole installation, so they are not shown more widely.",
   "aiusage.sub":
-    "Your own bill, made visible — per task and tier, token-denominated.",
-  "aiusage.budget": "{spent} of {budget} tokens · {pct}%",
-  "aiusage.budgetMeter": "Monthly token budget used",
-  "aiusage.band.normal": "Normal",
-  "aiusage.band.degraded": "Economy mode",
-  "aiusage.band.queued": "Budget reached — background AI queued",
-  "aiusage.band.unknown": "Unknown budget state",
+    "Historical usage for the selected month. Estimates are separate from the live token allowance and from your provider bill.",
   "aiusage.col.task": "Task",
   "aiusage.col.tier": "Tier",
   "aiusage.col.calls": "Calls",
@@ -7896,10 +7955,11 @@ export const en = {
   "aiusage.prevMonth": "Previous month",
   "aiusage.nextMonth": "Next month",
 
-  "aibanner.degraded": "AI running in economy mode",
-  "aibanner.queued": "AI budget reached — background AI is queued",
+  "aibanner.degraded":
+    "80% AI allowance threshold reached — review feature impacts",
+  "aibanner.queued": "AI allowance reached — review deferred work",
   "aibanner.unknown": "AI budget status is not recognized",
-  "aibanner.link": "View usage",
+  "aibanner.link": "Manage allowance",
   "aibanner.dismiss": "Dismiss",
 
   "aicalls.title": "AI call trace",
@@ -8115,11 +8175,14 @@ export const en = {
   "elapsed.minutes": "{minutes} min ago",
   "elapsed.hours": "{hours} h ago",
   "elapsed.days": "{days} d ago",
-  "aiRouting.lane.local_small": "Bulk classifying, on your own hardware",
+  "aiRouting.lane.local_small":
+    "Lowest routing tier; the binding determines processing location",
   "aiRouting.lane.cheap_cloud": "Everyday work — enrichment, summaries, triage",
   "aiRouting.lane.premium": "Anything a customer will read",
-  "aiRouting.lane.frontier": "The hardest reasoning, used sparingly",
-  "aiRouting.lane.local_large": "Heavier work that must not leave your hosts",
+  "aiRouting.lane.frontier":
+    "Advanced reasoning tier; availability does not mean it is used",
+  "aiRouting.lane.local_large":
+    "Higher local-tier route; inspect the configured endpoint",
   "aiRouting.lane.embeddings": "Search and retrieval across your records",
   "aiRouting.lanes.title": "Routing lanes",
   "aiRouting.lanes.sub":
@@ -8204,7 +8267,8 @@ export const en = {
   "aiRouting.savedTitle": "Routing saved",
   "aiRouting.saved": "Every process is now serving it.",
   "aiRouting.saveFailed": "Routing could not be saved",
-  "aiRouting.adminOnly": "Only an admin or ops can change model routing.",
+  "aiRouting.adminOnly":
+    "Changing model routing requires routing-update and allowance-read permission.",
   "workingHours.title": "When you are bookable",
   "workingHours.sub":
     "Yours alone. Nobody sets these for you, and you set them for nobody else.",

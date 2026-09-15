@@ -38,6 +38,7 @@ func Groups() []Group {
 		return keys
 	}
 	return []Group{
+		{Name: "cg:ai-budget-resume", Streams: forEntities(aiBudgetStreamEntity)},
 		{Name: "cg:context-graph", Streams: forEntities(contactStreamEntity, companyStreamEntity, dealStreamEntity, activityStreamEntity, leadStreamEntity)},
 		// The interaction-edge projection (CG-DDL-1 / ADR-0078). Its OWN group
 		// rather than a second handler on cg:context-graph: a projection

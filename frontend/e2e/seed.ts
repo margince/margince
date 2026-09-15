@@ -6,6 +6,7 @@ import {
   briefOmitted,
   briefWithPlan,
 } from "../src/screens/meetingbrief/fixtures";
+import { aiAdminFixture } from "./ai-admin-fixture";
 import { type MockProject, projectMock } from "./projectmock";
 
 // The booked meeting the contact record offers a brief for. Its id is the one
@@ -125,6 +126,7 @@ const E2E_ADMIN_GRANTS: GrantSpec = {
   extension_access: ["read"],
   // AI usage, model calls and the health card, all three.
   ai_diagnostics: ["read"],
+  ai_budget: ["read", "update"],
   // The purposes card's own verb. The READ stays on `contact` above, which is
   // the gate the endpoint actually applies, and nothing here updates or deletes
   // a purpose.
@@ -2801,6 +2803,10 @@ export async function mockApi(
     if (path === "/ai/routing" && method === "GET") {
       return json(aiRouting);
     }
+    if (path === "/ai/status")
+      return json(aiAdminFixture(aiRouting.tiers, aiUsage.budget));
+    if (path === "/ai/budget")
+      return json(aiAdminFixture(aiRouting.tiers, aiUsage.budget).budget);
     if (path === "/ai/health") {
       return json(aiHealth);
     }

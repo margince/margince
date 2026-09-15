@@ -13120,6 +13120,122 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
 
+  /ai/budget:
+    get:
+      tags: [AI]
+      operationId: getAiBudget
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Read the shared company allowance (ai_budget read).
+      responses:
+        '200':
+          description: Current AI administration state.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AiBudgetSnapshot' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '409':
+          description: The configuration changed; reload before saving.
+        '422': { $ref: '#/components/responses/ValidationError' }
+    put:
+      tags: [AI]
+      operationId: replaceAiBudget
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Replace the shared company allowance (ai_budget update).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AiBudgetChange' }
+      responses:
+        '200':
+          description: Current AI administration state.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AiBudgetSnapshot' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '409':
+          description: The configuration changed; reload before saving.
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /ai/budget/preview:
+    post:
+      tags: [AI]
+      operationId: previewAiBudget
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Preview an allowance change (ai_budget read/update).
+      description: |
+        Model feature rows are included only with ai_routing read; deferred-work
+        counts are included only with ai_diagnostics read. Otherwise those arrays
+        are empty. The allowance preview remains available to budget-only editors.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AiBudgetChange' }
+      responses:
+        '200':
+          description: Current AI administration state.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AiBudgetPreview' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '409':
+          description: The configuration changed; reload before saving.
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /ai/status:
+    get:
+      tags: [AI]
+      operationId: getAiStatus
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Read AI administration status (ai_diagnostics and ai_budget read).
+      description: |
+        Requires both diagnostics and allowance read permissions. Without ai_routing
+        read, features and unused_tiers are empty and routing_version is an empty
+        string; routing settings are not read. Deferred-work counts cover the company.
+      responses:
+        '200':
+          description: Current AI administration state.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AiStatus' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '409':
+          description: The configuration changed; reload before saving.
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /ai/routing/preview:
+    post:
+      tags: [AI]
+      operationId: previewAiRouting
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Preview affected features without calling a model (ai_routing read/update and ai_budget read).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AiRouting' }
+      responses:
+        '200':
+          description: Current AI administration state.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AiRoutingPreview' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '409':
+          description: The configuration changed; reload before saving.
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /ai/usage:
     get:
       tags: [AI]
@@ -13198,6 +13314,11 @@ paths:
       x-agent-access: human-only
       summary: Replace the tier-to-model binding (admin/ops).
       description: |
+        Optional If-Match carries the configuration revision returned in the GET ETag header.
+        A stale revision returns 409 without changing settings. Omitting If-Match
+        is an unconditional replacement for legacy clients; * matches the existing
+        routing resource, including its unconfigured default. An empty supplied tag is refused.
+
         Replaces the WHOLE binding, deliberately: a sparse patch of `tiers` cannot say whether
         an omitted tier is unchanged or unbound, and the two differ by whether a task can be
         served at all. Send the document you want to be true.
@@ -13226,6 +13347,7 @@ paths:
               schema: { $ref: '#/components/schemas/AiRouting' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
+        '409': { description: The supplied configuration revision is stale. }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /ai/provider-keys:
@@ -25572,6 +25694,89 @@ components:
           type: integer
           description: The window's middle latency, which tells a slow lane from a dead one.
 
+    AiBudgetConfig:
+      type: object
+      required: [tokens_per_full_user, company_monthly_tokens]
+      properties:
+        tokens_per_full_user: { type: integer, format: int64, minimum: 1, maximum: 1000000000000 }
+        company_monthly_tokens: { type: [integer, 'null'], format: int64, minimum: 1, maximum: 1000000000000 }
+    AiBudgetChange:
+      type: object
+      required: [config, expected_revision]
+      properties:
+        config: { $ref: '#/components/schemas/AiBudgetConfig' }
+        expected_revision: { type: string }
+    AiBudgetSnapshot:
+      type: object
+      required: [config, revision, eligible_full_users, budgeted_full_users, source, monthly_tokens, spent_tokens, remaining_tokens, band, month_start_at, resets_at, observed_at]
+      properties:
+        config: { $ref: '#/components/schemas/AiBudgetConfig' }
+        revision: { type: string }
+        eligible_full_users: { type: integer, format: int64 }
+        budgeted_full_users: { type: integer, format: int64 }
+        source: { type: string, enum: [per_user, company_override], x-go-type: string }
+        monthly_tokens: { type: integer, format: int64 }
+        spent_tokens: { type: integer, format: int64 }
+        remaining_tokens: { type: integer, format: int64 }
+        band: { type: string, enum: [normal, degraded, queued], x-go-type: string }
+        month_start_at: { type: string, format: date-time }
+        resets_at: { type: string, format: date-time }
+        observed_at: { type: string, format: date-time }
+    AiRouteCandidate:
+      type: object
+      required: [tier, provider, model, processing]
+      properties:
+        tier: { type: string }
+        provider: { type: string }
+        model: { type: string }
+        processing: { type: string, enum: [cloud_provider, configured_endpoint], x-go-type: string }
+    AiFeatureRoute:
+      type: object
+      required: [task, display_name, execution_mode, normal_candidates, effective_candidates, impact, budget_exempt, leading_tier]
+      properties:
+        task: { type: string }
+        display_name: { type: string }
+        execution_mode: { type: string }
+        leading_tier: { type: string }
+        normal_candidates: { type: array, items: { $ref: '#/components/schemas/AiRouteCandidate' } }
+        effective_candidates: { type: array, items: { $ref: '#/components/schemas/AiRouteCandidate' } }
+        impact: { type: string, enum: [unchanged, model_changed, fallback_changed, budget_blocked, unconfigured], x-go-type: string }
+        budget_exempt: { type: boolean }
+    AiDeferredWork:
+      type: object
+      required: [carrier, unit, available]
+      properties:
+        carrier: { type: string }
+        unit: { type: string }
+        available: { type: boolean }
+        count: { type: integer, format: int64 }
+    AiStatus:
+      type: object
+      required: [observed_at, budget, routing_version, task_contract_hash, features, deferred_work, deferred_work_coverage]
+      properties:
+        observed_at: { type: string, format: date-time }
+        budget: { $ref: '#/components/schemas/AiBudgetSnapshot' }
+        routing_version: { type: string }
+        task_contract_hash: { type: string }
+        features: { type: array, items: { $ref: '#/components/schemas/AiFeatureRoute' } }
+        deferred_work: { type: array, items: { $ref: '#/components/schemas/AiDeferredWork' } }
+        deferred_work_coverage: { type: string }
+        unused_tiers: { type: array, items: { type: string } }
+    AiBudgetPreview:
+      type: object
+      required: [current, proposed, features, deferred_work]
+      properties:
+        current: { $ref: '#/components/schemas/AiBudgetSnapshot' }
+        proposed: { $ref: '#/components/schemas/AiBudgetSnapshot' }
+        features: { type: array, items: { $ref: '#/components/schemas/AiFeatureRoute' } }
+        deferred_work: { type: array, items: { $ref: '#/components/schemas/AiDeferredWork' } }
+    AiRoutingPreview:
+      type: object
+      required: [current_version, features, unused_tiers]
+      properties:
+        current_version: { type: string }
+        features: { type: array, items: { $ref: '#/components/schemas/AiFeatureRoute' } }
+        unused_tiers: { type: array, items: { type: string } }
     AiUsage:
       type: object
       description: 'AI usage + budget (AIRT-WIRE-1): the AIRT-PARAM-33 meter aggregated per day × task × tier, plus the budget band. Token-denominated; cost_est_minor is computed on read from the workspace''s ai_model_rate price sheet as of each call''s day (ADR-0067, price-on-read) — omitted, never a fabricated 0, when a task line''s window carries no priced call, and accompanied by unpriced_calls when it is a partial total.'
@@ -25591,6 +25796,7 @@ components:
                   required: [task, tier, calls, tokens_in, tokens_out]
                   properties:
                     task: { type: string, description: 'capture_classify, enrich, summarize, …' }
+                    task_display_name: { type: string }
                     tier: { type: string, description: 'local_small, cheap_cloud, premium, frontier, local_large.' }
                     calls: { type: integer }
                     cached_hits: { type: integer }
@@ -38571,7 +38777,7 @@ components:
          computed_field, offer_template, overlay_connection, embedding_reindex,
          webhook_subscription, fx_rate, ai_model_rate, capture_settings, project,
          channel_connection, import_run, installation_settings, finance, integrations,
-         retention_policy, capture_trace, license, contract, ai_routing, commission, deal_room,
+         retention_policy, capture_trace, license, contract, ai_routing, ai_budget, commission, deal_room,
          knowledge_corpus, knowledge_document, introduction, weekly_plan, forecast, data_coverage,
          user_admin, role_admin, team_admin, privacy_request, audit_log, job_health,
          extension_access, system_reset, ai_diagnostics, consent_config, communication_exception,

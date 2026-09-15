@@ -2,8 +2,11 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 import { type GrantSpec, meFixture } from "../app/mefixture";
+import { status } from "./ai-admin.testkit";
 import { AiRoutingCard } from "./ai-routing";
+import { AdapterFields, EmbeddingWidthField } from "./ai-routing-fields";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The installation's tier→model binding: which vendor serves each cost rung,
@@ -13,8 +16,16 @@ import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 // decides whether the binding is this reader's to see at all, and `update`
 // decides whether the form is theirs to change — so the three seats below are
 // three different cards, not one card with a disabled attribute.
-const MANAGER: GrantSpec = { ai_routing: ["read", "update"] };
-const READER: GrantSpec = { ai_routing: ["read"] };
+const MANAGER: GrantSpec = {
+  ai_routing: ["read", "update"],
+  ai_diagnostics: ["read"],
+  ai_budget: ["read"],
+};
+const READER: GrantSpec = {
+  ai_routing: ["read"],
+  ai_diagnostics: ["read"],
+  ai_budget: ["read"],
+};
 // Reaches the AI tab on another grant and holds no ai_routing at all.
 const NO_GRANT: GrantSpec = { automation: ["read"] };
 
@@ -89,7 +100,18 @@ function story(
   return () => {
     installFetchStub({
       "GET /me": () => jsonResponse(meFixture({ allow })),
-      "GET /ai/routing": () => jsonResponse(routing),
+      "GET /ai/routing": () => {
+        const response = jsonResponse(routing);
+        response.headers.set("ETag", '"routing-v1"');
+        return response;
+      },
+      "GET /ai/status": () => jsonResponse(status),
+      "POST /ai/routing/preview": () =>
+        jsonResponse({
+          current_version: "routing-v1",
+          features: status.features,
+          unused_tiers: ["frontier"],
+        }),
       "GET /ai-model-rates": () => jsonResponse({ data: SHEET }),
       "GET /ai/provider-keys": () =>
         jsonResponse({
@@ -120,6 +142,7 @@ function story(
 const meta: Meta<typeof AiRoutingCard> = {
   title: "Settings/AI/Models & routing/Model routing",
   component: AiRoutingCard,
+  subcomponents: { AdapterFields, EmbeddingWidthField },
 };
 export default meta;
 type Story = StoryObj<typeof AiRoutingCard>;
@@ -182,4 +205,17 @@ export const VendorCannotBeAsked: Story = {
 export const BoundDark: Story = {
   globals: { theme: "dark" },
   render: story(BOUND),
+};
+
+export const AdvancedBindings: Story = {
+  render: story(BOUND),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByText(/advanced.*shared.*bindings/i),
+    );
+    await userEvent.click(
+      canvas.getAllByRole("button", { name: /change/i })[0],
+    );
+  },
 };

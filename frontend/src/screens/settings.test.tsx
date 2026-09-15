@@ -332,7 +332,9 @@ describe("SettingsScreen RBAC surfaces", () => {
     // spent nothing — a statement about the data, where the truth is only about
     // who may read it. No request is made for it, so a rep never hits a 403
     // error box (GET /ai/usage).
-    expect(await screen.findByText("AI usage & budget")).toBeTruthy();
+    expect(
+      await screen.findByText("Estimated AI spend & usage history"),
+    ).toBeTruthy();
     expect(
       await screen.findByText(
         /only an operator can see what the AI runtime spent/i,

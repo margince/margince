@@ -501,8 +501,8 @@ describe("the first-run setup gate", () => {
         .getAllByRole("option")
         .map((option) => option.textContent),
     ).toEqual([
-      "gemini-3.1-flash-liteUS$0.25 → US$1.50",
-      "gemini-3.5-flashUS$1.50 → US$9.00",
+      "gemini-3.1-flash-liteInput US$0.25 · Output US$1.50 per 1M tokens",
+      "gemini-3.5-flashInput US$1.50 · Output US$9.00 per 1M tokens",
     ]);
     await user.keyboard("{Escape}");
 
@@ -511,7 +511,7 @@ describe("the first-run setup gate", () => {
       within(screen.getByRole("listbox"))
         .getAllByRole("option")
         .map((option) => option.textContent),
-    ).toEqual(["gemini-embedding-001US$0.15"]);
+    ).toEqual(["gemini-embedding-001Input US$0.15 per 1M tokens"]);
   });
 
   it("binds the model a reader picks off the list", async () => {
@@ -574,8 +574,8 @@ describe("the first-run setup gate", () => {
         .getAllByRole("option")
         .map((option) => option.textContent),
     ).toEqual([
-      "mistralai/mistral-large-2512US$0.50 → US$1.50",
-      "mistralai/mistral-small-3.2-24b-instructUS$0.10 → US$0.30",
+      "mistralai/mistral-large-2512Input US$0.50 · Output US$1.50 per 1M tokens",
+      "mistralai/mistral-small-3.2-24b-instructInput US$0.10 · Output US$0.30 per 1M tokens",
     ]);
   });
 });

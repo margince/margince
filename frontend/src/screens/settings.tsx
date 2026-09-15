@@ -61,6 +61,7 @@ import { viewerZone } from "../format/timezone";
 import { LOCALES, type Locale, localeNameKey, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { AcquisitionSourcesCard } from "./acquisitionsources";
+import { AiBudgetCard, AiFeaturesCard } from "./ai-admin";
 import { AiHealthCard } from "./ai-health";
 import { AiProviderKeysCard } from "./ai-provider-keys";
 import { AiRoutingCard } from "./ai-routing";
@@ -334,9 +335,11 @@ export function tabContent(id: SettingsPageId): ReactNode {
       return (
         <>
           {/* What the month has cost, above the breakdown that explains it. */}
+          <AiBudgetCard />
+          <AiFeaturesCard />
           <SpendStat />
           <AiUsageCard />
-          <ModelCostsCard />
+          <ModelPriceDetails />
         </>
       );
     case "model-calls":
@@ -2282,5 +2285,14 @@ export function AuditLogCard() {
         </SettingList>
       </PanelBody>
     </Panel>
+  );
+}
+
+function ModelPriceDetails() {
+  const t = useT();
+  return (
+    <Disclosure summary={t("aiRouting.priceSheet")}>
+      <ModelCostsCard />
+    </Disclosure>
   );
 }

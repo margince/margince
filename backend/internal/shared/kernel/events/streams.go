@@ -57,6 +57,8 @@ const extensionStreamEntity = "extension"
 // purge does not unlink is one that outlives a data reset.
 const aiTaskStreamEntity = "aitask"
 
+const aiBudgetStreamEntity = "aibudget"
+
 // briefStreamEntity is the stream every brief.* product-telemetry event rides.
 //
 // Out of streamEntities for the same three reasons aiTaskStreamEntity is, and
@@ -128,7 +130,7 @@ func Streams() []string {
 		out = append(out, StreamPrefix+e)
 	}
 	out = append(out, StreamPrefix+extensionStreamEntity, StreamPrefix+aiTaskStreamEntity,
-		StreamPrefix+briefStreamEntity)
+		StreamPrefix+briefStreamEntity, StreamPrefix+aiBudgetStreamEntity)
 	sort.Strings(out)
 	return out
 }

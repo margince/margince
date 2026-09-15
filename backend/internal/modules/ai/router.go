@@ -223,7 +223,10 @@ func (r *Router) serveAttempt(ctx context.Context, lc *logicalCall, task Task, l
 		// attempt did not run the caller's default route.
 		trace.AttemptReason = attemptReasonBudgetDegrade
 	}
-	ladder = r.applyProfile(ladder)
+	// Profile and clients come from the same binding snapshot as the route.
+	// Mixing two loads could produce a ladder no installed binding chose.
+	_, hasLarge := b.clients[TierLocalLarge]
+	ladder = profileLadder(b.profile, hasLarge, ladder)
 
 	// The rail's opening line. It sits HERE and not higher — announceRailStartOnce
 	// says why.
@@ -289,27 +292,7 @@ func (r *Router) applyBudget(ctx context.Context, task Task, wsID ids.WorkspaceI
 	if err != nil {
 		return nil, false, fmt.Errorf("ai: reading month usage: %w", errors.Join(errBudgetUnavailable, err))
 	}
-	utilization := float64(spent) / float64(budgetTokens)
-	switch {
-	case utilization >= queueUtilization:
-		if taskExecutionModes[task] == ExecutionModeBackground {
-			now := r.now().UTC()
-			nextWindow := time.Date(now.Year(), now.Month()+1, 1, 0, 0, 0, 0, time.UTC)
-			return nil, false, &BudgetDeferralError{Task: task, NextAttemptAt: nextWindow}
-		}
-		return []Tier{TierLocalSmall}, true, nil
-	case utilization >= degradeUtilization:
-		degradedLadder := make([]Tier, 0, len(ladder))
-		for _, tier := range ladder {
-			demoted := degradeTo[tier]
-			if len(degradedLadder) == 0 || degradedLadder[len(degradedLadder)-1] != demoted {
-				degradedLadder = append(degradedLadder, demoted)
-			}
-		}
-		return degradedLadder, true, nil
-	default:
-		return ladder, false, nil
-	}
+	return budgetLadder(task, ladder, BudgetBand(spent, budgetTokens), r.now().UTC())
 }
 
 // localTiers are the rungs that run on the box. The set is written this way
@@ -328,33 +311,6 @@ var localTiers = map[Tier]bool{
 // premium belongs here the day it is declared — an alarm that watches only
 // part of the expensive spend reads LOWER the more of it a workspace does.
 var costlyCloudTiers = []Tier{TierPremium, TierFrontier}
-
-// applyProfile remaps cloud rungs to local ones under sovereign. P7
-// zero-egress rests on validation, which refuses a cloud binding outright
-// under this profile so no cloud client is ever constructed; this remap is
-// the second line, keeping a cloud-named rung off the ladder even so.
-func (r *Router) applyProfile(ladder []Tier) []Tier {
-	// One load: applyProfile decides a ladder, and a ladder half-decided under
-	// two bindings is a route nothing chose.
-	b := r.binding()
-	if b.profile != ProfileSovereign {
-		return ladder
-	}
-	remapped := make([]Tier, 0, len(ladder))
-	for _, tier := range ladder {
-		if !localTiers[tier] {
-			if _, ok := b.clients[TierLocalLarge]; ok {
-				tier = TierLocalLarge
-			} else {
-				tier = TierLocalSmall
-			}
-		}
-		if len(remapped) == 0 || remapped[len(remapped)-1] != tier {
-			remapped = append(remapped, tier)
-		}
-	}
-	return remapped
-}
 
 // embedTokenEstimate meters the embed lane by the ~4-bytes-per-token
 // heuristic; local embedders report no usage counts.

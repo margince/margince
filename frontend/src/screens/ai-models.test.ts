@@ -47,8 +47,14 @@ describe("suggestionsFor", () => {
   // one, so the hint that ranks the list has to carry both.
   it("offers one provider's models in one lane, priced in → out", () => {
     expect(suggestionsFor(SHEET, "gemini", "chat", "en")).toEqual([
-      { value: "gemini-3.1-flash-lite", hint: "US$0.25 → US$1.50" },
-      { value: "gemini-3.5-flash", hint: "US$1.50 → US$9.00" },
+      {
+        value: "gemini-3.1-flash-lite",
+        hint: "Input US$0.25 · Output US$1.50 per 1M tokens",
+      },
+      {
+        value: "gemini-3.5-flash",
+        hint: "Input US$1.50 · Output US$9.00 per 1M tokens",
+      },
     ]);
   });
 
@@ -56,13 +62,16 @@ describe("suggestionsFor", () => {
   // meaning "not applicable" rendered as if it were a price.
   it("prices an embedder on its one side only", () => {
     expect(suggestionsFor(SHEET, "gemini", "embeddings", "en")).toEqual([
-      { value: "gemini-embedding-001", hint: "US$0.15" },
+      { value: "gemini-embedding-001", hint: "Input US$0.15 per 1M tokens" },
     ]);
   });
 
   it("prices in the reader's conventions", () => {
     expect(suggestionsFor(SHEET, "anthropic", "chat", "de")).toEqual([
-      { value: "claude-opus-4-8", hint: "5,00\u00a0$ → 25,00\u00a0$" },
+      {
+        value: "claude-opus-4-8",
+        hint: "Eingabe 5,00\u00a0$ · Ausgabe 25,00\u00a0$ pro 1 Mio. Tokens",
+      },
     ]);
   });
 
@@ -140,7 +149,10 @@ describe("vendorSuggestions", () => {
   it("does not let another provider's sheet entry hide a model", () => {
     const vendor = answered([vendorModel("claude-opus-4-8", "3.00", "15.00")]);
     expect(vendorSuggestions(vendor, SHEET, "gemini", "en")).toEqual([
-      { value: "claude-opus-4-8", hint: "US$3.00 → US$15.00" },
+      {
+        value: "claude-opus-4-8",
+        hint: "Input US$3.00 · Output US$15.00 per 1M tokens",
+      },
     ]);
   });
 
