@@ -216,12 +216,7 @@ function AccessTip({
 }>) {
   const { ref, trigger, tip } = useTooltip<HTMLSpanElement>(text);
   return (
-    <span
-      className="record-access-tip"
-      ref={ref}
-      {...trigger}
-      tabIndex={focusable ? 0 : trigger.tabIndex}
-    >
+    <span ref={ref} {...trigger} tabIndex={focusable ? 0 : trigger.tabIndex}>
       {children(trigger["aria-describedby"])}
       {tip}
     </span>

@@ -1135,7 +1135,7 @@ function ThreadMessage({
       <span className="tl-msg-body">
         <span className="tl-msg-lead">
           <b className="tl-msg-who">{lead.actor}</b>
-          {lead.verb && <span className="tl-msg-verb">{lead.verb}</span>}
+          {lead.verb && <span>{lead.verb}</span>}
           {visibility && <VisibilityBadge state={visibility} />}
         </span>
         <MessageWords entry={entry} t={t} />

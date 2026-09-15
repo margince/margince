@@ -39,7 +39,7 @@ export function ReadingsGrid({
   children: ReactNode;
 }>) {
   return (
-    <section className="readings" aria-label={label}>
+    <section aria-label={label}>
       <div className="readings-grid" data-testid={testId}>
         {children}
       </div>

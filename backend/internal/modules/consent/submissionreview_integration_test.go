@@ -15,9 +15,16 @@ package consent
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"testing"
+	"time"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -75,7 +82,7 @@ func TestAProposalWaitsInTheQueueUntilSomebodyDecides(t *testing.T) {
 	proposeCorrection(t, e, ConfirmFieldFullName, "Corrected Name")
 
 	unresolved := false
-	queue, err := e.store.ListSubmissions(reviewerCtx(e), ListSubmissionsInput{Resolved: &unresolved})
+	queue, _, err := e.store.ListSubmissions(reviewerCtx(e), ListSubmissionsInput{Resolved: &unresolved})
 	if err != nil {
 		t.Fatalf("listing the queue: %v", err)
 	}
@@ -245,7 +252,7 @@ func TestTheQueueCarriesBothHalvesOfTheComparison(t *testing.T) {
 	}
 	proposeCorrection(t, e, ConfirmFieldFullName, "Anna Schmidt")
 
-	queue, err := e.store.ListSubmissions(reviewerCtx(e), ListSubmissionsInput{})
+	queue, _, err := e.store.ListSubmissions(reviewerCtx(e), ListSubmissionsInput{})
 	if err != nil {
 		t.Fatalf("listing the queue: %v", err)
 	}
@@ -260,5 +267,233 @@ func TestTheQueueCarriesBothHalvesOfTheComparison(t *testing.T) {
 	if got.CurrentValue != "Anna Schmitt" {
 		t.Errorf("the row says the record currently holds %q — without it the reviewer sees "+
 			"one half of a comparison and has to go and look up the other", got.CurrentValue)
+	}
+}
+
+// ─── Paging ────────────────────────────────────────────────────────────────
+
+// PROPOSALS BEYOND ONE PAGE ARE REACHABLE AT ALL, which is the gap this closes.
+//
+// The bound was the whole of the answer: past it the route returned the first
+// page and said nothing about the rest, so the panel drew a complete-looking
+// queue and the submissions that fell off the end were the NEWEST — the ones a
+// reviewer has least chance of hearing about another way. No error, no count,
+// nothing to press.
+func TestEveryProposalIsReachableAcrossThePagesOfTheQueue(t *testing.T) {
+	e := setupChannelConsent(t)
+	const sent = 5
+	filed := map[ids.UUID]bool{}
+	for i := range sent {
+		filed[proposeCorrection(t, e, ConfirmFieldFullName, fmt.Sprintf("Name %d", i))] = false
+	}
+
+	seen := map[ids.UUID]int{}
+	cursor := ""
+	for pages := 0; ; pages++ {
+		if pages > sent {
+			t.Fatal("the walk did not end: a page that always says there is another is a loop, " +
+				"not a queue")
+		}
+		batch, page, err := e.store.ListSubmissions(reviewerCtx(e), ListSubmissionsInput{
+			Limit: 2, Cursor: cursor,
+		})
+		if err != nil {
+			t.Fatalf("page %d: %v", pages, err)
+		}
+		for _, sub := range batch {
+			seen[sub.ID]++
+		}
+		if !page.HasMore {
+			if page.NextCursor != "" {
+				t.Errorf("the last page handed back cursor %q — a client walking until the "+
+					"cursor is empty would loop", page.NextCursor)
+			}
+			break
+		}
+		if page.NextCursor == "" {
+			t.Fatal("a page says there is another and hands back nothing to fetch it with")
+		}
+		cursor = page.NextCursor
+	}
+
+	for id := range filed {
+		if seen[id] == 0 {
+			t.Errorf("proposal %s was on no page of the walk, so nobody can answer it", id)
+		}
+		if seen[id] > 1 {
+			t.Errorf("proposal %s appeared on %d pages — a reviewer decides it twice", id, seen[id])
+		}
+	}
+}
+
+// THE TIE-BREAK, which is the half of the key an id-only cursor loses.
+//
+// A batch of confirm links goes out together and the answers come back
+// together, so two submissions sharing a `submitted_at` is ordinary rather than
+// rare. A walk resumed on the instant alone re-reads them; one resumed on the
+// id alone skips every row whose instant is later and whose id happens to be
+// smaller. The order is by both, so the cursor is by both.
+func TestAWalkCrossesProposalsThatArrivedInTheSameInstant(t *testing.T) {
+	e := setupChannelConsent(t)
+	for i := range 3 {
+		proposeCorrection(t, e, ConfirmFieldFullName, fmt.Sprintf("Together %d", i))
+	}
+	// One instant for all three, so the id is the only thing left to order by.
+	// Set on the rows the real door wrote rather than on rows of this test's
+	// own: what is under test is the ORDER, and the writer has already run.
+	if _, err := e.owner.Exec(context.Background(),
+		`UPDATE contact_confirm_submission SET submitted_at = now() WHERE contact_id = $1`,
+		e.contact); err != nil {
+		t.Fatalf("giving the three one instant: %v", err)
+	}
+
+	seen := map[ids.UUID]bool{}
+	cursor := ""
+	for pages := 0; pages < 5; pages++ {
+		batch, page, err := e.store.ListSubmissions(reviewerCtx(e), ListSubmissionsInput{
+			Limit: 1, Cursor: cursor,
+		})
+		if err != nil {
+			t.Fatalf("page %d: %v", pages, err)
+		}
+		for _, sub := range batch {
+			if seen[sub.ID] {
+				t.Errorf("proposal %s came back twice", sub.ID)
+			}
+			seen[sub.ID] = true
+		}
+		if !page.HasMore {
+			break
+		}
+		cursor = page.NextCursor
+	}
+	if len(seen) != 3 {
+		t.Errorf("the walk saw %d of 3 proposals filed in one instant: a cursor that cannot tell "+
+			"them apart drops the ones it cannot name", len(seen))
+	}
+}
+
+// THE WALK CROSSES FROM THE QUEUE INTO THE ARCHIVE, which is the leading half
+// of the key and the one an ordinary cursor has no field for.
+//
+// Unresolved rows sort first. A cursor that carried only the instant and the id
+// would, on the first resolved row, compare as "before" every unresolved one
+// and hand the reviewer the queue they have just worked.
+func TestTheWalkCrossesFromTheQueueIntoWhatIsAlreadyDecided(t *testing.T) {
+	e := setupChannelConsent(t)
+	decided := proposeCorrection(t, e, ConfirmFieldFullName, "Already answered")
+	if _, err := e.store.ResolveSubmission(reviewerCtx(e), decided,
+		ResolveSubmissionInput{Resolution: SubmissionRejected}); err != nil {
+		t.Fatalf("deciding the first proposal: %v", err)
+	}
+	waiting := proposeCorrection(t, e, ConfirmFieldTitle, "Still waiting")
+
+	first, page, err := e.store.ListSubmissions(reviewerCtx(e), ListSubmissionsInput{Limit: 1})
+	if err != nil {
+		t.Fatalf("first page: %v", err)
+	}
+	if len(first) != 1 || first[0].ID != waiting {
+		t.Fatalf("the first page leads with %v, and an unanswered proposal outranks a decided one", first)
+	}
+	if !page.HasMore {
+		t.Fatal("the queue says it is complete with a decided proposal still unlisted")
+	}
+
+	second, page, err := e.store.ListSubmissions(reviewerCtx(e),
+		ListSubmissionsInput{Limit: 1, Cursor: page.NextCursor})
+	if err != nil {
+		t.Fatalf("second page: %v", err)
+	}
+	if len(second) != 1 || second[0].ID != decided {
+		t.Fatalf("the second page carried %v, want the decided proposal — a cursor with no room "+
+			"for the resolved flag re-enters at the top of the queue", second)
+	}
+	if page.HasMore {
+		t.Error("the walk says there is more behind the last of two proposals")
+	}
+}
+
+// A TOKEN THIS QUEUE DID NOT MINT IS REFUSED, never answered with an empty
+// page. Telling a reviewer their queue is clear is the one answer this route
+// must not guess at — and the shared envelope proves only that a token is one
+// of ours, not that it names a position here.
+func TestACursorFromSomewhereElseIsRefusedRatherThanAnswered(t *testing.T) {
+	e := setupChannelConsent(t)
+	proposeCorrection(t, e, ConfirmFieldFullName, "Waiting")
+
+	elsewhere, err := storekit.EncodeOpaque(storekit.Cursor{
+		CreatedAt: time.Now(), ID: ids.NewV7(),
+	})
+	if err != nil {
+		t.Fatalf("minting another route's cursor: %v", err)
+	}
+	for what, token := range map[string]string{
+		"another route's cursor": elsewhere,
+		"not a token at all":     "not-a-cursor",
+	} {
+		_, _, err := e.store.ListSubmissions(reviewerCtx(e),
+			ListSubmissionsInput{Cursor: token})
+		var malformed *storekit.MalformedCursorError
+		if !errors.As(err, &malformed) {
+			t.Errorf("%s answered %v, want a refusal: an empty page here reads as "+
+				"a queue with nothing left in it", what, err)
+		}
+	}
+}
+
+// THE WIRE carries the page, not just the store.
+//
+// The store can walk correctly and the route still answer a body with no
+// continuation in it — the envelope is assembled in the handler, and a client
+// walks what the wire says rather than what the store returned.
+func TestTheSubmissionQueuesWireCarriesItsPage(t *testing.T) {
+	e := setupChannelConsent(t)
+	for i := range 3 {
+		proposeCorrection(t, e, ConfirmFieldFullName, fmt.Sprintf("Wire %d", i))
+	}
+	h := Handlers{store: e.store}
+	ctx := reviewerCtx(e)
+
+	read := func(cursor *string) ([]crmcontracts.ConfirmSubmission, crmcontracts.PageInfo) {
+		t.Helper()
+		limit := 2
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, "/v1/confirm-submissions", nil).WithContext(ctx)
+		h.ListConfirmSubmissions(rec, req, crmcontracts.ListConfirmSubmissionsParams{
+			Limit: &limit, Cursor: cursor,
+		})
+		if rec.Code != http.StatusOK {
+			t.Fatalf("status = %d, want 200: %s", rec.Code, rec.Body.String())
+		}
+		var body struct {
+			Data []crmcontracts.ConfirmSubmission `json:"data"`
+			Page crmcontracts.PageInfo            `json:"page"`
+		}
+		if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+			t.Fatalf("decoding the queue's answer: %v", err)
+		}
+		return body.Data, body.Page
+	}
+
+	first, page := read(nil)
+	if len(first) != 2 || !page.HasMore {
+		t.Fatalf("first page carried %d proposals and has_more %v, want 2 and true",
+			len(first), page.HasMore)
+	}
+	if page.NextCursor == nil || *page.NextCursor == "" {
+		t.Fatal("the wire says there is another page and hands back no cursor to fetch it with")
+	}
+
+	second, page := read(page.NextCursor)
+	if len(second) != 1 || page.HasMore {
+		t.Fatalf("second page carried %d proposals and has_more %v, want 1 and false",
+			len(second), page.HasMore)
+	}
+	if page.NextCursor != nil {
+		t.Errorf("the last page handed back cursor %q — a client walking until the cursor is "+
+			"null would loop", *page.NextCursor)
+	}
+	if second[0].Id == first[0].Id || second[0].Id == first[1].Id {
+		t.Error("the second page repeated a proposal from the first")
 	}
 }

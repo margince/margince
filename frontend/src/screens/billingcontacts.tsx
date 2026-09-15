@@ -90,7 +90,7 @@ export function BillingContactsPanel({
           </p>
         )}
         {contacts.length === 0 ? (
-          <p className="muted">{t("billing.none")}</p>
+          <p className="t-caption">{t("billing.none")}</p>
         ) : (
           <ul className="billing-list">
             {contacts.map((c) => (
@@ -179,7 +179,7 @@ function BillingContactRow({
           {contact.email}
         </a>
       ) : (
-        <span className="billing-email muted">{t("billing.noEmail")}</span>
+        <span className="billing-email t-caption">{t("billing.noEmail")}</span>
       )}
     </li>
   );

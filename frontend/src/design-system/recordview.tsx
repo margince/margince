@@ -293,7 +293,11 @@ export function RecordView({
   // The strip sits directly under the identity on EVERY record, band or not: a
   // record with readings would otherwise open the choice of what to read a
   // block lower than the record beside it.
-  const strip = tabs && <div className="record-tabs">{tabs}</div>;
+  const strip = tabs && (
+    <div className="record-tabs" data-testid="record-tabs">
+      {tabs}
+    </div>
+  );
   // What describes the WHOLE record frames the columns from between the strip
   // and them at full width, not from the work column beside the rail.
   const frame = band && <div className="record-band">{band}</div>;

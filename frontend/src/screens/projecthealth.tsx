@@ -113,7 +113,7 @@ function CurrentReading({
   return (
     <div className="health-current">
       <StateBadge state={assessment.state} />
-      <span className="t-caption mute">
+      <span className="t-caption">
         {t("projectHealth.assessedOn", {
           date: formatDate(assessment.assessed_at, locale, recordZone),
         })}

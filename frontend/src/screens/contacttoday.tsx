@@ -75,7 +75,7 @@ export function ContactToday({
       return withheld;
     }
     return (
-      <div className="contact-coverage t-sub">
+      <div className="t-sub">
         <p>
           {moment
             ? moment.rule === "thin_relationship"

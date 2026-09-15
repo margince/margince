@@ -284,11 +284,7 @@ function BackreadScope({
 
   return (
     <div className="ob-backread-scope" aria-live="polite">
-      {counting && (
-        <p className="ob-backread-counting t-caption">
-          {t("ob.backread.estimating")}
-        </p>
-      )}
+      {counting && <p className="t-caption">{t("ob.backread.estimating")}</p>}
       {preview && (
         <p className="ob-backread-estimate">
           {t(
@@ -302,9 +298,7 @@ function BackreadScope({
         </p>
       )}
       {preview?.estimate_quality === "heuristic" && (
-        <p className="ob-backread-qualifier t-caption">
-          {t("ob.backread.estimateHeuristic")}
-        </p>
+        <p className="t-caption">{t("ob.backread.estimateHeuristic")}</p>
       )}
       {cost !== null && (
         <p className="ob-backread-cost">

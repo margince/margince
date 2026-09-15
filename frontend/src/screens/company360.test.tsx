@@ -434,7 +434,7 @@ describe("company view — withheld sections", () => {
     // The standing is the 360's word now, under the readings row: withheld
     // reads as withheld there, on the word and on each dimension.
     const call = await screen.findByText("Account brief");
-    const pane = call.closest(".co-reading-call");
+    const pane = call.closest(".panel");
     if (!(pane instanceof HTMLElement)) {
       throw new Error("the 360 has no pane");
     }
@@ -457,7 +457,7 @@ describe("company view — withheld sections", () => {
     renderCompany();
 
     const call = await screen.findByText("Account brief");
-    const pane = call.closest(".co-reading-call");
+    const pane = call.closest(".panel");
     if (!(pane instanceof HTMLElement)) {
       throw new Error("the 360 has no pane");
     }

@@ -793,49 +793,54 @@ function CompanyRecord({
   // the only way into the pane with it — and one strip on every record page is
   // what lets a reader learn where the switch is once.
   const tabs = (
-    <RecordTabs
-      options={visibleTabs}
-      value={tab}
-      onChange={(next) => {
-        onTab(next);
-        scrollPageToTop();
-      }}
-      counts={companyTabCounts(assembled)}
-      // The switch for the account's own details column, at the end of
-      // the tab row: it chooses what the page shows beside the work, so it
-      // stands with the controls that choose what the work column shows,
-      // and never in the head among the record's verbs.
-      trailing={
-        <PageAsideToggle
-          quiet
-          labels={{
-            show: t("record.panel.showDetails"),
-            hide: t("record.panel.hideDetails"),
-          }}
-        />
-      }
-      labels={{
-        // "360", not the shared "Overview": this tab is the account's
-        // one assembled reading, and the card inside it is named the same
-        // — a tab and the thing it opens calling themselves two different
-        // words is two places to learn. Its own key rather than a re-worded
-        // `tab.overview`, which four other record types render and none of
-        // them is this.
-        overview: t("tab.overview"),
-        contacts: t("tab.contacts"),
-        deals: t("tab.deals"),
-        tasks: t("tab.tasks"),
-        timeline: t("tab.timeline"),
-        // The tab's own key rather than `finance.title`, which the card
-        // inside varies by lifecycle ("Finance (historical)"). A tab label
-        // names a place and does not qualify it; sharing one key would tie
-        // the strip to a title that changes under it.
-        finance: t("tab.finance"),
-        documents: t("tab.documents"),
-        profile: t("tab.profile"),
-        partner: t("tab.partner"),
-      }}
-    />
+    // A TEST ID rather than a class: the walk from the page's own tab strip to
+    // the switch at its end is what two screen journeys assert, and nothing
+    // draws this wrapper.
+    <div data-testid="co-tabs">
+      <RecordTabs
+        options={visibleTabs}
+        value={tab}
+        onChange={(next) => {
+          onTab(next);
+          scrollPageToTop();
+        }}
+        counts={companyTabCounts(assembled)}
+        // The switch for the account's own details column, at the end of
+        // the tab row: it chooses what the page shows beside the work, so it
+        // stands with the controls that choose what the work column shows,
+        // and never in the head among the record's verbs.
+        trailing={
+          <PageAsideToggle
+            quiet
+            labels={{
+              show: t("record.panel.showDetails"),
+              hide: t("record.panel.hideDetails"),
+            }}
+          />
+        }
+        labels={{
+          // "360", not the shared "Overview": this tab is the account's
+          // one assembled reading, and the card inside it is named the same
+          // — a tab and the thing it opens calling themselves two different
+          // words is two places to learn. Its own key rather than a re-worded
+          // `tab.overview`, which four other record types render and none of
+          // them is this.
+          overview: t("tab.overview"),
+          contacts: t("tab.contacts"),
+          deals: t("tab.deals"),
+          tasks: t("tab.tasks"),
+          timeline: t("tab.timeline"),
+          // The tab's own key rather than `finance.title`, which the card
+          // inside varies by lifecycle ("Finance (historical)"). A tab label
+          // names a place and does not qualify it; sharing one key would tie
+          // the strip to a title that changes under it.
+          finance: t("tab.finance"),
+          documents: t("tab.documents"),
+          profile: t("tab.profile"),
+          partner: t("tab.partner"),
+        }}
+      />
+    </div>
   );
 
   // Both tabs render inside ONE page. Partner used to be a different
