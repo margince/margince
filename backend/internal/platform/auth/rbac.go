@@ -74,6 +74,20 @@ func Require(ctx context.Context, object string, action principal.Action) error 
 	return nil
 }
 
+// Allows is Require's boolean form: the same object-level admission decision
+// for a caller that treats an absent grant as a branch rather than a refusal.
+// The LinkedIn matcher runs under a member's own contact:read authority and has
+// to know whether that member may also EDIT a contact — a holder of the update
+// grant auto-confirms a match, a read-only grant degrades it to a suggestion —
+// so the answer must be a boolean and not an error.
+//
+// It IS Require, read as a boolean, so the gate and the branch cannot answer
+// one question two ways — a condition added to Require reaches every branch
+// that asks this.
+func Allows(ctx context.Context, object string, action principal.Action) bool {
+	return Require(ctx, object, action) == nil
+}
+
 // RequireAny admits when the actor holds ANY of the listed actions on the
 // object. It exists for a write whose exact action is not yet knowable —
 // an upsert learns insert-vs-overwrite only from the table — so the caller

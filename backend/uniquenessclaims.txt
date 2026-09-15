@@ -413,7 +413,7 @@ internal/modules/contacts/leadmanualsignal.go#func manualSignalImage
 internal/modules/contacts/leadstatus.go#method LeadStatus.Open
 internal/modules/contacts/linkedincompanyplace.go#func companyKeys
 internal/modules/contacts/linkedinmatch.go#method Store.MatchLinkedInConnections
-internal/modules/contacts/linkedinmatch.go#var suggestNameEmployerMatchSQL
+internal/modules/contacts/linkedinmatch.go#var nameEmployerCandidatesSQL
 internal/modules/contacts/linkedinrenormalize.go#func matchRank
 internal/modules/contacts/linkedinrenormalize.go#var matchRankOrder
 internal/modules/contacts/listfilters.go#const block at const filterOwnerID
