@@ -4,11 +4,14 @@ terraform {
   # cross-variable references in a validation block are a 1.9+ feature.
   required_version = ">= 1.9.0"
 
-  # No backend block: state defaults to local, which puts the RDS/Redis/
-  # keyvault/webhook credentials every resource in secrets.tf generates into
-  # a plaintext file on whatever machine runs `terraform apply` — fine for a
-  # one-off `terraform plan` against this reference stack, not fine for an
-  # actual deployment. Uncomment and fill in for anything beyond that:
+  # No backend block by default: state defaults to local, which writes every
+  # generated credential from secrets.tf (RDS/Redis/keyvault/webhook/admin/
+  # blobstore) into a plaintext file on the machine that runs `terraform
+  # apply`. That is only acceptable for a one-off `terraform plan` against this
+  # reference stack. Before running `terraform apply` for any real deployment,
+  # uncomment and fill in the backend block below with a protected S3 bucket
+  # that only authorized deployment identities can reach, and verify that
+  # `terraform init -backend-config=...` (or the filled-in block) points at it.
   #
   # backend "s3" {
   #   bucket       = "your-terraform-state-bucket"

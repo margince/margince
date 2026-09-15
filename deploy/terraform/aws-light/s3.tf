@@ -50,6 +50,8 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "blobstore" {
 resource "aws_s3_bucket_lifecycle_configuration" "blobstore" {
   bucket = aws_s3_bucket.blobstore.id
 
+  depends_on = [aws_s3_bucket_versioning.blobstore]
+
   rule {
     id     = "abort-incomplete-multipart-uploads"
     status = "Enabled"

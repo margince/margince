@@ -20,6 +20,10 @@ resource "aws_kms_key" "data" {
   enable_key_rotation     = true
   deletion_window_in_days = 30
   tags                    = { Name = "${var.name_prefix}-data", Component = "security" }
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "aws_kms_alias" "data" {

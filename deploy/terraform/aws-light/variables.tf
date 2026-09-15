@@ -94,10 +94,20 @@ variable "instance_type" {
     was tried and starved the api's own in-process caches under any real
     traffic. Burstable (T-family): fine for a light/small-deployment
     workload, not for one under sustained load — size up (m7g family) if
-    CPU credit balance becomes the bottleneck.
+    CPU credit balance becomes the bottleneck. Must match cpu_architecture:
+    Graviton families end in "g" before the size suffix (t4g, m7g, etc.).
   EOT
   type        = string
   default     = "t4g.small"
+
+  validation {
+    condition     = var.cpu_architecture != "x86_64" || !can(regex("^[a-z][0-9]g\\.", var.instance_type))
+    error_message = "instance_type \"${var.instance_type}\" is a Graviton (arm64) family; set cpu_architecture = \"arm64\" or pick an x86_64 instance type."
+  }
+  validation {
+    condition     = var.cpu_architecture != "arm64" || can(regex("^[a-z][0-9]g\\.", var.instance_type))
+    error_message = "instance_type \"${var.instance_type}\" does not look like a Graviton (arm64) family (e.g. t4g.small, m7g.large); set cpu_architecture = \"x86_64\" or choose an arm64 instance type."
+  }
 }
 
 variable "root_volume_gb" {
@@ -217,9 +227,14 @@ variable "log_retention_days" {
 }
 
 variable "ecr_tagged_image_retain_count" {
-  description = "Same reasoning as the full stack's own variable — a generous rollback window under IMMUTABLE tags, not a tuned value."
+  description = "Same reasoning as the full stack's own variable — a generous rollback window under IMMUTABLE tags, not a tuned value. Must be a positive integer."
   type        = number
   default     = 10
+
+  validation {
+    condition     = var.ecr_tagged_image_retain_count >= 1 && floor(var.ecr_tagged_image_retain_count) == var.ecr_tagged_image_retain_count
+    error_message = "ecr_tagged_image_retain_count must be a positive integer."
+  }
 }
 
 variable "enable_deep_monitoring" {

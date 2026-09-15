@@ -151,25 +151,44 @@ fixing DNS: `sudo docker compose -f /opt/margince/docker-compose.yml run
 -d <domain> --agree-tos --no-eff-email --non-interactive && sudo docker
 compose -f /opt/margince/docker-compose.yml exec nginx nginx -s reload`.
 
-Bootstrap the database once, from the instance itself (it already sits in the
-same VPC as RDS, so there's no separate bastion step the way the full stack
-needs):
+Bootstrap the database once. Resolve the credentials on your workstation,
+then open an SSM port-forward through the EC2 instance (which already sits
+in the same VPC as RDS) so the psql session runs locally and nothing except
+the TLS-forwarded connection reaches the instance:
 
 ```bash
-aws ssm start-session --target "$(terraform output -raw instance_id)"
+# On your workstation
+INSTANCE_ID="$(terraform output -raw instance_id)"
+RDS_ENDPOINT="$(terraform output -raw rds_endpoint)"
 
-# Inside the session:
+# RDS master password lives only in Terraform state; the two role passwords
+# are stored in Secrets Manager by this stack.
+MASTER_PW="$(terraform show -json | jq -r '.values.root_module.resources[] | select(.type == "random_password" and .name == "rds_master") | .values.result')"
 OWNER_PW="$(aws secretsmanager get-secret-value --secret-id "$(terraform output -json secret_arns | jq -r .owner_dsn)" --query SecretString --output text | sed -E 's#.*:([^:@]+)@.*#\1#')"
 APP_PW="$(aws secretsmanager get-secret-value --secret-id "$(terraform output -json secret_arns | jq -r .app_dsn)" --query SecretString --output text | sed -E 's#.*:([^:@]+)@.*#\1#')"
 
-sudo psql "postgres://dbadmin:<terraform state show random_password.rds_master's result>@$(terraform output -raw rds_endpoint):5432/margince?sslmode=verify-full&sslrootcert=/opt/margince/config/rds-ca-bundle.pem" \
-  -v owner_pw="$OWNER_PW" -v app_pw="$APP_PW" \
-  -f /opt/margince/db-bootstrap.sql
+# Same CA bundle the instance trusts
+curl -fsSL https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem \
+  -o /tmp/rds-ca-bundle.pem
+
+# Open a port forward from local :15432 to RDS :5432 via the instance.
+# Run this in one terminal and keep it open:
+aws ssm start-session --target "$INSTANCE_ID" \
+  --document-name AWS-StartPortForwardingSessionToRemoteHost \
+  --parameters "host=$RDS_ENDPOINT,portNumber=5432,localPortNumber=15432"
+
+# In another terminal, run bootstrap from the repo root:
+export PGHOST=127.0.0.1 PGPORT=15432 PGUSER=dbadmin
+export PGSSLMODE=verify-full PGSSLROOTCERT=/tmp/rds-ca-bundle.pem
+PGPASSWORD="$MASTER_PW" psql \
+  -v owner_pw="$OWNER_PW" \
+  -v app_pw="$APP_PW" \
+  -f scripts/deploy/db-bootstrap.sql
 ```
 
-`scripts/deploy/db-bootstrap.sql` isn't on the instance by default — copy it
-up first (`aws s3 cp` via the blobstore bucket, or paste it in over the SSM
-session) since there's no git checkout on this box. Once bootstrapped, the
+The master password and role passwords never touch the instance filesystem or
+SSM command history this way. `scripts/deploy/db-bootstrap.sql` is part of
+this repo, so it runs straight from your workstation. Once bootstrapped, the
 already-running containers reconnect on their own next retry — no restart
 needed, though `sudo systemctl restart margince` forces it immediately.
 

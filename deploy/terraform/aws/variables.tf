@@ -162,10 +162,15 @@ variable "ecr_tagged_image_retain_count" {
     none of them are ever reclaimed by a later push to the same tag. 30 is a
     generous rollback window for a CRM's release cadence, not a tuned value
     — raise it if you release more often than that and still want that many
-    rollback targets on hand.
+    rollback targets on hand. Must be a positive integer.
   EOT
   type        = number
   default     = 30
+
+  validation {
+    condition     = var.ecr_tagged_image_retain_count >= 1 && floor(var.ecr_tagged_image_retain_count) == var.ecr_tagged_image_retain_count
+    error_message = "ecr_tagged_image_retain_count must be a positive integer."
+  }
 }
 
 # ---- Database ---------------------------------------------------------------

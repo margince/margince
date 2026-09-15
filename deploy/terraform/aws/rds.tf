@@ -46,12 +46,12 @@ resource "random_id" "final_snapshot" {
 # cannot be trusted to enforce it. rds.force_ssl makes the SERVER refuse a
 # non-TLS connection outright, which is what actually closes the gap; the
 # DSNs in secrets.tf additionally pass sslmode=require so a well-behaved
-# client never attempts plaintext in the first place. Family must track
-# db_engine_version's major version (16.x here) — RDS parameter groups are
-# versioned by major version, not by the exact minor this stack pins.
+# client never attempts plaintext in the first place. Family tracks
+# db_engine_version's major version — RDS parameter groups are versioned by
+# major version, not by the exact minor this stack pins.
 resource "aws_db_parameter_group" "this" {
-  name_prefix = "${var.name_prefix}-pg16-"
-  family      = "postgres16"
+  name_prefix = "${var.name_prefix}-pg${split(".", var.db_engine_version)[0]}-"
+  family      = "postgres${split(".", var.db_engine_version)[0]}"
 
   parameter {
     name         = "rds.force_ssl"
@@ -86,7 +86,7 @@ resource "aws_db_parameter_group" "this" {
     apply_method = "immediate"
   }
 
-  tags = { Name = "${var.name_prefix}-pg16", Component = "database" }
+  tags = { Name = "${var.name_prefix}-pg${split(".", var.db_engine_version)[0]}", Component = "database" }
 
   lifecycle { create_before_destroy = true }
 }

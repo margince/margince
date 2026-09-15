@@ -33,8 +33,8 @@ resource "random_id" "final_snapshot" {
 # or an unauthenticated server; force_ssl makes the SERVER refuse a non-TLS
 # connection outright.
 resource "aws_db_parameter_group" "this" {
-  name_prefix = "${var.name_prefix}-pg16-"
-  family      = "postgres16"
+  name_prefix = "${var.name_prefix}-pg${split(".", var.db_engine_version)[0]}-"
+  family      = "postgres${split(".", var.db_engine_version)[0]}"
 
   parameter {
     name         = "rds.force_ssl"
@@ -63,7 +63,7 @@ resource "aws_db_parameter_group" "this" {
     apply_method = "immediate"
   }
 
-  tags = { Name = "${var.name_prefix}-pg16", Component = "database" }
+  tags = { Name = "${var.name_prefix}-pg${split(".", var.db_engine_version)[0]}", Component = "database" }
 
   lifecycle { create_before_destroy = true }
 }

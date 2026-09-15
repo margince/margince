@@ -53,13 +53,28 @@ curl -fsSL https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem \
   -o /opt/margince/config/rds-ca-bundle.pem
 
 # ---- Secrets -> .env (mode 600, never written to a log or S3) ---------------
+# Rendered into a standalone script so ExecStartPre can refresh secrets on
+# every service start, not only at first boot. A secret containing a
+# newline or carriage return would corrupt the dotenv file, so the script
+# refuses to write it and fails the start loudly.
+cat > /opt/margince/fetch-secrets.sh <<'FETCH_SECRETS'
+#!/bin/bash
+set -euo pipefail
 ENV_FILE=/opt/margince/.env
 umask 077
 : > "$ENV_FILE"
 %{ for s in secrets ~}
-echo "${s.env_name}=$(aws secretsmanager get-secret-value --secret-id '${s.secret_id}' --region "${aws_region}" --query SecretString --output text)" >> "$ENV_FILE"
+_value=$(aws secretsmanager get-secret-value --secret-id '${s.secret_id}' --region "${aws_region}" --query SecretString --output text)
+if [[ "$_value" == *$'\n'* || "$_value" == *$'\r'* ]]; then
+  echo "secret ${s.secret_id} contains a newline or carriage return; refusing to write to $ENV_FILE" >&2
+  exit 1
+fi
+echo "${s.env_name}=$_value" >> "$ENV_FILE"
 %{ endfor ~}
 chmod 600 "$ENV_FILE"
+FETCH_SECRETS
+chmod 700 /opt/margince/fetch-secrets.sh
+/opt/margince/fetch-secrets.sh
 
 # ---- nginx reverse-proxy config (mirrors the full stack's ALB listener rules) --
 base64 -d > /opt/margince/nginx.conf <<'NGINX_CONF_B64'
@@ -152,12 +167,13 @@ services:
 %{ endif ~}
 %{ if enable_tls ~}
 
-  # Never `up -d`'d on its own (no restart policy, entrypoint exits
-  # immediately) — invoked directly below via `docker compose run` for
-  # issuance, and by margince-renew.timer for renewal.
+  # Not started by `docker compose up` (profile excludes it from the default
+  # set); invoked directly below via `docker compose run` for issuance, and
+  # by margince-renew.timer for renewal. The default certbot image entrypoint
+  # is preserved so both calls execute the certbot binary as intended.
   certbot:
     image: certbot/certbot:latest
-    entrypoint: "/bin/true"
+    profiles: [certbot]
     volumes:
       - /opt/margince/certbot/www:/var/www/certbot
       - /opt/margince/certbot/conf:/etc/letsencrypt
@@ -176,6 +192,7 @@ Wants=network-online.target
 Type=oneshot
 RemainAfterExit=yes
 WorkingDirectory=/opt/margince
+ExecStartPre=/opt/margince/fetch-secrets.sh
 ExecStart=/usr/bin/docker compose -f /opt/margince/docker-compose.yml up -d --remove-orphans
 ExecStop=/usr/bin/docker compose -f /opt/margince/docker-compose.yml down
 TimeoutStartSec=300

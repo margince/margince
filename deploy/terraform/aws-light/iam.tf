@@ -5,19 +5,19 @@
 # no isolation here the way it does across separate ECS tasks.
 
 resource "aws_cloudwatch_log_group" "api" {
-  name              = "/margince-light/api"
+  name              = "/${var.name_prefix}/api"
   retention_in_days = var.log_retention_days
   tags              = { Name = "${var.name_prefix}-api-logs", Component = "observability" }
 }
 
 resource "aws_cloudwatch_log_group" "worker" {
-  name              = "/margince-light/worker"
+  name              = "/${var.name_prefix}/worker"
   retention_in_days = var.log_retention_days
   tags              = { Name = "${var.name_prefix}-worker-logs", Component = "observability" }
 }
 
 resource "aws_cloudwatch_log_group" "web" {
-  name              = "/margince-light/web"
+  name              = "/${var.name_prefix}/web"
   retention_in_days = var.log_retention_days
   tags              = { Name = "${var.name_prefix}-web-logs", Component = "observability" }
 }
