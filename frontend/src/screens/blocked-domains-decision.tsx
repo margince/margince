@@ -18,8 +18,8 @@ import { problemMessageOf, throwProblem } from "./common";
 //
 // Separate from the list beside it because it answers a different question. The
 // list says where every domain stands, including the ones nobody has judged;
-// this is the one place a person SETTLES one, and settling owes a sentence
-// somebody can review later. The two share the row type and its labels and
+// this is the one place somebody SETTLES one, and settling owes a sentence
+// a reader can review later. The two share the row type and its labels and
 // nothing else.
 
 export type BlockedDomain = components["schemas"]["BlockedDomain"];
@@ -39,7 +39,7 @@ export const ADMISSION_LABEL: Record<BlockedDomain["admission"], MessageKey> = {
 // consumer-mail-domains.tsx uses for the same reason).
 //
 // `undecided` is deliberately NOT here. It is a state a row can be READ in and
-// never one a person can choose: the dialog writes decisions, and "nobody has
+// never one somebody can choose: the dialog writes decisions, and "nobody has
 // decided" is not one of them. Offering it would put a third option in the
 // Select that the server's own request schema refuses.
 const ADMISSIONS = ["suppressed", "admitted"] as const;

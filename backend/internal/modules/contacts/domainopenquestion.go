@@ -36,8 +36,8 @@ const (
 	// sender's own name did not explain the domain.
 	PendingUnevidenced = "unevidenced"
 	// PendingStaleEvidence — the newest mail from the domain is older than
-	// staleEvidenceYears, so today's site is not evidence about the people who
-	// wrote then.
+	// staleEvidenceYears, so today's site is not evidence about the contacts
+	// who wrote then.
 	PendingStaleEvidence = "stale_evidence"
 )
 
