@@ -8,7 +8,7 @@
 // the record.
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { watchStartedAiRun } from "../app/ai-activity";
@@ -219,24 +219,27 @@ function SiteReadPanel({
   // Terminal, computed off the STATUS rather than the report itself, because
   // this has to stay a hook called on every render — including the pending
   // and error ones below — and the report is only defined once neither of
-  // those early returns fires.
+  // those early returns fires. `cancelled` is terminal on the wire (the
+  // engine never resumes one), same as `done`/`partial`/`failed`.
   const status = reportQuery.data?.status;
   const terminal =
-    status === "done" || status === "partial" || status === "failed";
+    status === "done" ||
+    status === "partial" ||
+    status === "failed" ||
+    status === "cancelled";
   // The facts this read staged land on the SAME query the Facts and
   // Technology panels already hold, and nothing else watches this read for
   // them: the start mutation invalidates `site-read-latest`, not the facts
-  // themselves, because at that moment there are none yet. This is the one
-  // place that learns a read has actually finished — for a read this tab
-  // started AND for one already in flight when the tab was opened, since
-  // both poll through here — so it is the one place that can tell the two
-  // panels to stop answering from before the read ran.
-  const wasTerminal = useRef(false);
+  // themselves, because at that moment there are none yet. This effect only
+  // re-runs when `terminal` actually changes, so it fires once per read
+  // reaching a terminal status — on the poll that lands there for a read
+  // this tab is watching live, and on MOUNT for one that already had, which
+  // is what covers a read started from elsewhere (Overview, or another tab)
+  // and finished before this panel existed to poll it.
   useEffect(() => {
-    if (terminal && !wasTerminal.current) {
+    if (terminal) {
       queryClient.invalidateQueries({ queryKey: factsKey(companyId) });
     }
-    wasTerminal.current = terminal;
   }, [terminal, companyId, queryClient]);
 
   if (reportQuery.isPending) {

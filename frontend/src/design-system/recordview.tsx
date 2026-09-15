@@ -151,6 +151,7 @@ export function RecordView({
   rail,
   railLabel,
   aside,
+  asideOpen,
   asideLabel,
   timeline,
   timelineGroups,
@@ -210,17 +211,15 @@ export function RecordView({
   // the WHOLE record — its readings, its stepper, the refusal of an edit.
   band?: ReactNode;
   rail?: ReactNode;
-  // What the rail column IS, on the same rule as asideLabel below: it defaults
-  // to the record's profile because that is what a rail usually holds, and a
-  // page whose rail holds something else names it. A record page that also has
-  // a Profile TAB is exactly that case — two regions called "Profile", one of
-  // them wrong, is a dead end for anyone navigating by landmark.
+  // What the rail and the aside ARE, for a reader navigating by landmark: each
+  // defaults to what its column usually holds, and one holding something else
+  // names it. A page with a Profile TAB and a Profile RAIL is two regions of
+  // one name, one of them wrong, and a dead end for anyone moving between them.
   railLabel?: string;
   aside?: ReactNode;
-  // What the aside column IS, for a reader navigating by landmark. Defaults to
-  // the record's context; a page whose aside holds something else names it,
-  // because two regions with one name is a dead end for anyone moving between
-  // them.
+  // Whether the details pane STANDS OPEN: `PageZones`'s own prop, handed
+  // through, so a pane a toggle shut folds its column instead of vanishing.
+  asideOpen?: boolean;
   asideLabel?: string;
   // The entries, or undefined when this view has NO timeline at all. The
   // distinction is the same one every card on a record page keeps: absent is
@@ -340,6 +339,7 @@ export function RecordView({
           </>
         }
         aside={aside}
+        asideOpen={asideOpen}
         asideLabel={asideLabel ?? t("record.context")}
         asideClassName="record-aside"
       />

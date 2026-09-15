@@ -99,16 +99,15 @@ function render(ui: ReactNode) {
 
 type RailProps = ComponentProps<typeof CompanyRail>;
 
-// Every site below wants the same rail: a writable view, not loading,
-// composer closed, and a no-op tab switch. `overrides` supplies whatever the
-// test is actually varying.
+// Every site below wants the same rail: a writable view, not loading, and a
+// no-op tab switch. `overrides` supplies whatever the test is actually
+// varying.
 function renderRail(overrides: Partial<RailProps> = {}) {
   return render(
     <CompanyRail
       companyId="o-1"
       view={view()}
       loading={false}
-      composerOpen={false}
       onTab={onTab}
       {...overrides}
     />,
@@ -161,12 +160,6 @@ function stub(
 }
 
 describe("CompanyRail", () => {
-  it("renders nothing while the composer holds the column", () => {
-    stub();
-    renderRail({ composerOpen: true });
-    expect(screen.queryByText("Details")).not.toBeInTheDocument();
-  });
-
   it("draws the details grid from the fields the record actually carries", async () => {
     stub();
     renderRail();
