@@ -5735,7 +5735,7 @@ export const de = {
 
   "blockedDomains.title": "Abgelehnte Domains",
   "blockedDomains.sub":
-    "Welchen Domains diese Installation die Firma verweigert und was das jeweils entschieden hat — ein Modellurteil, eine Heuristik oder ein Mensch. Eine Domain wieder zuzulassen stellt die Firmenfrage neu, statt nur eine Markierung zu entfernen.",
+    "Welchen Domains diese Installation die Firma verweigert und was das jeweils entschieden hat — ein Modellurteil, eine Heuristik oder ein Mensch. Eine Domain wieder zuzulassen stellt die Firmenfrage neu, statt nur eine Markierung zu entfernen. Offene Fragen erscheinen hier nur, wenn niemand sie besitzt; eine aus der Post einer Kollegin oder eines Kollegen wartet auf deren eigener Liste.",
   "blockedDomains.listTitle": "Erfasste Entscheidungen",
   "blockedDomains.record": "Entscheidung erfassen",
   "blockedDomains.recordOpen": "Entscheidung erfassen",
