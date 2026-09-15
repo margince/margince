@@ -8,9 +8,10 @@ import type { components } from "../api/schema";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { en } from "../i18n/en";
 import { useContact360 } from "./contact360";
-import { ContactAccess } from "./contactaccess";
+import { RecordAccess } from "./recordaccess";
 
 type Contact = components["schemas"]["Contact"];
+type Company = components["schemas"]["Company"];
 
 const base: Contact = {
   id: "p-1",
@@ -68,9 +69,11 @@ function stub(
   );
 }
 
-function LiveContactAccess() {
+function LiveRecordAccess() {
   const view = useContact360(base.id);
-  return view.data ? <ContactAccess contact={view.data.contact} /> : null;
+  return view.data ? (
+    <RecordAccess kind="contact" record={view.data.contact} />
+  ) : null;
 }
 
 function draw(contact?: Contact) {
@@ -80,7 +83,11 @@ function draw(contact?: Contact) {
   return render(
     <QueryClientProvider client={client}>
       <ToastProvider>
-        {contact ? <ContactAccess contact={contact} /> : <LiveContactAccess />}
+        {contact ? (
+          <RecordAccess kind="contact" record={contact} />
+        ) : (
+          <LiveRecordAccess />
+        )}
         <ToastRegion />
       </ToastProvider>
     </QueryClientProvider>,
@@ -94,7 +101,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("ContactAccess", () => {
+describe("RecordAccess — a contact", () => {
   it("shows the private visibility badge beside its action", async () => {
     stub();
     draw({ ...base, visibility: "owner", writable: true, owner_id: "u1" });
@@ -291,6 +298,126 @@ describe("ContactAccess", () => {
     // `workspace` would tell a reader their private contact is public.
     stub();
     const { container } = draw({ ...base, writable: true });
+    expect(container.innerHTML).toBe("");
+  });
+});
+
+// The company half. The same component, so the cases that are about the
+// COMPONENT are not repeated here — these are the ones that would pass on a
+// contact and still ship a broken company: the endpoint it writes to, the
+// account noun, and the account's own private state.
+describe("RecordAccess — a company", () => {
+  const company: Company = {
+    id: "c-1",
+    display_name: "Weber GmbH",
+    source: "gmail:seed",
+    captured_by: "connector:gmail",
+    created_at: "2026-06-01T08:00:00Z",
+    updated_at: "2026-08-01T08:00:00Z",
+    version: 4,
+  };
+
+  function drawCompany(record: Company) {
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    return render(
+      <QueryClientProvider client={client}>
+        <ToastProvider>
+          <RecordAccess kind="company" record={record} />
+          <ToastRegion />
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+  }
+
+  it("says a capture-private account is the owner's", async () => {
+    stub();
+    drawCompany({
+      ...company,
+      visibility: "owner",
+      writable: true,
+      owner_id: "u1",
+    });
+    expect(await screen.findByText("Only you")).toBeTruthy();
+  });
+
+  it("publishes a private account through the company patch", async () => {
+    const user = userEvent.setup();
+    // The door the product did not have. A company capture minted owner-scoped
+    // could only be widened by a sender verdict, so an account the classifier
+    // never asked about stayed private with nothing a human could press.
+    const sent: string[] = [];
+    const writes: { body: unknown; version: string | null }[] = [];
+    stub(sent, writes);
+    drawCompany({
+      ...company,
+      visibility: "owner",
+      writable: true,
+      owner_id: "u1",
+    });
+    await user.click(
+      await screen.findByRole("button", { name: /share with the company/i }),
+    );
+    // The COMPANY endpoint: a component that wrote /contacts/c-1 would pass
+    // every other assertion in this block.
+    expect(sent).toContain("PATCH /companies/c-1");
+    expect(writes).toEqual([
+      { body: { visibility: "workspace" }, version: "4" },
+    ]);
+  });
+
+  it("makes a shared account private again", async () => {
+    const user = userEvent.setup();
+    const sent: string[] = [];
+    stub(sent);
+    drawCompany({
+      ...company,
+      visibility: "workspace",
+      writable: true,
+      owner_id: "u1",
+    });
+    await user.click(
+      await screen.findByRole("button", { name: /make private/i }),
+    );
+    expect(sent).toContain("PATCH /companies/c-1");
+  });
+
+  it("names the account rather than the contact in its own sentence", async () => {
+    stub();
+    drawCompany({
+      ...company,
+      visibility: "workspace",
+      writable: true,
+      owner_id: "u1",
+    });
+    // The region's accessible name, which is the sentence a screen reader
+    // reads first. Sharing one string with the contact header would call a
+    // company a contact.
+    expect(
+      await screen.findByRole("region", {
+        name: en["recordAccess.company.title"],
+      }),
+    ).toBeTruthy();
+  });
+
+  it("offers no verb on an account the reader may not write", async () => {
+    stub();
+    drawCompany({
+      ...company,
+      visibility: "owner",
+      writable: false,
+      owner_id: "someone-else",
+    });
+    expect(await screen.findByText("Only you")).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: /share with the company/i }),
+    ).toBeNull();
+  });
+
+  it("draws nothing at all when the server sent no visibility", () => {
+    stub();
+    const { container } = drawCompany({ ...company, writable: true });
     expect(container.innerHTML).toBe("");
   });
 });

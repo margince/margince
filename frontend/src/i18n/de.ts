@@ -479,7 +479,6 @@ export const de = {
   "record.fieldsLoading": "Benutzerdefinierte Felder werden geladen…",
   "record.fieldsRetry": "Erneut versuchen",
 
-  "record.visibilityOwner": "Nur Eigentümer",
   "record.companyRoutingKey": "Zuordnungsschlüssel des Unternehmens",
   "record.finishFieldEdit":
     "Speichern oder verwerfen Sie die aktuelle Änderung, bevor Sie Details schließen.",
@@ -3668,15 +3667,27 @@ export const de = {
   "log.save": "Erfassen",
   "log.saving": "Wird erfasst…",
 
-  "contactAccess.title": "Wer diesen Kontakt sieht",
-  "contactAccess.privateToYou":
+  "recordAccess.contact.title": "Wer diesen Kontakt sieht",
+  "recordAccess.contact.privateToYou":
     "Nur für Sie. Ihr Postfach hat diesen Kontakt angelegt, und niemand sonst im Unternehmen sieht ihn — auch nicht Ihr Team und keine Administration.",
-  "contactAccess.company": "Alle im Unternehmen sehen diesen Kontakt.",
-  "contactAccess.share": "Mit dem Unternehmen teilen",
-  "contactAccess.published": "Das Unternehmen sieht diesen Kontakt jetzt.",
-  "contactAccess.makePrivate": "Privat setzen",
-  "contactAccess.madePrivate":
+  "recordAccess.contact.shared": "Alle im Unternehmen sehen diesen Kontakt.",
+  "recordAccess.contact.share": "Mit dem Unternehmen teilen",
+  "recordAccess.contact.published":
+    "Das Unternehmen sieht diesen Kontakt jetzt.",
+  "recordAccess.contact.makePrivate": "Privat setzen",
+  "recordAccess.contact.madePrivate":
     "Dieser Kontakt gehört wieder seinem Besitzer. Wer den Datensatz ausdrücklich freigegeben bekommen hat, behält den Zugriff.",
+  "recordAccess.company.title": "Wer dieses Unternehmen sieht",
+  "recordAccess.company.privateToYou":
+    "Nur für Sie. Ihr Postfach hat dieses Unternehmen angelegt, und niemand sonst im Unternehmen sieht es — auch nicht Ihr Team und keine Administration.",
+  "recordAccess.company.shared":
+    "Alle im Unternehmen sehen dieses Unternehmen.",
+  "recordAccess.company.share": "Mit dem Unternehmen teilen",
+  "recordAccess.company.published":
+    "Das Unternehmen sieht diesen Datensatz jetzt.",
+  "recordAccess.company.makePrivate": "Privat setzen",
+  "recordAccess.company.madePrivate":
+    "Dieses Unternehmen gehört wieder seinem Besitzer. Deals, Kontakte und E-Mails, die bereits dazu abgelegt sind, behalten ihre eigene Sichtbarkeit.",
   "compose.reply": "Antworten",
   "compose.writeEmail": "E-Mail schreiben",
   "compose.relink": "Neu verknüpfen",

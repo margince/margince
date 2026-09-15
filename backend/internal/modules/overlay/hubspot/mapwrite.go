@@ -166,6 +166,9 @@ var deferredCompanyWrites = map[string]string{
 		"both directions would need",
 	"parent_company_id":  "a company-to-company association, not a property — it writes through the association API rather than through this projection",
 	"relationship_types": "a Margince concept with no HubSpot counterpart: the incumbent models no such classification",
+	"visibility": "capture privacy is a Margince access-control property, not a fact about the company — " +
+		"the incumbent has no counterpart and must not be told who may see a row here. " +
+		"The same reason deferredContactWrites gives for the column of the same name",
 }
 
 // leadWriteFields — OVA-MAP-W5's writable Leads-object property that has a

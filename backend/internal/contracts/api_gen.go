@@ -13957,6 +13957,24 @@ func (e UpdateCompanyRequestSizeBand) Valid() bool {
 	}
 }
 
+// Defines values for UpdateCompanyRequestVisibility.
+const (
+	UpdateCompanyRequestVisibilityOwner     UpdateCompanyRequestVisibility = "owner"
+	UpdateCompanyRequestVisibilityWorkspace UpdateCompanyRequestVisibility = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the UpdateCompanyRequestVisibility enum.
+func (e UpdateCompanyRequestVisibility) Valid() bool {
+	switch e {
+	case UpdateCompanyRequestVisibilityOwner:
+		return true
+	case UpdateCompanyRequestVisibilityWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for UpdateContactRequestVisibility.
 const (
 	UpdateContactRequestVisibilityOwner     UpdateContactRequestVisibility = "owner"
@@ -20495,8 +20513,7 @@ type AttentionItem struct {
 	// handles `snooze` generically write the wrong endpoint.
 	Actions []AttentionItemActions `json:"actions"`
 
-	// AssigneeId Who holds this work, null when nobody has taken it. Sent by `task` and `notice_case`.
-	// A disclosure duty uses its assigned officer, falling back to its contact owner.
+	// AssigneeId Who holds this task, null when nobody has taken it. Sent by `task`.
 	//
 	// The lane serves three scopes and only one is the reader's own queue: an
 	// unassigned sweep and a named colleague's queue both put work on the page that
@@ -22660,7 +22677,7 @@ type Company struct {
 	// not only overlay mode.
 	Version *RowVersion `json:"version,omitempty"`
 
-	// Visibility Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the workspace through a sender verdict, and never travels back. There is no owner-driven door for a company: `POST /contacts/{id}/publish` is a contact's.
+	// Visibility Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the workspace through a sender verdict, or through `visibility` on `PATCH /companies/{id}`, which moves it BOTH ways for anybody the write gate admits. Read-only HERE, on the read schema, the same as the contact column beside it: the update request carries the writable copy.
 	Visibility *CompanyVisibility `json:"visibility,omitempty"`
 
 	// WebsiteUrl The company's readable website, DERIVED from its primary domain row. There is deliberately no website column — a second store for a fact company_domain already owns is the duplication ADR-0085 closes. Not accepted on write.
@@ -22680,7 +22697,7 @@ type CompanyRelationshipTypes string
 // CompanySizeBand defines model for Company.SizeBand.
 type CompanySizeBand string
 
-// CompanyVisibility Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the workspace through a sender verdict, and never travels back. There is no owner-driven door for a company: `POST /contacts/{id}/publish` is a contact's.
+// CompanyVisibility Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the workspace through a sender verdict, or through `visibility` on `PATCH /companies/{id}`, which moves it BOTH ways for anybody the write gate admits. Read-only HERE, on the read schema, the same as the contact column beside it: the update request carries the writable copy.
 type CompanyVisibility string
 
 // Company360 The company record page in one payload. Every section except `company` is
@@ -37596,9 +37613,30 @@ type UpdateCompanyRequest struct {
 	ParentCompanyId *openapi_types.UUID `json:"parent_company_id,omitempty"`
 
 	// RelationshipTypes Replace-set of what the company is to us (add new, archive removed), the same shape as `domains`. Absent = untouched; an empty array clears every type. Removing `partner` while the company still has a `partner` extension row is refused with 422 — the invariant binds both ways, and an invariant nothing enforces is a comment.
-	RelationshipTypes    *[]UpdateCompanyRequestRelationshipTypes `json:"relationship_types,omitempty"`
-	SizeBand             *UpdateCompanyRequestSizeBand            `json:"size_band,omitempty"`
-	AdditionalProperties map[string]interface{}                   `json:"-"`
+	RelationshipTypes *[]UpdateCompanyRequestRelationshipTypes `json:"relationship_types,omitempty"`
+	SizeBand          *UpdateCompanyRequestSizeBand            `json:"size_band,omitempty"`
+
+	// Visibility Who may see this company: `workspace` for everyone holding the read grant, `owner` for
+	// the seat named by `owner_id` alone. Absent = untouched.
+	//
+	// An ORDINARY field, writable in BOTH directions by anybody the write gate admits, on the
+	// same terms as `visibility` on `PATCH /contacts/{id}`. Capture mints a company
+	// owner-scoped from a message nothing has judged yet, and until this field existed the
+	// only way out was a sender verdict — so a company the classifier never asked about, or
+	// judged wrong, stayed private to its mailbox owner with no door at all. A machine's
+	// decision no human could undo is the same reasoning that made the contact column
+	// writable both ways.
+	//
+	// Narrowing a company does not retract what was already done with it. Deals, contacts and
+	// mail filed against it keep their own audiences; what changes is who finds the company
+	// from here on.
+	//
+	// A company that reads `owner` and names no owner is invisible to EVERY seat, including
+	// its author and an admin, so the pair is refused rather than written: sending
+	// `{"visibility":"owner","owner_id":null}`, or narrowing a company that has no owner,
+	// answers 422 naming `owner_id`.
+	Visibility           *UpdateCompanyRequestVisibility `json:"visibility,omitempty"`
+	AdditionalProperties map[string]interface{}          `json:"-"`
 }
 
 // UpdateCompanyRequestLifecycle Where the account stands with us (ADR-0079). Absent = untouched.
@@ -37609,6 +37647,27 @@ type UpdateCompanyRequestRelationshipTypes string
 
 // UpdateCompanyRequestSizeBand defines model for UpdateCompanyRequest.SizeBand.
 type UpdateCompanyRequestSizeBand string
+
+// UpdateCompanyRequestVisibility Who may see this company: `workspace` for everyone holding the read grant, `owner` for
+// the seat named by `owner_id` alone. Absent = untouched.
+//
+// An ORDINARY field, writable in BOTH directions by anybody the write gate admits, on the
+// same terms as `visibility` on `PATCH /contacts/{id}`. Capture mints a company
+// owner-scoped from a message nothing has judged yet, and until this field existed the
+// only way out was a sender verdict — so a company the classifier never asked about, or
+// judged wrong, stayed private to its mailbox owner with no door at all. A machine's
+// decision no human could undo is the same reasoning that made the contact column
+// writable both ways.
+//
+// Narrowing a company does not retract what was already done with it. Deals, contacts and
+// mail filed against it keep their own audiences; what changes is who finds the company
+// from here on.
+//
+// A company that reads `owner` and names no owner is invisible to EVERY seat, including
+// its author and an admin, so the pair is refused rather than written: sending
+// `{"visibility":"owner","owner_id":null}`, or narrowing a company that has no owner,
+// answers 422 naming `owner_id`.
+type UpdateCompanyRequestVisibility string
 
 // UpdateContactRequest Partial update. Omitted fields are unchanged.
 type UpdateContactRequest struct {
@@ -54087,6 +54146,14 @@ func (a *UpdateCompanyRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "size_band")
 	}
 
+	if raw, found := object["visibility"]; found {
+		err = json.Unmarshal(raw, &a.Visibility)
+		if err != nil {
+			return fmt.Errorf("error reading 'visibility': %w", err)
+		}
+		delete(object, "visibility")
+	}
+
 	if len(object) != 0 {
 		a.AdditionalProperties = make(map[string]interface{})
 		for fieldName, fieldBuf := range object {
@@ -54187,6 +54254,13 @@ func (a UpdateCompanyRequest) MarshalJSON() ([]byte, error) {
 		object["size_band"], err = json.Marshal(a.SizeBand)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'size_band': %w", err)
+		}
+	}
+
+	if a.Visibility != nil {
+		object["visibility"], err = json.Marshal(a.Visibility)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'visibility': %w", err)
 		}
 	}
 

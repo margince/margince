@@ -481,7 +481,6 @@ export const vi = {
   "record.fieldsLoading": "Đang tải trường tùy chỉnh…",
   "record.fieldsRetry": "Thử lại",
 
-  "record.visibilityOwner": "Chỉ chủ sở hữu",
   "record.companyRoutingKey": "Khóa định tuyến công ty",
   "record.finishFieldEdit":
     "Lưu hoặc hủy chỉnh sửa hiện tại trước khi đóng Chi tiết.",
@@ -3623,15 +3622,26 @@ export const vi = {
   "log.save": "Ghi nhận",
   "log.saving": "Đang ghi nhận…",
 
-  "contactAccess.title": "Ai xem được liên hệ này",
-  "contactAccess.privateToYou":
+  "recordAccess.contact.title": "Ai xem được liên hệ này",
+  "recordAccess.contact.privateToYou":
     "Riêng của bạn. Hộp thư của bạn đã tạo liên hệ này, và không ai khác trong tổ chức xem được — kể cả nhóm của bạn và quản trị viên.",
-  "contactAccess.company": "Mọi người trong tổ chức đều xem được liên hệ này.",
-  "contactAccess.share": "Chia sẻ với tổ chức",
-  "contactAccess.published": "Tổ chức đã xem được liên hệ này.",
-  "contactAccess.makePrivate": "Đặt ở chế độ riêng tư",
-  "contactAccess.madePrivate":
+  "recordAccess.contact.shared":
+    "Mọi người trong tổ chức đều xem được liên hệ này.",
+  "recordAccess.contact.share": "Chia sẻ với tổ chức",
+  "recordAccess.contact.published": "Tổ chức đã xem được liên hệ này.",
+  "recordAccess.contact.makePrivate": "Đặt ở chế độ riêng tư",
+  "recordAccess.contact.madePrivate":
     "Liên hệ này thuộc về chủ sở hữu trở lại. Những ai đã được chia sẻ bản ghi vẫn giữ quyền truy cập.",
+  "recordAccess.company.title": "Ai xem được công ty này",
+  "recordAccess.company.privateToYou":
+    "Riêng của bạn. Hộp thư của bạn đã tạo công ty này, và không ai khác trong tổ chức xem được — kể cả nhóm của bạn và quản trị viên.",
+  "recordAccess.company.shared":
+    "Mọi người trong tổ chức đều xem được công ty này.",
+  "recordAccess.company.share": "Chia sẻ với tổ chức",
+  "recordAccess.company.published": "Tổ chức đã xem được công ty này.",
+  "recordAccess.company.makePrivate": "Đặt ở chế độ riêng tư",
+  "recordAccess.company.madePrivate":
+    "Công ty này thuộc về chủ sở hữu trở lại. Các deal, liên hệ và email đã lưu vào công ty vẫn giữ phạm vi hiển thị riêng của chúng.",
   "compose.reply": "Trả lời",
   "compose.writeEmail": "Viết email",
   "compose.relink": "Liên kết lại",

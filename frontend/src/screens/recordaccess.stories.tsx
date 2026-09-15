@@ -4,13 +4,14 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
 import { IdentityFact, IdentityLine } from "../design-system/identityline";
-import { ContactAccess } from "./contactaccess";
+import { RecordAccess } from "./recordaccess";
 import { StoryProviders, stubWithSession } from "./story-utils";
 
 type Contact = components["schemas"]["Contact"];
+type Company = components["schemas"]["Company"];
 
 const meta: Meta = {
-  title: "Records/Contact record/Access",
+  title: "Records/Record access",
   parameters: { layout: "padded" },
 };
 export default meta;
@@ -33,7 +34,7 @@ function Access({ contact }: Readonly<{ contact: Contact }>) {
     <StoryProviders>
       <IdentityLine separator="space">
         <IdentityFact quiet>Owner: Alex</IdentityFact>
-        <ContactAccess contact={contact} />
+        <RecordAccess kind="contact" record={contact} />
       </IdentityLine>
     </StoryProviders>
   );
@@ -75,6 +76,47 @@ export const Archived: Story = {
         writable: true,
         archived_at: "2026-08-02T00:00:00Z",
       }}
+    />
+  ),
+};
+
+const account: Company = {
+  id: "01a05500-0000-7000-8000-0000000000c1",
+  display_name: "Weber GmbH",
+  source: "gmail:seed",
+  captured_by: "connector:gmail",
+  created_at: "2026-06-01T08:00:00Z",
+  updated_at: "2026-08-01T08:00:00Z",
+  version: 4,
+};
+
+function AccountAccess({ company }: Readonly<{ company: Company }>) {
+  stubWithSession({}, { company: ["update"] });
+  return (
+    <StoryProviders>
+      <IdentityLine separator="space">
+        <IdentityFact quiet>Owner: Alex</IdentityFact>
+        <RecordAccess kind="company" record={company} />
+      </IdentityLine>
+    </StoryProviders>
+  );
+}
+
+/** The same mark on an account, which had none before: a company capture
+ *  minted from an unjudged message is the owner's alone, and the header said
+ *  nothing about it. */
+export const AccountPrivateToItsOwner: Story = {
+  render: () => (
+    <AccountAccess
+      company={{ ...account, visibility: "owner", writable: true }}
+    />
+  ),
+};
+
+export const AccountSharedWithTheTeam: Story = {
+  render: () => (
+    <AccountAccess
+      company={{ ...account, visibility: "workspace", writable: true }}
     />
   ),
 };

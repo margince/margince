@@ -1,18 +1,18 @@
-.contact-access .visibility-line {
+.record-access .visibility-line {
   align-items: center;
 }
 
 /* Reserve the action's space so hovering does not move the header. Keyboard
    focus reveals it too; touch readers always get the visible action. */
 @media (hover: hover) and (pointer: fine) {
-  .contact-access-action {
+  .record-access-action {
     opacity: 0;
     pointer-events: none;
   }
 
-  .contact-access:hover .contact-access-action,
-  .contact-access:focus-within .contact-access-action,
-  .contact-access-action[aria-busy="true"] {
+  .record-access:hover .record-access-action,
+  .record-access:focus-within .record-access-action,
+  .record-access-action[aria-busy="true"] {
     opacity: 1;
     pointer-events: auto;
   }

@@ -19426,7 +19426,7 @@ export interface components {
             /** Format: uuid */
             owner_id?: string | null;
             /**
-             * @description Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the workspace through a sender verdict, and never travels back. There is no owner-driven door for a company: `POST /contacts/{id}/publish` is a contact's.
+             * @description Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the workspace through a sender verdict, or through `visibility` on `PATCH /companies/{id}`, which moves it BOTH ways for anybody the write gate admits. Read-only HERE, on the read schema, the same as the contact column beside it: the update request carries the writable copy.
              * @enum {string}
              */
             readonly visibility?: "workspace" | "owner";
@@ -19534,6 +19534,29 @@ export interface components {
             parent_company_id?: string | null;
             /** @description Replace-set of the company's live domains (add new, archive removed, flip is_primary). Absent = untouched; an empty array clears all domains. */
             domains?: components["schemas"]["CompanyDomainInput"][];
+            /**
+             * @description Who may see this company: `workspace` for everyone holding the read grant, `owner` for
+             *     the seat named by `owner_id` alone. Absent = untouched.
+             *
+             *     An ORDINARY field, writable in BOTH directions by anybody the write gate admits, on the
+             *     same terms as `visibility` on `PATCH /contacts/{id}`. Capture mints a company
+             *     owner-scoped from a message nothing has judged yet, and until this field existed the
+             *     only way out was a sender verdict — so a company the classifier never asked about, or
+             *     judged wrong, stayed private to its mailbox owner with no door at all. A machine's
+             *     decision no human could undo is the same reasoning that made the contact column
+             *     writable both ways.
+             *
+             *     Narrowing a company does not retract what was already done with it. Deals, contacts and
+             *     mail filed against it keep their own audiences; what changes is who finds the company
+             *     from here on.
+             *
+             *     A company that reads `owner` and names no owner is invisible to EVERY seat, including
+             *     its author and an admin, so the pair is refused rather than written: sending
+             *     `{"visibility":"owner","owner_id":null}`, or narrowing a company that has no owner,
+             *     answers 422 naming `owner_id`.
+             * @enum {string}
+             */
+            visibility?: "workspace" | "owner";
             /**
              * @description Where the account stands with us (ADR-0079). Absent = untouched.
              * @enum {string}
@@ -34196,8 +34219,7 @@ export interface components {
             deal?: components["schemas"]["AttentionDealFacts"];
             /**
              * Format: uuid
-             * @description Who holds this work, null when nobody has taken it. Sent by `task` and `notice_case`.
-             *     A disclosure duty uses its assigned officer, falling back to its contact owner.
+             * @description Who holds this task, null when nobody has taken it. Sent by `task`.
              *
              *     The lane serves three scopes and only one is the reader's own queue: an
              *     unassigned sweep and a named colleague's queue both put work on the page that
