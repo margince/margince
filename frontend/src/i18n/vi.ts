@@ -2279,6 +2279,7 @@ export const vi = {
   "lead.bulkOutcomeNotFound": "không còn trong danh sách của bạn",
   "lead.bulkSelectRow": "Chọn {name}",
   "lead.unnamed": "Khách hàng tiềm năng chưa có tên",
+  "lead.timeline.empty": "Chưa ghi nhận gì trên khách hàng tiềm năng này.",
   "lead.sla.breached": "Quá hạn",
   "lead.sla.atRisk": "Sắp đến hạn",
   "lead.sla.withinTarget": "Đúng hạn",

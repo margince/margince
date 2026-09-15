@@ -2371,6 +2371,7 @@ export const en = {
   "lead.bulkOutcomeNotFound": "no longer in your list",
   "lead.bulkSelectRow": "Select {name}",
   "lead.unnamed": "Unnamed lead",
+  "lead.timeline.empty": "Nothing is logged on this lead yet.",
   "lead.sla.breached": "Overdue",
   "lead.sla.atRisk": "Due soon",
   "lead.sla.withinTarget": "On time",

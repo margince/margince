@@ -2187,7 +2187,10 @@ describe("LeadScreen — owner display + assign to me (P-11)", () => {
 });
 
 describe("LeadScreen — History tab", () => {
-  it("shows a History tab that lists record changes", async () => {
+  it("shows a History tab whose Changes cut lists the record's own audit", async () => {
+    // The default cut is All, the same chronology the contact and the
+    // account open on; the audit row here only surfaces once the reader
+    // narrows to Changes (leadhistory.test.tsx covers the rest of the cut).
     stubFetchWithMe(async (url) => {
       if (url.includes("/history")) {
         return jsonResponse({
@@ -2212,6 +2215,7 @@ describe("LeadScreen — History tab", () => {
       expect(screen.getByRole("button", { name: /history/i })).toBeTruthy(),
     );
     await userEvent.click(screen.getByRole("button", { name: /history/i }));
+    await userEvent.click(screen.getByRole("button", { name: "Changes" }));
 
     await waitFor(() =>
       expect(screen.getByText("Lead score changed")).toBeTruthy(),
@@ -2225,6 +2229,22 @@ describe("LeadScreen — History tab", () => {
     expect(
       screen.getByRole("heading", { level: 1, name: lead.full_name }),
     ).toBeTruthy();
+  });
+
+  it("keeps the Overview tab's own content, without a second History section under it", async () => {
+    stubFetchWithMe(async () => undefined);
+    render(<LeadScreen id="l-1" />);
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole("heading", { level: 1, name: lead.full_name }),
+      ).toBeTruthy(),
+    );
+    // The chronology is the History tab's own body now — Overview draws its
+    // cards and nothing else under them, rather than the record's whole
+    // history a second time beneath the ladder and the call.
+    expect(document.querySelector(".record-timeline")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Changes" })).toBeNull();
   });
 });
 

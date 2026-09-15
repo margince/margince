@@ -10,7 +10,6 @@ import { useRecordZone } from "../app/recordzone";
 import { scrollPageToTop } from "../app/reveal";
 import { navigate, useRoute } from "../app/router";
 import { useUrlParams } from "../app/urlstate";
-import { activityTimeline } from "../design-system/activitytimeline";
 import {
   Badge,
   Button,
@@ -27,10 +26,8 @@ import { RecordTabs } from "../design-system/recordtabs";
 import {
   type RecordTimeline,
   useRecordTimeline,
-  useTimelineFilters,
 } from "../design-system/recordtimeline";
 import { RecordView } from "../design-system/recordview";
-import { TimelineFilterBar } from "../design-system/timelinefilterbar";
 import { useToast } from "../design-system/toast";
 import {
   formatDateAbbrev,
@@ -42,20 +39,14 @@ import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useClaimRecord } from "./claimrecord";
-import {
-  LoadMoreButton,
-  problemMessageOf,
-  QueryGate,
-  throwProblem,
-  timelineZoneNotice,
-  useViewerId,
-} from "./common";
+import { problemMessageOf, QueryGate, throwProblem } from "./common";
 import type { CreateField } from "./create";
 import { EntityRef, useEntityName } from "./entityref";
-import { RecordHistoryTab, useRecordHistory } from "./history";
+import { useRecordHistory } from "./history";
 import { leadBand } from "./leadband";
 import { LeadBrief } from "./leadbrief";
 import { LeadFacts, LeadPulse, LeadSubtitle } from "./leadheader";
+import { LeadHistoryTab } from "./leadhistory";
 import { MergedLeadPanel } from "./leadmerged";
 import {
   leadStatusLabel,
@@ -72,20 +63,14 @@ import { LeadManualSignals } from "./leadsignals";
 import { leadStanding } from "./leadstanding";
 import { leadTodoRows } from "./leadtoday";
 import { LogActivity } from "./logactivity";
-import { useOpenEmail, withEmailOpener } from "./openemail";
-import {
-  RecordReading,
-  RecordReadingPair,
-  TimelineThread,
-  TodayPanel,
-} from "./record360";
+import { useOpenEmail } from "./openemail";
+import { RecordReading, TimelineThread, TodayPanel } from "./record360";
 import { RecordCustomFields } from "./recordcustomfields";
 import { saveRecordEdit } from "./recordedit";
 import { RecordEmailAside, RecordEmailVerb } from "./recordemail";
 import { RecordFields } from "./recordfields";
 import { searchProjectReferences, useRecordOwners } from "./recordreferences";
 import { ShareAction } from "./share";
-import { groupChronology } from "./timelinegroups";
 import "./leads.css";
 
 // Leads (B-EP09.10a/b): visually SEGREGATED from the contact graph — the
@@ -107,7 +92,6 @@ export { promoteEligible, scoreTone } from "./leadpresentation";
 export { terminalBadge } from "./leadstanding";
 
 import { leadKey, leadScoreKey, leadWriteKeys } from "./leadkeys";
-import { invalidateRecord } from "./recordwritekeys";
 
 export { LeadsScreen } from "./leads.list";
 
@@ -1198,25 +1182,27 @@ function LeadOverviewPane({
             writer.readOnly ? terminalReasonId : undefined,
           )}
         </TodayPanel>
-        <RecordReadingPair>
-          <LeadScoreCard
-            lead={lead}
-            id={id}
-            writer={writer}
-            terminalReasonId={terminalReasonId}
-          />
-          <Panel title={t("lead.signalsTitle")}>
-            <PanelBody>
-              <LeadManualSignals
-                // Keyed by lead: a half-typed input for one lead must not be
-                // submitted against the next one the reader navigates to.
-                key={id}
-                id={id}
-                readOnlyReason={writer.readOnlyReason}
-              />
-            </PanelBody>
-          </Panel>
-        </RecordReadingPair>
+        {/* Full width, in sequence, rather than side by side (RecordReadingPair):
+            the score card is one line and the signals form is tall, and a
+            short card beside a long one reads as a layout that ran out of
+            content rather than as two readings a rep consults in order. */}
+        <LeadScoreCard
+          lead={lead}
+          id={id}
+          writer={writer}
+          terminalReasonId={terminalReasonId}
+        />
+        <Panel title={t("lead.signalsTitle")}>
+          <PanelBody>
+            <LeadManualSignals
+              // Keyed by lead: a half-typed input for one lead must not be
+              // submitted against the next one the reader navigates to.
+              key={id}
+              id={id}
+              readOnlyReason={writer.readOnlyReason}
+            />
+          </PanelBody>
+        </Panel>
       </RecordReading>
       {/* The composer follows the facts so opening a lead answers "what
           should I do" before asking the rep to type. */}
@@ -1418,22 +1404,12 @@ function LeadRecord({ lead, id }: Readonly<{ lead: Lead; id: string }>) {
   // every control the closure refuses (ADR-0108 §6).
   const terminalReasonId = useId();
   const [tab, setTab] = useLeadTab(id);
-  const [timelineFilters, setTimelineFilters] = useTimelineFilters(id);
-  const timelineQuery = useRecordTimeline("lead", id, {
-    filters: timelineFilters,
-  });
-  // The thread under the call reads the WHOLE history, not the page the filter
-  // strip narrowed. A filter is a view of the timeline tab; a call that said
-  // "no reply since" because the reader had hidden emails would be false, and
-  // the two share one query whenever no filter is set.
+  // The thread under the call reads the WHOLE history, not whatever the
+  // History tab's own filter has narrowed. A filter is a view of that tab; a
+  // call that said "no reply since" because the reader had hidden emails
+  // would be false.
   const threadQuery = useRecordTimeline("lead", id);
-  const viewerId = useViewerId();
   const [openEmail, setOpenEmail] = useOpenEmail();
-  const rawTimelineEntries = activityTimeline(
-    timelineQuery.activities,
-    viewerId,
-  );
-  const timelineEntries = withEmailOpener(rawTimelineEntries, setOpenEmail);
   const [dialog, setDialog] = useState<"qualify" | "disqualify" | null>(null);
   // What the last qualify did, said once: the contact and, when one was
   // opened, the deal. The page stays (ADR-0119) and the outcome panel below
@@ -1512,32 +1488,6 @@ function LeadRecord({ lead, id }: Readonly<{ lead: Lead; id: string }>) {
         // honest default for a prospect: a lead carries no workspace location of
         // its own to prefer over where the reader is.
         zone={viewerZone()}
-        timeline={timelineEntries}
-        timelineGroups={groupChronology(
-          timelineEntries,
-          timelineQuery.hasNextPage,
-        )}
-        timelineHeader={
-          <TimelineFilterBar
-            value={timelineFilters}
-            onChange={setTimelineFilters}
-          />
-        }
-        timelineFooter={
-          <>
-            <LoadMoreButton query={timelineQuery} />
-            {/* One drawer over the lead, beside the timeline it opens from. */}
-            <OpenEmailDrawer
-              activityId={openEmail}
-              zone={viewerZone()}
-              onClose={() => setOpenEmail(null)}
-            />
-          </>
-        }
-        timelineNotice={timelineZoneNotice(
-          { pending: timelineQuery.isPending },
-          t,
-        )}
         band={leadBand({ lead, writer, reasonId: terminalReasonId, id, t })}
         // The same strip every record in the product carries: a place a reader
         // navigates, drawn as a rule with the open body underlined, rather than
@@ -1595,15 +1545,15 @@ function LeadRecord({ lead, id }: Readonly<{ lead: Lead; id: string }>) {
           }}
         />
         {tab === "history" && (
-          <RecordHistoryTab
-            kind="lead"
-            id={lead.id}
-            restore={{
-              version: lead.version,
-              onRestored: () => invalidateRecord(queryClient, "lead", lead.id),
-            }}
-          />
+          <LeadHistoryTab lead={lead} onOpenEmail={setOpenEmail} />
         )}
+        {/* One drawer over the lead, whichever tab is open: the Overview
+            call's own thread and the History tab's rows both open into it. */}
+        <OpenEmailDrawer
+          activityId={openEmail}
+          zone={viewerZone()}
+          onClose={() => setOpenEmail(null)}
+        />
       </RecordView>
     </div>
   );
