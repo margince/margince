@@ -88,6 +88,37 @@ var roleTokens = map[string]struct{}{
 	"bestellung": {}, "reservations": {}, "bookings": {}, "versand": {},
 }
 
+// wholeRoleTokens name a function only when they are the ENTIRE local part.
+//
+// `contact@` is a company's front door and names nobody — a live import put a
+// record called "Contact" in the CRM off contact@bajricsanel.com. But "contact"
+// is unlike every other word in roleTokens: it appears as an ordinary field in
+// human addresses, and this tree is full of them (`real.contact@`,
+// `known.contact@`, `old.contact@`). Adding it to roleTokens, where a match on
+// any dot-separated field is enough, turned all of those into nobody.
+//
+// So the rule is narrower than membership: the whole local part, or nothing.
+// The same asymmetry roleTokens' own `cs` comment describes applies in reverse
+// here — a wrong role_mailbox creates no contact, but this word is common
+// enough in real addresses that the wrong direction stops being rare.
+//
+// NOT in Tokens(), and the reason is measured rather than feared. That corpus
+// feeds the one-list gate, which flags any composite literal naming three role
+// words. With "contact" in it the gate fires on
+// agents/commandsingle_test.go:185 — a table of command-validation cases whose
+// three "role words" are a message body ("hello"), a RECORD TYPE
+// (RecordType: "contact") and an ENTITY TYPE (EntityType: "invoice"). None is a
+// mailbox. The gate's own comment anticipates this: role words are ordinary
+// words, and three co-occur by coincidence once one of them is the product's
+// most common record noun.
+//
+// The cost of the omission is bounded and stated: the gate cannot see a second
+// copy of THIS set. It holds one word, which is not a copy worth the name, and
+// the words in it are exactly the ones too ordinary for a census to judge.
+var wholeRoleTokens = map[string]struct{}{
+	"contact": {},
+}
+
 // roleQualifiers modify a department without naming a contact: a region, a size,
 // a word like "team". They matter only for DisplayName, where "APAC Billing"
 // and "Support Team" must read as departments rather than as contacts.
