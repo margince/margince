@@ -95,6 +95,9 @@ Mine means the reader's responsibilities for managers and individual contributor
 Access to a record does not assign its work. Team oversight is selected explicitly;
 team exceptions follow live team membership, and broad backlog diagnostics appear only
 under All. Manager authority does not grant access to colleagues' private correspondence.
+Capture-contact reviews belong to the importing member, including proposals already waiting.
+Disclosure cards require an openable contact and follow the assigned officer, falling back
+to the contact owner; the explicit compliance queue retains its separate officer authority.
 
 | Surface | Personal scope | Wider scope |
 | --- | --- | --- |

@@ -24,6 +24,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/approvalsubject"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -56,17 +57,24 @@ func (s *Store) approvalVisibleTo(ctx context.Context, approvalID ids.UUID) (boo
 		targetType *string
 		targetID   *ids.UUID
 		stagedFor  *ids.UUID
+		kind       string
+		body       []byte
 	)
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		args := []any{approvalID}
 		return tx.QueryRow(ctx,
-			`SELECT target_entity_type, target_entity_id, on_behalf_of FROM approval WHERE id = $1`,
-			approvalID).Scan(&targetType, &targetID, &stagedFor)
+			fmt.Sprintf(`SELECT target_entity_type, target_entity_id, on_behalf_of, kind, proposed_change FROM approval WHERE id = $%d`, len(args)),
+			args...).Scan(&targetType, &targetID, &stagedFor, &kind, &body)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, nil
 	}
 	if err != nil {
 		return false, err
+	}
+	actor, _ := principal.Actor(ctx)
+	if approvalsubject.Withheld(kind, body, actor.UserID) {
+		return false, nil
 	}
 	return s.approvalShapeVisible(ctx, targetType, targetID, stagedFor)
 }

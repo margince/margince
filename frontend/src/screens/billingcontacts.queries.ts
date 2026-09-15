@@ -5,10 +5,11 @@ import { ifMatch } from "../api/version";
 import type { BillingContact, BillingContactRole } from "./billingcontacts";
 import { throwProblem } from "./common";
 
-// The three writes the billing-contacts panel makes, sharing one invalidation:
-// the panel reads its rows out of the company's finance summary, so every one
-// of them ends in the same refetch and the card never shows a saved edit
-// beside its own stale value.
+// The three writes the billing-contacts panel makes, sharing one invalidation.
+// The same panel is read from two projections — the finance summary the
+// Finance tab shows, and the Company360 the Contacts tab reads — so every write
+// refetches both, or the tab the reader is not on keeps a saved edit beside its
+// own stale value.
 //
 // A billing contact is an ordinary `relationship` row of kind `billing_contact`
 // — there is no billing-specific endpoint, and inventing a hook that pretended
@@ -81,8 +82,10 @@ export function useBillingContactActions(
   unresolvedVersion: string,
 ) {
   const qc = useQueryClient();
-  const invalidate = () =>
+  const invalidate = () => {
     qc.invalidateQueries({ queryKey: financeSummaryKey(companyId) });
+    qc.invalidateQueries({ queryKey: ["company360", companyId] });
+  };
 
   const patch = async (contact: BillingContact, role: BillingContactRole) => {
     const version = await billingEdgeVersion(companyId, contact);

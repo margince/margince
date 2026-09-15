@@ -267,8 +267,8 @@ func keepOwnedBy(rows []ranked, owner ids.UUID) []ranked {
 // narrowedByItsOwnLane reports whether a source already answered the ownership
 // question in its own query.
 //
-// Four lanes take the scope and the owner as ARGUMENTS — tasks, owed leads and
-// the two meeting lanes — so what they return is already the right contact's,
+// The task, disclosure, owed-lead and meeting lanes take the scope and owner
+// as arguments — so what they return is already the right contact's,
 // whichever scope this read runs at. Re-judging their rows here is not a second
 // safety net: it asks a different question of an answer that was already
 // correct, and it gets it wrong. A lead the lane returned under `mine` is the
@@ -291,7 +291,7 @@ func keepOwnedBy(rows []ranked, owner ids.UUID) []ranked {
 // narrowToScope, so a fourth caller with its own source list cannot appear
 // without that test naming it.
 func narrowedByItsOwnLane(row ranked) bool {
-	return row.item.Source == sourceTask || row.item.Source == sourceWeeklyCommitment || row.item.Source == sourceLeadResponse ||
+	return row.item.Source == sourceNoticeCase || row.item.Source == sourceTask || row.item.Source == sourceWeeklyCommitment || row.item.Source == sourceLeadResponse ||
 		row.item.Source == sourceMeeting || row.item.Source == sourceMeetingOutcome
 }
 
@@ -466,4 +466,21 @@ func scopeOptions(options []string) []crmcontracts.WorklistScopeOptions {
 		out = append(out, crmcontracts.WorklistScopeOptions(option))
 	}
 	return out
+}
+
+// forNoticeTeam bounds disclosure candidates before their earliest-deadline cut.
+func (s *Service) forNoticeTeam(ctx context.Context) (*Service, error) {
+	narrowed := *s
+	narrowed.noticeOwners = []ids.UUID{}
+	if s.teammates == nil {
+		return &narrowed, nil
+	}
+	roster, _, err := s.teammates.LiveTeammatesOfCaller(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, member := range roster {
+		narrowed.noticeOwners = append(narrowed.noticeOwners, member.UserID)
+	}
+	return &narrowed, nil
 }

@@ -24,13 +24,18 @@ afterEach(() => {
 
 const COMPANY = "o-1";
 
-function render(ui: React.ReactNode) {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return rtlRender(
-    <QueryClientProvider client={qc}>
-      <LocaleProvider>{ui}</LocaleProvider>
-    </QueryClientProvider>,
-  );
+function render(
+  ui: React.ReactNode,
+  qc = new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+) {
+  return {
+    qc,
+    ...rtlRender(
+      <QueryClientProvider client={qc}>
+        <LocaleProvider>{ui}</LocaleProvider>
+      </QueryClientProvider>,
+    ),
+  };
 }
 
 const PAT: BillingContact = {
@@ -330,6 +335,29 @@ it("narrows the version lookup to the one contact", async () => {
   );
   expect(lookup?.url).toContain("contact_id=c-1");
   expect(lookup?.url).toContain("company_id=o-1");
+});
+
+it("refreshes both the Finance and the Contacts projections after a write", async () => {
+  // The panel is read from two projections — the finance summary the Finance
+  // tab shows, and the Company360 the Contacts tab reads. A write that
+  // refreshed only the first would leave whichever tab the reader is not on
+  // showing the edit beside its own stale list.
+  const seen: Seen[] = [];
+  stubFetch(seen, { version: 5 });
+  const { qc } = render(
+    <BillingContactsPanel contacts={[PAT]} companyId={COMPANY} />,
+  );
+  const invalidate = vi.spyOn(qc, "invalidateQueries");
+  await userEvent.click(
+    await screen.findByRole("button", {
+      name: "Take Pat Okafor off this account's invoices",
+    }),
+  );
+  await waitFor(() => {
+    const keys = invalidate.mock.calls.map((call) => call[0]?.queryKey);
+    expect(keys).toContainEqual(["finance-summary", COMPANY]);
+    expect(keys).toContainEqual(["company360", COMPANY]);
+  });
 });
 
 it("says so rather than writing unpinned when the edge cannot be read back", async () => {
