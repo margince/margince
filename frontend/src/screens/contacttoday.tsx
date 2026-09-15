@@ -69,7 +69,7 @@ export function ContactToday({
   );
   if (!actionableMoment(moment) && taskRows.length === 0) {
     return (
-      <div className="contact-coverage t-sub">
+      <div className="t-sub">
         <p>
           {moment
             ? moment.rule === "thin_relationship"

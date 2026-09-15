@@ -914,7 +914,7 @@ export function RecordView({
       {/* The strip sits directly under the identity on EVERY record, band or
           not: a record with readings would otherwise open the choice of what
           to read a block lower than the record beside it. */}
-      {tabs && <div className="record-tabs">{tabs}</div>}
+      {tabs && <div data-testid="record-tabs">{tabs}</div>}
       {/* What describes the WHOLE record frames the columns from between the
           strip and them at full width, not from the work column beside the rail. */}
       {band && <div className="record-band">{band}</div>}
@@ -1499,7 +1499,7 @@ function ThreadMessage({
       <span className="tl-msg-body">
         <span className="tl-msg-lead">
           <b className="tl-msg-who">{lead.actor}</b>
-          {lead.verb && <span className="tl-msg-verb">{lead.verb}</span>}
+          {lead.verb && <span>{lead.verb}</span>}
           {visibility && <VisibilityBadge state={visibility} />}
         </span>
         <MessageWords entry={entry} t={t} />

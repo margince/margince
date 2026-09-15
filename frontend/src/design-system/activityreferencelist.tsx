@@ -48,7 +48,7 @@ export function ActivityReferenceList({
         const withheld = reference.content_state === "withheld";
         const when = formatWhen(reference.occurred_at);
         return (
-          <li key={reference.activity_id} className="activityrefs__row">
+          <li key={reference.activity_id}>
             {reference.kind === "email" ? (
               <EmailReference
                 subject={reference.subject}
@@ -73,7 +73,7 @@ export function ActivityReferenceList({
                     ? t("email.withheldSubject")
                     : (reference.subject?.trim() ?? "")}
                 </span>
-                <span className="activityrefs__when t-num">{when}</span>
+                <span className="t-num">{when}</span>
               </span>
             )}
           </li>

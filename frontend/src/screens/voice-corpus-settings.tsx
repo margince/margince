@@ -128,7 +128,7 @@ export function VoiceCorpusIntake({
 function WhatTeachesTheVoice() {
   const t = useT();
   return (
-    <div className="vdna-works">
+    <div>
       <p className="t-caption vdna-label">{t("settings.voice.worksTitle")}</p>
       <ul className="t-caption vdna-works-list">
         <li>{t("settings.voice.worksEmails")}</li>
@@ -251,7 +251,7 @@ function NoticeRow({ notice }: Readonly<{ notice: IntakeNotice }>) {
   const { locale } = useLocale();
   return (
     <li
-      className={`t-caption vdna-notice vdna-notice-${notice.tone}`}
+      className={`t-caption vdna-notice-${notice.tone}`}
       role={notice.tone === "warn" ? "alert" : undefined}
     >
       {noticeText(t, notice, locale)}

@@ -149,11 +149,7 @@ export function FieldBuilder({
             />
           )}
         </Field>
-        <Field
-          label={t("cf.apiKey")}
-          className="cf-field"
-          hint={t("cf.apiKeyHint")}
-        >
+        <Field label={t("cf.apiKey")} hint={t("cf.apiKeyHint")}>
           {(control) => (
             <TextInput
               {...control}
@@ -183,11 +179,7 @@ export function FieldBuilder({
       </div>
 
       {type === "currency" && (
-        <Field
-          label={t("cf.currencyCode")}
-          className="cf-field"
-          hint={t("cf.currencyHint")}
-        >
+        <Field label={t("cf.currencyCode")} hint={t("cf.currencyHint")}>
           {(control) => (
             <TextInput
               {...control}
@@ -736,7 +728,6 @@ export function CustomFieldsAdmin() {
 
   return (
     <Panel
-      className="cf-screen"
       title={t("cf.title")}
       // The create verb is the card's, so it stands in the header band. As a
       // trailing row its label ("Add a field to Deal") said the same thing as

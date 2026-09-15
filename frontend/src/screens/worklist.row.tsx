@@ -861,7 +861,7 @@ function RowDecision({ item }: Readonly<{ item: WorklistItem }>) {
   const approval = useApproval(item.id, open);
   const usable = approval.data?.kind ? approval.data : undefined;
   return (
-    <div className="worklist-row-decision">
+    <div>
       <Button
         ref={opener}
         variant="primary"

@@ -407,7 +407,7 @@ export function CommercialPanel({
               >
                 <span className="co-commercial-title">{deal.name}</span>
                 {deal.expected_close_date && (
-                  <span className="co-commercial-sub t-sub">
+                  <span className="t-sub">
                     {t("commercial.closes", {
                       when: formatDate(
                         deal.expected_close_date,

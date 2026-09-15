@@ -788,7 +788,7 @@ function CompanyRecord({
   // the only way into the pane with it — and one strip on every record page is
   // what lets a reader learn where the switch is once.
   const tabs = (
-    <div className="co-tabs">
+    <div>
       <RecordTabs
         options={visibleTabs}
         value={tab}

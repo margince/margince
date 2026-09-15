@@ -265,7 +265,7 @@ function DecisionCell({ row }: Readonly<{ row: SenderDecision }>) {
           what turns a silent classification into something they can act on, and
           "mark as business" beside it is the act that cancels it. */}
       {row.deletes_at && (
-        <div className="cell-note">
+        <div>
           {t("senders.deletesOn", {
             date: formatDate(row.deletes_at, locale, zone),
           })}

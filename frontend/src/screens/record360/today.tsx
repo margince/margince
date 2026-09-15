@@ -86,7 +86,6 @@ export function TodayPanel({
   return (
     <Panel
       tone="ai"
-      className="co-reading-today"
       title={t("today.title")}
       titleAction={
         <div className="co-reading-today-actions">
@@ -283,7 +282,7 @@ export function TodoRow({
       {who && <Avatar name={who} size="xs" />}
       <span className="co-todo-body">
         <span className="co-todo-title">{title}</span>
-        {meta && <span className="co-todo-meta t-caption">{meta}</span>}
+        {meta && <span className="t-caption">{meta}</span>}
       </span>
       {due && (
         <span

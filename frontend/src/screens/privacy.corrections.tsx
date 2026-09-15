@@ -125,7 +125,7 @@ export function ConfirmSubmissionsPanel() {
             {t("privacy.correctionsEmptySub")}
           </EmptyState>
         ) : (
-          <ul className="correction-list">
+          <ul>
             {rows.map((row) => (
               <CorrectionRow
                 key={row.id}
@@ -187,24 +187,20 @@ function CorrectionRow({
 }>) {
   const t = useT();
   return (
-    <li className="correction-row">
-      <div className="correction-what">
+    <li>
+      <div>
         {/* WHO, first. This queue spans every contact, and two of them
             proposing the same title on the same day are indistinguishable
             without it — while accepting either changes a different record. */}
-        <span className="correction-who">
-          {row.contact_name ?? t("privacy.correctionUnnamed")}
-        </span>
-        <span className="correction-field">
-          {row.field ?? t("privacy.correctionRemoval")}
-        </span>
+        <span>{row.contact_name ?? t("privacy.correctionUnnamed")}</span>
+        <span>{row.field ?? t("privacy.correctionRemoval")}</span>
         {/* The subject's own words. A correction shown without them is a
             decision nobody can make. */}
         {/* BOTH HALVES. A correction is only reviewable as a comparison —
             "she says Schmidt, we hold Schmitt" is the decision, and the
             proposal alone is not. */}
         {row.proposed_value ? (
-          <span className="correction-value">
+          <span>
             {/* Not a catalog key: an arrow between two values carries no
                 words to translate, and three identical entries read as a
                 translation nobody did. */}
@@ -214,16 +210,14 @@ function CorrectionRow({
           </span>
         ) : null}
       </div>
-      <span className="correction-when">
-        {formatDate(row.submitted_at, locale, tz)}
-      </span>
+      <span>{formatDate(row.submitted_at, locale, tz)}</span>
       {canDecide && !deciding ? (
         <Button small onClick={onOpen}>
           {t("privacy.correctionDecide")}
         </Button>
       ) : null}
       {deciding ? (
-        <div className="correction-decide">
+        <div>
           <Textarea
             value={note}
             onChange={(e) => onNote(e.target.value)}

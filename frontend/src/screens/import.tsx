@@ -530,7 +530,7 @@ function UndoOutcome({ undo }: Readonly<{ undo: ImportReport["undo"] }>) {
   const plural = usePlural();
   const { locale } = useLocale();
   return (
-    <div className="import__undoOutcome">
+    <div>
       <Callout tone="success" kind="outcome" title={t("import.undone")} />
       {undo ? (
         <>

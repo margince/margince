@@ -140,7 +140,7 @@ function CoverageGrid({ companyId }: Readonly<{ companyId: string }>) {
   );
 
   return (
-    <div className="coverage-grid">
+    <div>
       <SearchField
         value={contactFilter}
         aria-label={t("acctCoverage.findContact")}
@@ -150,7 +150,7 @@ function CoverageGrid({ companyId }: Readonly<{ companyId: string }>) {
       {/* The columns are a choice, not a default view of everybody. Colleagues
           with no edge to this account are absent entirely rather than offered
           as empty columns. */}
-      <div className="coverage-picker">
+      <div>
         {colleagues.map((colleague) => {
           const on = shown.includes(colleague.id);
           const full = shown.length >= COLUMN_CAP && !on;
