@@ -81,20 +81,11 @@ func Require(ctx context.Context, object string, action principal.Action) error 
 // grant auto-confirms a match, a read-only grant degrades it to a suggestion —
 // so the answer must be a boolean and not an error.
 //
-// It shares Require's internals (the actor lookup, the buyer refusal, the
-// system trust) so the gate and the branch cannot answer one question two ways.
+// It IS Require, read as a boolean, so the gate and the branch cannot answer
+// one question two ways — a condition added to Require reaches every branch
+// that asks this.
 func Allows(ctx context.Context, object string, action principal.Action) bool {
-	p, err := rbacActor(ctx)
-	if err != nil {
-		return false
-	}
-	if refuseBuyer(p, object+"."+string(action)) != nil {
-		return false
-	}
-	if p.Type == principal.PrincipalSystem {
-		return true
-	}
-	return p.Permissions.Allows(object, action)
+	return Require(ctx, object, action) == nil
 }
 
 // RequireAny admits when the actor holds ANY of the listed actions on the

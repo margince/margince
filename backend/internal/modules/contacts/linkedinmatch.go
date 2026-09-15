@@ -104,10 +104,13 @@ func runLinkedInMatch(ctx context.Context, s *Store, owner, onlyContact ids.UUID
 }
 
 // matchInTx reads both tiers' candidates, then applies them, folding the pass's
-// decision into out. canConfirm is the caller's contact:update authority: with it
-// an exact identity auto-confirms, without it every match is a suggestion.
-// onlyContact is ids.Nil for a whole sweep, or the one contact a contact-scoped
-// call names.
+// decision into out. canConfirm is the caller's OBJECT-level contact:update
+// authority: without it every match is a suggestion. The ROW-level arm is per
+// contact and travels inside each candidate's confirmable flag, so an exact
+// identity auto-confirms only on a contact this caller may actually edit and
+// degrades to a suggestion on any other — never to a refusal, which would cost
+// the whole pass over one colleague-owned contact. onlyContact is ids.Nil for a
+// whole sweep, or the one contact a contact-scoped call names.
 //
 // Both candidate sets are read BEFORE either is applied, so every contact a
 // confirm will touch can be locked once, in one ascending order — the order two
@@ -212,9 +215,10 @@ const noConfirmedRivalConnection = `NOT EXISTS (
 			              AND other.match_status = 'confirmed')`
 
 // emailMatchCandidates reads the ghosts whose address is already a known
-// contact's address. An address identifies a contact, so every such pair is
-// confirmable: the applier auto-confirms it for a caller that may edit a contact
-// — the same rule capture's dedupe uses — and suggests it for a read-only one.
+// contact's address. An address identifies a contact — the same rule capture's
+// dedupe uses — so such a pair is confirmable whenever the caller may edit that
+// contact; on a contact outside the caller's write authority, and for every
+// match of a read-only caller, the applier suggests instead.
 func emailMatchCandidates(ctx context.Context, tx pgx.Tx, owner, onlyContact ids.UUID) ([]matchCandidate, error) {
 	// The contact row scope, on the MATCH itself. Without it the matcher links
 	// a ghost to a contact the uploader cannot see — and then reports a
@@ -235,8 +239,22 @@ func emailMatchCandidates(ctx context.Context, tx pgx.Tx, owner, onlyContact ids
 	if visible == "" {
 		visible = sqlAlwaysVisible
 	}
+	// Whether THIS caller may edit THIS contact, decided per row where the
+	// candidate is read. A contact is readable by every seat, so the candidate
+	// set reaches contacts an own-scoped caller cannot write — and lack of row
+	// authority over one of them degrades that match to a suggestion, exactly as
+	// lack of the object grant degrades the whole pass. Decided anywhere later
+	// (at the hold, at the write) it is a refusal instead, and one colleague-owned
+	// candidate aborts a whole upload.
+	writable, err := auth.WriteAuthorityClauseFor(ctx, "contact", "p", arg)
+	if err != nil {
+		return nil, err
+	}
+	if writable == "" {
+		writable = sqlAlwaysVisible
+	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT g.id, pe.contact_id, g.owner_user_id, true
+		SELECT g.id, pe.contact_id, g.owner_user_id, (%[4]s)
 		  FROM linkedin_connection g
 		  JOIN contact_email pe ON g.email IS NOT NULL AND lower(pe.email) = g.email
 		  JOIN contact p ON p.id = pe.contact_id AND p.archived_at IS NULL
@@ -247,7 +265,7 @@ func emailMatchCandidates(ctx context.Context, tx pgx.Tx, owner, onlyContact ids
 		   AND ($%[3]d::uuid IS NULL OR p.id = $%[3]d)
 		   AND `+ghostOwnerCapturePrivacy+`
 		   AND `+noConfirmedRivalConnection+`
-		   AND (%[2]s)`, ownerPos, visible, contactPos), args...)
+		   AND (%[2]s)`, ownerPos, visible, contactPos, writable), args...)
 	if err != nil {
 		return nil, fmt.Errorf("contacts: reading LinkedIn address matches: %w", err)
 	}
@@ -260,9 +278,10 @@ func emailMatchCandidates(ctx context.Context, tx pgx.Tx, owner, onlyContact ids
 
 // nameEmployerCandidatesSQL finds the ghosts whose normalized name and live
 // employer agree with a contact's, and marks which of them an exact name
-// releases for automatic confirmation. Four parameter positions: the owner
-// filter, the contact row scope, the single-contact narrowing, and the contacts
-// the address tier already confirmed this pass and so withholds from here.
+// releases for automatic confirmation. Five parameter positions: the owner
+// filter, the contact row scope, the single-contact narrowing, the contacts
+// the address tier already confirmed this pass and so withholds from here, and
+// the caller's row-level write authority over the contact.
 //
 // A var and not a const, because the employment-currency predicate is a
 // function call: employment.IsCurrentSQL is the one definition of "this job is
@@ -279,7 +298,13 @@ var nameEmployerCandidatesSQL = `
 		           -- Whether the names agree EXACTLY, before folding. The fold
 		           -- is what finds the candidate; this is what decides whether
 		           -- a human still has to look at it.
-		           g.full_name = p.full_name AS exact_name
+		           g.full_name = p.full_name AS exact_name,
+		           -- Whether THIS caller may edit THIS contact — the row arm of
+		           -- the authority a confirm needs, asked here where the contact
+		           -- row is in hand (the address tier asks the same; the reason
+		           -- is on its SELECT). It gates only confirmable below: an
+		           -- unwritable contact still becomes a suggestion.
+		           (%[5]s) AS writable
 		      FROM linkedin_connection g
 		      JOIN contact p
 		        ON p.archived_at IS NULL
@@ -321,7 +346,7 @@ var nameEmployerCandidatesSQL = `
 		    -- The count is over distinct CONTACTS one ghost matches, which is what
 		    -- ambiguity means for the ghost. (count(DISTINCT …) is not a window
 		    -- function in Postgres, hence the two steps rather than one.)
-		    SELECT ghost_id, contact_id, owner_user_id, exact_name,
+		    SELECT ghost_id, contact_id, owner_user_id, exact_name, writable,
 		           count(*) OVER (PARTITION BY ghost_id) AS matches
 		      FROM pair
 		),
@@ -331,13 +356,13 @@ var nameEmployerCandidatesSQL = `
 		    -- exact name and employer pointing at the same contact are as
 		    -- ambiguous as one ghost pointing at two contacts — neither may
 		    -- auto-confirm, though each stays a suggestion a human can judge.
-		    SELECT ghost_id, contact_id, owner_user_id, exact_name, matches,
+		    SELECT ghost_id, contact_id, owner_user_id, exact_name, writable, matches,
 		           count(*) FILTER (WHERE exact_name AND matches = 1)
 		             OVER (PARTITION BY owner_user_id, contact_id) AS exact_confirmers
 		      FROM candidate
 		)
 		SELECT ghost_id, contact_id, owner_user_id,
-		       (exact_name AND matches = 1 AND exact_confirmers = 1) AS confirmable
+		       (exact_name AND matches = 1 AND exact_confirmers = 1 AND writable) AS confirmable
 		  FROM scored
 		 -- Ambiguity is not even a suggestion: one ghost matching two contacts
 		 -- of the same name is the case a human must resolve, and picking one
@@ -379,7 +404,17 @@ func nameMatchCandidates(ctx context.Context, tx pgx.Tx, owner, onlyContact ids.
 	if visible == "" {
 		visible = sqlAlwaysVisible
 	}
-	rows, err := tx.Query(ctx, fmt.Sprintf(nameEmployerCandidatesSQL, ownerPos, visible, contactPos, excludePos), args...)
+	// And the same reason as the address arm's writable column: row-level write
+	// authority is per contact, and lacking it degrades that match to a
+	// suggestion rather than refusing the pass.
+	writable, err := auth.WriteAuthorityClauseFor(ctx, "contact", "p", arg)
+	if err != nil {
+		return nil, err
+	}
+	if writable == "" {
+		writable = sqlAlwaysVisible
+	}
+	rows, err := tx.Query(ctx, fmt.Sprintf(nameEmployerCandidatesSQL, ownerPos, visible, contactPos, excludePos, writable), args...)
 	if err != nil {
 		return nil, fmt.Errorf("contacts: reading LinkedIn name-and-employer matches: %w", err)
 	}

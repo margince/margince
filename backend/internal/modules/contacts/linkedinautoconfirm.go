@@ -32,9 +32,12 @@ import (
 )
 
 // matchCandidate is one (ghost, contact) pair a tier decided to act on, and
-// whether an exact identity released it for automatic confirmation. owner is the
-// member whose imported network the ghost belongs to — it names the self-only
-// decided event and binds the connection the confirm writes.
+// whether it may confirm automatically: an exact identity, on a contact the
+// caller holds row-level write authority over — both decided by the candidate
+// query, so a contact the caller may not edit arrives here already degraded to
+// a suggestion. owner is the member whose imported network the ghost belongs to
+// — it names the self-only decided event and binds the connection the confirm
+// writes.
 type matchCandidate struct {
 	ghost       ids.UUID
 	contact     ids.UUID

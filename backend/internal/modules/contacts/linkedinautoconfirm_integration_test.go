@@ -14,6 +14,9 @@ package contacts
 //     human's approval releases;
 //   - a caller who may read a contact but not edit one confirms NOTHING: its
 //     matches degrade to suggestions and it never touches a contact;
+//   - the same degrade holds PER CONTACT under row scope: an own-scoped seat
+//     confirms onto its own contacts and only suggests a colleague's, and one
+//     unwritable contact never aborts the rest of the pass;
 //   - two of the owner's ghosts of the same exact name and employer pointing at
 //     one contact are ambiguous — neither auto-confirms, both stay suggestions.
 
@@ -297,6 +300,79 @@ func assertConfirmWroteEverything(t *testing.T, e *dedupeEnv, contact ids.Contac
 	}
 	if n := e.eventCount(t, "contact.updated"); n < 1 {
 		t.Errorf("the confirm emitted %d contact.updated events, want at least the handle gain", n)
+	}
+}
+
+// Write authority over a contact is decided row by row, not once for the
+// caller. The default seat holds contact:update at own row scope, and every
+// contact in the workspace is readable and so a candidate — which makes "may
+// edit contacts" true of the caller and false of a colleague's contact at the
+// same time. On both tiers the colleague's match degrades to a suggestion; the
+// caller's own contact still confirms with the whole write; and the unwritable
+// contact must not cost the pass, or one colleague-owned candidate would strand
+// the whole upload behind a 403.
+func TestAnOwnScopedCallerConfirmsOwnContactsAndOnlySuggestsColleagues(t *testing.T) {
+	e := setupDedupe(t)
+	company := e.seedAcmeCompany(t)
+	// One pair per tier on the caller's own contacts…
+	dana := e.seedVisibleContact(t, "Dana Buyer")
+	e.seedEmail(t, dana, "dana@acme.test")
+	e.seedEmailGhost(t, "Dana Buyer", "dana@acme.test", "https://www.linkedin.com/in/danabuyer")
+	bruno := e.seedVisibleContact(t, "Bruno Weber")
+	e.employ(t, bruno, company)
+	e.seedNameGhost(t, "Bruno Weber", "bruno weber", "https://www.linkedin.com/in/bweber", company, "2023-02-02")
+	// …and the same evidence onto contacts a colleague owns: readable by every
+	// seat, writable only by their owner or a grant, and this caller has neither.
+	franka := e.seedVisibleContact(t, "Franka Berg")
+	e.seedEmail(t, franka, "franka@acme.test")
+	e.seedEmailGhost(t, "Franka Berg", "franka@acme.test", "https://www.linkedin.com/in/frankaberg")
+	greta := e.seedVisibleContact(t, "Greta Holz")
+	e.employ(t, greta, company)
+	e.seedNameGhost(t, "Greta Holz", "greta holz", "https://www.linkedin.com/in/gholz", company, "2024-05-05")
+	if err := e.store.tx(e.as(), func(tx pgx.Tx) error {
+		_, err := tx.Exec(e.as(), `UPDATE contact SET owner_id = $1 WHERE id = ANY($2)`,
+			e.otherRep, []ids.UUID{franka.UUID, greta.UUID})
+		return err
+	}); err != nil {
+		t.Fatalf("re-owning the colleague's contacts: %v", err)
+	}
+
+	res, err := e.store.MatchLinkedInConnections(e.asOwnScoped(e.rep), e.rep)
+	if err != nil {
+		t.Fatalf("an own-scoped pass over a colleague's contact must degrade, not fail: %v", err)
+	}
+	if res.Confirmed != 2 || res.Suggested != 2 {
+		t.Fatalf("the pass reported %+v, want 2 confirmed (own) and 2 suggested (colleague's)", res)
+	}
+	for name, own := range map[string]ids.ContactID{"Dana Buyer": dana, "Bruno Weber": bruno} {
+		if status, contact := e.ghostStatus(t, name); status != "confirmed" || contact == nil || *contact != own.UUID {
+			t.Errorf("the own-contact match %s is %q → %v, want confirmed → %s", name, status, contact, own)
+		}
+	}
+	for name, theirs := range map[string]ids.ContactID{"Franka Berg": franka, "Greta Holz": greta} {
+		if status, contact := e.ghostStatus(t, name); status != "suggested" || contact == nil || *contact != theirs.UUID {
+			t.Errorf("the colleague-contact match %s is %q → %v, want suggested → %s", name, status, contact, theirs)
+		}
+		// The contact this caller may not edit was not edited: no handle, no audit.
+		if _, found := e.linkedInHandle(t, theirs); found {
+			t.Errorf("%s gained a LinkedIn handle from a caller with no write authority over them", name)
+		}
+		if n := e.auditCount(t, "contact", theirs.UUID); n != 0 {
+			t.Errorf("%s carries %d update audit rows, want 0", name, n)
+		}
+	}
+	// The caller's own confirms still performed the whole write; the handle and
+	// per-contact audit row are the contact-edit half of it.
+	for name, own := range map[string]ids.ContactID{"Dana Buyer": dana, "Bruno Weber": bruno} {
+		if _, found := e.linkedInHandle(t, own); !found {
+			t.Errorf("%s did not gain the confirmed connection's handle", name)
+		}
+		if n := e.auditCount(t, "contact", own.UUID); n != 1 {
+			t.Errorf("%s carries %d update audit rows, want 1", name, n)
+		}
+	}
+	if n := e.eventCount(t, "linkedin_match.decided"); n != 2 {
+		t.Errorf("the pass emitted %d decided events, want 2 — one per confirm, none for a degrade", n)
 	}
 }
 
