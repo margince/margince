@@ -37,10 +37,12 @@ const (
 
 	// The money a project's WON deals fold to, in the installation's base
 	// currency (the frozen base amount), read through the caller's deal row
-	// scope: a per-project total that counted a deal the caller's deal list
-	// would withhold discloses that deal through arithmetic (the rule
-	// ProjectDealTotalsTx keeps).
-	wonDealValueBaseExpr = "(SELECT coalesce(sum(d.amount_minor_base), 0)::bigint FROM deal d" +
+	// scope AND their field masks: a per-project total that counted a deal the
+	// caller's deal list would withhold discloses that deal through arithmetic
+	// (the rule ProjectDealTotalsTx keeps), and one that counted a FIGURE the
+	// list withholds discloses the figure the same way.
+	wonDealValueBaseExpr = "(SELECT coalesce(sum(d.amount_minor_base) FILTER (WHERE " + reportDealMaskToken +
+		"), 0)::bigint FROM deal d" +
 		" WHERE d.project_id = t.id AND d.status = 'won' AND d.archived_at IS NULL AND " + reportDealScopeToken + ")"
 
 	// A project's commitments are the open tasks filed under it. Overdue is

@@ -170,6 +170,56 @@ func StampWritable[T any](ctx context.Context, tx pgx.Tx, table string,
 // this caller outright.
 const sqlNoRow = "FALSE"
 
+// MaskedColumnSQL renders one maskable column for a SELECT list, with the
+// caller's masks applied in the STATEMENT: the bare column when no mask names
+// it, NULL on every row when a mask always withholds it, and a CASE that nulls
+// it on the rows the caller could not change when the mask is conditioned on
+// write authority.
+//
+// The third shape of the same decision, and it exists because the other two do
+// not fit a row surface that has no id list. MaskExcludedClause filters rows
+// out, which is right for an AGGREGATE — a sum must not include a value the row
+// would withhold — and wrong for a card, where dropping the deal would say the
+// account has no business rather than that the figure is not yours. The
+// export's maskedRowSelects nulls the column, which is right, but it resolves
+// write authority through WritableSubset over ids the caller already holds, and
+// a section selecting rows by account has none to pass.
+//
+// So this composes the predicate MaskExcludedClause already renders, inline, as
+// a projection guard. One decision, three renderings, and the reason each one
+// exists is that the caller's shape differs — not the rule.
+//
+// The FIELD is what a mask names; the COLUMN is what gets rendered, and they
+// are separate arguments because they are not always the same thing. A deal's
+// money is stored twice — `amount_minor` in its own currency and
+// `amount_minor_base` converted — and only the first is a mask's subject. They
+// are one fact, so a mask on the field has to withhold both columns, and a
+// caller summing across currencies asks for the base column under the field's
+// mask. Passing the same string for both is the ordinary case.
+//
+// The alias names the row like the caller's FROM clause does. Both field and
+// column are formatted into SQL, so each must be a compile-time literal or a
+// catalog name, never a string off a request body.
+func MaskedColumnSQL(ctx context.Context, object, field, alias, column string, arg func(any) int) (string, error) {
+	qualified := column
+	if alias != "" {
+		qualified = alias + "." + column
+	}
+	clause, masked, err := MaskExcludedClause(ctx, object, field, alias, arg)
+	if err != nil {
+		return "", err
+	}
+	if !masked {
+		return qualified, nil
+	}
+	// One rendering for both masked cases, including the always-masked one
+	// where the clause is FALSE. A bare NULL would be untyped and Postgres
+	// refuses to infer a type for one in a UNION leg or an aggregate; the CASE
+	// takes its type from the THEN branch whether or not that branch can ever
+	// be reached, so the column types the expression without being read.
+	return "CASE WHEN " + clause + " THEN " + qualified + " ELSE NULL END", nil
+}
+
 // MaskExcludedClause renders the predicate for the rows on which the caller
 // may READ one maskable column — the filter an AGGREGATE over that column
 // applies, so a sum never includes a value the row itself would withhold and

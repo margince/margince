@@ -128,7 +128,8 @@ func (s *Service) readMeeting(ctx context.Context, tx pgx.Tx, activityID ids.UUI
 	var attendees []byte
 	var project projectRow
 	var projectID *ids.UUID
-	err = tx.QueryRow(ctx, fmt.Sprintf(meetingQuery, clauses.deal, clauses.contact, idPos, clauses.touch, clauses.seat, clauses.project, requestedPos), args...).
+	err = tx.QueryRow(ctx, fmt.Sprintf(meetingQuery, clauses.deal, clauses.contact, idPos, clauses.touch, clauses.seat, clauses.project, requestedPos,
+		clauses.amount), args...).
 		Scan(&out.ID, &out.StartsAt, &subject,
 			&dealID, &deal.Name, &stage, &deal.AmountMinor, &currency, &deal.CloseDate,
 			&projectID, &project.Name, &project.Key, &project.Phase, &project.TargetEndDate,
@@ -239,7 +240,7 @@ const meetingQuery = `
 	  LIMIT 1
 	) pr ON TRUE
 	LEFT JOIN LATERAL (
-	  SELECT dd.id, dd.name, s.name AS stage_name, dd.amount_minor, dd.currency, dd.expected_close_date
+	  SELECT dd.id, dd.name, s.name AS stage_name, %[8]s, dd.currency, dd.expected_close_date
 	  FROM activity_link dl
 	  JOIN deal dd ON dd.id = dl.deal_id AND dd.archived_at IS NULL
 	  LEFT JOIN stage s ON s.id = dd.stage_id
@@ -259,9 +260,14 @@ const meetingQuery = `
 // deciding what the caller may be TOLD rather than filtering afterwards.
 type roomScopes struct {
 	deal, contact, project, touch, seat string
+	// amount is the deal's money rendered under the caller's field masks — a
+	// projection rather than a clause, because a masked figure withholds the
+	// NUMBER and keeps the deal. The brief is grounding for generated prose, so
+	// a figure that reaches it reaches the letter.
+	amount string
 }
 
-// roomClauses renders the five clauses in bind order.
+// roomClauses renders the five clauses in bind order, and the masked amount.
 //
 // The last-touch sub-select reads ACTIVITIES, so it takes the activity row
 // scope like every other activity read on this page. Without it the brief
@@ -294,6 +300,12 @@ func roomClauses(ctx context.Context, arg func(any) int) (roomScopes, error) {
 		out.touch = scopeAll
 	}
 	if out.seat, err = seatJoinPredicate(ctx, "r", arg); err != nil {
+		return roomScopes{}, err
+	}
+	// The INNER alias, because the outer select reads this sub-select's column
+	// rather than the deal's: masking it at the source means the pass-through
+	// above cannot be the way around it.
+	if out.amount, err = auth.MaskedColumnSQL(ctx, "deal", "amount_minor", "dd", "amount_minor", arg); err != nil {
 		return roomScopes{}, err
 	}
 	return out, nil
