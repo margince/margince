@@ -622,7 +622,7 @@
      corner. Without it the title runs under the glyph. The rule in atoms.css
      that reserves this cannot reach here: it names a dialog's first HEADING,
      and the heading in this row is a level down inside it. */
-  padding-inline-end: var(--control-h-sm);
+  padding-inline-end: calc(var(--control-h-sm) + var(--space-4));
 }
 
 .pe-drawer-title h2 {

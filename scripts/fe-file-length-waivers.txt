@@ -88,7 +88,6 @@
 561 frontend/src/screens/worklist.queries.ts
 571 frontend/src/screens/capture-activity.tsx
 564 frontend/src/screens/project360.tsx
-589 frontend/src/app/palette.tsx
 591 frontend/src/screens/adddocument.tsx
 592 frontend/src/screens/rates.tsx
 612 frontend/src/app/account.tsx

@@ -538,24 +538,41 @@
  * element in the box (atoms.tsx) so it is the last tab stop, and drawn over the
  * corner rather than in the flow so no dialog has to leave a slot for it.
  *
- * `--space-2` inside a `22px` padding puts the 32px control's glyph on roughly
- * the same optical corner the padding names, without the control's own hit
- * target — which is larger than the glyph, and deliberately so — crowding the
- * edge. */
+ * It sits a full `--space-4` in from both edges, which is further than the
+ * corner the box's own padding names. That is deliberate: the control's hit
+ * target is larger than its glyph, and pressed tight into the corner the glyph
+ * reads as stuck to the edge while the target overhangs the radius. */
 .modal-close {
   position: absolute;
-  inset-block-start: var(--space-2);
-  inset-inline-end: var(--space-2);
+  inset-block-start: var(--space-4);
+  inset-inline-end: var(--space-4);
   /* Above the drawer's sticky head band (z-index 1), which it is drawn on. */
   z-index: 2;
 }
 
 /* The dialog's first line stops short of the control drawn over it. A heading
    is what that line nearly always is — ConfirmModal's, the drawer head's — and
-   a title running under the glyph is a title with a button on its last word. */
+   a title running under the glyph is a title with a button on its last word.
+
+   The reservation is the control plus the gap it sits in, which is the whole
+   corner it occupies measured from the box's own edge. Deducting the padding
+   the box already pays would be right by a few pixels and would need a number
+   per box — 22 for a centred dialog, --space-5 for a drawer, zero for the
+   lightbox — so one of the three would be the one that went stale. This clears
+   every one of them, and what it costs is a title that wraps a word early.
+
+   Three selectors, because "the dialog's first line" has three shapes: the box
+   itself, a head band, and a head band whose first child is a box pairing the
+   title with a subtitle (the meeting brief). Deliberately not a descendant
+   combinator inside the band — that would reach a heading further down it,
+   which is nowhere near the control and would be indented for nothing. */
 .modal > :is(h1, h2, h3, .modal-title):first-child,
-.modal > .drawer-head > :is(h1, h2, h3, .modal-title):first-child {
-  padding-inline-end: var(--control-h-sm);
+.modal > .drawer-head > :is(h1, h2, h3, .modal-title):first-child,
+.modal
+  > .drawer-head
+  > :first-child
+  > :is(h1, h2, h3, .modal-title):first-child {
+  padding-inline-end: calc(var(--control-h-sm) + var(--space-4));
 }
 /* Roomier variant for content-dense dialogs (e.g. the cert-scenario export's
    YAML + response previews) that read cramped at the compact form width. */
@@ -804,10 +821,16 @@
   .overlay[data-state="closing"] {
     animation: overlay-leave var(--dur-state) var(--ease-out) both;
   }
-  .overlay[data-state="open"] > .modal {
+  /* `.palette` is the ⌘K search, which draws its own chrome (app/shell.css) and
+     is therefore not a `.modal` — but it is the same kind of arrival, so it
+     joins these two rules rather than growing a second pair of keyframes that
+     would drift from them. */
+  .overlay[data-state="open"] > .modal,
+  .overlay[data-state="open"] > .palette {
     animation: dialog-arrive var(--dur-move) var(--ease-out) both;
   }
-  .overlay[data-state="closing"] > .modal {
+  .overlay[data-state="closing"] > .modal,
+  .overlay[data-state="closing"] > .palette {
     animation: dialog-leave var(--dur-state) var(--ease-out) both;
   }
 

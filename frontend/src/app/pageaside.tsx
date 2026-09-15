@@ -153,17 +153,19 @@ export function useDetailsFieldTarget(field: string) {
  * pane is open — the one answer a screen needs to decide whether to hand
  * `RecordView` its aside.
  *
- * `available` is whether the screen has a pane to offer right now: a record
- * whose composer has taken the column's place passes false, and the switch
- * goes with the pane rather than standing beside a drawer it cannot open.
+ * Claiming it is mounting: a screen has a pane to offer for as long as it is
+ * on the page, and nothing else takes the pane away from it. An overlay does
+ * not — a drawer is portalled over a scrim and takes none of the page's
+ * width, so folding the column beneath one would animate the record behind
+ * its own backdrop and leave the pane shut once it closed.
  */
-export function usePageAside(available = true): { open: boolean } {
+export function usePageAside(): { open: boolean } {
   const { filled, setFilled, collapsed } = usePageAsideState();
   useEffect(() => {
-    setFilled(available);
+    setFilled(true);
     return () => setFilled(false);
-  }, [available, setFilled]);
-  return { open: filled && available && !collapsed };
+  }, [setFilled]);
+  return { open: filled && !collapsed };
 }
 
 /**

@@ -1220,21 +1220,11 @@ function CompanyPage({
   // 360 renders it, not a `["activities", …]` query of its own), the
   // workspace-wide queue, and the task's own detail.
   const taskUpdate = useTaskUpdate(taskWriteKeys("company", company.id));
-  // Either composer holds the rail's column, and the rail does not care
-  // which. Computed once so both `CompanyRail` and the layout below share
-  // the one decision, rather than the page rendering a rail element that
-  // itself returns null while `RecordView` still reserves the column for it.
-  const composerOpen = Boolean(composing) || writingEmail;
-  // The details pane yields to the composer, which opens as its own drawer
-  // (ComposeModal's `placement="right"` is a portalled overlay): no pane at
-  // all while one is open, so the column is absent for exactly as long as the
-  // drawer holds that space, rather than standing open around nothing.
-  const details = usePageAside(!composerOpen);
-  // The pane's content. Whether the pane stands open is `details.open`, which
-  // a composer closes: both drawers open into this space, so a rail beside
-  // them would be two things in one place — and folded away rather than
-  // narrowed, because a rail squeezed to a third of its width is a column of
-  // broken cards.
+  // The pane answers to its own switch and to nothing else. A composer is a
+  // portalled drawer over a scrim, so it takes none of the page's width: an
+  // overlay that folded the column beneath it would animate the record behind
+  // its own backdrop, and leave the reader's pane shut when they closed it.
+  const details = usePageAside();
   const rail = (
     <CompanyRail
       companyId={company.id}
@@ -1245,7 +1235,6 @@ function CompanyPage({
       // undefined `view` alone, and both drawing the loading skeleton is not
       // the same defect as both drawing "could not be loaded".
       loading={loading}
-      composerOpen={composerOpen}
       onTab={onTab}
     />
   );

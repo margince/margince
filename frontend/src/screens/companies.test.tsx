@@ -1454,8 +1454,8 @@ describe("CompanyScreen — next-step suggestions", () => {
   });
 
   it("opens the composer on the message a draft-reply action names", async () => {
-    // Through the PAGE: the card only names the action, and the page is
-    // what performs it. A reply composer holds the rail's column while open.
+    // Through the PAGE: the card only names the action, and the page is what
+    // performs it.
     const unanswered = {
       ...stalledSuggestion,
       kind: "no_reply",
@@ -1475,7 +1475,10 @@ describe("CompanyScreen — next-step suggestions", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: "Create draft" }),
     );
-    await waitFor(() => expect(container.querySelector(".co-rail")).toBeNull());
+    // The composer stands OVER the record — the details pane it covers is
+    // still where the reader left it.
+    await screen.findByRole("button", { name: "Cancel" });
+    expect(container.querySelector(".co-rail")).toBeTruthy();
   });
 
   it("goes to the deal an open-deal action names", async () => {
@@ -1805,10 +1808,11 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
     );
   });
 
-  // The drawer opens INTO the rail's column. Both composers do — the header's
-  // Write-email and the one anchored on a message — so the rail stands down
-  // for either, and comes back when the drawer closes.
-  it("stands the rail down while a composer holds its column", async () => {
+  // The drawer opens OVER the record rather than into a column of it: it is
+  // portalled above a scrim and takes none of the page's width, so the details
+  // pane under it neither folds away nor comes back — it is exactly where the
+  // reader left it, both while the drawer stands and once it has gone.
+  it("leaves the details pane standing while a composer is open", async () => {
     stubFetch(companyBackstop, { company360 });
     const { container } = render(<CompanyScreen id="o-1" />);
     await screen.findByText("Brandt Automotive GmbH");
@@ -1817,12 +1821,14 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
     );
 
     await userEvent.click(screen.getByRole("button", { name: "Email" }));
-    await waitFor(() => expect(container.querySelector(".co-rail")).toBeNull());
+    await screen.findByRole("button", { name: "Cancel" });
+    expect(container.querySelector(".co-rail")).toBeTruthy();
 
     await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
     await waitFor(() =>
-      expect(container.querySelector(".co-rail")).toBeTruthy(),
+      expect(screen.queryByRole("button", { name: "Cancel" })).toBeNull(),
     );
+    expect(container.querySelector(".co-rail")).toBeTruthy();
   });
 
   // A call or a note often carries no subject. Counting only the subjected

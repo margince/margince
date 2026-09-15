@@ -70,7 +70,7 @@
   margin-bottom: var(--space-3);
   /* Room at the end for the dialog's own close, which is drawn over this
      corner. Without it the reply verb sits under the glyph. */
-  padding-inline-end: var(--control-h-sm);
+  padding-inline-end: calc(var(--control-h-sm) + var(--space-4));
 }
 
 /* Answer the message — the header's verb, at its far end. It does not shrink:
