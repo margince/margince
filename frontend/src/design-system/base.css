@@ -352,25 +352,30 @@
  * the finger left, the control comes back. That is the one place a bounce is
  * honest here.
  *
- * `:not(:disabled)` because `:active` and `:disabled` have the same
- * specificity and this rule is the later one: without it a refused button
- * would push down under a press it is not accepting.
+ * BOTH spellings of refusal are excluded, because this product uses both: a
+ * barred control is `:disabled`, and a BUSY one is `[aria-disabled="true"]`,
+ * which stays focusable so a reader can still reach the control that is not
+ * answering yet. Either way the control is refusing the press and is
+ * therefore at rest — a button that travels while the write it is already
+ * running has not come back says it took a second press it did not take.
+ * Naming them is not optional here: `:active` and `:disabled` tie on
+ * specificity and this rule is the later one, so it wins by default.
  */
-.btn:active:not(:disabled),
-.iconbtn:active:not(:disabled) {
+.btn:active:not(:disabled, [aria-disabled="true"]),
+.iconbtn:active:not(:disabled, [aria-disabled="true"]) {
   transform: translateY(1px);
   transition-duration: var(--dur-tap);
 }
 /* The other half of the press, and the half a hover already starts: the
    resting layer is the gap between the control and the page, so dropping it
    is the control going INTO the page rather than chrome arriving around it.
-   `:not(:disabled)` for the same reason the travel above excludes it — a
+   The same two refusals the travel above names, for the same reason — a
    control refusing the press is still at rest, and keeps its layer. */
-.btn:hover:not(:disabled),
-.btn:active:not(:disabled) {
+.btn:hover:not(:disabled, [aria-disabled="true"]),
+.btn:active:not(:disabled, [aria-disabled="true"]) {
   box-shadow: none;
 }
-.iconbtn:active:not(:disabled) {
+.iconbtn:active:not(:disabled, [aria-disabled="true"]) {
   background: var(--bgCard);
 }
 
@@ -706,8 +711,8 @@ kbd {
  * so document order is what settles the tie.
  */
 @media (prefers-reduced-motion: reduce) {
-  .btn:active:not(:disabled),
-  .iconbtn:active:not(:disabled) {
+  .btn:active:not(:disabled, [aria-disabled="true"]),
+  .iconbtn:active:not(:disabled, [aria-disabled="true"]) {
     transform: none;
     filter: brightness(0.96);
   }
