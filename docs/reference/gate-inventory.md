@@ -133,7 +133,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `worklistbounds_test.go` | H2 | The worklist reports a source as possibly having more work behind it when its lane came back exactly at its bound. |
 | `worklistverdictstandings_test.go` | H2 | The queue's verdict standings ARE the deal card's, and this derives them from the card rather than keeping a second list of them. |
 
-## Census (151)
+## Census (152)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -176,6 +176,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `contactattachlock_test.go` | H2 | A relationship carrying a contact is written under that contact's row lock. |
 | `contactprofilefieldwriter_test.go` | H2 | contacts.writeContactProfileField is the one writer of contact\_profile\_field, and the one place the precedence rule lives: a machine fill claims an unanswered field, a human's acceptance replaces what is there. |
 | `contactreaders_test.go` | H2 | `contact` is an RBAC object, and until this gate nothing held the object half of that anywhere outside the module that owns it. |
+| `contractlistpaging_test.go` | H2 | A LIST THAT CAN BE CUT SAYS WHERE IT WAS CUT. |
 | `contractproducers_test.go` | H2 | A field the contract PROMISES and nobody WRITES is invisible. |
 | `contractrefs_test.go` | H3 | Contract $ref pre-flight as a fitness function. |
 | `contributorwiring_test.go` | H1 | What a contributor arriving from outside is promised, in the files they meet on the way in. |
