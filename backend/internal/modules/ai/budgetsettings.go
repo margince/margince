@@ -65,13 +65,13 @@ func validateBudget(c BudgetConfig) error {
 	return nil
 }
 
-// monthlyTokens applies the override or the live full-user count with an onboarding
-// floor, delegating the overflow decision to the caller. MonthlyTokens rejects it,
-// because nothing may be WRITTEN past the ceiling. SaturatingMonthlyTokens clamps it,
-// because an already-stored value (valid when written, overflowing now that the
-// workspace's full-user count grew) must still be OBSERVABLE by the admin surfaces
+// resolveMonthlyTokens applies the override or the live full-user count with an
+// onboarding floor, delegating the overflow decision to the caller. MonthlyTokens
+// rejects it, because nothing may be WRITTEN past the ceiling. SaturatingMonthlyTokens
+// clamps it, because an already-stored value (valid when written, overflowing now that
+// the workspace's full-user count grew) must still be OBSERVABLE by the admin surfaces
 // that exist to correct it.
-func (c BudgetConfig) monthlyTokens(fullUsers int64, onOverflow func() (int64, error)) (int64, error) {
+func (c BudgetConfig) resolveMonthlyTokens(fullUsers int64, onOverflow func() (int64, error)) (int64, error) {
 	if err := validateBudget(c); err != nil {
 		return 0, err
 	}
@@ -87,7 +87,7 @@ func (c BudgetConfig) monthlyTokens(fullUsers int64, onOverflow func() (int64, e
 
 // MonthlyTokens applies the override or the live full-user count with an onboarding floor.
 func (c BudgetConfig) MonthlyTokens(fullUsers int64) (int64, error) {
-	return c.monthlyTokens(fullUsers, func() (int64, error) {
+	return c.resolveMonthlyTokens(fullUsers, func() (int64, error) {
 		return 0, fmt.Errorf("company allowance exceeds the supported maximum")
 	})
 }
@@ -99,7 +99,7 @@ func (c BudgetConfig) MonthlyTokens(fullUsers int64) (int64, error) {
 // that is currently over-cap; a NEW value being written is still rejected outright by
 // MonthlyTokens, so the ceiling itself is never weakened.
 func (c BudgetConfig) SaturatingMonthlyTokens(fullUsers int64) (int64, error) {
-	return c.monthlyTokens(fullUsers, func() (int64, error) { return MaxMonthlyTokens, nil })
+	return c.resolveMonthlyTokens(fullUsers, func() (int64, error) { return MaxMonthlyTokens, nil })
 }
 
 // Revision hashes the canonical typed document without mixing in live consumption.

@@ -30,7 +30,7 @@ func TestAllowanceOverflowLockoutRecoversThroughReplaceBudget(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	store := ai.NewAdminStore(e.DB(), NewSettingsStore(e.Pool), budgetFullUsers, aiDeferredWork(e.Pool))
-	people := identity.NewService(e.Pool)
+	service := identity.NewService(e.Pool)
 	actor := recoveryAdminIdentity(e)
 	rep3 := ids.From[ids.UserKind](e.Rep3)
 
@@ -54,7 +54,7 @@ func TestAllowanceOverflowLockoutRecoversThroughReplaceBudget(t *testing.T) {
 	// Shrink to 3 full users, set an allowance valid for exactly that count, then grow
 	// back to 4 — the same shape as an admin sizing TokensPerFullUser for today's
 	// headcount and a colleague returning from leave later.
-	if err := people.DeactivateUser(ctx, actor, identity.DeactivateUserInput{UserID: rep3}); err != nil {
+	if err := service.DeactivateUser(ctx, actor, identity.DeactivateUserInput{UserID: rep3}); err != nil {
 		t.Fatal(err)
 	}
 	validForThree := ai.MaxMonthlyTokens / 3
@@ -65,7 +65,7 @@ func TestAllowanceOverflowLockoutRecoversThroughReplaceBudget(t *testing.T) {
 	if err != nil {
 		t.Fatalf("sizing for 3 full users: %v", err)
 	}
-	if err := people.ReactivateUser(ctx, actor, rep3); err != nil {
+	if err := service.ReactivateUser(ctx, actor, rep3); err != nil {
 		t.Fatal(err)
 	}
 
