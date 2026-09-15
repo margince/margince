@@ -89,7 +89,7 @@ func TestDispatcherWriteVerbsIgnoreAStaleCachedMode(t *testing.T) {
 			return err
 		},
 		"PromoteLead": func() error {
-			_, _, err := d.PromoteLead(ctx, ids.NewV7(), "manual", nil)
+			_, _, err := d.PromoteLead(ctx, ids.NewV7(), "manual", nil, nil)
 			return err
 		},
 	}

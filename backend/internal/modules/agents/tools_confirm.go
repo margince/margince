@@ -200,8 +200,13 @@ func (t archiveRecord) Handle(ctx context.Context, in json.RawMessage) (json.Raw
 
 // LeadPromoter is the provider extension promotion rides (the sor seam
 // has no promotion verb yet — fable feedback/17).
+//
+// ifVersion carries the version the write must be conditioned on, for the
+// reason LeadDisqualifier's does: this verb STAGES a target version at
+// approval time, and a promotion that applied none would mint a contact from
+// lead fields a concurrent edit may have changed since the human approved.
 type LeadPromoter interface {
-	PromoteLead(ctx context.Context, id ids.UUID, trigger string, evidenceNote *string) (datasource.EntityRef, bool, error)
+	PromoteLead(ctx context.Context, id ids.UUID, trigger string, evidenceNote *string, ifVersion *int64) (datasource.EntityRef, bool, error)
 }
 
 type promoteArgs struct {
@@ -261,7 +266,14 @@ func (t promoteLead) Handle(ctx context.Context, in json.RawMessage) (json.RawMe
 	if err := requireGenuineTrigger(args.Trigger); err != nil {
 		return nil, err
 	}
-	ref, merged, err := t.promoter.PromoteLead(ctx, args.LeadID, args.Trigger, args.EvidenceNote)
+	// nil, because this tool takes no if_version of its own: the pin it
+	// applies is the one the approval was released against, as every other
+	// staged write's is.
+	pin, err := pinForWrite(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	ref, merged, err := t.promoter.PromoteLead(ctx, args.LeadID, args.Trigger, args.EvidenceNote, pin)
 	if err != nil {
 		return nil, err
 	}

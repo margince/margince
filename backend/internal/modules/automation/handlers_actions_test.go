@@ -165,7 +165,7 @@ func (p *fakeUpdateProvider) Merge(context.Context, datasource.MergeInput) (data
 	panic("fakeUpdateProvider: Merge not stubbed for this test")
 }
 
-func (p *fakeUpdateProvider) PromoteLead(context.Context, ids.UUID, string, *string) (datasource.EntityRef, bool, error) {
+func (p *fakeUpdateProvider) PromoteLead(context.Context, ids.UUID, string, *string, *int64) (datasource.EntityRef, bool, error) {
 	panic("fakeUpdateProvider: PromoteLead not stubbed for this test")
 }
 

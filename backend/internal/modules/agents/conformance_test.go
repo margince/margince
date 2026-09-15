@@ -263,7 +263,7 @@ func (inertLifecycle) DisqualifyLead(context.Context, ids.UUID, *int64) (json.Ra
 	return nil, nil
 }
 
-func (inertLifecycle) DemoteLead(context.Context, ids.UUID, string) (json.RawMessage, error) {
+func (inertLifecycle) DemoteLead(context.Context, ids.UUID, string, *int64) (json.RawMessage, error) {
 	return nil, nil
 }
 

@@ -165,7 +165,14 @@ type SystemOfRecordProvider interface {
 	// reports true when an existing contact absorbed the lead). 🟡 — a
 	// lifecycle transition that materializes records; cross-module
 	// orchestration like Merge.
-	PromoteLead(ctx context.Context, id ids.UUID, trigger string, evidenceNote *string) (ref EntityRef, merged bool, err error)
+	//
+	// ifVersion refuses the promotion unless the lead is still at that
+	// version. It is on the seam rather than left to a caller's own guard
+	// because promotion is STAGED for approval: the version the human was
+	// shown is released with the approval, and a pin staged and never applied
+	// is a guarantee the approvals surface advertises and the write does not
+	// keep. Nil attaches no precondition.
+	PromoteLead(ctx context.Context, id ids.UUID, trigger string, evidenceNote *string, ifVersion *int64) (ref EntityRef, merged bool, err error)
 
 	// Freshness lets a 🟡 high-value action force a synchronous live
 	// read-through to the incumbent before acting (03e §2.3), bypassing

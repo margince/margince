@@ -143,7 +143,7 @@ func (seamProbeProvider) Merge(context.Context, datasource.MergeInput) (datasour
 	return datasource.EntityRef{}, errSeamReached
 }
 
-func (seamProbeProvider) PromoteLead(context.Context, ids.UUID, string, *string) (datasource.EntityRef, bool, error) {
+func (seamProbeProvider) PromoteLead(context.Context, ids.UUID, string, *string, *int64) (datasource.EntityRef, bool, error) {
 	return datasource.EntityRef{}, false, errSeamReached
 }
 
@@ -207,7 +207,7 @@ func (seamProbeLifecycle) DisqualifyLead(context.Context, ids.UUID, *int64) (jso
 	return nil, errSeamReached
 }
 
-func (seamProbeLifecycle) DemoteLead(context.Context, ids.UUID, string) (json.RawMessage, error) {
+func (seamProbeLifecycle) DemoteLead(context.Context, ids.UUID, string, *int64) (json.RawMessage, error) {
 	return nil, errSeamReached
 }
 

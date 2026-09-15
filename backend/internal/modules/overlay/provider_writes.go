@@ -429,6 +429,8 @@ func (p *Provider) Merge(_ context.Context, _ datasource.MergeInput) (datasource
 
 // PromoteLead is unsupported in overlay (OVA-MAP-W6): like Merge, a
 // cross-type materialization with no atomic incumbent-first projection.
-func (p *Provider) PromoteLead(_ context.Context, _ ids.UUID, _ string, _ *string) (datasource.EntityRef, bool, error) {
+func (p *Provider) PromoteLead(
+	_ context.Context, _ ids.UUID, _ string, _ *string, _ *int64,
+) (datasource.EntityRef, bool, error) {
 	return datasource.EntityRef{}, false, apperrors.ErrUnsupportedBySoR
 }

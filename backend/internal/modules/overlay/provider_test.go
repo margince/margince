@@ -43,7 +43,7 @@ func TestProviderUnsupportedVerbs(t *testing.T) {
 	})
 
 	t.Run("PromoteLead", func(t *testing.T) {
-		_, merged, err := p.PromoteLead(ctx, ids.NewV7(), "manual", nil)
+		_, merged, err := p.PromoteLead(ctx, ids.NewV7(), "manual", nil, nil)
 		if !errors.Is(err, apperrors.ErrUnsupportedBySoR) {
 			t.Fatalf("want ErrUnsupportedBySoR, got %v", err)
 		}
