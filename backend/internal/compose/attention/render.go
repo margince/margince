@@ -78,7 +78,7 @@ func (s *Service) duplicateItem(
 	confidence := float32(pair.Confidence)
 	item := crmcontracts.AttentionItem{
 		Id:         pair.ID.String(),
-		Source:     crmcontracts.AttentionItemSource("dedupe_candidate"),
+		Source:     crmcontracts.AttentionItemSource(sourceDuplicate),
 		Kind:       &kind,
 		Confidence: &confidence,
 		Actions:    []crmcontracts.AttentionItemActions{},
