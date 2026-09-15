@@ -3869,6 +3869,7 @@ export const de = {
   "tasks.moveTo": "Verschieben auf",
   "tasks.detail": "Aufgabe",
   "tasks.source": "Das Meeting",
+  "tasks.sourceEmail": "Die E-Mail, aus der das entstand",
   "tasks.openSource": "Original öffnen",
   "tasks.detailLoading": "Aufgabe wird gelesen…",
   "tasks.isDone": "Abgeschlossen",

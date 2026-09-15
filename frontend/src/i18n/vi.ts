@@ -3822,6 +3822,7 @@ export const vi = {
   "tasks.moveTo": "Dời sang",
   "tasks.detail": "Công việc",
   "tasks.source": "Cuộc họp",
+  "tasks.sourceEmail": "Email tạo ra việc này",
   "tasks.openSource": "Mở bản gốc",
   "tasks.detailLoading": "Đang đọc công việc này…",
   "tasks.isDone": "Đã hoàn thành",
