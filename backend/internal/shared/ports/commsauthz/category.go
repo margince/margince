@@ -134,7 +134,7 @@ func (c Category) ServesTheSubject() bool {
 //
 // The door narrows; the STORAGE does not. The migration's CHECK on
 // communication_override.category
-// (backend/migrations/core/1789437489_a_rep_may_vouch_for_a_send.up.sql) still
+// (backend/migrations/core/1789456230_a_rep_may_vouch_for_a_send.up.sql) still
 // admits all fourteen Categories() values, held by
 // TestOverrideCategoryVocabularyAgreesWithItsCheckConstraint: a row already
 // written carries its original category forward, so the column must accept the

@@ -2784,14 +2784,22 @@ export const de = {
   "settings.page.reviewtemplates.sub":
     "Die Fragen, die bei einem gewonnenen oder verlorenen Deal gestellt werden.",
   "settings.tab.reviewtemplates": "Abschlussreviews",
+  "reviewTemplates.editHint":
+    "Änderungen gelten für zukünftige Reviews. Bestehende Reviews behalten ihre ursprünglichen Fragen und Antworten.",
+  "reviewTemplates.question": "Frage",
+  "reviewTemplates.answerType": "Antworttyp",
+  "reviewTemplates.options": "Auswahlmöglichkeiten (eine pro Zeile)",
+  "reviewTemplates.requiredChoice": "Antwort erforderlich",
+  "reviewTemplates.removeQuestion": "Frage entfernen",
+  "reviewTemplates.addQuestion": "Frage hinzufügen",
+  "reviewTemplates.save": "Vorlage speichern",
+  "reviewTemplates.edit": "Fragen bearbeiten",
   "reviewTemplates.title": "Fragen zum Abschlussreview",
   "reviewTemplates.sub":
     "Was gefragt wird, wenn ein Deal gewonnen oder verloren wurde.",
   "reviewTemplates.empty": "Keine Reviewfragen eingerichtet",
   "reviewTemplates.retired": "Stillgelegt",
   "reviewTemplates.required": "(Pflicht)",
-  "reviewTemplates.readOnly":
-    "Diese Fragen gehören zum Produkt und sind hier noch nicht änderbar.",
   "outcomeReview.title": "Abschlussreview",
   "outcomeReview.add": "Review hinzufügen",
   "outcomeReview.save": "Review speichern",
@@ -4902,6 +4910,7 @@ export const de = {
   "retention.scopeDealWon": "Gewonnene Deals",
   "retention.scopeAiCallPayloadContent": "KI-Aufruf-Nutzdaten",
 
+  "retention.scopeRawCapture": "Gespeicherte Nachrichtenoriginale",
   "settings.pipelines": "Pipelines",
   "settings.pipelinesReadOnly":
     "Nur-Lese-Ansicht — du darfst Pipelines und ihre Phasen nicht ändern.",
@@ -6865,6 +6874,7 @@ export const de = {
   "cf.type.number": "Zahl",
   "cf.type.date": "Datum",
   "cf.type.currency": "Währung",
+  "cf.type.multiselect": "Mehrfachauswahl",
   "cf.type.picklist": "Auswahlliste",
   "cf.type.boolean": "Ja / Nein",
   "cf.builder.addTo": "Feld zu {object} hinzufügen",

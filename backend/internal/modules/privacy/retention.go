@@ -18,6 +18,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -408,7 +409,13 @@ func (s *RetentionService) evaluatePolicy(ctx context.Context, pol retentionPoli
 // order mixed-unit periods differently.
 func (s *RetentionService) dueRecords(ctx context.Context, pol retentionPolicy, selector string, ref time.Time) ([]ids.UUID, error) {
 	args := []any{pol.RetainDays, retentionBatch}
-	if pol.ObjectType == "activity" {
+	// Derived from the SELECTOR rather than from the object type. The floor is
+	// carried by whichever selectors compose correspondenceFloorPredicate, and
+	// that is no longer only the activity ones — raw_capture joins the activity
+	// precisely to inherit it. Keyed on the object type, a selector that took
+	// the floor without being called "activity" would be sent two arguments
+	// short and fail its whole stage, taking every later policy with it.
+	if strings.Contains(selector, "$4") {
 		floor := jurisdiction.RetentionClass{}
 		if pol.Action != actionArchive {
 			floor = statutoryCorrespondenceFloor(ref)

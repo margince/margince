@@ -165,19 +165,16 @@
   flex-wrap: wrap;
 }
 
-/* "Powered by Margince", pinned to the page's bottom-right corner: the one
-   mark on the buyer's page that is the product's rather than the seller's. */
-
-.buyer-page {
-  position: relative;
-}
-
+/* "Powered by Margince": the one mark on the buyer's page that is the
+   product's rather than the seller's. It closes the column, after the
+   sign-out row, rather than sitting fixed in the viewport's corner — fixed to
+   the WINDOW while `.buyer-column` is centred and capped at 1040px, it can
+   drift onto whatever sits at the column's own trailing edge. In flow it
+   reserves its own room and can never sit on top of another control. */
 .buyer-powered {
-  position: fixed;
-  right: var(--space-5);
-  bottom: var(--space-4);
   display: inline-flex;
   align-items: center;
+  align-self: flex-end;
   gap: var(--space-2);
   color: var(--textMeta);
 }

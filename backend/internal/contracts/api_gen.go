@@ -6648,12 +6648,13 @@ func (e CreateCustomFieldRequestObject) Valid() bool {
 
 // Defines values for CreateCustomFieldRequestType.
 const (
-	CreateCustomFieldRequestTypeBoolean  CreateCustomFieldRequestType = "boolean"
-	CreateCustomFieldRequestTypeCurrency CreateCustomFieldRequestType = "currency"
-	CreateCustomFieldRequestTypeDate     CreateCustomFieldRequestType = "date"
-	CreateCustomFieldRequestTypeNumber   CreateCustomFieldRequestType = "number"
-	CreateCustomFieldRequestTypePicklist CreateCustomFieldRequestType = "picklist"
-	CreateCustomFieldRequestTypeText     CreateCustomFieldRequestType = "text"
+	CreateCustomFieldRequestTypeBoolean     CreateCustomFieldRequestType = "boolean"
+	CreateCustomFieldRequestTypeCurrency    CreateCustomFieldRequestType = "currency"
+	CreateCustomFieldRequestTypeDate        CreateCustomFieldRequestType = "date"
+	CreateCustomFieldRequestTypeMultiselect CreateCustomFieldRequestType = "multiselect"
+	CreateCustomFieldRequestTypeNumber      CreateCustomFieldRequestType = "number"
+	CreateCustomFieldRequestTypePicklist    CreateCustomFieldRequestType = "picklist"
+	CreateCustomFieldRequestTypeText        CreateCustomFieldRequestType = "text"
 )
 
 // Valid indicates whether the value is a known member of the CreateCustomFieldRequestType enum.
@@ -6664,6 +6665,8 @@ func (e CreateCustomFieldRequestType) Valid() bool {
 	case CreateCustomFieldRequestTypeCurrency:
 		return true
 	case CreateCustomFieldRequestTypeDate:
+		return true
+	case CreateCustomFieldRequestTypeMultiselect:
 		return true
 	case CreateCustomFieldRequestTypeNumber:
 		return true
@@ -7260,12 +7263,13 @@ func (e CustomFieldStatus) Valid() bool {
 
 // Defines values for CustomFieldType.
 const (
-	CustomFieldTypeBoolean  CustomFieldType = "boolean"
-	CustomFieldTypeCurrency CustomFieldType = "currency"
-	CustomFieldTypeDate     CustomFieldType = "date"
-	CustomFieldTypeNumber   CustomFieldType = "number"
-	CustomFieldTypePicklist CustomFieldType = "picklist"
-	CustomFieldTypeText     CustomFieldType = "text"
+	CustomFieldTypeBoolean     CustomFieldType = "boolean"
+	CustomFieldTypeCurrency    CustomFieldType = "currency"
+	CustomFieldTypeDate        CustomFieldType = "date"
+	CustomFieldTypeMultiselect CustomFieldType = "multiselect"
+	CustomFieldTypeNumber      CustomFieldType = "number"
+	CustomFieldTypePicklist    CustomFieldType = "picklist"
+	CustomFieldTypeText        CustomFieldType = "text"
 )
 
 // Valid indicates whether the value is a known member of the CustomFieldType enum.
@@ -7276,6 +7280,8 @@ func (e CustomFieldType) Valid() bool {
 	case CustomFieldTypeCurrency:
 		return true
 	case CustomFieldTypeDate:
+		return true
+	case CustomFieldTypeMultiselect:
 		return true
 	case CustomFieldTypeNumber:
 		return true
@@ -8307,14 +8313,15 @@ func (e FilterVocabularyFieldReferences) Valid() bool {
 
 // Defines values for FilterVocabularyFieldType.
 const (
-	FilterVocabularyFieldTypeBoolean  FilterVocabularyFieldType = "boolean"
-	FilterVocabularyFieldTypeCurrency FilterVocabularyFieldType = "currency"
-	FilterVocabularyFieldTypeDate     FilterVocabularyFieldType = "date"
-	FilterVocabularyFieldTypeDomain   FilterVocabularyFieldType = "domain"
-	FilterVocabularyFieldTypeId       FilterVocabularyFieldType = "id"
-	FilterVocabularyFieldTypeNumber   FilterVocabularyFieldType = "number"
-	FilterVocabularyFieldTypePicklist FilterVocabularyFieldType = "picklist"
-	FilterVocabularyFieldTypeText     FilterVocabularyFieldType = "text"
+	FilterVocabularyFieldTypeBoolean     FilterVocabularyFieldType = "boolean"
+	FilterVocabularyFieldTypeCurrency    FilterVocabularyFieldType = "currency"
+	FilterVocabularyFieldTypeDate        FilterVocabularyFieldType = "date"
+	FilterVocabularyFieldTypeDomain      FilterVocabularyFieldType = "domain"
+	FilterVocabularyFieldTypeId          FilterVocabularyFieldType = "id"
+	FilterVocabularyFieldTypeMultiselect FilterVocabularyFieldType = "multiselect"
+	FilterVocabularyFieldTypeNumber      FilterVocabularyFieldType = "number"
+	FilterVocabularyFieldTypePicklist    FilterVocabularyFieldType = "picklist"
+	FilterVocabularyFieldTypeText        FilterVocabularyFieldType = "text"
 )
 
 // Valid indicates whether the value is a known member of the FilterVocabularyFieldType enum.
@@ -8329,6 +8336,8 @@ func (e FilterVocabularyFieldType) Valid() bool {
 	case FilterVocabularyFieldTypeDomain:
 		return true
 	case FilterVocabularyFieldTypeId:
+		return true
+	case FilterVocabularyFieldTypeMultiselect:
 		return true
 	case FilterVocabularyFieldTypeNumber:
 		return true
@@ -12055,6 +12064,7 @@ const (
 	RetentionScopeDeallost               RetentionScope = "deal/lost"
 	RetentionScopeDealwon                RetentionScope = "deal/won"
 	RetentionScopeLeadunconverted        RetentionScope = "lead/unconverted"
+	RetentionScopeRawCapture             RetentionScope = "raw_capture"
 )
 
 // Valid indicates whether the value is a known member of the RetentionScope enum.
@@ -12074,6 +12084,8 @@ func (e RetentionScope) Valid() bool {
 		return true
 	case RetentionScopeLeadunconverted:
 		return true
+	case RetentionScopeRawCapture:
+		return true
 	default:
 		return false
 	}
@@ -12081,12 +12093,15 @@ func (e RetentionScope) Valid() bool {
 
 // Defines values for ReviewQuestionType.
 const (
-	ReviewQuestionTypeText ReviewQuestionType = "text"
+	ReviewQuestionTypeMultiselect ReviewQuestionType = "multiselect"
+	ReviewQuestionTypeText        ReviewQuestionType = "text"
 )
 
 // Valid indicates whether the value is a known member of the ReviewQuestionType enum.
 func (e ReviewQuestionType) Valid() bool {
 	switch e {
+	case ReviewQuestionTypeMultiselect:
+		return true
 	case ReviewQuestionTypeText:
 		return true
 	default:
@@ -27247,11 +27262,17 @@ type CreateOutcomeReviewRequest struct {
 	// Body Free prose for the note itself, beside the structured answers. Optional: the answers are the review.
 	Body *string `json:"body,omitempty"`
 
+	// ChoiceAnswers Selected options by question key; values must belong to the frozen question vocabulary.
+	ChoiceAnswers *map[string][]string `json:"choice_answers,omitempty"`
+
 	// ClosingOccurrenceId The closing being reviewed. Must be the one the deal is on now, else 409.
 	ClosingOccurrenceId openapi_types.UUID `json:"closing_occurrence_id"`
 
 	// SubmissionId The client's own id for this submission. Retrying with the same id returns the review that already exists rather than writing a second one; a deliberate second review uses a new id.
 	SubmissionId openapi_types.UUID `json:"submission_id"`
+
+	// TemplateVersion Version shown when the form opened. A changed template returns 409 rather than filing answers against new questions.
+	TemplateVersion *int64 `json:"template_version,omitempty"`
 }
 
 // CreatePipelineRequest defines model for CreatePipelineRequest.
@@ -27599,7 +27620,7 @@ type CustomField struct {
 	// Status retired = soft: hidden from the API and filtering, column and values preserved (CUSTOM-FIELDS-AC-13).
 	Status CustomFieldStatus `json:"status"`
 
-	// Type The closed set of six scalar types (CUSTOM-FIELDS-PARAM-1). Immutable once created.
+	// Type The supported field types. Multiselect values are JSON string arrays; empty arrays clear the selection. Immutable once created.
 	Type      CustomFieldType `json:"type"`
 	UpdatedAt time.Time       `json:"updated_at"`
 
@@ -27617,7 +27638,7 @@ type CustomFieldObject string
 // CustomFieldStatus retired = soft: hidden from the API and filtering, column and values preserved (CUSTOM-FIELDS-AC-13).
 type CustomFieldStatus string
 
-// CustomFieldType The closed set of six scalar types (CUSTOM-FIELDS-PARAM-1). Immutable once created.
+// CustomFieldType The supported field types. Multiselect values are JSON string arrays; empty arrays clear the selection. Immutable once created.
 type CustomFieldType string
 
 // CustomFieldListResponse defines model for CustomFieldListResponse.
@@ -32868,6 +32889,9 @@ type OutcomeReview struct {
 	// Answers Keyed by question key. Every key here has a question in `questions`.
 	Answers map[string]string `json:"answers"`
 
+	// ChoiceAnswers Selected options by question key; values must belong to the frozen question vocabulary.
+	ChoiceAnswers *map[string][]string `json:"choice_answers,omitempty"`
+
 	// ClosingOccurrenceId Which closing this review is about. Compare it against the deal's own `closing_occurrence_id` to tell whether it reviews the current outcome or an earlier one.
 	ClosingOccurrenceId openapi_types.UUID `json:"closing_occurrence_id"`
 	CreatedAt           time.Time          `json:"created_at"`
@@ -35360,14 +35384,17 @@ type ReviewQuestion struct {
 	Key string `json:"key"`
 
 	// Label What the question asks, worded as the reader sees it.
-	Label    string `json:"label"`
-	Required bool   `json:"required"`
+	Label string `json:"label"`
 
-	// Type Only free text for now. The vocabulary is closed so a client never meets a control it cannot render.
+	// Options Allowed choices, required for multiselect. Frozen alongside the question in each submitted review.
+	Options  *[]string `json:"options,omitempty"`
+	Required bool      `json:"required"`
+
+	// Type Text answers use answers; multiple-choice answers use choice_answers.
 	Type ReviewQuestionType `json:"type"`
 }
 
-// ReviewQuestionType Only free text for now. The vocabulary is closed so a client never meets a control it cannot render.
+// ReviewQuestionType Text answers use answers; multiple-choice answers use choice_answers.
 type ReviewQuestionType string
 
 // RightsCaseReceipt What a data subject is told to quote when asking after a request they sent through their confirm
@@ -37660,6 +37687,14 @@ type UpdateActivityRequest struct {
 // tell an absent field from a null one. Recording the wrong outcome is fixed by
 // sending the right one.
 type UpdateActivityRequestMeetingStatus string
+
+// UpdateActivityReviewTemplateRequest defines model for UpdateActivityReviewTemplateRequest.
+type UpdateActivityReviewTemplateRequest struct {
+	Questions []ReviewQuestion `json:"questions"`
+
+	// Version Last read template version.
+	Version int64 `json:"version"`
+}
 
 // UpdateAttachmentMetadataRequest A sparse patch. An absent field is untouched; `title` and `supersedes_id` accept
 // null to clear, because clearing either is an edit a human makes deliberately.
@@ -46086,6 +46121,9 @@ type PreviewSendAuthorizationJSONRequestBody = PreviewSendRequest
 
 // SendMessageJSONRequestBody defines body for SendMessage for application/json ContentType.
 type SendMessageJSONRequestBody = SendMessageRequest
+
+// UpdateActivityReviewTemplateJSONRequestBody defines body for UpdateActivityReviewTemplate for application/json ContentType.
+type UpdateActivityReviewTemplateJSONRequestBody = UpdateActivityReviewTemplateRequest
 
 // ResetDataJSONRequestBody defines body for ResetData for application/json ContentType.
 type ResetDataJSONRequestBody ResetDataJSONBody
@@ -56637,6 +56675,9 @@ type ServerInterface interface {
 	// The question sets an outcome review can ask.
 	// (GET /activity-review-templates)
 	ListActivityReviewTemplates(w http.ResponseWriter, r *http.Request)
+	// Edit the questions for future outcome reviews.
+	// (PATCH /activity-review-templates/{id})
+	UpdateActivityReviewTemplate(w http.ResponseWriter, r *http.Request, id Id)
 	// What capture's judgement queues are holding, and in whose mailbox.
 	// (GET /admin/capture-health)
 	GetCaptureHealth(w http.ResponseWriter, r *http.Request)
@@ -58716,6 +58757,12 @@ func (_ Unimplemented) GetTranscriptRead(w http.ResponseWriter, r *http.Request,
 // The question sets an outcome review can ask.
 // (GET /activity-review-templates)
 func (_ Unimplemented) ListActivityReviewTemplates(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Edit the questions for future outcome reviews.
+// (PATCH /activity-review-templates/{id})
+func (_ Unimplemented) UpdateActivityReviewTemplate(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -63975,6 +64022,40 @@ func (siw *ServerInterfaceWrapper) ListActivityReviewTemplates(w http.ResponseWr
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListActivityReviewTemplates(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateActivityReviewTemplate operation middleware
+func (siw *ServerInterfaceWrapper) UpdateActivityReviewTemplate(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateActivityReviewTemplate(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -90878,6 +90959,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/activity-review-templates", wrapper.ListActivityReviewTemplates)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/activity-review-templates/{id}", wrapper.UpdateActivityReviewTemplate)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/admin/capture-health", wrapper.GetCaptureHealth)

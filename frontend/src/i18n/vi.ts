@@ -2753,13 +2753,21 @@ export const vi = {
   "settings.page.reviewtemplates.sub":
     "Các câu hỏi khi một thương vụ thắng hoặc thua.",
   "settings.tab.reviewtemplates": "Đánh giá kết quả",
+  "reviewTemplates.editHint":
+    "Thay đổi áp dụng cho đánh giá mới. Đánh giá đã lưu giữ nguyên câu hỏi và câu trả lời.",
+  "reviewTemplates.question": "Câu hỏi",
+  "reviewTemplates.answerType": "Loại câu trả lời",
+  "reviewTemplates.options": "Lựa chọn (mỗi dòng một mục)",
+  "reviewTemplates.requiredChoice": "Bắt buộc trả lời",
+  "reviewTemplates.removeQuestion": "Xóa câu hỏi",
+  "reviewTemplates.addQuestion": "Thêm câu hỏi",
+  "reviewTemplates.save": "Lưu mẫu",
+  "reviewTemplates.edit": "Sửa câu hỏi",
   "reviewTemplates.title": "Câu hỏi đánh giá kết quả",
   "reviewTemplates.sub": "Những gì được hỏi khi một thương vụ thắng hoặc thua.",
   "reviewTemplates.empty": "Chưa thiết lập câu hỏi đánh giá",
   "reviewTemplates.retired": "Đã ngừng dùng",
   "reviewTemplates.required": "(bắt buộc)",
-  "reviewTemplates.readOnly":
-    "Các câu hỏi này đi kèm sản phẩm và chưa thể chỉnh sửa tại đây.",
   "outcomeReview.title": "Đánh giá kết quả",
   "outcomeReview.add": "Thêm đánh giá",
   "outcomeReview.save": "Lưu đánh giá",
@@ -4825,6 +4833,7 @@ export const vi = {
   "retention.scopeDealWon": "Deal đã thắng",
   "retention.scopeAiCallPayloadContent": "Nội dung lời gọi AI",
 
+  "retention.scopeRawCapture": "Bản gốc tin nhắn đã lưu",
   "settings.pipelines": "Pipeline",
   "settings.pipelinesReadOnly":
     "Chế độ chỉ đọc — bạn không thể thay đổi pipeline hay các giai đoạn.",
@@ -6777,6 +6786,7 @@ export const vi = {
   "cf.type.number": "Số",
   "cf.type.date": "Ngày",
   "cf.type.currency": "Tiền tệ",
+  "cf.type.multiselect": "Chọn nhiều",
   "cf.type.picklist": "Danh sách chọn",
   "cf.type.boolean": "Có / Không",
   "cf.builder.addTo": "Thêm một trường vào {object}",

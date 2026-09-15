@@ -146,9 +146,11 @@ costs nothing now and is written down because the next contact to reach for it s
 - **Orphaned-object reclamation.** `activities/capturedfiles.go` names it as owed by both writers of
   the `attachment` table. This sweep does not change that: it removes a copy from the database and
   never touches an object.
-- **`raw_capture` still has no retention sweep of its own.** It ages out only via the **activity**
-  sweep joined on `(source_system, source_id)`, plus Art. 17 contact erasure. Slimming reduces the
-  slope of its growth by roughly twentyfold; it does not make it bounded.
+- **Growth is bounded by a policy now, not by slimming.** Slimming reduces the slope of `raw_capture`'s
+  growth by roughly twentyfold and does not make it bounded; the `raw_capture` retention scope does,
+  on a clock of its own rather than on the activity's. What it does NOT reach is an original with no
+  activity row — an internal-only drop — where the raw_capture row is the only tombstone against a
+  replay re-ingesting a message the pipeline already judged.
 - **The ten-in-forty miss rate.** A repeated inline logo is never slimmed. Fixing it needs an
   identity for a part that survives duplication — an ordinal resolved against the MIME structure
   rather than against the bytes — and that is the design this deliberately avoided. It is worth

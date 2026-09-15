@@ -14,6 +14,7 @@ export function typeLabels(t: ReturnType<typeof useT>): Record<CfType, string> {
     number: t("cf.type.number"),
     date: t("cf.type.date"),
     currency: t("cf.type.currency"),
+    multiselect: t("cf.type.multiselect"),
     picklist: t("cf.type.picklist"),
     boolean: t("cf.type.boolean"),
   };

@@ -472,6 +472,7 @@ public.activity_review_response.activity_review_response_questions_shape CHECK (
 public.activity_review_response.activity_review_response_revision_check CHECK ((revision >= 1))
 public.activity_review_response.answers jsonb NOT NULL gen=- def=-
 public.activity_review_response.captured_by text NOT NULL gen=- def=-
+public.activity_review_response.choice_answers jsonb NOT NULL gen=- def='{}'::jsonb
 public.activity_review_response.closing_occurrence_id uuid NOT NULL gen=- def=-
 public.activity_review_response.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.activity_review_response.deal_id uuid NOT NULL gen=- def=-
@@ -2905,7 +2906,7 @@ public.custom_field.custom_field_currency_check CHECK (((currency IS NULL) OR (c
 public.custom_field.custom_field_object_check CHECK ((object = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'activity'::text, 'project'::text, 'relationship'::text, 'partner'::text, 'contract'::text])))
 public.custom_field.custom_field_pkey PRIMARY KEY (id)
 public.custom_field.custom_field_status_check CHECK ((status = ANY (ARRAY['active'::text, 'retired'::text])))
-public.custom_field.custom_field_type_check CHECK ((type = ANY (ARRAY['text'::text, 'number'::text, 'date'::text, 'currency'::text, 'picklist'::text, 'boolean'::text])))
+public.custom_field.custom_field_type_check CHECK ((type = ANY (ARRAY['text'::text, 'number'::text, 'date'::text, 'currency'::text, 'picklist'::text, 'multiselect'::text, 'boolean'::text])))
 public.custom_field.id uuid NOT NULL gen=- def=uuidv7()
 public.custom_field.label text NOT NULL gen=- def=-
 public.custom_field.object text NOT NULL gen=- def=-

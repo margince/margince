@@ -131,6 +131,10 @@ func (stubs) ListActivityReviewTemplates(w nethttp.ResponseWriter, r *nethttp.Re
 	httperr.NotImplemented(w, r, "ListActivityReviewTemplates")
 }
 
+func (stubs) UpdateActivityReviewTemplate(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "UpdateActivityReviewTemplate")
+}
+
 func (stubs) GetCaptureHealth(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetCaptureHealth")
 }

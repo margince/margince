@@ -50,6 +50,7 @@ var retentionActions = map[string]retentionExecutor{
 	"activity/erase":        (*RetentionService).eraseActivityContent,
 	"deal/archive":          (*RetentionService).archiveDeal,
 	"ai_call_payload/erase": (*RetentionService).erasePayload,
+	"raw_capture/erase":     (*RetentionService).eraseRawCapture,
 	"lead/anonymize":        (*RetentionService).anonymizeLead,
 	"contact/anonymize":     (*RetentionService).anonymizeContact,
 }
@@ -69,16 +70,6 @@ func (s *RetentionService) archiveActivity(ctx context.Context, tx pgx.Tx, id id
 
 func (*RetentionService) archiveDeal(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 	_, err := tx.Exec(ctx, `UPDATE deal SET archived_at = now() WHERE id = $1`, id)
-	return err
-}
-
-// erasePayload deletes the row outright rather than scrubbing it in place —
-// unlike activity/erase there is no metadata half of this record left to keep:
-// ai_call_payload IS the special-category-adjacent content, and ai_call (the
-// metadata row it FK-cascades from) survives untouched. The retention audit entry
-// carries no payload bytes, only policy metadata.
-func (*RetentionService) erasePayload(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
-	_, err := tx.Exec(ctx, `DELETE FROM ai_call_payload WHERE id = $1`, id)
 	return err
 }
 

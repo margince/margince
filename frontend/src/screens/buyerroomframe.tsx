@@ -32,14 +32,16 @@ export function BuyerFrame({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <div className="buyer-page">
-      <div className="buyer-column">{children}</div>
-      <PoweredBy />
+      <div className="buyer-column">
+        {children}
+        <PoweredBy />
+      </div>
     </div>
   );
 }
 
 // The one thing on the buyer's page that is ours rather than the seller's:
-// the product's mark, in the corner, saying what is serving the room.
+// the product's mark, closing the column, saying what is serving the room.
 function PoweredBy() {
   const t = useT();
   return (

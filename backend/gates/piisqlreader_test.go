@@ -209,6 +209,11 @@ var retentionSweepFiles = []string{
 	// this list a column this file alone stops destroying would pass here with
 	// nothing to notice.
 	"internal/modules/privacy/retention_leadrecord.go",
+	// The two executors that DELETE a row rather than scrub one — the ai_call
+	// payload and the stored provider original. They left retentionactions.go
+	// when it crossed the length cap, and this list is what noticed, exactly as
+	// its header says it should.
+	"internal/modules/privacy/retentionrowerasure.go",
 	// Everything an activity's TEXT leaves behind, which every arm destroys
 	// through one function. It arrived here when that function was extracted,
 	// and its absence was the regression this list's header describes twice

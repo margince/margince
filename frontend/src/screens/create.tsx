@@ -1,3 +1,13 @@
+import {
+  joinMultiselectValue,
+  splitMultiselectValue,
+} from "./create.multiselect";
+
+export {
+  joinMultiselectValue,
+  splitMultiselectValue,
+} from "./create.multiselect";
+
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
 import { type ReactNode, useEffect, useId, useRef, useState } from "react";
@@ -56,6 +66,7 @@ export type SubField = {
   type?: "text" | "email" | "number" | "date" | "datetime-local" | "select";
   required?: boolean;
   options?: CreateFieldOption[];
+  multiselectEncoding?: "json";
   placeholder?: string;
   maxLength?: number;
   // Granularity for a number input. Omitted means the browser's default of 1,
@@ -83,6 +94,7 @@ export type CreateField = {
     | "textarea";
   required?: boolean;
   options?: CreateFieldOption[];
+  multiselectEncoding?: "json";
   placeholder?: string;
   maxLength?: number;
   // Already translated guidance beneath the control.
@@ -208,22 +220,6 @@ export function fieldLabel(
   t: (key: MessageKey) => string,
 ): string {
   return field.labelText ?? (field.label ? t(field.label) : "");
-}
-
-// multiselect (e.g. a webhook's subscribed event types): the toggled
-// selection is collected as a comma-joined string in the SAME
-// `values: Record<string, string>` channel every scalar field already uses —
-// no new value channel, so every existing single-string field type stays
-// untouched. These are the documented mapper a screen's transport uses to
-// recover the `string[]` (join before render, split after submit).
-const MULTISELECT_DELIMITER = ",";
-
-export function splitMultiselectValue(raw: string): string[] {
-  return raw.length === 0 ? [] : raw.split(MULTISELECT_DELIMITER);
-}
-
-export function joinMultiselectValue(selected: string[]): string {
-  return selected.join(MULTISELECT_DELIMITER);
 }
 
 // One repeatable-row field's collected rows, e.g. `{ email: "a@x", email_type:
@@ -669,14 +665,14 @@ function MultiselectField({
   setValue: (next: string) => void;
 }>) {
   const t = useT();
-  const selected = splitMultiselectValue(value);
+  const selected = splitMultiselectValue(value, field.multiselectEncoding);
   const hintId = `${formId}-${field.key}-required-hint`;
 
   function toggle(optionValue: string) {
     const next = selected.includes(optionValue)
       ? selected.filter((entry) => entry !== optionValue)
       : [...selected, optionValue];
-    setValue(joinMultiselectValue(next));
+    setValue(joinMultiselectValue(next, field.multiselectEncoding));
   }
 
   return (

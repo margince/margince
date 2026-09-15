@@ -207,6 +207,15 @@
   cursor: pointer;
 }
 
+/* A cell with two facts that belong on two lines — a call's timestamp over the
+ * reason it failed, say — rather than run together as one glued word. Named
+ * for what it does, not for a caller, so any cell renderer can reach for it. */
+.cell-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
 /* The chip's own chrome. Its SIZE is a rung below, never here: four rendered
    sizes — 20, 28, 44 and 76 — already existed in three different stylesheets
    for a component whose prop surface admitted two, so the scale is declared
