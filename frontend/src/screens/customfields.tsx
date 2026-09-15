@@ -596,14 +596,11 @@ export function CustomFieldsAdmin() {
   const toast = useToast();
   const [renaming, setRenaming] = useState<CustomField | null>(null);
   const [renameLabel, setRenameLabel] = useState("");
-  // The builder is mounted only while its dialog is open, which is what stops a
-  // second Confirm resubmitting the same, now-committed, draft (m6): a
-  // successful create closes the dialog and the form's state goes with it.
+  // The dialog stays MOUNTED so it can animate out, so `addSeq` is what gives
+  // each open a builder of its own: it re-keys the form, which discards a
+  // half-typed label rather than leaving it waiting under an object nobody
+  // re-chose, and stops a second Confirm resubmitting a draft already created.
   const [adding, setAdding] = useState(false);
-  // Bumped on every open so the builder below is re-keyed and starts empty.
-  // The dialog stays mounted now, so remounting on open is what discards a
-  // half-typed label instead of leaving it waiting under an object nobody
-  // re-chose.
   const [addSeq, setAddSeq] = useState(0);
   const renameId = useId();
   const addId = useId();
