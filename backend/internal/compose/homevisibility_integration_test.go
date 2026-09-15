@@ -154,7 +154,9 @@ func TestCounterpartyReviewRemainsWithItsImportingSeat(t *testing.T) {
 	activity := seedCapturedMail(t, e, "review@agenda.example", "A possible new contact")
 	disposition := seedPendingDisposition(t, e, "review@agenda.example", "agenda.example", activity)
 	retireToUnsure(t, e, disposition)
-	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{}, slog.Default())
+	engine := NewCounterpartyVerdictEngine(
+		e.Pool, &scriptedVerdictBrain{}, CaptureConfig{}, slog.Default(),
+	)
 	if err := engine.StageReviewsWorkspace(e.Admin(), 0); err != nil {
 		t.Fatal(err)
 	}
