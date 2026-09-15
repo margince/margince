@@ -58,24 +58,30 @@ export function CoverageExplorer({
 }: Readonly<{ companyId: string }>) {
   const t = useT();
   const [open, setOpen] = useState(false);
+  // Opened once, mounted from then on. The grid reads the company graph, so it
+  // must not mount with the page — and it must not unmount when the dialog
+  // closes either, because the dialog is still on screen while it leaves and an
+  // emptied one is what the reader would watch go.
+  const [everOpened, setEverOpened] = useState(false);
   const titleId = useId();
   return (
     <>
       <button
         type="button"
         className="link-button"
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          setEverOpened(true);
+          setOpen(true);
+        }}
       >
         {t("acctCoverage.open")}
       </button>
-      {open && (
-        <Modal open onClose={() => setOpen(false)} labelledBy={titleId}>
-          <h2 id={titleId} className="t-h2 modal-title">
-            {t("acctCoverage.title")}
-          </h2>
-          <CoverageGrid companyId={companyId} />
-        </Modal>
-      )}
+      <Modal open={open} onClose={() => setOpen(false)} labelledBy={titleId}>
+        <h2 id={titleId} className="t-h2 modal-title">
+          {t("acctCoverage.title")}
+        </h2>
+        {everOpened && <CoverageGrid companyId={companyId} />}
+      </Modal>
     </>
   );
 }

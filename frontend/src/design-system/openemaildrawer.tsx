@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { useRef } from "react";
+
 import { formatDateTime } from "../format/format";
 import { useLocale } from "../i18n";
 import { EmailAccessEditor } from "../screens/emailaccesseditor";
@@ -15,6 +17,11 @@ import { EmailDetail } from "./emaildetail";
  * mount the same three lines, and `{openEmail && <EmailDetail …/>}` spends a
  * branch inside render callbacks that are already at the complexity ceiling.
  * Nothing is drawn when no message is open.
+ *
+ * Nothing is drawn until the first message is opened. From then on the drawer
+ * stays mounted with `open` false, because that is what lets it animate out —
+ * a drawer unmounted the moment its id goes away vanishes instead of leaving,
+ * and takes the message off the screen the reader is still looking at.
  *
  * This is also where the access editor is bound, so every page that mounts the
  * drawer gets it. `EmailDetail` takes it as a render prop and never imports it:
@@ -50,12 +57,20 @@ export function OpenEmailDrawer({
   onReplySent?: () => void;
 }>) {
   const { locale } = useLocale();
-  if (!activityId) {
+  // The id the drawer was opened with, kept after the host clears it: the
+  // drawer is still on screen while it closes, and it has to name a message to
+  // draw one. The next open replaces it.
+  const shown = useRef<string | null>(null);
+  if (activityId !== null) {
+    shown.current = activityId;
+  }
+  if (shown.current === null) {
     return null;
   }
   return (
     <EmailDetail
-      activityId={activityId}
+      activityId={shown.current}
+      open={activityId !== null}
       onClose={onClose}
       formatWhen={(iso) => formatDateTime(iso, locale, zone)}
       renderAccess={(presentation) => (

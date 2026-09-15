@@ -9,7 +9,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { Avatar, Badge, Button, Modal } from "../design-system/atoms";
+import { Avatar, Badge, Modal } from "../design-system/atoms";
 import { CompanyLogo } from "../design-system/companylogo";
 import { Logomark } from "../design-system/logomark";
 import { useLocale, useT } from "../i18n";
@@ -655,14 +655,6 @@ function SectionSwitcher({
               onPick={close}
             />
           ))}
-        </div>
-        {/* At this width the dialog is a full-screen sheet: there is no backdrop
-            left to click and a touch reader has no Escape, so the way out has to
-            be a control in the sheet. */}
-        <div className="actions">
-          <Button small onClick={close}>
-            {t("shell.closeMenu")}
-          </Button>
         </div>
       </Modal>
     </>

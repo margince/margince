@@ -98,7 +98,6 @@ export const de = {
   "brief.focus.back": "Zurück zum Fokus",
   "brief.queue.back": "Zurück zur Liste",
   "brief.queue.title": "Arbeitsliste",
-  "brief.queue.close": "Zur Startseite",
   "brief.focus.urgentRemaining_one":
     "{count} weitere dringende Aufgabe in der Liste",
   "brief.focus.urgentRemaining_other":
@@ -816,7 +815,6 @@ export const de = {
   "state.partialCount": "{count} weitere nicht angezeigt",
   "filePreview.download": "Herunterladen",
   "filePreview.print": "Drucken",
-  "filePreview.close": "Vorschau schließen",
   "filePreview.loading": "Datei wird geöffnet…",
   "filePreview.failedTitle": "Diese Datei kann hier nicht angezeigt werden",
   "filePreview.failed":
@@ -1820,7 +1818,6 @@ export const de = {
   "email.detail.attachments_one": "{count} Anhang",
   "email.detail.attachments_other": "{count} Anhänge",
   "email.detail.showQuoted": "Zitierten Verlauf anzeigen",
-  "email.detail.close": "Schließen",
   "email.detail.withheldReason":
     "Diese Nachricht ist nicht für Sie freigegeben",
   "email.detail.from": "Von",
@@ -5843,7 +5840,6 @@ export const de = {
   "ob.conv.connect.appSetupLink": "In den Einstellungen einrichten",
   "ob.conv.connect.dialogIntro":
     "{brings}. Ich lese es einmal, um deine Kontakte und Historie aufzubauen, und halte es danach synchron.",
-  "ob.conv.connect.dialogClose": "Schließen",
   "ob.conv.connect.linkedinName": "LinkedIn",
   "ob.conv.connect.linkedinSaved": "Profil gespeichert",
   "ob.conv.connect.linkedinSkippedNote":

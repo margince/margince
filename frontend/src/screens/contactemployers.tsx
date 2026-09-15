@@ -2,7 +2,6 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { ifMatch } from "../api/version";
 import { useCanWriteRecord } from "../app/capability";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
@@ -27,7 +26,7 @@ import { stillHeld, today } from "./employmentcurrency";
 import { EmploymentEdit } from "./employmentedit";
 import { ImportedEmploymentHistory } from "./employmentimport";
 import { useEmploymentPages } from "./employmentpages";
-import { sameEditValue, saveIndependentEdit } from "./independentedit";
+import { patchEmployment } from "./employmentpatch";
 
 // --- Employers ---------------------------------------------------------
 
@@ -50,77 +49,6 @@ export async function searchCompanyCandidates(
     id: company.id,
     name: company.display_name,
   }));
-}
-
-// Re-read through the scoped list endpoint when a concurrent edit requires a
-// comparison; the relationship contract has no single-record GET.
-export async function patchEmployment(
-  employment: Employment,
-  contactId: string,
-  body: UpdateRelationshipRequest,
-  t: ReturnType<typeof useT>,
-): Promise<void> {
-  const read = async () => {
-    const { data, error } = await api.GET("/relationships", {
-      params: {
-        query: {
-          contact_id: contactId,
-          company_id: employment.company_id,
-          kind: "employment",
-          limit: 200,
-        },
-      },
-    });
-    if (error) throwProblem(error);
-    const row = data.data.find((row) => row.id === employment.relationship_id);
-    if (!row)
-      throwProblem({ detail: t("contact.rail.employmentVersionUnresolved") });
-    return row;
-  };
-  const original = {
-    ...employment,
-    id: employment.relationship_id,
-    started_at: employment.started_at?.slice(0, 10),
-    ended_at: employment.ended_at?.slice(0, 10),
-  };
-  // Older snapshots may lack a version. Compare visible fields before using
-  // their fresh version; never pin an unseen change as the user's baseline.
-  if (original.version === undefined) {
-    const fresh = await read();
-    for (const key of [
-      "role",
-      "started_at",
-      "ended_at",
-      "employment_status",
-    ] as const) {
-      if (!sameEditValue(original[key], fresh[key]))
-        throwProblem({ code: "version_skew" });
-    }
-    original.version = fresh.version;
-  }
-  await saveIndependentEdit({
-    opened: { id: original.id, original },
-    patch: body,
-    groups: [
-      ["started_at", "started_precision", "clear_started_at"],
-      [
-        "ended_at",
-        "ended_precision",
-        "clear_ended_at",
-        "employment_status",
-        "is_current_primary",
-      ],
-    ],
-    read,
-    write: async (patch, version) => {
-      const { data, error } = await api.PATCH("/relationships/{id}", {
-        params: { path: { id: original.id }, ...ifMatch(version) },
-        body: patch,
-      });
-      if (error) throwProblem(error);
-      return data;
-    },
-  });
 }
 
 // Refresh the record, paginated roles and brief together after any employment
@@ -205,7 +133,15 @@ export function Employers({ view }: Readonly<{ view: Contact360 }>) {
     ).values(),
   ];
   const [adding, setAdding] = useState(false);
-  const [editing, setEditing] = useState<Employment | null>(null);
+  // The row being edited, kept after the dialog closes so it still has an
+  // employment to draw while it animates out. `editingOpen` is what is open,
+  // and `seq` rides in the key below so every press opens a dialog seeded
+  // afresh from the row — the reset the old unmount gave for free.
+  const [editing, setEditing] = useState<Readonly<{
+    row: Employment;
+    seq: number;
+  }> | null>(null);
+  const [editingOpen, setEditingOpen] = useState(false);
   const [removing, setRemoving] = useState<Employment | null>(null);
   const primaryCompany = allEmployments.find(
     (e) => e.is_current_primary && stillHeld(e),
@@ -272,7 +208,13 @@ export function Employers({ view }: Readonly<{ view: Contact360 }>) {
               readOnlyReason={readOnlyReason}
               actions={actions}
               onRemove={() => setRemoving(employment)}
-              onEdit={() => setEditing(employment)}
+              onEdit={() => {
+                setEditing((prior) => ({
+                  row: employment,
+                  seq: (prior?.seq ?? 0) + 1,
+                }));
+                setEditingOpen(true);
+              }}
             />
           ))}
         </SurfaceState>
@@ -296,12 +238,16 @@ export function Employers({ view }: Readonly<{ view: Contact360 }>) {
             canEdit={canEdit}
           />
         )}
-        {editing && (
+        {/* The guard falls only before the first row is ever edited: `editing`
+            outlives the close, so from then on the dialog stays mounted and
+            leaves with the employment it was opened on still drawn. */}
+        {editing !== null && (
           <EmploymentEdit
-            key={contact.id + editing.relationship_id}
-            employment={editing}
+            key={`${contact.id}:${editing.row.relationship_id}:${editing.seq}`}
+            employment={editing.row}
+            open={editingOpen}
             contactId={contact.id}
-            onClose={() => setEditing(null)}
+            onClose={() => setEditingOpen(false)}
             onSaved={actions.invalidate}
           />
         )}

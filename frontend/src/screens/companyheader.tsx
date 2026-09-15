@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { CheckSquare, FileText } from "lucide-react";
-import { type ReactElement, useId } from "react";
+import { type ReactElement, useId, useRef } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
@@ -172,6 +172,12 @@ function WriteEmailAction({
   onOpen: (open: boolean) => void;
   disabledReasonId?: string;
 }>) {
+  // Whether the verb has ever been pressed. `open` belongs to the page, so
+  // this is the composer's own memory of having been asked for.
+  const everOpened = useRef(false);
+  if (open) {
+    everOpened.current = true;
+  }
   return (
     <>
       {/* One of three equal verbs, not the record's primary action: on an
@@ -179,7 +185,11 @@ function WriteEmailAction({
           move worth doing is the one the Brief names. The same verb every
           record page draws, so it is found by its place and its word. */}
       <EmailVerb reasonId={disabledReasonId} onClick={() => onOpen(true)} />
-      {open && (
+      {/* Not drawn until the verb has been pressed once, and mounted from
+          then on. A composer mounted with the record would read on every
+          render of a page nobody is writing from; one unmounted the moment it
+          closes has no frame left to animate out on. */}
+      {everOpened.current && (
         // Keyed by the record, so navigating to another company while the
         // composer is open REMOUNTS it rather than re-pointing it. Without the
         // key the form keeps the text written for the previous account while

@@ -113,6 +113,9 @@ const LEAD_TERMINAL_STAGES = [
 ] as const;
 
 type TerminalDialog = (typeof LEAD_TERMINAL_STAGES)[number]["dialog"];
+// The lead a terminal decision is waiting on: `open` outlives the close so the
+// copy still names it, and `seq` keys the dialog so a second drop asks clean.
+type Ask = { lead: Lead; dialog: TerminalDialog; open: boolean; seq: number };
 
 // How many leads each status holds, INCLUDING the archived terminal ones.
 //
@@ -257,10 +260,7 @@ export function LeadBoard({
   // where leads go to stop being work: a reader opening the board wants the
   // three they still act on, and the terminal pair folded to a count each.
   const [openTerminal, setOpenTerminal] = useState<TerminalStatus | null>(null);
-  const [pending, setPending] = useState<{
-    lead: Lead;
-    dialog: TerminalDialog;
-  } | null>(null);
+  const [pending, setPending] = useState<Ask | null>(null);
   const counts = useLeadStatusCounts();
   const terminalRows = useTerminalLeads(
     openTerminal ?? "promoted",
@@ -364,9 +364,9 @@ export function LeadBoard({
     const terminal = LEAD_TERMINAL_STAGES.find((s) => s.stage === stage);
     if (terminal) {
       // No "is it already there" test: the guard above has already ruled out
-      // every terminal status, and the compiler says so — the comparison this
-      // replaced was dead code once the source had to be live.
-      setPending({ lead, dialog: terminal.dialog });
+      // every terminal status, and the compiler says so.
+      const seq = (pending?.seq ?? 0) + 1;
+      setPending({ lead, dialog: terminal.dialog, open: true, seq });
       return;
     }
     const target = LEAD_BOARD_STAGES.find((s) => s.stage === stage);
@@ -492,24 +492,24 @@ export function LeadBoard({
           the next, the same reason the detail screen keys its pair. */}
       {pending?.dialog === "qualify" && (
         <QualifyDialog
-          key={`qualify-${pending.lead.id}`}
+          key={`qualify-${pending.lead.id}-${pending.seq}`}
           lead={pending.lead}
-          open
-          onClose={() => setPending(null)}
+          open={pending.open}
+          onClose={() => setPending({ ...pending, open: false })}
           onQualified={() => {
-            setPending(null);
+            setPending({ ...pending, open: false });
             onMoved();
           }}
         />
       )}
       {pending?.dialog === "disqualify" && (
         <DisqualifyDialog
-          key={`disqualify-${pending.lead.id}`}
+          key={`disqualify-${pending.lead.id}-${pending.seq}`}
           lead={pending.lead}
-          open
-          onClose={() => setPending(null)}
+          open={pending.open}
+          onClose={() => setPending({ ...pending, open: false })}
           onDisqualified={() => {
-            setPending(null);
+            setPending({ ...pending, open: false });
             onMoved();
           }}
         />

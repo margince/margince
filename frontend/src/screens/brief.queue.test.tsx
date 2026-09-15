@@ -59,9 +59,7 @@ it("restores the queue opener's keyboard focus after closing", async () => {
   const opener = screen.getByRole("button", { name: en["brief.queue.title"] });
   await user.click(opener);
   await screen.findByRole("dialog", { name: en["brief.queue.title"] });
-  await user.click(
-    screen.getByRole("button", { name: en["brief.queue.close"] }),
-  );
+  await user.click(screen.getByRole("button", { name: /close/i }));
   expect(screen.queryByRole("dialog")).toBeNull();
   expect(document.activeElement).toBe(opener);
 });

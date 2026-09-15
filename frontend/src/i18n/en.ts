@@ -91,7 +91,6 @@ export const en = {
   "brief.focus.back": "Back to Focus",
   "brief.queue.back": "Back to queue",
   "brief.queue.title": "Work queue",
-  "brief.queue.close": "Back to Home",
   "brief.focus.urgentRemaining_one": "{count} more urgent item in the queue",
   "brief.focus.urgentRemaining_other": "{count} more urgent items in the queue",
   "brief.focus.remaining": "{count} more priorities in the queue",
@@ -857,7 +856,6 @@ export const en = {
   // account and over a scan that arrived on a message.
   "filePreview.download": "Download",
   "filePreview.print": "Print",
-  "filePreview.close": "Close preview",
   "filePreview.loading": "Opening this file…",
   "filePreview.failedTitle": "This file cannot be shown here",
   "filePreview.failed": "Download it to open it in another application.",
@@ -1900,7 +1898,6 @@ export const en = {
   "email.detail.attachments_one": "{count} attachment",
   "email.detail.attachments_other": "{count} attachments",
   "email.detail.showQuoted": "Show quoted history",
-  "email.detail.close": "Close",
   "email.detail.withheldReason": "This message is not shared with you",
   "email.detail.from": "From",
   "email.detail.to": "To",
@@ -5975,7 +5972,6 @@ export const en = {
   "ob.conv.connect.appSetupLink": "Set it up in Settings",
   "ob.conv.connect.dialogIntro":
     "{brings}. I read it once to build your contacts and history, then keep it in sync.",
-  "ob.conv.connect.dialogClose": "Close",
   "ob.conv.connect.linkedinName": "LinkedIn",
   "ob.conv.connect.linkedinSaved": "Profile saved",
   "ob.conv.connect.linkedinSkippedNote": "Skipped: add it later in Settings",

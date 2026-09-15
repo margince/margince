@@ -68,7 +68,6 @@ export function CompanyRail({
   company,
   view,
   loading,
-  composerOpen,
   onTab,
 }: Readonly<{
   companyId: string;
@@ -85,10 +84,6 @@ export function CompanyRail({
   // every one of them reads the failed state for as long as the read runs,
   // flashing "could not be loaded" on every ordinary page open.
   loading: boolean;
-  // A composer drawer is open in this column. The rail stands down entirely
-  // rather than narrowing: squeezed to a third of its width it is a column of
-  // broken cards, and no mockup draws the two side by side.
-  composerOpen: boolean;
   // Where each panel's header link goes: Deals/Contacts switch the record's own
   // tab strip, Details opens Profile. One callback rather than three, because
   // every use is the same verb aimed at a different tab.
@@ -101,9 +96,6 @@ export function CompanyRail({
   const resolved = view?.company ?? company;
   const canWriteCompany =
     useCanWriteRecord("company", resolved) && !resolved?.archived_at;
-  if (composerOpen) {
-    return null;
-  }
   return (
     // A plain div: the shell's own <aside> is the landmark around this, and a
     // second labelled region inside it would give a reader two names for one

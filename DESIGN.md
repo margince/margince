@@ -911,7 +911,13 @@ The existing durations and curves stay (`--dur-tap` 90ms, `--dur-state` 140ms,
   landed) rather than decoration.
 - A reading whose value changed counts to the new figure over `--dur-move`;
   a row just saved flashes `--accentWash` once and fades over `--dur-enter`.
-- Only `transform` and `opacity` animate. Nothing animates its own layout.
+- Only `transform` and `opacity` animate, with ONE exception: a page COLUMN
+  arriving or leaving — the sidebar rail, the record's details pane — travels
+  its own grid track, and the gutter beside it, over `--dur-move`. It earns
+  the exception twice: the distance is short and a reader makes the move many
+  times a day, and the work column next to it has to REFLOW as the track goes
+  rather than smear behind a pane sliding over it. Nothing else animates its
+  own layout.
 - `prefers-reduced-motion` jumps every one of these to its end state.
 
 ## 10. Restraint — what a screen in this language does not do

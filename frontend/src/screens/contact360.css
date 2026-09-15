@@ -618,6 +618,11 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
+  /* Room at the end for the dialog's own close, which is drawn over this
+     corner. Without it the title runs under the glyph. The rule in atoms.css
+     that reserves this cannot reach here: it names a dialog's first HEADING,
+     and the heading in this row is a level down inside it. */
+  padding-inline-end: calc(var(--control-h-sm) + var(--space-4));
 }
 
 .pe-drawer-title h2 {

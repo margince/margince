@@ -315,6 +315,8 @@ it("keeps a mobile Details edit open until it is saved or cancelled", async () =
   );
   const input = within(dialog).getByRole("textbox", { name: "Title" });
   await user.type(input, "Director");
+  // The drawer's own way out refuses while a field edit is open, and says so
+  // on the control rather than answering the press with nothing.
   await waitFor(() =>
     expect(
       within(dialog)

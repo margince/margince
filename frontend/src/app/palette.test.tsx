@@ -432,6 +432,56 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
 // rail row is a ⌘K command with no registration of its own — and a screen with
 // neither is reachable only by typing its hash. That derivation is what these
 // assert, end to end: the word a reader types, and the address they land on.
+// The palette is not a `Modal` — it draws its own box — but it keeps the same
+// two contracts every dialog here keeps, and this is the second one: it stays
+// on the page while its exit plays, and while it does it is a picture of a
+// palette and nothing a reader or a pointer can reach.
+describe("a palette that is leaving", () => {
+  it("stays on the page, inert and out of the accessibility tree", () => {
+    const exit = new Promise<void>(() => undefined);
+    const animations = vi
+      .spyOn(HTMLElement.prototype, "getAnimations")
+      // The two properties `usePresence` reads: whether this animation can end
+      // at all, and when it did.
+      .mockReturnValue([
+        {
+          finished: exit,
+          effect: { getComputedTiming: () => ({ iterations: 1 }) },
+        } as unknown as Animation,
+      ]);
+    try {
+      const onClose = vi.fn();
+      const { baseElement, rerender } = render(
+        <CommandPalette open onClose={onClose} commands={commands} />,
+      );
+      rerender(
+        <CommandPalette open={false} onClose={onClose} commands={commands} />,
+      );
+
+      const overlay = baseElement.querySelector(".palette-overlay");
+      expect(overlay?.getAttribute("data-state")).toBe("closing");
+      expect(overlay?.hasAttribute("inert")).toBe(true);
+      expect(overlay?.getAttribute("aria-hidden")).toBe("true");
+      expect(screen.queryByRole("dialog")).toBeNull();
+    } finally {
+      animations.mockRestore();
+    }
+  });
+
+  it("renders nothing at all where nothing animates", () => {
+    // Reduced motion, and jsdom: no animation means nothing to wait for, so the
+    // palette goes on the render that dismissed it, exactly as it did before it
+    // had an exit.
+    const { baseElement, rerender } = render(
+      <CommandPalette open onClose={() => {}} commands={commands} />,
+    );
+    rerender(
+      <CommandPalette open={false} onClose={() => {}} commands={commands} />,
+    );
+    expect(baseElement.querySelector(".palette-overlay")).toBeNull();
+  });
+});
+
 describe("useBuiltinCommands", () => {
   function Probe() {
     return (
