@@ -1208,20 +1208,33 @@
      16px animated the FONT SIZE, so tapping a field on an iPhone grew its type
      over 140ms. What should transition is what a field changes about itself
      when it is focused, refused or disabled, and that is these four. */
-  box-shadow: var(--shadow-rest);
+  box-shadow: var(--shadow-well);
   transition:
     border-color var(--dur-state) var(--ease-out),
     box-shadow var(--dur-state) var(--ease-out),
     background-color var(--dur-state) var(--ease-out),
     color var(--dur-state) var(--ease-out);
 }
-/* The press-in, for all three field shapes at once — the shell and the
-   textarea are declared further down this sheet, but their FOCUS rules are
-   further down still, and this rule has to stay above every one of them: a
-   focused field under the pointer must keep its ring, and hover and focus are
-   the same specificity, so source order is what decides it. `:where()` is
-   what keeps them the same specificity while still excluding a control
-   nobody may touch — a disabled field is at rest, so it keeps its layer. */
+/* The Select trigger is the one `.input` that is NOT a well: it holds a closed
+   face rather than a place to type, so it is verb-shaped and takes the surface
+   layer a button takes. Two classes, so it outranks `.input` on specificity
+   rather than on which sheet the bundler emitted first — the same reason
+   `.btn.btn-link` is spelled that way below, and not a theoretical one here:
+   select.css is its own chunk, so the order of the two is a routing decision.
+   In THIS sheet, so the hover and focus rules under it still win on order. */
+.input.select-control {
+  box-shadow: var(--shadow-rest);
+}
+/* The field FLATTENS under the pointer — the floor comes up to meet it, which
+   is the well's version of a button pressing in: either way the gap between
+   the control and the reader closes.
+
+   One rule for all three field shapes, and it has to stay ABOVE every focus
+   rule in this sheet (the shell's and the textarea's are declared much further
+   down): a focused field under the pointer must keep its ring, hover and focus
+   are the same specificity, and source order is what settles that. `:where()`
+   holds them at the same specificity while still excluding a control nobody
+   may touch — a field refusing input is at rest, and keeps its floor. */
 .input:hover:where(:not(:disabled, [aria-disabled="true"])),
 .input:active:where(:not(:disabled, [aria-disabled="true"])),
 .textarea:hover:where(:not(:disabled, [aria-disabled="true"])),
@@ -1230,8 +1243,8 @@
 .field-shell:active:where(:not(:has(:disabled, [aria-disabled="true"]))) {
   box-shadow: none;
 }
-/* The glow REPLACES the resting layer rather than joining it: nothing in this
-   product stacks a shadow under a shadow. */
+/* The glow REPLACES the well rather than joining it: nothing in this product
+   stacks a shadow under a shadow. */
 .input:focus {
   border-color: var(--accent);
   box-shadow: var(--focus-glow);
@@ -1294,7 +1307,7 @@
   background: var(--bgElevated);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-sm);
-  box-shadow: var(--shadow-rest);
+  box-shadow: var(--shadow-well);
   transition:
     border-color var(--dur-state) var(--ease-out),
     box-shadow var(--dur-state) var(--ease-out),
@@ -1517,7 +1530,7 @@
   padding: 9px 11px;
   width: 100%;
   outline: none;
-  box-shadow: var(--shadow-rest);
+  box-shadow: var(--shadow-well);
   transition:
     border-color var(--dur-state) var(--ease-out),
     box-shadow var(--dur-state) var(--ease-out),

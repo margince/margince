@@ -625,6 +625,11 @@
    * deep a resting thing sits is no screen's decision. --shadow-pop is the
    * other half, for what is genuinely above the plane; nothing wears both. */
   --shadow-rest: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  /* The same layer turned inside, for a field. A surface and a verb have a top
+   * side; a field is a place to PUT something, so its depth goes inward and it
+   * has a floor instead. One light source, two ways of meeting it — which is
+   * why the geometry is --shadow-rest's exactly and only `inset` differs. */
+  --shadow-well: inset 0 1px 2px 0 rgb(0 0 0 / 0.05);
   --shadow-pop: 0 8px 30px rgba(41, 37, 36, 0.14);
 
   /*
@@ -821,6 +826,7 @@
      must not diverge, or one button would sit at two different heights in the
      two themes. A deeper alpha for the same apparent step. */
   --shadow-rest: 0 1px 2px 0 rgb(0 0 0 / 0.4);
+  --shadow-well: inset 0 1px 2px 0 rgb(0 0 0 / 0.4);
   --shadow-pop: 0 8px 30px rgba(0, 0, 0, 0.55);
 
   /* higher alpha so the teal read-pill fill stays legible on the darker card
@@ -944,6 +950,7 @@
     --borderControl: #5f7a6e;
 
     --shadow-rest: 0 1px 2px 0 rgb(0 0 0 / 0.4);
+    --shadow-well: inset 0 1px 2px 0 rgb(0 0 0 / 0.4);
     --shadow-pop: 0 8px 30px rgba(0, 0, 0, 0.55);
 
     --tealLight: rgba(14, 116, 144, 0.28);

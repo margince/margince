@@ -4,12 +4,17 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { extensionLayers, filesMatching } from "../../scripts/lib/source-tree";
 
-// Depth, source-wide. This product has exactly two of it: --shadow-rest, one
-// tight layer under every resting surface and filled control, and --shadow-pop,
-// the soft one for what is genuinely above the plane. A control DROPS the
-// resting layer on hover, active and focus, which is the whole of the
-// interaction — the shadow is the gap between the control and the page, so
-// removing it is the control being pressed into the page.
+// Depth, source-wide. This product has exactly three of it, and they answer
+// three different questions about one light source above:
+//
+//   --shadow-rest  a surface or a filled verb has a TOP SIDE
+//   --shadow-well  a field is a place to put something, so it has a FLOOR —
+//                  the same geometry as --shadow-rest, turned inside
+//   --shadow-pop   a popover, menu or drawer is genuinely above the plane
+//
+// A control closes the gap on hover, active and focus: a verb presses into the
+// page, a field's floor comes up to meet the pointer, and either way the layer
+// goes to `none`. That is the whole of the interaction.
 //
 // The token is what makes that changeable: change --shadow-rest and every
 // resting surface follows, in both themes, from one line. A rule that spells
@@ -40,12 +45,63 @@ const cssFiles = [
   ),
 ];
 
-// `none` and `0` are the suppression half of the pattern — a variant with no
+// `none` and `0` are the suppression half of the pattern — a control with no
 // fill taking the resting layer back off, which is a decision and not a drift.
-// `inset` is not depth at all: an inset shadow is a rule, a rail or a well
-// drawn INSIDE the box, and nothing about it says how high the box sits.
 const HOUSE_SHADOW =
-  /^(none|0|inset\b[\s\S]*|var\(--shadow-(rest|pop)\)|var\(--focus-glow(-danger|-ai)?\))$/;
+  /^(none|0|var\(--shadow-(rest|well|pop)\)|var\(--focus-glow(-danger|-ai)?\))$/;
+
+/**
+ * Whether every layer of a shadow is a RULE rather than depth.
+ *
+ * Every inset in this tree is a rail or a ring — a 3px bar down one edge, a 1px
+ * ring inside the box — drawn inside rather than as a border so it costs the
+ * element no size. None of them says how high anything sits, so none of them is
+ * this gate's business.
+ *
+ * Depth is what has BLUR, and now that --shadow-well exists a blurred inset is
+ * an inset well somebody spelled by hand. So the blur — the third length — must
+ * be zero or absent, and it is asked of EVERY comma-separated layer rather than
+ * of the value's first word: the orb's chrome begins with a flat inset ring and
+ * then adds an outer bloom, so a check that read only the opening would wave a
+ * 44px glow through on the strength of the ring in front of it.
+ */
+function drawsOnlyFlatInsets(value: string): boolean {
+  return topLevelLayers(value).every((layer) => {
+    if (!/^inset\b/.test(layer)) {
+      return false;
+    }
+    const lengths = layer
+      .slice("inset".length)
+      .trim()
+      .split(/\s+/)
+      .filter((token) => /^-?(\d*\.)?\d+(px|rem|em)?$/.test(token));
+    // Fewer than three lengths is offset-only: no blur to be depth with.
+    return lengths.length < 3 || /^0(px|rem|em)?$/.test(lengths[2]);
+  });
+}
+
+/**
+ * One shadow's comma-separated layers, splitting only at paren depth zero —
+ * `color-mix(in srgb, …)` carries commas of its own, and a naive split would
+ * tear a colour in half and judge the pieces.
+ */
+function topLevelLayers(value: string): string[] {
+  const layers: string[] = [];
+  let depth = 0;
+  let current = "";
+  for (const character of value) {
+    if (character === "(") depth += 1;
+    if (character === ")") depth -= 1;
+    if (character === "," && depth === 0) {
+      layers.push(current.trim());
+      current = "";
+      continue;
+    }
+    current += character;
+  }
+  layers.push(current.trim());
+  return layers.filter((layer) => layer !== "");
+}
 
 /**
  * Every box-shadow VALUE in one stylesheet that is not one of the house
@@ -60,12 +116,12 @@ function spelledShadows(file: string): string[] {
   const text = readFileSync(file, "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
   return [...text.matchAll(/box-shadow:\s*([^;}]+)[;}]/g)]
     .map((match) => match[1].trim().replace(/\s+/g, " "))
-    .filter((value) => !HOUSE_SHADOW.test(value))
+    .filter((value) => !HOUSE_SHADOW.test(value) && !drawsOnlyFlatInsets(value))
     .map((value) => `${relative(frontendRoot, file)}: box-shadow: ${value}`);
 }
 
 describe("depth", () => {
-  it("draws every shadow from the two depth tokens", () => {
+  it("draws every shadow from the three depth tokens", () => {
     const spelled = cssFiles
       // tokens.css is where the two values LIVE; a literal there is its job.
       .filter((file) => !file.endsWith("tokens.css"))
@@ -75,9 +131,10 @@ describe("depth", () => {
       .sort();
     expect(
       spelled,
-      "a shadow reads `var(--shadow-rest)` at rest or `var(--shadow-pop)` " +
-        "above the plane; these spell their own geometry and colour, which is " +
-        "how one depth becomes twenty that no longer agree",
+      "a shadow reads `var(--shadow-rest)` for a top side, " +
+        "`var(--shadow-well)` for a field's floor, or `var(--shadow-pop)` " +
+        "above the plane; these spell their own geometry and colour, which " +
+        "is how one depth becomes twenty that no longer agree",
     ).toEqual([
       // The agent's state mark and its recap marks are LIGHTS, not boxes: a 5px
       // dot with its own halo in the tone the orb is running, so the panel and
@@ -95,6 +152,13 @@ describe("depth", () => {
       "src/design-system/decisiondeck.css: box-shadow: 0 0 0 2px var(--ai)",
       "src/design-system/decisiondeck.css: box-shadow: 0 0 0 2px var(--borderStrong)",
       "src/design-system/decisiondeck.css: box-shadow: 0 0 0 2px var(--danger)",
+      // The agent orb is a lit SPHERE, not a surface at a depth: an inner
+      // shading gradient, a white hairline just inside the edge, and the ball's
+      // own bloom, modelling one object under one light. The second value is
+      // the same chrome at the small container rung. Neither is an elevation
+      // and no token could carry either.
+      "src/design-system/margince-core.css: box-shadow: inset 0 -40px 60px -46px var(--coreC1), inset 0 0 0 1px color-mix(in srgb, var(--overlayLight) 8%, transparent), 0 0 44px -22px var(--coreC2)",
+      "src/design-system/margince-core.css: box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--overlayLight) 6%, transparent), 0 0 12px -7px var(--coreC2)",
       // The capture mark while the agent is reading: a halo in the same tint as
       // the mark's fill. That is the state, not an elevation.
       "src/screens/backfill.css: box-shadow: 0 0 0 4px var(--aiLight)",
@@ -143,16 +207,19 @@ describe("depth", () => {
   // simply stops being drawn, in silence, on every surface at once. Every rule
   // above reads the name, so the name has to exist in every theme arm — not
   // only in the one whose screenshot somebody happened to look at.
-  it("declares the resting layer in every theme arm", () => {
-    const tokens = readFileSync(
-      join(frontendRoot, "src", "design-system", "tokens.css"),
-      "utf8",
-    );
-    expect(
-      [...tokens.matchAll(/--shadow-rest:\s*[^;]+;/g)].length,
-      "--shadow-rest belongs in the light block, the dark toggle and the " +
-        "platform-preference arm; a theme missing it loses every resting " +
-        "shadow in the product",
-    ).toBe(3);
-  });
+  it.each(["--shadow-rest", "--shadow-well", "--shadow-pop"])(
+    "declares %s in every theme arm",
+    (token) => {
+      const tokens = readFileSync(
+        join(frontendRoot, "src", "design-system", "tokens.css"),
+        "utf8",
+      );
+      expect(
+        [...tokens.matchAll(new RegExp(`${token}:\\s*[^;]+;`, "g"))].length,
+        `${token} belongs in the light block, the dark toggle and the ` +
+          "platform-preference arm; a theme missing it loses that depth " +
+          "everywhere at once, and says nothing about it",
+      ).toBe(3);
+    },
+  );
 });

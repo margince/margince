@@ -83,10 +83,12 @@ least risky once the tokens hold.
    their own px (they diverge today). Set `--fs-body` 13.5px, `--lh-normal`
    1.55, `--fs-display` 32px with `--tracking-display` -0.03em. `body` in
    `app.css` reads the tokens rather than `14px/1.5`.
-7. **Radius and depth.** `--r-md` 12→14px, `--r-lg` 20→18px (the pane). Two
+7. **Radius and depth.** `--r-md` 12→14px, `--r-lg` 20→18px (the pane). Three
    depth tokens and no more: `--shadow-rest`, one tight 1px/2px layer worn by
-   every resting surface and filled control (and dropped by a control on hover,
-   active and focus), and `--shadow-pop` for popovers and the drawer.
+   every resting surface and filled control; `--shadow-well`, the same layer
+   turned `inset`, worn by every field, because a field has a floor rather than
+   a top side; and `--shadow-pop` for popovers and the drawer. A control drops
+   its layer on hover, active and focus.
 8. **Dark.** Add the new tokens to both dark arms with the dark values from
    `DESIGN.md` §3; the two arms must stay byte-identical to each other (the
    gate holds that), not to the light block.

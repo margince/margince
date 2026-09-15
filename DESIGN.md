@@ -56,10 +56,12 @@ checked against it. The sources are listed at the end of the section.
 2. **When a shadow is cast, it is tinted and layered.** Stripe's shadows are
    blue-grey (`rgba(50,50,93,.25)`) because its brand is navy, with a second
    tighter layer close to the element; a pure black shadow is what makes a
-   card look pasted on. **Rule:** there are exactly two depth tokens,
-   `--shadow-rest` and `--shadow-pop`, from a single light source above — the
-   resting one a single tight layer, the popover one soft and far. Both are
-   themed: the ink is the theme's to decide, the geometry is not.
+   card look pasted on. **Rule:** there are exactly three depth tokens, all
+   from a single light source above — `--shadow-rest`, one tight layer for a
+   thing with a top side; `--shadow-well`, that same layer turned `inset` for a
+   field, which has a floor instead; and `--shadow-pop`, soft and far, for what
+   is genuinely above the plane. All three are themed: the ink is the theme's
+   to decide, the geometry is not.
 3. **A rim light on the top edge is what makes a filled thing look made.**
    Raycast's buttons and keycaps carry `inset 0 1px 0 rgba(255,255,255,.1)`;
    the same one-pixel highlight is on every "premium" control the craft guides
@@ -264,15 +266,20 @@ alignment mono was bought for.
   16px for a board card and the agent's row; 12px for a control; 8px for a chip
   and 4px for a keycap; full for a pill and a monogram.
 - **Depth is light first, shadow second.** A pane is translucent over the lit
-  ground with a hairline edge; that is its elevation. On top of it a resting
-  surface — a pane, a card, a reading, a board card — and a control with a FILL
-  take `--shadow-rest`, one tight 1px/2px 5% layer, which says the thing has a
-  top side rather than that it is floating. The fill is what decides it: a
-  ghost button casts, because the pane is its fill; a bare icon button has none
-  and casts nothing, and neither does a text affordance. A CONTROL drops the
-  layer on hover, active and focus, so the interaction reads as the control
-  being pressed into the page. A popover, menu or drawer takes `--shadow-pop` instead. Nothing at
-  rest glows or has a gradient, and nothing stacks a shadow under a shadow.
+  ground with a hairline edge; that is its elevation. On top of it the question
+  is what the thing IS. A surface — a pane, a card, a reading, a board card —
+  and a control with a FILL have a top side, and take `--shadow-rest`, one
+  tight 1px/2px 5% layer. The fill is what decides a control: a ghost button
+  casts, because the pane is its fill; a bare icon button has none and casts
+  nothing, and neither does a text affordance. A FIELD is a place to put
+  something, so it has a floor rather than a top side and takes
+  `--shadow-well`, the same layer turned inside — a text box, a textarea, a
+  field shell. The one exception is the `Select` trigger: it holds a closed
+  face rather than a place to type, so it is verb-shaped and takes the resting
+  layer. Either way a control closes the gap on hover, active and focus — a
+  verb presses into the page, a field's floor comes up to meet the pointer. A
+  popover, menu or drawer takes `--shadow-pop` instead. Nothing at rest glows
+  or has a gradient, and nothing stacks a shadow under a shadow.
 - **No pane inside a pane.** A zone is one pane; the things in it are a
   title, a rule and rows. The only enclosed shapes inside a pane are the
   agent's tinted row and a staged row's dashed edge.
