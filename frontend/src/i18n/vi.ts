@@ -9771,6 +9771,8 @@ export const vi = {
   "lead.today.answer": "Trả lời {name}",
   "lead.today.answerMeta": "Còn nợ phản hồi đầu tiên",
   "lead.today.nextTask": "Việc tiếp theo",
+  "lead.today.reply": "Trả lời",
+  "lead.today.openTasks": "Mở công việc",
   "lead.readings.answered": "Đã trả lời",
   "lead.standing.dueBy": "Chưa ai trả lời. Phản hồi đầu tiên hạn đến {at}.",
   "lead.standing.overdueSince":

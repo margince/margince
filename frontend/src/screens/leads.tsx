@@ -34,14 +34,12 @@ import { TimelineFilterBar } from "../design-system/timelinefilterbar";
 import { useToast } from "../design-system/toast";
 import {
   formatDateAbbrev,
-  formatDateTime,
   formatDecimal,
   formatNumber,
 } from "../format/format";
-import { daysPast } from "../format/lateness";
 import { leadIdentityName } from "../format/leadname";
 import { viewerZone } from "../format/timezone";
-import { type Locale, type Translator, useLocale, useT } from "../i18n";
+import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useClaimRecord } from "./claimrecord";
 import {
@@ -72,6 +70,7 @@ import { QualifyDialog } from "./leads.qualify";
 import { LeadStepper } from "./leads.stepper";
 import { LeadManualSignals } from "./leadsignals";
 import { leadStanding } from "./leadstanding";
+import { leadTodoRows } from "./leadtoday";
 import { LogActivity } from "./logactivity";
 import { useOpenEmail, withEmailOpener } from "./openemail";
 import {
@@ -79,7 +78,6 @@ import {
   RecordReadingPair,
   TimelineThread,
   TodayPanel,
-  TodoRow,
 } from "./record360";
 import { RecordCustomFields } from "./recordcustomfields";
 import { saveRecordEdit } from "./recordedit";
@@ -816,89 +814,6 @@ function LeadCall({
   );
 }
 
-// What needs a contact on this lead: the first response, while it is owed, and
-// the next task on it. Neither is the agent's move — a lead carries no
-// suggestions — so both draw as to-dos the record already carries. A closed
-// lead is not worked and draws none.
-function leadTodoRows(
-  lead: Lead,
-  t: Translator,
-  locale: Locale,
-  // A task's DEADLINE is the record's day — the team agreed it and every
-  // colleague must quote the same one. The response clocks below stay on the
-  // reader's own: how long a lead has been waiting on them is about them.
-  recordZone: string,
-): ReactNode[] {
-  if (lead.archived_at) {
-    return [];
-  }
-  const zone = viewerZone();
-  const rows: ReactNode[] = [];
-  if (!lead.first_response_at) {
-    rows.push(
-      <TodoRow
-        key="answer"
-        title={t("lead.today.answer", {
-          name: leadIdentityName(lead) || t("lead.unnamed"),
-        })}
-        meta={t("lead.today.answerMeta")}
-        due={firstResponseDue(lead, t, locale, zone)}
-      />,
-    );
-  }
-  if (lead.next_task_subject) {
-    const late = lead.next_task_due_at
-      ? daysPast(Date.parse(lead.next_task_due_at), Date.now()).late
-      : false;
-    rows.push(
-      <TodoRow
-        key="task"
-        title={lead.next_task_subject}
-        meta={t("lead.today.nextTask")}
-        due={
-          lead.next_task_due_at
-            ? {
-                label: late
-                  ? t("co.next.overdue")
-                  : t("co.next.due", {
-                      when: formatDateAbbrev(
-                        lead.next_task_due_at,
-                        locale,
-                        recordZone,
-                      ),
-                    }),
-                tone: late ? "danger" : undefined,
-              }
-            : { label: t("co.next.undated") }
-        }
-      />,
-    );
-  }
-  return rows;
-}
-
-// When the first response is owed, in the server's own three states. No clock
-// means owed without a date, which is not the same as late.
-function firstResponseDue(
-  lead: Lead,
-  t: Translator,
-  locale: Locale,
-  zone: string,
-): { label: string; tone?: "warn" | "danger" } | undefined {
-  if (!lead.sla_deadline_at || !lead.sla_state) {
-    return undefined;
-  }
-  if (lead.sla_state === "breached") {
-    return { label: t("co.next.overdue"), tone: "danger" };
-  }
-  return {
-    label: t("co.next.due", {
-      when: formatDateTime(lead.sla_deadline_at, locale, zone),
-    }),
-    tone: lead.sla_state === "at_risk" ? "warn" : undefined,
-  };
-}
-
 /**
  * What the promotion did, read from the promote audit row it wrote.
  *
@@ -1234,6 +1149,18 @@ function LeadOverviewPane({
     // above it. jsdom has no scrollIntoView; the browser always does.
     composer.current?.scrollIntoView?.({ block: "start" });
   }, [askedToLogCall]);
+  // The "Answer" row's own verb: the same landing the address above gives a
+  // reader sent here to reply, but reached by a press rather than a link, so
+  // it hands the reader the field too rather than leaving them to find it.
+  function focusComposer() {
+    composer.current?.scrollIntoView?.({ block: "start" });
+    composer.current
+      ?.querySelector<HTMLElement>("input, textarea, select, button")
+      ?.focus();
+  }
+  // The lead carries no task id of its own, so both the panel head's "View
+  // tasks" and the "Next task" row's own verb open the same queue.
+  const onOpenTasks = () => navigate({ screen: "worklist" });
   return (
     <div className="record-stack">
       {/* The readings open the overview, as they do on every record page. */}
@@ -1260,8 +1187,16 @@ function LeadOverviewPane({
           why it scores what it scores, and what the rep knows about it. */}
       <RecordReading>
         <LeadCall lead={lead} thread={thread} onOpenEmail={onOpenEmail} />
-        <TodayPanel onOpenTasks={() => navigate({ screen: "worklist" })}>
-          {leadTodoRows(lead, t, locale, recordZone)}
+        <TodayPanel onOpenTasks={onOpenTasks}>
+          {leadTodoRows(
+            lead,
+            t,
+            locale,
+            recordZone,
+            focusComposer,
+            onOpenTasks,
+            writer.readOnly ? terminalReasonId : undefined,
+          )}
         </TodayPanel>
         <RecordReadingPair>
           <LeadScoreCard

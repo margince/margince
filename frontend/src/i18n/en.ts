@@ -10080,6 +10080,8 @@ export const en = {
   "lead.today.answer": "Answer {name}",
   "lead.today.answerMeta": "First response owed",
   "lead.today.nextTask": "Next task",
+  "lead.today.reply": "Reply",
+  "lead.today.openTasks": "Open tasks",
   "lead.readings.answered": "Answered",
   "lead.standing.dueBy":
     "Nobody has answered yet. The first response is due by {at}.",
