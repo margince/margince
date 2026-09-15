@@ -128,10 +128,10 @@ func TestARedeliveredCreationRecordsOneDuty(t *testing.T) {
 //
 // The acquisition is written directly because CreateContactRequest carries no
 // acquisition field: the web door cannot say how a contact arrived, so every
-// contact it creates is unknown_legacy. The importing doors CAN say
-// (compose/csvcontactfields.go and flipwriters.go both pass
-// AcquiredPurchasedOrImported), and this fixture stands in for them — the row
-// it writes is the row they write, in the same shape and the same columns.
+// contact it creates is unknown_legacy. The importing door CAN say
+// (compose/csvcontactfields.go passes AcquiredPurchasedOrImported), and this
+// fixture stands in for it — the row it writes is the row that door writes, in
+// the same shape and the same columns.
 //
 // Widening the create contract to carry a kind is a real gap and a separate
 // change; a test that pretended the field existed would be describing a product
