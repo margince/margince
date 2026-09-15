@@ -226,7 +226,7 @@ function DealRailRow({ deal }: Readonly<{ deal: Deal }>) {
   return (
     <PanelRow className="co-row">
       <a
-        className="co-rowlink co-rowcover"
+        className="co-rowlink"
         href={routeHash({ screen: "deals", id: deal.deal_id })}
       >
         {deal.name}

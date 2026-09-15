@@ -105,7 +105,7 @@ export function EvidenceModal({
       ) : !shown?.source_kind ? (
         <EmptyState>{t("co.evidence.unavailable")}</EmptyState>
       ) : (
-        <div className="co-evidence">
+        <div>
           <p className="co-evidence-value">
             {shown.label ? `${shown.label}: ` : ""}
             {shown.value}

@@ -77,12 +77,7 @@ export function CallCard({
   children?: ReactNode;
 }>) {
   return (
-    <Panel
-      tone="ai"
-      className="co-reading-call"
-      title={<BriefTitle name={name} />}
-      footer={footer}
-    >
+    <Panel tone="ai" title={<BriefTitle name={name} />} footer={footer}>
       {standing ? (
         <VerdictHead
           label={standing.label}

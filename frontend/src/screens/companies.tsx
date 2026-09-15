@@ -785,7 +785,11 @@ function CompanyRecord({
   // the only way into the pane with it — and one strip on every record page is
   // what lets a reader learn where the switch is once.
   const tabs = (
-    <div className="co-tabs">
+    // A TEST ID rather than a class: the walk from the page's own tab strip to
+    // the switch at its end is what two screen journeys assert, and nothing
+    // draws this wrapper. A class carrying no rule is the lie the class census
+    // exists to catch.
+    <div data-testid="co-tabs">
       <RecordTabs
         options={visibleTabs}
         value={tab}

@@ -147,11 +147,11 @@ function ReviewCard({
               : "outcomeReview.outcomeLost",
           )}
         </Badge>
-        <span className="muted">
+        <span className="t-caption">
           {formatDate(review.created_at, locale, recordZone)}
         </span>
         {earlier && (
-          <span className="muted">{t("outcomeReview.earlierMark")}</span>
+          <span className="t-caption">{t("outcomeReview.earlierMark")}</span>
         )}
       </div>
       <dl className="firmo">
@@ -170,7 +170,7 @@ function ReviewCard({
               {(question.type === "multiselect"
                 ? review.choice_answers?.[question.key]?.join(", ")
                 : review.answers?.[question.key]) || (
-                <span className="muted">{t("outcomeReview.noAnswer")}</span>
+                <span className="t-caption">{t("outcomeReview.noAnswer")}</span>
               )}
             </dd>
           </div>

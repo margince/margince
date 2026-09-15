@@ -567,7 +567,7 @@ function MultiselectField({
         {field.required ? " *" : ""}
       </legend>
       {field.required && (
-        <p id={hintId} className="t-caption field-multiselect-hint">
+        <p id={hintId} className="t-caption">
           {t("create.multiselect.required")}
         </p>
       )}

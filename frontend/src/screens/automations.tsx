@@ -357,7 +357,7 @@ export function AutomationRow({
   const hasVerbs = (canEdit && entry !== undefined) || canViewRuns || canDelete;
 
   return (
-    <li className="auto-row" data-automation={automation.id}>
+    <li data-automation={automation.id}>
       <div className="auto-row-head">
         {entry?.tier && (
           <AutonomyDot

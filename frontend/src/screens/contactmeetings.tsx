@@ -217,7 +217,7 @@ export function ContactMeetingsTab({
     view?.moment?.rule === "meeting_prep" ? view.moment : undefined;
   return (
     <div className="record-stack">
-      <section className="pe-meetings">
+      <section>
         <h2 className="t-h3">{t("contact.meetings.upcoming")}</h2>
         <SurfaceState
           loadingLabel={t("contact.meetings.upcoming")}
@@ -257,7 +257,7 @@ export function ContactMeetingsTab({
           )}
         </SurfaceState>
       </section>
-      <section className="pe-meetings">
+      <section>
         <h2 className="t-h3">{t("contact.meetings.past")}</h2>
         <SurfaceState
           loadingLabel={t("contact.meetings.past")}
