@@ -151,6 +151,45 @@ it("edits the normal leading tier while the effective tier is demoted", async ()
   await user.click(screen.getByRole("button", { name: "Edit shared binding" }));
   expect(onEdit).toHaveBeenCalledWith("cheap_cloud");
 });
+it("explains each routing impact in operational language", () => {
+  render(
+    <LocaleProvider initial="en">
+      <AiFeatureTable
+        rows={[
+          {
+            ...feature,
+            task: "blocked",
+            display_name: "Blocked activity",
+            impact: "budget_blocked",
+          },
+          {
+            ...feature,
+            task: "changed",
+            display_name: "Changed activity",
+            impact: "model_changed",
+          },
+          {
+            ...feature,
+            task: "fallback",
+            display_name: "Fallback activity",
+            impact: "fallback_changed",
+          },
+          {
+            ...feature,
+            task: "unconfigured",
+            display_name: "Unconfigured activity",
+            impact: "unconfigured",
+          },
+        ]}
+      />
+    </LocaleProvider>,
+  );
+
+  expect(screen.getByText("Waiting on allowance")).toBeTruthy();
+  expect(screen.getByText("Different model selected")).toBeTruthy();
+  expect(screen.getByText("Fallback chain changed")).toBeTruthy();
+  expect(screen.getByText("No model configured")).toBeTruthy();
+});
 it("withholds model identities from an allowance reader without routing access", async () => {
   mount({ ai_budget: ["read"], ai_diagnostics: ["read"] });
   await screen.findByText(/22,453,486 of 24,000,000 tokens/);
