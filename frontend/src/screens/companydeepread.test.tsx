@@ -420,13 +420,15 @@ describe("company-360 deep read", () => {
         await vi.advanceTimersByTimeAsync(1);
       });
 
+    // ADDRESSED rather than clicked. The tab is read off the URL, and a click
+    // reaches it through a hashchange — an event, not a timer, so nothing this
+    // test can advance delivers it while the fake clock is installed. Clicked
+    // under fake timers the page stayed on Overview, where neither panel this
+    // case is about is even mounted, and the button below was never drawn.
+    window.location.hash = "#/companies/o-1/profile";
     vi.useFakeTimers();
     try {
       render(<CompanyScreen id="o-1" />);
-      await flush();
-      await flush();
-      await flush();
-      fireEvent.click(screen.getByRole("button", { name: "Profile" }));
       await flush();
       await flush();
       await flush();
