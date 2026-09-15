@@ -235,6 +235,7 @@ func begin(ctx context.Context, tx pgx.Tx, scanID ids.UUID) (row, bool, error) {
 	r, err := scanRow(tx.QueryRow(ctx, `
 		UPDATE company_scan
 		   SET status = 'running', started_at = now(), next_attempt_at = NULL,
+ degrade_reason = CASE WHEN degrade_reason = 'budget_deferred' THEN NULL ELSE degrade_reason END,
 		       attempt = attempt + CASE WHEN status = 'running' THEN 1 ELSE 0 END
 		 WHERE id = $1
 		   AND (status = 'queued'
@@ -254,7 +255,7 @@ func begin(ctx context.Context, tx pgx.Tx, scanID ids.UUID) (row, bool, error) {
 func deferBudget(ctx context.Context, tx pgx.Tx, h held, next time.Time) error {
 	r, err := scanRow(tx.QueryRow(ctx, `
 		UPDATE company_scan
-		   SET status = 'queued', next_attempt_at = $2, attempt = attempt + 1, started_at = NULL
+		   SET status = 'queued', degrade_reason = 'budget_deferred', next_attempt_at = $2, attempt = attempt + 1, started_at = NULL
 		 WHERE id = $1 AND status = 'running' AND started_at = $3
 		RETURNING `+rowColumns, h.ID, next.UTC(), h.ClaimedAt))
 	if errors.Is(err, pgx.ErrNoRows) {

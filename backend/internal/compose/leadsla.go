@@ -98,7 +98,7 @@ func (w leadSLAEscalation) Apply(ctx context.Context, ev workflow.Event, eff wor
 		DueAt:        &due,
 		SourceSystem: &sourceSystem,
 		SourceID:     &sourceID,
-		Links:        []activities.ActivityLinkInput{{EntityType: flipObjectLead, EntityID: ev.Entity.ID}},
+		Links:        []activities.ActivityLinkInput{{EntityType: entityLead, EntityID: ev.Entity.ID}},
 		Source:       systemActor,
 	}
 	if payload.EscalationTarget != nil {

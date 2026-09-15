@@ -15,6 +15,17 @@ info:
     coverage gate that walks the subscribable set.
 components:
   schemas:
+    InternalEventAiBudgetUpdated:
+      type: object
+      x-event-type: ai_budget.updated
+      x-entity-type: ai_budget
+      description: The shared company allowance changed; workers reconsider deferred work.
+      required: [before_revision, after_revision, tokens_per_full_user]
+      properties:
+        before_revision: { type: string }
+        after_revision: { type: string }
+        tokens_per_full_user: { type: integer, format: int64 }
+        company_monthly_tokens: { type: integer, format: int64 }
     InternalEventAiTaskStateChanged:
       type: object
       x-event-type: ai_task.state_changed

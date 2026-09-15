@@ -312,7 +312,7 @@ func TestBuildOptionsDDL_LabelInjectionNeverReachesRawSQL(t *testing.T) {
 // constants are what the DDL admits, and a typo here is a column the catalog
 // cannot write.
 func TestFieldTypes_MatchesMigrationCheckSpelling(t *testing.T) {
-	want := []string{"text", "number", "date", "currency", "picklist", "boolean"}
+	want := []string{"text", "number", "date", "currency", "picklist", "multiselect", "boolean"}
 	if len(FieldTypes) != len(want) {
 		t.Fatalf("FieldTypes = %v, want %v", FieldTypes, want)
 	}

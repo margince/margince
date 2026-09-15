@@ -278,28 +278,6 @@ func TestAUnitsLaterFailureTakesTheFiledActivityWithIt(t *testing.T) {
 	}
 }
 
-// An overlay workspace's native tables are not the live ones, so a core write
-// there lands where nothing reads it. The port refuses instead, and the refusal
-// is the DECLARED one.
-func TestACoreWriteInAnOverlayWorkspaceIsRefusedAndWritesNothing(t *testing.T) {
-	e := setupCore(t)
-	if _, err := e.owner.Exec(context.Background(),
-		// The incumbent rides along: overlay_mode_overlay_iff_incumbent holds the
-		// two together, because an overlay installation with nothing to mirror is
-		// a state no reader of the mode could act on.
-		`UPDATE overlay_mode SET sor_mode = 'overlay', incumbent = 'hubspot'`); err != nil {
-		t.Fatalf("putting the workspace in overlay mode: %v", err)
-	}
-
-	_, err := e.file(t, e.subject, nil)
-	if !errors.Is(err, extension.ErrOverlayUnsupported) {
-		t.Fatalf("filing in an overlay workspace = %v, want ErrOverlayUnsupported", err)
-	}
-	if n := e.count(t, `SELECT count(*) FROM activity`); n != 0 {
-		t.Errorf("%d activity row(s) written in overlay mode, want none", n)
-	}
-}
-
 // A subject the caller cannot see is a NOT FOUND, and nothing is written. The
 // port inherits the store's row-scope gate rather than re-implementing it, and
 // this is what says the gate is actually reached.

@@ -1,15 +1,23 @@
+import {
+  joinMultiselectValue,
+  splitMultiselectValue,
+} from "./create.multiselect";
+
+export {
+  joinMultiselectValue,
+  splitMultiselectValue,
+} from "./create.multiselect";
+
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
 import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { navigate, type Route, type Screen } from "../app/router";
 import {
   Button,
-  Card,
   Checkbox,
   Field,
   type FieldControl,
   Modal,
-  Radio,
   Textarea,
   TextInput,
 } from "../design-system/atoms";
@@ -20,24 +28,8 @@ import {
 import { Select, type SelectOption } from "../design-system/select";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import {
-  ProblemError,
-  problemExistingId,
-  problemMessageOf,
-  useSorMode,
-} from "./common";
-import { kindOf, withPrimaryMarked, withRowUpdated } from "./createrows";
-
-// The record screens whose entities are served from the incumbent mirror in
-// overlay mode. Creating one there answers unsupported_by_sor, so CreateAction
-// renders nothing for these screens in overlay (native screens — products,
-// offer-templates, settings — are unaffected and keep their create button).
-const OVERLAY_MIRRORED_SCREENS = new Set([
-  "contacts",
-  "companies",
-  "deals",
-  "leads",
-]);
+import { ProblemError, problemExistingId, problemMessageOf } from "./common";
+import { RepeatableRowsField } from "./repeatablerowsfield";
 
 // The shared create-record form (contacts, companies, leads, deals): each
 // list screen declares its fields; the transport (which endpoint, how values
@@ -56,6 +48,7 @@ export type SubField = {
   type?: "text" | "email" | "number" | "date" | "datetime-local" | "select";
   required?: boolean;
   options?: CreateFieldOption[];
+  multiselectEncoding?: "json";
   placeholder?: string;
   maxLength?: number;
   // Granularity for a number input. Omitted means the browser's default of 1,
@@ -83,6 +76,7 @@ export type CreateField = {
     | "textarea";
   required?: boolean;
   options?: CreateFieldOption[];
+  multiselectEncoding?: "json";
   placeholder?: string;
   maxLength?: number;
   // Already translated guidance beneath the control.
@@ -208,22 +202,6 @@ export function fieldLabel(
   t: (key: MessageKey) => string,
 ): string {
   return field.labelText ?? (field.label ? t(field.label) : "");
-}
-
-// multiselect (e.g. a webhook's subscribed event types): the toggled
-// selection is collected as a comma-joined string in the SAME
-// `values: Record<string, string>` channel every scalar field already uses —
-// no new value channel, so every existing single-string field type stays
-// untouched. These are the documented mapper a screen's transport uses to
-// recover the `string[]` (join before render, split after submit).
-const MULTISELECT_DELIMITER = ",";
-
-export function splitMultiselectValue(raw: string): string[] {
-  return raw.length === 0 ? [] : raw.split(MULTISELECT_DELIMITER);
-}
-
-export function joinMultiselectValue(selected: string[]): string {
-  return selected.join(MULTISELECT_DELIMITER);
 }
 
 // One repeatable-row field's collected rows, e.g. `{ email: "a@x", email_type:
@@ -390,10 +368,6 @@ export function CreateAction<Created extends { id: string }>({
     mutation.error instanceof ProblemError
       ? problemExistingId(mutation.error.problem)
       : null;
-  const overlay = useSorMode() === "overlay";
-  if (overlay && OVERLAY_MIRRORED_SCREENS.has(screen)) {
-    return null;
-  }
   return (
     <>
       <NewRecordButton
@@ -553,106 +527,6 @@ export function fieldControl(
   );
 }
 
-// Repeated entries stay separate from scalar values; selecting a primary
-// clears the flag on its siblings. New entries inherit the declared type.
-function RepeatableRowsField({
-  field,
-  formId,
-  rows,
-  setRows,
-}: Readonly<{
-  field: CreateField;
-  formId: string;
-  rows: FormRow[];
-  setRows: (next: FormRow[]) => void;
-}>) {
-  const t = useT();
-  const rowFields = field.rowFields ?? [];
-  const primaryKey = field.primaryKey;
-  const typeKey = field.typeKey;
-  const typeDefault = field.typeDefault ?? "";
-
-  function updateRow(index: number, key: string, value: string) {
-    setRows(withRowUpdated(rows, index, key, value, primaryKey, typeKey));
-  }
-
-  function markPrimary(index: number) {
-    if (!primaryKey) {
-      return;
-    }
-    setRows(withPrimaryMarked(rows, index, primaryKey, typeKey, typeDefault));
-  }
-
-  function removeRow(index: number) {
-    setRows(rows.filter((_, rowIndex) => rowIndex !== index));
-  }
-
-  return (
-    <div className="field-repeatable">
-      <span className="t-label">
-        {fieldLabel(field, t)}
-        {field.required ? " *" : ""}
-      </span>
-      {rows.map((row, index) => (
-        // Rows have no stable identity until saved — index is the only key
-        // available, and reordering never happens (add appends, remove
-        // filters), so it's safe here.
-        <Card
-          as="div"
-          // biome-ignore lint/suspicious/noArrayIndexKey: rows are unordered-append/remove only
-          key={index}
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            gap: "var(--space-2)",
-            alignItems: "center",
-          }}
-        >
-          {rowFields.map((subField) => (
-            <Field
-              key={subField.key}
-              label={t(subField.label)}
-              required={subField.required}
-            >
-              {(control) =>
-                fieldControl(
-                  subField,
-                  control,
-                  row[subField.key] ?? "",
-                  (next) => updateRow(index, subField.key, next),
-                  t,
-                )
-              }
-            </Field>
-          ))}
-          {primaryKey && (
-            <Radio
-              className="t-label"
-              // Scoped by kind so the native radio group itself cannot enforce exclusivity across kinds.
-              name={`${formId}-${field.key}-${kindOf(row, typeKey, typeDefault)}-primary`}
-              checked={row[primaryKey] === "true"}
-              onChange={() => markPrimary(index)}
-              label={t("field.primary")}
-            />
-          )}
-          <Button small type="button" onClick={() => removeRow(index)}>
-            {t("field.removeRow")}
-          </Button>
-        </Card>
-      ))}
-      <Button
-        small
-        type="button"
-        onClick={() =>
-          setRows([...rows, typeKey ? { [typeKey]: typeDefault } : {}])
-        }
-      >
-        {field.addLabel ? t(field.addLabel) : fieldLabel(field, t)}
-      </Button>
-    </div>
-  );
-}
-
 // A multiselect field: each option renders as its own checkbox; toggling one
 // re-joins the whole selection back into `values` via `setValue` — the same
 // single-string channel every scalar field writes through (see
@@ -669,14 +543,14 @@ function MultiselectField({
   setValue: (next: string) => void;
 }>) {
   const t = useT();
-  const selected = splitMultiselectValue(value);
+  const selected = splitMultiselectValue(value, field.multiselectEncoding);
   const hintId = `${formId}-${field.key}-required-hint`;
 
   function toggle(optionValue: string) {
     const next = selected.includes(optionValue)
       ? selected.filter((entry) => entry !== optionValue)
       : [...selected, optionValue];
-    setValue(joinMultiselectValue(next));
+    setValue(joinMultiselectValue(next, field.multiselectEncoding));
   }
 
   return (

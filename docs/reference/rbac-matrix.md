@@ -64,6 +64,7 @@ changes none.
 | Object | `admin` | `management` | `manager` | `rep` | `read_only` | `ops` |
 |---|---|---|---|---|---|---|
 | `activity` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |
+| `ai_budget` | -RU- | -R-- | ---- | ---- | ---- | -RU- |
 | `ai_diagnostics` | -R-- | -R-- | ---- | ---- | ---- | -R-- |
 | `ai_model_rate` | CRU- | ---- | ---- | ---- | ---- | CRU- |
 | `ai_routing` | -RU- | ---- | ---- | ---- | ---- | -RU- |
@@ -102,7 +103,6 @@ changes none.
 | `oauth_application` | CRUD | -R-- | ---- | ---- | ---- | CRUD |
 | `offer` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |
 | `offer_template` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |
-| `overlay_connection` | CRUD | -R-- | -R-- | -R-- | -R-- | CRUD |
 | `partner` | CRUD | CRUD | CRUD | -R-- | -R-- | CRUD |
 | `pipeline` | CRUD | -R-- | -R-- | -R-- | -R-- | CRUD |
 | `privacy_request` | -RU- | ---- | ---- | ---- | ---- | ---- |

@@ -70,15 +70,10 @@ export function DealCommitteeMap({
   coverage,
   withheld,
   pending,
-  overlay,
 }: Readonly<{
   coverage?: DealCoverage;
   withheld: boolean;
   pending: boolean;
-  // Overlay mode serves a mirrored deal whose coverage this installation
-  // cannot assemble, so no seats will ever arrive and the map says so rather
-  // than drawing an empty committee.
-  overlay: boolean;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -92,25 +87,23 @@ export function DealCommitteeMap({
   // land on "nobody is on this deal" — a finding from a check that never ran,
   // contradicting the rail two feet away. `sectionState` answers
   // `unavailable` there instead.
-  const state = overlay
-    ? ("unsupported" as const)
-    : sectionState(
-        // undefined WHILE PENDING, because that is the only input from which
-        // sectionState can answer "loading": it reads the flag solely on the
-        // `!view` arm. Handing it a literal either way made `pending` dead
-        // here, and a read still in flight rendered "unavailable" — the same
-        // sentence a FAILED read gets, which is the distinction the comment
-        // above says this primitive exists to keep.
-        pending
-          ? undefined
-          : withheld
-            ? { sections_omitted: ["stakeholders"] }
-            : { sections_omitted: [] },
-        "stakeholders",
-        Boolean(coverage),
-        seats.length,
-        pending,
-      );
+  const state = sectionState(
+    // undefined WHILE PENDING, because that is the only input from which
+    // sectionState can answer "loading": it reads the flag solely on the
+    // `!view` arm. Handing it a literal either way made `pending` dead
+    // here, and a read still in flight rendered "unavailable" — the same
+    // sentence a FAILED read gets, which is the distinction the comment
+    // above says this primitive exists to keep.
+    pending
+      ? undefined
+      : withheld
+        ? { sections_omitted: ["stakeholders"] }
+        : { sections_omitted: [] },
+    "stakeholders",
+    Boolean(coverage),
+    seats.length,
+    pending,
+  );
 
   return (
     <Panel title={t("deal.committee.title")}>
@@ -119,11 +112,6 @@ export function DealCommitteeMap({
           loadingLabel={t("deal.committee.title")}
           state={state}
           emptyLabel={t("deal.committee.empty")}
-          detail={
-            overlay
-              ? { unsupportedReason: t("overlay.unavailable") }
-              : undefined
-          }
         >
           <CommitteeSvg seats={seats} ourCount={ours.length} ghosts={ghosts} />
           <ul className="dc-legend t-caption">

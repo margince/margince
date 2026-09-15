@@ -46,7 +46,7 @@ other verdict unreadable.
 
 **Area** is where the fix lives, one only, so a filter never double-counts:
 `agents-mcp` · `ai-models` · `authz` · `capture` · `ci-tests` · `contract-api` ·
-`deals` · `extensions` · `finance` · `frontend` · `overlay` · `platform` ·
+`deals` · `extensions` · `finance` · `frontend` · `platform` ·
 `privacy` · `records` · `reports`. A doc that is wrong about a subsystem takes
 that subsystem's area, not a documentation area — it belongs next to the code it
 misleads about.

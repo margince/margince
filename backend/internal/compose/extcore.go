@@ -18,14 +18,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log/slog"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/pkg/extension"
@@ -105,17 +103,10 @@ func (a extensionActivities) Create(ctx context.Context, in crm.CreateActivityRe
 	if err != nil {
 		return crm.Activity{}, err
 	}
-	// The caller's own grant for the write, BEFORE the workspace's mode is
-	// consulted. The store checks it again and that check is the invariant;
-	// this one is about ordering. Refusing on mode first would answer
-	// ErrOverlayUnsupported to a caller who is not allowed to make the write at
-	// all, which tells them something about the installation that their refusal
-	// should not.
+	// The caller's own grant for the write. The store checks it again and that
+	// check is the invariant; this one is about ordering.
 	if err := auth.Require(ctx, "activity", principal.ActionCreate); err != nil {
 		return crm.Activity{}, portRefusal(err)
-	}
-	if err := a.core.refuseOverlay(ctx); err != nil {
-		return crm.Activity{}, err
 	}
 	request, transcodeErr := transcode[crmcontracts.CreateActivityRequest](in)
 	err = transcodeErr
@@ -184,39 +175,6 @@ func (c extensionCore) refuseUnattended() error {
 		// The unit's OWN tables stay writable, which is what an unattended run
 		// is for.
 		return fmt.Errorf("%w: a scheduled job and a bus delivery run with no caller, and a core write is checked against the caller's own permissions", extension.ErrForbidden)
-	}
-	return nil
-}
-
-// refuseOverlay refuses a core write in a workspace whose records live
-// somewhere else.
-func (c extensionCore) refuseOverlay(ctx context.Context) error {
-	workspace, bound := principal.WorkspaceID(ctx)
-	if !bound {
-		return database.ErrNoWorkspace
-	}
-	// FRESH, never cached, and for the reason the dispatcher's own uncached read
-	// carries: a write routed on a stale mode is silent divergence rather than a
-	// stale screen. An overlay workspace's native tables are not the live ones,
-	// so this write would land where nothing reads it.
-	//
-	// Read on the CALLER'S transaction, which is both safer and stronger than a
-	// connection of its own. Safer: a second acquire inside a borrowed
-	// transaction is the deadlock shape this programme removed from the store
-	// seams. Stronger: the mode and the write it guards are then the same
-	// transaction, so the answer cannot go stale between them — the dispatcher's
-	// own read narrows that window and cannot close it.
-	overlaid, err := overlayModeOf(ctx, c.tx)
-	if err != nil {
-		// Logged here and NOT returned: the text of a failed workspace read is
-		// a relation name and a SQL state, and a unit is not a reader those are
-		// written for. What it gets is that the write was refused.
-		slog.Default().ErrorContext(ctx, "compose: resolving the workspace record mode for an extension core write",
-			"workspace", workspace.String(), "error", err)
-		return errors.New("extension: the core could not establish where this workspace's records live, so nothing was written")
-	}
-	if overlaid {
-		return extension.ErrOverlayUnsupported
 	}
 	return nil
 }

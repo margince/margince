@@ -32,9 +32,7 @@ import { TaskQuickActions, useTaskUpdate } from "./taskactions";
 //   - a section the caller's role withheld says so, and never draws the
 //     empty state that would read as "there is none";
 //   - consent is per purpose and default-deny, so silence never renders as
-//     permission;
-//   - a workspace reading from an incumbent mirror gets one refusal, not a
-//     page that quietly omits most of itself.
+//     permission.
 
 type Company = components["schemas"]["Company"];
 type Company360 = components["schemas"]["Company360"];
@@ -603,34 +601,6 @@ describe("company view — the context column belongs to the account, not to a t
 
     await userEvent.click(screen.getByRole("button", { name: "Partner" }));
     expect(screen.queryByRole("region", { name: "History" })).toBeNull();
-  });
-});
-
-describe("company view — overlay mode", () => {
-  it("refuses once instead of rendering a page missing most of itself", async () => {
-    stub(
-      {
-        title: "Unprocessable",
-        code: "validation_error",
-        details: {
-          errors: [
-            { field: "id", code: "unsupported_in_overlay_mode", message: "x" },
-          ],
-        },
-      },
-      422,
-    );
-    renderCompany();
-
-    await waitFor(() =>
-      expect(screen.getByText(/not assembled here/)).toBeTruthy(),
-    );
-    // No half-page: the overview's own panels (the account, its worth, the
-    // pipeline, the money) are absent entirely rather than showing cards
-    // that would each read as an empty account.
-    expect(
-      document.querySelector(".co-overview-stack")?.textContent,
-    ).toBeFalsy();
   });
 });
 

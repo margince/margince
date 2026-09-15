@@ -87,9 +87,9 @@ export function DealIdentityLine({
   const roster = useRoster("user", Boolean(deal.owner_id));
   const partial = useRosterPartial("user", Boolean(deal.owner_id));
   const masked = deal.masked_fields ?? [];
-  // An em dash rather than the stage id: a deal in overlay mode carries no
-  // native pipeline row, and printing a UUID where a stage name goes reads as
-  // a fault.
+  // An em dash rather than the stage id: a deal whose stage was archived out
+  // from under it has no row to name, and printing a UUID where a stage name
+  // goes reads as a fault.
   const stage = stages.find((candidate) => candidate.id === deal.stage_id);
   return (
     <IdentityMeta>

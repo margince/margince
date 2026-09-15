@@ -26,19 +26,19 @@ import (
 )
 
 // NewRestoreSeam assembles the reversal executor over the installation pool and
-// the update dispatcher, with the evaluator's ports bound to the real readers.
+// the record provider, with the evaluator's ports bound to the real readers.
 //
 // corrections is nil-safe: an installation wired without it simply offers no
 // correction-aware reversal, every row falling through to the generic
 // evaluator exactly as before this seam knew corrections existed.
-func NewRestoreSeam(pool *pgxpool.Pool, dispatcher *Dispatcher, corrections *deals.Store) RestoreSeam {
+func NewRestoreSeam(pool *pgxpool.Pool, provider *Provider, corrections *deals.Store) RestoreSeam {
 	// The edge's rules are the contacts module's, and so is its table. This seam
 	// reaches them through that module's own store rather than restating any of
 	// them, which is also why it owns no relationship SQL.
 	edges := contacts.NewStore(InstallationDB(pool))
 	return RestoreSeam{
 		pool:        pool,
-		dispatcher:  dispatcher,
+		provider:    provider,
 		visible:     recordIsVisibleToCaller,
 		edges:       edges,
 		corrections: corrections,
@@ -50,9 +50,6 @@ func NewRestoreSeam(pool *pgxpool.Pool, dispatcher *Dispatcher, corrections *dea
 			Unwritable:    valuesNoLongerWritable,
 			EdgeFacts:     edges.EdgeFactsForReverse,
 			EdgeWritable:  edgeIsWritableByCaller(edges),
-			ExternallyGoverned: func(ctx context.Context) (bool, error) {
-				return dispatcher.isOverlayUncached(ctx)
-			},
 		},
 	}
 }
@@ -265,13 +262,6 @@ var _ privacy.ChangeRestorer = RestoreSeam{}
 // executor that puts a change back, and the reader that says in advance which
 // changes can be. They share ONE seam, so the button and the write cannot come
 // to disagree about what is possible.
-//
-// It runs AFTER assembly and takes the server's OWN dispatcher rather than
-// building one. A second dispatcher is a second per-workspace overlay cache and
-// a second overlay meter, so the reversal path would answer "is this workspace
-// overlay-governed" from a different reading than every other write the server
-// makes — and two answers to that question is what the dispatcher exists to
-// prevent.
 func (s *Server) wireReversal(pool *pgxpool.Pool) {
 	// ONE instance, given to the seam that WRITES a reversal and to the judge
 	// that READS whether one is offered — the same reason the seam itself is
@@ -280,14 +270,13 @@ func (s *Server) wireReversal(pool *pgxpool.Pool) {
 	// second gate, a second cache) is exactly the kind of drift this line
 	// exists to make impossible rather than merely unlikely.
 	corrections := deals.NewStore(InstallationDB(pool), DealsInstallation())
-	seam := NewRestoreSeam(pool, s.sorDispatch, corrections)
+	seam := NewRestoreSeam(pool, NewProvider(pool), corrections)
 	s.privacyHandlers = s.privacyHandlers.
 		WithChangeRestorer(seam).
 		WithUndoabilityReader(NewUndoabilityPage(seam))
 	// The receipt's undo answer comes from THIS seam, not a second one built
 	// for it: the line offering an Undo and the write performing it must agree,
-	// and one evaluator is how they stay agreed. It also inherits the server's
-	// own dispatcher, so the overlay question is answered once.
+	// and one evaluator is how they stay agreed.
 	//
 	// Assembly order is load-bearing here and stated rather than assumed: the
 	// receipt is built before this runs, and a nil service would leave every

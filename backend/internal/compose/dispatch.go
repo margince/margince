@@ -65,10 +65,6 @@ const (
 	// kinds land here is api/jobs.yaml's to say, not this comment's.
 	aiCaptureQueue      = "ai_capture"
 	aiCaptureMaxWorkers = 2
-
-	// overlayReconcileQueue is serial. See the queue table in jobQueues
-	// for why per-workspace parallelism is not what this phase is after.
-	overlayReconcileQueue = "overlay_reconcile"
 )
 
 // workspaceSweepOpts is the enqueue policy for one fanned-out child, read

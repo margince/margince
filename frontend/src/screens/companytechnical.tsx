@@ -11,6 +11,7 @@ import { SurfaceState } from "../design-system/surfacestate";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { QueryGate, throwProblem } from "./common";
+import { factsKey } from "./companyfactspanel";
 import { derivedSource } from "./evidencesource";
 
 type CompanyFact = components["schemas"]["CompanyFact"];
@@ -64,7 +65,7 @@ export function TechnicalProfilePanel({
   const t = useT();
 
   const facts = useQuery({
-    queryKey: ["company-facts", companyId],
+    queryKey: factsKey(companyId),
     queryFn: async () => {
       const { data, error } = await api.GET("/companies/{id}/facts", {
         params: { path: { id: companyId } },

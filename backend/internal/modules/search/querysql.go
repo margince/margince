@@ -340,6 +340,13 @@ func (c *planCompiler) clause(expr, at string, field Field, clause Predicate) (s
 		return "", refusal
 	}
 	operand := fmt.Sprintf("$%d%s", c.arg(value), cast)
+	if field.Kind == KindMultiselect {
+		member := "COALESCE(" + operand + " = ANY(" + expr + "), false)"
+		if clause.Op == OpNeq {
+			return "NOT " + member, nil
+		}
+		return member, nil
+	}
 	if clause.Op == OpNeq {
 		// IS DISTINCT FROM rather than <>: a field that is UNSET is distinct
 		// from every value, and three-valued logic would otherwise drop those
@@ -374,6 +381,9 @@ func (c *planCompiler) inClause(expr, at string, field Field, clause Predicate) 
 			return "", refusal
 		}
 		operands[i] = fmt.Sprintf("$%d%s", c.arg(value), cast)
+	}
+	if field.Kind == KindMultiselect {
+		return expr + " && ARRAY[" + strings.Join(operands, ", ") + "]::text[]", nil
 	}
 	return expr + " IN (" + strings.Join(operands, ", ") + ")", nil
 }

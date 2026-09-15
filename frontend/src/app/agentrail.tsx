@@ -33,6 +33,7 @@ import type { MessageKey } from "../i18n/en";
 import { usePendingApprovals } from "../screens/approvals.queries";
 import { useConnectors } from "../screens/connectors";
 import { useLicenseEntitlement } from "../screens/license";
+import { settingsHref } from "../screens/settingsrouting";
 import {
   type AgentEdgeRegister,
   clearAgentEdge,
@@ -52,6 +53,7 @@ import { useCan, useHoldsAdminRole } from "./capability";
 import { type CaptureProgress, liveCapture } from "./capture-progress";
 import { usePopoverDismiss } from "./popover";
 import type { Route } from "./router";
+import { routeHash } from "./router";
 import { usePhoneViewport } from "./viewport";
 import "./agentrail.css";
 
@@ -92,7 +94,7 @@ const MARK_FADE = 0.16;
  * change that splits the cards; pointing at it now would land a reader on
  * Account, because the screen still renders the combined entry.
  */
-const AI_SETTINGS_HREF = "#/settings/ai";
+const AI_SETTINGS_HREF = routeHash(settingsHref("usage"));
 /** Where a licence key is entered: the seats section of settings. */
 const LICENSE_SETTINGS_HREF = "#/settings/seats";
 

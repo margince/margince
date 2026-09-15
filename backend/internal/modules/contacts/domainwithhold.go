@@ -59,6 +59,15 @@ func markDispositionUnevidenced(ctx context.Context, tx pgx.Tx, domain, evidence
 func withholdForStaleEvidence(
 	ctx context.Context, tx pgx.Tx, in ResolveDomainTriageInput, prior DomainDisposition,
 ) (bool, error) {
+	if in.Source == DomainSourceHuman {
+		// A human IS what this gate withholds for. It exists because a crawl
+		// reads the site as it stands today and decade-old mail does not argue
+		// the company is there now — so the question is handed to somebody who
+		// can know. Withholding it from them too leaves the domain permanently
+		// unanswerable: nothing rearms the cursor, and the one caller able to
+		// settle it is refused without being told why.
+		return false, nil
+	}
 	if prior.LastEvidenceAt == nil {
 		return false, nil
 	}

@@ -379,6 +379,89 @@ describe("company-360 deep read", () => {
     expect(window.location.hash).toBe("#/worklist");
   });
 
+  it("refreshes the facts and technical panels once an in-page read reaches a terminal status", async () => {
+    // The bug this guards: a read started (or already running) from Profile
+    // and watched to completion must not leave the Facts and Technology
+    // panels answering from before it ran. Both panels read the SAME query
+    // key (`factsKey`, shared with companytechnical.tsx), so one shared
+    // fetch count proves both refresh — a reload is not required.
+    //
+    // Fake timers run for the whole test, not just the poll advance: the
+    // report query's `refetchInterval` schedules its next poll with
+    // whichever `setTimeout` is live at that moment, so switching clocks
+    // mid-test would leave that poll armed on a clock nothing here advances.
+    let reportPollCount = 0;
+    const alreadyRead = {
+      ...runningRead,
+      status: "done",
+      fact_count: 9,
+      finished_at: "2026-07-17T08:05:00Z",
+    };
+    const { calls } = stubDeepRead({
+      // The account has already been read once, which is what puts the panel
+      // on Profile rather than Overview — the tab the issue names.
+      latest: () => jsonResponse(alreadyRead),
+      report: () => {
+        reportPollCount += 1;
+        return reportPollCount === 1
+          ? jsonResponse({ ...runningRead, status: "running" })
+          : jsonResponse({
+              ...runningRead,
+              status: "done",
+              fact_count: 12,
+              finished_at: "2026-07-17T09:00:00Z",
+            });
+      },
+    });
+    const factsCallCount = () =>
+      calls.filter((call) => call.endsWith("/companies/o-1/facts")).length;
+    const flush = () =>
+      act(async () => {
+        await vi.advanceTimersByTimeAsync(1);
+      });
+
+    // ADDRESSED rather than clicked. The tab is read off the URL, and a click
+    // reaches it through a hashchange — an event, not a timer, so nothing this
+    // test can advance delivers it while the fake clock is installed. Clicked
+    // under fake timers the page stayed on Overview, where neither panel this
+    // case is about is even mounted, and the button below was never drawn.
+    window.location.hash = "#/companies/o-1/profile";
+    vi.useFakeTimers();
+    try {
+      render(<CompanyScreen id="o-1" />);
+      await flush();
+      await flush();
+      await flush();
+      await flush();
+      expect(
+        screen.getByRole("button", { name: "Read the website again" }),
+      ).toBeTruthy();
+      const beforeSecondRead = factsCallCount();
+      expect(beforeSecondRead).toBeGreaterThan(0);
+
+      fireEvent.click(
+        screen.getByRole("button", { name: "Read the website again" }),
+      );
+      await flush();
+      await flush();
+      // Still running: nothing has finished, so nothing should have told the
+      // facts panel to refetch yet.
+      expect(factsCallCount()).toBe(beforeSecondRead);
+
+      // The 3s poll lands on `done`.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(3000);
+      });
+      await flush();
+      // Reaching a terminal status invalidates the facts query, and it is
+      // still mounted (the reader stayed on the page), so it refetches on
+      // its own — the whole point of the fix.
+      expect(factsCallCount()).toBeGreaterThan(beforeSecondRead);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("renders the honest 422 detail when the company has no website on file", async () => {
     stubDeepRead({
       post: () =>

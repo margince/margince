@@ -435,14 +435,15 @@ func operandFor(t FieldType, op string) any { //craft:ignore naked-any mirrors P
 		return true
 	}
 	scalar := map[FieldType]any{
-		FieldText:     "manufacturing",
-		FieldPicklist: "customer",
-		FieldID:       ownerUUID,
-		FieldNumber:   float64(40),
-		FieldCurrency: float64(1000),
-		FieldDate:     "2026-08-19",
-		FieldBoolean:  true,
-		FieldDomain:   "acme.example",
+		FieldText:        "manufacturing",
+		FieldPicklist:    "customer",
+		FieldMultiselect: "customer",
+		FieldID:          ownerUUID,
+		FieldNumber:      float64(40),
+		FieldCurrency:    float64(1000),
+		FieldDate:        "2026-08-19",
+		FieldBoolean:     true,
+		FieldDomain:      "acme.example",
 	}[t]
 	if op == OpIn {
 		return []any{scalar}

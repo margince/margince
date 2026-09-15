@@ -70,7 +70,6 @@ describe("the buying committee, drawn", () => {
       coverage: coverage(),
       withheld: false,
       pending: false,
-      overlay: false,
     });
     // The accessible list is the assertion rather than the SVG: a reader on a
     // screen reader gets the rows, and a map that drew shapes for seats it did
@@ -89,7 +88,6 @@ describe("the buying committee, drawn", () => {
       coverage: undefined,
       withheld: true,
       pending: false,
-      overlay: false,
     });
     expect(
       screen.getByText("Hidden — your role cannot read this"),
@@ -105,7 +103,6 @@ describe("the buying committee, drawn", () => {
       coverage: undefined,
       withheld: false,
       pending: true,
-      overlay: false,
     });
     // The busy region rather than its label: the label lands in an sr-only
     // span or a visible note depending on the caller, and asserting the one
@@ -125,7 +122,6 @@ describe("the buying committee, drawn", () => {
       coverage: coverage({ stakeholders: [] }),
       withheld: false,
       pending: false,
-      overlay: false,
     });
     expect(
       screen.getByText("No stakeholder is recorded on this deal"),

@@ -270,12 +270,13 @@
   position: relative;
   /* The pane over the column's ground, not the elevated surface: a card lifts
      off the stage it sits in by being translucent white over it, which is the
-     same separation every other pane in the product is drawn with. No
-     --shadow-card on top — that token is a hairline ring, and a ring behind a
-     1px border is the same edge drawn twice. */
+     same separation every other pane in the product is drawn with.
+     --shadow-rest on top of that is the top side every resting surface here
+     has, and it is one layer under a hairline rather than a second edge. */
   background: var(--pane);
   border: 1px solid var(--paneEdge);
   border-radius: var(--r-control);
+  box-shadow: var(--shadow-rest);
   padding: var(--space-3) var(--space-4);
   display: flex;
   flex-direction: column;
@@ -640,7 +641,9 @@
   /* The same step the work column keeps between its cards, so the first card
      stands off the strip exactly as the second stands off the first. */
   margin-bottom: var(--space-6);
-  box-shadow: 0 1px 0 var(--borderSubtle);
+  /* A hairline, not a shadow: the strip is part of the sheet's plane, and the
+     line under it is the seam the cards scroll beneath. */
+  border-block-end: 1px solid var(--borderSubtle);
 }
 .record-sheet .record-tabs .recordtabs {
   margin-block-end: 0;

@@ -75,10 +75,6 @@ func briefService(e *Env, lane companybrief.Completer, routingVersion string) *c
 		func() time.Time { return briefClock })
 }
 
-// nativeMode is the workspace reading from THIS system of record, which is
-// what every case here is about. The overlay refusal has its own case below.
-func nativeMode(context.Context) (bool, error) { return false, nil }
-
 var briefReaderPerms = principal.Permissions{
 	RoleKeys: []string{"rep"},
 	Objects: map[string]principal.ObjectGrant{
@@ -381,7 +377,7 @@ func TestCompanyBriefTransportServesAndForces(t *testing.T) {
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme", &e.Rep1))
 	reader := e.As(e.Rep1, nil, briefReaderPerms)
 	lane := &countingLane{reply: `{"sections":[{"kind":"snapshot","sentences":[{"text":"An account.","nature":"fact","evidence":[{"entity_type":"company","entity_id":"` + company.String() + `"}]}]}]}`}
-	handlers := companybrief.NewHandlers(briefService(e, lane, "routing-1"), nativeMode)
+	handlers := companybrief.NewHandlers(briefService(e, lane, "routing-1"))
 	path := "/v1/companies/" + company.String() + "/brief"
 
 	rec := httptest.NewRecorder()
@@ -438,7 +434,7 @@ func TestCompanyBriefTransportRefusesOutOfScope(t *testing.T) {
 	theirs := ids.From[ids.CompanyKind](account)
 	scoped := briefReaderPerms
 	scoped.RowScope = principal.RowScopeTeam
-	handlers := companybrief.NewHandlers(briefService(e, nil, ""), nativeMode)
+	handlers := companybrief.NewHandlers(briefService(e, nil, ""))
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/v1/companies/"+theirs.String()+"/brief", nil)
@@ -448,35 +444,6 @@ func TestCompanyBriefTransportRefusesOutOfScope(t *testing.T) {
 
 	if rec.Code != http.StatusNotFound {
 		t.Errorf("status = %d for an out-of-scope account, want 404", rec.Code)
-	}
-}
-
-// An overlay workspace has no brief to write: the 360 the brief is assembled
-// from refuses that mode, and its refusal lives in ITS handler rather than in
-// the service this one calls — so without the same gate here, an overlay
-// workspace would be handed a brief written from native rows while its own
-// company page refuses to render.
-func TestCompanyBriefTransportRefusesAnOverlayWorkspace(t *testing.T) {
-	e := Setup(t)
-	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme", &e.Rep1))
-	lane := &countingLane{reply: `{"sections":[]}`}
-	handlers := companybrief.NewHandlers(briefService(e, lane, "routing-1"),
-		func(context.Context) (bool, error) { return true, nil })
-
-	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/v1/companies/"+company.String()+"/brief", nil)
-	handlers.GetCompanyBrief(rec,
-		req.WithContext(e.As(e.Rep1, nil, briefReaderPerms)), crmcontracts.Id(company.UUID),
-		crmcontracts.GetCompanyBriefParams{})
-
-	if rec.Code != http.StatusUnprocessableEntity {
-		t.Errorf("status = %d in overlay mode, want 422; body %s", rec.Code, rec.Body.String())
-	}
-	if lane.calls != 0 {
-		t.Errorf("model calls = %d in overlay mode, want the refusal to come first", lane.calls)
-	}
-	if rows := e.WsCount(t, `SELECT count(*) FROM company_brief`); rows != 0 {
-		t.Errorf("company_brief rows = %d after an overlay refusal, want 0", rows)
 	}
 }
 

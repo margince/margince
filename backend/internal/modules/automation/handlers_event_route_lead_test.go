@@ -78,7 +78,7 @@ func (p *fakeCreateRecorder) Merge(context.Context, datasource.MergeInput) (data
 	panic("fakeCreateRecorder: Merge not stubbed for this test")
 }
 
-func (p *fakeCreateRecorder) PromoteLead(context.Context, ids.UUID, string, *string) (datasource.EntityRef, bool, error) {
+func (p *fakeCreateRecorder) PromoteLead(context.Context, ids.UUID, string, *string, *int64) (datasource.EntityRef, bool, error) {
 	panic("fakeCreateRecorder: PromoteLead not stubbed for this test")
 }
 

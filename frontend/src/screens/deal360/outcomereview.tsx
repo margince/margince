@@ -167,7 +167,9 @@ function ReviewCard({
                 than a missing row, so the reader sees WHICH question went
                 unanswered instead of a shorter list. */}
             <dd>
-              {review.answers?.[question.key] || (
+              {(question.type === "multiselect"
+                ? review.choice_answers?.[question.key]?.join(", ")
+                : review.answers?.[question.key]) || (
                 <span className="muted">{t("outcomeReview.noAnswer")}</span>
               )}
             </dd>

@@ -338,6 +338,11 @@ const VERB_LABEL: Record<
   // AutomationRetry, which acts in place, so VERB_DESTINATION routes it
   // nowhere and this label is never the one a reader sees.
   retry: (t) => t("worklist.verb.retry"),
+  // An undecided domain's pair, drawn in place by DomainQuestionAnswer. Named
+  // here because the map is total; the words a reader actually presses come
+  // from that control, which reads these same two keys.
+  keep: (t) => t("worklist.verb.keep"),
+  discard: (t) => t("worklist.verb.discard"),
   // The composer's own word, not a second one: ChannelReplyAction draws the
   // button this labels, and two spellings of one act would read as two acts.
   reply: (t) => t("compose.reply"),

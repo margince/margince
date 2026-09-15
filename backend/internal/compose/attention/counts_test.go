@@ -136,6 +136,46 @@ func TestACategoryWhoseSourceHitItsBoundSaysThereMayBeMore(t *testing.T) {
 	}
 }
 
+// The duplicate lane's own total is what says whether it finished, and the
+// page it fills never comes near the census depth the staged proposals share.
+//
+// This is the measured case. The dedupe queue answers one page at a time and
+// that page is smaller than the census, so a workspace with more open pairs
+// than a page holds reaches this snapshot with the lane cut and the shared
+// length test seeing nothing: thirty-eight pairs, twenty-five on the page, and
+// a headline saying nothing more was waiting.
+func TestTheDuplicateLaneSaysThereIsMoreWhenItsOwnCountSaysSo(t *testing.T) {
+	shown := []crmcontracts.AttentionItem{}
+	for i := range 25 {
+		shown = append(shown, item("p"+string(rune('a'+i)), "dedupe_candidate"))
+	}
+	open := 38
+	day := crmcontracts.Attention{AsOf: rankInstant, NeedsYou: shown}
+	day.Counts.DuplicatesOpen = &open
+
+	got := (&Service{}).worklistFrom(t.Context(), day, scopeAll, "", 50, waitingRead{}, leadRead{}, worklistCursor{}, nil)
+
+	if count := countFor(t, got, "decisions"); !count.MoreAvailable {
+		t.Fatalf("the lane showed %d of %d open pairs and called the day complete", len(shown), open)
+	}
+}
+
+// And a lane that showed every pair it has does NOT claim more, or the case
+// above is satisfied by a flag that is always on — which would teach a reader
+// to ignore it on the day it means something.
+func TestTheDuplicateLaneIsSilentWhenItShowedEveryOpenPair(t *testing.T) {
+	shown := []crmcontracts.AttentionItem{item("p", "dedupe_candidate")}
+	open := 1
+	day := crmcontracts.Attention{AsOf: rankInstant, NeedsYou: shown}
+	day.Counts.DuplicatesOpen = &open
+
+	got := (&Service{}).worklistFrom(t.Context(), day, scopeAll, "", 50, waitingRead{}, leadRead{}, worklistCursor{}, nil)
+
+	if count := countFor(t, got, "decisions"); count.MoreAvailable {
+		t.Fatal("the lane showed its one open pair and still told the reader to look for more")
+	}
+}
+
 // Two reads of one unchanged day produce the same bytes. Map order is not an
 // order, and a client diffing the payload would see a change that is not one.
 func TestCountsAreOrderedTheSameWayTwice(t *testing.T) {
@@ -231,7 +271,7 @@ func everyWorklistSource() []crmcontracts.WorklistItemSource {
 	all := []crmcontracts.WorklistItemSource{
 		"approval", "dedupe_candidate", "task", "brief_item", "conversation_claim",
 		"customer_waiting", "deal_at_risk", "meeting", "relationship_decay",
-		"failed_approval", "dsr", "sync_health", "capture_health", "ai_work_health",
+		"failed_approval", "dsr", "capture_health", "ai_work_health",
 		"bounce", "undelivered", "automation_run", "notice", "introduction_request",
 		"batch",
 	}
@@ -349,9 +389,6 @@ func everyLane() []struct {
 		{"brief_item", crmcontracts.Attention{AsOf: rankInstant, ThisMorning: []crmcontracts.AttentionItem{
 			item("x", "brief_item"),
 		}}},
-		{"sync_health", crmcontracts.Attention{AsOf: rankInstant, SyncHealth: lane(
-			item("x", "sync_health"),
-		)}},
 		{"capture_health", crmcontracts.Attention{AsOf: rankInstant, CaptureHealth: lane(
 			item("x", "capture_health"),
 		)}},

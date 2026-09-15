@@ -159,7 +159,7 @@ storekit.EmitEventForEntity(ctx, tx, auditID, entityType, entityID, payload)  //
 `EmitEvent` derives the event type and entity type FROM the payload struct (`payload.EventType()`,
 `payload.EntityType()`) — a call site cannot pair `PublicEventDealCreated` with `contact.created`
 without the code failing to *compile*, not just failing a test. `EmitEventForEntity` is the same
-guarantee for the handful of dynamic-entity types (`mirror.*`, `consent.changed`, `retention.applied`)
+guarantee for the handful of dynamic-entity types (`consent.changed`, `retention.applied`)
 whose subject is a runtime value the caller resolves rather than the payload's static type. This was
 proven, not assumed: renaming a schema field breaks the Go build, because the generated struct's field
 literally disappears out from under every call site that references it. There are exactly two emit
@@ -314,7 +314,7 @@ collide with a row-scoped entity name below), then by entity type:
 | `activity`, `signal` | same object-read grant, then their bespoke link-walk / resolver row-scope gates |
 | `offer` | `offer.read` grant, then it inherits its **parent deal's** row scope (an offer carries no owner of its own) |
 | `approval` (and the `coldstart.*` echoes, entity `approval`) | **target-visibility gated** (`approvalVisibleTo`), NOT ownerless: the envelope leaks staged-change detail, so it delivers only to an owner who can see the approval's TARGET record under that record's row scope — mirroring the approvals inbox (`approvals.targetVisible`, C3). Target types `contact`/`company`/`deal`/`lead`/`offer`/`signal`/`activity` scope by row; the workspace-shared `product`/`custom_field` config scope by existence; a **target-less** approval is fail-closed (not delivered) |
-| `pipeline`, `stage`, `audit`, `user`, `passport`, `onboarding_wizard_state`, `incumbent_connection` | genuinely ownerless workspace/admin-level facts (`workspaceLevelEntities`) — a bare entity ref the receiver re-reads under its own scope, so it delivers to any live owner. `role.changed` and the `user.*` lifecycle both name entity `user`; there is no separate `role`, `coldstart`, or `mirror` key. |
+| `pipeline`, `stage`, `audit`, `user`, `passport`, `onboarding_wizard_state` | genuinely ownerless workspace/admin-level facts (`workspaceLevelEntities`) — a bare entity ref the receiver re-reads under its own scope, so it delivers to any live owner. `role.changed` and the `user.*` lifecycle both name entity `user`; there is no separate `role` or `coldstart` key. |
 | a ratified **deferred-delivery** subject (below) | ratified **not delivered** — an explicit decision, distinct from the fail-closed default |
 | **anything else** | **DENIED** (the `default` branch) — fail-closed |
 
@@ -322,19 +322,11 @@ The point of the explicit deny default: adding a new subscribable event whose su
 *forces* you to add a probe — it can never silently inherit fan-out-to-everyone. Adding one that is
 genuinely ownerless *forces* you to add it to the allow-list. The choice is forced, never defaulted.
 
-**Ratified deferred delivery — subscribable but not delivered, on purpose.** Two families are
-catalogued, valid subscription targets, and match `matchingSubscriptions`, yet `entityVisibleTo` returns
-"not visible" for them **unconditionally** — not a bug, a known gap awaiting spec reconciliation,
-because neither has an ownership model the fan-out gate can bound delivery by:
+**Ratified deferred delivery — subscribable but not delivered, on purpose.** One family is
+catalogued, a valid subscription target, and matches `matchingSubscriptions`, yet `entityVisibleTo`
+returns "not visible" for it **unconditionally** — not a bug, a known gap awaiting spec
+reconciliation, because it has no ownership model the fan-out gate can bound delivery by:
 
-- **The overlay `mirror.*` family** (`mirror.conflict`, `mirror.budget_degraded`, `mirror.deleted`, the
-  reserved `mirror.write_rejected`) — keyed by EVENT type (`deferredDeliveryEvents`). Each emit site
-  stamps the diverged record's *runtime* canonical class (`rec.ObjectClass` / `ref.Type` /
-  `del.ObjectClass` — e.g. `"contact"`, `"deal"`) as the envelope's entity type, but the entity id is a
-  mirror-synthetic key or a pre-materialization ref, **not** a live record id the owner's grants can be
-  probed against. Classifying by entity type would either miss (fail-closed by accident) or — for
-  `mirror.budget_degraded`, whose ref can be a real record ref — deliver to an owner who must not see
-  the record. Neither is acceptable, so the whole family is deferred by event type instead.
 - **Three `retention.applied` telemetry subjects** — keyed by ENTITY type (`deferredDeliveryEntities`):
   `ai_call` (the embed-call sweep's traces), `ai_call_payload` (retained call content), and
   `voice_learning_signal` (aged voice-learning telemetry). Most `retention.applied` subjects (`contact`,
@@ -342,15 +334,15 @@ because neither has an ownership model the fan-out gate can bound delivery by:
   are engine telemetry with no owner and no visibility probe — delivering them workspace-wide would leak
   which telemetry rows a retention sweep purged.
 
-A subscriber can select `mirror.conflict` or `retention.applied` today and will simply receive nothing
+A subscriber can select `retention.applied` today and will simply receive nothing
 for these specific subjects — fail-**safe**, not fail-silent: the gap is in `UPSTREAM-P3.md` for the
 spec to grow an ownership model these subjects can be scoped by, not worked around here.
 
-**Catalogued, never emitted.** Six schemas exist purely for whole-catalog coverage (`events.Types()` is
-completely covered by a `PublicEvent<Event>`, the fitness-test definition of "Phase 4 done") but have
-no emit site in the codebase today, so nothing is ever delivered for them regardless of the visibility
-gate: `deal.restored`, `contact.restored`, `pipeline.archived`, `stage.archived`, `mirror.write_rejected`
-(reserved for a branch-2 overlay feature), and `audit.appended` (the audit ledger's own row is
+**Catalogued, never emitted.** Five schemas exist purely for whole-catalog coverage (`events.Types()`
+is completely covered by a `PublicEvent<Event>`, the fitness-test definition of "Phase 4 done") but
+have no emit site in the codebase today, so nothing is ever delivered for them regardless of the
+visibility gate: `deal.restored`, `contact.restored`, `pipeline.archived`, `stage.archived`, and
+`audit.appended` (the audit ledger's own row is
 workspace-level and resolved back under the receiver's own scope, so an empty payload would carry no
 information a receiver doesn't already have). Each schema's description in `public-events.yaml` says so
 explicitly — a subscriber selecting one of these types is not wrong, just early.
@@ -475,12 +467,12 @@ viewer with read-only access sees the list and deliveries but not the mutating a
   are not subscribable — they name no subject to scope by.
 - **Fan-out never escalates.** Delivery is gated at enqueue against the owner's *live* read grant AND
   row scope (the record read path's own admission), and the visibility map is fail-closed — an
-  unclassified subject type is denied, not delivered. A handful of subjects (overlay `mirror.*`, three
-  `retention.applied` telemetry entities — `ai_call`, `ai_call_payload`, `voice_learning_signal`) are
+  unclassified subject type is denied, not delivered. Three `retention.applied` telemetry entities
+  (`ai_call`, `ai_call_payload`, `voice_learning_signal`) are
   *ratified* as deferred-not-delivered pending an upstream ownership model — subscribable, catalogued,
   honestly undelivered, never a leak.
 - **Some catalogued types are never emitted at all** (`deal.restored`, `contact.restored`,
-  `pipeline.archived`, `stage.archived`, `mirror.write_rejected`, `audit.appended`) — published for
+  `pipeline.archived`, `stage.archived`, `audit.appended`) — published for
   whole-catalog coverage, not because a code path fires them yet.
 - **The owner is server-derived**, never a request field; a principal with no human identity cannot own
   a subscription.

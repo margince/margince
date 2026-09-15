@@ -6,9 +6,8 @@ package deployconfig
 // The uploads block of margince.yaml: how many bytes one request may carry on
 // each route that accepts a file (OPS-CFG-12, DOC-PARAM-11).
 //
-// It sits in its own file for the same reason overlay_budget does — it is a
-// section with arithmetic of its own, defaults to merge and bounds to enforce,
-// rather than values to hand on.
+// It sits in its own file because it is a section with arithmetic of its own,
+// defaults to merge and bounds to enforce, rather than values to hand on.
 //
 // What this section does NOT decide: which routes may carry a file. That list
 // is a source-level declaration in the composition layer, and it is the whole

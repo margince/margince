@@ -71,15 +71,6 @@ const (
 	// scopeContactChild scopes a contact child row (contact_social) by its
 	// parent contact's visibility  14 the same rule the contact read applies.
 	scopeContactChild
-	// scopeMirror gates a mirror row by the caller's mirror_visibility
-	// deny-join — the same fail-closed rule every overlay read applies
-	// (ADR-0044): an unmapped caller exports zero mirror rows.
-	scopeMirror
-	// scopeMirrorAssoc requires BOTH endpoints of a mirrored association
-	// edge to be visible — an edge never discloses a record on the far
-	// side the caller cannot see (the relationship member's rule, on
-	// mirror visibility).
-	scopeMirrorAssoc
 )
 
 // exportMember is one bundle entry: a table, its row-scope rule, and the
@@ -90,12 +81,11 @@ type exportMember struct {
 	table      string
 	scope      scopeMode
 	objectGate string
-	// updateGate additionally requires the UPDATE grant on objectGate —
-	// the admin-only members (the incumbent user map's surface is
-	// admin-managed, RC-15/ADR-0057, so its export follows that gate).
+	// updateGate additionally requires the UPDATE grant on objectGate, for
+	// an admin-managed member whose own surface follows that gate.
 	updateGate bool
-	// orderBy overrides the deterministic ordering for tables without an
-	// id column (the overlay mirror's composite keys). Empty = "t.id".
+	// orderBy overrides the deterministic ordering for a table with no id
+	// column. Empty = "t.id".
 	orderBy string
 }
 
@@ -121,18 +111,6 @@ var exportMembers = []exportMember{
 	{table: "stage", scope: scopeWorkspace},
 	{table: "attachment", scope: scopeAttachment},
 	{table: "audit_log", scope: scopeAudit},
-}
-
-// overlayExportMembers join the bundle for a workspace in OVERLAY mode
-// (AC-OV-9: the export contains our augmentation PLUS the mirror
-// snapshot, and documents that canonical data resides in the incumbent).
-// Mirror rows and edges ride the caller's mirror-visibility deny-join —
-// the bundle keeps its "never a row their lists would hide" contract;
-// the user map is admin-gated like its own surface.
-var overlayExportMembers = []exportMember{
-	{table: "overlay_mirror", scope: scopeMirror, objectGate: string(recordTypeOverlayConnection), orderBy: "t.object_class, t.external_id"},
-	{table: "overlay_association", scope: scopeMirrorAssoc, objectGate: string(recordTypeOverlayConnection), orderBy: "t.from_type, t.from_id, t.to_type, t.to_id, t.type_id"},
-	{table: "mirror_user_map", scope: scopeWorkspace, objectGate: string(recordTypeOverlayConnection), updateGate: true, orderBy: "t.app_user_id, t.incumbent"},
 }
 
 // ExportWriter assembles the open-format bundle for the caller's
@@ -173,21 +151,8 @@ func (w *ExportWriter) WriteBundle(ctx context.Context, dst io.Writer) (BundleSu
 	summary := BundleSummary{RowCounts: make(map[string]int, len(exportMembers))}
 
 	var collected []memberData
-	var incumbent string
 	err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
-		// In overlay mode the bundle additionally carries the mirror
-		// snapshot and documents where canonical data lives (AC-OV-9) —
-		// P7 stays honestly partial until the flip.
-		if err := tx.QueryRow(ctx, `
-			SELECT coalesce(incumbent, '') FROM overlay_mode`,
-		).Scan(&incumbent); err != nil {
-			return fmt.Errorf("export: resolving the installation's SoR mode: %w", err)
-		}
-		members := exportMembers
-		if incumbent != "" {
-			members = append(append([]exportMember{}, exportMembers...), overlayExportMembers...)
-		}
-		for _, m := range members {
+		for _, m := range exportMembers {
 			if m.objectGate != "" {
 				action := principal.ActionRead
 				if m.updateGate {
@@ -215,24 +180,21 @@ func (w *ExportWriter) WriteBundle(ctx context.Context, dst io.Writer) (BundleSu
 	}
 
 	wsID, _ := principal.WorkspaceID(ctx)
-	if err := writeZip(dst, actor, wsID, incumbent, collected, summary); err != nil {
+	if err := writeZip(dst, actor, wsID, collected, summary); err != nil {
 		return BundleSummary{}, err
 	}
 
 	// The single export audit entry (features/04 §5: who exported what,
-	// when) — written only once the bundle itself is complete. Ordering
-	// matters beyond bookkeeping: the flip preflight treats this row as
-	// proof a pre-flip bundle exists, so auditing before the write would
-	// let an aborted download satisfy the gate and leave the
-	// reconstruction promise resting on an artifact nobody holds.
-	if err := auditExport(ctx, w.pool, incumbent, summary); err != nil {
+	// when) — written only once the bundle itself is complete, so an
+	// aborted download leaves no row claiming one was taken.
+	if err := auditExport(ctx, w.pool, summary); err != nil {
 		return BundleSummary{}, err
 	}
 	return summary, nil
 }
 
 // auditExport records the completed bundle.
-func auditExport(ctx context.Context, pool *pgxpool.Pool, incumbent string, summary BundleSummary) error {
+func auditExport(ctx context.Context, pool *pgxpool.Pool, summary BundleSummary) error {
 	wsID, ok := principal.WorkspaceID(ctx)
 	if !ok {
 		return errors.New("compose: no workspace bound to export context")
@@ -240,7 +202,6 @@ func auditExport(ctx context.Context, pool *pgxpool.Pool, incumbent string, summ
 	return database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
 		_, err := storekit.Audit(ctx, tx, "export", objectWorkspace, wsID, nil, map[string]any{
 			auditFieldFormat: exportFormat, "row_counts": summary.RowCounts, "omitted": summary.Omitted,
-			"canonical_data_resides_in": incumbent,
 		})
 		return err
 	})

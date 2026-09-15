@@ -23,7 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
-	"github.com/margince/margince/backend/internal/platform/overlaybudget/budgettest"
+	"github.com/margince/margince/backend/internal/platform/redistest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -36,7 +36,7 @@ func ladderApp(t *testing.T, slug string, limits agentvolume.Limits) (*apptest.A
 	// re-read on the REAL clock, and a one-hour bucket resets under any run that
 	// crosses the top of the hour — a flake that would read as the release
 	// having failed.
-	meter := agentvolume.New(budgettest.Client(t), limits, agentvolume.DefaultWindow)
+	meter := agentvolume.New(redistest.Client(t), limits, agentvolume.DefaultWindow)
 	// The CONNECTOR composition, because half the ladder only exists behind
 	// /mcp: the REST door refuses on the volume budget but has no tool to name, so the
 	// step-up it would stage has no question in it. The hosted transport is

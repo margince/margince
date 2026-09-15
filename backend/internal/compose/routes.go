@@ -61,15 +61,14 @@ func contractAPI(srv Server, pool *pgxpool.Pool, identitySvc *identity.Service) 
 	// this registry, so a registry built without one would refuse REST calls on
 	// a counter it then never paid — the exact half-a-control this change exists
 	// to remove.
-	registry := registryWithGate(InstallationDB(pool), gate, srv.replyDrafter, srv.resolveOverlayIncumbent(pool), srv.send,
+	registry := registryWithGate(InstallationDB(pool), gate, srv.replyDrafter, srv.send,
 		companyEnricher{}, srv.retrievalEmbedder, nil, importsFor(&srv),
 		meetingBriefReader(srv.meetingBriefSvc), srv.log,
 		agents.WithVolumeCharger(srv.volumeMeter))
 	// The ADR-0055 admission layer and the MCP tool surface share one
-	// provider seam: agentGate's StageResolver dispatches per workspace
-	// exactly like the MCP registry's tools do — and the overlay-mode
-	// human read shadows (overlayread.go) ride this same instance.
-	provider := srv.sorDispatch
+	// provider seam: agentGate's StageResolver reads exactly what the MCP
+	// registry's tools read.
+	provider := NewProvider(pool)
 	staging := approvalsAdapter{svc: approvals.NewService(InstallationDB(pool))}
 	// Wrap order: the generated router applies the slice left-to-right
 	// around the handler, so the LAST entry is outermost — idempotency
@@ -81,13 +80,8 @@ func contractAPI(srv Server, pool *pgxpool.Pool, identitySvc *identity.Service) 
 		Middlewares: []crmcontracts.MiddlewareFunc{
 			agentGate(registry, staging, provider, provider, fieldOwnership{pool: pool}, importsFor(&srv), tagSeam(pool), gate),
 			idempotency(pool, replayProbes(staging.svc, contracts.NewStore(InstallationDB(pool), ContractFreezeRate(pool)), dealrooms.NewStore(InstallationDB(pool)))),
-			// Outermost: an overlay-mode SoR write is refused before it can
-			// be recorded under an idempotency key or staged as an agent
-			// approval — the honest unsupported_by_sor, for every principal.
-			overlayWriteGuard(srv.sorDispatch),
-			// Outermost of all, so the measurement covers the admission gate,
-			// the idempotency replay and the overlay guard rather than only the
-			// handler underneath them. A 403 from the gate IS this route's
+			// Outermost, so the measurement covers the admission gate and the
+			// idempotency replay rather than only the handler underneath them. A 403 from the gate IS this route's
 			// latency as a client experiences it, and a refusal that cost a
 			// database read is exactly the slow answer worth seeing.
 			//
@@ -192,7 +186,6 @@ func operationalMux(srv Server, pool *pgxpool.Pool, log *slog.Logger, identitySv
 		Published: events.PublishedTotal,
 		Extra:     srv.writeMetricsSections,
 		JobStats:  jobMetricsSection(func(ctx context.Context) (jobs.Snapshot, error) { return jobs.Stats(ctx, pool) }),
-		Overlay:   overlayMetricsSection(srv, pool),
 	})))
 	// The anonymous public edges sit between the session middleware (which
 	// lets /v1/public/ through without session or workspace) and the
@@ -218,11 +211,11 @@ func operationalMux(srv Server, pool *pgxpool.Pool, log *slog.Logger, identitySv
 	// shared/kernel/capabilitypath, not named at each mount. The booking
 	// page's slug is deliberately absent from that list; it is a public
 	// identifier the host hands out, not a credential.
-	// extendDeadlineForModelRoutes sits OUTSIDE the handler chain because a
+	// boundByResponseDeadline sits OUTSIDE the handler chain because a
 	// write deadline has to be set before anything starts writing — including
 	// the access log's own wrapper, which is what holds the ResponseWriter the
 	// controller reaches through.
-	mux.Handle("/v1/", extendDeadlineForModelRoutes(httpserver.Correlate(
+	mux.Handle("/v1/", boundByResponseDeadline(httpserver.Correlate(
 		httpserver.AccessLog(log, authH.Middleware(publicEdge)))))
 	// The remote MCP connector, mounted as ONE group behind the deployment
 	// gate: the A2 transport, the A2 authorization server (ADR-0013) and
@@ -300,9 +293,6 @@ func mountProviderPushWebhooks(mux *http.ServeMux, srv Server, log *slog.Logger)
 	}
 	if srv.graphPush != nil {
 		mux.Handle("/webhooks/graph", httpserver.Correlate(httpserver.AccessLog(log, srv.graphPush)))
-	}
-	if srv.overlayWebhook != nil {
-		mux.Handle("/webhooks/hubspot", httpserver.Correlate(httpserver.AccessLog(log, srv.overlayWebhook)))
 	}
 }
 

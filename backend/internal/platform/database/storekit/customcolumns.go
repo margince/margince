@@ -197,6 +197,8 @@ func extractValue(typ string, raw any) (any, bool) {
 	case fieldcatalog.TypeBoolean:
 		v, ok := raw.(bool)
 		return v, ok
+	case fieldcatalog.TypeMultiselect:
+		return stringSet(raw)
 	case fieldcatalog.TypeText, fieldcatalog.TypePicklist:
 		switch v := raw.(type) {
 		case []byte:
@@ -278,6 +280,8 @@ func SQLValue(c fieldcatalog.Column, v any) (any, bool) {
 			return nil, false
 		}
 		return b, true
+	case fieldcatalog.TypeMultiselect:
+		return stringSet(v)
 	case fieldcatalog.TypeText, fieldcatalog.TypePicklist:
 		s, ok := v.(string)
 		if !ok {
@@ -314,4 +318,36 @@ func sqlNumber(v any) (any, bool) {
 	default:
 		return nil, false
 	}
+}
+
+// stringSet preserves each choice verbatim and removes duplicates. A malformed
+// element refuses the entire value; it never saves only its valid siblings.
+//
+//craft:ignore naked-any the value is a decoded JSON or pgx array, whose element types are checked here
+func stringSet(raw any) ([]string, bool) {
+	var values []string
+	switch v := raw.(type) {
+	case []string:
+		values = v
+	case []any:
+		values = make([]string, len(v))
+		for i, item := range v {
+			value, ok := item.(string)
+			if !ok {
+				return nil, false
+			}
+			values[i] = value
+		}
+	default:
+		return nil, false
+	}
+	out := make([]string, 0, len(values))
+	seen := make(map[string]bool, len(values))
+	for _, value := range values {
+		if !seen[value] {
+			out = append(out, value)
+			seen[value] = true
+		}
+	}
+	return out, true
 }

@@ -23,7 +23,7 @@ import { TopBar } from "./topbar";
 //
 // Three of those five are proved here, because three of them are the top bar's
 // own: the toggle, the trail and the search. The chip and the account menu are
-// components with suites of their own (sormodechip.test.tsx, account.test.tsx);
+// components with suites of their own (account.test.tsx);
 // what this file asserts about them is nothing, and what the SHELL asserts is
 // that they are mounted (shell.test.tsx).
 //

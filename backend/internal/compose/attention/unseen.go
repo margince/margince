@@ -92,13 +92,42 @@ func boundedSources(day crmcontracts.Attention) map[crmcontracts.WorklistItemSou
 	atCap("conversation_claim", day.Commitments, doneCap)
 	// The decision lane is read deeper than the rest, because a batch row
 	// counts a pile and a count taken from a page of ten would report ten over
-	// a hundred and fifty. Approvals and duplicate pairs share that ONE bound,
-	// so filling it says the LANE was truncated and neither source can claim to
-	// be complete — the conservative reading, since the alternative is telling a
-	// rep there are no more of a kind when there are.
+	// a hundred and fifty. Filling that bound says the LANE was truncated, so
+	// the staged proposals sharing it cannot claim to be complete — the
+	// conservative reading, since the alternative is telling a rep there are no
+	// more of a kind when there are.
 	bounded["approval"] = len(day.NeedsYou) >= batchScanDepth
-	bounded["dedupe_candidate"] = bounded["approval"]
+	// The duplicate pairs know their own TOTAL, so they do not guess from the
+	// page, and the difference is not academic. Their read is bounded twice:
+	// once by the census depth above, and again by the page the dedupe queue
+	// will answer, which is smaller. A length test can see neither of those —
+	// a hundred pairs read under a depth of two hundred fill no bound, and the
+	// page then says nothing more is waiting over every pair it never read.
+	//
+	// Counts.DuplicatesOpen is that total, taken by the store under the same
+	// visibility rule as the page, so the two are answering one question about
+	// one reader.
+	bounded[sourceDuplicate] = duplicatesShown(day.NeedsYou) < openPairs(day)
 	return bounded
+}
+
+// openPairs is how many open duplicate pairs this reader has in total, which
+// the lane omits entirely when it has none.
+func openPairs(day crmcontracts.Attention) int {
+	if day.Counts.DuplicatesOpen == nil {
+		return 0
+	}
+	return *day.Counts.DuplicatesOpen
+}
+
+func duplicatesShown(lane []crmcontracts.AttentionItem) int {
+	shown := 0
+	for _, item := range lane {
+		if item.Source == sourceDuplicate {
+			shown++
+		}
+	}
+	return shown
 }
 
 // unavailable turns the assembled day's withheld lanes into the queue's own

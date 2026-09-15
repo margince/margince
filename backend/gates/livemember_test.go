@@ -76,16 +76,17 @@ const (
 // keying on statement text, which changes with every whitespace edit and
 // ratifies nothing stable.
 var cannotReachIdentity = gatekit.Waive(map[string]string{
-	"internal/modules/activities/audience.go":        "activities cannot import identity (ADR-0054 §3); the predicate must move tier first",
-	"internal/modules/activities/assignee.go":        "activities cannot import identity (ADR-0054 §3); the predicate must move tier first. This one asks a second question of the same row — whether the seat is an agent — which identity.LiveMemberSQL does not answer and which the assignee refusal is entirely about",
-	"internal/modules/dealrooms/store_public.go":     "dealrooms cannot import identity (ADR-0054 §3); the predicate must move tier first",
-	"internal/modules/dealrooms/room_write.go":       "dealrooms cannot import identity (ADR-0054 §3); the predicate must move tier first. It arrived here from namesTheSeatRatherThanOffersIt, where it did NOT belong: a steward is somebody a buyer is pointed at for help, so the seat is being offered rather than named, and the entry was recording the defect (a deactivated colleague could be one) instead of a reason. Fixed in issue 2596",
-	"internal/modules/capture/owneridentitystore.go": "capture cannot import identity (ADR-0054 §3); the predicate must move tier first",
-	"internal/modules/contacts/counterpartyname.go":  "contacts cannot import identity (ADR-0054 §3); the predicate must move tier first",
-	"internal/modules/contacts/leadrouting.go":       "contacts cannot import identity (ADR-0054 §3); the predicate must move tier first",
-	"internal/modules/contacts/linkedinmatch.go":     "contacts cannot import identity (ADR-0054 §3); the predicate must move tier first",
-	"internal/modules/projects/surface.go":           "projects cannot import identity (ADR-0054 §3); the predicate must move tier first",
-	"internal/modules/search/graphedge.go":           "search cannot import identity (ADR-0054 §3); the predicate must move tier first",
+	"internal/modules/activities/audience.go":          "activities cannot import identity (ADR-0054 §3); the predicate must move tier first",
+	"internal/modules/activities/assignee.go":          "activities cannot import identity (ADR-0054 §3); the predicate must move tier first. This one asks a second question of the same row — whether the seat is an agent — which identity.LiveMemberSQL does not answer and which the assignee refusal is entirely about",
+	"internal/modules/dealrooms/store_public.go":       "dealrooms cannot import identity (ADR-0054 §3); the predicate must move tier first",
+	"internal/modules/dealrooms/room_write.go":         "dealrooms cannot import identity (ADR-0054 §3); the predicate must move tier first. It arrived here from namesTheSeatRatherThanOffersIt, where it did NOT belong: a steward is somebody a buyer is pointed at for help, so the seat is being offered rather than named, and the entry was recording the defect (a deactivated colleague could be one) instead of a reason. Fixed in issue 2596",
+	"internal/modules/capture/owneridentitystore.go":   "capture cannot import identity (ADR-0054 §3); the predicate must move tier first",
+	"internal/modules/contacts/counterpartyname.go":    "contacts cannot import identity (ADR-0054 §3); the predicate must move tier first",
+	"internal/modules/contacts/domainadmissionlist.go": "contacts cannot import identity (ADR-0054 §3); the predicate must move tier first. It decides which unanswered domain questions the operator's list carries: one whose owner can no longer sign in has no queue left to reach, so liveness is exactly the question being asked",
+	"internal/modules/contacts/leadrouting.go":         "contacts cannot import identity (ADR-0054 §3); the predicate must move tier first",
+	"internal/modules/contacts/linkedinmatch.go":       "contacts cannot import identity (ADR-0054 §3); the predicate must move tier first",
+	"internal/modules/projects/surface.go":             "projects cannot import identity (ADR-0054 §3); the predicate must move tier first",
+	"internal/modules/search/graphedge.go":             "search cannot import identity (ADR-0054 §3); the predicate must move tier first",
 })
 
 // deliberatelyNotLiveness ratifies the half-spellings that are not answering

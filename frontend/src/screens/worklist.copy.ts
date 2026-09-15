@@ -751,7 +751,6 @@ export const KNOWN_SOURCES = {
   failed_approval: true,
   dsr: true,
   notice_case: true,
-  sync_health: true,
   capture_health: true,
   ai_work_health: true,
   bounce: true,
@@ -759,6 +758,9 @@ export const KNOWN_SOURCES = {
   automation_run: true,
   notice: true,
   introduction_request: true,
+  // An undecided domain. It names no record either — the subject is the domain
+  // itself, and the row is answered in place rather than by opening anything.
+  domain_question: true,
   // A group of routine decisions, which names no single record.
   batch: true,
 } as const;

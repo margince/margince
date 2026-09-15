@@ -32,13 +32,13 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose"
-	"github.com/margince/margince/backend/internal/platform/overlaybudget/budgettest"
+	"github.com/margince/margince/backend/internal/platform/redistest"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 )
 
 func TestABootFailureAfterALaneStartedStillJoinsIt(t *testing.T) {
 	pool := workerTestPool(t)
-	rdb := budgettest.Client(t)
+	rdb := redistest.Client(t)
 
 	// announced takes only the phases' own Fprintln calls, which this goroutine
 	// makes synchronously inside startEventLanes. The LANES get a discarding

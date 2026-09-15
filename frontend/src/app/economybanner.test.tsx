@@ -7,25 +7,22 @@ import { LocaleProvider } from "../i18n";
 import { EconomyBanner } from "./economybanner";
 import { type GrantSpec, meFixture } from "./mefixture";
 
-// The banner reads GET /ai/usage, which the server gates on ai_diagnostics:read
-// (ai/usage.go). The fixtures name that grant directly rather than a role, so a
-// rebinding fails here instead of 403-ing in a browser — which is what happened
-// when the server moved off automation:update and three client gates stayed.
-function mount(allow: GrantSpec, readBand: string | (() => string)) {
+function mount(
+  allow: GrantSpec,
+  readBand: string | (() => string),
+  seat: "full" | "read" = "full",
+) {
   const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
     const path = new URL(
       input instanceof Request ? input.url : String(input),
       "https://test",
     ).pathname;
     const body = path.endsWith("/me")
-      ? meFixture({ allow })
+      ? meFixture({ allow, seat })
       : {
-          days: [],
-          budget: {
-            monthly_tokens: 100,
-            spent_tokens: 80,
-            band: typeof readBand === "function" ? readBand() : readBand,
-          },
+          monthly_tokens: 100,
+          spent_tokens: 80,
+          band: typeof readBand === "function" ? readBand() : readBand,
         };
     return new Response(JSON.stringify(body), {
       headers: { "Content-Type": "application/json" },
@@ -46,14 +43,14 @@ function mount(allow: GrantSpec, readBand: string | (() => string)) {
 }
 
 // The one grant this surface needs, named once.
-const AI_RUNTIME_READER: GrantSpec = { ai_diagnostics: ["read"] };
+const AI_RUNTIME_READER: GrantSpec = { ai_budget: ["read", "update"] };
 
 // Every sentence the banner can say. Silence is proved against all three: the
 // notice is standing rather than announced, so it carries no ARIA role, and an
 // assertion on one would pass whether or not a banner was on screen.
 const BANNER_LINES = [
-  "AI running in economy mode",
-  "AI budget reached — background AI is queued",
+  "80% AI allowance threshold reached — review feature impacts",
+  "AI allowance reached — review deferred work",
   "AI budget status is not recognized",
 ];
 
@@ -70,22 +67,37 @@ it("does not probe usage for a non-admin", async () => {
   const { fetchMock } = mount({}, "degraded");
   await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
   expect(
-    fetchMock.mock.calls.some(([input]) => String(input).includes("/ai/usage")),
+    fetchMock.mock.calls.some(([input]) =>
+      String(input).includes("/ai/budget"),
+    ),
   ).toBe(false);
-  expect(screen.queryByText("AI running in economy mode")).toBeNull();
+  expect(
+    screen.queryByText(
+      "80% AI allowance threshold reached — review feature impacts",
+    ),
+  ).toBeNull();
 });
 
 it("shows and dismisses economy mode for an admin", async () => {
   mount(AI_RUNTIME_READER, "degraded");
-  expect(await screen.findByText("AI running in economy mode")).toBeTruthy();
-  await userEvent.click(screen.getByLabelText("Dismiss"));
-  expect(screen.queryByText("AI running in economy mode")).toBeNull();
+  expect(
+    await screen.findByText(
+      "80% AI allowance threshold reached — review feature impacts",
+    ),
+  ).toBeTruthy();
+  const user = userEvent.setup({ delay: null });
+  await user.click(screen.getByLabelText("Dismiss"));
+  expect(
+    screen.queryByText(
+      "80% AI allowance threshold reached — review feature impacts",
+    ),
+  ).toBeNull();
 });
 
 it("shows queued while normal stays silent", async () => {
   mount(AI_RUNTIME_READER, "queued");
   expect(
-    await screen.findByText("AI budget reached — background AI is queued"),
+    await screen.findByText("AI allowance reached — review deferred work"),
   ).toBeTruthy();
   cleanup();
   const { fetchMock } = mount(AI_RUNTIME_READER, "normal");
@@ -96,21 +108,29 @@ it("shows queued while normal stays silent", async () => {
 it("shows a recurring band as a new occurrence", async () => {
   let band = "degraded";
   const { client } = mount(AI_RUNTIME_READER, () => band);
-  expect(await screen.findByText("AI running in economy mode")).toBeTruthy();
-  await userEvent.click(screen.getByLabelText("Dismiss"));
+  expect(
+    await screen.findByText(
+      "80% AI allowance threshold reached — review feature impacts",
+    ),
+  ).toBeTruthy();
+  const user = userEvent.setup({ delay: null });
+  await user.click(screen.getByLabelText("Dismiss"));
   expect(bannerLinesOnScreen()).toEqual([]);
 
   band = "normal";
-  await client.refetchQueries({ queryKey: ["ai-usage-band"] });
+  await client.refetchQueries({ queryKey: ["ai-budget"] });
   await waitFor(() =>
-    expect(
-      client.getQueryData<{ budget: { band: string } }>(["ai-usage-band"])
-        ?.budget.band,
-    ).toBe("normal"),
+    expect(client.getQueryData<{ band: string }>(["ai-budget"])?.band).toBe(
+      "normal",
+    ),
   );
   band = "degraded";
-  await client.refetchQueries({ queryKey: ["ai-usage-band"] });
-  expect(await screen.findByText("AI running in economy mode")).toBeTruthy();
+  await client.refetchQueries({ queryKey: ["ai-budget"] });
+  expect(
+    await screen.findByText(
+      "80% AI allowance threshold reached — review feature impacts",
+    ),
+  ).toBeTruthy();
 });
 
 it("surfaces an unknown budget band", async () => {
@@ -118,4 +138,27 @@ it("surfaces an unknown budget band", async () => {
   expect(
     await screen.findByText("AI budget status is not recognized"),
   ).toBeTruthy();
+});
+
+it("keeps a diagnostics-only management reader free of allowance banners", async () => {
+  const { fetchMock } = mount(
+    { ai_diagnostics: ["read"], ai_budget: ["read"] },
+    "degraded",
+  );
+  await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+  expect(bannerLinesOnScreen()).toEqual([]);
+});
+it("links an allowance editor to usage instead of model bindings", async () => {
+  mount(AI_RUNTIME_READER, "degraded");
+  expect(
+    (
+      await screen.findByRole("link", { name: "Manage allowance" })
+    ).getAttribute("href"),
+  ).toBe("#/settings/usage");
+});
+
+it("does not show management notices to a read seat even with role grants", async () => {
+  const { fetchMock } = mount(AI_RUNTIME_READER, "degraded", "read");
+  await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+  expect(bannerLinesOnScreen()).toEqual([]);
 });
