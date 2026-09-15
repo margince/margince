@@ -9798,9 +9798,18 @@ export const en = {
   "worklist.verb.promiseKept": "Done",
   "worklist.verb.promiseSettled": "Marked as kept.",
   "worklist.verb.promiseSettleFailed": "That could not be marked as kept.",
+  // The card's two verbs. "Update" opens the composer on this meeting; the
+  // three answers below it are what that composer offers, and "Cancelled" is
+  // the one the card writes by itself.
+  "worklist.verb.meetingUpdate": "Update",
+  "worklist.verb.meetingUpdateTitle": "Meeting",
+  "worklist.verb.meetingReading": "Reading this meeting…",
+  "worklist.verb.meetingWhatHappened": "What happened",
+  "worklist.verb.meetingBodyHint":
+    "What was said, and what happens next. The calendar's own notes are here to edit.",
   "worklist.verb.meetingHeld": "It happened",
   "worklist.verb.meetingNoShow": "They didn't come",
-  "worklist.verb.meetingCanceled": "It was called off",
+  "worklist.verb.meetingCanceled": "Cancelled",
   "worklist.verb.meetingOutcomeRecorded": "Recorded how the meeting went.",
   "worklist.verb.meetingOutcomeFailed": "That could not be recorded.",
   "worklist.verb.retry": "Run it again",

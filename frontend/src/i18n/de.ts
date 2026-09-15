@@ -9664,9 +9664,15 @@ export const de = {
   "worklist.verb.promiseKept": "Erledigt",
   "worklist.verb.promiseSettled": "Als eingehalten vermerkt.",
   "worklist.verb.promiseSettleFailed": "Das konnte nicht vermerkt werden.",
+  "worklist.verb.meetingUpdate": "Bearbeiten",
+  "worklist.verb.meetingUpdateTitle": "Termin",
+  "worklist.verb.meetingReading": "Termin wird gelesen…",
+  "worklist.verb.meetingWhatHappened": "Was ist passiert",
+  "worklist.verb.meetingBodyHint":
+    "Was besprochen wurde und was als Nächstes ansteht. Die Notizen aus dem Kalender stehen hier zum Bearbeiten.",
   "worklist.verb.meetingHeld": "Hat stattgefunden",
   "worklist.verb.meetingNoShow": "Niemand kam",
-  "worklist.verb.meetingCanceled": "Wurde abgesagt",
+  "worklist.verb.meetingCanceled": "Abgesagt",
   "worklist.verb.meetingOutcomeRecorded":
     "Der Verlauf des Termins wurde festgehalten.",
   "worklist.verb.meetingOutcomeFailed": "Das konnte nicht festgehalten werden.",

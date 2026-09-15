@@ -240,9 +240,16 @@ func stringOr(v *string) string {
 type stubMeetingsAwaitingOutcome struct {
 	rows []MeetingAwaitingOutcome
 	err  error
+	// from records where the window OPENS, for the reason stubCommitments
+	// records its instant — and this one earned it. The lane shipped opening at
+	// the reader's own midnight, so an unanswered meeting left the queue when
+	// the date rolled over, with its status still unset and nothing else in the
+	// product looking for it. A stub that discards the bound cannot fail on it.
+	from *time.Time
 }
 
-func (s *stubMeetingsAwaitingOutcome) Since(_ context.Context, _, _ time.Time, _ int, _ TaskScope, _ ids.UUID) ([]MeetingAwaitingOutcome, error) {
+func (s *stubMeetingsAwaitingOutcome) Since(_ context.Context, from, _ time.Time, _ int, _ TaskScope, _ ids.UUID) ([]MeetingAwaitingOutcome, error) {
+	s.from = &from
 	return s.rows, s.err
 }
 
@@ -277,6 +284,46 @@ func TestTheMeetingLaneAsksFromNowRatherThanFromTheStartOfTheDay(t *testing.T) {
 	}
 	if !meetings.from.Equal(readInstant) {
 		t.Errorf("the lane asks from %s, want the read instant %s", meetings.from, readInstant)
+	}
+}
+
+// THE OUTCOME LANE REACHES BACK PAST MIDNIGHT, which is the whole difference
+// between the two meeting lanes' windows.
+//
+// The lane above expires at midnight because preparing for a meeting stops
+// being possible once it starts. This one does not: a meeting nobody closed off
+// is still unclosed tomorrow. Opened at the reader's own day-start, the lane
+// asked about a meeting only for the hours left in the day it happened — an
+// afternoon meeting for a few hours, a late one for minutes — and then dropped
+// it at local midnight with `meeting_status` still NULL. Nothing re-raised it,
+// because no other surface reads that column looking for work, so the record
+// stayed wrong for good and the queue reported a clear day.
+func TestTheOutcomeLaneReachesBackAFortnightRatherThanToThisMorning(t *testing.T) {
+	unanswered := &stubMeetingsAwaitingOutcome{}
+	svc := NewService(
+		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{},
+		nil, nil, nil, &stubMeetings{}, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock,
+		WithMeetingsAwaitingOutcome(unanswered))
+	if _, err := svc.Assemble(pageReader()); err != nil {
+		t.Fatalf("assembling: %v", err)
+	}
+	if unanswered.from == nil {
+		t.Fatal("the outcome lane was never asked for a window")
+	}
+	// A fortnight before the day BEGAN, not before the read instant: the edge is
+	// a local midnight like every other boundary here, so a meeting does not
+	// drift out of the window as the reader's own morning wears on.
+	want := time.Date(2026, 8, 11, 0, 0, 0, 0, time.UTC)
+	if !unanswered.from.Equal(want) {
+		t.Errorf("the lane opens at %s, want %s — a shorter reach drops an unanswered "+
+			"meeting at midnight and nothing else in the product asks about it again",
+			unanswered.from.UTC(), want)
+	}
+	// And it still closes at the reader's moment, which is what keeps a meeting
+	// off both lanes at once.
+	if !unanswered.from.Before(readInstant) {
+		t.Errorf("the window opens at %s, which is not before the read instant %s",
+			unanswered.from.UTC(), readInstant)
 	}
 }
 

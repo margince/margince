@@ -59,6 +59,23 @@ const (
 // on the page rather than a scrollback.
 const doneCap = 8
 
+// unansweredLookbackDays is how far back the lane of meetings owing an outcome
+// reaches, and it exists because the answer to "how did it go" does not expire
+// at midnight.
+//
+// That lane once opened at the start of the reader's own day, which made the
+// question survivable only for the hours left in it: a meeting at 17:00 was
+// asked about for seven hours, one at 23:30 for thirty minutes, and at local
+// midnight every unanswered meeting fell out of the window still carrying
+// `meeting_status` NULL. Nothing re-raised it, because nothing else reads that
+// column looking for work — so the record simply stayed wrong.
+//
+// A fortnight rather than forever: an unbounded lookback would, on the first
+// read after this ships, hand a reader every meeting their installation has
+// ever left unanswered, which is a queue nobody can clear and so a queue
+// nobody reads.
+const unansweredLookbackDays = 14
+
 // Clock is the read's instant, injected so the lane boundaries a test asserts
 // are the ones it set.
 type Clock func() time.Time
