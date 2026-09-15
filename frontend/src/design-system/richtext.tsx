@@ -195,7 +195,7 @@ export function RichText({
         tabIndex={0}
         data-placeholder={placeholder}
         className="richtext-input"
-        style={{ minHeight: `${rows * 1.5}em` }}
+        style={{ height: `${rows * 1.5}em` }}
         onInput={report}
         onBlur={report}
       />
