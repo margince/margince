@@ -230,6 +230,10 @@ var retired = gatekit.Waive(map[string]string{
 		"of them — never this record",
 	"docs/handbook/settings.md": "it names the seats settings group, which is the heading a " +
 		"reader navigating Settings actually sees",
+	// The embedded corpus is `make -C backend handbook-embed` output — a byte copy of
+	// the page above, held to it by TestTheEmbeddedHandbookMatchesTheDocs. Waiving the
+	// source without its mirror would fail the moment the two are brought into line.
+	"backend/internal/modules/knowledge/handbook/settings.md": "the embedded copy of the page above",
 
 	"scripts/fe-file-length-waivers.txt": "its note explains which two words got wider, which it " +
 		"cannot do without saying them",

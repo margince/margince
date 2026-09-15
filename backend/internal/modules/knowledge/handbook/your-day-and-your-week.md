@@ -289,4 +289,4 @@ A team's week needs a grant that reaches past your own rows, and the two ways of
 lacking one answer differently. A seat that reaches only its own records is told
 plainly that this is not theirs. A seat that *could* read a team, asking about
 one it does not lead, gets **not found** — exactly what a team that does not
-exist returns, so the org chart cannot be mapped by trying.
+exist returns, so who leads what cannot be mapped by trying.
