@@ -262,6 +262,31 @@ func (h Handlers) SuppressContact(w http.ResponseWriter, r *http.Request, id crm
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// AllowContact serves POST /contacts/{id}/consent/allow: a rep vouching that a
+// machine-level refusal for one category may be overruled for this contact.
+//
+// Wire-only, matching SuppressContact: the store owns the category vocabulary,
+// takes the authority from the session and decides whether this caller may
+// write about this subject — none of which belongs at this layer.
+func (h Handlers) AllowContact(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	var req crmcontracts.AllowContactJSONRequestBody
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	if err := h.store.Allow(r.Context(), AllowInput{
+		ContactID: ids.From[ids.ContactKind](ids.UUID(id)),
+		Category:  string(req.Category),
+		Reason:    req.Reason,
+	}); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	// 204: the row is the whole result, matching SuppressContact — a caller
+	// reads the standing override back from the contact's own consent view,
+	// not from the write door.
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // LiftSuppression serves POST /contacts/{id}/consent/suppress/{suppressionId}/lift:
 // somebody taking back a stop they outrank.
 //
@@ -283,6 +308,32 @@ func (h Handlers) LiftSuppression(
 		ContactID:     ids.From[ids.ContactKind](ids.UUID(id)),
 		SuppressionID: ids.UUID(suppressionID),
 		Reason:        req.Reason,
+	}); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// RevokeOverride serves POST /contacts/{id}/consent/allow/{overrideId}/revoke:
+// somebody taking back a standing vouch they outrank.
+//
+// Wire-only, matching LiftSuppression exactly: the store judges the reason,
+// the row scope and the level. The comparison in particular belongs beside
+// the row and inside the transaction that revokes it — a handler that
+// pre-checked the level would be reading a value that can change before the
+// write lands.
+func (h Handlers) RevokeOverride(
+	w http.ResponseWriter, r *http.Request, id crmcontracts.Id, overrideID openapi_types.UUID,
+) {
+	var req crmcontracts.RevokeOverrideJSONRequestBody
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	if err := h.store.RevokeOverride(r.Context(), RevokeOverrideInput{
+		ContactID:  ids.From[ids.ContactKind](ids.UUID(id)),
+		OverrideID: ids.UUID(overrideID),
+		Reason:     req.Reason,
 	}); err != nil {
 		httperr.Write(w, r, err)
 		return

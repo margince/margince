@@ -173,6 +173,15 @@ func (s *Store) mergeContactTx(ctx context.Context, tx pgx.Tx, sourceID, targetI
 		commsauthz.ContactStopSubject(targetID)); err != nil {
 		return crmcontracts.Contact{}, fmt.Errorf("carry the merged-away contact's stops: %w", err)
 	}
+	// A rep's standing override travels the same way, and for the same
+	// reason: a merge that carried the stops but dropped a live vouch would
+	// leave the survivor refused again for a category a rep already cleared —
+	// see overridecarry.go.
+	if err := s.carryOverridesTx(ctx, tx,
+		commsauthz.ContactStopSubject(sourceID),
+		commsauthz.ContactStopSubject(targetID)); err != nil {
+		return crmcontracts.Contact{}, fmt.Errorf("carry the merged-away contact's overrides: %w", err)
+	}
 	p := buildSurvivorshipPatch(tgt, src)
 	if !p.Empty() {
 		if err := p.ApplyLocked(ctx, tx, tgtLock); err != nil {

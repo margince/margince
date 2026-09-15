@@ -512,8 +512,8 @@ internal/modules/privacy/legalholdarms_test.go#func activityHoldSelectors
 internal/modules/privacy/recordhistory.go#const block at const actorTypeAgent
 internal/modules/privacy/restrictedlist.go#type RestrictedRecord
 internal/modules/privacy/retention_floor.go#func correspondenceFloorPredicate
-internal/modules/privacy/retentionactions.go#func ActionsForScope
 internal/modules/privacy/retentionactions.go#var retentionActions
+internal/modules/privacy/retentionauthorable.go#func ActionsForScope
 internal/modules/privacy/retentionpolicystore.go#const fieldAction
 internal/modules/privacy/retentionpolicystore.go#const fieldRetainDays
 internal/modules/privacy/retentionscope.go#func AuthorableScopes

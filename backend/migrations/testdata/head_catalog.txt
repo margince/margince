@@ -1875,6 +1875,27 @@ BEGIN
   RETURN NEW;
 END 
 public.communication_instruction_review_id_key CREATE UNIQUE INDEX communication_instruction_review_id_key ON public.communication_instruction USING btree (review_id)
+public.communication_override acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.communication_override.captured_by text NOT NULL gen=- def=-
+public.communication_override.carried_from uuid gen=- def=-
+public.communication_override.category text NOT NULL gen=- def=-
+public.communication_override.communication_override_carried_from_fkey FOREIGN KEY (carried_from) REFERENCES communication_override(id) ON DELETE SET NULL
+public.communication_override.communication_override_category CHECK ((category = ANY (ARRAY['reply_to_inbound'::text, 'requested_followup'::text, 'precontract_quote'::text, 'active_deal_followup'::text, 'customer_service'::text, 'account_notice'::text, 'contract_notice'::text, 'invoice_or_payment'::text, 'security_notice'::text, 'privacy_notice'::text, 'record_confirmation'::text, 'consent_confirmation'::text, 'optout_confirmation'::text, 'marketing'::text])))
+public.communication_override.communication_override_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
+public.communication_override.communication_override_decided_by_level CHECK ((decided_by_level = ANY (ARRAY['user'::text, 'admin'::text])))
+public.communication_override.communication_override_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES lead(id) ON DELETE CASCADE
+public.communication_override.communication_override_names_a_target CHECK (((contact_id IS NOT NULL) OR (lead_id IS NOT NULL)))
+public.communication_override.communication_override_pkey PRIMARY KEY (id)
+public.communication_override.contact_id uuid gen=- def=-
+public.communication_override.decided_by_level text NOT NULL gen=- def=-
+public.communication_override.id uuid NOT NULL gen=- def=uuidv7()
+public.communication_override.lead_id uuid gen=- def=-
+public.communication_override.reason text NOT NULL gen=- def=-
+public.communication_override.recorded_at timestamp with time zone NOT NULL gen=- def=now()
+public.communication_override.revoked_at timestamp with time zone gen=- def=-
+public.communication_override_live_contact CREATE INDEX communication_override_live_contact ON public.communication_override USING btree (contact_id, category) WHERE (revoked_at IS NULL)
+public.communication_override_live_lead CREATE INDEX communication_override_live_lead ON public.communication_override USING btree (lead_id, category) WHERE (revoked_at IS NULL)
+public.communication_override_pkey CREATE UNIQUE INDEX communication_override_pkey ON public.communication_override USING btree (id)
 public.communication_review acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.communication_review.approval_id uuid gen=- def=-
 public.communication_review.communication_review_delivery_intent_id_fkey FOREIGN KEY (delivery_intent_id) REFERENCES scheduled_send(id) ON DELETE CASCADE

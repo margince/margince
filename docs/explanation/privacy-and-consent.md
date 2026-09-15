@@ -43,6 +43,21 @@ The engine answers the second. It resolves a **category** from what the send act
   `communication_suppression` records the other stops: an Art. 21 objection, a statutory
   restriction, a subject's request to stop, a hard bounce. Neither expires on its own, and no
   rollout mode softens either.
+- **A rep may vouch for a send the engine refused for lack of evidence, and that vouch is not
+  consent.** `communication_override` (`consent.Allow`) records a standing, per-category statement
+  that a machine-level refusal may be overruled for one contact — the category the engine resolved
+  the send to, and only that category; a vouch for `marketing` says nothing about
+  `customer_service`. It flips nothing absolute: `Decision.CanBeOverruled` only asks the question
+  for a non-absolute machine reading, so the nine `absoluteDenials` above and any subject-decided
+  refusal are unreachable through this door regardless of who is vouching — a subject stop still
+  wins. The reason is required — unlike a suppression, which may relay a bare phone call, an
+  override is the rep's own judgement call and the record must say why. It is revocable
+  (`consent.RevokeOverride`) only by a caller whose authority level `CanOverrule` the level it was
+  recorded at, the same rule `lift.go` applies to a suppression, and it survives a merge onto the
+  surviving contact (`consent.CarryOverridesTx`) with its original `decided_by_level` and reason
+  intact, so a merge cannot launder a vouch down to a lower authority. It is carried with the rest
+  of a contact's consent record through Art. 17 erasure and Art. 15 subject access
+  (`privacy.AssembleSAR`'s `communication_overrides`).
 - **A restriction is not total, and that is deliberate.** Three categories still reach a restricted
   subject through a registered template — `security_notice`, `privacy_notice` and
   `optout_confirmation` — because a contact is not better off for being unable to hear that their
@@ -299,6 +314,7 @@ have with a supervisory authority, and destruction is irreversible.
 | The authorization engine | `internal/modules/consent/authorize*.go` (`AuthorizeStagingTx`, `AuthorizeTransmit`) |
 | The shared vocabulary | `internal/shared/ports/commsauthz/` (category, basis, phase, verdict, mode) |
 | Per-recipient decisions | `communication_decision`, `communication_basis`, `communication_suppression` |
+| Standing rep overrides | `internal/modules/consent/override.go`, `overridecarry.go` (`Allow`, `RevokeOverride`, `CarryOverridesTx`, `communication_override`) |
 | Consent state + proof log | `internal/modules/consent/` (`consent_purpose`, `contact_consent`, `consent_event`) |
 | Art. 17 erasure | `internal/modules/privacy/eraser.go` (`NewEraser`, `EraseContact`) |
 | Art. 15 SAR | `internal/modules/privacy/sar.go` (`AssembleSAR`) |

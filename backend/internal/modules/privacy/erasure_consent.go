@@ -165,6 +165,14 @@ func deleteConsentCapabilities(
 		contactID, lowerAll(emails)); err != nil {
 		return fmt.Errorf("privacy: destroying the subject's suppressions: %w", err)
 	}
+	// An override is a rep vouching FOR this contact, not an address-keyed
+	// refusal, so it carries no address column and no address arm: unlike the
+	// suppression above, nothing machine-written ever names this table without
+	// a contact_id, so a contact-keyed delete reaches every row about this
+	// subject.
+	if _, err := tx.Exec(ctx, `DELETE FROM communication_override WHERE contact_id = $1`, contactID); err != nil {
+		return fmt.Errorf("privacy: destroying the subject's send overrides: %w", err)
+	}
 	return nil
 }
 

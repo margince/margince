@@ -10865,6 +10865,80 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/contacts/{id}/consent/allow": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record a standing vouch that a machine-level refusal for one category may be overruled.
+         * @description Writes a `communication_override`: a rep's standing statement that a future send in the
+         *     named category may go out even though the engine, on its own, would refuse it for lack of
+         *     evidence. **It is not consent and not a lawful basis** — it sits beside the refusal and
+         *     outranks only a MACHINE-level, non-absolute one. A subject-level stop (a suppression, an
+         *     Art. 21 objection) still wins at the gate; this door cannot touch one.
+         *
+         *     **The authority is the seat's own, always.** There is no field for it: the level recorded
+         *     is read from the authenticated session (`user` for a rep, `admin` for an admin), never
+         *     from the body — a caller naming its own level would let any seat write a row that outranks
+         *     every future refusal in that category.
+         *
+         *     **The reason is required**, unlike `suppress`: a vouch that flips a refusal is the write
+         *     most worth being able to explain later, and there is no phone call it merely relays.
+         *
+         *     The override is a standing fact for the contact and category named, not a one-time
+         *     instruction for a single message: it remains live, and is read by every future send
+         *     evaluation for that pair, until it is revoked.
+         */
+        post: operations["allowContact"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/contacts/{id}/consent/allow/{overrideId}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                /**
+                 * @description The override to take back. The row and not the contact: a subject may carry more
+                 *     than one vouch — one per category — and revoking "the override" would take back
+                 *     whichever came first.
+                 */
+                overrideId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Take back a standing override, if you outrank the level that recorded it.
+         * @description Revokes one `communication_override`. **You may revoke a vouch recorded below your
+         *     level, never at or above it** — a rep's override is revocable by an admin and not by
+         *     another rep, the same rule `liftSuppression` states for a stop.
+         *
+         *     A row already revoked, belonging to another subject, or never in existence all answer
+         *     `404` alike: a caller learns nothing about rows they would not have been allowed to
+         *     touch either way.
+         */
+        post: operations["revokeOverride"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/contacts/{id}/consent/double-opt-in": {
         parameters: {
             query?: never;
@@ -52727,6 +52801,91 @@ export interface operations {
         };
         responses: {
             /** @description Lifted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    allowContact: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * @description Which category of send this vouch covers. The engine resolves every send to
+                     *     exactly one of these, and the override applies to that one category only — a
+                     *     vouch for `marketing` says nothing about `customer_service`.
+                     * @enum {string}
+                     */
+                    category: "reply_to_inbound" | "requested_followup" | "precontract_quote" | "active_deal_followup" | "customer_service" | "account_notice" | "contract_notice" | "invoice_or_payment" | "security_notice" | "privacy_notice" | "record_confirmation" | "consent_confirmation" | "optout_confirmation" | "marketing";
+                    /**
+                     * @description Why the rep is vouching for this send, in their own words. Required: unlike a
+                     *     suppression, which may only relay what the subject said, this write is the
+                     *     rep's own judgement call and the record must say why it was made.
+                     */
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Recorded. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    revokeOverride: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                /**
+                 * @description The override to take back. The row and not the contact: a subject may carry more
+                 *     than one vouch — one per category — and revoking "the override" would take back
+                 *     whichever came first.
+                 */
+                overrideId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * @description Why the override is being revoked. Required, the same asymmetry
+                     *     `liftSuppression`'s reason states: a vouch that gets taken back is the
+                     *     write most worth being able to explain later.
+                     */
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Revoked. */
             204: {
                 headers: {
                     [name: string]: unknown;

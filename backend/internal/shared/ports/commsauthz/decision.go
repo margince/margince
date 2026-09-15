@@ -142,6 +142,13 @@ type Decision struct {
 	// LegacyVerdict is what the old purpose gate said, so a disagreement is
 	// visible in the row rather than only in a metric.
 	LegacyVerdict string
+	// OverrideID names the communication_override that flipped a machine
+	// refusal to allow, or the zero UUID when none did. It rides the in-memory
+	// decision so the gate can report which override applied; it is not itself
+	// persisted. The durable trail lives elsewhere — reason_code
+	// 'allowed_by_override' on communication_decision, and the vouching seat and
+	// level in audit_log from the Allow write, which survives erasure.
+	OverrideID ids.UUID
 }
 
 // DecisionSet holds the per-recipient answers for one delivery and phase.
@@ -165,6 +172,16 @@ func (s DecisionSet) Allowed() bool {
 		}
 	}
 	return true
+}
+
+// AllowedByOverride returns this decision flipped to allow, naming the override
+// row that did it. The caller has already checked CanBeOverruled and that a
+// qualifying override exists; this only records the outcome.
+func (d Decision) AllowedByOverride(id ids.UUID) Decision {
+	d.Verdict = VerdictAllow
+	d.ReasonCode = ReasonAllowedByOverride
+	d.OverrideID = id
+	return d
 }
 
 // Denied returns the decisions that refused, for a message that names them.

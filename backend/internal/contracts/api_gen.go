@@ -17230,6 +17230,60 @@ func (e ListContactsParamsTagMode) Valid() bool {
 	}
 }
 
+// Defines values for AllowContactJSONBodyCategory.
+const (
+	AllowContactJSONBodyCategoryAccountNotice       AllowContactJSONBodyCategory = "account_notice"
+	AllowContactJSONBodyCategoryActiveDealFollowup  AllowContactJSONBodyCategory = "active_deal_followup"
+	AllowContactJSONBodyCategoryConsentConfirmation AllowContactJSONBodyCategory = "consent_confirmation"
+	AllowContactJSONBodyCategoryContractNotice      AllowContactJSONBodyCategory = "contract_notice"
+	AllowContactJSONBodyCategoryCustomerService     AllowContactJSONBodyCategory = "customer_service"
+	AllowContactJSONBodyCategoryInvoiceOrPayment    AllowContactJSONBodyCategory = "invoice_or_payment"
+	AllowContactJSONBodyCategoryMarketing           AllowContactJSONBodyCategory = "marketing"
+	AllowContactJSONBodyCategoryOptoutConfirmation  AllowContactJSONBodyCategory = "optout_confirmation"
+	AllowContactJSONBodyCategoryPrecontractQuote    AllowContactJSONBodyCategory = "precontract_quote"
+	AllowContactJSONBodyCategoryPrivacyNotice       AllowContactJSONBodyCategory = "privacy_notice"
+	AllowContactJSONBodyCategoryRecordConfirmation  AllowContactJSONBodyCategory = "record_confirmation"
+	AllowContactJSONBodyCategoryReplyToInbound      AllowContactJSONBodyCategory = "reply_to_inbound"
+	AllowContactJSONBodyCategoryRequestedFollowup   AllowContactJSONBodyCategory = "requested_followup"
+	AllowContactJSONBodyCategorySecurityNotice      AllowContactJSONBodyCategory = "security_notice"
+)
+
+// Valid indicates whether the value is a known member of the AllowContactJSONBodyCategory enum.
+func (e AllowContactJSONBodyCategory) Valid() bool {
+	switch e {
+	case AllowContactJSONBodyCategoryAccountNotice:
+		return true
+	case AllowContactJSONBodyCategoryActiveDealFollowup:
+		return true
+	case AllowContactJSONBodyCategoryConsentConfirmation:
+		return true
+	case AllowContactJSONBodyCategoryContractNotice:
+		return true
+	case AllowContactJSONBodyCategoryCustomerService:
+		return true
+	case AllowContactJSONBodyCategoryInvoiceOrPayment:
+		return true
+	case AllowContactJSONBodyCategoryMarketing:
+		return true
+	case AllowContactJSONBodyCategoryOptoutConfirmation:
+		return true
+	case AllowContactJSONBodyCategoryPrecontractQuote:
+		return true
+	case AllowContactJSONBodyCategoryPrivacyNotice:
+		return true
+	case AllowContactJSONBodyCategoryRecordConfirmation:
+		return true
+	case AllowContactJSONBodyCategoryReplyToInbound:
+		return true
+	case AllowContactJSONBodyCategoryRequestedFollowup:
+		return true
+	case AllowContactJSONBodyCategorySecurityNotice:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SuppressContactJSONBodyKind.
 const (
 	SuppressContactJSONBodyKindMarketingObjection SuppressContactJSONBodyKind = "marketing_objection"
@@ -42644,6 +42698,30 @@ type RecordConsentParams struct {
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
+// AllowContactJSONBody defines parameters for AllowContact.
+type AllowContactJSONBody struct {
+	// Category Which category of send this vouch covers. The engine resolves every send to
+	// exactly one of these, and the override applies to that one category only — a
+	// vouch for `marketing` says nothing about `customer_service`.
+	Category AllowContactJSONBodyCategory `json:"category"`
+
+	// Reason Why the rep is vouching for this send, in their own words. Required: unlike a
+	// suppression, which may only relay what the subject said, this write is the
+	// rep's own judgement call and the record must say why it was made.
+	Reason string `json:"reason"`
+}
+
+// AllowContactJSONBodyCategory defines parameters for AllowContact.
+type AllowContactJSONBodyCategory string
+
+// RevokeOverrideJSONBody defines parameters for RevokeOverride.
+type RevokeOverrideJSONBody struct {
+	// Reason Why the override is being revoked. Required, the same asymmetry
+	// `liftSuppression`'s reason states: a vouch that gets taken back is the
+	// write most worth being able to explain later.
+	Reason string `json:"reason"`
+}
+
 // IssueDoubleOptInJSONBody defines parameters for IssueDoubleOptIn.
 type IssueDoubleOptInJSONBody struct {
 	PurposeId openapi_types.UUID `json:"purpose_id"`
@@ -46295,6 +46373,12 @@ type RecordConversationClaimJSONRequestBody = RecordConversationClaimRequest
 
 // RecordConsentJSONRequestBody defines body for RecordConsent for application/json ContentType.
 type RecordConsentJSONRequestBody = RecordConsentRequest
+
+// AllowContactJSONRequestBody defines body for AllowContact for application/json ContentType.
+type AllowContactJSONRequestBody AllowContactJSONBody
+
+// RevokeOverrideJSONRequestBody defines body for RevokeOverride for application/json ContentType.
+type RevokeOverrideJSONRequestBody RevokeOverrideJSONBody
 
 // IssueDoubleOptInJSONRequestBody defines body for IssueDoubleOptIn for application/json ContentType.
 type IssueDoubleOptInJSONRequestBody IssueDoubleOptInJSONBody
@@ -57248,6 +57332,12 @@ type ServerInterface interface {
 	// Grant or withdraw consent for one purpose — writes an append-only proof row.
 	// (POST /contacts/{id}/consent)
 	RecordConsent(w http.ResponseWriter, r *http.Request, id Id, params RecordConsentParams)
+	// Record a standing vouch that a machine-level refusal for one category may be overruled.
+	// (POST /contacts/{id}/consent/allow)
+	AllowContact(w http.ResponseWriter, r *http.Request, id Id)
+	// Take back a standing override, if you outrank the level that recorded it.
+	// (POST /contacts/{id}/consent/allow/{overrideId}/revoke)
+	RevokeOverride(w http.ResponseWriter, r *http.Request, id Id, overrideId openapi_types.UUID)
 	// Mail this contact a single-use link to see what is held about them, correct it, and answer on marketing.
 	// (POST /contacts/{id}/consent/confirm-request)
 	RequestDetailsConfirmation(w http.ResponseWriter, r *http.Request, id Id)
@@ -59981,6 +60071,18 @@ func (_ Unimplemented) GetContactConsent(w http.ResponseWriter, r *http.Request,
 // Grant or withdraw consent for one purpose — writes an append-only proof row.
 // (POST /contacts/{id}/consent)
 func (_ Unimplemented) RecordConsent(w http.ResponseWriter, r *http.Request, id Id, params RecordConsentParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Record a standing vouch that a machine-level refusal for one category may be overruled.
+// (POST /contacts/{id}/consent/allow)
+func (_ Unimplemented) AllowContact(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Take back a standing override, if you outrank the level that recorded it.
+// (POST /contacts/{id}/consent/allow/{overrideId}/revoke)
+func (_ Unimplemented) RevokeOverride(w http.ResponseWriter, r *http.Request, id Id, overrideId openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -72449,6 +72551,79 @@ func (siw *ServerInterfaceWrapper) RecordConsent(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.RecordConsent(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AllowContact operation middleware
+func (siw *ServerInterfaceWrapper) AllowContact(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AllowContact(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RevokeOverride operation middleware
+func (siw *ServerInterfaceWrapper) RevokeOverride(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "overrideId" -------------
+	var overrideId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "overrideId", chi.URLParam(r, "overrideId"), &overrideId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "overrideId", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RevokeOverride(w, r, id, overrideId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -91441,6 +91616,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/contacts/{id}/consent", wrapper.RecordConsent)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/contacts/{id}/consent/allow", wrapper.AllowContact)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/contacts/{id}/consent/allow/{overrideId}/revoke", wrapper.RevokeOverride)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/contacts/{id}/consent/confirm-request", wrapper.RequestDetailsConfirmation)

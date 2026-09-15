@@ -64,6 +64,16 @@ type StopCarrier interface {
 	// the survivor. Idempotent: a stop the survivor already holds is left
 	// alone rather than duplicated.
 	CarryStopsTx(ctx context.Context, tx pgx.Tx, from, to commsauthz.StopSubject) error
+
+	// CarryOverridesTx copies every live standing override (a rep's vouch that
+	// a machine-level refusal may be overruled) held by the retiring subject
+	// onto the survivor. Idempotent, the same way CarryStopsTx is.
+	//
+	// NO SEPARATE LOCK METHOD to call first: consent's lock on a subject's
+	// stops and its lock on that subject's overrides are the same advisory
+	// lock, keyed on the subject id alone (see overridecarry.go on the consent
+	// side) — LockStopsTx already takes it before either carry runs.
+	CarryOverridesTx(ctx context.Context, tx pgx.Tx, from, to commsauthz.StopSubject) error
 }
 
 // WithStopCarrier wires the consent-side seam. Compose binds it to the consent

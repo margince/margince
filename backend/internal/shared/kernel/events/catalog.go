@@ -41,6 +41,18 @@ var catalog = map[string]struct {
 	// the subject as stopped forever, which is the state this event exists to
 	// end.
 	"consent.suppression_lifted": {contactStreamEntity, 1},
+	// A rep recorded a standing vouch that one category's machine-level refusal
+	// may be overruled for this contact. Its own type rather than a
+	// consent.changed for the same reason consent.suppressed is: an override is
+	// not consent, it does not expire on its own, and a consumer folding it into
+	// a generic change would have no way to tell "may now write" from "may no
+	// longer write" — the two states this catalog most needs kept apart.
+	"consent.override_recorded": {contactStreamEntity, 1},
+	// A standing override taken back by somebody who outranked the level that
+	// recorded it. Its own type for the same reason consent.suppression_lifted
+	// is: a consumer that saw only override_recorded would keep treating the
+	// category as vouched for forever, which is the state this event ends.
+	"consent.override_lifted": {contactStreamEntity, 1},
 	// What a contact promised, asked or decided, and a human's correction of
 	// it. Both ride the CONTACT stream: a subscriber reacting to what somebody
 	// said wants the contact, and the claim id rides the payload for the reader
