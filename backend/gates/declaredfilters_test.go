@@ -14,7 +14,7 @@ package gates
 // that from a workspace where everyone carries the tag. Three of these were
 // live when the gate was written — `tag`, `company.domain`,
 // `activity.assignee_id` — plus one shadow, `deal.project_id`, that answered
-// the whole incumbent mirror to a caller who named one project.
+// every deal in the workspace to a caller who named one project.
 //
 // It is derived rather than listed. The generated contract carries every list
 // operation's query parameters as a `*Params` struct, so the census IS the

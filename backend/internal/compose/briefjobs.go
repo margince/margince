@@ -249,12 +249,6 @@ func (w *briefGenerateWorker) assembleFor(ctx context.Context, wsID, userID ids.
 // repsDueTheirMorning lists the workspace's active full-seat humans whose local
 // day has reached briefingHour and who hold no run for that day.
 //
-// Refusing an overlay workspace outright rather than returning nobody: the
-// brief ranks native deal rows, which an overlay workspace keeps in the
-// incumbent, so a pass there would assemble an empty queue — and "nothing needs
-// your attention today" and "this cannot be answered here" read identically on
-// the screen while only one of them is true.
-//
 // Agents are excluded: a brief is a colleague's morning, and an agent seat has no
 // morning to prepare. Read seats are excluded because the brief's whole content
 // is deals to act on.
