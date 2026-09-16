@@ -219,7 +219,7 @@ function AutomationStatus({
   const enabled = automation.status === "enabled";
   if (!canEdit) {
     return (
-      <Badge tone={enabled ? "success" : "warn"}>
+      <Badge tone={enabled ? "success" : "warning"}>
         {enabled ? t("auto.statusEnabled") : t("auto.statusPaused")}
       </Badge>
     );
@@ -638,7 +638,7 @@ function AutomationTierBadge({ tier }: Readonly<{ tier?: string }>) {
   }
   const runs = tier === "auto_execute";
   return (
-    <Badge tone={runs ? "success" : "warn"}>
+    <Badge tone={runs ? "success" : "warning"}>
       {runs ? t("auto.tier.runs") : t("auto.tier.approval")}
     </Badge>
   );

@@ -33,10 +33,10 @@ import { type CssRule, rulesIn, withoutComments } from "../testing/css";
 //                 of (`text-shadow`, `opacity`, a custom property the atom reads)
 //                 counts as a restyle rather than slipping past.
 //   hand-rolled — a class whose name ends a hyphen-bounded `badge`, `pill`,
-//                 `lozenge` or `tag` segment (`x-pill`, `x-tag-warn`), whose
+//                 `lozenge` or `tag` segment (`x-pill`, `x-tag-warning`), whose
 //                 rules together lay a fill and a full corner. Together: a pill
 //                 split into `.x-pill { border-radius }` and
-//                 `.x-pill-warn { background }` is still one pill. Hyphen-bounded
+//                 `.x-pill-warning { background }` is still one pill. Hyphen-bounded
 //                 because `filterpill` and `tagpill` are design-system controls
 //                 that name themselves as one word, and a chip a reader presses
 //                 is not a badge.
@@ -622,8 +622,8 @@ describe("a label in a pill has one spelling", () => {
 
     it("reads a child-combinator tone class and a compound", () => {
       expect(
-        restyledIn(".x > .badge-warn { text-transform: uppercase; }"),
-      ).toEqual([".x > .badge-warn text-transform"]);
+        restyledIn(".x > .badge-warning { text-transform: uppercase; }"),
+      ).toEqual([".x > .badge-warning text-transform"]);
       expect(restyledIn(".badge.x { letter-spacing: 0.04em; }")).toEqual([
         ".badge.x letter-spacing",
       ]);
@@ -699,7 +699,7 @@ describe("a label in a pill has one spelling", () => {
     it("reads a pill split across its base and a modifier, in a breakpoint", () => {
       expect(
         pillsIn(
-          ".lead-tag { border-radius: 50%; }\n@media (min-width: 1px) { .lead-tag-warn { background-color: var(--warningBg); } }",
+          ".lead-tag { border-radius: 50%; }\n@media (min-width: 1px) { .lead-tag-warning { background-color: var(--warningBg); } }",
         ),
       ).toEqual(["lead-tag"]);
       expect(
@@ -733,7 +733,7 @@ describe("a label in a pill has one spelling", () => {
     });
 
     it("reads the badge class in className, however it is assembled", () => {
-      expect(markup('<span className="badge badge-warn">x</span>')).toEqual([
+      expect(markup('<span className="badge badge-warning">x</span>')).toEqual([
         "<span> carries the badge class",
       ]);
       expect(
@@ -761,7 +761,7 @@ describe("a label in a pill has one spelling", () => {
           'import { Badge as Pill } from "../design-system/atoms";\n<Pill {...{ className: "x" }}>x</Pill>',
         ),
       ).toEqual(["<Badge> is handed {...{ className }}"]);
-      expect(markup('<Badge tone="warn">x</Badge>')).toEqual([]);
+      expect(markup('<Badge tone="warning">x</Badge>')).toEqual([]);
     });
   });
 });

@@ -251,7 +251,7 @@ export function LicenseReading({
         {entitlement.state === "rejected" && (
           <Callout
             kind="standing"
-            tone="warn"
+            tone="warning"
             title={t("license.refused.title")}
           >
             {t("license.refused.body")}

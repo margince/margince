@@ -65,7 +65,7 @@
    It leads the stack rather than sharing a row: the moment is the page's
    answer, and an answer beside two other cards is one of three things to read
    rather than the thing to do. Its shape and its tint are both the design
-   system's `Panel` — `tone="accent"` for the ordinary ask, `tone="warn"` for
+   system's `Panel` — `tone="accent"` for the ordinary ask, `tone="warning"` for
    State B, where the finding itself is the bad news — so only the lead's
    two-column interior lives here.
    --------------------------------------------------------------------------- */
@@ -437,7 +437,7 @@
   color: var(--successText);
 }
 
-.pe-rail-value-warn {
+.pe-rail-value-warning {
   color: var(--warningText);
 }
 
@@ -605,7 +605,7 @@
   background: var(--success);
 }
 
-.pe-dot-warn {
+.pe-dot-warning {
   background: var(--warning);
 }
 

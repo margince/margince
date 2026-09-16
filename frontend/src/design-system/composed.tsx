@@ -850,7 +850,7 @@ function MoveFlag({ entry }: Readonly<{ entry: TimelineEntry }>) {
   }
   const direction = conversationDirection(entry);
   if (direction === "inbound") {
-    return <Badge tone="warn">{t("convo.yourMove")}</Badge>;
+    return <Badge tone="warning">{t("convo.yourMove")}</Badge>;
   }
   if (direction === "outbound") {
     return <Badge>{t("convo.waitingOnThem")}</Badge>;

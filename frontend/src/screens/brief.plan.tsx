@@ -56,10 +56,10 @@ const STATE_LABEL: Readonly<Record<WeeklyPlanCommitment["state"], MessageKey>> =
  * a reader something is wrong when nothing is.
  */
 const STATE_TONE: Readonly<
-  Partial<Record<WeeklyPlanCommitment["state"], "success" | "warn">>
+  Partial<Record<WeeklyPlanCommitment["state"], "success" | "warning">>
 > = {
   done: "success",
-  missed: "warn",
+  missed: "warning",
 };
 
 /**

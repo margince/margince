@@ -1450,7 +1450,7 @@ function dealColumns(
               )}
             </span>
             {deal.stalled && (
-              <Badge tone="warn">{t("deal.stalledBadge")}</Badge>
+              <Badge tone="warning">{t("deal.stalledBadge")}</Badge>
             )}
           </CellStrip>
         ) : (

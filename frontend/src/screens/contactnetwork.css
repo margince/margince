@@ -293,7 +293,7 @@
   display: none;
 }
 .pn-relay-done::before {
-  background: var(--accent);
+  background: var(--success);
 }
 .pn-relay-step strong {
   display: block;
@@ -318,9 +318,9 @@
   font-variant-numeric: tabular-nums;
 }
 .pn-relay-done .pn-relay-num {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--textOnAccent);
+  background: var(--successText);
+  border-color: var(--successText);
+  color: var(--textOnStatusControl);
 }
 .pn-relay-current .pn-relay-num {
   border-color: var(--accent);

@@ -503,7 +503,7 @@ function RuntimeRows({
     <div className="armeta">
       {/* The posture leads, because it decides whether anything below it means
           anything: a model name from last week is not a model bound today. */}
-      {ai === "unconfigured" && <Badge tone="warn">{LABELS.noModel}</Badge>}
+      {ai === "unconfigured" && <Badge tone="warning">{LABELS.noModel}</Badge>}
       {ai === "development" && (
         <span>
           <b>{t("auth.coreDevelopment")}</b> {t("auth.coreModeDevelopment")}
@@ -536,8 +536,8 @@ function RuntimeRows({
           page, so a link around it takes them there: the badge stays the
           label nobody presses, and the anchor carries the press. */}
       {(license === "none" || license === "refused") && (
-        <a className="arwarn" href={LICENSE_SETTINGS_HREF}>
-          <Badge tone="warn">{licenseLine}</Badge>
+        <a className="arwarning" href={LICENSE_SETTINGS_HREF}>
+          <Badge tone="warning">{licenseLine}</Badge>
         </a>
       )}
       {offline.map((source) => (

@@ -146,7 +146,11 @@ function ForecastAnswer({
           between eligible and priced is stated beside the total rather than
           left in the receipt alone. */}
       {readings.priced_count < readings.eligible_count && (
-        <Callout tone="warn" kind="standing" title={t("forecast.partialTitle")}>
+        <Callout
+          tone="warning"
+          kind="standing"
+          title={t("forecast.partialTitle")}
+        >
           {t("forecast.partial", {
             priced: formatNumber(readings.priced_count, locale),
             eligible: formatNumber(readings.eligible_count, locale),

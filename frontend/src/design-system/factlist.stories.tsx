@@ -70,7 +70,7 @@ export const RichValues: Story = {
       {
         key: "status",
         term: "Mailbox",
-        value: <Badge tone="warn">Reconnect needed</Badge>,
+        value: <Badge tone="warning">Reconnect needed</Badge>,
       },
       { key: "size", term: "Employees", value: "Not recorded" },
       {

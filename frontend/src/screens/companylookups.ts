@@ -294,14 +294,14 @@ export function useAccountStanding(
 }
 
 // The tone the standing pill is drawn in. `strong` is the all-clear and
-// `at_risk` is the alarm; `good` sits between them and takes the warn tint
+// `at_risk` is the alarm; `good` sits between them and takes the warning tint
 // rather than the calm one, because "good" here means "not failing yet" and a
 // green pill over it reads as nothing to do.
 export const HEALTH_STANDING_TONE: Record<
   HealthRating,
-  "calm" | "warn" | "danger"
+  "calm" | "warning" | "danger"
 > = {
   strong: "calm",
-  good: "warn",
+  good: "warning",
   at_risk: "danger",
 };

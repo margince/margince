@@ -195,7 +195,7 @@ export function MailSharingCard() {
                     sharedShown ? (
                       <Callout
                         kind="standing"
-                        tone="warn"
+                        tone="warning"
                         title={t("mailSharing.sharedPosture.warningTitle")}
                       >
                         {t("mailSharing.sharedPosture.warning")}
@@ -216,7 +216,7 @@ export function MailSharingCard() {
                     shown ? null : (
                       <Callout
                         kind="standing"
-                        tone="warn"
+                        tone="warning"
                         title={t("mailSharing.dangerTitle")}
                       >
                         {t("mailSharing.danger")}

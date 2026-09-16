@@ -90,7 +90,7 @@
 }
 
 /* The refusal banner and the confirm gate are Callouts now — they were the
-   `danger` and `warn` tones hand-drawn, off by a pixel on both axes and with
+   `danger` and `warning` tones hand-drawn, off by a pixel on both axes and with
    the radius token's VALUE typed in rather than the token. */
 
 .cf-ddl {

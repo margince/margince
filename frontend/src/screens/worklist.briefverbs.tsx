@@ -111,7 +111,7 @@ export function useBriefAnswer(item: WorklistItem) {
       // had named a conflict, and the retry it invites hits the same 409.
       onError: (failure) =>
         toast.show(problemMessageOf(failure, t), {
-          mark: false,
+          tone: "danger",
         }),
     });
   };

@@ -33,13 +33,13 @@ import { type Locale, useLocale, useT } from "../i18n";
  * The four standings, and the tone each is drawn in.
  *
  * `cold` takes NO tone deliberately: the palette's tones each carry an
- * instruction — success is fine, warn is act soon, danger is act now — and a
+ * instruction — success is fine, warning is act soon, danger is act now — and a
  * deal treated as lost is none of those. Drawn plain, it reads as the statement
  * of fact it is rather than as a fourth thing competing for the same attention.
  */
 const STANDING_TONE = {
   live: "success",
-  drifting: "warn",
+  drifting: "warning",
   blocked: "danger",
   cold: undefined,
 } as const;

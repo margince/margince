@@ -108,7 +108,7 @@ export function DossierPanel({
           /* Said out loud BESIDE the content, never instead of it: a stale
              dossier is more useful than none, and hiding it would leave the
              reader with nothing rather than with something dated. */
-          <Badge tone="warn">{t("co.dossier.stale")}</Badge>
+          <Badge tone="warning">{t("co.dossier.stale")}</Badge>
         )}
         <span className="t-caption">
           {t("co.brief.generatedAt", {

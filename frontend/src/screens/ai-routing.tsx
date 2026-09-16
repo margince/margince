@@ -616,10 +616,10 @@ function LaneRow<
                 host. Only this adapter has one, so nothing else grows it. */}
             {binding.base_url ? <span>{hostOf(binding.base_url)}</span> : null}
             {unkeyed?.has(binding.provider) && (
-              <Badge tone="warn">{t("aiRouting.noKey")}</Badge>
+              <Badge tone="warning">{t("aiRouting.noKey")}</Badge>
             )}
             {isUnpriced(catalogue, binding.provider, binding.model, lane) ? (
-              <Badge tone="warn">{t("aiRouting.unpriced")}</Badge>
+              <Badge tone="warning">{t("aiRouting.unpriced")}</Badge>
             ) : (
               // What this lane costs to call, where the sheet can say. It is
               // the reason the ladder is ordered the way it is, and reading it
@@ -952,7 +952,7 @@ function RoutingConflict({
   const t = useT();
   if (!current || current === expected.replaceAll('"', "")) return null;
   return (
-    <Callout tone="warn" kind="standing" title={t("aiAdmin.routingStale")}>
+    <Callout tone="warning" kind="standing" title={t("aiAdmin.routingStale")}>
       {t("aiAdmin.staleHelp")}
     </Callout>
   );

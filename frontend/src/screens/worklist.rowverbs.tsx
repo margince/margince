@@ -413,7 +413,7 @@ function PinVerb({ item }: Readonly<{ item: WorklistItem }>) {
                     ? "worklist.verb.unpinFailed"
                     : "worklist.verb.pinFailed",
                 ),
-                { mark: false },
+                { tone: "danger" },
               ),
           },
         )

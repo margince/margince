@@ -46,6 +46,38 @@ export type SectionState =
   | "partial";
 
 /**
+ * What each state SAYS, in the five-state colour vocabulary — one list, read by
+ * the component and by the sheet's class names.
+ *
+ * Most of the nine report on the SURFACE rather than on the record, and those
+ * keep the italic voice and no colour: `empty` is a fact about the account,
+ * `withheld` is a permission boundary a reader must not mistake for a fault,
+ * and `ready` is content. The four that are a verdict take one:
+ *
+ *   loading  — work still in flight, which is what `info` is for.
+ *   failed   — the read did not land, and there is a retry beside it.
+ *   stale    — a figure that was true earlier: a caveat before the fact.
+ *   partial  — some of the rows, with the remainder named. A report, not a
+ *              fault; the surface answered, it just did not answer in full.
+ *
+ * `unavailable` is deliberately NOT danger. It is the section that is missing
+ * with nobody saying why, and a reader cannot act on it — colouring it as a
+ * failure would put a red line on every page a version skew touches.
+ */
+export const SECTION_STATE_TONES: Readonly<
+  Record<SectionState, "info" | "warning" | "danger" | null>
+> = {
+  ready: null,
+  empty: null,
+  withheld: null,
+  unavailable: null,
+  loading: "info",
+  failed: "danger",
+  stale: "warning",
+  partial: "info",
+};
+
+/**
  * Withholding is the shape of a payload that names the sections its reader may
  * not have: a composite read answers with the sections it could serve plus the
  * list of the ones a grant refused.
@@ -251,7 +283,9 @@ export function SurfaceState({
       )}
       {state === "failed" && (
         <div className="surfacestate-failed">
-          <p className="surfacestate-withheld">{t("state.failed")}</p>
+          <p className="surfacestate-withheld surfacestate-danger">
+            {t("state.failed")}
+          </p>
           {detail?.onRetry && (
             <Button onClick={detail.onRetry}>{t("state.retry")}</Button>
           )}
@@ -272,7 +306,7 @@ export function SurfaceState({
       {state === "partial" && (
         <>
           {children}
-          <p className="surfacestate-empty">
+          <p className="surfacestate-empty surfacestate-info">
             {detail?.remaining
               ? t("state.partialCount", {
                   count: formatNumber(detail.remaining, locale),

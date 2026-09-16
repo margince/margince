@@ -1189,7 +1189,7 @@
   corner-shape: round;
   background: var(--borderStrong);
 }
-.co-dot-warn {
+.co-dot-warning {
   background: var(--warning);
 }
 .co-dot-danger {
@@ -1243,7 +1243,7 @@
   background: currentColor;
   flex: none;
 }
-.today-lead-warn {
+.today-lead-warning {
   color: var(--warning);
 }
 .today-lead-danger {
@@ -1542,7 +1542,7 @@
 .co-dim-calm::before {
   background: var(--success);
 }
-.co-dim-warn::before {
+.co-dim-warning::before {
   background: var(--warning);
 }
 .co-dim-danger::before {
@@ -1581,7 +1581,7 @@
   font: inherit;
   color: inherit;
 }
-.co-360-reading dd.co-360-reading-warn {
+.co-360-reading dd.co-360-reading-warning {
   color: var(--warningText);
 }
 .co-360-reading dd.co-360-reading-danger {
@@ -1691,13 +1691,18 @@
   flex: none;
 }
 
+/* The ladder says how the RUN is going, which is an outcome and not a claim
+   about who wrote it: a finished stage is success, a stage under way is work in
+   flight. Indigo said "a machine did this" about every rung equally, so the one
+   thing the ladder exists to report — where the read has got to — was the one
+   thing its colour did not say. */
 .deepread-step.is-done .deepread-step-mark {
-  background: var(--ai);
-  border-color: var(--ai);
+  background: var(--success);
+  border-color: var(--success);
 }
 
 .deepread-step.is-running .deepread-step-mark {
-  border-color: var(--ai);
+  border-color: var(--info);
 }
 
 /* A to-do already on somebody's list, under the move Margince found.
@@ -1729,7 +1734,7 @@
   flex: none;
   white-space: nowrap;
 }
-.co-todo-due-warn {
+.co-todo-due-warning {
   color: var(--warningText);
 }
 .co-todo-due-danger {

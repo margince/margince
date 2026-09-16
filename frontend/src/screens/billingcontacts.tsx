@@ -7,7 +7,7 @@ import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { BillingContactModal } from "./billingcontactmodal";
 import { useBillingContactActions } from "./billingcontacts.queries";
-import { problemMessageOf } from "./common";
+import { RefusalLine } from "./common";
 
 export type BillingContact = components["schemas"]["BillingContact"];
 export type BillingContactRole = components["schemas"]["BillingContactRole"];
@@ -85,7 +85,7 @@ export function BillingContactsPanel({
           // A refused removal is the one failure here a reader must not have
           // to infer: the row stays and the button re-enables, which reads
           // exactly like a contact who is still on the account.
-          <p role="alert">{problemMessageOf(actions.remove.error, t)}</p>
+          <RefusalLine error={actions.remove.error} />
         )}
         {contacts.length === 0 ? (
           <p className="t-caption">{t("billing.none")}</p>

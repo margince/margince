@@ -17,7 +17,7 @@ import {
 // the one connector fact worth interrupting a morning for.
 //
 // Read every frame in BOTH themes with the toolbar's Theme control — the
-// unhealthy-connector callout is the one that matters, because the warn family
+// unhealthy-connector callout is the one that matters, because the warning family
 // lifts its ink in dark.
 
 const DIGEST_ROUTES: RouteMap = {

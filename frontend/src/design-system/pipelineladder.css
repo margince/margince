@@ -55,14 +55,16 @@
 }
 
 /* The mark carries the verdict at a glance, so the same three tones the badge
- * uses appear here too. Every other status keeps the resting tone: none of them
- * is a statement about the MESSAGE, and colouring them would read as one. */
+ * uses appear here too — read off STATUS_TONE in pipelineladder.tsx, which is
+ * where the mapping is decided. Every other status keeps the resting tone: none
+ * of them is a statement about the MESSAGE, and colouring them would read as
+ * one. */
 .pipeline-ladder__rung[data-status="done"] .pipeline-ladder__mark {
   background: var(--success);
 }
 
 .pipeline-ladder__rung[data-status="pending"] .pipeline-ladder__mark {
-  background: var(--away);
+  background: var(--info);
 }
 
 .pipeline-ladder__rung[data-status="failed"] .pipeline-ladder__mark {

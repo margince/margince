@@ -57,7 +57,7 @@ export function EmbedReindexBanner() {
     return null;
   }
   return (
-    // `warn` and not `info`: this banner is drawn only for the one state a
+    // `warning` and not `info`: this banner is drawn only for the one state a
     // human must act on, and a notice with no urgency is the wrong claim about
     // a rebuild nobody has confirmed. `.appbanner` is the SHELL's hook — the
     // content column reserves the top bar's height only when no banner is
@@ -65,7 +65,7 @@ export function EmbedReindexBanner() {
     // a wrapper this component owns.
     <div className="appbanner">
       <Callout
-        tone="warn"
+        tone="warning"
         kind="standing"
         title={t("reindexbanner.needed")}
         actions={<a href="#/settings/maintenance">{t("reindexbanner.link")}</a>}

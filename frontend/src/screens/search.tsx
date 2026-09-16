@@ -263,7 +263,7 @@ function SearchHit({
           <Badge tone="accent">{t("search.tier.mirrored")}</Badge>
         )}
         {hit.trust_tier === "unverified" && (
-          <Badge tone="warn">{t("search.tier.unverified")}</Badge>
+          <Badge tone="warning">{t("search.tier.unverified")}</Badge>
         )}
       </div>
       {/* `hit.score` is deliberately not drawn. The contract bounds it to

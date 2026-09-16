@@ -388,7 +388,9 @@ export function CompanyActionBadges({
           record. Drawn here as well it was the same badge in two places on one
           screen, and a reader who found both had to satisfy themselves the two
           agreed. */}
-      {company.archived_at && <Badge tone="warn">{t("record.archived")}</Badge>}
+      {company.archived_at && (
+        <Badge tone="warning">{t("record.archived")}</Badge>
+      )}
       {/* The trigger is unconditional because the menu always holds something
           to say: an archived account's verbs are refused rather than dropped,
           and the sentence refusing them travels with them. Only a panel with

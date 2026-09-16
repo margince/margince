@@ -224,7 +224,7 @@ function FirstResponseCard({
       detail={t(breached ? "lead.sla.overdueSince" : "lead.sla.dueBy", {
         at: formatDateTime(clock.deadline, locale, zone),
       })}
-      tone={breached ? "danger" : atRisk ? "warn" : undefined}
+      tone={breached ? "danger" : atRisk ? "warning" : undefined}
     />
   );
 }

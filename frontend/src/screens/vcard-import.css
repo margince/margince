@@ -28,6 +28,6 @@
 /* The one outcome that asks something of the reader. A card that merely
    resembles somebody was written nowhere, and nothing else on this list needs
    them to act. */
-.vcard-import-warn {
+.vcard-import-warning {
   color: var(--warningText);
 }

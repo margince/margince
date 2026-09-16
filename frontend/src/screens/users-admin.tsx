@@ -412,14 +412,16 @@ function MemberVerbs({
 // flight is the ordinary first state of every seat, and painting a whole
 // column of new colleagues amber tells an admin something is wrong when
 // nothing is. Warn is kept for the states somebody has to act on.
-function statusTone(status: string): "success" | "warn" | "danger" | undefined {
+function statusTone(
+  status: string,
+): "success" | "warning" | "danger" | undefined {
   switch (status) {
     case "active":
       return "success";
     case "invited":
       return undefined;
     default:
-      return "warn";
+      return "warning";
   }
 }
 

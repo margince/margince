@@ -51,11 +51,11 @@ type ContactSort =
  */
 export const ENGAGEMENT_TONES: Record<
   Engagement,
-  "success" | "warn" | undefined
+  "success" | "warning" | undefined
 > = {
-  waiting: "warn",
+  waiting: "warning",
   answered: "success",
-  no_reply: "warn",
+  no_reply: "warning",
   lapsed: undefined,
   untried: undefined,
 };

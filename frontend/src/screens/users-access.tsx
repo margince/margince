@@ -198,7 +198,7 @@ export function TeamsCard() {
     // came back. Sticky, because a refusal is not a courtesy to withdraw after
     // three and a half seconds.
     onError: (error) => {
-      toast.show(problemMessageOf(error, t), { mark: false, sticky: true });
+      toast.show(problemMessageOf(error, t), { tone: "danger", sticky: true });
     },
     onSuccess: (_restored, { name }) => {
       qc.invalidateQueries({ queryKey: ["teams"] });

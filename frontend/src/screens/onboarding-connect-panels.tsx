@@ -45,7 +45,7 @@ function ConnectWarn({ title, body }: { title: string; body: string }) {
     // the banner: as an inline `margin` shorthand they also reset the top
     // margin the banner declares for itself, so the one block on the surface
     // that says something went wrong was the one with nothing above it.
-    <div className="readfail warn ob-connect-warn">
+    <div className="readfail warning ob-connect-warning">
       <span className="rfi">
         <Circle aria-hidden />
       </span>

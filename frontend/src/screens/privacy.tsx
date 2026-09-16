@@ -283,7 +283,7 @@ export function ConsentPurposesCard() {
                       <Badge
                         key={purpose.id}
                         tone={
-                          purpose.requires_double_opt_in ? "warn" : undefined
+                          purpose.requires_double_opt_in ? "warning" : undefined
                         }
                       >
                         {purpose.label}
@@ -489,10 +489,10 @@ function NewDsrForm({ onDone }: Readonly<{ onDone: () => void }>) {
 // here rather than a silently untoned badge.
 const STATUS_TONE: Record<
   DsrStatus,
-  "success" | "warn" | "danger" | undefined
+  "success" | "warning" | "danger" | undefined
 > = {
   open: undefined,
-  in_progress: "warn",
+  in_progress: "warning",
   fulfilled: "success",
   rejected: "danger",
 };

@@ -15,7 +15,7 @@ import {
 } from "../design-system/recordpicker";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
-import { problemMessageOf, throwProblem } from "./common";
+import { RefusalLine, throwProblem } from "./common";
 import {
   type AssignmentRecordType,
   type AssignmentSubjectKind,
@@ -212,9 +212,7 @@ export function RecordTeamAssign({
           />
         </div>
         <p className="t-caption">{t("assignments.noAccessNote")}</p>
-        {write.isError && (
-          <p role="alert">{problemMessageOf(write.error, t)}</p>
-        )}
+        {write.isError && <RefusalLine error={write.error} />}
         <div className="actions">
           <Button variant="ghost" onClick={close} disabled={write.isPending}>
             {t("deals.cancel")}

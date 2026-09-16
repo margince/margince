@@ -370,7 +370,7 @@ export const SectionWithheld: Story = {
 };
 
 // waiting_on_them is one of only two engagement states ENGAGEMENT_TONE
-// (company360.tsx) colours "warn" — the ball is in their court, not ours —
+// (company360.tsx) colours "warning" — the ball is in their court, not ours —
 // and the one state that also draws a silence note (companytoday.tsx's own
 // `silenceNote`, gated on this exact state plus a `last_outbound_at` to
 // count from). populated above never reaches either: its engagement is
@@ -394,7 +394,7 @@ export const WaitingOnThem: Story = {
   ),
 };
 
-// dormant: the other warn-toned engagement state, but the one that carries no
+// dormant: the other warning-toned engagement state, but the one that carries no
 // silence note of its own — silenceNote only ever fires for waiting_on_them,
 // so a dormant account's warning is the strip's tone and nothing else.
 export const Dormant: Story = {

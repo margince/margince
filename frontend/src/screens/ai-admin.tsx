@@ -112,7 +112,7 @@ function BudgetReading({ budget }: Readonly<{ budget: Budget }>) {
       </p>
       <Callout
         kind="standing"
-        tone={budget.band === "normal" ? "info" : "warn"}
+        tone={budget.band === "normal" ? "info" : "warning"}
         title={
           budget.band === "normal"
             ? t("aiAdmin.normal")
@@ -260,7 +260,7 @@ function BudgetBody({
             </Field>
           </div>
           {revision !== budget.revision && (
-            <Callout kind="standing" tone="warn" title={t("aiAdmin.stale")}>
+            <Callout kind="standing" tone="warning" title={t("aiAdmin.stale")}>
               {t("aiAdmin.staleHelp")}
             </Callout>
           )}
@@ -448,7 +448,7 @@ export function AiFeatureTable({
             <Badge
               tone={
                 row.impact === "budget_blocked" || row.impact === "unconfigured"
-                  ? "warn"
+                  ? "warning"
                   : undefined
               }
             >

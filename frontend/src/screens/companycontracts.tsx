@@ -61,8 +61,8 @@ const STATUS_LABELS: Record<ContractStatus, MessageKey> = {
 // Only two states change how a row should READ. A superseded agreement is
 // history; a cancelled one is a fact the reader needs to notice. The rest are
 // equal citizens and get no tone, because tone on everything is tone on nothing.
-const STATUS_TONE: Partial<Record<ContractStatus, "warn" | "danger">> = {
-  superseded: "warn",
+const STATUS_TONE: Partial<Record<ContractStatus, "warning" | "danger">> = {
+  superseded: "warning",
   cancelled: "danger",
 };
 
@@ -428,7 +428,7 @@ function ContractTermState({ contract }: Readonly<{ contract: Contract }>) {
   }
   if (contract.cancellation_effective_on && contract.under_contract) {
     return (
-      <Badge tone="warn">
+      <Badge tone="warning">
         {t("contracts.endsOn", {
           when: formatDate(
             contract.cancellation_effective_on,

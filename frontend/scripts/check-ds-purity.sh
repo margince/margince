@@ -36,6 +36,14 @@ EXT_DIR="${MARGINCE_EXT_DIR:-$(cd "$SCRIPT_DIR/../.." && pwd)/extensions}"
 # rendered in Ledger Green is a wrong mark. Keep this a NAMED file — widening it
 # to a pattern is how a real drift gets in beside it, and the same one entry is
 # repeated in conformance.test.ts so both arms of the gate say why.
+#
+# And exactly ONE piece of scaffolding, on the same terms:
+# design-system/tokens-testing.ts is what the token suites READ the sheet with,
+# so the `rgba(` in it is the grammar it parses rather than paint it applies. It
+# declares no colour of its own; every value it touches arrives from tokens.css.
+# It sat inside tokens.test.ts, which the test exclusion above already skipped,
+# until a second suite needed the same maths and a copy would have been two
+# answers to one question.
 FILES=()
 while IFS= read -r -d '' f; do FILES+=("$f"); done < <(
   find "$SRC_DIR" -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.css" \) \
@@ -43,6 +51,7 @@ while IFS= read -r -d '' f; do FILES+=("$f"); done < <(
     -not -name "tokens.css" \
     -not -name "schema.d.ts" \
     -not -name "provider-mark.tsx" \
+    -not -name "tokens-testing.ts" \
     -print0 2>/dev/null
 )
 while IFS= read -r -d '' f; do FILES+=("$f"); done < <(

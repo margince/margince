@@ -149,7 +149,7 @@ function CriterionRow({
       <span className="criterion-label">{criterion.label}</span>
       <span className="t-caption">{criterion.key}</span>
       <Badge>{t(KIND_LABEL[criterion.kind])}</Badge>
-      <Badge tone={criterion.required ? "warn" : undefined}>
+      <Badge tone={criterion.required ? "warning" : undefined}>
         {criterion.required
           ? t("stage.criteria.required")
           : t("stage.criteria.optional")}

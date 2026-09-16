@@ -53,7 +53,7 @@ function Derives({
   );
 }
 
-/** The five tones together, which is the only way to judge that they differ.
+/** Every tone together, which is the only way to judge that they differ.
  * No `icon` at any of them: the glyph comes from the tone, so shape carries the
  * claim as well as colour does — and `accent` shares `info`'s glyph, because it
  * is the same claim asking for more of the reader's attention. */
@@ -66,7 +66,7 @@ export const Tones: Story = {
       <Callout tone="accent" title="Two accounts are waiting on you">
         Neither has been answered since the buyer asked for a price.
       </Callout>
-      <Callout tone="warn" title="Reindex needed">
+      <Callout tone="warning" title="Reindex needed">
         Search is answering from an index that is behind the records.
       </Callout>
       <Callout tone="danger" title="That did not save">
@@ -74,6 +74,9 @@ export const Tones: Story = {
       </Callout>
       <Callout tone="success" title="The mailbox is connected">
         The first read starts within five minutes.
+      </Callout>
+      <Callout tone="discovery" title="Deal Rooms are new here">
+        A buyer can now read the price, the terms and the plan in one place.
       </Callout>
     </Stack>
   ),
@@ -121,7 +124,7 @@ export const AlertAnatomy: Story = {
         dismiss={{ label: "Dismiss", onDismiss: () => {} }}
       />
 
-      <Callout tone="warn" kind="standing" title="This licence is in grace">
+      <Callout tone="warning" kind="standing" title="This licence is in grace">
         Seats stay writable until 31 March. After that the workspace keeps
         answering reads and refuses every write, including the ones the
         connectors make on their own.
@@ -158,7 +161,11 @@ export const Kinds: Story = {
       </Derives>
 
       <Derives announces='kind="event" → role="status"'>
-        <Callout tone="warn" kind="event" title="The mailbox connector stopped">
+        <Callout
+          tone="warning"
+          kind="event"
+          title="The mailbox connector stopped"
+        >
           It refused the last three reads. Nothing has been captured since
           09:12.
         </Callout>
@@ -209,7 +216,7 @@ export const Narrow: Story = {
 export const WithActions: Story = {
   render: () => (
     <Callout
-      tone="warn"
+      tone="warning"
       kind="event"
       title="Connection interrupted"
       actions={<Button variant="primary">Resume</Button>}
@@ -261,7 +268,7 @@ export const LongContent: Story = {
 export const WithFacts: Story = {
   render: () => (
     <Callout
-      tone="warn"
+      tone="warning"
       kind="standing"
       icon={MailX}
       title="Nobody has written back"

@@ -8,7 +8,7 @@ import {
 } from "../../design-system/atoms";
 import { Heading } from "../../design-system/heading";
 import { useT } from "../../i18n";
-import { problemMessageOf } from "../common";
+import { RefusalLine } from "../common";
 import {
   type ReviewTemplate,
   useCreateOutcomeReview,
@@ -217,9 +217,7 @@ export function OutcomeReviewModal({
             />
           )}
         </Field>
-        {create.isError && (
-          <p role="alert">{problemMessageOf(create.error, t)}</p>
-        )}
+        {create.isError && <RefusalLine error={create.error} />}
         <div className="actions">
           <Button variant="ghost" onClick={close} disabled={create.isPending}>
             {t("deals.cancel")}

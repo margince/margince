@@ -12,7 +12,7 @@ import {
 import { Heading } from "../design-system/heading";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
-import { problemMessageOf, throwProblem } from "./common";
+import { RefusalLine, throwProblem } from "./common";
 import {
   REVIEW_TEMPLATES_KEY,
   type ReviewQuestion,
@@ -160,7 +160,7 @@ export function ReviewTemplateEditor({
         >
           {t("reviewTemplates.addQuestion")}
         </Button>
-        {save.isError && <p role="alert">{problemMessageOf(save.error, t)}</p>}
+        {save.isError && <RefusalLine error={save.error} />}
         <div className="actions">
           <Button variant="ghost" disabled={save.isPending} onClick={onClose}>
             {t("deals.cancel")}

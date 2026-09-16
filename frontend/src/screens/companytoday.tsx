@@ -55,7 +55,7 @@ type TodayLead = {
   note?: string;
   // Colours the state where it is bad news — an account gone quiet, a move
   // that has been ours for weeks.
-  tone?: "warn" | "danger";
+  tone?: "warning" | "danger";
 };
 
 /** One of the three rated dimensions under the verdict. */
@@ -68,7 +68,7 @@ export type TodayDimension = {
   // dimension's standing and a blank one would read as a rating of zero.
   reading: string;
   // How loud the rating is. Absent where there is no rating to be loud about.
-  tone?: "calm" | "warn" | "danger";
+  tone?: "calm" | "warning" | "danger";
   // What this dimension WEIGHS. Three words on a card cannot say what went
   // into "Commercial · Good", and a reader who cannot interpret a rating has
   // to take it on trust.
@@ -488,7 +488,7 @@ function briefFooter(
   return (
     <>
       {commitment && (
-        <Badge tone={commitment.overdue ? "warn" : undefined}>
+        <Badge tone={commitment.overdue ? "warning" : undefined}>
           {commitment.headline}
         </Badge>
       )}

@@ -49,13 +49,13 @@ export function PlanContract({
   const n = (value: number) => formatNumber(value, locale);
   return (
     <Panel title={t("plan.contract.title")}>
-      {/* A warn Callout only when the week is actually crowded. Drawn always,
+      {/* A warning Callout only when the week is actually crowded. Drawn always,
           the tone would stop meaning anything and a reader would learn to skip
           it. */}
       {capacity !== undefined && crowded && (
         <PanelBody>
           <Callout
-            tone="warn"
+            tone="warning"
             kind="standing"
             title={t("plan.contract.crowded")}
           >

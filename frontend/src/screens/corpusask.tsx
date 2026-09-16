@@ -246,7 +246,7 @@ function AnswerView({ answer }: Readonly<{ answer: Answer }>) {
           than sitting under it for that reason. */}
       {answer.outcome === "unreviewed" ? (
         <Callout
-          tone="warn"
+          tone="warning"
           kind="outcome"
           title={t("corpusAsk.unreviewedTitle")}
         >

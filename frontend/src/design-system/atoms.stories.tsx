@@ -310,7 +310,9 @@ export const BadgeLongLabel: Story = {
   parameters: badgeDocs("At 200px, alone and beside a sibling: an ellipsis."),
   render: () => (
     <div style={{ ...stack, alignItems: "flex-start", inlineSize: 200 }}>
-      <Badge tone="warn">extensions/acme/routes/partner-portal/settings</Badge>
+      <Badge tone="warning">
+        extensions/acme/routes/partner-portal/settings
+      </Badge>
       <div style={{ ...row, flexWrap: "nowrap", inlineSize: "100%" }}>
         <span>Route</span>
         <Badge icon={Lock}>extensions/acme/routes/partner-portal</Badge>

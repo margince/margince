@@ -297,55 +297,107 @@
  * A TONE ONLY TINTS. The band's height, its padding and its alignment belong to
  * `.panel-head` above. What is left for a tone is the ground, the hairline's
  * colour and the title's colour; the icon alignment below is the tone's own,
- * because only a toned head leads its title with a mark. */
+ * because only a toned head leads its title with a mark.
+ *
+ * ONE ANATOMY, and each tone names three tokens into it rather than restating
+ * the four rules. Seven copies of the same block is seven places for a hairline
+ * to drift from a band, which is what the first two tones had already started
+ * doing. `PANEL_TONES` in panel.tsx is the list; a tone added there with no
+ * `--panelTone*` triple here draws an untinted panel, and panel.test.tsx walks
+ * the list to catch it. */
+.panel-accent,
+.panel-info,
+.panel-success,
+.panel-warning,
+.panel-danger,
+.panel-discovery {
+  border-color: var(--panelToneEdge);
+}
 .panel-accent > .panel-head,
-.panel-warn > .panel-head {
+.panel-info > .panel-head,
+.panel-success > .panel-head,
+.panel-warning > .panel-head,
+.panel-danger > .panel-head,
+.panel-discovery > .panel-head {
   gap: var(--space-2);
+  background: var(--panelToneBand);
+  border-bottom: 1px solid var(--panelToneEdge);
 }
 .panel-accent > .panel-head .panel-title,
-.panel-warn > .panel-head .panel-title {
+.panel-info > .panel-head .panel-title,
+.panel-success > .panel-head .panel-title,
+.panel-warning > .panel-head .panel-title,
+.panel-danger > .panel-head .panel-title,
+.panel-discovery > .panel-head .panel-title {
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  color: var(--panelToneInk);
+}
+.panel-accent > .panel-foot,
+.panel-info > .panel-foot,
+.panel-success > .panel-foot,
+.panel-warning > .panel-foot,
+.panel-danger > .panel-foot,
+.panel-discovery > .panel-foot {
+  border-top-color: var(--panelToneEdge);
 }
 
-/* tone="accent": the ordinary ask. */
+/* tone="accent": the ordinary ask. The one lead with no FINDING behind it — the
+ * brand asking for a move rather than the account reporting one. */
 .panel-accent {
-  border-color: var(--accentMed);
-}
-.panel-accent > .panel-head {
-  background: var(--accentLight);
-  border-bottom: 1px solid var(--accentMed);
-}
-.panel-accent > .panel-head .panel-title {
-  color: var(--accentText);
-}
-.panel-accent > .panel-foot {
-  border-top-color: var(--accentMed);
+  --panelToneEdge: var(--accentMed);
+  --panelToneBand: var(--accentLight);
+  --panelToneInk: var(--accentText);
 }
 
-/* tone="warn": the lead whose FINDING is the bad news. The warn family's own
- * three tokens, the same pairing `Callout` draws — a title in `--warning` over
- * `--warningBg` — so the two surfaces that say "this is the bad news" say it in
- * one colour rather than each picking its own amber. */
-.panel-warn {
-  border-color: var(--warningBorder);
+/* The five states, each on its own family's three tokens — the same pairing
+ * `Callout` and `Badge` draw, so the surfaces that say "this is the bad news"
+ * or "this went well" say it in one colour rather than each picking its own.
+ *
+ * tone="info": the neutral report, and the lead whose work is still running. */
+.panel-info {
+  --panelToneEdge: var(--infoBorder);
+  --panelToneBand: var(--infoBg);
+  --panelToneInk: var(--infoText);
 }
-.panel-warn > .panel-head {
-  background: var(--warningBg);
-  border-bottom: 1px solid var(--warningBorder);
+
+/* tone="success": the lead whose FINDING is that the thing landed. */
+.panel-success {
+  --panelToneEdge: var(--successBorder);
+  --panelToneBand: var(--successBg);
+  --panelToneInk: var(--successText);
 }
-.panel-warn > .panel-head .panel-title {
-  color: var(--warningText);
+
+/* tone="warning": the lead whose FINDING is the bad news that can still be
+ * stopped — a relationship gone quiet, a promise going late. */
+.panel-warning {
+  --panelToneEdge: var(--warningBorder);
+  --panelToneBand: var(--warningBg);
+  --panelToneInk: var(--warningText);
 }
-.panel-warn > .panel-foot {
-  border-top-color: var(--warningBorder);
+
+/* tone="danger": the finding that cannot be stopped — the write that failed,
+ * the record that cannot be brought back. */
+.panel-danger {
+  --panelToneEdge: var(--dangerBorder);
+  --panelToneBand: var(--dangerBg);
+  --panelToneInk: var(--dangerText);
+}
+
+/* tone="discovery": a capability this reader has not met. The one lead that
+ * reports no verdict on the account — it says how long a thing has been here,
+ * not how it is going. */
+.panel-discovery {
+  --panelToneEdge: var(--discoveryBorder);
+  --panelToneBand: var(--discoveryBg);
+  --panelToneInk: var(--discoveryText);
 }
 
 /* tone="ai": the panel a MACHINE wrote or read. Indigo is the product's one
  * mark of machine authorship (tokens.css --ai), so this is a claim about who
  * produced the panel rather than about how the account is doing — which is why
- * it sits beside "accent" and "warn" rather than replacing either. A reader
+ * it sits beside "accent" and "warning" rather than replacing either. A reader
  * seeing indigo anywhere knows the same thing: Margince did this. */
 .panel-ai > .panel-head {
   gap: var(--space-2);

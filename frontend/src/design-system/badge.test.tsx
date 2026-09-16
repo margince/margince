@@ -191,8 +191,9 @@ describe("Badge", () => {
         "1px solid var(--borderSubtle)",
       );
       const edges: Record<string, string> = {
+        ".badge-info": "var(--infoBorder)",
         ".badge-success": "var(--successBorder)",
-        ".badge-warn": "var(--warningBorder)",
+        ".badge-warning": "var(--warningBorder)",
         ".badge-danger": "var(--dangerBorder)",
         ".badge-ai": "var(--aiMed)",
         ".badge-accent": "var(--accentMed)",

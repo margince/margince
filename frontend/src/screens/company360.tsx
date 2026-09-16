@@ -248,7 +248,7 @@ function DealRow({ deal }: Readonly<{ deal: Deal360 }>) {
             )}
           </span>
         )}
-        {deal.stalled && <Badge tone="warn">{t("deal.stalledBadge")}</Badge>}
+        {deal.stalled && <Badge tone="warning">{t("deal.stalledBadge")}</Badge>}
       </span>
     </PanelRow>
   );
@@ -791,10 +791,10 @@ export const ENGAGEMENT_LABELS: Record<
 // The two states that name a problem rather than a condition. Colouring only
 // these keeps the brief from reading as a dashboard where every tile is lit.
 export const ENGAGEMENT_TONE: Partial<
-  Record<NonNullable<StateStrip["engagement"]>["state"], "warn">
+  Record<NonNullable<StateStrip["engagement"]>["state"], "warning">
 > = {
-  waiting_on_them: "warn",
-  dormant: "warn",
+  waiting_on_them: "warning",
+  dormant: "warning",
 };
 
 // A reading the caller's grants withheld. Shared with the contact record's
@@ -1396,7 +1396,7 @@ function PipelineCard({
           count: formatNumber(commercial.open_count, locale),
         })}
         detail={join(t("co.strip.unpriced"), stalled)}
-        tone={stalled ? "warn" : undefined}
+        tone={stalled ? "warning" : undefined}
         {...basisProps}
       />
     );
@@ -1419,7 +1419,7 @@ function PipelineCard({
       onOpen={onOpen}
       label={t("co.strip.pipeline")}
       value={formatMoney(value, currency, locale)}
-      tone={stalled ? "warn" : undefined}
+      tone={stalled ? "warning" : undefined}
       detail={join(
         partial
           ? t("co.strip.pricedPartly", {
@@ -1503,7 +1503,7 @@ function HealthStat({
         onOpen={onOpen}
         label={t("co.strip.health")}
         value={t("co.strip.noInboundEver")}
-        tone="warn"
+        tone="warning"
         {...basisProps}
       />
     );
@@ -1514,7 +1514,7 @@ function HealthStat({
         onOpen={onOpen}
         label={t("co.strip.health")}
         value={t("co.strip.healthQuiet")}
-        tone="warn"
+        tone="warning"
         detail={t("co.health.sinceInbound", {
           days: formatNumber(days, locale),
         })}
@@ -1545,7 +1545,7 @@ function HealthStat({
       value={
         oneSided ? t("co.strip.healthOneSided") : t("co.strip.healthBalanced")
       }
-      tone={oneSided ? "warn" : undefined}
+      tone={oneSided ? "warning" : undefined}
       detail={t("co.strip.replyShare", {
         percent: formatNumber(percent, locale),
       })}
@@ -1991,7 +1991,7 @@ export function SuggestionsSection({
     commitment || onOpenTasks || body.footer ? (
       <>
         {commitment && (
-          <Badge tone={commitment.overdue ? "warn" : undefined}>
+          <Badge tone={commitment.overdue ? "warning" : undefined}>
             {commitment.headline}
           </Badge>
         )}

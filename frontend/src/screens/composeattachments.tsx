@@ -31,7 +31,7 @@ import { type Locale, type Translator, useLocale, useT } from "../i18n";
 import { type AttachmentParent, uploadAttachment } from "./attachmentupload";
 import { type CarriageViolation, carriageViolations } from "./carriage";
 import { useProviderCarriage } from "./channelproviders";
-import { problemMessageOf, throwProblem } from "./common";
+import { problemMessageOf, RefusalLine, throwProblem } from "./common";
 import type { RelinkKind } from "./compose";
 import "./composeattachments.css";
 
@@ -287,7 +287,7 @@ function AttachPicker({
       {library.isPending ? (
         <PendingBody label={t("compose.filesLoading")} lines={2} />
       ) : library.isError ? (
-        <p role="alert">{problemMessageOf(library.error, t)}</p>
+        <RefusalLine error={library.error} />
       ) : files.length === 0 ? (
         <p>{t("compose.filesNone")}</p>
       ) : (
@@ -409,7 +409,7 @@ export function CarriageNotice({
   }
   return (
     <Callout
-      tone="warn"
+      tone="warning"
       kind="standing"
       title={t("compose.carriageTitle", { channel })}
     >

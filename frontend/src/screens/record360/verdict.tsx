@@ -41,7 +41,7 @@ import "./record360.css";
  * for a word nobody could interpret. It renders neutral instead — the card
  * shows the call it was given and does not pretend to grade it.
  */
-export type StandingTone = "danger" | "warn" | "accent" | "calm" | "unknown";
+export type StandingTone = "danger" | "warning" | "accent" | "calm" | "unknown";
 
 /**
  * One reading the call was made from: what it said, and which reading said it.
@@ -209,7 +209,7 @@ export function Proof({
  * loud element on the card and answers a different question — including
  * "I do not recognise this word", which a badge never has to say.
  */
-export type SignalTone = "danger" | "warn" | "accent" | undefined;
+export type SignalTone = "danger" | "warning" | "accent" | undefined;
 
 /** One scannable finding, stating the number that tripped it. */
 export type Signal = {

@@ -255,7 +255,7 @@ function SuspendedRule({
   return (
     <>
       <Callout
-        tone="warn"
+        tone="warning"
         kind="event"
         title={t("stageAutomation.suspended")}
         actions={

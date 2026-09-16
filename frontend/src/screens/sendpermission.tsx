@@ -170,7 +170,7 @@ export function SendPermission({
   return (
     // `status` for the same reason the refusal above keeps it.
     <Callout
-      tone="warn"
+      tone="warning"
       kind="standing"
       live="status"
       icon={ShieldQuestion}

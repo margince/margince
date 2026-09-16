@@ -391,7 +391,7 @@ function FragmentRow({
           <div className="aicalls-badges">
             {call.cache_hit && <Badge>{t("aicalls.badge.cacheHit")}</Badge>}
             {call.degraded && (
-              <Badge tone="warn">{t("aicalls.badge.degraded")}</Badge>
+              <Badge tone="warning">{t("aicalls.badge.degraded")}</Badge>
             )}
             {call.error_sentinel && (
               <Badge tone="danger">{call.error_sentinel}</Badge>

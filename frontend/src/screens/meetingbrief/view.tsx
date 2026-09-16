@@ -171,7 +171,7 @@ export function MeetingBriefView({
                   onOpenEmail={onOpenEmail}
                 />
                 {/* The sections' risk list, unless the plan carried the one
-                    risk that matters with what to do about it — two warn
+                    risk that matters with what to do about it — two warning
                     panels on one surface is no warning at all, and the plan's
                     is the one a reader can act on. */}
                 {!brief.plan?.top_risk && (

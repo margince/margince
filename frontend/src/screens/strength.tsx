@@ -31,11 +31,11 @@ type RelationshipStrength = components["schemas"]["RelationshipStrength"];
 
 const BUCKET_TONE: Record<
   RelationshipStrength["bucket"],
-  "success" | "accent" | "warn" | undefined
+  "success" | "accent" | "warning" | undefined
 > = {
   strong: "success",
   moderate: "accent",
-  weak: "warn",
+  weak: "warning",
   none: undefined,
 };
 

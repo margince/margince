@@ -45,12 +45,21 @@
    already laid over --bgElevated, as one opaque colour — and reads the same on
    every surface. The ink is the Text token, never the base hue, which on its
    own tint at 12px is nowhere near 4.5:1. */
+/* `info` is the neutral report and work still in flight — a row a job has not
+   finished writing, a step that is only telling the reader something. It is a
+   status like the four below it and is painted the same way; what makes it the
+   quiet one is the hue, not a different anatomy. */
+.badge-info {
+  background: var(--infoSurface);
+  border-color: var(--infoBorder);
+  color: var(--infoText);
+}
 .badge-success {
   background: var(--successSurface);
   border-color: var(--successBorder);
   color: var(--successText);
 }
-.badge-warn {
+.badge-warning {
   background: var(--warningSurface);
   border-color: var(--warningBorder);
   color: var(--warningText);
@@ -90,11 +99,15 @@
   border-color: transparent;
   color: var(--bgPage);
 }
+.badge-primary.badge-info {
+  background: var(--infoText);
+  color: var(--textOnStatusControl);
+}
 .badge-primary.badge-success {
   background: var(--successText);
   color: var(--textOnStatusControl);
 }
-.badge-primary.badge-warn {
+.badge-primary.badge-warning {
   background: var(--warningText);
   color: var(--textOnStatusControl);
 }
@@ -2250,35 +2263,46 @@
   display: block;
   block-size: 100%;
   border-radius: inherit;
-  background: var(--accent);
+  background: var(--success);
 }
 /* A reading whose figure carries a tone carries it into the bar too, in the
    SAME token: the bar is the same claim at a glance, and a bar a shade off the
    figure above it is the card disagreeing with itself about how it went. A
    reading with no tone is not a neutral reading, it is one that is fine, so the
-   untoned bar stays the accent (`.stat-card-meter-fill` above) — a row of
-   identical grey tracks made the reader compare lengths to find the one that is
-   wrong, when the colour already knows. */
-.stat-card-warn ~ .stat-card-meter .stat-card-meter-fill {
+   untoned bar takes --success with the toned ones (`.stat-card-meter-fill`
+   above) — a row of identical grey tracks made the reader compare lengths to
+   find the one that is wrong, when the colour already knows. The brand accent
+   said the same thing in the colour of a primary action, which is how a bar
+   that reports came to look like one a reader could press. */
+.stat-card-warning ~ .stat-card-meter .stat-card-meter-fill {
   background: var(--warning);
 }
 .stat-card-danger ~ .stat-card-meter .stat-card-meter-fill {
   background: var(--danger);
 }
-.stat-card-good ~ .stat-card-meter .stat-card-meter-fill {
+.stat-card-success ~ .stat-card-meter .stat-card-meter-fill {
   background: var(--success);
 }
+.stat-card-info ~ .stat-card-meter .stat-card-meter-fill {
+  background: var(--info);
+}
 
-/* The three tones a reading's figure can carry, and the ONE place each is
+/* The four tones a reading's figure can carry, and the ONE place each is
    spelled: the figure and its bar read the same token, so the two parts of one
    claim cannot come out two colours. The BASE status token and not its Text
    sibling: this is a 17-20px display figure and a 4px bar, which is the role
    the base hue is for — the Text tokens are the ink for anything smaller. */
-.stat-card-good {
+.stat-card-success {
   color: var(--success);
 }
 
-.stat-card-warn {
+/* The reading a job has not finished writing — a figure still being counted,
+   a lane the read has not reached. */
+.stat-card-info {
+  color: var(--info);
+}
+
+.stat-card-warning {
   color: var(--warning);
 }
 

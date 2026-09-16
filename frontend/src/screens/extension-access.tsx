@@ -724,14 +724,14 @@ function ObjectMatrix({
         </table>
       </TableScroll>
       {nobodyReads ? (
-        // `warn` is exactly the claim: nothing is broken, and something will go
+        // `warning` is exactly the claim: nothing is broken, and something will go
         // wrong if nobody acts — every screen this unit ships renders "you do
         // not hold access" until a read grant exists. Standing, and yet spoken
         // deliberately: the sentence appears and disappears as the last read
         // grant is toggled, and a change nobody is told about is the silence
         // this screen exists to break.
         <Callout
-          tone="warn"
+          tone="warning"
           kind="standing"
           live="status"
           title={t("extAccess.nobodyReadsTitle")}

@@ -52,9 +52,9 @@ describe("overdue", () => {
 });
 
 describe("kind tone", () => {
-  it("reads erasure as danger and rectify as warn", () => {
+  it("reads erasure as danger and rectify as warning", () => {
     expect(dsrKindTone("erasure")).toBe("danger");
-    expect(dsrKindTone("rectify")).toBe("warn");
+    expect(dsrKindTone("rectify")).toBe("warning");
     expect(dsrKindTone("access")).toBeUndefined();
   });
 });

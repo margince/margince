@@ -131,7 +131,7 @@ function ConsentProofLog({ events }: Readonly<{ events: ConsentEvent[] }>) {
             <span className="tl-body">
               <span className="tl-title">
                 <Badge
-                  tone={event.new_state === "granted" ? "success" : "warn"}
+                  tone={event.new_state === "granted" ? "success" : "warning"}
                 >
                   {humanizeToken(event.new_state)}
                 </Badge>{" "}
@@ -168,10 +168,10 @@ function ConsentProofLog({ events }: Readonly<{ events: ConsentEvent[] }>) {
 // than a silently untoned badge.
 const STATE_TONE: Record<
   ContactConsentState["state"],
-  "success" | "warn" | undefined
+  "success" | "warning" | undefined
 > = {
   granted: "success",
-  withdrawn: "warn",
+  withdrawn: "warning",
   unknown: undefined,
 };
 

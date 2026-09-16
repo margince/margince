@@ -142,7 +142,7 @@ function DealCloses({
   const { locale } = useLocale();
   const overdue = day < calendarDay(new Date(), zone);
   const classes =
-    provisional || overdue ? "deal-closes deal-closes-warn" : "deal-closes";
+    provisional || overdue ? "deal-closes deal-closes-warning" : "deal-closes";
   return (
     <span className={classes}>
       {t("deal.closes", {
@@ -260,7 +260,7 @@ export function DealCard({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  // No `stalled` class: the warn Badge below says it in words, and an edge
+  // No `stalled` class: the warning Badge below says it in words, and an edge
   // stripe saying the same thing is one statement drawn twice — the reader who
   // cannot see colour reads the badge, and the reader who can read both.
   const classes = [
@@ -292,7 +292,9 @@ export function DealCard({
           {deal.singleThreaded && (
             <Badge tone="danger">{t("deal.singleThreaded")}</Badge>
           )}
-          {deal.stalled && <Badge tone="warn">{t("deal.stalledBadge")}</Badge>}
+          {deal.stalled && (
+            <Badge tone="warning">{t("deal.stalledBadge")}</Badge>
+          )}
           {/* How long it has sat is the size of the stall, and only then: on a
               healthy card the number is a fact nobody acts on. */}
           {deal.stalled && (

@@ -283,7 +283,7 @@ export function TodoRow({
   meta?: ReactNode;
   // When it is owed, coloured only where it is bad news: a late promise is the
   // one thing on the row that may shout.
-  due?: { label: string; tone?: "warn" | "danger" };
+  due?: { label: string; tone?: "warning" | "danger" };
   // The verb that advances it. `byMargince` marks a verb whose work the agent
   // does — a draft it writes — because the indigo mark means authorship and
   // nothing else.

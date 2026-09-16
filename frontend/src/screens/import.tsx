@@ -378,7 +378,7 @@ function ImportOutcome({
           standing over a list it introduces is a heading in notice clothing —
           and the list is what the reader came here to read. */}
       {report.issues.length > 0 ? (
-        <Callout tone="warn" kind="outcome" title={t("import.issuesLead")}>
+        <Callout tone="warning" kind="outcome" title={t("import.issuesLead")}>
           <ul className="import__issues t-sub">
             {report.issues.map((issue) => (
               <li key={`${issue.line}-${issue.reason}`}>
@@ -651,7 +651,7 @@ function ImportMappingStep({
         </p>
       ) : (
         <Callout
-          tone="warn"
+          tone="warning"
           kind="standing"
           title={t("import.needsIdentifier", { field: identifying })}
         />

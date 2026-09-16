@@ -354,7 +354,7 @@ function NoticeRow({
         row.owner_user_id ? (
           <Badge>{t("notice.claimed")}</Badge>
         ) : (
-          <Badge tone="warn">{t("notice.unclaimed")}</Badge>
+          <Badge tone="warning">{t("notice.unclaimed")}</Badge>
         )
       }
       control={

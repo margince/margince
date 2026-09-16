@@ -146,8 +146,8 @@ describe("score thresholds (AC-leads colour bands)", () => {
   it("maps ≥60 accent-strong, 40–59 medium, <40 low", () => {
     expect(scoreTone(60)).toBe("success");
     expect(scoreTone(95)).toBe("success");
-    expect(scoreTone(59)).toBe("warn");
-    expect(scoreTone(40)).toBe("warn");
+    expect(scoreTone(59)).toBe("warning");
+    expect(scoreTone(40)).toBe("warning");
     expect(scoreTone(39)).toBeUndefined();
   });
 });
@@ -1675,7 +1675,7 @@ describe("LeadsScreen — archived marking (P-3)", () => {
     );
     const warned = screen
       .getAllByText("Disqualified", { selector: ".badge-label" })
-      .filter((label) => label.closest(".badge.badge-warn"));
+      .filter((label) => label.closest(".badge.badge-warning"));
     expect(warned).toHaveLength(1);
   });
 });
@@ -2232,12 +2232,12 @@ describe("terminalBadge (archived/terminal labelling)", () => {
   it("labels disqualified and promoted distinctly and leaves open leads unbadged", () => {
     expect(terminalBadge({ status: "disqualified" })).toEqual({
       label: "lead.disqualified",
-      tone: "warn",
+      tone: "warning",
     });
     // A promoted lead IS archived, but reads "Archived" — never "Disqualified".
     expect(terminalBadge({ status: "promoted" })).toEqual({
       label: "record.archived",
-      tone: "warn",
+      tone: "warning",
     });
     expect(terminalBadge({ status: "new" })).toBeNull();
     expect(terminalBadge({ status: "contacted" })).toBeNull();

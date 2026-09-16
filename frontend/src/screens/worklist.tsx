@@ -385,7 +385,11 @@ function WorklistBody({
           was never read. This is the surface speaking about ITSELF, which is
           what Callout is for. */}
       {missing.length > 0 && (
-        <Callout tone="warn" kind="standing" title={t("worklist.partialTitle")}>
+        <Callout
+          tone="warning"
+          kind="standing"
+          title={t("worklist.partialTitle")}
+        >
           {t("worklist.partial", {
             sources: missing
               .map((source) => sourceUnavailableText(source, t))

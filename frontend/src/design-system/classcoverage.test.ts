@@ -510,7 +510,7 @@ describe("what a className can be shown to produce", () => {
 
   // The blind spot, stated as behaviour: the whole tokens of a template are
   // read and the one touching the interpolation is dropped rather than
-  // half-read. `tone-` is not a class and `tone-warn` is not one this can know.
+  // half-read. `tone-` is not a class and `tone-warning` is not one this can know.
   it("reads a template's whole tokens and drops the one it cannot finish", () => {
     expect(names("<p className={`card tone-${level}`}>x</p>")).toEqual([
       "card",

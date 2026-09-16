@@ -300,7 +300,7 @@ describe("the brief readings strip", () => {
     // And it WARNS, because somebody is waiting. A figure drawn plain would say
     // the morning is calm while four rows say it is not. The tone lands on the
     // value rather than the card, which is where StatCard puts it.
-    expect(card.querySelector(".stat-card-warn")).toBeTruthy();
+    expect(card.querySelector(".stat-card-warning")).toBeTruthy();
   });
 
   // A BOUNDED READ IS A `+`, NOT A SENTENCE. The row used to carry a line

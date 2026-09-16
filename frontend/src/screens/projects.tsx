@@ -242,7 +242,7 @@ export function ProjectsScreen() {
                   <ProjectKeyChip projectKey={project.key} dense />
                 )}
                 {project.archived_at && (
-                  <Badge tone="warn">{t("record.archived")}</Badge>
+                  <Badge tone="warning">{t("record.archived")}</Badge>
                 )}
               </span>
             ),

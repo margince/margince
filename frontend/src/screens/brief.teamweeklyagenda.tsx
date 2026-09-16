@@ -204,7 +204,7 @@ export function AgendaPanel({
                     ? undefined
                     : CELEBRATED.has(rep.focus_kind)
                       ? "success"
-                      : "warn"
+                      : "warning"
                 }
               >
                 {t(FOCUS_LABEL[rep.focus_kind])}

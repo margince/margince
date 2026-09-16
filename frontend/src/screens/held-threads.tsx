@@ -266,7 +266,7 @@ function BacklogCallout({ rows }: Readonly<{ rows: HeldThread[] }>) {
   }
   return (
     <Callout
-      tone="warn"
+      tone="warning"
       kind="event"
       title={t("heldThreads.backlogStalledTitle")}
     >
@@ -289,7 +289,10 @@ function WhyCell({ row }: Readonly<{ row: HeldThread }>) {
   if (row.pending) {
     return (
       <CellStack>
-        <Badge tone="warn">{t("heldThreads.pending")}</Badge>
+        {/* `info`: pending below the ceiling is ordinary latency — the same
+            reading the stalled-backlog callout above refuses to cry wolf
+            about — so amber told a reader to act on a queue that is moving. */}
+        <Badge tone="info">{t("heldThreads.pending")}</Badge>
         <span className="t-caption">
           {t("heldThreads.attempts", {
             count: formatNumber(row.attempts, locale),

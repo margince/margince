@@ -55,7 +55,7 @@ export function LicenseHolderCard({
             // about a DATE rather than about how bad the news is.
             <Callout
               kind="standing"
-              tone="warn"
+              tone="warning"
               icon={CalendarClock}
               title={t("license.renewal.title")}
             >

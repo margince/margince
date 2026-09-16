@@ -154,3 +154,29 @@
   border-radius: var(--r-sm);
   opacity: 1;
 }
+
+/*
+ * The mark, in the message's own tone.
+ *
+ * It is the `.dot` shape from trust.css with a state fill, and every message
+ * carries one: a confirmation that a write landed and a refusal that it did not
+ * are both things a reader has to notice, and the arrangement this replaces
+ * could only DROP the dot for the second — so the message that mattered more
+ * was the one drawn with less. The base hue rather than the Text ink, because
+ * this is a 9px disc on the rail's dark plate and nothing is read on it.
+ */
+.toast-dot-info {
+  background: var(--info);
+}
+.toast-dot-success {
+  background: var(--success);
+}
+.toast-dot-warning {
+  background: var(--warning);
+}
+.toast-dot-danger {
+  background: var(--danger);
+}
+.toast-dot-discovery {
+  background: var(--discovery);
+}

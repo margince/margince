@@ -5,6 +5,7 @@ import {
   CircleCheck,
   CircleX,
   Info,
+  Lightbulb,
   type LucideIcon,
   Sparkles,
   TriangleAlert,
@@ -21,22 +22,32 @@ import "./callout.css";
 // bare paragraphs tinted by hand. One of them, `.co-callout`, declared only a
 // top margin: the name promised a callout and the sheet delivered whitespace.
 //
-// The tones are a closed set because they are claims, not decoration. `warn`
+// The tones are a closed set because they are claims, not decoration. `warning`
 // says something will go wrong if you do nothing; `danger` says something is
 // wrong or is about to be irreversible; `success` confirms an action landed;
-// `info` is the default and carries no urgency at all; `accent` is `info` said
-// emphatically; `ai` says a MACHINE produced what the notice is about, the
-// same claim `Panel tone="ai"` makes for a card. There is no seventh: a
-// surface reaching for one is reaching for emphasis, which is what the words
-// are for.
+// `info` is the default and carries no urgency at all; `discovery` says the
+// notice is about something NEW to this reader — a capability they have not
+// met, a step of onboarding — which is the one claim that is not a verdict on
+// the account; `accent` is `info` said emphatically; `ai` says a MACHINE
+// produced what the notice is about, the same claim `Panel tone="ai"` makes for
+// a card. There is no eighth: a surface reaching for one is reaching for
+// emphasis, which is what the words are for.
+//
+// The vocabulary is a VALUE the type is read from, so the story that draws
+// every tone, the gate that checks every tone has a glyph and a rule, and the
+// compiler all walk one list. Spelled twice, they drift, and the copy that goes
+// stale is always the one nobody renders.
+export const CALLOUT_TONES = [
+  "info",
+  "accent",
+  "success",
+  "warning",
+  "danger",
+  "discovery",
+  "ai",
+] as const;
 
-export type CalloutTone =
-  | "info"
-  | "accent"
-  | "warn"
-  | "danger"
-  | "success"
-  | "ai";
+export type CalloutTone = (typeof CALLOUT_TONES)[number];
 
 /**
  * What the notice IS, which is a different question from how loud it is.
@@ -66,9 +77,13 @@ export type CalloutKind = "outcome" | "standing" | "event";
 const TONE_ICONS: Readonly<Record<CalloutTone, LucideIcon>> = {
   info: Info,
   accent: Info,
-  warn: TriangleAlert,
+  warning: TriangleAlert,
   danger: CircleX,
   success: CircleCheck,
+  // Something the reader has not met yet. Deliberately NOT a Sparkle: that
+  // family is the AI mark, and a notice about a new capability drawn in it
+  // would claim a machine wrote the notice.
+  discovery: Lightbulb,
   // The product's one mark for "a machine did this", the same glyph the
   // provenance tags and the AI badge wear.
   ai: Sparkles,

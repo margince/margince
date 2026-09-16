@@ -118,8 +118,12 @@
   color: var(--callout-ink);
 }
 
+/* `info` is the neutral report, and it takes the info family's own ink rather
+ * than the page's. Body ink here made the one tone actually NAMED info the only
+ * one a reader could not tell from untoned prose — the glyph and the heading
+ * said "notice" in the same colour as the sentence under them. */
 .callout-info {
-  --callout-ink: var(--textPrimary);
+  --callout-ink: var(--infoText);
 }
 
 /* `accent` is `info` said emphatically — the ask, the lead — in the brand
@@ -128,7 +132,7 @@
   --callout-ink: var(--accentText);
 }
 
-.callout-warn {
+.callout-warning {
   --callout-ink: var(--warningText);
 }
 
@@ -138,6 +142,13 @@
 
 .callout-success {
   --callout-ink: var(--successText);
+}
+
+/* `discovery` is the notice about something NEW to this reader — a capability
+ * they have not met, a step of onboarding. The one tone here that reports no
+ * verdict on the account. */
+.callout-discovery {
+  --callout-ink: var(--discoveryText);
 }
 
 /* `ai` is the claim that a machine produced what the notice is about: the

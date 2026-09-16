@@ -461,7 +461,7 @@ function MailRosterFailed({ onRetry }: Readonly<{ onRetry: () => void }>) {
   const t = useT();
   return (
     <div
-      className="readfail warn"
+      className="readfail warning"
       role="alert"
       style={{ maxWidth: 460, margin: "0 auto" }}
     >

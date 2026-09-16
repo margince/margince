@@ -1,6 +1,6 @@
 /* Deal360 — the deal page's written briefing. Tokens only. */
 
-.deal360-warn {
+.deal360-warning {
   color: var(--warningText);
 }
 

@@ -152,7 +152,7 @@ function UnsubscribeBody({
     return (
       <PublicPage>
         <Callout
-          tone={center.error instanceof RateLimitedError ? "warn" : "danger"}
+          tone={center.error instanceof RateLimitedError ? "warning" : "danger"}
           kind="outcome"
           title={t("prefs.unsub.errorTitle")}
           actions={
@@ -263,7 +263,7 @@ function PressError({ error }: Readonly<{ error: unknown }>) {
   }
   return (
     <Callout
-      tone={error instanceof RateLimitedError ? "warn" : "danger"}
+      tone={error instanceof RateLimitedError ? "warning" : "danger"}
       kind="outcome"
       title={t("prefs.unsub.failedTitle")}
     >

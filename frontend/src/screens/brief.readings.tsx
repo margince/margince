@@ -81,7 +81,7 @@ function openLane(filter: WorklistFilter, scope: Worklist["scope"]): void {
 /**
  * One reading: what it is, the figure, and what the figure rests on.
  *
- * `warn` is deliberately narrow. Neutral ink is the default for every figure on
+ * `warning` is deliberately narrow. Neutral ink is the default for every figure on
  * the plate, because a row where four numbers are coloured is a traffic light
  * rather than a comparison. It is spent only where the reading counts something
  * that is BREACHING — somebody waiting, a promise going, a meeting starting
@@ -92,7 +92,7 @@ type Reading = Readonly<{
   /** The figure itself, so the slot can tell a floor of none from a floor. */
   count: number | null;
   basis: ReactNode;
-  warn?: boolean;
+  warning?: boolean;
   /** The source behind the figure was read to its bound: it is a floor. */
   floor?: boolean;
   /** The lane this reading counted, which is where its cell leads. */
@@ -133,7 +133,7 @@ function LaneReading({
   label,
   count,
   basis,
-  warn,
+  warning,
   floor,
   lane,
   scope,
@@ -174,7 +174,7 @@ function LaneReading({
     <StatCard
       label={label}
       value={readingFigure(figure, marked)}
-      tone={warn ? "warn" : undefined}
+      tone={warning ? "warning" : undefined}
       detail={basis}
       // On a phone the plate is a list, not five boxes stacked.
       narrow="row"
@@ -226,7 +226,7 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
           // the top two levels — somebody waiting or a promise breaking — and
           // the morning's first question is how many of those there are.
           count={unread && day.summary.urgent === 0 ? null : day.summary.urgent}
-          warn={day.summary.urgent > 0}
+          warning={day.summary.urgent > 0}
           // The one slot that genuinely spans the day: `urgent` is every row at
           // the top two levels whatever lane raised it, so any bounded source
           // anywhere makes it a floor. This is what `more_available` is for.
@@ -252,7 +252,7 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
           // Readiness is the breach here: a meeting starting with nothing
           // prepared is the one fact on this slot a reader must act on before
           // it begins. The count of meetings itself is neither good nor bad.
-          warn={meetings.unready !== null && meetings.unready > 0}
+          warning={meetings.unready !== null && meetings.unready > 0}
           floor={
             day.reach?.find((entry) => entry.source === "meeting")
               ?.more_available ||

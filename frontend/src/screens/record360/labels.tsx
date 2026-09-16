@@ -52,14 +52,14 @@ export function signalKindLabel(
 // deliberately untoned: a record whose worst news is a commitment somebody
 // made is a record with no bad news — colouring that would cry wolf on every
 // healthy record.
-const SIGNAL_TONE: Record<string, "warn" | "danger" | undefined> = {
+const SIGNAL_TONE: Record<string, "warning" | "danger" | undefined> = {
   info: undefined,
-  warn: "warn",
+  warn: "warning",
   urgent: "danger",
 };
 
 /** signalTone colours a signal by severity; an unknown severity is untoned. */
-export function signalTone(severity: string): "warn" | "danger" | undefined {
+export function signalTone(severity: string): "warning" | "danger" | undefined {
   return Object.hasOwn(SIGNAL_TONE, severity)
     ? SIGNAL_TONE[severity]
     : undefined;

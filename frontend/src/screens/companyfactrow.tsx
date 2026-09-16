@@ -95,7 +95,7 @@ export function FactRow({
             answer than flagging it, and the reader is the one who can tell. */}
         {fact.suspect_reason && (
           <span className="co-fact-suspect">
-            <Badge tone="warn">
+            <Badge tone="warning">
               {t(FACT_SUSPECT_LABELS[fact.suspect_reason])}
             </Badge>
           </span>

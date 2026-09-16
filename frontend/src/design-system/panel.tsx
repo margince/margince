@@ -11,6 +11,27 @@ import {
 } from "./surfacestate";
 import "./panel.css";
 
+/**
+ * The lead vocabulary, as a VALUE the type is read from — so the story that
+ * draws every tone and the gate that holds a tone to tinting rather than
+ * reshaping walk the same list the compiler enforces.
+ *
+ * The five states come first and say what the FINDING is; `accent` is the
+ * ordinary brand ask with no finding behind it; `ai` is a claim about who wrote
+ * the panel rather than about the account.
+ */
+export const PANEL_TONES = [
+  "accent",
+  "info",
+  "success",
+  "warning",
+  "danger",
+  "discovery",
+  "ai",
+] as const;
+
+export type PanelTone = (typeof PANEL_TONES)[number];
+
 // Which element the title takes at each level. A table rather than an element
 // name built from the number, which would render a raw magnitude — and the
 // SIZE is not in it, because the head's type does not step with the outline: a
@@ -64,20 +85,23 @@ export function Panel({
   // the head's, whatever the tone. This is not a palette either: a second
   // tinted panel on the same page is two leads, which is none.
   //
-  // The three tones are three kinds of lead, not three colours to choose from:
-  // "accent" is the ordinary ask; "warn" is a lead whose FINDING is the bad
-  // news — a relationship that went quiet, a promise that is late — where the
-  // tone is the reading rather than decoration on it; and "ai" is a panel a
-  // MACHINE wrote or read, which is a fact about its authorship rather than
-  // about the account. That last one is why "ai" is not simply a third accent:
-  // an indigo band means "Margince did this" everywhere in the product, so it
-  // must never be reached for to make an ordinary panel look important.
+  // The tones are kinds of lead, not colours to choose from. "accent" is the
+  // ordinary ask, with no finding behind it. The five states say what the
+  // FINDING is — "warning" for the bad news that can still be stopped, "danger"
+  // for the one that cannot, "success" for the lead whose finding is that the
+  // thing landed, "info" for the neutral report and the work still running,
+  // "discovery" for a capability this reader has not met — where the tone is the
+  // reading rather than decoration on it. And "ai" is a panel a MACHINE wrote or
+  // read, which is a fact about its authorship rather than about the account.
+  // That last one is why "ai" is not simply a second accent: an indigo band
+  // means "Margince did this" everywhere in the product, so it must never be
+  // reached for to make an ordinary panel look important.
   //
   // It is a prop rather than a class a screen sheet adds because the tint has
   // to reach `.panel-head` and `.panel-foot`, which are this component's own
   // internals: a screen reaching into them is a second author for a rhythm
   // this file owns, and the two drift the first time either moves.
-  tone?: "accent" | "warn" | "ai";
+  tone?: PanelTone;
   // Which heading level the title takes. A panel names a section of the page,
   // so h2 is right on a page — and wrong inside a dialog, where the dialog's
   // own title is already the h2 these sit under. A caller that knows its

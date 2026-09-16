@@ -44,7 +44,7 @@ type Story = StoryObj<typeof TodayPanel>;
 // provenance and what it covered.
 const foot = (
   <>
-    <Badge tone="warn">1 overdue</Badge>
+    <Badge tone="warning">1 overdue</Badge>
     <span className="co-scan-foot">
       <Badge tone="ai">Margince</Badge>
       <span className="co-row-meta">Read 14 exchanges and 2 deals</span>

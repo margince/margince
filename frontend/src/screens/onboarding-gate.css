@@ -179,7 +179,7 @@
   padding: var(--space-3) var(--space-4);
 }
 
-/* A paused read wears the warn family, not the danger family: the server will
+/* A paused read wears the warning family, not the danger family: the server will
    come back to it, so it must not read as something the reader broke. The two
    tones are also distinguished by their role (alert vs status), so the
    difference survives without colour. */

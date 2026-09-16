@@ -4,7 +4,7 @@ import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { Panel, PanelBody, PanelRow } from "./panel";
+import { PANEL_TONES, Panel, PanelBody, PanelRow } from "./panel";
 
 afterEach(cleanup);
 
@@ -403,10 +403,22 @@ describe("the panel head is one band, fixed at the height every panel shares", (
 // read as a different card rather than as the same card in a different mood,
 // which is what the ai head did while it hugged its own two lines.
 describe("a panel tone tints the head band and never reshapes it", () => {
+  // The vocabulary is walked from the component rather than listed again here:
+  // a tone spelled twice drifts, and the copy that goes stale is always the one
+  // in the test — it passes while the tone nobody added to it ships untinted.
+  const TONE_SELECTOR = new RegExp(`^\\.panel-(?:${PANEL_TONES.join("|")})\\b`);
   const toned = () =>
-    bandRules(panelCss()).filter((rule) =>
-      /^\.panel-(?:accent|warn|ai)\b/.test(rule.selector),
+    bandRules(panelCss()).filter((rule) => TONE_SELECTOR.test(rule.selector));
+
+  it("paints every tone the component offers", () => {
+    const declared = new Set(
+      cssRules(panelCss())
+        .flatMap((rule) => rule.selector.split(","))
+        .map((selector) => /^\s*\.panel-([\w-]+)\s*$/.exec(selector)?.[1])
+        .filter((tone): tone is string => tone !== undefined),
     );
+    expect([...PANEL_TONES].filter((tone) => !declared.has(tone))).toEqual([]);
+  });
 
   it("leaves the band's geometry to the band", () => {
     expect(toned().length).toBeGreaterThan(0);

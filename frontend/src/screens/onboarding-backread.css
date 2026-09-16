@@ -90,12 +90,15 @@
   overflow: hidden;
 }
 
+/* Determinate progress of a read still running: the info family, which is what
+   "work still in flight" is for. The brand accent made a wait look like the
+   page's primary action. */
 .ob-backread-bar > span {
   display: block;
   height: 100%;
   border-radius: var(--r-full);
   corner-shape: round;
-  background: var(--accent);
+  background: var(--info);
   transition: width 0.18s ease;
 }
 

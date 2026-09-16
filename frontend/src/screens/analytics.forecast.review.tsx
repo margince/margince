@@ -131,8 +131,8 @@ function ReadinessBadge({ run }: Readonly<{ run: Assurance }>) {
   const tone = {
     ready: "success",
     ready_with_exceptions: "accent",
-    needs_review: "warn",
-    checks_incomplete: "warn",
+    needs_review: "warning",
+    checks_incomplete: "warning",
   } as const;
   const label = {
     ready: "review.ready",

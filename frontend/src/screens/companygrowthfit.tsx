@@ -43,9 +43,9 @@ const BAND_LABELS: Record<Band, MessageKey> = {
 // low score, and giving it a colour on the same scale as the other three would
 // place it on that scale — which is the single misreading this panel exists to
 // prevent. It renders as prose instead.
-const BAND_TONES: Partial<Record<Band, "success" | "warn">> = {
+const BAND_TONES: Partial<Record<Band, "success" | "warning">> = {
   strong: "success",
-  weak: "warn",
+  weak: "warning",
 };
 
 /**

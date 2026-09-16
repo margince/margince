@@ -6,7 +6,7 @@ import { Button } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
-import { problemMessageOf, throwProblem } from "./common";
+import { RefusalLine, throwProblem } from "./common";
 
 // "My mail with this party is nobody else's."
 //
@@ -178,7 +178,7 @@ export function CounterpartyHoldRow({
           {t("hold.holdDomain", { domain })}
         </Button>
       </div>
-      {place.isError && <p role="alert">{problemMessageOf(place.error, t)}</p>}
+      {place.isError && <RefusalLine error={place.error} />}
       <ConfirmModal
         open={asking !== null}
         onClose={() => setAsking(null)}

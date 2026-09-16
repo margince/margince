@@ -130,7 +130,7 @@ const SITE_READ_CAPPED_LABELS: Record<ConfiguredStopReason, MessageKey> = {
 };
 
 /**
- * Why a read was INTERRUPTED, for the warn badge.
+ * Why a read was INTERRUPTED, for the warning badge.
  *
  * Only the stops a later run might get past appear here. A configured ceiling
  * is named by the status instead, so a label for one would be unreachable copy
@@ -286,12 +286,12 @@ function SiteReadPanel({
       <SiteReadDeferral report={report} />
       {/* Only the stops a reader can do something about are drawn as a
           warning. A page or byte cap is already stated by the status beside
-          the page count, and repeating it in a warn badge told a rep their
+          the page count, and repeating it in a warning badge told a rep their
           read had gone wrong when it had done exactly what it was configured
           to do. */}
       {report.stopped_reason && !stopIsConfigured(report.stopped_reason) && (
         <p style={{ margin: "var(--space-2) 0 0" }}>
-          <Badge tone="warn">
+          <Badge tone="warning">
             {t("deepread.stoppedEarly", {
               reason: t(SITE_READ_STOP_LABELS[report.stopped_reason]),
             })}

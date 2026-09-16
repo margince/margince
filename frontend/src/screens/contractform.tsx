@@ -8,7 +8,7 @@ import { Heading } from "../design-system/heading";
 import { SurfaceState } from "../design-system/surfacestate";
 import { useT } from "../i18n";
 import { uploadAttachment } from "./attachmentupload";
-import { problemMessageOf } from "./common";
+import { RefusalLine } from "./common";
 import { ContractCustomFields } from "./contractcustomfields";
 import { useSeededCustomFields } from "./contractcustomseed";
 import { paperState, useContractPaper } from "./contractpaper";
@@ -259,7 +259,7 @@ export function ContractForm({
         onPick={setFile}
       />
 
-      {save.error && <p role="alert">{problemMessageOf(save.error, t)}</p>}
+      {save.error && <RefusalLine error={save.error} />}
 
       <div className="actions">
         <Button onClick={onClose}>{t("create.cancel")}</Button>

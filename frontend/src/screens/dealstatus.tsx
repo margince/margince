@@ -60,7 +60,7 @@ const VERDICT_LABELS: Record<string, MessageKey> = {
 // healthy deal shouting is how a reader learns to stop looking at the strip.
 const VERDICT_TONE: Record<string, StandingTone> = {
   live: "calm",
-  drifting: "warn",
+  drifting: "warning",
   blocked: "danger",
   cold: "danger",
 };
@@ -298,7 +298,7 @@ function Briefing({
             section={card.blocker}
             onOpenRecord={open}
             onOpenEmail={onOpenEmail}
-            tone="warn"
+            tone="warning"
           />
           <Section
             heading={t("deal360.buyer")}
@@ -337,7 +337,7 @@ function Section({
   onOpenRecord: (entityType: string, entityId: string) => void;
   // Opens a cited message; see `Citations`.
   onOpenEmail?: (activityId: string) => void;
-  tone?: "warn";
+  tone?: "warning";
   // The brief's opening block leads with its judgement, the way every other
   // written reading on a record does.
   lead?: boolean;
@@ -348,7 +348,7 @@ function Section({
   return (
     <PanelBody>
       {heading ? (
-        <p className={tone === "warn" ? "deal360-warn" : undefined}>
+        <p className={tone === "warning" ? "deal360-warning" : undefined}>
           {heading}
         </p>
       ) : null}

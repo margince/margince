@@ -367,7 +367,7 @@ export function CommandPalette({
               one thing a reader must not conclude is that there is nothing. */}
           {search.failed && (
             <Callout
-              tone="warn"
+              tone="warning"
               kind="outcome"
               title={t("palette.searchFailedTitle")}
             >

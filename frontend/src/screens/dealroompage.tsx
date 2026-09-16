@@ -237,11 +237,13 @@ function StateBanner({ room }: Readonly<{ room: DealRoom }>) {
   const recordZone = useRecordZone();
   switch (room.state) {
     case "paused":
-      return <StateNotice tone="warn" claim={t("roompage.banner.paused")} />;
+      return <StateNotice tone="warning" claim={t("roompage.banner.paused")} />;
     case "closed":
       return <StateNotice claim={t("roompage.banner.closed")} />;
     case "expired":
-      return <StateNotice tone="warn" claim={t("roompage.banner.expired")} />;
+      return (
+        <StateNotice tone="warning" claim={t("roompage.banner.expired")} />
+      );
     case "archived":
       return (
         <StateNotice tone="danger" claim={t("roompage.banner.archived")} />

@@ -378,7 +378,7 @@
 /* A warning about the DATE, not about the deal: one nobody has confirmed, or
    one already behind us. The tone marks the figure and leaves the card alone,
    which is the deal strip's rule for the same fact. */
-.deal-card .deal-closes-warn {
+.deal-card .deal-closes-warning {
   color: var(--warningText);
 }
 .deal-card .deal-name {

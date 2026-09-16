@@ -251,7 +251,7 @@ function NoticeRow({ notice }: Readonly<{ notice: IntakeNotice }>) {
   return (
     <li
       className={`vdna-notice-${notice.tone}`}
-      role={notice.tone === "warn" ? "alert" : undefined}
+      role={notice.tone === "warning" ? "alert" : undefined}
     >
       {noticeText(t, notice, locale)}
     </li>

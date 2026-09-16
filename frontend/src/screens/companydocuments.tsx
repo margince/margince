@@ -75,7 +75,9 @@ const STATE_LABELS: Record<DocState, MessageKey> = {
 
 // Superseded is the one state that changes how a row should READ: it is history,
 // not a candidate. The rest are equal citizens and get no tone.
-const STATE_TONE: Partial<Record<DocState, "warn">> = { superseded: "warn" };
+const STATE_TONE: Partial<Record<DocState, "warning">> = {
+  superseded: "warning",
+};
 
 // A FILTERED read that found nothing is not an empty account. SectionCard's
 // empty state replaces the whole body — filters included — so reporting it here

@@ -54,7 +54,7 @@ import { stable } from "../format/collate";
 // immutable cf_-prefixed API key and the pending DDL are shown before Confirm so
 // the schema change is legible, a structural-sounding label is refused up front,
 // and the 🟡 gate states that Confirm writes a live column + an audit row. This
-// is NOT the ApprovalGate (Accept/Edit/Dismiss triad) — it is a `warn` Callout,
+// is NOT the ApprovalGate (Accept/Edit/Dismiss triad) — it is a `warning` Callout,
 // which is what the surface saying something about itself already looks like
 // everywhere else.
 
@@ -118,9 +118,9 @@ export function FieldBuilder({
     // A picklist without an option is not a picklist — the last row is a floor,
     // not a delete target, so the intent is surfaced as a toast, not swallowed.
     if (options.length <= 1) {
-      // `mark: false`: this is a refusal, and the completion dot beside it said
-      // the opposite of what the sentence says.
-      toast.show(t("cf.lastOptionBlocked"), { mark: false });
+      // `danger`: this is a refusal, and the completion dot the default tone
+      // draws said the opposite of what the sentence says.
+      toast.show(t("cf.lastOptionBlocked"), { tone: "danger" });
       return;
     }
     setOptions((current) => current.filter((_, i) => i !== idx));
@@ -232,11 +232,11 @@ export function FieldBuilder({
         </Callout>
       )}
 
-      {/* `warn`: nothing is wrong yet, and something will be if the reader
+      {/* `warning`: nothing is wrong yet, and something will be if the reader
           confirms unread — the column goes live on every record of this object.
           The dot rides in the title, so tier and sentence are one line. */}
       <Callout
-        tone="warn"
+        tone="warning"
         kind="standing"
         title={
           <>
@@ -349,7 +349,7 @@ export function FieldTable({
               <span className="cf-fieldname">
                 <span className={cellClass}>{field.label}</span>
                 {field.status === "retired" && (
-                  <Badge tone="warn">{t("cf.retired")}</Badge>
+                  <Badge tone="warning">{t("cf.retired")}</Badge>
                 )}
               </span>
               <span className="cf-key">
@@ -649,7 +649,7 @@ export function CustomFieldsAdmin() {
       if (context) {
         queryClient.setQueryData(context.key, context.previous);
       }
-      toast.show(problemMessageOf(error, t), { mark: false });
+      toast.show(problemMessageOf(error, t), { tone: "danger" });
     },
     onSuccess: (_data, draft) => {
       queryClient.invalidateQueries({
@@ -686,7 +686,7 @@ export function CustomFieldsAdmin() {
       setRenaming(null);
     },
     onError: (error) => {
-      toast.show(problemMessageOf(error, t), { mark: false });
+      toast.show(problemMessageOf(error, t), { tone: "danger" });
     },
   });
 
@@ -705,7 +705,7 @@ export function CustomFieldsAdmin() {
       toast.show(t("cf.archived", { label: field.label }));
     },
     onError: (error) => {
-      toast.show(problemMessageOf(error, t), { mark: false });
+      toast.show(problemMessageOf(error, t), { tone: "danger" });
     },
   });
 

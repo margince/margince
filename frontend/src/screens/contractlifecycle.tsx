@@ -13,7 +13,7 @@ import { Heading } from "../design-system/heading";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf, throwProblem } from "./common";
+import { RefusalLine, throwProblem } from "./common";
 import { type ContractDraft, draftProblem, pricedIn } from "./contractform";
 import { contractTermsBody, renewDraftOf } from "./contracttermsbody";
 import { ContractTermsFields } from "./contracttermsfields";
@@ -228,7 +228,7 @@ export function ContractRenewModal({
         </Field>
       )}
 
-      {renew.error && <p role="alert">{problemMessageOf(renew.error, t)}</p>}
+      {renew.error && <RefusalLine error={renew.error} />}
 
       <div className="actions">
         <Button onClick={onClose}>{t("create.cancel")}</Button>
@@ -333,7 +333,7 @@ export function ContractStatusModal({
         )}
       </Field>
 
-      {assert.error && <p role="alert">{problemMessageOf(assert.error, t)}</p>}
+      {assert.error && <RefusalLine error={assert.error} />}
 
       <div className="actions">
         <Button onClick={onClose}>{t("create.cancel")}</Button>
@@ -476,7 +476,7 @@ export function ContractCancelModal({
         )}
       </Field>
 
-      {cancel.error && <p role="alert">{problemMessageOf(cancel.error, t)}</p>}
+      {cancel.error && <RefusalLine error={cancel.error} />}
 
       <div className="actions">
         <Button onClick={onClose}>{t("create.cancel")}</Button>

@@ -124,7 +124,7 @@ export const ReadUpToThePageLimit: Story = {
 };
 
 /** A crawl that lost its model budget. This one a reader CAN act on, so it is
- *  the stop that earns the warn badge. */
+ *  the stop that earns the warning badge. */
 export const StoppedEarly: Story = {
   render: reporting({
     status: "partial",

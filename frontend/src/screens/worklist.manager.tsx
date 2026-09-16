@@ -185,7 +185,7 @@ export function ReassignControl({
               // reader the opposite of what the sentence beside it says.
               onError: () =>
                 toast.show(t("worklist.manager.reassignFailed"), {
-                  mark: false,
+                  tone: "danger",
                 }),
             },
           );
@@ -349,7 +349,7 @@ function coachRefused(
     refused && name
       ? t("worklist.manager.coachRefused", { name })
       : t("worklist.manager.coachFailed"),
-    { mark: false },
+    { tone: "danger" },
   );
 }
 
@@ -454,7 +454,7 @@ export function TakeOwnershipControl({
                 // reader who is not told that believes they now hold it.
                 onError: () =>
                   toast.show(t("worklist.manager.takeOwnershipFailed"), {
-                    mark: false,
+                    tone: "danger",
                   }),
               },
             );

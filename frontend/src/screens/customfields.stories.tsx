@@ -84,7 +84,7 @@ export const BuilderText: Story = {
 };
 
 // The builder in dark, for the consent callout it always carries. The DDL
-// preview is a `.cf-ddl` chip painting `--bgElevated` INSIDE a warn-toned
+// preview is a `.cf-ddl` chip painting `--bgElevated` INSIDE a warning-toned
 // Callout: an elevated ground nested in a tint, which is the composite that has
 // no reason to keep its separation once both tokens re-resolve. The autonomy dot
 // in the callout title is colour-only as well, and it is what marks this as a

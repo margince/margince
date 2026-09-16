@@ -440,7 +440,7 @@ export const CellStrips: Story = {
               const warm = row.owner === "Lars";
               return (
                 <CellStrip>
-                  <Badge tone={warm ? "success" : "warn"}>
+                  <Badge tone={warm ? "success" : "warning"}>
                     {warm ? "Warm" : "Cooling"}
                   </Badge>
                   <span className="t-caption">
@@ -459,7 +459,7 @@ export const CellStrips: Story = {
             cell: (row: Company) => (
               <CellStrip>
                 <span>{row.owner === "Lars" ? "2 days" : "3 weeks"}</span>
-                {row.owner !== "Lars" && <Badge tone="warn">Stalled</Badge>}
+                {row.owner !== "Lars" && <Badge tone="warning">Stalled</Badge>}
               </CellStrip>
             ),
           },

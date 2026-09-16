@@ -51,9 +51,9 @@ type JobFailure = components["schemas"]["JobFailure"];
 // makes a state added upstream a compile error here instead of an untoned badge.
 const FAILURE_STATE: Record<
   JobFailure["state"],
-  Readonly<{ label: MessageKey; tone: "warn" | "danger" | undefined }>
+  Readonly<{ label: MessageKey; tone: "warning" | "danger" | undefined }>
 > = {
-  retryable: { label: "jobs.state.retryable", tone: "warn" },
+  retryable: { label: "jobs.state.retryable", tone: "warning" },
   discarded: { label: "jobs.state.discarded", tone: "danger" },
   cancelled: { label: "jobs.state.cancelled", tone: undefined },
 };
@@ -96,7 +96,7 @@ function KindCounts({ kind }: Readonly<{ kind: JobKindHealth }>) {
     <span className="jobhealth-counts">
       <Badge>{t("jobs.count.waiting", { count: shown(kind.waiting) })}</Badge>
       <Badge>{t("jobs.count.running", { count: shown(kind.running) })}</Badge>
-      <Badge tone={kind.retrying > 0 ? "warn" : undefined}>
+      <Badge tone={kind.retrying > 0 ? "warning" : undefined}>
         {t("jobs.count.retrying", { count: shown(kind.retrying) })}
       </Badge>
       <Badge tone={kind.dead > 0 ? "danger" : undefined}>

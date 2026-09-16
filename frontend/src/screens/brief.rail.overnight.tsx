@@ -198,7 +198,7 @@ function DigestBody({ digest }: Readonly<{ digest: MorningDigest }>) {
               the digest is where they find out at all. `event`, because a sync
               failed overnight rather than under the reader's hand. */}
           <Callout
-            tone="warn"
+            tone="warning"
             kind="event"
             title={t("brief.overnight.connectorsUnhealthy")}
             actions={

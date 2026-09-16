@@ -238,7 +238,7 @@ export function WorklistRow({
         )}
         {/* WHAT KIND of work, in its own column at a width that has one, so a
             reader running down the queue reads the kinds as a list without
-            reading a title first — and in the warn tone on the rows the day
+            reading a title first — and in the warning tone on the rows the day
             put in its first band, where the kind is also why it is there. The
             title line keeps the states that are about this row alone: overdue,
             unprepared.
@@ -250,7 +250,7 @@ export function WorklistRow({
             width the kinds share; `conditionOf` says what a system row
             draws there instead. */}
         <span className={kindClass(named)} title={named ?? undefined}>
-          <Badge tone={item.band === "now" ? "warn" : undefined}>
+          <Badge tone={item.band === "now" ? "warning" : undefined}>
             {named ?? t(eyebrowKeyFor(item))}
           </Badge>
         </span>
@@ -358,7 +358,7 @@ function RowText({
               danger — an unprepared meeting is work to do, not a deadline
               already missed. */}
           {isUnprepared(item) && (
-            <Badge tone="warn">{t("worklist.needsPrep")}</Badge>
+            <Badge tone="warning">{t("worklist.needsPrep")}</Badge>
           )}
         </p>
       )}
@@ -612,14 +612,14 @@ function NudgeDismiss({ contactId }: Readonly<{ contactId: string }>) {
                   onAct: () => {
                     restore.mutateAsync({ contactId }).catch(() =>
                       toast.show(t("worklist.verb.dismissUndoFailed"), {
-                        mark: false,
+                        tone: "danger",
                       }),
                     );
                   },
                 },
               }),
             onError: () =>
-              toast.show(t("worklist.verb.dismissFailed"), { mark: false }),
+              toast.show(t("worklist.verb.dismissFailed"), { tone: "danger" }),
           },
         )
       }
@@ -934,7 +934,7 @@ function NoticeAcknowledge({ id }: Readonly<{ id: string }>) {
           // reader has no reason to try again.
           onError: () =>
             toast.show(t("worklist.verb.acknowledgeFailed"), {
-              mark: false,
+              tone: "danger",
             }),
         })
       }
@@ -997,7 +997,7 @@ function TaskComplete({
                   onAct: () => {
                     undo(id, completedAt).catch(() =>
                       toast.show(t("worklist.verb.completeUndoFailed"), {
-                        mark: false,
+                        tone: "danger",
                       }),
                     );
                   },
@@ -1007,7 +1007,7 @@ function TaskComplete({
             // on screen to say so — the same rendering a click that did
             // nothing would leave, and the reader has no reason to try again.
             onError: () =>
-              toast.show(t("worklist.verb.completeFailed"), { mark: false }),
+              toast.show(t("worklist.verb.completeFailed"), { tone: "danger" }),
           },
         )
       }
@@ -1039,12 +1039,14 @@ function AutomationRetry({ id }: Readonly<{ id: string }>) {
               result?.retried === true
                 ? t("worklist.verb.retryStarted")
                 : t(refusalMessage(result?.refusal)),
-              { mark: result?.retried === true },
+              // `info` and not `success`: a retry that was accepted has
+              // STARTED, not finished, and the work is still in flight.
+              { tone: result?.retried === true ? "info" : "danger" },
             ),
           // A rejected retry leaves the button idle with nothing on screen to
           // say so, which renders exactly like a click that did nothing.
           onError: () =>
-            toast.show(t("worklist.verb.retryFailed"), { mark: false }),
+            toast.show(t("worklist.verb.retryFailed"), { tone: "danger" }),
         })
       }
     >
@@ -1154,7 +1156,7 @@ function PromiseKept({ id }: Readonly<{ id: string }>) {
             // the same as a click that did nothing.
             onError: () =>
               toast.show(t("worklist.verb.promiseSettleFailed"), {
-                mark: false,
+                tone: "danger",
               }),
           },
         )

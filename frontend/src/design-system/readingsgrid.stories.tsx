@@ -46,7 +46,7 @@ export const FourReadings: Story = {
         label="The close"
         value="09 Sep"
         detail="in 19 days"
-        tone="warn"
+        tone="warning"
       />
       <StatCard
         label="The contacts"
@@ -71,7 +71,7 @@ export const InANarrowColumn: Story = {
   render: () => (
     <div style={{ maxWidth: 480 }}>
       <ReadingsGrid label="Where this contact stands">
-        <StatCard label="Whose move" value="Yours" tone="warn" />
+        <StatCard label="Whose move" value="Yours" tone="warning" />
         <StatCard label="Open promises" value="1" detail="19 days late" />
         <StatCard label="Deals they decide" value="€227k" />
         <StatCard label="Next meeting" value="None" />
@@ -90,7 +90,7 @@ export const WithAFloor: Story = {
       label="What today is worth"
       floor="Read to the page limit, so these are floors, not totals."
     >
-      <StatCard label="Revenue at risk" value="€384.5k" tone="warn" />
+      <StatCard label="Revenue at risk" value="€384.5k" tone="warning" />
       <StatCard label="Buyer replies" value="14" />
       <StatCard label="Prospecting" value="3" />
       <StatCard label="Review" value="27" />

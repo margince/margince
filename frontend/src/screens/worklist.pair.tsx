@@ -117,7 +117,7 @@ export function PairDecision({ item }: Readonly<{ item: WorklistItem }>) {
           // miss, and the press that follows fails identically. "Try again"
           // is the only one of the three that means it.
           toast.show(t(message), {
-            mark: false,
+            tone: "danger",
             sticky: code === "permission_denied" || code === "conflict",
           });
         },

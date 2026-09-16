@@ -6,7 +6,7 @@
  *
  * Semantic split (§2, UX review 2026-06-29): the brand accent (deep emerald) means
  * PRIMARY ACTION and brand only; AI/agent-authored surfaces carry their own indigo
- * hue; status (success/warn/danger) is a third family. One meaning per colour —
+ * hue; status (success/warning/danger) is a third family. One meaning per colour —
  * success stays a brighter grass-green than the brand emerald on purpose.
  */
 :root {
@@ -166,20 +166,13 @@
      since controls sit on both. */
   --borderControl: #868f89;
 
+  /* Identity, not status: the teal pair marks OUR side of a diagram apart from
+   * the agent's indigo and the counterparty's neutral. It says nothing about
+   * how anything is going — a reading that does belongs to one of the five
+   * states below. --teal is unthemed; --tealText is lifted for dark, because it
+   * carries a mark on a dark card. */
   --teal: #0e7490;
-  /* Readable teal text for a chip on the --tealLight fill. Split from --teal
-   * (a fill/accent) so the dark theme can lift the text without shifting the
-   * pill fills that read --teal — and so LIGHT can darken it without them, which
-   * the grey grounds now require: --tealLight is an alpha tint over whatever is
-   * behind it, and on the grey page the pair measured 4.30:1. 5.17:1 now. The
-   * same move as --accentText, for the same reason; neither --teal nor
-   * --tealLight shifts. */
   --tealText: #0d6882;
-  /* low-alpha teal fill — the read-access pill's tint, tonally distinct from
-   * the emerald --accentLight the write pill uses (record-share safety split,
-   * mirrors share.html's read/write pill colours). Derived from --teal. */
-  --tealLight: rgba(14, 116, 144, 0.1);
-  --away: #fbbf24;
   /* Monogram tones: the six backgrounds a company/contact avatar picks from by
    * name, so the same record reads the same colour everywhere without storing
    * one. Low-alpha fills over the card surface, paired with a readable text
@@ -826,11 +819,8 @@
   --shadow-well: inset 0 1px 2px 0 rgb(0 0 0 / 0.4);
   --shadow-pop: 0 8px 30px rgba(0, 0, 0, 0.55);
 
-  /* higher alpha so the teal read-pill fill stays legible on the darker card
-   * surface (same light→dark bump --accentLight makes). --teal is unthemed. */
-  --tealLight: rgba(14, 116, 144, 0.28);
-  /* Lifted teal text: the light --tealText (#0e7490) is dark-on-dark on the
-   * --tealLight fill over a dark card, below AA — brighten it for dark. */
+  /* Lifted teal mark: the light --tealText (#0e7490) is dark-on-dark over a
+   * dark card, below AA — brighten it for dark. --teal is unthemed. */
   --tealText: #5cb6cf;
 
   --aiText: #9ba0f0;
@@ -964,8 +954,6 @@
     --shadow-rest: 0 1px 2px 0 rgb(0 0 0 / 0.4);
     --shadow-well: inset 0 1px 2px 0 rgb(0 0 0 / 0.4);
     --shadow-pop: 0 8px 30px rgba(0, 0, 0, 0.55);
-
-    --tealLight: rgba(14, 116, 144, 0.28);
 
     --tealText: #5cb6cf;
 

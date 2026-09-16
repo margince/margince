@@ -79,7 +79,7 @@
   gap: var(--space-1);
 }
 
-.vdna-notice-warn {
+.vdna-notice-warning {
   color: var(--warningText);
 }
 
@@ -88,7 +88,7 @@
 .vdna-speaker {
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-sm);
-  background: var(--warningSurface);
+  background: var(--warningWash);
   padding: var(--space-3);
   margin: var(--space-3) 0 0;
   min-inline-size: 0; /* a fieldset otherwise refuses to shrink in a flex column */

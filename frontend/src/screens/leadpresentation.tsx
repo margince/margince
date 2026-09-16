@@ -31,9 +31,9 @@ import { sourceLabelFor } from "./leadsources";
 
 type Lead = components["schemas"]["Lead"];
 
-export function scoreTone(score: number): "success" | "warn" | undefined {
+export function scoreTone(score: number): "success" | "warning" | undefined {
   if (score >= 60) return "success";
-  if (score >= 40) return "warn";
+  if (score >= 40) return "warning";
   return undefined;
 }
 
@@ -83,7 +83,7 @@ export function SlaBadge({ state }: Readonly<{ state: Lead["sla_state"] }>) {
     return <Badge tone="danger">{t("lead.sla.breached")}</Badge>;
   }
   if (state === "at_risk") {
-    return <Badge tone="warn">{t("lead.sla.atRisk")}</Badge>;
+    return <Badge tone="warning">{t("lead.sla.atRisk")}</Badge>;
   }
   return null;
 }

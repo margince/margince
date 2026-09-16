@@ -12,7 +12,7 @@
 .meterbar span {
   display: block;
   height: 100%;
-  background: linear-gradient(90deg, var(--accent), var(--away));
+  background: linear-gradient(90deg, var(--accent), var(--warning));
   border-radius: var(--r-full);
   corner-shape: round;
   transition: width 0.5s var(--ease-out);
@@ -34,14 +34,14 @@
 /* A reading whose low end is the bad one carries its own colour, so the bar
  * agrees with the band badge the caller draws beside it. Flat, not a
  * gradient: the second colour of a gradient reads as a second meaning. */
-.meterbar-warn span {
+.meterbar-warning span {
   background: var(--warning);
 }
 .meterbar-danger span {
   background: var(--danger);
 }
 /* Same reasoning as the tone variants above: a caller can want the accent
- * without the fade to `--away`, which reads as a warning creeping into a
+ * without the fade to `--warning`, which reads as a warning creeping into a
  * bar that has no low-is-bad meaning at all. */
 .meterbar-flat span {
   background: var(--accent);

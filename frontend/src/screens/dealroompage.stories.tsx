@@ -108,7 +108,7 @@ export const NoRoom: Story = { render: served([]) };
  *  first, and the buyer's own row beside it. */
 export const Live: Story = { render: served([ROOM]) };
 
-/** A room a rep has stopped. The same head, with the chip in the warn tone and
+/** A room a rep has stopped. The same head, with the chip in the warning tone and
  *  no dot — the state is something the room recorded, not something happening
  *  now — and the banner saying what a buyer arriving would meet. */
 export const Paused: Story = {

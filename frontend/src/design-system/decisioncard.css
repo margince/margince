@@ -26,7 +26,7 @@
  * The deadline, as a band down the card's leading edge. Three steps rather than
  * a gradient: a reader has to be able to name which one they are looking at, and
  * "somewhere between amber and red" is not a reading. The escalation is in the
- * COLOUR and not in the opacity: a faded warn band beside a solid danger one is
+ * COLOUR and not in the opacity: a faded warning band beside a solid danger one is
  * a weaker statement for no reason a reader could name.
  *
  * An INSET SHADOW rather than a border, and the reason is `.staging-card`: its
@@ -61,8 +61,13 @@
   background: var(--bgCard);
 }
 
+/* The window closed without a decision. The same reading VERDICT_TONE gives
+   `expired` in decisioncard.tsx, so the sentence and the badge that reports it
+   agree — it was body ink, which is the one thing on this card that says
+   nothing at all. */
 .dcard-lapsed {
   margin-top: var(--space-2);
+  color: var(--warningText);
 }
 
 /* The chips line. Wraps, because a provenance tag, a kind label and a countdown

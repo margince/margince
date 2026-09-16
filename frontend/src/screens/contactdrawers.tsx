@@ -122,7 +122,7 @@ function ClaimMapRow({
               </span>
             ),
           )}
-          <Badge tone={claim.confidence === "high" ? "success" : "warn"}>
+          <Badge tone={claim.confidence === "high" ? "success" : "warning"}>
             {claim.confidence}
           </Badge>
         </div>

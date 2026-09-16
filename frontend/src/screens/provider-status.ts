@@ -29,7 +29,7 @@ export type ProviderProfileState = ContactProviderProfile["state"];
  *  `undefined` is the neutral tone and is deliberately NOT `danger`: a
  *  provider nobody connected is a configuration, not a fault, and colouring
  *  it red tells an operator to fix something that is not broken. */
-export type StatusTone = "success" | "warn" | "danger" | undefined;
+export type StatusTone = "success" | "warning" | "danger" | undefined;
 
 const CONNECTION_TONE: Record<ProviderConnectionStatus, StatusTone> = {
   connected: "success",
@@ -40,9 +40,9 @@ const CONNECTION_TONE: Record<ProviderConnectionStatus, StatusTone> = {
   invalid_credentials: "danger",
   // Recoverable provider conditions. The connection is intact and the key is
   // good; the vendor is refusing this moment's work.
-  insufficient_credits: "warn",
-  rate_limited: "warn",
-  provider_error: "warn",
+  insufficient_credits: "warning",
+  rate_limited: "warning",
+  provider_error: "warning",
 };
 
 const CONNECTION_LABEL: Record<ProviderConnectionStatus, MessageKey> = {
@@ -82,18 +82,18 @@ const PROFILE_TONE: Record<ProviderProfileState, StatusTone> = {
   no_match: undefined,
   // The data is real but old enough that the platform will not vouch for it —
   // or the provider was disconnected and it can no longer be refreshed.
-  stale: "warn",
+  stale: "warning",
   invalid_credentials: "danger",
-  insufficient_credits: "warn",
-  rate_limited: "warn",
-  provider_error: "warn",
+  insufficient_credits: "warning",
+  rate_limited: "warning",
+  provider_error: "warning",
   // The outcome was never learned, and the run may have been charged for.
-  submission_unknown: "warn",
+  submission_unknown: "warning",
   // Paid, and the values never reached the record. Its own state because it
   // is neither a success nor a failure: somebody was charged and has nothing
   // to show for it, which a contact needs to SEE rather than discover as
   // missing data.
-  completed_claims_unwritten: "warn",
+  completed_claims_unwritten: "warning",
 };
 
 const PROFILE_LABEL: Record<ProviderProfileState, MessageKey> = {

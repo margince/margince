@@ -234,7 +234,7 @@ function CloseStat({
       // A date nobody confirmed is a warning about the FIGURE, not about the
       // deal: the tone marks the number, and `alert` (which tints the whole
       // tile) stays for a slot that is itself bad news.
-      tone={deal.close_date_provisional || days < 0 ? "warn" : undefined}
+      tone={deal.close_date_provisional || days < 0 ? "warning" : undefined}
     />
   );
 }
@@ -270,7 +270,7 @@ function ContactsStat({
         label={t("deal.strip.contacts")}
         value={t("deal.strip.contacts.none")}
         detail={t("deal.strip.contacts.noneDetail")}
-        tone="warn"
+        tone="warning"
       />
     );
   }
@@ -286,7 +286,7 @@ function ContactsStat({
         total: formatNumber(seats.length, locale),
       })}
       detail={detail}
-      tone={engaged <= 1 || !champion ? "warn" : undefined}
+      tone={engaged <= 1 || !champion ? "warning" : undefined}
       // Counted segments, because a committee is a thing a reader counts.
       meter={{ filled: engaged, total: seats.length }}
       basis={

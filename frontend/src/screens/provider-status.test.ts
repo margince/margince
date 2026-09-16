@@ -160,18 +160,18 @@ describe("the provider status vocabulary", () => {
     expect(connectionTone("disconnected")).toBeUndefined();
     expect(connectionTone("connected")).toBe("success");
     // Recoverable vendor conditions warn rather than alarm.
-    expect(connectionTone("rate_limited")).toBe("warn");
-    expect(connectionTone("insufficient_credits")).toBe("warn");
+    expect(connectionTone("rate_limited")).toBe("warning");
+    expect(connectionTone("insufficient_credits")).toBe("warning");
   });
 
   it("warns on a charge with nothing to show for it", () => {
     // Paid, and the values never arrived. Neither a success nor a failure,
     // and the one state somebody has to actually see.
-    expect(profileTone("completed_claims_unwritten")).toBe("warn");
+    expect(profileTone("completed_claims_unwritten")).toBe("warning");
     // The outcome was never learned, and the run may have been charged.
-    expect(profileTone("submission_unknown")).toBe("warn");
+    expect(profileTone("submission_unknown")).toBe("warning");
     // Bought earlier and no longer refreshable — real data, stale label.
-    expect(profileTone("stale")).toBe("warn");
+    expect(profileTone("stale")).toBe("warning");
     expect(profileTone("completed")).toBe("success");
   });
 

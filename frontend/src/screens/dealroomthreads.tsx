@@ -201,7 +201,7 @@ function DocumentCard({
         ) : null}
         {unanswered > 0 ? (
           <span className="board-doc-unanswered">
-            <Badge tone="warn">
+            <Badge tone="warning">
               {plural("threads.unanswered", unanswered, {
                 count: formatNumber(unanswered, locale),
               })}

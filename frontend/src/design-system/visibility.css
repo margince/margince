@@ -40,7 +40,7 @@
 
 /* Withheld: the one state about the reader, drawn as the caution it is. The
    tint composites over its own --bgElevated so its contrast does not depend on
-   which surface a caller put it on — the same reason .badge-warn does. */
+   which surface a caller put it on — the same reason .badge-warning does. */
 .visibility-withheld {
   background:
     linear-gradient(var(--warningBg), var(--warningBg)), var(--bgElevated);

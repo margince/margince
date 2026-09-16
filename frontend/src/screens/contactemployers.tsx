@@ -11,7 +11,7 @@ import { SurfaceState } from "../design-system/surfacestate";
 import { stable } from "../format/collate";
 import { useT } from "../i18n";
 import { AddEmploymentModal } from "./addemploymentmodal";
-import { problemMessageOf, throwProblem } from "./common";
+import { problemMessageOf, RefusalLine, throwProblem } from "./common";
 import { EmploymentRow } from "./contactemploymentrow";
 import {
   bodyState,
@@ -229,7 +229,7 @@ export function Employers({ view }: Readonly<{ view: Contact360 }>) {
             />
           ))}
         </SurfaceState>
-        {more.isError && <p role="alert">{problemMessageOf(more.error, t)}</p>}
+        {more.isError && <RefusalLine error={more.error} />}
         {more.hasNextPage && (
           <Button
             pending={more.isFetchingNextPage}

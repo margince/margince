@@ -54,7 +54,7 @@ describe("policyEffect", () => {
     expect(effectReasonKey("suppressed")).toBe("retention.suppressedWhy");
     expect(effectReasonKey("disabled")).toBe("retention.disabledWhy");
     expect(effectTone("acting")).toBe("success");
-    expect(effectTone("suppressed")).toBe("warn");
+    expect(effectTone("suppressed")).toBe("warning");
     expect(effectTone("disabled")).toBeUndefined();
   });
 });

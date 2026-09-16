@@ -16,7 +16,7 @@
   padding: var(--space-3);
   border: 1px solid var(--warningBorder);
   border-radius: var(--r-sm);
-  background: var(--warningSurface);
+  background: var(--warningWash);
   text-wrap: pretty;
 }
 .ob-facts-cap:empty {

@@ -178,7 +178,7 @@
 }
 
 .rmap-band-strong {
-  stroke: var(--accent);
+  stroke: var(--success);
   stroke-width: 2.5;
 }
 

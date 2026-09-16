@@ -150,11 +150,11 @@ export const AccentTone: Story = {
   },
 };
 
-// tone="warn": the same lead, when the FINDING is the bad news — a
+// tone="warning": the same lead, when the FINDING is the bad news — a
 // relationship that went quiet, a promise that is late. The tone is the
 // reading, which is why it recolours the card's own frame instead of adding a
 // badge inside it, and why the geometry does not move: an accent lead and a
-// warn lead are one card in two states, not two cards.
+// warning lead are one card in two states, not two cards.
 //
 // Check it in both themes. `--warning` inverts across them (a dark amber-brown on
 // light, a bright amber on dark) while `--warningBg` and `--warningBorder` stay the
@@ -162,7 +162,7 @@ export const AccentTone: Story = {
 // thing to look at twice.
 export const WarnTone: Story = {
   args: {
-    tone: "warn",
+    tone: "warning",
     title: "Gone quiet",
     children: (
       <>
@@ -172,6 +172,32 @@ export const WarnTone: Story = {
     ),
     footer: <span>Two sources · updated an hour ago</span>,
   },
+};
+
+// The rest of the state vocabulary, on one page: `info` for the lead whose work
+// is still running, `success` for the one whose finding is that it landed,
+// `danger` for the finding that cannot be undone, `discovery` for a capability
+// this reader has not met. Same geometry at every tone — put them beside
+// `AccentTone` and only the band's colour moves.
+export const StateTones: Story = {
+  render: () => (
+    <div style={{ display: "grid", gap: "var(--space-4)" }}>
+      <Panel tone="info" title="Still reading">
+        <PanelRow>Four of eleven pages read. Nothing to do yet.</PanelRow>
+      </Panel>
+      <Panel tone="success" title="The renewal is signed">
+        <PanelRow>Countersigned this morning, filed against the deal.</PanelRow>
+      </Panel>
+      <Panel tone="danger" title="The mailbox stopped">
+        <PanelRow>No message has been read since 04:12. Reconnect it.</PanelRow>
+      </Panel>
+      <Panel tone="discovery" title="Deal Rooms are new here">
+        <PanelRow>
+          A buyer can read the price and the plan in one place.
+        </PanelRow>
+      </Panel>
+    </div>
+  ),
 };
 
 // tone="ai": the panel a MACHINE wrote or read. It is the same lead geometry

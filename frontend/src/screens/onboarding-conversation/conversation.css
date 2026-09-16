@@ -1020,10 +1020,11 @@
   margin-top: var(--space-3);
 }
 
+/* A corpus still building: the bar reports work in flight, not a brand ask. */
 .ob-voice-meter-bar {
   inline-size: 100%;
   block-size: 6px;
-  accent-color: var(--accent);
+  accent-color: var(--info);
 }
 
 .ob-voice-meter-line {
@@ -1578,7 +1579,7 @@
 
 .ob-connect-card[data-state="connected"] {
   border-color: var(--success);
-  background: var(--accentLight);
+  background: var(--successBg);
 }
 
 /* The one state where the dashed treatment above is the honest one: this
@@ -2921,12 +2922,15 @@
   overflow: hidden;
 }
 
+/* The fill says HOW FAR the job has got, which is a fact about the run rather
+   than about who authored it — indigo is provenance, and a progress bar wearing
+   it claimed a model had decided the figure. */
 .ob-conv-meter-bar span {
   display: block;
   block-size: 100%;
   border-radius: var(--r-full);
   corner-shape: round;
-  background: var(--aiMed);
+  background: var(--info);
 }
 
 .ob-conv-stages {
@@ -3004,7 +3008,7 @@
 
 /* A finding the narration or a jump just landed on lights up unmistakably —
  * a solid ring that holds for a beat before it fades, calm rather than
- * alarming (no colour borrowed from the danger/warn palette, no motion
+ * alarming (no colour borrowed from the danger/warning palette, no motion
  * beyond a fade), and never a bare outline: this is a box-shadow
  * specifically so it layers beside the browser's own focus ring rather
  * than fighting it for the same CSS property. */

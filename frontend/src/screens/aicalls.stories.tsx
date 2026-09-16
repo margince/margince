@@ -166,7 +166,7 @@ export const RowExpanded: Story = {
 };
 
 // The same expanded row in dark. Two badge tones are all that separates a call
-// that limped from one that failed — `degraded` (warn) and the error sentinel
+// that limped from one that failed — `degraded` (warning) and the error sentinel
 // (danger) — so a tint that stops carrying that distinction against a dark card
 // takes the task column's meaning with it. The trail is open because the
 // attempt table brings a second danger badge onto a nested surface, where a

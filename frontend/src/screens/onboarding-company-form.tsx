@@ -107,7 +107,10 @@ export function CompanyStep({
       )}
 
       {saveError && (
-        <div className="readfail warn" style={{ marginTop: "var(--space-3)" }}>
+        <div
+          className="readfail warning"
+          style={{ marginTop: "var(--space-3)" }}
+        >
           <span className="rfi">
             <Circle aria-hidden />
           </span>

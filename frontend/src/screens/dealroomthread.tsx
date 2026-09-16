@@ -119,7 +119,7 @@ function ThreadRow({
       {thread.required_change || resolved ? (
         <div className="thread-head">
           {thread.required_change ? (
-            <Badge tone="warn">{t("threads.requiredChange")}</Badge>
+            <Badge tone="warning">{t("threads.requiredChange")}</Badge>
           ) : null}
           {resolved ? (
             <Badge tone="success">{t("threads.resolved")}</Badge>

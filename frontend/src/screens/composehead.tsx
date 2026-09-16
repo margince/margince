@@ -257,7 +257,7 @@ export function AddressBlock({
           does not, and a bounce is a fact about the past. */}
       {deadRecipients.length > 0 && (
         <Callout
-          tone="warn"
+          tone="warning"
           kind="standing"
           // Standing on open, yet it also appears as a rep TYPES a recipient,
           // and a reader who cannot see the field would otherwise never learn

@@ -30,11 +30,14 @@ type Rung = components["schemas"]["PipelineStageRung"];
 // as one.
 const STATUS_TONE: Record<
   Rung["status"],
-  "success" | "warn" | "danger" | undefined
+  "info" | "success" | "danger" | undefined
 > = {
   done: "success",
   skipped: undefined,
-  pending: "warn",
+  // `info` and not `warning`: a rung the message has not reached yet is work
+  // still in flight, and amber told a reader to act on a delivery that is
+  // simply not finished.
+  pending: "info",
   failed: "danger",
   not_applicable: undefined,
   unknown: undefined,

@@ -70,22 +70,25 @@ type UpdateWebhookSubscriptionRequest =
 // same spelling rather than re-deriving its own tone rules per status.
 export function webhookStatusBadge(
   status: WebhookDeliveryStatus,
-): "success" | "warn" | "danger" | "accent" {
+): "success" | "info" | "warning" | "danger" {
   switch (status) {
     case "delivered":
       return "success";
     case "dead_lettered":
       return "danger";
     case "retrying":
-      return "warn";
+      return "warning";
     // Not "danger": nothing failed. The subscriber's own endpoint is fine and
     // the record simply left their sight, so this is a stop rather than a
     // fault, and an operator reading the list should not go looking for a
     // broken endpoint.
     case "visibility_revoked":
-      return "warn";
+      return "warning";
+    // `info` and not the brand accent: a delivery nobody has attempted yet is
+    // work in flight, and green beside the real `delivered` row read as a
+    // second way of saying it landed.
     case "pending":
-      return "accent";
+      return "info";
   }
 }
 
@@ -406,8 +409,8 @@ function SecretRevealModal({
 
 function subscriptionStateTone(
   state: WebhookSubscription["state"],
-): "success" | "warn" {
-  return state === "active" ? "success" : "warn";
+): "success" | "warning" {
+  return state === "active" ? "success" : "warning";
 }
 
 function NotConfiguredState() {

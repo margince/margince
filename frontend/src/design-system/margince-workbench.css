@@ -192,9 +192,9 @@
    AA role, so what separates done from still-to-come is the FILLED numeral
    below — a difference in shape, not one 2%-apart pair of greys. */
 .mw-step.is-done b {
-  color: var(--textOnAccentControl);
+  color: var(--textOnStatusControl);
   border-color: transparent;
-  background: var(--accent);
+  background: var(--successText);
 }
 
 .mw-step.is-now {

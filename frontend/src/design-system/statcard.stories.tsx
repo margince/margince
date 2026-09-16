@@ -79,7 +79,7 @@ export const ReadingsWithADoor: Story = {
       <StatCard
         label="Urgent"
         value="7"
-        tone="warn"
+        tone="warning"
         detail="across every lane this morning"
         onOpen={() => {}}
       />
@@ -100,15 +100,15 @@ export const ReadingsAtOneSize: Story = {
   render: () => (
     <div style={row}>
       <StatCard label="Owner" value="Carol Wagner" />
-      <StatCard label="Consent" value="Allowed" tone="good" />
-      <StatCard label="Health" value="Watch" tone="warn" />
+      <StatCard label="Consent" value="Allowed" tone="success" />
+      <StatCard label="Health" value="Watch" tone="warning" />
       <StatCard label="Payment" value="At risk" tone="danger" />
       {/* Three lines of detail in a two-line box: the third is cut, and the
           card keeps the height of the four beside it. */}
       <StatCard
         label="Engagement"
         value="Cooling"
-        tone="warn"
+        tone="warning"
         detail="Last inbound 12 Jun · last outbound 3 Jul · nobody here has replied since the renewal was raised, and the champion left in April"
       />
       {/* A label longer than the card is wide, with the source badge and the

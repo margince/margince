@@ -104,7 +104,7 @@ export function LeadPanel({
             {route.evidence.two_way ? (
               <Badge>{t("contact.intro.factReciprocal")}</Badge>
             ) : (
-              <Badge tone="warn">{t("contact.intro.factOneSided")}</Badge>
+              <Badge tone="warning">{t("contact.intro.factOneSided")}</Badge>
             )}
             <Badge>
               {route.through_display_name

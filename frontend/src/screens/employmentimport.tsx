@@ -11,7 +11,7 @@ import {
 } from "../design-system/recordpicker";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
-import { problemMessageOf, throwProblem } from "./common";
+import { RefusalLine, throwProblem } from "./common";
 import { searchCompanyCandidates } from "./contactemployers";
 import { invalidateRecord } from "./recordwritekeys";
 
@@ -91,9 +91,7 @@ export function ImportedEmploymentHistory({
         </p>
       ))}
       {reading.isPending && <p>{t("employment.importLoading")}</p>}
-      {reading.isError && (
-        <p role="alert">{problemMessageOf(reading.error, t)}</p>
-      )}
+      {reading.isError && <RefusalLine error={reading.error} />}
       {canEdit && outstanding.some((item) => item.state === "pending") && (
         <Button
           disabled={apply.isPending}
@@ -196,9 +194,7 @@ export function ImportedEmploymentHistory({
               </p>
             ),
         )}
-      {apply.isError && !resolving && (
-        <p role="alert">{problemMessageOf(apply.error, t)}</p>
-      )}
+      {apply.isError && !resolving && <RefusalLine error={apply.error} />}
       {resolving && (
         <EmploymentMatchModal
           key={resolving.key}
@@ -308,7 +304,7 @@ function EmploymentMatchModal({
           }))}
           disabled={pending}
         />
-        {error != null && <p role="alert">{problemMessageOf(error, t)}</p>}
+        {error != null && <RefusalLine error={error} />}
         <Button
           disabled={
             pending ||

@@ -89,7 +89,11 @@ function StatusHeader({
   locale: Locale;
   t: ReturnType<typeof useT>;
 }>) {
-  const tone = isRunning ? "accent" : data.reindex_needed ? "warn" : "success";
+  const tone = isRunning
+    ? "accent"
+    : data.reindex_needed
+      ? "warning"
+      : "success";
   const label = isRunning
     ? t("embedreindex.statusReembedding")
     : data.reindex_needed

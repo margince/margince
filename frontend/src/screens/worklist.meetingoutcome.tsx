@@ -106,7 +106,7 @@ export function MeetingOutcome({
               // identically to a click that did nothing.
               onError: () =>
                 toast.show(t("worklist.verb.meetingOutcomeFailed"), {
-                  mark: false,
+                  tone: "danger",
                 }),
             },
           )

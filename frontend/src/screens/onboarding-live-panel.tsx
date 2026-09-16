@@ -75,7 +75,7 @@ export function DossierCard({
  * the read was configured with, which limits coverage without anything having
  * gone wrong.
  */
-type CoverageKind = "note" | "warn" | "skip" | "fail";
+type CoverageKind = "note" | "warning" | "skip" | "fail";
 
 type StoppedReason = NonNullable<
   components["schemas"]["CompanySiteRead"]["stopped_reason"]
@@ -128,7 +128,7 @@ function coverageRows(
   if (stoppedReason !== undefined && stoppedReason !== null) {
     rows.push({
       id: `stopped:${stoppedReason}`,
-      kind: stopIsConfigured(stoppedReason) ? "note" : "warn",
+      kind: stopIsConfigured(stoppedReason) ? "note" : "warning",
       label: t(
         stopIsConfigured(stoppedReason)
           ? "ob.live.coverageCapped"
@@ -141,7 +141,7 @@ function coverageRows(
     seq += 1;
     rows.push({
       id: `warning:${seq}`,
-      kind: "warn",
+      kind: "warning",
       label: t("ob.live.coverageWarning"),
       reason: warning,
     });

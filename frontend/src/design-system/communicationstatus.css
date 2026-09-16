@@ -76,6 +76,13 @@
   color: var(--dangerText);
 }
 
+/* The state that is not a verdict: the check has not answered yet. It was the
+   one state in the vocabulary with no ink at all, so a row still being read
+   looked exactly like one whose reading came back neutral. */
+.commstatus-checking {
+  color: var(--infoText);
+}
+
 .commstatus-panel {
   display: flex;
   flex-direction: column;

@@ -74,7 +74,7 @@
   color: var(--danger);
 }
 .urlnote.ok {
-  color: var(--teal);
+  color: var(--successText);
 }
 
 .rfprov {
@@ -110,7 +110,7 @@
   flex: none;
   margin-top: 1px; /* ds:ignore optical: sets the tile on the title's cap line */
 }
-.readfail.warn .rfi {
+.readfail.warning .rfi {
   background: var(--warningBg);
   color: var(--warning);
 }
@@ -146,10 +146,13 @@
   gap: var(--space-2);
   margin-top: var(--space-3);
 }
+/* An advisory mark beside a hint: the info family, which is what an
+   informational glyph is for. It was --teal, an identity colour that happens to
+   sit 15deg off the info hue — a look-alike rather than the token. */
 .spoken-hint svg {
   width: 13px;
   height: 13px;
-  color: var(--teal);
+  color: var(--infoText);
   flex: none;
   margin-top: 2px; /* ds:ignore optical: sets the glyph on the first text line */
 }
@@ -190,12 +193,12 @@
    top margin `.readfail` carries for the full-page surfaces: in a dialog every
    neighbour it can have already owns the distance to it. */
 .connect-result .ob-sub,
-.ob-connect-warn {
+.ob-connect-warning {
   width: min(460px, 100%);
   margin-inline: auto;
 }
 
-.ob-connect-warn {
+.ob-connect-warning {
   margin-top: 0;
 }
 .connect-result .cr-h {
@@ -210,12 +213,14 @@
   color: var(--success);
 }
 
-/* spinner (shared inline) */
+/* spinner (shared inline). The info family, not the brand: a turning ring is
+   work still in flight, and drawn in the accent it read as the page's next
+   move rather than as a wait. */
 .ob-spinner {
   width: 15px;
   height: 15px;
-  border: 2.5px solid var(--accentMed);
-  border-top-color: var(--accent);
+  border: 2.5px solid var(--infoBorder);
+  border-top-color: var(--info);
   border-radius: 50%;
   corner-shape: round;
   animation: obSpin 0.7s linear infinite;
@@ -385,7 +390,7 @@
   box-shadow: 0 0 16px var(--aiMed);
 }
 .ob-core-journey [data-state="done"] i {
-  color: var(--textOnAccent);
+  color: var(--textOnStatusControl);
   border-color: var(--success);
   background: var(--success);
 }

@@ -8,7 +8,7 @@ import {
 } from "../design-system/atoms";
 import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
-import { problemMessageOf } from "./common";
+import { RefusalLine } from "./common";
 import {
   type ProjectHealthState,
   useCorrectProjectHealth,
@@ -170,9 +170,7 @@ export function ProjectHealthModal({
         {correcting && (
           <p className="t-caption">{t("projectHealth.correctionNote")}</p>
         )}
-        {write.isError && (
-          <p role="alert">{problemMessageOf(write.error, t)}</p>
-        )}
+        {write.isError && <RefusalLine error={write.error} />}
         <div className="actions">
           <Button variant="ghost" onClick={onClose} disabled={write.isPending}>
             {t("deals.cancel")}

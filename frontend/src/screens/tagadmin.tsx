@@ -103,7 +103,7 @@ export function TagVocabularyCard() {
                           the cap, and merge could not name it as a target. */}
                         {answer.page.has_more && (
                           <Callout
-                            tone="warn"
+                            tone="warning"
                             kind="standing"
                             title={t("tagAdmin.truncatedTitle")}
                           >
@@ -382,7 +382,7 @@ function TagDialog({
       </Field>
       {near.length > 0 && (
         <Callout
-          tone="warn"
+          tone="warning"
           kind="standing"
           title={t("tagAdmin.nearMatchTitle")}
         >
@@ -477,7 +477,7 @@ function MergeDialog({
           />
         )}
       </Field>
-      {/* `danger` and not `warn`: the act is irreversible, which is what the
+      {/* `danger` and not `warning`: the act is irreversible, which is what the
           dialog's own confirm button says with its tone. */}
       <Callout
         tone="danger"

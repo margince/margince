@@ -103,7 +103,7 @@ describe("the terminal badge a merged-away lead wears", () => {
   it("says merged, on a lead whose ladder never left the conversation", () => {
     expect(
       terminalBadge({ status: "contacted", merged_into_id: "l-2" }),
-    ).toEqual({ label: "lead.merged", tone: "warn" });
+    ).toEqual({ label: "lead.merged", tone: "warning" });
     expect(
       terminalBadge({ status: "contacted", merged_into_id: null }),
     ).toBeNull();

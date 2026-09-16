@@ -11,7 +11,7 @@
 //
 // AN OFFER, NOT AN ERROR. The day on screen is still correct — it is simply no
 // longer complete, and the remedy is to refresh when the reader is ready. A
-// warn tone would tell them something is wrong with a page that is working
+// warning tone would tell them something is wrong with a page that is working
 // exactly as designed.
 
 import { Button } from "../design-system/atoms";

@@ -16,7 +16,7 @@
   background: var(--success);
 }
 .dot-confirm {
-  background: var(--away);
+  background: var(--warning);
 }
 
 .evidence-chip {
@@ -91,7 +91,7 @@ button.evidence-chip:hover {
   background: var(--success);
 }
 .confidence-med .dot {
-  background: var(--away);
+  background: var(--warning);
 }
 .confidence-low .dot {
   background: var(--danger);

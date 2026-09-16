@@ -309,7 +309,7 @@ function useFileVerbs(dealId: string, attachmentId: string) {
     // The same obligation the team restore carries, for the same reason: this
     // is what the hide's Undo runs, and that message is consumed on the press.
     onError: (error) => {
-      toast.show(problemMessageOf(error, t), { mark: false, sticky: true });
+      toast.show(problemMessageOf(error, t), { tone: "danger", sticky: true });
     },
     onSuccess: async () => {
       await refresh();

@@ -206,7 +206,7 @@ function ProviderKeyRow({
               {keyless ? "\u2014" : status.env_var}
             </span>
           </span>
-          <Badge tone={status.configured || keyless ? "success" : "warn"}>
+          <Badge tone={status.configured || keyless ? "success" : "warning"}>
             {keyless
               ? t("aiProviderKeys.keyless")
               : status.configured

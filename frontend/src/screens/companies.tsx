@@ -304,7 +304,7 @@ export function CompaniesScreen() {
                 />
                 <strong>{company.display_name}</strong>
                 {company.archived_at && (
-                  <Badge tone="warn">{t("record.archived")}</Badge>
+                  <Badge tone="warning">{t("record.archived")}</Badge>
                 )}
               </span>
             ),

@@ -11,7 +11,7 @@ import {
 import { Heading } from "../design-system/heading";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
-import { problemMessageOf } from "./common";
+import { RefusalLine } from "./common";
 import { stillHeld } from "./employmentcurrency";
 import { patchEmployment } from "./employmentpatch";
 
@@ -146,9 +146,7 @@ export function EmploymentEdit({
           disabled={status !== "current" || saving.isPending}
           onChange={(e) => setPrimary(e.target.checked)}
         />
-        {saving.isError && (
-          <p role="alert">{problemMessageOf(saving.error, t)}</p>
-        )}
+        {saving.isError && <RefusalLine error={saving.error} />}
         <Button
           disabled={!valid || saving.isPending}
           onClick={() => {

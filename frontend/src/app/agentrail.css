@@ -1006,11 +1006,11 @@
    carries the press, so it adds no ink of its own. A hover underline would be
    dead here, because text decoration does not reach into the badge's
    inline-flex box, so the ring on keyboard focus is the one state it draws. */
-.arwarn {
+.arwarning {
   display: inline-flex;
   text-decoration: none;
 }
-.arwarn:focus-visible {
+.arwarning:focus-visible {
   outline: var(--focus-ring);
   outline-offset: 2px;
   border-radius: var(--r-full);

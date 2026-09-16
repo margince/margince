@@ -388,12 +388,12 @@ function decisionColumns({
  */
 function admissionTone(
   admission: BlockedDomain["admission"],
-): "success" | "warn" | undefined {
+): "success" | "warning" | undefined {
   switch (admission) {
     case "admitted":
       return "success";
     case "suppressed":
-      return "warn";
+      return "warning";
     default:
       return undefined;
   }

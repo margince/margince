@@ -252,7 +252,7 @@ export const CompactRowExpired: Story = {
   },
 };
 
-// Under six hours: the edge takes the warn tone. The countdown badge is the
+// Under six hours: the edge takes the warning tone. The countdown badge is the
 // caller's, and it reads the same thresholds — check that the two agree.
 export const ExpiringSoon: Story = {
   args: {

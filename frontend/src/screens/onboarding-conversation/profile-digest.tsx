@@ -271,7 +271,7 @@ function DigestDocument({
                 {t("ob.digest.citedCaption")}
               </span>
             </div>
-            <div className="pdigest-figure" data-warn={openCount > 0}>
+            <div className="pdigest-figure" data-warning={openCount > 0}>
               <strong className="pdigest-figure-value">
                 {formatNumber(openCount, locale)}
               </strong>

@@ -11,7 +11,7 @@ import { SurfaceState } from "../design-system/surfacestate";
 import { middayInstant } from "../format/calendarday";
 import { formatDate } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { problemMessageOf } from "./common";
+import { RefusalLine } from "./common";
 import { EntityRef } from "./entityref";
 import {
   useAnswerCommitment,
@@ -174,9 +174,7 @@ function TeamCommitment({
             ) : (
               <p>{commitment.manager_response}</p>
             )}
-            {answer.isError && (
-              <p role="alert">{problemMessageOf(answer.error, t)}</p>
-            )}
+            {answer.isError && <RefusalLine error={answer.error} />}
           </>
         )}
       </div>

@@ -218,7 +218,7 @@ function verdictClass(verdict: string | undefined): string {
     case "allowed":
       return "pe-rail-value pe-rail-value-good";
     case "blocked":
-      return "pe-rail-value pe-rail-value-warn";
+      return "pe-rail-value pe-rail-value-warning";
     default:
       return "pe-rail-value pe-rail-value-muted";
   }

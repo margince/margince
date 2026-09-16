@@ -190,7 +190,7 @@ export function DecisionsSection({
         // keeps what it still holds and the notice under it says what stopped.
         const message = problemMessageOf(result.failure, t);
         setFailure(message);
-        toast.show(message, { mark: false, sticky: true });
+        toast.show(message, { tone: "danger", sticky: true });
         return;
       }
       setFailure(null);

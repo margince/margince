@@ -1665,7 +1665,7 @@ function ToolRow({
           <span className="settings-run">
             <AutonomyDot tier={dotTier(tool.tier)} />
             {tool.required_scope && <Badge>{tool.required_scope}</Badge>}
-            {tool.egress && <Badge tone="warn">{t("tools.egress")}</Badge>}
+            {tool.egress && <Badge tone="warning">{t("tools.egress")}</Badge>}
           </span>
         }
       />
@@ -1882,7 +1882,7 @@ function AutonomyCard() {
             control={
               <span className="settings-run">
                 <AutonomyDot tier="confirm" />
-                <Badge tone="warn">{t("settings.locked")}</Badge>
+                <Badge tone="warning">{t("settings.locked")}</Badge>
               </span>
             }
           />

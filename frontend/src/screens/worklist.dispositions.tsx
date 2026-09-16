@@ -224,14 +224,14 @@ export function usePutDown(item: WorklistItem) {
                   {
                     onError: () =>
                       toast.show(t("worklist.disposition.undoFailed"), {
-                        mark: false,
+                        tone: "danger",
                       }),
                   },
                 ),
             },
           }),
         onError: () =>
-          toast.show(t("worklist.disposition.failed"), { mark: false }),
+          toast.show(t("worklist.disposition.failed"), { tone: "danger" }),
         // Settled either way, so a refusal releases the row rather than leaving
         // it unanswerable until the reader reloads.
         onSettled: () => {

@@ -158,13 +158,13 @@ export function offerAmount(
 
 const OFFER_TONE: Record<
   Offer["status"],
-  "success" | "warn" | "danger" | undefined
+  "success" | "warning" | "danger" | undefined
 > = {
   draft: undefined,
   sent: undefined,
   accepted: "success",
   rejected: "danger",
-  expired: "warn",
+  expired: "warning",
   superseded: undefined,
 };
 
@@ -227,7 +227,7 @@ export function CompanyContractState({
           )}
         {contracts.cancellation_pending &&
           contracts.cancellation_effective_on && (
-            <Badge tone="warn">
+            <Badge tone="warning">
               {t("contracts.state.endsOn", {
                 when: formatDate(
                   contracts.cancellation_effective_on,

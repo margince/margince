@@ -247,7 +247,7 @@ function AddConnectionDialog({
         {/* The fact is standing — this deployment never wired that provider —
             but the reader learns it BY pressing Connect and it is set on that
             press alone, so it is an `outcome` and is spoken. `info` and not
-            `warn`: an unwired provider is a documented configuration, and
+            `warning`: an unwired provider is a documented configuration, and
             nothing about it is wrong. */}
         {notConfigured501 && (
           <Callout
@@ -617,7 +617,7 @@ function ConnectorRow({
               {t(statusLabel(conn.status))}
             </Badge>
             {missingSendGrant(conn) && (
-              <Badge tone="warn">{t("connectors.cannotSend")}</Badge>
+              <Badge tone="warning">{t("connectors.cannotSend")}</Badge>
             )}
           </span>
         }
@@ -953,7 +953,7 @@ function PublicOriginRow({
       ? undefined
       : status.reachable
         ? "success"
-        : "warn";
+        : "warning";
   const stateLabel =
     status.reachable === null || status.reachable === undefined
       ? t("connectors.originUnchecked")

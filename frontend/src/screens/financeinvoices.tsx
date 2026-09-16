@@ -122,14 +122,14 @@ const STATUS_LABEL: Record<FinanceInvoice["status"], MessageKey> = {
 
 const STATUS_TONE: Record<
   FinanceInvoice["status"],
-  "success" | "warn" | "danger" | undefined
+  "success" | "warning" | "danger" | undefined
 > = {
   draft: undefined,
   open: undefined,
-  partially_paid: "warn",
+  partially_paid: "warning",
   paid: "success",
   overdue: "danger",
-  disputed: "warn",
+  disputed: "warning",
   credited: undefined,
   void: undefined,
 };

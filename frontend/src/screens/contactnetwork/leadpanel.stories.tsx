@@ -12,7 +12,7 @@ import "../contactnetwork.css";
 // The page's one recommendation, drawn alone so its badges can be read side by
 // side: the route's standing in the head band, and the two facts under the
 // chain. Soft throughout: the head badge is success while the ask is open and
-// neutral once it is not, and a fact turns warn only for a one-sided route.
+// neutral once it is not, and a fact turns warning only for a one-sided route.
 //
 // Dates are fixed rather than relative: `make fe-clock-drift` runs the suite at
 // +200 days and must reach the same verdict.
@@ -93,7 +93,7 @@ type Story = StoryObj<typeof LeadPanel>;
  *  neutral, and the ask under the chain. */
 export const StrongDirect: Story = { render: draw(route()) };
 
-/** Only one side writes. The fact badge turns warn, because "they already
+/** Only one side writes. The fact badge turns warning, because "they already
  *  write to each other" would be the claim the counts contradict. */
 export const OneSided: Story = {
   render: draw(

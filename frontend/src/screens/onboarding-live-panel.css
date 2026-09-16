@@ -123,7 +123,7 @@
 
 /* Four gaps, and only the two faults are tinted. A page that could not be read
    is a hole in the dossier and reads danger; a warning about the read as a
-   whole reads warn. A note is a bound the read was configured with and a
+   whole reads warning. A note is a bound the read was configured with and a
    skipped page is routine — one alarm colour for all four would make a
    robots.txt skip indistinguishable from a failure, and would paint a page cap
    — the read doing exactly what it was told — as a fault. The label itself
@@ -133,7 +133,7 @@
   color: var(--dangerText);
 }
 
-.ob-live-coverage[data-kind="warn"] .ob-live-coverage-label {
+.ob-live-coverage[data-kind="warning"] .ob-live-coverage-label {
   color: var(--warningText);
 }
 

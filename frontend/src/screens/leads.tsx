@@ -807,7 +807,7 @@ function useLeadPatch(lead: Lead, id: string, onChanged: () => void) {
  * It is the tinted panel because it is the only surface here asking for a
  * MOVE — everything else on the page reports. The tone follows the finding
  * rather than the layout: a first response already breached is bad news, and
- * the warn family is what says so, in the same pairing `Callout` draws.
+ * the warning family is what says so, in the same pairing `Callout` draws.
  */
 function LeadLadderPanel({
   lead,
@@ -825,7 +825,7 @@ function LeadLadderPanel({
   return (
     <Panel
       title={t("lead.ladder.title")}
-      tone={lead.sla_state === "breached" ? "warn" : "accent"}
+      tone={lead.sla_state === "breached" ? "warning" : "accent"}
     >
       <PanelBody>
         <div className="lead-stack">
@@ -1098,7 +1098,7 @@ function firstResponseDue(
   t: Translator,
   locale: Locale,
   zone: string,
-): { label: string; tone?: "warn" | "danger" } | undefined {
+): { label: string; tone?: "warning" | "danger" } | undefined {
   if (!lead.sla_deadline_at || !lead.sla_state) {
     return undefined;
   }
@@ -1109,7 +1109,7 @@ function firstResponseDue(
     label: t("co.next.due", {
       when: formatDateTime(lead.sla_deadline_at, locale, zone),
     }),
-    tone: lead.sla_state === "at_risk" ? "warn" : undefined,
+    tone: lead.sla_state === "at_risk" ? "warning" : undefined,
   };
 }
 

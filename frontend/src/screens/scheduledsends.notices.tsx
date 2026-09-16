@@ -25,7 +25,7 @@ export function QueueSkewNotice({
   return (
     <Callout
       kind="outcome"
-      tone="warn"
+      tone="warning"
       title={t("sched.skewTitle")}
       actions={<Button onClick={onReload}>{t("sched.reload")}</Button>}
     >

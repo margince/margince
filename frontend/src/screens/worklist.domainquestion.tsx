@@ -113,11 +113,10 @@ export function DomainQuestionAnswer({
           disabled={busy}
           onClick={() =>
             keep.mutate(domain, {
-              onSuccess: () =>
-                toast.show(t("worklist.verb.domainKept"), { mark: true }),
+              onSuccess: () => toast.show(t("worklist.verb.domainKept")),
               onError: () =>
                 toast.show(t("worklist.verb.domainKeepFailed"), {
-                  mark: false,
+                  tone: "danger",
                 }),
             })
           }
@@ -131,11 +130,10 @@ export function DomainQuestionAnswer({
           disabled={busy}
           onClick={() =>
             discard.mutate(domain, {
-              onSuccess: () =>
-                toast.show(t("worklist.verb.domainDiscarded"), { mark: true }),
+              onSuccess: () => toast.show(t("worklist.verb.domainDiscarded")),
               onError: () =>
                 toast.show(t("worklist.verb.domainDiscardFailed"), {
-                  mark: false,
+                  tone: "danger",
                 }),
             })
           }

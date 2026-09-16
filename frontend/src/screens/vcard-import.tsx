@@ -21,11 +21,11 @@ type VCardResult = components["schemas"]["VCardImportResult"];
  * resembles somebody was written nowhere, and nobody finds that out unless the
  * report says so. */
 const OUTCOMES: Readonly<
-  Record<VCardResult["outcome"], { label: MessageKey; tone?: "warn" }>
+  Record<VCardResult["outcome"], { label: MessageKey; tone?: "warning" }>
 > = {
   created: { label: "vcardImport.outcome.created" },
   updated: { label: "vcardImport.outcome.updated" },
-  needs_review: { label: "vcardImport.outcome.needsReview", tone: "warn" },
+  needs_review: { label: "vcardImport.outcome.needsReview", tone: "warning" },
   skipped: { label: "vcardImport.outcome.skipped" },
 };
 
@@ -180,7 +180,7 @@ function ImportReport({ report }: Readonly<{ report: VCardReport }>) {
             <span>{card.full_name}</span>
             <span
               className={
-                outcome?.tone === "warn" ? "vcard-import-warn" : "t-sub"
+                outcome?.tone === "warning" ? "vcard-import-warning" : "t-sub"
               }
             >
               {/* An outcome this build has no name for is a server newer than

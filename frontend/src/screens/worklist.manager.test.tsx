@@ -140,9 +140,10 @@ function refusal(code?: string) {
 
 // The green dot is the toast region's way of saying "that worked". A failure
 // wearing it tells the reader the opposite of what the sentence beside it
-// says, which is why every failure arm on this page passes `{ mark: false }`.
+// says, which is why every failure arm on this page passes `{ tone: "danger" }`
+// and gets the red one instead.
 function completionMark(container: HTMLElement) {
-  return container.ownerDocument.body.querySelector(".dot-auto");
+  return container.ownerDocument.body.querySelector(".toast-dot-success");
 }
 
 describe("handing a task to somebody else", () => {

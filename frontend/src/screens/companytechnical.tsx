@@ -227,7 +227,7 @@ function LaneNotices({
     <div className="co-facts-group">
       {notices.map((lane) => (
         <p key={lane.lane}>
-          <Badge tone="warn">{t(laneLabel(lane.lane))}</Badge>{" "}
+          <Badge tone="warning">{t(laneLabel(lane.lane))}</Badge>{" "}
           {lane.outcome === "refused"
             ? t("co.tech.laneRefused")
             : t("co.tech.laneFailed", { lane: t(laneLabel(lane.lane)) })}

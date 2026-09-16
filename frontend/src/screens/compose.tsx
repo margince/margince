@@ -2438,7 +2438,7 @@ export function ComposeModal({
             <StaleThreadNotice stale={staleThread} />
             {/* Whose conversation this is. Not a warning and not a refusal —
             covering for a colleague is ordinary work — so it states the fact
-            and lets the reader decide. Info rather than warn for that reason,
+            and lets the reader decide. Info rather than warning for that reason,
             and no live region: it renders with the drawer rather than in
             answer to anything the reader just did. */}
             {answeringColleaguesMail && (

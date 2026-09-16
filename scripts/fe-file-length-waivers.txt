@@ -57,7 +57,7 @@
 1728 frontend/src/screens/onboarding-facts.test.tsx
 1917 frontend/src/screens/contactpage.stories.tsx
 1913 frontend/src/screens/analytics.tsx
-1888 frontend/src/design-system/atoms.tsx
+1676 frontend/src/design-system/atoms.tsx
 2062 frontend/src/screens/company360.tsx
 1931 frontend/src/design-system/composed.tsx
 2185 frontend/src/screens/leads.tsx
@@ -86,7 +86,7 @@
 561 frontend/src/screens/worklist.queries.ts
 571 frontend/src/screens/capture-activity.tsx
 564 frontend/src/screens/project360.tsx
-591 frontend/src/screens/adddocument.tsx
+538 frontend/src/screens/adddocument.tsx
 592 frontend/src/screens/rates.tsx
 612 frontend/src/app/account.tsx
 612 frontend/src/design-system/trust.tsx
