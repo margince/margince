@@ -87,7 +87,7 @@ response caching off so every run is a fresh model call), judges each answer, an
 prints the verdict:
 
 ```text
-cold_start: certified (reliability=1.00 score_p50=100 self_judged=false)
+cold_start: certified (reliability=1.00 judge_score_p50=100 self_judged=false)
 ```
 
 `self_judged` is `true` when the candidate and the judge resolved to the **same

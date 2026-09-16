@@ -21,8 +21,8 @@
     "sales",
     "offer"
   ],
-  "score_p50": 100,
-  "score_min": 0,
+  "judge_score_p50": 100,
+  "judge_score_min": 0,
   "latency_p50": 1521,
   "latency_p95": 3389,
   "mean_tokens": 21370,
