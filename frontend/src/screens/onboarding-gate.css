@@ -88,15 +88,21 @@
 .ob-gate-field:has([aria-invalid="true"]):focus-within {
   box-shadow: var(--focus-glow-danger);
 }
+/* The shell above owns the box and the leading inset, so this owns the rest of
+   the inset and the type — the field's own, not the engine's. */
 .ob-gate-input {
   flex: 1;
   min-width: 0;
   border: 0;
   background: none;
   outline: 0;
-  padding: var(--space-3) var(--space-3) var(--space-3) 0;
-  font-family: var(--fontFamilyBody);
-  color: var(--textPrimary);
+  padding-block: var(--inputPaddingY);
+  padding-inline: 0 var(--inputPaddingX);
+  font: inherit;
+  color: inherit;
+}
+.ob-gate-input::placeholder {
+  color: var(--textSecondary);
 }
 .ob-gate-submit {
   flex: none;

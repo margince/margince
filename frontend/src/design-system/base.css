@@ -54,8 +54,8 @@
   border: 1px solid transparent;
   cursor: pointer;
   border-radius: var(--r-control);
-  /* The HEIGHT is the invariant, not the inset: --controlHeight is what a
-     button, a field and a Select trigger agree on, and the vertical padding
+  /* The HEIGHT is the invariant, not the inset: --controlHeight is what every
+     button and the Select trigger agree on, and the vertical padding
      falls out of it — 32 less the 1px border either side less the 20px line
      leaves 5px above and below, which `align-items: center` places. Stated as
      a height, one number moves every control together; stated as padding, the

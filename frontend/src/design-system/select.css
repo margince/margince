@@ -1,19 +1,22 @@
 /* The Margince select — the trigger's face and its portalled popup.
  *
  * The trigger reads `.input` (atoms.css) on top of this: a dropdown and a text
- * input are the same field on screen, so the surface — font, fill, border,
- * padding, focus ring, and the resting depth that makes this one a face rather
- * than a well — is declared once there, and only the layout the button needs
- * lives here.
+ * input are the same FACE on screen, so the surface — fill, border, radius,
+ * focus ring, and the resting depth that makes this one a face rather than a
+ * well — is declared once there, and only the layout the button needs lives
+ * here. The BOX is where the two part company, and atoms.css carries that too:
+ * a trigger is a button that opens a list, not a place to type, so `.input` is
+ * overridden there by `.select-control` back onto --controlHeight.
  *
  * The popup is `position: fixed` and portalled to the body, so nothing in this
  * sheet may assume a positioned ancestor: every coordinate arrives as an inline
  * style from select.tsx, measured against the viewport. */
 
-/* The closed face takes its box from `.input` — height, inset, weight — and
-   adds only the row: the label, whatever marks it, and the chevron. The gap is
-   the control's icon-to-label gap, the same one a button spends between its
-   glyph and its verb. */
+/* The closed face takes its box — height, inset, weight — from the
+   `.select-control` rule in atoms.css, which has to sit beside `.input` to beat
+   it on source order. What is left, and what lives here, is the ROW: the label,
+   whatever marks it, and the chevron. The gap is the control's icon-to-label
+   gap, the same one a button spends between its glyph and its verb. */
 .select-control {
   display: flex;
   align-items: center;

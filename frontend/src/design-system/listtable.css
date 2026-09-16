@@ -112,12 +112,19 @@
   flex: 1;
 }
 
+/* The toolbar's own field shell, and a text field is ONE box: it stands at
+   --inputHeight like the field in a form and like the palette this toolbar's
+   magnifier promises, because 30px here and 40px there was the same control
+   twice. A floor rather than a height, so the box cannot clip what it holds.
+   Nothing on the row has to be re-aligned for it — `.lt-tools` is a centred
+   flex row, so the 32px triggers beside this sit on its middle line, which is
+   the answer: the trigger is a button and does not grow to meet a field. */
 .lt-search {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
   padding: 0 var(--space-3);
-  height: 30px;
+  min-block-size: var(--inputHeight);
   background: var(--bgElevated);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-full);
@@ -128,25 +135,33 @@
   color: var(--accentText);
 }
 
+/* A place to type inside the toolbar's own pill, so it wears the field's type
+ * rather than the engine's: the app reset hands a form control the body FAMILY
+ * and nothing else, which left this box at the browser's default size beside a
+ * `.input` sized by the house. The shell around it owns the box. */
 .lt-search-input {
   border: 0;
   outline: 0;
+  font: inherit;
   background: transparent;
-  color: var(--textPrimary);
+  color: inherit;
   width: 180px;
+}
+.lt-search-input::placeholder {
+  color: var(--textSecondary);
 }
 
 /* Controls a body brings with it (the deals pipeline picker and its stage and
  * company selects). A bare `.input` is a full-width form control; in the
  * toolbar it is one item in a row of pills, so it shrinks to its content and
- * takes the pill silhouette instead of claiming its own line. The HEIGHT is not
- * the toolbar's to choose — a control here is the same control as one in a
- * form, and a 30px trigger beside a 32px one is the misalignment a reader sees
- * without being able to name it. */
+ * takes the pill silhouette instead of claiming its own line. Silhouette only:
+ * the HEIGHT and the INSET are not the toolbar's to choose — a control here is
+ * the same control as one in a form, and a field that is 40px in a form and
+ * something else here is two answers to what a field is. The trigger's own
+ * --controlHeight and the field's --inputHeight both arrive from atoms.css. */
 .lt-tools .select-control.input,
 .lt-tools input.input {
   width: auto;
-  padding-inline: var(--controlPaddingX);
   border-radius: var(--r-full);
   corner-shape: round;
   border-color: var(--borderSubtle);
@@ -344,13 +359,23 @@
   display: block;
   padding: var(--space-1) var(--space-2);
 }
+/* A text field, so it takes the field's box and the field's type — the same
+ * three numbers `.input` spends, spelled here rather than borrowed because this
+ * one draws in the MENU's ground (`--bgPage` reads as a well inside a
+ * `--bgElevated` popup, where the field ground would read as another sheet of
+ * the same paper) and `.input` and this class would tie on specificity. */
 .lt-fsearch-input {
   width: 100%;
-  padding: var(--space-1) var(--space-2);
+  min-block-size: var(--inputHeight);
+  padding: var(--inputPaddingY) var(--inputPaddingX);
+  font: inherit;
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-sm);
   background: var(--bgPage);
-  color: var(--textPrimary);
+  color: inherit;
+}
+.lt-fsearch-input::placeholder {
+  color: var(--textSecondary);
 }
 .lt-fsearch-input:focus {
   outline: 0;

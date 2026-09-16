@@ -1109,35 +1109,36 @@
   border-top: 1px solid var(--borderSubtle);
 }
 
-/* A field and the button that submits it are the same box on screen, so they
-   take the same two numbers: --controlHeight for the box, --controlPaddingX for
-   the inset from its edge to the first character. The inset used to be its own
-   figure, on the argument that a field's text is left-set where a label is
-   centred, and what that bought was a field whose value began in a different
-   place from the verb beside it. Before the shared height existed the two
-   computed 40.25px and 38.25px independently.
+/* A place to TYPE, and the box says so: --inputHeight, with --inputPaddingY
+   and --inputPaddingX for the room around what a reader puts in it. This is the
+   one place a field and the button beside it part company — a verb you hit and
+   a box you fill are not the same object, and the room inside is what says
+   which is which. Every button, and the Select trigger below, stays on
+   --controlHeight.
 
-   `font: inherit` states what the reset already hands a form control, so the
-   weight below has something to sit on: the shorthand resets weight, so a
-   medium declared above it would be thrown away. Medium because a field's value
-   is a component's text and sits beside a glyph as often as not. */
+   `font: inherit` and NOTHING else about type. What is typed here is the
+   reader's own text, not a component's label, so it wears the root face, size
+   and weight exactly as the prose around it does; the medium weight this rule
+   used to add made a reader's answer heavier than the question above it.
+   `color: inherit` for the same reason — which leaves the placeholder, the one
+   run of text in this control that nobody typed, as the only thing here with a
+   tone of its own. */
 .input {
   font: inherit;
-  font-weight: var(--fontWeightMedium);
-  color: var(--textPrimary);
+  color: inherit;
   background: var(--bgElevated);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-control);
-  padding: 0 var(--controlPaddingX);
-  min-block-size: var(--controlHeight);
+  padding: var(--inputPaddingY) var(--inputPaddingX);
+  min-block-size: var(--inputHeight);
   width: 100%;
   outline: none;
   /* Named properties, not `all` — `transition: <time>` alone means
-     `transition-property: all`, which put this field's own height, padding and
-     width on a timer. Most visibly the phone rule below: raising the text to
-     16px animated the FONT SIZE, so tapping a field on an iPhone grew its type
-     over 140ms. What should transition is what a field changes about itself
-     when it is focused, refused or disabled, and that is these four. */
+     `transition-property: all`, which put this field's own height, padding,
+     width and type on a timer: while a phone rule raised the text to 16px,
+     tapping a field on an iPhone GREW its type over 140ms. What should
+     transition is what a field changes about itself when it is focused,
+     refused or disabled, and that is these four. */
   box-shadow: var(--shadow-well);
   transition:
     border-color var(--dur-state) var(--ease-out),
@@ -1145,13 +1146,39 @@
     background-color var(--dur-state) var(--ease-out),
     color var(--dur-state) var(--ease-out);
 }
-/* The Select trigger is the one `.input` that is NOT a well: it holds a closed
-   face rather than a place to type, so it is verb-shaped and takes the surface
-   layer a button takes. Two classes, so it outranks `.input` on specificity
-   rather than on which sheet the bundler emitted first — the same reason
-   `.btn.btn-link` is spelled that way below, and not a theoretical one here:
-   select.css is its own chunk, so the order of the two is a routing decision.
-   In THIS sheet, so the hover and focus rules under it still win on order. */
+/* The placeholder is not a value, it is a prompt for one, so it reads in the
+   secondary ink: a field with nothing in it has to be legibly EMPTY, and at the
+   same tone as its own text it is legibly filled with the wrong words. Both
+   field shapes in one rule, because they are one field — the textarea's own
+   declarations are below and a second placeholder rule beside them would be the
+   same sentence twice, ready to drift. */
+.input::placeholder,
+.textarea::placeholder {
+  color: var(--textSecondary);
+}
+/* The Select trigger is the one `.input` that is NOT a place to type: it holds
+   a closed face, so it is verb-shaped and keeps the CONTROL box every button
+   takes — --controlHeight, the control's own inset, and medium, because a
+   trigger's face is a component's text where a typed value is the reader's. A
+   trigger standing 8px taller than the button next to it is the misalignment
+   the one control size was bought to end.
+
+   In THIS sheet rather than in select.css, which is its own chunk: the order of
+   the two sheets is a bundler routing decision, so a rule that has to beat
+   `.input` cannot stand on it. A single class declared AFTER `.input` here wins
+   on source order and spends no specificity — which matters, because
+   `.lt-perpage .select-control` and `.timeline-filters-row .select-control`
+   re-shape this trigger with two classes and would have tied with a
+   `.input.select-control` spelling. */
+.select-control {
+  min-block-size: var(--controlHeight);
+  padding: 0 var(--controlPaddingX);
+  font-weight: var(--fontWeightMedium);
+}
+/* Nor is it a well: a face rather than a hole, at the resting depth a button
+   takes. Two classes here, for the opposite reason to the rule above — this one
+   has to outrank `.input`'s own `--shadow-well` while still losing to the hover
+   and focus rules below it on source order alone. */
 .input.select-control {
   box-shadow: var(--shadow-rest);
 }
@@ -1217,8 +1244,11 @@
   display: flex;
   align-items: center;
   gap: var(--controlGap);
-  padding-inline: var(--controlPaddingX);
-  min-block-size: var(--controlHeight);
+  /* The shell IS the field, so it takes the field's box rather than a control's:
+     what sits inside it is a place to type, and a shelled field standing shorter
+     than the bare one under it in the same form is the same field twice. */
+  padding-inline: var(--inputPaddingX);
+  min-block-size: var(--inputHeight);
   background: var(--bgElevated);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-sm);
@@ -1264,10 +1294,15 @@
   box-shadow: var(--focus-glow-danger);
 }
 /* Inside the shell the input is only the text: the shell owns the fill, the
-   boundary, the radius, the focus ring and the horizontal padding. */
+   boundary, the radius, the focus ring, the horizontal padding and the HEIGHT.
+   The height is the one the rule used to leave on the input, and what that cost
+   was a shell two pixels taller than the field beside it — the input's own
+   `min-block-size` is a border-box figure and the shell's borders sit outside
+   it, so the two floors stacked instead of agreeing. */
 .field-shell > .input {
   flex: 1;
   min-inline-size: 0;
+  min-block-size: 0;
   border: 0;
   background: none;
   border-radius: 0;
@@ -1300,7 +1335,8 @@
 }
 /* No `select.input` rule: there is no native dropdown in this product. The
    Margince select's trigger is a button that reads `.input` for the same field
-   surface and owns its own layout in select.css. */
+   surface, takes the control's box back from `.select-control` above, and owns
+   its own layout in select.css. */
 
 /* The Checkbox/Radio row: control, then its words, on one line the whole of
    which is the click target.
@@ -1415,11 +1451,12 @@
 }
 
 /* A textarea is the same field as .input, only taller: the two sit next to each
-   other in the same form, so type size, horizontal inset and focus transition
-   are the SAME values, not near ones. Two things differ. `resize` — that is
-   what makes it a textarea. And the WEIGHT: what a reader types here is
-   prose — a note, a draft, a reason — and prose is regular, where a field's
-   one-line value is a component's text and takes medium with the rest of it.
+   other in the same form, so type, inset and focus transition are the SAME
+   values, not near ones. One thing differs, and it is `resize` — that is what
+   makes it a textarea. The weight used to differ too, on the argument that
+   prose is regular where a one-line value is a component's text; the field
+   above now takes the root weight as well, so the pair no longer needs a rule
+   to agree.
 
    `width: 100%` is part of the atom rather than each caller's job. Without it a
    textarea falls back to its intrinsic `cols`, which is narrower than the column
@@ -1427,16 +1464,16 @@
    three that did not (the ask panel, the onboarding company form, the activity
    logger) rendered a short box in a wide field. */
 .textarea {
-  font-family: var(--fontFamilyBody);
-  color: var(--textPrimary);
+  font: inherit;
+  color: inherit;
   background: var(--bgElevated);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-sm);
-  /* The inset from the edge to the first character is the control's, so a
-     textarea and the field above it start their text in the same place. The
-     vertical figure is its own: a box of several lines has no single line for
-     `align-items` to centre, so the room above the first one is stated. */
-  padding: var(--space-2) var(--controlPaddingX);
+  /* The field's own insets, so a textarea and the input above it start their
+     text in the same place. Both figures are stated: a box of several lines has
+     no single line for `align-items` to centre, so the room above the first one
+     is spelled rather than left to a height. */
+  padding: var(--inputPaddingY) var(--inputPaddingX);
   width: 100%;
   outline: none;
   box-shadow: var(--shadow-well);

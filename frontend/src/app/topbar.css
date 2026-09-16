@@ -93,13 +93,21 @@
 .topbar-searchslot {
   width: min(420px, 34vw);
 }
+/* This is a BUTTON that opens the palette, and it is drawn as the field the
+   palette opens with — so it takes the field's box and the field's type, not a
+   control's. A reader reads the shape: something shaped like a search box that
+   stands 8px shorter than the one it opens, in type a rung off it, reads as a
+   different object mid-gesture. `font: inherit` because the app reset hands a
+   button the body FAMILY and nothing else, and root type at the root weight is
+   what a field wears. */
 .topbar-search {
   display: flex;
   align-items: center;
   gap: var(--space-2);
   width: 100%;
-  min-height: var(--controlHeight);
-  padding: 0 var(--space-2) 0 var(--space-3);
+  min-block-size: var(--inputHeight);
+  padding-inline: var(--inputPaddingX);
+  font: inherit;
   /* One more pane on the glass, with the pane's own edge: a field drawn in the
      page's ground sat in the strip as a hole. */
   border: 1px solid var(--paneEdge);
@@ -128,9 +136,13 @@
   outline: var(--focus-ring);
   outline-offset: 1px;
 }
+/* The words in the box are this field's PLACEHOLDER — nobody typed them, and
+   they go the moment the palette opens — so they take the placeholder's tone
+   rather than the ink of a value. */
 .topbar-searchlabel {
   flex: 1;
   min-width: 0;
+  color: var(--textSecondary);
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;

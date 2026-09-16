@@ -104,10 +104,12 @@
  * surface underneath refused to follow. What that cut off was the end of the
  * message being written and the toolbar under it, with nothing left anywhere to
  * scroll to them. A height shrinks; that is the difference. */
+/* Type and ink are the reader's own, exactly as in the plain `.textarea` this
+ * replaces on the same forms, and the inset is the field's. */
 .richtext-input {
-  font-family: var(--fontFamilyBody);
-  color: var(--textPrimary);
-  padding: 9px 11px;
+  font: inherit;
+  color: inherit;
+  padding: var(--inputPaddingY) var(--inputPaddingX);
   outline: none;
   overflow-y: auto;
 }
@@ -119,6 +121,9 @@
 .richtext-input:empty::before,
 .richtext-input:has(> br:only-child)::before {
   content: attr(data-placeholder);
+  /* The same tone every other placeholder in the product takes. Drawn as text
+     rather than by the engine, so nothing would have given it one. */
+  color: var(--textSecondary);
   pointer-events: none;
 }
 

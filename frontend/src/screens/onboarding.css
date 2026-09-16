@@ -410,15 +410,24 @@
   padding-left: var(--space-3);
   color: var(--railIconHover);
 }
+/* The shell above owns the box; this owns the inset and the type. The leading
+   inset stays --space-1 because the `https://` prefix sits immediately before
+   it and the two are one string to read. */
 .ob-core-url input {
   min-width: 0;
   flex: 1;
-  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-1);
+  padding-block: var(--inputPaddingY);
+  padding-inline: var(--space-1) var(--inputPaddingX);
+  font: inherit;
   color: var(--railIconActive);
   border: 0;
   outline: 0;
   background: transparent;
 }
+/* The one placeholder in the product that is NOT --textSecondary, and the
+   reason is the ground: this field draws on the onboarding hero, where the
+   secondary ink is the rail's own and --textSecondary is a dark grey that
+   disappears into it. --railIconHover IS the secondary tone of this surface. */
 .ob-core-url input::placeholder {
   color: var(--railIconHover);
 }
@@ -530,10 +539,14 @@
   display: flex;
   justify-content: space-between;
 }
+/* The field's box and the field's type; the INK is the stage's, because this
+   form draws on the onboarding hero rather than on a card. */
 .ob-manual-input {
   width: 100%;
   margin-top: var(--space-4);
-  padding: var(--space-3);
+  min-block-size: var(--inputHeight);
+  padding: var(--inputPaddingY) var(--inputPaddingX);
+  font: inherit;
   color: var(--railIconActive);
   border: 1px solid var(--railHover);
   border-radius: var(--r-sm);

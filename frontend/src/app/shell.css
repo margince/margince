@@ -1108,13 +1108,14 @@
   height: 16px;
   flex: none;
 }
+/* No type and no ink here: the box IS a `.input` (SearchField `flush`), and the
+   face, size, weight, colour and placeholder tone all come from that one rule.
+   Restating them made the bar a second opinion about what a field looks like. */
 .palette-input input {
   flex: 1;
   border: 0;
   outline: none;
   background: transparent;
-  font-family: var(--fontFamilyBody);
-  color: var(--textPrimary);
 }
 .palette-list {
   max-height: 320px;

@@ -5,7 +5,9 @@
  * border, focus ring, font — is declared once there and only the layout the
  * tokens need lives here. That also means the frame must not restate a height:
  * this control GROWS as tokens wrap, and a fixed height from `.input` would clip
- * the second row. */
+ * the second row. What it keeps is the FLOOR, and the floor is the text field's
+ * — a reader types into this, so an empty one stands exactly as tall as the
+ * plain field above it in the same form. */
 
 .token-input {
   display: flex;
@@ -14,7 +16,7 @@
   gap: var(--space-1);
   /* Overrides .input's single-line height: the whole point is wrapping. */
   height: auto;
-  min-height: var(--controlHeight);
+  min-height: var(--inputHeight);
   cursor: text;
 }
 
@@ -29,9 +31,16 @@
 
 /* The box shares the frame's row with the tokens and takes what is left, with a
  * floor so it stays clickable when the tokens have nearly filled the line. */
+/* `font: inherit` because the platform does not: the app reset hands a form
+ * control the body FAMILY and nothing else, and this box is the one field in the
+ * product that does not wear `.input` itself — the frame around it does. Left
+ * out, a reader's tokens were typed at the engine's own 13.33px inside a field
+ * sized by the house. */
 .token-box {
   flex: 1 1 6rem;
   min-width: 4rem;
+  font: inherit;
+  color: inherit;
   border: 0;
   padding: 0;
   background: transparent;
@@ -39,6 +48,10 @@
      can be answered: the box is a borderless input inside a bordered span, so a
      ring on the box would be drawn in the middle of the field. */
   outline: none;
+}
+
+.token-box::placeholder {
+  color: var(--textSecondary);
 }
 
 /* WCAG 2.4.7. This control took focus on the box above, killed the platform's
