@@ -12953,10 +12953,11 @@ paths:
         deliberate one.
 
         An `undecided` entry is a question, not a decision. The crawl found nothing that named a
-        company (`unevidenced`), or the newest mail from the domain is too old to mint one from
-        today's site (`stale_evidence`). Such a domain is dropped from the retry sweep — a
-        re-crawl cannot make old mail newer — so it stays open until new mail arrives or somebody
-        here answers it. Without this list those rows are invisible, and a company that never
+        company (`unevidenced`), the newest mail from the domain is too old to mint one from
+        today's site (`stale_evidence`), or the name it resolved to is close to a company already
+        here and creating would put one company in the workspace twice (`near_duplicate`). Such a
+        domain is dropped from the retry sweep — a re-crawl reads the same site and reaches the
+        same answer — so it stays open until new mail arrives or somebody here answers it. Without this list those rows are invisible, and a company that never
         appeared looks the same as one nobody ever asked about.
 
         Every human role may read the list; changing an entry demands `company:update`
@@ -24223,12 +24224,14 @@ components:
         reason: { type: string, description: 'One sentence an operator can act on: why this domain was refused, let in, or left open.' }
         source:
           type: string
-          enum: [verdict, heuristic, human, unevidenced, stale_evidence]
+          enum: [verdict, heuristic, human, unevidenced, stale_evidence, near_duplicate]
           description: |
             What decided it, or — for an `undecided` domain — what stopped the machine deciding.
             `human` decisions outrank every machine one. `unevidenced` means nothing the crawl
             found named a company; `stale_evidence` means the newest mail from the domain is too
-            old to mint one from today's site.
+            old to mint one from today's site; `near_duplicate` means the name it resolved to is
+            close to a company already here, and which of them this domain belongs to is a
+            human's call rather than the machine's.
         decided_at: { type: string, format: date-time, description: 'When the decision was recorded. For an `undecided` domain, when the row last moved.' }
         company_id:
           type: string
@@ -33981,7 +33984,55 @@ components:
               entity_type: { type: string, enum: [contact, company, deal, lead, project] }
               entity_id: { type: string, format: uuid }
         source: { type: string }
-        raw: { type: [object, 'null'], additionalProperties: true }
+        raw:
+          type: [object, 'null']
+          additionalProperties: true
+          description: >-
+            Provenance an importer keeps with the record — the source system's own
+            representation of this activity. Stored verbatim and returned by
+            `getActivity`. It is content: a reader who may not read this activity's
+            subject and body does not receive it either, and the retention and
+            noise-redaction paths destroy it with the rest of the text.
+        participants:
+          type: [object, 'null']
+          additionalProperties: false
+          description: >-
+            The message's own address headers, for mail this installation never
+            captured. Email only — any other kind returns
+            `422 code: field_not_valid_for_kind` — and `direction` is required
+            alongside it, because the counterparty is derived from the two together:
+            an inbound message is with its sender, an outbound one with the first
+            recipient who is not the sending mailbox.
+          properties:
+            from: { type: [string, 'null'] }
+            to: { type: array, items: { type: string } }
+            cc: { type: array, items: { type: string } }
+        rfc_message_id:
+          type: [string, 'null']
+          description: >-
+            This message's RFC 5322 Message-ID, angle brackets optional. Email only.
+            It is the identity a later capture of the same message resolves against,
+            so an import that supplies it is recognised rather than duplicated.
+        thread_key:
+          type: [string, 'null']
+          description: >-
+            The conversation this message belongs to. Email only. Defaults to
+            `rfc_message_id` when absent, which files a message under itself — the
+            same root a captured message takes when it starts a thread.
+        ical_uid:
+          type: [string, 'null']
+          description: >-
+            The calendar event's iCal UID. Meeting only. A recurring series shares
+            one UID across every occurrence, so this identifies the series and
+            `ical_instance` identifies the occurrence within it; neither alone
+            identifies a meeting.
+        ical_instance:
+          type: [string, 'null']
+          description: >-
+            Which occurrence of `ical_uid` this is — the occurrence's own original
+            start, as the calendar states it. Meeting only. Required whenever
+            `ical_uid` is given, because a series without an occurrence names every
+            meeting in it at once.
 
     ActivityAudience:
       type: string

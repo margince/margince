@@ -159,6 +159,13 @@ func (s *Store) resolveDomainTriageTx(ctx context.Context, tx pgx.Tx, in Resolve
 	if err != nil {
 		return ResolveDomainTriageResult{}, err
 	}
+	if res.CompanyID == nil {
+		// Held for a human: the name this domain resolved to is close to a
+		// company already here, and which of them it belongs to is their call.
+		// Nothing below has a company to wire, and the disposition stays
+		// pending so the question keeps its place in their queue.
+		return ResolveDomainTriageResult{}, nil
+	}
 	if res.EdgesPlanted, err = plantDomainEmployment(ctx, tx, in.Domain, *res.CompanyID); err != nil {
 		return ResolveDomainTriageResult{}, err
 	}
@@ -215,6 +222,17 @@ func (s *Store) adoptOrCreateTriagedCompany(ctx context.Context, tx pgx.Tx, in R
 	}
 	if match.Decision == DecisionExactCollision {
 		return ResolveDomainTriageResult{CompanyID: &match.CompanyID}, nil
+	}
+	// A HUMAN's verdict is never held below. They were asked the question and
+	// answered it; holding their answer leaves the domain unanswerable, because
+	// nothing rearms the cursor and the one caller who could settle it is
+	// refused without being told why — the rule withholdForStaleEvidence states
+	// for the same reason.
+	if in.Source != DomainSourceHuman {
+		adopted, held, err := s.adoptOrHoldForNameTwin(ctx, tx, in, match, by)
+		if err != nil || held || adopted != nil {
+			return ResolveDomainTriageResult{CompanyID: adopted}, err
+		}
 	}
 
 	companyID, err := createCompany(ctx, tx, match, CompanySpec{

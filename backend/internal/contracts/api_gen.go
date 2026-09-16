@@ -2480,6 +2480,7 @@ func (e BlockedDomainAdmission) Valid() bool {
 const (
 	BlockedDomainSourceHeuristic     BlockedDomainSource = "heuristic"
 	BlockedDomainSourceHuman         BlockedDomainSource = "human"
+	BlockedDomainSourceNearDuplicate BlockedDomainSource = "near_duplicate"
 	BlockedDomainSourceStaleEvidence BlockedDomainSource = "stale_evidence"
 	BlockedDomainSourceUnevidenced   BlockedDomainSource = "unevidenced"
 	BlockedDomainSourceVerdict       BlockedDomainSource = "verdict"
@@ -2491,6 +2492,8 @@ func (e BlockedDomainSource) Valid() bool {
 	case BlockedDomainSourceHeuristic:
 		return true
 	case BlockedDomainSourceHuman:
+		return true
+	case BlockedDomainSourceNearDuplicate:
 		return true
 	case BlockedDomainSourceStaleEvidence:
 		return true
@@ -21289,7 +21292,9 @@ type BlockedDomain struct {
 	// Source What decided it, or — for an `undecided` domain — what stopped the machine deciding.
 	// `human` decisions outrank every machine one. `unevidenced` means nothing the crawl
 	// found named a company; `stale_evidence` means the newest mail from the domain is too
-	// old to mint one from today's site.
+	// old to mint one from today's site; `near_duplicate` means the name it resolved to is
+	// close to a company already here, and which of them this domain belongs to is a
+	// human's call rather than the machine's.
 	Source BlockedDomainSource `json:"source"`
 }
 
@@ -21301,7 +21306,9 @@ type BlockedDomainAdmission string
 // BlockedDomainSource What decided it, or — for an `undecided` domain — what stopped the machine deciding.
 // `human` decisions outrank every machine one. `unevidenced` means nothing the crawl
 // found named a company; `stale_evidence` means the newest mail from the domain is too
-// old to mint one from today's site.
+// old to mint one from today's site; `near_duplicate` means the name it resolved to is
+// close to a company already here, and which of them this domain belongs to is a
+// human's call rather than the machine's.
 type BlockedDomainSource string
 
 // BlockedDomainListResponse defines model for BlockedDomainListResponse.
@@ -26546,24 +26553,45 @@ type CreateActivityRequest struct {
 	Direction       *CreateActivityRequestDirection `json:"direction,omitempty"`
 	DueAt           *time.Time                      `json:"due_at,omitempty"`
 	DurationSeconds *int                            `json:"duration_seconds,omitempty"`
-	Kind            CreateActivityRequestKind       `json:"kind"`
-	Links           *[]struct {
+
+	// IcalInstance Which occurrence of `ical_uid` this is — the occurrence's own original start, as the calendar states it. Meeting only. Required whenever `ical_uid` is given, because a series without an occurrence names every meeting in it at once.
+	IcalInstance *string `json:"ical_instance,omitempty"`
+
+	// IcalUid The calendar event's iCal UID. Meeting only. A recurring series shares one UID across every occurrence, so this identifies the series and `ical_instance` identifies the occurrence within it; neither alone identifies a meeting.
+	IcalUid *string                   `json:"ical_uid,omitempty"`
+	Kind    CreateActivityRequestKind `json:"kind"`
+	Links   *[]struct {
 		EntityId   openapi_types.UUID                   `json:"entity_id"`
 		EntityType CreateActivityRequestLinksEntityType `json:"entity_type"`
 	} `json:"links,omitempty"`
 	MeetingStatus *CreateActivityRequestMeetingStatus `json:"meeting_status,omitempty"`
 	OccurredAt    *time.Time                          `json:"occurred_at,omitempty"`
-	Raw           *map[string]interface{}             `json:"raw,omitempty"`
+
+	// Participants The message's own address headers, for mail this installation never captured. Email only — any other kind returns `422 code: field_not_valid_for_kind` — and `direction` is required alongside it, because the counterparty is derived from the two together: an inbound message is with its sender, an outbound one with the first recipient who is not the sending mailbox.
+	Participants *struct {
+		Cc   *[]string `json:"cc,omitempty"`
+		From *string   `json:"from,omitempty"`
+		To   *[]string `json:"to,omitempty"`
+	} `json:"participants,omitempty"`
+
+	// Raw Provenance an importer keeps with the record — the source system's own representation of this activity. Stored verbatim and returned by `getActivity`. It is content: a reader who may not read this activity's subject and body does not receive it either, and the retention and noise-redaction paths destroy it with the rest of the text.
+	Raw *map[string]interface{} `json:"raw,omitempty"`
 
 	// RemindAt Task only.
 	RemindAt *time.Time `json:"remind_at,omitempty"`
 
 	// RequestActivityId Accept this inbound request for the authenticated human, with activity read and create authority. Task only; agents cannot accept and assignee_id must name the caller when provided. The server verifies source access and copies its links instead of caller-supplied links. Subject and body are honored on creation. Retries return the same personal reminder without changing it. Explicit acceptance can restore an archived unfinished reminder with update authority. Completion settles the source request; automatic reconciliation never restores a reminder.
 	RequestActivityId *openapi_types.UUID `json:"request_activity_id,omitempty"`
-	Source            string              `json:"source"`
-	SourceId          *string             `json:"source_id,omitempty"`
-	SourceSystem      *string             `json:"source_system,omitempty"`
-	Subject           *string             `json:"subject,omitempty"`
+
+	// RfcMessageId This message's RFC 5322 Message-ID, angle brackets optional. Email only. It is the identity a later capture of the same message resolves against, so an import that supplies it is recognised rather than duplicated.
+	RfcMessageId *string `json:"rfc_message_id,omitempty"`
+	Source       string  `json:"source"`
+	SourceId     *string `json:"source_id,omitempty"`
+	SourceSystem *string `json:"source_system,omitempty"`
+	Subject      *string `json:"subject,omitempty"`
+
+	// ThreadKey The conversation this message belongs to. Email only. Defaults to `rfc_message_id` when absent, which files a message under itself — the same root a captured message takes when it starts a thread.
+	ThreadKey *string `json:"thread_key,omitempty"`
 }
 
 // CreateActivityRequestDirection defines model for CreateActivityRequest.Direction.

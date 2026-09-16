@@ -282,5 +282,27 @@ func LogActivityInputFrom(req crmcontracts.CreateActivityRequest) (LogActivityIn
 		}
 		in.Body = &normalized
 	}
+	if err := importedProvenanceFrom(req, &in); err != nil {
+		return LogActivityInput{}, err
+	}
 	return in, nil
+}
+
+// importedProvenanceFrom takes what an importer keeps with a record it carried
+// across: the source system's own copy, how long it took, and the message's own
+// identity and addresses.
+//
+// All of it was accepted on the wire and dropped before the store, which is the
+// defect this path closes.
+func importedProvenanceFrom(req crmcontracts.CreateActivityRequest, in *LogActivityInput) error {
+	in.Raw = req.Raw
+	if req.DurationSeconds != nil {
+		// The contract promises field_not_valid_for_kind for this, and only the
+		// two kinds that occupy a span of time have a duration to state.
+		if in.Kind != KindMeeting && in.Kind != string(crmcontracts.ActivityKindCall) {
+			return &KindFieldError{Field: "duration_seconds", Only: "a meeting or call"}
+		}
+		in.DurationSeconds = req.DurationSeconds
+	}
+	return mailIdentityFrom(req, in)
 }
