@@ -246,6 +246,37 @@ const PHONE_TAG = "uat-phone";
 const DESKTOP = { width: 1024, height: 720 };
 const PHONE = { width: 390, height: 844 };
 
+// What counts as painted. The canvas is the usual answer, but `Modal`
+// (src/design-system/atoms.tsx) returns `createPortal(…, document.body)` — a
+// dialog opened from inside a collapsed container would otherwise be hidden
+// along with it — so a drawer story renders FULLY while leaving
+// `#storybook-root` empty, and reading the canvas alone called four such
+// stories blank.
+//
+// The dialog ROLES and nothing wider: an overflow menu and a toast portal to
+// the body too, and either one would let a story that never drew its subject
+// pass here as rendered.
+const PAINTED = '#storybook-root > *, [role="dialog"], [role="alertdialog"]';
+// Enough of a node to recognise it by, in a manifest read without the browser.
+const DUMP_CHARS = 600;
+
+// What the deadline actually saw. A verdict that now spans two places has to
+// report both, or the next reader cannot tell an empty canvas from a dialog
+// that opened and never became visible.
+async function paintCensus(page) {
+  return await page.evaluate((limit) => {
+    const clip = (el) => el.outerHTML.slice(0, limit);
+    const root = document.querySelector("#storybook-root");
+    const dialogs = [
+      ...document.querySelectorAll('[role="dialog"], [role="alertdialog"]'),
+    ];
+    return [
+      `#storybook-root: ${root ? clip(root) : "absent"}`,
+      `dialogs (${dialogs.length}): ${dialogs.map(clip).join(" | ") || "none"}`,
+    ].join("\n");
+  }, DUMP_CHARS);
+}
+
 const wantImportPaths = new Set(
   [...storyFiles].map((p) => `./${p.replace(/^frontend\//, "")}`),
 );
@@ -322,10 +353,12 @@ if (storyFiles.size > 0) {
     try {
       // Large histories can still be rendering after the network is idle.
       // Keep a finite visibility deadline separate from network settling.
-      await page.waitForSelector("#storybook-root > *", { timeout: 30_000 });
+      await page.waitForSelector(PAINTED, { timeout: 30_000 });
     } catch {
       rendered = false;
-      errors.push("#storybook-root had no visible content within the render deadline");
+      errors.push(
+        `the story painted neither a visible #storybook-root child nor an open dialog within the render deadline — ${await paintCensus(page)}`,
+      );
     }
     // Let any play() interaction settle before the frame.
     //
