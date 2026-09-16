@@ -2227,6 +2227,7 @@ export const en = {
   "tags.removeTag": "Remove {name}",
   "tags.removeTitle": "Remove {name} from this record?",
   "tags.addedBy": "Added by {who} · {when}",
+  "tags.addedByUndated": "Added by {who}",
   "tags.addedOn": "Added {when}",
   "tags.visibleWorkspaceWide": "Tag names are visible across the company.",
   "tags.removeFromRecord": "Remove from this record",

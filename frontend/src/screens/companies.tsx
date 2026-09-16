@@ -1898,11 +1898,18 @@ function CompanyOverviewStack({
         titleAction={
           view && (
             <>
-              <span className="t-caption">
-                {t("contact.brief.updatedAt", {
-                  when: formatDate(view.as_of, locale, recordZone),
-                })}
-              </span>
+              {/* The reading's own date, and only where the payload carries a
+                  date this can read. A server one release out of step answers
+                  the 360 without `as_of`, and Intl refuses an unparseable
+                  value by throwing, which took the whole record down over a
+                  line that only qualifies the head. */}
+              {!Number.isNaN(Date.parse(view.as_of)) && (
+                <span className="t-caption">
+                  {t("contact.brief.updatedAt", {
+                    when: formatDate(view.as_of, locale, recordZone),
+                  })}
+                </span>
+              )}
               {/* The 360 call is a composition read off this account's own
                   records rather than model prose, so its claim of authorship
                   is the deterministic one — the same distinction the sources

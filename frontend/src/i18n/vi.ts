@@ -2124,6 +2124,7 @@ export const vi = {
   "tags.removeTag": "Gỡ {name}",
   "tags.removeTitle": "Gỡ {name} khỏi bản ghi này?",
   "tags.addedBy": "Được thêm bởi {who} · {when}",
+  "tags.addedByUndated": "Được thêm bởi {who}",
   "tags.addedOn": "Đã thêm {when}",
   "tags.visibleWorkspaceWide": "Tên tag hiển thị cho toàn bộ tổ chức.",
   "tags.removeFromRecord": "Gỡ khỏi bản ghi này",

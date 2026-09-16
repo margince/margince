@@ -620,9 +620,7 @@ describe("company view — what changed since the last visit", () => {
     });
     renderWork(three60);
 
-    expect(
-      screen.getByText("3 new items since your last visit."),
-    ).toBeTruthy();
+    expect(screen.getByText("3 new items since your last visit.")).toBeTruthy();
     // The decision count has ONE display, the header chip, which counts the
     // approvals section. This block used to render its own count off
     // since_last_visit.pending_proposals, and the two disagreed on screen.

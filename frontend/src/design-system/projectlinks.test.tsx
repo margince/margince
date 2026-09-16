@@ -34,7 +34,9 @@ function draw(adapter: Partial<ProjectLinksAdapter> = {}, bare = false) {
 describe("ProjectLinks", () => {
   it("says how a link comes to exist when there are none", () => {
     draw();
-    expect(screen.getByText("No projects yet")).toBeTruthy();
+    // One quiet line, no display heading over it: as a pane of its own the
+    // section already carries its name in the head.
+    expect(screen.queryByText("No projects yet")).toBeNull();
     // The instructional line, not a bare "nothing here": a reader who cannot
     // see any is the reader who needs telling how one appears.
     expect(screen.getByText(/body of work a deal is about/)).toBeTruthy();
