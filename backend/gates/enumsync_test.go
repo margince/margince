@@ -111,12 +111,17 @@ var enumBindings = map[string]struct{ pkgDir, typeName string }{
 	"retention_policy.action":         {"internal/contracts", "RetentionAction"},
 	"saved_view.resource":             {"internal/contracts", "SavedViewResource"},
 
-	// One vocabulary, six columns. Every derived narrative row records whether
-	// a human template or a model wrote it, and WrittenBy is the word the
-	// contract uses for that everywhere — so a seventh narrative table gets the
-	// binding for free by naming its column the same way, and widening the
-	// contract without widening six CHECKs fails here rather than at the first
-	// insert of the new value.
+	// One vocabulary, six columns. Every derived narrative row records whether a
+	// human template or a model wrote it, and WrittenBy is the word the contract
+	// uses for that everywhere, so widening the contract without widening all
+	// six CHECKs fails here rather than at the first insert of the new value.
+	//
+	// A seventh narrative table needs its OWN line: this registry is keyed by
+	// table.column and has no wildcard, so reusing the vocabulary is free and
+	// being bound to it is not. That is the hand-kept cost #1496 names, and it
+	// is worth paying here for the reason the block above gives — which pairs
+	// are real is a judgement, and a wildcard would bind the next column called
+	// generated_by whether or not it holds this vocabulary.
 	"company_brief.generated_by":      {"internal/contracts", "WrittenBy"},
 	"company_dossier.generated_by":    {"internal/contracts", "WrittenBy"},
 	"company_growth_fit.generated_by": {"internal/contracts", "WrittenBy"},
