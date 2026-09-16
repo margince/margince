@@ -329,3 +329,27 @@ it rather than relying on the bake file staying correct.
   link is never derived from a request `Host`.
 - **AI keys fail closed:** a missing/invalid provider key disables the bound AI
   lanes but leaves core CRUD + auth working.
+- **An MCP App view that misses the api's boot stays missing until the api
+  restarts.** The api reads those documents from the web tier once at startup,
+  and there is no channel for announcing a later arrival — so a web tier that was
+  down at that moment leaves a running api advertising a short set for the life
+  of the process. It says so at boot, naming the views it is without and the
+  restart, and `margince_mcp_app_view_held{uri=…}` reports the same per view.
+
+  The lever, when the api cannot reliably reach the web tier at boot, is
+  `--mcp-apps-base-url` / `MARGINCE_MCP_APPS_BASE_URL` — a CDN origin is a
+  supported value. Two things about it are worth knowing before you reach for it,
+  because both are easy to get wrong:
+
+  - **It replaces a dependency; it does not remove one.** The web tier becomes the
+    CDN, its DNS and this installation's egress. That is better for some
+    deployments and worse for others, and absent for none.
+  - **The value must be API-reachable, not publicly reachable.** A container with
+    no egress cannot use a public CDN, and that asymmetry is the whole reason this
+    setting exists: the default is the web tier precisely because an air-gapped
+    or egress-restricted installation has to work out of the box.
+
+  The scheme must be `https` unless the host is a loopback or private address,
+  and a cleartext hostname is refused at boot naming the setting rather than
+  accepted and then refused by every fetch. Full flag reference:
+  [configuration.md](reference/configuration.md).
