@@ -277,10 +277,10 @@ function Triage({
         </div>
         <AboutLine item={lead} />
         <WorklistRow
-          // Personal ordering is the queue's, not the focus projection's. No
-          // rank either: the head says where the row stands, in words.
+          // Personal ordering is the queue's, not the focus projection's.
           allowPin={false}
           item={lead}
+          position={at + 1}
           owner=""
           onOpenEmail={onOpenEmail}
           onReview={() =>

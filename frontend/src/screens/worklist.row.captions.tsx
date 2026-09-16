@@ -77,11 +77,7 @@ export function aboutRecord(
 export function touchOf(
   item: WorklistItem,
   acts: "triage" | undefined,
-): WorklistItem["contact"] extends infer C
-  ? C extends { touch?: infer T }
-    ? T
-    : never
-  : never {
+): NonNullable<WorklistItem["contact"]>["touch"] | undefined {
   return acts === "triage" ? undefined : item.contact?.touch;
 }
 

@@ -95,8 +95,10 @@
   padding-block-start: var(--space-2);
   border-block-start: 1px solid var(--borderSubtle);
 }
-/* The kind of work is the head's label, and the message's own by-line says
-   again whose message it is and when — both already on the card, each once. */
+/* The head says where the row stands and why, in words, and the message's
+   own by-line says again whose it is and when — each already on the card
+   once, so the rank tile, the kind and the by-line draw nothing here. */
+.brief-triage-lead .worklist-rank,
 .brief-triage-lead .worklist-row-kind,
 .brief-triage-lead .emailentry__lead {
   display: none;
