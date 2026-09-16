@@ -57,7 +57,6 @@ gates/manifestdigest_test.go#var manifestDigestEncoding
 gates/modulepoolsharing_test.go#var poolConstructors
 gates/netguardparity_test.go#func TestPublishedReservedNetsMatchTheGuard
 gates/outboundanonymity_test.go#func isDefaultClient
-gates/preferencecentrewriters_test.go#func TestThePreferenceCentreResolvesOnePrimaryAddress
 gates/replayscope_test.go#var replayScopeConsts
 gates/restrictedreaders_test.go#var activityReaderScope
 gates/tableownerregistry_test.go#var tableOwners
