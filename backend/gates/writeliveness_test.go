@@ -92,7 +92,8 @@ var livenessMarkers = map[string]bool{
 	"EnsureWritableLive": true, "EnsureVisibleLive": true, "HoldWritableLive": true,
 	"LockSubjectLive": true, "EnsureActivityVisibleLive": true,
 	"EnsureActivityContentVisibleLive": true, "EnsureSignalVisibleLive": true,
-	"EnsureLinkTarget": true, "EnsureActivityWritable": true, "EnsureActivityWritableIn": true,
+	"EnsureLinkTarget": true, "EnsureAttachTarget": true,
+	"EnsureActivityWritable": true, "EnsureActivityWritableIn": true,
 	"LiveOnly": true, "ApplyGuarded": true, "ApplyWithVersion": true,
 	// identity's own spelling of the same refusal, rendered into SQL: a seat
 	// that is archived, suspended or deactivated is not a live member.
