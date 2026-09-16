@@ -252,7 +252,7 @@ The engine must distinguish an **answer** (park — a human can act on it) from 
 the question could not be asked): getting that backwards silently kills legitimate mail. Every
 category ships **enforcing**; `consent.authorization_modes` can move one to `observe` or `warn`, an
 operator's rollback lever rather than the shipped posture. It buys less than it looks: the older
-purpose-key gate decides only where **no** recipient's category is enforced, and eight reason codes
+purpose-key gate decides only where **no** recipient's category is enforced, and nine reason codes
 deny in every mode whatever the setting says.
 
 ### Confirm-first for agents; a human's own action is its own approval

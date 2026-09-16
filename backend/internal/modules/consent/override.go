@@ -159,9 +159,8 @@ func (s *Store) allowAdmittedTx(
 
 	// ON CONFLICT DO NOTHING would be wrong here too: a second vouch is a
 	// second occasion somebody decided to overrule the engine, possibly for a
-	// different reason, and liveOverride (override_read.go) takes the
-	// strongest live row by recorded_at, so recording both is the honest
-	// answer.
+	// different reason, and liveOverride (override_read.go) answers with the
+	// strongest live row by AUTHORITY, so recording both is the honest answer.
 	var overrideID ids.UUID
 	if err = tx.QueryRow(ctx, `
 		INSERT INTO communication_override
@@ -213,14 +212,17 @@ type RevokeOverrideInput struct {
 	Reason string
 }
 
-// RevokeOverride revokes one standing override, if this caller outranks the
-// level that recorded it.
+// RevokeOverride revokes one standing override, if this caller's level may
+// revoke the one that recorded it.
 //
-// The shape mirrors Lift exactly: same subject reach, same authority source,
-// same write shape, against communication_override rather than
-// communication_suppression. The one rule is unchanged —
-// commsauthz.AuthorityLevel.CanOverrule — and this door asks that question
-// once rather than re-answering it.
+// The shape mirrors Lift in subject reach, authority source and write shape,
+// against communication_override rather than communication_suppression. The one
+// difference from Lift is the rule it asks: commsauthz.AuthorityLevel.CanRevoke,
+// not CanOverrule — a vouch is the one decision an admin may take back from a
+// peer admin, because admin is the top human authority and nothing higher exists
+// to reach an admin-recorded override. The suppression Lift keeps CanOverrule on
+// purpose: a stop erring toward not-sending is the safe direction, so an
+// admin-recorded stop needs no admin-revokes-admin escape.
 func (s *Store) RevokeOverride(ctx context.Context, in RevokeOverrideInput) error {
 	sub, level, err := admitRevokeOverride(ctx, in)
 	if err != nil {
@@ -289,9 +291,13 @@ func (s *Store) revokeOverrideAdmittedTx(
 		return fmt.Errorf("consent: reading the override: %w", err)
 	}
 
-	if !level.CanOverrule(commsauthz.AuthorityLevel(decided)) {
+	// CanRevoke, not CanOverrule: taking back a vouch is the one place an admin
+	// may act on a peer admin's row, because admin is the top human authority and
+	// no higher seat exists to reach an admin-recorded override. A subject-level
+	// decision stays beyond every seat — CanRevoke keeps that square closed.
+	if !level.CanRevoke(commsauthz.AuthorityLevel(decided)) {
 		return fmt.Errorf(
-			"this override was recorded at a level you do not outrank: %w", apperrors.ErrPermissionDenied)
+			"this override was recorded at a level you may not revoke: %w", apperrors.ErrPermissionDenied)
 	}
 
 	if _, err = tx.Exec(ctx, `
@@ -317,20 +323,23 @@ func (s *Store) revokeOverrideAdmittedTx(
 		return err
 	}
 	return storekit.EmitEvent(ctx, tx, auditID, sub.id,
-		overrideLiftedPayload(in.OverrideID, level))
+		overrideLiftedPayload(in.OverrideID, commsauthz.AuthorityLevel(decided), level))
 }
 
-// overrideLiftedPayload names which override was revoked and at whose
-// authority. It carries neither the category the override covered nor the
-// reason either party gave: a consumer wanting the category can read the
-// still-live communication_override rows for this contact, and the words
-// belong to the contacts who wrote them — the same restraint
-// suppressionLiftedPayload keeps.
+// overrideLiftedPayload names which override was revoked, at which authority it
+// was recorded, and at whose it was taken back. It carries BOTH levels so a
+// subscriber can see the revoker was allowed to overrule the recorder without
+// joining a row that no longer says so — the same pairing
+// suppressionLiftedPayload keeps. It still carries neither the category the
+// override covered nor the reason either party gave: a consumer wanting the
+// category reads the still-live communication_override rows for this contact,
+// and the words belong to the contacts who wrote them.
 func overrideLiftedPayload(
-	revoked ids.UUID, by commsauthz.AuthorityLevel,
+	revoked ids.UUID, recordedAtLevel, by commsauthz.AuthorityLevel,
 ) crmcontracts.PublicEventConsentOverrideLifted {
 	return crmcontracts.PublicEventConsentOverrideLifted{
-		OverrideId:     openapi_types.UUID(revoked),
-		RevokedByLevel: string(by),
+		OverrideId:      openapi_types.UUID(revoked),
+		RecordedAtLevel: string(recordedAtLevel),
+		RevokedByLevel:  string(by),
 	}
 }

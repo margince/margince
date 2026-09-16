@@ -319,6 +319,51 @@ func TestAdminRevokesAUserOverride(t *testing.T) {
 	}
 }
 
+// TestAdminRevokesAnAdminOverride is the case CanOverrule refused and CanRevoke
+// admits: admin is the top human authority, so an admin-recorded vouch has no
+// higher seat to take it back — leaving it revocable only by admin, or by
+// nobody at all. Mirrors TestAdminRevokesAUserOverride, recorded one tier up.
+func TestAdminRevokesAnAdminOverride(t *testing.T) {
+	e := setupChannelConsent(t)
+	row := plantOverride(t, e, e.contact, string(commsauthz.LevelAdmin))
+
+	adminCtx := writerCtxAt(e.ws, ids.NewV7(), "admin")
+	if err := e.store.RevokeOverride(adminCtx, RevokeOverrideInput{
+		ContactID: e.contact, OverrideID: row, Reason: "the buyer changed their mind",
+	}); err != nil {
+		t.Fatalf("an admin revoking an admin's override: %v", err)
+	}
+	if overrideStillLive(t, e, row) {
+		t.Error("an admin-recorded override is still live after an admin revoked it")
+	}
+}
+
+// TestAUserCannotRevokeAnAdminOverride is the laundering guard's non-merge twin:
+// a rep never reaches an admin-recorded row, so the only way an admin vouch
+// comes back is an admin taking it back. CanRevoke adds admin-revokes-admin
+// without lowering the floor for a rep.
+func TestAUserCannotRevokeAnAdminOverride(t *testing.T) {
+	e := setupChannelConsent(t)
+	own := ids.New[ids.ContactKind]()
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO contact (id, full_name, source, captured_by, visibility, owner_id)
+		VALUES ($1, 'Their Own Contact', 'test', 'human:x', 'workspace', $2)`,
+		own, e.user); err != nil {
+		t.Fatal(err)
+	}
+	row := plantOverride(t, e, own, string(commsauthz.LevelAdmin))
+
+	err := e.store.RevokeOverride(boundedRepCtx(e.ws, e.user), RevokeOverrideInput{
+		ContactID: own, OverrideID: row, Reason: "I disagree with the admin's vouch",
+	})
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("a rep revoking an admin's override answered %v, want ErrPermissionDenied", err)
+	}
+	if !overrideStillLive(t, e, row) {
+		t.Error("a refused revoke took back the admin's row anyway")
+	}
+}
+
 // plantOverride writes a row at a named level, bypassing the write door so a
 // revoke test can start from a known level without depending on Allow's own
 // behaviour — the same reason plantSuppression bypasses Suppress for the lift

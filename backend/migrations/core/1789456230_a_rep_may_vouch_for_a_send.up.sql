@@ -20,8 +20,12 @@ CREATE TABLE communication_override (
     revoked_at timestamptz,
     -- Merge provenance, mirroring communication_suppression.carried_from.
     carried_from uuid REFERENCES communication_override(id) ON DELETE SET NULL,
+    -- EXACTLY ONE subject, never both: the Allow door is contact-only and a
+    -- carry sets exactly one of contact_id/lead_id, so a row naming both is a
+    -- writer bug this refuses at the table rather than letting liveOverride's
+    -- (contact_id = $1 OR lead_id = $1) match a subject it was never meant to.
     CONSTRAINT communication_override_names_a_target
-        CHECK (contact_id IS NOT NULL OR lead_id IS NOT NULL),
+        CHECK ((contact_id IS NULL) <> (lead_id IS NULL)),
     CONSTRAINT communication_override_decided_by_level
         CHECK (decided_by_level = ANY (ARRAY['user'::text, 'admin'::text])),
     CONSTRAINT communication_override_category

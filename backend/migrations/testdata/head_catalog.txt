@@ -1884,7 +1884,7 @@ public.communication_override.communication_override_category CHECK ((category =
 public.communication_override.communication_override_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
 public.communication_override.communication_override_decided_by_level CHECK ((decided_by_level = ANY (ARRAY['user'::text, 'admin'::text])))
 public.communication_override.communication_override_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES lead(id) ON DELETE CASCADE
-public.communication_override.communication_override_names_a_target CHECK (((contact_id IS NOT NULL) OR (lead_id IS NOT NULL)))
+public.communication_override.communication_override_names_a_target CHECK (((contact_id IS NULL) <> (lead_id IS NULL)))
 public.communication_override.communication_override_pkey PRIMARY KEY (id)
 public.communication_override.contact_id uuid gen=- def=-
 public.communication_override.decided_by_level text NOT NULL gen=- def=-

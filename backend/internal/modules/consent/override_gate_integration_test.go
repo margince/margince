@@ -49,6 +49,65 @@ func (e *resolveEnv) seedOverride(t *testing.T, category string, revoked bool) i
 	return id
 }
 
+// seedOverrideAt records one live override at a named level and recorded_at, so
+// a test can pit authority against recency directly — seedOverride's user-level,
+// now() default cannot.
+func (e *resolveEnv) seedOverrideAt(t *testing.T, category, level string, recordedAt time.Time) ids.UUID {
+	t.Helper()
+	id := ids.NewV7()
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO communication_override
+		    (id, contact_id, category, reason, decided_by_level, captured_by, recorded_at)
+		VALUES ($1, $2, $3, 'seeded for the ordering test', $4, 'human:x', $5)`,
+		id, e.contact, category, level, recordedAt); err != nil {
+		t.Fatalf("seeding a %s-level override: %v", level, err)
+	}
+	return id
+}
+
+// TestTheStrongestOverrideWinsEvenWhenAWeakerOneIsNewer is the read half of the
+// merge's two-live-rows design: a survivor can hold its own weaker vouch and a
+// stronger one carried onto it, and liveOverride must answer with the STRONGEST
+// by authority — not whichever landed last. A weaker user row recorded after a
+// stronger admin row must not displace it.
+func TestTheStrongestOverrideWinsEvenWhenAWeakerOneIsNewer(t *testing.T) {
+	e := setupResolve(t)
+	e.seedPurpose(t, "newsletter", "marketing")
+	req := commsauthz.Request{LegacyPurposeKey: "newsletter"}
+
+	admin := e.seedOverrideAt(t, "marketing", "admin", time.Now().Add(-time.Hour))
+	e.seedOverrideAt(t, "marketing", "user", time.Now())
+
+	got := e.decide(t, req)
+	if got.Verdict != commsauthz.VerdictAllow {
+		t.Fatalf("verdict = %q (%s), want allow: a live override should vouch for this send",
+			got.Verdict, got.ReasonCode)
+	}
+	if got.OverrideID != admin {
+		t.Errorf("override id = %s, want the admin row %s: authority wins over recency",
+			got.OverrideID, admin)
+	}
+}
+
+// TestAStrongerSurvivorIsNotDisplacedByAWeakerCarry is the mirror: when the
+// stronger row is also the more recent, the answer is still the stronger — so
+// the ordering is deterministic by authority in both recency directions, not an
+// artefact of which case happens to align with recorded_at.
+func TestAStrongerSurvivorIsNotDisplacedByAWeakerCarry(t *testing.T) {
+	e := setupResolve(t)
+	e.seedPurpose(t, "newsletter", "marketing")
+	req := commsauthz.Request{LegacyPurposeKey: "newsletter"}
+
+	e.seedOverrideAt(t, "marketing", "user", time.Now().Add(-time.Hour))
+	admin := e.seedOverrideAt(t, "marketing", "admin", time.Now())
+
+	got := e.decide(t, req)
+	if got.OverrideID != admin {
+		t.Errorf("override id = %s, want the admin row %s: the stronger vouch answers",
+			got.OverrideID, admin)
+	}
+}
+
 // A live user-level override flips a no-evidence refusal for its category.
 func TestAnOverrideFlipsANoEvidenceRefusal(t *testing.T) {
 	e := setupResolve(t)

@@ -73,7 +73,8 @@ The engine answers the second. It resolves a **category** from what the send act
   enforced, so flipping one category buys less than it looks. Nine reason codes are absolute
   (`absoluteDenials` in `commsauthz`) and deny in every mode whatever the setting says: the four
   above, an unconfirmed double opt-in, a recipient that resolves to no single subject, a consent
-  withdrawal, and a jurisdiction's advertising frequency cap.
+  withdrawal, a jurisdiction's advertising frequency cap, and a request whose claimed category
+  contradicts what the record resolves it to.
 
 Marketing consent still works the way it always did, and the round trip is what proves it: a
 double-opt-in purpose needs a confirmed `consent_event`, completed **only by the data subject**, by

@@ -57335,7 +57335,7 @@ type ServerInterface interface {
 	// Record a standing vouch that a machine-level refusal for one category may be overruled.
 	// (POST /contacts/{id}/consent/allow)
 	AllowContact(w http.ResponseWriter, r *http.Request, id Id)
-	// Take back a standing override, if you outrank the level that recorded it.
+	// Take back a standing override, if your level may revoke the one that recorded it.
 	// (POST /contacts/{id}/consent/allow/{overrideId}/revoke)
 	RevokeOverride(w http.ResponseWriter, r *http.Request, id Id, overrideId openapi_types.UUID)
 	// Mail this contact a single-use link to see what is held about them, correct it, and answer on marketing.
@@ -60080,7 +60080,7 @@ func (_ Unimplemented) AllowContact(w http.ResponseWriter, r *http.Request, id I
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Take back a standing override, if you outrank the level that recorded it.
+// Take back a standing override, if your level may revoke the one that recorded it.
 // (POST /contacts/{id}/consent/allow/{overrideId}/revoke)
 func (_ Unimplemented) RevokeOverride(w http.ResponseWriter, r *http.Request, id Id, overrideId openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)

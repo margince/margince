@@ -2689,6 +2689,7 @@ components:
         was given to.
       required:
         - override_id
+        - recorded_at_level
         - revoked_by_level
       properties:
         override_id:
@@ -2698,6 +2699,13 @@ components:
             Which override was revoked. Without it a consumer holding several
             overrides for one contact cannot tell which one this event
             describes.
+        recorded_at_level:
+          type: string
+          description: >-
+            The authority the override was originally recorded at (user |
+            admin). Paired with revoked_by_level so an auditor can see the
+            second was allowed to take back the first without joining a row
+            that no longer says so.
         revoked_by_level:
           type: string
           description: The authority that revoked it (user | admin).

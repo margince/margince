@@ -1110,6 +1110,9 @@ type PublicEventConsentOverrideLifted struct {
 	// OverrideId Which override was revoked. Without it a consumer holding several overrides for one contact cannot tell which one this event describes.
 	OverrideId openapi_types.UUID `json:"override_id"`
 
+	// RecordedAtLevel The authority the override was originally recorded at (user | admin). Paired with revoked_by_level so an auditor can see the second was allowed to take back the first without joining a row that no longer says so.
+	RecordedAtLevel string `json:"recorded_at_level"`
+
 	// RevokedByLevel The authority that revoked it (user | admin).
 	RevokedByLevel string `json:"revoked_by_level"`
 }

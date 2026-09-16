@@ -10923,10 +10923,13 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Take back a standing override, if you outrank the level that recorded it.
+         * Take back a standing override, if your level may revoke the one that recorded it.
          * @description Revokes one `communication_override`. **You may revoke a vouch recorded below your
-         *     level, never at or above it** — a rep's override is revocable by an admin and not by
-         *     another rep, the same rule `liftSuppression` states for a stop.
+         *     level; a rep cannot revoke another rep's, but an admin may revoke another admin's** —
+         *     admin is the top human authority, so an admin vouch has no higher seat to take it back
+         *     and would otherwise be unrevocable. This is the one place the rule differs from
+         *     `liftSuppression`, which keeps the stricter below-your-level test because a stop erring
+         *     toward not-sending is the safe direction.
          *
          *     A row already revoked, belonging to another subject, or never in existence all answer
          *     `404` alike: a caller learns nothing about rows they would not have been allowed to

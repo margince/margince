@@ -45,11 +45,20 @@ import (
 
 // CarryOverridesTx implements contacts.StopCarrier.
 //
-// IDEMPOTENT ON CATEGORY, gated on authority exactly as CarryStopsTx is: a
-// survivor already holding a live override for a category keeps the STRONGER
-// of its own and the retiring subject's, never a second row of the same
-// category — two live rows would leave a rep's reason and an unrelated rep's
-// reason both on file for a decision that only ever had one live answer.
+// GATED ON AUTHORITY, exactly as CarryStopsTx is: the NOT EXISTS below carries a
+// retiring row only when the survivor holds nothing of that category at least as
+// strong, so a weaker survivor never keeps a stronger vouch out.
+//
+// TWO LIVE ROWS OF ONE CATEGORY ARE ALLOWED HERE, and this is where it differs
+// from a stop. When the survivor already holds a WEAKER vouch and a STRONGER one
+// is carried in, both stay live: this carry never revokes the survivor's own
+// row, because a merge must not take back a vouch THIS record's own rep is still
+// standing behind — the same restraint CarryStopsTx keeps for a stop. It does
+// not have to: unlike a stop, where a second lift could silently re-enable mail,
+// an override only ever ENABLES, and liveOverride answers with the strongest by
+// authority regardless of recency. Revoking the strongest simply falls back to
+// the next vouch, which is still a vouch. So the honest record is both rows, and
+// the read — not a destructive write at merge time — decides which one speaks.
 //
 // THE AUTHORITY — AND THE REASON — TRAVEL. RevokeOverride only lets a caller
 // take back a row recorded at a level they outrank. If a merge downgraded a
