@@ -52,7 +52,7 @@
 1442 frontend/src/app/agentrail.test.tsx
 1505 frontend/src/screens/onboarding-conversation/confirm-card.tsx
 1527 frontend/src/design-system/listtable.test.tsx
-1571 frontend/src/app/agentrail.tsx
+1519 frontend/src/app/agentrail.tsx
 1650 frontend/src/design-system/listtable.tsx
 1728 frontend/src/screens/onboarding-facts.test.tsx
 1917 frontend/src/screens/contactpage.stories.tsx
@@ -80,7 +80,6 @@
 527 frontend/src/screens/importflow.ts
 506 frontend/src/screens/contractlifecycle.tsx
 531 frontend/src/screens/voice-versions.tsx
-533 frontend/src/screens/companywork.tsx
 542 frontend/src/screens/leadpresentation.tsx
 547 frontend/src/screens/connected-agents.tsx
 547 frontend/src/screens/scheduledsends.tsx

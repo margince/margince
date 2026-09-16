@@ -611,6 +611,7 @@ public.ai_call.ai_call_context_scopes_check CHECK ((context_scopes <@ ARRAY['ide
 public.ai_call.ai_call_context_tokens_estimate_check CHECK ((context_tokens_estimate >= 0))
 public.ai_call.ai_call_kind_check CHECK ((kind = ANY (ARRAY['completion'::text, 'embedding'::text])))
 public.ai_call.ai_call_pkey PRIMARY KEY (id)
+public.ai_call.ai_call_secrets_removed_check CHECK ((secrets_removed >= 0))
 public.ai_call.ai_call_source_check CHECK ((served_identity_source = ANY (ARRAY['response'::text, 'echo'::text, 'configured'::text])))
 public.ai_call.attempt integer NOT NULL gen=- def=1
 public.ai_call.attempt_reason text NOT NULL gen=- def=''::text
@@ -637,6 +638,8 @@ public.ai_call.occurred_at timestamp with time zone NOT NULL gen=- def=now()
 public.ai_call.provider text NOT NULL gen=- def=''::text
 public.ai_call.reasoning_tokens bigint NOT NULL gen=- def=0
 public.ai_call.request_fingerprint text NOT NULL gen=- def=-
+public.ai_call.secret_kinds text[] NOT NULL gen=- def='{}'::text[]
+public.ai_call.secrets_removed bigint NOT NULL gen=- def=0
 public.ai_call.served_identity_source text NOT NULL gen=- def='configured'::text
 public.ai_call.served_model text NOT NULL gen=- def=''::text
 public.ai_call.served_provider text NOT NULL gen=- def=''::text

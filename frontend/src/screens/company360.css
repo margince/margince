@@ -120,6 +120,33 @@
   color: var(--textPrimary);
 }
 
+/* A listed deal on the record-card face (design-system/recordcard.css): the
+   name and its amount share the card's own two tracks, and the note that
+   qualifies them takes the full width under both — the same split
+   `.record-card-facts` draws for a listed contact. The card is itself the
+   link (recordcard.css's own `.record-card-open` only wraps a contact's mark
+   because a popover trigger sits beside it; a deal carries no such control to
+   collide with). */
+.co-deal-card {
+  color: inherit;
+  text-decoration: none;
+}
+.co-deal-card:hover .record-card-name {
+  text-decoration: underline;
+}
+.co-deal-card:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+.co-deal-amount {
+  grid-column: 2;
+  grid-row: 1;
+}
+.co-deal-meta {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
 /* A row's own line: the icon sits with the text rather than on its baseline. */
 .co-row-main {
   display: inline-flex;
@@ -473,17 +500,13 @@
   align-items: center;
   /* The verbs end the row, on the same margin down the whole list: a column of
      asks each with its verb wherever its own evidence happened to stop is a
-     list a reader has to hunt through for the thing to press. */
+     list a reader has to hunt through for the thing to press. Its one child
+     is `.today-actions` (record360.css) — the verb column every record page
+     draws the same way — so this only places that column at the row's end
+     rather than laying its own contents out. */
   justify-content: flex-end;
   gap: var(--space-2);
   margin-top: var(--space-3);
-}
-.co-move-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--gapActions);
-  margin-left: auto;
 }
 
 /* An open task: the tick at the row's own weight (it IS the primary verb,
@@ -523,9 +546,37 @@
   gap: var(--space-2);
   margin: 8px 0 0;
 }
+/* The reply itself: a white plate on the panel's indigo ground, so the answer
+   reads as the thing that came back rather than as more of the panel. */
+.co-ask-answer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--aiMed);
+  border-radius: var(--r-md);
+  background: var(--bgElevated);
+}
+/* The question over its answer, in the agent's own colour and one rung under
+   the prose: it names what was asked without competing with the reply. */
 .co-ask-asked {
-  margin: var(--space-2) 0 0;
+  margin: 0;
+  font-size: var(--fs-meta);
   font-weight: 600;
+  color: var(--aiText);
+}
+.co-ask-answer > .surfacestate-empty {
+  margin: 0;
+}
+/* Who wrote it and when, under a hairline: the plate's own footer band, told
+   apart from the answer the way every card on this page tells its foot apart
+   from its body. */
+.co-ask-foot {
+  margin: 0;
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--borderSubtle);
+  color: var(--textMeta);
 }
 
 /* The proposals count is a way into the queue it counts, so it is a button —
@@ -569,10 +620,6 @@
   margin-bottom: var(--space-4);
 }
 
-.co-facts-heading {
-  margin-bottom: var(--space-2);
-}
-
 /* The VAT consultation. Label above value rather than side by side, because
    two of the values — the registered name and the receipt — run long enough
    that a label column would wrap them into ribbons. */
@@ -601,24 +648,15 @@
   align-items: center;
   flex-wrap: wrap;
   gap: var(--space-2);
+}
+/* The prep foot stands under prose and pays its own interval off it; the
+   authorship meta sits inside the panel's footer band, which already spaces
+   it, so an interval of its own would drop it under the verb beside it. */
+.co-prep-foot {
   margin-top: var(--space-3);
 }
 .co-prep-foot:empty {
   display: none;
-}
-
-/* THE VALUE AND EVERYTHING THAT QUALIFIES IT, on one line.
-   The value, a warning about its shape, who vouched for it and the verbs that
-   change it are separate elements of unlike kinds — a mark, a badge, a chip, a
-   button — and inline with no rule between them they simply abutted: a fact
-   nobody has to confirm read as "1998Set by a contact", because it is the one
-   row where no button follows the value to force a gap. The row owns the
-   spacing, so it holds for every combination of the four. */
-.co-fact-line {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--space-2);
 }
 
 /* A fact whose value contradicts its field. It sits beside the value rather
@@ -791,6 +829,35 @@
   color: var(--textMeta);
 }
 
+/* The modal's own vertical rhythm: search, the colleague choice, then the
+ * grid. Without a gap the three ran together as one dense block and the
+ * search field read as a caption for the toggle row rather than its own
+ * control. */
+.coverage-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* The colleague toggles are a CHOICE, not a menu, so they read as a wrapping
+ * row rather than a list: `--gapActions` is the same gap every side-by-side
+ * button row in the product uses. */
+.coverage-colleagues {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gapActions);
+}
+/* The first cell of a row is the contact's NAME, a row header only so a
+   screen reader ties each band to its contact: it reads at the body's own
+   size and case, not as the column eyebrow `.table` sets every th in. */
+.coverage-table tbody th {
+  font-size: var(--fs-body);
+  font-weight: var(--fw-medium);
+  color: var(--textPrimary);
+  text-transform: none;
+  letter-spacing: var(--tracking-normal);
+}
+
 /* ---- The coverage grid on a narrow screen (plan §10.3) ----------------------
  *
  * One column per colleague reads well on a desktop and not at all on a phone:
@@ -800,12 +867,11 @@
  *
  * Each row becomes a card, each cell a labelled line. The label comes from the
  * cell's own data-label, set from the column header, so the two cannot drift.
+ *
+ * Paired with the shared `.table` class for cell padding, hairlines and
+ * left-aligned headers: this block only adds what the narrow layout and the
+ * block-card fallback need on top of it.
  */
-.coverage-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
 @media (max-width: 720px) {
   /* No overflow override here. The rows below become block CARDS at this
    * width, so there is nothing left to run past the right edge and
@@ -880,8 +946,10 @@
   gap: var(--space-1);
 }
 .co-figure-value {
-  font-size: var(--fs-h1);
-  font-weight: var(--fw-medium);
+  /* The record page's own card-value rung: a headline figure inside a card,
+     the same size every card value on the page carries. */
+  font-size: var(--fs-h3);
+  font-weight: var(--fw-semibold);
   font-variant-numeric: tabular-nums;
 }
 /* The finance panel: one decision figure with its reasons, a quieter column
@@ -923,17 +991,20 @@
   gap: var(--space-1);
 }
 .fin-amount {
-  font-size: var(--fs-h2);
-  font-weight: var(--fw-medium);
+  /* The record page's own card-value rung: a headline figure inside a card,
+     the same size every card value on the page carries. */
+  font-size: var(--fs-h3);
+  font-weight: var(--fw-semibold);
   font-variant-numeric: tabular-nums;
 }
-/* The one figure on the panel that asks for a decision, at the size that says
-   so. Overdue money is drawn in the danger tone whatever its value: unlike a
-   badge, the figure is the reading itself, and a reader who has to check
-   whether it is coloured has already read it. */
+/* The one figure on the panel that asks for a decision. Overdue money is
+   drawn in the danger tone whatever its value: unlike a badge, the figure is
+   the reading itself, and a reader who has to check whether it is coloured
+   has already read it — so the emphasis is the colour, not a size the record
+   page's own card-value rung does not otherwise carry. */
 .fin-amount-hero {
-  font-size: var(--fs-display);
-  font-weight: var(--fw-medium);
+  font-size: var(--fs-h3);
+  font-weight: var(--fw-semibold);
   color: var(--danger);
   line-height: 1.1;
 }
@@ -1402,7 +1473,7 @@
 .co-lead .co-move-do {
   display: contents;
 }
-.co-lead .co-move-actions {
+.co-lead .today-actions {
   grid-column: 2;
   grid-row: 1 / -1;
 }
@@ -1539,13 +1610,9 @@
   gap: var(--gapActions);
   flex: none;
 }
-/* The three rated dimensions under the verdict: a dot in the dimension's
-   tone, the dimension, its rating. Inline, because they qualify the word
-   above them rather than standing as readings of their own. */
+/* The three rated dimensions under the verdict, as a row of readings the
+   card's own body separates from the word above it. */
 .co-360-dims {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2) var(--space-4);
   padding-top: var(--space-3);
 }
 /* And no seam over them, which is the other half of the same point: the
@@ -1622,12 +1689,49 @@
   background: var(--danger);
 }
 
-/* When the row was written and by whom, closing the facts line: the date
-   and the provenance mark beside it, in the line's own ink. */
-.co-record-provenance {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
+/* The three dimensions as term-over-value cells, on the contact brief's own
+   readings ladder: a caption names what was rated, the value under it is the
+   rating and the trigger for its own working. Content is unchanged from the
+   chip row above — only the shape moved, from an inline run to a grid a
+   reader can scan column by column. */
+.co-360-readings {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3) var(--space-4);
+  margin: 0;
+}
+.co-360-reading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.co-360-reading dd {
+  margin: 0;
+  font-size: var(--fs-body);
+  font-weight: var(--fw-medium);
+  color: var(--textPrimary);
+}
+/* The same dotted-underline mark the contact brief's own readings wear for
+   "there is more behind this value", scoped here so the reset it works
+   against is the popover's own and not `.co-dim`'s chip face. */
+.co-360-reading .popover-trigger {
+  text-decoration: underline dotted;
+  text-decoration-color: var(--textMeta);
+  text-underline-offset: 0.2em;
+  font: inherit;
+  color: inherit;
+}
+.co-360-reading dd.co-360-reading-warn {
+  color: var(--warnText);
+}
+.co-360-reading dd.co-360-reading-danger {
+  color: var(--dangerText);
+}
+@media (max-width: 720px) {
+  .co-360-readings {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 /* THE CARD'S CLAIM OF AUTHORSHIP, and what it is a claim about: the mark on

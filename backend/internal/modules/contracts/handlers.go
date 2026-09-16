@@ -25,8 +25,8 @@ type Handlers struct {
 }
 
 // NewHandlers builds the contract handler set.
-func NewHandlers(db *database.DB, freezeRate FreezeRateFunc) Handlers {
-	return Handlers{store: NewStore(db, freezeRate)}
+func NewHandlers(db *database.DB, freezeRate FreezeRateFunc, timezone TimezoneFunc) Handlers {
+	return Handlers{store: NewStore(db, freezeRate, timezone)}
 }
 
 // WithFieldCatalog wires the workspace custom-field catalog into the

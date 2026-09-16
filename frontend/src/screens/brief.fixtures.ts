@@ -61,12 +61,12 @@ export const bundle: Approval[] = [
     bundle_id: BUNDLE,
     proposed_change: { source_url: "https://acme.example" },
   }),
-  proposal("ap-lead-1", "Lead from acme.example: Anna Weber", {
+  proposal("ap-lead-1", "Found on acme.example: Anna Weber", {
     kind: "site_lead",
     bundle_id: BUNDLE,
     proposed_change: { name: "Anna Weber", role: "Head of Operations" },
   }),
-  proposal("ap-lead-2", "Lead from acme.example: Mira Osei", {
+  proposal("ap-lead-2", "Found on acme.example: Mira Osei", {
     kind: "site_lead",
     bundle_id: BUNDLE,
     proposed_change: { name: "Mira Osei", role: "Procurement" },

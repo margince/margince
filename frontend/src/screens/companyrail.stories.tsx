@@ -101,6 +101,17 @@ const populated: View = {
     open_commitments: 2,
   },
   tags: [{ id: "t-1", name: "Key account" }],
+  projects: [
+    {
+      project_id: "pr-1",
+      name: "Depot fit-out",
+      key: "DEP-12",
+      phase: "delivering",
+      quiet: false,
+      owner_name: "Mira Voss",
+    },
+  ],
+  projects_page: page,
 };
 
 // Health and Contacts withheld, exactly the shape a role scoped away from

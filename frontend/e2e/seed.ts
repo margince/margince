@@ -1591,6 +1591,20 @@ export async function mockApi(
     if (path === "/companies" && method === "GET") {
       return json(page([brandt]));
     }
+    // The account page's ONE composite read, the company side of the contact
+    // 360 above and required by the contract in the same way: `company` and
+    // `as_of` are not optional, so the catch-all's empty collection page is
+    // not a thin response — it is a response the overview cannot render, and
+    // the head's "Last update" line threw formatting a moment it was never
+    // given. Every section is readable and empty, which is the state the page
+    // has to draw on a fresh account.
+    if (method === "GET" && /^\/companies\/[^/]+\/360$/.test(path)) {
+      return json({
+        as_of: "2026-06-20T09:00:00Z",
+        company: brandt,
+        sections_omitted: [],
+      });
+    }
     if (path === "/companies/o-brandt") {
       return json(brandt);
     }

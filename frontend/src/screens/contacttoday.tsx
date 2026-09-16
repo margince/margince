@@ -14,9 +14,15 @@ import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { contactTabRoute } from "./contacttab";
 import { useRoster } from "./entityref";
-import { interactionIcon } from "./interactionchrome";
 import { MoveButton } from "./movebutton";
-import { FoundMove, TodayPanel, TodoRow, WithheldNotice } from "./record360";
+import {
+  FoundMove,
+  MomentEvidence,
+  TodayPanel,
+  TodoRow,
+  WithheldNotice,
+} from "./record360";
+import "./record360/record360.css";
 
 // The server selects the recommendation. Empty relationship and quiet results
 // describe coverage; they do not describe outstanding work.
@@ -135,55 +141,31 @@ function MomentMove({
       title={suggestion.ask}
       why={suggestion.why}
       basis={
-        <ul className="pe-today-evidence">
-          {[
-            ...new Map(
-              moment.evidence.map((item) => [
-                `${item.type}:${item.id ?? item.label}`,
-                item,
-              ]),
-            ).values(),
-          ].map((item) => {
-            // The glyph names the KIND of record the move rests on, the same
-            // way the brief's sources and the timeline's rows name theirs.
+        <MomentEvidence
+          evidence={moment.evidence}
+          // The glyph names the KIND of record the move rests on, the same
+          // way the brief's sources and the timeline's rows name theirs.
+          kindOf={(item) =>
+            item.type === "activity"
+              ? view.activities?.data.find((row) => row.id === item.id)?.kind
+              : item.type
+          }
+          onOpen={(item) => {
             const activity = view.activities?.data.find(
               (row) => row.id === item.id,
             );
-            const glyph = interactionIcon(
-              item.type === "activity" ? activity?.kind : item.type,
-            );
-            return (
-              <li
-                key={`${item.type}-${item.id ?? item.label}`}
-                className="t-sub"
-              >
-                {item.id ? (
-                  <Button
-                    variant="link"
-                    onClick={() => {
-                      if (activity?.kind === "email" && onOpenEmail && item.id)
-                        onOpenEmail(item.id);
-                      else
-                        navigate(contactTabRoute(view.contact.id, "timeline"));
-                    }}
-                  >
-                    {glyph}
-                    {item.label}
-                  </Button>
-                ) : (
-                  <span className="pe-source">
-                    {glyph}
-                    {item.label}
-                  </span>
-                )}
-                {item.snippet && <q>{item.snippet}</q>}
-              </li>
-            );
-          })}
-        </ul>
+            if (activity?.kind === "email" && onOpenEmail && item.id)
+              onOpenEmail(item.id);
+            else navigate(contactTabRoute(view.contact.id, "timeline"));
+          }}
+        />
       }
       action={
-        <div className="pe-today-actions">
+        // A fragment, not a column of its own: FoundMove owns the one
+        // `.today-actions` column its row draws, defer included, so a second
+        // column nested inside it laid the defer button beside these verbs
+        // in a row instead of under them.
+        <>
           <ActionVerb
             action={moment.recommended_action}
             primary
@@ -199,7 +181,7 @@ function MomentMove({
               onAction={onAction}
             />
           ))}
-        </div>
+        </>
       }
     />
   );
@@ -347,7 +329,7 @@ function ActionVerb({
   // this one" about a draft the agent writes.
   const variant = primary ? "ai" : "ghost";
   return (
-    <span className="pe-today-verb">
+    <span className="today-verb">
       {/* A blocked verb hands its sentence to the Button, whose `reason`
           bars the press AND describes the control with it: a `title` on a
           disabled button reaches no screen reader. A verb that will ask for

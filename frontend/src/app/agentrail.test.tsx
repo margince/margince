@@ -973,7 +973,8 @@ describe("AgentRail", () => {
     id: "019f7e65-fbf7-7114-b114-40af4af63a01",
     kind: "morning_brief",
     state: "running",
-    started_at: "2026-08-21T05:00:00Z",
+    // Relative: the resting line ages a settled run out (agentrail-resting.ts).
+    started_at: new Date(Date.now() - 60_000).toISOString(),
     ...over,
   });
 
@@ -1421,11 +1422,10 @@ describe("AgentRail", () => {
     expect(panel().textContent).not.toContain("telepathic_prospecting");
   });
 
-  // A settled run reaches the reader twice, answering two questions: the
-  // RESTING ROTATION on the card says the one true thing this installation has
-  // to say now, and the recap lists what got done. It reaches the RUNNING
-  // section in neither case. `recent` is bounded to today, so the rotation
-  // never pins a "ready" still announcing this morning at six in the evening.
+  // A settled run reaches the reader twice: the resting rotation says what the
+  // agent has just got done, the recap lists the day's. It reaches the RUNNING
+  // section in neither case. The two bounds differ — agentrail.resting.test.tsx
+  // holds the rotation's.
   it("reads a run that finished today in the resting line and in the recap, never as live work", async () => {
     withSettled(RUN({ state: "done" }));
     const user = userEvent.setup();
