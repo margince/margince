@@ -155,20 +155,29 @@ func (s *Store) adoptDomainIntoCompany(
 	if err := auth.Require(ctx, entityCompany, principal.ActionUpdate); err != nil {
 		return nil, err
 	}
-	// And the row has to be one this caller may WRITE: the dedupe ladder scores
-	// every company in the installation, so a twin can be a record outside the
-	// caller's own scope. Visibility is the wrong question here — a manual read
-	// share widens it — and adopting writes a domain onto the record. A miss
-	// reads as not-found rather than denied, which keeps that company's
-	// existence hidden.
-	if err := auth.EnsureWritable(ctx, tx, entityCompany, companyID.UUID); err != nil {
+	// Lock FIRST, then ask whether this caller may write the row.
+	//
+	// The other order is a real defect rather than a theoretical one: under READ
+	// COMMITTED a privatization or an ownership change committing between the
+	// check and the lock is invisible to the check, so a caller the record no
+	// longer admits is admitted anyway. That is the interleaving
+	// companyvisibility.go describes, where the guard passed and the write would
+	// have landed. Asking UNDER the lock is this tree's answer to it, because
+	// there the answer cannot go stale before the write.
+	//
+	// The lock also settles what the row HOLDS. The twin was chosen from a scan,
+	// and between that scan and this write the company can be archived or its
+	// domains edited — which would adopt a domain onto a record that is gone,
+	// and audit a before-image that was already stale when it was read.
+	if _, err := storekit.LockRow(ctx, tx, entityCompany, companyID.UUID, storekit.LiveOnly); err != nil {
 		return nil, err
 	}
-	// Lock the row before reading what it holds. The twin was chosen from a
-	// scan, and between that scan and this write the company can be archived or
-	// its domains edited — which would adopt a domain onto a record that is
-	// gone, and audit a before-image that was already stale when it was read.
-	if _, err := storekit.LockRow(ctx, tx, entityCompany, companyID.UUID, storekit.LiveOnly); err != nil {
+	// The dedupe ladder scores every company in the installation, so a twin can
+	// be a record outside the caller's own scope. Visibility is the wrong
+	// question here — a manual read share widens it — and adopting writes a
+	// domain onto the record. A miss reads as not-found rather than denied,
+	// which keeps that company's existence hidden.
+	if err := auth.EnsureWritable(ctx, tx, entityCompany, companyID.UUID); err != nil {
 		return nil, err
 	}
 	// Read BEFORE the insert. The audit's before-image is what this company's
