@@ -87,7 +87,6 @@ import {
   useMe,
   useViewerId,
 } from "./common";
-import { RecordContextPanel } from "./context";
 import type { CreateField } from "./create";
 import { CreateAction } from "./create";
 import {
@@ -114,13 +113,12 @@ import {
   MOTION_OPTIONS,
   PRIORITY_OPTIONS,
 } from "./deal360/dealcommercialfields";
-import { DealCommitteeMap } from "./deal360/dealcommittee";
+import { DealCommitteeCard } from "./deal360/dealcommitteecard";
 import { dealSurfaceChips } from "./deal360/dealfilterchips";
 import { DealIdentityFacts, DealSubtitle } from "./deal360/dealheaderfacts";
 import { DealHistoryTab } from "./deal360/dealhistorytab";
 import { DealPulse } from "./deal360/dealpulse";
 import { DealRoomTab } from "./deal360/dealroomtab";
-import { DealSeats } from "./deal360/dealseats";
 import { OutcomeReviewPanel } from "./deal360/outcomereview";
 import { useDealCoverage } from "./deal360/usedealcoverage";
 import { DealBulkBar } from "./dealbulk";
@@ -155,7 +153,6 @@ import {
   withListPage,
   withoutScreenDials,
 } from "./listquery";
-import { LogActivity } from "./logactivity";
 import { useOpenEmail } from "./openemail";
 import type { Project } from "./projects.form";
 import { RecordReading, RecordReadingPair, TimelineThread } from "./record360";
@@ -165,7 +162,6 @@ import { RecordFields, rawRecord } from "./recordfields";
 import { tagsColumn } from "./recordlist";
 import { useRecordOwners } from "./recordreferences";
 import { RecordTeam } from "./recordteam";
-import { RelationshipsTab } from "./relationships";
 import { SaveViewAction, useSavedViewTabs } from "./savedviews";
 import { parseTagIDs, parseTagMode, tagQueryParams } from "./tagfilter";
 import { TagsPanel } from "./tagspanel";
@@ -2521,40 +2517,6 @@ function editProjectFields(
   );
 }
 
-// The two contacts surfaces under the deal's overview.
-//
-// The seats are in the RAIL as context — who these contacts are. The map is in
-// the column because it is a working surface: it draws how the deal is threaded
-// and where the cover is missing, which is what a reader acts on.
-//
-// The stakeholders panel is where a seat is ADDED, changed and removed. The
-// rail's seats and the map both read the coverage view, which carries no
-// relationship id and so can carry no verb — a deal's stakeholders were
-// readable on three surfaces and writable on none of them, reachable only from
-// whichever contact happened to already be linked. It is the generic
-// relationships panel under a deal scope, not a second one: create, edit and
-// remove have one implementation for every kind.
-//
-// Named rather than inlined so DealScreen's render callback stays under the
-// complexity ceiling.
-function DealContactsPanels({
-  dealId,
-  refusedReasonId,
-}: Readonly<{
-  dealId: string;
-  // The page's one sentence about why this deal takes no changes: a seat is
-  // written through the deal's own write gate, so the panel's verbs are
-  // refused by the same fact as Edit.
-  refusedReasonId?: string;
-}>) {
-  return (
-    <RelationshipsTab
-      scope={{ deal_id: dealId }}
-      refusedReasonId={refusedReasonId}
-    />
-  );
-}
-
 export function DealDetails({
   deal,
   companies,
@@ -2988,10 +2950,12 @@ function DealOverviewPane({
               onCreate={onCreateOffer}
             />
           </div>
-          <DealCommitteeMap
+          <DealCommitteeCard
+            dealId={deal.id}
             coverage={coverage.coverage}
             withheld={coverage.withheld}
             pending={coverage.pending}
+            refusedReasonId={refusedReasonId}
           />
         </RecordReadingPair>
       </RecordReading>
@@ -3011,9 +2975,13 @@ function DealOverviewPane({
         status={deal.status}
         closingOccurrenceId={deal.closing_occurrence_id}
       />
-
-      <RecordContextPanel entityType="deal" id={deal.id} />
-      <LogActivity entityType="deal" entityId={deal.id} />
+      {/* Neither the related-evidence panel nor the inline log form stands
+          here any more. The evidence it listed — recent touches, open tasks,
+          the contacts and companies around the deal — is already the reading
+          above and the rail beside it, and a reader given the same records
+          twice has two lists to reconcile. Logging is a verb, and the head
+          carries it (dealactions.tsx): a form always open at the foot of the
+          page asks for a note on every read. */}
     </div>
   );
 }
@@ -3135,7 +3103,6 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
   const dealContext = (deal: Deal) => (
     <DealContext
       deal={deal}
-      coverage={coverageRead}
       companies={companies.data?.data ?? []}
       meId={me.data?.user.id ?? ""}
     />
@@ -3363,10 +3330,6 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                       readOnly={readOnly}
                       refusedReasonId={refusedReasonId}
                     />
-                    <DealContactsPanels
-                      dealId={deal.id}
-                      refusedReasonId={refusedReasonId}
-                    />
                   </div>
                 )}
                 {tab === "room" && (
@@ -3421,16 +3384,14 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
   );
 }
 
-// The deal's context, for the details pane: the seats first, then how the deal
-// is filed, then the deal rooms and the mail card.
+// The deal's context, for the details pane: what the deal is, who of ours owns
+// it, then how the deal is filed and the mail card.
 function DealContext({
   deal,
-  coverage,
   companies,
   meId,
 }: Readonly<{
   deal: Deal;
-  coverage: ReturnType<typeof useDealCoverage>;
   companies: { id: string; display_name: string }[];
   meId: string;
 }>) {
@@ -3440,14 +3401,12 @@ function DealContext({
   const canWrite = useCanWriteRecord("deal", deal) && !deal.archived_at;
   return (
     <>
-      {/* Before the seats: what the deal IS commercially, then who is on it. */}
+      {/* What the deal IS commercially, then who OURS are on it. The buyer's
+          seats are not here: they live in the committee card in the column, with
+          the verbs that change them, and a rail copy of that list is what this
+          page carried three of. */}
       <DealDetails deal={deal} companies={companies} meId={meId} />
       <RecordTeam recordType="deal" recordId={deal.id} readOnly={!canWrite} />
-      <DealSeats
-        coverage={coverage.coverage}
-        withheld={coverage.withheld}
-        pending={coverage.pending}
-      />
       <DealTagsSection deal={deal} />
       <DealEmailAside dealId={deal.id} />
     </>

@@ -3,7 +3,7 @@
 
 // This deal's VERBS — split out of deals.tsx, which is at its own line
 // ceiling and may not grow, for the same readability reason DealOverviewPane
-// and DealContactsPanels were split out before it: the record-view render
+// and the deal's committee card were split out before it: the record-view render
 // callback stays under the complexity ceiling.
 //
 // An archived deal is read-only (no edit/archive/advance path exists

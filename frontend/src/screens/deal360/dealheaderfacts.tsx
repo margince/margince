@@ -43,24 +43,26 @@ type Deal = components["schemas"]["Deal"];
 // What the head reads off a deal. Every field is optional because every one
 // of them is a fact a deal can lack or a reader can be refused — the same
 // contract DealIdentityLine kept.
-export type DealIdentity = Pick<
-  Deal,
-  | "amount_minor"
-  | "currency"
-  | "stage_id"
-  | "expected_close_date"
-  | "close_date_provisional"
-  | "forecast_category"
-  | "wait_until"
-  | "fx_rate_to_base"
-  | "fx_rate_date"
-  | "owner_id"
-  | "company_id"
-  | "partner_company_id"
-  | "partner_attribution"
-  | "masked_fields"
-  | "source"
-  | "captured_by"
+export type DealIdentity = Partial<
+  Pick<
+    Deal,
+    | "amount_minor"
+    | "currency"
+    | "stage_id"
+    | "expected_close_date"
+    | "close_date_provisional"
+    | "forecast_category"
+    | "wait_until"
+    | "fx_rate_to_base"
+    | "fx_rate_date"
+    | "owner_id"
+    | "company_id"
+    | "partner_company_id"
+    | "partner_attribution"
+    | "masked_fields"
+    | "source"
+    | "captured_by"
+  >
 > &
   WonWithoutContract;
 

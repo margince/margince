@@ -91,11 +91,11 @@
   font-weight: var(--fw-semibold);
 }
 
-/* A rung the record has not reached yet: quieter than the ones behind it, so
-   the row reads left to right as climbed, here, ahead. */
-.stage-ladder-step:not(.is-done) > .btn {
-  color: var(--textMeta);
-}
+/* A rung ahead of the record is told apart by what it LACKS — the chip below
+   and the weight above — rather than by a quieter ink. A meta ink here read as
+   a colour on the chip ground to any scan that cannot see the :not(), and
+   --textMeta over --bgChip is a pair nothing measures; the fill and the weight
+   already make the row read left to right as climbed, here, ahead. */
 
 /* A ladder nobody may move is a record of where the deal went rather than a
    row of controls that refuse, so its rungs keep their chip and lose only the

@@ -8,9 +8,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
-import { en } from "../../i18n/en";
 import { DealPulse } from "./dealpulse";
-import { DealSeats } from "./dealseats";
 
 // What the deal page owes a reader before they read anything: the sentence
 // naming whose move it is, and who is on the deal in the rail beside it. The
@@ -122,52 +120,5 @@ describe("the sentence says whose move it is", () => {
     // A headline that guessed would be the loudest wrong thing on the page.
     const { container } = show(<DealPulse card={undefined} timeline={[]} />);
     expect(container.querySelector(".d360-pulse")).toBeNull();
-  });
-});
-
-describe("the rail says who is on the deal", () => {
-  it("lists a seat with its role and whether they are engaged", () => {
-    show(
-      <DealSeats
-        pending={false}
-        withheld={false}
-        coverage={{
-          deal_id: DEAL_ID,
-          stakeholders: [
-            {
-              contact_id: "p1",
-              contact_name: "Thorsten Ortner",
-              role: "economic_buyer",
-              engaged: true,
-            },
-          ],
-          our_side: [],
-          risks: [],
-          sections_omitted: [],
-        }}
-      />,
-    );
-    expect(screen.getByText("Thorsten Ortner")).toBeInTheDocument();
-    expect(screen.getByText("Engaged")).toBeInTheDocument();
-  });
-
-  it("shows a seat whose identity is withheld without dropping the row", () => {
-    // The seat still counts toward coverage, so it is shown; only the name is
-    // withheld. Dropping the row would undercount the deal's own coverage.
-    show(
-      <DealSeats
-        pending={false}
-        withheld={false}
-        coverage={{
-          deal_id: DEAL_ID,
-          stakeholders: [{ contact_id: "p1", role: "user", engaged: false }],
-          our_side: [],
-          risks: [],
-          sections_omitted: [],
-        }}
-      />,
-    );
-    expect(screen.getByText(en["coverage.seatWithheld"])).toBeInTheDocument();
-    expect(screen.getByText("No two-way contact")).toBeInTheDocument();
   });
 });
