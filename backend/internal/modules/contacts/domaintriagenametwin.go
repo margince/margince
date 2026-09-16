@@ -5,12 +5,15 @@ package contacts
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // adoptOrHoldForNameTwin decides what a domain does about a company that
@@ -32,11 +35,11 @@ import (
 // carry on and create.
 func (s *Store) adoptOrHoldForNameTwin(
 	ctx context.Context, tx pgx.Tx, in ResolveDomainTriageInput,
-	match CompanyMatch, displayName, by string,
+	match CompanyMatch, by string,
 ) (adopted *ids.CompanyID, held bool, err error) {
 	twins := exactNameRivals(match)
 	if len(twins) == 1 {
-		id, err := s.adoptDomainIntoCompany(ctx, tx, in, twins[0], displayName, by)
+		id, err := s.adoptDomainIntoCompany(ctx, tx, in, twins[0], by)
 		return id, false, err
 	}
 	// Several exact twins, or a near-match the fuzzy tier already flagged.
@@ -51,7 +54,33 @@ func (s *Store) adoptOrHoldForNameTwin(
 	return nil, true, nil
 }
 
-// exactNameRivals is every ranked company whose name IS this one, folded.
+// auditKeyDomains names the domain list in an audit image, so the before and
+// after of an adoption are read as one field changing rather than two facts.
+const auditKeyDomains = "domains"
+
+// liveCompanyDomains lists a company's unarchived domains, for the audit
+// image an adoption writes.
+func liveCompanyDomains(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) ([]string, error) {
+	rows, err := tx.Query(ctx,
+		`SELECT domain FROM company_domain
+		  WHERE company_id = $1 AND archived_at IS NULL
+		  ORDER BY domain`, companyID)
+	if err != nil {
+		return nil, fmt.Errorf("contacts: reading a company's domains: %w", err)
+	}
+	defer rows.Close()
+	var out []string
+	for rows.Next() {
+		var domain string
+		if err := rows.Scan(&domain); err != nil {
+			return nil, fmt.Errorf("contacts: reading a company's domains: %w", err)
+		}
+		out = append(out, domain)
+	}
+	return out, rows.Err()
+}
+
+// exactNameRivals collects the ranked companies whose name folds to this one.
 //
 // Read off the ranked list rather than the single best score: the winner is
 // chosen on confidence alone, and a near-match can outrank — or tie and
@@ -89,18 +118,44 @@ func heldRival(match CompanyMatch, twins []CompanyCandidateScore) (CompanyCandid
 // displace it. No unclaimed probe is needed — the exact-domain tier just proved
 // no live company holds this domain, and uq_company_domain is the structural
 // guarantee under a race.
+//
+// The company keeps its OWN name: this domain resolved to the same one, and
+// the incumbent record is the one that already carries it.
 func (s *Store) adoptDomainIntoCompany(
 	ctx context.Context, tx pgx.Tx, in ResolveDomainTriageInput,
-	twin CompanyCandidateScore, displayName, by string,
+	twin CompanyCandidateScore, by string,
 ) (*ids.CompanyID, error) {
 	companyID := twin.CompanyID
+	// Adopting CHANGES a company that already exists, which is a different
+	// authority from the create this path was entered under. The caller's
+	// ActionCreate says they may mint a record; it does not say they may write
+	// a domain onto somebody else's.
+	if err := auth.Require(ctx, entityCompany, principal.ActionUpdate); err != nil {
+		return nil, err
+	}
+	// And the row has to be one this caller may WRITE: the dedupe ladder scores
+	// every company in the installation, so a twin can be a record outside the
+	// caller's own scope. Visibility is the wrong question here — a manual read
+	// share widens it — and adopting writes a domain onto the record. A miss
+	// reads as not-found rather than denied, which keeps that company's
+	// existence hidden.
+	if err := auth.EnsureWritable(ctx, tx, entityCompany, companyID.UUID); err != nil {
+		return nil, err
+	}
+	// Read BEFORE the insert. The audit's before-image is what this company's
+	// domains were, and reading after the write would record the answer as
+	// though it were the question.
+	before, err := liveCompanyDomains(ctx, tx, companyID)
+	if err != nil {
+		return nil, err
+	}
 	if err := insertCompanyDomains(ctx, tx, companyID, domainTriageSource(in.Domain), by,
 		[]CompanyDomainInput{{Domain: in.Domain, IsPrimary: false}}); err != nil {
 		return nil, err
 	}
-	auditID, err := storekit.Audit(ctx, tx, "update", entityCompany, companyID.UUID, nil, map[string]any{
-		auditKeyDomain: in.Domain, fieldDisplayName: displayName,
-	})
+	auditID, err := storekit.Audit(ctx, tx, "update", entityCompany, companyID.UUID,
+		map[string]any{auditKeyDomains: before},
+		map[string]any{auditKeyDomains: append(append([]string{}, before...), in.Domain)})
 	if err != nil {
 		return nil, err
 	}

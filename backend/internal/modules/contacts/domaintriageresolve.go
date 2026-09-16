@@ -222,7 +222,7 @@ func (s *Store) adoptOrCreateTriagedCompany(ctx context.Context, tx pgx.Tx, in R
 	// refused without being told why — the rule withholdForStaleEvidence states
 	// for the same reason.
 	if in.Source != DomainSourceHuman {
-		adopted, held, err := s.adoptOrHoldForNameTwin(ctx, tx, in, match, displayName, by)
+		adopted, held, err := s.adoptOrHoldForNameTwin(ctx, tx, in, match, by)
 		if err != nil || held || adopted != nil {
 			return ResolveDomainTriageResult{CompanyID: adopted}, err
 		}

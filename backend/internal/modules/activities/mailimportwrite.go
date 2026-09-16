@@ -50,9 +50,10 @@ func deriveImportedCounterparty(ctx context.Context, tx pgx.Tx, in LogActivityIn
 // and every address on the message belongs to somebody else — correct, because
 // neither is a party to the correspondence it is filing.
 func actingHumanAddresses(ctx context.Context, tx pgx.Tx) (map[string]bool, error) {
+	none := map[string]bool{}
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.Type != principal.PrincipalHuman || actor.UserID == ids.Nil {
-		return nil, nil
+		return none, nil
 	}
 	// Deliberately NOT gated on liveness: whose address this is does not change
 	// when they leave, and a colleague importing their own old mail after
@@ -68,7 +69,7 @@ func actingHumanAddresses(ctx context.Context, tx pgx.Tx) (map[string]bool, erro
 		// to fail the write on: it means we cannot tell which side is ours, and
 		// the derivation below already treats an unknown side as foreign.
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, nil
+			return none, nil
 		}
 		return nil, fmt.Errorf("activities: acting user address: %w", err)
 	}

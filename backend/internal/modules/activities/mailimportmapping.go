@@ -26,6 +26,12 @@ const (
 	fieldParticipantOf = "participants.from"
 )
 
+// Which kind may carry a field, for the refusal that names where it belongs.
+const (
+	onlyAnEmail  = "an email"
+	onlyAMeeting = "a meeting"
+)
+
 // KindFieldError refuses a field on a kind that cannot carry it.
 //
 // The contract names `field_not_valid_for_kind` for exactly this, so the code
@@ -60,7 +66,7 @@ type mailParticipants struct {
 // single role.
 //
 // First role wins: an address in both To and Cc is a recipient, and carrying it
-// twice would let one person count as two on a message. From outranks both,
+// twice would let one address count as two on a message. From outranks both,
 // because the sender is who the message is FROM whatever else the headers also
 // list them as.
 func normalizeParticipants(in *struct {
@@ -165,11 +171,11 @@ func mailIdentityFrom(req crmcontracts.CreateActivityRequest, in *LogActivityInp
 		field   string
 		only    string
 	}{
-		{req.Participants != nil, isEmail, fieldParticipants, "an email"},
-		{req.RfcMessageId != nil, isEmail, fieldRFCMessageID, "an email"},
-		{req.ThreadKey != nil, isEmail, fieldThreadKey, "an email"},
-		{req.IcalUid != nil, isMeeting, fieldICalUID, "a meeting"},
-		{req.IcalInstance != nil, isMeeting, fieldICalInstance, "a meeting"},
+		{req.Participants != nil, isEmail, fieldParticipants, onlyAnEmail},
+		{req.RfcMessageId != nil, isEmail, fieldRFCMessageID, onlyAnEmail},
+		{req.ThreadKey != nil, isEmail, fieldThreadKey, onlyAnEmail},
+		{req.IcalUid != nil, isMeeting, fieldICalUID, onlyAMeeting},
+		{req.IcalInstance != nil, isMeeting, fieldICalInstance, onlyAMeeting},
 	} {
 		if refusal.present && !refusal.allowed {
 			return &KindFieldError{Field: refusal.field, Only: refusal.only}
