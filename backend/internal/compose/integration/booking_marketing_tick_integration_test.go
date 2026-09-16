@@ -300,7 +300,8 @@ func assertNoMarketingGrant(t *testing.T, e *apptest.AppEnv, contactID, purposeI
 }
 
 // A tick submitted from an address a contact holds but does NOT read
-// confirmations at is refused, and mails nothing.
+// confirmations at mails nothing — and costs the booker the newsletter rather
+// than the meeting they came for.
 //
 // This is not hypothetical: it was found by probing this path rather than
 // reading it. EnsureContactByEmail resolves the booking email to ANY existing
@@ -313,7 +314,15 @@ func assertNoMarketingGrant(t *testing.T, e *apptest.AppEnv, contactID, purposeI
 // name it could name a stranger's. What the guard adds is that the two
 // addresses must AGREE, because when they disagree neither the mint nor the
 // subject can tell who actually asked.
-func TestAMarketingTickFromANonPrimaryAddressIsRefused(t *testing.T) {
+//
+// WHAT THE REFUSAL DOES NOT DO ANY MORE IS TAKE THE BOOKING WITH IT. The guard
+// is unchanged where it counts — no token, no mail — but the visitor who typed
+// the second address they hold came for a meeting, and losing it over an
+// optional checkbox left the record saying they consented to be contacted
+// about a booking that does not exist. The response reports `not_asked`, which
+// is what the contract already declares for a question this installation could
+// not put.
+func TestAMarketingTickFromANonPrimaryAddressIsNotAsked(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	base := "/v1/public/booking/" + bookingSlug(t, e)
@@ -334,9 +343,12 @@ func TestAMarketingTickFromANonPrimaryAddressIsRefused(t *testing.T) {
 		t.Fatalf("create contact → %d", status)
 	}
 
-	tick := func(email string) AnyMap {
+	// A SLOT EACH, because both presses now book. They used to share one: the
+	// first was refused outright and left the slot free for the second, which
+	// is exactly the behaviour under test here.
+	tick := func(email string, at time.Duration) AnyMap {
 		return AnyMap{
-			"start": monday.Add(6 * time.Hour), "end": monday.Add(390 * time.Minute),
+			"start": monday.Add(at), "end": monday.Add(at + 30*time.Minute),
 			"booker": AnyMap{"name": "Vera Verified", "email": email},
 			"consent": AnyMap{
 				"purpose_id": transactional, "policy_version": "pp-2026-01",
@@ -349,8 +361,18 @@ func TestAMarketingTickFromANonPrimaryAddressIsRefused(t *testing.T) {
 		}
 	}
 
-	if status := publicCall(t, e, "POST", base, tick("vera-old@corp.example"), nil, nil); status != 422 {
-		t.Fatalf("a tick from a non-primary address → %d, want 422", status)
+	var answer struct {
+		Booking   string `json:"booking"`
+		Marketing string `json:"marketing"`
+	}
+	if status := publicCall(t, e, "POST", base, tick("vera-old@corp.example", 6*time.Hour), nil, &answer); status != http.StatusCreated {
+		t.Fatalf("a tick from a non-primary address → %d, want 201: the link is not minted "+
+			"either way, and refusing to ask need not refuse the meeting", status)
+	}
+	if answer.Booking != "confirmed" || answer.Marketing != "not_asked" {
+		t.Errorf("the response says booking=%q marketing=%q, want confirmed/not_asked — a booker "+
+			"who ticked the box is owed the fact that no mail is coming",
+			answer.Booking, answer.Marketing)
 	}
 	var links int
 	if err := e.Owner.QueryRow(context.Background(),
@@ -358,17 +380,26 @@ func TestAMarketingTickFromANonPrimaryAddressIsRefused(t *testing.T) {
 		t.Fatal(err)
 	}
 	if links != 0 {
-		t.Fatalf("a refused tick minted %d links, want 0 — the refusal must mail nothing", links)
+		t.Fatalf("a tick that could not be asked minted %d links, want 0 — the guard must mail "+
+			"nothing whatever the booking does", links)
 	}
 
 	// The SAME contact ticking from the address their confirmations reach is
-	// admitted. Without this the refusal above would be satisfied by a guard
-	// that refuses everyone, which is the shape that passes for the wrong
-	// reason. It also proves the comparison is case-insensitive: an address
-	// differing only in case is the same mailbox.
-	if status := publicCall(t, e, "POST", base, tick("VERA@corp.example"), nil, nil); status != http.StatusCreated {
+	// asked. Without this the silence above would be satisfied by a guard that
+	// asks nobody, which is the shape that passes for the wrong reason — and it
+	// matters more now that both presses answer 201, because the status alone
+	// no longer tells the two apart. It also proves the comparison is
+	// case-insensitive: an address differing only in case is the same mailbox.
+	if status := publicCall(t, e, "POST", base, tick("VERA@corp.example", 9*time.Hour), nil, &answer); status != http.StatusCreated {
 		t.Fatalf("a tick from the primary address (differing in case) → %d, want 201", status)
 	}
+	// THE TOKEN COUNT BELOW IS THE CONTROL, not the outcome field. Both presses
+	// report not_asked on this installation, because the confirmation lane is
+	// wired onto the handlers' store and not the adapter's own, so nothing is
+	// staged and the outcome says so honestly —
+	// TestTheMarketingOutcomeAgreesWithWhatWasActuallyStaged is where that
+	// lives. What separates a question asked from one refused is whether a
+	// token exists.
 	if err := e.Owner.QueryRow(context.Background(),
 		`SELECT count(*) FROM confirm_token WHERE contact_id = $1`, contact.ID).Scan(&links); err != nil {
 		t.Fatal(err)
@@ -391,6 +422,11 @@ func TestAMarketingTickFromANonPrimaryAddressIsRefused(t *testing.T) {
 // The operational half one function away already carries this reasoning —
 // NeverOverrideExisting, "a decision already on record, above all a withdrawal,
 // must stand". The marketing path did not copy it.
+//
+// THE MEETING IS NOT PART OF THE REFUSAL. Nothing is staged and nothing is
+// granted, which is the whole of what the guard protects; the booking form
+// simply stops being the place where that is paid for by somebody who came to
+// book a slot. The response says `not_asked`, and the withdrawal stands.
 func TestAMarketingTickDoesNotReSolicitAWithdrawnSubject(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
@@ -442,11 +478,32 @@ func TestAMarketingTickDoesNotReSolicitAWithdrawnSubject(t *testing.T) {
 		AnyMap{"purpose_id": marketing, "new_state": "withdrawn"}, nil, nil); status != http.StatusOK {
 		t.Fatalf("withdrawing the purpose → %d", status)
 	}
-	if status := publicCall(t, e, "POST", base, tickAt(7*time.Hour, "wendy@corp.example"), nil, nil); status != 422 {
-		t.Fatalf("a tick naming a withdrawn subject → %d, want 422", status)
+	var answer struct {
+		Booking   string `json:"booking"`
+		Marketing string `json:"marketing"`
+	}
+	if status := publicCall(t, e, "POST", base, tickAt(7*time.Hour, "wendy@corp.example"), nil, &answer); status != http.StatusCreated {
+		t.Fatalf("a tick naming a withdrawn subject → %d, want 201: they are asked nothing, and "+
+			"the question they are not asked is not one they wanted", status)
+	}
+	if answer.Booking != "confirmed" || answer.Marketing != "not_asked" {
+		t.Errorf("the response says booking=%q marketing=%q, want confirmed/not_asked",
+			answer.Booking, answer.Marketing)
 	}
 	if n := linksFor(withdrawn); n != 0 {
 		t.Fatalf("a withdrawn subject was mailed %d confirmation links, want 0", n)
+	}
+	// AND THE WITHDRAWAL IS UNTOUCHED. A booking form that quietly re-granted
+	// what a subject took back is the thing this guard exists to stop, and the
+	// booking now committing is exactly when that would show.
+	var state string
+	if err := e.Owner.QueryRow(context.Background(),
+		`SELECT state FROM contact_consent WHERE contact_id = $1 AND purpose_id = $2`,
+		withdrawn, marketing).Scan(&state); err != nil {
+		t.Fatal(err)
+	}
+	if state != "withdrawn" {
+		t.Errorf("the marketing purpose reads %q after the booking, want withdrawn", state)
 	}
 
 	// The positive control, and it is not optional: without it this test passes

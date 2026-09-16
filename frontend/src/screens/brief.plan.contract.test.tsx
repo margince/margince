@@ -14,12 +14,12 @@ import type { WeeklyPlan } from "./weeklyplan.queries";
 
 afterEach(cleanup);
 
-const basePlan = {
+const basePlan: WeeklyPlan = {
   id: "11111111-1111-1111-1111-111111111111",
   local_week_start: "2026-06-15",
   status: "open",
   commitments: [],
-} as unknown as WeeklyPlan;
+};
 
 const planWith = (extra: Partial<WeeklyPlan>): WeeklyPlan =>
   ({ ...basePlan, ...extra }) as WeeklyPlan;

@@ -14,7 +14,6 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/owedwork"
@@ -149,8 +148,8 @@ func openPromiseWhyNow(now time.Time, task crmcontracts.Activity) string {
 	if task.DueAt == nil {
 		return fmt.Sprintf("Task recorded on %s with no date set. It stays open until you do it or close it.", task.OccurredAt.Format("2 Jan"))
 	}
-	if past, ok := deadline.DaysPast(task.DueAt, now); ok {
-		return fmt.Sprintf("Due %d days ago and still open.", past)
+	if words, late := owedwork.LateWords(task.DueAt, now); late {
+		return words
 	}
 	// Whole days of REMAINING TIME, not calendar boundaries crossed — see
 	// elapsed.FullDaysUntil for why a deadline counts differently from a pair
@@ -206,6 +205,19 @@ func owedPromises(page *crmcontracts.Contact360) []owedwork.Item {
 	var items []owedwork.Item
 	if page.NextSteps != nil {
 		for _, task := range page.NextSteps.Data {
+			// A task the system minted — a check-in or renewal reminder — is
+			// the product nudging the reader, not a promise anybody made, so
+			// it stays on the task list and off the promise rungs. The account
+			// card and the review_commitments sweep exclude the same rows in
+			// SQL (activities.NotSystemMinted, the predicate's other spelling);
+			// this rung reads the already-assembled section, so it filters the
+			// page instead. The section's cap therefore bounds what this rung
+			// can see, which it did before this filter too — and a single
+			// contact would need a full page of open reminders due ahead of a
+			// promise before the difference showed.
+			if task.CapturedBy != nil && principal.SystemMintedID(*task.CapturedBy) {
+				continue
+			}
 			items = append(items, owedwork.Item{
 				Ref: task, Source: owedwork.FromTask,
 				DueAt: task.DueAt, FiledAt: task.OccurredAt,
@@ -245,7 +257,13 @@ func overdueTaskCard(ctx context.Context, now time.Time, task crmcontracts.Activ
 // overdueClaimCard is the card for a promise read out of a conversation. It
 // carries the quote it was read from, which a task has nothing to match.
 func overdueClaimCard(now time.Time, claim crmcontracts.ConversationClaim) crmcontracts.ContactMoment {
-	overdue := elapsed.Days(*claim.DueAt, now)
+	// Deliberately not owedwork.LateWords: a claim names the date the
+	// SPEAKER promised, so its sentence keeps that framing, and its count is
+	// elapsed calendar days rather than whole days behind.
+	whyNow := "Promised for a date that passed less than a day ago."
+	if overdue := elapsed.Days(*claim.DueAt, now); overdue > 0 {
+		whyNow = fmt.Sprintf("Promised for a date that passed %d days ago.", overdue)
+	}
 	evidence := []crmcontracts.ContactMomentEvidence{{
 		Type:       crmcontracts.ContactMomentEvidenceTypeActivity,
 		Id:         &claim.SourceActivityId,
@@ -259,7 +277,7 @@ func overdueClaimCard(now time.Time, claim crmcontracts.ConversationClaim) crmco
 		RuleVersion:         ptr(ruleVersion),
 		EvidenceFingerprint: fingerprintOf(evidence),
 		Headline:            fmt.Sprintf("You owe them: %s", claim.Body),
-		WhyNow:              fmt.Sprintf("Promised for a date that passed %d days ago.", overdue),
+		WhyNow:              whyNow,
 		Confidence:          crmcontracts.ContactMomentConfidenceObservedFact,
 		Evidence:            evidence,
 		FreshnessAt:         claim.DueAt,

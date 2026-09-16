@@ -39,7 +39,7 @@ const files: Attachment[] = [
     entity_id: "p-1",
     source: "upload",
     captured_by: "human:u-1",
-  } as unknown as Attachment,
+  },
   {
     id: "f-2",
     filename: "nda_signed.pdf",
@@ -49,7 +49,7 @@ const files: Attachment[] = [
     entity_id: "p-1",
     source: "upload",
     captured_by: "human:u-1",
-  } as unknown as Attachment,
+  },
 ];
 
 // The second page of the same library, filed a year earlier — same shape as

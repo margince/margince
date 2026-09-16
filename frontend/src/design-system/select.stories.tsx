@@ -4,7 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { type CSSProperties, useState } from "react";
 import { Field } from "./atoms";
-import { Select, type SelectOption } from "./select";
+import { MultiSelect, Select, type SelectOption } from "./select";
 import { TAG_TONES } from "./tagpill";
 import "./tagpill.css";
 
@@ -345,6 +345,67 @@ export const AdornmentsDark: Story = {
   render: () => (
     <div style={column}>
       <Demo label="Colour" options={TONES} start="violet" />
+    </div>
+  ),
+};
+
+function MultiDemo({
+  options,
+  start = [],
+  label,
+  placeholder,
+}: Readonly<{
+  options: readonly SelectOption[];
+  start?: readonly string[];
+  label: string;
+  placeholder?: string;
+}>) {
+  const [values, setValues] = useState<string[]>([...start]);
+  return (
+    <Field label={label}>
+      {(control) => (
+        <MultiSelect
+          {...control}
+          options={options}
+          values={values}
+          onChange={setValues}
+          placeholder={placeholder}
+        />
+      )}
+    </Field>
+  );
+}
+
+/**
+ * The multi-value sibling: a pick TOGGLES membership and the list stays open,
+ * so choosing three of thirty options is three clicks. The closed face reads
+ * the chosen labels in option order and ellipsizes past the field's width —
+ * open the long-vocabulary field to see the checks against a list a checkbox
+ * group would have drawn as a page of its own.
+ */
+export const Multi: Story = {
+  render: () => (
+    <div style={column}>
+      <MultiDemo
+        label="Stages"
+        options={STAGES}
+        start={["qualify", "proposal"]}
+      />
+      <MultiDemo label="Time zones" options={ZONES} placeholder="Not set" />
+    </div>
+  ),
+};
+
+/** The multi face and its checks on a dark ground. */
+export const MultiDark: Story = {
+  globals: { theme: "dark" },
+  render: () => (
+    <div style={column}>
+      <MultiDemo
+        label="Stages"
+        options={STAGES}
+        start={["qualify", "won", "lost"]}
+      />
     </div>
   ),
 };

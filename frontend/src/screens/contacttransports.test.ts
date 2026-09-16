@@ -8,6 +8,37 @@ import type { Transport } from "./contacttransports";
 import { transportForActivity, transportsFor } from "./contacttransports";
 
 type Contact360 = components["schemas"]["Contact360"];
+type Activity = NonNullable<Contact360["activities"]>["data"][number];
+
+// The scaffolding every Contact360 carries and none of these cases is about:
+// the instant it was read at, the record it is about, and what it could not
+// see. They were absent while a cast stood in front of the type, so the
+// fixtures were a shape the server cannot send.
+const AS_OF = "2026-08-20T10:00:00Z";
+const SUBJECT: Contact360["contact"] = {
+  id: "p-1",
+  full_name: "Dana Brandt",
+  source: "manual",
+  captured_by: "human:u-1",
+  created_at: "2026-06-01T08:00:00Z",
+  updated_at: "2026-06-01T08:00:00Z",
+};
+
+// One activity as the wire carries it: the case names what it is about, and
+// everything else is what an activity always has.
+function activity(
+  over: Partial<Activity> & Pick<Activity, "id" | "kind">,
+): Activity {
+  return {
+    occurred_at: AS_OF,
+    is_done: true,
+    source: "manual",
+    captured_by: "human:u-1",
+    created_at: AS_OF,
+    updated_at: AS_OF,
+    ...over,
+  };
+}
 
 // Two channels and an address, so "which one" is a real question rather than
 // one the fixture answers by having a single option.
@@ -17,19 +48,20 @@ const TRANSPORTS: Transport[] = [
   { id: "telegram", label: "Telegram", anchorId: "tg-newest" },
 ];
 
-function pageWith(
-  activities: Array<{ id: string; kind: string; channel_provider?: string }>,
-): Contact360 {
+function pageWith(activities: readonly Activity[]): Contact360 {
   return {
-    activities: { data: activities, page: {} },
-  } as unknown as Contact360;
+    as_of: AS_OF,
+    contact: SUBJECT,
+    sections_omitted: [],
+    activities: { data: [...activities], page: { has_more: false } },
+  };
 }
 
 const PAGE = pageWith([
-  { id: "wa-older", kind: "message", channel_provider: "whatsapp" },
-  { id: "wa-newest", kind: "message", channel_provider: "whatsapp" },
-  { id: "tg-newest", kind: "message", channel_provider: "telegram" },
-  { id: "mail-1", kind: "email" },
+  activity({ id: "wa-older", kind: "message", channel_provider: "whatsapp" }),
+  activity({ id: "wa-newest", kind: "message", channel_provider: "whatsapp" }),
+  activity({ id: "tg-newest", kind: "message", channel_provider: "telegram" }),
+  activity({ id: "mail-1", kind: "email" }),
 ]);
 
 describe("transportForActivity", () => {
@@ -108,32 +140,44 @@ const say: ReturnType<typeof useT> = (key, params) =>
 function contact(
   options: Readonly<{
     email?: boolean;
-    reachable?: { provider: string; reachable: boolean }[];
-    activities?: {
-      id: string;
-      kind: string;
-      channel_provider?: string;
-      occurred_at: string;
-    }[];
+    reachable?: { provider: string; reachable: boolean; since: string }[];
+    activities?: readonly Activity[];
   }>,
 ): Contact360 {
   return {
+    as_of: AS_OF,
+    sections_omitted: [],
     contact: {
+      ...SUBJECT,
       emails: options.email
-        ? [{ email: "dana@brandt.example", is_primary: true }]
+        ? [
+            {
+              id: "em-1",
+              email: "dana@brandt.example",
+              is_primary: true,
+              email_type: "work",
+              position: 0,
+              source: "manual",
+              captured_by: "human:u-1",
+            },
+          ]
         : [],
       reachability: options.reachable ?? [],
     },
-    activities: { data: options.activities ?? [] },
-  } as unknown as Contact360;
+    activities: {
+      data: [...(options.activities ?? [])],
+      page: { has_more: false },
+    },
+  };
 }
 
-const aMessage = (provider: string, id: string, at: string) => ({
-  id,
-  kind: "message",
-  channel_provider: provider,
-  occurred_at: at,
-});
+const aMessage = (provider: string, id: string, at: string): Activity =>
+  activity({
+    id,
+    kind: "message",
+    channel_provider: provider,
+    occurred_at: at,
+  });
 
 describe("transportsFor", () => {
   it("offers mail alone for a contact with an address and no channel", () => {
@@ -148,7 +192,7 @@ describe("transportsFor", () => {
     const got = transportsFor(
       contact({
         email: true,
-        reachable: [{ provider: "dispact", reachable: true }],
+        reachable: [{ provider: "dispact", reachable: true, since: AS_OF }],
         activities: [aMessage("dispact", "a-1", "2026-08-15T08:00:00Z")],
       }),
       nameProvider,
@@ -165,7 +209,7 @@ describe("transportsFor", () => {
     const got = transportsFor(
       contact({
         email: true,
-        reachable: [{ provider: "dispact", reachable: true }],
+        reachable: [{ provider: "dispact", reachable: true, since: AS_OF }],
       }),
       nameProvider,
       say,
@@ -178,7 +222,7 @@ describe("transportsFor", () => {
     const got = transportsFor(
       contact({
         email: true,
-        reachable: [{ provider: "dispact", reachable: false }],
+        reachable: [{ provider: "dispact", reachable: false, since: AS_OF }],
         activities: [aMessage("dispact", "a-1", "2026-08-15T08:00:00Z")],
       }),
       nameProvider,
@@ -192,7 +236,7 @@ describe("transportsFor", () => {
   it("offers the channel alone for a contact with no address", () => {
     const got = transportsFor(
       contact({
-        reachable: [{ provider: "dispact", reachable: true }],
+        reachable: [{ provider: "dispact", reachable: true, since: AS_OF }],
         activities: [aMessage("dispact", "a-1", "2026-08-15T08:00:00Z")],
       }),
       nameProvider,
@@ -206,7 +250,7 @@ describe("transportsFor", () => {
   it("anchors a provider on its most recent conversation, once", () => {
     const got = transportsFor(
       contact({
-        reachable: [{ provider: "dispact", reachable: true }],
+        reachable: [{ provider: "dispact", reachable: true, since: AS_OF }],
         activities: [
           aMessage("dispact", "older", "2026-08-01T08:00:00Z"),
           aMessage("dispact", "newest", "2026-08-15T08:00:00Z"),

@@ -92,6 +92,13 @@ var recognisedOwners = []string{
 	// corpus/owed_verdict.
 	"owed_verdict/owed",
 	"propose_roles/committee",
+	// settled | still_owed | unsure. An ANSWER vocabulary like owed_verdict's
+	// above: the whole output is one of these three words per conversation.
+	// unsure wants a scenario of its own because it is a real answer rather
+	// than a failure to reach one — it leaves the request owed — and a corpus
+	// scoring only the two confident words would never measure the abstention
+	// the floor exists to produce.
+	"request_settlement/request_settle",
 	"signal_extract/thread_events",
 	"site_triage/triage",
 }
