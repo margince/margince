@@ -435,12 +435,13 @@ The eight shapes, what each is for, and how each one silently passes:
 | `signatureeligibilityonespelling_test.go` | H2 | One spelling of "may this message be mined for this contact's signature", held by a test rather than by a comment. |
 | `uniquenessclaims_test.go` | H1 | A comment that says a declaration is the ONLY one of its kind is not decoration. |
 
-## Budget (4)
+## Budget (5)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
 | `docspagelength_test.go` | H3 | A docs page an agent cannot navigate is a page it does not read, and the failure is silent: it greps, lands in the middle of six hundred lines, and answers from the part it happened to see. |
 | `laneconnbudget_test.go` | H3 | The integration lane's connection demand is a PRODUCT — concurrent packages times what one package may hold — and for most of this repo's life neither factor knew about the third number it had to fit inside. |
+| `mcptoolcount_test.go` | H2 | How much of a user's tool budget this server spends. |
 | `rulebooklength_test.go` | H3 | A rulebook is read in full by every session and, for its Craftsmanship section, by every gate prompt — so its length is a running cost rather than a matter of taste. |
 | `workflowtimeouts_test.go` | H3 | Every workflow job carries a wall-clock ceiling. |
 
