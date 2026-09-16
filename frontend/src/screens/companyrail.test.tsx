@@ -69,6 +69,8 @@ function view(overrides: Record<string, unknown> = {}): Company360 {
       won_lifetime: { amount_minor: 0, currency: null },
       lost_count: 0,
     },
+    projects: [],
+    projects_page: emptyPage,
     tags: [],
     ...overrides,
   } as unknown as Company360;
@@ -983,7 +985,7 @@ describe("CompanyRail", () => {
       }),
     });
     expect(
-      screen.getByText("Nothing open — only closed history."),
+      screen.getByText("Nothing open, only closed history."),
     ).toBeInTheDocument();
     // No first-deal verb here — the account has already had deals, it is
     // between two of them rather than never having started. The way to the

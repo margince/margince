@@ -659,6 +659,7 @@ const (
 	AiActivityKindOwedVerdict                   AiActivityKind = "owed_verdict"
 	AiActivityKindProposeRoles                  AiActivityKind = "propose_roles"
 	AiActivityKindRateExtract                   AiActivityKind = "rate_extract"
+	AiActivityKindRequestSettlement             AiActivityKind = "request_settlement"
 	AiActivityKindSignalExtract                 AiActivityKind = "signal_extract"
 	AiActivityKindSiteExtract                   AiActivityKind = "site_extract"
 	AiActivityKindSiteFactExtract               AiActivityKind = "site_fact_extract"
@@ -715,6 +716,8 @@ func (e AiActivityKind) Valid() bool {
 	case AiActivityKindProposeRoles:
 		return true
 	case AiActivityKindRateExtract:
+		return true
+	case AiActivityKindRequestSettlement:
 		return true
 	case AiActivityKindSignalExtract:
 		return true
@@ -20160,9 +20163,15 @@ type Attention struct {
 	// Absent — not empty — on an installation whose feed does not read meetings.
 	Meetings *[]AttentionItem `json:"meetings,omitempty"`
 
-	// MeetingsUnreported Today's meetings that have already started and whose result nobody has
-	// recorded, longest unanswered first. The counterpart of `meetings`: that lane
-	// is what to prepare for, this is what to close off.
+	// MeetingsUnreported Meetings that have already started and whose result nobody has recorded,
+	// longest unanswered first. The counterpart of `meetings`: that lane is what to
+	// prepare for, this is what to close off.
+	//
+	// It reaches back a FORTNIGHT, where `meetings` is today only. The two bound
+	// differently because they expire differently: preparation stops being possible
+	// once a meeting begins, while an unrecorded outcome stays owed until somebody
+	// records it. Bounded at all so that the first read after a quiet month is a
+	// queue a reader can clear rather than a history of everything never answered.
 	//
 	// A meeting carrying no status at all is here. A captured calendar event
 	// arrives without one, so treating an absent status as settled would empty this
@@ -20333,7 +20342,7 @@ type AttentionCounts struct {
 	// Meetings How many of today's meetings are still ahead — the bounded page, as the other lanes report.
 	Meetings *int `json:"meetings,omitempty"`
 
-	// MeetingsUnreported How many of today's meetings have started with nobody saying how they went — the bounded page, as the other lanes report. Not in `required`: a client reading an installation whose feed does not carry this lane gets no number rather than a zero, which would claim the day is clear.
+	// MeetingsUnreported How many meetings of the last fortnight have started with nobody saying how they went — the bounded page, as the other lanes report. Not in `required`: a client reading an installation whose feed does not carry this lane gets no number rather than a zero, which would claim the day is clear.
 	MeetingsUnreported *int `json:"meetings_unreported,omitempty"`
 	NeedsYou           int  `json:"needs_you"`
 

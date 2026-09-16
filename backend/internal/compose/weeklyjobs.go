@@ -294,11 +294,6 @@ func (w *weeklyGenerateWorker) narrate(ctx context.Context, review weekly.Review
 
 // repsDueTheirReview lists the workspace's active full-seat humans whose local
 // Monday has reached reviewHour and who hold no review for the closed week.
-//
-// Overlay workspaces are refused outright: the review counts native deal rows,
-// which an overlay workspace keeps in the incumbent, so a pass there would
-// measure a week of zeroes — and "a quiet week" and "this cannot be answered
-// here" read identically while only one is true.
 func (w *weeklyGenerateWorker) repsDueTheirReview(
 	ctx context.Context, wsID ids.UUID, now time.Time,
 ) ([]ids.UUID, error) {

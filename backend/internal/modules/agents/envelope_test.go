@@ -219,7 +219,7 @@ func TestFreshnessReportsTheOldestContributingRecord(t *testing.T) {
 	}
 }
 
-// One mirror-backed record taints the whole answer. The alternative — reporting
+// One non-authoritative record taints the whole answer. The alternative — reporting
 // the majority, or the anchor — would let an agent act on external content
 // believing it came from the workspace.
 func TestOneMirrorBackedRecordTaintsTheAnswer(t *testing.T) {
@@ -229,10 +229,10 @@ func TestOneMirrorBackedRecordTaintsTheAnswer(t *testing.T) {
 	)))
 
 	if env.Freshness.Authoritative {
-		t.Error("authoritative stayed true with a mirror-backed record in the answer")
+		t.Error("authoritative stayed true with a non-authoritative record in the answer")
 	}
 	if env.Trust != trustExternal {
-		t.Errorf("trust = %q, want %q — a mirror-backed record is external content", env.Trust, trustExternal)
+		t.Errorf("trust = %q, want %q — a non-authoritative record is external content", env.Trust, trustExternal)
 	}
 }
 

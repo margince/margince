@@ -265,10 +265,8 @@ func TestCompany360ContactsHideACapturePrivateContact(t *testing.T) {
 }
 
 // The transport is thin, but "thin" is a claim: it has to bind the path id,
-// let the service's gates decide, and hand back the assembled body — and a
-// native workspace must reach it, not be refused by the overlay guard that
-// only exists for mirror-backed ones.
-func TestCompany360TransportServesANativeWorkspace(t *testing.T) {
+// let the service's gates decide, and hand back the assembled body.
+func TestCompany360TransportServesAWorkspace(t *testing.T) {
 	e := integration.Setup(t)
 	handlers := company360svc.NewHandlers(company360Service(e))
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme", &e.Rep1))

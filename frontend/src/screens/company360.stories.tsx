@@ -12,7 +12,6 @@ import {
   SuggestionsSection,
 } from "./company360";
 import { CompanyContractState } from "./companycommercial";
-import { CompanyWorkCard } from "./companywork";
 import {
   installFetchStub,
   jsonResponse,
@@ -345,10 +344,6 @@ function Cards({ view }: Readonly<{ view: View }>) {
   return (
     <StoryProviders>
       <div style={{ display: "grid", gap: "var(--space-3)", maxWidth: 420 }}>
-        {/* The overview's lead card. The live page always wires an opener,
-            so the commitment lines here can link to the conversation they
-            were read from; without one they render as plain sentences. */}
-        <CompanyWorkCard view={view} onOpenRecord={() => {}} />
         {/* The contract standing rides in the panel's `extra` slot, which is
             the SAME component the Deals tab draws — an account's contracted
             value and renewal must not be able to say two things on two

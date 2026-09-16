@@ -1248,8 +1248,8 @@ export const de = {
   "co.pulse.owner": "Betreut von",
   "co.pulse.sizeBand": "{band} Mitarbeitende",
   "co.pulse.strongestLead": "Zugang \u00fcber",
-  "co.pulse.strengthTail_one": "— der einzige Kontakt hier",
-  "co.pulse.strengthTail_other": "— von {count} Kontakten hier",
+  "co.pulse.strengthTail_one": ", der einzige Kontakt hier",
+  "co.pulse.strengthTail_other": ", von {count} Kontakten hier",
   "co.pulse.unowned": "Nicht zugewiesen",
   "co.since.first": "Du öffnest diesen Account zum ersten Mal.",
   "co.partial":
@@ -1456,24 +1456,8 @@ export const de = {
   "co.facts.projects_one": "1 Projekt",
   "co.facts.projects_other": "{count} Projekte",
   "co.facts.atLeast": "oder mehr",
-  "co.work.title": "Was läuft, und warum",
-  "co.work.count": "{count} laufend",
-  "co.work.countAtLeast": "{count}+ laufend",
-  "co.work.deals": "Deals",
-  "co.work.noDealsDetail":
-    "Im Deal stehen Betrag und Abschlussdatum. Leg einen an, sobald es etwas zu gewinnen gibt.",
   "co.work.noDeals": "Keine offenen Deals.",
   "co.work.closes": "Abschluss {date}",
-  "co.work.stalled": "Zu diesem Deal wurde seit 60 Tagen nichts erfasst.",
-  "co.work.overdueTask":
-    "{who} sollte \u201a{title}\u2018 bis {date} erledigen und hat es nicht getan.",
-  "co.work.overdueTaskUnnamed":
-    "\u201a{title}\u2018 war am {date} f\u00e4llig und ist offen.",
-  "co.work.owesUs": "{who} sagte: \u201a{body}\u2018",
-  "co.work.owesUsUnnamed": "Sie sagten: \u201a{body}\u2018",
-  "co.work.wasDue": "\u2014 bis {date}.",
-  "co.work.statusesWithheld":
-    "Du darfst die Konversationen dieses Accounts nicht lesen, deshalb tragen die Zeilen oben keine Begr\u00fcndungen.",
   "co.brief.by.model": "Von Margince geschrieben",
   "co.brief.by.deterministic": "Aus deinen Daten zusammengestellt",
   "co.brief.generatedAt": "Stand {when}",
@@ -1671,7 +1655,7 @@ export const de = {
   "co.rail.deals.title": "Aktive Deals",
   "co.rail.deals.empty": "Für diesen Account gibt es noch keine Deals.",
   "co.rail.deals.emptyClosedOnly":
-    "Nichts offen — nur abgeschlossene Historie.",
+    "Nichts offen, nur abgeschlossene Historie.",
   "co.rail.deals.noCloseDate": "kein Abschlussdatum",
   "co.rail.deals.attentionOverdue": "Überfällig",
   "co.rail.deals.attentionCommitment": "Sie schulden uns",
@@ -1680,6 +1664,10 @@ export const de = {
     "Noch keine Kontakte. Niemand, dem man schreiben kann.",
   "co.rail.contacts.add": "Kontakt hinzufügen",
   "co.rail.contacts.inTouch": "Bereits mit ihnen in Kontakt",
+  "co.rail.projects.title": "Projekte",
+  "co.rail.projects.empty": "Noch keine Projekte.",
+
+  "co.tab.deals": "Deals & Projekte",
 
   "co.commercial.title": "Kommerziell",
   "co.commercial.lostFigure": "Verlorene Deals",
@@ -1807,6 +1795,7 @@ export const de = {
   "email.access.sentence.selected":
     "Nur die unten genannten Personen können das lesen.",
   "visibility.team": "Team",
+  "visibility.workspace": "Geteilt",
   "visibility.participants": "Beteiligte",
   "visibility.selected": "Ausgewählte",
   "visibility.private": "Nur Sie",
@@ -2691,7 +2680,6 @@ export const de = {
   "assignments.subjectInactive": "(inaktiv)",
   "assignments.add": "Zuweisen",
   "assignments.change": "Ändern",
-  "assignments.remove": "Entfernen",
   "assignments.changeOne": "Zuständigkeit ändern: {who}",
   "assignments.removeOne": "Zuständigkeit beenden: {who}",
   "assignments.addTitle": "Zuständigkeit festhalten",
@@ -3785,6 +3773,8 @@ export const de = {
     "Deine Änderungen bleiben erhalten. Erstelle einen neuen Entwurf, wenn du bereit bist.",
   "compose.threadFailed":
     "Diese Nachricht konnte nicht gelesen werden. Versuche es in der Unterhaltung erneut.",
+  "compose.anchorGone":
+    "Diese Nachricht gibt es nicht mehr, es ist also nichts da, worauf du antworten k\u00f6nntest. Schreib stattdessen eine neue Nachricht.",
   "compose.threadPending": "Verlauf wird geladen\u2026",
   "compose.sendBody":
     "Prüfen und bearbeiten Sie Ihren Entwurf. Ein Klick auf Senden verschickt die E-Mail und kann nicht rückgängig gemacht werden.",
@@ -3872,6 +3862,7 @@ export const de = {
   "tasks.moveTo": "Verschieben auf",
   "tasks.detail": "Aufgabe",
   "tasks.source": "Das Meeting",
+  "tasks.sourceEmail": "Die E-Mail, aus der das entstand",
   "tasks.openSource": "Original öffnen",
   "tasks.detailLoading": "Aufgabe wird gelesen…",
   "tasks.isDone": "Abgeschlossen",
@@ -8630,10 +8621,6 @@ export const de = {
   "contact.moment.suggest.missingNextStep":
     "Nächsten Schritt festlegen: mit ihnen ist nichts geplant.",
   "contact.moment.rule.nothing_needed": "Nichts zu tun",
-  "contact.moment.evidence.activity": "Aus einem Austausch",
-  "contact.moment.evidence.task": "Aus einer Aufgabe",
-  "contact.moment.evidence.relationship_change":
-    "Aus einer Änderung am Datensatz",
 
   "contact.overview.detailsPermissions": "Details & Berechtigungen",
   "contact.overview.detailsShow": "Details & Berechtigungen einblenden",
@@ -9133,7 +9120,7 @@ export const de = {
   "unit.projects": "Projekte",
   "companyProjects.title": "Projekte",
   "companyProjects.empty":
-    "Ein Projekt ist die Arbeit, um die es in einem Deal geht. Dieses Unternehmen erscheint hier, sobald es an einem beteiligt ist — als Kunde, Partner oder Subunternehmer.",
+    "Ein Projekt ist die Arbeit, um die es in einem Deal geht. Dieses Unternehmen erscheint hier, sobald es an einem beteiligt ist: als Kunde, Partner oder Subunternehmer.",
   "projectCompanies.title": "Unternehmen",
   "projectCompanies.empty":
     "Ein Projekt ist Arbeit, die mehrere Unternehmen gemeinsam leisten — der Kunde und jeder Partner oder Subunternehmer, der liefert.",
@@ -9666,9 +9653,15 @@ export const de = {
   "worklist.verb.promiseKept": "Erledigt",
   "worklist.verb.promiseSettled": "Als eingehalten vermerkt.",
   "worklist.verb.promiseSettleFailed": "Das konnte nicht vermerkt werden.",
+  "worklist.verb.meetingUpdate": "Bearbeiten",
+  "worklist.verb.meetingUpdateTitle": "Termin",
+  "worklist.verb.meetingReading": "Termin wird gelesen…",
+  "worklist.verb.meetingWhatHappened": "Was ist passiert",
+  "worklist.verb.meetingBodyHint":
+    "Was besprochen wurde und was als Nächstes ansteht. Die Notizen aus dem Kalender stehen hier zum Bearbeiten.",
   "worklist.verb.meetingHeld": "Hat stattgefunden",
   "worklist.verb.meetingNoShow": "Niemand kam",
-  "worklist.verb.meetingCanceled": "Wurde abgesagt",
+  "worklist.verb.meetingCanceled": "Abgesagt",
   "worklist.verb.meetingOutcomeRecorded":
     "Der Verlauf des Termins wurde festgehalten.",
   "worklist.verb.meetingOutcomeFailed": "Das konnte nicht festgehalten werden.",

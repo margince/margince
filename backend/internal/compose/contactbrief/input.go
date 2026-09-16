@@ -43,7 +43,7 @@ import (
 // of them.
 //
 // It covers ONLY the floor. The model prompt versions itself below.
-const floorVersion = "contact-brief-floor-v2"
+const floorVersion = "contact-brief-floor-v3"
 
 // promptVersion is DERIVED from the prompt as it is SENT — boundary rule
 // included — so editing that wording bumps it whether or not anybody remembers
@@ -58,12 +58,28 @@ var promptVersion = ai.PromptDigest(func(fence promptfence.Fence) string {
 	return briefSystemFor(fence, string(textlang.English))
 })
 
-// briefInputActivities bounds the timeline the brief reads. Each row now
-// carries a line of what was actually written, so six of them say more than the
-// ten subjects they replace — and a brief is four or five sentences, so a longer
-// window buys nothing a reader will see while making the fingerprint churn on
-// activity that never changes the text.
-const briefInputActivities = 6
+// BriefInputActivities bounds the timeline the brief reads.
+//
+// TWELVE, and the number is load-bearing rather than generous. Six was chosen
+// when each row carried a line of what was written, on the reasoning that a
+// brief is four or five sentences and a longer window buys nothing a reader
+// sees. That reasoning holds for a contact with a varied recent timeline and
+// fails completely for one whose last six messages are a single exchange: the
+// window then contains one topic, the prompt is told to lead with what changed,
+// and the brief reports a booked meeting as the state of the relationship —
+// which is what it did on a real contact whose substantive history sat in the
+// seventh row and below.
+//
+// Free, which is why the number can move at all: the 360 timeline read already
+// fetches its own section cap and this fold TRUNCATES what it was handed, so a
+// wider window is rows already in memory rather than a second query or a wider
+// gate. The ceiling is that cap, not this constant.
+// EXPORTED because the certification fixture folds through this same bound.
+// That fold used to append every message a scenario supplied, so a corpus case
+// written to prove the window reaches older material would have passed with
+// production still capped at six — a test supplying its own version of the
+// thing it certifies.
+const BriefInputActivities = 12
 
 // briefInputClaims bounds the claims the brief reads, newest first. The
 // commitments card renders them all — the brief only needs enough to say what
@@ -198,11 +214,29 @@ type MomentIn struct {
 // such a row — the 360 nulls them before this fold ever sees them — so the flag
 // adds no content, it explains an absence.
 type ActIn struct {
-	ID        string `json:"id"`
-	Kind      string `json:"kind"`
-	Subject   string `json:"subject,omitempty"`
-	Preview   string `json:"preview,omitempty"`
-	Direction string `json:"direction,omitempty"`
+	ID      string `json:"id"`
+	Kind    string `json:"kind"`
+	Subject string `json:"subject,omitempty"`
+	Preview string `json:"preview,omitempty"`
+	// Speaker says WHO wrote this message, in the voice the brief is written
+	// in: "them" for a message from the contact, "you" for one from the
+	// reader. Empty on a row that records no direction, which the contract
+	// allows and the prompt is told to expect.
+	//
+	// It is a SPEAKER and not a direction, and that is the whole of the fix it
+	// carries. `direction: outbound` states a fact about a message and leaves the
+	// model to join it to "so these are the reader's own words" — a join it got
+	// wrong in production, attributing a founder's own assessment of a competitor
+	// to the contact who had merely asked about them, and labelling the sentence
+	// a FACT. The prompt had a rule telling it to make that join. A rule is not a
+	// substitute for saying the thing plainly in the data.
+	//
+	// Preview is the SPEAKER's own line, so the two fields belong together: this
+	// one names whose words those are. The deterministic floor never had this
+	// defect — lastTouchLine writes "You wrote last" straight from LastOutbound —
+	// which is why the fix lands in the shape the model reads rather than in the
+	// prose either path produces.
+	Speaker string `json:"speaker,omitempty"`
 	// Move is the server's reading of whose turn it is on this message:
 	// `needs_reply`, `waiting_for_them`, or `none` when the question cannot be
 	// answered honestly. Empty on a row that is not mail.
@@ -352,7 +386,7 @@ func foldRecent(in *Input, view crmcontracts.Contact360) {
 		return
 	}
 	for _, activity := range view.Activities.Data {
-		if len(in.Recent) == briefInputActivities {
+		if len(in.Recent) == BriefInputActivities {
 			break
 		}
 		folded := ActIn{
@@ -365,7 +399,7 @@ func foldRecent(in *Input, view crmcontracts.Contact360) {
 			folded.Subject = *activity.Subject
 		}
 		if activity.Direction != nil {
-			folded.Direction = string(*activity.Direction)
+			folded.Speaker = SpeakerFor(*activity.Direction)
 		}
 		foldMailSummary(&folded, activity.EmailSummary)
 		in.Recent = append(in.Recent, folded)
@@ -389,6 +423,35 @@ func foldMailSummary(into *ActIn, summary *crmcontracts.EmailSummary) {
 	if summary.Move != crmcontracts.EmailSummaryMoveNone {
 		into.Move = string(summary.Move)
 	}
+}
+
+// The two speakers a captured message can have, in the voice the brief is
+// written in. Derived from the contract's own direction enum rather than
+// compared against string literals, so a rename upstream fails to compile here
+// instead of silently folding every message to the same one.
+const (
+	speakerThem = "them"
+	speakerYou  = "you"
+)
+
+// SpeakerFor names who wrote a message, from the direction the 360 recorded.
+//
+// Inbound is the contact; everything else is the reader. The default is
+// deliberate rather than lazy: a direction this function does not recognise is
+// one the product has just added, and attributing an unknown message to the
+// READER is the safe way to be wrong — a brief that credits the reader with a
+// contact's words understates what the contact said, where the reverse puts
+// words in their mouth, which is the defect this field exists to prevent.
+//
+// Exported because the certification case folds its fixture through THIS
+// function rather than mapping directions to speakers a second time: a copy
+// would agree until somebody edited one side, and the side that drifted would be
+// the one certifying the prompt.
+func SpeakerFor(direction crmcontracts.ActivityDirection) string {
+	if direction == crmcontracts.ActivityDirectionInbound {
+		return speakerThem
+	}
+	return speakerYou
 }
 
 // withheldContent reports a row whose words are not this reader's. The 360 has

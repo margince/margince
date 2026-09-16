@@ -194,7 +194,7 @@ afterEach(() => {
 // because a mail row's "Unanswered" status is a `.badge` in that same line
 // too, and a child selector could not tell the two spans apart.
 function timelineTransportCell(container: HTMLElement): HTMLElement {
-  const cell = container.querySelector<HTMLElement>(".pe-memory-who + span");
+  const cell = container.querySelector<HTMLElement>(".meta-row-who + span");
   if (!cell) {
     throw new Error("no transport text rendered on the timeline row");
   }

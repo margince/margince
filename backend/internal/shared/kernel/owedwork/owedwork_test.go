@@ -24,6 +24,33 @@ func undated(ref string, filedDaysAgo int, source owedwork.Source) owedwork.Item
 	return owedwork.Item{Ref: ref, Source: source, FiledAt: now.AddDate(0, 0, -filedDaysAgo)}
 }
 
+// The overdue sentence never says "0 days ago": lateness under one whole day
+// has its own words, and undated or future work has none.
+func TestLateWordsCountWholeDaysBehind(t *testing.T) {
+	twoHoursLate := now.Add(-2 * time.Hour)
+	fourDaysLate := now.AddDate(0, 0, -4)
+	stillAhead := now.Add(2 * time.Hour)
+	cases := []struct {
+		name string
+		due  *time.Time
+		want string
+		late bool
+	}{
+		{"hours late", &twoHoursLate, "Due less than a day ago and still open.", true},
+		{"days late", &fourDaysLate, "Due 4 days ago and still open.", true},
+		{"not yet due", &stillAhead, "", false},
+		{"undated", nil, "", false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, late := owedwork.LateWords(tc.due, now)
+			if got != tc.want || late != tc.late {
+				t.Fatalf("LateWords = %q/%t, want %q/%t", got, late, tc.want, tc.late)
+			}
+		})
+	}
+}
+
 func refOf(t *testing.T, item owedwork.Item) string {
 	t.Helper()
 	ref, ok := item.Ref.(string)

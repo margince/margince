@@ -1,0 +1,25 @@
+/* A listed project on the record-card face (design-system/recordcard.css):
+   the name and its phase badge share the card's own two tracks, and the
+   owner line under both takes the full width, the same split the deals
+   rail row draws for its own amount and meta (company360.css's
+   .co-deal-card). The card is itself the link: a project row carries no
+   other control to collide with. */
+.co-project-card {
+  color: inherit;
+  text-decoration: none;
+}
+.co-project-card:hover .record-card-name {
+  text-decoration: underline;
+}
+.co-project-card:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+.co-project-phase {
+  grid-column: 2;
+  grid-row: 1;
+}
+.co-project-meta {
+  grid-column: 1 / -1;
+  margin: 0;
+}

@@ -177,5 +177,7 @@ it("says so when ending a responsibility is refused", async () => {
   // The button re-enables either way, so a refusal that said nothing would
   // read exactly like a responsibility that ended.
   expect(await screen.findByRole("alert")).toBeTruthy();
-  expect(screen.getByText(/Mara Feld/)).toBeTruthy();
+  // Exact match: the row's own name, not the removal verb's tooltip, which
+  // also carries "Mara Feld" as part of its own sentence.
+  expect(screen.getByText("Mara Feld")).toBeTruthy();
 });

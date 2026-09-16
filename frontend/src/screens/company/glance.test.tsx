@@ -7,48 +7,12 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
-import { MoneyPane, ThreadFold } from "./glance";
+import { ThreadFold } from "./glance";
 
 type Company360 = components["schemas"]["Company360"];
 type Activity = components["schemas"]["Activity"];
 
 afterEach(cleanup);
-
-function drawMoney(loading: boolean) {
-  return render(
-    <LocaleProvider initial="en">
-      <MoneyPane
-        companyId="o-1"
-        loading={loading}
-        readOnly={false}
-        onAllDeals={() => undefined}
-      />
-    </LocaleProvider>,
-  );
-}
-
-// The projects group reads its own state the way the deals group does. An
-// absent list handed straight to the links section drew "No projects yet"
-// with an Attach verb while the 360 was still on its way — an invitation to
-// act on a section that had not answered.
-describe("the money pane's projects group", () => {
-  it("holds the loading state, not an empty plate, while the 360 is in flight", () => {
-    drawMoney(true);
-    expect(screen.queryByRole("button", { name: "Attach project" })).toBeNull();
-    expect(screen.queryByText("No projects yet")).toBeNull();
-    // The group is still named, so a reader can tell WHICH reading is on its
-    // way, one level under the pane's own title.
-    expect(
-      screen.getByRole("heading", { level: 3, name: "Projects" }),
-    ).toBeTruthy();
-  });
-
-  it("says the section could not be read when the 360 failed", () => {
-    drawMoney(false);
-    expect(screen.queryByRole("button", { name: "Attach project" })).toBeNull();
-    expect(screen.queryByText("No projects yet")).toBeNull();
-  });
-});
 
 // The fold draws the account's messages in FULL — sender, subject, preview,
 // access badge — so a reader who can see the message expects to open it. It

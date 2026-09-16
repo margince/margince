@@ -1322,8 +1322,8 @@ export const en = {
   "co.pulse.owner": "Owner",
   "co.pulse.sizeBand": "{band} employees",
   "co.pulse.strongestLead": "Way in",
-  "co.pulse.strengthTail_one": "— the only contact here",
-  "co.pulse.strengthTail_other": "— of {count} contacts here",
+  "co.pulse.strengthTail_one": ", the only contact here",
+  "co.pulse.strengthTail_other": ", of {count} contacts here",
   "co.pulse.unowned": "Unassigned",
   "co.since.first": "You are opening this account for the first time.",
   "co.partial":
@@ -1530,25 +1530,8 @@ export const en = {
   "co.facts.projects_one": "1 project",
   "co.facts.projects_other": "{count} projects",
   "co.facts.atLeast": "or more",
-  "co.work.title": "What is in flight, and why",
-  "co.work.count": "{count} in flight",
-  "co.work.countAtLeast": "{count}+ in flight",
-  "co.work.deals": "Deals",
-  "co.work.noDealsDetail":
-    "A deal is where the money and the close date live. Open one when there is something to win.",
   "co.work.noDeals": "No open deals.",
   "co.work.closes": "closes {date}",
-  "co.work.stalled":
-    "Nothing has been filed against this deal in the last 60 days.",
-  "co.work.overdueTask":
-    "{who} was supposed to \u2018{title}\u2019 by {date} and has not.",
-  "co.work.overdueTaskUnnamed":
-    "\u2018{title}\u2019 was due {date} and is still open.",
-  "co.work.owesUs": "{who} said: \u2018{body}\u2019",
-  "co.work.owesUsUnnamed": "They said: \u2018{body}\u2019",
-  "co.work.wasDue": "\u2014 by {date}.",
-  "co.work.statusesWithheld":
-    "You cannot read this account\u2019s conversations, so the rows above carry no reasons.",
   "co.brief.by.model": "Written by Margince",
   "co.brief.by.deterministic": "Assembled from your records",
   "co.brief.generatedAt": "as of {when}",
@@ -1746,7 +1729,7 @@ export const en = {
   "co.rail.allUncounted": "All",
   "co.rail.deals.title": "Active deals",
   "co.rail.deals.empty": "No deals on this account yet.",
-  "co.rail.deals.emptyClosedOnly": "Nothing open — only closed history.",
+  "co.rail.deals.emptyClosedOnly": "Nothing open, only closed history.",
   "co.rail.deals.noCloseDate": "no close date",
   "co.rail.deals.attentionOverdue": "Overdue",
   "co.rail.deals.attentionCommitment": "They owe us",
@@ -1754,6 +1737,13 @@ export const en = {
   "co.rail.contacts.empty": "No contacts yet. Nobody to write to.",
   "co.rail.contacts.add": "Add a contact",
   "co.rail.contacts.inTouch": "Already in touch with them",
+  "co.rail.projects.title": "Projects",
+  "co.rail.projects.empty": "No projects yet.",
+
+  // Its own key rather than the shared `tab.deals`: the contact page's own
+  // Deals tab holds no projects, so renaming that key would rename a tab that
+  // did not change.
+  "co.tab.deals": "Deals & projects",
 
   "co.commercial.title": "Commercial",
   "co.commercial.lostFigure": "Lost deals",
@@ -1887,6 +1877,11 @@ export const en = {
   // workspace (see above); "Only you" is a captured contact's owner-only
   // state, which a message never has.
   "visibility.team": "Team",
+  // A shared company or contact, where the audience IS the whole workspace —
+  // no linked record narrows it the way one narrows a message. "Shared" pairs
+  // with the verb beside it ("Make private"), which is how a reader tells the
+  // two apart without reading the tooltip.
+  "visibility.workspace": "Shared",
   "visibility.participants": "Participants",
   "visibility.selected": "Selected",
   "visibility.private": "Only you",
@@ -2758,7 +2753,6 @@ export const en = {
   "assignments.subjectInactive": "(inactive)",
   "assignments.add": "Assign",
   "assignments.change": "Change",
-  "assignments.remove": "Remove",
   "assignments.changeOne": "Change who holds this: {who}",
   "assignments.removeOne": "End this responsibility: {who}",
   "assignments.addTitle": "Name who is responsible",
@@ -3905,6 +3899,12 @@ export const en = {
   "compose.draftKept": "Your edits were kept. Draft again when you are ready.",
   "compose.threadFailed":
     "That message could not be read. Use Try again in the conversation.",
+  // The message a reply anchors on is gone — archived, or no longer this
+  // reader's to open. It names the state and what the reader can still do,
+  // because the server's own answer here is a bare "not found", which tells
+  // them neither.
+  "compose.anchorGone":
+    "That message is no longer available, so there is nothing to reply to. Write a new message instead.",
   "compose.threadPending": "Loading the conversation\u2026",
   "compose.sendBody":
     "Review and edit your draft. Clicking Send sends this email and cannot be undone.",
@@ -3993,6 +3993,7 @@ export const en = {
   "tasks.moveTo": "Move to",
   "tasks.detail": "Task",
   "tasks.source": "The meeting",
+  "tasks.sourceEmail": "The email this came from",
   "tasks.openSource": "Open original",
   "tasks.detailLoading": "Reading this task…",
   "tasks.isDone": "Completed",
@@ -8750,9 +8751,6 @@ export const en = {
   "contact.moment.suggest.missingNextStep":
     "Set the next step: nothing is planned with them.",
   "contact.moment.rule.nothing_needed": "Nothing needed",
-  "contact.moment.evidence.activity": "From an exchange",
-  "contact.moment.evidence.task": "From a task",
-  "contact.moment.evidence.relationship_change": "From a change on the record",
 
   "contact.overview.detailsPermissions": "Details & permissions",
   "contact.overview.detailsShow": "Show details & permissions",
@@ -9279,7 +9277,7 @@ export const en = {
   "unit.projects": "projects",
   "companyProjects.title": "Projects",
   "companyProjects.empty":
-    "A project is the body of work a deal is about. This company appears here once it is on one — as the client, a partner, or a subcontractor.",
+    "A project is the body of work a deal is about. This company appears here once it is on one: as the client, a partner, or a subcontractor.",
   "projectCompanies.title": "Companies",
   "projectCompanies.empty":
     "A project is work several companies do together — the client, and any partner or subcontractor delivering it.",
@@ -9800,9 +9798,18 @@ export const en = {
   "worklist.verb.promiseKept": "Done",
   "worklist.verb.promiseSettled": "Marked as kept.",
   "worklist.verb.promiseSettleFailed": "That could not be marked as kept.",
+  // The card's two verbs. "Update" opens the composer on this meeting; the
+  // three answers below it are what that composer offers, and "Cancelled" is
+  // the one the card writes by itself.
+  "worklist.verb.meetingUpdate": "Update",
+  "worklist.verb.meetingUpdateTitle": "Meeting",
+  "worklist.verb.meetingReading": "Reading this meeting…",
+  "worklist.verb.meetingWhatHappened": "What happened",
+  "worklist.verb.meetingBodyHint":
+    "What was said, and what happens next. The calendar's own notes are here to edit.",
   "worklist.verb.meetingHeld": "It happened",
   "worklist.verb.meetingNoShow": "They didn't come",
-  "worklist.verb.meetingCanceled": "It was called off",
+  "worklist.verb.meetingCanceled": "Cancelled",
   "worklist.verb.meetingOutcomeRecorded": "Recorded how the meeting went.",
   "worklist.verb.meetingOutcomeFailed": "That could not be recorded.",
   "worklist.verb.retry": "Run it again",

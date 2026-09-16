@@ -239,3 +239,35 @@
     flex-direction: row;
   }
 }
+
+/* The moment's evidence: what the rule fired on, each openable. They are the
+   difference between a verdict and a claim with its receipts. What the move
+   rests on, as an inline run of links after its caption: one quiet meta line
+   under the ask, the way a citation reads, rather than a list of bordered
+   buttons that competed with the verbs beside it. */
+.today-evidence {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.today-evidence li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* A source names its kind with a glyph before its words, on the same
+   baseline; the link variant of Button already lays its children out this
+   way, so the rule covers the plain-text sources. Shared by both record
+   pages the moment's evidence draws on: the company page does not load the
+   contact page's stylesheet, so the class lives in the kit both reach. */
+.pe-source {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}

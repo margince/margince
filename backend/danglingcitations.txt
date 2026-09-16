@@ -50,7 +50,6 @@ backend/gates/tableownerregistry_test.go migration 0219
 backend/gates/tableownershipwaivers_test.go core 0245
 backend/internal/compose/accountdraft/input.go core 0203
 backend/internal/compose/agentgate_pin_test.go core 0063
-backend/internal/compose/agentgate_pin_test.go custom 20260730120000
 backend/internal/compose/agenttaskretention.go migration 0201
 backend/internal/compose/captureverdict_integration_test.go migration 0137
 backend/internal/compose/captureverdictnoise_integration_test.go migration 0137

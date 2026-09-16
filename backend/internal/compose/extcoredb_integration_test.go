@@ -11,8 +11,8 @@ package compose
 // reach any of them: the port's own suite runs on a fake runtime whose Tx
 // merely calls the callback, so it models neither transaction ownership nor
 // rollback and the atomicity claim is proven by construction and by nothing
-// else. The overlay refusal reads a real row. The attribution is merged into
-// audit_log.evidence by storekit, which no fake runs. And the whole point of
+// else. The attribution is merged into audit_log.evidence by storekit, which no
+// fake runs. And the whole point of
 // holding the caller's transaction rather than taking a connection is invisible
 // until the pool has one connection in it.
 //

@@ -25,6 +25,7 @@ import { entityTimelineKeys } from "./activitykeys";
 import {
   isConsentNotGranted,
   ProblemError,
+  problemCodeOf,
   problemFieldErrorsOf,
   problemMessageOf,
   throwProblem,
@@ -2197,10 +2198,24 @@ export function ComposeModal({
       (Boolean(answering) &&
         (!anchorActivity || anchorActivity.content_state === "withheld")) ||
       (groundable && !account.recipientId),
+    // A 404 from the draft endpoint, ON A REPLY, is the anchor being gone
+    // rather than a drafting failure: GET /activities/{id} still answers 200
+    // for an archived row, so anchorRead succeeds and this is the first place
+    // the reader learns of it. Without its own sentence the server's bare
+    // "not found" prints above the To field, naming neither the message nor
+    // what to do next.
+    //
+    // Gated on `answering`, because the same mutation drafts for a contact,
+    // company or lead with no anchor at all, and those 404 when the RECORD is
+    // gone. Telling a rep composing a fresh message that there is nothing to
+    // reply to would name the wrong record and advise what they are already
+    // doing.
     error: anchorRead.failed
       ? t("compose.threadFailed")
       : draft.isError
-        ? problemMessageOf(draft.error, t)
+        ? answering && problemCodeOf(draft.error) === "not_found"
+          ? t("compose.anchorGone")
+          : problemMessageOf(draft.error, t)
         : null,
   };
   // The account-started path's two additions to the mail's head — who this is

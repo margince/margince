@@ -4,8 +4,8 @@
 package agents
 
 // The canonical V1 CRUD tool set (interfaces.md §2.1), composed over the
-// SystemOfRecordProvider seam so the same tools serve SoR-mode today and
-// Overlay-mode unchanged (03e AC-OV-2). Record-type-generic by design:
+// SystemOfRecordProvider seam so the same tools serve whichever provider
+// answers for the records. Record-type-generic by design:
 // one read_record with a record_type argument, mapping onto the per-type
 // contract operations. Writes stamp source="mcp"; captured_by is derived
 // from the authenticated Principal by the store — an agent cannot forge
@@ -157,11 +157,12 @@ type wireRecord struct {
 	Fields     json.RawMessage `json:"fields"`
 	Version    int64           `json:"version,omitempty"`
 	// TrustTier is "external" when the record did not come from the native
-	// store (datasource.Record.Freshness.Authoritative is false) — the
-	// overlay mirror's T2 label (AC-OV-5). It is the same marker the REST
-	// search surface emits (compose.ContractSearchResults); carrying it
-	// here keeps mirror-backed content tainted end-to-end for Surface-A MCP
-	// clients too, not only inside the runner's blanket untrusted-wrapping.
+	// store (datasource.Record.Freshness.Authoritative is false), which is
+	// content another system holds and this one only copies — T2 by
+	// definition. It is the same marker the REST search surface emits
+	// (compose.ContractSearchResults); carrying it here keeps that content
+	// tainted end-to-end for Surface-A MCP clients too, not only inside the
+	// runner's blanket untrusted-wrapping.
 	// Omitted (empty) for authoritative native reads.
 	TrustTier string `json:"trust_tier,omitempty"`
 }

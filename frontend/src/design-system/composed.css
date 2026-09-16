@@ -1520,21 +1520,27 @@
 /* One responsibility row in the Responsible panel (screens/recordteam.tsx).
  *
  * The row is the reader's unit: a role label over the colleague or team that
- * holds it, with the verbs for that one responsibility beside the pair. So the
- * li is a row, and the labelled pair inside it is a column — the same anatomy
- * .firmo's own div children already have, which is why the pair carries no
- * class of its own.
+ * holds it, with the verbs for that one responsibility stacked under the
+ * pair rather than squeezed beside it: a full-size Change and Remove pair
+ * beside the text, at the rail's ~320px width, was what pushed a two-line
+ * eyebrow and a two-line name. Stacked, the pair keeps the row's width and
+ * the small verbs get their own line under it.
  *
  * Scoped to this list rather than to .firmo, which every firmographics block
  * in the product uses and none of which has row verbs. */
 .assignments {
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-3);
+  /* Off the caption above it, which the list otherwise touches. */
+  margin-block-start: var(--space-3);
 }
+/* The pair leads and the verbs end the row; a name too long for one line
+   wraps the verbs under it rather than crushing either. */
 .assignments > li {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-2) var(--space-3);
   width: 100%;
 }
 .assignments .assignrow-pair {
@@ -1542,13 +1548,11 @@
   flex-direction: column;
   gap: 2px;
   min-width: 0;
+  flex: 1 1 8rem;
 }
-/* Pushed to the end of the row and never shrunk: a long team name wraps, and
- * Change/Remove keep their hit targets whatever the name does. */
 .assignrow-verbs {
   display: flex;
   gap: var(--gapActions);
-  flex: 0 0 auto;
   margin-inline-start: auto;
 }
 
@@ -1582,4 +1586,116 @@
   display: flex;
   align-items: baseline;
   gap: var(--space-2);
+}
+
+/* `.meta-row`: one row of a condensed list, read as a face and a body. The
+ * contact page's conversation memory (screens/contactmemory.tsx) and the
+ * company page's stated facts (screens/companyfactrow.tsx) both draw it. A
+ * face down a quiet left column, a meta line over the content, and the time
+ * and the trailing action closing each line at the far edge. Two rows, three
+ * columns when there is a face: the content takes the body column under the
+ * meta line, never the face's, so the axis stays readable down the card.
+ *
+ * A `PanelRow`, so the hairline and the gutters come from there; this only
+ * lays the row's own content out. Children arrive named by class rather than
+ * by position, so a caller can leave one out (the facts card has no face, no
+ * time) without the grid losing track of which cell is which. */
+.meta-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  column-gap: var(--space-3);
+  row-gap: var(--space-1);
+  align-items: start;
+}
+.meta-row > .avatar {
+  grid-row: 1 / span 2;
+  grid-column: 1;
+}
+.meta-row-line {
+  grid-row: 1;
+  grid-column: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: var(--space-6);
+}
+/* The counterparty's name, set apart from the rest of the meta line's plain
+   words the way a name is set apart everywhere else this product lists
+   contacts. */
+.meta-row-who {
+  font-weight: var(--fw-medium);
+  color: var(--textPrimary);
+}
+/* A dot between the words of the meta line, drawn by the line rather than
+   typed into the copy, so a row with one fact carries no stray separator. */
+.meta-row-line > * + *::before {
+  content: "·";
+  margin-inline-end: var(--space-2);
+  color: var(--textMeta);
+}
+/* The standing pill is a mark, not a word in the sentence, so no dot leads
+   into it. The wrapper takes the cancel; the pill itself stays atoms.css's. */
+.meta-row-line > .pe-memory-standing::before {
+  content: none;
+}
+.meta-row-time {
+  grid-row: 1;
+  grid-column: 3;
+  justify-self: end;
+  white-space: nowrap;
+}
+.meta-row-action {
+  grid-row: 2;
+  grid-column: 3;
+  justify-self: end;
+}
+.meta-row > .emailentry,
+.meta-row > .meta-row-entry {
+  grid-row: 2;
+  grid-column: 2;
+}
+/* The entry is a pressable plate with its own inset, so its words started a
+   pad to the right of the meta line above them. Pulled out by that inset, the
+   words line up with the meta and the hover plate still surrounds them. */
+.meta-row > .emailentry {
+  /* ds:ignore pulls the plate out by its own inset so its words align with the
+     meta line; the primitive's inset is what is being cancelled */
+  margin-inline: calc(-1 * var(--space-3));
+}
+
+/* On a phone the meta line is too long for one row: the third column folds
+   away and the time and the reply drop under the subject, so nothing has to
+   overflow the panel to stay on its line. */
+@media (max-width: 600px) {
+  .meta-row {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+}
+
+.meta-row-action:empty {
+  display: none;
+}
+
+/* A `.meta-row` with no face column, read by the row itself rather than told
+ * by a modifier class: the facts card names no counterparty to put one
+ * beside, so the row loses the column and the gap a face would have paid
+ * for, and the trailing action keeps its own column beside the content. */
+.meta-row:not(:has(> .avatar)) {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+.meta-row:not(:has(> .avatar)) > .meta-row-line,
+.meta-row:not(:has(> .avatar)) > .meta-row-entry {
+  grid-column: 1;
+}
+.meta-row:not(:has(> .avatar)) > .meta-row-action {
+  grid-column: 2;
+}
+@media (max-width: 600px) {
+  .meta-row:not(:has(> .avatar)) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .meta-row:not(:has(> .avatar)) > .meta-row-action {
+    grid-column: 1;
+  }
 }

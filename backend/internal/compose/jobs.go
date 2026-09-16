@@ -197,6 +197,12 @@ type JobRunnerConfig struct {
 	// unjudged, and the queue ranks an unjudged row exactly as it did before the
 	// pass existed.
 	OwedBrain completer
+	// SettlementBrain is the request-settlement lane, which judges whether our
+	// own reply settled what an inbound request asked. Nil = no AI configured
+	// for it, and the consequence is exactly today's behaviour: a request stays
+	// owed until somebody ticks its reminder, because a reply alone has never
+	// settled one.
+	SettlementBrain completer
 	// EnrichBrain is the signature-enrich lane; nil = the pass is absent
 	// by omission and connector-created contacts keep their empty fields.
 	EnrichBrain completer

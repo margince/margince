@@ -109,6 +109,36 @@ func (s *Service) startOfDay(ctx context.Context, asOf time.Time) (time.Time, er
 	return startOfNextDay(local.AddDate(0, 0, -1), loc), nil
 }
 
+// unansweredSince is where the lane of meetings owing an outcome opens.
+//
+// NOT startOfDay, and the difference is the whole of the bug it fixes. That
+// boundary answers "when did today begin", which is the right question for a
+// lane about today and the wrong one for a debt: a meeting nobody closed off
+// does not stop owing an answer because the clock passed midnight, and a window
+// that opened there dropped it silently at the exact moment the reader went
+// home.
+//
+// It walks back from the day's start rather than from asOf, so the window's
+// lower edge is a local midnight like every other boundary in this file. Off
+// the instant instead, the lane would open mid-morning and a meeting from
+// fourteen days ago would drift in and out of it as the day wore on.
+//
+// AddDate over the local date rather than a fixed span of hours, for the reason
+// startOfNextDay spells out: a fortnight contains a clock change twice a year,
+// and subtracting 14×24h lands an hour off on those — in the direction that
+// drops the oldest meeting a day early.
+func (s *Service) unansweredSince(ctx context.Context, asOf time.Time) (time.Time, error) {
+	began, err := s.startOfDay(ctx, asOf)
+	if err != nil {
+		return time.Time{}, err
+	}
+	loc, err := s.location(ctx)
+	if err != nil {
+		return time.Time{}, err
+	}
+	return began.In(loc).AddDate(0, 0, -unansweredLookbackDays), nil
+}
+
 // location resolves the installation's zone, or UTC when none is bound.
 //
 // One spelling for both boundaries: they must agree about where the reader is,

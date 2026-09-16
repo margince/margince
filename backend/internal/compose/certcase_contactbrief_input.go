@@ -99,6 +99,7 @@ type contactBriefExpectation struct {
 const (
 	fixtureKindEmail = string(crmcontracts.ActivityKindEmail)
 	fixtureInbound   = string(crmcontracts.ActivityDirectionInbound)
+	fixtureOutbound  = string(crmcontracts.ActivityDirectionOutbound)
 )
 
 // contactBriefInput assembles what the service assembles, with minted ids.
@@ -155,12 +156,31 @@ func foldFixtureMessages(
 		return a.DaysAgo - b.DaysAgo
 	})
 	for _, message := range ordered {
+		// The PRODUCTION bound, applied here rather than trusted to the corpus
+		// author. foldRecent truncates the timeline at this same constant, so a
+		// fold that appended everything would let a scenario prove the brief
+		// reads its seventh message while the product still stopped at its
+		// sixth — the case passing on evidence production never sees.
+		//
+		// The ids of the messages past the bound are still minted and still
+		// answer byLabel, because refuseUnpreparableBrief resolves cites_label
+		// against that map: a scenario citing a message the window drops is a
+		// scenario that cannot be satisfied, and it should be refused with that
+		// reason rather than failing to resolve a label.
+		if len(in.Recent) == contactbrief.BriefInputActivities {
+			break
+		}
 		id := ids.NewV7().String()
 		byLabel[message.Label] = id
 		at := now.AddDate(0, 0, -message.DaysAgo)
 		folded := contactbrief.ActIn{
-			ID: id, Kind: fixtureKindEmail, Direction: message.Direction,
-			At: at.UTC().Format(time.RFC3339), Withheld: message.Withheld,
+			ID: id, Kind: fixtureKindEmail,
+			// The fixture speaks in directions because that is what a corpus
+			// author knows about a message; the fold turns it into the speaker
+			// the prompt reads, through the site's own function rather than a
+			// second mapping that could disagree with it.
+			Speaker: contactbrief.SpeakerFor(crmcontracts.ActivityDirection(message.Direction)),
+			At:      at.UTC().Format(time.RFC3339), Withheld: message.Withheld,
 		}
 		if !message.Withheld {
 			folded.Subject, folded.Preview, folded.Move = message.Subject, message.Preview, message.Move

@@ -220,9 +220,10 @@ describe("a row's verbs are one line with the lane's answer last", () => {
   });
 
   // A lane whose verbs are EQUAL has no call to action, and drawing one would
-  // be the product claiming an expectation it has not got: held, no-show and
-  // cancelled are three records of what already happened. Nothing on the line
-  // is filled, and the three keep the order the lane drew them in.
+  // be the product claiming an expectation it has not got: saying what came of
+  // a meeting and recording that it was called off are two answers of equal
+  // standing. Nothing on the line is filled, and the two keep the order the
+  // lane drew them in.
   it("promotes none of a lane's equal verbs", async () => {
     oneRow(
       row({
@@ -235,24 +236,24 @@ describe("a row's verbs are one line with the lane's answer last", () => {
       }),
     );
 
-    const held = await screen.findByRole("button", {
-      name: en["worklist.verb.meetingHeld"],
+    const update = await screen.findByRole("button", {
+      name: en["worklist.verb.meetingUpdate"],
     });
     const drawn = verbsInOrder();
     expect(filled(drawn)).toEqual([]);
-    let at = drawn.indexOf(held);
+    const at = drawn.indexOf(update);
     expect(
       at,
       "the outcomes are not on the row's line of verbs",
     ).toBeGreaterThan(-1);
-    for (const verb of ["meetingNoShow", "meetingCanceled"] as const) {
-      const next = drawn.indexOf(
-        screen.getByRole("button", { name: en[`worklist.verb.${verb}`] }),
-      );
-      expect(next, `${verb} is out of the lane's own order`).toBeGreaterThan(
-        at,
-      );
-      at = next;
-    }
+    const cancelled = drawn.indexOf(
+      screen.getByRole("button", {
+        name: en["worklist.verb.meetingCanceled"],
+      }),
+    );
+    expect(
+      cancelled,
+      "cancelled is out of the lane's own order",
+    ).toBeGreaterThan(at);
   });
 });

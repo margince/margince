@@ -8,17 +8,20 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { Panel, PanelBody } from "../design-system/panel";
 import {
   ProjectLinks,
   type ProjectLinksAdapter,
 } from "../design-system/projectlinks";
 import type { RecordPickerCandidate } from "../design-system/recordpicker";
+import { SurfaceState, sectionState } from "../design-system/surfacestate";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { throwProblem } from "./common";
 import { PhaseBadge } from "./projects";
 import type { ProjectPhase } from "./projects.form";
 
+type Company360 = components["schemas"]["Company360"];
 type Company360Project = components["schemas"]["Company360Project"];
 
 // What a company can BE to a project, PARTNER FIRST because the first role is
@@ -138,6 +141,60 @@ export function CompanyProjects({
       emptyBody="companyProjects.empty"
       bare={bare}
     />
+  );
+}
+
+/**
+ * CompanyProjectsPanel is the account's projects as their own Panel, for a
+ * caller that has not already proven the 360's `projects` section is
+ * readable: the Deals tab, which mounts this beside the pipeline.
+ *
+ * The guard used to live inside the money pane this section moved out of: an
+ * absent list handed straight to `CompanyProjects` drew "No projects yet"
+ * with an Attach verb while the 360 was still on its way, an invitation to
+ * act on a section that had not answered.
+ */
+export function CompanyProjectsPanel({
+  companyId,
+  view,
+  readOnly,
+}: Readonly<{
+  companyId: string;
+  view?: Company360;
+  readOnly?: boolean;
+}>) {
+  const t = useT();
+  const projects = view?.projects;
+  const state = sectionState(
+    view,
+    "projects",
+    Boolean(projects),
+    projects?.length ?? 0,
+  );
+  // NOT bare: the section draws its own Panel titled "Projects" here, unlike
+  // its mount in `CompanyProjects` bare, which stands inside a caller's own
+  // panel and would otherwise repeat the title on a second heading.
+  if (state === "ready" || state === "empty") {
+    return (
+      <CompanyProjects
+        companyId={companyId}
+        projects={projects}
+        readOnly={readOnly}
+      />
+    );
+  }
+  return (
+    <Panel title={t("companyProjects.title")}>
+      <PanelBody>
+        <SurfaceState
+          loadingLabel={t("companyProjects.title")}
+          state={state}
+          emptyLabel={t("projectLinks.emptyTitle")}
+        >
+          {null}
+        </SurfaceState>
+      </PanelBody>
+    </Panel>
   );
 }
 
