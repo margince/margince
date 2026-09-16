@@ -79,6 +79,24 @@ func boundToKnownMessage(ctx context.Context, tx pgx.Tx, in LogActivityInput) (c
 	return out, true, nil
 }
 
+// recognizedMessage answers the activity this message already is, when the
+// other door filed it first.
+//
+// It is the same question the source-key replay asks, over a wider net: that
+// one recognises this caller's OWN key, this one recognises the message itself
+// however the other door filed it. A recognised meeting takes its new status
+// the way a replayed one does — a cancellation arriving through the second door
+// is still a cancellation, and dropping it would leave a meeting reading booked
+// after it was called off.
+func recognizedMessage(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmcontracts.Activity, bool, error) {
+	bound, found, err := boundToKnownMessage(ctx, tx, in)
+	if err != nil || !found {
+		return crmcontracts.Activity{}, false, err
+	}
+	moved, err := replayMovedTheMeeting(ctx, tx, bound, in)
+	return moved, true, err
+}
+
 // recordImportedProvenance writes what an importer stated about a message it
 // handed over: who was on it, and which message it is.
 //

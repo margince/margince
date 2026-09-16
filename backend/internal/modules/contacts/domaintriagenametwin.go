@@ -83,6 +83,19 @@ func liveCompanyDomains(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID)
 	return out, rows.Err()
 }
 
+// companyHasPrimaryDomain answers whether the record already has the one domain
+// auto-enrichment reads it by.
+func companyHasPrimaryDomain(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) (bool, error) {
+	var exists bool
+	if err := tx.QueryRow(ctx,
+		`SELECT EXISTS (SELECT 1 FROM company_domain
+		   WHERE company_id = $1 AND is_primary AND archived_at IS NULL)`,
+		companyID).Scan(&exists); err != nil {
+		return false, fmt.Errorf("contacts: reading whether a company has a primary domain: %w", err)
+	}
+	return exists, nil
+}
+
 // exactNameRivals collects the ranked companies whose name folds to this one.
 //
 // Read off the ranked list rather than the single best score: the winner is
@@ -151,6 +164,13 @@ func (s *Store) adoptDomainIntoCompany(
 	if err := auth.EnsureWritable(ctx, tx, entityCompany, companyID.UUID); err != nil {
 		return nil, err
 	}
+	// Lock the row before reading what it holds. The twin was chosen from a
+	// scan, and between that scan and this write the company can be archived or
+	// its domains edited — which would adopt a domain onto a record that is
+	// gone, and audit a before-image that was already stale when it was read.
+	if _, err := storekit.LockRow(ctx, tx, entityCompany, companyID.UUID, storekit.LiveOnly); err != nil {
+		return nil, err
+	}
 	// Read BEFORE the insert. The audit's before-image is what this company's
 	// domains were, and reading after the write would record the answer as
 	// though it were the question.
@@ -158,9 +178,28 @@ func (s *Store) adoptDomainIntoCompany(
 	if err != nil {
 		return nil, err
 	}
-	if err := insertCompanyDomains(ctx, tx, companyID, domainTriageSource(in.Domain), by,
-		[]CompanyDomainInput{{Domain: in.Domain, IsPrimary: false}}); err != nil {
+	// Primary only when the company has none. The record's own primary domain
+	// is the one it was created with and a domain arriving from a crawl has no
+	// claim to displace it — but a company with NO primary domain is skipped by
+	// auto-enrichment, whose query joins on is_primary, so leaving it without
+	// one would quietly take it out of the enrichment it is now eligible for.
+	hasPrimary, err := companyHasPrimaryDomain(ctx, tx, companyID)
+	if err != nil {
 		return nil, err
+	}
+	if err := insertCompanyDomains(ctx, tx, companyID, domainTriageSource(in.Domain), by,
+		[]CompanyDomainInput{{Domain: in.Domain, IsPrimary: !hasPrimary}}); err != nil {
+		return nil, err
+	}
+	// Adopting changes no column on the company row, so without this the record
+	// looks untouched: a client holding the version from before the adoption
+	// could replace the domain set and silently drop the domain just added,
+	// with no conflict to notice. The same bump an ordinary domain replace-set
+	// makes, for the same reason.
+	if _, err := tx.Exec(ctx,
+		`UPDATE company SET version = version + 1 WHERE id = $1`,
+		companyID); err != nil {
+		return nil, fmt.Errorf("contacts: marking the company changed by an adopted domain: %w", err)
 	}
 	auditID, err := storekit.Audit(ctx, tx, "update", entityCompany, companyID.UUID,
 		map[string]any{auditKeyDomains: before},

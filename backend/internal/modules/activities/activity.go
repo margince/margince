@@ -251,10 +251,7 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 		moved, err := replayMovedTheMeeting(ctx, tx, *replay, in)
 		return moved, false, err
 	}
-	// The same question the replay above asks, over a wider net: that one
-	// recognises this caller's OWN key, this one recognises the message itself
-	// however the other door filed it.
-	if bound, found, err := boundToKnownMessage(ctx, tx, in); err != nil || found {
+	if bound, found, err := recognizedMessage(ctx, tx, in); err != nil || found {
 		return bound, false, err
 	}
 
