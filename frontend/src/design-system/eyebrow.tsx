@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { ReactNode } from "react";
+import { Heading, type HeadingSize } from "./heading";
 
 // The micro-label that sits above the thing it names; its type rule is defined
 // on the `.t-eyebrow` role hook. It was spelled out five times across three
@@ -24,6 +25,19 @@ import type { ReactNode } from "react";
 // is, so the caller does.
 export type EyebrowElement = "h2" | "h3" | "h4" | "span" | "dt";
 
+// The type each heading element wears, from the one table the tree migrated
+// by. It is also the list of which elements ARE headings — the guard below
+// reads it rather than restating it.
+const HEADING_SIZE: Readonly<Record<"h2" | "h3" | "h4", HeadingSize>> = {
+  h2: "large",
+  h3: "medium",
+  h4: "small",
+};
+
+function isHeadingElement(as: EyebrowElement): as is keyof typeof HEADING_SIZE {
+  return as in HEADING_SIZE;
+}
+
 export function Eyebrow({
   as = "span",
   children,
@@ -38,12 +52,21 @@ export function Eyebrow({
   className?: string;
   id?: string;
 }>) {
+  const classes = ["t-eyebrow", className ?? ""].filter(Boolean).join(" ");
+  // A heading goes through `Heading`, the one spelling of the element in this
+  // tree. The other two stay written out: `dt` is a definition term and `span`
+  // claims no place in the outline, so neither is a heading and `Heading`
+  // rightly does not offer them.
+  if (isHeadingElement(as)) {
+    return (
+      <Heading size={HEADING_SIZE[as]} as={as} className={classes} id={id}>
+        {children}
+      </Heading>
+    );
+  }
   const Tag = as;
   return (
-    <Tag
-      className={["t-eyebrow", className ?? ""].filter(Boolean).join(" ")}
-      id={id}
-    >
+    <Tag className={classes} id={id}>
       {children}
     </Tag>
   );

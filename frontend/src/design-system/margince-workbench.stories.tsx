@@ -7,6 +7,7 @@ import type { ComponentProps } from "react";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
 import { Button, Card } from "./atoms";
+import { Heading } from "./heading";
 import {
   MarginceWorkbench,
   type WorkbenchRuntimeLabels,
@@ -142,7 +143,7 @@ function Artifact() {
   return (
     <div className="wrap">
       <Card as="div">
-        <h2>Northwind Traders GmbH</h2>
+        <Heading size="large">Northwind Traders GmbH</Heading>
         <p>
           Wholesale food distribution for independent grocers across
           German-speaking Europe.

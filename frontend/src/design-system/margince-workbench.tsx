@@ -8,6 +8,7 @@ import type { MessageKey } from "../i18n/en";
 import { Avatar } from "./atoms";
 import { MarginceCoreScene, type MarginceCoreState } from "./margince-core";
 import "./margince-workbench.css";
+import { Heading } from "./heading";
 
 type AiRunSummary = components["schemas"]["AiRunSummary"];
 
@@ -117,7 +118,7 @@ export function MarginceWorkbench({
       />
       <div className="mw-identity">
         <span className="t-eyebrow">{eyebrow}</span>
-        <h1>{title}</h1>
+        <Heading size="xlarge">{title}</Heading>
         <p>
           <i data-state={state} aria-hidden /> {status}
         </p>
@@ -280,9 +281,8 @@ function StepProgress({
 
 // Cost disclosure as an opt-in chip. The summary line (spend so far) is always
 // visible because a reader must never have to ask what a run is costing; the
-// per-model breakdown opens on demand. Hover reveals, click pins — so a
-// pointer user reads it in passing and a keyboard user can keep it open while
-// they read it.
+// per-model breakdown opens on demand. Hover reveals, click pins — so a pointer
+// user reads it in passing and a keyboard user can keep it open while reading.
 /**
  * What the installation is running on, and what this setup has spent on it.
  *

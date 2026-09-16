@@ -16,6 +16,7 @@ import { useLocale, useT } from "../i18n";
 import { OverflowMenu } from "./atoms";
 import { useDebouncedSearch } from "./debouncedsearch";
 import "./listtable.css";
+import { Heading } from "./heading";
 
 // The list surface's shell: the header (view tabs, count, primary action),
 // the caption and the toolbar (search, filter chips, an archived toggle and
@@ -209,7 +210,11 @@ export function ListSurface({
   return (
     <div className="lt">
       <div className="lt-head">
-        {title && <h1 className="lt-title t-display">{title}</h1>}
+        {title && (
+          <Heading size="xlarge" className="lt-title t-display">
+            {title}
+          </Heading>
+        )}
         {views.length > 0 && (
           <div className="lt-views">
             {views.map((view, index) => (

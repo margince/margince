@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { Modal } from "./atoms";
+import { Heading } from "./heading";
 import { Popover } from "./popover";
 
 afterEach(cleanup);
@@ -12,7 +13,9 @@ function Layers({ close }: Readonly<{ close: () => void }>) {
   const [reading, setReading] = useState(false);
   return (
     <Modal open onClose={close} labelledBy="composer-title">
-      <h2 id="composer-title">Composer</h2>
+      <Heading size="large" id="composer-title">
+        Composer
+      </Heading>
       <button type="button" onClick={() => setReading(true)}>
         Read email
       </button>
@@ -23,7 +26,9 @@ function Layers({ close }: Readonly<{ close: () => void }>) {
         onClose={() => setReading(false)}
         labelledBy="reader-title"
       >
-        <h2 id="reader-title">Email reader</h2>
+        <Heading size="large" id="reader-title">
+          Email reader
+        </Heading>
         <button type="button" onClick={() => setReading(false)}>
           Close reader
         </button>

@@ -30,6 +30,7 @@ import {
   TextInput,
 } from "./atoms";
 import { AvatarStack } from "./avatarstack";
+import { Heading } from "./heading";
 import { usePasswordReveal } from "./passwordreveal";
 import { ProviderMark } from "./provider-mark";
 import { Select } from "./select";
@@ -339,9 +340,9 @@ export const BadgeInsideUppercaseParent: Story = {
   parameters: badgeDocs("A parent's case, tracking and face stop at its edge."),
   render: () => (
     <div style={stack}>
-      <h3 className="t-eyebrow">
+      <Heading size="medium" className="t-eyebrow">
         Pipeline <Badge tone="accent">Three open</Badge>
-      </h3>
+      </Heading>
       <code>
         run 4f2a <Badge tone="success">Passed</Badge>
       </code>
@@ -702,8 +703,7 @@ const SIDES = ["owner", "team"] as const;
 type Side = (typeof SIDES)[number];
 const SIDE_LABELS: Record<Side, string> = { owner: "Owner", team: "Team" };
 
-// SegmentedControl is fully controlled, so the catalog has to own the state or
-// the buttons never move.
+// SegmentedControl is controlled: without state here the buttons never move.
 function ToolbarDemo() {
   const [range, setRange] = useState<Range>("quarter");
   const [side, setSide] = useState<Side>("owner");
@@ -884,13 +884,14 @@ function ModalDemo() {
         Open the dialog
       </Button>
       <Modal open={open} onClose={() => setOpen(false)} labelledBy={titleId}>
-        <h2
+        <Heading
+          size="large"
           id={titleId}
           className="t-h2"
           style={{ marginBottom: "var(--space-3)" }}
         >
           Merge these companies?
-        </h2>
+        </Heading>
         <p className="t-caption">
           Globex GmbH keeps its record; the duplicate's activities, deals and
           contacts move onto it. This cannot be undone.
@@ -932,10 +933,9 @@ function OverflowMenuDemo({
       ?.click();
   }, [openOnMount]);
   return (
-    // The panel is anchored to its trigger and hangs off the trigger's END, the
-    // way a record header carries it — so the story puts the trigger at the
-    // right edge (the panel opens inward, not off the page) and reserves the
-    // height it drops into.
+    // The panel is anchored to its trigger and hangs off its END, as a record
+    // header carries it — so the story puts the trigger at the right edge (it
+    // opens inward, not off the page) and reserves the height it drops into.
     <div
       ref={wrap}
       style={{
@@ -1016,13 +1016,14 @@ function DrawerDemo() {
         labelledBy={titleId}
         placement="right"
       >
-        <h2
+        <Heading
+          size="large"
           id={titleId}
           className="t-h2"
           style={{ marginBottom: "var(--space-3)" }}
         >
           Write to Anna Brandt
-        </h2>
+        </Heading>
         <p className="t-caption">
           The draft sits beside the record it is about, so a rep can read the
           history while writing rather than remembering it.

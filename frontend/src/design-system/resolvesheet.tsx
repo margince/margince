@@ -5,6 +5,7 @@ import { useId, useState } from "react";
 import { Button, Modal, TextInput } from "./atoms";
 import { ChoiceList } from "./choicelist";
 import { DateInput, type ISODate, isISODate } from "./dateinput";
+import { Heading } from "./heading";
 
 // Answering a finding from the nightly input check.
 //
@@ -57,7 +58,9 @@ export function ResolveSheet({
 
   return (
     <Modal open={open} labelledBy={titleID} onClose={onClose} placement="right">
-      <h2 id={titleID}>{labels.title}</h2>
+      <Heading size="large" id={titleID}>
+        {labels.title}
+      </Heading>
       <ChoiceList
         legend={labels.outcomeLegend}
         value={outcome}

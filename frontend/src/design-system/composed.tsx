@@ -31,6 +31,7 @@ import { useTruncationTooltip } from "./tooltip";
 import { type Provenance, ProvenanceTag } from "./trust";
 import { type Visibility, VisibilityBadge } from "./visibility";
 import "./composed.css";
+import { Heading } from "./heading";
 
 // Composed surfaces (B-EP09.3b): the pipeline board and the record view — each
 // consumes the 3a trust primitives so staged / real / human-typed stay three
@@ -646,11 +647,10 @@ const TIMELINE_ICON = {
   change: PencilLine,
 } as const;
 
-// Where a record's verbs land. Three places can hold them — beside the
-// standing column, on the identity's own row, or in a band under the header —
-// and the choice is made once here rather than restated as a condition at
-// each of the three, where a reader had to hold all three at once to know
-// which one wins.
+// Where a record's verbs land. Three places can hold them — beside the standing
+// column, on the identity's own row, or in a band under the header — and the
+// choice is made once here rather than restated as a condition at each of the
+// three, where a reader had to hold all three at once to know which one wins.
 function actionsPlacement(
   actions: ReactNode,
   inline: boolean | undefined,
@@ -723,10 +723,10 @@ function RecordHead({
               one line and truncated rather than allowed to grow the header;
               the tooltip is what carries the whole of it, and appears only
               when there was more name than row. */}
-          <h1 ref={nameTip.ref} {...nameTip.trigger}>
+          <Heading size="xlarge" ref={nameTip.ref} {...nameTip.trigger}>
             {name}
             {nameTip.tip}
-          </h1>
+          </Heading>
           {nameBadge}
         </div>
         {/* A div, not a p: a caller passing structure — the company page's
@@ -943,7 +943,9 @@ export function RecordView({
                 className="record-timeline"
                 aria-label={t("record.timeline")}
               >
-                <h2 className="t-sub">{t("record.timeline")}</h2>
+                <Heading size="large" className="t-sub">
+                  {t("record.timeline")}
+                </Heading>
                 {/* The dials above the list are one block with one rhythm: the
                     cuts through the chronology, then the narrowing of whichever
                     cut is open. Rendered as bare siblings they touched, and two
@@ -1287,12 +1289,11 @@ export function GroupedTimelineList({
 }
 
 /**
- * TimelineWhen is the row's place on the axis: the day, and under it the
- * time of day. The day alone told a reader two calls happened on the 26th
- * and not which came first, or whether the reply landed an hour after the
- * ask or a working day later — the one thing a chronology is opened to
- * settle. Tabular digits keep the column straight whatever each date's
- * digits are.
+ * TimelineWhen is the row's place on the axis: the day, and under it the time
+ * of day. The day alone told a reader two calls happened on the 26th and not
+ * which came first, or whether the reply landed an hour after the ask or a
+ * working day later — the one thing a chronology is opened to settle. Tabular
+ * digits keep the column straight whatever each date's digits are.
  */
 function TimelineWhen({
   atIso,
@@ -1424,8 +1425,7 @@ function threadMessageOpener(entry: TimelineEntry): (() => void) | undefined {
 
 // The mark beside a message: the sender's face on their word, a send mark on
 // ours, a lock on one the reader may not open, and the kind's own icon where
-// nobody is named. A monogram of "We" or of "Them" would be a face nobody
-// has.
+// nobody is named. A monogram of "We" or of "Them" would be a face nobody has.
 function MessageMark({ entry }: Readonly<{ entry: TimelineEntry }>) {
   if (entry.withheld) {
     return (

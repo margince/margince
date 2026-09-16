@@ -3,6 +3,7 @@
 
 import { type ReactNode, useId } from "react";
 import { Eyebrow } from "./eyebrow";
+import { Heading } from "./heading";
 import {
   type SectionDetail,
   type SectionState,
@@ -123,15 +124,13 @@ export function Panel({
               and goes is a second header shape, and the height the band
               guarantees is measured on this one. */}
           <div className="panel-head-text">
-            {titleLevel === 3 ? (
-              <h3 className="panel-title" id={titleId}>
-                {title}
-              </h3>
-            ) : (
-              <h2 className="panel-title" id={titleId}>
-                {title}
-              </h2>
-            )}
+            <Heading
+              size={titleLevel === 3 ? "medium" : "large"}
+              className="panel-title"
+              id={titleId}
+            >
+              {title}
+            </Heading>
             {sub && <span className="panel-head-sub">{sub}</span>}
           </div>
           {titleAction}

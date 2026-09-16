@@ -26,14 +26,14 @@ import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { useAnchoredToTrigger } from "./anchored";
 import { useDialogFocus } from "./dialogfocus";
+import { Heading, type HeadingElement, type HeadingSize } from "./heading";
 import { Popover } from "./popover";
 import "./atoms.css";
 import "./evidencemark.css";
 
-// The Margince atom library (B-EP09.2, re-scoped to our own
-// system, no gw-ui port; atoms are added as screens need them). Copy always
-// arrives through props — callers translate with t(); atoms never hard-code
-// user-facing words.
+// The Margince atom library (B-EP09.2, re-scoped to our own system, no gw-ui
+// port; atoms are added as screens need them). Copy always arrives through
+// props — callers translate with t(); atoms never hard-code user-facing words.
 
 // `federated` is the door into another company's sign-in: full-width,
 // unfilled, and carrying that company's own mark. It is a variant rather than a
@@ -822,11 +822,10 @@ export function Field({
  * traffic light.
  *
  * `alert` is the one exception, for the one slot whose reading is bad news
- * simply by being present (an overdue balance, a lapsed renewal) rather than
- * by its number — those tint the whole tile, because there is no value to
- * colour that says the same thing on its own. Wire it only there; a reading
- * that could be read either way stays plain and lets its own words carry the
- * judgement.
+ * simply by being present (an overdue balance, a lapsed renewal) rather than by
+ * its number — those tint the whole tile, because there is no value to colour
+ * that says the same thing on its own. Wire it only there; a reading that could
+ * be read either way stays plain and lets its own words carry the judgement.
  *
  * `basis` is the reading's receipt: the rows it was computed from, folded away
  * until a reader asks for them. It is a `Popover` that opens to a settled
@@ -1297,12 +1296,25 @@ export function EmptyState({
   }
   return (
     <Card as="div" inset className="empty empty-instructional">
-      <h2 className="t-h2 empty-title">{title}</h2>
+      <Heading size="large" className="t-h2 empty-title">
+        {title}
+      </Heading>
       <div className="empty-body">{children}</div>
       {action && <div className="empty-action">{action}</div>}
     </Card>
   );
 }
+
+// Level picks the element AND the type together: an inner heading drawn at its
+// parent's size says the group matters as much as the page holding it. A table
+// rather than a tag built from the number, which would render a raw magnitude.
+const LEVEL_HEADING: Readonly<
+  Record<1 | 2 | 3, { size: HeadingSize; as: HeadingElement }>
+> = {
+  1: { size: "xlarge", as: "h1" },
+  2: { size: "large", as: "h2" },
+  3: { size: "medium", as: "h3" },
+};
 
 export function SectionHeader({
   title,
@@ -1333,9 +1345,7 @@ export function SectionHeader({
   return (
     <div className="section-header">
       <div className="section-header-text">
-        {level === 1 && <h1>{title}</h1>}
-        {level === 2 && <h2>{title}</h2>}
-        {level === 3 && <h3>{title}</h3>}
+        <Heading {...LEVEL_HEADING[level]}>{title}</Heading>
         {sub && <span className="sub">{sub}</span>}
       </div>
       {actions && <div className="section-header-actions">{actions}</div>}

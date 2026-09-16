@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { useId } from "react";
 import { useT } from "../i18n";
 import { Button, Modal } from "./atoms";
+import { Heading } from "./heading";
 import { AutonomyDot } from "./trust";
 
 // The shared confirm-dialog chrome: this used to live duplicated,
@@ -101,14 +102,19 @@ export function ConfirmModal({
       returnFocusTo={returnFocusTo}
       initialFocusTo={initialFocusTo}
     >
-      <h2 id={headingId} className="t-h2" style={{ marginBottom: 12 }}>
+      <Heading
+        size="large"
+        id={headingId}
+        className="t-h2"
+        style={{ marginBottom: 12 }}
+      >
         {tier && (
           <>
             <AutonomyDot tier={tier} />{" "}
           </>
         )}
         {title}
-      </h2>
+      </Heading>
       {children}
       {error && (
         // role="alert" (assertive live region) so a screen reader announces the
