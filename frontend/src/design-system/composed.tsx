@@ -394,12 +394,18 @@ function BoardLayout<Record extends BoardRecord>({
 
                   It is a SENTENCE, and it takes the wrapping class rather than
                   the weighted figure's: sharing that class ellipsised it to
-                  "Loaded only — filter to My deals fo…" in a 240px stage. */}
-              {money && column.sumHidden && (
-                <span className="board-col-refusal">
-                  {column.sumHiddenReason ?? t("board.mixedCurrencies")}
-                </span>
-              )}
+                  "Loaded only — filter to My deals fo…" in a 240px stage.
+
+                  An EMPTY column says nothing: with no deals counted there is
+                  no sum to refuse, and ten columns repeating the sentence over
+                  a blank board read as ten errors. */}
+              {money &&
+                column.sumHidden &&
+                (column.count ?? column.deals.length) > 0 && (
+                  <span className="board-col-refusal">
+                    {column.sumHiddenReason ?? t("board.mixedCurrencies")}
+                  </span>
+                )}
             </div>
             {!column.collapsed &&
               column.deals.map((record) => (
