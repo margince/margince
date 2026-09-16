@@ -48,8 +48,9 @@ const dealTable = "deal"
 // below turned out to be, each one composing auth.ScopeClauseFor and stopping
 // there.
 var dealGate = objectGate{
-	object:  dealTable,
-	literal: gatekit.TableReadPattern(dealTable),
+	object:              dealTable,
+	literal:             gatekit.TableReadPattern(dealTable),
+	objectGateSatisfies: true,
 }
 
 // predicateDealReads: the deal table appears only inside a JOIN or EXISTS that

@@ -15,9 +15,11 @@ package company360
 // real database.
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -138,5 +140,44 @@ func TestTheAccountsPipelineBandNullsAMaskedAmount(t *testing.T) {
 	}
 	if other != nil {
 		t.Errorf("another team's amount reached the account page as %d", *other)
+	}
+}
+
+// And the connections card, which shows no figure at all and ranks by one.
+// Size decides which of the account's deals are drawn and in what order, so a
+// reader whose role withholds an amount would read the biggest deal off the
+// layout of a card that prints none of them.
+//
+// The reader's own deal is the SMALLER of the two here: ordered by the real
+// figures, the other team's would lead, and any implementation that ranks by
+// what this reader may price puts theirs behind — which is what makes the
+// order an assertion rather than a coincidence.
+func TestTheConnectionsCardDoesNotRankByAMaskedAmount(t *testing.T) {
+	e := integration.Setup(t)
+	svc := company360Service(e)
+	company, mine, theirs := seedTwoPricedDeals(t, e, "open")
+	e.WsExec(t, `UPDATE deal SET amount_minor = $2, amount_minor_base = $2 WHERE id = $1`,
+		theirs, 10*maskedDealAmount)
+
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, maskedRep())
+	graph, err := svc.Graph(rep, ids.From[ids.CompanyKind](company))
+	if err != nil {
+		t.Fatalf("graph: %v", err)
+	}
+	var drawn []ids.UUID
+	for _, node := range graph.Nodes {
+		if node.Kind == crmcontracts.CompanyGraphNodeKindDeal {
+			drawn = append(drawn, ids.UUID(node.Id))
+		}
+	}
+	ownAt, theirsAt := slices.Index(drawn, mine), slices.Index(drawn, theirs)
+	if ownAt < 0 || theirsAt < 0 {
+		t.Fatalf("the card drew %d of the two open deals (own at %d, the other team's at %d) — "+
+			"a masked figure must cost a deal its PLACE, never its node", len(drawn), ownAt, theirsAt)
+	}
+	if ownAt > theirsAt {
+		t.Errorf("the card drew another team's deal first, ahead of this reader's own worth a " +
+			"tenth of it — the order ranks by the amount the mask withholds, which hands back " +
+			"through the layout what the deals band nulls")
 	}
 }

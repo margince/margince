@@ -74,10 +74,12 @@ func (g *graphAssembly) unmeasuredEmployee(t *testing.T, name string) ids.Contac
 	return contactID
 }
 
-// openDeal registers one open deal on the account, total included.
-func (g *graphAssembly) openDeal(name string, amountMinor *int64) ids.UUID {
+// openDeal registers one open deal on the account, total included. The order
+// the card draws them in is the read's, so a placement test states it by the
+// order it registers them.
+func (g *graphAssembly) openDeal(name string) ids.UUID {
 	dealID := ids.NewV7()
-	g.openDeals = append(g.openDeals, graphDeal{dealID: dealID, name: name, amountMinor: amountMinor})
+	g.openDeals = append(g.openDeals, graphDeal{dealID: dealID, name: name})
 	g.openDealTotal++
 	return dealID
 }
@@ -193,8 +195,7 @@ func TestDroppedCountReportsPastTheBoundedRead(t *testing.T) {
 	}
 	// The account has far more contacts than the read brought back.
 	g.employeeTotal = 900
-	amount := int64(1)
-	g.openDeal("Fetched", &amount)
+	g.openDeal("Fetched")
 	g.openDealTotal = 40
 	g.relatedTotal = 25
 
@@ -217,11 +218,10 @@ func TestDroppedCountReportsPastTheBoundedRead(t *testing.T) {
 // too.
 func TestASeatOnADroppedDealDrawsNoEdge(t *testing.T) {
 	g, _ := newGraph(t)
-	amount := int64(1)
 	for range graphDealCap {
-		g.openDeal("Kept", &amount)
+		g.openDeal("Kept")
 	}
-	droppedDeal := g.openDeal("Dropped", nil)
+	droppedDeal := g.openDeal("Dropped")
 	seated := ids.From[ids.ContactKind](ids.NewV7())
 	g.seats = append(g.seats, graphSeat{
 		dealID:  droppedDeal,
@@ -250,7 +250,7 @@ func TestAStakeholderWhoAlsoWorksHereIsOneNode(t *testing.T) {
 	title := "CTO"
 	contactID := g.employee(t, "Both", 60)
 	g.employees[0].title = &title
-	dealID := g.openDeal("Renewal", nil)
+	dealID := g.openDeal("Renewal")
 	role := "champion"
 	g.seats = append(g.seats, graphSeat{
 		dealID:  dealID,
@@ -547,7 +547,7 @@ func TestTheInteractionReadCorrelatesOnlyAgainstDrawnContacts(t *testing.T) {
 		kept = append(kept, g.employee(t, "Kept", 100-i))
 	}
 	droppedContact := g.employee(t, "Dropped", 1)
-	deal := g.openDeal("Renewal", nil)
+	deal := g.openDeal("Renewal")
 	stakeholder := ids.From[ids.ContactKind](ids.NewV7())
 	g.seats = append(g.seats, graphSeat{
 		dealID:  deal,

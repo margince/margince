@@ -51,8 +51,9 @@ const companyTable = "company"
 // anywhere, because a row clause standing in for the object half is the exact
 // defect four of the reads below turned out to be.
 var companyGate = objectGate{
-	object:  companyTable,
-	literal: gatekit.TableReadPattern(companyTable),
+	object:              companyTable,
+	literal:             gatekit.TableReadPattern(companyTable),
+	objectGateSatisfies: true,
 }
 
 // predicateCompanyReads: the company table appears only inside a JOIN or EXISTS

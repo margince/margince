@@ -46,8 +46,9 @@ const leadTable = "lead"
 // transitive resolution reaches the object gate itself and never needs the row
 // clause to stand in for it.
 var leadGate = objectGate{
-	object:  leadTable,
-	literal: gatekit.TableReadPattern(leadTable),
+	object:              leadTable,
+	literal:             gatekit.TableReadPattern(leadTable),
+	objectGateSatisfies: true,
 }
 
 // predicateLeadReads: the lead table appears only inside a JOIN or EXISTS that
