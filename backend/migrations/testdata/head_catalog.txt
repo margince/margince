@@ -4057,7 +4057,7 @@ public.import_run.connector text NOT NULL gen=- def=-
 public.import_run.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.import_run.error text gen=- def=-
 public.import_run.id uuid NOT NULL gen=- def=uuidv7()
-public.import_run.import_run_connector_check CHECK ((connector = ANY (ARRAY['csv'::text, 'hubspot'::text, 'salesforce'::text])))
+public.import_run.import_run_connector_check CHECK ((connector = ANY (ARRAY['csv'::text, 'salesforce'::text])))
 public.import_run.import_run_pkey PRIMARY KEY (id)
 public.import_run.import_run_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'validating'::text, 'awaiting_approval'::text, 'running'::text, 'complete'::text, 'failed'::text, 'undoing'::text, 'undone'::text])))
 public.import_run.mapping jsonb NOT NULL gen=- def='{}'::jsonb

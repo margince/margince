@@ -55,9 +55,9 @@ func TestCaptureDedupeStagesMergeInsteadOfDuplicating(t *testing.T) {
 	// answers, and a merge proposal lands in the inbox.
 	second, err := sink.Upsert(ctx, connector.NormalizedRecord{
 		EntityType: "lead",
-		NaturalKey: connector.NaturalKey{SourceSystem: "hubspot", SourceID: "h-9"},
+		NaturalKey: connector.NaturalKey{SourceSystem: "legacy_crm", SourceID: "h-9"},
 		Fields:     capture.LeadFields{FullName: "Dana Duplicate", Email: "DANA@example.test "},
-		Source:     "hubspot:h-9", CapturedBy: "connector:test",
+		Source:     "legacy_crm:h-9", CapturedBy: "connector:test",
 	})
 	if err != nil {
 		t.Fatal(err)

@@ -22,7 +22,7 @@ import (
 
 func TestDealCreateInputRefusesTheImporterNamespace(t *testing.T) {
 	_, err := dealCreateInput(crmcontracts.CreateDealRequest{
-		Name: "Planted", Source: "mirror:hubspot:deal:d-1",
+		Name: "Planted", Source: "mirror:legacy_crm:deal:d-1",
 	})
 	var refused *provenance.ReservedError
 	if !errors.As(err, &refused) {
