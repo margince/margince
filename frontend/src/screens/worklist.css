@@ -83,6 +83,23 @@
   text-wrap: balance;
 }
 
+/* WHERE THE DIALS SHARE ITS LINE the sentence steps down a rung, and the rung
+   is what makes it one line again: at the heading size five figures need more
+   room than a drawer leaves beside a scope switch and a picker, and a wrapped
+   figure line breaks at a separator — leaving a middot opening the second
+   line, which reads as punctuation that lost its sentence.
+
+   The ROW's own width, not the window's: the queue's own page is wider than
+   this at every window it is read on, so its lead keeps the heading size it
+   has always had. Only the drawer and a narrow window step down, which are
+   exactly the widths where the readings under it carry the display face
+   instead. */
+@container (max-width: 66rem) {
+  .worklist-lead {
+    font-size: var(--fs-body);
+  }
+}
+
 /* The two dials over the day, at the trailing end of the sentence they change.
    A named owner outranks the scope word and replaces it, so this is a group of
    one on a colleague's day — but on the READER's own it is a pair, and the pair
