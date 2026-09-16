@@ -1012,6 +1012,13 @@
   margin: 0;
   color: var(--textContent);
 }
+/* What period the figures describe, under them. It qualifies the whole panel
+   rather than any one reading, which is why it sits below the split instead of
+   beside a figure. The type is `.t-caption` on the element — the line under the
+   thing it qualifies — so only the margin is left to say here. */
+.fin-coverage {
+  margin: 0;
+}
 /* The bar's two halves, named. Laid out as a row that wraps, so a long
    currency string moves the second half onto its own line instead of
    truncating it. */

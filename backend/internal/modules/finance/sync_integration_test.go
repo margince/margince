@@ -40,6 +40,29 @@ type financeEnv struct {
 	external string
 }
 
+// setLifecycle moves the fixture account's relationship state, which is the one
+// input the card reads about the account itself.
+//
+// Its own owner connection rather than the store's pool: the app role cannot
+// write a company, and the point of the fixture is to move the account'"'"'s state
+// out from under a card that has already been read once.
+func (e *financeEnv) setLifecycle(t *testing.T, state string) {
+	t.Helper()
+	owner, err := pgx.Connect(e.ctx, os.Getenv("MARGINCE_TEST_DSN"))
+	if err != nil {
+		t.Fatalf("owner connection: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := owner.Close(context.Background()); err != nil {
+			t.Errorf("closing the owner connection: %v", err)
+		}
+	})
+	if _, err := owner.Exec(e.ctx,
+		`UPDATE company SET lifecycle = $2 WHERE id = $1`, e.company, state); err != nil {
+		t.Fatalf("moving the account to %s: %v", state, err)
+	}
+}
+
 func setupFinance(t *testing.T) *financeEnv {
 	t.Helper()
 	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
@@ -891,4 +914,51 @@ func (p *restatingProvider) Customers(context.Context) ([]SourceCustomer, error)
 
 func (p *restatingProvider) InvoicesFor(context.Context, string) (SourceLedger, error) {
 	return p.ledger, nil
+}
+
+// THE FORMER CUSTOMER, which is the honest hard case here and the one nobody
+// exercises by accident (FIN-AC-3).
+//
+// Two things have to be true at once, and they pull in opposite directions: the
+// figures must still be readable — a finished relationship's history is exactly
+// what a reader opens this card for — and the one figure that is a CALL TO
+// ACTION must not be. An overdue amount on a relationship that ended reads as a
+// collection to make, and a rep acting on the most natural reading telephones a
+// customer who is not one.
+func TestAFormerCustomersCardKeepsItsHistoryAndWithholdsItsOverdue(t *testing.T) {
+	e := setupFinance(t)
+	if _, err := e.store.SyncConnection(e.ctx, e.provider()); err != nil {
+		t.Fatalf("sync: %v", err)
+	}
+
+	current := e.summaryAtEpoch(t, e.company)
+	if current.Overdue == nil {
+		t.Fatal("the fixture's live account carries no overdue figure, so nothing below distinguishes " +
+			"a withheld one from an absent one")
+	}
+	if current.CoverageStart == nil || current.CoverageEnd == nil {
+		t.Fatal("the card names no coverage period, so it cannot say which period its figures describe")
+	}
+
+	e.setLifecycle(t, "former_customer")
+
+	ended := e.summaryAtEpoch(t, e.company)
+	if ended.Overdue != nil {
+		t.Errorf("a finished relationship still reports an overdue figure (%+v) — it reads as a collection "+
+			"to make about a customer who is not one", ended.Overdue)
+	}
+	// The open balance is a fact about the ledger whatever the relationship is
+	// now, and it carries no call to action. Withholding it too would take the
+	// history the reader came for.
+	if ended.OpenBalance == nil {
+		t.Error("the open balance went with the overdue figure; what is still open is true either way")
+	}
+	if ended.NetInvoicedLifetime == nil {
+		t.Error("the lifetime figure went with it too, which is the history this card exists to keep")
+	}
+	// And the period those figures describe survives, because it is what makes
+	// them readable as historical rather than current.
+	if ended.CoverageStart == nil || ended.CoverageEnd == nil {
+		t.Error("the coverage period went with the overdue figure")
+	}
 }

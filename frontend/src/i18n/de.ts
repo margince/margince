@@ -1298,6 +1298,10 @@ export const de = {
   "finance.unmapped":
     "Verbunden, aber dieses Unternehmen ist noch keinem Kunden im Buchhaltungssystem zugeordnet",
   "finance.netInvoiced": "Netto fakturiert · 12 Monate",
+  "finance.coveragePeriod":
+    "Diese Zahlen umfassen Rechnungen mit Ausstellungsdatum {from} – {to}.",
+  "finance.overdueRelationshipEnded":
+    "Nicht angezeigt: Diese Geschäftsbeziehung ist beendet, ein Überfälligkeitsbetrag läse sich daher als offene Forderung zum Eintreiben.",
   "finance.overdue": "Überfällig",
   "finance.behaviour": "Zahlungsverhalten",
   "finance.behaviourShape":
