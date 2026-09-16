@@ -30,6 +30,7 @@ import { moveHref, moveLabel } from "./worklist.copy";
 import { DispositionVerbs } from "./worklist.dispositions";
 import { ReassignControl } from "./worklist.manager";
 import { usePinRow, type WorklistItem } from "./worklist.queries";
+import { replyIsTheMove } from "./worklist.reply";
 import { TriageActs } from "./worklist.rowverbs.triage";
 
 /**
@@ -207,6 +208,13 @@ export function RowVerbs({
   part?: "ways" | "act";
 }>) {
   const t = useT();
+  // THE MOVE IS NOT DRAWN TWICE. Where the row's answer IS this reply, that
+  // control already carries the move — the same act, the same indigo, the same
+  // mark — and it opens the composer in place rather than promising a draft
+  // over a link that lands on a record or a read of the message itself. Drawn
+  // here as well, the row asked one question with two buttons, and the one
+  // wearing the agent's mark was the one that did not draft.
+  const answered = replyIsTheMove(item);
   const replyActivity =
     item.move?.action === "draft_reply" ? item.move.activity_id : undefined;
   const readReply =
@@ -255,7 +263,7 @@ export function RowVerbs({
   if (verbs.length === 0 && !move) {
     return null;
   }
-  const act = part !== "ways";
+  const act = part !== "ways" && !answered;
   const ways = part !== "act";
   return (
     <>

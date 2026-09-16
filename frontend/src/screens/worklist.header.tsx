@@ -200,7 +200,16 @@ export function WorklistHeader({
   const completeness = completenessText(day, filter, t, locale, loaded);
   const [head, inColumn] = useLanesColumn();
   return (
-    <div className="worklist-header" ref={head}>
+    // The stack the lanes column takes is keyed on this class rather than on a
+    // width: `useLanesColumn` reads the wrapper's own computed display, which
+    // is what decides it, and a breakpoint spelled again in the stylesheet was
+    // a second answer that disagreed with this one in the queue drawer.
+    <div
+      className={
+        inColumn ? "worklist-header worklist-header-column" : "worklist-header"
+      }
+      ref={head}
+    >
       {/* The facts line and the dials on one line: what the day holds, and
           whose day. A dial belongs beside the sentence it changes rather than
           under it, where it read as a control over the pills below. */}

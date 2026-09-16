@@ -64,23 +64,6 @@
   justify-content: space-between;
   gap: var(--space-2) var(--space-4);
 }
-/* In the lanes column the line is a STACK: the sentence, then the dials under
-   it at the column's width, because a 14rem column holds neither beside the
-   other. The dials take the column and the picker its whole line. */
-@container (min-width: 52rem) {
-  .worklist-header-line {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .worklist-header-dials {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .worklist-owner-field {
-    max-width: none;
-    min-inline-size: 0;
-  }
-}
 
 /* The day's verdict in figures, in the display face: it is the one sentence
    that says what the whole day holds, so it is set as a heading rather than as
@@ -93,17 +76,67 @@
   font-family: var(--f-display);
   letter-spacing: var(--tracking-display);
   font-variant-numeric: tabular-nums;
+  /* Where the dials leave it too little for one line it breaks EVENLY rather
+     than orphaning the last two words: five figures read as one statement, and
+     "69 in / all" alone on a second line reads as a figure that ran out of
+     room. */
+  text-wrap: balance;
 }
 
 /* The two dials over the day, at the trailing end of the sentence they change.
-   They replace each other rather than stacking — a named owner outranks the
-   scope word — so this is a group of one most of the time and wraps as a unit
-   when the sentence takes the line. */
+   A named owner outranks the scope word and replaces it, so this is a group of
+   one on a colleague's day — but on the READER's own it is a pair, and the pair
+   is ONE ROW. Left to wrap inside itself the picker dropped under the switch,
+   its label between them, and the three-deep group left a band of empty ground
+   beside a one-line sentence: the drawer's whole head for two controls. It
+   wraps as a unit instead, and the sentence beside it gives up the width. */
 .worklist-header-dials {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: flex-end;
-  gap: var(--space-3);
+  /* The tighter interval, because these two are ONE dial in two parts — the
+     scope and whose day — rather than two controls that happen to be adjacent,
+     and the room it saves is room the sentence beside them keeps. */
+  gap: var(--space-2);
+}
+
+/* The sentence yields, the dials do not. A figure line reads perfectly well on
+   two lines; a segmented control on two lines is two controls, and a picker
+   under its own switch is the stack this pair exists to avoid. */
+.worklist-header-line > .worklist-lead {
+  flex: 1 1 14rem;
+  min-inline-size: 0;
+}
+.worklist-header-line > .worklist-header-dials {
+  flex: 0 0 auto;
+}
+
+/* IN THE LANES COLUMN the head is a STACK: the sentence, then the dials under
+   it at the column's width, because a 14rem column holds neither beside the
+   other. The dials take the column and the picker its whole line.
+
+   Keyed on the CLASS the head itself carries, not on a width. The head already
+   reads whether it stands in that column off the columns wrapper's computed
+   display (`useLanesColumn`), which is the one thing that decides it — and a
+   second answer spelled here as a breakpoint disagreed with the first in the
+   queue DRAWER, which is wide enough to match it and forces the wrapper back
+   to a block. There the head stacked across the whole drawer, the sentence
+   took a flex basis meant for its width as 224px of its HEIGHT, and the two
+   dials sat in a band of empty ground under it. */
+.worklist-header-column .worklist-header-line,
+.worklist-header-column .worklist-header-dials {
+  flex-direction: column;
+  align-items: stretch;
+}
+/* A flex basis is a MAIN-AXIS size, and the main axis here is the block one.
+   Released to auto, which is what a stack of two wants. */
+.worklist-header-column .worklist-header-line > .worklist-lead,
+.worklist-header-column .worklist-header-line > .worklist-header-dials {
+  flex: 0 0 auto;
+}
+.worklist-header-column .worklist-owner-field {
+  max-width: none;
+  min-inline-size: 0;
 }
 
 /* A FLOOR AND A CEILING, and neither is the page's width. Full width the picker
@@ -130,8 +163,15 @@
    capped control the rule below is here to release. A descendant cannot widen
    the box it sits in. */
 @media (max-width: 720px) {
-  .worklist-header-dials {
+  /* Matched on the same selector the row band uses, because that one is more
+     specific: a bare `.worklist-header-dials` here lost to it and the group
+     kept its content width at 390px. */
+  .worklist-header-line > .worklist-header-dials {
     flex: 1 1 100%;
+    /* The pair is one row where a row fits. At this width it does not, and a
+       segmented control squeezed beside a picker is worse than either on its
+       own line. */
+    flex-wrap: wrap;
   }
 
   .worklist-owner-field {

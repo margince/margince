@@ -66,7 +66,12 @@ it("restores the queue opener's keyboard focus after closing", async () => {
   expect(document.activeElement).toBe(opener);
 });
 
-it("opens a review row's context without excluding it as non-selling work", async () => {
+// A review row is not excluded as non-selling work: it can be taken in hand
+// like any other. What it opens INTO differs by surface — the queue's own page
+// draws the record's pane beside it (worklist.detail.test.tsx), the drawer
+// draws none, because the row already names whom it is about and a drawer has
+// no third of its width to spend saying it twice.
+it("takes a review row in hand, and opens no column beside it", async () => {
   const user = userEvent.setup();
   window.location.hash = "#/home?queue=1";
   const review: components["schemas"]["WorklistItem"] = {
@@ -87,10 +92,11 @@ it("opens a review row's context without excluding it as non-selling work", asyn
       name: /Show what 1, Review the disclosure/,
     }),
   );
-  expect(
-    screen.getByRole("complementary", { name: en["worklist.pane.title"] }),
-  ).toBeTruthy();
   expect(window.location.hash).toContain("selected=notice_case-privacy");
+  expect(
+    screen.queryByRole("complementary", { name: en["worklist.pane.title"] }),
+    "the drawer spent a third of its width repeating the row above it",
+  ).toBeNull();
 });
 
 it("opens a task's evidence without replacing the Home overview", async () => {

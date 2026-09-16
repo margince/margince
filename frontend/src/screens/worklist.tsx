@@ -444,7 +444,14 @@ function WorklistBody({
               active={selectedId !== ""}
               onClose={() => onSelect(NOTHING_IN_HAND)}
               pane={
-                selected && hasPane(selected) ? (
+                // NOT IN THE DRAWER, and this is the one surface it is
+                // withheld from. The pane says whom a row is about, when they
+                // last wrote and when we did — and the ROW now says all three
+                // itself, on every surface that draws it. On the queue's own
+                // page the column beside it is free and the pane adds the
+                // record's own reading to that; in a drawer it is a third of
+                // an already narrow list spent repeating the line above it.
+                !embedded && selected && hasPane(selected) ? (
                   <WorklistPane item={selected} />
                 ) : null
               }

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useId, useRef, useState } from "react";
 import { useRecordZone } from "../app/recordzone";
 import { Badge, Button, Modal } from "../design-system/atoms";
@@ -12,7 +11,6 @@ import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { ApprovalRow } from "./approvalrow";
 import { useMe } from "./common";
-import { ChannelReplyAction, RELINK_KINDS, type RelinkKind } from "./compose";
 import { hasMoveControl, MoveButton } from "./movebutton";
 import {
   useAutomationRetry,
@@ -54,6 +52,7 @@ import {
   worklistKey,
 } from "./worklist.queries";
 import { noticeDetail, readerTask } from "./worklist.reader";
+import { replyTarget, WaitingReply } from "./worklist.reply";
 import {
   aboutRecord,
   REASONS_BEFORE_THE_FOLD,
@@ -564,7 +563,7 @@ function rowAnswer(item: WorklistItem, brief: BriefAnswer): RowPlacement {
   // travels with it.
   const replyTo = replyTarget(item);
   if (replyTo) {
-    return { primary: <WaitingReply id={item.id} to={replyTo} /> };
+    return { primary: <WaitingReply item={item} to={replyTo} /> };
   }
   // A brief item's three verbs, RANKED the way the row ranks them: acting on
   // the day's pick is what the reader came for, and setting it aside or
@@ -961,57 +960,6 @@ function refusalMessage(
 // typed. It lives in its own file because the dialog it carries reads the
 // meeting and patches it — a form, a query and a mutation, which is a screen's
 // worth of code rather than one of this file's row verbs.
-
-// The record a reply would be filed against, or nothing.
-//
-// Both halves must hold. The verb says the server judged this wait answerable —
-// it is mail, not a channel message the mail composer would answer in the wrong
-// place. The subject says WHICH record the sent message links to, and its type
-// has to be one the composer can file against: the row's own vocabulary is
-// wider than RELINK_KINDS, so an `activity` subject would type-check as a
-// string and fail at the composer.
-function replyTarget(
-  item: WorklistItem,
-): { type: RelinkKind; id: string } | undefined {
-  if (!item.actions.includes("reply") || !item.subject) {
-    return undefined;
-  }
-  const type = item.subject.type;
-  if (!RELINK_KINDS.includes(type as RelinkKind)) {
-    return undefined;
-  }
-  return { type: type as RelinkKind, id: item.subject.id };
-}
-
-// Answering the buyer, over the row that named the wait.
-//
-// Its own component so it can hold the hook that refreshes the queue. The
-// composer invalidates the RECORD timelines it knows about, and the worklist is
-// not one of them — nor does the queue poll — so without the callback the row
-// keeps saying nobody has replied, and keeps offering to reply again, over a
-// message the reader has already answered.
-function WaitingReply({
-  id,
-  to,
-}: Readonly<{ id: string; to: { type: RelinkKind; id: string } }>) {
-  const queryClient = useQueryClient();
-  return (
-    <ChannelReplyAction
-      activityId={id}
-      kind="email"
-      entityType={to.type}
-      entityId={to.id}
-      // `worklistKey`, not `[worklistKey]`. The key IS the segment array, so
-      // wrapping it once more asks for a query whose first segment is itself
-      // an array — which nothing in the cache is, so the invalidation matched
-      // nothing and the row a rep had just answered stayed in the waiting
-      // lane until they reloaded the page.
-      onSent={() =>
-        void queryClient.invalidateQueries({ queryKey: worklistKey })
-      }
-    />
-  );
-}
 
 // Saying a promise was kept, from the row that keeps asking for it.
 //

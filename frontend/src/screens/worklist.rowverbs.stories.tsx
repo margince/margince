@@ -10,6 +10,7 @@ import type { MessageKey } from "../i18n/en";
 import { installFetchStub, meRoute, StoryProviders } from "./story-utils";
 import { rowHref } from "./worklist.copy";
 import type { WorklistItem } from "./worklist.queries";
+import { WaitingReply } from "./worklist.reply";
 import { RowActs } from "./worklist.rowverbs";
 import { TriageActs } from "./worklist.rowverbs.triage";
 // The line's own sheet. `.worklist-row-acts` is where its trailing alignment,
@@ -314,4 +315,37 @@ export const TheLineOnTheCardInHand: Story = {
       primary={<Verb message="compose.reply" answer />}
     />
   ),
+};
+
+/**
+ * THE ANSWER A RULE PREPARED, which is the reply itself and not a button
+ * beside it.
+ *
+ * A waiting message whose move is `draft_reply` gets ONE control on the line:
+ * the composer's own reply, wearing the agent's face and mark because the
+ * ranking and the steer are a machine's doing, and carrying the word for the
+ * act rather than the bare "Reply". The frames above show the same line with
+ * no prepared move on it, where the answer is that bare word.
+ *
+ * What to look for: one marked control and not two, still last and still on
+ * the trailing edge, and the mark reading as a mark beside a word rather than
+ * as a stray glyph.
+ */
+export const ThePreparedReplyIsTheAnswer: Story = {
+  render: () => {
+    const item = waitingRow();
+    return (
+      <TriageActs
+        item={item}
+        href={rowHref(item)}
+        owner=""
+        primary={
+          <WaitingReply
+            item={item}
+            to={{ type: "deal", id: "01a05500-0000-7000-8000-0000000000bb" }}
+          />
+        }
+      />
+    );
+  },
 };

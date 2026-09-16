@@ -55,14 +55,19 @@ export function StatStrip({
   // count is what is on screen.
   const slots = Children.toArray(children).length;
   // The fold breakpoints cap at the same count rather than at the sheet's own
-  // 3-then-2 ladder: `repeat()` needs an integer, so the cap can only come
-  // from here, where the slot count is already known. A two-slot strip folds
-  // to two columns at every width instead of inventing a third, empty one.
+  // 4-then-3-then-2 ladder: `repeat()` needs an integer, so the cap can only
+  // come from here, where the slot count is already known. A two-slot strip
+  // folds to two columns at every width instead of inventing a third, empty
+  // one — and a four-slot strip stays four across for the whole rung its own
+  // slots are still wide enough for, rather than folding on a width written
+  // for a row of six.
   const vars: StripVars = {
     "--stat-strip-slots": slots,
+    "--stat-strip-slots-4": Math.min(slots, 4),
     "--stat-strip-slots-3": Math.min(slots, 3),
     "--stat-strip-slots-2": Math.min(slots, 2),
     "--stat-strip-tail-6": tailSpan(slots, 6),
+    "--stat-strip-tail-4": tailSpan(slots, 4),
     "--stat-strip-tail-3": tailSpan(slots, 3),
     "--stat-strip-tail-2": tailSpan(slots, 2),
   };
