@@ -86,22 +86,25 @@ jobs:
       - run: make fe-quality
 
   # FOUR shards, and the number comes from a measurement rather than from the
-  # runner budget. The suite is 742 files and about 560s of test work on a
-  # two-core runner; the fixed cost of a leg — checkout, pnpm install, the node
-  # setup — is around 70s, and vitest slices by a hash of the file path, which
-  # distributes file COUNT evenly and duration only approximately. Modelled
-  # against the per-file durations this suite actually spends:
+  # runner budget.
   #
-  #   1 shard   632s (measured on main)    4 shards  ~225s
-  #   2 shards  ~350s                      6 shards  ~180s
-  #   3 shards  ~275s                      8 shards  ~155s
+  # The suite is ~750 files and 652s of test work on a two-core runner (vitest's
+  # own figure, summed across the four blobs). The fixed cost of a leg —
+  # checkout, pnpm install, the node setup — is around 65s, and vitest slices by
+  # a hash of the file path, which distributes file COUNT evenly and duration
+  # only approximately: the four legs measured 156s, 180s, 178s and 243s, so the
+  # heaviest quarter runs about a third longer than an even one would.
   #
-  # The knee is at four: the step from one to four takes two thirds off the
-  # lane, and every step after it buys under a minute for another runner slot
-  # inside the same 20-concurrent ceiling the six integration shards already
-  # queue in. Raising it is a two-character change here and in the FE_SHARD
-  # argument below — the fan-in reads the matrix rather than a second copy of
-  # the number, and check-shard-union.sh fails if the two ever disagree.
+  #   1 shard   632s (measured on main)    4 shards   243s + 30s merge (measured)
+  #   2 shards  ~440s                      6 shards  ~212s + 30s
+  #   3 shards  ~325s                      8 shards  ~175s + 30s
+  #
+  # The knee is at four: it takes 57% off the lane, and every step after it buys
+  # around half a minute for another runner slot inside the same 20-concurrent
+  # ceiling the six integration shards already queue in. Raising it is a
+  # two-character change here and in the FE_SHARD argument below — the fan-in
+  # reads the matrix rather than a second copy of the number, and
+  # check-shard-union.sh fails if the two ever disagree.
   fe-unit:
     name: fe-unit (vitest + coverage ${{ matrix.shard }}/4)
     timeout-minutes: 20
