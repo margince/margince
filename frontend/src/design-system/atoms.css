@@ -2,6 +2,8 @@
  * Colours read tokens only; the conformance gate enforces it. */
 
 .badge {
+  /* Small body at regular weight; the rest of the type inherits. */
+  font: var(--fontBodySmall);
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
@@ -18,10 +20,6 @@
   box-sizing: border-box;
   min-inline-size: 0;
   max-inline-size: 100%;
-  /* Type is stated, never inherited: a badge in an eyebrow heading or inside a
-     code sample must read as the badge beside it everywhere else. */
-  font-family: var(--fontFamilyBody);
-  font-style: normal;
   min-block-size: 20px;
   padding: 0 8px;
   /* Every variant reserves the edge; soft draws it in its tone and primary

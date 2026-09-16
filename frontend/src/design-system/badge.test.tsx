@@ -156,8 +156,7 @@ describe("Badge", () => {
   // happy-dom applies no stylesheet, so the look is held where it is written.
   // A soft badge draws a hairline in its tone and a primary one reserves the
   // same edge transparent, so mixed variants share a height; nothing else draws
-  // an edge. The type is stated rather than inherited, so an uppercase, tracked
-  // or mono parent cannot turn a badge into a kicker.
+  // an edge. The type is one declaration and the rest is the root's.
   describe("its stylesheet", () => {
     const sheet = readFileSync(join(here, "atoms.css"), "utf8").replace(
       /\/\*[\s\S]*?\*\//g,
@@ -223,40 +222,27 @@ describe("Badge", () => {
       expect(layered).toEqual([]);
     });
 
-    it("sets its label in sentence case at normal tracking, and nowhere else", () => {
-      const resets: Record<string, string[]> = {
-        "text-transform": ["none"],
-        "letter-spacing": ["normal", "0"],
-      };
-      const shouted = rules.flatMap(({ selector, declarations }) =>
-        Object.entries(resets)
-          .filter(([name, allowed]) => {
-            const value = declarations.get(name);
-            return value !== undefined && !allowed.includes(value);
-          })
-          .map(
-            ([name]) => `${selector} { ${name}: ${declarations.get(name)} }`,
-          ),
+    // The badge says ONE thing about type — the S rung, which carries the
+    // size, the leading, the weight, the face and the slope — and inherits
+    // every other part, casing and tracking included. A second declaration is
+    // a part of the rung wearable on its own, which is how a level comes to be
+    // half-worn; so the sweep is over the whole family of type properties and
+    // over every badge rule, not over the ones anybody remembered to look at.
+    // The floor stands apart from the rung: S's 1rem line inside two 1px edges
+    // stands 18px, and 20px is what gives a row of mixed variants one height.
+    it("wears the S rung whole and declares nothing else about type", () => {
+      const type =
+        /^(font-|letter-spacing|word-spacing|line-height|text-transform|text-decoration)/;
+      expect(declared(".badge", "font")).toBe("var(--fontBodySmall)");
+      expect(declared(".badge", "min-block-size")).toBe("20px");
+      const spelled = rules.flatMap(({ selector, declarations }) =>
+        [...declarations.keys()]
+          .filter((name) =>
+            name === "font" ? selector !== ".badge" : type.test(name),
+          )
+          .map((name) => `${selector} { ${name}: ${declarations.get(name)} }`),
       );
-      expect(shouted).toEqual([]);
-    });
-
-    // A badge in an eyebrow heading or inside a code sample reads as the badge
-    // beside it everywhere else: the face and the slope are the badge's own,
-    // and the floor is what gives a row of mixed variants one height.
-    it("states the face, the slope and the floor rather than inheriting them", () => {
-      expect(
-        Object.fromEntries(
-          ["font-family", "font-style", "min-block-size"].map((name) => [
-            name,
-            declared(".badge", name),
-          ]),
-        ),
-      ).toEqual({
-        "font-family": "var(--fontFamilyBody)",
-        "font-style": "normal",
-        "min-block-size": "20px",
-      });
+      expect(spelled).toEqual([]);
     });
 
     // A container that must not squeeze its badge (a panel's head band) says
