@@ -86,8 +86,30 @@ type LogActivityInput struct {
 	// as ThreadKey, for the same reason.
 	CounterpartyEmail            string
 	CounterpartyOutboundAttested bool
-	Links                        []ActivityLinkInput
-	Source                       string
+	// Raw is the source system's own representation of this activity, kept
+	// verbatim. It is CONTENT: the audience projection withholds it from a
+	// reader who may not read the subject and body, and both destructive
+	// paths — retention and noise redaction — null it with the rest of the text.
+	Raw *map[string]any
+	// DurationSeconds is how long a meeting or call lasted; the mapping
+	// refuses it on any other kind.
+	DurationSeconds *int
+	// The address headers an importer stated, normalized and each address in
+	// one role only. Capture derives these from the message it holds; an
+	// importer holds only what its source system kept, so it states them.
+	EmailFrom string
+	EmailTo   []string
+	EmailCc   []string
+	// RFCMessageID is this message's own RFC 5322 identity, brackets stripped —
+	// what a later capture of the same message resolves against.
+	RFCMessageID string
+	// The calendar identity, which is a PAIR: a recurring series shares one UID
+	// across every occurrence, so the UID names the series and the instance
+	// names the occurrence within it.
+	ICalUID      string
+	ICalInstance string
+	Links        []ActivityLinkInput
+	Source       string
 	// Origin says who caused this row to exist, and the recency clocks in the
 	// schema read it: the two system origins are excluded from every
 	// last_activity_at, because neither the system asking about a silent deal
@@ -235,19 +257,30 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 	if origin == "" {
 		origin = OriginHuman
 	}
+	// An importer states the message's addresses; who it was WITH follows from
+	// those and the direction, and needs the acting side's own address to tell
+	// a recipient from ourselves. A caller that set the column outright is
+	// obeyed — capture's own writes arrive that way.
+	counterparty := in.CounterpartyEmail
+	if counterparty == "" {
+		counterparty, err = deriveImportedCounterparty(ctx, tx, in)
+		if err != nil {
+			return crmcontracts.Activity{}, false, err
+		}
+	}
 	_, err = tx.Exec(ctx,
 		`INSERT INTO activity (id, kind, channel_provider, subject, body, occurred_at, direction, meeting_status,
 		                       due_at, remind_at, assignee_id, host_user_id, source_system, source_id, source, captured_by,
 		                       thread_key, counterparty_email, counterparty_outbound_attested, origin,
-		                       source_activity_id)
+		                       source_activity_id, raw, duration_seconds)
 		 VALUES ($1, $2, NULLIF($3, ''), $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NULLIF($17, ''),
-		         NULLIF($18, ''), $19, $20, $21)`,
+		         NULLIF($18, ''), $19, $20, $21, $22, $23)`,
 		// NULLIF on channel_provider: the column FKs into channel_provider, and
 		// '' names no provider, so anything without a transport stores NULL.
 		id, in.Kind, in.ChannelProvider, in.Subject, in.Body, occurredAt, in.Direction, in.MeetingStatus,
 		in.DueAt, in.RemindAt, assignee, in.HostUserID, in.SourceSystem, in.SourceID, in.Source, by,
-		in.ThreadKey, in.CounterpartyEmail, in.CounterpartyOutboundAttested, origin,
-		in.SourceActivityID)
+		in.ThreadKey, counterparty, in.CounterpartyOutboundAttested, origin,
+		in.SourceActivityID, in.Raw, in.DurationSeconds)
 	if err != nil {
 		if storekit.IsUniqueViolation(err) {
 			return crmcontracts.Activity{}, false, apperrors.ErrConflict
@@ -275,6 +308,12 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 	// whichever contact they name — and they have just been through the
 	// row-scope gate, so nothing here needs to re-check them.
 	if err := stampLoggedParticipants(ctx, tx, id, in.Kind, in.Direction, in.Links); err != nil {
+		return crmcontracts.Activity{}, false, err
+	}
+	// The headers an importer stated, for the addresses that resolved to no
+	// contact above. Both sets belong on the row: one names who this workspace
+	// knows, the other names everyone the message was actually addressed to.
+	if err := stampSuppliedEmailParticipants(ctx, tx, id, in); err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
 

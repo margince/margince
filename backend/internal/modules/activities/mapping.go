@@ -282,5 +282,17 @@ func LogActivityInputFrom(req crmcontracts.CreateActivityRequest) (LogActivityIn
 		}
 		in.Body = &normalized
 	}
+	in.Raw = req.Raw
+	if req.DurationSeconds != nil {
+		// The contract promises field_not_valid_for_kind for this, and only the
+		// two kinds that occupy a span of time have a duration to state.
+		if in.Kind != KindMeeting && in.Kind != string(crmcontracts.ActivityKindCall) {
+			return LogActivityInput{}, &KindFieldError{Field: "duration_seconds", Only: "a meeting or call"}
+		}
+		in.DurationSeconds = req.DurationSeconds
+	}
+	if err := mailIdentityFrom(req, &in); err != nil {
+		return LogActivityInput{}, err
+	}
 	return in, nil
 }
