@@ -126,23 +126,22 @@ export function worklistLaneHref(
   return hashWithParams(routeHash({ screen: "home" }), params);
 }
 
-// The widest a lanes column ever is. worklist.css gives the column 14rem when
-// the page draws two columns; anything wider than this is the head standing
-// across the page on its own.
-const LANES_COLUMN_MAX_PX = 320;
-
 /**
  * Whether this head stands in the LANES COLUMN beside the day, or across the
- * page above it — read off the head's own width rather than the window's,
- * because the same queue is drawn on a page of its own and inside the Brief's
- * drawer, and the stylesheet decides the columns from the page's width
- * (worklist.css). The cuts are a list in the column and a strip across the
- * page: eight rows of lanes over a phone's queue would push the first row past
- * the fold the phone rules exist to keep it above.
+ * page above it. The stylesheet decides (worklist.css): the columns wrapper
+ * is a grid where the page is wide enough for lanes beside rows, and it
+ * dissolves on a phone. The head reads that decision off the wrapper's
+ * computed display, so the cuts and the columns cannot disagree — a
+ * breakpoint spelled again here in pixels could, and the head's own width
+ * cannot tell a lanes column from a narrow page. The cuts are a list in the
+ * column and a strip across the page: eight rows of lanes over a phone's
+ * queue would push the first row past the fold the phone rules keep it above.
  *
- * Measured once wherever the observer is unavailable (jsdom): the answer is
- * right for the render that just happened, it simply stops following a
- * resize, and a head that was never measured reads as across the page.
+ * The head's own box is what the observer watches: it changes width when the
+ * layout flips and stands still otherwise, and a wrapper that has dissolved
+ * has no box to observe. Where the observer is unavailable (jsdom) the answer
+ * is read once, for the render that just happened, and a head outside the
+ * columns reads as across the page.
  */
 function useLanesColumn(): [RefObject<HTMLDivElement | null>, boolean] {
   const head = useRef<HTMLDivElement>(null);
@@ -152,8 +151,12 @@ function useLanesColumn(): [RefObject<HTMLDivElement | null>, boolean] {
     if (!element) {
       return;
     }
-    const measure = () =>
-      setInColumn(element.getBoundingClientRect().width <= LANES_COLUMN_MAX_PX);
+    const measure = () => {
+      const columns = element.closest(".worklist-columns");
+      setInColumn(
+        columns !== null && getComputedStyle(columns).display === "grid",
+      );
+    };
     measure();
     if (typeof ResizeObserver === "undefined") {
       return;

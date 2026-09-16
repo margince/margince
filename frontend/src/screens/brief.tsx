@@ -157,6 +157,13 @@ function PersonalMorning({
     : query.isError && !day
       ? "failed"
       : "ready";
+  // A task and a meeting are both ACTIVITIES, and the door on either row
+  // opens the activity's own read: for a meeting, its subject and the
+  // calendar's excerpt of who was there and what it was about. The pane
+  // beside the queue draws only a contact, so a meeting sent there opened a
+  // frame with nothing in it.
+  const opensActivity =
+    context?.source === "task" || context?.source === "meeting_outcome";
   return (
     <>
       {/* The figures FIRST, as the lower band of the briefing: what the day
@@ -220,7 +227,7 @@ function PersonalMorning({
           </>
         }
       />
-      {context?.source === "task" ? (
+      {context && opensActivity ? (
         <TaskDetailModal
           activityId={context.id}
           readOnly={!context.actions.includes("complete")}
