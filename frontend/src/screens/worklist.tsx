@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { Button, Disclosure } from "../design-system/atoms";
+import { Badge, Button, Disclosure } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { PageZones } from "../design-system/pagezones";
@@ -450,7 +450,20 @@ function WorklistBody({
               }
               label={t("worklist.pane.title")}
               queue={
-                <Panel title={t("worklist.queue")}>
+                <Panel
+                  // INDIGO, the band the Brief's Focus panel wears and a
+                  // record's "what needs you today" pane before it: these rows
+                  // are the agent's reading of the day — what it ranked and
+                  // what it prepared — and indigo is the one claim the product
+                  // makes about who did that. The same panel is drawn on this
+                  // page and in the queue drawer, so the claim is made once
+                  // and reads the same in both.
+                  tone="ai"
+                  title={t("worklist.queue")}
+                  titleAction={
+                    <Badge tone="ai">{t("co.assistant.aiTag")}</Badge>
+                  }
+                >
                   {/* The headings come from the SERVER's band list, in its draw
                   order, rather than from the rows — which is the only way a
                   band holding nothing can say so. Ranks are still counted over
