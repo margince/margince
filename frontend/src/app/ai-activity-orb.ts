@@ -57,6 +57,12 @@ export const ACTIVITY_LANE: Readonly<Record<ActivityKind, AgentLane>> = {
   // ranking, a verdict, a draft, a summary, a review.
   brief_ranking: "working",
   cert_judge: "working",
+  // Whether our own reply settled what they asked. `working` and not `ingest`,
+  // where owed_verdict above is the other way round, and the split is the
+  // map's own: that one labels mail as it lands, this one reads a conversation
+  // the workspace captured hours ago and reaches a judgement about it. Nothing
+  // arrives when it runs.
+  request_settlement: "working",
   // The retrieval is settled before this task is reached — the passages have
   // already cleared the grounding floor — so what the model does here is write
   // the answer from evidence the workspace already holds.

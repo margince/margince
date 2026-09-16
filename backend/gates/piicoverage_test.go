@@ -329,6 +329,17 @@ var piiTables = map[string]piiHandling{
 	// activity. Purged with the body rather than exported, like the embedding:
 	// a machine artifact of the subject's text, not anything they supplied.
 	"transcript_read": {erasureWrite: true, sarRead: false},
+	// What our own reply did to a request the subject made of us: whether it
+	// settled what they asked, and where it did not, a sentence naming what we
+	// still owe them. The same kind of derived claim the reply verdicts above
+	// carry, deleted for the same reason — a conclusion about somebody nobody
+	// may now assert anything about has nothing left to say — and its cascade
+	// never fires for the same reason either, because Art. 17 empties the
+	// activity in place rather than deleting it. Art. 15 hands it back on the
+	// reply verdicts' own ground, and more plainly still: a subject asking what
+	// we concluded about their mail is asking for exactly this, and here the
+	// answer can be an outstanding obligation TO them.
+	"activity_request_settlement": {erasureWrite: true, sarRead: true},
 	// The preference-center token (0048) is a live capability over the
 	// subject's consent record — held by whoever has the emailed
 	// List-Unsubscribe URL, honoured with no session at all. Registered so
@@ -428,6 +439,12 @@ var piiTables = map[string]piiHandling{
 var sarAssemblyFiles = []string{
 	"internal/modules/privacy/sar.go",
 	"internal/modules/privacy/sarsections.go",
+	// What this installation CONCLUDED about the subject's correspondence —
+	// what their replies meant, and what ours did about what they asked. Its
+	// own file for the reason the others have theirs, and named here because a
+	// chapter left off this list is a PII table the census reports as
+	// unexported while the export carries it.
+	"internal/modules/privacy/sarjudgements.go",
 	"internal/modules/privacy/sarcommunication.go",
 	"internal/modules/privacy/sarconsentlinks.go",
 	"internal/modules/privacy/sarmessages.go",
