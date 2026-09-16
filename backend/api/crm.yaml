@@ -23892,8 +23892,11 @@ components:
           description: |
             Every provider this deployment mounted, each marked with whether the
             installation has chosen to offer it — which is a stored choice, not a
-            guarantee the provider has working credentials. Password is never listed: it
-            is the method every installation always has and cannot switch off.
+            guarantee the provider has working credentials. Password is never listed, and
+            not because it is always there: whether an installation offers it is the
+            DEPLOYMENT's `auth.password.enabled`, which no stored choice can reach. What
+            this document governs is the providers, and `/auth/capabilities` reports the
+            methods a login screen may draw.
           items: { $ref: '#/components/schemas/SignInProvider' }
     SignInProvider:
       type: object

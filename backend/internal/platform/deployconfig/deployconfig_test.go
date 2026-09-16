@@ -92,13 +92,26 @@ func TestParseValidatesFailClosed(t *testing.T) {
 		"purpose without label":   "version: 1\nseeds: { consent_purposes: [ { key: marketing_email } ] }\n",
 		"email without smtp":      "version: 1\nemail: { enabled: true, from_address: a@b.co }\n",
 		"smtp port out of range":  "version: 1\nemail: { enabled: true, from_address: a@b.co, smtp: { host: h, port: 70000 } }\n",
-		"password auth disabled":  "version: 1\nauth: { password: { enabled: false } }\n",
 		"unknown context rollout": "version: 1\ncompany_context: { rollout: everything }\n",
 	}
 	for name, doc := range cases {
 		if _, err := Parse([]byte(doc)); err == nil {
 			t.Errorf("%s: parsed without error", name)
 		}
+	}
+}
+
+// A deployment may close the password door. This file cannot check that
+// something else opens one — which providers are mounted is decided by the
+// credentials and URLs the composition root composes, not by this document —
+// so it parses, and cmd/api refuses the combination that leaves no way in.
+func TestPasswordAuthMayBeTurnedOff(t *testing.T) {
+	cfg, err := Parse([]byte("version: 1\nauth: { password: { enabled: false } }\n"))
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	if cfg.Auth.PasswordEnabled() {
+		t.Fatal("auth.password.enabled=false parsed as enabled — the switch would be inert")
 	}
 }
 

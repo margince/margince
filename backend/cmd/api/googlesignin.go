@@ -28,15 +28,7 @@ import (
 // from the same flag with no such check — a gap this file does not widen but
 // does not close either.)
 func googleSignInOptions(cfg apiConfig, stdout io.Writer) ([]compose.Option, error) {
-	redirectBase, postLogin, failure := signInURLs(cfg)
-	ssoCfg := compose.GoogleSignInConfig{
-		ClientID:     cfg.gmailClientID,
-		ClientSecret: cfg.gmailClientSecret,
-		StateKey:     cfg.connectorStateKey,
-		RedirectBase: redirectBase,
-		PostLoginURL: postLogin,
-		FailureURL:   failure,
-	}
+	ssoCfg := googleSignInConfig(cfg)
 	if ssoCfg.Enabled() {
 		if err := validateSignInBases(cfg, "google"); err != nil {
 			return nil, err
@@ -51,4 +43,20 @@ func googleSignInOptions(cfg apiConfig, stdout io.Writer) ([]compose.Option, err
 		_, _ = fmt.Fprintf(stdout, "api google sign-in configured but INCOMPLETE — missing %v; oidc_providers stays empty\n", ssoCfg.MissingFields())
 	}
 	return []compose.Option{compose.WithGoogleSignIn(ssoCfg)}, nil
+}
+
+// googleSignInConfig is the deployment's Google sign-in wiring, built where the
+// option is built and read again by the boot check that asks whether ANY method
+// remains. Two spellings of "what this deployment composed for Google" could
+// disagree, and the one that decided nobody can sign in would be the quiet one.
+func googleSignInConfig(cfg apiConfig) compose.GoogleSignInConfig {
+	redirectBase, postLogin, failure := signInURLs(cfg)
+	return compose.GoogleSignInConfig{
+		ClientID:     cfg.gmailClientID,
+		ClientSecret: cfg.gmailClientSecret,
+		StateKey:     cfg.connectorStateKey,
+		RedirectBase: redirectBase,
+		PostLoginURL: postLogin,
+		FailureURL:   failure,
+	}
 }
