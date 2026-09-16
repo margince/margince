@@ -50,29 +50,32 @@ func relinkStrandedSatellites(ctx context.Context, tx pgx.Tx, sourceID, targetID
 // take: their judgement is about the record that remains, and it was made with
 // that record in front of them.
 func relinkReaderJudgements(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.ContactID) error {
+	// CARRY AND RETIRE IN ONE STATEMENT, because they are one act: move these
+	// rows. Spelled as two, the next author adds a condition to one and not the
+	// other, and the merge starts leaving rows behind it believes it moved. The
+	// data-modifying CTE and the DELETE read the same snapshot, so the carry
+	// sees the source rows the delete is about to remove.
 	if _, err := tx.Exec(ctx, `
-		INSERT INTO contact_moment_dismissal (user_id, contact_id, claim_key, evidence_fingerprint, dismissed_at)
-		SELECT user_id, $2, claim_key, evidence_fingerprint, dismissed_at
-		  FROM contact_moment_dismissal WHERE contact_id = $1
-		ON CONFLICT (user_id, contact_id, claim_key) DO NOTHING`,
+		WITH carried AS (
+		  INSERT INTO contact_moment_dismissal (user_id, contact_id, claim_key, evidence_fingerprint, dismissed_at)
+		  SELECT user_id, $2, claim_key, evidence_fingerprint, dismissed_at
+		    FROM contact_moment_dismissal WHERE contact_id = $1
+		  ON CONFLICT (user_id, contact_id, claim_key) DO NOTHING
+		)
+		DELETE FROM contact_moment_dismissal WHERE contact_id = $1`,
 		sourceID, targetID); err != nil {
 		return fmt.Errorf("carry the moments a reader had already dismissed: %w", err)
 	}
-	if _, err := tx.Exec(ctx,
-		`DELETE FROM contact_moment_dismissal WHERE contact_id = $1`, sourceID); err != nil {
-		return fmt.Errorf("retire the merged-away dismissals: %w", err)
-	}
 	if _, err := tx.Exec(ctx, `
-		INSERT INTO relationship_nudge_dismissal (contact_id, reader_id, dismissed_until, set_by, set_at)
-		SELECT $2, reader_id, dismissed_until, set_by, set_at
-		  FROM relationship_nudge_dismissal WHERE contact_id = $1
-		ON CONFLICT (contact_id, reader_id) DO NOTHING`,
+		WITH carried AS (
+		  INSERT INTO relationship_nudge_dismissal (contact_id, reader_id, dismissed_until, set_by, set_at)
+		  SELECT $2, reader_id, dismissed_until, set_by, set_at
+		    FROM relationship_nudge_dismissal WHERE contact_id = $1
+		  ON CONFLICT (contact_id, reader_id) DO NOTHING
+		)
+		DELETE FROM relationship_nudge_dismissal WHERE contact_id = $1`,
 		sourceID, targetID); err != nil {
 		return fmt.Errorf("carry the nudges a reader had already put down: %w", err)
-	}
-	if _, err := tx.Exec(ctx,
-		`DELETE FROM relationship_nudge_dismissal WHERE contact_id = $1`, sourceID); err != nil {
-		return fmt.Errorf("retire the merged-away nudge dismissals: %w", err)
 	}
 	if _, err := tx.Exec(ctx,
 		`DELETE FROM contact_brief WHERE contact_id IN ($1, $2)`,
@@ -105,16 +108,15 @@ func relinkWorkInFlight(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.C
 		return fmt.Errorf("relink the hand-offs naming this contact: %w", err)
 	}
 	if _, err := tx.Exec(ctx, `
-		INSERT INTO contact_signature_enrich_state (contact_id, activity_id, last_activity_at, attempted_at)
-		SELECT $2, activity_id, last_activity_at, attempted_at
-		  FROM contact_signature_enrich_state WHERE contact_id = $1
-		ON CONFLICT (contact_id) DO NOTHING`,
+		WITH carried AS (
+		  INSERT INTO contact_signature_enrich_state (contact_id, activity_id, last_activity_at, attempted_at)
+		  SELECT $2, activity_id, last_activity_at, attempted_at
+		    FROM contact_signature_enrich_state WHERE contact_id = $1
+		  ON CONFLICT (contact_id) DO NOTHING
+		)
+		DELETE FROM contact_signature_enrich_state WHERE contact_id = $1`,
 		sourceID, targetID); err != nil {
 		return fmt.Errorf("carry the signature-enrichment attempt: %w", err)
-	}
-	if _, err := tx.Exec(ctx,
-		`DELETE FROM contact_signature_enrich_state WHERE contact_id = $1`, sourceID); err != nil {
-		return fmt.Errorf("retire the merged-away enrichment attempt: %w", err)
 	}
 	return nil
 }
