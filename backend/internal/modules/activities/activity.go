@@ -251,6 +251,12 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 		moved, err := replayMovedTheMeeting(ctx, tx, *replay, in)
 		return moved, false, err
 	}
+	// The same question the replay above asks, over a wider net: that one
+	// recognises this caller's OWN key, this one recognises the message itself
+	// however the other door filed it.
+	if bound, found, err := boundToKnownMessage(ctx, tx, in); err != nil || found {
+		return bound, false, err
+	}
 
 	id := ids.New[ids.ActivityKind]()
 	origin := in.Origin
@@ -315,6 +321,16 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 	// knows, the other names everyone the message was actually addressed to.
 	if err := stampSuppliedEmailParticipants(ctx, tx, id, in); err != nil {
 		return crmcontracts.Activity{}, false, err
+	}
+	// Claim the message's own identity, so the other door recognises this row
+	// instead of filing the same message again. The claim is in THIS
+	// transaction: two arrivals racing on one Message-ID both reach here, the
+	// primary key lets one through, and the loser is told rather than left to
+	// create a second row.
+	if kind, key := identityOf(in); key != "" {
+		if err := ClaimIdentity(ctx, tx, id, kind, key, by); err != nil {
+			return crmcontracts.Activity{}, false, err
+		}
 	}
 
 	if err := recordInitialActivity(ctx, tx, id, in); err != nil {
