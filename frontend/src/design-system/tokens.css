@@ -490,8 +490,11 @@
   /* Three families (DESIGN.md §4): a face with character for a heading and for
    * the one line a reader identifies a record by, a quiet grotesk for
    * everything read, and a mono for code — `code`, `pre`, `samp` and
-   * `.code-block` (base.css) and nothing else. Figures stay in the grotesk and align through tabular-nums
-   * (`.t-num`); an id or a key is read, not compiled, so it is body text too. */
+   * `.code-block` (base.css) and nothing else. Both text families ship three
+   * weights and index.html loads exactly those three, 400 / 500 / 700, so a
+   * fourth is a face the browser synthesized rather than one anybody drew.
+   * Figures stay in the grotesk and align through tabular-nums (`.t-num`); an
+   * id or a key is read, not compiled, so it is body text too. */
   --fontFamilyHeading: "Outfit", system-ui, sans-serif;
   --fontFamilyBody: "Geist", system-ui, sans-serif;
   --fontFamilyMono: "Geist Mono", ui-monospace, monospace;

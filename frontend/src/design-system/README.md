@@ -85,7 +85,11 @@ medium for text that sits beside a line icon, where the stroke of the glyph and
 the stroke of the letter should match — which is most text inside a component,
 and anything that may end up next to an icon. 700 bold for emphasis or to tell
 one thing from another in a case that earns it, and the heading tokens; used
-anywhere else it stops meaning anything.
+anywhere else it stops meaning anything. Those three are all there are: both
+text families ship 400, 500 and 700, `index.html` loads exactly those, and a
+fourth weight asked for anywhere renders as a face the browser synthesized
+rather than one the designer drew. `design-system/weights.test.ts` reads the
+request and the stylesheets against each other and fails on the difference.
 
 Nothing is wired yet: no rule maps `h1`–`h6` to a token, and there are no class
 hooks for these. A caller picks the token its context calls for, and the element
@@ -577,6 +581,7 @@ the shell script it replaced could not.
 | `frontend/scripts/check-ds-purity.sh` | A hex literal or `rgb()`/`hsl()`/`oklch()` outside `tokens.css` |
 | `frontend/scripts/check-font-lock.sh` | A fourth type family; and mono outside code — the `t-mono` class anywhere, a `font-family`/`font` naming a mono family on a rule whose selectors do not all have `code`, `pre`, `samp` or `.code-block` as their subject, a custom property carrying one other than `--fontFamilyMono` in `tokens.css`, a mono family in a TS string. `check-font-lock.test.sh` plants each shape and each allowed one, and requires the verdict |
 | `design-system/mono.test.ts` | The same mono rule read properly: comments skipped, selectors resolved through nesting and `@media`, `style` and `<style>` in HTML, class names and inline `fontFamily` read from the syntax tree of every TS/TSX file under `src/`, `e2e/`, `.storybook/` and every extension frontend layer |
+| `design-system/weights.test.ts` | A weight no font file exists for. It reads the Google Fonts request in `index.html` against every `font-weight`, `font` shorthand and `--font*` token under `src/` plus each inline `fontWeight`, and refuses a text family that does not load exactly 400/500/700, a declaration asking for anything else (named by file and line), and a mono family loading a weight the text families do not have. Fails closed: no request, a family with no weights, or a corpus that read nothing is a failure, not an empty pass |
 | `frontend/scripts/check-icon-glyph.sh` | An emoji glyph in a source string — Lucide only |
 | `frontend/scripts/check-ds-spacing.sh` | New raw-px margin/padding/gap outside this tier (diff-scoped) |
 | `frontend/scripts/check-ds-spacing-roles.sh` | Screen CSS that re-spaces a class this tier both spaces and declares on its own, or re-sizes one it sizes (`font-size`, `line-height`, `letter-spacing`), or that spells a rung where a role exists — `*-actions` gap, `*-cards` gap, `*-card`/`*-panel` padding. Whole-tree; the corpus is derived from this tier on every run, so a primitive added here is protected the day it exists |

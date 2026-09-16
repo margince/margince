@@ -223,8 +223,10 @@ which is how a screen-reader user moves through it: one `<h1>`, descending, no
 level skipped. Neither decision is allowed to settle the other. Body is three
 levels on the same foundation, each carrying the paragraph spacing that
 separates two blocks of its own prose, and weight is meaning rather than
-decoration — 400 is prose, 500 is text that sits beside a line icon and most
-text inside a component, 700 is a heading or an emphasis that has earned it.
+decoration — and there are exactly three, shipped in both text families and
+loaded as such, so a fourth is a face the browser synthesized: 400 is prose, 500
+is text that sits beside a line icon and most text inside a component, 700 is a
+heading or an emphasis that has earned it.
 
 Everything is rem on the browser's own 1rem = 16px, so a reader who enlarges
 that moves the product with them.
