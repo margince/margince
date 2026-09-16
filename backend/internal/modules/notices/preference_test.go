@@ -143,6 +143,74 @@ func TestEveryClassAKindLandsInCanBeDecidedAbout(t *testing.T) {
 	}
 }
 
+// The save decides whether anything moved, and what the ledger says it moved
+// from, out of a read — and then writes what it decided. Both halves must see
+// ONE state, and the write identity is what makes that true rather than
+// intended: without it two tabs saving the same class each read "nothing
+// decided here", each pass the no-op skip, and the second records a change from
+// a null the first had already filled.
+//
+// Read from the SOURCE rather than raced for. What a running database would
+// prove is that an advisory lock blocks, which is Postgres's contract and not
+// ours; what can regress here is taking the lock after the read, or not taking
+// it — and that is a property of the text. Capture's backfill lock-order test
+// makes the same call for the same reason.
+func TestTheSaveTakesTheSeatsWriteIdentityBeforeItReadsOrWrites(t *testing.T) {
+	t.Parallel()
+	const guard = "LockWriteIdentity"
+	dependents := []string{"chosenBy", "savePreference"}
+	calls := callsInOrder(t, "preference.go", "SaveNotificationPreference")
+	// Nothing here may pass short: a rename this test stopped recognising would
+	// otherwise leave it asserting an order between names that are not there.
+	for _, name := range append([]string{guard}, dependents...) {
+		if !slices.Contains(calls, name) {
+			t.Fatalf("the save calls no %s — this test is reading a function it no longer describes: %v", name, calls)
+		}
+	}
+	guardAt := slices.Index(calls, guard)
+	for _, name := range dependents {
+		if slices.Index(calls, name) < guardAt {
+			t.Errorf("%s runs before %s, so the save decides from a read a concurrent save can "+
+				"invalidate between the two statements", name, guard)
+		}
+	}
+}
+
+// callsInOrder is every function the named function calls, in source order,
+// spelled by the name at the call site — a selector reads as its final name, so
+// storekit.LockWriteIdentity and a bare helper are both just their own name.
+func callsInOrder(t *testing.T, file, fn string) []string {
+	t.Helper()
+	parsed, err := parser.ParseFile(token.NewFileSet(), file, nil, 0)
+	if err != nil {
+		t.Fatalf("reading %s: %v", file, err)
+	}
+	var calls []string
+	for _, decl := range parsed.Decls {
+		declared, isFunc := decl.(*ast.FuncDecl)
+		if !isFunc || declared.Name.Name != fn {
+			continue
+		}
+		ast.Inspect(declared.Body, func(node ast.Node) bool {
+			call, isCall := node.(*ast.CallExpr)
+			if !isCall {
+				return true
+			}
+			switch called := call.Fun.(type) {
+			case *ast.Ident:
+				calls = append(calls, called.Name)
+			case *ast.SelectorExpr:
+				calls = append(calls, called.Sel.Name)
+			}
+			return true
+		})
+	}
+	if len(calls) == 0 {
+		t.Fatalf("%s declares no %s, or it calls nothing", file, fn)
+	}
+	return calls
+}
+
 func TestOnlyAnApprovalLeavesTheProductByDefault(t *testing.T) {
 	t.Parallel()
 	if got := DefaultDelivery(ClassApprovalPending); got != DeliveryEmail {

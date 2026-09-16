@@ -155,6 +155,20 @@ func (s *Store) SaveNotificationPreference(ctx context.Context, class, delivery 
 	}
 	var chosen map[string]string
 	if err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		// FIRST, because everything below depends on one answer to "what has
+		// this seat decided about this class". READ COMMITTED gives each
+		// statement its own view, so two tabs saving the same class both read
+		// "nothing decided here", both pass the no-op skip, and the second's
+		// write lands with a before-image naming a null the first had already
+		// filled — two ledger entries and two announcements for one net change,
+		// and a ledger that cannot say what the change was from.
+		//
+		// The write identity rather than SELECT … FOR UPDATE: a FIRST save has
+		// no row to lock, and that is precisely the racing case.
+		if err := storekit.LockWriteIdentity(ctx, tx, "notification_preference",
+			preferenceIdentity(human, class)); err != nil {
+			return err
+		}
 		var txErr error
 		if chosen, txErr = chosenBy(ctx, tx, human); txErr != nil {
 			return txErr
@@ -229,6 +243,16 @@ func DeliveryFor(ctx context.Context, tx pgx.Tx, recipient ids.UserID, class str
 		return "", fmt.Errorf("notices: reading the recipient's notification setting: %w", err)
 	}
 	return delivery, nil
+}
+
+// preferenceIdentity names the logical record a save decides about: one seat's
+// choice for ONE class.
+//
+// Per class rather than per seat, so two tabs changing different classes do not
+// wait on each other — they decide about different rows and read each other's
+// nothing.
+func preferenceIdentity(human ids.UUID, class string) string {
+	return human.String() + ":" + class
 }
 
 // preferenceSeat is the acting human, named by the act for the refusal message.
