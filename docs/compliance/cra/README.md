@@ -6,10 +6,16 @@ before it reads employee mail. This directory is what **we** do when a
 weakness in Margince is being exploited in the wild.
 
 The obligation is Article 14 of Regulation (EU) 2024/2847 (the Cyber
-Resilience Act), which applies from **11 September 2026** and reaches products
-placed on the market before that date. The regulation governs; this page is
-the operational reading of it, written so nobody has to do that reading with a
-24-hour clock already running.
+Resilience Act). Two dates, and they do different jobs:
+
+- **11 September 2026** — when Article 14 starts applying. It is in force now.
+- **11 December 2027** — the transitional cutoff. Article 69(3) extends the
+  Article 14 reporting duty to in-scope products **placed on the market before**
+  that date, so a product older than the regulation's substantive requirements
+  still carries the duty to report.
+
+The regulation governs; this page is the operational reading of it, written so
+nobody has to do that reading with a 24-hour clock already running.
 
 ## The three cases, and which one you are in
 
@@ -70,26 +76,62 @@ member state of our main establishment, and ENISA. Article 16 establishes a
 single reporting platform through which both are reached, so in practice this
 is one submission with two addressees.
 
-Our coordinator is the German one — **BSI** (Bundesamt für Sicherheit in der
+**Which coordinator is a rule, not a fact about us.** Article 14(7) names the
+CSIRT of the member state where the manufacturer's **product-cybersecurity
+decisions are predominantly taken**. Where that member state cannot be
+determined, the chain continues: the EU establishment with the most employees,
+then — for a manufacturer with no EU main establishment — the authorised
+representative, the importer, the distributor, and last the member states where
+users are.
+
+On the first limb ours is Germany, and the basis is worth writing down rather
+than assuming: the decisions about this product's security are taken where it
+is built. So the coordinator is **BSI** (Bundesamt für Sicherheit in der
 Informationstechnik), whose operational arm is CERT-Bund. Its published
-reporting channel is on `bsi.bund.de`; the exact submission address is
-recorded in the pre-registration step below rather than transcribed here,
-because an address copied into a document and never checked is worse than a
-document that says where to look.
+reporting channel is on `bsi.bund.de`; the exact submission address is recorded
+in the pre-registration step below rather than transcribed here, because an
+address copied into a document and never checked is worse than a document that
+says where to look.
+
+**Re-decide it when the basis moves, not when somebody remembers.** A second
+establishment, a move of where security decisions are taken, or an EU presence
+arriving or leaving changes which CSIRT is the right recipient — and a
+notification to the wrong one is a notification not made. The pre-registration
+block below records the basis beside the address, so the two are re-checked
+together.
 
 ## And tell the operators
 
 Separately from the filing, and **without undue delay** once we are aware:
-tell whoever runs a Margince installation that there is an actively
-exploited vulnerability, what mitigates it, and what corrective measure is coming or
-available. That duty is ours as manufacturer and is not discharged by filing —
-a report to an authority protects nobody's installation.
+tell whoever runs a Margince installation that there is an actively exploited
+vulnerability, what mitigates it, and what corrective measure is coming or
+available. Article 14(8) puts that duty on the manufacturer, and filing does
+not discharge it — a report to an authority protects nobody's installation.
+Where we fail to do it in time, the notified CSIRT may do it for us.
 
-The channel is the GitHub Security Advisory that the private report already
-lives in ([SECURITY.md](../../../SECURITY.md)), published at the point where
-publishing helps operators more than it helps an attacker who is already
-exploiting it. In an actively-exploited case that point arrives early: the
-exploit is in use, so the secrecy is protecting nothing.
+**The owner is whoever fixed T₀.** The maintainer who started the clock owns
+the operator notice until it is sent, because the failure this prevents is a
+pair of maintainers each assuming the other told the customers.
+
+**The channel, and its known reach.** The first channel is the GitHub Security
+Advisory the private report already lives in
+([SECURITY.md](../../../SECURITY.md)), published at the point where publishing
+helps operators more than it helps an attacker who is already exploiting it. In
+an actively-exploited case that point arrives early: the exploit is in use, so
+the secrecy is protecting nothing. Publishing also puts the vulnerability where
+automation can read it, which is the machine-readable form Article 14(8) asks
+for where appropriate.
+
+**An advisory reaches whoever watches this repository, which is not the same
+set as whoever runs the software.** A self-hosted installation subscribes to
+nothing by default. So the advisory is the floor rather than the answer: every
+operator we hold a contact route for is told directly, by that route, and the
+notice carries the same three things — the risk, the mitigation available now,
+and the corrective measure.
+
+Where no route exists for an installation, that is a gap in what we know about
+our own deployments rather than a discharge of the duty, and the honest record
+of it belongs in the final report's *users informed* block.
 
 ## Before any of this happens
 
@@ -102,6 +144,12 @@ checked when they change.
 - [ ] **The coordinator's channel is confirmed** against BSI's own published
       contact, and the date of that check is written next to it. An authority's
       address is not a constant.
+- [ ] **The Article 14(7) basis is recorded** — which limb of the rule selects
+      our coordinator, and why — and re-checked whenever an establishment, or
+      where product-security decisions are taken, changes.
+- [ ] **The operator contact routes are listed**, so "tell every affected
+      operator" is a list somebody works through rather than a hope about who
+      reads an advisory.
 - [ ] **The tabletop below has been walked**, with its date and outcome
       recorded.
 
