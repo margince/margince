@@ -107,9 +107,10 @@ describe("the settings stories are filed where the product files them", () => {
   // decision` and `You/Capture activity/Pipeline drawer`; 83 → 86 for
   // `Across pages/Refresh from sources`, `Governance/Privacy &
   // retention/Corrections` and `Governance/Privacy & retention/Retention policy
-  // form`; 86 → 87 for `AI/Automations/Automation form`.
+  // form`; 86 → 87 for `AI/Automations/Automation form`; 87 → 88 for
+  // `Governance/Privacy & retention/Notice duties`.
   it("reads every settings story, and says how many that is", () => {
-    expect(settingsStories.length).toBe(87);
+    expect(settingsStories.length).toBe(88);
   });
 
   // The filter above drops a file whose title does not resolve. That is the
