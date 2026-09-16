@@ -50,6 +50,7 @@ it can be answered for.
 | `owed_verdict` | `local_small` → `cheap_cloud` | no | yes | shipped |
 | `propose_roles` | `cheap_cloud` → `premium` | no | no | shipped |
 | `rate_extract` | `premium` → `cheap_cloud` | no | no | shipped |
+| `request_settlement` | `local_small` → `cheap_cloud` | no | yes | shipped |
 | `signal_extract` | `cheap_cloud` → `premium` | no | yes | shipped |
 | `site_extract` | `premium` | no | no | shipped |
 | `site_fact_extract` | `cheap_cloud` → `premium` | no | no | shipped |

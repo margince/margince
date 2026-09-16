@@ -24,12 +24,12 @@ How to certify a model: [certify-an-ai-model.md](../how-to/certify-an-ai-model.m
 
 | | |
 |---|---:|
-| Shipped invocation sites | 45 |
+| Shipped invocation sites | 46 |
 | … best state `current` | 41 |
 | … best state `partial` | 0 |
 | … best state `stale` | 4 |
-| … `absent` on every binding | 0 |
-| Scenarios in the corpus | 163 |
+| … `absent` on every binding | 1 |
+| Scenarios in the corpus | 167 |
 | Committed records | 76 |
 | Bindings measured | 10 |
 
@@ -84,7 +84,7 @@ today. It says nothing about how well the model did — that is the band.
 
 ## Index
 
-### Sites (45)
+### Sites (46)
 
 Which model to run each site on, and what that choice rests on.
 
@@ -117,6 +117,7 @@ Which model to run each site on, and what that choice rests on.
 | [`propose_roles/committee`](#propose_rolescommittee) | `gemini · gemini-3.1-flash-lite · eu_hosted` | `certified` | 1.00 | `current` | 3 | 2 |
 | [`rate_extract/fx`](#rate_extractfx) | `openai_compatible · mistralai/mistral-large-2512 · eu_hosted` | `certified` | 1.00 | `current` | 2 | 4 |
 | [`rate_extract/pricing`](#rate_extractpricing) | `openai_compatible · mistralai/mistral-large-2512 · eu_hosted` | `certified` | 1.00 | `current` | 1 | 4 |
+| [`request_settlement/request_settle`](#request_settlementrequest_settle) | - | - | - | `absent` | 4 | 0 |
 | [`signal_extract/thread_events`](#signal_extractthread_events) | `gemini · gemini-3.1-flash-lite · eu_hosted` | `not_supported` | 0.75 | `current` | 4 | 2 |
 | [`site_extract/profile`](#site_extractprofile) | `openai_compatible · mistralai/mistral-large-2512 · eu_hosted` | `not_supported` | 0.80 | `current` | 5 | 5 |
 | [`site_fact_extract/page_facts`](#site_fact_extractpage_facts) | `gemini · gemini-3.1-flash-lite · eu_hosted` | `certified` | 1.00 | `current` | 3 | 3 |
@@ -858,6 +859,23 @@ Records (4):
 | `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | `stale` | - | `certified` | 3 | 3 | 1.00 | 2384ms | 3001ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-large-2512 · eu_hosted` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 1848ms | 2482ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · z-ai/glm-5.2 · cloud_frontier` | `stale` | - | `certified` | 3 | 3 | 1.00 | 4206ms | 5262ms | 3 | 0 | 0 | 0 |
+
+### `request_settlement`
+
+#### `request_settlement/request_settle`
+
+Scope a run of it can claim: `single_call`.
+
+Scenarios (4):
+
+| Scenario | Expects | Case |
+|---|---|---|
+| `a_reply_that_says_nothing_either_way_is_answered_unsure` | `accepted` | [unsure_when_the_words_do_not_say_01.yaml](../../backend/internal/compose/aicert/corpus/request_settlement/unsure_when_the_words_do_not_say_01.yaml) |
+| `an_answer_settles_a_request_and_an_acknowledgement_does_not` | `accepted` | [answered_and_acknowledged_01.yaml](../../backend/internal/compose/aicert/corpus/request_settlement/answered_and_acknowledged_01.yaml) |
+| `answering_one_of_two_asks_leaves_the_other_owed` | `accepted` | [partial_answer_and_reask_01.yaml](../../backend/internal/compose/aicert/corpus/request_settlement/partial_answer_and_reask_01.yaml) |
+| `declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague` | `accepted` | [declined_and_handed_on_01.yaml](../../backend/internal/compose/aicert/corpus/request_settlement/declined_and_handed_on_01.yaml) |
+
+No record: this site has never been certified on any binding.
 
 ### `signal_extract`
 

@@ -1,11 +1,11 @@
 {
   "totals": {
-    "sites": 45,
+    "sites": 46,
     "sites_best_current": 41,
     "sites_best_partial": 0,
     "sites_best_stale": 4,
-    "sites_absent": 0,
-    "scenarios": 163,
+    "sites_absent": 1,
+    "scenarios": 167,
     "records": 76,
     "bindings": 10
   },
@@ -3581,6 +3581,38 @@
           "stale_reason": "predates per-scenario stamps: only its task stamp can be compared, and that has moved"
         }
       ]
+    },
+    {
+      "task": "request_settlement",
+      "site": "request_settle",
+      "key": "request_settlement/request_settle",
+      "scope": "single_call",
+      "missing_context_scopes": [],
+      "best_state": "absent",
+      "recommended": null,
+      "scenarios": [
+        {
+          "name": "a_reply_that_says_nothing_either_way_is_answered_unsure",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/request_settlement/unsure_when_the_words_do_not_say_01.yaml"
+        },
+        {
+          "name": "an_answer_settles_a_request_and_an_acknowledgement_does_not",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/request_settlement/answered_and_acknowledged_01.yaml"
+        },
+        {
+          "name": "answering_one_of_two_asks_leaves_the_other_owed",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/request_settlement/partial_answer_and_reask_01.yaml"
+        },
+        {
+          "name": "declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/request_settlement/declined_and_handed_on_01.yaml"
+        }
+      ],
+      "records": []
     },
     {
       "task": "signal_extract",
