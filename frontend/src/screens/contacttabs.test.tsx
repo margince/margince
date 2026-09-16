@@ -13,14 +13,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { pickOption } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
-import {
-  ContactDealsTab,
-  ContactMeetingsTab,
-  ContactTimelineTab,
-} from "./contacttabs";
-import { stubWithSession } from "./story-utils";
+import { ContactDealsTab } from "./contactdeals";
+import { ContactMeetingsTab } from "./contactmeetings";
+import { ContactTimelineTab } from "./contacttabs";
+import { jsonResponse, stubWithSession } from "./story-utils";
 
 type Contact360 = components["schemas"]["Contact360"];
+type Deal = components["schemas"]["Deal"];
+type Company = components["schemas"]["Company"];
 // The 360 carries its OWN spelling of an activity row — the section's element
 // type, not the standalone `Activity` schema, which differs in two fields.
 // Deriving it from the section is what keeps this fixture honest about the
@@ -60,6 +60,21 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+// The one deal every fixture below seats this contact on: `deal_roles` names
+// only its title, its stage and the seat, so a deal card fetches the rest
+// through the route the default stub below routes to it.
+const DEAL_D1: Deal = {
+  id: "d-1",
+  name: "Fleet renewal 2026",
+  pipeline_id: "pl-1",
+  stage_id: "s-1",
+  status: "open",
+  source: "manual",
+  captured_by: "human:u-1",
+  created_at: "2026-06-01T08:00:00Z",
+  updated_at: "2026-08-01T08:00:00Z",
+};
+
 // The session probe, routed with no object grants: the ordinary native seat
 // this tab is drawn for. Unrouted it is refused, a refused session reads as a
 // malformed one, and the tab draws the branch a denied grant produces — which
@@ -69,7 +84,7 @@ afterEach(() => {
 // read gets here: a kind dial that is a SERVER parameter makes the list its
 // own request rather than the 360's seeded page.
 beforeEach(() => {
-  stubWithSession({}, {});
+  stubWithSession({ "GET /deals/d-1": () => jsonResponse(DEAL_D1) }, {});
 });
 
 function withProviders(node: ReactNode) {
@@ -276,6 +291,55 @@ describe("the deals tab", () => {
     expect(screen.getByText("Economic buyer")).toBeTruthy();
   });
 
+  // The card draws its money, its close date and its company off the deal
+  // itself: `deal_roles` names neither. The committee used to live a second
+  // time in a panel of its own below this list, read off `commercial.deal`;
+  // it is folded into the matching card instead, so the panel is gone rather
+  // than repeating a deal this list already names.
+  it("draws the deal's money, close date and company on its card, and folds the committee in", async () => {
+    stubWithSession(
+      {
+        "GET /deals/d-1": () =>
+          jsonResponse({
+            ...DEAL_D1,
+            amount_minor: 42_000_000,
+            currency: "EUR",
+            expected_close_date: "2026-09-30",
+            company_id: "co-1",
+          } satisfies Deal),
+        "GET /companies/co-1": () =>
+          jsonResponse({
+            id: "co-1",
+            display_name: "straight. GmbH",
+            source: "manual",
+            captured_by: "human:u-1",
+            created_at: "2026-06-01T08:00:00Z",
+            updated_at: "2026-06-01T08:00:00Z",
+          } satisfies Company),
+      },
+      {},
+    );
+    const withCommercial: Contact360 = {
+      ...view,
+      commercial: {
+        deal: { deal_id: "d-1", title: "Fleet renewal 2026" },
+        role: "economic_buyer",
+        committee: [
+          { contact_id: "c-2", full_name: "Sam Ops", role: "champion" },
+        ],
+      },
+    };
+    withProviders(<ContactDealsTab view={withCommercial} />);
+    expect(await screen.findByText(/€420k/i)).toBeTruthy();
+    expect(screen.getByText(/closes/i)).toBeTruthy();
+    expect(screen.getByText(/straight\. GmbH/)).toBeTruthy();
+    expect(screen.getByText("Sam Ops")).toBeTruthy();
+    expect(screen.getByText("Champion")).toBeTruthy();
+    expect(
+      screen.queryByRole("heading", { name: "Open deal & buying role" }),
+    ).toBeNull();
+  });
+
   it("does not report an absent grant as an absence of deals", () => {
     withProviders(<ContactDealsTab view={withheld} />);
     expect(screen.queryByText(/not recorded on any deal/)).toBeNull();
@@ -436,5 +500,48 @@ describe("the meetings tab", () => {
     // The booked meeting leads the tab; the held one follows it.
     await userEvent.setup().click(actions[1]);
     expect(briefed).toEqual(["a-2"]);
+  });
+
+  it("draws the prep note and its agenda verb on the booked meeting", async () => {
+    // The rung fires off the next meeting alone: a moment about a different
+    // claim (re-engagement, an overdue promise) has no meeting to sit on.
+    const draftAgenda: components["schemas"]["ContactMomentAction"] = {
+      kind: "draft_reply",
+      label: "Draft agenda",
+      state: "will_confirm",
+      destination: { surface: "composer", prefill: { intent: "agenda" } },
+    };
+    const withMoment: Contact360 = {
+      ...view,
+      moment: {
+        claim_key: "moment:meeting_prep",
+        evidence_fingerprint: "fp-1",
+        rule: "meeting_prep",
+        headline: "Prepare for Contract review",
+        why_now:
+          "Preparation is worth something before the meeting and nothing after it.",
+        confidence: "observed_fact",
+        evidence: [],
+        recommended_action: {
+          kind: "open_meeting_brief",
+          label: "Open meeting brief",
+          state: "available",
+        },
+        secondary_actions: [draftAgenda],
+      },
+    };
+    const acted: components["schemas"]["ContactMomentAction"][] = [];
+    withProviders(
+      <ContactMeetingsTab
+        view={withMoment}
+        onBriefMeeting={() => {}}
+        onAction={(action) => acted.push(action)}
+      />,
+    );
+    expect(screen.getByText("Upcoming")).toBeTruthy();
+    expect(screen.getByText(/Preparation is worth something/)).toBeTruthy();
+    const draft = screen.getByRole("button", { name: "Draft agenda" });
+    await userEvent.setup().click(draft);
+    expect(acted).toEqual([draftAgenda]);
   });
 });

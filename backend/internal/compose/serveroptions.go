@@ -28,7 +28,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/mailer"
-	"github.com/margince/margince/backend/internal/platform/overlaybudget"
 )
 
 // Option customizes the wiring for one process role; everything not
@@ -284,26 +283,6 @@ func WithKeyvault(vault keyvault.Vault) Option {
 				publicOrigin:         s.originStatus,
 			}
 		}
-		// The overlay incumbent connection lifecycle needs the same
-		// custodian: Connect seals the private-app token, Disconnect
-		// resolves-then-deletes it. s.overlayMeter is the Server's own
-		// shared instance (constructed unconditionally in newServer) so
-		// GetOverlayBudget answers from the SAME meter contractAPI's
-		// Dispatcher spends force-fresh reads against.
-		s.overlayHandlers = NewOverlayHandlers(pool, vault, s.overlayMeter, s.log, s.overlayBackfillLimit, s.sorDispatch.Invalidate)
-		// Now that the vault is wired, install the live per-workspace
-		// incumbent resolver on the overlay read dispatch — force-fresh
-		// reads can reach HubSpot (Authoritative:true), no longer degrading
-		// to the mirror unconditionally. newServer built the dispatch with a
-		// nil resolver because the vault arrives only here; the dispatch is
-		// a shared pointer, so this reaches the same instance that serves
-		// reads. Boot-time only (before serving), so it never races a Read.
-		// Guarded for the isolated-option unit tests that apply WithKeyvault
-		// to a Server with no dispatch wired; the real newServer path always
-		// has one.
-		if s.sorDispatch != nil {
-			s.sorDispatch.SetOverlayIncumbentResolver(s.resolveOverlayIncumbent(pool))
-		}
 		// The channel connect path needs the same custodian: it seals the bot
 		// token and destroys it on disconnect. A role that composed no channel
 		// transport is left that way (channelconnect.go).
@@ -316,28 +295,6 @@ func WithKeyvault(vault keyvault.Vault) Option {
 		// the only place the channel branch gets to run at all.
 		installSendPreflight(s, pool)
 	}
-}
-
-// WithOverlayBackfillLimit bounds the overlay initial mirror backfill at
-// limit records per object class (dev/demo — MARGINCE_OVERLAY_BACKFILL_LIMIT).
-// It must be applied BEFORE WithKeyvault (which builds the overlay handlers
-// off s.overlayBackfillLimit); cmd/api orders them that way. 0 is uncapped.
-func WithOverlayBackfillLimit(limit int) Option {
-	return func(s *Server, _ *pgxpool.Pool) { s.overlayBackfillLimit = limit }
-}
-
-// WithOverlayMeter Rebinds the Server's shared OVB meter to the live,
-// Redis-backed meter cmd built. newServer constructs the meter fail-closed
-// (nil Redis) and shares that ONE pointer with the read dispatch and the
-// budget handlers, so this RebindFrom reaches every holder regardless of
-// option order — force-fresh reads and the budget surface all meter against
-// the same Redis windows. Taking the already-built *overlaybudget.Meter
-// (not a *redis.Client) keeps the raw-Redis dependency in cmd, never in
-// compose. Without this option the meter stays fail-closed (every
-// force-fresh read sheds to the mirror), the honest posture for a role with
-// no Redis.
-func WithOverlayMeter(meter *overlaybudget.Meter) Option {
-	return func(s *Server, _ *pgxpool.Pool) { s.overlayMeter.RebindFrom(meter) }
 }
 
 // WithAgentVolume Rebinds the Server's shared MCP-SESS-* meter to the live,

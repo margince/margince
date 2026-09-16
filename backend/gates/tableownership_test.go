@@ -185,6 +185,15 @@ func stringConstsByPackage(t *testing.T, fset *token.FileSet, roots []string) ma
 type tableWrite struct {
 	pos   string // file:line for the finding
 	table string
+	// stmt is WHICH write this is, within the declaration that makes it: the
+	// statement's own first line for a SQL literal, the call's own text for a
+	// storekit write. It is the last part of the waiver key, and the reason the
+	// key reaches one write rather than one function's writes to one table.
+	//
+	// Two writes with the same text in one declaration collapse to one subject,
+	// and that is right: they are the same statement made twice, so one
+	// ratification is one piece of evidence covering both.
+	stmt string
 	// verb is which write this is — "insert", "delete" or "update".
 	//
 	// cols carries the columns the statement names, where they can be read.
@@ -264,13 +273,14 @@ func collectTableWrites(t *testing.T) map[string][]tableWrite {
 			// walk: ast.Inspect is flat, and a stack maintained by hand here
 			// would be a second traversal to keep correct.
 			enclosing := unnamedDeclSite
-			record := func(pos token.Pos, tables []sqlTarget) {
+			record := func(pos token.Pos, stmt string, tables []sqlTarget) {
 				for _, target := range tables {
 					writes[owner] = append(writes[owner], tableWrite{
 						pos:   fset.Position(pos).String(),
 						table: target.table,
 						verb:  target.verb,
 						cols:  target.cols,
+						stmt:  stmt,
 						// Relative to the owner, which the key already names:
 						// the absolute path would repeat that prefix in every
 						// entry and push the part a reader is actually
@@ -289,7 +299,7 @@ func collectTableWrites(t *testing.T) map[string][]tableWrite {
 					if err != nil {
 						return
 					}
-					record(node.Pos(), sqlWrites(text))
+					record(node.Pos(), gatekit.FirstLineOf(text), sqlWrites(text))
 				case *ast.CallExpr:
 					sel, ok := node.Fun.(*ast.SelectorExpr)
 					if !ok || !storekitTableArg[sel.Sel.Name] || len(node.Args) < 4 {
@@ -315,7 +325,12 @@ func collectTableWrites(t *testing.T) map[string][]tableWrite {
 					// of them creates a row. TestNoPendingWriterHasAWriter
 					// leans on that — an INSERT cannot arrive through this arm
 					// and be read as an update.
-					record(node.Pos(), []sqlTarget{{table: strings.ToLower(table), verb: "storekit"}})
+					// The call's own text, for the arm that has no SQL to take a
+					// first line from. Two storekit writes to one table in one
+					// declaration differ in their arguments, which is what
+					// separates them here.
+					record(node.Pos(), gatekit.FirstLineOf(exprText(fset, node)),
+						[]sqlTarget{{table: strings.ToLower(table), verb: "storekit"}})
 					storekitWrites++
 				}
 			}
@@ -341,15 +356,22 @@ func collectTableWrites(t *testing.T) map[string][]tableWrite {
 const storekitWriteFloor = 25
 
 // waiverKey is the subject crossStoreWrites ratifies: the writing package, the
-// table it reaches into, and the INSTANCE that reaches it.
+// table it reaches into, and the STATEMENT that reaches it.
 //
 // The declaration is the point. Keyed on owner and table alone, one entry
 // ratifies the CATEGORY — "contacts may write activity_link" — and a second,
 // differently written copy of that write inside the same package is admitted by
 // the entry the first one earned, with no finding to notice. A cross-store
 // write is ratified on its own evidence or it is not ratified.
+//
+// That reasoning moved the unit from the package to the DECLARATION and stopped
+// one level short: a function writing its table twice — two INSERTs into
+// activity_link in one relink helper, an UPDATE beside a DELETE in one erasure
+// step — presented both under one key, and the second was admitted by the
+// waiver the first earned with nothing to report. So the statement is in the
+// key too, the way settingReadSubject already names a read.
 func waiverKey(owner string, w tableWrite) string {
-	return owner + ":" + w.table + ":" + w.site
+	return owner + ":" + w.table + ":" + w.site + ":" + w.stmt
 }
 
 // unratifiedCrossStoreWrites returns one finding per write that reaches a table
@@ -387,7 +409,7 @@ func unratifiedCrossStoreWrites(t testing.TB, waivers *gatekit.Waivers[string], 
 			}
 			findings = append(findings, fmt.Sprintf(
 				"%s: %s writes table %q owned by %s — move the write into the owning module, or ratify THIS write in crossStoreWrites[%q] with a self-contained rationale. "+
-					"A waiver a sibling write in the same package already holds does not cover this one: the key names the function, so every copy is ratified on its own evidence",
+					"A waiver a sibling write in the same package already holds does not cover this one: the key names the STATEMENT, so every copy is ratified on its own evidence",
 				w.pos, owner, w.table, declared, key,
 			))
 		}
@@ -424,12 +446,31 @@ func TestASecondCopyOfARatifiedWriteIsNotCoveredByTheFirst(t *testing.T) {
 		table = "activity_link"
 		first = "ensure.go:Store.linkActivityToContact"
 	)
-	ratified := tableWrite{pos: "internal/modules/contacts/ensure.go:1:1", table: table, site: first}
+	const ratifiedStmt = "INSERT INTO activity_link (activity_id, entity_type, contact_id) …"
+	ratified := tableWrite{
+		pos: "internal/modules/contacts/ensure.go:1:1", table: table, site: first, stmt: ratifiedStmt,
+	}
 	// Same package, same table, a different declaration.
 	planted := tableWrite{
 		pos:   "internal/modules/contacts/planted.go:1:1",
 		table: table,
 		site:  "planted.go:aSecondWriterOfARatifiedTable",
+		stmt:  ratifiedStmt,
+	}
+	// And the case the declaration's reasoning reached only one level short of:
+	// the SAME declaration, writing the same table a second time. Before the
+	// statement joined the key this presented under the ratified write's own
+	// subject and went through with nothing to report — not hypothetically,
+	// either: ten functions in the tree write their table twice, and eleven
+	// writes were being admitted by a sibling's waiver when this landed.
+	//
+	// Synthetic rather than planted in the tree, because a case that can only
+	// be written once somebody has made the mistake is not a guard.
+	sibling := tableWrite{
+		pos:   "internal/modules/contacts/ensure.go:9:9",
+		table: table,
+		site:  first,
+		stmt:  "DELETE FROM activity_link WHERE activity_id = $1 AND contact_id = $2",
 	}
 
 	// The plant only tests coverage if it is a write the tree really ratifies
@@ -442,11 +483,18 @@ func TestASecondCopyOfARatifiedWriteIsNotCoveredByTheFirst(t *testing.T) {
 		t.Fatalf("crossStoreWrites no longer ratifies %s — repoint this case at a live waiver",
 			waiverKey(owner, ratified))
 	}
-	// And the two must differ ONLY in the part the key added, or the case would
-	// pass on a distinction the superseded key already drew.
-	if owner+":"+ratified.table != owner+":"+planted.table {
-		t.Fatalf("the plant differs from the ratified write in package or table, so a key naming " +
-			"neither would already separate them and this case proves nothing about the declaration")
+	// And each plant must differ from the ratified write ONLY in the part of
+	// the key it is about, or the case would pass on a distinction the
+	// superseded key already drew. The declaration plant shares the table and
+	// the statement; the sibling shares the table and the declaration.
+	if owner+":"+ratified.table != owner+":"+planted.table || ratified.stmt != planted.stmt {
+		t.Fatalf("the declaration plant differs from the ratified write in package, table or " +
+			"statement, so a key naming none of those would already separate them and this case " +
+			"proves nothing about the declaration")
+	}
+	if sibling.site != ratified.site || sibling.table != ratified.table {
+		t.Fatalf("the sibling plant differs from the ratified write in declaration or table, so the " +
+			"superseded key would already separate them and this case proves nothing about the statement")
 	}
 
 	waivers := gatekit.Waive(map[string]string{
@@ -463,6 +511,17 @@ func TestASecondCopyOfARatifiedWriteIsNotCoveredByTheFirst(t *testing.T) {
 		if !strings.Contains(findings[0], planted.site) {
 			t.Errorf("the finding does not name the planted write %q, so this case cannot tell that the "+
 				"planted copy was the one refused:\n%s", planted.site, findings[0])
+		}
+	})
+
+	t.Run("a second write to the same table in the same declaration is refused", func(t *testing.T) {
+		findings := unratifiedCrossStoreWrites(t, waivers, map[string][]tableWrite{owner: {sibling}})
+		if len(findings) != 1 {
+			t.Fatalf("planted one unratified sibling write, got %d findings: %v", len(findings), findings)
+		}
+		if !strings.Contains(findings[0], sibling.stmt) {
+			t.Errorf("the finding does not name the planted statement %q, so this case cannot tell that "+
+				"the second write was the one refused:\n%s", sibling.stmt, findings[0])
 		}
 	})
 

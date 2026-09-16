@@ -2,7 +2,11 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { type Mock, vi } from "vitest";
+import type { components } from "../api/schema";
 import { meFixture } from "../app/mefixture";
+
+type Company = components["schemas"]["Company"];
+type Company360 = components["schemas"]["Company360"];
 
 // What the server answers a company record with, in ONE place.
 //
@@ -43,7 +47,7 @@ export function emptyPage(): Response {
   return jsonResponse(emptySection);
 }
 
-export const company = {
+export const company: Company = {
   id: "o-1",
   display_name: "Brandt Automotive GmbH",
   industry: "Automotive",
@@ -67,7 +71,7 @@ export const company = {
  * absent and named in `sections_omitted`. A suite that IS about a section
  * spreads its own over this one.
  */
-export const company360 = {
+export const company360: Company360 = {
   as_of: "2026-06-01T09:00:00Z",
   company: company,
   sections_omitted: [],

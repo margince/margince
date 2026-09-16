@@ -48,15 +48,20 @@ checked against it. The sources are listed at the end of the section.
    hovered row one step lighter again, and that ordering is the whole
    elevation system. Vercel is "border-first": a 1px hairline defines every
    static element and a real shadow is reserved for something floating above
-   the plane. **Rule:** paper → surface → raised is the ladder; a hairline OR a
-   shadow, never both on one element; only a popover, a menu or a drawer casts
-   a shadow that a reader would notice.
+   the plane. **Rule:** paper → surface → raised is the ladder, and it carries
+   the separation. A resting surface takes ONE tight layer on top of that —
+   `--shadow-rest`, 1px down and 2px of blur at 5% — which gives it a top side
+   without making it float; only a popover, a menu or a drawer casts a shadow a
+   reader would call one. Never two shadows on one element.
 2. **When a shadow is cast, it is tinted and layered.** Stripe's shadows are
    blue-grey (`rgba(50,50,93,.25)`) because its brand is navy, with a second
    tighter layer close to the element; a pure black shadow is what makes a
-   card look pasted on. **Rule:** `--shadow-raised` and `--shadow-pop` are
-   ink-green (`rgba(16,26,21,…)`) in two layers, the near one tight and the far
-   one soft, from a single light source above.
+   card look pasted on. **Rule:** there are exactly three depth tokens, all
+   from a single light source above — `--shadow-rest`, one tight layer for a
+   thing with a top side; `--shadow-well`, that same layer turned `inset` for a
+   field, which has a floor instead; and `--shadow-pop`, soft and far, for what
+   is genuinely above the plane. All three are themed: the ink is the theme's
+   to decide, the geometry is not.
 3. **A rim light on the top edge is what makes a filled thing look made.**
    Raycast's buttons and keycaps carry `inset 0 1px 0 rgba(255,255,255,.1)`;
    the same one-pixel highlight is on every "premium" control the craft guides
@@ -260,11 +265,22 @@ alignment mono was bought for.
 - **Radii by role**: 20px for a pane, the details panel and a reading card;
   16px for a board card and the agent's row; 12px for a control; 8px for a chip
   and 4px for a keycap; full for a pill and a monogram.
-- **Depth is light, not shadow.** A pane is translucent over the lit ground
-  with a hairline edge; that is its whole elevation. Nothing at rest casts a
-  shadow, glows or has a gradient. A popover, menu or drawer takes the one
-  shadow; a board card takes a faint one on hover, because it is being picked
-  up.
+- **Depth is light first, shadow second.** A pane is translucent over the lit
+  ground with a hairline edge; that is its elevation. On top of it the question
+  is what the thing IS. A surface — a pane, a card, a reading, a board card —
+  and a control with a FILL have a top side, and take `--shadow-rest`, one
+  tight 1px/2px 5% layer. The fill is what decides a control: a ghost button
+  casts, because the pane is its fill; a bare icon button has none and casts
+  nothing, and neither does a text affordance. A FIELD is a place to put
+  something, so it has a floor rather than a top side and takes
+  `--shadow-well`, the same layer turned inside — a text box, a textarea, a
+  field shell, and anything DRAWN as a field, the topbar's search included,
+  because a reader reads the shape and not the element. The one exception runs
+  the other way: the `Select` trigger holds a closed face rather than a place
+  to type, so it is verb-shaped and takes the resting layer. Either way a control closes the gap on hover, active and focus — a
+  verb presses into the page, a field's floor comes up to meet the pointer. A
+  popover, menu or drawer takes `--shadow-pop` instead. Nothing at rest glows
+  or has a gradient, and nothing stacks a shadow under a shadow.
 - **No pane inside a pane.** A zone is one pane; the things in it are a
   title, a rule and rows. The only enclosed shapes inside a pane are the
   agent's tinted row and a staged row's dashed edge.
@@ -362,8 +378,9 @@ scrolls inside itself.
 **The feel.** Calm, lit, and legible at arm's length. A rep opens an account
 and in one screen knows where it stands, what they owe, and what happened; the
 agent speaks in one place on the page and says what it rests on; every figure
-is in the same face and lines up; nothing casts a shadow or glows. It should
-feel like a well-lit desk with one folder open on it, not a dashboard.
+is in the same face and lines up; nothing glows, and the one shadow anything
+rests on is too slight to notice as a shadow. It should feel like a well-lit
+desk with one folder open on it, not a dashboard.
 
 **Five rules of structure**, each preventing a shape a record page falls into
 as it grows (a fact with several homes, verdicts stacked above the list they
@@ -868,8 +885,8 @@ looks now.
 | `FieldGrid` / `FieldRow` | The attribute row in the details panel: a 96px label with its glyph in `--ink3`, the value in `--ink`, "Add …" in `--ink4` when empty, the dotted evidence underline when a machine read it. |
 | `ListTable` / `DataTable` | Headers at 11.5px 500 in `--ink3`; 44px rows; hairlines; figures right-aligned; the selected row on `--accentBg`. Edge to edge inside its zone. |
 | `RecordTabs` | Quiet: no rule under the strip; the open tab in `--ink` with a 2px accent underline; counts at 11px in `--ink4`; the Details control at the right end. |
-| `SegmentedControl` | `--bg3` track, white pressed segment with a faint shadow, 12px. |
-| `Modal` | White, 8px radius, the one shadow, a scrim of `rgba(24,24,27,.4)`. The drawer form slides from the right with the same surface. |
+| `SegmentedControl` | `--bg3` track, white pressed segment on the resting shadow, 12px. |
+| `Modal` | White, 8px radius, `--shadow-pop`, a scrim of `rgba(24,24,27,.4)`. The drawer form slides from the right with the same surface. |
 | `EmptyState` | Left-aligned in the zone it belongs to, `--ink3`, one sentence and one verb. |
 | `Callout` | An alert's anatomy on the pane's ground, and ONE of them: the tone's own glyph on the heading's first line, the heading beside it in the tone's ink, an optional body in ordinary ink under it, the verbs right-aligned at the end of that line and the dismiss after them. The heading is mandatory and everything else optional, so a bare heading is the commonest callout in the product; below 640px the verbs drop under the body. Five tones — `info`, `accent` (the emphatic ask, in the brand accent, and never in indigo, which claims a machine wrote what follows), `warn`, `danger`, `success` — and tone reaches the glyph and the heading and nothing else, never a filled coloured box. The dot it replaced was dots differing only in hue; the shape is what says which tone it is. No `className`: a notice that wanted its own edge was a second callout wearing this one's name. |
 | `StagingCard` / `DecisionCard` | The agent's row: `--aiBg`, 14px radius, the indigo mark on its own tile (no label beside it: the tile is the claim), the verdict word at 15px 600 (amber when warn, green when calm), the sentence in `--ink`, "What this rests on · n sources" in `--aiText`, the agent's verb in `--ai`. A staged change is a row with a dashed `--aiLine` edge, Accept and Dismiss. |
@@ -894,16 +911,23 @@ The existing durations and curves stay (`--dur-tap` 90ms, `--dur-state` 140ms,
   landed) rather than decoration.
 - A reading whose value changed counts to the new figure over `--dur-move`;
   a row just saved flashes `--accentWash` once and fades over `--dur-enter`.
-- Only `transform` and `opacity` animate. Nothing animates its own layout.
+- Only `transform` and `opacity` animate, with ONE exception: a page COLUMN
+  arriving or leaving — the sidebar rail, the record's details pane — travels
+  its own grid track, and the gutter beside it, over `--dur-move`. It earns
+  the exception twice: the distance is short and a reader makes the move many
+  times a day, and the work column next to it has to REFLOW as the track goes
+  rather than smear behind a pane sliding over it. Nothing else animates its
+  own layout.
 - `prefers-reduced-motion` jumps every one of these to its end state.
 
 ## 10. Restraint — what a screen in this language does not do
 
 - Does not put a pane inside a pane. A zone is one pane; inside it a title, a
   hairline and rows.
-- Does not cast a shadow, a glow or a gradient at rest. The two corner glows
-  on the ground are the only light; a button is a flat shape; the only tinted
-  thing inside a pane is the agent's row.
+- Does not cast a shadow of its own, a glow or a gradient. The resting layer
+  is `--shadow-rest` and it comes from the token, never from a rule that spells
+  its own; the two corner glows on the ground are the only other light; the
+  only tinted thing inside a pane is the agent's row.
 - Does not say a fact twice. One home per fact; the rest are links to it.
 - Does not fill a button, a row or a surface with emerald except the one
   primary verb and a selected row's wash.
@@ -933,8 +957,8 @@ rest one screen at a time.
       reading's figure; nothing else uses it.
 - [ ] Every figure is tabular (`t-num`), right-aligned in a column; mono only
       on code.
-- [ ] Every zone is one pane with a title, a hairline and rows; nothing casts
-      a shadow at rest.
+- [ ] Every zone is one pane with a title, a hairline and rows; the only
+      shadow at rest is `--shadow-rest`, and no rule spells one by hand.
 - [ ] One emerald-filled control in view.
 - [ ] Anything an agent wrote is a row on `--aiLight` carrying the indigo mark,
       and a row that ASKS for something says "Margince suggests" — never over

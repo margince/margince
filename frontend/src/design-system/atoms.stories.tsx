@@ -4,7 +4,6 @@ import {
   type CSSProperties,
   type ReactNode,
   useEffect,
-  useId,
   useRef,
   useState,
 } from "react";
@@ -19,7 +18,6 @@ import {
   EmptyState,
   Field,
   Kbd,
-  Modal,
   OverflowMenu,
   Radio,
   SearchField,
@@ -34,8 +32,6 @@ import { usePasswordReveal } from "./passwordreveal";
 import { ProviderMark } from "./provider-mark";
 import { Select } from "./select";
 
-// fe-uat (frontend/scripts/fe-uat.mjs) maps atoms.tsx → atoms.stories.tsx and
-// fails a change to atoms.tsx whose stories here do not render clean.
 const meta: Meta = {
   title: "Design System/Atoms",
   parameters: { layout: "padded" },
@@ -44,8 +40,6 @@ export default meta;
 
 type Story = StoryObj;
 
-// The two shapes the stories below arrange things in: a wrapping row for
-// atoms that sit side by side, and a column for surfaces that stack.
 const row: CSSProperties = {
   display: "flex",
   gap: "0.75rem",
@@ -661,29 +655,20 @@ export const Placeholders: Story = {
   ),
 };
 
-// A header that names a block, and a disclosure in both states, because the
-// chevron is its only state indicator.
 export const Sections: Story = {
   render: () => (
     <div style={stack}>
       <SectionHeader title="Pipeline" />
       <SectionHeader title="Pipeline" sub="Six open deals · 1.2M weighted" />
-      {/* The description is a line of its own, so length is a reading matter
-          rather than a layout one — beside the title this sentence used to push
-          the heading around and then run out of room. */}
       <SectionHeader
         title="Reporting currency"
         sub="Every aggregate on this installation converts to it at the day's rate, and the rate that was used stays on the figure."
         actions={<Button small>Change</Button>}
       />
       <Card>
-        {/* As the card's first child, which is the pairing atoms.css styles.
-            Equivalent to passing title/sub to Card — that is what it renders. */}
         <SectionHeader title="Contacts" sub="Three contacts at this company" />
         <p className="t-caption">Carol Wagner · Bob Schmidt · Alice Müller</p>
       </Card>
-      {/* level={3} is a section INSIDE a section, and the type steps down
-          with the outline: at its parent's size it would read as a peer. */}
       <Card>
         <SectionHeader title="Delivery" sub="Where webhooks are sent" />
         <SectionHeader title="Endpoints" level={3} />
@@ -693,15 +678,11 @@ export const Sections: Story = {
       </Card>
       <Disclosure summary="Matching rules">
         <p className="t-caption">
-          Closed by default: the reader pays one line for a surface they rarely
-          open.
+          Closed by default for details the reader rarely needs.
         </p>
       </Disclosure>
       <Disclosure summary="Import log" open>
-        <p className="t-caption">
-          Forced open for a state the reader must not miss — a run in progress,
-          or a result that just arrived.
-        </p>
+        <p className="t-caption">Open for a run or a new result.</p>
       </Disclosure>
     </div>
   ),
@@ -890,43 +871,6 @@ export const Tables: Story = {
   ),
 };
 
-// Open on mount, because a dialog rendered closed screenshots as an empty
-// canvas. The trigger stays so the reader can reopen it after dismissing.
-function ModalDemo() {
-  const [open, setOpen] = useState(true);
-  const titleId = useId();
-  return (
-    <>
-      <Button variant="primary" onClick={() => setOpen(true)}>
-        Open the dialog
-      </Button>
-      <Modal open={open} onClose={() => setOpen(false)} labelledBy={titleId}>
-        <h2
-          id={titleId}
-          className="t-h2"
-          style={{ marginBottom: "var(--space-3)" }}
-        >
-          Merge these companies?
-        </h2>
-        <p className="t-caption">
-          Globex GmbH keeps its record; the duplicate's activities, deals and
-          contacts move onto it. This cannot be undone.
-        </p>
-        <div className="actions">
-          <Button onClick={() => setOpen(false)}>Cancel</Button>
-          <Button variant="danger" onClick={() => setOpen(false)}>
-            Merge
-          </Button>
-        </div>
-      </Modal>
-    </>
-  );
-}
-
-export const Dialog: Story = {
-  render: () => <ModalDemo />,
-};
-
 // OverflowMenu mounts its items only once opened, so the story presses the
 // trigger on mount rather than giving the component a prop it does not have.
 function OverflowMenuDemo({
@@ -1008,57 +952,6 @@ export const Overflow: Story = {
   ),
 };
 
-// placement="right" is the drawer form of the SAME Modal: full height on the
-// right edge, the record behind it still legible. One component, one prop
-// between it and the centred dialog everyone pictures when they read "Modal".
-function DrawerDemo() {
-  const [open, setOpen] = useState(true);
-  const titleId = useId();
-  return (
-    <>
-      {/* Something behind the drawer, because "the record stays legible" is
-          the whole claim the placement makes and an empty canvas cannot show
-          it being kept. */}
-      <SectionHeader title="Globex GmbH" sub="Enterprise · Munich" />
-      <p className="t-body">
-        Anna Brandt replied on Tuesday and is waiting on pricing. Nobody has
-        written since.
-      </p>
-      <Button variant="primary" onClick={() => setOpen(true)}>
-        Open the drawer
-      </Button>
-      <Modal
-        open={open}
-        onClose={() => setOpen(false)}
-        labelledBy={titleId}
-        placement="right"
-      >
-        <h2
-          id={titleId}
-          className="t-h2"
-          style={{ marginBottom: "var(--space-3)" }}
-        >
-          Write to Anna Brandt
-        </h2>
-        <p className="t-caption">
-          The draft sits beside the record it is about, so a rep can read the
-          history while writing rather than remembering it.
-        </p>
-        <div className="actions">
-          <Button onClick={() => setOpen(false)}>Discard</Button>
-          <Button variant="primary" onClick={() => setOpen(false)}>
-            Send
-          </Button>
-        </div>
-      </Modal>
-    </>
-  );
-}
-
-export const Drawer: Story = {
-  render: () => <DrawerDemo />,
-};
-
 // The one spelling of a search input, empty and filled: the affordance is the
 // icon and the type="search" clear control, and only a filled field shows it.
 export const Search: Story = {
@@ -1072,4 +965,20 @@ export const Search: Story = {
       </Field>
     </div>
   ),
+};
+
+function ControlledDisclosureExample() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button onClick={() => setOpen(true)}>Open details</Button>
+      <Disclosure summary="Editable details" open={open} onToggle={setOpen}>
+        <p>The reader can close and reopen this section.</p>
+      </Disclosure>
+    </>
+  );
+}
+
+export const ControlledDisclosure: Story = {
+  render: () => <ControlledDisclosureExample />,
 };

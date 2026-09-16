@@ -77,7 +77,7 @@ export function RecordTeam({
   const body = (
     <>
       <PanelBody>
-        <p className="t-caption mute">{t("assignments.noAccessNote")}</p>
+        <p className="t-caption">{t("assignments.noAccessNote")}</p>
         {/* A refused end is the one failure here a reader must not have to
             infer. The button re-enables when the request settles either way,
             so without this a responsibility that is still standing looks

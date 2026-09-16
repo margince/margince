@@ -275,23 +275,6 @@ describe("saved views", () => {
     );
   });
 
-  it("reports no saved-view failure in overlay mode, where no rail is drawn", async () => {
-    vi.stubGlobal(
-      "fetch",
-      viewsFailingOnce({
-        ...meFixture({}),
-        system_of_record: { mode: "overlay" },
-      }),
-    );
-    wrap(<SaveViewAction resource="companies" query={narrowed} />);
-
-    // The rail is withheld in overlay mode, so there is nothing on screen for
-    // the failure to be about. Waiting on the save button proves the read has
-    // settled rather than that the assertion below ran too early.
-    await screen.findByRole("button", { name: "Save view" });
-    expect(screen.queryByText("This section did not load.")).toBeNull();
-  });
-
   it("carries the search a view was saved with", async () => {
     vi.stubGlobal(
       "fetch",

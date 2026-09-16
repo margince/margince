@@ -15,9 +15,15 @@
   column-gap: var(--space-3);
   row-gap: var(--space-1);
   padding: var(--space-3);
-  border: 1px solid var(--paneEdge);
-  border-radius: var(--r-control);
-  background: var(--bgCard);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-md);
+  /* Raised, not sunken: a listed record is a thing a reader opens, and on
+     the card ground it read as a recess in the pane rather than as a card
+     on it. The same face the contact page's employer card wears. */
+  background: var(--bgElevated);
+}
+.record-card:hover {
+  background: var(--bgHover);
 }
 
 /* The mark and the name are ONE target. No hover on the card itself: it is a

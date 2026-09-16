@@ -123,8 +123,6 @@ function stubBackend(opts: {
   single?: Deal;
   // The project a deal names, as its own per-id read answers it.
   project?: { id: string; name: string };
-  // Puts the screen on the overlay mirror, which forces the flat table.
-  overlay?: boolean;
 }) {
   return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const request = input instanceof Request ? input : null;
@@ -187,7 +185,6 @@ function stubBackend(opts: {
         authorization: meFixture({
           allow: { deal: ["read", "create", "update"], project: ["read"] },
         }).authorization,
-        ...(opts.overlay ? { system_of_record: { mode: "overlay" } } : {}),
       });
     }
     if (method === "GET" && /\/deals\/[^/?]+(\?.*)?$/.test(url)) {
@@ -635,15 +632,13 @@ describe("a deal's edit form over a withheld reference", () => {
   });
 });
 
-// The mirror carries the same `masked_fields` the native list does, and its
-// amount cell read a refused figure as a deal nobody had priced — the same
-// defect one surface over.
-describe("the overlay mirror table", () => {
+// The amount cell read a refused figure as a deal nobody had priced — the
+// same defect one surface over.
+describe("the deals table", () => {
   it("reads a withheld amount as withheld, not as an unpriced deal", async () => {
     vi.stubGlobal(
       "fetch",
       stubBackend({
-        overlay: true,
         deals: [
           deal({
             amount_minor: null,
@@ -653,6 +648,9 @@ describe("the overlay mirror table", () => {
         ],
       }),
     );
+    // The amount COLUMN is the table's, and the board is where the screen
+    // opens — so the view dial is turned before the render rather than after.
+    window.location.hash = "#/deals?view=table";
     render(<DealsScreen />);
 
     expect(await screen.findByText("Fleet retrofit")).toBeTruthy();

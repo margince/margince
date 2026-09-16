@@ -136,7 +136,6 @@ internal/compose/deepreadprincipal.go#func withClaimedRequester
 internal/compose/deploymentsecretseal.go#func resolveSecret
 internal/compose/deploymentsecretseal.go#method vaultBinding.open
 internal/compose/dispatch.go#func fanOutChildren
-internal/compose/dispatcher.go#func overlayModeOf
 internal/compose/documentextract.go#func documentFieldOrder
 internal/compose/documentextract.go#func toModelField
 internal/compose/draftcheck/draftcheck.go#func allDirectedRelationshipPhrases
@@ -155,10 +154,6 @@ internal/compose/extrouteargs.go#type argumentReader
 internal/compose/extroutes.go#type toolInvoker
 internal/compose/extruntime.go#func BindExtensionCapture
 internal/compose/extruntime.go#method callRuntime.usable
-internal/compose/flipbundle.go#func ReconstructForTest
-internal/compose/flipclaim.go#func flipLockKey
-internal/compose/flipsource.go#const block at const flipObjectCompany
-internal/compose/flipstages.go#const block at const stageSemanticOpen
 internal/compose/gmailpush.go#func handleGmailPush
 internal/compose/heldrelease_integration_test.go#const draftRecipient
 internal/compose/idempotency.go#const replayWindow
@@ -177,8 +172,6 @@ internal/compose/integration/deploymentsecretseal_integration_test.go#func TestA
 internal/compose/integration/employment_dedupe_integration_test.go#func TestAnEmploymentPastItsLastDayStopsCountingAtTheAccount
 internal/compose/integration/harness.go#func ProjectsStore
 internal/compose/integration/offertemplate_http_integration_test.go#func assertRenderOfferNotImplementedWithoutBlobstore
-internal/compose/integration/overlay/overlay_toolsurface_integration_test.go#func nativeOnlyAgentTools
-internal/compose/integration/overlay_acceptance_seam_test.go#const backendModulePath
 internal/compose/integration/privacy_customfields_integration_test.go#func catalogColumns
 internal/compose/integration/querybudget_integration_test.go#const budgetVolumeRows
 internal/compose/integration/queryplan_integration_test.go#var queryObjects
@@ -211,13 +204,6 @@ internal/compose/networkseams.go#func toAgentRisks
 internal/compose/oauthedge.go#func sessionDigest
 internal/compose/offerdraft.go#const offerDraftAgentID
 internal/compose/offeringconfirmed.go#func offeringConfirmed
-internal/compose/overlay.go#const incumbentHubSpot
-internal/compose/overlayincumbent_refusing_integration_test.go#func refusals
-internal/compose/overlayread.go#const block at const paramSort
-internal/compose/overlaysearch.go#var overlayMirroredTypes
-internal/compose/overlaywire.go#func overlayWireContact
-internal/compose/overlaywire_test.go#func TestOverlayAddressCarriesEveryMemberAndOmitsAnEmptyOne
-internal/compose/overlaywirefields.go#func overlayAddress
 internal/compose/pipelinetrace/rungs.go#func unavailable
 internal/compose/project360/sectionswork.go#var entityTypeProject
 internal/compose/queryseam.go#func queryRunner
@@ -413,7 +399,7 @@ internal/modules/contacts/leadmanualsignal.go#func manualSignalImage
 internal/modules/contacts/leadstatus.go#method LeadStatus.Open
 internal/modules/contacts/linkedincompanyplace.go#func companyKeys
 internal/modules/contacts/linkedinmatch.go#method Store.MatchLinkedInConnections
-internal/modules/contacts/linkedinmatch.go#var suggestNameEmployerMatchSQL
+internal/modules/contacts/linkedinmatch.go#var nameEmployerCandidatesSQL
 internal/modules/contacts/linkedinrenormalize.go#func matchRank
 internal/modules/contacts/linkedinrenormalize.go#var matchRankOrder
 internal/modules/contacts/listfilters.go#const block at const filterOwnerID
@@ -482,25 +468,6 @@ internal/modules/integrations/poll.go#func pollFrom
 internal/modules/integrations/store.go#const block at const auditKeyProvider
 internal/modules/integrations/surfe/surfe.go#const baseURL
 internal/modules/integrations/surfe/surfe.go#const block at const poolEmail
-internal/modules/overlay/connection.go#const block at const auditFieldIncumbent
-internal/modules/overlay/connection.go#const block at const statusActive
-internal/modules/overlay/connection.go#const overlayConnectionObject
-internal/modules/overlay/fieldbinding.go#func mirrorStructuralBindings
-internal/modules/overlay/hubspot/mapping_hs.go#const attrIsPrimary
-internal/modules/overlay/hubspot/mapping_hs.go#const block at const kindCall
-internal/modules/overlay/hubspot/mapping_hs.go#const block at const objectClassContacts
-internal/modules/overlay/hubspot/mapping_hs.go#const block at const propEmail
-internal/modules/overlay/hubspot/mapping_hs.go#const industryField
-internal/modules/overlay/hubspot/mapping_hs.go#const unmappedPolicyFlag
-internal/modules/overlay/incumbent.go#const block at const IncumbentClassContacts
-internal/modules/overlay/mirrorstore.go#const ingestSQL
-internal/modules/overlay/mirrorstore.go#method MirrorStore.Ingest
-internal/modules/overlay/provider_writeback_integration_test.go#const writebackOwner
-internal/modules/overlay/reconcilefloor.go#func reconcileFloor
-internal/modules/overlay/teardown.go#func RevertToNative
-internal/modules/overlay/usermapadmin.go#func auditRevokedMappings
-internal/modules/overlay/usermapadmin.go#method MirrorStore.SetManualUserMap
-internal/modules/overlay/usermapservice.go#func requireUserMapAdmin
 internal/modules/privacy/auditfilter_test.go#func TestEveryPublishedAuditFilterReachesTheStore
 internal/modules/privacy/auditlog.go#const auditContentStateKey
 internal/modules/privacy/auditlog.go#func ScrubNewerThanRowSQL
@@ -603,7 +570,6 @@ internal/platform/testdb/river.go#func EnsureRiverSchema
 internal/shared/buildinfo/buildinfo.go#var ReleaseVersion
 internal/shared/gatekit/scope.go#method Scope.normalizedRoots
 internal/shared/kernel/draftfloor/envelope.go#func langOrDefault
-internal/shared/kernel/events/streams.go#const streamOverlay
 internal/shared/kernel/pipelinetrace/registry.go#func FunnelStages
 internal/shared/kernel/principal/principal.go#const HumanIDPrefix
 internal/shared/kernel/promptfence/promptfence.go#func FromMarker

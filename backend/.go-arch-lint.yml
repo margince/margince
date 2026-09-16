@@ -111,7 +111,6 @@ components:
   commissions: { in: internal/modules/commissions }
   agents:      { in: [internal/modules/agents, internal/modules/agents/**] }
   automation:  { in: internal/modules/automation }
-  overlay:     { in: [internal/modules/overlay, internal/modules/overlay/**] }
   migration:   { in: internal/modules/migration }
   webhooks:    { in: internal/modules/webhooks }
   comms:       { in: internal/modules/comms }
@@ -233,9 +232,6 @@ deps:
   agents:
     mayDependOn: [agents, contracts, platform]
     canUse: [pgx, oapi]
-  overlay:
-    mayDependOn: [overlay, contracts, platform]
-    canUse: [pgx, oapi]
   # The importer engine (import-export-migration): sources and native
   # writers are injected seams (compose), so the module itself sees only
   # the platform — never the record modules it feeds.
@@ -270,7 +266,7 @@ deps:
     mayDependOn: [contracts, platform]
     canUse: [pgx, oapi]
   compose:
-    mayDependOn: [compose, identity, contacts, privacy, deals, activities, aiactivity, approvals, agents, automation, ai, search, capture, consent, collections, signals, customfields, overlay, migration, webhooks, comms, notices, introductions, weeklyplan, forecasting, assurance, finance, integrations, agreements, commissions, contracts, dealrooms, knowledge, assignments, platform, migrations, projects]
+    mayDependOn: [compose, identity, contacts, privacy, deals, activities, aiactivity, approvals, agents, automation, ai, search, capture, consent, collections, signals, customfields, migration, webhooks, comms, notices, introductions, weeklyplan, forecasting, assurance, finance, integrations, agreements, commissions, contracts, dealrooms, knowledge, assignments, platform, migrations, projects]
     # xtext: the evidence gate normalizes page text to NFC before matching
     # (evidencematch.go) — Unicode normal forms need golang.org/x/text.
     # yaml: aicert's corpus loader parses scenario files directly — the
@@ -350,5 +346,5 @@ deps:
     mayDependOn: [contracts, compose, ai, collections, platform, activities, aiactivity, agents, approvals, contacts, customfields, forecasting, comms]
     canUse: [yaml, jsonschema]
   cmd:
-    mayDependOn: [compose, identity, contacts, privacy, deals, activities, aiactivity, approvals, agents, automation, ai, search, capture, consent, collections, signals, customfields, overlay, migration, webhooks, comms, notices, introductions, weeklyplan, forecasting, assurance, finance, integrations, agreements, commissions, contracts, dealrooms, assignments, platform, migrations, projects]
+    mayDependOn: [compose, identity, contacts, privacy, deals, activities, aiactivity, approvals, agents, automation, ai, search, capture, consent, collections, signals, customfields, migration, webhooks, comms, notices, introductions, weeklyplan, forecasting, assurance, finance, integrations, agreements, commissions, contracts, dealrooms, assignments, platform, migrations, projects]
     canUse: [pgx, redis, xterm, composition]

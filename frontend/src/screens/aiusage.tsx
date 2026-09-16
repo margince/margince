@@ -4,14 +4,12 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCan } from "../app/capability";
 import {
-  Badge,
   Button,
   DataTable,
   Disclosure,
   EmptyState,
 } from "../design-system/atoms";
 import { Panel, PanelBody } from "../design-system/panel";
-import { Meter } from "../design-system/readings";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { formatMoney, formatNumber } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
@@ -28,16 +26,6 @@ export function bandTone(band: string): "warn" | "danger" | undefined {
   if (band === "normal") return undefined;
   if (band === "degraded") return "warn";
   return "danger";
-}
-
-function bandLabel(
-  band: AiUsage["budget"]["band"],
-  t: ReturnType<typeof useT>,
-) {
-  if (band === "degraded") return t("aiusage.band.degraded");
-  if (band === "queued") return t("aiusage.band.queued");
-  if (band === "normal") return t("aiusage.band.normal");
-  return t("aiusage.band.unknown");
 }
 
 // monthAround is the first and last day of the month `offset` months from the
@@ -128,7 +116,7 @@ function usageColumns(
     {
       key: "task",
       header: t("aiusage.col.task"),
-      render: (r: UsageTask) => r.task,
+      render: (r: UsageTask) => r.task_display_name ?? r.task,
     },
     {
       key: "tier",
@@ -188,12 +176,6 @@ function AiUsageBody({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const pct =
-    data.budget.monthly_tokens > 0
-      ? Math.round(
-          (data.budget.spent_tokens / data.budget.monthly_tokens) * 100,
-        )
-      : 100;
   const rows = useMemo(() => aggregate(data.days), [data.days]);
   const showCost = useMemo(
     () =>
@@ -219,28 +201,6 @@ function AiUsageBody({
 
   return (
     <SettingList>
-      <SettingRow
-        layout="stack"
-        label={t("aiusage.budgetMeter")}
-        description={t("aiusage.budget", {
-          spent: formatNumber(data.budget.spent_tokens, locale),
-          budget: formatNumber(data.budget.monthly_tokens, locale),
-          pct: formatNumber(pct, locale),
-        })}
-        control={
-          <div className="settingrow-measure aiusage-budget">
-            <div className="aiusage-budget-bar">
-              {/* pct, not the raw token pair: a workspace with no monthly budget
-                  configured reads as fully spent (pct is 100 above), and the bar
-                  must say what the caption beside it says. */}
-              <Meter value={pct} max={100} label={t("aiusage.budgetMeter")} />
-            </div>
-            <Badge tone={bandTone(data.budget.band)}>
-              {bandLabel(data.budget.band, t)}
-            </Badge>
-          </div>
-        }
-      />
       <SettingRow
         label={t("aiusage.monthLabel")}
         control={

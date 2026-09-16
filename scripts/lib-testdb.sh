@@ -480,10 +480,17 @@ bucket_for() { echo "${2:-${MARGINCE_TEST_BLOBSTORE_BUCKET:-margince-test}}-p${1
 # is allowed to cost. Exits rather than returning on a bad value: a lane that ran
 # on a budget nobody asked for is worse than one that refuses to start.
 #
-# The budget is sized for the slowest package, not the median: compose/integration
-# alone runs within a few seconds of 300s and tips over it under the concurrency
-# the parallel lane itself creates, which reads as a regression in whatever branch
-# happens to be running. 600s is headroom while that package is split.
+# 600s is the BUDGET — the policy number a package is priced against and told to
+# split before it crosses. The parallel lane keeps it under that name (IT_BUDGET)
+# and scales the go-test TIMEOUT separately, because the two are different
+# questions wearing one number: what a package is allowed to COST, and how long a
+# single `go test` may run before it is presumed hung.
+#
+# They were the same number until compose/integration grew past it. A sharded CI
+# run executes a sixth of the tree and fit comfortably; the unsharded local lane
+# ran the same package's 2284 tests against the same bound and was killed at the
+# ceiling with every test passing — so the lane reported nothing about any of
+# them. See the parallel lane for how the two are separated now.
 #
 # `go test -timeout` also accepts 10m or 1h30s. The parallel lane's budget column
 # reads this as a seconds count, so anything else would price every package

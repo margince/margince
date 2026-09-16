@@ -21,7 +21,10 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  font-size: var(--fs-sm);
+  /* The body rung, the same one the record's verbs beside this block wear: at
+     --fs-sm the facts sat half a pixel under the buttons on their right, a gap
+     too small to read as a choice and large enough to read as drift. */
+  font-size: var(--fs-body);
   line-height: 1.4;
   /* The facts themselves are content — read at a glance under the name — so
      they take the content ink, and the quieter roles below step down from it.

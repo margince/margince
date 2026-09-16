@@ -214,9 +214,9 @@ func dayOfEveryLane() crmcontracts.Attention {
 		NeedsYou:           []crmcontracts.AttentionItem{item("approval", "approval"), item("pair", "dedupe_candidate")},
 		RelationshipDecay:  lane(item("decay", "relationship_decay")),
 		CaptureHealth:      lane(item("capture", "capture_health")),
+		DomainQuestions:    lane(item("example.com", "domain_question")),
 		AiWorkHealth:       lane(item("ai", "ai_work_health")),
 		AutomationHealth:   lane(item("automation", "automation_run")),
-		SyncHealth:         lane(item("sync", "sync_health")),
 		Notices:            lane(item("notice", "notice")),
 		Introductions:      lane(item("introduction", "introduction_request")),
 	}
@@ -245,6 +245,7 @@ func TestOnlyAReaderBoundLaneNamesTheReader(t *testing.T) {
 		"undelivered":          "the same per-user read as the bounce beside it",
 		"notice":               "a notice is addressed to one contact",
 		"capture_health":       "a mailbox belongs to one contact",
+		"domain_question":      "OpenDomainQuestionsForOwner reads the acting human's own owner_id",
 	}
 	rows := classifyDay(dayOfEveryLane(), rankInstant, dayMoney{})
 	planService := meetingPrepService(nil).WithWeeklyPlans(planWorkStub{entries: []PlanWork{{ID: ids.NewV7(), OwnerID: readerOf(meetingPrepReader()), Label: "Prepare proposal", DueAt: rankInstant}}})

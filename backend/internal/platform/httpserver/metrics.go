@@ -13,32 +13,11 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
-	"sort"
 	"strconv"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
-
-// OverlayMetrics is the overlay sync-health section /metrics adds when
-// this role has an incumbent connection surface wired (design.md §4.7):
-// per-object-class source lag (the fleet-wide worst-case staleness),
-// plus the inbound sync-rate and conflict-rate counters. Nil means this
-// role never wired an overlay keyvault (WithKeyvault absent) — the same
-// "declared or absent" posture backlog/published already establish for
-// the outbox relay, never a silent zero-valued section.
-type OverlayMetrics struct {
-	// SourceLag answers, per canonical object class, now minus the
-	// oldest last_synced_at seen anywhere in the fleet for that class.
-	SourceLag func(context.Context) (map[string]time.Duration, error)
-	// SyncedTotal answers the process's inbound mirror-sync counter.
-	SyncedTotal func() uint64
-	// ConflictTotal answers the process's mirror.conflict counter.
-	ConflictTotal func() uint64
-	// DeletedTotal answers the process's mirror.deleted counter (records
-	// purged from the mirror by the continuous-sync deletion feed).
-	DeletedTotal func() uint64
-}
 
 // MetricsInput is everything a role wires into its /metrics endpoint. It is a
 // struct rather than a parameter list because the list ran out of room, and
@@ -80,9 +59,6 @@ type MetricsInput struct {
 	// handed THIS handler's deadline-bound ctx rather than the request's,
 	// because an unbounded job read is what the 2s budget exists to stop.
 	JobStats func(context.Context, io.Writer) error
-	// Overlay renders the mirror sync-health section. Fleet-wide, and nil
-	// for a role with no overlay surface wired.
-	Overlay *OverlayMetrics
 }
 
 // Metrics serves the Prometheus text exposition format. The margince_*
@@ -126,13 +102,6 @@ func Metrics(in MetricsInput) http.HandlerFunc {
 			if err := in.JobStats(ctx, out); err != nil && out.err == nil {
 				out.err = err
 			}
-		}
-		if in.Overlay != nil && !out.gone() {
-			// The deadline-bound ctx, not the request's: this section queries
-			// at scrape time like the job one above it, and the 2s budget
-			// exists so a stalled read cannot hold the handler and its
-			// database work open for as long as the client keeps the socket.
-			writeOverlayMetrics(ctx, out, in.Overlay)
 		}
 		// Asked ONCE, about the whole exposition. A refused write means the
 		// scraper is already gone, so this cannot be answered to the caller —
@@ -291,49 +260,4 @@ var poolCounters = []poolCounter{
 		"Connections closed for reaching pool_max_conn_idle_time.",
 		countOf((*pgxpool.Stat).MaxIdleDestroyCount),
 	},
-}
-
-// writeOverlayMetrics renders the overlay sync-health section — split
-// out of Metrics so that function's own top-to-bottom read stays one
-// section per line, not buried behind a nested nil-check.
-func writeOverlayMetrics(ctx context.Context, out *exposition, overlay *OverlayMetrics) {
-	if lag, err := overlay.SourceLag(ctx); err == nil {
-		out.printf("# HELP margince_overlay_source_lag_seconds Seconds since the mirror's oldest last sync per object class (worst case across the fleet).\n")
-		out.printf("# TYPE margince_overlay_source_lag_seconds gauge\n")
-		for _, objectClass := range sortedKeys(lag) {
-			out.printf("margince_overlay_source_lag_seconds{object_class=%s} %.0f\n", Label(objectClass), lag[objectClass].Seconds())
-		}
-	} else {
-		slog.Error("metrics: overlay source-lag query failed", "err", err)
-	}
-	// The lag section may be what discovers the writer is gone. printf goes
-	// quiet from here, but the three counter suppliers below would still be
-	// called to build arguments for writes that go nowhere.
-	if out.gone() {
-		return
-	}
-
-	out.printf("# HELP margince_overlay_mirror_synced_total Mirror rows ingested (push+pull) since process start.\n")
-	out.printf("# TYPE margince_overlay_mirror_synced_total counter\n")
-	out.printf("margince_overlay_mirror_synced_total %d\n", overlay.SyncedTotal())
-
-	out.printf("# HELP margince_overlay_mirror_conflict_total mirror.conflict events emitted (incumbent-wins divergence) since process start.\n")
-	out.printf("# TYPE margince_overlay_mirror_conflict_total counter\n")
-	out.printf("margince_overlay_mirror_conflict_total %d\n", overlay.ConflictTotal())
-
-	out.printf("# HELP margince_overlay_mirror_deleted_total mirror.deleted events emitted (incumbent-deleted records purged from the mirror) since process start.\n")
-	out.printf("# TYPE margince_overlay_mirror_deleted_total counter\n")
-	out.printf("margince_overlay_mirror_deleted_total %d\n", overlay.DeletedTotal())
-}
-
-// sortedKeys answers lag's object-class keys in a stable order — a
-// Prometheus scrape target's series order should not flap between
-// scrapes for no reason, and map iteration order is not stable.
-func sortedKeys(lag map[string]time.Duration) []string {
-	keys := make([]string, 0, len(lag))
-	for k := range lag {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	return keys
 }

@@ -71,6 +71,13 @@ func TestParseContactNameReadsTheAddressWhenTheHeaderNamesNobody(t *testing.T) {
 			email: "mail@petereich.com", wantFull: "mail",
 		},
 		{
+			// The live import's defect: title-casing this local part invented a
+			// contact called "Contact". A role address keeps its local part
+			// lowercase, which is what says it names nobody.
+			name:  "the english twin of kontakt names nobody either",
+			email: "contact@bajricsanel.example", wantFull: "contact",
+		},
+		{
 			name:  "plus-addressing is a routing tag, not a name",
 			email: "anna.weber+crm@example.com", wantFull: "Anna Weber",
 			wantFirst: "Anna", wantLast: "Weber", wantConfide: true,

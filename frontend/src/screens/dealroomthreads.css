@@ -93,7 +93,7 @@
   padding: var(--space-3) var(--space-3) 0;
   background: var(--bgElevated);
   border-radius: var(--r-xs) var(--r-xs) 0 0;
-  box-shadow: var(--shadow-card);
+  box-shadow: var(--shadow-rest);
 }
 
 .board-doc-page-line {

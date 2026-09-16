@@ -1,7 +1,10 @@
 import { useEffect, useId, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useT } from "../i18n";
+import { useAnchoredToTrigger } from "./anchored";
 import { Button } from "./atoms";
 import { useHoverIntent } from "./hoverintent";
+import { usePortalPanelFocus } from "./portalfocus";
 import type { ConfidenceLevel, Provenance } from "./trust";
 import { ProvenanceTag } from "./trust";
 import "./evidencemark.css";
@@ -51,6 +54,13 @@ export function EvidenceMark({
 }>) {
   const t = useT();
   const [open, setOpen] = useState(false);
+  // How the panel came to be open. A press is a reader asking for it, and
+  // focus follows into the panel's own controls (the "Full history" button);
+  // a passing pointer is not, and moving focus off whatever the reader was
+  // doing to put it in a panel they merely settled on would be the page
+  // grabbing at them. The same distinction popover.tsx draws for its own
+  // portalled panel.
+  const [openedBy, setOpenedBy] = useState<"press" | "hover">("press");
   const panelId = useId();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLElement>(null);
@@ -59,9 +69,31 @@ export function EvidenceMark({
   // is checked by resting on it, not by clicking through to it. The click
   // still toggles, for a touch screen and for a reader who wants it to stay.
   const hover = useHoverIntent(
-    () => setOpen(true),
+    () => {
+      setOpenedBy("hover");
+      setOpen(true);
+    },
     () => setOpen(false),
   );
+  // Focus, shared with the popover's own portalled panel: into the panel when a
+  // press opened it and there is a control to land on (a receipt with no "Full
+  // history" link has nothing to focus, and a screen reader is already on the
+  // trigger's accessible name), back to the trigger if the close dropped it,
+  // and Tab measured from where the trigger sits on the page. Portalled to the
+  // body, the panel is no longer the trigger's next DOM sibling, so none of the
+  // three happens by adjacency any more.
+  const panelFocus = usePortalPanelFocus({
+    open,
+    openedBy,
+    trigger: triggerRef,
+    panel: panelRef,
+  });
+  // The receipt is portalled to the body and placed against the trigger's own
+  // rectangle (anchored.ts), the same reason the popover is (popover.tsx): a
+  // value near the bottom of a `Panel` sits inside `overflow: hidden`, and a
+  // panel positioned relative to that value was clipped at the panel's edge
+  // rather than reaching the reader.
+  const at = useAnchoredToTrigger(open, triggerRef, panelRef, "start");
 
   // Registered while this mark is the open one, and cleared on close or
   // unmount so a removed mark never leaves a closer pointing at a component
@@ -128,49 +160,70 @@ export function EvidenceMark({
         aria-expanded={open}
         aria-controls={open ? panelId : undefined}
         aria-label={t("evidence.explain", { value })}
-        onClick={() => setOpen((was) => !was)}
+        onClick={() => {
+          setOpenedBy("press");
+          setOpen((was) => !was);
+        }}
       >
         {value}
       </button>
-      {open && (
-        // A named section rather than a dialog: this is a disclosure beside
-        // the value, not a modal — the page behind it stays usable and
-        // nothing here traps focus. The accessible name makes it a landmark
-        // a screen reader can jump to, and only one is ever open.
-        <section
-          ref={panelRef}
-          id={panelId}
-          className="evmark-panel"
-          aria-label={t("evidence.explain", { value })}
-        >
-          <p className="evmark-row">
-            <ProvenanceTag provenance={source.provenance} />
-            {source.confidence && (
-              <span className="evmark-confidence">
-                {t(`confidence.${source.confidence}`)}
-              </span>
+      {open &&
+        createPortal(
+          // A named section rather than a dialog: this is a disclosure beside
+          // the value, not a modal — the page behind it stays usable and
+          // nothing here traps focus. The accessible name makes it a landmark
+          // a screen reader can jump to, and only one is ever open.
+          <section
+            ref={panelRef}
+            id={panelId}
+            className="evmark-panel"
+            aria-label={t("evidence.explain", { value })}
+            // Portalled to the body (below), so it is no longer a DOM
+            // descendant of `.evmark` — pointer enter/leave stop tracking
+            // containment once the panel moves outside that subtree, and
+            // without its own copy of the hover pair a pointer crossing from
+            // the trigger into the receipt read as leaving both, closing the
+            // panel a reader was moving toward. The same reason popover.tsx's
+            // portalled panel carries the same pair.
+            {...hover}
+            {...panelFocus}
+            style={{
+              top: `${at.top}px`,
+              left: `${at.left}px`,
+              maxHeight: `${at.maxHeight}px`,
+            }}
+          >
+            <p className="evmark-row">
+              <ProvenanceTag provenance={source.provenance} />
+              {source.confidence && (
+                <span className="evmark-confidence">
+                  {t(`confidence.${source.confidence}`)}
+                </span>
+              )}
+            </p>
+            {source.snippet && (
+              <blockquote className="evmark-snippet">
+                {source.snippet}
+              </blockquote>
             )}
-          </p>
-          {source.snippet && (
-            <blockquote className="evmark-snippet">{source.snippet}</blockquote>
-          )}
-          {source.sourceUrl && (
-            <p className="evmark-source">{source.sourceUrl}</p>
-          )}
-          {source.at && <p className="evmark-at">{source.at}</p>}
-          {onOpenHistory && (
-            <Button
-              small
-              onClick={() => {
-                setOpen(false);
-                onOpenHistory();
-              }}
-            >
-              {historyLabel ?? t("evidence.fullHistory")}
-            </Button>
-          )}
-        </section>
-      )}
+            {source.sourceUrl && (
+              <p className="evmark-source">{source.sourceUrl}</p>
+            )}
+            {source.at && <p className="evmark-at">{source.at}</p>}
+            {onOpenHistory && (
+              <Button
+                small
+                onClick={() => {
+                  setOpen(false);
+                  onOpenHistory();
+                }}
+              >
+                {historyLabel ?? t("evidence.fullHistory")}
+              </Button>
+            )}
+          </section>,
+          document.body,
+        )}
     </span>
   );
 }

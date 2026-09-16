@@ -88,7 +88,8 @@ only borrows from is [relationship-graph.md](relationship-graph.md).
 **Two entry points, and they are not the same query.** `GET /v1/search` runs the
 **lexical arm alone** (`Store.Search`) — ranked, cursor-paged, every result
 stamped `trust_tier: authoritative` (the provenance grade the contract puts on
-natively-held records, as opposed to `external` mirror data). The **fused** path (`Store.HybridSearch`) is
+natively-held records; `external` is reserved for connector-sourced rows and is
+not emitted yet). The **fused** path (`Store.HybridSearch`) is
 reached through the `shared/ports/retrieval` seam (`search.Retriever`), which is
 what the AI layers ground on: `cmd/api` wires it with the resolved model path's
 embedder for the offer-draft surface, `cmd/worker` wires it as the Surface-B

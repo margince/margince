@@ -59,8 +59,11 @@ var performedBySource = map[string][]crmcontracts.AttentionItemActions{
 	// `snooze` opens the record, where the due date lives.
 	"task": {"complete", "snooze", "open"},
 	// Answered inline: the decision card is on the row itself.
-	"approval":             {"decide", "open"},
-	"dedupe_candidate":     {"merge", "open"},
+	"approval": {"decide", "open"},
+	// Both answered by PairDecision in worklist.pair.tsx, and each on its own
+	// guard: the Keep buttons ask for `merge`, and the "Not the same" line asks
+	// for `dismiss`. A pair no merge would accept still carries the second.
+	"dedupe_candidate":     {"merge", "dismiss", "open"},
 	"introduction_request": {"decide", "open"},
 	// Drawn by NoticeAcknowledge rather than through the routing table.
 	"notice": {"acknowledge", "open"},
@@ -71,7 +74,6 @@ var performedBySource = map[string][]crmcontracts.AttentionItemActions{
 	// Health and delivery rows navigate and nothing more: what fixes them lives
 	// on another screen, and a verb here would promise a repair this queue
 	// cannot make.
-	"sync_health":    {"open"},
 	"capture_health": {"open"},
 	"ai_work_health": {"open"},
 	// `retry` reaches AutomationRetry; a failed firing carries it and a blocked
@@ -80,6 +82,12 @@ var performedBySource = map[string][]crmcontracts.AttentionItemActions{
 	"bounce":          {"open"},
 	"undelivered":     {"open"},
 	"failed_approval": {"open"},
+	// Answered IN PLACE, like an approval: `keep` makes the company from the
+	// domain's own label and `discard` writes this reader's own capture
+	// exclusion. Neither needs anything typed, which is what lets a domain
+	// question settle from a queue row — and there is no `open`, because the
+	// subject is a domain rather than a record with a page.
+	"domain_question": {"keep", "discard"},
 	// The privacy queue's own row. It is read here and answered there.
 	"dsr": {"open"},
 	// The disclosure duty, read here and discharged on the contact's own screen
@@ -286,7 +294,6 @@ func aDayWithEveryLaneCarryingARow(t *testing.T) crmcontracts.Attention {
 			FailedAt: readInstant, TargetType: "contact", TargetID: ids.NewV7(),
 		}}},
 		&stubDSRs{rows: []DSRCase{{ID: ids.NewV7(), Kind: "access", DueAt: readInstant}}},
-		&stubSyncHealth{rows: []SyncConcern{{Kind: "sync_failing", ErrorClass: "auth"}}},
 		&stubCaptureHealth{rows: []CaptureConcern{{ConnectionID: ids.NewV7(), Kind: "reauth_required", Provider: "gmail"}}},
 		&stubAIWork{rows: []TroubledRun{{ID: ids.NewV7(), State: "failed", OccurredAt: readInstant}}},
 		&stubBounces{rows: []BouncedSend{{ID: ids.NewV7(), Subject: "a bounced send", BouncedAt: readInstant, ContactID: ids.NewV7()}}},
@@ -316,6 +323,13 @@ func aDayWithEveryLaneCarryingARow(t *testing.T) crmcontracts.Attention {
 		WithIntroductions(&stubIntroductions{rows: []PendingIntroduction{{
 			ID: ids.NewV7(), ContactID: ids.NewV7(),
 			Reason: "they know the buyer", RequestedAt: readInstant, DueAt: readInstant,
+		}}}).
+		// An OPTION like the two above, and so just as easy to leave out — which
+		// is why it is fed here: a lane this fixture does not bind is a source
+		// whose verbs this census silently never reads.
+		WithDomainQuestions(&stubDomainQuestions{rows: []DomainQuestion{{
+			Domain: "mckinsey.com", Reason: "Nothing on the site named a company.",
+			AskedAt: readInstant,
 		}}})
 	out, err := svc.Assemble(pageReader())
 	if err != nil {

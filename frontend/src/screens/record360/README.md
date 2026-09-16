@@ -65,7 +65,6 @@ its own.
 No module here imports a screen stylesheet. `shells.tsx` used to, because
 `SectionCard` rendered `.co-card` and that rule lives in `company360.css` —
 that coupling is gone with the component, whose call sites moved to `RailPanel`
-and which nothing drew afterwards. `RailPanel` and `OverlayFallback` are in
-`src/design-system/` now, where `frontend/AGENTS.md` says a primitive another
-screen imports belongs. `verdict.tsx` carries no such import either; its classes
+and which nothing drew afterwards. `RailPanel` is in `src/design-system/` now,
+where `frontend/AGENTS.md` says a primitive another screen imports belongs. `verdict.tsx` carries no such import either; its classes
 are the kit's own and live in `record360.css`.

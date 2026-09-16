@@ -44,6 +44,33 @@ export async function pickOption(
 }
 
 /**
+ * The ONE way a test drives a Margince `MultiSelect`.
+ *
+ * `pickOption`'s multi sibling: one call opens the control, toggles each named
+ * option in order, and closes the list again with Escape — the popup stays
+ * open across toggles, which is the control's whole point, so unlike
+ * `pickOption` several picks belong in ONE call. Toggling is symmetric:
+ * naming an option that is already chosen removes it.
+ *
+ * The control must be CLOSED when this is called, for `pickOption`'s reason:
+ * the first click toggles the trigger.
+ */
+export async function toggleOptions(
+  user: UserEvent,
+  control: HTMLElement,
+  optionLabels: readonly (string | RegExp)[],
+): Promise<void> {
+  await user.click(control);
+  const listbox = screen.getByRole("listbox");
+  for (const optionLabel of optionLabels) {
+    await user.click(
+      within(listbox).getByRole("option", { name: optionLabel }),
+    );
+  }
+  await user.keyboard("{Escape}");
+}
+
+/**
  * The ONE way a test drives a Margince `ComboBox`.
  *
  * `pickOption`'s sibling, and deliberately not the same function: a `Select`

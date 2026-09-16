@@ -13,6 +13,7 @@ package identity
 // database, and a panic on a nil pool is how this file would say otherwise.
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -145,25 +146,25 @@ func TestMeAdvertisesTheLinkActionOnlyToAnAdminWhoCanUseIt(t *testing.T) {
 	readSeatAdmin.SeatType = "read"
 
 	emailLess := emailLessInstallation()
-	if !emailLess.canIssuePasswordLink(admin) {
+	if !emailLess.canIssuePasswordLink(context.Background(), admin) {
 		t.Error("admin on an email-less installation with a base URL: want the action advertised")
 	}
 	// A rep must not learn the installation's email posture from /me, which is
 	// why this is a caller capability and not a deployment-posture flag.
-	if emailLess.canIssuePasswordLink(rep) {
+	if emailLess.canIssuePasswordLink(context.Background(), rep) {
 		t.Error("rep: want the action hidden")
 	}
 	// The seat ceiling sits ABOVE RBAC: serveAsHuman refuses every mutating
 	// method from a read seat before the role is consulted, so advertising this
 	// to a read-seat admin would offer a button that can only answer 403.
-	if emailLess.canIssuePasswordLink(readSeatAdmin) {
+	if emailLess.canIssuePasswordLink(context.Background(), readSeatAdmin) {
 		t.Error("admin on a read seat: want the action hidden, since the seat ceiling refuses it")
 	}
-	if NewHandlers(&Service{}).canIssuePasswordLink(admin) {
+	if NewHandlers(&Service{}).canIssuePasswordLink(context.Background(), admin) {
 		t.Error("admin with no public base URL: want the action hidden, since it could only 409")
 	}
 	mailed := NewHandlers(&Service{}).WithPasswordReset(nopMailer{}).WithPasswordLinkBase("https://crm.example.test")
-	if mailed.canIssuePasswordLink(admin) {
+	if mailed.canIssuePasswordLink(context.Background(), admin) {
 		t.Error("admin where email is configured: want the action hidden, since the invite mails the link")
 	}
 }

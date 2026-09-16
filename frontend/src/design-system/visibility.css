@@ -1,32 +1,33 @@
 /* Who may read a thing, as one mark.
  *
- * Bigger than a Badge on purpose: 26px and an icon, where the Badge is 20px of
- * text. A limit on a message is a fact a reader wants before they read, and the
- * quiet dot-and-word it used to be was the thing on the drawer nobody saw. The
- * icon is what makes it tellable across a room — open, sealed, named, not
- * yours — and the word is what makes it exact. */
+ * On the Badge's line box (20px, --fs-meta), because it stands in the same
+ * rows a Badge does: a record's identity line, a message entry. Two pills of
+ * two heights side by side read as a mistake, not as two kinds. What makes
+ * this one tellable across a room is not its size but its icon (open, sealed,
+ * named, not yours) and the word is what makes it exact; a limited state is
+ * also the filled one below, so it still stands out in a column of open rows. */
 
 .visibility {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  min-block-size: 26px;
-  padding: 0 10px 0 8px;
+  gap: var(--space-1);
+  min-block-size: 20px;
+  padding: 0 8px 0 6px;
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-full);
   corner-shape: round;
   background: var(--bgElevated);
   color: var(--textPrimary);
-  font-size: var(--fs-sm);
+  font-size: var(--fs-meta);
   font-weight: var(--fw-medium);
-  line-height: 1;
+  line-height: 18px; /* ds:ignore the 20px pill less its two 1px edges, as .badge */
   white-space: nowrap;
 }
 
 .visibility > svg {
   flex: none;
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
   color: var(--textMeta);
 }
 

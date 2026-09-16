@@ -28,7 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
-	"github.com/margince/margince/backend/internal/platform/overlaybudget/budgettest"
+	"github.com/margince/margince/backend/internal/platform/redistest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -37,7 +37,7 @@ import (
 // test can put the window into whatever state it is about.
 func boundedApp(t *testing.T, slug string, limit int) (*apptest.AppEnv, *agentvolume.Meter) {
 	t.Helper()
-	meter := agentvolume.New(budgettest.Client(t), agentvolume.Limits{Reads: limit}, time.Hour)
+	meter := agentvolume.New(redistest.Client(t), agentvolume.Limits{Reads: limit}, time.Hour)
 	e := apptest.SetupAppWithOptions(t, compose.WithAgentVolume(meter))
 	apptest.BootstrapWorkspaceSession(t, e, "Read Bound", slug+"@fable.test", "Admin")
 	return e, meter

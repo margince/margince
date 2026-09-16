@@ -330,12 +330,22 @@ func weightedPipelineMinor(ctx context.Context, tx pgx.Tx, included []ids.UUID, 
 	// The stage join deliberately carries NO archived_at filter, matching
 	// the forecast report's join: archiving a stage reshapes the pipeline
 	// vocabulary, it must never silently zero the open deals still in it.
-	rows, err := tx.Query(ctx, `
-		SELECT d.amount_minor, d.currency, s.win_probability
+	args := []any{included}
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	// A masked amount arrives NULL, and the fold below already treats a null
+	// amount as a real zero — so a deal whose figure this caller may not read
+	// contributes nothing to the weighted pipeline rather than contributing a
+	// number they are refused on the row.
+	amount, err := auth.MaskedColumnSQL(ctx, "deal", "amount_minor", "d", "amount_minor", arg)
+	if err != nil {
+		return 0, err
+	}
+	rows, err := tx.Query(ctx, fmt.Sprintf(`
+		SELECT %s, d.currency, s.win_probability
 		FROM deal d
 		JOIN stage s ON s.id = d.stage_id
-		WHERE d.company_id = ANY($1) AND d.status = 'open' AND d.archived_at IS NULL`,
-		included)
+		WHERE d.company_id = ANY($1) AND d.status = 'open' AND d.archived_at IS NULL`, amount),
+		args...)
 	if err != nil {
 		return 0, err
 	}
@@ -387,13 +397,24 @@ func weightedPipelineMinor(ctx context.Context, tx pgx.Tx, included []ids.UUID, 
 // same way or the company page and the report disagree in front of them.
 func closedWonMinorThisQuarter(ctx context.Context, tx pgx.Tx, included []ids.UUID, asOf time.Time, loc *time.Location, fiscalStart int) (int64, error) {
 	start, end := currentQuarterBounds(asOf, loc, fiscalStart)
+	args := []any{included, start, end}
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	// SUM over the MASKED expression rather than a filtered row set. The two
+	// agree here because SUM skips a NULL, and nulling is the cheaper spelling
+	// — it needs no second clause threaded into a WHERE that already binds
+	// three positions. A withheld amount contributes nothing to the quarter,
+	// which is the same answer the row itself gives the caller.
+	amount, err := auth.MaskedColumnSQL(ctx, "deal", "amount_minor", "d", "amount_minor_base", arg)
+	if err != nil {
+		return 0, err
+	}
 	var total int64
-	err := tx.QueryRow(ctx, `
-		SELECT COALESCE(SUM(d.amount_minor_base), 0)::bigint
+	err = tx.QueryRow(ctx, fmt.Sprintf(`
+		SELECT COALESCE(SUM(%s), 0)::bigint
 		FROM deal d
 		WHERE d.company_id = ANY($1) AND d.status = 'won' AND d.archived_at IS NULL
-		  AND d.closed_at >= $2 AND d.closed_at < $3`,
-		included, start, end).Scan(&total)
+		  AND d.closed_at >= $2 AND d.closed_at < $3`, amount),
+		args...).Scan(&total)
 	return total, err
 }
 

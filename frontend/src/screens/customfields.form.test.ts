@@ -335,3 +335,28 @@ describe("customFieldsToPatch", () => {
     expect(body).toEqual({});
   });
 });
+
+it("round-trips multiple choices with punctuation and distinguishes unchanged from cleared", () => {
+  const field = cf({
+    type: "multiselect",
+    options: ["Fit, scope", "C++"],
+    column_name: "cf_choices",
+  });
+  const control = customFieldToFormField(field, BOOL_LABELS);
+  const selected = ["Fit, scope", "C++"];
+  const input = control.toInput?.(selected);
+  expect(input).toBe(JSON.stringify(selected));
+  expect(customFieldsToBody({ cf_choices: input }, [field])).toEqual({
+    cf_choices: selected,
+  });
+  expect(
+    customFieldsToPatch({ cf_choices: input }, { cf_choices: selected }, [
+      field,
+    ]),
+  ).toEqual({});
+  expect(
+    customFieldsToPatch({ cf_choices: "[]" }, { cf_choices: selected }, [
+      field,
+    ]),
+  ).toEqual({ cf_choices: [] });
+});

@@ -23,6 +23,7 @@ const TONE_GLYPHS: ReadonlyArray<readonly [CalloutTone, string]> = [
   ["warn", "lucide-triangle-alert"],
   ["danger", "lucide-circle-x"],
   ["success", "lucide-circle-check"],
+  ["ai", "lucide-sparkles"],
 ];
 
 /** Every kind a caller can pass, passing none included. */
@@ -53,21 +54,25 @@ const DERIVATIONS: ReadonlyArray<
   ["outcome", "warn", "status"],
   ["outcome", "danger", "alert"],
   ["outcome", "success", "status"],
+  ["outcome", "ai", "status"],
   ["event", "info", "status"],
   ["event", "accent", "status"],
   ["event", "warn", "status"],
   ["event", "danger", "status"],
   ["event", "success", "status"],
+  ["event", "ai", "status"],
   ["standing", "info", null],
   ["standing", "accent", null],
   ["standing", "warn", null],
   ["standing", "danger", null],
   ["standing", "success", null],
+  ["standing", "ai", null],
   [undefined, "info", null],
   [undefined, "accent", null],
   [undefined, "warn", null],
   [undefined, "danger", null],
   [undefined, "success", null],
+  [undefined, "ai", null],
 ];
 
 describe("Callout", () => {
@@ -231,7 +236,7 @@ describe("Callout", () => {
     render(
       <Callout
         tone="success"
-        title="HubSpot is connected"
+        title="The mailbox is connected"
         dismiss={{ label: "Dismiss", onDismiss }}
       />,
     );
@@ -241,7 +246,7 @@ describe("Callout", () => {
 
   it("offers no dismiss control unless the caller handles it", () => {
     const { container } = render(
-      <Callout tone="success" title="HubSpot is connected" />,
+      <Callout tone="success" title="The mailbox is connected" />,
     );
     expect(container.querySelector(".callout-dismiss")).toBeNull();
     expect(screen.queryByRole("button")).toBeNull();

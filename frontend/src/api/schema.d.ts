@@ -508,9 +508,7 @@ export interface paths {
          *
          *     Human-only, and not a `create_record` tool: quick capture is a form somebody
          *     types into while reading a profile, so there is no agent story for it and
-         *     nothing to stage. The overlay posture is `createContact`'s, because the button
-         *     that reaches it is a `CreateAction` on a mirrored screen and those render
-         *     nothing in overlay mode.
+         *     nothing to stage.
          */
         post: operations["quickCaptureContact"];
         delete?: never;
@@ -651,9 +649,6 @@ export interface paths {
          *     folded into one "last touch": which direction went last is the whole question — a
          *     contact we mailed a fortnight ago with no reply is not the same as one who just
          *     wrote to us.
-         *
-         *     Native system-of-record only: a workspace reading from an incumbent mirror gets
-         *     `422 unsupported_in_overlay_mode`.
          */
         get: operations["getContact360"];
         put?: never;
@@ -1802,10 +1797,6 @@ export interface paths {
          *     always null: page two comes from the endpoint that owns that collection —
          *     `GET /activities` for the timeline, `GET /deals`, `GET /relationships`,
          *     `GET /approvals` — each with its own cursor vocabulary.
-         *
-         *     Native system-of-record only: a workspace reading from an incumbent mirror gets
-         *     `422 unsupported_in_overlay_mode`, the same refusal entity-scoped activity reads
-         *     give, because the mirror holds none of these relationships.
          */
         get: operations["getCompany360"];
         put?: never;
@@ -1874,10 +1865,6 @@ export interface paths {
          *     Keeping it true costs a count over each group's whole membership, so this read is
          *     proportional to the account it describes and not to the caps; the caps bound the
          *     rows returned and the per-contact work done on them, which is what grows fast.
-         *
-         *     Native system-of-record only: a workspace reading from an incumbent mirror gets
-         *     `422 unsupported_in_overlay_mode`, the same refusal the 360 gives, because the
-         *     mirror holds none of these edges.
          */
         get: operations["getCompanyGraph"];
         put?: never;
@@ -1973,9 +1960,6 @@ export interface paths {
          *     contact the caller cannot see is still a seat: `unlisted_seats` counts them, and
          *     `gaps` is empty whenever it is non-zero. A partial answer here is worse than
          *     none, because the reader cannot tell which one they got.
-         *
-         *     Native system-of-record only: an overlay workspace gets `422`, the same refusal
-         *     the 360 gives.
          */
         get: operations["getCompanyCoverage"];
         put?: never;
@@ -2029,9 +2013,6 @@ export interface paths {
          *     **Row scope, per contact.** The list carries the caller's contact scope, so a
          *     contact they may not read is absent rather than named — the same answer
          *     `GET /contacts` gives. Reading the company itself is mandatory.
-         *
-         *     Native system-of-record only: a workspace reading from an incumbent mirror gets
-         *     `422 unsupported_in_overlay_mode`, the same refusal the 360 gives.
          */
         get: operations["listCompanyContacts"];
         put?: never;
@@ -3183,9 +3164,6 @@ export interface paths {
          *     while granting all of its parts would be a distinction the surface cannot honestly
          *     explain. It is governed exactly as those reads are — object RBAC and row scope apply
          *     per section — and it writes nothing.
-         *
-         *     Native system-of-record only: a workspace reading from an incumbent mirror has no
-         *     project to assemble a page for and gets `422 unsupported_in_overlay_mode`.
          */
         get: operations["getProject360"];
         put?: never;
@@ -6132,6 +6110,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/exports/bundle": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download the whole-workspace export bundle.
+         * @description Streams the open-format margince-export/1 bundle (CSV per object + relational JSON + manifests) — the installation's data handover, row- scoped to the caller so it can never hand out rows their own lists would hide. Admin/ops only (the `installation_settings` UPDATE grant), and every download writes one audit entry. Spec-fill note: the general export-run lifecycle (IEM-WIRE-1/2 — enqueue, poll, fetch from the blob store) is the import-export-migration chapter's own unminted contract extension; this op streams the bundle inline until that lands.
+         */
+        get: operations["downloadExportBundle"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/channel-connections": {
         parameters: {
             query?: never;
@@ -8998,6 +8996,73 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/capture/domain-questions/{domain}/keep": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Answer an open domain question by keeping the company.
+         * @description Settles an `undecided` domain as a company, and creates the record the triage withheld.
+         *
+         *     The company is named from the domain's own registrable label, because nothing on the
+         *     site named it and a human pressing this is not asked to type one. That is a worse name
+         *     than a site would have given and never a fabricated one — the same name the pre-triage
+         *     path always produced — and renaming the company afterwards is ordinary record editing.
+         *
+         *     Only an `undecided` domain can be answered this way. A domain already carrying a
+         *     decision answers `409`: the request is intelligible and the domain well formed, it is
+         *     the row's state that refuses.
+         *
+         *     Demands `company:update`, the gate every domain decision takes, because what this
+         *     creates is a company.
+         */
+        post: operations["keepDomainQuestion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/capture/domain-questions/{domain}/discard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Answer an open domain question by excluding the domain from your own capture.
+         * @description Writes a capture exclusion for the caller's OWN mailboxes, so mail from this domain
+         *     stops being stored for them. It is the same rule `POST /capture/exclusions` writes with
+         *     `scope: user`, reached from the question rather than by typing the domain again.
+         *
+         *     ONE COLLEAGUE'S ANSWER, and deliberately not the workspace's. Two colleagues on one
+         *     installation may judge the same domain differently — a consultancy that is noise to one
+         *     seat and a live account to another — so this binds only the connections the caller
+         *     granted. Excluding a domain for everybody is a different act with a different gate:
+         *     `POST /capture/exclusions` with `scope: workspace`, which takes the capture-settings
+         *     grant.
+         *
+         *     It does not destroy mail already captured. Purging what a rule matched is
+         *     `POST /capture/exclusions/{id}/purge`, a separate and irreversible act.
+         *
+         *     Takes a human seat and nothing more, because a personal exclusion is the caller's own
+         *     boundary. Idempotent: pressing it twice answers the rule that already exists.
+         */
+        post: operations["discardDomainQuestion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/capture/consumer-mail-baseline": {
         parameters: {
             query?: never;
@@ -9050,6 +9115,85 @@ export interface paths {
         get: operations["getAiHealth"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai/budget": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read the shared company allowance (ai_budget read). */
+        get: operations["getAiBudget"];
+        /** Replace the shared company allowance (ai_budget update). */
+        put: operations["replaceAiBudget"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai/budget/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview an allowance change (ai_budget read/update).
+         * @description Model feature rows are included only with ai_routing read; deferred-work
+         *     counts are included only with ai_diagnostics read. Otherwise those arrays
+         *     are empty. The allowance preview remains available to budget-only editors.
+         */
+        post: operations["previewAiBudget"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read AI administration status (ai_diagnostics and ai_budget read).
+         * @description Requires both diagnostics and allowance read permissions. Without ai_routing
+         *     read, features and unused_tiers are empty and routing_version is an empty
+         *     string; routing settings are not read. Deferred-work counts cover the company.
+         */
+        get: operations["getAiStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai/routing/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Preview affected features without calling a model (ai_routing read/update and ai_budget read). */
+        post: operations["previewAiRouting"];
         delete?: never;
         options?: never;
         head?: never;
@@ -9124,7 +9268,12 @@ export interface paths {
         get: operations["getAiRouting"];
         /**
          * Replace the tier-to-model binding (admin/ops).
-         * @description Replaces the WHOLE binding, deliberately: a sparse patch of `tiers` cannot say whether
+         * @description Optional If-Match carries the configuration revision returned in the GET ETag header.
+         *     A stale revision returns 409 without changing settings. Omitting If-Match
+         *     is an unconditional replacement for legacy clients; * matches the existing
+         *     routing resource, including its unconfigured default. An empty supplied tag is refused.
+         *
+         *     Replaces the WHOLE binding, deliberately: a sparse patch of `tiers` cannot say whether
          *     an omitted tier is unchanged or unbound, and the two differ by whether a task can be
          *     served at all. Send the document you want to be true.
          *
@@ -10091,6 +10240,12 @@ export interface paths {
          *
          *     Unresolved first by default, oldest first within that: a correction somebody sent three
          *     weeks ago is the one still waiting.
+         *
+         *     The queue is PAGED, and every page says whether there is another. A `limit` with no
+         *     continuation made every submission past the ceiling unreachable through this route at
+         *     all — and the ones that fell off the end were the newest, with the screen giving no sign
+         *     a tail existed. The resolved archive was truncated the same way, permanently. Walk
+         *     `page.next_cursor` until `has_more` is false.
          */
         get: operations["listConfirmSubmissions"];
         put?: never;
@@ -12575,6 +12730,29 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/activity-review-templates/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Edit the questions for future outcome reviews.
+         * @description Requires custom_field update permission. Version conflicts return 409; submitted reviews retain their frozen questions and answers.
+         */
+        patch: operations["updateActivityReviewTemplate"];
         trace?: never;
     };
     "/deals/{id}/offers": {
@@ -15194,136 +15372,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/overlay/connection": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** The workspace's overlay incumbent connection, if any. */
-        get: operations["getOverlayConnection"];
-        put?: never;
-        /** Connect the workspace's overlay incumbent (HubSpot). */
-        post: operations["connectOverlay"];
-        /** Disconnect the overlay incumbent and queue mirror teardown. */
-        delete: operations["disconnectOverlay"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/overlay/sync-status": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Per-object mirror sync freshness (fresh/pending_sync/stale, backfill completeness). */
-        get: operations["getOverlaySyncStatus"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/overlay/reconcile": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Queue an out-of-band mirror reconciliation sweep. */
-        post: operations["reconcileOverlay"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/overlay/budget": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** The incumbent API budget window's consumption and band (ok/warn/shed). */
-        get: operations["getOverlayBudget"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/overlay/export": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Download the workspace export bundle — the flip's pre-flip export producer.
-         * @description Streams the open-format margince-export/1 bundle (CSV per object + relational JSON + manifests). In overlay mode it carries the mirror snapshot under the caller's mirror-visibility deny-join and the honest-scope manifest (AC-OV-9), and writing it records the export audit entry the flip preflight's export-recency check reads (B-E18.26). Admin/ops only (the overlay_connection UPDATE grant): this is the cutover operator's surface. Spec-fill note: the general export-run lifecycle (IEM-WIRE-1/2) is the import-export-migration chapter's own unminted contract extension — this op is the overlay lifecycle's bundle producer until that lands, raised upstream.
-         */
-        get: operations["downloadOverlayExport"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/overlay/flip:preflight": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Dry-run the overlay→native flip's readiness checks without executing it.
-         * @description The B-E18.26 gate (OVA-WIRE-7): reports whether the flip can run — incumbent reachable, force-fresh sync complete, `pending_sync` writes drained, conflicts cleared, pre-flip export available — and, when every check is green, seals the frozen mirror snapshot the flip will import and previews the parity dry-run (counts per object, skips with reasons, zero rows written). Any blocker unseals the snapshot again (UC-E18-04 F1): a failed preflight is a no-op return to a healthy overlay. When the incumbent is unreachable (`revoked`/`error`), `blocking` carries `incumbent_unreachable` and the `emergency` block discloses the last-known-mirror cutover option (OVA-AC-6 a/b).
-         */
-        post: operations["preflightOverlayFlip"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/overlay/flip": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Execute the overlay→native flip, running the migration.
-         * @description The B-E18.27 cutover (OVA-WIRE-8): freezes the mirror, imports the frozen snapshot through the migration engine with counts and relationships preserved (AC-OV-10), carries our augmentation over, detaches write-back, and flips the workspace to native — an irreversible mode change gated by the typed confirmation phrase. Refused with 409 `overlay_flip_blocked` while the preflight is unsatisfied. Human-only, like its preflight: the typed confirmation phrase IS the human-intent control, and an agent supplying it in staged arguments would collapse the confirm-first gate to a single approval click on a one-way, estate-wide change. `mode: emergency` is the ADR-0071 last-known-mirror cutover: available ONLY while the incumbent is unreachable (never a silent substitute for a fresh-sync flip, in either direction) and its 202 carries the disclosed-lossy staleness + unverifiable-parity notice.
-         */
-        post: operations["executeOverlayFlip"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/imports/sources": {
         parameters: {
             query?: never;
@@ -15491,9 +15539,8 @@ export interface paths {
          *     run that is still in flight, was never approved, has already failed,
          *     or has already finished undoing is a conflict, as is a run whose
          *     `undoing` state carries no recorded progress to resume; the
-         *     `hubspot`/`salesforce`/`mirror`/`bundle` connectors have no reversal
-         *     path (`mirror`/`bundle` are the ADR-0071 overlay flip, not a customer
-         *     import; `hubspot`/`salesforce` are unbuilt).
+         *     `hubspot`/`salesforce` connectors have no reversal path — they are
+         *     unbuilt.
          *
          *     Reverses only the rows this run created that nobody has touched since
          *     (A93): never an all-or-nothing hard rollback that clobbers a later
@@ -15514,73 +15561,6 @@ export interface paths {
          *     concurrent pass.
          */
         post: operations["undoImportRun"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/overlay/user-map": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * The workspace users' incumbent-user mapping, with unmapped users flagged.
-         * @description Admin-managed per RC-15/ADR-0057 — this IS the overlay-connection settings surface the spec names, not a general CRUD endpoint. Requires the overlay_connection UPDATE grant (admin/ops), NOT its read grant: every role holds the read so a rep can see whether overlay mode is live, and this payload carries every user's email plus their incumbent mapping, which no non-admin sees today.
-         */
-        get: operations["listOverlayUserMap"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/overlay/user-map/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        get?: never;
-        /**
-         * Pin one user to an incumbent user as a manual admin override.
-         * @description Writes match_source=manual — the escape hatch design.md §4.6 rule 4 defines for a reassigned or ambiguous email — and clears any auto-map block for the user. Requires the overlay_connection UPDATE grant.
-         */
-        put: operations["setOverlayUserMap"];
-        post?: never;
-        /**
-         * Unmap one user and stop automatic email matching from re-mapping them.
-         * @description Removes the mapping and its visibility grants, and records the decision so the reconcile sweep cannot re-create the mapping. Idempotent: an already-unmapped user still records the block. Requires the overlay_connection UPDATE grant.
-         */
-        delete: operations["deleteOverlayUserMap"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/overlay/owners": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * The connected incumbent's user directory, for the mapping picker.
-         * @description Requires the overlay_connection UPDATE grant — this is external directory PII (names and emails of the incumbent's users) that reaches no non-admin today. Capped: the Incumbent seam's Owners() is unpaginated, so `truncated` reports honestly when the directory exceeded the cap rather than implying completeness.
-         */
-        get: operations["listOverlayOwners"];
-        put?: never;
-        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -16991,10 +16971,14 @@ export interface components {
          *     deliberately letting one in, which no later verdict may undo.
          *
          *     `undecided` is the third state and it is not a decision: the question was asked, the
-         *     machine declined to answer it, and nobody has since. Those rows are why this list
-         *     exists rather than being a record of refusals alone — a domain nothing decided is
-         *     invisible everywhere else, and an operator hunting a company that never appeared
-         *     cannot tell it from one that was refused.
+         *     machine declined to answer it, and nobody has since.
+         *
+         *     Only the undecided domains belonging to NOBODY reach this list. A question raised by a
+         *     colleague's mail is addressed to that colleague and waits on their own queue, where the
+         *     verbs answering it live; carrying it here too would put one question on two surfaces and
+         *     invite an operator to answer for mail they cannot read. A domain whose owner has since
+         *     been deleted keeps no such addressee — the column is cleared with the account — and those
+         *     rows would otherwise be visible to nobody at all, which is what this list is for.
          */
         BlockedDomain: {
             /** @description The registrable domain the decision is about. */
@@ -18148,7 +18132,7 @@ export interface components {
         };
         DedupeCandidateListResponse: {
             data: components["schemas"]["DedupeCandidate"][];
-            page?: components["schemas"]["PageInfo"];
+            page: components["schemas"]["PageInfo"];
         };
         DedupeDispositionRequest: {
             /** @enum {string} */
@@ -18193,6 +18177,87 @@ export interface components {
             /** @description The window's middle latency, which tells a slow lane from a dead one. */
             median_latency_ms: number;
         };
+        AiBudgetConfig: {
+            /** Format: int64 */
+            tokens_per_full_user: number;
+            /** Format: int64 */
+            company_monthly_tokens: number | null;
+        };
+        AiBudgetChange: {
+            config: components["schemas"]["AiBudgetConfig"];
+            expected_revision: string;
+        };
+        AiBudgetSnapshot: {
+            config: components["schemas"]["AiBudgetConfig"];
+            revision: string;
+            /** Format: int64 */
+            eligible_full_users: number;
+            /** Format: int64 */
+            budgeted_full_users: number;
+            /** @enum {string} */
+            source: "per_user" | "company_override";
+            /** Format: int64 */
+            monthly_tokens: number;
+            /** Format: int64 */
+            spent_tokens: number;
+            /** Format: int64 */
+            remaining_tokens: number;
+            /** @enum {string} */
+            band: "normal" | "degraded" | "queued";
+            /** Format: date-time */
+            month_start_at: string;
+            /** Format: date-time */
+            resets_at: string;
+            /** Format: date-time */
+            observed_at: string;
+        };
+        AiRouteCandidate: {
+            tier: string;
+            provider: string;
+            model: string;
+            /** @enum {string} */
+            processing: "cloud_provider" | "configured_endpoint";
+        };
+        AiFeatureRoute: {
+            task: string;
+            display_name: string;
+            execution_mode: string;
+            leading_tier: string;
+            normal_candidates: components["schemas"]["AiRouteCandidate"][];
+            effective_candidates: components["schemas"]["AiRouteCandidate"][];
+            /** @enum {string} */
+            impact: "unchanged" | "model_changed" | "fallback_changed" | "budget_blocked" | "unconfigured";
+            budget_exempt: boolean;
+        };
+        AiDeferredWork: {
+            carrier: string;
+            unit: string;
+            available: boolean;
+            /** Format: int64 */
+            count?: number;
+        };
+        AiStatus: {
+            /** Format: date-time */
+            observed_at: string;
+            budget: components["schemas"]["AiBudgetSnapshot"];
+            routing_version: string;
+            task_contract_hash: string;
+            features: components["schemas"]["AiFeatureRoute"][];
+            deferred_work: components["schemas"]["AiDeferredWork"][];
+            deferred_work_coverage: string;
+            unused_tiers?: string[];
+        };
+        AiBudgetPreview: {
+            current: components["schemas"]["AiBudgetSnapshot"];
+            proposed: components["schemas"]["AiBudgetSnapshot"];
+            features: components["schemas"]["AiFeatureRoute"][];
+            deferred_work: components["schemas"]["AiDeferredWork"][];
+        };
+        AiRoutingPreview: {
+            current_version: string;
+            features: components["schemas"]["AiFeatureRoute"][];
+            unused_tiers: string[];
+        };
         /** @description AI usage + budget (AIRT-WIRE-1): the AIRT-PARAM-33 meter aggregated per day × task × tier, plus the budget band. Token-denominated; cost_est_minor is computed on read from the workspace's ai_model_rate price sheet as of each call's day (ADR-0067, price-on-read) — omitted, never a fabricated 0, when a task line's window carries no priced call, and accompanied by unpriced_calls when it is a partial total. */
         AiUsage: {
             days: {
@@ -18201,6 +18266,7 @@ export interface components {
                 tasks: {
                     /** @description capture_classify, enrich, summarize, … */
                     task: string;
+                    task_display_name?: string;
                     /** @description local_small, cheap_cloud, premium, frontier, local_large. */
                     tier: string;
                     calls: number;
@@ -18338,152 +18404,6 @@ export interface components {
         ReplaceChannelTokenRequest: {
             /** @description The replacement BotFather token. Sealed into the vault on arrival and never echoed back. */
             botToken: string;
-        };
-        /** @description The workspace's overlay incumbent connection (HubSpot). The credential itself is never in this shape — it lives sealed in the vault. */
-        OverlayConnection: {
-            /** @enum {string} */
-            incumbent: "hubspot";
-            region: string;
-            /** @enum {string} */
-            status: "active" | "revoked" | "error";
-            /** Format: date-time */
-            connectedAt: string;
-            scopes: string[];
-        };
-        OverlayConnectRequest: {
-            /** @enum {string} */
-            incumbent: "hubspot";
-            region: string;
-            /** @description Sealed into the vault; never echoed. An empty value is rejected (422); a real credential is required to connect. */
-            privateAppToken: string;
-        };
-        /** @description Per-object mirror sync health — freshness state and backfill completeness (design.md §4.7). */
-        OverlaySyncStatus: {
-            objects?: {
-                object?: string;
-                /** Format: date-time */
-                lastSyncedAt?: string | null;
-                /** @enum {string} */
-                state?: "fresh" | "pending_sync" | "stale";
-                backfillComplete?: boolean;
-                /** @description The mirror is held still by a pending overlay→native flip: the sweep skips this workspace entirely, so staleness grows on purpose. Stated rather than left to be inferred from a mirror that merely looks idle. */
-                frozenForFlip?: boolean;
-                /** @description How many of the class's mirror rows the CURRENT declaration cannot project. It is what tells the two readings of `stale` apart, and they want opposite responses: `stale` with ZERO here is converging — the sweep has not reached those rows and will — while `stale` with a NON-ZERO count never converges on its own and holds `force_fresh_incomplete` shut until somebody repairs the mapping. Zero means wait; non-zero means look. A count and not a list, because the question an operator is answering is whether anything needs them, not which ids. */
-                unprojectableRows?: number;
-            }[];
-        };
-        /** @description The incumbent REST budget window's consumption and degradation band, its per-source breakdown, honest headroom, and the per-second Search window (overlay-budget.md "The budget read (wire shape)", OVB-AC-1/AC-5). */
-        OverlayBudget: {
-            window?: string;
-            /** Format: int64 */
-            consumed?: number;
-            /** Format: int64 */
-            limit?: number;
-            band?: components["schemas"]["OverlayBudgetBand"];
-            /** @description Per-source REST breakdown; the values sum exactly to `consumed` (OVB-AC-5). Absent sources have spent nothing this window. Integer counts, so the per-source sum equals `consumed` exactly (a float would round independently and could break the sum above 2^24). */
-            sources?: {
-                /** Format: int64 */
-                force_fresh?: number;
-                /** Format: int64 */
-                poller?: number;
-                /** Format: int64 */
-                capture?: number;
-            };
-            /** @description Free REST capacity derived from our own counts, or the `~unknown` sentinel (OVB-PARAM-5) when a share cannot be attributed — never a fabricated number (OVB-AC-1). */
-            headroom?: string;
-            /** @description Whether the figures were READ rather than assumed. False on the meter's fail-closed arms — no accounting store reachable, an unconfigured incumbent, a read error — where the bands report the shed a spender must assume, not a measured exhaustion. A surface showing this budget to a human states the difference rather than presenting an accounting outage as quota pressure. */
-            measured?: boolean;
-            search?: components["schemas"]["OverlayBudgetSearch"];
-        };
-        /** @description The per-second Search-API window — metered, not gated, in branch 1, so the admin surface sees search pressure alongside REST. */
-        OverlayBudgetSearch: {
-            window?: string;
-            /** Format: int64 */
-            consumed?: number;
-            /** Format: int64 */
-            limit?: number;
-            band?: components["schemas"]["OverlayBudgetBand"];
-        };
-        /**
-         * @description The degradation band of a budget window — healthy (`ok`), approaching the cap (`warn`), or at/over the shed threshold (`shed`). Shared by the REST and Search windows so both read the one band vocabulary.
-         * @enum {string}
-         */
-        OverlayBudgetBand: "ok" | "warn" | "shed";
-        /** @description The flip preflight verdict (OVA-WIRE-7): `{ready, blocking[], unresolved_conflicts[]}` plus the sealed snapshot and parity preview when ready, and the emergency-cutover disclosure when the incumbent is unreachable (ADR-0071 / OVA-AC-6). */
-        OverlayFlipPreflight: {
-            ready: boolean;
-            /** @description Why the flip cannot run, empty when ready. `incumbent_unreachable` is the OVA-AC-6(a) honest block — the connection is revoked/error, so the force-fresh sync cannot pass; the workspace stays in overlay on its last mirror. */
-            blocking: ("incumbent_unreachable" | "force_fresh_incomplete" | "pending_sync_draining" | "unresolved_conflicts" | "export_missing")[];
-            /** @description How many mirror rows the CURRENT declaration cannot project — a SUBSET of what holds `force_fresh_incomplete`, and the only part of it that never clears on its own. It is sent whether or not the flip is blocked, and zero is a real answer: an operator waiting on `force_fresh_incomplete` with zero here is waiting on a sweep that will finish, while a non-zero count is waiting on somebody repairing the mapping. Which class holds them is on the sync-status read, per object. */
-            unprojectable_rows?: number;
-            /** @description Open incumbent-wins conflicts awaiting acceptance; each blocks the flip. Empty in this build: branch 1 reconciliation resolves incumbent-wins at ingest and persists no conflict queue, so the producer arrives with write-back (branch 2). The field is required by OVA-WIRE-7's response shape. */
-            unresolved_conflicts: components["schemas"]["OverlayFlipUnresolvedConflict"][];
-            snapshot?: components["schemas"]["OverlayFlipSnapshot"];
-            /** @description The parity dry-run against the sealed snapshot — writes zero CRM rows; skipped rows are disclosed with reasons, never silently dropped (AC-mode-flip-7). */
-            parity?: components["schemas"]["OverlayFlipParityEntry"][] | null;
-            /** @description Present only while the incumbent is unreachable: the ADR-0071 emergency cutover from the last-known mirror, disclosed-lossy — never offered while a fresh-sync flip is possible. */
-            emergency?: {
-                available: boolean;
-                /** Format: date-time */
-                last_synced_at: string | null;
-                /** Format: int64 */
-                staleness_seconds?: number;
-                unverifiable_parity_notice: string;
-            } | null;
-        };
-        /** @description The sealed frozen-mirror snapshot the flip imports. */
-        OverlayFlipSnapshot: {
-            id: string;
-            /** Format: date-time */
-            frozen_at: string;
-        };
-        /** @description One open incumbent-wins conflict blocking the flip. */
-        OverlayFlipUnresolvedConflict: {
-            object_class: string;
-            external_id: string;
-            property?: string;
-        };
-        /** @description One object class's parity preview row (AC-mode-flip-7). */
-        OverlayFlipParityEntry: {
-            object: string;
-            mirror_count: number;
-            will_create: number;
-            will_update: number;
-            skipped?: components["schemas"]["OverlayFlipParitySkip"][];
-        };
-        /** @description One row the importer cannot carry, disclosed with its reason (never silently dropped). */
-        OverlayFlipParitySkip: {
-            external_id: string;
-            reason: string;
-        };
-        OverlayFlipRequest: {
-            /**
-             * @description `fresh_sync` (the default) requires the sealed preflight snapshot. `emergency` is the last-known-mirror cutover and is refused while the incumbent is reachable — the explicit field is the never-silently-substituted guarantee (OVA-AC-6 b).
-             * @default fresh_sync
-             * @enum {string}
-             */
-            mode: "fresh_sync" | "emergency";
-            /** @description Must equal the exact phrase `FLIP TO SOR` (AC-mode-flip-5). */
-            confirmation_phrase: string;
-        };
-        OverlayFlipAccepted: {
-            /**
-             * Format: uuid
-             * @description The migration run (`import_run`) this flip executed.
-             */
-            run_id: string;
-            /** @enum {string} */
-            mode: "fresh_sync" | "emergency";
-            /** Format: int64 */
-            records_imported?: number;
-            /** @description Returned on an emergency cutover — the disclosed-lossy staleness and the parity that cannot be re-verified against a live incumbent. */
-            emergency_disclosure?: {
-                /** Format: date-time */
-                last_synced_at: string | null;
-                /** Format: int64 */
-                staleness_seconds?: number;
-                unverifiable_parity_notice: string;
-            } | null;
         };
         /**
          * @description What the file's rows are, and therefore what the run creates.
@@ -18778,11 +18698,8 @@ export interface components {
         ImportRun: {
             /** Format: uuid */
             id: string;
-            /**
-             * @description The two beyond the migrate-in set are the flip's own sources (OVA-WIRE-8).
-             * @enum {string}
-             */
-            connector: "csv" | "hubspot" | "salesforce" | "bundle" | "mirror";
+            /** @enum {string} */
+            connector: "csv" | "hubspot" | "salesforce";
             object: components["schemas"]["ImportObject"];
             status: components["schemas"]["ImportRunStatus"];
             /** @description Absolute offset into the source's rows for a forward run (`running`/`failed`), or into import_record_map's rows once the run is `undoing` (IEM-WIRE-9) — 0 = not started either way. What a resume continues from. */
@@ -18796,46 +18713,6 @@ export interface components {
             created_at: string;
             /** Format: date-time */
             updated_at: string;
-        };
-        OverlayUserMapEntry: {
-            /** Format: uuid */
-            user_id: string;
-            email: string;
-            name?: string;
-            /** @description Empty when the user is not mapped. */
-            incumbent_user_id?: string;
-            incumbent_user_name?: string;
-            incumbent_user_email?: string;
-            /**
-             * @description Absent when the user is not mapped.
-             * @enum {string}
-             */
-            match_source?: "email" | "manual";
-            /**
-             * @description Why this user has no mapping. `none` means they are mapped. `directory_unavailable` means the incumbent directory could not be read, so no reason could be derived — never a guessed diagnosis.
-             * @enum {string}
-             */
-            unmapped_reason: "none" | "no_email_match" | "ambiguous_email" | "blocked_by_admin" | "not_yet_synced" | "directory_unavailable";
-            /** @description A manual mapping pointing at an incumbent user absent from the current directory. Reported, never auto-revoked: the override stays sticky. */
-            stale_owner_ref?: boolean;
-        };
-        OverlayUserMapPage: {
-            incumbent: string;
-            entries: components["schemas"]["OverlayUserMapEntry"][];
-            next_cursor?: string;
-        };
-        OverlayOwner: {
-            incumbent_user_id: string;
-            name?: string;
-            email: string;
-        };
-        OverlayOwnerDirectory: {
-            incumbent: string;
-            owners: components["schemas"]["OverlayOwner"][];
-            truncated: boolean;
-        };
-        SetOverlayUserMapRequest: {
-            incumbent_user_id: string;
         };
         /**
          * @description What a coaching notice is about. A closed vocabulary, because a notice addressed to a
@@ -19796,7 +19673,7 @@ export interface components {
             /** Format: uuid */
             owner_id?: string | null;
             /**
-             * @description Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the workspace through a sender verdict, and never travels back. There is no owner-driven door for a company: `POST /contacts/{id}/publish` is a contact's.
+             * @description Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the workspace through a sender verdict, or through `visibility` on `PATCH /companies/{id}`, which moves it BOTH ways for anybody the write gate admits. Read-only HERE, on the read schema, the same as the contact column beside it: the update request carries the writable copy.
              * @enum {string}
              */
             readonly visibility?: "workspace" | "owner";
@@ -19904,6 +19781,29 @@ export interface components {
             parent_company_id?: string | null;
             /** @description Replace-set of the company's live domains (add new, archive removed, flip is_primary). Absent = untouched; an empty array clears all domains. */
             domains?: components["schemas"]["CompanyDomainInput"][];
+            /**
+             * @description Who may see this company: `workspace` for everyone holding the read grant, `owner` for
+             *     the seat named by `owner_id` alone. Absent = untouched.
+             *
+             *     An ORDINARY field, writable in BOTH directions by anybody the write gate admits, on the
+             *     same terms as `visibility` on `PATCH /contacts/{id}`. Capture mints a company
+             *     owner-scoped from a message nothing has judged yet, and until this field existed the
+             *     only way out was a sender verdict — so a company the classifier never asked about, or
+             *     judged wrong, stayed private to its mailbox owner with no door at all. A machine's
+             *     decision no human could undo is the same reasoning that made the contact column
+             *     writable both ways.
+             *
+             *     Narrowing a company does not retract what was already done with it. Deals, contacts and
+             *     mail filed against it keep their own audiences; what changes is who finds the company
+             *     from here on.
+             *
+             *     A company that reads `owner` and names no owner is invisible to EVERY seat, including
+             *     its author and an admin, so the pair is refused rather than written: sending
+             *     `{"visibility":"owner","owner_id":null}`, or narrowing a company that has no owner,
+             *     answers 422 naming `owner_id`.
+             * @enum {string}
+             */
+            visibility?: "workspace" | "owner";
             /**
              * @description Where the account stands with us (ADR-0079). Absent = untouched.
              * @enum {string}
@@ -23389,12 +23289,12 @@ export interface components {
             fx_rate_date?: string | null;
             /**
              * Format: uuid
-             * @description Native mode: always a non-null pipeline FK. Overlay mode: NULL — an overlay-mirror deal has no native Margince pipeline row; the incumbent's own pipeline id rides `raw` and the code-declared stage→semantic mapping drives tier resolution (overlay-augmentation OVA-MAP-6). A zero/placeholder UUID here is forbidden (dangling FK).
+             * @description The deal's pipeline. A zero/placeholder UUID here is forbidden (dangling FK).
              */
             pipeline_id: string | null;
             /**
              * Format: uuid
-             * @description Native mode: always a non-null stage FK; must belong to pipeline_id. Overlay mode: NULL (see pipeline_id; the incumbent dealstage id rides `raw`, OVA-MAP-6).
+             * @description The deal's current stage; must belong to pipeline_id.
              */
             stage_id: string | null;
             /**
@@ -26649,10 +26549,12 @@ export interface components {
             /** @description What the question asks, worded as the reader sees it. */
             label: string;
             /**
-             * @description Only free text for now. The vocabulary is closed so a client never meets a control it cannot render.
+             * @description Text answers use answers; multiple-choice answers use choice_answers.
              * @enum {string}
              */
-            type: "text";
+            type: "text" | "multiselect";
+            /** @description Allowed choices, required for multiselect. Frozen alongside the question in each submitted review. */
+            options?: string[];
             required: boolean;
         };
         ActivityReviewTemplate: {
@@ -26674,6 +26576,14 @@ export interface components {
             created_at: string;
             /** Format: date-time */
             updated_at: string;
+        };
+        UpdateActivityReviewTemplateRequest: {
+            /**
+             * Format: int64
+             * @description Last read template version.
+             */
+            version: number;
+            questions: components["schemas"]["ReviewQuestion"][];
         };
         ActivityReviewTemplateListResponse: {
             data: components["schemas"]["ActivityReviewTemplate"][];
@@ -26702,6 +26612,10 @@ export interface components {
             template_version: number;
             /** @description The questions as they were asked, FROZEN at submission. The template they came from is editable, and an edit must not change what this review appears to have asked. */
             questions: components["schemas"]["ReviewQuestion"][];
+            /** @description Selected options by question key; values must belong to the frozen question vocabulary. */
+            choice_answers?: {
+                [key: string]: string[];
+            };
             /** @description Keyed by question key. Every key here has a question in `questions`. */
             answers: {
                 [key: string]: string;
@@ -26717,6 +26631,11 @@ export interface components {
         };
         CreateOutcomeReviewRequest: {
             /**
+             * Format: int64
+             * @description Version shown when the form opened. A changed template returns 409 rather than filing answers against new questions.
+             */
+            template_version?: number;
+            /**
              * Format: uuid
              * @description The closing being reviewed. Must be the one the deal is on now, else 409.
              */
@@ -26726,6 +26645,10 @@ export interface components {
              * @description The client's own id for this submission. Retrying with the same id returns the review that already exists rather than writing a second one; a deliberate second review uses a new id.
              */
             submission_id: string;
+            /** @description Selected options by question key; values must belong to the frozen question vocabulary. */
+            choice_answers?: {
+                [key: string]: string[];
+            };
             /** @description Keyed by question key. An answer to a question the template does not ask is refused 422, because the frozen questions beside it could not explain it. */
             answers: {
                 [key: string]: string;
@@ -27476,7 +27399,7 @@ export interface components {
              *     a folded value has no fragment to match against.
              * @enum {string}
              */
-            type: "text" | "number" | "date" | "currency" | "picklist" | "boolean" | "id" | "domain";
+            type: "text" | "number" | "date" | "currency" | "picklist" | "multiselect" | "boolean" | "id" | "domain";
             /**
              * @description The operator subset this field's type admits (LVS-PARAM-1), in one
              *     stable order. An operator absent here is one the engine refuses for
@@ -27959,21 +27882,6 @@ export interface components {
             /** @description Effective role keys for this principal, and the one authority for them — `user.roles` is deliberately left unset here rather than repeating the same fact. */
             roles: string[];
             teams: string[];
-            /**
-             * @description The installation's active system-of-record mode (overlay_mode.sor_mode). `native` is the
-             *     default and full-capability mode. In `overlay` mode the data is served from a read-only
-             *     incumbent mirror: list sort/filter dials and unservable reads answer
-             *     422 `unsupported_in_overlay_mode` / 404, and mirrored-entity writes answer
-             *     `unsupported_by_sor`. Clients gate their UI on this — rendering unservable read surfaces
-             *     as an honest "not available in overlay" affordance and hiding mirrored-entity write
-             *     controls — rather than offering controls that fail. Reverts to `native` after an
-             *     overlay→native flip. Optional for backward compatibility; a missing value MUST be
-             *     treated as `native`.
-             */
-            system_of_record?: {
-                /** @enum {string} */
-                mode: "native" | "overlay";
-            };
             authorization?: components["schemas"]["Authorization"];
             settings_availability?: components["schemas"]["SettingsAvailability"];
             /**
@@ -28753,7 +28661,7 @@ export interface components {
          *     The SERVER does not derive from it. `identity/internal/policy.coreObjects` is maintained separately (oapi-codegen emits nothing for a top-level standalone string enum, so there are no generated Go constants to derive from), and a typo there is an ordinary runtime value, not a compile error. What keeps the two honest is a merge-blocking parity test, `backend/gates/rbacvocabulary_test.go`, which holds this enum equal to that list. Editing this enum alone changes what clients can express, never what the server enforces — change both, and the gate will say so if you do not.
          * @enum {string}
          */
-        RbacObject: "contact" | "company" | "deal" | "lead" | "activity" | "pipeline" | "list" | "tag" | "relationship" | "partner" | "automation" | "voice_profile" | "product" | "offer" | "signal" | "saved_view" | "custom_field" | "computed_field" | "offer_template" | "overlay_connection" | "embedding_reindex" | "webhook_subscription" | "fx_rate" | "ai_model_rate" | "capture_settings" | "project" | "channel_connection" | "import_run" | "installation_settings" | "finance" | "integrations" | "retention_policy" | "capture_trace" | "license" | "contract" | "ai_routing" | "commission" | "deal_room" | "knowledge_corpus" | "knowledge_document" | "introduction" | "weekly_plan" | "forecast" | "data_coverage" | "user_admin" | "role_admin" | "team_admin" | "privacy_request" | "audit_log" | "job_health" | "extension_access" | "system_reset" | "ai_diagnostics" | "consent_config" | "communication_exception" | "authentication_policy" | "oauth_application" | "seat_usage";
+        RbacObject: "contact" | "company" | "deal" | "lead" | "activity" | "pipeline" | "list" | "tag" | "relationship" | "partner" | "automation" | "voice_profile" | "product" | "offer" | "signal" | "saved_view" | "custom_field" | "computed_field" | "offer_template" | "embedding_reindex" | "webhook_subscription" | "fx_rate" | "ai_model_rate" | "capture_settings" | "project" | "channel_connection" | "import_run" | "installation_settings" | "finance" | "integrations" | "retention_policy" | "capture_trace" | "license" | "contract" | "ai_routing" | "ai_budget" | "commission" | "deal_room" | "knowledge_corpus" | "knowledge_document" | "introduction" | "weekly_plan" | "forecast" | "data_coverage" | "user_admin" | "role_admin" | "team_admin" | "privacy_request" | "audit_log" | "job_health" | "extension_access" | "system_reset" | "ai_diagnostics" | "consent_config" | "communication_exception" | "authentication_policy" | "oauth_application" | "seat_usage";
         /**
          * @description The four object-level verbs a grant carries (data-model §2.4). These are RBAC actions, not HTTP methods: the seat ceiling is clamped on the method independently, and the two diverge in both directions — a read-seat GET that the object grants, and a mutating route whose RBAC action is `read`.
          * @enum {string}
@@ -29108,10 +29016,10 @@ export interface components {
             /** @description Admin-facing key the column_name derives from. */
             slug: string;
             /**
-             * @description The closed set of six scalar types (CUSTOM-FIELDS-PARAM-1). Immutable once created.
+             * @description The supported field types. Multiselect values are JSON string arrays; empty arrays clear the selection. Immutable once created.
              * @enum {string}
              */
-            type: "text" | "number" | "date" | "currency" | "picklist" | "boolean";
+            type: "text" | "number" | "date" | "currency" | "picklist" | "multiselect" | "boolean";
             /**
              * @description retired = soft: hidden from the API and filtering, column and values preserved (CUSTOM-FIELDS-AC-13).
              * @enum {string}
@@ -29153,7 +29061,7 @@ export interface components {
             object: "contact" | "company" | "deal" | "lead" | "project" | "contract";
             label: string;
             /** @enum {string} */
-            type: "text" | "number" | "date" | "currency" | "picklist" | "boolean";
+            type: "text" | "number" | "date" | "currency" | "picklist" | "multiselect" | "boolean";
             currency?: string | null;
             options?: string[] | null;
             source: string;
@@ -29259,7 +29167,7 @@ export interface components {
         Undoability: {
             undoable: boolean;
             /**
-             * @description Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would have to clear a field the record's own write path cannot clear, so it is refused rather than reporting a success that changed nothing. `edge_relink_unsupported` means the entry REMOVED a link: putting one back is an un-archive, which this path does not perform. The refusal says the link can be made again from the record's own screen, because that is true and actionable. `not_restorable_by_this_path` covers two shapes: a record whose workspace keeps its records in an incumbent system, and EVERY change to a project's company link whatever the verb — that kind takes write authority over the project row and a project must keep at least one company, so a generic reverse would be a side door around both rules. `detail` names the kind in the second case.
+             * @description Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would have to clear a field the record's own write path cannot clear, so it is refused rather than reporting a success that changed nothing. `edge_relink_unsupported` means the entry REMOVED a link: putting one back is an un-archive, which this path does not perform. The refusal says the link can be made again from the record's own screen, because that is true and actionable. `not_restorable_by_this_path` covers EVERY change to a project's company link whatever the verb — that kind takes write authority over the project row and a project must keep at least one company, so a generic reverse would be a side door around both rules. `detail` names the kind.
              * @enum {string|null}
              */
             reason?: "no_before_image" | "not_a_replayable_verb" | "unsupported_record_type" | "superseded" | "behind_erasure_boundary" | "already_undone" | "not_restorable_by_this_path" | "record_archived" | "null_unwritable_by_module" | "not_writable_by_caller" | "edge_relink_unsupported" | null;
@@ -29394,7 +29302,7 @@ export interface components {
             /** @description The canonical email row, on an `activity` hit whose activity is an email THIS caller may read. Null on every other hit type, and null for a non-email activity — a call, a note, a task and a meeting are activities too, and each keeps its generic hit. An email whose content is not this caller's produces no hit at all, because the activity branch is content-gated. A client renders the canonical row when this is present and falls back to `title`/`snippet` when it is not. */
             readonly email_summary?: components["schemas"]["EmailSummary"] | null;
             /**
-             * @description Provenance tier of the underlying record. In native mode every stored record is `authoritative`; `external`/`unverified` are reserved for overlay/connector-sourced rows (not emitted until overlay adapters land). Never guessed — null when unknown.
+             * @description Provenance tier of the underlying record. Nearly every stored record is `authoritative`; `external`/`unverified` are reserved for connector-sourced rows (not emitted until those adapters land). Never guessed — null when unknown.
              * @enum {string|null}
              */
             trust_tier?: "authoritative" | "external" | "unverified" | null;
@@ -29540,7 +29448,7 @@ export interface components {
          *     edits one.
          * @enum {string}
          */
-        AiActivityKind: "morning_brief" | "overnight_at_risk_sweep" | "document_extract" | "site_read" | "brief_ranking" | "capture_classify" | "capture_confidentiality_verdict" | "capture_counterparty_verdict" | "cert_judge" | "cold_start" | "deal_health" | "draft_reply" | "enrich" | "growth_fit" | "nl_search" | "offer_draft" | "rate_extract" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "stage_evidence_extract" | "summarize" | "transcript" | "transcript_propose" | "voice_build" | "corpus_ask" | "weekly_review" | "weekly_learnings" | "propose_roles" | "owed_verdict" | "account_scan";
+        AiActivityKind: "morning_brief" | "overnight_at_risk_sweep" | "document_extract" | "site_read" | "brief_ranking" | "capture_classify" | "capture_confidentiality_verdict" | "capture_counterparty_verdict" | "cert_judge" | "cold_start" | "deal_health" | "draft_reply" | "enrich" | "growth_fit" | "nl_search" | "offer_draft" | "rate_extract" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "stage_evidence_extract" | "summarize" | "transcript" | "transcript_propose" | "voice_build" | "corpus_ask" | "weekly_review" | "weekly_learnings" | "propose_roles" | "owed_verdict" | "request_settlement" | "account_scan";
         AiActivityItem: {
             /** Format: uuid */
             id: string;
@@ -29664,7 +29572,7 @@ export interface components {
              * @description The record the operation targets. A confirm-first operation that resolves a concrete {id} must name one, or the approval it stages cannot be row-scoped.
              * @enum {string}
              */
-            record_type?: "activity" | "app_user" | "commission" | "custom_field" | "data_subject_request" | "deal" | "deal_room" | "deal_room_comment" | "deal_room_document" | "deal_room_participant" | "deal_room_thread" | "import_run" | "lead" | "list" | "offer" | "offer_template" | "company" | "overlay_connection" | "partner" | "contact" | "product" | "project" | "record_grant" | "relationship" | "saved_view" | "tag" | "team" | "webhook_subscription";
+            record_type?: "activity" | "app_user" | "commission" | "custom_field" | "data_subject_request" | "deal" | "deal_room" | "deal_room_comment" | "deal_room_document" | "deal_room_participant" | "deal_room_thread" | "import_run" | "lead" | "list" | "offer" | "offer_template" | "company" | "partner" | "contact" | "product" | "project" | "record_grant" | "relationship" | "saved_view" | "tag" | "team" | "webhook_subscription";
             /**
              * @description The autonomy tier, identical on REST and MCP (ADR-0055).
              * @enum {string}
@@ -30855,8 +30763,7 @@ export interface components {
          * @description Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
          *     Echoed back as the `version` field on every mutable entity. To make a write conditional,
          *     send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
-         *     (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
-         *     not only overlay mode.
+         *     (ErrVersionSkew) so the client re-reads before retrying.
          */
         RowVersion: number;
         /**
@@ -30998,7 +30905,7 @@ export interface components {
          *     Extending this enum means adding a selector in the same change.
          * @enum {string}
          */
-        RetentionScope: "lead/unconverted" | "activity" | "activity/transcript" | "contact/no_consent_no_deal" | "deal/lost" | "deal/won" | "ai_call_payload/content";
+        RetentionScope: "lead/unconverted" | "activity" | "activity/transcript" | "contact/no_consent_no_deal" | "deal/lost" | "deal/won" | "ai_call_payload/content" | "raw_capture";
         /**
          * @description What happens to a record past its window. One action per policy row — a ladder is separate
          *     rows at increasing `retain_days`, never a multi-action row. `archive` retains the record;
@@ -34122,9 +34029,15 @@ export interface components {
              */
             meetings?: components["schemas"]["AttentionItem"][];
             /**
-             * @description Today's meetings that have already started and whose result nobody has
-             *     recorded, longest unanswered first. The counterpart of `meetings`: that lane
-             *     is what to prepare for, this is what to close off.
+             * @description Meetings that have already started and whose result nobody has recorded,
+             *     longest unanswered first. The counterpart of `meetings`: that lane is what to
+             *     prepare for, this is what to close off.
+             *
+             *     It reaches back a FORTNIGHT, where `meetings` is today only. The two bound
+             *     differently because they expire differently: preparation stops being possible
+             *     once a meeting begins, while an unrecorded outcome stays owed until somebody
+             *     records it. Bounded at all so that the first read after a quiet month is a
+             *     queue a reader can clear rather than a history of everything never answered.
              *
              *     A meeting carrying no status at all is here. A captured calendar event
              *     arrives without one, so treating an absent status as settled would empty this
@@ -34223,20 +34136,6 @@ export interface components {
              */
             did_not_run?: components["schemas"]["AttentionItem"][];
             /**
-             * @description The overlay sync's current concerns: the poller backing off, the incumbent
-             *     call budget degraded, mirrored classes stale or still backfilling. One card
-             *     per CONDITION, never one per affected row, so a broken connector is a single
-             *     card rather than a flood. Each card's `kind` names the condition and
-             *     `detail` carries its facts (the affected object classes, the failure
-             *     class, or the budget band); fixing the connection stays on the sync
-             *     settings screen, so the card offers no verbs.
-             *
-             *     Absent — not empty — on a workspace that is not running in overlay mode:
-             *     an installation with no incumbent connected does not look here, which is a
-             *     different fact from a healthy sync.
-             */
-            sync_health?: components["schemas"]["AttentionItem"][];
-            /**
              * @description The reader's OWN capture connections needing the reader's hand: a mailbox
              *     wanting re-authentication, a connection in error, a sync failing, a history
              *     import that ended in error. One card per connection, carrying its worst
@@ -34250,6 +34149,30 @@ export interface components {
              *     capture connections.
              */
             capture_health?: components["schemas"]["AttentionItem"][];
+            /**
+             * @description Domains the capture triage could not judge, whose mail belongs to THIS
+             *     reader — the machine read the site, found nothing that named a company,
+             *     and left the question open rather than inventing a record.
+             *
+             *     Each card names the domain as `title` and why the machine stopped as
+             *     `detail`. The two verbs are the whole answer a human owes: `keep` makes
+             *     the company from the domain's own label, and `discard` writes a capture
+             *     exclusion for this reader's mailboxes alone. Neither needs anything
+             *     typed, which is why this lane can settle from a queue row where a
+             *     free-text answer could not.
+             *
+             *     OWNED, and that is the point of the lane. Every open question carries
+             *     the mailbox owner whose mail raised it (`company_domain_disposition.owner_id`,
+             *     stamped when the question opens), so it reaches the reader whose mail it
+             *     is about rather than a shared pile nobody answers for. One installation's
+             *     two colleagues may answer the same domain differently, and the exclusion
+             *     a `discard` writes binds only the colleague who pressed it.
+             *
+             *     Withheld — named in `lanes_omitted` — for a caller with no human behind
+             *     it. Absent — not empty — on an installation whose feed does not read
+             *     domain questions.
+             */
+            domain_questions?: components["schemas"]["AttentionItem"][];
             /**
              * @description The reader's OWN AI work that went wrong: runs that failed in the recent
              *     window, and live runs past the lease their source declared (stalled).
@@ -34359,7 +34282,7 @@ export interface components {
              */
             introductions?: components["schemas"]["AttentionItem"][];
             /** @description Lanes withheld because the caller may not read what they contain. Never returned empty instead. */
-            lanes_omitted?: ("this_morning" | "needs_you" | "planned" | "done_for_you" | "commitments" | "at_risk" | "meetings" | "relationship_decay" | "did_not_run" | "dsr" | "notice_case" | "sync_health" | "capture_health" | "ai_work_health" | "bounces" | "undelivered" | "automation_health" | "notices" | "introductions" | "meetings_unreported")[];
+            lanes_omitted?: ("this_morning" | "needs_you" | "planned" | "done_for_you" | "commitments" | "at_risk" | "meetings" | "relationship_decay" | "did_not_run" | "dsr" | "notice_case" | "capture_health" | "domain_questions" | "ai_work_health" | "bounces" | "undelivered" | "automation_health" | "notices" | "introductions" | "meetings_unreported")[];
             counts: components["schemas"]["AttentionCounts"];
         };
         /**
@@ -34382,7 +34305,7 @@ export interface components {
             duplicates_open?: number;
             /** @description How many of today's meetings are still ahead — the bounded page, as the other lanes report. */
             meetings?: number;
-            /** @description How many of today's meetings have started with nobody saying how they went — the bounded page, as the other lanes report. Not in `required`: a client reading an installation whose feed does not carry this lane gets no number rather than a zero, which would claim the day is clear. */
+            /** @description How many meetings of the last fortnight have started with nobody saying how they went — the bounded page, as the other lanes report. Not in `required`: a client reading an installation whose feed does not carry this lane gets no number rather than a zero, which would claim the day is clear. */
             meetings_unreported?: number;
             /** @description How many at-risk deals this lane is CARRYING, the bounded page rather than every deal at risk — the same bound the other lanes report under. */
             at_risk?: number;
@@ -34396,10 +34319,10 @@ export interface components {
             dsr?: number;
             /** @description How many undischarged disclosure duties this lane is CARRYING — the bounded page, as the other lanes report. A reader past the bound sees the soonest deadlines, which is the order the lane is in. */
             notice_cases?: number;
-            /** @description How many sync concerns the lane carries — one per condition, so this is the full count, never a bounded page of a larger one. */
-            sync_health?: number;
             /** @description How many capture connections need the reader's hand — one per connection, the full count rather than a bounded page. */
             capture_health?: number;
+            /** @description How many open domain questions belong to this reader — the full count rather than a bounded page, because a reader with thirty must be told thirty and the lane offers no second page to find the rest by. */
+            domain_questions?: number;
             /** @description How many troubled AI runs the lane is CARRYING — the bounded page, as the other lanes report. A reader past the bound sees the newest failures. */
             ai_work_health?: number;
             /** @description How many hard-bounced sends the lane is CARRYING — the bounded page, as the other lanes report. A reader past the bound sees the newest reports. */
@@ -34446,7 +34369,7 @@ export interface components {
              * @description Which producer raised it, and therefore which endpoint its verbs go to.
              * @enum {string}
              */
-            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "sync_health" | "capture_health" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome";
+            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "capture_health" | "domain_question" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome";
             /** @description The producer's own sub-type (an approval kind, a dedupe entity type) — for the icon and the label, never for authority. */
             kind?: string;
             /**
@@ -34470,12 +34393,6 @@ export interface components {
              *
              *     Both now travel typed — `quiet_days` and `staged` below — and the client writes
              *     the sentence in the reader's own language.
-             *
-             *     ONE source is still an exception, and a client must know it: `sync_health` fills
-             *     this field with its own vocabulary — the affected object classes, the failure
-             *     class, or the budget band — for a client to write a sentence from. Those are
-             *     words like `shed` and `deal, contact`. A client that has not written that
-             *     sentence draws nothing for that source rather than the value.
              */
             detail?: string;
             staged?: components["schemas"]["AttentionStagedFacts"];
@@ -34566,8 +34483,7 @@ export interface components {
             deal?: components["schemas"]["AttentionDealFacts"];
             /**
              * Format: uuid
-             * @description Who holds this work, null when nobody has taken it. Sent by `task` and `notice_case`.
-             *     A disclosure duty uses its assigned officer, falling back to its contact owner.
+             * @description Who holds this task, null when nobody has taken it. Sent by `task`.
              *
              *     The lane serves three scopes and only one is the reader's own queue: an
              *     unassigned sweep and a named colleague's queue both put work on the page that
@@ -34610,6 +34526,13 @@ export interface components {
              *     contact must choose; `complete` and `snooze` are a task's own verbs; `open` is
              *     the read-only fallback for a receipt.
              *
+             *     `keep` and `discard` are an undecided domain's pair, and they always travel
+             *     together: keeping it creates the company the triage withheld, discarding it stops
+             *     the caller's OWN mailboxes capturing that domain. Neither carries a body, because
+             *     a domain question has no field to fill in — which is what lets it be answered from
+             *     a queue row. They route to `/capture/domain-questions/{domain}/…`, keyed on the
+             *     domain because an open question is named by the domain rather than by a record id.
+             *
              *     `act`, `dismiss` and `set_aside` are the briefing queue's three, and they route
              *     to `/brief/items/{itemId}/…`. `acknowledge` is a notice's one verb and routes
              *     to `/notices/{id}/read` — the reader has seen it, and it leaves the lane. `set_aside` rather than reusing `snooze`: a task's
@@ -34617,7 +34540,7 @@ export interface components {
              *     suggestion until later in the day. One word for both would make a client that
              *     handles `snooze` generically write the wrong endpoint.
              */
-            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry" | "reply" | "undo")[];
+            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry" | "reply" | "undo" | "keep" | "discard")[];
         };
         /**
          * @description The two records a duplicate item proposes to merge, with the detection-time
@@ -34672,7 +34595,7 @@ export interface components {
             forecast_category?: string | null;
             /**
              * Format: uuid
-             * @description The deal's current stage; null for an overlay-mirror deal, whose stage lives with the incumbent.
+             * @description The deal's current stage.
              */
             stage_id?: string | null;
             /** Format: int64 */
@@ -34885,7 +34808,7 @@ export interface components {
              * @description Which producer these numbers are about. The same vocabulary as an item source.
              * @enum {string}
              */
-            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "sync_health" | "capture_health" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome" | "weekly_commitment" | "batch";
+            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "capture_health" | "domain_question" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome" | "weekly_commitment" | "batch";
             /** @description How many candidates from this source were read and ranked. */
             considered: number;
             /** @description How many of them the queue is carrying after folding, filtering and the page cut. */
@@ -35631,7 +35554,7 @@ export interface components {
              *     row rather than a hundred. Its own facts ride in `batch`.
              * @enum {string}
              */
-            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "sync_health" | "capture_health" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome" | "weekly_commitment" | "batch";
+            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "capture_health" | "domain_question" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome" | "weekly_commitment" | "batch";
             /**
              * @description The badge, and the filter it answers to. A reader groups by this; the ORDER never does.
              * @enum {string}
@@ -35692,11 +35615,6 @@ export interface components {
              *     Not a channel for anything else. A value the queue itself reads travels typed
              *     beside this field, never inside it: a figure parsed back out of a sentence reads
              *     as zero the day somebody rewords the sentence.
-             *
-             *     ONE source is an exception a client must know: `sync_health` fills this with its
-             *     own vocabulary — the affected object classes, the failure class, the budget band
-             *     — for a client to write a sentence from. Those are words like `shed`. A client
-             *     that has not written that sentence draws nothing for that source.
              */
             detail?: string;
             /** @description The facts that put this item at this level, in the order they were weighed. */
@@ -35774,7 +35692,7 @@ export interface components {
              */
             undo?: components["schemas"]["AppliedUndo"];
             /** @description What this item offers, routed to the endpoint that owns the verb. */
-            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry" | "reply" | "undo")[];
+            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry" | "reply" | "undo" | "keep" | "discard")[];
             /**
              * @description The heading this row sits under, as an OUTCOME rather than a priority number.
              *
@@ -37169,7 +37087,7 @@ export interface operations {
                         jobs_deleted: number;
                         /** @description Event-bus stream KEYS deleted (their consumer groups are re-created empty), not entries. */
                         streams_purged: number;
-                        /** @description Redis keys unlinked — processed-event dedupe marks plus this workspace's overlay budget counters. */
+                        /** @description Redis keys unlinked — this workspace's processed-event dedupe marks. */
                         cache_keys_deleted: number;
                         /** @description Objects removed from the blob store under this workspace's key prefix. */
                         objects_deleted: number;
@@ -42855,10 +42773,7 @@ export interface operations {
                 occurred_after?: string;
                 /** @description Only activities that occurred strictly before this instant (exclusive), so a day range is `occurred_after=<day 00:00>&occurred_before=<next day 00:00>`. */
                 occurred_before?: string;
-                /**
-                 * @description Restrict the list to an inbound message still awaiting an answer: the newest message of each thread that nobody has answered. Combined with `entity_type`/`entity_id` it answers what on this record is waiting for a reply.
-                 *     Native system-of-record only: an incumbent mirror carries no thread walk to answer it from, so a workspace in overlay mode refuses `waiting_reply=true` with the 422 every unsupported overlay parameter gets, rather than returning the whole mirrored set as though every row qualified. `false` asks for nothing and is accepted in either mode.
-                 */
+                /** @description Restrict the list to an inbound message still awaiting an answer: the newest message of each thread that nobody has answered. Combined with `entity_type`/`entity_id` it answers what on this record is waiting for a reply. */
                 waiting_reply?: boolean;
             };
             header?: never;
@@ -42880,15 +42795,6 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             /** @description The `entity_type`/`entity_id` this read was narrowed TO is outside the caller's row scope, or names nothing. Filtering BY a record is a read OF it, so an unreadable one owes the same existence-hiding answer a direct read would — the caller cannot tell "not yours" from "not there". Note this is the NARROWING TARGET, not the activities: a readable target with no activities answers 200 with an empty page. */
             404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            /** @description A filter the workspace's mode cannot answer — `waiting_reply=true`, or any other narrowing the incumbent mirror carries no data for, in overlay mode. */
-            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -46922,6 +46828,28 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    downloadExportBundle: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The bundle as a downloadable ZIP attachment. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/zip": string;
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+        };
+    };
     listChannelConnections: {
         parameters: {
             query?: never;
@@ -50474,6 +50402,61 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    keepDomainQuestion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The domain to keep; normalized to its registrable form. */
+                domain: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Where the domain stands now that it has an answer. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BlockedDomain"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    discardDomainQuestion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The domain to stop capturing; normalized to its registrable form. */
+                domain: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The exclusion rule now binding this caller's mailboxes. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaptureExclusion"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     listConsumerMailBaseline: {
         parameters: {
             query?: {
@@ -50519,6 +50502,168 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
+        };
+    };
+    getAiBudget: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current AI administration state. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiBudgetSnapshot"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            /** @description The configuration changed; reload before saving. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    replaceAiBudget: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AiBudgetChange"];
+            };
+        };
+        responses: {
+            /** @description Current AI administration state. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiBudgetSnapshot"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            /** @description The configuration changed; reload before saving. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    previewAiBudget: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AiBudgetChange"];
+            };
+        };
+        responses: {
+            /** @description Current AI administration state. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiBudgetPreview"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            /** @description The configuration changed; reload before saving. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getAiStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current AI administration state. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiStatus"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            /** @description The configuration changed; reload before saving. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    previewAiRouting: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AiRouting"];
+            };
+        };
+        responses: {
+            /** @description Current AI administration state. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiRoutingPreview"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            /** @description The configuration changed; reload before saving. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            422: components["responses"]["ValidationError"];
         };
     };
     getAiUsage: {
@@ -50617,6 +50762,13 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
+            /** @description The supplied configuration revision is stale. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             422: components["responses"]["ValidationError"];
         };
     };
@@ -51617,6 +51769,8 @@ export interface operations {
                 resolved?: boolean;
                 /** @description Max items in the page. */
                 limit?: components["parameters"]["Limit"];
+                /** @description Opaque keyset cursor from a prior response's `page.next_cursor`. It encodes all three parts of this queue's order — whether the row is resolved, its `submitted_at`, and its id — because two subjects can send in the same second and an id alone cannot continue an order it is only the tie-break of. Changing `contact_id` or `resolved` mid-walk changes which rows the remaining pages see, so re-issue without the cursor when a filter changes. A token this endpoint did not mint returns `422 code: malformed_cursor`. */
+                cursor?: string;
             };
             header?: never;
             path?: never;
@@ -51624,12 +51778,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /**
-             * @description The submissions, bounded by the limit. NO CURSOR: this is a queue somebody works
-             *     through rather than an archive to page, and a cursor the handler did not read would
-             *     answer a wider page than the one that was asked for. When the queue grows past one
-             *     screen, the paging lands with the reader that needs it.
-             */
+            /** @description A page of submissions. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -51637,6 +51786,7 @@ export interface operations {
                 content: {
                     "application/json": {
                         data: components["schemas"]["ConfirmSubmission"][];
+                        page: components["schemas"]["PageInfo"];
                     };
                 };
             };
@@ -55796,6 +55946,37 @@ export interface operations {
             };
         };
     };
+    updateActivityReviewTemplate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateActivityReviewTemplateRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated template. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityReviewTemplate"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     listDealOffers: {
         parameters: {
             query?: {
@@ -59249,203 +59430,6 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
-    getOverlayConnection: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["OverlayConnection"];
-                };
-            };
-            404: components["responses"]["NotFound"];
-        };
-    };
-    connectOverlay: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["OverlayConnectRequest"];
-            };
-        };
-        responses: {
-            /** @description Connected */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["OverlayConnection"];
-                };
-            };
-            409: components["responses"]["Conflict"];
-        };
-    };
-    disconnectOverlay: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Teardown queued */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            404: components["responses"]["NotFound"];
-        };
-    };
-    getOverlaySyncStatus: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["OverlaySyncStatus"];
-                };
-            };
-        };
-    };
-    reconcileOverlay: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Sweep queued */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    getOverlayBudget: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["OverlayBudget"];
-                };
-            };
-        };
-    };
-    downloadOverlayExport: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description The bundle as a downloadable ZIP attachment. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/zip": string;
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["PermissionDenied"];
-        };
-    };
-    preflightOverlayFlip: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["OverlayFlipPreflight"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["PermissionDenied"];
-            404: components["responses"]["NotFound"];
-        };
-    };
-    executeOverlayFlip: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["OverlayFlipRequest"];
-            };
-        };
-        responses: {
-            /** @description Migration run complete (synchronous behind 202, the teardown precedent). */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["OverlayFlipAccepted"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["PermissionDenied"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
-            422: components["responses"]["ValidationError"];
-        };
-    };
     uploadImportSource: {
         parameters: {
             query?: never;
@@ -59623,103 +59607,6 @@ export interface operations {
             403: components["responses"]["PermissionDenied"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
-        };
-    };
-    listOverlayUserMap: {
-        parameters: {
-            query?: {
-                /** @description Opaque keyset cursor from a prior response's root-level `next_cursor`. It encodes the last row's app_user id and nothing else; there is no sort to disagree with. A token this endpoint did not mint returns `422 code: malformed_cursor` — re-issue the request without it. */
-                cursor?: string;
-                /** @description Max items in the page. */
-                limit?: components["parameters"]["Limit"];
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["OverlayUserMapPage"];
-                };
-            };
-            404: components["responses"]["NotFound"];
-            422: components["responses"]["ValidationError"];
-        };
-    };
-    setOverlayUserMap: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SetOverlayUserMapRequest"];
-            };
-        };
-        responses: {
-            /** @description Mapped */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            404: components["responses"]["NotFound"];
-            422: components["responses"]["ValidationError"];
-        };
-    };
-    deleteOverlayUserMap: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Unmapped */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            404: components["responses"]["NotFound"];
-        };
-    };
-    listOverlayOwners: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["OverlayOwnerDirectory"];
-                };
-            };
-            404: components["responses"]["NotFound"];
         };
     };
     listFxRates: {

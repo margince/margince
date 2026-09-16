@@ -1756,32 +1756,6 @@
 
 /* ---- the connect dialog: one provider's ask, its own surface ---- */
 
-.ob-connect-dialog-frame {
-  position: relative;
-}
-
-.ob-connect-dialog-close {
-  position: absolute;
-  top: var(--space-3);
-  right: var(--space-3);
-  display: grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-sm);
-  background: var(--bgPage);
-  color: var(--textMeta);
-  cursor: pointer;
-  font-size: var(--fs-h2);
-  line-height: var(--lh-tight);
-}
-
-.ob-connect-dialog-close:hover {
-  border-color: var(--borderStrong);
-  color: var(--textPrimary);
-}
-
 .ob-connect-dialog-mark {
   display: grid;
   place-items: center;

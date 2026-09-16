@@ -41,10 +41,11 @@ function day(changed: number): Worklist {
   };
 }
 
-// Casts on purpose. `readings` is required on the wire and `{}` is not a
-// Worklist at all, so neither shape can be spelled with the type — and both are
-// what this function has to survive rather than throw on.
+// contract:cast `readings` is required on the wire and `{}` is not a Worklist
+// at all, so neither shape can be spelled with the type — and both are what
+// this function has to survive rather than throw on.
 const NO_READINGS = { ...day(0), readings: undefined } as unknown as Worklist;
+// contract:cast the same, one shape further: not a page at all.
 const NOT_A_PAGE = {} as unknown as Worklist;
 
 describe("changedSinceBrief", () => {

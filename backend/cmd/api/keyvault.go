@@ -25,7 +25,7 @@ import (
 // than nil-deref if ever invoked; the vault is required for any standing
 // connection. A key that is set but malformed already failed the boot, never a
 // silent fallback to something weaker.
-func keyvaultOptions(pool *pgxpool.Pool, vault keyvault.Vault, stdout io.Writer, overlayBackfillLimit int) ([]compose.Option, error) {
+func keyvaultOptions(pool *pgxpool.Pool, vault keyvault.Vault, stdout io.Writer) ([]compose.Option, error) {
 	// Bound BEFORE the unconfigured return, and with whatever the boot
 	// resolved: the extension tier's per-call Runtime needs the POOL for its
 	// workspace-pinned transactions whether or not a custodian exists, and a
@@ -38,11 +38,7 @@ func keyvaultOptions(pool *pgxpool.Pool, vault keyvault.Vault, stdout io.Writer,
 		return nil, nil
 	}
 	_, _ = fmt.Fprintln(stdout, "api connector-credential vault enabled (keyvault configured)")
-	// WithOverlayBackfillLimit must precede WithKeyvault: the latter builds
-	// the overlay handlers off the backfill-limit field the former sets
-	// (the same documented option-ordering WithKeyvault↔WithGmailCapture
-	// already relies on).
-	opts := []compose.Option{compose.WithOverlayBackfillLimit(overlayBackfillLimit), compose.WithKeyvault(vault)}
+	opts := []compose.Option{compose.WithKeyvault(vault)}
 	provider, err := providerOption(pool, vault, stdout)
 	if err != nil {
 		return nil, err

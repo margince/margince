@@ -355,6 +355,10 @@
   overflow-wrap: anywhere;
 }
 
+/* The focus-context drawer's head, which carries a heading AND a way back to
+   the queue behind it — the one head here that has two things to divide. The
+   queue drawer's own head does NOT use it: that one holds a title and nothing
+   else, so it takes the shared band's spacing and adds nothing. */
 .brief-queue-head {
   display: flex;
   align-items: center;
@@ -362,13 +366,28 @@
   gap: var(--space-3);
 }
 
+/* The queue is EMBEDDED here, so it must not also pay the page gutter: the
+   drawer body already spaces its content, and the worklist's own page wrapper
+   on top of it made this the one drawer whose content sat twice as far in as
+   every other drawer's. */
+.brief-queue-body > .wrap {
+  padding: 0;
+}
+
 /* Queue rows respond to the drawer's width, not the viewport behind it. */
 .brief-queue-body .worklist-row {
   grid-template-columns: auto minmax(0, 1fr);
 }
 
+/* worklist.row.css spans the verbs and any child after them (a duplicate
+   pair's review card among them) to column 3 of its own three-column grid.
+   This override drops to two columns, so those children need the same
+   full-width span restated against THIS grid — column 3 does not exist here,
+   and without it the browser opens an implicit track sized to the child's own
+   content, crushing the title column beside it. */
 .brief-queue-body .worklist-row-text,
-.brief-queue-body .worklist-row > .worklist-row-acts {
+.brief-queue-body .worklist-row > .worklist-row-acts,
+.brief-queue-body .worklist-row > :nth-child(n + 5) {
   grid-column: 1 / -1;
 }
 

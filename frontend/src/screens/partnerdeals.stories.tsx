@@ -27,13 +27,19 @@ function deal(over: Partial<Deal>): Deal {
     id: "d-1",
     name: "Depot rollout",
     company_id: "o-9",
+    pipeline_id: null,
+    stage_id: null,
     status: "open",
+    source: "manual",
+    captured_by: "human:u-1",
+    created_at: "2026-08-01T00:00:00Z",
+    updated_at: "2026-08-01T00:00:00Z",
     currency: "EUR",
     amount_minor: 4_500_000,
     partner_attribution: "sourced",
     version: 1,
     ...over,
-  } as unknown as Deal;
+  };
 }
 
 function Panel({ deals }: Readonly<{ deals: Deal[] }>) {

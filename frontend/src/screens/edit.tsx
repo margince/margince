@@ -124,7 +124,6 @@ export function EditRecordModal({
   open,
   onClose,
   title,
-  notice,
   fields,
   record,
   pending,
@@ -137,10 +136,6 @@ export function EditRecordModal({
   open: boolean;
   onClose: () => void;
   title: string;
-  // A one-sentence advisory shown above the form fields, e.g. overlay mode's
-  // partial-write-back warning. Optional so a plain edit carries no empty
-  // banner.
-  notice?: string;
   fields: CreateField[];
   record: Record<string, unknown> & { id: string; version?: number };
   pending: boolean;
@@ -244,11 +239,6 @@ export function EditRecordModal({
       <h2 id={headingId} className="t-h2" style={{ marginBottom: 12 }}>
         {title}
       </h2>
-      {notice && (
-        <p className="t-caption" style={{ marginBottom: "var(--space-3)" }}>
-          {notice}
-        </p>
-      )}
       <RecordFormBody
         fields={fields}
         values={values}
@@ -275,7 +265,6 @@ export function EditRecordModal({
 // prefill from, and its transport — nothing else.
 export function EditAction<Updated extends { id: string }>({
   label,
-  notice,
   fields,
   record,
   update,
@@ -305,8 +294,6 @@ export function EditAction<Updated extends { id: string }>({
   // hiding the control hides a fact the reader needs.
   disabledReasonId?: string;
 
-  // See EditRecordModal — an optional one-sentence advisory over the form.
-  notice?: string;
   fields: CreateField[];
   record: Record<string, unknown> & { id: string; version?: number };
   update: (
@@ -381,7 +368,6 @@ export function EditAction<Updated extends { id: string }>({
         open={editing}
         onClose={() => setEditing(false)}
         title={label}
-        notice={notice}
         fields={fields}
         record={record}
         pending={mutation.isPending}

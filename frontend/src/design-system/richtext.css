@@ -93,6 +93,19 @@
   box-shadow: var(--focus-glow);
 }
 
+/* The writing surface. It is `rows` lines TALL and scrolls inside itself, the
+ * way the `rows` on the plain `<textarea>` beside it already works — the
+ * height arrives from the component, and this is the half of the pair that
+ * makes a box of a fixed number of lines hold a message of any length.
+ *
+ * A floor rather than a height is what it used to be, and a floor is the one
+ * thing this surface must not carry: the frame around it clips (`overflow:
+ * hidden` above, which is what keeps the focus ring's corners), and a host with
+ * a height to give it — the reply drawer's fields column, which hands the
+ * surface whatever the fields above it leave — then shrank the frame while the
+ * surface underneath refused to follow. What that cut off was the end of the
+ * message being written and the toolbar under it, with nothing left anywhere to
+ * scroll to them. A height shrinks; that is the difference. */
 .richtext-input {
   font-family: var(--f-body);
   font-size: var(--fs-body);

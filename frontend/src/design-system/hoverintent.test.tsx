@@ -19,8 +19,13 @@ import { useHoverIntent } from "./hoverintent";
 function Trigger({
   onOpen,
   onClose,
-}: Readonly<{ onOpen: () => void; onClose: () => void }>) {
-  const hover = useHoverIntent(onOpen, onClose);
+  ownsState,
+}: Readonly<{
+  onOpen: () => void;
+  onClose: () => void;
+  ownsState?: boolean;
+}>) {
+  const hover = useHoverIntent(onOpen, onClose, { ownsState });
   return (
     <button
       type="button"
@@ -173,5 +178,32 @@ describe("useHoverIntent", () => {
     expect(neighborClosed).toBe(0);
     fireEvent.pointerLeave(first);
     fireEvent.pointerLeave(second);
+  });
+
+  it("still closes a trigger that owns its own state after a neighbour opened", () => {
+    let ownClosed = 0;
+    render(
+      <Trigger
+        ownsState
+        onOpen={() => undefined}
+        onClose={() => {
+          ownClosed += 1;
+        }}
+      />,
+    );
+    // The shared trigger is the second button rendered; the owning one the
+    // third. Two tooltips side by side: leaving the first for the second must
+    // shut the first, or the tip a reader just left stays on the page.
+    const buttons = screen.getAllByRole("button");
+    const own = buttons[buttons.length - 1];
+    const neighbour = buttons[0];
+    fireEvent.pointerEnter(own);
+    advance(100);
+    fireEvent.pointerLeave(own);
+    fireEvent.pointerEnter(neighbour);
+    advance(110);
+    advance(180);
+    expect(ownClosed).toBe(1);
+    fireEvent.pointerLeave(neighbour);
   });
 });

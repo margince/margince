@@ -182,7 +182,7 @@ func batchKeyOf(row ranked) (crmcontracts.WorklistBatchKey, bool) {
 	if row.item.Category != "decisions" || row.item.Level != levelRoutine {
 		return "", false
 	}
-	if row.item.Source == "dedupe_candidate" {
+	if row.item.Source == sourceDuplicate {
 		return "duplicates", true
 	}
 	if row.item.Kind == nil {

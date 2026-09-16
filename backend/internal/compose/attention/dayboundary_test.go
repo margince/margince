@@ -115,11 +115,7 @@ func TestTheZoneIsResolvedOncePerAssembly(t *testing.T) {
 	if err != nil {
 		t.Fatalf("loading the zone: %v", err)
 	}
-	s := NewService(
-		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
-		stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock,
-		WithZone(func(context.Context) (*time.Location, error) { asked++; return loc, nil }),
-	)
+	s := NewService(stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock, WithZone(func(context.Context) (*time.Location, error) { asked++; return loc, nil }))
 	if _, err := s.Assemble(pageReader()); err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -233,6 +229,79 @@ func TestTheDayBeginsAtTheInstallationsMidnight(t *testing.T) {
 			if !got.Equal(tc.want) {
 				t.Errorf("today began at %s, want %s — the boundary is the installation's "+
 					"midnight, and %s reads it as UTC's", got.UTC(), tc.want.UTC(), name)
+			}
+		})
+	}
+}
+
+// A DEBT'S window opens a fortnight back, and on a local midnight.
+//
+// startOfDay answers "when did today begin", which is right for a lane about
+// today and wrong for one about what is still owed: an unrecorded outcome does
+// not stop being owed because the clock passed midnight. So this boundary walks
+// back from the day's start rather than from the read instant — measured off
+// the instant, the window's lower edge would slide through the morning and a
+// meeting fourteen days old would leave the lane midway through a working day.
+func TestTheOutcomeWindowOpensAFortnightBeforeTheDayBegan(t *testing.T) {
+	// Mid-afternoon in Ho Chi Minh City, which is 08:30 UTC — so the local date
+	// is already the 15th while UTC agrees, and a zone east of UTC is where a
+	// boundary computed in the wrong one shows up.
+	asOf := time.Date(2026, 6, 15, 8, 30, 0, 0, time.UTC)
+	for name, tc := range map[string]struct {
+		zone string
+		want time.Time
+	}{
+		"east of UTC": {"Asia/Ho_Chi_Minh", time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC).Add(-7 * time.Hour)},
+		"west of UTC": {"America/New_York", time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC).Add(4 * time.Hour)},
+		"at UTC":      {"UTC", time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC)},
+	} {
+		t.Run(name, func(t *testing.T) {
+			s := &Service{zone: zoneNamed(t, tc.zone)}
+			got, err := s.unansweredSince(context.Background(), asOf)
+			if err != nil {
+				t.Fatalf("unansweredSince: %v", err)
+			}
+			if !got.Equal(tc.want) {
+				t.Errorf("the window opens at %s, want %s — the edge is the installation's "+
+					"midnight a fortnight back, and %s reads it elsewhere", got.UTC(), tc.want.UTC(), name)
+			}
+		})
+	}
+}
+
+// And it opens BEFORE the day it is read on, which is the property that makes
+// yesterday's unanswered meeting survive the rollover.
+//
+// Asserted as a relationship rather than a constant: a lower bound correct
+// against its own fixture can still sit after the day's start if the arithmetic
+// is reversed, and the lane would then carry nothing at all rather than a
+// fortnight.
+func TestTheOutcomeWindowOpensBeforeTheDayItIsReadOn(t *testing.T) {
+	for _, name := range []string{"Asia/Ho_Chi_Minh", "America/New_York", "UTC", "America/Havana"} {
+		t.Run(name, func(t *testing.T) {
+			if _, err := time.LoadLocation(name); err != nil {
+				t.Skipf("%s is not in this tzdata", name)
+			}
+			s := &Service{zone: zoneNamed(t, name)}
+			asOf := time.Date(2026, 6, 15, 8, 30, 0, 0, time.UTC)
+			opens, err := s.unansweredSince(context.Background(), asOf)
+			if err != nil {
+				t.Fatalf("unansweredSince: %v", err)
+			}
+			began, err := s.startOfDay(context.Background(), asOf)
+			if err != nil {
+				t.Fatalf("startOfDay: %v", err)
+			}
+			if !opens.Before(began) {
+				t.Fatalf("the window opens at %s, which is not before today's start %s — "+
+					"a meeting left unanswered yesterday is outside it", opens, began)
+			}
+			// Yesterday's meeting is the case the bug was reported on, so it is
+			// named rather than left to the span above.
+			yesterday := began.Add(-3 * time.Hour)
+			if !opens.Before(yesterday) {
+				t.Errorf("a meeting at %s falls outside the window opening %s, so it "+
+					"disappears overnight exactly as before", yesterday, opens)
 			}
 		})
 	}

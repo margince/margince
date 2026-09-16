@@ -19,7 +19,7 @@ import (
 // workspaceLevelEntities are the event subject types with NO per-owner row
 // scope: workspace/admin-level facts (pipeline & stage config, the
 // identity/access-revocation cascade, the audit ledger, the onboarding
-// wizard state, the incumbent-connection lifecycle) whose envelope is a
+// wizard state) whose envelope is a
 // bare entity ref — a receiver reads any detail back under its own scope
 // (events.md §0). They deliver to any live subscription
 // owner. This is an ALLOW-list, not the default: every subject type that is
@@ -36,15 +36,12 @@ import (
 // storekit.EmitEvent EntityType() / EmitEventForEntity caller argument),
 // which are NOT the dotted event prefix: role.changed and the user.*
 // lifecycle both name entity "user"; passport.revoked names "passport";
-// onboarding.state_changed names "onboarding_wizard_state";
-// incumbent.connected/disconnected name "incumbent_connection". The
+// onboarding.state_changed names "onboarding_wizard_state". The
 // approval.*/coldstart.* events name entity "approval" but are NOT listed
 // here — an approval's envelope carries staged-change detail (summary,
 // edited_change, target ids) that a bare-ref allow-list would fan out to
 // owners who cannot see the target, so "approval" is instead gated by
-// approvalVisibleTo in the switch below (BYO-EVT-4). The mirror.* events
-// name a dynamic object_class, handled by deferredDeliveryEvents below, so
-// no "mirror" key exists either.
+// approvalVisibleTo in the switch below (BYO-EVT-4).
 // selfOnlyEvents are subscribable events whose subject is a member's OWN
 // account and whose payload no other seat may read — not even an admin.
 //
@@ -94,7 +91,6 @@ var workspaceLevelEntities = map[string]struct{}{
 	"team":                    {},
 	"passport":                {},
 	"onboarding_wizard_state": {},
-	"incumbent_connection":    {},
 	// A daily snapshot is a fact about the workspace's whole forecast, not
 	// about any owner's slice of it: the pass freezes the workspace scope, and
 	// the envelope carries the period and the readings rather than the deals
@@ -126,28 +122,14 @@ var workspaceLevelEntities = map[string]struct{}{
 // deferredDeliveryEvents are subscribable events whose subject cannot be
 // resolved to an owner's row scope at fan-out time, keyed by EVENT TYPE
 // (not entity type) because their runtime subject class collides with the
-// row-scoped entity names above. The overlay mirror.* events stamp the
-// diverged record's RUNTIME canonical class (rec.ObjectClass / ref.Type /
-// del.ObjectClass — e.g. "contact", "deal") as their entity type, but the
-// id they carry is a mirror-synthetic key (externalIDToUUID) or a
-// pre-materialization EntityRef — NOT a live record id the owner's grants
-// can be probed against. An entity-type probe would therefore either miss
-// (fail-closed by accident) or, for mirror.budget_degraded's real ref.ID,
-// deliver to owners who must not see the record. Neither is acceptable, so
-// delivery for these is DEFERRED pending an overlay-mirror ownership model
-// (raised upstream, P3): they stay subscribable and fully catalogued, but
-// entityVisibleTo returns not-visible for them — an EXPLICIT, ratified
-// undelivered decision, never a silent deny and never a workspace-wide
-// fan-out. Checked BEFORE the entity-type switch so the object_class
-// collision can never route one of these into a row-scope probe. Each
+// row-scoped entity names above. An entry stays subscribable and fully
+// catalogued, but entityVisibleTo returns not-visible for it — an EXPLICIT,
+// ratified undelivered decision, never a silent deny and never a
+// workspace-wide fan-out. Checked BEFORE the entity-type switch so a
+// class collision can never route one of these into a row-scope probe. Each
 // entry carries the rationale for the deferral, so the waiver is
 // self-contained (the auditOnlyWrites precedent).
-var deferredDeliveryEvents = map[string]string{
-	"mirror.conflict":        "overlay mirror subject is a runtime object_class over a mirror-synthetic id — no live-record scope to probe; delivery deferred pending an overlay ownership model (upstream P3)",
-	"mirror.budget_degraded": "overlay mirror subject is a runtime object_class; its ref.ID is a pre-materialization record ref, not an owner-scopable live id — delivery deferred pending an overlay ownership model (upstream P3)",
-	"mirror.deleted":         "overlay mirror subject is a runtime object_class over a mirror-synthetic id — no live-record scope to probe; delivery deferred pending an overlay ownership model (upstream P3)",
-	"mirror.write_rejected":  "reserved branch-2 overlay mirror event; same runtime-object_class subject shape — delivery deferred pending an overlay ownership model (upstream P3)",
-}
+var deferredDeliveryEvents = map[string]string{}
 
 // deferredDeliveryEntities are subscribable subjects keyed by RUNTIME
 // entity type whose row scope has no probe today. retention.applied is a

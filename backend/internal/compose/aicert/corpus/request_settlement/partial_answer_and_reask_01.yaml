@@ -1,0 +1,62 @@
+name: answering_one_of_two_asks_leaves_the_other_owed
+task: request_settlement
+site: request_settle
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+# Two shapes where a reply is real and the request survives it.
+#
+# The first is the partial answer, which is the one a reader is most likely to
+# lose: the reply is substantive, it plainly answers something, and a settlement
+# judged on "did we engage" closes a request half of which nobody has done.
+#
+# The second is the customer saying so themselves. When they write back asking
+# again, the question of whether our reply settled it has already been answered
+# by whoever asked.
+fixture:
+  - messages:
+      - direction: inbound
+        subject: 'Two things before the kickoff'
+        body: |
+          Two things before we start: can you confirm the kickoff date, and can
+          you send the data-processing agreement for our legal team?
+      - direction: outbound
+        subject: 'Re: Two things before the kickoff'
+        body: |
+          The kickoff is confirmed for the 12th, 10:00 your time.
+  - messages:
+      - direction: inbound
+        subject: 'Rechnung 2049'
+        body: |
+          Die Rechnung 2049 steht noch offen bei uns im System. Können Sie mir
+          sagen, worauf sich die Position "Zusatzaufwand" bezieht?
+      - direction: outbound
+        subject: 'Re: Rechnung 2049'
+        body: |
+          Ich schaue mir das an und komme darauf zurück.
+      - direction: inbound
+        subject: 'Re: Rechnung 2049'
+        body: |
+          Gibt es dazu schon etwas? Unsere Buchhaltung möchte die Rechnung
+          diese Woche abschließen.
+expect:
+  outcome: accepted
+  answer:
+    - verdict: still_owed
+      remaining_names: processing
+    - verdict: still_owed
+  rubric: >
+    Both are still_owed, and neither is a case of us having said nothing.
+    The first answers one of two asks. The date is confirmed; the agreement is
+    not sent and is not mentioned. The remaining phrase must name the
+    outstanding document — the data-processing agreement — and must not mention
+    the kickoff date, which is done. A model that answers settled here has let a
+    real answer to half a request close the whole of it.
+    The second is the customer telling us themselves. We promised to come back,
+    they wrote again asking whether there was anything yet, and a later inbound
+    re-asking the same thing settles the question of whether our reply settled
+    it. Score at the floor for settled on this one: the evidence that it is not
+    settled is in the conversation, in their words.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

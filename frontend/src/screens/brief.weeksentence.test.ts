@@ -48,13 +48,17 @@ const ZERO_COUNTS = {
 
 function week(
   counts: Partial<typeof ZERO_COUNTS>,
-  pipeline?: { won_minor: number; currency: string },
+  pipeline?: NonNullable<WeeklyReview["pipeline"]>,
 ): WeeklyReview {
   return {
+    id: "22222222-2222-2222-2222-222222222222",
     local_week_start: "2026-06-29",
+    generated_at: "2026-07-06T06:00:00Z",
+    as_of: "2026-07-06T06:00:00Z",
+    deals: [],
     counts: { ...ZERO_COUNTS, ...counts },
     ...(pipeline === undefined ? {} : { pipeline }),
-  } as unknown as WeeklyReview;
+  };
 }
 
 describe("weekSentence — what the closed week says about itself", () => {
@@ -81,7 +85,15 @@ describe("weekSentence — what the closed week says about itself", () => {
   // page twice and a reader has two places to reconcile.
   it("never prices the wins, even when the week recorded the money", () => {
     const priced = say(
-      week({ deals_won: 2 }, { won_minor: 4200000, currency: "EUR" }),
+      week(
+        { deals_won: 2 },
+        {
+          created_minor: 0,
+          won_minor: 4200000,
+          lost_minor: 0,
+          currency: "EUR",
+        },
+      ),
     );
     expect(priced).toBe(say(week({ deals_won: 2 })));
     expect(priced).not.toContain("42");

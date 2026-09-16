@@ -109,7 +109,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // English does — digits then the sign, no space — so the value is identical by
   // agreement rather than by omission. German differs (it takes the space) and
   // carries its own.
-  "brief.pct",
   // Pure punctuation layouts: every word in them is a placeholder, so there is
   // nothing to translate and a "translation" could only reorder the slots.
   // Two phase names and an arrow.
@@ -144,9 +143,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // surface over.
   "provider.profile.linkedin",
   "contact.page.linkedin",
-  "overlay.userMap.principal.hubspot",
-  "overlay.regionEu1",
-  "overlay.budgetSources",
   "ob.ai.speaker",
   "ob.ai.speakerName",
   "auth.title",

@@ -14,11 +14,12 @@ function story(band: string) {
   return () => {
     installFetchStub({
       "GET /me": () =>
-        jsonResponse(meFixture({ allow: { automation: ["update"] } })),
-      "GET /ai/usage": () =>
+        jsonResponse(meFixture({ allow: { ai_budget: ["read", "update"] } })),
+      "GET /ai/budget": () =>
         jsonResponse({
-          days: [],
-          budget: { monthly_tokens: 100, spent_tokens: 85, band },
+          monthly_tokens: 100,
+          spent_tokens: 85,
+          band,
         }),
     });
     return (

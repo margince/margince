@@ -33,15 +33,22 @@ import type { MessageKey } from "../i18n/en";
 import { usePendingApprovals } from "../screens/approvals.queries";
 import { useConnectors } from "../screens/connectors";
 import { useLicenseEntitlement } from "../screens/license";
+import { settingsHref } from "../screens/settingsrouting";
 import {
   type AgentEdgeRegister,
   clearAgentEdge,
   publishAgentEdge,
 } from "./agent-edge-signal";
 import { type AgentFault, useAgentFault } from "./agent-fault";
-import { IDLE_ORDER, type IdleKind, LABELS, RUNNING } from "./agentrail-copy";
+import { LABELS, RUNNING } from "./agentrail-copy";
 import { EdgeLightSetting } from "./agentrail-edgelight";
 import { RailLine } from "./agentrail-line";
+import {
+  restingReadings,
+  restingTips,
+  stillNews,
+  useRestingLine,
+} from "./agentrail-resting";
 import { useAgentTicker } from "./agentrail-ticker";
 import { type AiActivity, useAiActivity } from "./ai-activity";
 import { PANEL_HEADING } from "./ai-activity-lines";
@@ -52,6 +59,7 @@ import { useCan, useHoldsAdminRole } from "./capability";
 import { type CaptureProgress, liveCapture } from "./capture-progress";
 import { usePopoverDismiss } from "./popover";
 import type { Route } from "./router";
+import { routeHash } from "./router";
 import { usePhoneViewport } from "./viewport";
 import "./agentrail.css";
 
@@ -92,7 +100,7 @@ const MARK_FADE = 0.16;
  * change that splits the cards; pointing at it now would land a reader on
  * Account, because the screen still renders the combined entry.
  */
-const AI_SETTINGS_HREF = "#/settings/ai";
+const AI_SETTINGS_HREF = routeHash(settingsHref("usage"));
 /** Where a licence key is entered: the seats section of settings. */
 const LICENSE_SETTINGS_HREF = "#/settings/seats";
 
@@ -1039,66 +1047,6 @@ function derive(
 }
 
 /**
- * The true things a resting agent can say, in the order it says them.
- *
- * Every one is a reading it already made. A kind with nothing to report is
- * absent rather than reworded into a cheerful nothing, so an installation with a
- * clean queue and no licence rotates through two lines and not five.
- */
-function idleLines(
-  signals: Signals,
-  devLine: string,
-  /** The newest run that settled today, or null when there is none to name. */
-  settledLine: SpokenLine | null,
-): readonly SpokenLine[] {
-  const said: Partial<Record<IdleKind, SpokenLine>> = {
-    // What the scheduled runner finished while nobody was looking. It rotates
-    // rather than pinning the bar: `recent` is bounded to today, so a line
-    // pinned to it would still be announcing this morning's brief at six in the
-    // evening. In the rotation it is one true thing among the others.
-    finished: settledLine ?? undefined,
-    waiting:
-      signals.waiting !== undefined && signals.waiting > 0
-        ? plain(`${signals.waiting} ${LABELS.waiting}`)
-        : undefined,
-    // The development path answers every call with an invention, and a reader who
-    // does not know that is being misled by a product that looks like it works.
-    model: signals.ai === "development" ? plain(devLine) : undefined,
-  };
-  const lines = IDLE_ORDER.map((kind) => said[kind]).filter(
-    (line): line is SpokenLine => line !== undefined,
-  );
-  return lines.length === 0 ? [plain(LABELS.allClear)] : lines;
-}
-
-/**
- * Which of those lines is showing, changing on its own.
- *
- * Slow: this sits at the edge of every screen all day, and a line that changed
- * every second would be movement in the corner of somebody's eye while they were
- * trying to read something else. One line, long enough to read twice.
- */
-const IDLE_HOLD_MS = 5200;
-
-function useIdleLine(lines: readonly SpokenLine[]): SpokenLine {
-  const [at, setAt] = useState(0);
-  const count = lines.length;
-  useEffect(() => {
-    if (count < 2) {
-      return;
-    }
-    const timer = setInterval(
-      () => setAt((current) => (current + 1) % count),
-      IDLE_HOLD_MS,
-    );
-    return () => clearInterval(timer);
-  }, [count]);
-  // The list can shorten under it when a read answers, so the index is clamped
-  // rather than trusted.
-  return lines[at % count] ?? lines[0];
-}
-
-/**
  * What that occurrence is called, in the reader's words.
  *
  * A kind the copy map does not narrate answers with the plainest true thing
@@ -1411,11 +1359,24 @@ export function AgentRail({
   const hitLabel = railHitLabel(open, spend, money);
   // Above the early return with every other hook: a screen this section draws
   // nothing on is still a render it has to make the same calls in.
-  // The newest settled run, for the rotation; the newest live one, for the bar.
-  // The bar keeps the live run because that is what is true this second.
-  const settledLine = server.recent[0] ? speak(server.recent[0], t) : null;
-  const resting = useIdleLine(
-    idleLines(signals, t("auth.coreDevelopment"), settledLine),
+  //
+  // The runs that settled recently, for the rotation; the newest live one, for
+  // the bar. The bar keeps the live run because that is what is true this
+  // second. Read once per render, so every line in one pass of the rotation
+  // shares one reading of the clock and they cannot disagree about which runs
+  // are still news.
+  const settled = stillNews(server.recent, Date.now()).flatMap((item) => {
+    const said = speak(item, t);
+    return said === null ? [] : [said];
+  });
+  const resting = useRestingLine(
+    restingReadings({
+      waiting: signals.waiting,
+      developmentLine:
+        signals.ai === "development" ? t("auth.coreDevelopment") : null,
+      settled,
+    }),
+    restingTips(route.screen, t),
   );
 
   // The one screen it absents itself from, and the reason is not layout: the Ask

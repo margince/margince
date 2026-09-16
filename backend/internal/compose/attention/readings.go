@@ -93,25 +93,19 @@ func readingsOf(
 			// draws them as one row. The strip says how much work there is; the
 			// queue says how much reading it costs.
 			//
-			// A row this reader cannot settle is not their decision. The verb is
+			// A row this reader cannot settle is not their decision. ANY verb is
 			// the test, because the producers already resolved authority to
-			// decide whether to offer one: a duplicate pair reaches
-			// duplicateItem with a merge action only when the reader could write
-			// BOTH records, and an approval carries its verbs only where the
-			// inbox admits them. Counting the rest tells somebody a contact is
-			// waiting on an answer they are not able to give.
+			// decide whether to offer one: a duplicate pair leaves duplicateItem
+			// with verbs only where the reader could write BOTH records, and an
+			// approval carries its verbs only where the inbox admits them.
+			// Counting the rest tells somebody a contact is waiting on an answer
+			// they are not able to give.
 			//
-			// KNOWN NARROWING, and it is the safe direction rather than an
-			// oversight. A duplicate pair the reader may write but nobody may
-			// MERGE — two companies each carrying live projects — can still
-			// be dismissed as not-a-duplicate, and reaches here with no verb
-			// because the surface offers no dismiss control for this source
-			// yet (issue 5066). Such a pair is missing from this count until it
-			// does. The
-			// alternative was counting every undecidable row, which is the
-			// defect: a headline naming work the reader cannot do teaches them
-			// to distrust the number, while one that is short by a case nobody
-			// can currently action from this page stays true to what it claims.
+			// Any verb rather than a SETTLING one, and the difference is a case
+			// this count was once short by: two companies each carrying live
+			// projects can never be merged by anybody, and the pair is still the
+			// reader's to dismiss as not-a-duplicate. It arrives here carrying
+			// that verb alone, and asking for a merge would drop it.
 			if len(row.item.Actions) == 0 {
 				continue
 			}

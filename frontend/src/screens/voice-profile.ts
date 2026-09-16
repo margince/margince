@@ -9,8 +9,12 @@ type VoiceProfile = components["schemas"]["VoiceProfile"];
 // and human-only server-side. It lives here rather than beside one screen
 // because several surfaces report the same profile's provenance — sharing the
 // query key is what makes them agree instead of each holding its own answer.
-export function useVoiceProfile() {
+export function useVoiceProfile(enabled = true) {
   return useQuery({
+    // A surface that is mounted but not showing asks for nothing: the composer
+    // stays mounted while it animates out, and a dialog nobody is looking at
+    // reading the owner's profile is a request the reader did not ask for.
+    enabled,
     queryKey: ["voice-profile"],
     queryFn: async (): Promise<VoiceProfile | null> => {
       const { data, error } = await api.GET("/voice-profiles");

@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Package datasource defines the System-of-Record Provider seam (interfaces.md
-// §3, 03e §2.1): the one interface that binds the AI layers, the MCP tool
-// surface, and the UI to either the SoR-mode modules or an incumbent
-// adapter (Overlay-mode). Nothing above this seam imports the modules or an
-// incumbent SDK directly (AC-OV-1); identical signatures in both modes
-// (AC-OV-2).
+// Package datasource defines the System-of-Record Provider seam: the one
+// interface that binds the AI layers, the MCP tool surface, and the UI to
+// whichever provider answers for the records — this product's own modules, or
+// a fork's adapter over another system. Nothing above this seam imports the
+// modules or a vendor SDK directly, and the signatures are identical whoever
+// answers.
 package datasource
 
 import (
@@ -129,7 +129,6 @@ type EntityRef struct {
 // adapter that cannot serve a v2 verb returns ErrUnsupportedBySoR. The
 // freeze is pinned by TestSystemOfRecordProviderV1MethodSetIsFrozen.
 type SystemOfRecordProvider interface {
-	// Reads are mirror-served in overlay mode to meet P4 read budgets.
 	Read(ctx context.Context, ref EntityRef) (Record, error)
 	Search(ctx context.Context, q SearchQuery) (SearchResult, error)
 	ListObjects(ctx context.Context) ([]ObjectDef, error)
@@ -138,13 +137,10 @@ type SystemOfRecordProvider interface {
 
 	// StageSemantic resolves a stage id to its canonical semantic
 	// (open|won|lost) plus owning pipeline — the lookup the advance_deal
-	// tier resolver trusts instead of labels or request args; in overlay
-	// mode it resolves through the incumbent→canonical stage mapping.
+	// tier resolver trusts instead of labels or request args.
 	StageSemantic(ctx context.Context, stageID ids.UUID) (semantic string, pipelineID ids.UUID, err error)
 
-	// Writes are canonical in SoR-mode and write BACK to the incumbent in
-	// overlay mode. Every write carries provenance and the acting
-	// Principal from ctx.
+	// Every write carries provenance and the acting Principal from ctx.
 	Create(ctx context.Context, in CreateInput) (EntityRef, error)
 	Update(ctx context.Context, in UpdateInput) (EntityRef, error)
 	AdvanceDeal(ctx context.Context, in AdvanceDealInput) (EntityRef, error)
@@ -165,7 +161,14 @@ type SystemOfRecordProvider interface {
 	// reports true when an existing contact absorbed the lead). 🟡 — a
 	// lifecycle transition that materializes records; cross-module
 	// orchestration like Merge.
-	PromoteLead(ctx context.Context, id ids.UUID, trigger string, evidenceNote *string) (ref EntityRef, merged bool, err error)
+	//
+	// ifVersion refuses the promotion unless the lead is still at that
+	// version. It is on the seam rather than left to a caller's own guard
+	// because promotion is STAGED for approval: the version the human was
+	// shown is released with the approval, and a pin staged and never applied
+	// is a guarantee the approvals surface advertises and the write does not
+	// keep. Nil attaches no precondition.
+	PromoteLead(ctx context.Context, id ids.UUID, trigger string, evidenceNote *string, ifVersion *int64) (ref EntityRef, merged bool, err error)
 
 	// Freshness lets a 🟡 high-value action force a synchronous live
 	// read-through to the incumbent before acting (03e §2.3), bypassing
@@ -245,9 +248,10 @@ type MergeInput struct {
 	TargetID ids.UUID
 }
 
-// FreshnessInfo travels in tool responses so an agent knows mirror
-// staleness (03e §2.3). Authoritative is false while pending_sync in
-// overlay mode; in SoR-mode it is always true.
+// FreshnessInfo travels in tool responses so an agent knows how stale the
+// record it is answering from may be. Authoritative is true for a provider
+// that holds the record itself, and an adapter serving a copy of somebody
+// else's system answers false while that copy is behind.
 type FreshnessInfo struct {
 	LastSyncedAt  time.Time
 	Authoritative bool
@@ -269,8 +273,8 @@ type SearchResult struct {
 	HasMore    bool
 }
 
-// ObjectDef / FieldDef expose schema introspection — ours in SoR-mode,
-// the incumbent's in overlay mode.
+// ObjectDef / FieldDef expose schema introspection — whichever system the
+// provider answers for.
 type ObjectDef struct {
 	Type   EntityType
 	Label  string

@@ -134,7 +134,10 @@
   border-block-end: 2px solid transparent;
   background: none;
   font-family: var(--f-body);
-  font-size: var(--fs-sm);
+  /* The body rung: the strip ends in a Button (the details toggle), and a tab
+     word half a pixel smaller than the button beside it reads as drift, not as
+     a second kind of control. */
+  font-size: var(--fs-body);
   font-weight: var(--fw-medium);
   color: var(--textMeta);
   white-space: nowrap;

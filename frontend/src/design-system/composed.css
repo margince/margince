@@ -270,12 +270,13 @@
   position: relative;
   /* The pane over the column's ground, not the elevated surface: a card lifts
      off the stage it sits in by being translucent white over it, which is the
-     same separation every other pane in the product is drawn with. No
-     --shadow-card on top — that token is a hairline ring, and a ring behind a
-     1px border is the same edge drawn twice. */
+     same separation every other pane in the product is drawn with.
+     --shadow-rest on top of that is the top side every resting surface here
+     has, and it is one layer under a hairline rather than a second edge. */
   background: var(--pane);
   border: 1px solid var(--paneEdge);
   border-radius: var(--r-control);
+  box-shadow: var(--shadow-rest);
   padding: var(--space-3) var(--space-4);
   display: flex;
   flex-direction: column;
@@ -569,16 +570,129 @@
 .record-head-wide .record-actions > .btn {
   padding-inline: var(--space-4);
 }
+/* The compact head: one rung under the masthead. The name takes the h1 rung
+   rather than the record's fluid one, and its tracking follows, because the
+   record rung's tighter setting was chosen for the larger size. The mark is
+   `lg`, set by RecordHead; nothing else about the wide head changes, so the
+   verbs, the subtitle and the identity lines keep their places. */
+.record-head-wide.record-head-compact h1 {
+  font-size: var(--fs-h1);
+  letter-spacing: var(--tracking-display);
+}
+/* The compact head's second register: a caption line on the name's own row
+   (the role and the company), the pills under it, and the facts strip as a
+   full row across the head under a rule. The strip is the `badges` slot,
+   drawn after the verbs so the verbs keep the name's line; `order` here is
+   the one place the head's reading order and its drawn order differ, and it
+   is the facts that step back, not the verbs. */
+.record-head-compact .record-name-row {
+  align-items: baseline;
+  gap: var(--space-3);
+}
+.record-sub-inline {
+  font-size: var(--fs-body);
+  color: var(--textMeta);
+  min-width: 0;
+}
+.record-head-compact .record-pulse {
+  margin-top: var(--space-2);
+}
+.record-head-compact .record-badges {
+  flex-basis: 100%;
+  order: 1;
+  margin-top: var(--space-1);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--borderSubtle);
+}
+
+/* The record as one sheet: head, strip and columns on one raised surface
+   with a hairline round it, so the record reads as a document on the page
+   ground rather than as loose cards on it. */
+.record-sheet {
+  background: var(--bgElevated);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-lg);
+  padding: var(--space-5) var(--space-6);
+  margin-top: var(--space-4);
+}
+
+/* The strip stays in reach as the record scrolls: stuck to the top of the
+   scroll pane, on the sheet's own ground so the cards pass under it rather
+   than through it, closed by the hairline the tabs already draw. The toggle
+   for the details pane rides with it, so a reader deep in the activity can
+   still change what stands beside the work. Nothing else in the head sticks:
+   the name is in the breadcrumb above, and the verbs a reader needs mid-page
+   are on the rows themselves. */
+.record-sheet .record-tabs {
+  position: sticky;
+  /* Flush under the top bar: the scroll pane pads the page's top gap above
+     its content, and a strip stuck at the pane's edge left that gap open with
+     the cards scrolling through it. */
+  top: calc(-1 * var(--pageGapTop));
+  z-index: 2;
+  background: var(--bgElevated);
+  /* Out to the sheet's edges, so the stuck strip runs the sheet's full width
+     rather than sitting inside its padding with the cards visible beside it.
+     The intervals under and around it are padding INSIDE the stuck block
+     rather than the margin the strip carries elsewhere: a margin is
+     transparent, and the cards scrolled through it. */
+  margin-inline: calc(-1 * var(--space-6));
+  padding: 0 var(--space-6);
+  /* The same step the work column keeps between its cards, so the first card
+     stands off the strip exactly as the second stands off the first. */
+  margin-bottom: var(--space-6);
+  /* A hairline, not a shadow: the strip is part of the sheet's plane, and the
+     line under it is the seam the cards scroll beneath. */
+  border-block-end: 1px solid var(--borderSubtle);
+}
+.record-sheet .record-tabs .recordtabs {
+  margin-block-end: 0;
+}
+
+/* The head's facts strip: caption over value, cells laid along the row and
+   wrapping when the head narrows. A `dl`, because each cell IS a term and its
+   value; the margins a `dl` and its `dd` carry by default are reset. */
+.record-facts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-8);
+  margin: 0;
+  /* The strip is a flex item of the head's badge row; it has to be told to
+     take the row's width or its cells sit at their own widths on the left. */
+  flex: 1 1 100%;
+}
+.record-fact {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.record-fact dd {
+  margin: 0;
+  font-size: var(--fs-body);
+  color: var(--textPrimary);
+}
+
+/* A hairline between two groups of verbs: reaching the record, and recording
+   what happened to it. */
+.record-actions-sep {
+  inline-size: 1px;
+  align-self: stretch;
+  margin-inline: var(--space-1);
+  background: var(--borderSubtle);
+}
 .record-head .record-sub {
   font-size: var(--fs-sm);
   line-height: 1.5;
   color: var(--textMeta);
 }
-/* One quiet line under the name, at the same size as the facts beside it. Set
-   larger it competed with the name above and read as a second title; the facts
-   row under it carries what a reader actually scans for. */
+/* One quiet line under the name, at the same size as the facts under it (the
+   identity line's body rung). Set larger it competed with the name above and
+   read as a second title; the facts row under it carries what a reader
+   actually scans for. */
 .record-head-wide .record-sub {
-  font-size: var(--fs-sm);
+  font-size: var(--fs-body);
   line-height: 1.45;
   color: var(--textMeta);
   max-width: 62ch;

@@ -681,7 +681,7 @@ function WebsiteStatusMessage({
       <p>{presentation.body}</p>
       <ReadActivity read={read} refreshing={refreshing} />
       {read.status === "deferred" && read.next_attempt_at && (
-        <p className="mw-resume">
+        <p>
           {t("deepread.resumesAt", {
             when: formatDateTime(read.next_attempt_at, locale, viewerZone()),
           })}

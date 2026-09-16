@@ -82,6 +82,14 @@ var schemaObjects = []datasource.ObjectDef{
 	}},
 }
 
+// The column names this package's schema shapes and audit payloads reach for
+// in more than one place.
+const (
+	paramCompanyID = "company_id"
+	paramOwnerID   = "owner_id"
+	paramKind      = "kind"
+)
+
 func schemaFields(entity datasource.EntityType) ([]datasource.FieldDef, bool) {
 	for _, obj := range schemaObjects {
 		if obj.Type == entity {

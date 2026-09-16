@@ -181,6 +181,20 @@ func fillCompanySurvivorship(ctx context.Context, tx pgx.Tx, src, tgt crmcontrac
 	fillString(p, fieldLegalName, tgt.LegalName, src.LegalName)
 	fillString(p, "description", tgt.Description, src.Description)
 	fillString(p, "industry", tgt.Industry, src.Industry)
+	// The postal address moves as ONE block, on the same rule as the contact
+	// merge (buildSurvivorshipPatch): a survivor with no address at all takes
+	// the retired record's whole address, and a survivor that has one keeps
+	// every line of it. Filling line by line would build an address that
+	// neither company ever had — this city with that postcode — which is worse
+	// than the blank it replaced, because it looks deliberate.
+	if tgt.Address == nil && src.Address != nil {
+		p.Set("address_line1", nil, src.Address.Line1)
+		p.Set("address_line2", nil, src.Address.Line2)
+		p.Set("address_city", nil, src.Address.City)
+		p.Set("address_region", nil, src.Address.Region)
+		p.Set("address_postal_code", nil, src.Address.PostalCode)
+		p.Set("address_country", nil, src.Address.Country)
+	}
 	if targetIsPartner {
 		if err := ensureCompanyRelationshipType(ctx, tx, ids.CompanyID{UUID: ids.UUID(tgt.Id)},
 			relationshipTypePartner, "system", "system:merge"); err != nil {
@@ -300,6 +314,13 @@ func absorbCompanyReferences(ctx context.Context, tx pgx.Tx, sourceID, targetID 
 		`UPDATE company SET merged_into_id = $2 WHERE merged_into_id = $1`,
 		sourceID, targetID); err != nil {
 		return false, fmt.Errorf("repoint earlier merges: %w", err)
+	}
+	// Everything else that names the merged-away company: the enrichment it
+	// accumulated, the money owed against it, the jobs reading it, and the
+	// per-reader rows. mergerelink_company.go carries them, and
+	// companyfkcoverage proves none was forgotten.
+	if err := relinkCompanySatellites(ctx, tx, sourceID, targetID); err != nil {
+		return false, err
 	}
 	return targetIsPartner, nil
 }

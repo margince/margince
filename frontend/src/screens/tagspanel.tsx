@@ -1,17 +1,18 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { MoreHorizontal, Plus } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { Button } from "../design-system/atoms";
+import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelBody } from "../design-system/panel";
-import { Popover } from "../design-system/popover";
 import { TagPill } from "../design-system/tagpill";
 import { formatDate, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
+import { problemMessageOf } from "./common";
 import { AddTagDialog } from "./tagpicker";
 import type { RecordTag, TaggableType } from "./tags.queries";
 import { useRecordTags, useRemoveTag } from "./tags.queries";
@@ -50,6 +51,10 @@ export function TagsPanel({
   const { locale } = useLocale();
   const [expanded, setExpanded] = useState(false);
   const [adding, setAdding] = useState(false);
+  // Where focus returns once a pill is gone: the Add tag row, which stays
+  // mounted whenever a tag can be removed, including after the last one goes
+  // and the row of tags unmounts with it.
+  const actions = useRef<HTMLDivElement>(null);
   const read = useRecordTags(entityType, entityID);
 
   // The frame stands while the read is in flight. This panel sits in the record
@@ -94,11 +99,17 @@ export function TagsPanel({
       sub={tags.length > 0 ? t("tags.panelSub") : undefined}
       bare={bare}
     >
+      {/* In a card of its own the empty panel teaches what tags are for. As
+          a row of the Details card the label already says "Tags" and the
+          dashed pill under it is the whole invitation, so the lesson would
+          be two sentences beside every untagged record. */}
       {tags.length === 0 ? (
-        <div className="tagspanel-empty">
-          <p className="tagspanel-empty-title">{t("tags.emptyTitle")}</p>
-          <p className="tagspanel-note">{t("tags.emptyBody")}</p>
-        </div>
+        !bare && (
+          <div className="tagspanel-empty">
+            <p className="tagspanel-empty-title">{t("tags.emptyTitle")}</p>
+            <p className="tagspanel-note">{t("tags.emptyBody")}</p>
+          </div>
+        )
       ) : (
         <div className="tagspanel-set">
           {visible.map((tag) => (
@@ -108,6 +119,7 @@ export function TagsPanel({
               entityType={entityType}
               entityID={entityID}
               canEdit={canEdit}
+              returnFocusTo={() => actions.current}
             />
           ))}
           {hidden > 0 && (
@@ -123,7 +135,7 @@ export function TagsPanel({
         </div>
       )}
       {canEdit && (
-        <div className="tagspanel-actions">
+        <div className="tagspanel-actions" ref={actions} tabIndex={-1}>
           <AddTagButton onOpen={() => setAdding(true)} />
         </div>
       )}
@@ -161,8 +173,11 @@ function TagsFrame({
   bare: boolean;
   children: ReactNode;
 }>) {
+  // Bare is the set alone, for a host that already frames it: a row of the
+  // record's Details card, where the card's own padding and the row's label
+  // are the frame.
   if (bare) {
-    return <PanelBody>{children}</PanelBody>;
+    return <>{children}</>;
   }
   return (
     <Panel title={title} sub={sub}>
@@ -184,62 +199,76 @@ function TagOnRecord({
   entityType,
   entityID,
   canEdit,
+  returnFocusTo,
 }: Readonly<{
   tag: RecordTag;
   entityType: TaggableType;
   entityID: string;
   canEdit: boolean;
+  // Where focus lands after a removal: the row of tags, which survives the
+  // refetch, rather than the pill's own button, which the refetch takes away
+  // and would leave focus on the document body.
+  returnFocusTo: () => HTMLElement | null;
 }>) {
   const t = useT();
   const { locale } = useLocale();
   const zone = viewerZone();
   const remove = useRemoveTag(entityType, entityID);
+  const [confirming, setConfirming] = useState(false);
+  const added = tag.assigned_by?.display_name
+    ? t("tags.addedBy", {
+        who: tag.assigned_by.display_name,
+        when: formatDate(tag.assigned_at, locale, zone),
+      })
+    : // No name where the row records none: an assignment written before
+      // the product recorded WHO has nobody to credit, and inventing one
+      // would put a choice on somebody.
+      t("tags.addedOn", {
+        when: formatDate(tag.assigned_at, locale, zone),
+      });
 
   return (
     <span className="tagspanel-combo">
       <a className="tagspanel-open" href={`#/tags/${tag.tag_id}`}>
         <TagPill name={tag.name} tone={tag.color} archived={tag.archived} />
       </a>
-      <Popover
-        variant="ghost"
-        className="tagspanel-more"
-        label={
-          <>
-            <MoreHorizontal aria-hidden />
-            <span className="sr-only">
-              {t("tags.options", { name: tag.name })}
-            </span>
-          </>
-        }
-      >
-        <div className="tagspanel-menu">
-          <strong>{tag.name}</strong>
-          <p className="t-caption">
-            {tag.assigned_by?.display_name
-              ? t("tags.addedBy", {
-                  who: tag.assigned_by.display_name,
-                  when: formatDate(tag.assigned_at, locale, zone),
-                })
-              : // No name where the row records none: an assignment written
-                // before the product kept one has nobody to credit, and
-                // inventing a name would put a choice on somebody.
-                t("tags.addedOn", {
-                  when: formatDate(tag.assigned_at, locale, zone),
-                })}
-          </p>
-          <span className="t-caption">{t("tags.visibleWorkspaceWide")}</span>
-          {canEdit && (
-            <Button
-              small
-              variant="ghost"
-              disabled={remove.isPending}
-              onClick={() => remove.mutate(tag.tag_id)}
-            >
-              {t("tags.removeFromRecord")}
-            </Button>
-          )}
-        </div>
-      </Popover>
+      {/* The one verb a tag on a record has, as the cross the pill grows on
+          hover and on focus, rather than a menu of one item. It asks before
+          it acts: who applied the tag and when is shown there, so a reader
+          about to undo a colleague's filing sees whose it was. */}
+      {canEdit && (
+        <>
+          <button
+            type="button"
+            className="tagspanel-remove"
+            aria-label={t("tags.removeTag", { name: tag.name })}
+            onClick={() => setConfirming(true)}
+          >
+            <X aria-hidden size={13} />
+          </button>
+          <ConfirmModal
+            open={confirming}
+            onClose={() => {
+              setConfirming(false);
+              remove.reset();
+            }}
+            title={t("tags.removeTitle", { name: tag.name })}
+            confirmLabel={t("tags.removeFromRecord")}
+            confirmVariant="danger"
+            pending={remove.isPending}
+            error={remove.isError ? problemMessageOf(remove.error, t) : null}
+            returnFocusTo={returnFocusTo}
+            onConfirm={() =>
+              remove.mutate(tag.tag_id, {
+                onSuccess: () => setConfirming(false),
+              })
+            }
+          >
+            <p className="t-body">{added}</p>
+            <p className="t-caption">{t("tags.visibleWorkspaceWide")}</p>
+          </ConfirmModal>
+        </>
+      )}
     </span>
   );
 }

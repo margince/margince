@@ -114,7 +114,7 @@ describe("who may correct what a machine read", () => {
     stubMe(MAY_CORRECT);
     renderFields([field({})]);
 
-    expect(await screen.findByRole("button", { name: "Correct" })).toBeTruthy();
+    expect(await screen.findByRole("button", { name: "Edit" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "That is right" })).toBeTruthy();
   });
 
@@ -126,7 +126,7 @@ describe("who may correct what a machine read", () => {
     // this card is that a claim can be checked against its source.
     expect(await screen.findByText("Head of Procurement")).toBeTruthy();
     await waitFor(() =>
-      expect(screen.queryByRole("button", { name: "Correct" })).toBeNull(),
+      expect(screen.queryByRole("button", { name: "Edit" })).toBeNull(),
     );
     expect(screen.queryByRole("button", { name: "That is right" })).toBeNull();
   });
@@ -140,7 +140,7 @@ describe("who may correct what a machine read", () => {
 
     expect(await screen.findByText("Head of Procurement")).toBeTruthy();
     await waitFor(() =>
-      expect(screen.queryByRole("button", { name: "Correct" })).toBeNull(),
+      expect(screen.queryByRole("button", { name: "Edit" })).toBeNull(),
     );
     expect(screen.queryByRole("button", { name: "That is right" })).toBeNull();
   });
@@ -165,7 +165,7 @@ describe("which verdicts are still open", () => {
     );
     // Correct stays on every field: a value already settled once can still be
     // settled differently.
-    expect(screen.getAllByRole("button", { name: "Correct" })).toHaveLength(3);
+    expect(screen.getAllByRole("button", { name: "Edit" })).toHaveLength(3);
   });
 });
 
@@ -175,13 +175,13 @@ describe("what the editor opens on", () => {
     stubMe(MAY_CORRECT);
     renderFields([field({})]);
 
-    await user.click(await screen.findByRole("button", { name: "Correct" }));
+    await user.click(await screen.findByRole("button", { name: "Edit" }));
     const input = screen.getByRole("textbox", { name: "Title" });
     await user.clear(input);
     await user.type(input, "Typed by mistake");
     await user.click(screen.getByRole("button", { name: "Cancel" }));
 
-    await user.click(screen.getByRole("button", { name: "Correct" }));
+    await user.click(screen.getByRole("button", { name: "Edit" }));
     // Reopening on the abandoned draft is worse than losing it: the reader is
     // shown text they discarded, and pressing Save writes it over the value
     // they chose to keep.
@@ -202,7 +202,7 @@ describe("what the editor opens on", () => {
     stubMe(MAY_CORRECT);
     const { show } = renderFields([field({})]);
 
-    await user.click(await screen.findByRole("button", { name: "Correct" }));
+    await user.click(await screen.findByRole("button", { name: "Edit" }));
     const input = screen.getByRole("textbox", { name: "Title" });
     await user.clear(input);
     await user.type(input, "Head of Purchasing");

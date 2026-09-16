@@ -124,6 +124,14 @@ type SARPackage struct {
 	// know not only what they wrote but what we decided it meant, and which
 	// classifier decided it.
 	ReplyJudgements []map[string]any `json:"reply_judgements"`
+	// RequestSettlements is what this installation concluded our own replies
+	// DID about what the subject asked of us: whether the answer settled their
+	// request, and where it did not, the sentence naming what we still owe
+	// them. Owed for ReplyJudgements' reason and one of its own — the subject
+	// is entitled to know what we decided their message meant, and here that
+	// decision can be an outstanding obligation TO them, which is a thing held
+	// about somebody that they would have no other way to discover.
+	RequestSettlements []map[string]any `json:"request_settlements"`
 	// Handoffs is each time this contact was passed from one seat to another as a
 	// prospect, what was decided, and why. Art. 15 owes it twice over: the note
 	// is what one colleague wrote ABOUT them, and the decision is one colleagues

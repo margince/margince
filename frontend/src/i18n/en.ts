@@ -2,6 +2,73 @@
 // (compile-time via satisfies, runtime via i18n.test.ts). Placeholders use
 // {name} and are filled by t(key, params).
 export const en = {
+  "aiAdmin.allowance": "Monthly AI allowance",
+  "aiAdmin.pool":
+    "A shared company pool. This is not an individual quota or a dollar spending cap.",
+  "aiAdmin.consumption": "{spent} of {total} tokens used · {pct}%",
+  "aiAdmin.remaining": "{tokens} tokens remaining",
+  "aiAdmin.reset": "Resets {date} UTC",
+  "aiAdmin.fixed":
+    "Fixed company allowance overrides the per-user calculation.",
+  "aiAdmin.formula":
+    "{users} active full users × {tokens} tokens per user per month.",
+  "aiAdmin.floor": "With no eligible users, the allowance counts one user.",
+  "aiAdmin.normal": "Within the normal allowance band",
+  "aiAdmin.degraded": "80% threshold reached: reduced-tier routing is active",
+  "aiAdmin.queued": "Allowance reached: background AI is deferred",
+  "aiAdmin.policy":
+    "At 80%, routing moves to lower tiers. The actual model may stay the same. At 100%, background completions wait; interactive AI uses the lowest tier. Search embeddings continue and still count toward usage.",
+  "aiAdmin.saved": "Allowance saved",
+  "aiAdmin.recovery":
+    "Eligible website reads, account scans and voice builds become runnable on the next reconciliation pass, normally within a minute. Completion depends on worker capacity, current permissions and provider availability. Other background passes keep their normal schedule.",
+  "aiAdmin.edit": "Edit allowance",
+  "aiAdmin.perUser": "Tokens per full user per month",
+  "aiAdmin.range": "Whole tokens, from 1 to 1,000,000,000,000.",
+  "aiAdmin.company": "Fixed company total (optional)",
+  "aiAdmin.overrideHint":
+    "Leave blank to use the per-user calculation. The per-user value is retained.",
+  "aiAdmin.routingStale": "Model bindings changed while you were editing",
+  "aiAdmin.stale": "This allowance changed while you were editing",
+  "aiAdmin.staleHelp":
+    "Cancel and reopen the editor to use the latest settings.",
+  "aiAdmin.failed": "The change could not be applied",
+  "aiAdmin.preview": "Preview effects",
+  "aiAdmin.previewHint":
+    "Preview of current conditions. Saving checks the latest settings and usage again; this does not reserve capacity or call a model.",
+  "aiAdmin.features": "AI by activity",
+  "aiAdmin.featuresWithheld":
+    "Only a reader who holds both AI diagnostics read and AI allowance read can see which features are live right now.",
+  "aiAdmin.save": "Save allowance",
+  "aiAdmin.cancel": "Cancel",
+  "aiAdmin.prospective":
+    "Model selected by current policy. Actual calls can use a fallback or fail; this is not provider health or proof of a model already used.",
+  "aiAdmin.calls": "Inspect actual model calls",
+  "aiAdmin.website": "Website reads",
+  "aiAdmin.scans": "Account scans",
+  "aiAdmin.voice": "Voice builds",
+  "aiAdmin.waiting": "Recorded work waiting on the allowance",
+  "aiAdmin.coverage":
+    "Counts cover durable website reads, account scans and voice builds only. They do not count every scheduled AI pass or guarantee that a request is still eligible to run.",
+  "aiAdmin.unavailable": "Unavailable",
+  "aiAdmin.impact.blocked": "Waiting on allowance",
+  "aiAdmin.impact.model": "Different model selected",
+  "aiAdmin.impact.fallback": "Fallback chain changed",
+  "aiAdmin.impact.unconfigured": "No model configured",
+  "aiAdmin.impact.exempt": "Continues beyond allowance",
+  "aiAdmin.impact.same": "Same model selection",
+  "aiAdmin.activity": "Activity",
+  "aiAdmin.model": "Model selected by policy",
+  "aiAdmin.cloud": "Cloud provider",
+  "aiAdmin.endpoint": "Configured endpoint; location not verified",
+  "aiAdmin.editBinding": "Edit shared binding",
+  "aiAdmin.effect": "Effect",
+  "aiAdmin.advanced": "Advanced: shared model bindings",
+  "aiAdmin.shared":
+    "These bindings are shared. Review every affected activity before saving.",
+  "aiAdmin.unused": "Not used by current shipped activities: {tiers}",
+  "aiAdmin.inputRate": "Input {input} per 1M tokens",
+  "aiAdmin.rates": "Input {input} · Output {output} per 1M tokens",
+
   "brief.weekly.tasksCompleted": "Tasks completed",
   "teamweekly.noPriority": "No priority indicated by the recorded metrics",
   "teamweekly.basis":
@@ -24,7 +91,8 @@ export const en = {
   "brief.focus.back": "Back to Focus",
   "brief.queue.back": "Back to queue",
   "brief.queue.title": "Work queue",
-  "brief.queue.close": "Back to Home",
+  "brief.queue.show": "Show work queue",
+  "brief.queue.hide": "Hide work queue",
   "brief.focus.urgentRemaining_one": "{count} more urgent item in the queue",
   "brief.focus.urgentRemaining_other": "{count} more urgent items in the queue",
   "brief.focus.remaining": "{count} more priorities in the queue",
@@ -51,7 +119,6 @@ export const en = {
   "brief.coverage.source.bounce": "Undeliverable emails",
   "brief.coverage.source.ai_work_health": "Automation checks",
   "brief.coverage.source.capture_health": "Mailbox connections",
-  "brief.coverage.source.sync_health": "CRM sync checks",
   "brief.coverage.source.failed_approval": "Failed approved actions",
   "brief.coverage.source.relationship_decay": "Quiet relationships",
   "brief.coverage.source.meeting_outcome": "Meeting follow-up",
@@ -494,7 +561,6 @@ export const en = {
   "record.fieldsLoading": "Loading custom fields…",
   "record.fieldsRetry": "Retry",
 
-  "record.visibilityOwner": "Owner only",
   "record.companyRoutingKey": "Company routing key",
   "record.finishFieldEdit":
     "Save or cancel the current edit before closing Details.",
@@ -702,7 +768,6 @@ export const en = {
   "rel.empty": "No relationships yet",
   "rel.counterparty": "Linked to",
   "rel.dates": "Dates",
-  "rel.pickCounterparty": "Select the other side",
   "rel.addConfirm": "Add a {kind} link to {target}.",
   "rel.kind.employment": "Employment",
   "rel.kind.dealStakeholder": "Deal stakeholder",
@@ -779,8 +844,6 @@ export const en = {
   "state.withheld": "Hidden — your role cannot read this",
   "state.unavailable":
     "Could not be loaded — this may not be the whole picture",
-  "state.unsupported":
-    "Not available in this mode — the connected system does not hold it",
   "state.failed": "This section did not load.",
   "state.loading": "Loading this section…",
   "state.retry": "Try again",
@@ -794,7 +857,6 @@ export const en = {
   // account and over a scan that arrived on a message.
   "filePreview.download": "Download",
   "filePreview.print": "Print",
-  "filePreview.close": "Close preview",
   "filePreview.loading": "Opening this file…",
   "filePreview.failedTitle": "This file cannot be shown here",
   "filePreview.failed": "Download it to open it in another application.",
@@ -805,8 +867,6 @@ export const en = {
   "list.loadMore": "Load more",
   "list.viewAll": "All",
   "list.viewHot": "Hot",
-  "list.overlayReadOnly":
-    "Sorting and filters read through HubSpot — open it there",
 
   // The list surface (design-system/listtable.tsx). The count says "loaded"
   // rather than a total on purpose: paging is a keyset cursor, so the number
@@ -853,152 +913,6 @@ export const en = {
   "table.filterSearching": "Searching…",
   "table.filterSearchFailed": "The search failed. Try again.",
   "table.filterNoMatches": "No matches.",
-  "overlay.unavailable":
-    "Not available while reading from HubSpot — open it in HubSpot",
-  "overlay.chipLabel": "Reading from HubSpot",
-  "overlay.chipAria":
-    "This installation reads records from a HubSpot mirror instead of native tables. Open Settings → Integrations to manage the connection.",
-  "overlay.refused":
-    "Not available while reading from HubSpot — the mirror can't serve this write.",
-  "overlay.filterUnsupported":
-    "This filter or sort isn't available while reading from HubSpot — remove it and try again.",
-  "overlay.emptyOwnerHint":
-    "An empty list here usually means the owner's HubSpot email doesn't match a user in this company, not an empty HubSpot portal.",
-  "overlay.partialWriteBack":
-    "Only the fields HubSpot accepts are written back — anything else here, including custom fields and owner, is not applied at all; HubSpot's current value is kept.",
-
-  "overlay.title": "HubSpot mirror",
-  "overlay.sub":
-    "Connect the company's incumbent CRM so records read from its mirror instead of native tables.",
-  "overlay.loading": "Loading the incumbent connection…",
-  "overlay.notConfigured": "Overlay mode isn't configured in this deployment.",
-  "overlay.loadFailed": "Couldn't load the incumbent connection.",
-  "overlay.empty":
-    "No incumbent is connected. Connect HubSpot to read records from its mirror.",
-  "overlay.adminOnly":
-    "You do not have permission to change the HubSpot connection.",
-  "overlay.loadFailedTitle": "The connection could not be read",
-  "overlay.region": "Region",
-  "overlay.regionEu1": "EU",
-  "overlay.connectionLabel": "Connection",
-  "overlay.notConnectedYet": "Not connected",
-  "overlay.regionUs": "United States",
-  "overlay.token": "Private-app token",
-  "overlay.tokenHint": "Sealed into the vault; never shown again.",
-  "overlay.connect": "Connect HubSpot",
-  "overlay.reconnect": "Reconnect",
-  "overlay.connectConfirmTitle": "Connect HubSpot for the whole company?",
-  "overlay.reconnectConfirmTitle": "Reconnect HubSpot for the whole company?",
-  "overlay.connectConfirmBody":
-    "This switches every seat's reads to HubSpot's mirror immediately, and records become read-only wherever the mirror can't serve a write. This affects the whole installation, not just your own session.",
-  "overlay.statusActive": "Connected",
-  "overlay.statusRevoked": "Revoked",
-  "overlay.statusError": "Sync error",
-  "overlay.connectedAt": "Connected {at}",
-  "overlay.syncTitle": "Mirror sync",
-  "overlay.syncLoadFailed": "Couldn't load sync status.",
-  "overlay.syncLoadFailedTitle": "Sync status could not be read",
-  "overlay.syncEmpty": "Nothing has synced yet.",
-  "overlay.syncStateFresh": "Fresh",
-  "overlay.syncStatePending": "Pending sync",
-  "overlay.syncStateStale": "Stale",
-  "overlay.backfillDone": "Backfill complete",
-  "overlay.backfillPending": "Backfill in progress",
-  "overlay.lastSynced": "Last synced {at}",
-  "overlay.neverSynced": "Never synced",
-  "overlay.budgetTitle": "API budget",
-  "overlay.budgetLoadFailed": "Couldn't load the budget window.",
-  "overlay.budgetLoadFailedTitle": "The budget window could not be read",
-  "overlay.budgetHeadroom": "Headroom: {headroom}",
-  "overlay.budgetUnmeasured":
-    "Live calls are paused as a precaution. This is not HubSpot quota pressure — the meter itself is not reporting.",
-  "overlay.budgetUnmeasuredTitle": "The call budget cannot be measured",
-  "overlay.budgetEmpty":
-    "The incumbent reported no budget window for this period.",
-  "overlay.budgetSources":
-    "Force-fresh {forceFresh} · Poller {poller} · Capture {capture}",
-  "overlay.budgetSearch": "Search API: {consumed} / {limit} per second",
-  "overlay.bandOk": "Healthy",
-  "overlay.bandWarn": "Approaching limit",
-  "overlay.bandShed": "Shedding load",
-  "overlay.reconcile": "Sync now",
-  "overlay.reconcileQueued":
-    "Sweep queued — the worker picks it up on its next poll (about every 2 minutes).",
-  "overlay.reconcileFailedTitle": "The sweep was not queued",
-  "overlay.disconnect": "Disconnect",
-  "overlay.disconnectTitle": "Disconnect HubSpot?",
-  "overlay.disconnectBody":
-    "This purges the mirrored data and switches the company back to native records. The audit trail is kept.",
-
-  "overlay.userMap.title": "Mirror user mapping",
-  "overlay.userMap.sub":
-    "Who each user in this company is as a {principal} user. This mapping is the whole of their mirror visibility.",
-  "overlay.userMap.cost":
-    "A user with no mapping sees no mirrored records at all — their lists come back empty.",
-  "overlay.userMap.costTitle": "An unmapped user sees nothing",
-  "overlay.userMap.loading": "Loading the user mapping…",
-  "overlay.userMap.loadFailed": "Couldn't load the user mapping.",
-  "overlay.userMap.loadFailedTitle": "The user mapping could not be read",
-  "overlay.userMap.adminOnly":
-    "You do not have permission to review who is mapped.",
-  "overlay.userMap.notOverlay":
-    "This company reads from native tables, so there is nothing to map.",
-  "overlay.userMap.notConfigured":
-    "Overlay mode isn't configured in this deployment.",
-  "overlay.userMap.empty": "This company has no users to map.",
-  "overlay.userMap.view": "Grouping",
-  "overlay.userMap.viewByUser": "By user",
-  "overlay.userMap.viewByOwner": "By {principal} user",
-  "overlay.userMap.principal.hubspot": "HubSpot",
-  "overlay.userMap.principal.generic": "connected CRM",
-  "overlay.userMap.you": "You",
-  "overlay.userMap.matchEmail": "Matched by email",
-  "overlay.userMap.matchManual": "Manual override",
-  "overlay.userMap.map": "Map",
-  "overlay.userMap.change": "Change",
-  "overlay.userMap.unmap": "Unmap",
-  "overlay.userMap.cancel": "Cancel",
-  "overlay.userMap.pickerLabel": "Search {principal} users",
-  "overlay.userMap.pickTitle": "Map to a {principal} user",
-  "overlay.userMap.truncated":
-    "The {principal} directory is longer than this list — someone you can't find here may be past the cut-off.",
-  "overlay.userMap.directoryFailed":
-    "Couldn't read the {principal} directory, so nobody can be picked right now.",
-  "overlay.userMap.directoryFailedTitle": "The directory could not be read",
-  "overlay.userMap.saveFailedTitle": "That mapping was not saved",
-  "overlay.userMap.notMapped": "Not mapped",
-  "overlay.userMap.chip.noEmailMatch": "No email match",
-  "overlay.userMap.chip.ambiguousEmail": "Ambiguous email",
-  "overlay.userMap.chip.blockedByAdmin": "Unmapped by an admin",
-  "overlay.userMap.chip.notYetSynced": "Not synced yet",
-  "overlay.userMap.chip.directoryUnavailable": "Reason unknown",
-  "overlay.userMap.reason.noEmailMatch":
-    "No {principal} user has this email address.",
-  "overlay.userMap.reason.ambiguousEmail":
-    "Two or more {principal} users share this email address, so no automatic match is safe.",
-  "overlay.userMap.reason.blockedByAdmin":
-    "An admin unmapped this user, and automatic matching will not map them again.",
-  "overlay.userMap.reason.notYetSynced":
-    "The {principal} directory hasn't listed this user yet.",
-  "overlay.userMap.reason.directoryUnavailable":
-    "Couldn't read the whole {principal} directory, so no reason can be derived.",
-  "overlay.userMap.staleChip": "No longer in the {principal} directory",
-  "overlay.userMap.staleNote":
-    "This manual mapping grants no visibility. It is reported, never withdrawn automatically — the decision stays yours.",
-  "overlay.userMap.unmapTitle": "Unmap this user?",
-  "overlay.userMap.unmapSelfTitle": "Unmap yourself?",
-  "overlay.userMap.unmapBody":
-    "{user} will stop seeing every mirrored record until they are mapped again.",
-  "overlay.userMap.unmapSelfBody":
-    "You will stop seeing every mirrored record until you are mapped again. This tab stays reachable, so you can undo it here.",
-  "overlay.userMap.sharedSeat": "Shared seat — {count} users",
-  "overlay.userMap.ownerEmpty": "Nobody is mapped to a {principal} user yet.",
-  "overlay.userMap.unmappedCount_one":
-    "1 user is not mapped and isn't shown here — switch to By user to fix that.",
-  "overlay.userMap.unmappedCount_other":
-    "{count} users are not mapped and aren't shown here — switch to By user to fix that.",
-  "overlay.userMap.partialView":
-    "This grouping and count cover the users loaded so far. Load more to see the rest.",
 
   "contacts.name": "Name",
   "contacts.email": "Email",
@@ -1278,7 +1192,8 @@ export const en = {
   "record.restsOn.source_one": "source",
   "record.restsOn.source_other": "sources",
   "record.tabs": "Parts of this record",
-  "record.panel.details": "Details",
+  "record.panel.showDetails": "Show details",
+  "record.panel.hideDetails": "Hide details",
   // The Deal Room aside on a deal. `room.` rather than `dealroom.` for the
   // reason the other abbreviated namespaces give: the surface is named once at
   // the top of the panel and every key under it is read in that context.
@@ -1973,6 +1888,11 @@ export const en = {
   // workspace (see above); "Only you" is a captured contact's owner-only
   // state, which a message never has.
   "visibility.team": "Team",
+  // A shared company or contact, where the audience IS the whole workspace —
+  // no linked record narrows it the way one narrows a message. "Shared" pairs
+  // with the verb beside it ("Make private"), which is how a reader tells the
+  // two apart without reading the tooltip.
+  "visibility.workspace": "Shared",
   "visibility.participants": "Participants",
   "visibility.selected": "Selected",
   "visibility.private": "Only you",
@@ -1985,7 +1905,6 @@ export const en = {
   "email.detail.attachments_one": "{count} attachment",
   "email.detail.attachments_other": "{count} attachments",
   "email.detail.showQuoted": "Show quoted history",
-  "email.detail.close": "Close",
   "email.detail.withheldReason": "This message is not shared with you",
   "email.detail.from": "From",
   "email.detail.to": "To",
@@ -2316,7 +2235,8 @@ export const en = {
   "tags.add": "Add tag",
   "tags.more": "+{count} more",
   "tags.showLess": "Show less",
-  "tags.options": "Options for {name}",
+  "tags.removeTag": "Remove {name}",
+  "tags.removeTitle": "Remove {name} from this record?",
   "tags.addedBy": "Added by {who} · {when}",
   "tags.addedOn": "Added {when}",
   "tags.visibleWorkspaceWide": "Tag names are visible across the company.",
@@ -2346,8 +2266,6 @@ export const en = {
   "tagResult.noneLeft": "Nothing carries it any more",
   "tagResult.unnamed": "Unnamed",
   "co.timeline.empty": "Nothing logged on this account yet.",
-  "co.overlayFallback":
-    "This account is served from the connected system of record, so the company view is not assembled here. Open it in that system to see the full picture.",
   "company.domains": "Domains",
   "company.factCategory.company": "Company",
   "company.factCategory.offering": "Offering",
@@ -2476,8 +2394,6 @@ export const en = {
   "lead.terminalReadOnly": "This lead is closed and takes no changes.",
   "lead.notYoursToChange":
     "You cannot change this lead. Ask its owner to share it with you, or your administrator for the right to edit it.",
-  "lead.callNotInOverlay":
-    "This lead is a mirror of the system of record, which takes no activity from here \u2014 log the call where the record lives.",
   "lead.boardCountsUnavailable":
     "The Qualified and Disqualified counts could not be read.",
   "lead.boardTerminalRowsUnavailable":
@@ -2641,8 +2557,6 @@ export const en = {
   "lead.viewEngaged": "Engaged",
   "lead.ladder": "Lead status",
   "lead.ladder.new": "New — nobody has reached out yet.",
-  "lead.ladder.overlay":
-    "The mirror does not move a lead's status; change it in the source system.",
   "lead.ladder.automatic": "{label} · set automatically from captured activity",
   "lead.ladder.automaticWith": "{label} · set automatically — {what} on {at}",
   "lead.ladder.byHand": "{label} · set by hand",
@@ -2703,7 +2617,6 @@ export const en = {
   "deals.winReasonOther": "Something else",
   "deals.winReasonDetail": "What was it?",
   "deals.confirm": "Confirm",
-  "deals.loading": "Reading the deals…",
   "deals.cancel": "Cancel",
   "deals.advanced": "Moved to {stage}",
   "deal.pendingApprovals": "Awaiting your confirmation",
@@ -2780,13 +2693,21 @@ export const en = {
   "settings.page.reviewtemplates.sub":
     "The questions a rep is asked when a deal is won or lost.",
   "settings.tab.reviewtemplates": "Outcome reviews",
+  "reviewTemplates.editHint":
+    "Edits apply to future reviews. Existing reviews retain their original questions and answers.",
+  "reviewTemplates.question": "Question",
+  "reviewTemplates.answerType": "Answer type",
+  "reviewTemplates.options": "Choices (one per line)",
+  "reviewTemplates.requiredChoice": "Answer required",
+  "reviewTemplates.removeQuestion": "Remove question",
+  "reviewTemplates.addQuestion": "Add question",
+  "reviewTemplates.save": "Save template",
+  "reviewTemplates.edit": "Edit questions",
   "reviewTemplates.title": "Outcome review questions",
   "reviewTemplates.sub": "What a rep is asked when a deal is won or lost.",
   "reviewTemplates.empty": "No review questions are set up",
   "reviewTemplates.retired": "Retired",
   "reviewTemplates.required": "(required)",
-  "reviewTemplates.readOnly":
-    "These questions ship with the product and cannot be edited here yet.",
   "outcomeReview.title": "Outcome review",
   "outcomeReview.add": "Add review",
   "outcomeReview.save": "Save review",
@@ -2884,6 +2805,8 @@ export const en = {
   "deal.archivedReadOnly": "This deal is archived and takes no changes.",
   "deal.notYoursToChange":
     "You cannot change this deal. Ask its owner to share it with you, or your administrator for the right to edit it.",
+  "deal.closedTakesNoStage":
+    "This deal is closed. Reopen it to move it to another stage.",
   "deal.reopen": "Reopen",
   "deal.reopenPick": "Move this deal back to an open stage",
   "deal.reopenConfirm": "Reopen",
@@ -3270,16 +3193,6 @@ export const en = {
   "brief.weekly.outcome.lost": "lost",
   "brief.act": "Done",
   "brief.dismiss": "Dismiss",
-  "brief.actedState": "acted",
-  "brief.dismissedState": "dismissed",
-  "brief.evidence_other": "{count} evidence rows",
-  "brief.evidence_one": "{count} evidence row",
-  "brief.openDeal": "Open deal",
-  "brief.factorWinnability": "Winnability",
-  "brief.factorRevenue": "Revenue",
-  "brief.factorTiming": "Timing",
-  "brief.factorMomentum": "Momentum",
-  "brief.factorWarmth": "Warmth",
 
   "brief.digestFor": "digest for {date}",
   "brief.digestSynced": "Sync details",
@@ -3355,7 +3268,6 @@ export const en = {
   "brief.readings.leadsBasis": "assigned and awaiting first contact",
   "brief.readings.leadsDue": "next due {value}",
   "brief.rail": "Context",
-  "brief.pct": "{pct}%",
   "brief.deck.later": "Later",
   "brief.deck.showMore": "Show the whole message",
   "brief.deck.showLess": "Show less",
@@ -3400,18 +3312,10 @@ export const en = {
   "brief.deck.empty": "Nothing is waiting on you.",
   "brief.deck.bundleSummary": "One decision · {count} items",
   "brief.deck.bundleMembers": "Show the {count} items",
-  "brief.rank": "Rank",
-  "brief.composite": "Score",
   // A deal the rep dismissed, come back. The suppression rule holds a dismissed
   // deal out until a linked activity arrives after the mark, so the sentence
   // states that rule rather than guessing: it can only ever name an activity.
-  "brief.previouslyDismissed": "Flagged {day} — you dismissed it.",
-  "brief.returnedWith": "It came back with activity on",
-  "brief.revenueBasis": "Revenue measured against {amount}",
-  "brief.resurfaces": "Back",
-  "brief.evidenceNone": "no evidence recorded",
   "brief.snooze": "Snooze",
-  "brief.snoozedState": "snoozed",
 
   "enrich.toInbox": "Open the Worklist",
 
@@ -3500,7 +3404,6 @@ export const en = {
   "transcriptread.effectFailedTitle": "Accepted, but the task never appeared",
 
   "create.cancel": "Cancel",
-  "create.multiselect.required": "Required — select at least one.",
   "create.save": "Create",
   "create.saving": "Creating…",
   "create.contact": "New contact",
@@ -3577,6 +3480,10 @@ export const en = {
   "field.phoneOther": "Other",
   "field.primary": "Primary",
   "field.removeRow": "Remove",
+  "field.removeRowLabel": "Remove row {n}",
+  "field.moveRowUp": "Move row {n} up",
+  "field.moveRowDown": "Move row {n} down",
+  "field.rowMoved": "Moved to position {n}",
   "field.yes": "Yes",
   "field.no": "No",
 
@@ -3801,15 +3708,33 @@ export const en = {
   "log.save": "Log",
   "log.saving": "Logging…",
 
-  "contactAccess.title": "Who can see this contact",
-  "contactAccess.privateToYou":
+  // Who may READ a record, on its own header. The company half says "account"
+  // where the contact half says "contact", because that is the word the rest
+  // of the company page uses for itself.
+  "recordAccess.contact.title": "Who can see this contact",
+  "recordAccess.contact.privateToYou":
     "Private to its owner. Nobody else in the company can see this contact — not the team, and not an admin.",
-  "contactAccess.company": "Everyone in the company can see this contact.",
-  "contactAccess.share": "Share with the company",
-  "contactAccess.published": "The company can see this contact now.",
-  "contactAccess.makePrivate": "Make private",
-  "contactAccess.madePrivate":
+  "recordAccess.contact.shared":
+    "Everyone in the company can see this contact.",
+  "recordAccess.contact.privateTip":
+    "Only you can see this contact. Share it with the company to let others see it too.",
+  "recordAccess.contact.share": "Share with the company",
+  "recordAccess.contact.published": "The company can see this contact now.",
+  "recordAccess.contact.makePrivate": "Make private",
+  "recordAccess.contact.madePrivate":
     "This contact is the owner's again. Anyone the record was explicitly shared with keeps their access.",
+  "recordAccess.company.title": "Who can see this account",
+  "recordAccess.company.privateToYou":
+    "Private to its owner. Nobody else in the company can see this account — not the team, and not an admin.",
+  "recordAccess.company.shared":
+    "Everyone in the company can see this account.",
+  "recordAccess.company.privateTip":
+    "Only you can see this account. Share it with the company to let others see it too.",
+  "recordAccess.company.share": "Share with the company",
+  "recordAccess.company.published": "The company can see this account now.",
+  "recordAccess.company.makePrivate": "Make private",
+  "recordAccess.company.madePrivate":
+    "This account is the owner's again. Deals, contacts and mail already filed against it keep their own audiences.",
   "compose.reply": "Reply",
   "compose.writeEmail": "Write email",
   "compose.relink": "Relink",
@@ -3981,6 +3906,12 @@ export const en = {
   "compose.draftKept": "Your edits were kept. Draft again when you are ready.",
   "compose.threadFailed":
     "That message could not be read. Use Try again in the conversation.",
+  // The message a reply anchors on is gone — archived, or no longer this
+  // reader's to open. It names the state and what the reader can still do,
+  // because the server's own answer here is a bare "not found", which tells
+  // them neither.
+  "compose.anchorGone":
+    "That message is no longer available, so there is nothing to reply to. Write a new message instead.",
   "compose.threadPending": "Loading the conversation\u2026",
   "compose.sendBody":
     "Review and edit your draft. Clicking Send sends this email and cannot be undone.",
@@ -4069,6 +4000,7 @@ export const en = {
   "tasks.moveTo": "Move to",
   "tasks.detail": "Task",
   "tasks.source": "The meeting",
+  "tasks.sourceEmail": "The email this came from",
   "tasks.openSource": "Open original",
   "tasks.detailLoading": "Reading this task…",
   "tasks.isDone": "Completed",
@@ -4527,6 +4459,20 @@ export const en = {
     "Drafting your offer has taken unusually long. It may have stopped.",
   "agent.panel.runningNow": "Running now",
 
+  // The four things the agent section says once it has run out of news
+  // (`agentrail-copy.ts`). None of them claims the agent did anything: they are
+  // standing facts about the product, which is what lets them be written here
+  // rather than read from the installation.
+  //
+  // SHORT, and that is a hard constraint rather than a style: the rail clamps
+  // its line to two lines at about 200px (`.arline` in agentrail.css), so a
+  // sentence past roughly fifty characters is a sentence with its end cut off.
+  // Every translation of these is held to the same ceiling.
+  "agent.tip.day": "To-dos, decisions and duplicates live on {name}.",
+  "agent.tip.ask": "Ask me from anywhere with ⌘K.",
+  "agent.tip.recap": "Open me for what I have done today.",
+  "agent.tip.edge": "The screen edge lights while I work.",
+
   "agents.connected": "Connected agents",
   "agents.connectedSub":
     "MCP clients holding their own credential, scoped to what you ticked when you authorized them",
@@ -4956,6 +4902,7 @@ export const en = {
   "retention.scopeDealWon": "Won deals",
   "retention.scopeAiCallPayloadContent": "AI call payloads",
 
+  "retention.scopeRawCapture": "Stored message originals",
   "settings.pipelines": "Pipelines",
   "settings.pipelinesReadOnly":
     "Read-only view — you may not change pipelines or their stages.",
@@ -5780,7 +5727,7 @@ export const en = {
 
   "blockedDomains.title": "Refused domains",
   "blockedDomains.sub":
-    "Which domains this installation refuses a company, and what decided each one — a model verdict, a heuristic, or a person. Letting a domain back in re-opens the company question rather than merely clearing a flag.",
+    "Which domains this installation refuses a company, and what decided each one — a model verdict, a heuristic, or a person. Letting a domain back in re-opens the company question rather than merely clearing a flag. Open questions appear here only when nobody owns them; one raised by a colleague's mail waits on their own list.",
   "blockedDomains.listTitle": "Decisions on record",
   "blockedDomains.record": "Record a decision",
   "blockedDomains.recordOpen": "Record a decision",
@@ -6057,7 +6004,6 @@ export const en = {
   "ob.conv.connect.appSetupLink": "Set it up in Settings",
   "ob.conv.connect.dialogIntro":
     "{brings}. I read it once to build your contacts and history, then keep it in sync.",
-  "ob.conv.connect.dialogClose": "Close",
   "ob.conv.connect.linkedinName": "LinkedIn",
   "ob.conv.connect.linkedinSaved": "Profile saved",
   "ob.conv.connect.linkedinSkippedNote": "Skipped: add it later in Settings",
@@ -6951,6 +6897,7 @@ export const en = {
   "cf.type.number": "Number",
   "cf.type.date": "Date",
   "cf.type.currency": "Currency",
+  "cf.type.multiselect": "Multiple choice",
   "cf.type.picklist": "Picklist",
   "cf.type.boolean": "Yes / No",
   "cf.builder.addTo": "Add a field to {object}",
@@ -7868,17 +7815,11 @@ export const en = {
   "tools.scopedTo": "Reachable by {label}",
   "tools.unreachable": "scope not granted",
 
-  "aiusage.title": "AI usage & budget",
+  "aiusage.title": "Estimated AI spend & usage history",
   "aiusage.withheld":
     "Only an operator can see what the AI runtime spent. The figures cover the whole installation, so they are not shown more widely.",
   "aiusage.sub":
-    "Your own bill, made visible — per task and tier, token-denominated.",
-  "aiusage.budget": "{spent} of {budget} tokens · {pct}%",
-  "aiusage.budgetMeter": "Monthly token budget used",
-  "aiusage.band.normal": "Normal",
-  "aiusage.band.degraded": "Economy mode",
-  "aiusage.band.queued": "Budget reached — background AI queued",
-  "aiusage.band.unknown": "Unknown budget state",
+    "Historical usage for the selected month. Estimates are separate from the live token allowance and from your provider bill.",
   "aiusage.col.task": "Task",
   "aiusage.col.tier": "Tier",
   "aiusage.col.calls": "Calls",
@@ -7896,10 +7837,11 @@ export const en = {
   "aiusage.prevMonth": "Previous month",
   "aiusage.nextMonth": "Next month",
 
-  "aibanner.degraded": "AI running in economy mode",
-  "aibanner.queued": "AI budget reached — background AI is queued",
+  "aibanner.degraded":
+    "80% AI allowance threshold reached — review feature impacts",
+  "aibanner.queued": "AI allowance reached — review deferred work",
   "aibanner.unknown": "AI budget status is not recognized",
-  "aibanner.link": "View usage",
+  "aibanner.link": "Manage allowance",
   "aibanner.dismiss": "Dismiss",
 
   "aicalls.title": "AI call trace",
@@ -8137,11 +8079,14 @@ export const en = {
   "elapsed.minutes": "{minutes} min ago",
   "elapsed.hours": "{hours} h ago",
   "elapsed.days": "{days} d ago",
-  "aiRouting.lane.local_small": "Bulk classifying, on your own hardware",
+  "aiRouting.lane.local_small":
+    "Lowest routing tier; the binding determines processing location",
   "aiRouting.lane.cheap_cloud": "Everyday work — enrichment, summaries, triage",
   "aiRouting.lane.premium": "Anything a customer will read",
-  "aiRouting.lane.frontier": "The hardest reasoning, used sparingly",
-  "aiRouting.lane.local_large": "Heavier work that must not leave your hosts",
+  "aiRouting.lane.frontier":
+    "Advanced reasoning tier; availability does not mean it is used",
+  "aiRouting.lane.local_large":
+    "Higher local-tier route; inspect the configured endpoint",
   "aiRouting.lane.embeddings": "Search and retrieval across your records",
   "aiRouting.lanes.title": "Routing lanes",
   "aiRouting.lanes.sub":
@@ -8226,7 +8171,8 @@ export const en = {
   "aiRouting.savedTitle": "Routing saved",
   "aiRouting.saved": "Every process is now serving it.",
   "aiRouting.saveFailed": "Routing could not be saved",
-  "aiRouting.adminOnly": "Only an admin or ops can change model routing.",
+  "aiRouting.adminOnly":
+    "Changing model routing requires routing-update and allowance-read permission.",
   "workingHours.title": "When you are bookable",
   "workingHours.sub":
     "Yours alone. Nobody sets these for you, and you set them for nobody else.",
@@ -8486,6 +8432,10 @@ export const en = {
     "Add their employer and Margince can read that company's site for their role.",
   "contact.thin.logFirst": "Log the first interaction",
   "contact.enriched.title": "What Margince read",
+  "contact.confirm.title_one": "{count} detail to confirm",
+  "contact.confirm.title_other": "{count} details to confirm",
+  "contact.confirm.body": "{fields} were read from their emails on {when}.",
+  "contact.confirm.review": "Review",
   "contact.enriched.sub":
     "Each value with the text it was read from. Correct one and the correction stands.",
   "contact.enriched.field.title": "Title",
@@ -8500,7 +8450,6 @@ export const en = {
   "contact.enriched.replaced": "Replaced “{was}”, which was older.",
   "contact.enriched.correctedByYou": "Corrected by you",
   "contact.enriched.confirmed": "Confirmed",
-  "contact.enriched.correct": "Correct",
   "contact.enriched.confirm": "That is right",
   "contact.enriched.save": "Save the correction",
   "contact.enriched.cancel": "Cancel",
@@ -8773,6 +8722,11 @@ export const en = {
   "contact.rail.employmentTitle": "Companies",
   "contact.rail.noEmployment": "No employment on record.",
   "contact.rail.addEmployment": "Add company",
+  "contact.employer.contacts_one": "{count} contact",
+  "contact.employer.contacts_other": "{count} contacts",
+  "contact.employer.openDeals_one": "{count} open deal",
+  "contact.employer.openDeals_other": "{count} open deals",
+  "contact.employer.noOpenDeals": "no open deals",
   "contact.rail.employer": "Employer",
   "contact.rail.allCompaniesConnected":
     "Every match is already connected to this contact.",
@@ -8785,17 +8739,15 @@ export const en = {
   "contact.deals.empty": "They are not recorded on any deal.",
   "contact.deals.untitled": "Untitled deal",
   "contact.deals.noStage": "No stage yet",
-  "contact.meetings.next": "Next meeting",
+  "contact.meetings.upcoming": "Upcoming",
   "contact.meetings.past": "Meetings so far",
   "contact.meetings.noneBooked": "Nothing is booked with them.",
   "contact.meetings.noneLogged": "No meeting with them has been logged.",
   "contact.meetings.untitled": "Untitled meeting",
-  "contact.meetings.participants": "In the room",
   "contact.documents.empty": "No file has been filed against this contact.",
   "contact.research.empty": "Nothing has been researched about them yet.",
   "contact.research.fields": "Enrichment evidence",
   "contact.research.fieldsEmpty": "No enriched field carries evidence yet.",
-  "contact.research.capturedBy": "Captured by",
   "contact.action.email": "Email",
   // The lead verb when the record leaves the transport open: either the
   // composer will ask which way to send, or there is no way to send at all.
@@ -8808,21 +8760,14 @@ export const en = {
   // way to reach them, and consent that says not to.
   "contact.action.noTransport": "No address, and no conversation to reply to.",
   "contact.action.call": "Call",
-  "contact.action.meetings": "See meetings",
+  "contact.action.meetings": "Meetings",
   "contact.action.addTask": "Add task",
   "contact.action.research": "Research",
 
-  "contact.strip.lastInbound": "Last inbound",
-  "contact.strip.lastOutbound": "Last outbound",
-  "contact.strip.reciprocity": "Reciprocity",
-  "contact.strip.inOut": "{inbound} in · {outbound} out",
-  "contact.strip.nextMeeting": "Next meeting",
   "contact.strip.never": "Never",
   "contact.strip.today": "Today",
   "contact.strip.yesterday": "Yesterday",
   "contact.strip.days": "{count} days",
-  "contact.strip.noOpenDeal": "No open deal",
-  "contact.strip.noMeeting": "None",
   "contact.consent.allowedWord": "Allowed",
   "contact.consent.blockedWord": "Blocked",
   "contact.consent.unknownWord": "Unknown",
@@ -8836,12 +8781,26 @@ export const en = {
   "contact.moment.rule.public_signal": "Said in public",
   "contact.moment.rule.missing_next_step": "Nothing scheduled",
   "contact.moment.rule.thin_relationship": "No interactions recorded",
+  "contact.moment.suggest.goneQuiet":
+    "Follow up now: nothing has come back in {days} days.",
+  "contact.moment.suggest.reEngaged":
+    "Reply now: they wrote back and are waiting on us.",
+  "contact.moment.suggest.overduePromise":
+    "Deliver what was promised: it is overdue.",
+  "contact.moment.suggest.openPromise":
+    "Deliver what was promised before it falls due.",
+  "contact.moment.suggest.jobChange": "Reach out: they have changed jobs.",
+  "contact.moment.suggest.publicSignal": "Reach out about the news on them.",
+  "contact.moment.suggest.missingNextStep":
+    "Set the next step: nothing is planned with them.",
   "contact.moment.rule.nothing_needed": "Nothing needed",
   "contact.moment.evidence.activity": "From an exchange",
   "contact.moment.evidence.task": "From a task",
   "contact.moment.evidence.relationship_change": "From a change on the record",
 
   "contact.overview.detailsPermissions": "Details & permissions",
+  "contact.overview.detailsShow": "Show details & permissions",
+  "contact.overview.detailsHide": "Hide details & permissions",
   "contact.overview.partial":
     "Some sections are not available to your role. This summary covers the records you can see.",
   "contact.overview.coverage": "Based on the records available to you.",
@@ -8851,6 +8810,8 @@ export const en = {
   "contact.overview.briefFailed": "The relationship brief could not be loaded.",
 
   "contact.brief.title": "Relationship brief",
+  "contact.brief.sources": "Sources",
+  "contact.brief.updatedAt": "Last update {when}",
   "contact.brief.reading": "Reading the relationship…",
   "contact.brief.sourceActivity": "Conversation",
   "contact.brief.sourceDeal": "Deal notes",
@@ -8883,10 +8844,9 @@ export const en = {
   "contact.loops.dueInDays": "in {count} days",
   "contact.loops.waiting": "Waiting",
   "contact.loops.openBadge": "Open",
-  "contact.loops.atLeast": "at least {count}",
 
-  "contact.memory.title": "Conversation memory",
-  "contact.memory.viewAll": "View all activity",
+  "contact.memory.title": "Activity",
+  "contact.memory.showAll": "Show all activity",
   "contact.memory.empty": "Nothing captured on this channel yet.",
   "contact.memory.all": "All",
   "contact.memory.email": "Email",
@@ -8902,21 +8862,19 @@ export const en = {
   "contact.memory.replied": "Replied",
   "contact.memory.unanswered": "Unanswered",
 
-  "contact.rail.reviewFirst": "Review first",
   "contact.rail.blocked": "Blocked",
-  "contact.rail.pulseTitle": "Relationship pulse",
-  "contact.rail.explain": "Explain",
   "contact.rail.direction": "Direction",
+  "contact.rail.lastReply": "Last reply",
+  "contact.rail.trend": "Trend",
   "contact.rail.twoWay": "Two-way",
   "contact.rail.noDirection": "No direction recorded",
   "contact.overview.unavailable": "Not shown: {sections}.",
   "contact.rail.inboundOnly": "Inbound only",
   "contact.rail.outboundOnly": "Outbound only",
-  "contact.rail.lastReply": "Last reply",
   "contact.rail.coverage": "Coverage",
+  "contact.rail.exchanges": "{count} exchanges",
   "contact.rail.colleagues_one": "{count} colleague",
   "contact.rail.colleagues_other": "{count} colleagues",
-  "contact.rail.trend": "Trend",
   "contact.rail.noInbound": "No inbound",
   "contact.rail.cooling": "Cooling",
   "contact.rail.warming": "Warming",
@@ -8924,16 +8882,23 @@ export const en = {
   "contact.rail.thin": "Thin",
   "contact.rail.atRisk": "At risk",
   "contact.rail.strong": "Strong",
-  "contact.rail.whoKnows": "Who knows {name}",
-  "contact.rail.nobodyYet": "Nobody here has corresponded with them yet.",
-  "contact.rail.exchanges": "{count} exchanges",
-  "contact.rail.signals": "Signals & risks",
-  "contact.rail.noSignals": "Nothing stands out on this relationship.",
-  "contact.rail.noReplyDays": "No reply for {count} days",
-  "contact.rail.repliedDaysAgo_one": "Replied {count} day ago",
-  "contact.rail.repliedDaysAgo_other": "Replied {count} days ago",
-  "contact.rail.singleThreaded": "Single-threaded on this deal",
-  "contact.rail.noMeetingBooked": "No next meeting booked",
+  "contact.standing.why.strong":
+    "They wrote within the last {days} days, so the relationship reads as strong.",
+  "contact.standing.why.atRisk":
+    "Nothing from them for more than {days} days, so the relationship reads as at risk.",
+  "contact.standing.why.thin":
+    "They have never written, so there is no verdict yet.",
+  "contact.standing.trend.warming":
+    "Warming: their last message is newer than ours.",
+  "contact.standing.trend.cooling":
+    "Cooling: we wrote last and are waiting on them.",
+  "contact.standing.direction.twoWay":
+    "Both sides have written: they have replied to us and we have reached out to them.",
+  "contact.standing.direction.inboundOnly":
+    "Only they have written so far; nothing has gone out from our side.",
+  "contact.standing.direction.outboundOnly":
+    "Only we have written so far; nothing has come back from them yet.",
+  "contact.standing.direction.none": "No messages either way yet.",
   "contact.rail.consentTitle": "Communication permissions",
   "contact.rail.email": "Email",
   "contact.rail.phone": "Phone",
@@ -9551,6 +9516,8 @@ export const en = {
   "worklist.pair.ask": "Which record should survive?",
   "worklist.pair.keep": "Keep {name}",
   "worklist.pair.notDuplicate": "Not the same",
+  "worklist.pair.mergeBlocked":
+    "These two cannot be combined: each is running live projects, and nothing in the records says which work belongs where. If they are not the same, you can still say so.",
   "worklist.pair.related": "{count} linked",
   "worklist.pair.failed": "Could not settle the pair. Try again.",
   "worklist.pair.refused":
@@ -9850,38 +9817,16 @@ export const en = {
   "worklist.untitled.failed_approval": "Something you approved did not run",
   "worklist.untitled.dsr": "An open privacy request",
   "worklist.untitled.notice_case": "A disclosure this contact is owed",
-  "worklist.untitled.sync_health": "The CRM sync needs attention",
-  "worklist.sync.class.contacts": "contacts",
-  "worklist.sync.class.companies": "companies",
-  "worklist.sync.class.deals": "deals",
-  "worklist.sync.class.leads": "prospects",
-  "worklist.sync.class.calls": "calls",
-  "worklist.sync.class.meetings": "meetings",
-  "worklist.sync.class.emails": "emails",
-  "worklist.sync.class.notes": "notes",
-  "worklist.sync.class.tasks": "tasks",
-  "worklist.sync.error.rate_limited":
-    "the other system is limiting how often we may ask",
-  "worklist.sync.error.unreachable": "the other system cannot be reached",
-  "worklist.sync.error.auth": "the connection needs signing in again",
-  "worklist.sync.error.history_gone":
-    "the other system no longer holds that history",
-  "worklist.sync.error.internal": "something on our side went wrong",
-  "worklist.sync.band.warn":
-    "Close to the read budget, so some reads may be served from the copy.",
-  "worklist.sync.band.shed":
-    "Over the read budget: reads are being served from the copy rather than live.",
-  "worklist.sync.failing": "Not syncing — {reason}.",
-  "worklist.sync.objects_stale": "Out of date here: {classes}.",
-  "worklist.sync.backfill_incomplete": "Still importing: {classes}.",
-  "worklist.sync.records_overwritten":
-    "Changed here and overwritten by the other system: {classes}.",
   "worklist.untitled.capture_health": "A mailbox connection needs attention",
   "worklist.untitled.ai_work_health": "AI work needs a look",
   "worklist.untitled.bounce": "An email did not arrive",
   "worklist.untitled.undelivered": "An email was never sent",
   "worklist.untitled.automation_run": "A rule did not do its work",
   "worklist.untitled.notice": "A notice for you",
+  // A domain question always carries the domain itself as its title, so this
+  // fallback should never render. It exists because the map is total over the
+  // sources this build knows.
+  "worklist.untitled.domain_question": "A domain nobody has judged yet",
   "worklist.untitled.introduction_request":
     "A colleague asked you for an introduction",
   "worklist.verb.decide": "Decide",
@@ -9899,14 +9844,38 @@ export const en = {
   "worklist.verb.promiseKept": "Done",
   "worklist.verb.promiseSettled": "Marked as kept.",
   "worklist.verb.promiseSettleFailed": "That could not be marked as kept.",
+  // The card's two verbs. "Update" opens the composer on this meeting; the
+  // three answers below it are what that composer offers, and "Cancelled" is
+  // the one the card writes by itself.
+  "worklist.verb.meetingUpdate": "Update",
+  "worklist.verb.meetingUpdateTitle": "Meeting",
+  "worklist.verb.meetingReading": "Reading this meeting…",
+  "worklist.verb.meetingWhatHappened": "What happened",
+  "worklist.verb.meetingBodyHint":
+    "What was said, and what happens next. The calendar's own notes are here to edit.",
   "worklist.verb.meetingHeld": "It happened",
   "worklist.verb.meetingNoShow": "They didn't come",
-  "worklist.verb.meetingCanceled": "It was called off",
+  "worklist.verb.meetingCanceled": "Cancelled",
   "worklist.verb.meetingOutcomeRecorded": "Recorded how the meeting went.",
   "worklist.verb.meetingOutcomeFailed": "That could not be recorded.",
   "worklist.verb.retry": "Run it again",
   "worklist.verb.retryStarted": "Running the rule again.",
   "worklist.verb.retryFailed": "That could not be run again.",
+  // An undecided domain, answered from the row. Two verbs of equal weight,
+  // because the question genuinely has two answers and neither is the
+  // product's expectation: a domain one colleague works with is noise to the
+  // next, and leading with either would be the machine guessing again.
+  "worklist.verb.keep": "It's a company",
+  "worklist.verb.discard": "Not for me",
+  "worklist.verb.domainKept": "Company created from this domain.",
+  "worklist.verb.domainKeepFailed": "That company could not be created.",
+  // The discard wording says WHOSE mail stops being captured, because the
+  // colleague reading it shares this installation with people whose answer may
+  // differ — and a sentence that said "excluded" flatly would read as a
+  // workspace-wide act it is not.
+  "worklist.verb.domainDiscarded":
+    "Your mail from this domain is no longer captured.",
+  "worklist.verb.domainDiscardFailed": "That domain could not be excluded.",
   "worklist.verb.retryRefusedNotFailed":
     "Nothing to run again \u2014 this firing was stopped on purpose, not by an error.",
   "worklist.verb.retryRefusedRepeats":
@@ -10133,17 +10102,6 @@ export const en = {
   "firstRun.ai.foot":
     "Nothing is sent to your vendor until you press Continue.",
   "contact.readings.title": "Where this contact stands",
-  "contact.readings.lastMessage": "Last message",
-  "contact.readings.fromThem": "From them",
-  "contact.readings.fromUs": "From us",
-  "contact.readings.quiet": "Gone quiet",
-  "contact.readings.neverSpoke": "Never spoken",
-  "contact.readings.lastFromThem": "last from them: {when}",
-  "contact.readings.neverReplied": "nothing from them yet",
-  "contact.readings.promises": "Open promises",
-  "contact.readings.nothingOwed": "nothing owed",
-  "contact.readings.onTime": "none late yet",
-  "contact.readings.deal": "Deals they decide",
   "deal360.brief": "What this deal is",
   "deal.strip.lastTouch": "Last touch",
   "lead.standing.qualified": "Qualified",

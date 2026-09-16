@@ -86,14 +86,16 @@ func (m *Meter) Record(ctx context.Context, u Usage) error {
 // MonthTokens sums the workspace's current calendar-month spend — the
 // input to the §1.3 utilization bands.
 func (m *Meter) MonthTokens(ctx context.Context) (int64, error) {
-	monthStart := m.now().UTC().Format("2006-01") + "-01"
 	var total int64
-	err := m.db.Tx(ctx, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx, `
-			SELECT COALESCE(SUM(tokens_in + tokens_out), 0)
-			FROM ai_usage WHERE day >= $1::date`, monthStart).Scan(&total)
-	})
-	if err != nil {
+	err := m.db.Tx(ctx, func(tx pgx.Tx) error { var err error; total, err = monthTokensTx(ctx, tx, m.now()); return err })
+	return total, err
+}
+
+func monthTokensTx(ctx context.Context, tx pgx.Tx, now time.Time) (int64, error) {
+	args := []any{now.UTC().Format("2006-01") + "-01"}
+	var total int64
+	query := fmt.Sprintf(`SELECT COALESCE(SUM(tokens_in+tokens_out),0) FROM ai_usage WHERE day >= $%d::date`, len(args))
+	if err := tx.QueryRow(ctx, query, args...).Scan(&total); err != nil {
 		return 0, fmt.Errorf("ai: month tokens: %w", err)
 	}
 	return total, nil

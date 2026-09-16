@@ -236,6 +236,21 @@ const (
 	// over a deal subquery aliased d — what keeps a per-project money total
 	// from disclosing a deal the same caller's deal list would withhold.
 	reportDealScopeToken = "<<deal-scope:d>>" //nolint:gosec // an SQL placeholder the engine substitutes, not a credential
+	// reportDealMaskToken stands in for the rows whose deal amount this caller
+	// may READ, over a deal subquery aliased d.
+	//
+	// The row scope above and this are different questions and a project money
+	// total needs both: the scope says which deals count, the mask says whether
+	// this caller may read the FIGURE of one that does. A project's won-deal
+	// total is an aggregate over deals inside a PROJECT report, so the engine's
+	// own mask pass — which asks the masks on the spec's entity — never looks
+	// at the deal's.
+	//
+	// A CLAUSE and not a rendered column, deliberately. A token standing in for
+	// the whole expression would take `amount_minor` out of the statement's own
+	// text, and the census that holds this rule reads SQL literals: the figure
+	// would have left its sight on the day it was first guarded.
+	reportDealMaskToken = "<<deal-amount-mask:d>>" //nolint:gosec // an SQL placeholder the engine substitutes, not a credential
 	// reportActivityScopeToken stands in for the caller's activity content
 	// clause over an activity subquery aliased a, for the same reason.
 	reportActivityScopeToken = "<<activity-scope:a>>"
@@ -293,6 +308,12 @@ func bindReportTokens(
 		return nil
 	}
 	if err := bindScope(reportDealScopeToken, func() (string, error) { return auth.ScopeClauseFor(ctx, tableDeal, "d", arg) }); err != nil {
+		return "", nil, err
+	}
+	if err := bindScope(reportDealMaskToken, func() (string, error) {
+		clause, _, err := auth.MaskExcludedClause(ctx, tableDeal, "amount_minor", "d", arg)
+		return clause, err
+	}); err != nil {
 		return "", nil, err
 	}
 	if err := bindScope(reportActivityScopeToken, func() (string, error) { return auth.ActivityContentClause(ctx, "a", arg) }); err != nil {

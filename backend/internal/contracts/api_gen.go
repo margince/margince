@@ -659,6 +659,7 @@ const (
 	AiActivityKindOwedVerdict                   AiActivityKind = "owed_verdict"
 	AiActivityKindProposeRoles                  AiActivityKind = "propose_roles"
 	AiActivityKindRateExtract                   AiActivityKind = "rate_extract"
+	AiActivityKindRequestSettlement             AiActivityKind = "request_settlement"
 	AiActivityKindSignalExtract                 AiActivityKind = "signal_extract"
 	AiActivityKindSiteExtract                   AiActivityKind = "site_extract"
 	AiActivityKindSiteFactExtract               AiActivityKind = "site_fact_extract"
@@ -715,6 +716,8 @@ func (e AiActivityKind) Valid() bool {
 	case AiActivityKindProposeRoles:
 		return true
 	case AiActivityKindRateExtract:
+		return true
+	case AiActivityKindRequestSettlement:
 		return true
 	case AiActivityKindSignalExtract:
 		return true
@@ -1510,6 +1513,7 @@ const (
 	AttentionLanesOmittedCaptureHealth      AttentionLanesOmitted = "capture_health"
 	AttentionLanesOmittedCommitments        AttentionLanesOmitted = "commitments"
 	AttentionLanesOmittedDidNotRun          AttentionLanesOmitted = "did_not_run"
+	AttentionLanesOmittedDomainQuestions    AttentionLanesOmitted = "domain_questions"
 	AttentionLanesOmittedDoneForYou         AttentionLanesOmitted = "done_for_you"
 	AttentionLanesOmittedDsr                AttentionLanesOmitted = "dsr"
 	AttentionLanesOmittedIntroductions      AttentionLanesOmitted = "introductions"
@@ -1520,7 +1524,6 @@ const (
 	AttentionLanesOmittedNotices            AttentionLanesOmitted = "notices"
 	AttentionLanesOmittedPlanned            AttentionLanesOmitted = "planned"
 	AttentionLanesOmittedRelationshipDecay  AttentionLanesOmitted = "relationship_decay"
-	AttentionLanesOmittedSyncHealth         AttentionLanesOmitted = "sync_health"
 	AttentionLanesOmittedThisMorning        AttentionLanesOmitted = "this_morning"
 	AttentionLanesOmittedUndelivered        AttentionLanesOmitted = "undelivered"
 )
@@ -1542,6 +1545,8 @@ func (e AttentionLanesOmitted) Valid() bool {
 		return true
 	case AttentionLanesOmittedDidNotRun:
 		return true
+	case AttentionLanesOmittedDomainQuestions:
+		return true
 	case AttentionLanesOmittedDoneForYou:
 		return true
 	case AttentionLanesOmittedDsr:
@@ -1561,8 +1566,6 @@ func (e AttentionLanesOmitted) Valid() bool {
 	case AttentionLanesOmittedPlanned:
 		return true
 	case AttentionLanesOmittedRelationshipDecay:
-		return true
-	case AttentionLanesOmittedSyncHealth:
 		return true
 	case AttentionLanesOmittedThisMorning:
 		return true
@@ -1600,7 +1603,9 @@ const (
 	AttentionItemActionsAct         AttentionItemActions = "act"
 	AttentionItemActionsComplete    AttentionItemActions = "complete"
 	AttentionItemActionsDecide      AttentionItemActions = "decide"
+	AttentionItemActionsDiscard     AttentionItemActions = "discard"
 	AttentionItemActionsDismiss     AttentionItemActions = "dismiss"
+	AttentionItemActionsKeep        AttentionItemActions = "keep"
 	AttentionItemActionsMerge       AttentionItemActions = "merge"
 	AttentionItemActionsOpen        AttentionItemActions = "open"
 	AttentionItemActionsReply       AttentionItemActions = "reply"
@@ -1621,7 +1626,11 @@ func (e AttentionItemActions) Valid() bool {
 		return true
 	case AttentionItemActionsDecide:
 		return true
+	case AttentionItemActionsDiscard:
+		return true
 	case AttentionItemActionsDismiss:
+		return true
+	case AttentionItemActionsKeep:
 		return true
 	case AttentionItemActionsMerge:
 		return true
@@ -1681,6 +1690,7 @@ const (
 	AttentionItemSourceCustomerWaiting     AttentionItemSource = "customer_waiting"
 	AttentionItemSourceDealAtRisk          AttentionItemSource = "deal_at_risk"
 	AttentionItemSourceDedupeCandidate     AttentionItemSource = "dedupe_candidate"
+	AttentionItemSourceDomainQuestion      AttentionItemSource = "domain_question"
 	AttentionItemSourceDsr                 AttentionItemSource = "dsr"
 	AttentionItemSourceFailedApproval      AttentionItemSource = "failed_approval"
 	AttentionItemSourceIntroductionRequest AttentionItemSource = "introduction_request"
@@ -1690,7 +1700,6 @@ const (
 	AttentionItemSourceNotice              AttentionItemSource = "notice"
 	AttentionItemSourceNoticeCase          AttentionItemSource = "notice_case"
 	AttentionItemSourceRelationshipDecay   AttentionItemSource = "relationship_decay"
-	AttentionItemSourceSyncHealth          AttentionItemSource = "sync_health"
 	AttentionItemSourceTask                AttentionItemSource = "task"
 	AttentionItemSourceUndelivered         AttentionItemSource = "undelivered"
 )
@@ -1718,6 +1727,8 @@ func (e AttentionItemSource) Valid() bool {
 		return true
 	case AttentionItemSourceDedupeCandidate:
 		return true
+	case AttentionItemSourceDomainQuestion:
+		return true
 	case AttentionItemSourceDsr:
 		return true
 	case AttentionItemSourceFailedApproval:
@@ -1735,8 +1746,6 @@ func (e AttentionItemSource) Valid() bool {
 	case AttentionItemSourceNoticeCase:
 		return true
 	case AttentionItemSourceRelationshipDecay:
-		return true
-	case AttentionItemSourceSyncHealth:
 		return true
 	case AttentionItemSourceTask:
 		return true
@@ -6648,12 +6657,13 @@ func (e CreateCustomFieldRequestObject) Valid() bool {
 
 // Defines values for CreateCustomFieldRequestType.
 const (
-	CreateCustomFieldRequestTypeBoolean  CreateCustomFieldRequestType = "boolean"
-	CreateCustomFieldRequestTypeCurrency CreateCustomFieldRequestType = "currency"
-	CreateCustomFieldRequestTypeDate     CreateCustomFieldRequestType = "date"
-	CreateCustomFieldRequestTypeNumber   CreateCustomFieldRequestType = "number"
-	CreateCustomFieldRequestTypePicklist CreateCustomFieldRequestType = "picklist"
-	CreateCustomFieldRequestTypeText     CreateCustomFieldRequestType = "text"
+	CreateCustomFieldRequestTypeBoolean     CreateCustomFieldRequestType = "boolean"
+	CreateCustomFieldRequestTypeCurrency    CreateCustomFieldRequestType = "currency"
+	CreateCustomFieldRequestTypeDate        CreateCustomFieldRequestType = "date"
+	CreateCustomFieldRequestTypeMultiselect CreateCustomFieldRequestType = "multiselect"
+	CreateCustomFieldRequestTypeNumber      CreateCustomFieldRequestType = "number"
+	CreateCustomFieldRequestTypePicklist    CreateCustomFieldRequestType = "picklist"
+	CreateCustomFieldRequestTypeText        CreateCustomFieldRequestType = "text"
 )
 
 // Valid indicates whether the value is a known member of the CreateCustomFieldRequestType enum.
@@ -6664,6 +6674,8 @@ func (e CreateCustomFieldRequestType) Valid() bool {
 	case CreateCustomFieldRequestTypeCurrency:
 		return true
 	case CreateCustomFieldRequestTypeDate:
+		return true
+	case CreateCustomFieldRequestTypeMultiselect:
 		return true
 	case CreateCustomFieldRequestTypeNumber:
 		return true
@@ -7260,12 +7272,13 @@ func (e CustomFieldStatus) Valid() bool {
 
 // Defines values for CustomFieldType.
 const (
-	CustomFieldTypeBoolean  CustomFieldType = "boolean"
-	CustomFieldTypeCurrency CustomFieldType = "currency"
-	CustomFieldTypeDate     CustomFieldType = "date"
-	CustomFieldTypeNumber   CustomFieldType = "number"
-	CustomFieldTypePicklist CustomFieldType = "picklist"
-	CustomFieldTypeText     CustomFieldType = "text"
+	CustomFieldTypeBoolean     CustomFieldType = "boolean"
+	CustomFieldTypeCurrency    CustomFieldType = "currency"
+	CustomFieldTypeDate        CustomFieldType = "date"
+	CustomFieldTypeMultiselect CustomFieldType = "multiselect"
+	CustomFieldTypeNumber      CustomFieldType = "number"
+	CustomFieldTypePicklist    CustomFieldType = "picklist"
+	CustomFieldTypeText        CustomFieldType = "text"
 )
 
 // Valid indicates whether the value is a known member of the CustomFieldType enum.
@@ -7276,6 +7289,8 @@ func (e CustomFieldType) Valid() bool {
 	case CustomFieldTypeCurrency:
 		return true
 	case CustomFieldTypeDate:
+		return true
+	case CustomFieldTypeMultiselect:
 		return true
 	case CustomFieldTypeNumber:
 		return true
@@ -8307,14 +8322,15 @@ func (e FilterVocabularyFieldReferences) Valid() bool {
 
 // Defines values for FilterVocabularyFieldType.
 const (
-	FilterVocabularyFieldTypeBoolean  FilterVocabularyFieldType = "boolean"
-	FilterVocabularyFieldTypeCurrency FilterVocabularyFieldType = "currency"
-	FilterVocabularyFieldTypeDate     FilterVocabularyFieldType = "date"
-	FilterVocabularyFieldTypeDomain   FilterVocabularyFieldType = "domain"
-	FilterVocabularyFieldTypeId       FilterVocabularyFieldType = "id"
-	FilterVocabularyFieldTypeNumber   FilterVocabularyFieldType = "number"
-	FilterVocabularyFieldTypePicklist FilterVocabularyFieldType = "picklist"
-	FilterVocabularyFieldTypeText     FilterVocabularyFieldType = "text"
+	FilterVocabularyFieldTypeBoolean     FilterVocabularyFieldType = "boolean"
+	FilterVocabularyFieldTypeCurrency    FilterVocabularyFieldType = "currency"
+	FilterVocabularyFieldTypeDate        FilterVocabularyFieldType = "date"
+	FilterVocabularyFieldTypeDomain      FilterVocabularyFieldType = "domain"
+	FilterVocabularyFieldTypeId          FilterVocabularyFieldType = "id"
+	FilterVocabularyFieldTypeMultiselect FilterVocabularyFieldType = "multiselect"
+	FilterVocabularyFieldTypeNumber      FilterVocabularyFieldType = "number"
+	FilterVocabularyFieldTypePicklist    FilterVocabularyFieldType = "picklist"
+	FilterVocabularyFieldTypeText        FilterVocabularyFieldType = "text"
 )
 
 // Valid indicates whether the value is a known member of the FilterVocabularyFieldType enum.
@@ -8329,6 +8345,8 @@ func (e FilterVocabularyFieldType) Valid() bool {
 	case FilterVocabularyFieldTypeDomain:
 		return true
 	case FilterVocabularyFieldTypeId:
+		return true
+	case FilterVocabularyFieldTypeMultiselect:
 		return true
 	case FilterVocabularyFieldTypeNumber:
 		return true
@@ -8877,23 +8895,17 @@ func (e ImportOnDuplicate) Valid() bool {
 
 // Defines values for ImportRunConnector.
 const (
-	ImportRunConnectorBundle     ImportRunConnector = "bundle"
 	ImportRunConnectorCsv        ImportRunConnector = "csv"
 	ImportRunConnectorHubspot    ImportRunConnector = "hubspot"
-	ImportRunConnectorMirror     ImportRunConnector = "mirror"
 	ImportRunConnectorSalesforce ImportRunConnector = "salesforce"
 )
 
 // Valid indicates whether the value is a known member of the ImportRunConnector enum.
 func (e ImportRunConnector) Valid() bool {
 	switch e {
-	case ImportRunConnectorBundle:
-		return true
 	case ImportRunConnectorCsv:
 		return true
 	case ImportRunConnectorHubspot:
-		return true
-	case ImportRunConnectorMirror:
 		return true
 	case ImportRunConnectorSalesforce:
 		return true
@@ -9742,24 +9754,6 @@ func (e MeResponsePassportScopes) Valid() bool {
 	}
 }
 
-// Defines values for MeResponseSystemOfRecordMode.
-const (
-	MeResponseSystemOfRecordModeNative  MeResponseSystemOfRecordMode = "native"
-	MeResponseSystemOfRecordModeOverlay MeResponseSystemOfRecordMode = "overlay"
-)
-
-// Valid indicates whether the value is a known member of the MeResponseSystemOfRecordMode enum.
-func (e MeResponseSystemOfRecordMode) Valid() bool {
-	switch e {
-	case MeResponseSystemOfRecordModeNative:
-		return true
-	case MeResponseSystemOfRecordModeOverlay:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for MeetingBriefSectionKind.
 const (
 	MeetingBriefSectionKindAttendees      MeetingBriefSectionKind = "attendees"
@@ -10540,210 +10534,6 @@ func (e OutcomeReviewOutcome) Valid() bool {
 	case OutcomeReviewOutcomeLost:
 		return true
 	case OutcomeReviewOutcomeWon:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for OverlayBudgetBand.
-const (
-	OverlayBudgetBandOk   OverlayBudgetBand = "ok"
-	OverlayBudgetBandShed OverlayBudgetBand = "shed"
-	OverlayBudgetBandWarn OverlayBudgetBand = "warn"
-)
-
-// Valid indicates whether the value is a known member of the OverlayBudgetBand enum.
-func (e OverlayBudgetBand) Valid() bool {
-	switch e {
-	case OverlayBudgetBandOk:
-		return true
-	case OverlayBudgetBandShed:
-		return true
-	case OverlayBudgetBandWarn:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for OverlayConnectRequestIncumbent.
-const (
-	OverlayConnectRequestIncumbentHubspot OverlayConnectRequestIncumbent = "hubspot"
-)
-
-// Valid indicates whether the value is a known member of the OverlayConnectRequestIncumbent enum.
-func (e OverlayConnectRequestIncumbent) Valid() bool {
-	switch e {
-	case OverlayConnectRequestIncumbentHubspot:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for OverlayConnectionIncumbent.
-const (
-	OverlayConnectionIncumbentHubspot OverlayConnectionIncumbent = "hubspot"
-)
-
-// Valid indicates whether the value is a known member of the OverlayConnectionIncumbent enum.
-func (e OverlayConnectionIncumbent) Valid() bool {
-	switch e {
-	case OverlayConnectionIncumbentHubspot:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for OverlayConnectionStatus.
-const (
-	OverlayConnectionStatusActive  OverlayConnectionStatus = "active"
-	OverlayConnectionStatusError   OverlayConnectionStatus = "error"
-	OverlayConnectionStatusRevoked OverlayConnectionStatus = "revoked"
-)
-
-// Valid indicates whether the value is a known member of the OverlayConnectionStatus enum.
-func (e OverlayConnectionStatus) Valid() bool {
-	switch e {
-	case OverlayConnectionStatusActive:
-		return true
-	case OverlayConnectionStatusError:
-		return true
-	case OverlayConnectionStatusRevoked:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for OverlayFlipAcceptedMode.
-const (
-	OverlayFlipAcceptedModeEmergency OverlayFlipAcceptedMode = "emergency"
-	OverlayFlipAcceptedModeFreshSync OverlayFlipAcceptedMode = "fresh_sync"
-)
-
-// Valid indicates whether the value is a known member of the OverlayFlipAcceptedMode enum.
-func (e OverlayFlipAcceptedMode) Valid() bool {
-	switch e {
-	case OverlayFlipAcceptedModeEmergency:
-		return true
-	case OverlayFlipAcceptedModeFreshSync:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for OverlayFlipPreflightBlocking.
-const (
-	OverlayFlipPreflightBlockingExportMissing        OverlayFlipPreflightBlocking = "export_missing"
-	OverlayFlipPreflightBlockingForceFreshIncomplete OverlayFlipPreflightBlocking = "force_fresh_incomplete"
-	OverlayFlipPreflightBlockingIncumbentUnreachable OverlayFlipPreflightBlocking = "incumbent_unreachable"
-	OverlayFlipPreflightBlockingPendingSyncDraining  OverlayFlipPreflightBlocking = "pending_sync_draining"
-	OverlayFlipPreflightBlockingUnresolvedConflicts  OverlayFlipPreflightBlocking = "unresolved_conflicts"
-)
-
-// Valid indicates whether the value is a known member of the OverlayFlipPreflightBlocking enum.
-func (e OverlayFlipPreflightBlocking) Valid() bool {
-	switch e {
-	case OverlayFlipPreflightBlockingExportMissing:
-		return true
-	case OverlayFlipPreflightBlockingForceFreshIncomplete:
-		return true
-	case OverlayFlipPreflightBlockingIncumbentUnreachable:
-		return true
-	case OverlayFlipPreflightBlockingPendingSyncDraining:
-		return true
-	case OverlayFlipPreflightBlockingUnresolvedConflicts:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for OverlayFlipRequestMode.
-const (
-	OverlayFlipRequestModeEmergency OverlayFlipRequestMode = "emergency"
-	OverlayFlipRequestModeFreshSync OverlayFlipRequestMode = "fresh_sync"
-)
-
-// Valid indicates whether the value is a known member of the OverlayFlipRequestMode enum.
-func (e OverlayFlipRequestMode) Valid() bool {
-	switch e {
-	case OverlayFlipRequestModeEmergency:
-		return true
-	case OverlayFlipRequestModeFreshSync:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for OverlaySyncStatusObjectsState.
-const (
-	OverlaySyncStatusObjectsStateFresh       OverlaySyncStatusObjectsState = "fresh"
-	OverlaySyncStatusObjectsStatePendingSync OverlaySyncStatusObjectsState = "pending_sync"
-	OverlaySyncStatusObjectsStateStale       OverlaySyncStatusObjectsState = "stale"
-)
-
-// Valid indicates whether the value is a known member of the OverlaySyncStatusObjectsState enum.
-func (e OverlaySyncStatusObjectsState) Valid() bool {
-	switch e {
-	case OverlaySyncStatusObjectsStateFresh:
-		return true
-	case OverlaySyncStatusObjectsStatePendingSync:
-		return true
-	case OverlaySyncStatusObjectsStateStale:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for OverlayUserMapEntryMatchSource.
-const (
-	OverlayUserMapEntryMatchSourceEmail  OverlayUserMapEntryMatchSource = "email"
-	OverlayUserMapEntryMatchSourceManual OverlayUserMapEntryMatchSource = "manual"
-)
-
-// Valid indicates whether the value is a known member of the OverlayUserMapEntryMatchSource enum.
-func (e OverlayUserMapEntryMatchSource) Valid() bool {
-	switch e {
-	case OverlayUserMapEntryMatchSourceEmail:
-		return true
-	case OverlayUserMapEntryMatchSourceManual:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for OverlayUserMapEntryUnmappedReason.
-const (
-	OverlayUserMapEntryUnmappedReasonAmbiguousEmail       OverlayUserMapEntryUnmappedReason = "ambiguous_email"
-	OverlayUserMapEntryUnmappedReasonBlockedByAdmin       OverlayUserMapEntryUnmappedReason = "blocked_by_admin"
-	OverlayUserMapEntryUnmappedReasonDirectoryUnavailable OverlayUserMapEntryUnmappedReason = "directory_unavailable"
-	OverlayUserMapEntryUnmappedReasonNoEmailMatch         OverlayUserMapEntryUnmappedReason = "no_email_match"
-	OverlayUserMapEntryUnmappedReasonNone                 OverlayUserMapEntryUnmappedReason = "none"
-	OverlayUserMapEntryUnmappedReasonNotYetSynced         OverlayUserMapEntryUnmappedReason = "not_yet_synced"
-)
-
-// Valid indicates whether the value is a known member of the OverlayUserMapEntryUnmappedReason enum.
-func (e OverlayUserMapEntryUnmappedReason) Valid() bool {
-	switch e {
-	case OverlayUserMapEntryUnmappedReasonAmbiguousEmail:
-		return true
-	case OverlayUserMapEntryUnmappedReasonBlockedByAdmin:
-		return true
-	case OverlayUserMapEntryUnmappedReasonDirectoryUnavailable:
-		return true
-	case OverlayUserMapEntryUnmappedReasonNoEmailMatch:
-		return true
-	case OverlayUserMapEntryUnmappedReasonNone:
-		return true
-	case OverlayUserMapEntryUnmappedReasonNotYetSynced:
 		return true
 	default:
 		return false
@@ -12055,6 +11845,7 @@ const (
 	RetentionScopeDeallost               RetentionScope = "deal/lost"
 	RetentionScopeDealwon                RetentionScope = "deal/won"
 	RetentionScopeLeadunconverted        RetentionScope = "lead/unconverted"
+	RetentionScopeRawCapture             RetentionScope = "raw_capture"
 )
 
 // Valid indicates whether the value is a known member of the RetentionScope enum.
@@ -12074,6 +11865,8 @@ func (e RetentionScope) Valid() bool {
 		return true
 	case RetentionScopeLeadunconverted:
 		return true
+	case RetentionScopeRawCapture:
+		return true
 	default:
 		return false
 	}
@@ -12081,12 +11874,15 @@ func (e RetentionScope) Valid() bool {
 
 // Defines values for ReviewQuestionType.
 const (
-	ReviewQuestionTypeText ReviewQuestionType = "text"
+	ReviewQuestionTypeMultiselect ReviewQuestionType = "multiselect"
+	ReviewQuestionTypeText        ReviewQuestionType = "text"
 )
 
 // Valid indicates whether the value is a known member of the ReviewQuestionType enum.
 func (e ReviewQuestionType) Valid() bool {
 	switch e {
+	case ReviewQuestionTypeMultiselect:
+		return true
 	case ReviewQuestionTypeText:
 		return true
 	default:
@@ -13957,6 +13753,24 @@ func (e UpdateCompanyRequestSizeBand) Valid() bool {
 	}
 }
 
+// Defines values for UpdateCompanyRequestVisibility.
+const (
+	UpdateCompanyRequestVisibilityOwner     UpdateCompanyRequestVisibility = "owner"
+	UpdateCompanyRequestVisibilityWorkspace UpdateCompanyRequestVisibility = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the UpdateCompanyRequestVisibility enum.
+func (e UpdateCompanyRequestVisibility) Valid() bool {
+	switch e {
+	case UpdateCompanyRequestVisibilityOwner:
+		return true
+	case UpdateCompanyRequestVisibilityWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for UpdateContactRequestVisibility.
 const (
 	UpdateContactRequestVisibilityOwner     UpdateContactRequestVisibility = "owner"
@@ -15727,7 +15541,9 @@ const (
 	WorklistItemActionsAct         WorklistItemActions = "act"
 	WorklistItemActionsComplete    WorklistItemActions = "complete"
 	WorklistItemActionsDecide      WorklistItemActions = "decide"
+	WorklistItemActionsDiscard     WorklistItemActions = "discard"
 	WorklistItemActionsDismiss     WorklistItemActions = "dismiss"
+	WorklistItemActionsKeep        WorklistItemActions = "keep"
 	WorklistItemActionsMerge       WorklistItemActions = "merge"
 	WorklistItemActionsOpen        WorklistItemActions = "open"
 	WorklistItemActionsReply       WorklistItemActions = "reply"
@@ -15748,7 +15564,11 @@ func (e WorklistItemActions) Valid() bool {
 		return true
 	case WorklistItemActionsDecide:
 		return true
+	case WorklistItemActionsDiscard:
+		return true
 	case WorklistItemActionsDismiss:
+		return true
+	case WorklistItemActionsKeep:
 		return true
 	case WorklistItemActionsMerge:
 		return true
@@ -16028,6 +15848,7 @@ const (
 	WorklistItemSourceCustomerWaiting     WorklistItemSource = "customer_waiting"
 	WorklistItemSourceDealAtRisk          WorklistItemSource = "deal_at_risk"
 	WorklistItemSourceDedupeCandidate     WorklistItemSource = "dedupe_candidate"
+	WorklistItemSourceDomainQuestion      WorklistItemSource = "domain_question"
 	WorklistItemSourceDsr                 WorklistItemSource = "dsr"
 	WorklistItemSourceFailedApproval      WorklistItemSource = "failed_approval"
 	WorklistItemSourceIntroductionRequest WorklistItemSource = "introduction_request"
@@ -16037,7 +15858,6 @@ const (
 	WorklistItemSourceNotice              WorklistItemSource = "notice"
 	WorklistItemSourceNoticeCase          WorklistItemSource = "notice_case"
 	WorklistItemSourceRelationshipDecay   WorklistItemSource = "relationship_decay"
-	WorklistItemSourceSyncHealth          WorklistItemSource = "sync_health"
 	WorklistItemSourceTask                WorklistItemSource = "task"
 	WorklistItemSourceUndelivered         WorklistItemSource = "undelivered"
 	WorklistItemSourceWeeklyCommitment    WorklistItemSource = "weekly_commitment"
@@ -16068,6 +15888,8 @@ func (e WorklistItemSource) Valid() bool {
 		return true
 	case WorklistItemSourceDedupeCandidate:
 		return true
+	case WorklistItemSourceDomainQuestion:
+		return true
 	case WorklistItemSourceDsr:
 		return true
 	case WorklistItemSourceFailedApproval:
@@ -16085,8 +15907,6 @@ func (e WorklistItemSource) Valid() bool {
 	case WorklistItemSourceNoticeCase:
 		return true
 	case WorklistItemSourceRelationshipDecay:
-		return true
-	case WorklistItemSourceSyncHealth:
 		return true
 	case WorklistItemSourceTask:
 		return true
@@ -16163,6 +15983,7 @@ const (
 	WorklistReachSourceCustomerWaiting     WorklistReachSource = "customer_waiting"
 	WorklistReachSourceDealAtRisk          WorklistReachSource = "deal_at_risk"
 	WorklistReachSourceDedupeCandidate     WorklistReachSource = "dedupe_candidate"
+	WorklistReachSourceDomainQuestion      WorklistReachSource = "domain_question"
 	WorklistReachSourceDsr                 WorklistReachSource = "dsr"
 	WorklistReachSourceFailedApproval      WorklistReachSource = "failed_approval"
 	WorklistReachSourceIntroductionRequest WorklistReachSource = "introduction_request"
@@ -16172,7 +15993,6 @@ const (
 	WorklistReachSourceNotice              WorklistReachSource = "notice"
 	WorklistReachSourceNoticeCase          WorklistReachSource = "notice_case"
 	WorklistReachSourceRelationshipDecay   WorklistReachSource = "relationship_decay"
-	WorklistReachSourceSyncHealth          WorklistReachSource = "sync_health"
 	WorklistReachSourceTask                WorklistReachSource = "task"
 	WorklistReachSourceUndelivered         WorklistReachSource = "undelivered"
 	WorklistReachSourceWeeklyCommitment    WorklistReachSource = "weekly_commitment"
@@ -16203,6 +16023,8 @@ func (e WorklistReachSource) Valid() bool {
 		return true
 	case WorklistReachSourceDedupeCandidate:
 		return true
+	case WorklistReachSourceDomainQuestion:
+		return true
 	case WorklistReachSourceDsr:
 		return true
 	case WorklistReachSourceFailedApproval:
@@ -16220,8 +16042,6 @@ func (e WorklistReachSource) Valid() bool {
 	case WorklistReachSourceNoticeCase:
 		return true
 	case WorklistReachSourceRelationshipDecay:
-		return true
-	case WorklistReachSourceSyncHealth:
 		return true
 	case WorklistReachSourceTask:
 		return true
@@ -18698,8 +18518,7 @@ type Activity struct {
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
-	// (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
-	// not only overlay mode.
+	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version *RowVersion `json:"version,omitempty"`
 }
 
@@ -18815,8 +18634,7 @@ type ActivityReviewTemplate struct {
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
-	// (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
-	// not only overlay mode.
+	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version *RowVersion `json:"version,omitempty"`
 }
 
@@ -19068,6 +18886,42 @@ type AiActivityItemState string
 // edits one.
 type AiActivityKind string
 
+// AiBudgetChange defines model for AiBudgetChange.
+type AiBudgetChange struct {
+	Config           AiBudgetConfig `json:"config"`
+	ExpectedRevision string         `json:"expected_revision"`
+}
+
+// AiBudgetConfig defines model for AiBudgetConfig.
+type AiBudgetConfig struct {
+	CompanyMonthlyTokens *int64 `json:"company_monthly_tokens"`
+	TokensPerFullUser    int64  `json:"tokens_per_full_user"`
+}
+
+// AiBudgetPreview defines model for AiBudgetPreview.
+type AiBudgetPreview struct {
+	Current      AiBudgetSnapshot `json:"current"`
+	DeferredWork []AiDeferredWork `json:"deferred_work"`
+	Features     []AiFeatureRoute `json:"features"`
+	Proposed     AiBudgetSnapshot `json:"proposed"`
+}
+
+// AiBudgetSnapshot defines model for AiBudgetSnapshot.
+type AiBudgetSnapshot struct {
+	Band              string         `json:"band"`
+	BudgetedFullUsers int64          `json:"budgeted_full_users"`
+	Config            AiBudgetConfig `json:"config"`
+	EligibleFullUsers int64          `json:"eligible_full_users"`
+	MonthStartAt      time.Time      `json:"month_start_at"`
+	MonthlyTokens     int64          `json:"monthly_tokens"`
+	ObservedAt        time.Time      `json:"observed_at"`
+	RemainingTokens   int64          `json:"remaining_tokens"`
+	ResetsAt          time.Time      `json:"resets_at"`
+	Revision          string         `json:"revision"`
+	Source            string         `json:"source"`
+	SpentTokens       int64          `json:"spent_tokens"`
+}
+
 // AiCall defines model for AiCall.
 type AiCall struct {
 	AgentRunId *openapi_types.UUID `json:"agent_run_id,omitempty"`
@@ -19187,6 +19041,14 @@ type AiCallSummary struct {
 	TokensOut int    `json:"tokens_out"`
 }
 
+// AiDeferredWork defines model for AiDeferredWork.
+type AiDeferredWork struct {
+	Available bool   `json:"available"`
+	Carrier   string `json:"carrier"`
+	Count     *int64 `json:"count,omitempty"`
+	Unit      string `json:"unit"`
+}
+
 // AiEmbeddingsBinding defines model for AiEmbeddingsBinding.
 type AiEmbeddingsBinding struct {
 	// BaseUrl Endpoint override; empty means the provider default.
@@ -19207,6 +19069,18 @@ type AiEmbeddingsBinding struct {
 	// Provider The adapter serving this tier: fake | anthropic | ollama | vllm | openai_compatible
 	// | openai | gemini. The credential is never part of this document.
 	Provider string `json:"provider"`
+}
+
+// AiFeatureRoute defines model for AiFeatureRoute.
+type AiFeatureRoute struct {
+	BudgetExempt        bool               `json:"budget_exempt"`
+	DisplayName         string             `json:"display_name"`
+	EffectiveCandidates []AiRouteCandidate `json:"effective_candidates"`
+	ExecutionMode       string             `json:"execution_mode"`
+	Impact              string             `json:"impact"`
+	LeadingTier         string             `json:"leading_tier"`
+	NormalCandidates    []AiRouteCandidate `json:"normal_candidates"`
+	Task                string             `json:"task"`
 }
 
 // AiHealth defines model for AiHealth.
@@ -19296,6 +19170,14 @@ type AiProviderKeyStatus struct {
 	Provider string `json:"provider"`
 }
 
+// AiRouteCandidate defines model for AiRouteCandidate.
+type AiRouteCandidate struct {
+	Model      string `json:"model"`
+	Processing string `json:"processing"`
+	Provider   string `json:"provider"`
+	Tier       string `json:"tier"`
+}
+
 // AiRouting The installation's tier-to-model binding. `tiers` is keyed by tier name; the closed set
 // of names is the one the task contract declares (api/ai-tasks.yaml), and the server
 // refuses an unknown key with a 422 naming it — restating the set here would be a second
@@ -19314,6 +19196,13 @@ type AiRouting struct {
 // AiRoutingProfile The location ladder (§4). `sovereign` means zero egress by construction: a cloud
 // provider on any tier is refused, and so is a local provider pointed at another host.
 type AiRoutingProfile string
+
+// AiRoutingPreview defines model for AiRoutingPreview.
+type AiRoutingPreview struct {
+	CurrentVersion string           `json:"current_version"`
+	Features       []AiFeatureRoute `json:"features"`
+	UnusedTiers    []string         `json:"unused_tiers"`
+}
 
 // AiRunModelUsage One task, route, and served-model slice within a correlated AI run.
 type AiRunModelUsage struct {
@@ -19386,6 +19275,18 @@ type AiRungHealth struct {
 	Tier string `json:"tier"`
 }
 
+// AiStatus defines model for AiStatus.
+type AiStatus struct {
+	Budget               AiBudgetSnapshot `json:"budget"`
+	DeferredWork         []AiDeferredWork `json:"deferred_work"`
+	DeferredWorkCoverage string           `json:"deferred_work_coverage"`
+	Features             []AiFeatureRoute `json:"features"`
+	ObservedAt           time.Time        `json:"observed_at"`
+	RoutingVersion       string           `json:"routing_version"`
+	TaskContractHash     string           `json:"task_contract_hash"`
+	UnusedTiers          *[]string        `json:"unused_tiers,omitempty"`
+}
+
 // AiTierBinding defines model for AiTierBinding.
 type AiTierBinding struct {
 	// BaseUrl Endpoint override; empty means the provider default.
@@ -19430,7 +19331,8 @@ type AiUsage struct {
 			CostEstMinor *int `json:"cost_est_minor,omitempty"`
 
 			// Task capture_classify, enrich, summarize, …
-			Task string `json:"task"`
+			Task            string  `json:"task"`
+			TaskDisplayName *string `json:"task_display_name,omitempty"`
 
 			// Tier local_small, cheap_cloud, premium, frontier, local_large.
 			Tier      string `json:"tier"`
@@ -20181,6 +20083,29 @@ type Attention struct {
 	// failure marks.
 	DidNotRun *[]AttentionItem `json:"did_not_run,omitempty"`
 
+	// DomainQuestions Domains the capture triage could not judge, whose mail belongs to THIS
+	// reader — the machine read the site, found nothing that named a company,
+	// and left the question open rather than inventing a record.
+	//
+	// Each card names the domain as `title` and why the machine stopped as
+	// `detail`. The two verbs are the whole answer a human owes: `keep` makes
+	// the company from the domain's own label, and `discard` writes a capture
+	// exclusion for this reader's mailboxes alone. Neither needs anything
+	// typed, which is why this lane can settle from a queue row where a
+	// free-text answer could not.
+	//
+	// OWNED, and that is the point of the lane. Every open question carries
+	// the mailbox owner whose mail raised it (`company_domain_disposition.owner_id`,
+	// stamped when the question opens), so it reaches the reader whose mail it
+	// is about rather than a shared pile nobody answers for. One installation's
+	// two colleagues may answer the same domain differently, and the exclusion
+	// a `discard` writes binds only the colleague who pressed it.
+	//
+	// Withheld — named in `lanes_omitted` — for a caller with no human behind
+	// it. Absent — not empty — on an installation whose feed does not read
+	// domain questions.
+	DomainQuestions *[]AttentionItem `json:"domain_questions,omitempty"`
+
 	// DoneForYou What the system did on its own, most recent first. Receipts, not questions.
 	DoneForYou []AttentionItem `json:"done_for_you"`
 
@@ -20238,9 +20163,15 @@ type Attention struct {
 	// Absent — not empty — on an installation whose feed does not read meetings.
 	Meetings *[]AttentionItem `json:"meetings,omitempty"`
 
-	// MeetingsUnreported Today's meetings that have already started and whose result nobody has
-	// recorded, longest unanswered first. The counterpart of `meetings`: that lane
-	// is what to prepare for, this is what to close off.
+	// MeetingsUnreported Meetings that have already started and whose result nobody has recorded,
+	// longest unanswered first. The counterpart of `meetings`: that lane is what to
+	// prepare for, this is what to close off.
+	//
+	// It reaches back a FORTNIGHT, where `meetings` is today only. The two bound
+	// differently because they expire differently: preparation stops being possible
+	// once a meeting begins, while an unrecorded outcome stays owed until somebody
+	// records it. Bounded at all so that the first read after a quiet month is a
+	// queue a reader can clear rather than a history of everything never answered.
 	//
 	// A meeting carrying no status at all is here. A captured calendar event
 	// arrives without one, so treating an absent status as settled would empty this
@@ -20308,19 +20239,6 @@ type Attention struct {
 	// Absent — not empty — on an installation whose feed does not derive relationship
 	// changes.
 	RelationshipDecay *[]AttentionItem `json:"relationship_decay,omitempty"`
-
-	// SyncHealth The overlay sync's current concerns: the poller backing off, the incumbent
-	// call budget degraded, mirrored classes stale or still backfilling. One card
-	// per CONDITION, never one per affected row, so a broken connector is a single
-	// card rather than a flood. Each card's `kind` names the condition and
-	// `detail` carries its facts (the affected object classes, the failure
-	// class, or the budget band); fixing the connection stays on the sync
-	// settings screen, so the card offers no verbs.
-	//
-	// Absent — not empty — on a workspace that is not running in overlay mode:
-	// an installation with no incumbent connected does not look here, which is a
-	// different fact from a healthy sync.
-	SyncHealth *[]AttentionItem `json:"sync_health,omitempty"`
 
 	// ThisMorning The overnight brief's queue, best-ranked first — what the night found worth
 	// the rep's first hour.
@@ -20409,6 +20327,9 @@ type AttentionCounts struct {
 	// DidNotRun How many failed decisions this lane is CARRYING — the bounded page, as the other lanes report.
 	DidNotRun *int `json:"did_not_run,omitempty"`
 
+	// DomainQuestions How many open domain questions belong to this reader — the full count rather than a bounded page, because a reader with thirty must be told thirty and the lane offers no second page to find the rest by.
+	DomainQuestions *int `json:"domain_questions,omitempty"`
+
 	// Dsr How many unresolved data-subject requests this lane is CARRYING — the bounded page, as the other lanes report. A reader past the bound sees the soonest deadlines, which is the order the lane is in.
 	Dsr *int `json:"dsr,omitempty"`
 
@@ -20421,7 +20342,7 @@ type AttentionCounts struct {
 	// Meetings How many of today's meetings are still ahead — the bounded page, as the other lanes report.
 	Meetings *int `json:"meetings,omitempty"`
 
-	// MeetingsUnreported How many of today's meetings have started with nobody saying how they went — the bounded page, as the other lanes report. Not in `required`: a client reading an installation whose feed does not carry this lane gets no number rather than a zero, which would claim the day is clear.
+	// MeetingsUnreported How many meetings of the last fortnight have started with nobody saying how they went — the bounded page, as the other lanes report. Not in `required`: a client reading an installation whose feed does not carry this lane gets no number rather than a zero, which would claim the day is clear.
 	MeetingsUnreported *int `json:"meetings_unreported,omitempty"`
 	NeedsYou           int  `json:"needs_you"`
 
@@ -20436,9 +20357,6 @@ type AttentionCounts struct {
 
 	// RelationshipDecay How many lapsed relationships this lane is CARRYING — the bounded page, as the other lanes report. A rep past the bound sees the longest silences, which is the order the lane is in.
 	RelationshipDecay *int `json:"relationship_decay,omitempty"`
-
-	// SyncHealth How many sync concerns the lane carries — one per condition, so this is the full count, never a bounded page of a larger one.
-	SyncHealth *int `json:"sync_health,omitempty"`
 
 	// ThisMorning Briefing items still unanswered in the rep's run for today.
 	ThisMorning int `json:"this_morning"`
@@ -20474,7 +20392,7 @@ type AttentionDealFacts struct {
 	NoChampion *bool               `json:"no_champion,omitempty"`
 	OwnerId    *openapi_types.UUID `json:"owner_id,omitempty"`
 
-	// StageId The deal's current stage; null for an overlay-mirror deal, whose stage lives with the incumbent.
+	// StageId The deal's current stage.
 	StageId *openapi_types.UUID `json:"stage_id,omitempty"`
 }
 
@@ -20487,6 +20405,13 @@ type AttentionItem struct {
 	// contact must choose; `complete` and `snooze` are a task's own verbs; `open` is
 	// the read-only fallback for a receipt.
 	//
+	// `keep` and `discard` are an undecided domain's pair, and they always travel
+	// together: keeping it creates the company the triage withheld, discarding it stops
+	// the caller's OWN mailboxes capturing that domain. Neither carries a body, because
+	// a domain question has no field to fill in — which is what lets it be answered from
+	// a queue row. They route to `/capture/domain-questions/{domain}/…`, keyed on the
+	// domain because an open question is named by the domain rather than by a record id.
+	//
 	// `act`, `dismiss` and `set_aside` are the briefing queue's three, and they route
 	// to `/brief/items/{itemId}/…`. `acknowledge` is a notice's one verb and routes
 	// to `/notices/{id}/read` — the reader has seen it, and it leaves the lane. `set_aside` rather than reusing `snooze`: a task's
@@ -20495,8 +20420,7 @@ type AttentionItem struct {
 	// handles `snooze` generically write the wrong endpoint.
 	Actions []AttentionItemActions `json:"actions"`
 
-	// AssigneeId Who holds this work, null when nobody has taken it. Sent by `task` and `notice_case`.
-	// A disclosure duty uses its assigned officer, falling back to its contact owner.
+	// AssigneeId Who holds this task, null when nobody has taken it. Sent by `task`.
 	//
 	// The lane serves three scopes and only one is the reader's own queue: an
 	// unassigned sweep and a named colleague's queue both put work on the page that
@@ -20557,12 +20481,6 @@ type AttentionItem struct {
 	//
 	// Both now travel typed — `quiet_days` and `staged` below — and the client writes
 	// the sentence in the reader's own language.
-	//
-	// ONE source is still an exception, and a client must know it: `sync_health` fills
-	// this field with its own vocabulary — the affected object classes, the failure
-	// class, or the budget band — for a client to write a sentence from. Those are
-	// words like `shed` and `deal, contact`. A client that has not written that
-	// sentence draws nothing for that source rather than the value.
 	Detail *string `json:"detail,omitempty"`
 
 	// DueAt When this is due (tasks), or when it lapses (approvals).
@@ -21366,10 +21284,14 @@ type BillingContactRole string
 // deliberately letting one in, which no later verdict may undo.
 //
 // `undecided` is the third state and it is not a decision: the question was asked, the
-// machine declined to answer it, and nobody has since. Those rows are why this list
-// exists rather than being a record of refusals alone — a domain nothing decided is
-// invisible everywhere else, and an operator hunting a company that never appeared
-// cannot tell it from one that was refused.
+// machine declined to answer it, and nobody has since.
+//
+// Only the undecided domains belonging to NOBODY reach this list. A question raised by a
+// colleague's mail is addressed to that colleague and waits on their own queue, where the
+// verbs answering it live; carrying it here too would put one question on two surfaces and
+// invite an operator to answer for mail they cannot read. A domain whose owner has since
+// been deleted keeps no such addressee — the column is cleared with the account — and those
+// rows would otherwise be visible to nobody at all, which is what this list is for.
 type BlockedDomain struct {
 	// Admission `suppressed` — never a company. `admitted` — allowed, and sticky against later machine
 	// refusals. `undecided` — the question is open and waiting to be answered; nothing is stored
@@ -22450,8 +22372,7 @@ type CommissionEntry struct {
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
-	// (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
-	// not only overlay mode.
+	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version *RowVersion `json:"version,omitempty"`
 
 	// VoidReason Required on a void; what a partner dispute is answered from.
@@ -22677,11 +22598,10 @@ type Company struct {
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
-	// (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
-	// not only overlay mode.
+	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version *RowVersion `json:"version,omitempty"`
 
-	// Visibility Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the workspace through a sender verdict, and never travels back. There is no owner-driven door for a company: `POST /contacts/{id}/publish` is a contact's.
+	// Visibility Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the workspace through a sender verdict, or through `visibility` on `PATCH /companies/{id}`, which moves it BOTH ways for anybody the write gate admits. Read-only HERE, on the read schema, the same as the contact column beside it: the update request carries the writable copy.
 	Visibility *CompanyVisibility `json:"visibility,omitempty"`
 
 	// WebsiteUrl The company's readable website, DERIVED from its primary domain row. There is deliberately no website column — a second store for a fact company_domain already owns is the duplication ADR-0085 closes. Not accepted on write.
@@ -22701,7 +22621,7 @@ type CompanyRelationshipTypes string
 // CompanySizeBand defines model for Company.SizeBand.
 type CompanySizeBand string
 
-// CompanyVisibility Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the workspace through a sender verdict, and never travels back. There is no owner-driven door for a company: `POST /contacts/{id}/publish` is a contact's.
+// CompanyVisibility Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the workspace through a sender verdict, or through `visibility` on `PATCH /companies/{id}`, which moves it BOTH ways for anybody the write gate admits. Read-only HERE, on the read schema, the same as the contact column beside it: the update request carries the writable copy.
 type CompanyVisibility string
 
 // Company360 The company record page in one payload. Every section except `company` is
@@ -25367,8 +25287,7 @@ type Contact struct {
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
-	// (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
-	// not only overlay mode.
+	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version *RowVersion `json:"version,omitempty"`
 
 	// Visibility Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the workspace through a verdict or through the owner's own `POST /contacts/{id}/publish`, and never travels back.
@@ -25562,8 +25481,7 @@ type Contact360Employment struct {
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
-	// (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
-	// not only overlay mode.
+	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version *RowVersion `json:"version,omitempty"`
 }
 
@@ -27113,11 +27031,17 @@ type CreateOutcomeReviewRequest struct {
 	// Body Free prose for the note itself, beside the structured answers. Optional: the answers are the review.
 	Body *string `json:"body,omitempty"`
 
+	// ChoiceAnswers Selected options by question key; values must belong to the frozen question vocabulary.
+	ChoiceAnswers *map[string][]string `json:"choice_answers,omitempty"`
+
 	// ClosingOccurrenceId The closing being reviewed. Must be the one the deal is on now, else 409.
 	ClosingOccurrenceId openapi_types.UUID `json:"closing_occurrence_id"`
 
 	// SubmissionId The client's own id for this submission. Retrying with the same id returns the review that already exists rather than writing a second one; a deliberate second review uses a new id.
 	SubmissionId openapi_types.UUID `json:"submission_id"`
+
+	// TemplateVersion Version shown when the form opened. A changed template returns 409 rather than filing answers against new questions.
+	TemplateVersion *int64 `json:"template_version,omitempty"`
 }
 
 // CreatePipelineRequest defines model for CreatePipelineRequest.
@@ -27465,15 +27389,14 @@ type CustomField struct {
 	// Status retired = soft: hidden from the API and filtering, column and values preserved (CUSTOM-FIELDS-AC-13).
 	Status CustomFieldStatus `json:"status"`
 
-	// Type The closed set of six scalar types (CUSTOM-FIELDS-PARAM-1). Immutable once created.
+	// Type The supported field types. Multiselect values are JSON string arrays; empty arrays clear the selection. Immutable once created.
 	Type      CustomFieldType `json:"type"`
 	UpdatedAt time.Time       `json:"updated_at"`
 
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
-	// (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
-	// not only overlay mode.
+	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version *RowVersion `json:"version,omitempty"`
 }
 
@@ -27483,7 +27406,7 @@ type CustomFieldObject string
 // CustomFieldStatus retired = soft: hidden from the API and filtering, column and values preserved (CUSTOM-FIELDS-AC-13).
 type CustomFieldStatus string
 
-// CustomFieldType The closed set of six scalar types (CUSTOM-FIELDS-PARAM-1). Immutable once created.
+// CustomFieldType The supported field types. Multiselect values are JSON string arrays; empty arrays clear the selection. Immutable once created.
 type CustomFieldType string
 
 // CustomFieldListResponse defines model for CustomFieldListResponse.
@@ -27607,7 +27530,7 @@ type Deal struct {
 	// PartnerCompanyId Deal registration/attribution to a partner company (ADR-0032). The company must have a live `partner` row — naming one that does not is refused 422 (`not_a_partner`), because commission prices from the margin tier on that row, and an attribution without one could never earn anything. Null when the caller may not read that company, in which case `masked_fields` names it.
 	PartnerCompanyId *openapi_types.UUID `json:"partner_company_id,omitempty"`
 
-	// PipelineId Native mode: always a non-null pipeline FK. Overlay mode: NULL — an overlay-mirror deal has no native Margince pipeline row; the incumbent's own pipeline id rides `raw` and the code-declared stage→semantic mapping drives tier resolution (overlay-augmentation OVA-MAP-6). A zero/placeholder UUID here is forbidden (dangling FK).
+	// PipelineId The deal's pipeline. A zero/placeholder UUID here is forbidden (dangling FK).
 	PipelineId *openapi_types.UUID `json:"pipeline_id"`
 
 	// Priority Human importance, set by a colleague and never derived. Deliberately independent of amount, score, stage and the computed urgency a worklist reads: those already exist, and a field that merely restates them would be a second answer to a question the product answers. Null is "nobody has said", not "medium" — new deals are born null and closing one preserves what it held.
@@ -27618,7 +27541,7 @@ type Deal struct {
 	Raw       *map[string]interface{} `json:"raw,omitempty"`
 	Source    string                  `json:"source"`
 
-	// StageId Native mode: always a non-null stage FK; must belong to pipeline_id. Overlay mode: NULL (see pipeline_id; the incumbent dealstage id rides `raw`, OVA-MAP-6).
+	// StageId The deal's current stage; must belong to pipeline_id.
 	StageId *openapi_types.UUID `json:"stage_id"`
 
 	// Stalled Derived — no activity past the threshold (absolute duration).
@@ -27630,8 +27553,7 @@ type Deal struct {
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
-	// (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
-	// not only overlay mode.
+	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version *RowVersion `json:"version,omitempty"`
 
 	// WaitUntil 'Customer asked us to wait until' date; suppresses the stalled flag but not the overdue close-date flag.
@@ -27868,8 +27790,7 @@ type DealRoom struct {
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
-	// (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
-	// not only overlay mode.
+	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version *RowVersion `json:"version,omitempty"`
 
 	// WelcomeMessage The buyer's first paragraph on opening the room.
@@ -27942,8 +27863,7 @@ type DealRoomDocument struct {
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
-	// (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
-	// not only overlay mode.
+	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version              *RowVersion            `json:"version,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
@@ -28148,8 +28068,7 @@ type DealRoomThread struct {
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
-	// (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
-	// not only overlay mode.
+	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version *RowVersion `json:"version,omitempty"`
 }
 
@@ -28324,7 +28243,7 @@ type DedupeCandidateStatus string
 // DedupeCandidateListResponse defines model for DedupeCandidateListResponse.
 type DedupeCandidateListResponse struct {
 	Data []DedupeCandidate `json:"data"`
-	Page *PageInfo         `json:"page,omitempty"`
+	Page PageInfo          `json:"page"`
 }
 
 // DedupeDispositionRequest defines model for DedupeDispositionRequest.
@@ -29765,11 +29684,9 @@ type ImportRun struct {
 	CapturedBy *string `json:"captured_by,omitempty"`
 
 	// Checkpoint Absolute offset into the source's rows for a forward run (`running`/`failed`), or into import_record_map's rows once the run is `undoing` (IEM-WIRE-9) — 0 = not started either way. What a resume continues from.
-	Checkpoint int `json:"checkpoint"`
-
-	// Connector The two beyond the migrate-in set are the flip's own sources (OVA-WIRE-8).
-	Connector ImportRunConnector `json:"connector"`
-	CreatedAt time.Time          `json:"created_at"`
+	Checkpoint int                `json:"checkpoint"`
+	Connector  ImportRunConnector `json:"connector"`
+	CreatedAt  time.Time          `json:"created_at"`
 
 	// Error Why a failed run stopped, in the uploader's terms. Never a driver or SQL message.
 	Error *string            `json:"error,omitempty"`
@@ -29812,7 +29729,7 @@ type ImportRun struct {
 	UpdatedAt time.Time       `json:"updated_at"`
 }
 
-// ImportRunConnector The two beyond the migrate-in set are the flip's own sources (OVA-WIRE-8).
+// ImportRunConnector defines model for ImportRun.Connector.
 type ImportRunConnector string
 
 // ImportRunDisposition What the run will do, or did, counted per outcome. The four sum to the rows read — a disposition that does not add up is hiding something.
@@ -30871,8 +30788,7 @@ type Lead struct {
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
-	// (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
-	// not only overlay mode.
+	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version *RowVersion `json:"version,omitempty"`
 
 	// Writable Whether THIS caller may change THIS row: the same question the server's write gate answers on a mutation — the owner, the owner's team where the role is team-scoped, a live `write` record grant, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed.
@@ -30905,8 +30821,7 @@ type LeadDisqualifyReason struct {
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
-	// (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
-	// not only overlay mode.
+	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version *RowVersion `json:"version,omitempty"`
 }
 
@@ -31081,8 +30996,7 @@ type LeadSource struct {
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
-	// (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
-	// not only overlay mode.
+	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version *RowVersion `json:"version,omitempty"`
 }
 
@@ -31464,20 +31378,7 @@ type MeResponse struct {
 	// Carried on `/me` so navigation, the command palette, settings home and settings search can resolve from ONE cached snapshot. Each of those surfaces has to agree about which pages exist, and a screen-specific probe alongside them is how they came to disagree: the rail asked, the palette did not, and a page appeared in one and not the other.
 	// The whole object is optional, and a client that cannot read it should treat every surface here as unavailable — the fail-closed direction hides a page that exists rather than offering one that does not.
 	SettingsAvailability *SettingsAvailability `json:"settings_availability,omitempty"`
-
-	// SystemOfRecord The installation's active system-of-record mode (overlay_mode.sor_mode). `native` is the
-	// default and full-capability mode. In `overlay` mode the data is served from a read-only
-	// incumbent mirror: list sort/filter dials and unservable reads answer
-	// 422 `unsupported_in_overlay_mode` / 404, and mirrored-entity writes answer
-	// `unsupported_by_sor`. Clients gate their UI on this — rendering unservable read surfaces
-	// as an honest "not available in overlay" affordance and hiding mirrored-entity write
-	// controls — rather than offering controls that fail. Reverts to `native` after an
-	// overlay→native flip. Optional for backward compatibility; a missing value MUST be
-	// treated as `native`.
-	SystemOfRecord *struct {
-		Mode MeResponseSystemOfRecordMode `json:"mode"`
-	} `json:"system_of_record,omitempty"`
-	Teams []openapi_types.UUID `json:"teams"`
+	Teams                []openapi_types.UUID  `json:"teams"`
 
 	// User A seat — human or first-party agent. Mirrors `app_user`.
 	User User `json:"user"`
@@ -31488,9 +31389,6 @@ type MeResponse struct {
 
 // MeResponsePassportScopes defines model for MeResponse.Passport.Scopes.
 type MeResponsePassportScopes string
-
-// MeResponseSystemOfRecordMode defines model for MeResponse.SystemOfRecord.Mode.
-type MeResponseSystemOfRecordMode string
 
 // MeetingBrief The pre-meeting brief for one booked meeting (ADR-0097 D5), assembled fresh on every
 // read from what the CALLER can see.
@@ -32440,8 +32338,7 @@ type Offer struct {
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
-	// (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
-	// not only overlay mode.
+	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version              *RowVersion            `json:"version,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
@@ -32503,8 +32400,7 @@ type OfferLineItem struct {
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
-	// (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
-	// not only overlay mode.
+	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version *RowVersion `json:"version,omitempty"`
 }
 
@@ -32574,8 +32470,7 @@ type OfferTemplate struct {
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
-	// (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
-	// not only overlay mode.
+	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version *RowVersion `json:"version,omitempty"`
 }
 
@@ -32790,6 +32685,9 @@ type OutcomeReview struct {
 	// Answers Keyed by question key. Every key here has a question in `questions`.
 	Answers map[string]string `json:"answers"`
 
+	// ChoiceAnswers Selected options by question key; values must belong to the frozen question vocabulary.
+	ChoiceAnswers *map[string][]string `json:"choice_answers,omitempty"`
+
 	// ClosingOccurrenceId Which closing this review is about. Compare it against the deal's own `closing_occurrence_id` to tell whether it reviews the current outcome or an earlier one.
 	ClosingOccurrenceId openapi_types.UUID `json:"closing_occurrence_id"`
 	CreatedAt           time.Time          `json:"created_at"`
@@ -32813,225 +32711,6 @@ type OutcomeReviewOutcome string
 // OutcomeReviewListResponse defines model for OutcomeReviewListResponse.
 type OutcomeReviewListResponse struct {
 	Data []OutcomeReview `json:"data"`
-}
-
-// OverlayBudget The incumbent REST budget window's consumption and degradation band, its per-source breakdown, honest headroom, and the per-second Search window (overlay-budget.md "The budget read (wire shape)", OVB-AC-1/AC-5).
-type OverlayBudget struct {
-	// Band The degradation band of a budget window — healthy (`ok`), approaching the cap (`warn`), or at/over the shed threshold (`shed`). Shared by the REST and Search windows so both read the one band vocabulary.
-	Band     *OverlayBudgetBand `json:"band,omitempty"`
-	Consumed *int64             `json:"consumed,omitempty"`
-
-	// Headroom Free REST capacity derived from our own counts, or the `~unknown` sentinel (OVB-PARAM-5) when a share cannot be attributed — never a fabricated number (OVB-AC-1).
-	Headroom *string `json:"headroom,omitempty"`
-	Limit    *int64  `json:"limit,omitempty"`
-
-	// Measured Whether the figures were READ rather than assumed. False on the meter's fail-closed arms — no accounting store reachable, an unconfigured incumbent, a read error — where the bands report the shed a spender must assume, not a measured exhaustion. A surface showing this budget to a human states the difference rather than presenting an accounting outage as quota pressure.
-	Measured *bool `json:"measured,omitempty"`
-
-	// Search The per-second Search-API window — metered, not gated, in branch 1, so the admin surface sees search pressure alongside REST.
-	Search *OverlayBudgetSearch `json:"search,omitempty"`
-
-	// Sources Per-source REST breakdown; the values sum exactly to `consumed` (OVB-AC-5). Absent sources have spent nothing this window. Integer counts, so the per-source sum equals `consumed` exactly (a float would round independently and could break the sum above 2^24).
-	Sources *struct {
-		Capture    *int64 `json:"capture,omitempty"`
-		ForceFresh *int64 `json:"force_fresh,omitempty"`
-		Poller     *int64 `json:"poller,omitempty"`
-	} `json:"sources,omitempty"`
-	Window *string `json:"window,omitempty"`
-}
-
-// OverlayBudgetBand The degradation band of a budget window — healthy (`ok`), approaching the cap (`warn`), or at/over the shed threshold (`shed`). Shared by the REST and Search windows so both read the one band vocabulary.
-type OverlayBudgetBand string
-
-// OverlayBudgetSearch The per-second Search-API window — metered, not gated, in branch 1, so the admin surface sees search pressure alongside REST.
-type OverlayBudgetSearch struct {
-	// Band The degradation band of a budget window — healthy (`ok`), approaching the cap (`warn`), or at/over the shed threshold (`shed`). Shared by the REST and Search windows so both read the one band vocabulary.
-	Band     *OverlayBudgetBand `json:"band,omitempty"`
-	Consumed *int64             `json:"consumed,omitempty"`
-	Limit    *int64             `json:"limit,omitempty"`
-	Window   *string            `json:"window,omitempty"`
-}
-
-// OverlayConnectRequest defines model for OverlayConnectRequest.
-type OverlayConnectRequest struct {
-	Incumbent OverlayConnectRequestIncumbent `json:"incumbent"`
-
-	// PrivateAppToken Sealed into the vault; never echoed. An empty value is rejected (422); a real credential is required to connect.
-	PrivateAppToken string `json:"privateAppToken"`
-	Region          string `json:"region"`
-}
-
-// OverlayConnectRequestIncumbent defines model for OverlayConnectRequest.Incumbent.
-type OverlayConnectRequestIncumbent string
-
-// OverlayConnection The workspace's overlay incumbent connection (HubSpot). The credential itself is never in this shape — it lives sealed in the vault.
-type OverlayConnection struct {
-	ConnectedAt time.Time                  `json:"connectedAt"`
-	Incumbent   OverlayConnectionIncumbent `json:"incumbent"`
-	Region      string                     `json:"region"`
-	Scopes      []string                   `json:"scopes"`
-	Status      OverlayConnectionStatus    `json:"status"`
-}
-
-// OverlayConnectionIncumbent defines model for OverlayConnection.Incumbent.
-type OverlayConnectionIncumbent string
-
-// OverlayConnectionStatus defines model for OverlayConnection.Status.
-type OverlayConnectionStatus string
-
-// OverlayFlipAccepted defines model for OverlayFlipAccepted.
-type OverlayFlipAccepted struct {
-	// EmergencyDisclosure Returned on an emergency cutover — the disclosed-lossy staleness and the parity that cannot be re-verified against a live incumbent.
-	EmergencyDisclosure *struct {
-		LastSyncedAt             *time.Time `json:"last_synced_at"`
-		StalenessSeconds         *int64     `json:"staleness_seconds,omitempty"`
-		UnverifiableParityNotice string     `json:"unverifiable_parity_notice"`
-	} `json:"emergency_disclosure,omitempty"`
-	Mode            OverlayFlipAcceptedMode `json:"mode"`
-	RecordsImported *int64                  `json:"records_imported,omitempty"`
-
-	// RunId The migration run (`import_run`) this flip executed.
-	RunId openapi_types.UUID `json:"run_id"`
-}
-
-// OverlayFlipAcceptedMode defines model for OverlayFlipAccepted.Mode.
-type OverlayFlipAcceptedMode string
-
-// OverlayFlipParityEntry One object class's parity preview row (AC-mode-flip-7).
-type OverlayFlipParityEntry struct {
-	MirrorCount int                      `json:"mirror_count"`
-	Object      string                   `json:"object"`
-	Skipped     *[]OverlayFlipParitySkip `json:"skipped,omitempty"`
-	WillCreate  int                      `json:"will_create"`
-	WillUpdate  int                      `json:"will_update"`
-}
-
-// OverlayFlipParitySkip One row the importer cannot carry, disclosed with its reason (never silently dropped).
-type OverlayFlipParitySkip struct {
-	ExternalId string `json:"external_id"`
-	Reason     string `json:"reason"`
-}
-
-// OverlayFlipPreflight The flip preflight verdict (OVA-WIRE-7): `{ready, blocking[], unresolved_conflicts[]}` plus the sealed snapshot and parity preview when ready, and the emergency-cutover disclosure when the incumbent is unreachable (ADR-0071 / OVA-AC-6).
-type OverlayFlipPreflight struct {
-	// Blocking Why the flip cannot run, empty when ready. `incumbent_unreachable` is the OVA-AC-6(a) honest block — the connection is revoked/error, so the force-fresh sync cannot pass; the workspace stays in overlay on its last mirror.
-	Blocking []OverlayFlipPreflightBlocking `json:"blocking"`
-
-	// Emergency Present only while the incumbent is unreachable: the ADR-0071 emergency cutover from the last-known mirror, disclosed-lossy — never offered while a fresh-sync flip is possible.
-	Emergency *struct {
-		Available                bool       `json:"available"`
-		LastSyncedAt             *time.Time `json:"last_synced_at"`
-		StalenessSeconds         *int64     `json:"staleness_seconds,omitempty"`
-		UnverifiableParityNotice string     `json:"unverifiable_parity_notice"`
-	} `json:"emergency,omitempty"`
-
-	// Parity The parity dry-run against the sealed snapshot — writes zero CRM rows; skipped rows are disclosed with reasons, never silently dropped (AC-mode-flip-7).
-	Parity *[]OverlayFlipParityEntry `json:"parity,omitempty"`
-	Ready  bool                      `json:"ready"`
-
-	// Snapshot The sealed frozen-mirror snapshot the flip imports.
-	Snapshot *OverlayFlipSnapshot `json:"snapshot,omitempty"`
-
-	// UnprojectableRows How many mirror rows the CURRENT declaration cannot project — a SUBSET of what holds `force_fresh_incomplete`, and the only part of it that never clears on its own. It is sent whether or not the flip is blocked, and zero is a real answer: an operator waiting on `force_fresh_incomplete` with zero here is waiting on a sweep that will finish, while a non-zero count is waiting on somebody repairing the mapping. Which class holds them is on the sync-status read, per object.
-	UnprojectableRows *int `json:"unprojectable_rows,omitempty"`
-
-	// UnresolvedConflicts Open incumbent-wins conflicts awaiting acceptance; each blocks the flip. Empty in this build: branch 1 reconciliation resolves incumbent-wins at ingest and persists no conflict queue, so the producer arrives with write-back (branch 2). The field is required by OVA-WIRE-7's response shape.
-	UnresolvedConflicts []OverlayFlipUnresolvedConflict `json:"unresolved_conflicts"`
-}
-
-// OverlayFlipPreflightBlocking defines model for OverlayFlipPreflight.Blocking.
-type OverlayFlipPreflightBlocking string
-
-// OverlayFlipRequest defines model for OverlayFlipRequest.
-type OverlayFlipRequest struct {
-	// ConfirmationPhrase Must equal the exact phrase `FLIP TO SOR` (AC-mode-flip-5).
-	ConfirmationPhrase string `json:"confirmation_phrase"`
-
-	// Mode `fresh_sync` (the default) requires the sealed preflight snapshot. `emergency` is the last-known-mirror cutover and is refused while the incumbent is reachable — the explicit field is the never-silently-substituted guarantee (OVA-AC-6 b).
-	Mode *OverlayFlipRequestMode `json:"mode,omitempty"`
-}
-
-// OverlayFlipRequestMode `fresh_sync` (the default) requires the sealed preflight snapshot. `emergency` is the last-known-mirror cutover and is refused while the incumbent is reachable — the explicit field is the never-silently-substituted guarantee (OVA-AC-6 b).
-type OverlayFlipRequestMode string
-
-// OverlayFlipSnapshot The sealed frozen-mirror snapshot the flip imports.
-type OverlayFlipSnapshot struct {
-	FrozenAt time.Time `json:"frozen_at"`
-	Id       string    `json:"id"`
-}
-
-// OverlayFlipUnresolvedConflict One open incumbent-wins conflict blocking the flip.
-type OverlayFlipUnresolvedConflict struct {
-	ExternalId  string  `json:"external_id"`
-	ObjectClass string  `json:"object_class"`
-	Property    *string `json:"property,omitempty"`
-}
-
-// OverlayOwner defines model for OverlayOwner.
-type OverlayOwner struct {
-	Email           string  `json:"email"`
-	IncumbentUserId string  `json:"incumbent_user_id"`
-	Name            *string `json:"name,omitempty"`
-}
-
-// OverlayOwnerDirectory defines model for OverlayOwnerDirectory.
-type OverlayOwnerDirectory struct {
-	Incumbent string         `json:"incumbent"`
-	Owners    []OverlayOwner `json:"owners"`
-	Truncated bool           `json:"truncated"`
-}
-
-// OverlaySyncStatus Per-object mirror sync health — freshness state and backfill completeness (design.md §4.7).
-type OverlaySyncStatus struct {
-	Objects *[]struct {
-		BackfillComplete *bool `json:"backfillComplete,omitempty"`
-
-		// FrozenForFlip The mirror is held still by a pending overlay→native flip: the sweep skips this workspace entirely, so staleness grows on purpose. Stated rather than left to be inferred from a mirror that merely looks idle.
-		FrozenForFlip *bool                          `json:"frozenForFlip,omitempty"`
-		LastSyncedAt  *time.Time                     `json:"lastSyncedAt,omitempty"`
-		Object        *string                        `json:"object,omitempty"`
-		State         *OverlaySyncStatusObjectsState `json:"state,omitempty"`
-
-		// UnprojectableRows How many of the class's mirror rows the CURRENT declaration cannot project. It is what tells the two readings of `stale` apart, and they want opposite responses: `stale` with ZERO here is converging — the sweep has not reached those rows and will — while `stale` with a NON-ZERO count never converges on its own and holds `force_fresh_incomplete` shut until somebody repairs the mapping. Zero means wait; non-zero means look. A count and not a list, because the question an operator is answering is whether anything needs them, not which ids.
-		UnprojectableRows *int `json:"unprojectableRows,omitempty"`
-	} `json:"objects,omitempty"`
-}
-
-// OverlaySyncStatusObjectsState defines model for OverlaySyncStatus.Objects.State.
-type OverlaySyncStatusObjectsState string
-
-// OverlayUserMapEntry defines model for OverlayUserMapEntry.
-type OverlayUserMapEntry struct {
-	Email              string  `json:"email"`
-	IncumbentUserEmail *string `json:"incumbent_user_email,omitempty"`
-
-	// IncumbentUserId Empty when the user is not mapped.
-	IncumbentUserId   *string `json:"incumbent_user_id,omitempty"`
-	IncumbentUserName *string `json:"incumbent_user_name,omitempty"`
-
-	// MatchSource Absent when the user is not mapped.
-	MatchSource *OverlayUserMapEntryMatchSource `json:"match_source,omitempty"`
-	Name        *string                         `json:"name,omitempty"`
-
-	// StaleOwnerRef A manual mapping pointing at an incumbent user absent from the current directory. Reported, never auto-revoked: the override stays sticky.
-	StaleOwnerRef *bool `json:"stale_owner_ref,omitempty"`
-
-	// UnmappedReason Why this user has no mapping. `none` means they are mapped. `directory_unavailable` means the incumbent directory could not be read, so no reason could be derived — never a guessed diagnosis.
-	UnmappedReason OverlayUserMapEntryUnmappedReason `json:"unmapped_reason"`
-	UserId         openapi_types.UUID                `json:"user_id"`
-}
-
-// OverlayUserMapEntryMatchSource Absent when the user is not mapped.
-type OverlayUserMapEntryMatchSource string
-
-// OverlayUserMapEntryUnmappedReason Why this user has no mapping. `none` means they are mapped. `directory_unavailable` means the incumbent directory could not be read, so no reason could be derived — never a guessed diagnosis.
-type OverlayUserMapEntryUnmappedReason string
-
-// OverlayUserMapPage defines model for OverlayUserMapPage.
-type OverlayUserMapPage struct {
-	Entries    []OverlayUserMapEntry `json:"entries"`
-	Incumbent  string                `json:"incumbent"`
-	NextCursor *string               `json:"next_cursor,omitempty"`
 }
 
 // OverrideWarning The caution a human reads before overruling the engine, with the version that identifies
@@ -33100,8 +32779,7 @@ type Partner struct {
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
-	// (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
-	// not only overlay mode.
+	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version *RowVersion `json:"version,omitempty"`
 }
 
@@ -33181,8 +32859,7 @@ type Pipeline struct {
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
-	// (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
-	// not only overlay mode.
+	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version *RowVersion `json:"version,omitempty"`
 }
 
@@ -33492,8 +33169,7 @@ type Product struct {
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
-	// (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
-	// not only overlay mode.
+	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version              *RowVersion            `json:"version,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
@@ -33552,8 +33228,7 @@ type Project struct {
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
-	// (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
-	// not only overlay mode.
+	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version *RowVersion `json:"version,omitempty"`
 
 	// Writable Whether THIS caller may change THIS row: the same question the server's write gate answers on a mutation — the owner, the owner's team where the role is team-scoped, a live `write` record grant, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed.
@@ -33993,8 +33668,7 @@ type ProviderConnection struct {
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
-	// (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
-	// not only overlay mode.
+	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version *RowVersion `json:"version,omitempty"`
 }
 
@@ -34392,8 +34066,7 @@ type RecordClaim struct {
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
-	// (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
-	// not only overlay mode.
+	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version *RowVersion `json:"version,omitempty"`
 }
 
@@ -34677,10 +34350,14 @@ type RejectCompanyResponse struct {
 	// deliberately letting one in, which no later verdict may undo.
 	//
 	// `undecided` is the third state and it is not a decision: the question was asked, the
-	// machine declined to answer it, and nobody has since. Those rows are why this list
-	// exists rather than being a record of refusals alone — a domain nothing decided is
-	// invisible everywhere else, and an operator hunting a company that never appeared
-	// cannot tell it from one that was refused.
+	// machine declined to answer it, and nobody has since.
+	//
+	// Only the undecided domains belonging to NOBODY reach this list. A question raised by a
+	// colleague's mail is addressed to that colleague and waits on their own queue, where the
+	// verbs answering it live; carrying it here too would put one question on two surfaces and
+	// invite an operator to answer for mail they cannot read. A domain whose owner has since
+	// been deleted keeps no such addressee — the column is cleared with the account — and those
+	// rows would otherwise be visible to nobody at all, which is what this list is for.
 	Domain BlockedDomain `json:"domain"`
 }
 
@@ -34754,8 +34431,7 @@ type Relationship struct {
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
-	// (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
-	// not only overlay mode.
+	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version *RowVersion `json:"version,omitempty"`
 }
 
@@ -35288,14 +34964,17 @@ type ReviewQuestion struct {
 	Key string `json:"key"`
 
 	// Label What the question asks, worded as the reader sees it.
-	Label    string `json:"label"`
-	Required bool   `json:"required"`
+	Label string `json:"label"`
 
-	// Type Only free text for now. The vocabulary is closed so a client never meets a control it cannot render.
+	// Options Allowed choices, required for multiselect. Frozen alongside the question in each submitted review.
+	Options  *[]string `json:"options,omitempty"`
+	Required bool      `json:"required"`
+
+	// Type Text answers use answers; multiple-choice answers use choice_answers.
 	Type ReviewQuestionType `json:"type"`
 }
 
-// ReviewQuestionType Only free text for now. The vocabulary is closed so a client never meets a control it cannot render.
+// ReviewQuestionType Text answers use answers; multiple-choice answers use choice_answers.
 type ReviewQuestionType string
 
 // RightsCaseReceipt What a data subject is told to quote when asking after a request they sent through their confirm
@@ -35355,8 +35034,7 @@ type RowTagColor string
 // RowVersion Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 // Echoed back as the `version` field on every mutable entity. To make a write conditional,
 // send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
-// (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
-// not only overlay mode.
+// (ErrVersionSkew) so the client re-reads before retrying.
 type RowVersion = int64
 
 // RunReportRequest A typed, validated query plan (not free-form SQL). For prebuilt reports, filters
@@ -35605,12 +35283,12 @@ type SearchResult struct {
 	// Title Display label (name/subject).
 	Title *string `json:"title,omitempty"`
 
-	// TrustTier Provenance tier of the underlying record. In native mode every stored record is `authoritative`; `external`/`unverified` are reserved for overlay/connector-sourced rows (not emitted until overlay adapters land). Never guessed — null when unknown.
+	// TrustTier Provenance tier of the underlying record. Nearly every stored record is `authoritative`; `external`/`unverified` are reserved for connector-sourced rows (not emitted until those adapters land). Never guessed — null when unknown.
 	TrustTier *SearchResultTrustTier `json:"trust_tier,omitempty"`
 	Type      SearchResultType       `json:"type"`
 }
 
-// SearchResultTrustTier Provenance tier of the underlying record. In native mode every stored record is `authoritative`; `external`/`unverified` are reserved for overlay/connector-sourced rows (not emitted until overlay adapters land). Never guessed — null when unknown.
+// SearchResultTrustTier Provenance tier of the underlying record. Nearly every stored record is `authoritative`; `external`/`unverified` are reserved for connector-sourced rows (not emitted until those adapters land). Never guessed — null when unknown.
 type SearchResultTrustTier string
 
 // SearchResultType defines model for SearchResult.Type.
@@ -36300,11 +35978,6 @@ type SetMyAgentGrantRequest struct {
 	Granted bool `json:"granted"`
 }
 
-// SetOverlayUserMapRequest defines model for SetOverlayUserMapRequest.
-type SetOverlayUserMapRequest struct {
-	IncumbentUserId string `json:"incumbent_user_id"`
-}
-
 // SetProjectCompanyRequest defines model for SetProjectCompanyRequest.
 type SetProjectCompanyRequest struct {
 	CompanyId openapi_types.UUID `json:"company_id"`
@@ -36492,8 +36165,7 @@ type Signal struct {
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
-	// (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
-	// not only overlay mode.
+	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version *RowVersion `json:"version,omitempty"`
 }
 
@@ -37542,12 +37214,12 @@ type Undoability struct {
 	// Detail The fields a refusal names, where naming them is the better explanation — which field was superseded, which one cannot be written back. Never the only thing a reader renders; `reason` is what the product says.
 	Detail *string `json:"detail,omitempty"`
 
-	// Reason Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would have to clear a field the record's own write path cannot clear, so it is refused rather than reporting a success that changed nothing. `edge_relink_unsupported` means the entry REMOVED a link: putting one back is an un-archive, which this path does not perform. The refusal says the link can be made again from the record's own screen, because that is true and actionable. `not_restorable_by_this_path` covers two shapes: a record whose workspace keeps its records in an incumbent system, and EVERY change to a project's company link whatever the verb — that kind takes write authority over the project row and a project must keep at least one company, so a generic reverse would be a side door around both rules. `detail` names the kind in the second case.
+	// Reason Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would have to clear a field the record's own write path cannot clear, so it is refused rather than reporting a success that changed nothing. `edge_relink_unsupported` means the entry REMOVED a link: putting one back is an un-archive, which this path does not perform. The refusal says the link can be made again from the record's own screen, because that is true and actionable. `not_restorable_by_this_path` covers EVERY change to a project's company link whatever the verb — that kind takes write authority over the project row and a project must keep at least one company, so a generic reverse would be a side door around both rules. `detail` names the kind.
 	Reason   *UndoabilityReason `json:"reason,omitempty"`
 	Undoable bool               `json:"undoable"`
 }
 
-// UndoabilityReason Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would have to clear a field the record's own write path cannot clear, so it is refused rather than reporting a success that changed nothing. `edge_relink_unsupported` means the entry REMOVED a link: putting one back is an un-archive, which this path does not perform. The refusal says the link can be made again from the record's own screen, because that is true and actionable. `not_restorable_by_this_path` covers two shapes: a record whose workspace keeps its records in an incumbent system, and EVERY change to a project's company link whatever the verb — that kind takes write authority over the project row and a project must keep at least one company, so a generic reverse would be a side door around both rules. `detail` names the kind in the second case.
+// UndoabilityReason Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would have to clear a field the record's own write path cannot clear, so it is refused rather than reporting a success that changed nothing. `edge_relink_unsupported` means the entry REMOVED a link: putting one back is an un-archive, which this path does not perform. The refusal says the link can be made again from the record's own screen, because that is true and actionable. `not_restorable_by_this_path` covers EVERY change to a project's company link whatever the verb — that kind takes write authority over the project row and a project must keep at least one company, so a generic reverse would be a side door around both rules. `detail` names the kind.
 type UndoabilityReason string
 
 // UpdateAcquisitionSourceRequest Every field optional; an omitted one is left alone.
@@ -37603,6 +37275,14 @@ type UpdateActivityRequest struct {
 // tell an absent field from a null one. Recording the wrong outcome is fixed by
 // sending the right one.
 type UpdateActivityRequestMeetingStatus string
+
+// UpdateActivityReviewTemplateRequest defines model for UpdateActivityReviewTemplateRequest.
+type UpdateActivityReviewTemplateRequest struct {
+	Questions []ReviewQuestion `json:"questions"`
+
+	// Version Last read template version.
+	Version int64 `json:"version"`
+}
 
 // UpdateAttachmentMetadataRequest A sparse patch. An absent field is untouched; `title` and `supersedes_id` accept
 // null to clear, because clearing either is an edit a human makes deliberately.
@@ -37694,9 +37374,30 @@ type UpdateCompanyRequest struct {
 	ParentCompanyId *openapi_types.UUID `json:"parent_company_id,omitempty"`
 
 	// RelationshipTypes Replace-set of what the company is to us (add new, archive removed), the same shape as `domains`. Absent = untouched; an empty array clears every type. Removing `partner` while the company still has a `partner` extension row is refused with 422 — the invariant binds both ways, and an invariant nothing enforces is a comment.
-	RelationshipTypes    *[]UpdateCompanyRequestRelationshipTypes `json:"relationship_types,omitempty"`
-	SizeBand             *UpdateCompanyRequestSizeBand            `json:"size_band,omitempty"`
-	AdditionalProperties map[string]interface{}                   `json:"-"`
+	RelationshipTypes *[]UpdateCompanyRequestRelationshipTypes `json:"relationship_types,omitempty"`
+	SizeBand          *UpdateCompanyRequestSizeBand            `json:"size_band,omitempty"`
+
+	// Visibility Who may see this company: `workspace` for everyone holding the read grant, `owner` for
+	// the seat named by `owner_id` alone. Absent = untouched.
+	//
+	// An ORDINARY field, writable in BOTH directions by anybody the write gate admits, on the
+	// same terms as `visibility` on `PATCH /contacts/{id}`. Capture mints a company
+	// owner-scoped from a message nothing has judged yet, and until this field existed the
+	// only way out was a sender verdict — so a company the classifier never asked about, or
+	// judged wrong, stayed private to its mailbox owner with no door at all. A machine's
+	// decision no human could undo is the same reasoning that made the contact column
+	// writable both ways.
+	//
+	// Narrowing a company does not retract what was already done with it. Deals, contacts and
+	// mail filed against it keep their own audiences; what changes is who finds the company
+	// from here on.
+	//
+	// A company that reads `owner` and names no owner is invisible to EVERY seat, including
+	// its author and an admin, so the pair is refused rather than written: sending
+	// `{"visibility":"owner","owner_id":null}`, or narrowing a company that has no owner,
+	// answers 422 naming `owner_id`.
+	Visibility           *UpdateCompanyRequestVisibility `json:"visibility,omitempty"`
+	AdditionalProperties map[string]interface{}          `json:"-"`
 }
 
 // UpdateCompanyRequestLifecycle Where the account stands with us (ADR-0079). Absent = untouched.
@@ -37707,6 +37408,27 @@ type UpdateCompanyRequestRelationshipTypes string
 
 // UpdateCompanyRequestSizeBand defines model for UpdateCompanyRequest.SizeBand.
 type UpdateCompanyRequestSizeBand string
+
+// UpdateCompanyRequestVisibility Who may see this company: `workspace` for everyone holding the read grant, `owner` for
+// the seat named by `owner_id` alone. Absent = untouched.
+//
+// An ORDINARY field, writable in BOTH directions by anybody the write gate admits, on the
+// same terms as `visibility` on `PATCH /contacts/{id}`. Capture mints a company
+// owner-scoped from a message nothing has judged yet, and until this field existed the
+// only way out was a sender verdict — so a company the classifier never asked about, or
+// judged wrong, stayed private to its mailbox owner with no door at all. A machine's
+// decision no human could undo is the same reasoning that made the contact column
+// writable both ways.
+//
+// Narrowing a company does not retract what was already done with it. Deals, contacts and
+// mail filed against it keep their own audiences; what changes is who finds the company
+// from here on.
+//
+// A company that reads `owner` and names no owner is invisible to EVERY seat, including
+// its author and an admin, so the pair is refused rather than written: sending
+// `{"visibility":"owner","owner_id":null}`, or narrowing a company that has no owner,
+// answers 422 naming `owner_id`.
+type UpdateCompanyRequestVisibility string
 
 // UpdateContactRequest Partial update. Omitted fields are unchanged.
 type UpdateContactRequest struct {
@@ -40025,11 +39747,6 @@ type WorklistItem struct {
 	// Not a channel for anything else. A value the queue itself reads travels typed
 	// beside this field, never inside it: a figure parsed back out of a sentence reads
 	// as zero the day somebody rewords the sentence.
-	//
-	// ONE source is an exception a client must know: `sync_health` fills this with its
-	// own vocabulary — the affected object classes, the failure class, the budget band
-	// — for a client to write a sentence from. Those are words like `shed`. A client
-	// that has not written that sentence draws nothing for that source.
 	Detail *string `json:"detail,omitempty"`
 
 	// Dispositions The ways this row can be PUT DOWN, as the server declares them. A client
@@ -40940,7 +40657,6 @@ type ListActivitiesParams struct {
 	OccurredBefore *time.Time `form:"occurred_before,omitempty" json:"occurred_before,omitempty"`
 
 	// WaitingReply Restrict the list to an inbound message still awaiting an answer: the newest message of each thread that nobody has answered. Combined with `entity_type`/`entity_id` it answers what on this record is waiting for a reply.
-	// Native system-of-record only: an incumbent mirror carries no thread walk to answer it from, so a workspace in overlay mode refuses `waiting_reply=true` with the 422 every unsupported overlay parameter gets, rather than returning the whole mirrored set as though every row qualified. `false` asks for nothing and is accepted in either mode.
 	WaitingReply *bool `form:"waiting_reply,omitempty" json:"waiting_reply,omitempty"`
 }
 
@@ -42353,6 +42069,9 @@ type ListConfirmSubmissionsParams struct {
 
 	// Limit Max items in the page.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. It encodes all three parts of this queue's order — whether the row is resolved, its `submitted_at`, and its id — because two subjects can send in the same second and an id alone cannot continue an order it is only the tie-break of. Changing `contact_id` or `resolved` mid-walk changes which rows the remaining pages see, so re-issue without the cursor when a filter changes. A token this endpoint did not mint returns `422 code: malformed_cursor`.
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
 }
 
 // ResolveConfirmSubmissionJSONBody defines parameters for ResolveConfirmSubmission.
@@ -44164,15 +43883,6 @@ type PutOnboardingStateParams struct {
 	// than half-honouring it, so read this contract, not the client, to know which calls are safe
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
-}
-
-// ListOverlayUserMapParams defines parameters for ListOverlayUserMap.
-type ListOverlayUserMapParams struct {
-	// Cursor Opaque keyset cursor from a prior response's root-level `next_cursor`. It encodes the last row's app_user id and nothing else; there is no sort to disagree with. A token this endpoint did not mint returns `422 code: malformed_cursor` — re-issue the request without it.
-	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
-
-	// Limit Max items in the page.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
 // ListPartnersParams defines parameters for ListPartners.
@@ -46013,11 +45723,20 @@ type PreviewSendAuthorizationJSONRequestBody = PreviewSendRequest
 // SendMessageJSONRequestBody defines body for SendMessage for application/json ContentType.
 type SendMessageJSONRequestBody = SendMessageRequest
 
+// UpdateActivityReviewTemplateJSONRequestBody defines body for UpdateActivityReviewTemplate for application/json ContentType.
+type UpdateActivityReviewTemplateJSONRequestBody = UpdateActivityReviewTemplateRequest
+
 // ResetDataJSONRequestBody defines body for ResetData for application/json ContentType.
 type ResetDataJSONRequestBody ResetDataJSONBody
 
 // SetAiModelRateJSONRequestBody defines body for SetAiModelRate for application/json ContentType.
 type SetAiModelRateJSONRequestBody = SetAiModelRateRequest
+
+// ReplaceAiBudgetJSONRequestBody defines body for ReplaceAiBudget for application/json ContentType.
+type ReplaceAiBudgetJSONRequestBody = AiBudgetChange
+
+// PreviewAiBudgetJSONRequestBody defines body for PreviewAiBudget for application/json ContentType.
+type PreviewAiBudgetJSONRequestBody = AiBudgetChange
 
 // RecordAIFeedbackJSONRequestBody defines body for RecordAIFeedback for application/json ContentType.
 type RecordAIFeedbackJSONRequestBody = AIFeedbackInput
@@ -46027,6 +45746,9 @@ type SetAiProviderKeyJSONRequestBody = AiProviderKeyInput
 
 // ReplaceAiRoutingJSONRequestBody defines body for ReplaceAiRouting for application/json ContentType.
 type ReplaceAiRoutingJSONRequestBody = AiRouting
+
+// PreviewAiRoutingJSONRequestBody defines body for PreviewAiRouting for application/json ContentType.
+type PreviewAiRoutingJSONRequestBody = AiRouting
 
 // ExplainAnalyticsCellJSONRequestBody defines body for ExplainAnalyticsCell for application/json ContentType.
 type ExplainAnalyticsCellJSONRequestBody = AnalyticsExplainRequest
@@ -46531,15 +46253,6 @@ type MessageOnboardingCompanyJSONRequestBody = OnboardingCompanyMessageRequest
 
 // PutOnboardingStateJSONRequestBody defines body for PutOnboardingState for application/json ContentType.
 type PutOnboardingStateJSONRequestBody = PutOnboardingStateRequest
-
-// ConnectOverlayJSONRequestBody defines body for ConnectOverlay for application/json ContentType.
-type ConnectOverlayJSONRequestBody = OverlayConnectRequest
-
-// ExecuteOverlayFlipJSONRequestBody defines body for ExecuteOverlayFlip for application/json ContentType.
-type ExecuteOverlayFlipJSONRequestBody = OverlayFlipRequest
-
-// SetOverlayUserMapJSONRequestBody defines body for SetOverlayUserMap for application/json ContentType.
-type SetOverlayUserMapJSONRequestBody = SetOverlayUserMapRequest
 
 // IssuePassportJSONRequestBody defines body for IssuePassport for application/json ContentType.
 type IssuePassportJSONRequestBody = IssuePassportRequest
@@ -54243,6 +53956,14 @@ func (a *UpdateCompanyRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "size_band")
 	}
 
+	if raw, found := object["visibility"]; found {
+		err = json.Unmarshal(raw, &a.Visibility)
+		if err != nil {
+			return fmt.Errorf("error reading 'visibility': %w", err)
+		}
+		delete(object, "visibility")
+	}
+
 	if len(object) != 0 {
 		a.AdditionalProperties = make(map[string]interface{})
 		for fieldName, fieldBuf := range object {
@@ -54343,6 +54064,13 @@ func (a UpdateCompanyRequest) MarshalJSON() ([]byte, error) {
 		object["size_band"], err = json.Marshal(a.SizeBand)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'size_band': %w", err)
+		}
+	}
+
+	if a.Visibility != nil {
+		object["visibility"], err = json.Marshal(a.Visibility)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'visibility': %w", err)
 		}
 	}
 
@@ -56542,6 +56270,9 @@ type ServerInterface interface {
 	// The question sets an outcome review can ask.
 	// (GET /activity-review-templates)
 	ListActivityReviewTemplates(w http.ResponseWriter, r *http.Request)
+	// Edit the questions for future outcome reviews.
+	// (PATCH /activity-review-templates/{id})
+	UpdateActivityReviewTemplate(w http.ResponseWriter, r *http.Request, id Id)
 	// What capture's judgement queues are holding, and in whose mailbox.
 	// (GET /admin/capture-health)
 	GetCaptureHealth(w http.ResponseWriter, r *http.Request)
@@ -56566,6 +56297,15 @@ type ServerInterface interface {
 	// What one vendor says it serves today (admin/ops).
 	// (GET /ai/available-models/{provider})
 	ListAvailableModels(w http.ResponseWriter, r *http.Request, provider string, params ListAvailableModelsParams)
+	// Read the shared company allowance (ai_budget read).
+	// (GET /ai/budget)
+	GetAiBudget(w http.ResponseWriter, r *http.Request)
+	// Replace the shared company allowance (ai_budget update).
+	// (PUT /ai/budget)
+	ReplaceAiBudget(w http.ResponseWriter, r *http.Request)
+	// Preview an allowance change (ai_budget read/update).
+	// (POST /ai/budget/preview)
+	PreviewAiBudget(w http.ResponseWriter, r *http.Request)
 	// The AI call trace — every terminal model call, newest first.
 	// (GET /ai/calls)
 	ListAiCalls(w http.ResponseWriter, r *http.Request, params ListAiCallsParams)
@@ -56596,6 +56336,12 @@ type ServerInterface interface {
 	// Replace the tier-to-model binding (admin/ops).
 	// (PUT /ai/routing)
 	ReplaceAiRouting(w http.ResponseWriter, r *http.Request)
+	// Preview affected features without calling a model (ai_routing read/update and ai_budget read).
+	// (POST /ai/routing/preview)
+	PreviewAiRouting(w http.ResponseWriter, r *http.Request)
+	// Read AI administration status (ai_diagnostics and ai_budget read).
+	// (GET /ai/status)
+	GetAiStatus(w http.ResponseWriter, r *http.Request)
 	// AI usage + budget — the spend is never invisible.
 	// (GET /ai/usage)
 	GetAiUsage(w http.ResponseWriter, r *http.Request, params GetAiUsageParams)
@@ -56809,6 +56555,12 @@ type ServerInterface interface {
 	// Lift a counterparty hold.
 	// (DELETE /capture/counterparty-holds/{id})
 	DeleteCaptureCounterpartyHold(w http.ResponseWriter, r *http.Request, id Id)
+	// Answer an open domain question by excluding the domain from your own capture.
+	// (POST /capture/domain-questions/{domain}/discard)
+	DiscardDomainQuestion(w http.ResponseWriter, r *http.Request, domain string)
+	// Answer an open domain question by keeping the company.
+	// (POST /capture/domain-questions/{domain}/keep)
+	KeepDomainQuestion(w http.ResponseWriter, r *http.Request, domain string)
 	// The workspace's own email domains.
 	// (GET /capture/email-domains)
 	ListWorkspaceEmailDomains(w http.ResponseWriter, r *http.Request)
@@ -57481,6 +57233,9 @@ type ServerInterface interface {
 	// Export a filtered slice of one object (or a saved view / dynamic list) to an open format.
 	// (POST /exports)
 	CreateFilteredExport(w http.ResponseWriter, r *http.Request)
+	// Download the whole-workspace export bundle.
+	// (GET /exports/bundle)
+	DownloadExportBundle(w http.ResponseWriter, r *http.Request)
 	// List the composed extension units and what each contributes. Admin-only, human-only, read-only.
 	// (GET /extensions)
 	ListExtensions(w http.ResponseWriter, r *http.Request)
@@ -57841,45 +57596,6 @@ type ServerInterface interface {
 	// Create or replace the acting user's resumable onboarding state.
 	// (PUT /onboarding/state)
 	PutOnboardingState(w http.ResponseWriter, r *http.Request, params PutOnboardingStateParams)
-	// The incumbent API budget window's consumption and band (ok/warn/shed).
-	// (GET /overlay/budget)
-	GetOverlayBudget(w http.ResponseWriter, r *http.Request)
-	// Disconnect the overlay incumbent and queue mirror teardown.
-	// (DELETE /overlay/connection)
-	DisconnectOverlay(w http.ResponseWriter, r *http.Request)
-	// The workspace's overlay incumbent connection, if any.
-	// (GET /overlay/connection)
-	GetOverlayConnection(w http.ResponseWriter, r *http.Request)
-	// Connect the workspace's overlay incumbent (HubSpot).
-	// (POST /overlay/connection)
-	ConnectOverlay(w http.ResponseWriter, r *http.Request)
-	// Download the workspace export bundle — the flip's pre-flip export producer.
-	// (GET /overlay/export)
-	DownloadOverlayExport(w http.ResponseWriter, r *http.Request)
-	// Execute the overlay→native flip, running the migration.
-	// (POST /overlay/flip)
-	ExecuteOverlayFlip(w http.ResponseWriter, r *http.Request)
-	// Dry-run the overlay→native flip's readiness checks without executing it.
-	// (POST /overlay/flip:preflight)
-	PreflightOverlayFlip(w http.ResponseWriter, r *http.Request)
-	// The connected incumbent's user directory, for the mapping picker.
-	// (GET /overlay/owners)
-	ListOverlayOwners(w http.ResponseWriter, r *http.Request)
-	// Queue an out-of-band mirror reconciliation sweep.
-	// (POST /overlay/reconcile)
-	ReconcileOverlay(w http.ResponseWriter, r *http.Request)
-	// Per-object mirror sync freshness (fresh/pending_sync/stale, backfill completeness).
-	// (GET /overlay/sync-status)
-	GetOverlaySyncStatus(w http.ResponseWriter, r *http.Request)
-	// The workspace users' incumbent-user mapping, with unmapped users flagged.
-	// (GET /overlay/user-map)
-	ListOverlayUserMap(w http.ResponseWriter, r *http.Request, params ListOverlayUserMapParams)
-	// Unmap one user and stop automatic email matching from re-mapping them.
-	// (DELETE /overlay/user-map/{id})
-	DeleteOverlayUserMap(w http.ResponseWriter, r *http.Request, id Id)
-	// Pin one user to an incumbent user as a manual admin override.
-	// (PUT /overlay/user-map/{id})
-	SetOverlayUserMap(w http.ResponseWriter, r *http.Request, id Id)
 	// List partner companies (companies with a partner row), filterable by role/cert status.
 	// (GET /partners)
 	ListPartners(w http.ResponseWriter, r *http.Request, params ListPartnersParams)
@@ -58630,6 +58346,12 @@ func (_ Unimplemented) ListActivityReviewTemplates(w http.ResponseWriter, r *htt
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Edit the questions for future outcome reviews.
+// (PATCH /activity-review-templates/{id})
+func (_ Unimplemented) UpdateActivityReviewTemplate(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // What capture's judgement queues are holding, and in whose mailbox.
 // (GET /admin/capture-health)
 func (_ Unimplemented) GetCaptureHealth(w http.ResponseWriter, r *http.Request) {
@@ -58675,6 +58397,24 @@ func (_ Unimplemented) ProposeAiModelRateRefresh(w http.ResponseWriter, r *http.
 // What one vendor says it serves today (admin/ops).
 // (GET /ai/available-models/{provider})
 func (_ Unimplemented) ListAvailableModels(w http.ResponseWriter, r *http.Request, provider string, params ListAvailableModelsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Read the shared company allowance (ai_budget read).
+// (GET /ai/budget)
+func (_ Unimplemented) GetAiBudget(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Replace the shared company allowance (ai_budget update).
+// (PUT /ai/budget)
+func (_ Unimplemented) ReplaceAiBudget(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Preview an allowance change (ai_budget read/update).
+// (POST /ai/budget/preview)
+func (_ Unimplemented) PreviewAiBudget(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -58735,6 +58475,18 @@ func (_ Unimplemented) GetAiRouting(w http.ResponseWriter, r *http.Request) {
 // Replace the tier-to-model binding (admin/ops).
 // (PUT /ai/routing)
 func (_ Unimplemented) ReplaceAiRouting(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Preview affected features without calling a model (ai_routing read/update and ai_budget read).
+// (POST /ai/routing/preview)
+func (_ Unimplemented) PreviewAiRouting(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Read AI administration status (ai_diagnostics and ai_budget read).
+// (GET /ai/status)
+func (_ Unimplemented) GetAiStatus(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -59161,6 +58913,18 @@ func (_ Unimplemented) ShareCaptureCounterpartyHoldHistory(w http.ResponseWriter
 // Lift a counterparty hold.
 // (DELETE /capture/counterparty-holds/{id})
 func (_ Unimplemented) DeleteCaptureCounterpartyHold(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Answer an open domain question by excluding the domain from your own capture.
+// (POST /capture/domain-questions/{domain}/discard)
+func (_ Unimplemented) DiscardDomainQuestion(w http.ResponseWriter, r *http.Request, domain string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Answer an open domain question by keeping the company.
+// (POST /capture/domain-questions/{domain}/keep)
+func (_ Unimplemented) KeepDomainQuestion(w http.ResponseWriter, r *http.Request, domain string) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -60508,6 +60272,12 @@ func (_ Unimplemented) CreateFilteredExport(w http.ResponseWriter, r *http.Reque
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Download the whole-workspace export bundle.
+// (GET /exports/bundle)
+func (_ Unimplemented) DownloadExportBundle(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // List the composed extension units and what each contributes. Admin-only, human-only, read-only.
 // (GET /extensions)
 func (_ Unimplemented) ListExtensions(w http.ResponseWriter, r *http.Request) {
@@ -61225,84 +60995,6 @@ func (_ Unimplemented) GetOnboardingState(w http.ResponseWriter, r *http.Request
 // Create or replace the acting user's resumable onboarding state.
 // (PUT /onboarding/state)
 func (_ Unimplemented) PutOnboardingState(w http.ResponseWriter, r *http.Request, params PutOnboardingStateParams) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// The incumbent API budget window's consumption and band (ok/warn/shed).
-// (GET /overlay/budget)
-func (_ Unimplemented) GetOverlayBudget(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Disconnect the overlay incumbent and queue mirror teardown.
-// (DELETE /overlay/connection)
-func (_ Unimplemented) DisconnectOverlay(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// The workspace's overlay incumbent connection, if any.
-// (GET /overlay/connection)
-func (_ Unimplemented) GetOverlayConnection(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Connect the workspace's overlay incumbent (HubSpot).
-// (POST /overlay/connection)
-func (_ Unimplemented) ConnectOverlay(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Download the workspace export bundle — the flip's pre-flip export producer.
-// (GET /overlay/export)
-func (_ Unimplemented) DownloadOverlayExport(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Execute the overlay→native flip, running the migration.
-// (POST /overlay/flip)
-func (_ Unimplemented) ExecuteOverlayFlip(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Dry-run the overlay→native flip's readiness checks without executing it.
-// (POST /overlay/flip:preflight)
-func (_ Unimplemented) PreflightOverlayFlip(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// The connected incumbent's user directory, for the mapping picker.
-// (GET /overlay/owners)
-func (_ Unimplemented) ListOverlayOwners(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Queue an out-of-band mirror reconciliation sweep.
-// (POST /overlay/reconcile)
-func (_ Unimplemented) ReconcileOverlay(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Per-object mirror sync freshness (fresh/pending_sync/stale, backfill completeness).
-// (GET /overlay/sync-status)
-func (_ Unimplemented) GetOverlaySyncStatus(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// The workspace users' incumbent-user mapping, with unmapped users flagged.
-// (GET /overlay/user-map)
-func (_ Unimplemented) ListOverlayUserMap(w http.ResponseWriter, r *http.Request, params ListOverlayUserMapParams) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Unmap one user and stop automatic email matching from re-mapping them.
-// (DELETE /overlay/user-map/{id})
-func (_ Unimplemented) DeleteOverlayUserMap(w http.ResponseWriter, r *http.Request, id Id) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Pin one user to an incumbent user as a manual admin override.
-// (PUT /overlay/user-map/{id})
-func (_ Unimplemented) SetOverlayUserMap(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -63907,6 +63599,40 @@ func (siw *ServerInterfaceWrapper) ListActivityReviewTemplates(w http.ResponseWr
 	handler.ServeHTTP(w, r)
 }
 
+// UpdateActivityReviewTemplate operation middleware
+func (siw *ServerInterfaceWrapper) UpdateActivityReviewTemplate(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateActivityReviewTemplate(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetCaptureHealth operation middleware
 func (siw *ServerInterfaceWrapper) GetCaptureHealth(w http.ResponseWriter, r *http.Request) {
 
@@ -64131,6 +63857,66 @@ func (siw *ServerInterfaceWrapper) ListAvailableModels(w http.ResponseWriter, r 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListAvailableModels(w, r, provider, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAiBudget operation middleware
+func (siw *ServerInterfaceWrapper) GetAiBudget(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAiBudget(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ReplaceAiBudget operation middleware
+func (siw *ServerInterfaceWrapper) ReplaceAiBudget(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReplaceAiBudget(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PreviewAiBudget operation middleware
+func (siw *ServerInterfaceWrapper) PreviewAiBudget(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PreviewAiBudget(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -64412,6 +64198,46 @@ func (siw *ServerInterfaceWrapper) ReplaceAiRouting(w http.ResponseWriter, r *ht
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ReplaceAiRouting(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PreviewAiRouting operation middleware
+func (siw *ServerInterfaceWrapper) PreviewAiRouting(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PreviewAiRouting(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAiStatus operation middleware
+func (siw *ServerInterfaceWrapper) GetAiStatus(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAiStatus(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -66886,6 +66712,70 @@ func (siw *ServerInterfaceWrapper) DeleteCaptureCounterpartyHold(w http.Response
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.DeleteCaptureCounterpartyHold(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DiscardDomainQuestion operation middleware
+func (siw *ServerInterfaceWrapper) DiscardDomainQuestion(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "domain" -------------
+	var domain string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "domain", chi.URLParam(r, "domain"), &domain, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "domain", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DiscardDomainQuestion(w, r, domain)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// KeepDomainQuestion operation middleware
+func (siw *ServerInterfaceWrapper) KeepDomainQuestion(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "domain" -------------
+	var domain string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "domain", chi.URLParam(r, "domain"), &domain, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "domain", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.KeepDomainQuestion(w, r, domain)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -71131,6 +71021,19 @@ func (siw *ServerInterfaceWrapper) ListConfirmSubmissions(w http.ResponseWriter,
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
 		}
 		return
 	}
@@ -77027,6 +76930,26 @@ func (siw *ServerInterfaceWrapper) CreateFilteredExport(w http.ResponseWriter, r
 	handler.ServeHTTP(w, r)
 }
 
+// DownloadExportBundle operation middleware
+func (siw *ServerInterfaceWrapper) DownloadExportBundle(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DownloadExportBundle(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListExtensions operation middleware
 func (siw *ServerInterfaceWrapper) ListExtensions(w http.ResponseWriter, r *http.Request) {
 
@@ -81447,334 +81370,6 @@ func (siw *ServerInterfaceWrapper) PutOnboardingState(w http.ResponseWriter, r *
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PutOnboardingState(w, r, params)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// GetOverlayBudget operation middleware
-func (siw *ServerInterfaceWrapper) GetOverlayBudget(w http.ResponseWriter, r *http.Request) {
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetOverlayBudget(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// DisconnectOverlay operation middleware
-func (siw *ServerInterfaceWrapper) DisconnectOverlay(w http.ResponseWriter, r *http.Request) {
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.DisconnectOverlay(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// GetOverlayConnection operation middleware
-func (siw *ServerInterfaceWrapper) GetOverlayConnection(w http.ResponseWriter, r *http.Request) {
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetOverlayConnection(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// ConnectOverlay operation middleware
-func (siw *ServerInterfaceWrapper) ConnectOverlay(w http.ResponseWriter, r *http.Request) {
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ConnectOverlay(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// DownloadOverlayExport operation middleware
-func (siw *ServerInterfaceWrapper) DownloadOverlayExport(w http.ResponseWriter, r *http.Request) {
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.DownloadOverlayExport(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// ExecuteOverlayFlip operation middleware
-func (siw *ServerInterfaceWrapper) ExecuteOverlayFlip(w http.ResponseWriter, r *http.Request) {
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ExecuteOverlayFlip(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// PreflightOverlayFlip operation middleware
-func (siw *ServerInterfaceWrapper) PreflightOverlayFlip(w http.ResponseWriter, r *http.Request) {
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.PreflightOverlayFlip(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// ListOverlayOwners operation middleware
-func (siw *ServerInterfaceWrapper) ListOverlayOwners(w http.ResponseWriter, r *http.Request) {
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListOverlayOwners(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// ReconcileOverlay operation middleware
-func (siw *ServerInterfaceWrapper) ReconcileOverlay(w http.ResponseWriter, r *http.Request) {
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ReconcileOverlay(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// GetOverlaySyncStatus operation middleware
-func (siw *ServerInterfaceWrapper) GetOverlaySyncStatus(w http.ResponseWriter, r *http.Request) {
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetOverlaySyncStatus(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// ListOverlayUserMap operation middleware
-func (siw *ServerInterfaceWrapper) ListOverlayUserMap(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	// Parameter object where we will unmarshal all parameters from the context
-	var params ListOverlayUserMapParams
-
-	// ------------- Optional query parameter "cursor" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
-		}
-		return
-	}
-
-	// ------------- Optional query parameter "limit" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
-		}
-		return
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListOverlayUserMap(w, r, params)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// DeleteOverlayUserMap operation middleware
-func (siw *ServerInterfaceWrapper) DeleteOverlayUserMap(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id Id
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.DeleteOverlayUserMap(w, r, id)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// SetOverlayUserMap operation middleware
-func (siw *ServerInterfaceWrapper) SetOverlayUserMap(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id Id
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.SetOverlayUserMap(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -90849,6 +90444,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/activity-review-templates", wrapper.ListActivityReviewTemplates)
 	})
 	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/activity-review-templates/{id}", wrapper.UpdateActivityReviewTemplate)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/admin/capture-health", wrapper.GetCaptureHealth)
 	})
 	r.Group(func(r chi.Router) {
@@ -90871,6 +90469,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/ai/available-models/{provider}", wrapper.ListAvailableModels)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/ai/budget", wrapper.GetAiBudget)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/ai/budget", wrapper.ReplaceAiBudget)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/ai/budget/preview", wrapper.PreviewAiBudget)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/ai/calls", wrapper.ListAiCalls)
@@ -90901,6 +90508,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/ai/routing", wrapper.ReplaceAiRouting)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/ai/routing/preview", wrapper.PreviewAiRouting)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/ai/status", wrapper.GetAiStatus)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/ai/usage", wrapper.GetAiUsage)
@@ -91114,6 +90727,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/capture/counterparty-holds/{id}", wrapper.DeleteCaptureCounterpartyHold)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/capture/domain-questions/{domain}/discard", wrapper.DiscardDomainQuestion)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/capture/domain-questions/{domain}/keep", wrapper.KeepDomainQuestion)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/capture/email-domains", wrapper.ListWorkspaceEmailDomains)
@@ -91788,6 +91407,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/exports", wrapper.CreateFilteredExport)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/exports/bundle", wrapper.DownloadExportBundle)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/extensions", wrapper.ListExtensions)
 	})
 	r.Group(func(r chi.Router) {
@@ -92146,45 +91768,6 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/onboarding/state", wrapper.PutOnboardingState)
-	})
-	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/overlay/budget", wrapper.GetOverlayBudget)
-	})
-	r.Group(func(r chi.Router) {
-		r.Delete(options.BaseURL+"/overlay/connection", wrapper.DisconnectOverlay)
-	})
-	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/overlay/connection", wrapper.GetOverlayConnection)
-	})
-	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/overlay/connection", wrapper.ConnectOverlay)
-	})
-	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/overlay/export", wrapper.DownloadOverlayExport)
-	})
-	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/overlay/flip", wrapper.ExecuteOverlayFlip)
-	})
-	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/overlay/flip:preflight", wrapper.PreflightOverlayFlip)
-	})
-	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/overlay/owners", wrapper.ListOverlayOwners)
-	})
-	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/overlay/reconcile", wrapper.ReconcileOverlay)
-	})
-	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/overlay/sync-status", wrapper.GetOverlaySyncStatus)
-	})
-	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/overlay/user-map", wrapper.ListOverlayUserMap)
-	})
-	r.Group(func(r chi.Router) {
-		r.Delete(options.BaseURL+"/overlay/user-map/{id}", wrapper.DeleteOverlayUserMap)
-	})
-	r.Group(func(r chi.Router) {
-		r.Put(options.BaseURL+"/overlay/user-map/{id}", wrapper.SetOverlayUserMap)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/partners", wrapper.ListPartners)

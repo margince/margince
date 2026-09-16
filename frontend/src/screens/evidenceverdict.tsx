@@ -8,6 +8,7 @@ import { Button, TextInput } from "../design-system/atoms";
 import { formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { throwProblem } from "./common";
+import { factsKey } from "./companyfactspanel";
 import "./evidenceverdict.css";
 
 // A human's verdict on a machine's claim: agree with it, or correct it.
@@ -176,7 +177,7 @@ export function EvidenceVerdict({
       // the page keeps offering a verdict on a claim the human already settled.
       queryClient.invalidateQueries({ queryKey: ["company", companyId] }),
       queryClient.invalidateQueries({ queryKey: profileFieldsKey(companyId) }),
-      queryClient.invalidateQueries({ queryKey: ["company-facts", companyId] }),
+      queryClient.invalidateQueries({ queryKey: factsKey(companyId) }),
     ]);
   };
   const confirm = useMutation({

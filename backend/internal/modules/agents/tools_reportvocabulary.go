@@ -48,9 +48,9 @@ type DescribeReportVocabularyResult struct {
 // ReportVocabularyReader answers the report plan vocabulary.
 //
 // A port rather than the catalog itself, so the composition root can wrap the
-// answer the way it wraps run_report's: in an overlay workspace run_report is
-// refused, and a vocabulary served there would teach a caller a name list
-// nothing can execute. ReportVocabularyResource satisfies it, which is what
+// answer the way it wraps run_report's: where run_report is refused, a
+// vocabulary served anyway would teach a caller a name list nothing can
+// execute. ReportVocabularyResource satisfies it, which is what
 // keeps the tool and the resource one document.
 type ReportVocabularyReader interface {
 	ReportVocabularyDocument(ctx context.Context) (json.RawMessage, error)

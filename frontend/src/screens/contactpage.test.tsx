@@ -150,7 +150,10 @@ describe("the contact record's tabs", () => {
   });
 });
 
-describe("the overview tab's added capabilities", () => {
+describe("the Data & tools tab's added capabilities", () => {
+  // On Data & tools, not the overview: an audit of what the enrichment pass
+  // read is record-keeping, and the overview is what a rep opens before a
+  // call.
   it("lets a reader confirm or correct a field Margince read off a signature", async () => {
     const withEnrichment: Contact360 = {
       ...view,
@@ -165,7 +168,7 @@ describe("the overview tab's added capabilities", () => {
         },
       ],
     };
-    mount("overview", withEnrichment);
+    mount("research", withEnrichment);
     expect(await screen.findByText("What Margince read")).toBeTruthy();
     expect(screen.getByText("Head of Procurement")).toBeTruthy();
     // The heading and the value alone don't prove the page reaches the
@@ -178,7 +181,7 @@ describe("the overview tab's added capabilities", () => {
     expect(
       await screen.findByRole("button", { name: "That is right" }),
     ).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Correct" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Edit" })).toBeTruthy();
   });
 });
 
@@ -604,7 +607,9 @@ describe("the contact's LinkedIn on the header", () => {
     });
 
     const header = await recordHeader();
-    expect(within(header).getByText("LinkedIn")).toBeTruthy();
+    expect(
+      within(header).getByText("LinkedIn", { selector: "dd" }),
+    ).toBeTruthy();
     expect(within(header).queryByRole("link", { name: "LinkedIn" })).toBe(null);
   });
 
@@ -623,7 +628,9 @@ describe("the contact's LinkedIn on the header", () => {
     const header = await recordHeader();
     // The fact is kept — this contact HAS something recorded — and the claim
     // that it is LinkedIn is what is withheld.
-    expect(within(header).getByText("LinkedIn")).toBeTruthy();
+    expect(
+      within(header).getByText("LinkedIn", { selector: "dd" }),
+    ).toBeTruthy();
     expect(within(header).queryByRole("link", { name: "LinkedIn" })).toBe(null);
   });
 
@@ -784,13 +791,14 @@ describe("logging an activity", () => {
     });
   });
 
-  // Nobody suggested that nothing needs doing, and a verb a reader can press
-  // is the whole of "ready". Both were printed on this rung and both said
-  // something about the machine rather than about the record.
-  it("carries neither an agent byline nor a readiness word", async () => {
+  // A quiet rung already says so in the brief, so the moment's own sentence
+  // under it would be the same news twice, and neither an agent byline nor
+  // a verb a reader can press belongs on a record where nothing is asked.
+  it("prints no suggestion card, byline, readiness word, or coverage sentence for a quiet record", async () => {
     mount("overview", { ...view, moment: quietDayMoment });
 
-    expect(await screen.findByText(quietDayMoment.why_now)).toBeTruthy();
+    await recordHeader();
+    expect(screen.queryByText(quietDayMoment.why_now)).toBeNull();
     expect(screen.queryByText("Margince suggests")).toBeNull();
     expect(screen.queryByText("Ready")).toBeNull();
     expect(

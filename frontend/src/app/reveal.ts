@@ -19,7 +19,7 @@
  * The id is ONE constant, exported by the strip that draws the door and given
  * to the element by the screen that owns the layout, so a typo cannot split the
  * two. The only miss left is a section not on the page — and a door for such a
- * section is not drawn: the deal strip is withheld in overlay, and every other
+ * section is not drawn: a withheld deal strip, say, and every other
  * door stands in the same tree as its section. The `?.` on the lookup answers
  * the type, `HTMLElement | null`, not a case this app has.
  */
@@ -30,4 +30,46 @@ export function reveal(anchor: string): () => void {
       .getElementById(anchor)
       ?.scrollIntoView?.({ behavior: "smooth", block: "start" });
   };
+}
+
+/**
+ * Reveals an anchor that may not be on the page yet: a press that also
+ * switches to the tab rendering it finds nothing on the first frame. Looked
+ * for once per frame for a moment, then given up rather than kept forever.
+ */
+export function revealOnceMounted(anchor: string, frames = 30): void {
+  const look = (left: number) => {
+    const target = document.getElementById(anchor);
+    if (target) {
+      target.scrollIntoView?.({ behavior: scrollBehavior(), block: "start" });
+      return;
+    }
+    if (left > 0) {
+      requestAnimationFrame(() => look(left - 1));
+    }
+  };
+  look(frames);
+}
+
+/**
+ * Takes the reader back to the top of the page pane, smoothly: for a tab
+ * strip stuck under the top bar, where a reader deep in one tab's body
+ * chooses another and would otherwise land part-way down the new one.
+ *
+ * `.scroll` is the shell's one scrolling pane (app/shell.css); the window
+ * itself never scrolls. Motion follows the reader's own setting: a reduced-
+ * motion preference makes the jump instant rather than skipping it.
+ */
+export function scrollPageToTop(): void {
+  const pane = document.querySelector(".scroll");
+  pane?.scrollTo?.({ top: 0, behavior: scrollBehavior() });
+}
+
+// Motion follows the reader's own setting: a reduced-motion preference makes
+// every reveal on this page an instant jump rather than a glide.
+function scrollBehavior(): ScrollBehavior {
+  const reduced = globalThis.matchMedia?.(
+    "(prefers-reduced-motion: reduce)",
+  ).matches;
+  return reduced ? "auto" : "smooth";
 }

@@ -39,7 +39,6 @@ type Config struct {
 	MCP            MCP             `yaml:"mcp"`
 	Capture        Capture         `yaml:"capture"`
 	CompanyContext CompanyContext  `yaml:"company_context"`
-	OverlayBudget  OverlayBudget   `yaml:"overlay_budget"`
 	Operations     Operations      `yaml:"operations"`
 	Uploads        Uploads         `yaml:"uploads"`
 }
@@ -379,11 +378,6 @@ func (c Config) validate() error {
 	case CompanyContextOff, CompanyContextRead, CompanyContextTasks, CompanyContextOnboarding:
 	default:
 		return fmt.Errorf("deployconfig: company_context.rollout %q is not off, read, tasks, or onboarding", c.CompanyContext.Rollout)
-	}
-	for name, ib := range c.OverlayBudget {
-		if err := ib.validate(name); err != nil {
-			return err
-		}
 	}
 	if err := c.Uploads.validate(); err != nil {
 		return err

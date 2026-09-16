@@ -45,7 +45,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/licensecheck"
-	"github.com/margince/margince/backend/internal/platform/overlaybudget"
 )
 
 // Server satisfies crmcontracts.ServerInterface by embedding: every
@@ -105,6 +104,7 @@ type Server struct {
 	connectorHandlers
 	backfillHandlers
 	aiRoutingHandlers
+	aiAdminHandlers
 	captureSettingsHandlers
 	integrationsSettingsHandlers
 	ownDomainHandlers
@@ -114,6 +114,7 @@ type Server struct {
 	installationSetupHandlers
 	consumerMailDomainHandlers
 	blockedDomainHandlers
+	domainQuestionHandlers
 	captureSenderHandlers
 	captureExclusionHandlers
 	captureOwnerIdentityHandlers
@@ -125,13 +126,12 @@ type Server struct {
 	pipelineTraceHandlers
 	filteredExportHandlers
 	filterPreviewHandlers
-	overlayExportHandlers
+	exportBundleHandlers
 	companyRollupHandlers
 	strengthHandlers
 	customfieldsHandlers
 	attachmentExtractionHandlers
 	outcomeReviewHandlers
-	overlayHandlers
 	embedReindexHandlers
 	rateRefreshHandlers
 	webhooksHandlers
@@ -206,12 +206,6 @@ type Server struct {
 	// chassis), injected by WithGraphPush only when a notification token is
 	// configured — the route is absent otherwise, never open.
 	graphPush http.Handler
-
-	// overlayWebhook is the HubSpot webhook-as-signal receiver (OVA-WIRE-10),
-	// injected by WithOverlayWebhook only when the overlay app secret is
-	// configured — the route is absent otherwise, never an open unverified
-	// endpoint.
-	overlayWebhook http.Handler
 
 	// mcpConnectorEnabled is the remote-connector deployment gate, set by
 	// WithMCPConnector from the deployment file. It governs the connector as
@@ -398,21 +392,6 @@ type Server struct {
 	// reports no license section at all.
 	licensePosture func() licensecheck.Posture
 
-	// overlayMeter is this Server's REST-surface OVB meter — what
-	// contractAPI's Dispatcher force-fresh reads spend against and what
-	// GetOverlayBudget reports (once WithKeyvault rebuilds overlayHandlers
-	// over it). Its windows live in Redis (see compose/overlay.go's
-	// NewOverlayMeter doc), so it shares a per-workspace-per-incumbent count
-	// with cmd/worker's poller meter over the same Redis; threading this one
-	// instance through both wiring points is convention, no longer a
-	// correctness requirement.
-	// Always non-nil (newServer constructs it unconditionally, fail-closed
-	// with no Redis): a role that never calls WithOverlayMeter answers shed
-	// for every force-fresh read (never spends live volume budget it cannot
-	// account for), and a role with no vault never reaches GetOverlayBudget
-	// at all. WithOverlayMeter Rebinds this shared pointer to the live
-	// Redis-backed meter at boot.
-	overlayMeter *overlaybudget.Meter
 	// volumeMeter is the MCP-SESS-READS bound this role enforces on agent
 	// the five MCP-SESS-* counters, shared by everything that must agree about
 	// them: the admission gate that REFUSES on them, both doors' registries that
@@ -431,10 +410,6 @@ type Server struct {
 	// nil is honest rather than broken: every surface that ranks says which
 	// lane ranked it.
 	retrievalEmbedder search.Embedder
-	// overlayBackfillLimit bounds the overlay initial mirror backfill per
-	// object class (dev/demo — WithOverlayBackfillLimit); 0 is uncapped.
-	overlayBackfillLimit int
-
 	// companyBriefSvc writes both of the company view's grounded-prose surfaces:
 	// the standing account brief and the prepared "Ask Margince" questions.
 	// WithAccountBrief rebinds its model lane at boot, so the api role writes
@@ -482,16 +457,6 @@ type Server struct {
 	// after it — silently reducing a full wipe to a table sweep, with nothing
 	// failing to say so.
 	resetRuntime ResetRuntime
-
-	// sorDispatch is the per-workspace native/overlay provider dispatch:
-	// the ONE instance both the ADR-0055 admission layer (contractAPI's
-	// agentGate) and the overlay-mode human read shadows (overlayread.go)
-	// ride, so the installation's resolved mode is cached once, not per
-	// consumer. Assembled in newServer, before the options run, so
-	// WithKeyvault can hand its Invalidate to overlay.Service as the
-	// mode-flip observer (a connect/disconnect drops the cached mode
-	// immediately in this process).
-	sorDispatch *Dispatcher
 }
 
 var _ crmcontracts.ServerInterface = Server{}

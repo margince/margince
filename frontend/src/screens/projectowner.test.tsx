@@ -45,12 +45,17 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
-const project = {
+const project: Project = {
   id: "proj-1",
   name: "Pallet Handling Programme",
+  phase: "delivering",
+  source: "manual",
+  captured_by: "human:u-1",
+  created_at: "2026-06-01T08:00:00Z",
+  updated_at: "2026-06-01T08:00:00Z",
   version: 5,
   owner_id: null,
-} as unknown as Project;
+};
 
 type Recorded = {
   url: string;

@@ -24,14 +24,12 @@ import (
 
 // csvWriters implements migration.Writers for a delimited upload.
 //
-// It is NOT the flip's writers with a different source, and the difference is
-// the whole reason this type exists. flipWriters answers "already landed" with
-// Unchanged and writes nothing, which is correct there because its source is a
-// FROZEN snapshot — a re-imported row cannot carry different values than the
-// row that already landed. **An uploaded file is editable.** The customer
-// fixes a column and uploads the corrected file, and that same shortcut would
-// report "unchanged" and write nothing, silently. So a match here compares the
-// mapped fields and updates the ones that differ.
+// A writer whose source is FROZEN may answer "already landed" with Unchanged
+// and write nothing: a re-imported row cannot carry different values than the
+// row that already landed. **An uploaded file is editable**, so that shortcut
+// is wrong here. The customer fixes a column and uploads the corrected file,
+// and answering "unchanged" would write nothing, silently. So a match here
+// compares the mapped fields and updates the ones that differ.
 type csvWriters struct {
 	pool       *pgxpool.Pool
 	contacts   *contacts.Store
@@ -71,6 +69,15 @@ var _ migration.Writers = (*csvWriters)(nil)
 // newCSVWriters takes the run's mapping by pointer because a stored run may
 // carry none: the object and the duplicate policy then fall back to empty,
 // which is what every caller before this did by passing them separately.
+// skipReasonNaturalKeyTaken marks an imported row that could not land because
+// something else already holds its natural key.
+const skipReasonNaturalKeyTaken = "natural_key_already_taken"
+
+// skipReasonDuplicateEmail marks an imported contact whose email a stored
+// contact already holds — a merge candidate the run discloses rather than
+// resolves.
+const skipReasonDuplicateEmail = "duplicate_email"
+
 func newCSVWriters(db *database.DB, runID migration.RunID, mapping *migration.RunMapping) *csvWriters {
 	settled := migration.RunMapping{}
 	if mapping != nil {

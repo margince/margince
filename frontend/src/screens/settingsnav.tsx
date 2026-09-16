@@ -62,11 +62,8 @@ import { SettingsSearchBox } from "./settingssearchbox";
 // takes; and the operational verbs that were hiding beside the field editor — a
 // reindex, job health, the danger zone — became a place of their own.
 //
-// One of those merges was later UNDONE: connectors and the overlay both answer
-// "what are we connected to" and were merged on that reading, but the question
-// has two different owners — see the split below. Capture activity is newer and
-// additive: it answers what those connections DID, which no existing entry
-// could say.
+// Capture activity is newer and additive: it answers what those connections
+// DID, which no existing entry could say.
 //
 // No sentence here counts the entries. Three of them used to, and by the time
 // anyone looked they said eleven, twelve and thirteen for a register holding
@@ -257,7 +254,6 @@ export function useSettingsEntryVisibility(): Readonly<
   // The consent registry's server gate, which is not a role and not "any member":
   // consent/store.go's ListPurposes calls auth.Require(ctx, "contact", read).
   const contact = useCan("contact", "read");
-  const overlay = useCan("overlay_connection", "read");
   // The one predicate below that is a ROLE rather than a grant. `GET /admin/reset-data`
   // and the job-health read are gated on the literal admin role server-side and no
   // RBAC object describes them — a `role` object would encode a constant, and an
@@ -309,24 +305,19 @@ export function useSettingsEntryVisibility(): Readonly<
     // page whose only read answers 403.
     extensions: isAdmin,
     capture: captureSettings,
-    // The installation's own outside wiring — the shared provider credential, the
-    // outbound subscriptions, the incumbent mirror. Either read opens it, and the
-    // provider card carries no grant of its own because the server answers for it.
-    //
-    // The system-of-record chip in the topbar is shown to EVERY seat and points
-    // here, so an entry this narrow would strand whoever follows it on the Account
-    // fallback — the overlay read every seeded role holds is what keeps that link
-    // honest, and it is a live grant rather than an exemption.
+    // The installation's own outside wiring — the shared provider credential
+    // and the outbound subscriptions. The webhook read opens it, and the
+    // provider card carries no grant of its own because the server answers for
+    // it.
     //
     // The composed units are the third card, and they open the entry on their
     // own PRESENCE rather than on a grant: this page is the only place a
     // workspace-scoped unit is offered at all — it has no rail row and the
-    // palette never carried one — so a role holding neither read would lose the
-    // unit itself, not merely the two cards above it. Presence is the honest
+    // palette never carried one — so a role holding no read would lose the
+    // unit itself, not merely the cards above it. Presence is the honest
     // predicate because the card asks for no grant; the unit's own screen is
     // what refuses, on the object it declares.
-    integrations:
-      webhook || overlay || unitsForSecretScope("workspace").length > 0,
+    integrations: webhook || unitsForSecretScope("workspace").length > 0,
     // Everything that defines the shape a record takes: the field editor, the
     // pipeline designer, the product list, the offer templates. Any one of their
     // reads opens the page; the authoring controls inside each ask for their own

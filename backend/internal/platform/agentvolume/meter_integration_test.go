@@ -10,16 +10,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/margince/margince/backend/internal/platform/overlaybudget/budgettest"
+	"github.com/margince/margince/backend/internal/platform/redistest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// The Redis fixture is budgettest's: it is the platform tier's shared
-// flushed-client helper (isolated db, fails loudly rather than skipping), and
-// it is named after the meter it was written for rather than after what it
-// does. Re-reading MARGINCE_TEST_REDIS here would be a second spelling of the
-// same fixture for no gain.
+// The Redis fixture is redistest's: the platform tier's shared flushed-client
+// helper (isolated db, fails loudly rather than skipping). Re-reading
+// MARGINCE_TEST_REDIS here would be a second spelling of the same fixture for
+// no gain.
 
 // meteredCall builds a context for one Passport inside workspace ws. The
 // workspace is a PARAMETER because the isolation test has to hold it fixed:
@@ -51,7 +50,7 @@ func aPassport() ids.UUID { return ids.New[ids.PassportKind]().UUID }
 // limit of 100 that no one of them approaches.
 func TestRecordsAccumulateAcrossCallsUntilTheThresholdIsCrossed(t *testing.T) {
 	at := time.Date(2026, 8, 8, 9, 0, 0, 0, time.UTC)
-	meter := NewWithClock(budgettest.Client(t), Limits{Reads: 100}, time.Hour, frozen(&at))
+	meter := NewWithClock(redistest.Client(t), Limits{Reads: 100}, time.Hour, frozen(&at))
 	ctx := meteredCall(t, aWorkspace(), aPassport())
 
 	for range 3 {
@@ -80,7 +79,7 @@ func TestRecordsAccumulateAcrossCallsUntilTheThresholdIsCrossed(t *testing.T) {
 // §2.2 names by hand: "a single search_records returning 5,000 rows trips it".
 func TestOneOversizedCallTripsTheThresholdByItself(t *testing.T) {
 	at := time.Date(2026, 8, 8, 9, 0, 0, 0, time.UTC)
-	meter := NewWithClock(budgettest.Client(t), Limits{Reads: 100}, time.Hour, frozen(&at))
+	meter := NewWithClock(redistest.Client(t), Limits{Reads: 100}, time.Hour, frozen(&at))
 	ctx := meteredCall(t, aWorkspace(), aPassport())
 
 	if err := meter.Consume(ctx, Reads, 5000); err != nil {
@@ -96,7 +95,7 @@ func TestOneOversizedCallTripsTheThresholdByItself(t *testing.T) {
 // otherwise one busy agent would step-up every other agent the workspace runs.
 func TestOnePassportsReadingDoesNotRefuseAnother(t *testing.T) {
 	at := time.Date(2026, 8, 8, 9, 0, 0, 0, time.UTC)
-	meter := NewWithClock(budgettest.Client(t), Limits{Reads: 100}, time.Hour, frozen(&at))
+	meter := NewWithClock(redistest.Client(t), Limits{Reads: 100}, time.Hour, frozen(&at))
 	// ONE workspace, two Passports — the whole point of the test.
 	ws := aWorkspace()
 	busy := meteredCall(t, ws, aPassport())
@@ -119,7 +118,7 @@ func TestOnePassportsReadingDoesNotRefuseAnother(t *testing.T) {
 // rather than by waiting for one.
 func TestTheWindowRollsOverAndReleasesTheThreshold(t *testing.T) {
 	at := time.Date(2026, 8, 8, 9, 0, 0, 0, time.UTC)
-	meter := NewWithClock(budgettest.Client(t), Limits{Reads: 100}, time.Hour, frozen(&at))
+	meter := NewWithClock(redistest.Client(t), Limits{Reads: 100}, time.Hour, frozen(&at))
 	ctx := meteredCall(t, aWorkspace(), aPassport())
 	if err := meter.Consume(ctx, Reads, 200); err != nil {
 		t.Fatal(err)
@@ -145,7 +144,7 @@ func TestTheWindowRollsOverAndReleasesTheThreshold(t *testing.T) {
 // arithmetic on a limit.
 func TestAReleaseLetsARefusedAgentReadAgainInTheSameWindow(t *testing.T) {
 	at := time.Date(2026, 8, 8, 9, 0, 0, 0, time.UTC)
-	meter := NewWithClock(budgettest.Client(t), Limits{Reads: 100}, time.Hour, frozen(&at))
+	meter := NewWithClock(redistest.Client(t), Limits{Reads: 100}, time.Hour, frozen(&at))
 	ws, passport := aWorkspace(), aPassport()
 	ctx := meteredCall(t, ws, passport)
 	if err := meter.Consume(ctx, Reads, 120); err != nil {
@@ -178,7 +177,7 @@ func TestAReleaseLetsARefusedAgentReadAgainInTheSameWindow(t *testing.T) {
 // the ladder has, so it must actually hold.
 func TestASecondCrossingAfterAReleaseNeedsASecondDecision(t *testing.T) {
 	at := time.Date(2026, 8, 8, 9, 0, 0, 0, time.UTC)
-	meter := NewWithClock(budgettest.Client(t), Limits{Reads: 100}, time.Hour, frozen(&at))
+	meter := NewWithClock(redistest.Client(t), Limits{Reads: 100}, time.Hour, frozen(&at))
 	ws, passport := aWorkspace(), aPassport()
 	ctx := meteredCall(t, ws, passport)
 	if err := meter.Consume(ctx, Reads, 120); err != nil {
@@ -202,7 +201,7 @@ func TestASecondCrossingAfterAReleaseNeedsASecondDecision(t *testing.T) {
 // tightest volume budget on the surface and the one nothing may release at all.
 func TestAReleaseWidensOnlyTheCounterItNamed(t *testing.T) {
 	at := time.Date(2026, 8, 8, 9, 0, 0, 0, time.UTC)
-	meter := NewWithClock(budgettest.Client(t), Limits{Reads: 10, Writes: 10}, time.Hour, frozen(&at))
+	meter := NewWithClock(redistest.Client(t), Limits{Reads: 10, Writes: 10}, time.Hour, frozen(&at))
 	ws, passport := aWorkspace(), aPassport()
 	ctx := meteredCall(t, ws, passport)
 	for _, c := range []Counter{Reads, Writes} {
@@ -228,7 +227,7 @@ func TestAReleaseWidensOnlyTheCounterItNamed(t *testing.T) {
 // let a caller spend the loose volume budget to escape the tight one.
 func TestEachCounterIsItsOwnWindowForOnePassport(t *testing.T) {
 	at := time.Date(2026, 8, 8, 9, 0, 0, 0, time.UTC)
-	meter := NewWithClock(budgettest.Client(t),
+	meter := NewWithClock(redistest.Client(t),
 		Limits{Reads: 100, Writes: 10, Egress: 2, Calls: 500}, time.Hour, frozen(&at))
 	ctx := meteredCall(t, aWorkspace(), aPassport())
 

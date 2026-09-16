@@ -2,12 +2,12 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { expect, userEvent, within } from "storybook/test";
-import { RecordView } from "../design-system/composed";
-import { InlineText } from "../design-system/inlinechoice";
+import { InlineText } from "../design-system/inlinetext";
 import { Panel, PanelBody } from "../design-system/panel";
 import { RecordTabs } from "../design-system/recordtabs";
+import { RecordView } from "../design-system/recordview";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { installFetchStub } from "../screens/story-utils";
@@ -52,10 +52,11 @@ function contextCards() {
   );
 }
 
-// A record screen's shape: it claims the pane, hands the view its content only
-// while the pane is open, and carries the switch at the end of the tab row.
-function Record({ available }: Readonly<{ available: boolean }>) {
-  const details = usePageAside(available);
+// A record screen's shape: it claims the pane, hands the view its content
+// whether or not the pane is showing and says which, and carries the switch at
+// the end of the tab row.
+function Record() {
+  const details = usePageAside();
   return (
     <RecordView
       name="Brandt Automotive GmbH"
@@ -69,7 +70,8 @@ function Record({ available }: Readonly<{ available: boolean }>) {
           trailing={<PageAsideToggle />}
         />
       }
-      aside={details.open ? contextCards() : undefined}
+      aside={contextCards()}
+      asideOpen={details.open}
     >
       <Panel title={en["co.commercial.title"]}>
         <PanelBody>{en["co.work.noDeals"]}</PanelBody>
@@ -78,15 +80,37 @@ function Record({ available }: Readonly<{ available: boolean }>) {
   );
 }
 
-function page(available: boolean, open: boolean) {
+// A screen that offers no pane at all: it never claims one, so the tab row's
+// switch has nothing to govern and draws nothing.
+function PlainRecord() {
+  return (
+    <RecordView
+      name="Brandt Automotive GmbH"
+      zone="UTC"
+      tabs={
+        <RecordTabs
+          options={["overview", "history"]}
+          value="overview"
+          onChange={() => undefined}
+          labels={{ overview: en["tab.overview"], history: en["tab.history"] }}
+          trailing={<PageAsideToggle />}
+        />
+      }
+    >
+      <Panel title={en["co.commercial.title"]}>
+        <PanelBody>{en["co.work.noDeals"]}</PanelBody>
+      </Panel>
+    </RecordView>
+  );
+}
+
+function page(screen: ReactNode, open: boolean) {
   return () => {
     installFetchStub({});
     return (
       <LocaleProvider initial="en">
         <PageAsideProvider open={open}>
-          <div className="wrap">
-            <Record available={available} />
-          </div>
+          <div className="wrap">{screen}</div>
         </PageAsideProvider>
       </LocaleProvider>
     );
@@ -94,27 +118,33 @@ function page(available: boolean, open: boolean) {
 }
 
 /** The pane open beside the work, under the tab row, at its own 300px. */
-export const Open: Story = { render: page(true, true) };
+export const Open: Story = { render: page(<Record />, true) };
 
 /**
  * Folded away: the work takes the whole width and the switch reads "show".
  * The play flips it and asserts the pane arrives, and the switch says so.
  */
 export const Folded: Story = {
-  render: page(true, false),
+  render: page(<Record />, false),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const user = userEvent.setup();
-    await expect(canvasElement.querySelector("aside")).toBeNull();
     // The switch renders nothing until the screen's `usePageAside` effect has
     // claimed the pane, which is a commit past mount: the query has to wait for
-    // it rather than assume the first paint carried it.
+    // it rather than assume the first paint carried it. The pane is open by
+    // default, so the first press folds it.
     await user.click(
-      await canvas.findByRole("button", { name: en["record.panel.details"] }),
+      await canvas.findByRole("button", {
+        name: en["record.panel.hideDetails"],
+      }),
+    );
+    await expect(canvasElement.querySelector("aside")).toBeNull();
+    await user.click(
+      canvas.getByRole("button", { name: en["record.panel.showDetails"] }),
     );
     await expect(canvasElement.querySelector("aside")).not.toBeNull();
     await expect(
-      canvas.getByRole("button", { name: en["record.panel.details"] }),
+      canvas.getByRole("button", { name: en["record.panel.hideDetails"] }),
     ).toHaveAttribute("aria-pressed", "true");
   },
 };
@@ -122,7 +152,7 @@ export const Folded: Story = {
 /** The screen offers no pane, so the switch is absent rather than present and
  *  inert — a switch for a pane that does not exist would be a control that
  *  does nothing. */
-export const Empty: Story = { render: page(false, true) };
+export const Empty: Story = { render: page(<PlainRecord />, true) };
 
 function ControlledQueue() {
   const [open, setOpen] = useState(false);
@@ -132,7 +162,7 @@ function ControlledQueue() {
         <PageAsideToggle
           controlled={{
             open,
-            label: "Work queue",
+            labels: { show: "Show work queue", hide: "Hide work queue" },
             onToggle: () => setOpen(!open),
           }}
         />

@@ -8,6 +8,7 @@ import type { ComboBoxSuggestion } from "../design-system/combobox";
 import { stable } from "../format/collate";
 import { formatUsdPerMTok } from "../format/format";
 import type { Locale } from "../i18n";
+import { translate } from "../i18n";
 
 /**
  * Which models this installation can bind, for the two screens that bind one.
@@ -187,9 +188,12 @@ function priceHint(rate: ModelRate, locale: Locale): string | undefined {
   }
   const shown = formatUsdPerMTok(rate.input_per_mtok, locale);
   if (rate.lane === "embeddings") {
-    return shown;
+    return translate(locale, "aiAdmin.inputRate", { input: shown });
   }
-  return `${shown} → ${formatUsdPerMTok(rate.output_per_mtok, locale)}`;
+  return translate(locale, "aiAdmin.rates", {
+    input: shown,
+    output: formatUsdPerMTok(rate.output_per_mtok, locale),
+  });
 }
 
 /**
@@ -260,7 +264,10 @@ function vendorHint(model: VendorModel, locale: Locale): string | undefined {
     return undefined;
   }
   const shown = formatUsdPerMTok(input, locale);
-  return `${shown} → ${formatUsdPerMTok(output, locale)}`;
+  return translate(locale, "aiAdmin.rates", {
+    input: shown,
+    output: formatUsdPerMTok(output, locale),
+  });
 }
 
 /**

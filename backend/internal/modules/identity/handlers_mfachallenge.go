@@ -91,7 +91,6 @@ func (h Handlers) CompleteMfaChallenge(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	setSessionCookie(w, token)
-	// The same response builder /me and /auth/login use; meResponse's own reads
-	// are not context-threaded there either.
-	httperr.WriteJSON(w, http.StatusOK, h.meResponse(id, h.resolveSorMode(r.Context()))) //nolint:contextcheck // matches the established /me and /auth/login call
+	// The same response builder /me and /auth/login use.
+	httperr.WriteJSON(w, http.StatusOK, h.meResponse(r.Context(), id))
 }

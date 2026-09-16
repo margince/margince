@@ -61,13 +61,6 @@ func jobQueues() map[string]river.QueueConfig {
 		// the intervals; this bound holds the single thread, because a second
 		// worker would be a second requester however carefully each paced.
 		technicalLookupQueue: {MaxWorkers: technicalLookupMaxWorkers},
-		// Overlay reconcile is SERIAL by design. overlaybudget.ConsumeSearch
-		// counts but does not pace, and its keys are per workspace, so it
-		// cannot bound a provider-level burst: a concurrent fan-out could
-		// exceed the incumbent's per-second Search limit. Each workspace
-		// still gets its own job row, which is the observability this phase
-		// is after; per-workspace PARALLELISM is not.
-		overlayReconcileQueue: {MaxWorkers: 1},
 		// A full batch of sequential calls to endpoints this deployment
 		// does not control: long and outbound-bound, so the same posture
 		// deep reads take (webhookRetryQueue).
