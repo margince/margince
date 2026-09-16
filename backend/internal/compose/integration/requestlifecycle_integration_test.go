@@ -46,7 +46,7 @@ func TestWonDealKeepsOldSchedulingRequestUntilItsTaskIsCompleted(t *testing.T) {
 	if _, err := store.SetCaptureLabel(ctx, id, "meeting"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := store.SetOwedVerdict(ctx, id, activities.OwedVerdictAsksUs); err != nil {
+	if _, err := store.SetOwedVerdict(ctx, id, activities.OwedVerdictAsksUs, "prompts-test", time.Now()); err != nil {
 		t.Fatal(err)
 	}
 	// Push the request outside the recent-history window with real activity writes.
