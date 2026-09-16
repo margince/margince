@@ -774,6 +774,8 @@
   padding: 5px 12px;
   border-radius: var(--r-sm);
   cursor: pointer;
+  /* Unselectable, for `.checkfield`'s reason. */
+  user-select: none;
 }
 .segmented button[aria-pressed="true"] {
   background: var(--bgElevated);
@@ -1356,6 +1358,9 @@
   align-content: center;
   column-gap: var(--space-2);
   cursor: pointer;
+  /* A double-click on a toggle's label selects the word instead of flipping the
+     control under it, so the words a reader clicks do not select. */
+  user-select: none;
 }
 /* Sized here rather than left to the platform. The box is native, so unsized it
    is whatever the engine draws — around 13px in Blink, a different figure in
@@ -1549,6 +1554,8 @@
   align-items: center;
   gap: var(--space-2);
   cursor: pointer;
+  /* Unselectable, for `.checkfield`'s reason. */
+  user-select: none;
   list-style: none;
 }
 .disclosure-summary::-webkit-details-marker {

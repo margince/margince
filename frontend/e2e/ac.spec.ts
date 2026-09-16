@@ -1283,7 +1283,11 @@ test("AC-create-2: the palette's New-deal action opens the create form; only ope
   await stageSelect.click();
   await expect(page.locator('[role="listbox"]')).toHaveCount(0);
   await page.getByLabel("Deal-Name").fill("Neuer Deal");
-  await page.getByLabel("Wert").fill("480");
+  // By ROLE, not by label: the rail's "Auswertung" group carries a real
+  // accessible name, and a label lookup for "Wert" matches inside it. The
+  // amount is a number input, so the role is what the query meant all along
+  // and a group can never answer to it.
+  await page.getByRole("spinbutton", { name: "Wert" }).fill("480");
   await page.getByRole("button", { name: "Anlegen" }).click();
   await expect(page).toHaveURL(/#\/deals\/d-new$/);
 });

@@ -20,6 +20,8 @@
   color: var(--textPrimary);
   text-align: left;
   cursor: pointer;
+  /* Unselectable, for `.checkfield`'s reason. */
+  user-select: none;
 }
 
 .switchcontrol:disabled {

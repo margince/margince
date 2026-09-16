@@ -172,6 +172,8 @@
   align-items: center;
   gap: var(--space-2);
   cursor: pointer;
+  /* Unselectable, for `.checkfield`'s reason. */
+  user-select: none;
 }
 /* Sized like every other tick in the product. Its box sits outside a
    `.checkfield`, so unsized it was whatever the engine draws — 13px in Blink,
@@ -306,6 +308,18 @@
    * stretches, so without this the button is as tall as its glyph — 15px, under
    * the 24px a pointer target owes — and the ratio below squares THAT. */
   height: 100%;
+  /* And a floor under that, because the height above is a PERCENTAGE of a
+   * wrapper the row stretches: whenever that chain gives way the target shrinks
+   * to the glyph, which is how this segment has twice been measured under WCAG
+   * 2.2 AA 2.5.8 (at 15px, then at 20px on a row that had not yet claimed
+   * --controlHeight). The 24px the rule asks for and not the row's 32px: the
+   * row is 32px OUTSIDE its border, so a segment that claimed the same would
+   * push the pill to 34px and off the line of controls it stands in.
+   * `padding: 0` so the button's own box is the target's box and the platform's
+   * default inset is not part of the arithmetic. */
+  min-inline-size: var(--space-6);
+  min-block-size: var(--space-6);
+  padding: 0;
   /* Square by construction, not by arithmetic. The row stretches this segment
    * to its own inner height; the ratio turns that into the width, so the "⋮"
    * cannot become a rectangle when the row's height or its border moves. A

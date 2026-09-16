@@ -1517,6 +1517,16 @@ describe("the applied filter row does not clip what it hosts", () => {
     expect(declarationsFor(".lt-frow-more")).toContain("height: 100%");
   });
 
+  // The height above is a percentage of a wrapper the row stretches, and twice
+  // now that chain has given way and left the target at the glyph's size. The
+  // floor is what holds either way — 24px, WCAG 2.2 AA 2.5.8, which axe runs
+  // over the leads page in both themes.
+  it("floors the more segment at the pointer target size", () => {
+    const block = declarationsFor(".lt-frow-more");
+    expect(block).toContain("min-inline-size: var(--space-6)");
+    expect(block).toContain("min-block-size: var(--space-6)");
+  });
+
   it("rounds the segments at each of its ends", () => {
     const left = declarationsFor(".lt-frow > :first-child");
     expect(left).toContain("border-top-left-radius: var(--r-full)");
