@@ -66,6 +66,48 @@ describe("VerdictHead grounding", () => {
     );
     expect(screen.getByText("At risk")).toBeTruthy();
   });
+
+  it("marks the compact scale on its own wrapper without changing the default", () => {
+    // A caller whose card is one reading among several, not the page's one
+    // verdict, opts into the record ladder's own weight rather than the
+    // display face: a class the record360 sheet keys its compact rules off,
+    // never a resize done at the call site.
+    render(
+      <LocaleProvider initial="en">
+        <VerdictHead label="Your move" tone="accent" scale="compact" />
+      </LocaleProvider>,
+    );
+    expect(
+      screen
+        .getByText("Your move")
+        .parentElement?.classList.contains("r360-verdict-compact"),
+    ).toBe(true);
+  });
+});
+
+describe("VerdictHead scale", () => {
+  it("draws the record face when the caller does not opt in", () => {
+    renderHead();
+    expect(
+      screen.getByText("At risk").closest(".r360-verdict")?.className,
+    ).not.toContain("r360-verdict-compact");
+  });
+
+  it("draws the compact face for a caller whose head already claims its own authorship", () => {
+    render(
+      <LocaleProvider initial="en">
+        <VerdictHead
+          label="At risk"
+          tone="danger"
+          because="Waiting on them"
+          scale="compact"
+        />
+      </LocaleProvider>,
+    );
+    expect(
+      screen.getByText("At risk").closest(".r360-verdict")?.className,
+    ).toContain("r360-verdict-compact");
+  });
 });
 
 describe("VerdictHead scale", () => {

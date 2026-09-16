@@ -456,6 +456,7 @@ export function LogActivityAction({
   disabled,
   disabledReasonId,
   onClose,
+  onLogged,
 }: Readonly<{
   entityType: EntityKind;
   entityId: string;
@@ -489,6 +490,11 @@ export function LogActivityAction({
   // such button" learns nothing from the absence.
   disabledReasonId?: string;
   onClose?: () => void;
+  // Fires once the form actually LOGGED, ahead of the close every dismissal
+  // triggers, for a caller with its own re-read to schedule off a write
+  // rather than off the drawer merely shutting (a cancel or an Escape closes
+  // it too, and has nothing to re-read).
+  onLogged?: () => void;
 }>) {
   const t = useT();
   const titleId = useId();
@@ -521,7 +527,10 @@ export function LogActivityAction({
           entityType={entityType}
           entityId={entityId}
           askedKind={askedKind}
-          onLogged={close}
+          onLogged={() => {
+            onLogged?.();
+            close();
+          }}
         />
       </Modal>
     </>

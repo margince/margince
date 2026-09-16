@@ -1606,10 +1606,11 @@ describe("LeadScreen — disqualify (P-3)", () => {
 });
 
 // The address may name the verb the reader arrived to perform. A rep sent here
-// to log a call attempt lands on the composer already set to one; a rep who
-// simply opened the lead gets the ordinary note.
+// to log a call attempt lands on the header's Log activity drawer already
+// open and set to Call; a rep who simply opened the lead finds the drawer
+// closed, the same standing way in every other record header offers.
 describe("LeadScreen — arriving to log a call", () => {
-  it("opens the composer on a call when the address asks for one", async () => {
+  it("opens the header's Log activity drawer on a call when the address asks for one", async () => {
     stubFetch(async () => jsonResponse(lead));
     window.location.hash = "#/leads/l-1?action=call";
     render(<LeadScreen id="l-1" />);
@@ -1619,27 +1620,37 @@ describe("LeadScreen — arriving to log a call", () => {
     );
   });
 
-  it("opens on a note for a reader who only opened the lead", async () => {
+  it("leaves the drawer closed for a reader who only opened the lead, open on a note from the header verb", async () => {
     stubFetch(async () => jsonResponse(lead));
     window.location.hash = "#/leads/l-1";
     render(<LeadScreen id="l-1" />);
 
+    await screen.findByRole("button", { name: "Log activity" });
+    expect(screen.queryByLabelText("Type")).toBeNull();
+
+    await waitFor(() =>
+      expect(
+        screen
+          .getByRole("button", { name: "Log activity" })
+          .hasAttribute("disabled"),
+      ).toBe(false),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Log activity" }));
     await waitFor(() =>
       expect(screen.getByLabelText("Type").textContent).toContain("Note"),
     );
   });
 
   // A link pressed on the record the reader is ALREADY on changes the address
-  // and nothing else — no remount, so a kind read once at mount stays put and
-  // the reader is handed the composer they asked for set to the wrong verb.
-  it("follows a call the address asks for after the composer is already open", async () => {
+  // and nothing else, no remount, so the drawer opens on the kind the address
+  // now names rather than staying shut.
+  it("opens the drawer on a call the address asks for after the page is already open", async () => {
     stubFetch(async () => jsonResponse(lead));
     window.location.hash = "#/leads/l-1";
     render(<LeadScreen id="l-1" />);
 
-    await waitFor(() =>
-      expect(screen.getByLabelText("Type").textContent).toContain("Note"),
-    );
+    await screen.findByRole("button", { name: "Log activity" });
+    expect(screen.queryByLabelText("Type")).toBeNull();
 
     // What a second link does: the hash moves under a mounted screen. The
     // event is dispatched rather than waited for, because jsdom delivers its
@@ -2187,7 +2198,10 @@ describe("LeadScreen — owner display + assign to me (P-11)", () => {
 });
 
 describe("LeadScreen — History tab", () => {
-  it("shows a History tab that lists record changes", async () => {
+  it("shows a History tab whose Changes cut lists the record's own audit", async () => {
+    // The default cut is All, the same chronology the contact and the
+    // account open on; the audit row here only surfaces once the reader
+    // narrows to Changes (leadhistory.test.tsx covers the rest of the cut).
     stubFetchWithMe(async (url) => {
       if (url.includes("/history")) {
         return jsonResponse({
@@ -2212,6 +2226,7 @@ describe("LeadScreen — History tab", () => {
       expect(screen.getByRole("button", { name: /history/i })).toBeTruthy(),
     );
     await userEvent.click(screen.getByRole("button", { name: /history/i }));
+    await userEvent.click(screen.getByRole("button", { name: "Changes" }));
 
     await waitFor(() =>
       expect(screen.getByText("Lead score changed")).toBeTruthy(),
@@ -2225,6 +2240,22 @@ describe("LeadScreen — History tab", () => {
     expect(
       screen.getByRole("heading", { level: 1, name: lead.full_name }),
     ).toBeTruthy();
+  });
+
+  it("keeps the Overview tab's own content, without a second History section under it", async () => {
+    stubFetchWithMe(async () => undefined);
+    render(<LeadScreen id="l-1" />);
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole("heading", { level: 1, name: lead.full_name }),
+      ).toBeTruthy(),
+    );
+    // The chronology is the History tab's own body now — Overview draws its
+    // cards and nothing else under them, rather than the record's whole
+    // history a second time beneath the ladder and the call.
+    expect(document.querySelector(".record-timeline")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Changes" })).toBeNull();
   });
 });
 
@@ -2280,6 +2311,7 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
     // why a mutation added later is still caught by construction.
     const viewControls = new Set([
       "Overview",
+      "Deals & projects",
       "History",
       "Hide details",
       // The trigger discloses; the open above sweeps the verbs behind it.

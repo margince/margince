@@ -338,8 +338,8 @@ export const SharedRecordViews: Story = {
 };
 
 // A rep sent here to log a call attempt. The address names the verb, so the
-// composer at the foot of the overview opens on Call rather than on a note
-// they would have to change, and the page scrolls to it.
+// header's Log activity drawer opens already showing Call rather than a note
+// they would have to change it to.
 export const LeadArrivedToLogACall: Story = {
   render: () => {
     installFetchStub({
