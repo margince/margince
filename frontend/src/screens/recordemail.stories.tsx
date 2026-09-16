@@ -69,12 +69,12 @@ export const WriteVerb: Story = {
         <EmailVerb onClick={() => {}} />
         <IconAction
           label="Call"
-          icon={<Phone size={15} aria-hidden="true" />}
+          icon={<Phone aria-hidden="true" />}
           onClick={() => {}}
         />
         <IconAction
           label="Meetings"
-          icon={<CalendarDays size={15} aria-hidden="true" />}
+          icon={<CalendarDays aria-hidden="true" />}
           onClick={() => {}}
         />
       </div>,
