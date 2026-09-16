@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
+import { company360 } from "./company.fixtures";
 import { CompanyRail } from "./companyrail";
 import {
   installFetchStub,
@@ -26,10 +27,11 @@ export default meta;
 
 type Story = StoryObj;
 type View = components["schemas"]["Company360"];
+type Company = components["schemas"]["Company"];
 
 const page = { has_more: false, next_cursor: null };
 
-const company = {
+const company: Company = {
   id: "o-1",
   workspace_id: "w-1",
   display_name: "Brandt Automotive GmbH",
@@ -40,7 +42,15 @@ const company = {
   size_band: "51-200",
   linkedin_url: "https://linkedin.com/company/brandt",
   address: { city: "Munich", country: "DE" },
-  domains: [{ domain: "brandt.example", is_primary: true, source: "manual" }],
+  domains: [
+    {
+      id: "dom-1",
+      domain: "brandt.example",
+      is_primary: true,
+      source: "manual",
+      captured_by: "human:u1",
+    },
+  ],
   captured_by: "human:u1",
   source: "manual",
   version: 1,
@@ -48,7 +58,8 @@ const company = {
   updated_at: "2026-06-01T08:00:00Z",
 };
 
-const populated = {
+const populated: View = {
+  ...company360,
   as_of: "2026-06-01T09:00:00Z",
   company: company,
   sections_omitted: [],
@@ -89,7 +100,7 @@ const populated = {
     active_contacts: 4,
     open_commitments: 2,
   },
-  tags: [{ id: "t-1", workspace_id: "w-1", name: "Key account" }],
+  tags: [{ id: "t-1", name: "Key account" }],
   projects: [
     {
       project_id: "pr-1",
@@ -101,17 +112,18 @@ const populated = {
     },
   ],
   projects_page: page,
-} as unknown as View;
+};
 
 // Health and Contacts withheld, exactly the shape a role scoped away from
 // them reads on any real workspace — no seeded demo account can reach this,
 // so this story is the only place it renders.
-const withheld = {
+const withheld: View = {
+  ...company360,
   ...populated,
   health: undefined,
   contacts: undefined,
   sections_omitted: ["health", "contacts"],
-} as unknown as View;
+};
 
 function Rail({ view }: Readonly<{ view: View }>) {
   installFetchStub({

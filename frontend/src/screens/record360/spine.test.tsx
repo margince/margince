@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
+import { company360 } from "../company.fixtures";
 import { RecordSpine } from "./spine";
 
 // The thread's one rule: it may only draw what the payload supports. Every
@@ -33,19 +34,13 @@ const TODAY = "Today25 Aug";
 
 function view(overrides: Record<string, unknown> = {}): View {
   return {
+    // The assembled-and-empty backstop, so the account this thread hangs off
+    // is the shape the wire sends rather than the five fields this file needs.
+    ...company360,
     as_of: AS_OF,
-    company: {
-      id: "o-1",
-      display_name: "Kugellager",
-      captured_by: "human:u1",
-      source: "manual",
-      version: 1,
-      created_at: "2026-06-01T08:00:00Z",
-      updated_at: "2026-08-01T08:00:00Z",
-    },
-    sections_omitted: [],
+    company: { ...company360.company, display_name: "Kugellager" },
     ...overrides,
-  } as unknown as View;
+  };
 }
 
 function draw(

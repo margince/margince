@@ -35,7 +35,18 @@ export default meta;
 
 type Story = StoryObj;
 
-const LABELS = {
+const CARD_LABELS = {
+  accept: "Accept",
+  edit: "Edit",
+  reject: "Reject",
+  expired: "Expired",
+  draftSubject: "Subject",
+  draftBody: "Message",
+  noContent: "This proposal carries nothing to read.",
+  loading: "Reading the proposal",
+};
+
+const LABELS: DecisionDeckLabels = {
   empty: "Nothing is waiting on you.",
   clearedTitle: "Deck clear",
   cleared: (count: number) => `${count} decisions sent`,
@@ -46,7 +57,20 @@ const LABELS = {
   commitNothingToSend: "Finish these",
   commit: "Send staged decisions",
   unstage: "Undo the last one",
-} as unknown as DecisionDeckLabels;
+  // Below here is what the TYPE requires and this frame never draws. They were
+  // missing while a cast stood in front of the annotation, so the fixture was
+  // not the shape the deck is handed — and a frame story is the picture the
+  // UAT lane renders.
+  card: CARD_LABELS,
+  deckLabel: "Decisions waiting on you",
+  viewLabel: "How to work the queue",
+  viewDeck: "Deck",
+  viewList: "List",
+  keys: "→ accept · ← reject · ↑ edit · ↓ later · U undo the last · Enter commit",
+  behind: (count: number) => `${count} more behind`,
+  bundleSummary: (members: number) => `1 decision · ${members} recipients`,
+  bundleMembers: (members: number) => `The ${members} recipients`,
+};
 
 const QUEUE = <p className="t-body">Three proposals, in whichever form.</p>;
 
