@@ -52,7 +52,6 @@ var vaultWriters = map[string]string{
 	"internal/modules/capture/registry_grant.go": "audit_log, under the connect/disconnect verbs",
 	"internal/modules/capture/channelconn.go":    "audit_log, under the channel-connection verbs",
 	"internal/modules/integrations/connect.go":   "audit_log, under the integration connect verbs",
-	"internal/modules/overlay/connection.go":     "audit_log, under the overlay connection verbs",
 
 	// Sealed alongside a SETTINGS write, which is what carries the audit row
 	// (settings.SetTx -> storekit.Audit, under the setting's own verb). The two

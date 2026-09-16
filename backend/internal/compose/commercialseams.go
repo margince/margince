@@ -52,7 +52,7 @@ const handoffScanLimit = 50
 // commitmentAboutContact is the entity type a promise's "about" row carries when
 // the record it names is a contact.
 //
-// Its own constant rather than flipsource.go's flipObjectContact: that one names
+// Its own constant rather than flipsource.go's entityContact: that one names
 // an object in the system-of-record FLIP, and borrowing it here would tie two
 // vocabularies together that are free to move apart.
 const commitmentAboutContact = "contact"

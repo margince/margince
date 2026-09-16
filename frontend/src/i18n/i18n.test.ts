@@ -143,9 +143,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // surface over.
   "provider.profile.linkedin",
   "contact.page.linkedin",
-  "overlay.userMap.principal.hubspot",
-  "overlay.regionEu1",
-  "overlay.budgetSources",
   "ob.ai.speaker",
   "ob.ai.speakerName",
   "auth.title",

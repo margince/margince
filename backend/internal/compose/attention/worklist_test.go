@@ -47,6 +47,15 @@ func decidable() func(*crmcontracts.AttentionItem) {
 	}
 }
 
+// dismissable gives a row the one verb a reader holds over a duplicate pair no
+// merge would take: two companies each carrying live projects cannot combine,
+// and saying they are not the same is still theirs to say.
+func dismissable() func(*crmcontracts.AttentionItem) {
+	return func(i *crmcontracts.AttentionItem) {
+		i.Actions = []crmcontracts.AttentionItemActions{"dismiss"}
+	}
+}
+
 func withDue(at time.Time) func(*crmcontracts.AttentionItem) {
 	return func(i *crmcontracts.AttentionItem) { i.DueAt = &at }
 }

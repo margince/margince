@@ -11,19 +11,27 @@ import {
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import { problemMessageOf } from "./common";
-import { patchEmployment } from "./contactemployers";
 import { stillHeld } from "./employmentcurrency";
+import { patchEmployment } from "./employmentpatch";
 
 type Employment = components["schemas"]["Contact360Employment"];
 type Patch = components["schemas"]["UpdateRelationshipRequest"];
 
 export function EmploymentEdit({
   employment,
+  open = true,
   contactId,
   onClose,
   onSaved,
 }: Readonly<{
   employment: Employment;
+  /**
+   * Whether the dialog is showing. Closed, it stays MOUNTED so it can animate
+   * out — which is why the caller keeps handing it the employment it was
+   * opened on. Defaults to open: a caller drawing this on its own, a story
+   * included, is drawing an open dialog.
+   */
+  open?: boolean;
   contactId: string;
   onClose: () => void;
   onSaved: () => Promise<void>;
@@ -68,7 +76,7 @@ export function EmploymentEdit({
     value === "" || /^\d{4}-\d{2}(-\d{2})?$/.test(value);
   const valid = validDate(start) && validDate(end);
   return (
-    <Modal open onClose={onClose} labelledBy={id}>
+    <Modal open={open} onClose={onClose} labelledBy={id}>
       <h2 id={id} className="t-h2" style={{ marginBottom: "var(--space-3)" }}>
         {t("employment.edit")}
       </h2>

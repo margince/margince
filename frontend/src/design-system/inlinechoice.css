@@ -92,3 +92,9 @@
   background: var(--bgElevated);
   cursor: progress;
 }
+
+/* A suggested value stands in for an empty field, muted: the fact is the
+   record's, but not yet this field's. */
+.inlinetext-suggested {
+  color: var(--textMeta);
+}

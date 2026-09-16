@@ -65,10 +65,10 @@ describe("the word above a system row", () => {
       day({
         queue: [
           row({
-            // Sync health mints NO label, which is the common case rather than
-            // an edge one: six of the nine system sources are like this.
-            id: "sync-1",
-            source: "sync_health",
+            // Capture health mints NO label, which is the common case rather
+            // than an edge one: most of the system sources are like this.
+            id: "capture-1",
+            source: "capture_health",
             category: "system",
             level: 4,
             title: "Reconnect the mailbox",

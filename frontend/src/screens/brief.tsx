@@ -83,7 +83,10 @@ export function BriefScreen() {
           <PageAsideToggle
             controlled={{
               open: params.get("queue") === "1",
-              label: t("brief.queue.title"),
+              labels: {
+                show: t("brief.queue.show"),
+                hide: t("brief.queue.hide"),
+              },
               onToggle: () => {
                 const next = new Map(params);
                 if (next.get("queue") === "1") next.delete("queue");

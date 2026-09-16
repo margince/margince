@@ -83,6 +83,12 @@ type DedupeQueueInput struct {
 
 const (
 	dedupeQueueDefaultLimit = 25
+	// dedupeQueueMaxLimit is the page maximum this endpoint publishes
+	// (/dedupe/candidates in the API description). Enforced HERE because
+	// nothing validates a query string against the schema: an over-cap ask
+	// arrives at the store intact, so the store is where the published bound
+	// either holds or does not.
+	dedupeQueueMaxLimit     = 100
 	dispositionOpen         = "open"
 	dispositionMerged       = "merged"
 	dispositionNotDuplicate = "not_a_duplicate"
@@ -166,8 +172,16 @@ func (s *Store) ListDedupeCandidates(ctx context.Context, in DedupeQueueInput) (
 	if in.Status == "" {
 		in.Status = dispositionOpen
 	}
-	if in.Limit <= 0 || in.Limit > 100 {
+	// CLAMPED to the maximum, not reset to the default. One condition covering
+	// both ends answered 25 rows to a caller asking for 200 — and the ranked
+	// queue on Home asks for exactly that, so every open pair past the
+	// twenty-fifth was missing from the surface that exists to reach them, in
+	// confidence order, with nothing on the page saying so.
+	switch {
+	case in.Limit <= 0:
 		in.Limit = dedupeQueueDefaultLimit
+	case in.Limit > dedupeQueueMaxLimit:
+		in.Limit = dedupeQueueMaxLimit
 	}
 
 	args := []any{in.Status}

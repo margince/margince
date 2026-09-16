@@ -55,19 +55,6 @@
   gap: var(--space-2);
   min-width: 0;
 }
-/* The system-of-record chip's link form (app/sormodechip.tsx). A badge is never
-   a control, so the anchor around it carries the target and the ring, rounded
-   to the pill so the outline follows the shape it frames. */
-.sormode-link {
-  display: inline-flex;
-  border-radius: var(--r-full);
-  corner-shape: round;
-  text-decoration: none;
-}
-.sormode-link:focus-visible {
-  outline: var(--focus-ring);
-  outline-offset: 2px;
-}
 
 /* The sidebar control lives HERE rather than in the sidebar, so the affordance
    that opens the panel does not travel with the panel — collapsed, it used to

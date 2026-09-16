@@ -150,7 +150,7 @@ func TestASealedRefTheSweepNeverSawIsStillPurged(t *testing.T) {
 
 	vault := resetTestVault(t, e)
 	wsID := ids.From[ids.WorkspaceKind](e.WS)
-	referenced, err := vault.Put(ctx, wsID, []byte("an incumbent's oauth refresh token"))
+	referenced, err := vault.Put(ctx, wsID, []byte("a capture connection's oauth refresh token"))
 	if err != nil {
 		t.Fatalf("sealing the referenced credential: %v", err)
 	}
@@ -158,8 +158,8 @@ func TestASealedRefTheSweepNeverSawIsStillPurged(t *testing.T) {
 	if err != nil {
 		t.Fatalf("sealing the escaped credential: %v", err)
 	}
-	e.WsExec(t, `INSERT INTO incumbent_connection (id, incumbent, region, status, credential_ref)
-		VALUES ($1, 'hubspot', 'eu', 'active', $2)`, ids.NewV7(), string(referenced))
+	e.WsExec(t, `INSERT INTO capture_connection (id, user_id, provider, status, credential_ref)
+		VALUES ($1, $2, 'gmail', 'connected', $3)`, ids.NewV7(), e.AdminUser, string(referenced))
 
 	h := dataResetHandlers{
 		pool:             e.Pool,

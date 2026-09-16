@@ -25,7 +25,7 @@ import (
 
 // writeZip packs the collected members into the bundle: a CSV per object,
 // the relational JSON dump, the files manifest, and the bundle manifest.
-func writeZip(dst io.Writer, actor principal.Principal, wsID ids.UUID, incumbent string, members []memberData, summary BundleSummary) error {
+func writeZip(dst io.Writer, actor principal.Principal, wsID ids.UUID, members []memberData, summary BundleSummary) error {
 	zw := zip.NewWriter(dst)
 
 	dump := make(map[string]any, len(members))
@@ -40,12 +40,6 @@ func writeZip(dst io.Writer, actor principal.Principal, wsID ids.UUID, incumbent
 		OmittedObjects: summary.Omitted,
 		Note: "Row-scoped to the exporting principal; open formats only (CSV per object + a relational JSON dump). " +
 			"File bytes are referenced by storage_key, not embedded — see files-manifest.json.",
-	}
-	if incumbent != "" {
-		// The honest-scope manifest (AC-OV-9): in overlay mode, canonical
-		// data resides in the incumbent — this bundle is our augmentation
-		// plus the mirror snapshot, and P7 is partial until the flip.
-		manifest.CanonicalDataResidesIn = incumbent
 	}
 
 	for _, m := range members {
@@ -196,18 +190,13 @@ func guardCSVFormula(s string) string {
 // bundleManifest describes the bundle: format, provenance, the members
 // present, and any objects the caller's grants excluded.
 type bundleManifest struct {
-	Format      string    `json:"format"`
-	WorkspaceID string    `json:"workspace_id,omitempty"`
-	GeneratedAt time.Time `json:"generated_at"`
-	GeneratedBy string    `json:"generated_by"`
-	// CanonicalDataResidesIn is the AC-OV-9 honest-scope disclosure: set
-	// (to the incumbent's name) only while the workspace runs in overlay
-	// mode, where this bundle is augmentation + mirror snapshot and the
-	// canonical estate still lives in the incumbent.
-	CanonicalDataResidesIn string           `json:"canonical_data_resides_in,omitempty"`
-	Members                []manifestMember `json:"members"`
-	OmittedObjects         []string         `json:"omitted_objects,omitempty"`
-	Note                   string           `json:"note"`
+	Format         string           `json:"format"`
+	WorkspaceID    string           `json:"workspace_id,omitempty"`
+	GeneratedAt    time.Time        `json:"generated_at"`
+	GeneratedBy    string           `json:"generated_by"`
+	Members        []manifestMember `json:"members"`
+	OmittedObjects []string         `json:"omitted_objects,omitempty"`
+	Note           string           `json:"note"`
 }
 
 type manifestMember struct {

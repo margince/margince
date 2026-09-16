@@ -124,8 +124,8 @@ func (w *embedReindexWorker) Work(ctx context.Context, job *river.Job[EmbedReind
 	}
 	if permanent {
 		// What this needs is a new confirm — under the current config, or once
-		// the installation has a live workspace again — not this row's remaining
-		// attempts (jobs_overlay_refetch.go's posture).
+		// the installation has a live workspace again — not this row's
+		// remaining attempts.
 		return river.JobCancel(passErr)
 	}
 	return jobs.FaultContext(ctx, passErr)

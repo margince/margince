@@ -127,11 +127,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	// the role that serves agent principals, so leaving it fail-closed would
 	// refuse every agent read an api with Redis configured could count.
 	volumeMeter := agentvolume.New(rdb, agentvolume.Limits{}, agentvolume.DefaultWindow)
-	overlayOpts, err := overlayOptions(cfg, deployCfg, rdb, volumeMeter, pool, logger, stdout)
-	if err != nil {
-		return err
-	}
-	opts = append(opts, overlayOpts...)
+	opts = append(opts, agentVolumeOptions(volumeMeter)...)
 
 	relayOpts, stopRelay, err := inlineRelayLane(ctx, cfg, pool, logger, stdout)
 	if err != nil {
@@ -319,15 +315,6 @@ func baseComposeOptions(ctx context.Context, cfg apiConfig, capCfg compose.Captu
 	}
 	opts = append(opts, blobOpts...)
 
-	// Validate the overlay backfill cap unconditionally: an invalid
-	// MARGINCE_OVERLAY_BACKFILL_LIMIT is a boot error whether or not a vault
-	// is configured (the value is only USED when a vault wires the overlay
-	// surface, but "invalid → boot error, never a silent default" must not
-	// hinge on that).
-	overlayBackfillLimit, err := overlayBackfillLimitFromEnv()
-	if err != nil {
-		return nil, nil, nil, fmt.Errorf("api: %w", err)
-	}
 	// The refusal half of the auto-enrich daily cap: this role spends it too
 	// (an approval accept can queue a domain-triage read), so a typo fails the
 	// boot here; compose resolves the value where it is spent, from the same
@@ -335,7 +322,7 @@ func baseComposeOptions(ctx context.Context, cfg apiConfig, capCfg compose.Captu
 	if _, err := compose.AutoEnrichDailyCapFromEnv(config.FromOS); err != nil {
 		return nil, nil, nil, fmt.Errorf("api: %w", err)
 	}
-	kvOpts, err := keyvaultOptions(pool, vault, stdout, overlayBackfillLimit)
+	kvOpts, err := keyvaultOptions(pool, vault, stdout)
 	if err != nil {
 		return nil, nil, nil, err
 	}

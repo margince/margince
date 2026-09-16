@@ -67,7 +67,7 @@ Full target list: [docs/reference/make-targets.md](docs/reference/make-targets.m
 - **Branch off `main`**: `git switch -c <type>/<slug> origin/main`.
   Direct pushes to `main` are blocked; there is no other path to merge.
 - **Conventional commit subjects**, scoped to the module:
-  `fix(overlay): a mirrored deal reports the incumbent's last-modified`.
+  `fix(deals): a closed deal reports the stage it closed in`.
   Write the subject as the behaviour after the change, not as the task
   you performed.
 - **Squash-merge** is the house style, and only over green checks.

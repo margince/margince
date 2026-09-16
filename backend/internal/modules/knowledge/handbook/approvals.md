@@ -1,7 +1,7 @@
 # Approvals
 
 When an agent wants to do something it is not allowed to do on its own, it does
-not do it. It writes the intention down and puts it in front of a contact. That
+not do it. It writes the intention down and puts it in front of a human. That
 list of written-down intentions is the **approval inbox**.
 
 This page is about what lands there and how you answer it.
@@ -23,21 +23,25 @@ Nothing has happened yet. The card is a request, not a receipt.
 Below is every kind of card the product can raise, in its own words. Note the
 word *can*: which of these you actually see depends on what your agents attempt,
 and on whether your installation has set stricter floors. See
-[What the AI does](what-the-ai-does.md#what-actually-waits-for-a-human) for
+[Agents, passports and what they may do](agents-and-passports.md#what-actually-waits-for-a-human)
+for
 which actions wait by default.
 
 **Records**
 - Update a record · Create a record · Archive a record · Merge two records
 - Hand a record to an owner · Rename an account · Account stage
+- Fold one tag into another · Create a contact from a card
 
 **Selling**
-- Move a deal forward · Correct a close date · Add a follow-up on a deal
-- Promote a lead · Disqualify a lead
+- Move a deal forward · Move a deal to the next stage · Correct a close date
+- Add a follow-up on a deal
+- Promote a lead · Disqualify a lead · Reverse a lead promotion
 - Move a project to its next phase
 
 **Messages**
 - Send an email · Send an email to an account · Send a message
-- Review a drafted email · Release a stopped message · Book a meeting
+- Review a drafted email · Decide a refused email · Release a stopped message
+- Book a meeting
 
 **Filing**
 - Refile an activity · Refile a conversation · Refile several activities
@@ -52,6 +56,29 @@ which actions wait by default.
 - Refresh exchange rates · Refresh model prices · Record an automation step
 - Let an agent continue
 
+## What answers itself
+
+Read this before the rest of the page, because it is the exception to
+everything below it: **not every proposal waits.**
+
+Three kinds of change can apply on their own, without a card being decided —
+close dates, company names, and lifecycle stages. They land in a **Done for
+you** lane with an Undo rather than in a queue with a verdict.
+
+This is per-seat, not company-wide, and it is **on by default**. You find the
+switches at **Settings → Agents**, under "What answers itself", which states the
+shape plainly: "Automatic changes start on. Existing settings are kept. You can
+change each switch here. Your choices apply to your work, not the whole team."
+
+Beside each switch is your own track record with that kind of proposal — "So
+far: {clean} approved as proposed, {edited} after an edit, {rejected} turned
+down." The grain is deliberate: approving fourteen close-date confirmations is
+evidence about close dates and none at all about outbound mail, so each kind
+earns its own standing.
+
+Turning a switch off sends that kind back to the inbox, where the rest of this
+page applies.
+
 ## Deciding
 
 You have three answers.
@@ -64,7 +91,7 @@ correct a value — and *the edited version is what executes*. Not the original.
 This is a real edit, not a comment.
 
 **Reject.** Nothing commits. No record changes. You can give a reason, and the
-reason is shared with the contact the action was staged for, so a rejection is
+reason is shared with whoever the action was staged for, so a rejection is
 not a silent dead end.
 
 A rejection is a decision, not a free action. It demands exactly the same
@@ -115,7 +142,7 @@ against today's records. It should be proposed again, against the state it can
 actually see.
 
 **One kind never expires: a stopped scheduled message.** The message itself is
-being held and nothing else will reap it, so the card waits until a contact
+being held and nothing else will reap it, so the card waits until somebody
 answers, however long that takes. A card that expired here would leave a
 message waiting with nothing asking about it — which is exactly the silent stop
 the card exists to prevent.

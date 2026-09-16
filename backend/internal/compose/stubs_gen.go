@@ -1411,6 +1411,10 @@ func (stubs) CreateFilteredExport(w nethttp.ResponseWriter, r *nethttp.Request) 
 	httperr.NotImplemented(w, r, "CreateFilteredExport")
 }
 
+func (stubs) DownloadExportBundle(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "DownloadExportBundle")
+}
+
 func (stubs) ListExtensions(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ListExtensions")
 }
@@ -1865,58 +1869,6 @@ func (stubs) GetOnboardingState(w nethttp.ResponseWriter, r *nethttp.Request) {
 
 func (stubs) PutOnboardingState(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.PutOnboardingStateParams) {
 	httperr.NotImplemented(w, r, "PutOnboardingState")
-}
-
-func (stubs) GetOverlayBudget(w nethttp.ResponseWriter, r *nethttp.Request) {
-	httperr.NotImplemented(w, r, "GetOverlayBudget")
-}
-
-func (stubs) DisconnectOverlay(w nethttp.ResponseWriter, r *nethttp.Request) {
-	httperr.NotImplemented(w, r, "DisconnectOverlay")
-}
-
-func (stubs) GetOverlayConnection(w nethttp.ResponseWriter, r *nethttp.Request) {
-	httperr.NotImplemented(w, r, "GetOverlayConnection")
-}
-
-func (stubs) ConnectOverlay(w nethttp.ResponseWriter, r *nethttp.Request) {
-	httperr.NotImplemented(w, r, "ConnectOverlay")
-}
-
-func (stubs) DownloadOverlayExport(w nethttp.ResponseWriter, r *nethttp.Request) {
-	httperr.NotImplemented(w, r, "DownloadOverlayExport")
-}
-
-func (stubs) ExecuteOverlayFlip(w nethttp.ResponseWriter, r *nethttp.Request) {
-	httperr.NotImplemented(w, r, "ExecuteOverlayFlip")
-}
-
-func (stubs) PreflightOverlayFlip(w nethttp.ResponseWriter, r *nethttp.Request) {
-	httperr.NotImplemented(w, r, "PreflightOverlayFlip")
-}
-
-func (stubs) ListOverlayOwners(w nethttp.ResponseWriter, r *nethttp.Request) {
-	httperr.NotImplemented(w, r, "ListOverlayOwners")
-}
-
-func (stubs) ReconcileOverlay(w nethttp.ResponseWriter, r *nethttp.Request) {
-	httperr.NotImplemented(w, r, "ReconcileOverlay")
-}
-
-func (stubs) GetOverlaySyncStatus(w nethttp.ResponseWriter, r *nethttp.Request) {
-	httperr.NotImplemented(w, r, "GetOverlaySyncStatus")
-}
-
-func (stubs) ListOverlayUserMap(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListOverlayUserMapParams) {
-	httperr.NotImplemented(w, r, "ListOverlayUserMap")
-}
-
-func (stubs) DeleteOverlayUserMap(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
-	httperr.NotImplemented(w, r, "DeleteOverlayUserMap")
-}
-
-func (stubs) SetOverlayUserMap(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
-	httperr.NotImplemented(w, r, "SetOverlayUserMap")
 }
 
 func (stubs) ListPartners(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListPartnersParams) {

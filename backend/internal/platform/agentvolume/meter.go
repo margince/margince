@@ -101,8 +101,7 @@ func (m *Meter) WithCostCeiling(c CostCeiling) *Meter {
 // WithAgentVolume option rebinds it from the live meter once the Redis client and
 // the deployment config are known, so every holder sees the live meter without
 // re-plumbing. Called at server assembly, before any request is served, so it
-// never races a charge — the same discipline overlaybudget.Meter.RebindFrom
-// follows.
+// never races a charge.
 func (m *Meter) RebindFrom(src *Meter) {
 	// EVERY field, including a nil ceiling. A conditional copy would leave a
 	// rebound meter judging cost against the composition it used to be in,

@@ -1,0 +1,1 @@
+-- Forward-only permission vocabulary: removing grants cannot restore an older binary contract.

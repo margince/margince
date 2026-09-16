@@ -65,8 +65,14 @@ func validateBudget(c BudgetConfig) error {
 	return nil
 }
 
-// MonthlyTokens applies the override or the live full-user count with an onboarding floor.
-func (c BudgetConfig) MonthlyTokens(fullUsers int64) (int64, error) {
+// resolveMonthlyTokens applies the override or the live full-user count with an
+// onboarding floor, delegating the overflow decision to the caller. MonthlyTokens
+// rejects it, because a NEW value being written must never exceed the ceiling.
+// SaturatingMonthlyTokens clamps it instead, because every other caller reads an
+// ALREADY-STORED config (spend, diagnostics, admin observation) and a clamp can
+// only ever authorize less than what was configured — never more — so it is the
+// conservative choice for a value nobody is choosing right now.
+func (c BudgetConfig) resolveMonthlyTokens(fullUsers int64, onOverflow func() (int64, error)) (int64, error) {
 	if err := validateBudget(c); err != nil {
 		return 0, err
 	}
@@ -75,9 +81,30 @@ func (c BudgetConfig) MonthlyTokens(fullUsers int64) (int64, error) {
 	}
 	users := max(fullUsers, 1)
 	if users > MaxMonthlyTokens/c.TokensPerFullUser {
-		return 0, fmt.Errorf("company allowance exceeds the supported maximum")
+		return onOverflow()
 	}
 	return users * c.TokensPerFullUser, nil
+}
+
+// MonthlyTokens validates a value being WRITTEN: nothing may be saved past the
+// ceiling. Every reader of an already-stored config uses SaturatingMonthlyTokens
+// instead — this stays strict only for the write path (previewBudget/ReplaceBudget).
+func (c BudgetConfig) MonthlyTokens(fullUsers int64) (int64, error) {
+	return c.resolveMonthlyTokens(fullUsers, func() (int64, error) {
+		return 0, fmt.Errorf("company allowance exceeds the supported maximum: lower tokens per full user, or set a company-wide monthly override")
+	})
+}
+
+// SaturatingMonthlyTokens reads an already-stored config: a product that has grown
+// past MaxMonthlyTokens since the value was written saturates at the ceiling
+// instead of erroring, so every reader — real spend (compose's
+// seatBudget.MonthlyTokenBudget), the resume sweep, usage reporting, and admin
+// observation alike — keeps working against the ceiling rather than halting until
+// an admin corrects a config nothing here is choosing anew. A NEW value being
+// written is still rejected outright by MonthlyTokens, so the ceiling itself is
+// never weakened by this path.
+func (c BudgetConfig) SaturatingMonthlyTokens(fullUsers int64) (int64, error) {
+	return c.resolveMonthlyTokens(fullUsers, func() (int64, error) { return MaxMonthlyTokens, nil })
 }
 
 // Revision hashes the canonical typed document without mixing in live consumption.

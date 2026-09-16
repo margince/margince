@@ -91,7 +91,6 @@ var predicateContactReads = gatekit.Waive(map[string]string{
 	"internal/modules/contacts/ensure.go:linkActivityToContact":                       "the link a capture plants between an activity and the contact it resolved, inside the ensure write",
 	"internal/modules/contacts/ensurechannel.go:recordChannelDedupeCandidate":         "records a channel-identity near-match for the review queue, inside the ensure write. What it produces is a review row",
 	"internal/modules/contacts/ensurechanneladopt.go:adoptEmailRoutedIncumbent":       "adopts an existing contact for a channel identity rather than minting a second, inside that same write",
-	"internal/modules/contacts/linkedinmatch.go:matchGhostsByEmail":                   "the email arm of that same match, behind the same gated entry",
 	"internal/modules/contacts/mergeface.go:readContactFaces":                         "the label and detail line a merge card shows for each side of a pair. Its only caller is DescribeForMerge, which asks auth.Require(entityType, read) — the object arrives as a PARAMETER — and narrows the ids through auth.VisibleSubset first",
 	"internal/modules/contacts/observedcontact.go:applyObservedPhone":                 "applies a phone number observed in a signature, inside the observation write",
 	"internal/modules/contacts/observedcontact.go:seedFromColumn":                     "seeds an observed value from the contact's own column so an enrichment does not overwrite what a human typed, inside that same write",
@@ -180,6 +179,7 @@ var calleeGatedContactReads = gatekit.Waive(map[string]string{
 	"internal/compose/introseams.go:accountContacts":                       "the contacts offered as an introduction route. Its caller asks the contact object gate before composing the seam",
 	"internal/compose/meetingbrief/meeting.go":                             "the pre-meeting brief's room statement. scopeFor asks auth.ReadGranted for each object it scopes, so a caller with no contact grant gets that join matched away; the census cannot see it because the object arrives as a PARAMETER",
 	"internal/compose/network/contactgraphaccount.go:readAccountContacts":  "the colleagues band of the contact graph, behind the graph assembly's own contact gate",
+	"internal/modules/contacts/linkedinmatch.go:emailMatchCandidates":      "the address arm of the LinkedIn match. Its one caller chain is matchInTx ← runLinkedInMatch, which asks auth.Require(ctx, \"contact\", read) before either tier runs; the row scope and the per-contact write clause travel inside the SELECT itself",
 	"internal/modules/search/graphactivitysubjects.go:employerSubjects":    "the employer band beside it, which walks contacts to reach the companies they work for and asks auth.ReadGranted for the company half itself",
 	"internal/modules/search/graphactivitysubjects.go:participantSubjects": "the participant band of a record's context — contact ids and names. Its enclosing read asks the contact object gate before assembling the bands",
 })

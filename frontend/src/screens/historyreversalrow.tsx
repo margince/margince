@@ -77,9 +77,7 @@ function SettledFace({
           </li>
         ))}
       </ul>
-      <span className="reversal-net t-caption">
-        {t("history.reversal.net")}
-      </span>
+      <span className="t-caption">{t("history.reversal.net")}</span>
     </>
   );
 }
@@ -99,9 +97,7 @@ function ResidualFace({
   const values = { currency, locale, zone };
   return (
     <>
-      <span className="reversal-net t-caption">
-        {t("history.reversal.stillChanged")}
-      </span>
+      <span className="t-caption">{t("history.reversal.stillChanged")}</span>
       <ul className="entry-fields">
         {netChanges(row).map((change) => (
           <li key={change.field} className="entry-field">
@@ -144,7 +140,7 @@ export function ReversalPairRow({
     undoer: actorName(row.reversal.actor_name, t),
   };
   return (
-    <li className="reversal-pair">
+    <li>
       <span className="tl-body">
         <span className="tl-title">{t(headlineKey(row), words)}</span>
         <span className="tl-meta">

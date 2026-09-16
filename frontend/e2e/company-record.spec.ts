@@ -95,7 +95,7 @@ test.describe("company record — the glance's page shape", () => {
     page,
   }) => {
     await openCompany(page, POPULATED_COMPANY as string);
-    expect(await topOf(page.locator(".co-tabs"))).toBeLessThan(
+    expect(await topOf(page.locator("[data-testid='co-tabs']"))).toBeLessThan(
       await topOf(page.locator(STRIP)),
     );
     await page.getByRole("button", { name: "Kontakte" }).click();
@@ -156,11 +156,11 @@ test.describe("company record — the glance's page shape", () => {
       const company = await response.json();
       return Boolean(company?.relationship_types?.includes("partner"));
     });
-    await expect(page.locator(".co-tabs .recordtabs-tab")).toHaveCount(
+    await expect(page.locator("[data-testid='co-tabs'] .recordtabs-tab")).toHaveCount(
       isPartnerAccount ? 8 : 7,
     );
     await expect(
-      page.locator(".co-tabs .recordtabs-trailing button[aria-pressed]"),
+      page.locator("[data-testid='co-tabs'] .recordtabs-trailing button[aria-pressed]"),
     ).toHaveCount(1);
   });
 
@@ -234,7 +234,7 @@ test.describe("company record — the glance's page shape", () => {
     await expect(rail).toBeHidden();
 
     await page
-      .locator(".co-tabs .recordtabs-trailing button[aria-pressed]")
+      .locator("[data-testid='co-tabs'] .recordtabs-trailing button[aria-pressed]")
       .click();
     await expect(rail).toBeVisible();
 
@@ -265,9 +265,9 @@ test.describe("company record — the glance's page shape", () => {
   // second way this page stops looking like the design.
   test("an imported company keeps the page's shape", async ({ page }) => {
     await openCompany(page, SPARSE_COMPANY as string);
-    await expect(page.locator(".co-tabs")).toBeVisible();
+    await expect(page.locator("[data-testid='co-tabs']")).toBeVisible();
     await expect(page.locator(STRIP)).toBeVisible();
-    expect(await topOf(page.locator(".co-tabs"))).toBeLessThan(
+    expect(await topOf(page.locator("[data-testid='co-tabs']"))).toBeLessThan(
       await topOf(page.locator(STRIP)),
     );
     // Five readings here too, on an account that can answer almost none of

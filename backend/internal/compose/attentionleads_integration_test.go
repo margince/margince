@@ -110,7 +110,7 @@ func seedOwedLead(t *testing.T, e *integration.Env, name string, owner *ids.UUID
 // arguments this helper pins.
 func ownQueue(ctx context.Context, t *testing.T, e *integration.Env) crmcontracts.Worklist {
 	t.Helper()
-	svc := newAttentionService(e.Pool, approvals.NewService(e.DB()), failClosedOverlayMeter(), time.Now)
+	svc := newAttentionService(e.Pool, approvals.NewService(e.DB()), time.Now)
 	page, err := svc.Worklist(ctx, "mine", "", ids.Nil, 50, "")
 	if err != nil {
 		t.Fatalf("reading the worklist: %v", err)
@@ -341,7 +341,7 @@ func TestALeadSurvivesTheNamedOwnerRead(t *testing.T) {
 
 	// The lead opens their teammate's queue by name.
 	lead := e.As(e.Rep2, []ids.UUID{e.Team1}, leadLeadPerms)
-	svc := newAttentionService(e.Pool, approvals.NewService(e.DB()), failClosedOverlayMeter(), time.Now)
+	svc := newAttentionService(e.Pool, approvals.NewService(e.DB()), time.Now)
 	page, err := svc.Worklist(lead, "team", "", e.Rep1, 50, "")
 	if err != nil {
 		t.Fatalf("opening the rep's queue: %v", err)

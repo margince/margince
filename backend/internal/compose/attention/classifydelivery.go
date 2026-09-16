@@ -67,7 +67,7 @@ func classifyUndelivered(item crmcontracts.AttentionItem, asOf time.Time) ranked
 // an admin screen.
 func classifySystem(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	consequence := crmcontracts.WorklistItemConsequence("work_blocked")
-	if item.Source == sourceCaptureHealth || item.Source == "sync_health" {
+	if item.Source == sourceCaptureHealth {
 		consequence = "mailbox_blind"
 	}
 	if item.Source == sourceNotice {

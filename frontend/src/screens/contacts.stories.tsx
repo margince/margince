@@ -55,10 +55,9 @@ export const ContactsList: Story = {
 
 // The list stories below are all about what the TABLE shows, so they share one
 // session and it is the smallest one that makes the read legitimate: a contact
-// reader. ContactsScreen gates no affordance on a grant — the create button is
-// hidden by overlay mode alone, and the archived badge paints off the row's own
-// archived_at rather than off a delete verb — so a wider grant would claim
-// affordances none of these stories draw.
+// reader. ContactsScreen gates no affordance on a grant — the archived badge
+// paints off the row's own archived_at rather than off a delete verb — so a
+// wider grant would claim affordances none of these stories draw.
 const contactsReader = meRoute({ contact: ["read"] });
 
 // The empty list: no rows, the "unit.contacts" copy from ListSurface's

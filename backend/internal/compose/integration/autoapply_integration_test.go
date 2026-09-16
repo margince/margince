@@ -352,8 +352,7 @@ func TestAnAutomaticChangeCanBePutBack(t *testing.T) {
 		Permissions: rbac.Permissions,
 	})
 	undoCtx = principal.WithCorrelationID(undoCtx, ids.NewV7())
-	seam := compose.NewRestoreSeam(e.Pool, compose.NewDispatcher(
-		compose.NewProvider(e.Pool), nil, e.Pool), nil)
+	seam := compose.NewRestoreSeam(e.Pool, compose.NewProvider(e.Pool), nil)
 	if _, err := seam.Restore(undoCtx, "company", company, auditID, version); err != nil {
 		t.Fatalf("undoing what the product applied on its own: %v", err)
 	}
@@ -466,7 +465,7 @@ func TestADefaultCloseDateChangeCanBePutBack(t *testing.T) {
 		pgx.NamedArgs{"deal": deal}).Scan(&version); err != nil {
 		t.Fatal(err)
 	}
-	seam := compose.NewRestoreSeam(e.Pool, compose.NewDispatcher(compose.NewProvider(e.Pool), nil, e.Pool), nil)
+	seam := compose.NewRestoreSeam(e.Pool, compose.NewProvider(e.Pool), nil)
 	if _, err := seam.Restore(e.Admin(), "deal", deal, auditID, version); err != nil {
 		t.Fatalf("undoing the automatic date: %v", err)
 	}

@@ -49,7 +49,7 @@ export function Waterfall({
   );
 
   return (
-    <div className="waterfall">
+    <div>
       {/* The bars carry the shape; the table carries the figures. A reader on
           a screen reader gets the table, which is the one with the values. */}
       <ol className="waterfall-bars" aria-hidden="true">

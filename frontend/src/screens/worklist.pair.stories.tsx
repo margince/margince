@@ -55,7 +55,7 @@ function pairRow(over: Partial<WorklistItem> = {}): WorklistItem {
     level: 6,
     consequence: "data_drifts",
     because: [],
-    actions: ["merge"],
+    actions: ["merge", "dismiss"],
     pair: {
       left: {
         id: "01a05500-0000-7000-8000-0000000000a1",
@@ -153,4 +153,18 @@ export const Withheld: Story = {
 // says who can settle it — rather than by buttons that would refuse.
 export const NotYoursToSettle: Story = {
   args: { item: pairRow({ actions: [] }) },
+};
+
+// THE PAIR NOBODY CAN MERGE. Two companies each running live projects do
+// not combine — nothing in the data says which body of work is which — so the
+// lane sends the dismissal alone.
+//
+// What to look at is the LEAD LINE. The frames above ask which record should
+// survive, and here neither can: the question a reader can actually answer is
+// whether these two were ever the same, so that is the one the block asks. Two
+// recessed cards with no verb at their feet and one ghost on the trailing edge
+// is the whole review, and it has to read as a decision rather than as a card
+// whose buttons failed to load.
+export const NoMergeWouldTakeIt: Story = {
+  args: { item: pairRow({ actions: ["dismiss"] }) },
 };

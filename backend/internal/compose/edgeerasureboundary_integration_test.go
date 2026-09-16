@@ -15,7 +15,6 @@ package compose
 // anyway proves nothing about the branch that was or was not asked.
 
 import (
-	"context"
 	"errors"
 	"testing"
 	"time"
@@ -118,54 +117,6 @@ func TestALinkWrittenAfterAnEndsErasureIsStillReversible(t *testing.T) {
 	if _, err := restoreSeamFor(e).Restore(e.Admin(), "contact", contact, auditID,
 		currentVersion(t, e, "contact", contact)); err != nil {
 		t.Fatalf("a link made after the erasure: %v", err)
-	}
-	if edgeIsLive(t, e, edge) {
-		t.Error("the reverse answered success and left the link live")
-	}
-}
-
-// A link in an OVERLAY-GOVERNED workspace still reverses, and the record path in
-// the same workspace still refuses. One route, two answers, decided on purpose.
-//
-// The record refusal exists because an overlay workspace's records live in the
-// incumbent: putting one back is a write-back that records its own verb and its
-// own evidence, so nothing would read as undone and the change would already
-// have happened in two systems. A LINK has no incumbent counterpart —
-// `relationship` is not in the overlay mirror's entity set and the overlay
-// provider declares no write verb for it — so the local row is not a copy of
-// anything and the local write is the whole write. Refusing it would strand a
-// link nobody can reverse in a workspace where nothing else could have changed
-// it either.
-//
-// The pair is asserted together because the interesting failure is the two
-// branches converging: a refusal added to the edge path, or the record's
-// quietly dropped.
-func TestALinkInAnOverlayGovernedWorkspaceIsStillReversible(t *testing.T) {
-	e := integration.Setup(t)
-	contact := e.SeedContact(t, "Ada Employed", nil)
-	company := e.SeedCompany(t, "Employer GmbH", nil)
-	edge := seedEmploymentEdge(t, e, contact, company)
-	title := "COO"
-	if _, err := e.Contacts.UpdateContact(e.Admin(), ids.From[ids.ContactKind](contact),
-		contacts.UpdateContactInput{Title: &title, Source: "manual"}); err != nil {
-		t.Fatalf("change a field through the real writer: %v", err)
-	}
-
-	// The port rather than a connected incumbent: what is under test is which
-	// branch asks it, and a real overlay workspace would also change what the
-	// update path does with the answer.
-	seam := restoreSeamFor(e)
-	seam.evaluator.ExternallyGoverned = func(context.Context) (bool, error) { return true, nil }
-
-	recordEntry := latestAuditRowID(t, e, "contact", contact, "update")
-	_, err := seam.Restore(e.Admin(), "contact", contact, recordEntry,
-		currentVersion(t, e, "contact", contact))
-	refusedBy(t, err, ReasonNotRestorableByThisPath)
-
-	edgeEntry := latestAuditRowID(t, e, edgeEntityType, edge, "create")
-	if _, err := seam.Restore(e.Admin(), "contact", contact, edgeEntry,
-		currentVersion(t, e, "contact", contact)); err != nil {
-		t.Fatalf("reversing a link in an overlay-governed workspace: %v", err)
 	}
 	if edgeIsLive(t, e, edge) {
 		t.Error("the reverse answered success and left the link live")

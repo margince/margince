@@ -659,6 +659,7 @@ const (
 	AiActivityKindOwedVerdict                   AiActivityKind = "owed_verdict"
 	AiActivityKindProposeRoles                  AiActivityKind = "propose_roles"
 	AiActivityKindRateExtract                   AiActivityKind = "rate_extract"
+	AiActivityKindRequestSettlement             AiActivityKind = "request_settlement"
 	AiActivityKindSignalExtract                 AiActivityKind = "signal_extract"
 	AiActivityKindSiteExtract                   AiActivityKind = "site_extract"
 	AiActivityKindSiteFactExtract               AiActivityKind = "site_fact_extract"
@@ -715,6 +716,8 @@ func (e AiActivityKind) Valid() bool {
 	case AiActivityKindProposeRoles:
 		return true
 	case AiActivityKindRateExtract:
+		return true
+	case AiActivityKindRequestSettlement:
 		return true
 	case AiActivityKindSignalExtract:
 		return true
@@ -1521,7 +1524,6 @@ const (
 	AttentionLanesOmittedNotices            AttentionLanesOmitted = "notices"
 	AttentionLanesOmittedPlanned            AttentionLanesOmitted = "planned"
 	AttentionLanesOmittedRelationshipDecay  AttentionLanesOmitted = "relationship_decay"
-	AttentionLanesOmittedSyncHealth         AttentionLanesOmitted = "sync_health"
 	AttentionLanesOmittedThisMorning        AttentionLanesOmitted = "this_morning"
 	AttentionLanesOmittedUndelivered        AttentionLanesOmitted = "undelivered"
 )
@@ -1564,8 +1566,6 @@ func (e AttentionLanesOmitted) Valid() bool {
 	case AttentionLanesOmittedPlanned:
 		return true
 	case AttentionLanesOmittedRelationshipDecay:
-		return true
-	case AttentionLanesOmittedSyncHealth:
 		return true
 	case AttentionLanesOmittedThisMorning:
 		return true
@@ -1700,7 +1700,6 @@ const (
 	AttentionItemSourceNotice              AttentionItemSource = "notice"
 	AttentionItemSourceNoticeCase          AttentionItemSource = "notice_case"
 	AttentionItemSourceRelationshipDecay   AttentionItemSource = "relationship_decay"
-	AttentionItemSourceSyncHealth          AttentionItemSource = "sync_health"
 	AttentionItemSourceTask                AttentionItemSource = "task"
 	AttentionItemSourceUndelivered         AttentionItemSource = "undelivered"
 )
@@ -1747,8 +1746,6 @@ func (e AttentionItemSource) Valid() bool {
 	case AttentionItemSourceNoticeCase:
 		return true
 	case AttentionItemSourceRelationshipDecay:
-		return true
-	case AttentionItemSourceSyncHealth:
 		return true
 	case AttentionItemSourceTask:
 		return true
@@ -8898,23 +8895,17 @@ func (e ImportOnDuplicate) Valid() bool {
 
 // Defines values for ImportRunConnector.
 const (
-	ImportRunConnectorBundle     ImportRunConnector = "bundle"
 	ImportRunConnectorCsv        ImportRunConnector = "csv"
 	ImportRunConnectorHubspot    ImportRunConnector = "hubspot"
-	ImportRunConnectorMirror     ImportRunConnector = "mirror"
 	ImportRunConnectorSalesforce ImportRunConnector = "salesforce"
 )
 
 // Valid indicates whether the value is a known member of the ImportRunConnector enum.
 func (e ImportRunConnector) Valid() bool {
 	switch e {
-	case ImportRunConnectorBundle:
-		return true
 	case ImportRunConnectorCsv:
 		return true
 	case ImportRunConnectorHubspot:
-		return true
-	case ImportRunConnectorMirror:
 		return true
 	case ImportRunConnectorSalesforce:
 		return true
@@ -9763,24 +9754,6 @@ func (e MeResponsePassportScopes) Valid() bool {
 	}
 }
 
-// Defines values for MeResponseSystemOfRecordMode.
-const (
-	MeResponseSystemOfRecordModeNative  MeResponseSystemOfRecordMode = "native"
-	MeResponseSystemOfRecordModeOverlay MeResponseSystemOfRecordMode = "overlay"
-)
-
-// Valid indicates whether the value is a known member of the MeResponseSystemOfRecordMode enum.
-func (e MeResponseSystemOfRecordMode) Valid() bool {
-	switch e {
-	case MeResponseSystemOfRecordModeNative:
-		return true
-	case MeResponseSystemOfRecordModeOverlay:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for MeetingBriefSectionKind.
 const (
 	MeetingBriefSectionKindAttendees      MeetingBriefSectionKind = "attendees"
@@ -10561,210 +10534,6 @@ func (e OutcomeReviewOutcome) Valid() bool {
 	case OutcomeReviewOutcomeLost:
 		return true
 	case OutcomeReviewOutcomeWon:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for OverlayBudgetBand.
-const (
-	OverlayBudgetBandOk   OverlayBudgetBand = "ok"
-	OverlayBudgetBandShed OverlayBudgetBand = "shed"
-	OverlayBudgetBandWarn OverlayBudgetBand = "warn"
-)
-
-// Valid indicates whether the value is a known member of the OverlayBudgetBand enum.
-func (e OverlayBudgetBand) Valid() bool {
-	switch e {
-	case OverlayBudgetBandOk:
-		return true
-	case OverlayBudgetBandShed:
-		return true
-	case OverlayBudgetBandWarn:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for OverlayConnectRequestIncumbent.
-const (
-	OverlayConnectRequestIncumbentHubspot OverlayConnectRequestIncumbent = "hubspot"
-)
-
-// Valid indicates whether the value is a known member of the OverlayConnectRequestIncumbent enum.
-func (e OverlayConnectRequestIncumbent) Valid() bool {
-	switch e {
-	case OverlayConnectRequestIncumbentHubspot:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for OverlayConnectionIncumbent.
-const (
-	OverlayConnectionIncumbentHubspot OverlayConnectionIncumbent = "hubspot"
-)
-
-// Valid indicates whether the value is a known member of the OverlayConnectionIncumbent enum.
-func (e OverlayConnectionIncumbent) Valid() bool {
-	switch e {
-	case OverlayConnectionIncumbentHubspot:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for OverlayConnectionStatus.
-const (
-	OverlayConnectionStatusActive  OverlayConnectionStatus = "active"
-	OverlayConnectionStatusError   OverlayConnectionStatus = "error"
-	OverlayConnectionStatusRevoked OverlayConnectionStatus = "revoked"
-)
-
-// Valid indicates whether the value is a known member of the OverlayConnectionStatus enum.
-func (e OverlayConnectionStatus) Valid() bool {
-	switch e {
-	case OverlayConnectionStatusActive:
-		return true
-	case OverlayConnectionStatusError:
-		return true
-	case OverlayConnectionStatusRevoked:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for OverlayFlipAcceptedMode.
-const (
-	OverlayFlipAcceptedModeEmergency OverlayFlipAcceptedMode = "emergency"
-	OverlayFlipAcceptedModeFreshSync OverlayFlipAcceptedMode = "fresh_sync"
-)
-
-// Valid indicates whether the value is a known member of the OverlayFlipAcceptedMode enum.
-func (e OverlayFlipAcceptedMode) Valid() bool {
-	switch e {
-	case OverlayFlipAcceptedModeEmergency:
-		return true
-	case OverlayFlipAcceptedModeFreshSync:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for OverlayFlipPreflightBlocking.
-const (
-	OverlayFlipPreflightBlockingExportMissing        OverlayFlipPreflightBlocking = "export_missing"
-	OverlayFlipPreflightBlockingForceFreshIncomplete OverlayFlipPreflightBlocking = "force_fresh_incomplete"
-	OverlayFlipPreflightBlockingIncumbentUnreachable OverlayFlipPreflightBlocking = "incumbent_unreachable"
-	OverlayFlipPreflightBlockingPendingSyncDraining  OverlayFlipPreflightBlocking = "pending_sync_draining"
-	OverlayFlipPreflightBlockingUnresolvedConflicts  OverlayFlipPreflightBlocking = "unresolved_conflicts"
-)
-
-// Valid indicates whether the value is a known member of the OverlayFlipPreflightBlocking enum.
-func (e OverlayFlipPreflightBlocking) Valid() bool {
-	switch e {
-	case OverlayFlipPreflightBlockingExportMissing:
-		return true
-	case OverlayFlipPreflightBlockingForceFreshIncomplete:
-		return true
-	case OverlayFlipPreflightBlockingIncumbentUnreachable:
-		return true
-	case OverlayFlipPreflightBlockingPendingSyncDraining:
-		return true
-	case OverlayFlipPreflightBlockingUnresolvedConflicts:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for OverlayFlipRequestMode.
-const (
-	OverlayFlipRequestModeEmergency OverlayFlipRequestMode = "emergency"
-	OverlayFlipRequestModeFreshSync OverlayFlipRequestMode = "fresh_sync"
-)
-
-// Valid indicates whether the value is a known member of the OverlayFlipRequestMode enum.
-func (e OverlayFlipRequestMode) Valid() bool {
-	switch e {
-	case OverlayFlipRequestModeEmergency:
-		return true
-	case OverlayFlipRequestModeFreshSync:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for OverlaySyncStatusObjectsState.
-const (
-	OverlaySyncStatusObjectsStateFresh       OverlaySyncStatusObjectsState = "fresh"
-	OverlaySyncStatusObjectsStatePendingSync OverlaySyncStatusObjectsState = "pending_sync"
-	OverlaySyncStatusObjectsStateStale       OverlaySyncStatusObjectsState = "stale"
-)
-
-// Valid indicates whether the value is a known member of the OverlaySyncStatusObjectsState enum.
-func (e OverlaySyncStatusObjectsState) Valid() bool {
-	switch e {
-	case OverlaySyncStatusObjectsStateFresh:
-		return true
-	case OverlaySyncStatusObjectsStatePendingSync:
-		return true
-	case OverlaySyncStatusObjectsStateStale:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for OverlayUserMapEntryMatchSource.
-const (
-	OverlayUserMapEntryMatchSourceEmail  OverlayUserMapEntryMatchSource = "email"
-	OverlayUserMapEntryMatchSourceManual OverlayUserMapEntryMatchSource = "manual"
-)
-
-// Valid indicates whether the value is a known member of the OverlayUserMapEntryMatchSource enum.
-func (e OverlayUserMapEntryMatchSource) Valid() bool {
-	switch e {
-	case OverlayUserMapEntryMatchSourceEmail:
-		return true
-	case OverlayUserMapEntryMatchSourceManual:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for OverlayUserMapEntryUnmappedReason.
-const (
-	OverlayUserMapEntryUnmappedReasonAmbiguousEmail       OverlayUserMapEntryUnmappedReason = "ambiguous_email"
-	OverlayUserMapEntryUnmappedReasonBlockedByAdmin       OverlayUserMapEntryUnmappedReason = "blocked_by_admin"
-	OverlayUserMapEntryUnmappedReasonDirectoryUnavailable OverlayUserMapEntryUnmappedReason = "directory_unavailable"
-	OverlayUserMapEntryUnmappedReasonNoEmailMatch         OverlayUserMapEntryUnmappedReason = "no_email_match"
-	OverlayUserMapEntryUnmappedReasonNone                 OverlayUserMapEntryUnmappedReason = "none"
-	OverlayUserMapEntryUnmappedReasonNotYetSynced         OverlayUserMapEntryUnmappedReason = "not_yet_synced"
-)
-
-// Valid indicates whether the value is a known member of the OverlayUserMapEntryUnmappedReason enum.
-func (e OverlayUserMapEntryUnmappedReason) Valid() bool {
-	switch e {
-	case OverlayUserMapEntryUnmappedReasonAmbiguousEmail:
-		return true
-	case OverlayUserMapEntryUnmappedReasonBlockedByAdmin:
-		return true
-	case OverlayUserMapEntryUnmappedReasonDirectoryUnavailable:
-		return true
-	case OverlayUserMapEntryUnmappedReasonNoEmailMatch:
-		return true
-	case OverlayUserMapEntryUnmappedReasonNone:
-		return true
-	case OverlayUserMapEntryUnmappedReasonNotYetSynced:
 		return true
 	default:
 		return false
@@ -16089,7 +15858,6 @@ const (
 	WorklistItemSourceNotice              WorklistItemSource = "notice"
 	WorklistItemSourceNoticeCase          WorklistItemSource = "notice_case"
 	WorklistItemSourceRelationshipDecay   WorklistItemSource = "relationship_decay"
-	WorklistItemSourceSyncHealth          WorklistItemSource = "sync_health"
 	WorklistItemSourceTask                WorklistItemSource = "task"
 	WorklistItemSourceUndelivered         WorklistItemSource = "undelivered"
 	WorklistItemSourceWeeklyCommitment    WorklistItemSource = "weekly_commitment"
@@ -16139,8 +15907,6 @@ func (e WorklistItemSource) Valid() bool {
 	case WorklistItemSourceNoticeCase:
 		return true
 	case WorklistItemSourceRelationshipDecay:
-		return true
-	case WorklistItemSourceSyncHealth:
 		return true
 	case WorklistItemSourceTask:
 		return true
@@ -16227,7 +15993,6 @@ const (
 	WorklistReachSourceNotice              WorklistReachSource = "notice"
 	WorklistReachSourceNoticeCase          WorklistReachSource = "notice_case"
 	WorklistReachSourceRelationshipDecay   WorklistReachSource = "relationship_decay"
-	WorklistReachSourceSyncHealth          WorklistReachSource = "sync_health"
 	WorklistReachSourceTask                WorklistReachSource = "task"
 	WorklistReachSourceUndelivered         WorklistReachSource = "undelivered"
 	WorklistReachSourceWeeklyCommitment    WorklistReachSource = "weekly_commitment"
@@ -16277,8 +16042,6 @@ func (e WorklistReachSource) Valid() bool {
 	case WorklistReachSourceNoticeCase:
 		return true
 	case WorklistReachSourceRelationshipDecay:
-		return true
-	case WorklistReachSourceSyncHealth:
 		return true
 	case WorklistReachSourceTask:
 		return true
@@ -18755,8 +18518,7 @@ type Activity struct {
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
-	// (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
-	// not only overlay mode.
+	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version *RowVersion `json:"version,omitempty"`
 }
 
@@ -18872,8 +18634,7 @@ type ActivityReviewTemplate struct {
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
-	// (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
-	// not only overlay mode.
+	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version *RowVersion `json:"version,omitempty"`
 }
 
@@ -20402,9 +20163,15 @@ type Attention struct {
 	// Absent — not empty — on an installation whose feed does not read meetings.
 	Meetings *[]AttentionItem `json:"meetings,omitempty"`
 
-	// MeetingsUnreported Today's meetings that have already started and whose result nobody has
-	// recorded, longest unanswered first. The counterpart of `meetings`: that lane
-	// is what to prepare for, this is what to close off.
+	// MeetingsUnreported Meetings that have already started and whose result nobody has recorded,
+	// longest unanswered first. The counterpart of `meetings`: that lane is what to
+	// prepare for, this is what to close off.
+	//
+	// It reaches back a FORTNIGHT, where `meetings` is today only. The two bound
+	// differently because they expire differently: preparation stops being possible
+	// once a meeting begins, while an unrecorded outcome stays owed until somebody
+	// records it. Bounded at all so that the first read after a quiet month is a
+	// queue a reader can clear rather than a history of everything never answered.
 	//
 	// A meeting carrying no status at all is here. A captured calendar event
 	// arrives without one, so treating an absent status as settled would empty this
@@ -20472,19 +20239,6 @@ type Attention struct {
 	// Absent — not empty — on an installation whose feed does not derive relationship
 	// changes.
 	RelationshipDecay *[]AttentionItem `json:"relationship_decay,omitempty"`
-
-	// SyncHealth The overlay sync's current concerns: the poller backing off, the incumbent
-	// call budget degraded, mirrored classes stale or still backfilling. One card
-	// per CONDITION, never one per affected row, so a broken connector is a single
-	// card rather than a flood. Each card's `kind` names the condition and
-	// `detail` carries its facts (the affected object classes, the failure
-	// class, or the budget band); fixing the connection stays on the sync
-	// settings screen, so the card offers no verbs.
-	//
-	// Absent — not empty — on a workspace that is not running in overlay mode:
-	// an installation with no incumbent connected does not look here, which is a
-	// different fact from a healthy sync.
-	SyncHealth *[]AttentionItem `json:"sync_health,omitempty"`
 
 	// ThisMorning The overnight brief's queue, best-ranked first — what the night found worth
 	// the rep's first hour.
@@ -20588,7 +20342,7 @@ type AttentionCounts struct {
 	// Meetings How many of today's meetings are still ahead — the bounded page, as the other lanes report.
 	Meetings *int `json:"meetings,omitempty"`
 
-	// MeetingsUnreported How many of today's meetings have started with nobody saying how they went — the bounded page, as the other lanes report. Not in `required`: a client reading an installation whose feed does not carry this lane gets no number rather than a zero, which would claim the day is clear.
+	// MeetingsUnreported How many meetings of the last fortnight have started with nobody saying how they went — the bounded page, as the other lanes report. Not in `required`: a client reading an installation whose feed does not carry this lane gets no number rather than a zero, which would claim the day is clear.
 	MeetingsUnreported *int `json:"meetings_unreported,omitempty"`
 	NeedsYou           int  `json:"needs_you"`
 
@@ -20603,9 +20357,6 @@ type AttentionCounts struct {
 
 	// RelationshipDecay How many lapsed relationships this lane is CARRYING — the bounded page, as the other lanes report. A rep past the bound sees the longest silences, which is the order the lane is in.
 	RelationshipDecay *int `json:"relationship_decay,omitempty"`
-
-	// SyncHealth How many sync concerns the lane carries — one per condition, so this is the full count, never a bounded page of a larger one.
-	SyncHealth *int `json:"sync_health,omitempty"`
 
 	// ThisMorning Briefing items still unanswered in the rep's run for today.
 	ThisMorning int `json:"this_morning"`
@@ -20641,7 +20392,7 @@ type AttentionDealFacts struct {
 	NoChampion *bool               `json:"no_champion,omitempty"`
 	OwnerId    *openapi_types.UUID `json:"owner_id,omitempty"`
 
-	// StageId The deal's current stage; null for an overlay-mirror deal, whose stage lives with the incumbent.
+	// StageId The deal's current stage.
 	StageId *openapi_types.UUID `json:"stage_id,omitempty"`
 }
 
@@ -20730,12 +20481,6 @@ type AttentionItem struct {
 	//
 	// Both now travel typed — `quiet_days` and `staged` below — and the client writes
 	// the sentence in the reader's own language.
-	//
-	// ONE source is still an exception, and a client must know it: `sync_health` fills
-	// this field with its own vocabulary — the affected object classes, the failure
-	// class, or the budget band — for a client to write a sentence from. Those are
-	// words like `shed` and `deal, contact`. A client that has not written that
-	// sentence draws nothing for that source rather than the value.
 	Detail *string `json:"detail,omitempty"`
 
 	// DueAt When this is due (tasks), or when it lapses (approvals).
@@ -22606,8 +22351,7 @@ type CommissionEntry struct {
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
-	// (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
-	// not only overlay mode.
+	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version *RowVersion `json:"version,omitempty"`
 
 	// VoidReason Required on a void; what a partner dispute is answered from.
@@ -22833,8 +22577,7 @@ type Company struct {
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
-	// (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
-	// not only overlay mode.
+	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version *RowVersion `json:"version,omitempty"`
 
 	// Visibility Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the workspace through a sender verdict, or through `visibility` on `PATCH /companies/{id}`, which moves it BOTH ways for anybody the write gate admits. Read-only HERE, on the read schema, the same as the contact column beside it: the update request carries the writable copy.
@@ -25523,8 +25266,7 @@ type Contact struct {
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
-	// (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
-	// not only overlay mode.
+	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version *RowVersion `json:"version,omitempty"`
 
 	// Visibility Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the workspace through a verdict or through the owner's own `POST /contacts/{id}/publish`, and never travels back.
@@ -25718,8 +25460,7 @@ type Contact360Employment struct {
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
-	// (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
-	// not only overlay mode.
+	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version *RowVersion `json:"version,omitempty"`
 }
 
@@ -27634,8 +27375,7 @@ type CustomField struct {
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
-	// (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
-	// not only overlay mode.
+	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version *RowVersion `json:"version,omitempty"`
 }
 
@@ -27769,7 +27509,7 @@ type Deal struct {
 	// PartnerCompanyId Deal registration/attribution to a partner company (ADR-0032). The company must have a live `partner` row — naming one that does not is refused 422 (`not_a_partner`), because commission prices from the margin tier on that row, and an attribution without one could never earn anything. Null when the caller may not read that company, in which case `masked_fields` names it.
 	PartnerCompanyId *openapi_types.UUID `json:"partner_company_id,omitempty"`
 
-	// PipelineId Native mode: always a non-null pipeline FK. Overlay mode: NULL — an overlay-mirror deal has no native Margince pipeline row; the incumbent's own pipeline id rides `raw` and the code-declared stage→semantic mapping drives tier resolution (overlay-augmentation OVA-MAP-6). A zero/placeholder UUID here is forbidden (dangling FK).
+	// PipelineId The deal's pipeline. A zero/placeholder UUID here is forbidden (dangling FK).
 	PipelineId *openapi_types.UUID `json:"pipeline_id"`
 
 	// Priority Human importance, set by a colleague and never derived. Deliberately independent of amount, score, stage and the computed urgency a worklist reads: those already exist, and a field that merely restates them would be a second answer to a question the product answers. Null is "nobody has said", not "medium" — new deals are born null and closing one preserves what it held.
@@ -27780,7 +27520,7 @@ type Deal struct {
 	Raw       *map[string]interface{} `json:"raw,omitempty"`
 	Source    string                  `json:"source"`
 
-	// StageId Native mode: always a non-null stage FK; must belong to pipeline_id. Overlay mode: NULL (see pipeline_id; the incumbent dealstage id rides `raw`, OVA-MAP-6).
+	// StageId The deal's current stage; must belong to pipeline_id.
 	StageId *openapi_types.UUID `json:"stage_id"`
 
 	// Stalled Derived — no activity past the threshold (absolute duration).
@@ -27792,8 +27532,7 @@ type Deal struct {
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
-	// (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
-	// not only overlay mode.
+	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version *RowVersion `json:"version,omitempty"`
 
 	// WaitUntil 'Customer asked us to wait until' date; suppresses the stalled flag but not the overdue close-date flag.
@@ -28030,8 +27769,7 @@ type DealRoom struct {
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
-	// (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
-	// not only overlay mode.
+	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version *RowVersion `json:"version,omitempty"`
 
 	// WelcomeMessage The buyer's first paragraph on opening the room.
@@ -28104,8 +27842,7 @@ type DealRoomDocument struct {
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
-	// (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
-	// not only overlay mode.
+	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version              *RowVersion            `json:"version,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
@@ -28310,8 +28047,7 @@ type DealRoomThread struct {
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
-	// (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
-	// not only overlay mode.
+	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version *RowVersion `json:"version,omitempty"`
 }
 
@@ -28486,7 +28222,7 @@ type DedupeCandidateStatus string
 // DedupeCandidateListResponse defines model for DedupeCandidateListResponse.
 type DedupeCandidateListResponse struct {
 	Data []DedupeCandidate `json:"data"`
-	Page *PageInfo         `json:"page,omitempty"`
+	Page PageInfo          `json:"page"`
 }
 
 // DedupeDispositionRequest defines model for DedupeDispositionRequest.
@@ -29927,11 +29663,9 @@ type ImportRun struct {
 	CapturedBy *string `json:"captured_by,omitempty"`
 
 	// Checkpoint Absolute offset into the source's rows for a forward run (`running`/`failed`), or into import_record_map's rows once the run is `undoing` (IEM-WIRE-9) — 0 = not started either way. What a resume continues from.
-	Checkpoint int `json:"checkpoint"`
-
-	// Connector The two beyond the migrate-in set are the flip's own sources (OVA-WIRE-8).
-	Connector ImportRunConnector `json:"connector"`
-	CreatedAt time.Time          `json:"created_at"`
+	Checkpoint int                `json:"checkpoint"`
+	Connector  ImportRunConnector `json:"connector"`
+	CreatedAt  time.Time          `json:"created_at"`
 
 	// Error Why a failed run stopped, in the uploader's terms. Never a driver or SQL message.
 	Error *string            `json:"error,omitempty"`
@@ -29974,7 +29708,7 @@ type ImportRun struct {
 	UpdatedAt time.Time       `json:"updated_at"`
 }
 
-// ImportRunConnector The two beyond the migrate-in set are the flip's own sources (OVA-WIRE-8).
+// ImportRunConnector defines model for ImportRun.Connector.
 type ImportRunConnector string
 
 // ImportRunDisposition What the run will do, or did, counted per outcome. The four sum to the rows read — a disposition that does not add up is hiding something.
@@ -31033,8 +30767,7 @@ type Lead struct {
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
-	// (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
-	// not only overlay mode.
+	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version *RowVersion `json:"version,omitempty"`
 
 	// Writable Whether THIS caller may change THIS row: the same question the server's write gate answers on a mutation — the owner, the owner's team where the role is team-scoped, a live `write` record grant, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed.
@@ -31067,8 +30800,7 @@ type LeadDisqualifyReason struct {
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
-	// (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
-	// not only overlay mode.
+	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version *RowVersion `json:"version,omitempty"`
 }
 
@@ -31243,8 +30975,7 @@ type LeadSource struct {
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
-	// (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
-	// not only overlay mode.
+	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version *RowVersion `json:"version,omitempty"`
 }
 
@@ -31626,20 +31357,7 @@ type MeResponse struct {
 	// Carried on `/me` so navigation, the command palette, settings home and settings search can resolve from ONE cached snapshot. Each of those surfaces has to agree about which pages exist, and a screen-specific probe alongside them is how they came to disagree: the rail asked, the palette did not, and a page appeared in one and not the other.
 	// The whole object is optional, and a client that cannot read it should treat every surface here as unavailable — the fail-closed direction hides a page that exists rather than offering one that does not.
 	SettingsAvailability *SettingsAvailability `json:"settings_availability,omitempty"`
-
-	// SystemOfRecord The installation's active system-of-record mode (overlay_mode.sor_mode). `native` is the
-	// default and full-capability mode. In `overlay` mode the data is served from a read-only
-	// incumbent mirror: list sort/filter dials and unservable reads answer
-	// 422 `unsupported_in_overlay_mode` / 404, and mirrored-entity writes answer
-	// `unsupported_by_sor`. Clients gate their UI on this — rendering unservable read surfaces
-	// as an honest "not available in overlay" affordance and hiding mirrored-entity write
-	// controls — rather than offering controls that fail. Reverts to `native` after an
-	// overlay→native flip. Optional for backward compatibility; a missing value MUST be
-	// treated as `native`.
-	SystemOfRecord *struct {
-		Mode MeResponseSystemOfRecordMode `json:"mode"`
-	} `json:"system_of_record,omitempty"`
-	Teams []openapi_types.UUID `json:"teams"`
+	Teams                []openapi_types.UUID  `json:"teams"`
 
 	// User A seat — human or first-party agent. Mirrors `app_user`.
 	User User `json:"user"`
@@ -31650,9 +31368,6 @@ type MeResponse struct {
 
 // MeResponsePassportScopes defines model for MeResponse.Passport.Scopes.
 type MeResponsePassportScopes string
-
-// MeResponseSystemOfRecordMode defines model for MeResponse.SystemOfRecord.Mode.
-type MeResponseSystemOfRecordMode string
 
 // MeetingBrief The pre-meeting brief for one booked meeting (ADR-0097 D5), assembled fresh on every
 // read from what the CALLER can see.
@@ -32546,8 +32261,7 @@ type Offer struct {
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
-	// (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
-	// not only overlay mode.
+	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version              *RowVersion            `json:"version,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
@@ -32609,8 +32323,7 @@ type OfferLineItem struct {
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
-	// (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
-	// not only overlay mode.
+	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version *RowVersion `json:"version,omitempty"`
 }
 
@@ -32680,8 +32393,7 @@ type OfferTemplate struct {
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
-	// (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
-	// not only overlay mode.
+	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version *RowVersion `json:"version,omitempty"`
 }
 
@@ -32924,225 +32636,6 @@ type OutcomeReviewListResponse struct {
 	Data []OutcomeReview `json:"data"`
 }
 
-// OverlayBudget The incumbent REST budget window's consumption and degradation band, its per-source breakdown, honest headroom, and the per-second Search window (overlay-budget.md "The budget read (wire shape)", OVB-AC-1/AC-5).
-type OverlayBudget struct {
-	// Band The degradation band of a budget window — healthy (`ok`), approaching the cap (`warn`), or at/over the shed threshold (`shed`). Shared by the REST and Search windows so both read the one band vocabulary.
-	Band     *OverlayBudgetBand `json:"band,omitempty"`
-	Consumed *int64             `json:"consumed,omitempty"`
-
-	// Headroom Free REST capacity derived from our own counts, or the `~unknown` sentinel (OVB-PARAM-5) when a share cannot be attributed — never a fabricated number (OVB-AC-1).
-	Headroom *string `json:"headroom,omitempty"`
-	Limit    *int64  `json:"limit,omitempty"`
-
-	// Measured Whether the figures were READ rather than assumed. False on the meter's fail-closed arms — no accounting store reachable, an unconfigured incumbent, a read error — where the bands report the shed a spender must assume, not a measured exhaustion. A surface showing this budget to a human states the difference rather than presenting an accounting outage as quota pressure.
-	Measured *bool `json:"measured,omitempty"`
-
-	// Search The per-second Search-API window — metered, not gated, in branch 1, so the admin surface sees search pressure alongside REST.
-	Search *OverlayBudgetSearch `json:"search,omitempty"`
-
-	// Sources Per-source REST breakdown; the values sum exactly to `consumed` (OVB-AC-5). Absent sources have spent nothing this window. Integer counts, so the per-source sum equals `consumed` exactly (a float would round independently and could break the sum above 2^24).
-	Sources *struct {
-		Capture    *int64 `json:"capture,omitempty"`
-		ForceFresh *int64 `json:"force_fresh,omitempty"`
-		Poller     *int64 `json:"poller,omitempty"`
-	} `json:"sources,omitempty"`
-	Window *string `json:"window,omitempty"`
-}
-
-// OverlayBudgetBand The degradation band of a budget window — healthy (`ok`), approaching the cap (`warn`), or at/over the shed threshold (`shed`). Shared by the REST and Search windows so both read the one band vocabulary.
-type OverlayBudgetBand string
-
-// OverlayBudgetSearch The per-second Search-API window — metered, not gated, in branch 1, so the admin surface sees search pressure alongside REST.
-type OverlayBudgetSearch struct {
-	// Band The degradation band of a budget window — healthy (`ok`), approaching the cap (`warn`), or at/over the shed threshold (`shed`). Shared by the REST and Search windows so both read the one band vocabulary.
-	Band     *OverlayBudgetBand `json:"band,omitempty"`
-	Consumed *int64             `json:"consumed,omitempty"`
-	Limit    *int64             `json:"limit,omitempty"`
-	Window   *string            `json:"window,omitempty"`
-}
-
-// OverlayConnectRequest defines model for OverlayConnectRequest.
-type OverlayConnectRequest struct {
-	Incumbent OverlayConnectRequestIncumbent `json:"incumbent"`
-
-	// PrivateAppToken Sealed into the vault; never echoed. An empty value is rejected (422); a real credential is required to connect.
-	PrivateAppToken string `json:"privateAppToken"`
-	Region          string `json:"region"`
-}
-
-// OverlayConnectRequestIncumbent defines model for OverlayConnectRequest.Incumbent.
-type OverlayConnectRequestIncumbent string
-
-// OverlayConnection The workspace's overlay incumbent connection (HubSpot). The credential itself is never in this shape — it lives sealed in the vault.
-type OverlayConnection struct {
-	ConnectedAt time.Time                  `json:"connectedAt"`
-	Incumbent   OverlayConnectionIncumbent `json:"incumbent"`
-	Region      string                     `json:"region"`
-	Scopes      []string                   `json:"scopes"`
-	Status      OverlayConnectionStatus    `json:"status"`
-}
-
-// OverlayConnectionIncumbent defines model for OverlayConnection.Incumbent.
-type OverlayConnectionIncumbent string
-
-// OverlayConnectionStatus defines model for OverlayConnection.Status.
-type OverlayConnectionStatus string
-
-// OverlayFlipAccepted defines model for OverlayFlipAccepted.
-type OverlayFlipAccepted struct {
-	// EmergencyDisclosure Returned on an emergency cutover — the disclosed-lossy staleness and the parity that cannot be re-verified against a live incumbent.
-	EmergencyDisclosure *struct {
-		LastSyncedAt             *time.Time `json:"last_synced_at"`
-		StalenessSeconds         *int64     `json:"staleness_seconds,omitempty"`
-		UnverifiableParityNotice string     `json:"unverifiable_parity_notice"`
-	} `json:"emergency_disclosure,omitempty"`
-	Mode            OverlayFlipAcceptedMode `json:"mode"`
-	RecordsImported *int64                  `json:"records_imported,omitempty"`
-
-	// RunId The migration run (`import_run`) this flip executed.
-	RunId openapi_types.UUID `json:"run_id"`
-}
-
-// OverlayFlipAcceptedMode defines model for OverlayFlipAccepted.Mode.
-type OverlayFlipAcceptedMode string
-
-// OverlayFlipParityEntry One object class's parity preview row (AC-mode-flip-7).
-type OverlayFlipParityEntry struct {
-	MirrorCount int                      `json:"mirror_count"`
-	Object      string                   `json:"object"`
-	Skipped     *[]OverlayFlipParitySkip `json:"skipped,omitempty"`
-	WillCreate  int                      `json:"will_create"`
-	WillUpdate  int                      `json:"will_update"`
-}
-
-// OverlayFlipParitySkip One row the importer cannot carry, disclosed with its reason (never silently dropped).
-type OverlayFlipParitySkip struct {
-	ExternalId string `json:"external_id"`
-	Reason     string `json:"reason"`
-}
-
-// OverlayFlipPreflight The flip preflight verdict (OVA-WIRE-7): `{ready, blocking[], unresolved_conflicts[]}` plus the sealed snapshot and parity preview when ready, and the emergency-cutover disclosure when the incumbent is unreachable (ADR-0071 / OVA-AC-6).
-type OverlayFlipPreflight struct {
-	// Blocking Why the flip cannot run, empty when ready. `incumbent_unreachable` is the OVA-AC-6(a) honest block — the connection is revoked/error, so the force-fresh sync cannot pass; the workspace stays in overlay on its last mirror.
-	Blocking []OverlayFlipPreflightBlocking `json:"blocking"`
-
-	// Emergency Present only while the incumbent is unreachable: the ADR-0071 emergency cutover from the last-known mirror, disclosed-lossy — never offered while a fresh-sync flip is possible.
-	Emergency *struct {
-		Available                bool       `json:"available"`
-		LastSyncedAt             *time.Time `json:"last_synced_at"`
-		StalenessSeconds         *int64     `json:"staleness_seconds,omitempty"`
-		UnverifiableParityNotice string     `json:"unverifiable_parity_notice"`
-	} `json:"emergency,omitempty"`
-
-	// Parity The parity dry-run against the sealed snapshot — writes zero CRM rows; skipped rows are disclosed with reasons, never silently dropped (AC-mode-flip-7).
-	Parity *[]OverlayFlipParityEntry `json:"parity,omitempty"`
-	Ready  bool                      `json:"ready"`
-
-	// Snapshot The sealed frozen-mirror snapshot the flip imports.
-	Snapshot *OverlayFlipSnapshot `json:"snapshot,omitempty"`
-
-	// UnprojectableRows How many mirror rows the CURRENT declaration cannot project — a SUBSET of what holds `force_fresh_incomplete`, and the only part of it that never clears on its own. It is sent whether or not the flip is blocked, and zero is a real answer: an operator waiting on `force_fresh_incomplete` with zero here is waiting on a sweep that will finish, while a non-zero count is waiting on somebody repairing the mapping. Which class holds them is on the sync-status read, per object.
-	UnprojectableRows *int `json:"unprojectable_rows,omitempty"`
-
-	// UnresolvedConflicts Open incumbent-wins conflicts awaiting acceptance; each blocks the flip. Empty in this build: branch 1 reconciliation resolves incumbent-wins at ingest and persists no conflict queue, so the producer arrives with write-back (branch 2). The field is required by OVA-WIRE-7's response shape.
-	UnresolvedConflicts []OverlayFlipUnresolvedConflict `json:"unresolved_conflicts"`
-}
-
-// OverlayFlipPreflightBlocking defines model for OverlayFlipPreflight.Blocking.
-type OverlayFlipPreflightBlocking string
-
-// OverlayFlipRequest defines model for OverlayFlipRequest.
-type OverlayFlipRequest struct {
-	// ConfirmationPhrase Must equal the exact phrase `FLIP TO SOR` (AC-mode-flip-5).
-	ConfirmationPhrase string `json:"confirmation_phrase"`
-
-	// Mode `fresh_sync` (the default) requires the sealed preflight snapshot. `emergency` is the last-known-mirror cutover and is refused while the incumbent is reachable — the explicit field is the never-silently-substituted guarantee (OVA-AC-6 b).
-	Mode *OverlayFlipRequestMode `json:"mode,omitempty"`
-}
-
-// OverlayFlipRequestMode `fresh_sync` (the default) requires the sealed preflight snapshot. `emergency` is the last-known-mirror cutover and is refused while the incumbent is reachable — the explicit field is the never-silently-substituted guarantee (OVA-AC-6 b).
-type OverlayFlipRequestMode string
-
-// OverlayFlipSnapshot The sealed frozen-mirror snapshot the flip imports.
-type OverlayFlipSnapshot struct {
-	FrozenAt time.Time `json:"frozen_at"`
-	Id       string    `json:"id"`
-}
-
-// OverlayFlipUnresolvedConflict One open incumbent-wins conflict blocking the flip.
-type OverlayFlipUnresolvedConflict struct {
-	ExternalId  string  `json:"external_id"`
-	ObjectClass string  `json:"object_class"`
-	Property    *string `json:"property,omitempty"`
-}
-
-// OverlayOwner defines model for OverlayOwner.
-type OverlayOwner struct {
-	Email           string  `json:"email"`
-	IncumbentUserId string  `json:"incumbent_user_id"`
-	Name            *string `json:"name,omitempty"`
-}
-
-// OverlayOwnerDirectory defines model for OverlayOwnerDirectory.
-type OverlayOwnerDirectory struct {
-	Incumbent string         `json:"incumbent"`
-	Owners    []OverlayOwner `json:"owners"`
-	Truncated bool           `json:"truncated"`
-}
-
-// OverlaySyncStatus Per-object mirror sync health — freshness state and backfill completeness (design.md §4.7).
-type OverlaySyncStatus struct {
-	Objects *[]struct {
-		BackfillComplete *bool `json:"backfillComplete,omitempty"`
-
-		// FrozenForFlip The mirror is held still by a pending overlay→native flip: the sweep skips this workspace entirely, so staleness grows on purpose. Stated rather than left to be inferred from a mirror that merely looks idle.
-		FrozenForFlip *bool                          `json:"frozenForFlip,omitempty"`
-		LastSyncedAt  *time.Time                     `json:"lastSyncedAt,omitempty"`
-		Object        *string                        `json:"object,omitempty"`
-		State         *OverlaySyncStatusObjectsState `json:"state,omitempty"`
-
-		// UnprojectableRows How many of the class's mirror rows the CURRENT declaration cannot project. It is what tells the two readings of `stale` apart, and they want opposite responses: `stale` with ZERO here is converging — the sweep has not reached those rows and will — while `stale` with a NON-ZERO count never converges on its own and holds `force_fresh_incomplete` shut until somebody repairs the mapping. Zero means wait; non-zero means look. A count and not a list, because the question an operator is answering is whether anything needs them, not which ids.
-		UnprojectableRows *int `json:"unprojectableRows,omitempty"`
-	} `json:"objects,omitempty"`
-}
-
-// OverlaySyncStatusObjectsState defines model for OverlaySyncStatus.Objects.State.
-type OverlaySyncStatusObjectsState string
-
-// OverlayUserMapEntry defines model for OverlayUserMapEntry.
-type OverlayUserMapEntry struct {
-	Email              string  `json:"email"`
-	IncumbentUserEmail *string `json:"incumbent_user_email,omitempty"`
-
-	// IncumbentUserId Empty when the user is not mapped.
-	IncumbentUserId   *string `json:"incumbent_user_id,omitempty"`
-	IncumbentUserName *string `json:"incumbent_user_name,omitempty"`
-
-	// MatchSource Absent when the user is not mapped.
-	MatchSource *OverlayUserMapEntryMatchSource `json:"match_source,omitempty"`
-	Name        *string                         `json:"name,omitempty"`
-
-	// StaleOwnerRef A manual mapping pointing at an incumbent user absent from the current directory. Reported, never auto-revoked: the override stays sticky.
-	StaleOwnerRef *bool `json:"stale_owner_ref,omitempty"`
-
-	// UnmappedReason Why this user has no mapping. `none` means they are mapped. `directory_unavailable` means the incumbent directory could not be read, so no reason could be derived — never a guessed diagnosis.
-	UnmappedReason OverlayUserMapEntryUnmappedReason `json:"unmapped_reason"`
-	UserId         openapi_types.UUID                `json:"user_id"`
-}
-
-// OverlayUserMapEntryMatchSource Absent when the user is not mapped.
-type OverlayUserMapEntryMatchSource string
-
-// OverlayUserMapEntryUnmappedReason Why this user has no mapping. `none` means they are mapped. `directory_unavailable` means the incumbent directory could not be read, so no reason could be derived — never a guessed diagnosis.
-type OverlayUserMapEntryUnmappedReason string
-
-// OverlayUserMapPage defines model for OverlayUserMapPage.
-type OverlayUserMapPage struct {
-	Entries    []OverlayUserMapEntry `json:"entries"`
-	Incumbent  string                `json:"incumbent"`
-	NextCursor *string               `json:"next_cursor,omitempty"`
-}
-
 // OverrideWarning The caution a human reads before overruling the engine, with the version that identifies
 // it. Both together, because a surface that could get one without the other would show words
 // while naming a different version.
@@ -33209,8 +32702,7 @@ type Partner struct {
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
-	// (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
-	// not only overlay mode.
+	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version *RowVersion `json:"version,omitempty"`
 }
 
@@ -33290,8 +32782,7 @@ type Pipeline struct {
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
-	// (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
-	// not only overlay mode.
+	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version *RowVersion `json:"version,omitempty"`
 }
 
@@ -33601,8 +33092,7 @@ type Product struct {
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
-	// (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
-	// not only overlay mode.
+	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version              *RowVersion            `json:"version,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
@@ -33661,8 +33151,7 @@ type Project struct {
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
-	// (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
-	// not only overlay mode.
+	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version *RowVersion `json:"version,omitempty"`
 
 	// Writable Whether THIS caller may change THIS row: the same question the server's write gate answers on a mutation — the owner, the owner's team where the role is team-scoped, a live `write` record grant, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed.
@@ -34102,8 +33591,7 @@ type ProviderConnection struct {
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
-	// (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
-	// not only overlay mode.
+	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version *RowVersion `json:"version,omitempty"`
 }
 
@@ -34501,8 +33989,7 @@ type RecordClaim struct {
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
-	// (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
-	// not only overlay mode.
+	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version *RowVersion `json:"version,omitempty"`
 }
 
@@ -34861,8 +34348,7 @@ type Relationship struct {
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
-	// (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
-	// not only overlay mode.
+	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version *RowVersion `json:"version,omitempty"`
 }
 
@@ -35465,8 +34951,7 @@ type RowTagColor string
 // RowVersion Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 // Echoed back as the `version` field on every mutable entity. To make a write conditional,
 // send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
-// (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
-// not only overlay mode.
+// (ErrVersionSkew) so the client re-reads before retrying.
 type RowVersion = int64
 
 // RunReportRequest A typed, validated query plan (not free-form SQL). For prebuilt reports, filters
@@ -35715,12 +35200,12 @@ type SearchResult struct {
 	// Title Display label (name/subject).
 	Title *string `json:"title,omitempty"`
 
-	// TrustTier Provenance tier of the underlying record. In native mode every stored record is `authoritative`; `external`/`unverified` are reserved for overlay/connector-sourced rows (not emitted until overlay adapters land). Never guessed — null when unknown.
+	// TrustTier Provenance tier of the underlying record. Nearly every stored record is `authoritative`; `external`/`unverified` are reserved for connector-sourced rows (not emitted until those adapters land). Never guessed — null when unknown.
 	TrustTier *SearchResultTrustTier `json:"trust_tier,omitempty"`
 	Type      SearchResultType       `json:"type"`
 }
 
-// SearchResultTrustTier Provenance tier of the underlying record. In native mode every stored record is `authoritative`; `external`/`unverified` are reserved for overlay/connector-sourced rows (not emitted until overlay adapters land). Never guessed — null when unknown.
+// SearchResultTrustTier Provenance tier of the underlying record. Nearly every stored record is `authoritative`; `external`/`unverified` are reserved for connector-sourced rows (not emitted until those adapters land). Never guessed — null when unknown.
 type SearchResultTrustTier string
 
 // SearchResultType defines model for SearchResult.Type.
@@ -36410,11 +35895,6 @@ type SetMyAgentGrantRequest struct {
 	Granted bool `json:"granted"`
 }
 
-// SetOverlayUserMapRequest defines model for SetOverlayUserMapRequest.
-type SetOverlayUserMapRequest struct {
-	IncumbentUserId string `json:"incumbent_user_id"`
-}
-
 // SetProjectCompanyRequest defines model for SetProjectCompanyRequest.
 type SetProjectCompanyRequest struct {
 	CompanyId openapi_types.UUID `json:"company_id"`
@@ -36602,8 +36082,7 @@ type Signal struct {
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
-	// (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
-	// not only overlay mode.
+	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version *RowVersion `json:"version,omitempty"`
 }
 
@@ -37637,12 +37116,12 @@ type Undoability struct {
 	// Detail The fields a refusal names, where naming them is the better explanation — which field was superseded, which one cannot be written back. Never the only thing a reader renders; `reason` is what the product says.
 	Detail *string `json:"detail,omitempty"`
 
-	// Reason Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would have to clear a field the record's own write path cannot clear, so it is refused rather than reporting a success that changed nothing. `edge_relink_unsupported` means the entry REMOVED a link: putting one back is an un-archive, which this path does not perform. The refusal says the link can be made again from the record's own screen, because that is true and actionable. `not_restorable_by_this_path` covers two shapes: a record whose workspace keeps its records in an incumbent system, and EVERY change to a project's company link whatever the verb — that kind takes write authority over the project row and a project must keep at least one company, so a generic reverse would be a side door around both rules. `detail` names the kind in the second case.
+	// Reason Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would have to clear a field the record's own write path cannot clear, so it is refused rather than reporting a success that changed nothing. `edge_relink_unsupported` means the entry REMOVED a link: putting one back is an un-archive, which this path does not perform. The refusal says the link can be made again from the record's own screen, because that is true and actionable. `not_restorable_by_this_path` covers EVERY change to a project's company link whatever the verb — that kind takes write authority over the project row and a project must keep at least one company, so a generic reverse would be a side door around both rules. `detail` names the kind.
 	Reason   *UndoabilityReason `json:"reason,omitempty"`
 	Undoable bool               `json:"undoable"`
 }
 
-// UndoabilityReason Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would have to clear a field the record's own write path cannot clear, so it is refused rather than reporting a success that changed nothing. `edge_relink_unsupported` means the entry REMOVED a link: putting one back is an un-archive, which this path does not perform. The refusal says the link can be made again from the record's own screen, because that is true and actionable. `not_restorable_by_this_path` covers two shapes: a record whose workspace keeps its records in an incumbent system, and EVERY change to a project's company link whatever the verb — that kind takes write authority over the project row and a project must keep at least one company, so a generic reverse would be a side door around both rules. `detail` names the kind in the second case.
+// UndoabilityReason Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would have to clear a field the record's own write path cannot clear, so it is refused rather than reporting a success that changed nothing. `edge_relink_unsupported` means the entry REMOVED a link: putting one back is an un-archive, which this path does not perform. The refusal says the link can be made again from the record's own screen, because that is true and actionable. `not_restorable_by_this_path` covers EVERY change to a project's company link whatever the verb — that kind takes write authority over the project row and a project must keep at least one company, so a generic reverse would be a side door around both rules. `detail` names the kind.
 type UndoabilityReason string
 
 // UpdateAcquisitionSourceRequest Every field optional; an omitted one is left alone.
@@ -40121,11 +39600,6 @@ type WorklistItem struct {
 	// Not a channel for anything else. A value the queue itself reads travels typed
 	// beside this field, never inside it: a figure parsed back out of a sentence reads
 	// as zero the day somebody rewords the sentence.
-	//
-	// ONE source is an exception a client must know: `sync_health` fills this with its
-	// own vocabulary — the affected object classes, the failure class, the budget band
-	// — for a client to write a sentence from. Those are words like `shed`. A client
-	// that has not written that sentence draws nothing for that source.
 	Detail *string `json:"detail,omitempty"`
 
 	// Dispositions The ways this row can be PUT DOWN, as the server declares them. A client
@@ -41036,7 +40510,6 @@ type ListActivitiesParams struct {
 	OccurredBefore *time.Time `form:"occurred_before,omitempty" json:"occurred_before,omitempty"`
 
 	// WaitingReply Restrict the list to an inbound message still awaiting an answer: the newest message of each thread that nobody has answered. Combined with `entity_type`/`entity_id` it answers what on this record is waiting for a reply.
-	// Native system-of-record only: an incumbent mirror carries no thread walk to answer it from, so a workspace in overlay mode refuses `waiting_reply=true` with the 422 every unsupported overlay parameter gets, rather than returning the whole mirrored set as though every row qualified. `false` asks for nothing and is accepted in either mode.
 	WaitingReply *bool `form:"waiting_reply,omitempty" json:"waiting_reply,omitempty"`
 }
 
@@ -42449,6 +41922,9 @@ type ListConfirmSubmissionsParams struct {
 
 	// Limit Max items in the page.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. It encodes all three parts of this queue's order — whether the row is resolved, its `submitted_at`, and its id — because two subjects can send in the same second and an id alone cannot continue an order it is only the tie-break of. Changing `contact_id` or `resolved` mid-walk changes which rows the remaining pages see, so re-issue without the cursor when a filter changes. A token this endpoint did not mint returns `422 code: malformed_cursor`.
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
 }
 
 // ResolveConfirmSubmissionJSONBody defines parameters for ResolveConfirmSubmission.
@@ -44260,15 +43736,6 @@ type PutOnboardingStateParams struct {
 	// than half-honouring it, so read this contract, not the client, to know which calls are safe
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
-}
-
-// ListOverlayUserMapParams defines parameters for ListOverlayUserMap.
-type ListOverlayUserMapParams struct {
-	// Cursor Opaque keyset cursor from a prior response's root-level `next_cursor`. It encodes the last row's app_user id and nothing else; there is no sort to disagree with. A token this endpoint did not mint returns `422 code: malformed_cursor` — re-issue the request without it.
-	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
-
-	// Limit Max items in the page.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
 // ListPartnersParams defines parameters for ListPartners.
@@ -46630,15 +46097,6 @@ type MessageOnboardingCompanyJSONRequestBody = OnboardingCompanyMessageRequest
 
 // PutOnboardingStateJSONRequestBody defines body for PutOnboardingState for application/json ContentType.
 type PutOnboardingStateJSONRequestBody = PutOnboardingStateRequest
-
-// ConnectOverlayJSONRequestBody defines body for ConnectOverlay for application/json ContentType.
-type ConnectOverlayJSONRequestBody = OverlayConnectRequest
-
-// ExecuteOverlayFlipJSONRequestBody defines body for ExecuteOverlayFlip for application/json ContentType.
-type ExecuteOverlayFlipJSONRequestBody = OverlayFlipRequest
-
-// SetOverlayUserMapJSONRequestBody defines body for SetOverlayUserMap for application/json ContentType.
-type SetOverlayUserMapJSONRequestBody = SetOverlayUserMapRequest
 
 // IssuePassportJSONRequestBody defines body for IssuePassport for application/json ContentType.
 type IssuePassportJSONRequestBody = IssuePassportRequest
@@ -57616,6 +57074,9 @@ type ServerInterface interface {
 	// Export a filtered slice of one object (or a saved view / dynamic list) to an open format.
 	// (POST /exports)
 	CreateFilteredExport(w http.ResponseWriter, r *http.Request)
+	// Download the whole-workspace export bundle.
+	// (GET /exports/bundle)
+	DownloadExportBundle(w http.ResponseWriter, r *http.Request)
 	// List the composed extension units and what each contributes. Admin-only, human-only, read-only.
 	// (GET /extensions)
 	ListExtensions(w http.ResponseWriter, r *http.Request)
@@ -57958,45 +57419,6 @@ type ServerInterface interface {
 	// Create or replace the acting user's resumable onboarding state.
 	// (PUT /onboarding/state)
 	PutOnboardingState(w http.ResponseWriter, r *http.Request, params PutOnboardingStateParams)
-	// The incumbent API budget window's consumption and band (ok/warn/shed).
-	// (GET /overlay/budget)
-	GetOverlayBudget(w http.ResponseWriter, r *http.Request)
-	// Disconnect the overlay incumbent and queue mirror teardown.
-	// (DELETE /overlay/connection)
-	DisconnectOverlay(w http.ResponseWriter, r *http.Request)
-	// The workspace's overlay incumbent connection, if any.
-	// (GET /overlay/connection)
-	GetOverlayConnection(w http.ResponseWriter, r *http.Request)
-	// Connect the workspace's overlay incumbent (HubSpot).
-	// (POST /overlay/connection)
-	ConnectOverlay(w http.ResponseWriter, r *http.Request)
-	// Download the workspace export bundle — the flip's pre-flip export producer.
-	// (GET /overlay/export)
-	DownloadOverlayExport(w http.ResponseWriter, r *http.Request)
-	// Execute the overlay→native flip, running the migration.
-	// (POST /overlay/flip)
-	ExecuteOverlayFlip(w http.ResponseWriter, r *http.Request)
-	// Dry-run the overlay→native flip's readiness checks without executing it.
-	// (POST /overlay/flip:preflight)
-	PreflightOverlayFlip(w http.ResponseWriter, r *http.Request)
-	// The connected incumbent's user directory, for the mapping picker.
-	// (GET /overlay/owners)
-	ListOverlayOwners(w http.ResponseWriter, r *http.Request)
-	// Queue an out-of-band mirror reconciliation sweep.
-	// (POST /overlay/reconcile)
-	ReconcileOverlay(w http.ResponseWriter, r *http.Request)
-	// Per-object mirror sync freshness (fresh/pending_sync/stale, backfill completeness).
-	// (GET /overlay/sync-status)
-	GetOverlaySyncStatus(w http.ResponseWriter, r *http.Request)
-	// The workspace users' incumbent-user mapping, with unmapped users flagged.
-	// (GET /overlay/user-map)
-	ListOverlayUserMap(w http.ResponseWriter, r *http.Request, params ListOverlayUserMapParams)
-	// Unmap one user and stop automatic email matching from re-mapping them.
-	// (DELETE /overlay/user-map/{id})
-	DeleteOverlayUserMap(w http.ResponseWriter, r *http.Request, id Id)
-	// Pin one user to an incumbent user as a manual admin override.
-	// (PUT /overlay/user-map/{id})
-	SetOverlayUserMap(w http.ResponseWriter, r *http.Request, id Id)
 	// List partner companies (companies with a partner row), filterable by role/cert status.
 	// (GET /partners)
 	ListPartners(w http.ResponseWriter, r *http.Request, params ListPartnersParams)
@@ -60661,6 +60083,12 @@ func (_ Unimplemented) CreateFilteredExport(w http.ResponseWriter, r *http.Reque
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Download the whole-workspace export bundle.
+// (GET /exports/bundle)
+func (_ Unimplemented) DownloadExportBundle(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // List the composed extension units and what each contributes. Admin-only, human-only, read-only.
 // (GET /extensions)
 func (_ Unimplemented) ListExtensions(w http.ResponseWriter, r *http.Request) {
@@ -61342,84 +60770,6 @@ func (_ Unimplemented) GetOnboardingState(w http.ResponseWriter, r *http.Request
 // Create or replace the acting user's resumable onboarding state.
 // (PUT /onboarding/state)
 func (_ Unimplemented) PutOnboardingState(w http.ResponseWriter, r *http.Request, params PutOnboardingStateParams) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// The incumbent API budget window's consumption and band (ok/warn/shed).
-// (GET /overlay/budget)
-func (_ Unimplemented) GetOverlayBudget(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Disconnect the overlay incumbent and queue mirror teardown.
-// (DELETE /overlay/connection)
-func (_ Unimplemented) DisconnectOverlay(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// The workspace's overlay incumbent connection, if any.
-// (GET /overlay/connection)
-func (_ Unimplemented) GetOverlayConnection(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Connect the workspace's overlay incumbent (HubSpot).
-// (POST /overlay/connection)
-func (_ Unimplemented) ConnectOverlay(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Download the workspace export bundle — the flip's pre-flip export producer.
-// (GET /overlay/export)
-func (_ Unimplemented) DownloadOverlayExport(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Execute the overlay→native flip, running the migration.
-// (POST /overlay/flip)
-func (_ Unimplemented) ExecuteOverlayFlip(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Dry-run the overlay→native flip's readiness checks without executing it.
-// (POST /overlay/flip:preflight)
-func (_ Unimplemented) PreflightOverlayFlip(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// The connected incumbent's user directory, for the mapping picker.
-// (GET /overlay/owners)
-func (_ Unimplemented) ListOverlayOwners(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Queue an out-of-band mirror reconciliation sweep.
-// (POST /overlay/reconcile)
-func (_ Unimplemented) ReconcileOverlay(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Per-object mirror sync freshness (fresh/pending_sync/stale, backfill completeness).
-// (GET /overlay/sync-status)
-func (_ Unimplemented) GetOverlaySyncStatus(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// The workspace users' incumbent-user mapping, with unmapped users flagged.
-// (GET /overlay/user-map)
-func (_ Unimplemented) ListOverlayUserMap(w http.ResponseWriter, r *http.Request, params ListOverlayUserMapParams) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Unmap one user and stop automatic email matching from re-mapping them.
-// (DELETE /overlay/user-map/{id})
-func (_ Unimplemented) DeleteOverlayUserMap(w http.ResponseWriter, r *http.Request, id Id) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Pin one user to an incumbent user as a manual admin override.
-// (PUT /overlay/user-map/{id})
-func (_ Unimplemented) SetOverlayUserMap(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -71424,6 +70774,19 @@ func (siw *ServerInterfaceWrapper) ListConfirmSubmissions(w http.ResponseWriter,
 		return
 	}
 
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListConfirmSubmissions(w, r, params)
 	}))
@@ -77316,6 +76679,26 @@ func (siw *ServerInterfaceWrapper) CreateFilteredExport(w http.ResponseWriter, r
 	handler.ServeHTTP(w, r)
 }
 
+// DownloadExportBundle operation middleware
+func (siw *ServerInterfaceWrapper) DownloadExportBundle(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DownloadExportBundle(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListExtensions operation middleware
 func (siw *ServerInterfaceWrapper) ListExtensions(w http.ResponseWriter, r *http.Request) {
 
@@ -81604,334 +80987,6 @@ func (siw *ServerInterfaceWrapper) PutOnboardingState(w http.ResponseWriter, r *
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PutOnboardingState(w, r, params)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// GetOverlayBudget operation middleware
-func (siw *ServerInterfaceWrapper) GetOverlayBudget(w http.ResponseWriter, r *http.Request) {
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetOverlayBudget(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// DisconnectOverlay operation middleware
-func (siw *ServerInterfaceWrapper) DisconnectOverlay(w http.ResponseWriter, r *http.Request) {
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.DisconnectOverlay(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// GetOverlayConnection operation middleware
-func (siw *ServerInterfaceWrapper) GetOverlayConnection(w http.ResponseWriter, r *http.Request) {
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetOverlayConnection(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// ConnectOverlay operation middleware
-func (siw *ServerInterfaceWrapper) ConnectOverlay(w http.ResponseWriter, r *http.Request) {
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ConnectOverlay(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// DownloadOverlayExport operation middleware
-func (siw *ServerInterfaceWrapper) DownloadOverlayExport(w http.ResponseWriter, r *http.Request) {
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.DownloadOverlayExport(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// ExecuteOverlayFlip operation middleware
-func (siw *ServerInterfaceWrapper) ExecuteOverlayFlip(w http.ResponseWriter, r *http.Request) {
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ExecuteOverlayFlip(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// PreflightOverlayFlip operation middleware
-func (siw *ServerInterfaceWrapper) PreflightOverlayFlip(w http.ResponseWriter, r *http.Request) {
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.PreflightOverlayFlip(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// ListOverlayOwners operation middleware
-func (siw *ServerInterfaceWrapper) ListOverlayOwners(w http.ResponseWriter, r *http.Request) {
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListOverlayOwners(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// ReconcileOverlay operation middleware
-func (siw *ServerInterfaceWrapper) ReconcileOverlay(w http.ResponseWriter, r *http.Request) {
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ReconcileOverlay(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// GetOverlaySyncStatus operation middleware
-func (siw *ServerInterfaceWrapper) GetOverlaySyncStatus(w http.ResponseWriter, r *http.Request) {
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetOverlaySyncStatus(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// ListOverlayUserMap operation middleware
-func (siw *ServerInterfaceWrapper) ListOverlayUserMap(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	// Parameter object where we will unmarshal all parameters from the context
-	var params ListOverlayUserMapParams
-
-	// ------------- Optional query parameter "cursor" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
-		}
-		return
-	}
-
-	// ------------- Optional query parameter "limit" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
-		}
-		return
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListOverlayUserMap(w, r, params)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// DeleteOverlayUserMap operation middleware
-func (siw *ServerInterfaceWrapper) DeleteOverlayUserMap(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id Id
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.DeleteOverlayUserMap(w, r, id)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// SetOverlayUserMap operation middleware
-func (siw *ServerInterfaceWrapper) SetOverlayUserMap(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id Id
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.SetOverlayUserMap(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -91893,6 +90948,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/exports", wrapper.CreateFilteredExport)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/exports/bundle", wrapper.DownloadExportBundle)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/extensions", wrapper.ListExtensions)
 	})
 	r.Group(func(r chi.Router) {
@@ -92233,45 +91291,6 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/onboarding/state", wrapper.PutOnboardingState)
-	})
-	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/overlay/budget", wrapper.GetOverlayBudget)
-	})
-	r.Group(func(r chi.Router) {
-		r.Delete(options.BaseURL+"/overlay/connection", wrapper.DisconnectOverlay)
-	})
-	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/overlay/connection", wrapper.GetOverlayConnection)
-	})
-	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/overlay/connection", wrapper.ConnectOverlay)
-	})
-	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/overlay/export", wrapper.DownloadOverlayExport)
-	})
-	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/overlay/flip", wrapper.ExecuteOverlayFlip)
-	})
-	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/overlay/flip:preflight", wrapper.PreflightOverlayFlip)
-	})
-	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/overlay/owners", wrapper.ListOverlayOwners)
-	})
-	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/overlay/reconcile", wrapper.ReconcileOverlay)
-	})
-	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/overlay/sync-status", wrapper.GetOverlaySyncStatus)
-	})
-	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/overlay/user-map", wrapper.ListOverlayUserMap)
-	})
-	r.Group(func(r chi.Router) {
-		r.Delete(options.BaseURL+"/overlay/user-map/{id}", wrapper.DeleteOverlayUserMap)
-	})
-	r.Group(func(r chi.Router) {
-		r.Put(options.BaseURL+"/overlay/user-map/{id}", wrapper.SetOverlayUserMap)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/partners", wrapper.ListPartners)

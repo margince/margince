@@ -35,8 +35,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/modules/notices"
-	"github.com/margince/margince/backend/internal/modules/overlay"
-	"github.com/margince/margince/backend/internal/platform/overlaybudget"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -86,11 +84,11 @@ func subjectOfActivity(row crmcontracts.Activity) string {
 // also names the company it came from, so the lead is what the reader wants to
 // open. A rank absent here is a record kind this surface does not route to.
 var linkPriority = map[crmcontracts.ActivityLinkEntityType]int{
-	flipObjectLead: 1,
-	flipObjectDeal: 2,
+	entityLead: 1,
+	entityDeal: 2,
 	crmcontracts.ActivityLinkEntityTypeProject: 3,
-	flipObjectContact:                          4,
-	flipObjectCompany:                          5,
+	entityContact: 4,
+	entityCompany: 5,
 }
 
 // primaryLink picks the one record a task row points at.
@@ -158,11 +156,9 @@ func (f attentionFailedEffects) Failed(ctx context.Context, limit int) ([]attent
 	return out, nil
 }
 
-// newAttentionHandlers assembles the surface for the API role. meter is the
-// Server's shared OVB meter (rebindable; overlay.go), which the sync-health
-// lane's budget concern reads.
-func newAttentionHandlers(pool *pgxpool.Pool, svc *approvals.Service, meter *overlaybudget.Meter) attention.Handlers {
-	return attention.NewHandlers(newAttentionService(pool, svc, meter, func() time.Time { return time.Now().UTC() }))
+// newAttentionHandlers assembles the surface for the API role.
+func newAttentionHandlers(pool *pgxpool.Pool, svc *approvals.Service) attention.Handlers {
+	return attention.NewHandlers(newAttentionService(pool, svc, func() time.Time { return time.Now().UTC() }))
 }
 
 // newAttentionService binds every lane to the module that owns what it shows.
@@ -172,7 +168,7 @@ func newAttentionHandlers(pool *pgxpool.Pool, svc *approvals.Service, meter *ove
 // keep passing while the shipped feed lost one — which is the failure the feed's
 // stub-driven unit tests already have, and the reason its producers went so long
 // without a test that reads them end to end.
-func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, meter *overlaybudget.Meter, now attention.Clock) *attention.Service {
+func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attention.Clock) *attention.Service {
 	db := InstallationDB(pool)
 	// ONE deal-status service for both seams below: the move and the standing
 	// are two reads of the same cached card, and a second service value would
@@ -209,13 +205,6 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, meter *over
 		// exactly as far as consent's own DSR-admin gate reaches — the store
 		// refuses everyone else and the lane renders that as withheld.
 		attentionDSRs{store: consent.NewStore(db)},
-		// The sync's own health, read through the module that owns the
-		// mirror. Built without a vault on purpose: the health read never
-		// touches a credential, and binding it here (rather than inside the
-		// vault-gated overlay wiring) keeps the lane alive on every role
-		// that serves the feed. A workspace not in overlay mode answers
-		// ErrModeNotOverlay and the lane stays absent.
-		attentionSyncHealth{svc: overlayReadService(db, nil, overlay.NewMirrorStore(db, unresolvedOwnerEmails{}), meter)},
 		// The reader's own mailbox connections, through the capture module's
 		// registry over the same rows the settings screen lists. Built bare —
 		// no sink, no authority, no vault — so the lane lives on every role

@@ -49,7 +49,7 @@ func WithAccountDraft(brain completer) Option {
 			WithEmailSummaries(emailRows(pool)).
 			WithDossier(s.companyDossierSvc).
 			WithVoice(ai.NewVoiceStore(InstallationDB(pool)), s.log)
-		s.accountDraftHandlers = accountdraft.NewHandlers(svc, s.sorDispatch.isOverlay)
+		s.accountDraftHandlers = accountdraft.NewHandlers(svc)
 	}
 }
 
@@ -67,7 +67,7 @@ func WithAccountBrief(brain completer, routingVersion string) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
 		s.companyBriefSvc = companybrief.NewService(pool, s.company360Svc, s.contactsStore, brain, routingVersion, time.Now).
 			WithEmailSummaries(emailRows(pool))
-		s.companyBriefHandlers = companybrief.NewHandlers(s.companyBriefSvc, s.sorDispatch.isOverlay)
+		s.companyBriefHandlers = companybrief.NewHandlers(s.companyBriefSvc)
 	}
 }
 
@@ -89,7 +89,7 @@ func WithCompanyDossier(brain completer, routingVersion string) Option {
 		s.companyDossierSvc = companydossier.NewService(pool, s.contactsStore, brain, routingVersion, time.Now).
 			WithEmailSummaries(emailRows(pool))
 		s.companyDossierHandlers = companydossier.NewHandlers(
-			s.companyDossierSvc, s.companyGrowthFitSvc, s.sorDispatch.isOverlay)
+			s.companyDossierSvc, s.companyGrowthFitSvc)
 	}
 }
 
@@ -113,7 +113,7 @@ func WithGrowthFit(brain completer, routingVersion string) Option {
 			pool, s.contactsStore, offeringConfirmed(s.contactsStore), brain, routingVersion, time.Now).
 			WithEmailSummaries(emailRows(pool))
 		s.companyDossierHandlers = companydossier.NewHandlers(
-			s.companyDossierSvc, s.companyGrowthFitSvc, s.sorDispatch.isOverlay)
+			s.companyDossierSvc, s.companyGrowthFitSvc)
 	}
 }
 
@@ -131,7 +131,7 @@ func WithMeetingBriefWriter(brain completer) Option {
 			return
 		}
 		s.meetingBriefHandlers = meetingbrief.NewHandlers(
-			s.meetingBriefSvc.WithLane(brain), s.sorDispatch.isOverlay)
+			s.meetingBriefSvc.WithLane(brain))
 	}
 }
 

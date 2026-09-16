@@ -361,8 +361,6 @@ function fileStubs(
 ) {
   return stubRoutes({
     "GET /projects/proj-1": () => jsonResponse(PROJECT),
-    // The endpoint answers the 360 itself; the ready/overlay wrapper is the
-    // hook's own reading of it, not something the wire carries.
     "GET /companies/company-1/360": () => jsonResponse(COMPANY_360),
     ...overrides,
   });

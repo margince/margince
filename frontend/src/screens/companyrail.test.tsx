@@ -99,16 +99,15 @@ function render(ui: ReactNode) {
 
 type RailProps = ComponentProps<typeof CompanyRail>;
 
-// Every site below wants the same rail: a writable view, not loading,
-// composer closed, and a no-op tab switch. `overrides` supplies whatever the
-// test is actually varying.
+// Every site below wants the same rail: a writable view, not loading, and a
+// no-op tab switch. `overrides` supplies whatever the test is actually
+// varying.
 function renderRail(overrides: Partial<RailProps> = {}) {
   return render(
     <CompanyRail
       companyId="o-1"
       view={view()}
       loading={false}
-      composerOpen={false}
       onTab={onTab}
       {...overrides}
     />,
@@ -161,12 +160,6 @@ function stub(
 }
 
 describe("CompanyRail", () => {
-  it("renders nothing while the composer holds the column", () => {
-    stub();
-    renderRail({ composerOpen: true });
-    expect(screen.queryByText("Details")).not.toBeInTheDocument();
-  });
-
   it("draws the details grid from the fields the record actually carries", async () => {
     stub();
     renderRail();
@@ -175,9 +168,11 @@ describe("CompanyRail", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("Automotive")).toBeInTheDocument();
     expect(screen.getByText("51-200")).toBeInTheDocument();
-    // Address draws one row per part now rather than one combined "Munich, DE"
-    // summary.
-    expect(screen.getByText("Munich · DE")).toBeInTheDocument();
+    // Address draws as postal lines now, city then country on their own line
+    // (recordfieldvalues.ts's `postalLines`), rather than one combined
+    // "Munich, DE" summary. The default text normalizer collapses that line
+    // break to a single space, so the two parts still read as one match.
+    expect(screen.getByText("Munich DE")).toBeInTheDocument();
     expect(screen.getByText("brandt.example")).toBeInTheDocument();
     // The owner cell resolves through the roster read, same as EntityRef
     // does everywhere else: not shown until the read lands.

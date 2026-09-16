@@ -11,7 +11,7 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
-import { ContactBriefCard } from "./contactcards";
+import { ContactBriefCard } from "./contactbrief";
 import { ContactMemory } from "./contactmemory";
 import { ContactRail } from "./contactrail";
 import { installFetchStub, jsonResponse, meRoute } from "./story-utils";
@@ -186,17 +186,29 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-// The transport cell of a timeline row or a brief chip — both draw the icon and
-// the name in the same slot, as the one badge that carries a glyph other than
-// the agent's Sparkles, which every AI-tone badge draws whatever it says. Read
-// by shape rather than by text: the assertion is about what the cell SAYS, so a
-// query that had to know the answer first could only ever confirm itself.
-function transportCell(container: HTMLElement): HTMLElement {
-  const cell = [...container.querySelectorAll<HTMLElement>(".badge")].find(
-    (badge) => badge.querySelector("svg:not(.lucide-sparkles)") !== null,
-  );
+// The timeline row's transport, which no longer sits in a badge of its own.
+// The avatar-row redesign folded it into the row's meta line as plain text,
+// right after who the row is with: read by that position rather than by the
+// text, so the assertion is about what the meta line SAYS and not a query
+// that had to know the answer first. The sibling selector, not a child one,
+// because a mail row's "Unanswered" status is a `.badge` in that same line
+// too, and a child selector could not tell the two spans apart.
+function timelineTransportCell(container: HTMLElement): HTMLElement {
+  const cell = container.querySelector<HTMLElement>(".pe-memory-who + span");
   if (!cell) {
-    throw new Error("no transport cell rendered");
+    throw new Error("no transport text rendered on the timeline row");
+  }
+  return cell;
+}
+
+// The brief chip's transport, drawn as an icon beside its own words rather
+// than in a badge: the chip row's own shape, `.pe-source`, one per cited
+// record. Read by shape rather than by text for the same reason as the
+// timeline: the assertion is about what the chip SAYS.
+function chipTransportCell(container: HTMLElement): HTMLElement {
+  const cell = container.querySelector<HTMLElement>(".pe-source");
+  if (!cell) {
+    throw new Error("no source chip rendered");
   }
   return cell;
 }
@@ -209,8 +221,10 @@ describe("the conversation timeline", () => {
     // The name arrives with the transport directory, which is a fetch.
     await screen.findAllByText("Zalo OA");
 
-    const cell = transportCell(container);
+    const cell = timelineTransportCell(container);
     expect(cell.textContent).toBe("Zalo OA");
+    // The kind's glyph beside the word, the rule every source on the page
+    // follows, so a chat row is told from a mail row at a glance.
     expect(cell.querySelector(".lucide-message-square")).toBeTruthy();
     // The reported symptom: an envelope on a contact with no email address.
     expect(cell.querySelector(".lucide-mail")).toBeNull();
@@ -221,8 +235,10 @@ describe("the conversation timeline", () => {
       <ContactMemory view={viewWith({ activities: [anActivity({})] })} />,
     );
 
-    const cell = transportCell(container);
+    const cell = timelineTransportCell(container);
     expect(cell.textContent).toBe("Email");
+    // Left red for the same reason as the chat case above: no kind glyph is
+    // drawn on the timeline row for any kind, mail included.
     expect(cell.querySelector(".lucide-mail")).toBeTruthy();
     expect(cell.querySelector(".lucide-message-square")).toBeNull();
   });
@@ -237,10 +253,12 @@ describe("the relationship brief's source chips", () => {
         view={viewWith({ activities: [aChatMessage] })}
       />,
     );
-    await screen.findByText("Zalo OA");
+    // The chip's day rides beside the name, so the reader can tell one chat
+    // citation from another on the same conversation.
+    await screen.findByText("Zalo OA 15 Aug");
 
-    const chip = transportCell(container);
-    expect(chip.textContent).toBe("Zalo OA");
+    const chip = chipTransportCell(container);
+    expect(chip.textContent).toBe("Zalo OA 15 Aug");
     expect(chip.querySelector(".lucide-message-square")).toBeTruthy();
     expect(chip.querySelector(".lucide-mail")).toBeNull();
   });
@@ -281,8 +299,8 @@ describe("the relationship brief's source chips", () => {
       />,
     );
 
-    const chip = transportCell(container);
-    expect(chip.textContent).toBe("Call");
+    const chip = chipTransportCell(container);
+    expect(chip.textContent).toBe("Call 15 Aug");
   });
 
   // A message this reader is outside the audience of names no subject and
@@ -316,7 +334,7 @@ describe("the relationship brief's source chips", () => {
       />,
     );
 
-    const chip = transportCell(container);
+    const chip = chipTransportCell(container);
     expect(chip.textContent).toBe("Conversation");
     expect(chip.querySelector(".lucide-mail")).toBeNull();
     expect(chip.querySelector(".lucide-message-square")).toBeNull();
@@ -342,8 +360,6 @@ describe("consent and channels", () => {
             ],
           } as unknown as components["schemas"]["ContactConsentGuard"]
         }
-        firstName="Dana"
-        onExplain={() => {}}
       />,
     );
     return within(screen.getByTestId("contact-rail"));

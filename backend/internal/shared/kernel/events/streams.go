@@ -32,10 +32,6 @@ const (
 	voiceStreamEntity     = "voice"
 )
 
-// streamOverlay is the §5.10 overlay-mirror stream's entity segment — named
-// once because the catalog below repeats it across every mirror.* entry.
-const streamOverlay = "overlay"
-
 // extensionStreamEntity is the one stream every EXTENSION-authored event rides,
 // whichever unit published it.
 //
@@ -110,14 +106,12 @@ func IsExtensionType(eventType string) bool {
 }
 
 // streamEntities are the V1 family streams from events.md, plus the §5.6a
-// identity/access-revocation stream, the voice owner-private lifecycle
-// stream, and the §5.10 overlay-mirror stream (overlay-mode-only).
-// Workspace is a field inside the envelope, never a stream —
+// identity/access-revocation stream and the voice owner-private lifecycle
+// stream. Workspace is a field inside the envelope, never a stream —
 // per-tenant streams would explode key count at multi-tenant scale.
 var streamEntities = []string{
 	contactStreamEntity, companyStreamEntity, dealStreamEntity, leadStreamEntity, activityStreamEntity,
 	approvalStreamEntity, captureStreamEntity, coldstartStreamEntity, auditStreamEntity, identityStreamEntity, voiceStreamEntity,
-	streamOverlay,
 }
 
 // Streams returns the full stream key set, sorted, for the ops surface to

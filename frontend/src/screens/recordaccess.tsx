@@ -17,11 +17,13 @@
 // open, and the rail folds away.
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import type { ReactNode } from "react";
 import { useId } from "react";
 import { api } from "../api/client";
 import { ifMatch, requireVersion } from "../api/version";
 import { Button } from "../design-system/atoms";
 import { useToast } from "../design-system/toast";
+import { useTooltip } from "../design-system/tooltip";
 import { VisibilityLine } from "../design-system/visibility";
 import { useT } from "../i18n";
 import { isVersionSkewOf, problemMessageOf, throwProblem } from "./common";
@@ -51,6 +53,7 @@ const COPY = {
     title: "recordAccess.contact.title",
     private: "recordAccess.contact.privateToYou",
     shared: "recordAccess.contact.shared",
+    privateTip: "recordAccess.contact.privateTip",
     share: "recordAccess.contact.share",
     makePrivate: "recordAccess.contact.makePrivate",
     published: "recordAccess.contact.published",
@@ -60,6 +63,7 @@ const COPY = {
     title: "recordAccess.company.title",
     private: "recordAccess.company.privateToYou",
     shared: "recordAccess.company.shared",
+    privateTip: "recordAccess.company.privateTip",
     share: "recordAccess.company.share",
     makePrivate: "recordAccess.company.makePrivate",
     published: "recordAccess.company.published",
@@ -139,33 +143,39 @@ export function RecordAccess({
   const mayChange = Boolean(record.writable) && !record.archived_at;
   const id = record.id;
   return (
-    <section
-      className="record-access"
-      aria-label={t(copy.title)}
-      title={description}
-    >
-      <VisibilityLine
-        state={isPrivate ? "private" : "team"}
-        action={
-          mayChange && (
-            <Button
-              variant="link"
-              className="record-access-action"
-              aria-describedby={descriptionId}
-              pending={setVisibility.isPending}
-              onClick={() =>
-                setVisibility.mutate({
-                  id,
-                  version: record.version,
-                  visibility: isPrivate ? "workspace" : "owner",
-                })
-              }
-            >
-              {t(isPrivate ? copy.share : copy.makePrivate)}
-            </Button>
-          )
-        }
-      />
+    <section className="record-access" aria-label={t(copy.title)}>
+      {/* The mark explains itself on hover and on focus: what "Only you"
+          means, and that the verb beside it is how to change it. A native
+          title reached a pointer alone and only after a pause. */}
+      <AccessTip
+        text={t(isPrivate ? copy.privateTip : copy.shared)}
+        focusable={!mayChange}
+      >
+        {(tipId) => (
+          <VisibilityLine
+            state={isPrivate ? "private" : "workspace"}
+            action={
+              mayChange && (
+                <Button
+                  variant="link"
+                  className="record-access-action"
+                  aria-describedby={describedBy(descriptionId, tipId)}
+                  pending={setVisibility.isPending}
+                  onClick={() =>
+                    setVisibility.mutate({
+                      id,
+                      version: record.version,
+                      visibility: isPrivate ? "workspace" : "owner",
+                    })
+                  }
+                >
+                  {t(isPrivate ? copy.share : copy.makePrivate)}
+                </Button>
+              )
+            }
+          />
+        )}
+      </AccessTip>
       <span id={descriptionId} className="sr-only">
         {description}
       </span>
@@ -177,5 +187,38 @@ export function RecordAccess({
         </span>
       )}
     </section>
+  );
+}
+
+// Both descriptions on the one control: the sr-only sentence it always
+// carries and the tip while it is open.
+function describedBy(...ids: (string | undefined)[]): string | undefined {
+  const joined = ids.filter(Boolean).join(" ");
+  return joined || undefined;
+}
+
+// The tooltip's anchor: one span around the line, so the badge and the verb
+// share the one explanation rather than each hanging its own. The tip's id is
+// handed to the children, because `aria-describedby` does not inherit: set on
+// the span alone, the button inside it stayed undescribed for a screen reader.
+//
+// `focusable` gives the span a tab stop only while no verb sits inside it: a
+// reader who may not change the visibility still reaches the explanation from
+// the keyboard, and one who may gets it from the button without a second stop.
+function AccessTip({
+  text,
+  focusable,
+  children,
+}: Readonly<{
+  text: string;
+  focusable: boolean;
+  children: (tipId?: string) => ReactNode;
+}>) {
+  const { ref, trigger, tip } = useTooltip<HTMLSpanElement>(text);
+  return (
+    <span ref={ref} {...trigger} tabIndex={focusable ? 0 : trigger.tabIndex}>
+      {children(trigger["aria-describedby"])}
+      {tip}
+    </span>
   );
 }

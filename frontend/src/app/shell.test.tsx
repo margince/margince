@@ -711,7 +711,7 @@ describe("Shell", () => {
     const title = container.querySelector(".pagetitle");
     expect(scroller?.contains(title ?? null)).toBe(true);
     // And the bar's own passengers are mounted, which is all the shell owes
-    // them: their behaviour is account.test.tsx's and sormodechip.test.tsx's.
+    // them: their behaviour is account.test.tsx's.
     expect(
       within(bar ?? container).getByRole("button", { name: "Account" }),
     ).toBeTruthy();

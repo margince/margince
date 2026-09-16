@@ -12,7 +12,11 @@ import { SettingList, SettingRow } from "../design-system/settingrow";
 import { stable } from "../format/collate";
 import { formatUsdPerMTok } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
-import { AiFeatureTable, useAiStatus } from "./ai-admin";
+import {
+  AiFeaturesWithheldPanel,
+  AiFeatureTable,
+  useAiStatus,
+} from "./ai-admin";
 import {
   type ModelCatalogue,
   type ModelLane,
@@ -905,7 +909,19 @@ function CurrentRouteFeatures({
   const canEdit = useCanWrite("ai_routing", "update");
   const canBudget = useCan("ai_budget", "read");
   const status = useAiStatus(canDiagnose && canBudget);
-  if (!canDiagnose || !canBudget) return null;
+  // `/ai/status` requires BOTH grants server-side (crm.yaml: "Read AI
+  // administration status (ai_diagnostics and ai_budget read)") — there is no
+  // partial payload for one grant alone, so a reader missing either gets the
+  // withheld panel rather than a silently empty section. `ai_routing:read`
+  // alone reaches this screen (gated one level up, in AiRoutingCard), and a
+  // viewer who lands here with only that grant needs to see THIS section
+  // exists and why it has nothing to show, not have it vanish with no
+  // trace. `AiFeaturesWithheldPanel` is shared with `AiFeaturesCard`
+  // (ai-admin.tsx), which opens the same section on the usage tab and faces
+  // the identical gap.
+  if (!canDiagnose || !canBudget) {
+    return <AiFeaturesWithheldPanel />;
+  }
   return (
     <Panel title={t("aiAdmin.features")}>
       <PanelBody>

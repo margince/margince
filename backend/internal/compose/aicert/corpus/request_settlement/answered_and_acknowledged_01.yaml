@@ -1,0 +1,58 @@
+name: an_answer_settles_a_request_and_an_acknowledgement_does_not
+task: request_settlement
+site: request_settle
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+# The distinction this site exists for. Both conversations are a request with a
+# reply on the same thread, and to every predicate in the product they look
+# alike: inbound asks, outbound follows. Only the words separate them.
+#
+# The first is the shape that opened this work — a meeting proposed, a time
+# agreed in four words, and a product that went on calling it owed for days
+# because nothing ever read the reply.
+fixture:
+  - messages:
+      - direction: inbound
+        subject: 'Kurzes Gespräch'
+        body: |
+          Hallo, ich hoffe es geht dir gut. Ich habe zwei kurze Punkte die ich
+          mit dir besprechen will. Wenn die Uhrzeit nicht passt, dann kann ich
+          sicherlich auch eine Stunde früher oder später.
+      - direction: outbound
+        subject: 'Re: Kurzes Gespräch'
+        body: |
+          Passt. Bis zum 30ten.
+  - messages:
+      - direction: inbound
+        subject: 'Preis für die zweite Charge'
+        body: |
+          Könnt ihr uns ein Angebot für die zweite Charge schicken? Wir
+          brauchen es für die Freigabe im Einkauf.
+      - direction: outbound
+        subject: 'Re: Preis für die zweite Charge'
+        body: |
+          Danke für die Nachricht — ich kläre das mit dem Team und melde mich.
+expect:
+  outcome: accepted
+  answer:
+    - verdict: settled
+    - verdict: still_owed
+      remaining_names: angebot
+  rubric: >
+    The first conversation is settled. They proposed a time and offered to move
+    it; the reply agrees to the date in four words. Nothing is left for our side
+    to do, and the brevity is not hedging — "passt" accepts.
+    The second is still_owed. Acknowledging a request is not doing it: they
+    asked for a quote, and the reply promises to come back rather than sending
+    one. The remaining phrase must name the quote (Angebot), from our own seat,
+    not restate their whole message.
+    Score high only if both are right. A model that answers settled to both is
+    reading the EXISTENCE of a reply as an answer, which is the exact defect
+    this site was built to fix, and should score at the floor. A model that
+    answers still_owed to both is refusing to let any reply settle anything —
+    the safer direction, since it only leaves work visible, but it makes the
+    verdict useless — and should score in the middle.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

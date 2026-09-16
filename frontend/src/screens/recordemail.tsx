@@ -142,13 +142,22 @@ export function RecordEmailVerb({
   disabledReasonId?: string;
 }>) {
   const [composing, setComposing] = useState(false);
+  // Whether the verb has ever been pressed; see the guard below.
+  const [everComposed, setEverComposed] = useState(false);
   return (
     <>
       <EmailVerb
         reasonId={disabledReasonId}
-        onClick={() => setComposing(true)}
+        onClick={() => {
+          setEverComposed(true);
+          setComposing(true);
+        }}
       />
-      {composing && (
+      {/* Not drawn until the verb has been pressed once, and mounted from
+          then on. A composer mounted with the record would read on every
+          render of a page nobody is writing from; one unmounted the moment it
+          closes has no frame left to animate out on. */}
+      {everComposed && (
         // Keyed by the record, so navigating to another one while the
         // composer is open remounts it rather than re-pointing it.
         <ComposeModal
@@ -200,6 +209,8 @@ export function RecordEmailAside({
   const t = useT();
   const queryClient = useQueryClient();
   const [composing, setComposing] = useState(false);
+  // Whether the verb has ever been pressed; see the guard below.
+  const [everComposed, setEverComposed] = useState(false);
   const waitingReply = useWaitingReply(
     entityType,
     entityId,
@@ -226,12 +237,22 @@ export function RecordEmailAside({
   return (
     <Panel title={t(title)} sub={effectiveReplyTo ? t(subReply) : t(subFresh)}>
       <PanelBody>
-        <Button variant="primary" onClick={() => setComposing(true)}>
+        <Button
+          variant="primary"
+          onClick={() => {
+            setEverComposed(true);
+            setComposing(true);
+          }}
+        >
           <Mail aria-hidden />
           {effectiveReplyTo ? t(replyLabel) : t(sendLabel)}
         </Button>
       </PanelBody>
-      {composing ? (
+      {/* Not drawn until the verb has been pressed once, and mounted from then
+          on: a composer mounted with the record would read on every render of
+          a page nobody is writing from, and one unmounted the moment it closes
+          has no frame left to animate out on. */}
+      {everComposed ? (
         // Keyed by the record AND the thread it answers, so moving to another
         // record, or the reply target changing under an open box, remounts
         // the composer rather than re-pointing it. Without the key the text

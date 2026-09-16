@@ -60,13 +60,12 @@ var archivableRecordTypes = []string{
 // archivableHere answers what the ROUTED executor archives, falling back to the
 // native list above when the provider cannot say.
 //
-// The list above is what the NATIVE provider archives, and for an installation
-// running in overlay mode that is three types too wide: overlay archives
-// contact, company and deal, and refuses project, relationship and
-// activity. A stage-time check reading the native list therefore admitted an
-// archive the executor was always going to refuse — the one failure this
-// tool's confirm-first shape exists to prevent, and the failure the comment on
-// archivableRecordTypes describes happening to `activity` once already.
+// The list above is what the NATIVE provider archives, and a fork's adapter may
+// archive fewer types than that. A stage-time check reading the native list
+// against such a provider admits an archive the executor was always going to
+// refuse — the one failure this tool's confirm-first shape exists to prevent,
+// and the failure the comment on archivableRecordTypes describes happening to
+// `activity` once already.
 //
 // The fallback is not a shrug: a provider that does not answer
 // RecordArchiverV2 is a fork's own adapter, and the native set is the only

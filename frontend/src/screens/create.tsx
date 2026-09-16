@@ -28,24 +28,8 @@ import {
 import { Select, type SelectOption } from "../design-system/select";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import {
-  ProblemError,
-  problemExistingId,
-  problemMessageOf,
-  useSorMode,
-} from "./common";
+import { ProblemError, problemExistingId, problemMessageOf } from "./common";
 import { RepeatableRowsField } from "./repeatablerowsfield";
-
-// The record screens whose entities are served from the incumbent mirror in
-// overlay mode. Creating one there answers unsupported_by_sor, so CreateAction
-// renders nothing for these screens in overlay (native screens — products,
-// offer-templates, settings — are unaffected and keep their create button).
-const OVERLAY_MIRRORED_SCREENS = new Set([
-  "contacts",
-  "companies",
-  "deals",
-  "leads",
-]);
 
 // The shared create-record form (contacts, companies, leads, deals): each
 // list screen declares its fields; the transport (which endpoint, how values
@@ -384,10 +368,6 @@ export function CreateAction<Created extends { id: string }>({
     mutation.error instanceof ProblemError
       ? problemExistingId(mutation.error.problem)
       : null;
-  const overlay = useSorMode() === "overlay";
-  if (overlay && OVERLAY_MIRRORED_SCREENS.has(screen)) {
-    return null;
-  }
   return (
     <>
       <NewRecordButton
@@ -587,7 +567,7 @@ function MultiselectField({
         {field.required ? " *" : ""}
       </legend>
       {field.required && (
-        <p id={hintId} className="t-caption field-multiselect-hint">
+        <p id={hintId} className="t-caption">
           {t("create.multiselect.required")}
         </p>
       )}

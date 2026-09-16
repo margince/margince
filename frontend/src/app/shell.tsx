@@ -9,7 +9,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { Avatar, Badge, Button, Modal } from "../design-system/atoms";
+import { Avatar, Badge, Modal } from "../design-system/atoms";
 import { CompanyLogo } from "../design-system/companylogo";
 import { Logomark } from "../design-system/logomark";
 import { useLocale, useT } from "../i18n";
@@ -24,8 +24,6 @@ import { SCREEN_ENTITY } from "./entity";
 import { EXTENSION_SCREEN, findExtension } from "./extensions";
 import {
   entryLabel,
-  GRIDDED_RECORD_SCREENS,
-  GRIDDED_SCREENS,
   MOBILE_PRIMARY,
   NAV,
   type NavCounts,
@@ -33,7 +31,6 @@ import {
   type NavLevelGroup,
   type NavSection,
   navEntryHref,
-  opensCreateForm,
   RAIL_LESS_SCREENS,
 } from "./nav";
 import {
@@ -50,6 +47,7 @@ import {
   sectionHead,
 } from "./pagemeta";
 import { usePopoverDismiss } from "./popover";
+import { useReadingColumn } from "./readingcolumn";
 import { displayVersion, narrowVersion } from "./release";
 import { type Route, routeHash, useRoute } from "./router";
 import { useScrollMemory } from "./scrollmemory";
@@ -656,14 +654,6 @@ function SectionSwitcher({
             />
           ))}
         </div>
-        {/* At this width the dialog is a full-screen sheet: there is no backdrop
-            left to click and a touch reader has no Escape, so the way out has to
-            be a control in the sheet. */}
-        <div className="actions">
-          <Button small onClick={close}>
-            {t("shell.closeMenu")}
-          </Button>
-        </div>
       </Modal>
     </>
   );
@@ -834,17 +824,7 @@ export function Shell({
   const onUnitPage =
     route.screen === EXTENSION_SCREEN && findExtension(route.id) !== null;
   const leveled = route.screen === SETTINGS_SCREEN || onUnitPage;
-  // A RECORD id makes one: `#/companies` and `#/deals/new` are both lists.
-  const recordPage = route.id !== undefined && !opensCreateForm(route);
-  const griddedRecord = recordPage && GRIDDED_RECORD_SCREENS.has(route.screen);
-  // The id-less half of the same policy: a screen that reads down but is not a
-  // record, so there is no id to key on. Brief is the one today.
-  const griddedScreen = GRIDDED_SCREENS.has(route.screen);
-  // A unit is NOT in this family, though it is leveled: the reading column is a
-  // claim about the page's own content, and a unit's surface is the unit's to
-  // lay out.
-  const gridded =
-    route.screen === SETTINGS_SCREEN || griddedRecord || griddedScreen;
+  const { gridded, griddedRecord } = useReadingColumn(route);
   const [collapsed, setCollapsed] = useState(
     () => readStored(COLLAPSE_KEY) === "1",
   );

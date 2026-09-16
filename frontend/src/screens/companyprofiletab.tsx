@@ -81,7 +81,7 @@ export function CompanyProfileForm({
   const t = useT();
   const reasonId = useId();
   const writable = useCanWriteRecord("company", company);
-  // The archived/overlay/not-yours sentence, when there is one. It is the
+  // The archived/not-yours sentence, when there is one. It is the
   // more specific answer, so it wins over the generic refusal below whenever
   // it applies.
   const specificReason = useCompanyReadOnlyReason(company);

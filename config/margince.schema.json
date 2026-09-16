@@ -315,48 +315,6 @@
         }
       }
     },
-    "overlay_budget": {
-      "type": "object",
-      "additionalProperties": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "search": {
-            "description": "Search is the per-second search-API window (fixed 1s bucket).",
-            "type": "object",
-            "additionalProperties": false,
-            "properties": {
-              "ceiling": {
-                "type": "integer"
-              },
-              "cap": {
-                "type": "integer"
-              }
-            }
-          },
-          "rest": {
-            "description": "REST is the daily REST-allocation window — a fixed UTC-day bucket (resets at UTC midnight), the meter's \"fixed-window counters with expiry\" mechanism, not a sliding 24h window.",
-            "type": "object",
-            "additionalProperties": false,
-            "properties": {
-              "ceiling": {
-                "type": "integer"
-              },
-              "cap": {
-                "type": "integer"
-              }
-            }
-          },
-          "warn_fraction": {
-            "description": "WarnFraction/ShedFraction are the consumed/cap ratios at which a charge answers warn then shed (OVB-PARAM-1/2). Zero means \"use the spec default\" (0.70 / 0.90) — resolved by Effective, not stored as 0.",
-            "type": "number"
-          },
-          "shed_fraction": {
-            "type": "number"
-          }
-        }
-      }
-    },
     "operations": {
       "description": "Operations carries the ops kill switches (OPS-CFG-9): capabilities an installation turns on deliberately, in the file layer, where the deployment reviews them.",
       "type": "object",

@@ -203,7 +203,6 @@ function DigestBody({ digest }: Readonly<{ digest: MorningDigest }>) {
           recordZone,
         ),
       })}
-      className="rail-panel"
     >
       {projects && <DigestProjectsBlock projects={projects} />}
       {unhealthy.length > 0 && (

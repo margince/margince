@@ -109,8 +109,8 @@ func (r ReportVocabularyResource) ReadResource(ctx context.Context, uri string) 
 // (internal/modules/agents/reportvocabularydoc_test.go)
 //
 // The context is unused here: the document is the engine's compile-time catalog
-// and the same for every caller. It is in the signature because the seam's other
-// implementation is the overlay guard, which reads the workspace's mode.
+// and the same for every caller. It is in the signature because the seam admits
+// an implementation that has to read something per request before it answers.
 func (r ReportVocabularyResource) ReportVocabularyDocument(context.Context) (json.RawMessage, error) {
 	body, err := json.Marshal(r.document())
 	if err != nil {

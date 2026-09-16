@@ -40,15 +40,14 @@ and the tightest e2e. Every later page copies its decisions. Files:
 | Deep-read offer | `DeepReadPanel` **leads the column** instead of the 360 when `nothingOnFile(view)` | | the two honest scan phases; `SiteReadPanel` pages read/skipped and why; 422 no website; 501 seam unwired; `SiteReadDeferral` |
 | What needs you | one list: the moment as the lead row, `co.suggest.*` rows (`draftReply / openDeal / addTask` verbs; `add_task` has no surface, so dismiss only), tasks from `CompanyTasksTab`'s source, the next meeting (`onPrepareMeeting`) | 360 suggestions, tasks, meetings | `co.next.empty`; `co.suggest.more` on the cap; withheld suggestions remove the row, not the verb; `DecisionsChip` count stays in the menu |
 | Commercial (the money) | One pane, the `DESIGN.md` zone: `CompanyContractState` and won/lost on one line, then `CompanyWorkCard`'s open deals with their status clause (`workVerbs`), then the project. `CompanyLastOffer` and the full table live on the Deals tab; the details panel repeats the contract line | `view.deals`, `view.projects` | `contracts.state.none`; `co.commercial.truncated`; `co.work.noDeals` + detail; `co.work.statusesWithheld`; `co.work.countAtLeast`; `leadingDeal` refuses to pick on a truncated page or mixed currencies |
-| Ask (prepared questions) | `AssistantPanel` as full-width rows, no free field; the three questions are the ones the server answers (`CompanyQuestion`), so no new keys — a fourth is a server change first | | `co.ask.nothing`; disabled in overlay (`enabled={!overlay}`) |
+| Ask (prepared questions) | `AssistantPanel` as full-width rows, no free field; the three questions are the ones the server answers (`CompanyQuestion`), so no new keys — a fourth is a server change first | | `co.ask.nothing` |
 | About | `DossierPanel` lead + paragraph + sources, `SignalsSection` rows, `GrowthFitPanel` verdict row (only when `!hasWorkInFlight`), "Profile" link | own reads | `co.dossier.empty` (write it), `co.dossier.stale` "Read over a month ago", `co.dossier.unavailable`; `co.factSuspect.*` shown with evidence |
 | Contacts (chips) | `ContactsSection` (`RAIL_ROW_LIMIT`) as chips with "+N" | 360 | withheld → absent with the sentence |
 | Details (right, closed) | `CompanyRail` as one pane with five titled sections (keep the five-subject anatomy inside the pane): Details grid with inline edit, Deals top 3, Contacts top 3, Hold, Tags | | every rail state as today; absent while a composer is open |
 | Chronology zone | stays the RecordView timeline slot, drawn on the History tab only (the 360 carries the fold) | | `timelineNotice`, `chronologyNotice` |
 
-Header-level states: overlay replaces the **whole page** with
-`OverlayFallback` (both triggers); `co.partial` on `view.isError`; 403 keeps
-the one shared sentence; version skew banners unchanged.
+Header-level states: `co.partial` on `view.isError`; 403 keeps the one shared
+sentence; version skew banners unchanged.
 
 ### 3.3 Features to carry (checklist)
 
@@ -72,8 +71,8 @@ Rewrite the shape assertions in `company-record.spec.ts` in the same commit
 right, closed, one pane of named sections). Update `company360.test.tsx`,
 `companyheader.test.tsx`, `companyrail.test.tsx` for markup, not behaviour.
 `history.spec.ts` unchanged. Storybook: `Records/Company` stories for every
-state row in §3.2 (this is where "empty", "withheld", "never read", "stale",
-"overlay" get their pictures).
+state row in §3.2 (this is where "empty", "withheld", "never read" and
+"stale" get their pictures).
 
 ## 4. Contact
 
@@ -112,8 +111,7 @@ Files: `contactpage.tsx`, `contact360.tsx`, `contactrail.tsx`,
   without one); `contact.page.notOpened`; `ThinState`; `withheldSections`
   read once; consent verdict from the server key; `provider.profile.neverRun`
   mark on the Research tab (and a cancelled run reads as never run);
-  `contact.graph.*` incompleteness on the map; archived and overlay verb
-  removal.
+  `contact.graph.*` incompleteness on the map; archived verb removal.
 - **Tabs.** Unchanged (`contacttab.ts`). Network keeps its order: decision
   strip, lead panel, routes, then the map (`contact-network.spec.ts` asserts
   it).
@@ -130,16 +128,14 @@ Files: `deals.tsx` (over the cap: the page moves to `screens/deal/`),
   more**, all outlined (Archive, Share, Reopen when won/lost). The
   `controls` slot goes: worth, stage, owner, close, forecast, partner join the
   facts line, masked fields still **named** (`FieldGuard mode="masked"`).
-  `dealPulse` becomes the live dot ("Your move"). Details keeps
-  `overlay.partialWriteBack`.
+  `dealPulse` becomes the live dot ("Your move").
 - **Readings.** `DealStrip` (money with the newest offer, close with
   provisional/waiting, contacts with the withheld flag, momentum) plus stage
   with days here.
 - **The 360.** `DealStatusCardPanel` (Deal360) is the word, sentence and
   citations; the stepper (`fieldset.stepper`, a group not a nav) inside the
   pane above the spine; the ledger folded. `deal360.unreadable` when the
-  story is not the promised shape. **Absent in overlay** with the pane
-  saying why.
+  story is not the promised shape.
 - **What needs you.** Deal360's next move as the lead row, `DealApprovals`
   as staged rows (dashed), the reply owed from `useWaitingReply`.
 - **The buying committee.** `DealContactsPanels` rows beside `DealCommitteeMap`
@@ -149,16 +145,15 @@ Files: `deals.tsx` (over the cap: the page moves to `screens/deal/`),
   "What the buyer wants"; an absent section renders nothing.
 - **Offers.** `OffersPanel`. **Deal Room.** `DealRoomAside` card
   (`OpenRoomCard` when none).
-- **Details (right, closed).** `DealSeats` (present in overlay, stating the
-  refusal), `FxLine`, wait-until, forecast, custom fields, project link,
+- **Details (right, closed).** `DealSeats`, `FxLine`, wait-until, forecast,
+  custom fields, project link,
   partner attribution, files (top two).
 - **Tabs.** `overview · history · documents`, **moved into the URL** to
   match the other records (`history.spec.ts`).
 - **States to keep:** provisional close, masked fields, unknown standing
   never healthy, unmapped forecast rendered raw, archived once in the band,
   closed vs archived refusals, advance failure caption, one advance at a
-  time, optimistic concurrency on edit, `OverlayUnavailable` on Files and
-  History.
+  time, optimistic concurrency on edit.
 - **Carry:** `StartDeliveryPrompt`, won reason dialog, file hide (with undo)
   vs delete, rewrite the briefing, project binding through project write
   authority.
@@ -194,8 +189,8 @@ Files: `leads.tsx` (over the cap: the record moves to `screens/lead/`),
   fields.
 - **States to keep:** the terminal sentence naming **which** closure
   (`terminalPromoted` vs `terminalDisqualified`), one id every refused
-  control points at; write-failure callout in the band; overlay removes
-  promote/disqualify/share; promotion outcome `unknown/pending/failed`;
+  control points at; write-failure callout in the band; promotion outcome
+  `unknown/pending/failed`;
   qualify amount without currency waits; disqualify reason required; one
   write at a time.
 

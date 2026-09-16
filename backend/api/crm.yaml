@@ -69,9 +69,6 @@ openapi: 3.1.0
 # Deferred areas (NOT specified here — see data-model.md §12): sequences/cadences,
 # telephony/click-to-call, the dedicated embedding store, workflow-run records.
 # They are commented stubs at the bottom of `paths` so the shape is intentional
-# but unspecified. (Overlay/augmentation MANAGEMENT is now specified — see the
-# OVERLAY block in `paths`; its mirrored data is served through the normal
-# resource ops via the SoR seam, not a forked data API — AC-OV-2/ADR-0018.)
 # =============================================================================
 
 info:
@@ -158,8 +155,6 @@ tags:
     description: >-
       Workspace-uploaded document corpora and the grounded ask over them — answers
       built only from what was filed, or a refusal that says which of the two it is.
-  - name: Overlay
-    description: The HubSpot mirror overlay — incumbent connection, mirror sync health, budget, and the read→overlay flip.
   - name: Assignments
     description: Who is responsible for a record — administered roles, and the colleagues or teams holding them. Responsibility, never access.
 
@@ -559,7 +554,7 @@ paths:
                     description: Event-bus stream KEYS deleted (their consumer groups are re-created empty), not entries.
                   cache_keys_deleted:
                     type: integer
-                    description: Redis keys unlinked — processed-event dedupe marks plus this workspace's overlay budget counters.
+                    description: Redis keys unlinked — this workspace's processed-event dedupe marks.
                   objects_deleted:
                     type: integer
                     description: Objects removed from the blob store under this workspace's key prefix.
@@ -1030,9 +1025,7 @@ paths:
 
         Human-only, and not a `create_record` tool: quick capture is a form somebody
         types into while reading a profile, so there is no agent story for it and
-        nothing to stage. The overlay posture is `createContact`'s, because the button
-        that reaches it is a `CreateAction` on a mirrored screen and those render
-        nothing in overlay mode.
+        nothing to stage.
       x-agent-access: human-only
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -1253,9 +1246,6 @@ paths:
         folded into one "last touch": which direction went last is the whole question — a
         contact we mailed a fortnight ago with no reply is not the same as one who just
         wrote to us.
-
-        Native system-of-record only: a workspace reading from an incumbent mirror gets
-        `422 unsupported_in_overlay_mode`.
       parameters:
         - name: project_id
           in: query
@@ -2784,10 +2774,6 @@ paths:
         always null: page two comes from the endpoint that owns that collection —
         `GET /activities` for the timeline, `GET /deals`, `GET /relationships`,
         `GET /approvals` — each with its own cursor vocabulary.
-
-        Native system-of-record only: a workspace reading from an incumbent mirror gets
-        `422 unsupported_in_overlay_mode`, the same refusal entity-scoped activity reads
-        give, because the mirror holds none of these relationships.
       parameters:
         - name: project_id
           in: query
@@ -2860,10 +2846,6 @@ paths:
         Keeping it true costs a count over each group's whole membership, so this read is
         proportional to the account it describes and not to the caps; the caps bound the
         rows returned and the per-contact work done on them, which is what grows fast.
-
-        Native system-of-record only: a workspace reading from an incumbent mirror gets
-        `422 unsupported_in_overlay_mode`, the same refusal the 360 gives, because the
-        mirror holds none of these edges.
       responses:
         '200':
           description: The company's one-hop connection graph.
@@ -2985,9 +2967,6 @@ paths:
         contact the caller cannot see is still a seat: `unlisted_seats` counts them, and
         `gaps` is empty whenever it is non-zero. A partial answer here is worse than
         none, because the reader cannot tell which one they got.
-
-        Native system-of-record only: an overlay workspace gets `422`, the same refusal
-        the 360 gives.
       responses:
         '200':
           description: The account's coverage.
@@ -3038,9 +3017,6 @@ paths:
         **Row scope, per contact.** The list carries the caller's contact scope, so a
         contact they may not read is absent rather than named — the same answer
         `GET /contacts` gives. Reading the company itself is mandatory.
-
-        Native system-of-record only: a workspace reading from an incumbent mirror gets
-        `422 unsupported_in_overlay_mode`, the same refusal the 360 gives.
       parameters:
         - name: status
           in: query
@@ -4471,8 +4447,8 @@ paths:
       # advance_deal is the one TierDynamic tool (ADR-0026): the gate resolves the tier from the
       # stage semantics at BOTH ENDS of the move, not statically. open→open = 🟢 (no token); a
       # terminal won/lost stage at either end = 🟡 (approval token required), so closing a deal and
-      # reopening one are both gated. The resolver reads each stage's `semantic` from pipeline config
-      # (and the overlay stage-mapping in overlay mode), not just the request args — and it may only
+      # reopening one are both gated. The resolver reads each stage's `semantic` from pipeline
+      # config, not just the request args — and it may only
       # ever RAISE, so an unknown or malformed semantic at either end fails toward the approval gate.
       # See interfaces.md §2.1 (TierDynamic) and events.md §5.3.
       x-mcp-tool: { verb: advance_deal, record_type: deal, tier: dynamic, tier_resolver: stage_semantic_at_either_endpoint, confirmation_required_when: 'source or target stage semantic in (won, lost)', scope: write }
@@ -4779,9 +4755,6 @@ paths:
         while granting all of its parts would be a distinction the surface cannot honestly
         explain. It is governed exactly as those reads are — object RBAC and row scope apply
         per section — and it writes nothing.
-
-        Native system-of-record only: a workspace reading from an incumbent mirror has no
-        project to assemble a page for and gets `422 unsupported_in_overlay_mode`.
       x-mcp-tool: { verb: read_project_360, record_type: project, tier: auto_execute, scope: read }
       responses:
         '200':
@@ -5783,12 +5756,6 @@ paths:
             Restrict the list to an inbound message still awaiting an answer: the newest message
             of each thread that nobody has answered. Combined with `entity_type`/`entity_id` it
             answers what on this record is waiting for a reply.
-
-            Native system-of-record only: an incumbent mirror carries no thread walk to answer
-            it from, so a workspace in overlay mode refuses `waiting_reply=true` with the 422
-            every unsupported overlay parameter gets, rather than returning the whole mirrored
-            set as though every row qualified. `false` asks for nothing and is accepted in
-            either mode.
       responses:
         '200':
           description: A page of activities (newest first by default).
@@ -5797,13 +5764,6 @@ paths:
               schema: { $ref: '#/components/schemas/ActivityListResponse' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
-        '422':
-          description: >-
-            A filter the workspace's mode cannot answer — `waiting_reply=true`, or any other
-            narrowing the incumbent mirror carries no data for, in overlay mode.
-          content:
-            application/problem+json:
-              schema: { $ref: '#/components/schemas/Problem' }
         '404':
           description: >-
             The `entity_type`/`entity_id` this read was narrowed TO is outside the caller's
@@ -9207,6 +9167,31 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
+
+  /exports/bundle:
+    get:
+      tags: [Views]
+      operationId: downloadExportBundle
+      security: [ { cookieAuth: [] } ]   # human session only — bulk egress, same posture as createFilteredExport
+      x-agent-access: human-only
+      summary: Download the whole-workspace export bundle.
+      description: >-
+        Streams the open-format margince-export/1 bundle (CSV per object +
+        relational JSON + manifests) — the installation's data handover, row-
+        scoped to the caller so it can never hand out rows their own lists
+        would hide. Admin/ops only (the `installation_settings` UPDATE grant),
+        and every download writes one audit entry. Spec-fill note: the general
+        export-run lifecycle (IEM-WIRE-1/2 — enqueue, poll, fetch from the blob
+        store) is the import-export-migration chapter's own unminted contract
+        extension; this op streams the bundle inline until that lands.
+      responses:
+        '200':
+          description: The bundle as a downloadable ZIP attachment.
+          content:
+            application/zip:
+              schema: { type: string, format: binary }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
 
   # ------------------------ /channel-connections ----------------------------
   # Workspace-level messaging-channel bindings (telegram-oa design §5, §9.1/§9.2).
@@ -14573,26 +14558,43 @@ paths:
 
         Unresolved first by default, oldest first within that: a correction somebody sent three
         weeks ago is the one still waiting.
+
+        The queue is PAGED, and every page says whether there is another. A `limit` with no
+        continuation made every submission past the ceiling unreachable through this route at
+        all — and the ones that fell off the end were the newest, with the screen giving no sign
+        a tail existed. The resolved archive was truncated the same way, permanently. Walk
+        `page.next_cursor` until `has_more` is false.
       parameters:
         - { name: contact_id, in: query, required: false, schema: { type: string, format: uuid },
             description: Only this contact's submissions. Omit for the whole queue. }
         - { name: resolved, in: query, required: false, schema: { type: boolean },
             description: "false for the queue, true for what has been decided. Omit for both." }
         - $ref: '#/components/parameters/Limit'
+        # Its own cursor, not the shared components/parameters/Cursor: this queue
+        # has no `sort` dial, so the shared token's contract — fingerprinting the
+        # request's sort, rejectable as cursor_param_mismatch — describes
+        # something this endpoint neither issues nor accepts.
+        - name: cursor
+          in: query
+          schema: { type: string }
+          description: >-
+            Opaque keyset cursor from a prior response's `page.next_cursor`. It encodes all three
+            parts of this queue's order — whether the row is resolved, its `submitted_at`, and its
+            id — because two subjects can send in the same second and an id alone cannot continue
+            an order it is only the tie-break of. Changing `contact_id` or `resolved` mid-walk
+            changes which rows the remaining pages see, so re-issue without the cursor when a
+            filter changes. A token this endpoint did not mint returns `422 code: malformed_cursor`.
       responses:
         '200':
-          description: |
-            The submissions, bounded by the limit. NO CURSOR: this is a queue somebody works
-            through rather than an archive to page, and a cursor the handler did not read would
-            answer a wider page than the one that was asked for. When the queue grows past one
-            screen, the paging lands with the reader that needs it.
+          description: A page of submissions.
           content:
             application/json:
               schema:
                 type: object
-                required: [data]
+                required: [data, page]
                 properties:
                   data: { type: array, items: { $ref: '#/components/schemas/ConfirmSubmission' } }
+                  page: { $ref: '#/components/schemas/PageInfo' }
   /confirm-submissions/{id}/resolve:
     parameters:
       - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
@@ -20448,86 +20450,6 @@ paths:
   # offers roll up to base via fx_rate (RT-PR-C2). Offer drafting obeys evidence-
   # or-omit (features/07) and NEVER fabricates a price (rate-card or blank).
   # =========================================================================
-  #
-  # OVERLAY / AUGMENTATION MANAGEMENT (data-model.md §12 overlay cluster;
-  # narrative/03e AC-OV-1..11; E18/E19/E20; A53). The B-E18.*/B-E19.*/B-E20.*
-  # build stories trace here.
-  #
-  # **Bounded-equivalence invariant (AC-OV-2 / ADR-0018): overlay mode does NOT
-  # fork the data API.** Mirrored contacts/companies/deals/activities/relationships are
-  # read and written through the SAME operations above (/contacts, /deals, …) via
-  # the SystemOfRecordProvider seam (architecture/01); each L1 MCP tool either
-  # passes identically OR returns a declared, tested `unsupported_by_sor` result
-  # (422) — never a silent break. The ops below are ONLY the overlay LIFECYCLE /
-  # MANAGEMENT surface, which has no SoR-mode equivalent and exists only when
-  # `overlay_mode.sor_mode = overlay` (data-model §12); in SoR-mode each returns
-  # 404 `mode_not_overlay`. Schemas drawn 1:1 from data-model §12
-  # (`incumbent_connection`, `overlay_mirror` sync-state); contract-codegen +
-  # AC-MCP-3 lint MUST emit/verify these ops. One incumbent per workspace, so the
-  # connection resource is SINGULAR. Associations (`overlay_association`,
-  # B-E18.22) surface through the normal /relationships endpoint — NOT a new path.
-  #
-  #   GET    /overlay/connection
-  #       Current incumbent binding + status: {incumbent, region, status ∈
-  #       active|revoked|error, connected_at, scopes[]}. 🟢 read.
-  #       x-mcp-tool: read_record record_type=overlay_connection, tier auto_execute.
-  #   POST   /overlay/connection
-  #       Connect an incumbent via OAuth (HubSpot public app B-E18.13 /
-  #       Salesforce ECA-JWT B-E19.* / Entra app B-E20.*). Body {incumbent,
-  #       region, auth_code|assertion}. EU customers MUST route to the incumbent's
-  #       EU region with an honest dual-residency disclosure (mirror replica lives
-  #       in OUR store → operator's residency, A35; B-E18.14). 🟡 — establishes
-  #       egress + ingest of the customer's entire CRM; ErrRequiresApproval +
-  #       ADR-0036 token; Idempotency-Key. 409 `incumbent_already_connected` if a
-  #       binding exists. x-mcp-tool: connect_incumbent, tier confirmation_required.
-  #   DELETE /overlay/connection
-  #       Disconnect → revoke token + mirror teardown: purge the `overlay_mirror`
-  #       replica AND incumbent-derived embeddings/context-graph nodes within the
-  #       declared retention window (B-E18.15; GDPR — the mirror must not outlive
-  #       the connection). 🟡, ErrRequiresApproval; 202 + teardown job ref.
-  #       x-mcp-tool: disconnect_incumbent, tier confirmation_required.
-  #   GET    /overlay/sync-status
-  #       Mirror freshness, per object class: [{object, last_synced_at, state ∈
-  #       fresh|pending_sync|stale, backfill_progress}]. Backs the three overlay
-  #       UI affordances every overlay screen must show (last_synced_at,
-  #       pending_sync optimism, staleness warning — 30-screen-acceptance §3a;
-  #       B-E18.4/.16). 🟢 read.
-  #   POST   /overlay/reconcile
-  #       Trigger the reconciliation poller sweep — heal gaps within the incumbent
-  #       search budget, incumbent-wins on divergence emitting `mirror.conflict`
-  #       (AC-OV-8; B-E18.7/.18). 🟢 (read-heavy, budget-metered); 202 + job ref.
-  #   GET    /overlay/budget
-  #       Per-incumbent consumption meter: {window, consumed, limit, band ∈
-  #       healthy|degrading|exhausted, policy} (B-E18.11/.12). At threshold,
-  #       force-fresh reads degrade to mirror-with-staleness (AC-OV-7) — surfaced
-  #       here so the UI/agent warns instead of starving the customer's quota.
-  #       🟢 read.
-  #   POST   /overlay/flip:preflight
-  #       Overlay→SoR flip preflight gate (B-E18.26, V1-WOW): force-fresh sync +
-  #       conflict reconciliation + honest-scope export check → {ready,
-  #       blocking[], unresolved_conflicts[]}. Human-only: a green
-  #       preflight FREEZES the mirror and seals the snapshot the execute
-  #       imports. 409 `overlay_flip_blocked` is returned by the execute
-  #       op below when this is not satisfied.
-  #   POST   /overlay/flip
-  #       Execute Overlay→SoR flip (B-E18.27; AC-OV-9/10): import the
-  #       frozen snapshot the preflight sealed, reusing the features/04
-  #       §5 importer, preserve record counts/relationships, carry over OUR
-  #       augmentation (context/embeddings/audit/capture/mappings), re-tag
-  #       incumbent-derived nodes T2→T1, detach write-back, flip
-  #       `overlay_mode.sor_mode = native`. Human-only, like its preflight:
-  #       the typed confirmation phrase IS the human-intent control, and
-  #       an agent supplying it in staged arguments would collapse the
-  #       confirm-first gate to one approval click on a one-way,
-  #       estate-wide change. 202 + migration run ref.
-  #
-  # Overlay error sentinels (interfaces.md §0 + overlay additions): 404
-  # `mode_not_overlay` (op called in SoR-mode), 409 `incumbent_already_connected`,
-  # 422 `unsupported_by_sor` (declared bounded-capability gap, AC-OV-2), 409
-  # `overlay_flip_blocked` (preflight unsatisfied), 503
-  # `incumbent_budget_exhausted` (degrade-don't-starve, AC-OV-7). All as RFC-7807
-  # `Problem`.
-  # =========================================================================
 
   /attachments:
     get:
@@ -21808,167 +21730,6 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
 
-  # ---------------------------- /overlay ------------------------------------
-  # The HubSpot mirror overlay (a second datasource.SystemOfRecordProvider):
-  # incumbent connection lifecycle, mirror sync health, budget, and the
-  # overlay→native flip with its ADR-0071 cutover lifecycle (preflight gate,
-  # emergency last-known-mirror variant, retirement ordering — OVA-AC-6).
-  /overlay/connection:
-    get:
-      tags: [Overlay]
-      operationId: getOverlayConnection
-      summary: The workspace's overlay incumbent connection, if any.
-      responses:
-        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/OverlayConnection' } } } }
-        '404': { $ref: '#/components/responses/NotFound' }   # mode_not_overlay
-    post:
-      tags: [Overlay]
-      operationId: connectOverlay
-      summary: Connect the workspace's overlay incumbent (HubSpot).
-      x-agent-access: human-only   # no tool: seals a credential and flips the system of record
-      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/OverlayConnectRequest' } } } }
-      responses:
-        '201': { description: Connected, content: { application/json: { schema: { $ref: '#/components/schemas/OverlayConnection' } } } }
-        '409': { $ref: '#/components/responses/Conflict' }   # incumbent_already_connected
-    delete:
-      tags: [Overlay]
-      operationId: disconnectOverlay
-      summary: Disconnect the overlay incumbent and queue mirror teardown.
-      x-agent-access: human-only   # no tool: purges the mirror and flips the system of record
-      responses:
-        '202': { description: Teardown queued }
-        '404': { $ref: '#/components/responses/NotFound' }
-
-  /overlay/sync-status:
-    get:
-      tags: [Overlay]
-      operationId: getOverlaySyncStatus
-      summary: Per-object mirror sync freshness (fresh/pending_sync/stale, backfill completeness).
-      responses:
-        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/OverlaySyncStatus' } } } }
-
-  /overlay/reconcile:
-    post:
-      tags: [Overlay]
-      operationId: reconcileOverlay
-      summary: Queue an out-of-band mirror reconciliation sweep.
-      x-agent-access: human-only   # no tool
-      responses:
-        '202': { description: Sweep queued }
-
-  /overlay/budget:
-    get:
-      tags: [Overlay]
-      operationId: getOverlayBudget
-      summary: The incumbent API budget window's consumption and band (ok/warn/shed).
-      responses:
-        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/OverlayBudget' } } } }
-
-  /overlay/export:
-    get:
-      tags: [Overlay]
-      operationId: downloadOverlayExport
-      security: [ { cookieAuth: [] } ]   # human session only — bulk egress, same posture as createFilteredExport
-      x-agent-access: human-only
-      summary: Download the workspace export bundle — the flip's pre-flip export producer.
-      description: >-
-        Streams the open-format margince-export/1 bundle (CSV per object +
-        relational JSON + manifests). In overlay mode it carries the mirror
-        snapshot under the caller's mirror-visibility deny-join and the
-        honest-scope manifest (AC-OV-9), and writing it records the export
-        audit entry the flip preflight's export-recency check reads
-        (B-E18.26). Admin/ops only (the overlay_connection UPDATE grant):
-        this is the cutover operator's surface. Spec-fill note: the general
-        export-run lifecycle (IEM-WIRE-1/2) is the import-export-migration
-        chapter's own unminted contract extension — this op is the overlay
-        lifecycle's bundle producer until that lands, raised upstream.
-      responses:
-        '200':
-          description: The bundle as a downloadable ZIP attachment.
-          content:
-            application/zip:
-              schema: { type: string, format: binary }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/PermissionDenied' }
-
-  /overlay/flip:preflight:
-    post:
-      tags: [Overlay]
-      operationId: preflightOverlayFlip
-      security: [ { cookieAuth: [] } ]   # human session only — a green preflight FREEZES the mirror (x-agent-access: human-only)
-      x-agent-access: human-only
-      summary: Dry-run the overlay→native flip's readiness checks without executing it.
-      description: >-
-        The B-E18.26 gate (OVA-WIRE-7): reports whether the flip can run —
-        incumbent reachable, force-fresh sync complete, `pending_sync` writes
-        drained, conflicts cleared, pre-flip export available — and, when every
-        check is green, seals the frozen mirror snapshot the flip will import
-        and previews the parity dry-run (counts per object, skips with reasons,
-        zero rows written). Any blocker unseals the snapshot again (UC-E18-04
-        F1): a failed preflight is a no-op return to a healthy overlay. When
-        the incumbent is unreachable (`revoked`/`error`), `blocking` carries
-        `incumbent_unreachable` and the `emergency` block discloses the
-        last-known-mirror cutover option (OVA-AC-6 a/b).
-      responses:
-        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/OverlayFlipPreflight' } } } }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/PermissionDenied' }
-        '404': { $ref: '#/components/responses/NotFound' }   # mode_not_overlay
-  /overlay/flip:
-    post:
-      tags: [Overlay]
-      operationId: executeOverlayFlip
-      summary: Execute the overlay→native flip, running the migration.
-      description: >-
-        The B-E18.27 cutover (OVA-WIRE-8): freezes the mirror, imports the
-        frozen snapshot through the migration engine with counts and
-        relationships preserved (AC-OV-10), carries our augmentation over,
-        detaches write-back, and flips the workspace to native — an
-        irreversible mode change gated by the typed confirmation phrase.
-        Refused with 409 `overlay_flip_blocked` while the preflight is
-        unsatisfied. Human-only, like its preflight: the typed
-        confirmation phrase IS the human-intent control, and an agent
-        supplying it in staged arguments would collapse the confirm-first
-        gate to a single approval click on a one-way, estate-wide change. `mode: emergency` is the ADR-0071 last-known-mirror
-        cutover: available ONLY while the incumbent is unreachable (never a
-        silent substitute for a fresh-sync flip, in either direction) and its
-        202 carries the disclosed-lossy staleness + unverifiable-parity notice.
-      security: [ { cookieAuth: [] } ]   # human session only — see x-agent-access
-      x-agent-access: human-only
-      # Not `required`: an absent body carries no confirmation phrase, so
-      # it lands on the same 422 the typed-phrase gate answers — the
-      # refusal a confirm-first op owes, without turning the previously
-      # body-less operation into a breaking contract change.
-      requestBody:
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/OverlayFlipRequest' }
-      responses:
-        '202': { description: 'Migration run complete (synchronous behind 202, the teardown precedent).', content: { application/json: { schema: { $ref: '#/components/schemas/OverlayFlipAccepted' } } } }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/PermissionDenied' }
-        '404': { $ref: '#/components/responses/NotFound' }   # mode_not_overlay
-        '409': { $ref: '#/components/responses/Conflict' }   # overlay_flip_blocked
-        '422': { $ref: '#/components/responses/ValidationError' }
-
-  # =========================================================================
-  # IMPORT — the migrate-in surface (IEM-GAP-2's contract extension).
-  #
-  # The chapter pinned these by planned path and behaviour only (IEM-WIRE-3..6)
-  # and made minting them a ticket-gate (IEM-AC-OPEN-3): no implementation may
-  # cite an operationId that does not exist here first. Four of the five below
-  # are those pins. The fifth — `uploadImportSource` — is a disclosed spec-fill:
-  # IEM-WIRE-3 accepts a "source ref" and nothing in the chapter mints one, yet
-  # a column mapping cannot be authored before a header has been read. The
-  # order the product actually needs is upload → profile → map → dry run →
-  # approve, so the upload is an operation, not an implementation detail.
-  #
-  # Every one is human-only (IEM-WIRE-7 / A139): an import is the least
-  # reversible write in the product, and a confirm-first gate over a
-  # thousand-row dry-run report is a rubber stamp that manufactures evidence of
-  # review. Rate class RL-BULK-WRITE; body cap CAP-BODY (import only, 10 MB by
-  # default and set per installation — `uploads.csv_import_mb`, OPS-CFG-12).
-  # =========================================================================
   /imports/sources:
     post:
       tags: [Import]
@@ -22189,9 +21950,8 @@ paths:
         run that is still in flight, was never approved, has already failed,
         or has already finished undoing is a conflict, as is a run whose
         `undoing` state carries no recorded progress to resume; the
-        `hubspot`/`salesforce`/`mirror`/`bundle` connectors have no reversal
-        path (`mirror`/`bundle` are the ADR-0071 overlay flip, not a customer
-        import; `hubspot`/`salesforce` are unbuilt).
+        `hubspot`/`salesforce` connectors have no reversal path — they are
+        unbuilt.
 
         Reverses only the rows this run created that nobody has touched since
         (A93): never an all-or-nothing hard rollback that clobbers a later
@@ -22220,92 +21980,6 @@ paths:
         '403': { $ref: '#/components/responses/PermissionDenied' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }   # not complete/undoing, not csv, already undone, or undoing with no progress to resume
-
-  /overlay/user-map:
-    get:
-      tags: [Overlay]
-      operationId: listOverlayUserMap
-      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
-      x-agent-access: human-only
-      summary: The workspace users' incumbent-user mapping, with unmapped users flagged.
-      description: >-
-        Admin-managed per RC-15/ADR-0057 — this IS the overlay-connection settings
-        surface the spec names, not a general CRUD endpoint. Requires the
-        overlay_connection UPDATE grant (admin/ops), NOT its read grant: every role
-        holds the read so a rep can see whether overlay mode is live, and this
-        payload carries every user's email plus their incumbent mapping, which no
-        non-admin sees today.
-      parameters:
-        # Its own cursor, not the shared components/parameters/Cursor: this page
-        # is keyed on the app_user id alone and has no `sort` dial, so the shared
-        # token's contract — minted from `page.next_cursor`, fingerprinting the
-        # request's sort, rejectable as cursor_param_mismatch — describes
-        # something this endpoint neither issues nor accepts.
-        - name: cursor
-          in: query
-          schema: { type: string }
-          description: >-
-            Opaque keyset cursor from a prior response's root-level `next_cursor`.
-            It encodes the last row's app_user id and nothing else; there is no
-            sort to disagree with. A token this endpoint did not mint returns
-            `422 code: malformed_cursor` — re-issue the request without it.
-        - $ref: '#/components/parameters/Limit'
-      responses:
-        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/OverlayUserMapPage' } } } }
-        '404': { $ref: '#/components/responses/NotFound' }   # mode_not_overlay
-        '422': { $ref: '#/components/responses/ValidationError' }   # malformed_cursor
-
-  /overlay/user-map/{id}:
-    parameters:
-      - $ref: '#/components/parameters/Id'
-    put:
-      tags: [Overlay]
-      operationId: setOverlayUserMap
-      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
-      x-agent-access: human-only
-      summary: Pin one user to an incumbent user as a manual admin override.
-      description: >-
-        Writes match_source=manual — the escape hatch design.md §4.6 rule 4 defines
-        for a reassigned or ambiguous email — and clears any auto-map block for the
-        user. Requires the overlay_connection UPDATE grant.
-      requestBody:
-        required: true
-        content: { application/json: { schema: { $ref: '#/components/schemas/SetOverlayUserMapRequest' } } }
-      responses:
-        '204': { description: Mapped }
-        '404': { $ref: '#/components/responses/NotFound' }   # mode_not_overlay, unknown user
-        '422': { $ref: '#/components/responses/ValidationError' }   # missing or malformed body
-    delete:
-      tags: [Overlay]
-      operationId: deleteOverlayUserMap
-      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
-      x-agent-access: human-only
-      summary: Unmap one user and stop automatic email matching from re-mapping them.
-      description: >-
-        Removes the mapping and its visibility grants, and records the decision so
-        the reconcile sweep cannot re-create the mapping. Idempotent: an
-        already-unmapped user still records the block. Requires the
-        overlay_connection UPDATE grant.
-      responses:
-        '204': { description: Unmapped }
-        '404': { $ref: '#/components/responses/NotFound' }   # mode_not_overlay
-
-  /overlay/owners:
-    get:
-      tags: [Overlay]
-      operationId: listOverlayOwners
-      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
-      x-agent-access: human-only
-      summary: The connected incumbent's user directory, for the mapping picker.
-      description: >-
-        Requires the overlay_connection UPDATE grant — this is external directory
-        PII (names and emails of the incumbent's users) that reaches no non-admin
-        today. Capped: the Incumbent seam's Owners() is unpaginated, so `truncated`
-        reports honestly when the directory exceeded the cap rather than implying
-        completeness.
-      responses:
-        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/OverlayOwnerDirectory' } } } }
-        '404': { $ref: '#/components/responses/NotFound' }   # mode_not_overlay
 
   # DEFERRED — stubs only (data-model.md §12). Intentionally NOT specified:
   #   /sequences, /sequences/{id}/steps, /enrollments   (outbound cadences; sends gated)
@@ -25747,7 +25421,7 @@ components:
         created_at: { type: string, format: date-time }
     DedupeCandidateListResponse:
       type: object
-      required: [data]
+      required: [data, page]
       properties:
         data: { type: array, items: { $ref: '#/components/schemas/DedupeCandidate' } }
         page: { $ref: '#/components/schemas/PageInfo' }
@@ -26064,241 +25738,6 @@ components:
           minLength: 1
           description: The replacement BotFather token. Sealed into the vault on arrival and never echoed back.
 
-    # ---- overlay (HubSpot mirror; design.md §11) ----
-    OverlayConnection:
-      type: object
-      description: The workspace's overlay incumbent connection (HubSpot). The credential itself is never in this shape — it lives sealed in the vault.
-      required: [incumbent, region, status, connectedAt, scopes]
-      properties:
-        incumbent: { type: string, enum: [hubspot] }
-        region: { type: string }
-        status: { type: string, enum: [active, revoked, error] }
-        connectedAt: { type: string, format: date-time }
-        scopes: { type: array, items: { type: string } }
-    OverlayConnectRequest:
-      type: object
-      required: [incumbent, region, privateAppToken]
-      properties:
-        incumbent: { type: string, enum: [hubspot] }
-        region: { type: string }
-        privateAppToken: { type: string, minLength: 1, description: Sealed into the vault; never echoed. An empty value is rejected (422); a real credential is required to connect. }
-    OverlaySyncStatus:
-      type: object
-      description: Per-object mirror sync health — freshness state and backfill completeness (design.md §4.7).
-      properties:
-        objects:
-          type: array
-          items:
-            type: object
-            properties:
-              object: { type: string }
-              lastSyncedAt: { type: [string, 'null'], format: date-time }
-              state: { type: string, enum: [fresh, pending_sync, stale] }
-              backfillComplete: { type: boolean }
-              frozenForFlip:
-                type: boolean
-                description: >-
-                  The mirror is held still by a pending overlay→native flip:
-                  the sweep skips this workspace entirely, so staleness grows
-                  on purpose. Stated rather than left to be inferred from a
-                  mirror that merely looks idle.
-              unprojectableRows:
-                type: integer
-                description: >-
-                  How many of the class's mirror rows the CURRENT declaration cannot project.
-                  It is what tells the two readings of `stale` apart, and they want opposite
-                  responses: `stale` with ZERO here is converging — the sweep has not reached
-                  those rows and will — while `stale` with a NON-ZERO count never converges on
-                  its own and holds `force_fresh_incomplete` shut until somebody repairs the
-                  mapping. Zero means wait; non-zero means look.
-                  A count and not a list, because the question an operator is answering is
-                  whether anything needs them, not which ids.
-    OverlayBudget:
-      type: object
-      description: >-
-        The incumbent REST budget window's consumption and degradation band, its
-        per-source breakdown, honest headroom, and the per-second Search window
-        (overlay-budget.md "The budget read (wire shape)", OVB-AC-1/AC-5).
-      properties:
-        window: { type: string }
-        consumed: { type: integer, format: int64 }
-        limit: { type: integer, format: int64 }
-        band: { $ref: '#/components/schemas/OverlayBudgetBand' }
-        sources:
-          type: object
-          description: >-
-            Per-source REST breakdown; the values sum exactly to `consumed`
-            (OVB-AC-5). Absent sources have spent nothing this window. Integer
-            counts, so the per-source sum equals `consumed` exactly (a float
-            would round independently and could break the sum above 2^24).
-          properties:
-            force_fresh: { type: integer, format: int64 }
-            poller: { type: integer, format: int64 }
-            capture: { type: integer, format: int64 }
-        headroom:
-          type: string
-          description: >-
-            Free REST capacity derived from our own counts, or the `~unknown`
-            sentinel (OVB-PARAM-5) when a share cannot be attributed — never a
-            fabricated number (OVB-AC-1).
-        measured:
-          type: boolean
-          description: >-
-            Whether the figures were READ rather than assumed. False on the
-            meter's fail-closed arms — no accounting store reachable, an
-            unconfigured incumbent, a read error — where the bands report the
-            shed a spender must assume, not a measured exhaustion. A surface
-            showing this budget to a human states the difference rather than
-            presenting an accounting outage as quota pressure.
-        search:
-          $ref: '#/components/schemas/OverlayBudgetSearch'
-
-    OverlayBudgetSearch:
-      type: object
-      description: >-
-        The per-second Search-API window — metered, not gated, in branch 1, so the
-        admin surface sees search pressure alongside REST.
-      properties:
-        window: { type: string }
-        consumed: { type: integer, format: int64 }
-        limit: { type: integer, format: int64 }
-        band: { $ref: '#/components/schemas/OverlayBudgetBand' }
-
-    OverlayBudgetBand:
-      type: string
-      enum: [ok, warn, shed]
-      description: >-
-        The degradation band of a budget window — healthy (`ok`), approaching the
-        cap (`warn`), or at/over the shed threshold (`shed`). Shared by the REST
-        and Search windows so both read the one band vocabulary.
-
-    OverlayFlipPreflight:
-      type: object
-      description: >-
-        The flip preflight verdict (OVA-WIRE-7): `{ready, blocking[],
-        unresolved_conflicts[]}` plus the sealed snapshot and parity preview
-        when ready, and the emergency-cutover disclosure when the incumbent is
-        unreachable (ADR-0071 / OVA-AC-6).
-      required: [ready, blocking, unresolved_conflicts]
-      properties:
-        ready: { type: boolean }
-        blocking:
-          type: array
-          description: >-
-            Why the flip cannot run, empty when ready. `incumbent_unreachable`
-            is the OVA-AC-6(a) honest block — the connection is revoked/error,
-            so the force-fresh sync cannot pass; the workspace stays in overlay
-            on its last mirror.
-          items:
-            type: string
-            enum: [incumbent_unreachable, force_fresh_incomplete, pending_sync_draining, unresolved_conflicts, export_missing]
-        unprojectable_rows:
-          type: integer
-          description: >-
-            How many mirror rows the CURRENT declaration cannot project — a SUBSET of what holds
-            `force_fresh_incomplete`, and the only part of it that never clears on its own. It is
-            sent whether or not the flip is blocked, and zero is a real answer: an operator waiting
-            on `force_fresh_incomplete` with zero here is waiting on a sweep that will finish, while
-            a non-zero count is waiting on somebody repairing the mapping. Which class holds them is
-            on the sync-status read, per object.
-        unresolved_conflicts:
-          type: array
-          description: >-
-            Open incumbent-wins conflicts awaiting acceptance; each blocks the
-            flip. Empty in this build: branch 1 reconciliation resolves
-            incumbent-wins at ingest and persists no conflict queue, so the
-            producer arrives with write-back (branch 2). The field is required
-            by OVA-WIRE-7's response shape.
-          items: { $ref: '#/components/schemas/OverlayFlipUnresolvedConflict' }
-        # Absent (not null) while unsealed: the snapshot exists only for a
-        # green preflight, and any blocker unseals it again.
-        snapshot: { $ref: '#/components/schemas/OverlayFlipSnapshot' }
-        parity:
-          type: [array, 'null']
-          description: >-
-            The parity dry-run against the sealed snapshot — writes zero CRM
-            rows; skipped rows are disclosed with reasons, never silently
-            dropped (AC-mode-flip-7).
-          items: { $ref: '#/components/schemas/OverlayFlipParityEntry' }
-        emergency:
-          type: [object, 'null']
-          description: >-
-            Present only while the incumbent is unreachable: the ADR-0071
-            emergency cutover from the last-known mirror, disclosed-lossy —
-            never offered while a fresh-sync flip is possible.
-          required: [available, last_synced_at, unverifiable_parity_notice]
-          properties:
-            available: { type: boolean }
-            last_synced_at: { type: [string, 'null'], format: date-time }
-            staleness_seconds: { type: integer, format: int64 }
-            unverifiable_parity_notice: { type: string }
-    OverlayFlipSnapshot:
-      type: object
-      description: The sealed frozen-mirror snapshot the flip imports.
-      required: [id, frozen_at]
-      properties:
-        id: { type: string }
-        frozen_at: { type: string, format: date-time }
-    OverlayFlipUnresolvedConflict:
-      type: object
-      description: One open incumbent-wins conflict blocking the flip.
-      required: [object_class, external_id]
-      properties:
-        object_class: { type: string }
-        external_id: { type: string }
-        property: { type: string }
-    OverlayFlipParityEntry:
-      type: object
-      description: One object class's parity preview row (AC-mode-flip-7).
-      required: [object, mirror_count, will_create, will_update]
-      properties:
-        object: { type: string }
-        mirror_count: { type: integer }
-        will_create: { type: integer }
-        will_update: { type: integer }
-        skipped:
-          type: array
-          items: { $ref: '#/components/schemas/OverlayFlipParitySkip' }
-    OverlayFlipParitySkip:
-      type: object
-      description: One row the importer cannot carry, disclosed with its reason (never silently dropped).
-      required: [external_id, reason]
-      properties:
-        external_id: { type: string }
-        reason: { type: string }
-    OverlayFlipRequest:
-      type: object
-      required: [confirmation_phrase]
-      properties:
-        mode:
-          type: string
-          enum: [fresh_sync, emergency]
-          default: fresh_sync
-          description: >-
-            `fresh_sync` (the default) requires the sealed preflight snapshot.
-            `emergency` is the last-known-mirror cutover and is refused while
-            the incumbent is reachable — the explicit field is the
-            never-silently-substituted guarantee (OVA-AC-6 b).
-        confirmation_phrase:
-          type: string
-          description: Must equal the exact phrase `FLIP TO SOR` (AC-mode-flip-5).
-    OverlayFlipAccepted:
-      type: object
-      required: [run_id, mode]
-      properties:
-        run_id: { type: string, format: uuid, description: The migration run (`import_run`) this flip executed. }
-        mode: { type: string, enum: [fresh_sync, emergency] }
-        records_imported: { type: integer, format: int64 }
-        emergency_disclosure:
-          type: [object, 'null']
-          description: Returned on an emergency cutover — the disclosed-lossy staleness and the parity that cannot be re-verified against a live incumbent.
-          required: [last_synced_at, unverifiable_parity_notice]
-          properties:
-            last_synced_at: { type: [string, 'null'], format: date-time }
-            staleness_seconds: { type: integer, format: int64 }
-            unverifiable_parity_notice: { type: string }
-
-    # ---- Import: the migrate-in surface (IEM-GAP-2) ----
     ImportObject:
       type: string
       enum: [company, lead, contact]
@@ -26629,7 +26068,7 @@ components:
       required: [id, connector, object, status, checkpoint, source, captured_by, created_at, updated_at]
       properties:
         id:         { type: string, format: uuid }
-        connector:  { type: string, enum: [csv, hubspot, salesforce, bundle, mirror], description: 'The two beyond the migrate-in set are the flip''s own sources (OVA-WIRE-8).' }
+        connector:  { type: string, enum: [csv, hubspot, salesforce] }
         object:     { $ref: '#/components/schemas/ImportObject' }
         status:     { $ref: '#/components/schemas/ImportRunStatus' }
         checkpoint: { type: integer, minimum: 0, description: 'Absolute offset into the source''s rows for a forward run (`running`/`failed`), or into import_record_map''s rows once the run is `undoing` (IEM-WIRE-9) — 0 = not started either way. What a resume continues from.' }
@@ -26638,61 +26077,6 @@ components:
         captured_by: { type: string, readOnly: true, description: 'Server-stamped from the authenticated principal; never client-supplied.' }
         created_at:  { type: string, format: date-time }
         updated_at:  { type: string, format: date-time }
-
-    OverlayUserMapEntry:
-      type: object
-      required: [user_id, email, unmapped_reason]
-      properties:
-        user_id: { type: string, format: uuid }
-        email: { type: string }
-        name: { type: string }
-        incumbent_user_id:
-          type: string
-          description: Empty when the user is not mapped.
-        incumbent_user_name: { type: string }
-        incumbent_user_email: { type: string }
-        match_source:
-          type: string
-          enum: [email, manual]
-          description: Absent when the user is not mapped.
-        unmapped_reason:
-          type: string
-          enum: [none, no_email_match, ambiguous_email, blocked_by_admin, not_yet_synced, directory_unavailable]
-          description: >-
-            Why this user has no mapping. `none` means they are mapped.
-            `directory_unavailable` means the incumbent directory could not be
-            read, so no reason could be derived — never a guessed diagnosis.
-        stale_owner_ref:
-          type: boolean
-          description: >-
-            A manual mapping pointing at an incumbent user absent from the current
-            directory. Reported, never auto-revoked: the override stays sticky.
-    OverlayUserMapPage:
-      type: object
-      required: [incumbent, entries]
-      properties:
-        incumbent: { type: string }
-        entries: { type: array, items: { $ref: '#/components/schemas/OverlayUserMapEntry' } }
-        next_cursor: { type: string }
-    OverlayOwner:
-      type: object
-      required: [incumbent_user_id, email]
-      properties:
-        incumbent_user_id: { type: string }
-        name: { type: string }
-        email: { type: string }
-    OverlayOwnerDirectory:
-      type: object
-      required: [incumbent, owners, truncated]
-      properties:
-        incumbent: { type: string }
-        owners: { type: array, items: { $ref: '#/components/schemas/OverlayOwner' } }
-        truncated: { type: boolean }
-    SetOverlayUserMapRequest:
-      type: object
-      required: [incumbent_user_id]
-      properties:
-        incumbent_user_id: { type: string, minLength: 1 }
 
     # ---- error (RFC 7807) ----
     NoticeKind:
@@ -32563,8 +31947,8 @@ components:
             filtering the list by a masked field is refused (422).
         fx_rate_to_base: { type: [string, 'null'], description: 'Native→base, frozen at close (null while open). Decimal-as-string to avoid float rounding of the 10-dp rate.' }
         fx_rate_date: { type: [string, 'null'], format: date }
-        pipeline_id: { type: [string, 'null'], format: uuid, description: 'Native mode: always a non-null pipeline FK. Overlay mode: NULL — an overlay-mirror deal has no native Margince pipeline row; the incumbent''s own pipeline id rides `raw` and the code-declared stage→semantic mapping drives tier resolution (overlay-augmentation OVA-MAP-6). A zero/placeholder UUID here is forbidden (dangling FK).' }
-        stage_id: { type: [string, 'null'], format: uuid, description: 'Native mode: always a non-null stage FK; must belong to pipeline_id. Overlay mode: NULL (see pipeline_id; the incumbent dealstage id rides `raw`, OVA-MAP-6).' }
+        pipeline_id: { type: [string, 'null'], format: uuid, description: 'The deal''s pipeline. A zero/placeholder UUID here is forbidden (dangling FK).' }
+        stage_id: { type: [string, 'null'], format: uuid, description: 'The deal''s current stage; must belong to pipeline_id.' }
         company_id: { type: [string, 'null'], format: uuid, description: 'Primary company; never a raw lead. Null when the caller may not read that company, in which case `masked_fields` names it.' }
         partner_company_id: { type: [string, 'null'], format: uuid, description: 'Deal registration/attribution to a partner company (ADR-0032). The company must have a live `partner` row — naming one that does not is refused 422 (`not_a_partner`), because commission prices from the margin tier on that row, and an attribution without one could never earn anything. Null when the caller may not read that company, in which case `masked_fields` names it.' }
         partner_attribution:
@@ -37710,21 +37094,6 @@ components:
         teams:
           type: array
           items: { type: string, format: uuid }
-        system_of_record:
-          type: object
-          description: |
-            The installation's active system-of-record mode (overlay_mode.sor_mode). `native` is the
-            default and full-capability mode. In `overlay` mode the data is served from a read-only
-            incumbent mirror: list sort/filter dials and unservable reads answer
-            422 `unsupported_in_overlay_mode` / 404, and mirrored-entity writes answer
-            `unsupported_by_sor`. Clients gate their UI on this — rendering unservable read surfaces
-            as an honest "not available in overlay" affordance and hiding mirrored-entity write
-            controls — rather than offering controls that fail. Reverts to `native` after an
-            overlay→native flip. Optional for backward compatibility; a missing value MUST be
-            treated as `native`.
-          required: [mode]
-          properties:
-            mode: { type: string, enum: [native, overlay] }
         authorization:
           $ref: '#/components/schemas/Authorization'
         settings_availability:
@@ -38919,7 +38288,7 @@ components:
       enum:
         [contact, company, deal, lead, activity, pipeline, list, tag, relationship, partner,
          automation, voice_profile, product, offer, signal, saved_view, custom_field,
-         computed_field, offer_template, overlay_connection, embedding_reindex,
+         computed_field, offer_template, embedding_reindex,
          webhook_subscription, fx_rate, ai_model_rate, capture_settings, project,
          channel_connection, import_run, installation_settings, finance, integrations,
          retention_policy, capture_trace, license, contract, ai_routing, ai_budget, commission, deal_room,
@@ -39699,11 +39068,10 @@ components:
             `edge_relink_unsupported` means the entry REMOVED a link: putting one back is an
             un-archive, which this path does not perform. The refusal says the link can be
             made again from the record's own screen, because that is true and actionable.
-            `not_restorable_by_this_path` covers two shapes: a record whose workspace keeps
-            its records in an incumbent system, and EVERY change to a project's company link
+            `not_restorable_by_this_path` covers EVERY change to a project's company link
             whatever the verb — that kind takes write authority over the project row and a
             project must keep at least one company, so a generic reverse would be a side door
-            around both rules. `detail` names the kind in the second case.
+            around both rules. `detail` names the kind.
           enum: [no_before_image, not_a_replayable_verb, unsupported_record_type, superseded,
                  behind_erasure_boundary, already_undone, not_restorable_by_this_path,
                  record_archived, null_unwritable_by_module, not_writable_by_caller,
@@ -39909,9 +39277,9 @@ components:
           # Pinned for the same reason as CompanyFactSuspectReason above.
           x-enum-varnames: [SearchResultTrustTierAuthoritative, SearchResultTrustTierExternal, SearchResultTrustTierUnverified]
           description: >
-            Provenance tier of the underlying record. In native mode every stored record is
-            `authoritative`; `external`/`unverified` are reserved for overlay/connector-sourced rows
-            (not emitted until overlay adapters land). Never guessed — null when unknown.
+            Provenance tier of the underlying record. Nearly every stored record is
+            `authoritative`; `external`/`unverified` are reserved for connector-sourced
+            rows (not emitted until those adapters land). Never guessed — null when unknown.
 
     SearchResponse:
       type: object
@@ -40085,7 +39453,7 @@ components:
          offer_draft, rate_extract, signal_extract, site_extract, site_fact_extract,
          site_triage, stage_evidence_extract, summarize, transcript, transcript_propose, voice_build,
          corpus_ask, weekly_review, weekly_learnings, propose_roles, owed_verdict,
-         account_scan]
+         request_settlement, account_scan]
       description: |
         What kind of AI work an occurrence is. Every AI task this build can run reports here,
         because a task that reports nothing is AI work the product performed and then denied.
@@ -40274,7 +39642,6 @@ components:
             - offer
             - offer_template
             - company
-            - overlay_connection
             - partner
             - contact
             - product
@@ -41654,8 +41021,7 @@ components:
         Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
         Echoed back as the `version` field on every mutable entity. To make a write conditional,
         send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
-        (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
-        not only overlay mode.
+        (ErrVersionSkew) so the client re-reads before retrying.
 
     # ---- Approval token (ADR-0036) ----
     ApprovalToken:
@@ -45020,9 +44386,15 @@ components:
           type: array
           items: { $ref: '#/components/schemas/AttentionItem' }
           description: |
-            Today's meetings that have already started and whose result nobody has
-            recorded, longest unanswered first. The counterpart of `meetings`: that lane
-            is what to prepare for, this is what to close off.
+            Meetings that have already started and whose result nobody has recorded,
+            longest unanswered first. The counterpart of `meetings`: that lane is what to
+            prepare for, this is what to close off.
+
+            It reaches back a FORTNIGHT, where `meetings` is today only. The two bound
+            differently because they expire differently: preparation stops being possible
+            once a meeting begins, while an unrecorded outcome stays owed until somebody
+            records it. Bounded at all so that the first read after a quiet month is a
+            queue a reader can clear rather than a history of everything never answered.
 
             A meeting carrying no status at all is here. A captured calendar event
             arrives without one, so treating an absent status as settled would empty this
@@ -45125,21 +44497,6 @@ components:
 
             Absent — not empty — on an installation whose feed does not read approvals'
             failure marks.
-        sync_health:
-          type: array
-          items: { $ref: '#/components/schemas/AttentionItem' }
-          description: |
-            The overlay sync's current concerns: the poller backing off, the incumbent
-            call budget degraded, mirrored classes stale or still backfilling. One card
-            per CONDITION, never one per affected row, so a broken connector is a single
-            card rather than a flood. Each card's `kind` names the condition and
-            `detail` carries its facts (the affected object classes, the failure
-            class, or the budget band); fixing the connection stays on the sync
-            settings screen, so the card offers no verbs.
-
-            Absent — not empty — on a workspace that is not running in overlay mode:
-            an installation with no incumbent connected does not look here, which is a
-            different fact from a healthy sync.
         capture_health:
           type: array
           items: { $ref: '#/components/schemas/AttentionItem' }
@@ -45296,7 +44653,7 @@ components:
             not read introductions.
         lanes_omitted:
           type: array
-          items: { type: string, enum: [this_morning, needs_you, planned, done_for_you, commitments, at_risk, meetings, relationship_decay, did_not_run, dsr, notice_case, sync_health, capture_health, domain_questions, ai_work_health, bounces, undelivered, automation_health, notices, introductions, meetings_unreported] }
+          items: { type: string, enum: [this_morning, needs_you, planned, done_for_you, commitments, at_risk, meetings, relationship_decay, did_not_run, dsr, notice_case, capture_health, domain_questions, ai_work_health, bounces, undelivered, automation_health, notices, introductions, meetings_unreported] }
           description: "Lanes withheld because the caller may not read what they contain. Never returned empty instead."
         counts: { $ref: '#/components/schemas/AttentionCounts' }
 
@@ -45334,10 +44691,10 @@ components:
           type: integer
           minimum: 0
           description: >-
-            How many of today's meetings have started with nobody saying how they went —
-            the bounded page, as the other lanes report. Not in `required`: a client
-            reading an installation whose feed does not carry this lane gets no number
-            rather than a zero, which would claim the day is clear.
+            How many meetings of the last fortnight have started with nobody saying how
+            they went — the bounded page, as the other lanes report. Not in `required`: a
+            client reading an installation whose feed does not carry this lane gets no
+            number rather than a zero, which would claim the day is clear.
         at_risk:
           type: integer
           minimum: 0
@@ -45378,12 +44735,6 @@ components:
             How many undischarged disclosure duties this lane is CARRYING — the
             bounded page, as the other lanes report. A reader past the bound sees
             the soonest deadlines, which is the order the lane is in.
-        sync_health:
-          type: integer
-          minimum: 0
-          description: >-
-            How many sync concerns the lane carries — one per condition, so this is
-            the full count, never a bounded page of a larger one.
         capture_health:
           type: integer
           minimum: 0
@@ -45467,7 +44818,7 @@ components:
         id: { type: string, description: "The owning record's id, as its own endpoint spells it." }
         source:
           type: string
-          enum: [approval, dedupe_candidate, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, notice_case, sync_health, capture_health, domain_question, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome]
+          enum: [approval, dedupe_candidate, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, notice_case, capture_health, domain_question, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome]
           description: "Which producer raised it, and therefore which endpoint its verbs go to."
         kind: { type: string, description: 'The producer''s own sub-type (an approval kind, a dedupe entity type) — for the icon and the label, never for authority.' }
         title:
@@ -45493,12 +44844,6 @@ components:
 
             Both now travel typed — `quiet_days` and `staged` below — and the client writes
             the sentence in the reader's own language.
-
-            ONE source is still an exception, and a client must know it: `sync_health` fills
-            this field with its own vocabulary — the affected object classes, the failure
-            class, or the budget band — for a client to write a sentence from. Those are
-            words like `shed` and `deal, contact`. A client that has not written that
-            sentence draws nothing for that source rather than the value.
         staged:
           $ref: '#/components/schemas/AttentionStagedFacts'
         quiet_days:
@@ -45710,7 +45055,7 @@ components:
       properties:
         close_date_provisional: { type: [boolean, 'null'], description: 'True when the close date has not been confirmed by a colleague.' }
         forecast_category: { type: [string, 'null'], description: 'The recorded forecast category, including omitted.' }
-        stage_id: { type: [string, 'null'], format: uuid, description: "The deal's current stage; null for an overlay-mirror deal, whose stage lives with the incumbent." }
+        stage_id: { type: [string, 'null'], format: uuid, description: "The deal's current stage." }
         amount_minor: { type: [integer, 'null'], format: int64 }
         currency: { type: [string, 'null'], pattern: '^[A-Z]{3}$' }
         owner_id: { type: [string, 'null'], format: uuid }
@@ -45928,7 +45273,7 @@ components:
       properties:
         source:
           type: string
-          enum: [approval, dedupe_candidate, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, notice_case, sync_health, capture_health, domain_question, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome, weekly_commitment, batch]
+          enum: [approval, dedupe_candidate, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, notice_case, capture_health, domain_question, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome, weekly_commitment, batch]
           description: 'Which producer these numbers are about. The same vocabulary as an item source.'
         considered:
           type: integer
@@ -46719,7 +46064,7 @@ components:
         id: { type: string, description: "The owning record's id, as its own endpoint spells it." }
         source:
           type: string
-          enum: [approval, dedupe_candidate, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, notice_case, sync_health, capture_health, domain_question, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome, weekly_commitment, batch]
+          enum: [approval, dedupe_candidate, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, notice_case, capture_health, domain_question, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome, weekly_commitment, batch]
           description: |
             Which producer raised it, and therefore which endpoint its verbs go to.
 
@@ -46789,11 +46134,6 @@ components:
             Not a channel for anything else. A value the queue itself reads travels typed
             beside this field, never inside it: a figure parsed back out of a sentence reads
             as zero the day somebody rewords the sentence.
-
-            ONE source is an exception a client must know: `sync_health` fills this with its
-            own vocabulary — the affected object classes, the failure class, the budget band
-            — for a client to write a sentence from. Those are words like `shed`. A client
-            that has not written that sentence draws nothing for that source.
         because:
           type: array
           items: { $ref: '#/components/schemas/WorklistReason' }

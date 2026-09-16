@@ -304,7 +304,7 @@ func NewFollowUpReconciler(pool *pgxpool.Pool, log *slog.Logger) *deals.FollowUp
 	// No system-of-record seam: this adapter is built for DraftEmail alone and
 	// its empty SendPath reaches no send, so the guard that would need one is
 	// unreachable from here. It refuses rather than passes if that ever changes.
-	drafter := newCommsAdapter(pool, nil, SendPath{}, nil)
+	drafter := newCommsAdapter(pool, nil, SendPath{})
 	stager := followUpStager{
 		svc:   approvals.NewService(db),
 		draft: drafter,

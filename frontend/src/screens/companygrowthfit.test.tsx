@@ -56,7 +56,7 @@ async function show(fit: GrowthFit) {
       }
     >
       <LocaleProvider initial="en">
-        <GrowthFitPanel companyId="o-1" enabled />
+        <GrowthFitPanel companyId="o-1" />
       </LocaleProvider>
     </QueryClientProvider>,
   );
@@ -87,7 +87,7 @@ describe("the wait before the first assessment", () => {
         }
       >
         <LocaleProvider initial="en">
-          <GrowthFitPanel companyId="o-1" enabled />
+          <GrowthFitPanel companyId="o-1" />
         </LocaleProvider>
       </QueryClientProvider>,
     );
@@ -171,8 +171,11 @@ describe("how well this company fits what we sell", () => {
 
     expect(screen.getByText("Argues for")).toBeTruthy();
     // A judgment that read as a stored fact would be the one claim the reader
-    // could not check, so only the assessment carries a label.
-    expect(screen.getByText("Our read")).toBeTruthy();
+    // could not check, so only the assessment carries a label. The nature word
+    // now sits in the sentence's own line with a trailing colon
+    // (NatureBadge, record360/citations.tsx), so the matcher only needs the
+    // word rather than the exact rendered text.
+    expect(screen.getByText(/Our read/)).toBeTruthy();
     // "Fact" is the label a fact WOULD carry if facts were labelled, so its
     // absence is what proves the badge is reserved for judgments. Asserting a
     // string the panel never renders under any nature would prove nothing.
@@ -199,7 +202,7 @@ describe("how well this company fits what we sell", () => {
         }
       >
         <LocaleProvider initial="en">
-          <GrowthFitPanel companyId="o-1" enabled />
+          <GrowthFitPanel companyId="o-1" />
         </LocaleProvider>
       </QueryClientProvider>,
     );
@@ -208,24 +211,5 @@ describe("how well this company fits what we sell", () => {
       await screen.findByText(/This assessment could not be read/),
     ).toBeTruthy();
     expect(screen.queryByText(/inputs recorded/)).toBeNull();
-  });
-
-  it("is absent, not empty, for a workspace reading from an incumbent", async () => {
-    serving(ABSTAINED);
-    const { container } = render(
-      <QueryClientProvider
-        client={
-          new QueryClient({ defaultOptions: { queries: { retry: false } } })
-        }
-      >
-        <LocaleProvider initial="en">
-          <GrowthFitPanel companyId="o-1" enabled={false} />
-        </LocaleProvider>
-      </QueryClientProvider>,
-    );
-
-    // A mirror holds none of the facts this is assembled from, so an empty
-    // panel would report a gap in data that simply lives somewhere else.
-    expect(container.textContent).toBe("");
   });
 });

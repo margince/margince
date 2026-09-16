@@ -9,7 +9,7 @@ import type { EntityKind } from "../app/entity";
 import { useRecordZone } from "../app/recordzone";
 import { startOfDayInZone } from "../format/timezone";
 import { entityTimelineKeys } from "../screens/activitykeys";
-import { throwProblem, useSorMode } from "../screens/common";
+import { throwProblem } from "../screens/common";
 import type { ISODate } from "./dateinput";
 
 type Activity = components["schemas"]["Activity"];
@@ -170,10 +170,6 @@ export function useRecordTimeline(
   const filters = options.filters ?? NO_TIMELINE_FILTERS;
   // The seed stands only for the unfiltered read it was cut from.
   const seed = hasTimelineFilters(filters) ? undefined : options.firstPage;
-  // The timeline is an entity-scoped activity read, a dial the overlay mirror
-  // refuses (422) — skip the fetch in overlay; the record page renders the
-  // honest unavailable state in the timeline slot instead.
-  const overlay = useSorMode() === "overlay";
   const zone = useRecordZone();
   const seedCursor = seed?.page.next_cursor ?? undefined;
   const query = useInfiniteQuery({
@@ -198,7 +194,7 @@ export function useRecordTimeline(
     ],
     // With a seed the first page is already on screen: nothing is fetched
     // until the reader asks, and `fetchNextPage` fetches regardless of this.
-    enabled: !overlay && !seed,
+    enabled: !seed,
     initialPageParam: seedCursor,
     getNextPageParam: (last: ActivityPage) =>
       last.page.has_more ? (last.page.next_cursor ?? undefined) : undefined,

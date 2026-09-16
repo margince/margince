@@ -24,7 +24,7 @@ import {
 import { stable } from "../format/collate";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf, useMe, useSorMode } from "./common";
+import { problemMessageOf, useMe } from "./common";
 import { rosterReading, useRoster, useRosterPartial } from "./entityref";
 import { withoutStrandedTagMode } from "./tagfilter";
 import { useTagVocabulary } from "./tags.queries";
@@ -510,24 +510,16 @@ export function useListQuery<Row>({
    */
   paramScope?: string;
 }>) {
-  // In overlay mode the incumbent mirror refuses sort/filter dials (422), so
-  // list reads must carry neither: an empty sort (ListTable hides the controls
-  // to match) and no filters. Native mode keeps the screen's default sort.
-  const overlay = useSorMode() === "overlay";
   const [params, setParams] = useUrlParams();
   const opening = useMemo<ListQuery>(
     () => ({
       q: "",
-      sort: overlay ? "" : (initialSort ?? ""),
+      sort: initialSort ?? "",
       includeArchived: false,
-      // Overlay withholds filters for the same reason it withholds sort: the
-      // incumbent mirror answers 422 to both. A screen that opens on a narrowed
-      // list opens unnarrowed there rather than sending a dial the mirror
-      // refuses.
-      filters: overlay ? {} : (initialFilters ?? {}),
+      filters: initialFilters ?? {},
       perPage: LIST_PAGE_SIZES[0],
     }),
-    [overlay, initialSort, initialFilters],
+    [initialSort, initialFilters],
   );
 
   // Whether the list's opening state has been spelled into the address yet.
@@ -545,21 +537,15 @@ export function useListQuery<Row>({
   // effect is where Back breaks: the address moves first, the state follows a
   // frame later, and whichever the list reads in between is the wrong one.
   // Derived, Back is just another address, and there is nothing to reconcile.
-  //
-  // Overlay reads the address for nothing, because the mirror refuses every
-  // dial in it. A pasted link therefore opens an unnarrowed list there instead
-  // of a 422 the reader cannot act on.
   const query = useMemo(
     () =>
-      overlay
-        ? opening
-        : listQueryFromParams(
-            withoutScreenDials(params, screenDials),
-            opening,
-            seeded.current,
-            paramScope,
-          ),
-    [overlay, params, opening, screenDials, paramScope],
+      listQueryFromParams(
+        withoutScreenDials(params, screenDials),
+        opening,
+        seeded.current,
+        paramScope,
+      ),
+    [params, opening, screenDials, paramScope],
   );
 
   // Spell the opening state into the address, once, on arrival.
@@ -570,7 +556,7 @@ export function useListQuery<Row>({
   // nothing, and needs to: for that screen a bare address never meant anything
   // else.
   useEffect(() => {
-    if (seeded.current || overlay) {
+    if (seeded.current) {
       return;
     }
     seeded.current = true;
@@ -589,13 +575,10 @@ export function useListQuery<Row>({
         paramScope,
       ),
     );
-  }, [overlay, opening, setParams, paramScope]);
+  }, [opening, setParams, paramScope]);
 
   const setQuery = useCallback(
     (update: SetStateAction<ListQuery>) => {
-      if (overlay) {
-        return;
-      }
       const live = currentParams();
       const next =
         typeof update === "function"
@@ -634,7 +617,7 @@ export function useListQuery<Row>({
         ),
       );
     },
-    [overlay, opening, setParams, screenDials, paramScope],
+    [opening, setParams, screenDials, paramScope],
   );
 
   const infinite = useInfiniteQuery({
@@ -771,7 +754,7 @@ export function ListTable<Row>({
   /**
    * What the empty table says under its generic line when THIS screen knows
    * why it is empty — a "Mine" view for a reader who owns nothing, with the
-   * way back to everything. Overlay's own note wins when both apply.
+   * way back to everything.
    */
   emptyNote?: ReactNode;
   /**
@@ -784,11 +767,6 @@ export function ListTable<Row>({
   scopeKey?: string;
 }>): ReactNode {
   const t = useT();
-  // Overlay reads a mirror that cannot sort or filter (the server 422s those
-  // dials), so the table is handed neither, and a note says why. Search and
-  // the archived toggle survive: the mirror answers the first and holds no
-  // archived rows, so the second is a harmless no-op.
-  const overlay = useSorMode() === "overlay";
   const { rows, query, setQuery, isPending, isError, error, refetch } = state;
   // The rendered page is a dial like the rest, so it comes from the address.
   // Read here rather than threaded through ListState: it is the only one the
@@ -814,29 +792,24 @@ export function ListTable<Row>({
   //
   // ONE rail, built once: the tabs the surface renders and the tabs the
   // highlight is matched against have to be the same list, or an index reported
-  // by a press names a different view than the one that was pressed. A view tab
-  // whose preset the mirror would refuse is a tab that lights up and does
-  // nothing, so overlay mode has no rail at all — the same reason its chips and
-  // its sort are withheld.
-  const railViews: readonly RailView[] = overlay
-    ? []
-    : [
-        ...views.map((spec) => ({
-          ...translateView(spec, t),
-          // A preset is identified by its message key: the screen wrote the set,
-          // so the key is unique within it, and it stays the same string when
-          // the label is translated or the rail is reordered. `preset:` keeps
-          // it out of the uuid namespace a saved view's id lives in.
-          id: `preset:${spec.label}`,
-          // A preset is a sort and a set of filters over the whole live list:
-          // it asks for no search and no archive, and the tab has to say so or
-          // it would keep claiming the list while the reader has a search typed
-          // or the archive switched on.
-          q: "",
-          includeArchived: false,
-        })),
-        ...dataViews,
-      ];
+  // by a press names a different view than the one that was pressed.
+  const railViews: readonly RailView[] = [
+    ...views.map((spec) => ({
+      ...translateView(spec, t),
+      // A preset is identified by its message key: the screen wrote the set,
+      // so the key is unique within it, and it stays the same string when
+      // the label is translated or the rail is reordered. `preset:` keeps
+      // it out of the uuid namespace a saved view's id lives in.
+      id: `preset:${spec.label}`,
+      // A preset is a sort and a set of filters over the whole live list:
+      // it asks for no search and no archive, and the tab has to say so or
+      // it would keep claiming the list while the reader has a search typed
+      // or the archive switched on.
+      q: "",
+      includeArchived: false,
+    })),
+    ...dataViews,
+  ];
   const [view, pickView] = useActiveView(railViews, query);
   // Keyed on the VALUES, not on the arrays that carry them. The table treats a
   // new `chosen` object as the reader narrowing the list and resets to page 1,
@@ -1038,41 +1011,21 @@ export function ListTable<Row>({
       onRowClick={rowRoute ? (row) => navigate(rowRoute(row)) : undefined}
       rowHref={rowRoute ? (row) => routeHash(rowRoute(row)) : undefined}
       unit={t(unit)}
-      // An empty overlay list is far more often a mirror row whose HubSpot
-      // owner email has no matching workspace user (so mirror_visibility never
-      // grants it to anyone) than a genuinely empty HubSpot portal — name that
-      // cause rather than letting the generic empty copy imply "there is
-      // nothing here".
-      //
-      // Not while a search is narrowing it, though: then the reader's own words
-      // are the likeliest cause, and blaming the mirror's owner mapping for
-      // what a typo did would send them looking in the wrong place.
-      emptyNote={
-        overlay
-          ? query.q
-            ? undefined
-            : t("overlay.emptyOwnerHint")
-          : emptyNote
-      }
+      emptyNote={emptyNote}
       action={action}
       caption={caption ? t(caption) : undefined}
       footer={footer}
       tools={tools}
-      note={overlay ? t("list.overlayReadOnly") : undefined}
       search={
         searchable
           ? { value: localSearch, onChange: setLocalSearch }
           : undefined
       }
-      sort={
-        overlay
-          ? undefined
-          : {
-              value: query.sort,
-              onChange: (next) => setQuery((prev) => ({ ...prev, sort: next })),
-            }
-      }
-      chips={overlay ? [] : allChips}
+      sort={{
+        value: query.sort,
+        onChange: (next) => setQuery((prev) => ({ ...prev, sort: next })),
+      }}
+      chips={allChips}
       chosen={chosen}
       onChipChange={setFilter}
       views={railViews}
@@ -1089,8 +1042,6 @@ export function ListTable<Row>({
             }
           : undefined
       }
-      // An overlay mirror pages by cursor like the native store, so paging is
-      // the one dial that behaves identically in both modes.
       hasMore={state.hasMore}
       onLoadMore={state.loadMore}
       // The page size is part of the server query, not a second slice on top

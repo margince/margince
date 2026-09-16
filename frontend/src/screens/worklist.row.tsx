@@ -17,7 +17,6 @@ import { hasMoveControl, MoveButton } from "./movebutton";
 import {
   useAutomationRetry,
   useClaimSettle,
-  useMeetingOutcome,
   useNoticeRead,
   useTaskUpdate,
 } from "./taskactions";
@@ -44,6 +43,7 @@ import { DomainQuestionAnswer } from "./worklist.domainquestion";
 import { WaitingEmailLine } from "./worklist.emailtitle";
 import { conditionOf, eyebrowKeyFor, kindClass } from "./worklist.eyebrow";
 import { leadFactsText } from "./worklist.leadfacts";
+import { MeetingOutcome } from "./worklist.meetingoutcome";
 import { PairDecision } from "./worklist.pair";
 import { PlanWorkActions } from "./worklist.plan";
 import {
@@ -55,7 +55,6 @@ import {
 import { noticeDetail, readerTask } from "./worklist.reader";
 import { CompactRowLine, type RowReadings } from "./worklist.row.compact";
 import { RowActs } from "./worklist.rowverbs";
-import { syncHealthDetail } from "./worklist.synchealth";
 import { VerdictLine } from "./worklist.verdict";
 import "./worklist.row.css";
 
@@ -148,13 +147,8 @@ export function WorklistRow({
   // began in four minutes or in fifty, and a task said "Overdue" without saying
   // by how long — on the two rows whose whole claim is a moment.
   const when = whenText(item, t, locale, zone, recordZone, new Date());
-  // The supporting line. Every source but one sends a sentence already;
-  // sync_health sends its condition's facts in its own vocabulary, so its line
-  // is written from `kind` and `detail` together.
-  const detail =
-    item.source === "sync_health"
-      ? syncHealthDetail(item.kind, item.detail, t)
-      : noticeDetail(item, viewer, t);
+  // The supporting line, which every source sends as a sentence already.
+  const detail = noticeDetail(item, viewer, t);
   // The badged reasons are drawn as badges above and left out here, so one
   // meeting does not report the same finding twice in two registers. The when
   // line takes `due_today` the same way when it is drawn: the moment names the
@@ -377,13 +371,7 @@ function RowText({
           writing sentences get to say them: which mailbox stopped, why a
           message bounced, why a send was held, what an AI task was about,
           which rule failed and how. That is the decisive line on most of these
-          rows, and a reader was reading around it.
-
-          `sync_health` sends its facts in the producer's own vocabulary —
-          `shed`, `rate_limited`, `deals, contacts` — so its line is WRITTEN
-          from that pair rather than drawn, by worklist.synchealth.ts. A value
-          that build does not recognise draws nothing, which is what this row
-          did for every sync value before. */}
+          rows, and a reader was reading around it. */}
       {detail && <p className="t-caption worklist-row-detail">{detail}</p>}
       {sample.length > 0 && (
         // A group nobody can see into is a group nobody trusts, and an
@@ -480,14 +468,25 @@ const ANSWER_BY_SOURCE: Partial<
     verb: "keep",
     draw: (item) => ({ equals: <DomainQuestionAnswer item={item} /> }),
   },
-  // THREE verbs of equal weight, so the row has no primary. Held, no-show and
-  // cancelled are equally likely records of what already happened, and leading
-  // the row with one of them would read as the product's expectation about a
-  // meeting it knows nothing about.
+  // TWO verbs of equal weight, so the row has no primary. Cancelling and saying
+  // what came of it are equally likely answers about a meeting the product
+  // knows nothing about, and leading the row with either would read as an
+  // expectation it has not got.
   meeting_outcome: {
     verb: "decide",
     draw: (item) => ({
-      equals: <MeetingOutcome id={item.id} version={item.version} />,
+      equals: (
+        <MeetingOutcome
+          id={item.id}
+          version={item.version}
+          // The row's own title field, not `itemTitle`: that one takes a
+          // translator and a locale to name the rows that have no title of
+          // their own, and this lane always has one — the meeting's subject,
+          // written by whoever booked it. The dialog falls back to its own
+          // heading when a row arrives without one.
+          title={item.title}
+        />
+      ),
     }),
   },
   conversation_claim: {
@@ -873,7 +872,9 @@ function RowDecision({ item }: Readonly<{ item: WorklistItem }>) {
   const approval = useApproval(item.id, open);
   const usable = approval.data?.kind ? approval.data : undefined;
   return (
-    <div className="worklist-row-decision">
+    // A TEST ID rather than a class: which rows offer a decision is what a
+    // screen journey counts, and nothing draws this wrapper.
+    <div data-testid="worklist-row-decision">
       <Button
         ref={opener}
         variant="primary"
@@ -1073,50 +1074,12 @@ function refusalMessage(
   }
 }
 
-// How a meeting went, recorded from the row that asked.
-//
-// Three buttons rather than one primary and a menu: the answers are equally
-// likely and equally short, and hiding two of three behind a chevron would make
-// the common case a second click. None is emerald — an outcome is a record of
-// what already happened, not the day's next move, and the queue's one filled
-// primary belongs to the selected row's own action.
-//
-// The row leaves the queue on success because the lane asks only for meetings
-// with no outcome. That is also why there is no undo offered here: a corrected
-// outcome is a second answer to the same question, given on the meeting itself
-// where the history of both is visible, rather than a toast that disappears.
-function MeetingOutcome({
-  id,
-  version,
-}: Readonly<{ id: string; version: number | undefined }>) {
-  const t = useT();
-  const toast = useToast();
-  const record = useMeetingOutcome([worklistKey]);
-  const answer = (status: "held" | "no_show" | "canceled") => () =>
-    record.mutate(
-      { id, version, status },
-      {
-        onSuccess: () => toast.show(t("worklist.verb.meetingOutcomeRecorded")),
-        // A refused write leaves the row exactly as it was, which renders
-        // identically to a click that did nothing.
-        onError: () =>
-          toast.show(t("worklist.verb.meetingOutcomeFailed"), { mark: false }),
-      },
-    );
-  return (
-    <>
-      <Button small pending={record.isPending} onClick={answer("held")}>
-        {t("worklist.verb.meetingHeld")}
-      </Button>
-      <Button small pending={record.isPending} onClick={answer("no_show")}>
-        {t("worklist.verb.meetingNoShow")}
-      </Button>
-      <Button small pending={record.isPending} onClick={answer("canceled")}>
-        {t("worklist.verb.meetingCanceled")}
-      </Button>
-    </>
-  );
-}
+// How a meeting went is recorded by `MeetingOutcome` in
+// worklist.meetingoutcome.tsx: "Cancelled" writes that one word from the card,
+// and "Update" opens the composer bound to this meeting, where the outcome is
+// typed. It lives in its own file because the dialog it carries reads the
+// meeting and patches it — a form, a query and a mutation, which is a screen's
+// worth of code rather than one of this file's row verbs.
 
 // The record a reply would be filed against, or nothing.
 //
