@@ -28,7 +28,6 @@ import (
 
 // A NAMED-PURPOSE LINK HELD BY A LEAD STOPS ITS OWN LIST, NOT EVERY LIST.
 //
-
 // communication_suppression.purpose_id lets a row bind ONE consent_purpose
 // rather than every marketing message. Writing this press as a BROAD row —
 // what this path did before that column existed — would stop more than the

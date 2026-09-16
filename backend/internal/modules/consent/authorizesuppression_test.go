@@ -9,7 +9,10 @@ package consent
 // authorizesuppression_integration_test.go.
 
 import (
+	"os"
+	"regexp"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -196,6 +199,72 @@ func TestEveryLiveKindIsAsked(t *testing.T) {
 		if d.ReasonCode != commsauthz.ReasonHardBounce {
 			t.Errorf("%v: reason = %q, want %q — the BINDING kind answers, not the first read",
 				order, d.ReasonCode, commsauthz.ReasonHardBounce)
+		}
+	}
+}
+
+// headCatalog is the migrated schema, which owns the kind vocabulary this file
+// must be able to read back.
+const headCatalog = "../../../migrations/testdata/head_catalog.txt"
+
+// suppressionKindCheck lifts the stored kinds out of the table's own CHECK, so
+// the census below cannot fall short of what the column can actually hold: a
+// hand-kept list would have stayed green through a fifth kind being added, and
+// under-recognition here reports PASS with nothing failing.
+var suppressionKindCheck = regexp.MustCompile(
+	`communication_suppression_kind CHECK \(\(kind = ANY \(ARRAY\[(.+?)\]\)\)\)`)
+
+// TestEveryStoredKindReachesANamedArmOfTheRule holds the two vocabularies apart
+// on purpose, and the mapping between them honest.
+//
+// The COLUMN stores a kind and the RULE answers about a reason code, and for
+// one of the four the spellings differ — 'processing_restriction' in the table
+// is ReasonRestricted, 'processing_restricted', to suppressionBinds. Every
+// reader of the column therefore owes the row a trip through
+// reasonForSuppressionKind, and the cost of forgetting is silent in the worst
+// direction: the raw kind matches no case, falls to the unrecognised default,
+// and binds EVERY category — including the three Art. 12(3)/13/14/34 oblige us
+// to send, which the same rule spares when asked with the mapped code.
+//
+// So the assertion is that no kind the CHECK admits lands on that default once
+// mapped. Derived from the catalog rather than listed here, because a list is
+// the thing that stops matching.
+func TestEveryStoredKindReachesANamedArmOfTheRule(t *testing.T) {
+	catalog, err := os.ReadFile(headCatalog)
+	if err != nil {
+		t.Fatalf("reading the migrated schema: %v", err)
+	}
+	found := suppressionKindCheck.FindSubmatch(catalog)
+	if found == nil {
+		t.Fatal("no communication_suppression kind CHECK in the head catalog — the vocabulary " +
+			"this census reads has moved, and an empty one would pass while proving nothing")
+	}
+	kinds := regexp.MustCompile(`'([a-z_]+)'::text`).FindAllStringSubmatch(string(found[1]), -1)
+	if len(kinds) < 4 {
+		t.Fatalf("read %d stored kinds out of the CHECK, want the four the column holds — a short "+
+			"read is how this passes without asking anything", len(kinds))
+	}
+	for _, k := range kinds {
+		stored := k[1]
+		reason := reasonForSuppressionKind(stored)
+		if strings.HasPrefix(reason, "unrecognised_suppression:") {
+			t.Errorf("stored kind %q maps to %q: the column holds a kind the rule cannot name, so "+
+				"every reader of it binds on the default", stored, reason)
+			continue
+		}
+		// The mapped code must reach a NAMED arm. Asked with the raw kind
+		// instead, an unrecognised code binds every category — which is what
+		// the default does and what this is here to tell apart.
+		named := false
+		for _, c := range commsauthz.Categories() {
+			if !suppressionBinds(reason, c, nil, nil) {
+				named = true
+				break
+			}
+		}
+		if !named && reason != commsauthz.ReasonHardBounce {
+			t.Errorf("stored kind %q (%q) binds every category — only a hard bounce and an "+
+				"unrecognised code may do that, so this one is reaching the default", stored, reason)
 		}
 	}
 }

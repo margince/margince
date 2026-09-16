@@ -44,8 +44,6 @@ func mintWithdrawal(t *testing.T, e *channelConsentEnv, in WithdrawalMintInput) 
 	return token
 }
 
-// TestAWithdrawalLinkSurvivesTheReadTokensRotation is the whole slice in one
-// test: the preference token rotates and dies, and the withdrawal link written
 // pressCtx is the edge a mailed link is actually pressed on: the system
 // principal compose binds to the public preferences routes, not a seat.
 //
@@ -61,6 +59,8 @@ func pressCtx(e *channelConsentEnv) context.Context {
 	})
 }
 
+// TestAWithdrawalLinkSurvivesTheReadTokensRotation is the whole slice in one
+// test: the preference token rotates and dies, and the withdrawal link written
 // into the same mail still withdraws.
 func TestAWithdrawalLinkSurvivesTheReadTokensRotation(t *testing.T) {
 	e := setupChannelConsent(t)

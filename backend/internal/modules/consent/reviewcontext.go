@@ -374,7 +374,16 @@ func aStopThatBindsTheMessage(
 			if err := rows.Scan(&kind, &purposeID); err != nil {
 				return err
 			}
-			stops = append(stops, liveStop{Kind: kind, PurposeID: purposeID})
+			// THROUGH THE SAME MAPPING liveSuppression uses, because liveStop.Kind
+			// is a REASON CODE and the column stores a kind — and for one of
+			// them the two spellings differ: 'processing_restriction' in the
+			// table is ReasonRestricted ('processing_restricted') to the rule.
+			// Handing suppressionBinds the raw column dropped that row past both
+			// scoped arms onto the unrecognised-code default, which binds EVERY
+			// category — so a restriction refused the rep a statement about the
+			// three categories Art. 12(3)/13/14/34 oblige us to send, which the
+			// send path itself lets through.
+			stops = append(stops, liveStop{Kind: reasonForSuppressionKind(kind), PurposeID: purposeID})
 		}
 		return rows.Err()
 	})
