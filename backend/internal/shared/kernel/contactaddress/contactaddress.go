@@ -34,10 +34,17 @@ package contactaddress
 // `is_primary DESC` first, because a primary address is the one somebody chose.
 // Then `position`, which is the record's own arrangement — a contact who moved
 // an address up meant it. Then `created_at`, so two addresses a caller never
-// arranged still come back in a stable order rather than whatever the planner
-// returns.
+// arranged still come back in the order they arrived.
+//
+// AND `id` LAST, WHICH IS WHAT MAKES IT TOTAL. Nothing constrains the first
+// three to be unique: contact_email's only unique indexes are on the address
+// itself and on one primary per (contact_id, email_type), so two live rows can
+// tie on all three — and every reader of this appends LIMIT 1, which then picks
+// whichever the planner reached first. Two surfaces asking the same question in
+// the same transaction could disagree, which is the whole defect this constant
+// exists to end rather than to relocate.
 //
 // Held by: TestOneAnswerToWhichAddressAContactIsKnownBy
 // (backend/gates/reachableaddress_test.go) — a statement that picks an address
-// off contact_email and orders it itself is a second answer, and fails there.
-const ReachableOrder = ` ORDER BY is_primary DESC, position, created_at`
+// off contact_email and does not use this is a second answer, and fails there.
+const ReachableOrder = ` ORDER BY is_primary DESC, position, created_at, id`
