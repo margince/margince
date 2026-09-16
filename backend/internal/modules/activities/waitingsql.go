@@ -165,7 +165,21 @@ const waitingRepliesSQL = `
 	   -- waiting on the very record this asks about. "TRUE" for the
 	   -- workspace-wide Worklist read.
 	   AND (%[11]s)
-	   AND (a.thread_key IS NOT NULL OR (` + requestCandidateSQL + `))
+	   -- A message with no thread key is judged by the rules below like any
+	   -- other, rather than being required to carry request evidence first.
+	   --
+	   -- The evidence it was asked for is evidence this queue PRODUCES. The
+	   -- owed-verdict pass reads its backlog from this query narrowed to
+	   -- unjudged rows, so a row excluded here is never judged, never gains a
+	   -- verdict, and is excluded again on the next pass — the exclusion fed
+	   -- itself. A client wrote "Dienstag 14 Uhr würde bei uns passen", the
+	   -- deal card said "Their move. Nobody here is owed an answer.", and no
+	   -- pass could ever reach the message to disagree.
+	   --
+	   -- Nothing is loosened by admitting it. The reply anti-joins below
+	   -- compare thread keys with plain equality and never NULL-match them, so
+	   -- a threadless row simply finds no reply and stays waiting; the machine
+	   -- and colleague rules sit above the scan cap and still apply.
 	   AND NOT EXISTS (SELECT 1 FROM activity request_task
 	     WHERE request_task.source_system = '` + EmailRequestTaskSource + `'
 	       AND request_task.source_activity_id = a.id

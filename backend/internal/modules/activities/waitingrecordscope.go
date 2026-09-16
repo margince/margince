@@ -110,7 +110,7 @@ func waitingReplyExistsClause(ctx context.Context, arg func(any) int, asOf time.
 			neverRelaxed, ownDomainSenderSQL("a", arg(ownDomains)),
 			messageSnoozeLiftedSQL(fmt.Sprintf("$%d", instant), backContent),
 			fmt.Sprintf("$%d", arg(readerAddresses)),
-			unansweredConversationSQL(fmt.Sprintf("$%d", instant))) +
+			unansweredConversationAdmittingThreadless(fmt.Sprintf("$%d", instant))) +
 		") waiting_thread)", nil
 }
 
