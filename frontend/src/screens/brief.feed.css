@@ -49,23 +49,112 @@
   }
 }
 
+/* THE SECTION'S OWN HEAD, in the accent. `tone="accent"` tints the band at
+   the wash every accent panel wears; this is the ONE lead on the page, so it
+   takes the next step of the same family — the same hue, twice the presence —
+   and its title, its badge and its way out keep the accent ink they already
+   read in. Colour only: the band's height, padding and alignment stay the
+   design system's, which is what keeps this panel the same shape as the ones
+   under it. */
+.brief-focus-panel > .panel-head {
+  background: var(--accentMed);
+}
+
+/* ── The stack under it ───────────────────────────────────────────────────
+ * The work still behind the card, as the EDGES of two more cards peeking out
+ * below it: the day has more in it, said by the shape of the thing being
+ * answered rather than by another number. Two at most, and only as many as
+ * there are rows behind — a stack of two over a day with one row left would
+ * be furniture telling a lie.
+ *
+ * Pseudo-elements rather than card elements: they are the drawing of a depth,
+ * with nothing to read, nothing to focus and nothing to announce. They carry
+ * the card's own ground, hairline and corner from the same tokens `Card`
+ * reads, so a stack cannot drift from the card it is under. */
+.brief-triage-stack {
+  position: relative;
+  min-width: 0;
+  /* The stack is as tall as the card on it, not as tall as the column beside
+     it: stretched, its edges would be drawn down a card's worth of nothing. */
+  align-self: start;
+}
+.brief-triage-stack::before,
+.brief-triage-stack::after {
+  position: absolute;
+  inset-block: var(--space-4) calc(-1 * var(--space-2));
+  inset-inline: var(--space-3);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-md);
+  background: var(--bgElevated);
+}
+.brief-triage-stack::after {
+  inset-block-end: calc(-1 * var(--space-4));
+  inset-inline: var(--space-6);
+}
+/* The card is LAST in the stack's paint order, which a positioned pseudo-
+   element after it in the tree would otherwise win: the deepest edge would
+   paint over the thing being answered. */
+.brief-triage-stack::before,
+.brief-triage-stack::after {
+  z-index: 0;
+}
+.brief-triage-stack[data-behind="1"]::before,
+.brief-triage-stack[data-behind="2"]::before,
+.brief-triage-stack[data-behind="2"]::after {
+  content: "";
+}
+/* The card stands over its own stack. */
+.brief-triage-stack > .brief-triage-lead {
+  position: relative;
+  z-index: 1;
+}
+
 /* ── The card in hand ─────────────────────────────────────────────────────
  * One thing to answer, drawn whole on its own surface: its state on top, the
  * work, whose it is, the verbs. The row inside is a `PanelRow` stripped of
  * its own box and laid open (`display: contents`), so the card orders the
  * row's parts among its own — the work above the about line, the verbs last
- * — without a second row layout. */
-.brief-triage-lead {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-  min-width: 0;
-  /* Its own height, not the column's: a card stretched to the queue beside it
-     is a card with a blank floor. */
-  align-self: start;
+ * — without a second row layout.
+ *
+ * ARRIVING: pressing a row in the queue mounts a new card, and the card comes
+ * up off the stack. `--dur-move` because it is something arriving rather than
+ * a control changing in place, and nothing moves at all for a reader who
+ * asked for less motion. */
+@media (prefers-reduced-motion: no-preference) {
+  .brief-triage-lead {
+    animation: brief-card-off-the-stack var(--dur-move) var(--ease-out);
+  }
 }
+@keyframes brief-card-off-the-stack {
+  from {
+    opacity: 0;
+    transform: translateY(var(--space-2)) scale(0.985);
+  }
+}
+
+/* TWO COLUMNS, the shape a record's own move card is laid out in
+   (`.co-lead .co-move-body`): what the row CLAIMS on the left — the label,
+   the work, whose it is — and what a reader can do about it opposite, on one
+   margin whatever the left column happens to hold. */
+.brief-triage-lead {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  /* THREE EXPLICIT ROWS — the label, the work, whose it is — because the
+     verbs span to `-1` and that line is counted in the EXPLICIT grid: left
+     implicit, the span resolves against line 1 and the column of verbs lands
+     above the label it belongs beside. The record's own move card documents
+     the same trap (company360.css). */
+  grid-template-rows: auto auto auto;
+  align-items: center;
+  gap: var(--space-3) var(--space-4);
+  min-width: 0;
+}
+/* THE LABEL ROW, over the work and across the card: why the row is here,
+   when it arrived, and where it stands in the day. The accent belongs to the
+   SECTION's own head, one rung up — two accent bands on one page is neither
+   the lead. */
 .brief-triage-lead-head {
-  order: 1;
+  grid-column: 1 / -1;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -76,7 +165,7 @@
 }
 .brief-triage-position {
   margin-inline-start: auto;
-  color: var(--textMeta);
+  color: var(--accentText);
 }
 .brief-triage-lead .worklist-row {
   display: contents;
@@ -84,14 +173,40 @@
 .brief-triage-lead .worklist-row::before {
   content: none;
 }
+/* The left column reads label, work, whose it is — in that order whatever
+   order the row hands its parts over in. */
 .brief-triage-lead .worklist-row-text {
-  order: 2;
+  grid-column: 1;
+  grid-row: 2;
 }
 .brief-triage-about {
-  order: 3;
+  grid-column: 1;
+  grid-row: 3;
 }
+/* The verbs stand opposite all of it, in a column of their own: the move the
+   product prepared first, the way into the record under it, the set-asides
+   last and quietest. A row of four controls under the work made the card's
+   floor its loudest line. */
 .brief-triage-lead .worklist-row-acts {
-  order: 4;
+  grid-column: 2;
+  grid-row: 2 / -1;
+  flex-direction: column;
+  align-items: stretch;
+}
+/* The move the product prepared leads the column, the way into the record
+   follows it, and the set-asides close it — quietest last, furthest from the
+   thumb that answers. Spelled as three orders rather than trusted to the
+   row's own sequence, which is written for a line and not a column. */
+.brief-triage-lead .worklist-row-acts > * {
+  order: 2;
+}
+.brief-triage-lead .worklist-row-acts > .btn-ai {
+  order: 1;
+}
+.brief-triage-lead .worklist-row-putdowns {
+  order: 3;
+  margin-inline-end: 0;
+  justify-content: flex-end;
 }
 /* The head says where the row stands and why, and the about line says whose
    message it is, when, and where it sits — each already on the card once, so
@@ -300,15 +415,24 @@
   .brief-triage {
     padding: var(--space-4);
   }
-  /* Below the fold the row wraps its parts in the swipe surface that answers
-     the set-asides by thumb, so the card cannot order them one by one: the
-     whole row stands third, after the head and the about line, and reads
-     work then verbs as it does everywhere else. */
-  .brief-triage-lead .worklist-row > * {
-    order: 3;
+  /* ONE COLUMN below the fold: a column of verbs beside the work leaves the
+     work a strip. A FLEX column and not a one-column grid, because below the
+     fold the row wraps its parts in the swipe surface that answers the
+     set-asides by thumb — the grid would place that wrapper and not the
+     parts inside it, and the verbs would land wherever it was placed. Order
+     reaches the wrapper; grid rows cannot. */
+  .brief-triage-lead {
+    display: flex;
+    flex-direction: column;
+  }
+  .brief-triage-lead-head {
+    order: 1;
   }
   .brief-triage-about {
     order: 2;
+  }
+  .brief-triage-lead .worklist-row > * {
+    order: 3;
   }
   /* The panel's own head has room for its title or for the way into the
      queue, not both; the page head's primary control already opens it. */
