@@ -154,16 +154,34 @@ func vendorSheetRates(day time.Time) []ModelRate {
 		// in error; reconfirmed against the live sheet 2026-08-12.
 		rateOn(day, providerGemini, "gemini-3.5-flash", 1_500_000, 9_000_000, 150_000, 0),
 		rateOn(day, providerGemini, "gemini-3.1-flash-lite", 250_000, 1_500_000, 25_000, 0),
-		// gemini-3.1-pro-preview is the example file's frontier binding, and the
-		// only Gemini row here whose rate varies with prompt size (verified
-		// 2026-08-12). Seeded at the <=200k sheet price, which is the common
-		// case; above that boundary Google charges $4.00/$18.00 and a call
-		// UNDER-reports its cost by that difference. Explicit caching adds
-		// $4.50/MTok/hour to STORE the cache, which none of the four billed
-		// buckets can express — folding it into a token bucket would misreport
-		// every call that never touched the cache, so it is recorded here
-		// rather than priced.
-		rateOn(day, providerGemini, "gemini-3.1-pro-preview", 2_000_000, 12_000_000, 200_000, 0),
+		// gemini-3.1-pro-preview — the example file's frontier binding — is
+		// DELIBERATELY NOT SEEDED, and that is the point rather than an
+		// omission.
+		//
+		// It is the only Gemini model here whose rate varies with prompt size
+		// (verified 2026-08-12): $2.00/$12.00 per MTok up to 200k tokens and
+		// $4.00/$18.00 above it. ModelRate has four billed buckets and no
+		// notion of a context-length break, so a single row must pick one band
+		// and be wrong about the other — roughly 2x wrong, in whichever
+		// direction it picks.
+		//
+		// This file's own invariant decides it: "a call with no rate row is
+		// UNPRICED, which is a materially different signal from FREE", and
+		// DayCost.UnpricedCalls makes that visible in the report. A row that
+		// under-reports by 2x on long-context calls is WORSE than no row: it
+		// reports a confident wrong number where an absent row reports a
+		// visible unknown. Seeding the >200k price instead is the same error
+		// pointed the other way, over-reporting the common case.
+		//
+		// Nothing is billed on it today — no task ladder selects the frontier
+		// tier — so an operator loses nothing now and gains the unknown being
+		// visible the moment one does. Restoring a row wants the context band
+		// the rate model does not have: #1045.
+		//
+		// Explicit caching is the second charge it cannot express: $4.50/MTok
+		// per HOUR HELD, billed for storage rather than per token processed, so
+		// folding it into any token bucket would charge every call that never
+		// touched the cache.
 
 		// OpenAI: config/ai-routing.example.yaml's commented cheap_cloud
 		// binding names "gpt-5-mini", which no longer appears on OpenAI's

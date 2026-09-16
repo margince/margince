@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 func TestPriceCall(t *testing.T) {
@@ -119,6 +121,26 @@ func TestSeedModelRatesLocalsAreZero(t *testing.T) {
 // `seeds.ai_routing` in the shipped margince yamls. Same obligation, read off
 // whatever the tree actually ships — a vanilla config that deliberately binds
 // nothing contributes nothing and is not a failure.
+// deliberatelyUnpriced are bindings the seeds leave UNPRICED on purpose.
+//
+// The one legitimate reason: ModelRate's four billed buckets cannot express the
+// model's actual charges, so any single row would be a confident wrong number.
+// pricing.go states the invariant that makes this the better answer — "a call
+// with no rate row is UNPRICED, which is a materially different signal from
+// FREE" — and DayCost.UnpricedCalls surfaces it in the report, where a 2x-wrong
+// price would surface as a price.
+//
+// Ratified rather than tolerated, because the two failures look identical from
+// here: a binding nobody priced and a binding somebody could not price differ
+// only in whether anyone decided.
+var deliberatelyUnpriced = gatekit.Waive(map[string]string{
+	"gemini/gemini-3.1-pro-preview": "the only Gemini model whose rate varies with prompt size " +
+		"($2/$12 per MTok to 200k, $4/$18 above it), and ModelRate has no context-length break — " +
+		"so one row must be ~2x wrong in one direction or the other. Explicit caching is a second " +
+		"charge it cannot express: billed per hour HELD rather than per token processed. Nothing " +
+		"is billed on it today because no ladder selects the frontier tier. #1045",
+})
+
 func TestSeedModelRatesPricesEveryBindingTheShippedSeedsName(t *testing.T) {
 	priced := map[string]bool{}
 	for _, r := range SeedModelRates(seedRatesTestDay) {
@@ -147,15 +169,24 @@ func TestSeedModelRatesPricesEveryBindingTheShippedSeedsName(t *testing.T) {
 			bindings[string(tier)] = binding
 		}
 		for lane, binding := range bindings {
-			if !priced[binding.Provider+"/"+binding.Model] {
-				t.Errorf("%s binds %s to %s/%s, which SeedModelRates does not price — every call on it would report UNPRICED",
-					filepath.Base(path), lane, binding.Provider, binding.Model)
+			model := binding.Provider + "/" + binding.Model
+			if priced[model] || deliberatelyUnpriced.Waived(t, model) {
+				continue
 			}
+			t.Errorf("%s binds %s to %s, which SeedModelRates does not price — every call on it "+
+				"would report UNPRICED.\n"+
+				"  Seed a rate, or — if the model's charges cannot be expressed by ModelRate's four "+
+				"buckets — record it in deliberatelyUnpriced with the reason and the issue.\n"+
+				"  An unpriced binding nobody declared is indistinguishable from one somebody forgot.",
+				filepath.Base(path), lane, model)
 		}
 	}
 	// The dev config binds a real ladder, so a run where NOTHING bound means the
 	// seeds block moved or stopped parsing — and this gate would report PASS
 	// having read no binding at all.
+	// A declared exception for a binding no config names any more is a reason
+	// nobody is paying: the model moved on and the note outlived it.
+	deliberatelyUnpriced.AssertAllMatched(t)
 	if bound == 0 {
 		t.Fatal("no shipped config declared seeds.ai_routing — the gate read no binding and would pass regardless")
 	}
