@@ -108,14 +108,19 @@ export function WorklistRow({
   onOpenEmail,
   context,
   acts,
+  framed = false,
 }: Readonly<{
   item: WorklistItem;
   /** The way into what this row is ABOUT, drawn among its verbs. The Brief
    *  has no pane beside its list, so its focus rows open a drawer instead. */
   context?: ReactNode;
-  /** How the verbs stand: one flow (the queue's), or the triage shape the
-   *  Brief's row in hand takes — worklist.rowverbs.tsx says what divides. */
+  /** How the verbs stand: one flow (the queue's), or the triage ORDER a row
+   *  being answered reads in — worklist.rowverbs.tsx says what divides. */
   acts?: "triage";
+  /** A CARD around this row says whose it is, why it is here and where it
+   *  stands, so the row withholds those captions and the verb that only
+   *  reaches its record. The Brief's card is the only frame there is. */
+  framed?: boolean;
   // Whose queue this row is on, empty for the reader's own. It names the
   // contact a reassignment moves work AWAY from, which on the reader's own
   // queue is the reader — ReassignControl resolves that rather than this
@@ -191,13 +196,14 @@ export function WorklistRow({
   const emailOpener = item.email_summary != null ? onOpenEmail : undefined;
   // WHICH RECORD THE ROW IS ABOUT, linked, on the one row that does not link
   // it: a waiting message names its sender as text, where every other title
-  // names and links its record (`itemTitle`, `rowHref`). The triage shape
-  // names it under the row itself (brief.feed.tsx) and withholds this.
-  const about =
-    acts === "triage"
-      ? undefined
-      : aboutRecord(item, emailOpener !== undefined);
-  const touch = lastTouch(touchOf(item, acts), t, locale, zone);
+  // names and links its record (`itemTitle`, `rowHref`). A FRAMED row names it
+  // under the row itself (brief.focus.tsx) and withholds this — the frame, not
+  // the verb order, because the drawer takes that order with no card around
+  // its rows and this line is the only place those facts are said there.
+  const about = framed
+    ? undefined
+    : aboutRecord(item, emailOpener !== undefined);
+  const touch = lastTouch(touchOf(item, framed), t, locale, zone);
   // Whether the day put a state on this row — overdue, or a meeting with
   // nothing prepared. They ride on the title line, which is why it is drawn on
   // a row that has no title of its own to draw.
@@ -212,7 +218,7 @@ export function WorklistRow({
   // holds the disposition write for the verbs and the swipe.
   const brief = useBriefAnswer(item);
   const answer = rowAnswer(item, brief);
-  const readings: RowReadings = shapedReadings(acts, {
+  const readings: RowReadings = shapedReadings(framed, {
     item,
     title,
     href,
@@ -320,6 +326,7 @@ export function WorklistRow({
           onReview={onReview}
           context={context}
           shape={acts}
+          framed={framed}
         />
         {/* An answer that is not a VERB: a duplicate pair, whose two buttons
             each name the record they keep and cannot leave the list that names

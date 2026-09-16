@@ -16,17 +16,21 @@ import type { RowReadings } from "./worklist.row.compact";
 // — the row's own account of itself — that reads whole on its own.
 
 /**
- * The readings as the row IN HAND on the Brief prints them: the title and the
- * work, nothing under it. The card around that row already says whose row it
- * is, which side wrote last, why it is here and where it stands in the day,
- * each once and in its own place — so the captions the queue's row prints
+ * The readings as a FRAMED row prints them: the title and the work, nothing
+ * under it. The card around the row in hand on the Brief already says whose
+ * row it is, which side wrote last, why it is here and where it stands in the
+ * day, each once and in its own place — so the captions the queue's row prints
  * under its title would say every one of them a second time.
+ *
+ * Keyed on the frame rather than on the verb ORDER the card also takes: the
+ * queue drawer reads its rows in that order with no card around them, and
+ * there these captions are the only place those facts are said.
  */
 export function shapedReadings(
-  acts: "triage" | undefined,
+  framed: boolean,
   readings: RowReadings,
 ): RowReadings {
-  if (acts !== "triage") return readings;
+  if (!framed) return readings;
   return {
     ...readings,
     when: null,
@@ -76,9 +80,9 @@ export function aboutRecord(
  */
 export function touchOf(
   item: WorklistItem,
-  acts: "triage" | undefined,
+  framed: boolean,
 ): NonNullable<WorklistItem["contact"]>["touch"] | undefined {
-  return acts === "triage" ? undefined : item.contact?.touch;
+  return framed ? undefined : item.contact?.touch;
 }
 
 /**

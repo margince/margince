@@ -60,17 +60,20 @@ export function RowActs({
   onOpenEmail,
   context,
   shape,
+  framed,
 }: Readonly<{
   item: WorklistItem;
   href: string | undefined;
   /**
-   * `triage` is the row IN HAND on the Brief: the verb that only reaches the
-   * record is withheld, because the card names and links that record itself;
-   * the set-asides lead the line from the other edge; and the move the
-   * product worked out stands LAST, because on the one row being answered
-   * that move is the answer.
+   * `triage` is the ORDER a row being ANSWERED reads in: the set-asides lead
+   * from the opening edge, because declining steps away from the work before
+   * any of it is done, and the move the product worked out stands LAST,
+   * because on the row being answered that move is the answer.
    */
   shape?: "triage";
+  /** A card around this row already names and links its record, so the verb
+   *  that only reaches it is withheld. The Brief's card, not the drawer. */
+  framed?: boolean;
   /**
    * `compact` withholds the verb that only REACHES the record, because at that
    * density the row's title carries the link itself — two controls on one line
@@ -106,6 +109,8 @@ export function RowActs({
         item={item}
         href={href}
         owner={owner}
+        allowPin={allowPin}
+        framed={framed}
         primary={primary}
         equals={equals}
         context={context}
@@ -197,6 +202,7 @@ export function RowVerbs({
   move,
   onOpenEmail,
   part,
+  framed,
 }: Readonly<{
   item: WorklistItem;
   href: string | undefined;
@@ -206,6 +212,9 @@ export function RowVerbs({
   /** Which half, for the triage shape: the `act` is the move the product
    *  worked out, the `ways` only reach the record. Absent, one flow. */
   part?: "ways" | "act";
+  /** A card around this row already names and links the record it is about,
+   *  so the verb that only reaches it would be the same press twice. */
+  framed?: boolean;
 }>) {
   const t = useT();
   // THE MOVE IS NOT DRAWN TWICE. Where the row's answer IS this reply, that
@@ -252,9 +261,11 @@ export function RowVerbs({
     //
     // `move` is untouched: it opens the composer, which is a different
     // destination and the most-pressed control on a waiting row.
-    // The triage shape's WAYS withhold it for the same reason: the row in hand
-    // names and links the record it is about under itself (brief.feed.tsx).
-    if ((density === "compact" || part === "ways") && destination === href) {
+    // A FRAMED row withholds it for the same reason: the card around the row
+    // in hand names and links that record itself. Keyed on the frame and not
+    // on the triage ORDER, which the drawer takes with no card around its
+    // rows — there the way to the record is the only one there is.
+    if ((density === "compact" || framed) && destination === href) {
       return [];
     }
     drawn.add(destination);
@@ -430,7 +441,7 @@ const VERB_LABEL: Record<
 //
 // A BATCH row is skipped. Its id is synthetic and minted by the fold, so a pin
 // on one names a group that will not exist under that key on the next read.
-function PinVerb({ item }: Readonly<{ item: WorklistItem }>) {
+export function PinVerb({ item }: Readonly<{ item: WorklistItem }>) {
   const t = useT();
   const toast = useToast();
   const pin = usePinRow();

@@ -199,6 +199,16 @@ function QueueRows({
             }
             onOpenEmail={onOpenEmail}
             onReview={() => onFilter(reviewFilter(item))}
+            // The ORDER the Brief's card reads in, on every row of the queue:
+            // the set-asides lead, the prepared move closes. The queue is a
+            // list of rows a reader answers one at a time, which is the same
+            // act the card is shaped for — and the two surfaces drawing one
+            // row's verbs in two orders is what sent a rep looking for the
+            // answer at a different x depending on where they opened it.
+            //
+            // The ORDER only. No card frames these rows, so they keep their
+            // own captions, the way to their record, and the pin.
+            acts="triage"
           />
         </li>
       ))}

@@ -147,6 +147,10 @@ export function Triage({
             }
             context={details}
             acts="triage"
+            // The CARD around this row says whose it is, why it is here and
+            // where it stands in the day — each once and in its own place —
+            // and names and links the record it is about.
+            framed
           />
         </Card>
       </div>
