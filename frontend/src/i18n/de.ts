@@ -3783,6 +3783,8 @@ export const de = {
     "Deine Änderungen bleiben erhalten. Erstelle einen neuen Entwurf, wenn du bereit bist.",
   "compose.threadFailed":
     "Diese Nachricht konnte nicht gelesen werden. Versuche es in der Unterhaltung erneut.",
+  "compose.anchorGone":
+    "Diese Nachricht gibt es nicht mehr, es ist also nichts da, worauf du antworten k\u00f6nntest. Schreib stattdessen eine neue Nachricht.",
   "compose.threadPending": "Verlauf wird geladen\u2026",
   "compose.sendBody":
     "Prüfen und bearbeiten Sie Ihren Entwurf. Ein Klick auf Senden verschickt die E-Mail und kann nicht rückgängig gemacht werden.",

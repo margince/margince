@@ -3740,6 +3740,8 @@ export const vi = {
     "Các chỉnh sửa của bạn được giữ lại. Hãy tạo bản nháp mới khi sẵn sàng.",
   "compose.threadFailed":
     "Không đọc được thư này. Hãy thử lại trong cuộc hội thoại.",
+  "compose.anchorGone":
+    "Thư này không còn nữa nên không có gì để trả lời. Hãy soạn một thư mới.",
   "compose.threadPending": "Đang tải cuộc trao đổi\u2026",
   "compose.sendBody":
     "Xem lại và chỉnh sửa bản nháp. Nhấn Gửi sẽ gửi email và không thể hoàn tác.",
