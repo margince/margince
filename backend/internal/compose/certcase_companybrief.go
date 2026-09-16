@@ -103,14 +103,38 @@ func (companyBriefCases) Prepare(fixture, expected json.RawMessage) (aitasks.Pre
 		request: func(in companybrief.Input) model.Request {
 			return companybrief.BriefRequest(in, string(textlang.English))
 		},
-		in: in, companyID: ids.NewV7().String(), label: label, expected: want,
+		// The account's id comes from the Input rather than beside it: the model
+		// is shown in.ID and the grounding filter is given companyID, and this
+		// site's whole defect was those being two different values.
+		parse: parseSectionedBrief,
+		in:    in, companyID: in.ID, label: label, expected: want,
 	}, nil
+}
+
+// parseSectionedBrief is the company_brief site's reader: production's
+// ParseBriefSections, with the surviving sentences lifted out of their sections
+// so one Evaluate serves both of this struct's sites.
+//
+// Flattening loses which section a sentence was in, and nothing here asks: the
+// scenario's expectation is which RECORDS the brief cited, and a section is a
+// place rather than a claim.
+func parseSectionedBrief(text, companyID string, in companybrief.Input) ([]companybrief.Sentence, error) {
+	sections, err := companybrief.ParseBriefSections(text, companyID, in)
+	if err != nil {
+		return nil, err
+	}
+	var out []companybrief.Sentence
+	for _, section := range sections {
+		out = append(out, section.Sentences...)
+	}
+	return out, nil
 }
 
 // companyBriefInput builds the production input, minting one id per labelled
 // record so no id in the reply can have come from the corpus.
 func companyBriefInput(f companyBriefFixture) (companybrief.Input, map[string]string, error) {
 	in := companybrief.Input{
+		ID:   ids.NewV7().String(),
 		Name: f.Name, Industry: f.Industry,
 		Strength: f.Strength, ContactCount: f.Contacts,
 		SectionsOmitted: f.SectionsOmitted,
@@ -184,8 +208,13 @@ type companyBriefCase struct {
 	request   func(companybrief.Input) model.Request
 	in        companybrief.Input
 	companyID string
-	label     map[string]string
-	expected  []string
+	// parse reads the shape `request` asked for. The two are ONE decision: this
+	// struct serves company_brief (sectioned) and company_ask (flat sentences),
+	// and a single shared parser silently read nil sentences out of every
+	// sectioned reply — so the site could not fail, it could only abstain.
+	parse    func(text, companyID string, in companybrief.Input) ([]companybrief.Sentence, error)
+	label    map[string]string
+	expected []string
 }
 
 // Run issues the one request this site sends, through the production
@@ -205,7 +234,7 @@ func (c *companyBriefCase) Run(ctx context.Context, completer aitasks.Completer)
 // surviving sentences cite the records the scenario says a correct brief is
 // about.
 func (c *companyBriefCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
-	sentences, err := companybrief.ParseBrief(trace.Output, c.companyID, c.in)
+	sentences, err := c.parse(trace.Output, c.companyID, c.in)
 	if err != nil {
 		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: err.Error()}
 	}

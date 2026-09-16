@@ -63,6 +63,20 @@ var promptVersion = ai.PromptDigest(func(fence promptfence.Fence) string {
 // pipeline, its contacts, and what has moved recently — each already pruned
 // to the reader's row scope by the read that produced it.
 type Input struct {
+	// ID is the account this brief is about, and it is in the payload BECAUSE
+	// the prompt tells the model to cite it: "A sentence about the account
+	// itself cites the company." knownRecords accepts {company, ID} as
+	// evidence, so an id the model was never shown made every company-level
+	// sentence ungroundable — the model had to invent an entity_id, and the
+	// filter dropped it.
+	//
+	// The id and the allowlist come from ONE field for that reason. While it
+	// was a parameter beside Input, what the filter accepted and what the model
+	// could see were two values with nothing holding them equal, and they were
+	// not equal.
+	//
+	// Held by: TestTheAccountTheBriefIsAboutIsCitable (internal/compose/companybrief/citablesubject_test.go)
+	ID           string    `json:"id"`
 	Name         string    `json:"name"`
 	Industry     string    `json:"industry,omitempty"`
 	SizeBand     string    `json:"size_band,omitempty"`
@@ -249,7 +263,7 @@ const briefInputActivities = 12
 // re-queries: the 360 ran under the caller's gates, so anything absent from
 // it is absent because that caller may not see it.
 func FromView(view crmcontracts.Company360) Input {
-	in := Input{Name: view.Company.DisplayName}
+	in := Input{ID: view.Company.Id.String(), Name: view.Company.DisplayName}
 	if view.Company.Industry != nil {
 		in.Industry = *view.Company.Industry
 	}

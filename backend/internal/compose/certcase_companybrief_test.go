@@ -124,12 +124,16 @@ func TestCompanyBriefCaseEvaluatesEachOutcome(t *testing.T) {
 		output string
 		want   string
 	}{
+		// SECTIONED, because that is what briefSystem asks this site for. These
+		// cases were written flat and passed against a parser that read
+		// `sentences` out of a sectioned document as nil — so they asserted the
+		// outcomes of a shape production never produces.
 		"cited what it had to": {
-			output: `{"sentences":[{"text":"The retrofit has stalled.","evidence":[{"entity_type":"deal","entity_id":"` + dealID + `"}]}]}`,
+			output: `{"sections":[{"kind":"activity","sentences":[{"text":"The retrofit has stalled.","evidence":[{"entity_type":"deal","entity_id":"` + dealID + `"}]}]}]}`,
 			want:   aitasks.OutcomeAccepted,
 		},
 		"cited nothing of this account": {
-			output: `{"sentences":[{"text":"Looks promising.","evidence":[{"entity_type":"deal","entity_id":"11111111-1111-4111-8111-111111111111"}]}]}`,
+			output: `{"sections":[{"kind":"activity","sentences":[{"text":"Looks promising.","evidence":[{"entity_type":"deal","entity_id":"11111111-1111-4111-8111-111111111111"}]}]}]}`,
 			want:   aitasks.OutcomeAbstained,
 		},
 		"not json at all": {
@@ -156,7 +160,7 @@ func TestCompanyBriefCaseReportsAMissedRecordAsAWrongAnswer(t *testing.T) {
 	dealID := firstRecordID(t, sent)
 
 	got := prepared.Evaluate(aitasks.Trace{
-		Output: `{"sentences":[{"text":"One open deal.","evidence":[{"entity_type":"deal","entity_id":"` + dealID + `"}]}]}`,
+		Output: `{"sections":[{"kind":"activity","sentences":[{"text":"One open deal.","evidence":[{"entity_type":"deal","entity_id":"` + dealID + `"}]}]}]}`,
 	})
 	if got.Result != aitasks.OutcomeWrongAnswer {
 		t.Fatalf("Evaluate = %q (%s), want a wrong answer", got.Result, got.Detail)
@@ -172,14 +176,33 @@ func TestCompanyBriefCaseReportsAMissedRecordAsAWrongAnswer(t *testing.T) {
 // It anchors on the id field rather than scanning for anything uuid-shaped:
 // the prompt also carries the fence nonce, which is uuid-shaped and is not a
 // record — answering with it would test nothing.
+// firstRecordID answers the id of the first record INSIDE a collection —
+// open_deals, recent, contacts — rather than the first `"id"` in the payload.
+//
+// The distinction is the account's own id, which the summary now carries so a
+// sentence about the account can cite it. That id is the first `"id"` in the
+// document, and a positional read of the first one returned it here and handed
+// these tests a company id to spell as a deal, which the allowlist correctly
+// refused. Anchored on the collection so the next field added above cannot move
+// the answer again.
 func firstRecordID(t *testing.T, prompt string) string {
 	t.Helper()
+	var collection string
+	for _, key := range []string{`"open_deals":[`, `"recent":[`, `"contacts":[`} {
+		if at := strings.Index(prompt, key); at >= 0 {
+			collection = prompt[at:]
+			break
+		}
+	}
+	if collection == "" {
+		t.Fatalf("the prompt carries no record collection to take an id from: %q", prompt)
+	}
 	const field = `"id":"`
-	at := strings.Index(prompt, field)
+	at := strings.Index(collection, field)
 	if at < 0 {
 		t.Fatalf("no record id in the prompt: %q", prompt)
 	}
-	rest := prompt[at+len(field):]
+	rest := collection[at+len(field):]
 	end := strings.IndexByte(rest, '"')
 	if end < 0 {
 		t.Fatalf("an unterminated record id in the prompt: %q", prompt)

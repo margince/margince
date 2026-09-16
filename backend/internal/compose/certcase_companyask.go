@@ -25,7 +25,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/companybrief"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -79,6 +78,10 @@ func (companyAskCases) Prepare(fixture, expected json.RawMessage) (aitasks.Prepa
 			// with a settings row would not be comparable between installations.
 			return companybrief.AskRequest(question, in, string(textlang.English))
 		},
-		in: in, companyID: ids.NewV7().String(), label: label, expected: want,
+		// ParseBrief, because AskRequest really does ask for flat sentences —
+		// and the id from the Input, so the account the model can cite is the
+		// account the filter accepts.
+		parse: companybrief.ParseBrief,
+		in:    in, companyID: in.ID, label: label, expected: want,
 	}, nil
 }

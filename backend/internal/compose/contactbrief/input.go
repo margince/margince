@@ -96,6 +96,12 @@ const briefInputChanges = 3
 // happened — each already pruned to the reader's row scope by the read that
 // produced it.
 type Input struct {
+	// ID is the contact this brief is about, in the payload so a sentence about
+	// them can cite them. Same defect and same reason as companybrief.Input.ID,
+	// which carries the account of it.
+	//
+	// Held by: TestTheContactTheBriefIsAboutIsCitable (internal/compose/contactbrief/citablesubject_test.go)
+	ID           string `json:"id"`
 	Name         string `json:"name"`
 	Title        string `json:"title,omitempty"`
 	Employer     string `json:"employer,omitempty"`
@@ -250,6 +256,7 @@ type ActIn struct {
 // of gates that could disagree with the first.
 func FromView(view crmcontracts.Contact360) Input {
 	in := Input{
+		ID:              view.Contact.Id.String(),
 		Name:            view.Contact.FullName,
 		SectionsOmitted: omittedNames(view.SectionsOmitted),
 	}
