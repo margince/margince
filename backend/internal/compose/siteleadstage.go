@@ -236,5 +236,5 @@ func siteLeadHost(seedURL string) string {
 	if err != nil || parsed.Hostname() == "" {
 		return seedURL
 	}
-	return strings.TrimPrefix(parsed.Hostname(), "www.")
+	return strings.TrimPrefix(strings.ToLower(parsed.Hostname()), "www.")
 }
