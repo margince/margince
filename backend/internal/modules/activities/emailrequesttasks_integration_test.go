@@ -38,7 +38,7 @@ func seedEmailRequest(t *testing.T, e *loadEnv, subject, label, verdict string) 
 	if _, err := store.SetCaptureLabel(asClassifier(e), id, label); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := store.SetOwedVerdict(asClassifier(e), id, verdict); err != nil {
+	if _, err := store.SetOwedVerdict(asClassifier(e), id, verdict, "prompts-test", time.Now()); err != nil {
 		t.Fatal(err)
 	}
 	return id
