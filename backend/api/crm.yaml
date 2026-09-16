@@ -9493,9 +9493,13 @@ paths:
       summary: List a subscription's delivery attempts (the dead-letter inspection surface).
       parameters:
         - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
       responses:
         '200':
-          description: Delivery attempts, newest first.
+          description: |
+            Delivery attempts, newest first. `page.next_cursor` continues the walk: the bound
+            cuts the OLDEST attempts, which on a failing subscription are the parked ones an
+            operator opened this surface to find.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/WebhookDeliveryListResponse' }
