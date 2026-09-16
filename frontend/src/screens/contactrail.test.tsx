@@ -549,6 +549,37 @@ describe("adding a company", () => {
     expect("started_precision" in body).toBe(false);
   });
 
+  // The modal is never unmounted, so every field it holds survives a cancel
+  // unless something puts it back. A start date is the worst one to leave
+  // standing: it would be sent for the NEXT employer, dated from the last.
+  it("does not carry a cancelled start date into the next employer", async () => {
+    const user = driver();
+    mount(emptyButGranted);
+    await screen.findByRole("button", { name: "Add company" });
+    await user.click(screen.getByRole("button", { name: "Add company" }));
+    await user.type(screen.getByLabelText("Start date"), "2019-03-04");
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+
+    await user.click(screen.getByRole("button", { name: "Add company" }));
+    expect(screen.getByLabelText("Start date")).toHaveProperty("value", "");
+  });
+
+  // `datePatch` appends `-01` to any seven characters, so an unchecked field
+  // turns a typo into a plausible-looking day — and the wire declares `date`,
+  // which refuses the rest outright. The form says no before either happens.
+  it("refuses to save a date that is not one", async () => {
+    const user = driver();
+    mount(emptyButGranted);
+    await screen.findByRole("button", { name: "Add company" });
+    await openAndPickEmployer(user);
+    await user.type(screen.getByLabelText("Start date"), "not-a-date");
+
+    expect(screen.getByRole("button", { name: "Create" })).toHaveProperty(
+      "disabled",
+      true,
+    );
+  });
+
   it("starts unticked for somebody who already has a current job", async () => {
     // The other half of the default, and the reason it is read off the rows
     // rather than hardcoded: which of two employers is the main one is not

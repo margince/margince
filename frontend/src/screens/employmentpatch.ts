@@ -108,3 +108,16 @@ export function datePatch(value: string): {
     ? { date: `${value}-01`, precision: "month" }
     : { date: value, precision: "day" };
 }
+
+/**
+ * Whether a typed date is one this product can send: empty, a month, or a day.
+ *
+ * The wire declares `date`, so `not-a-date` is a request the contract refuses —
+ * and `datePatch` would append `-01` to any seven characters, turning a typo
+ * into a plausible-looking day. Both forms that take a date check it with this,
+ * because a rule about what a date IS cannot have one spelling in the form that
+ * corrects one and another in the form that creates one.
+ */
+export function validDateEntry(value: string): boolean {
+  return value === "" || /^\d{4}-\d{2}(-\d{2})?$/.test(value);
+}

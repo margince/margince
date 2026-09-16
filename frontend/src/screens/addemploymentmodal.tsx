@@ -16,7 +16,7 @@ import {
   type EmploymentActions,
   searchCompanyCandidates,
 } from "./contactemployers";
-import { datePatch } from "./employmentpatch";
+import { datePatch, validDateEntry } from "./employmentpatch";
 
 // The "add a company" modal: pick the company (RecordPicker, the shared
 // debounced search-and-pick), optionally its role, and whether it is the
@@ -106,6 +106,11 @@ export function AddEmploymentModal({
   function close() {
     setCompany(null);
     setRole("");
+    // The modal is never unmounted — the list only flips `open` — so every
+    // field it holds has to be put back by hand. A start date left standing
+    // from a cancelled flow is the worst of them to forget: it would be sent
+    // for the NEXT employer, dated from the last one.
+    setStart("");
     setAllConnected(false);
     create.reset();
     onClose();
@@ -178,7 +183,7 @@ export function AddEmploymentModal({
         </Button>
         <Button
           variant="primary"
-          disabled={!company || create.isPending}
+          disabled={!company || !validDateEntry(start) || create.isPending}
           onClick={() => {
             if (!company) {
               return;
