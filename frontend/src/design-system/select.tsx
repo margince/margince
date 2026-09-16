@@ -2,25 +2,11 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { Check, ChevronDown } from "lucide-react";
-import {
-  type KeyboardEvent as ReactKeyboardEvent,
-  type ReactNode,
-  type RefObject,
-  useCallback,
-  useEffect,
-  useId,
-  useRef,
-  useState,
-} from "react";
+import type { ReactNode } from "react";
 import { createPortal } from "react-dom";
-import {
-  contentSizedPopupBox,
-  type PopupFrame,
-  useActiveOptionVisible,
-  useAnchoredPopup,
-  useDismissOnOutsidePress,
-} from "./anchoredpopup";
+import { contentSizedPopupBox, type PopupFrame } from "./anchoredpopup";
 import { usePrefersReducedMotion } from "./motion";
+import { type Listbox, useSelectListbox } from "./selectlistbox";
 import "./select.css";
 
 /**
@@ -113,309 +99,6 @@ export type SelectProps = Readonly<{
   onLeave?: () => void;
 }>;
 
-// How long a typeahead buffer survives between keystrokes. Measured from the
-// previous keystroke rather than reset by a timer: there is no timeout to cancel
-// when the control unmounts mid-word, and nothing to fake in a test.
-const TYPEAHEAD_RESET_MS = 500;
-
-// The next option at or after `from` that a keyboard may land on, walking in
-// `step`'s direction. Deliberately does not wrap: a list that jumps from its
-// last entry back to its first hides from the reader that they reached the end.
-function stepEnabled(
-  options: readonly SelectOption[],
-  from: number,
-  step: 1 | -1,
-): number {
-  for (let index = from; index >= 0 && index < options.length; index += step) {
-    if (!options[index]?.disabled) {
-      return index;
-    }
-  }
-  return -1;
-}
-
-/**
- * What a keypress means to a combobox, as data and with no React in it.
- *
- * The whole keyboard contract lives here so it can be read in one screen and
- * argued with: the same key means different things open and closed, which is the
- * part every hand-rolled dropdown gets partly right.
- *
- * `null` is "not ours" — the press keeps its default, which is what lets Tab,
- * the browser's own shortcuts and a screen reader's keys through.
- */
-type KeyIntent =
-  | Readonly<{ act: "open"; step: 1 | -1 }>
-  | Readonly<{ act: "move"; step: 1 | -1 }>
-  | Readonly<{ act: "edge"; step: 1 | -1 }>
-  | Readonly<{ act: "commit" }>
-  | Readonly<{ act: "cancel" }>
-  | Readonly<{ act: "leave" }>
-  | Readonly<{ act: "search"; char: string }>
-  | null;
-
-function intentFor(key: string, open: boolean): KeyIntent {
-  if (!open) {
-    if (key === "ArrowUp") {
-      return { act: "open", step: -1 };
-    }
-    // Typeahead on a CLOSED control is deliberately absent: a native select
-    // changes its value when someone types "w" while tabbing past it, and a
-    // stage that moved on a stray keystroke is a defect, not a shortcut.
-    const opens = key === "ArrowDown" || key === "Enter" || key === " ";
-    return opens ? { act: "open", step: 1 } : null;
-  }
-  switch (key) {
-    case "ArrowDown":
-      return { act: "move", step: 1 };
-    case "ArrowUp":
-      return { act: "move", step: -1 };
-    case "Home":
-      return { act: "edge", step: 1 };
-    case "End":
-      return { act: "edge", step: -1 };
-    case "Enter":
-    case " ":
-      return { act: "commit" };
-    case "Escape":
-      return { act: "cancel" };
-    case "Tab":
-      return { act: "leave" };
-    default:
-      return key.length === 1 ? { act: "search", char: key } : null;
-  }
-}
-
-// What each intent does. Named callbacks rather than a bag of setters, so the
-// table in the hook below reads as the behaviour it is.
-type IntentActions = Readonly<{
-  openFrom: (step: 1 | -1) => void;
-  moveBy: (step: 1 | -1) => void;
-  toEdge: (step: 1 | -1) => void;
-  commitActive: () => void;
-  cancel: () => void;
-  leave: () => void;
-  search: (char: string) => void;
-}>;
-
-function keyDownHandler(open: boolean, actions: IntentActions) {
-  return (event: ReactKeyboardEvent<HTMLButtonElement>) => {
-    // A modified press belongs to the browser or the OS (Alt+Arrow is history
-    // navigation, Cmd+F is find) — never to a typeahead buffer.
-    if (event.altKey || event.ctrlKey || event.metaKey) {
-      return;
-    }
-    const intent = intentFor(event.key, open);
-    if (!intent) {
-      return;
-    }
-    // Tab keeps its default so focus can leave; every other press we claim is
-    // ours, and scrolling the page on Space is never what was meant.
-    //
-    // Claimed also means it STOPS HERE. A dropdown is usually inside something
-    // else that listens for the same keys on the document — `Modal` closes on
-    // Escape, a form submits on Enter — and a press meant for the open list must
-    // not also reach them: abandoning a dropdown would take the whole dialog
-    // with it, and choosing an option would submit the form around it.
-    if (intent.act !== "leave") {
-      event.preventDefault();
-      event.stopPropagation();
-    }
-    switch (intent.act) {
-      case "open":
-        return actions.openFrom(intent.step);
-      case "move":
-        return actions.moveBy(intent.step);
-      case "edge":
-        return actions.toEdge(intent.step);
-      case "commit":
-        return actions.commitActive();
-      case "cancel":
-        return actions.cancel();
-      case "leave":
-        return actions.leave();
-      case "search":
-        return actions.search(intent.char);
-    }
-  };
-}
-
-// The typeahead match, kept out of React: a buffer, the character just typed and
-// the moment it arrived produce the next buffer and the option it points at.
-function typeaheadMatch(
-  options: readonly SelectOption[],
-  buffer: Readonly<{ query: string; at: number }>,
-  char: string,
-  now: number,
-): Readonly<{ query: string; at: number; hit: number }> {
-  const carried = now - buffer.at < TYPEAHEAD_RESET_MS;
-  const query = (carried ? buffer.query : "") + char.toLowerCase();
-  const hit = options.findIndex(
-    (option) =>
-      !option.disabled && option.label.toLowerCase().startsWith(query),
-  );
-  return { query, at: now, hit };
-}
-
-// Everything the trigger and the popup need from the state machine below.
-type Listbox = Readonly<{
-  open: boolean;
-  active: number;
-  frame: PopupFrame | null;
-  trigger: RefObject<HTMLButtonElement | null>;
-  popup: RefObject<HTMLDivElement | null>;
-  listboxId: string;
-  optionDomId: (index: number) => string;
-  onKeyDown: (event: ReactKeyboardEvent<HTMLButtonElement>) => void;
-  onTriggerClick: () => void;
-  pick: (index: number) => void;
-  hover: (index: number) => void;
-}>;
-
-/**
- * The open/active state machine, one level below the markup.
- *
- * It owns four things and nothing else: whether the list is open, which option
- * is active, where the popup sits, and what a keypress does about any of that.
- * The commit is the only place `onChange` is called, so there is exactly one
- * path by which a value changes.
- */
-// The option a fresh open (by click, arrow key or mount) lands active on: the
-// current value if it holds one, else the edge the direction points at.
-// Shared by `openFrom` and the openOnMount initializer so a Select that opens
-// itself highlights the same option one opened by the reader would.
-function startingActive(
-  options: readonly SelectOption[],
-  selectedIndex: number,
-  step: 1 | -1,
-): number {
-  if (selectedIndex !== -1 && !options[selectedIndex]?.disabled) {
-    return selectedIndex;
-  }
-  return stepEnabled(options, step === 1 ? 0 : options.length - 1, step);
-}
-
-function useSelectListbox(
-  options: readonly SelectOption[],
-  value: string,
-  onChange: (next: string) => void,
-  openOnMount: boolean,
-  onCancel?: () => void,
-  onLeave?: () => void,
-): Listbox {
-  const selectedIndex = options.findIndex((option) => option.value === value);
-  const edge = (step: 1 | -1) =>
-    stepEnabled(options, step === 1 ? 0 : options.length - 1, step);
-
-  const [open, setOpen] = useState(openOnMount);
-  const [active, setActive] = useState(() =>
-    openOnMount ? startingActive(options, selectedIndex, 1) : -1,
-  );
-  const trigger = useRef<HTMLButtonElement | null>(null);
-  const popup = useRef<HTMLDivElement | null>(null);
-  const typed = useRef({ query: "", at: 0 });
-  const listboxId = useId();
-
-  // A caller mounting this already-open (InlineChoice, on the click that
-  // started editing) mounts a TRIGGER THE CLICK NEVER LANDED ON — the DOM
-  // node the reader actually pressed was the previous render's resting
-  // button, gone by the time this one exists. Without this, Escape and the
-  // arrow keys have nothing to reach: keyboard events go to whatever the
-  // browser's default focus is, not to a listbox nobody told it opened.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: fires once, on mount — openOnMount names how this instance came to exist, not a value to keep reacting to on every later render.
-  useEffect(() => {
-    if (openOnMount) {
-      trigger.current?.focus();
-    }
-  }, []);
-
-  // The one place a close that picked nothing is told apart from one that
-  // did: `commit` below never routes through this, because it closes on a
-  // value that DID change.
-  const abandon = useCallback(() => {
-    setOpen(false);
-    onCancel?.();
-  }, [onCancel]);
-  const frame = useAnchoredPopup(trigger, popup, open, abandon);
-  useDismissOnOutsidePress(open, abandon, trigger, popup);
-  useActiveOptionVisible(open, active, listboxId);
-
-  const openFrom = (step: 1 | -1) => {
-    setActive(startingActive(options, selectedIndex, step));
-    setOpen(true);
-  };
-
-  const commit = (index: number) => {
-    const option = options[index];
-    if (!option || option.disabled) {
-      // Nothing to commit — the list stays open on the reader's own choice
-      // rather than closing as if something had been picked.
-      return;
-    }
-    onChange(option.value);
-    setOpen(false);
-    trigger.current?.focus();
-  };
-
-  const search = (char: string) => {
-    const match = typeaheadMatch(options, typed.current, char, Date.now());
-    typed.current = { query: match.query, at: match.at };
-    if (match.hit !== -1) {
-      setActive(match.hit);
-    }
-  };
-
-  // What each intent actually does, as a table. It reads as the keyboard's
-  // contract spelled a second way — `intentFor` says what a key means, this says
-  // what happens — and keeping the two apart is what makes either readable.
-  const actions: IntentActions = {
-    openFrom,
-    moveBy: (step) => {
-      const from = active === -1 ? edge(step) : active + step;
-      const next = stepEnabled(options, from, step);
-      if (next !== -1) {
-        setActive(next);
-      }
-    },
-    toEdge: (step) => setActive(edge(step)),
-    commitActive: () => commit(active),
-    cancel: () => {
-      trigger.current?.focus();
-      abandon();
-    },
-    // Tab already moved focus forward — that is the browser's own default,
-    // which the keydown handler above deliberately leaves unclaimed. Closing
-    // through `abandon` would fire `onCancel`, and a caller that restores
-    // focus on cancel (InlineChoice) would then yank it straight back to the
-    // trigger the reader just left. `onLeave` tells that caller apart from a
-    // real cancel so it knows not to.
-    leave: () => {
-      setOpen(false);
-      onLeave?.();
-    },
-    search,
-  };
-
-  return {
-    open,
-    active,
-    frame,
-    trigger,
-    popup,
-    listboxId,
-    optionDomId: (index: number) => `${listboxId}-option-${index}`,
-    onKeyDown: keyDownHandler(open, actions),
-    // Pressing the trigger a second time closes on nothing chosen, which is
-    // the same answer as Escape and as a press outside, so it leaves through
-    // `abandon` like they do. Closed with `setOpen` alone it would be the one
-    // dismissal a caller is never told about, and InlineChoice would sit in
-    // its editing view with no list beneath it.
-    onTriggerClick: () => (open ? abandon() : openFrom(1)),
-    pick: commit,
-    hover: setActive,
-  };
-}
-
 export function Select(props: SelectProps) {
   const {
     options,
@@ -429,8 +112,11 @@ export function Select(props: SelectProps) {
   } = props;
   const listbox = useSelectListbox(
     options,
-    value,
-    onChange,
+    options.findIndex((option) => option.value === value),
+    (option) => {
+      onChange(option.value);
+      return "close";
+    },
     openOnMount ?? false,
     onCancel,
     onLeave,
@@ -454,7 +140,87 @@ export function Select(props: SelectProps) {
         ? createPortal(
             <SelectPopup
               options={options}
-              value={value}
+              selected={(option) => option.value === value}
+              frame={listbox.frame}
+              listbox={listbox}
+              animate={!reduced}
+            />,
+            document.body,
+          )
+        : null}
+    </>
+  );
+}
+
+/**
+ * The multi-value sibling: the same trigger-plus-listbox anatomy, where a pick
+ * TOGGLES membership and the list stays open, so choosing three of thirty
+ * options is three clicks rather than three open-pick-reopen rounds.
+ *
+ * It exists for an ENUMERABLE vocabulary — a custom field's own options, where
+ * a page of thirty checkboxes buries the form around it. `TokenInput` remains
+ * the control for a set nobody can enumerate (cities, free tags); the line
+ * between them is whether the options list IS the vocabulary.
+ *
+ * The closed face reads the chosen labels in option order, comma-joined, and
+ * ellipsizes like any select face; `placeholder` is the empty face. There is
+ * no hidden-input mirror: a set has no single form value, and every caller
+ * here submits through its own handler rather than a native form post.
+ */
+export type MultiSelectProps = Readonly<{
+  options: readonly SelectOption[];
+  values: readonly string[];
+  onChange: (next: string[]) => void;
+  /** The trigger face while nothing is chosen. */
+  placeholder?: string;
+  id?: string;
+  disabled?: boolean;
+  required?: boolean;
+  className?: string;
+  "aria-label"?: string;
+  "aria-labelledby"?: string;
+  "aria-describedby"?: string;
+  "aria-invalid"?: boolean;
+}>;
+
+export function MultiSelect(props: MultiSelectProps) {
+  const { options, values, onChange } = props;
+  const chosen = new Set(values);
+  const listbox = useSelectListbox(
+    options,
+    options.findIndex((option) => chosen.has(option.value)),
+    (option) => {
+      onChange(
+        chosen.has(option.value)
+          ? values.filter((value) => value !== option.value)
+          : [...values, option.value],
+      );
+      return "stay";
+    },
+    false,
+  );
+  const reduced = usePrefersReducedMotion();
+  // Option order, not click order: the face is read against the list it came
+  // from, and a face that reorders on every toggle jumps under the reader.
+  const face = options
+    .filter((option) => chosen.has(option.value))
+    .map((option) => option.label)
+    .join(", ");
+  return (
+    <>
+      <TriggerButton
+        field={props}
+        listbox={listbox}
+        animate={!reduced}
+        face={face || (props.placeholder ?? " ")}
+        placeholderShown={face === ""}
+      />
+      {listbox.open && listbox.frame
+        ? createPortal(
+            <SelectPopup
+              options={options}
+              selected={(option) => chosen.has(option.value)}
+              multiselectable
               frame={listbox.frame}
               listbox={listbox}
               animate={!reduced}
@@ -471,7 +237,6 @@ function SelectTrigger({
   listbox,
   animate,
 }: Readonly<{ field: SelectProps; listbox: Listbox; animate: boolean }>) {
-  const { open, active } = listbox;
   const selected = field.options.find((option) => option.value === field.value);
   // A value that matches no option, with no placeholder to fall back on — a
   // stale query param, a roster that has not landed yet — still has to leave a
@@ -481,6 +246,50 @@ function SelectTrigger({
   // catalog) and the suite can assert it, which it cannot do for a stylesheet
   // jsdom never applies.
   const face = selected?.label ?? field.placeholder ?? "\u00a0";
+  return (
+    <TriggerButton
+      field={field}
+      listbox={listbox}
+      animate={animate}
+      face={face}
+      placeholderShown={!selected}
+      faceLang={selected?.lang}
+      adornment={selected?.adornment}
+    />
+  );
+}
+
+// The one closed face both dropdowns wear: everything here — the combobox
+// role, the expanded state, the activedescendant wiring, the chevron's turn —
+// is identical between one value and many, and a second copy of it would be a
+// second place for the ARIA contract to rot.
+function TriggerButton({
+  field,
+  listbox,
+  animate,
+  face,
+  placeholderShown,
+  faceLang,
+  adornment,
+}: Readonly<{
+  field: Readonly<{
+    id?: string;
+    className?: string;
+    disabled?: boolean;
+    required?: boolean;
+    "aria-label"?: string;
+    "aria-labelledby"?: string;
+    "aria-describedby"?: string;
+    "aria-invalid"?: boolean;
+  }>;
+  listbox: Listbox;
+  animate: boolean;
+  face: string;
+  placeholderShown: boolean;
+  faceLang?: string;
+  adornment?: ReactNode;
+}>) {
+  const { open, active } = listbox;
   return (
     <button
       type="button"
@@ -519,20 +328,22 @@ function SelectTrigger({
           whose options are told apart BY the mark still shows which one is
           chosen once the list is shut. Hidden from assistive tech for the same
           reason it is in the list: the label carries the meaning. */}
-      {selected?.adornment && (
+      {adornment && (
         <span className="select-option-adornment" aria-hidden="true">
-          {selected.adornment}
+          {adornment}
         </span>
       )}
       <span
         className={
-          selected ? "select-face" : "select-face select-face-placeholder"
+          placeholderShown
+            ? "select-face select-face-placeholder"
+            : "select-face"
         }
-        // The face is the selected option's label repeated, so it inherits that
+        // The face repeats a selected option's label, so it inherits that
         // option's language declaration. A placeholder is our own copy and is
-        // therefore in the document's language, which is why this reads from the
-        // selected option rather than from the face string.
-        lang={selected?.lang}
+        // therefore in the document's language, which is why the caller passes
+        // this from the selected option rather than from the face string.
+        lang={faceLang}
       >
         {face}
       </span>
@@ -543,13 +354,17 @@ function SelectTrigger({
 
 function SelectPopup({
   options,
-  value,
+  selected,
+  multiselectable,
   frame,
   listbox,
   animate,
 }: Readonly<{
   options: readonly SelectOption[];
-  value: string;
+  // Membership, not a value: the single select asks "is this THE value", the
+  // multi asks "is this IN the set", and the popup draws both the same way.
+  selected: (option: SelectOption) => boolean;
+  multiselectable?: boolean;
   frame: PopupFrame;
   listbox: Listbox;
   animate: boolean;
@@ -572,7 +387,12 @@ function SelectPopup({
           announced twice over. The listbox carries no name of its own either —
           the combobox that owns it is named, and a second name on the popup is
           read out on top of it. */}
-      <div className="select-list" id={listbox.listboxId} role="listbox">
+      <div
+        className="select-list"
+        id={listbox.listboxId}
+        role="listbox"
+        aria-multiselectable={multiselectable}
+      >
         {options.map((option, index) => (
           // biome-ignore lint/a11y/useKeyWithClickEvents: the keyboard path is the combobox trigger's own keydown handling
           // biome-ignore lint/a11y/useFocusableInteractive: an option in an aria-activedescendant listbox must NOT be focusable — focus stays on the combobox, which is what makes typeahead and Escape work
@@ -580,7 +400,7 @@ function SelectPopup({
             key={option.value}
             id={listbox.optionDomId(index)}
             role="option"
-            aria-selected={option.value === value}
+            aria-selected={selected(option)}
             aria-disabled={option.disabled}
             className={[
               "select-option",
@@ -590,6 +410,12 @@ function SelectPopup({
               .filter(Boolean)
               .join(" ")}
             onClick={option.disabled ? undefined : () => listbox.pick(index)}
+            // A press on an option must not steal focus from the combobox: in
+            // the multi list, which stays open after a toggle, Escape and the
+            // arrow keys have to keep reaching the trigger's own handler. On
+            // the rows rather than the container, so the list's scrollbar
+            // still drags.
+            onMouseDown={(event) => event.preventDefault()}
             onMouseEnter={
               option.disabled ? undefined : () => listbox.hover(index)
             }
@@ -602,7 +428,7 @@ function SelectPopup({
             <span className="select-option-label" lang={option.lang}>
               {option.label}
             </span>
-            {option.value === value && (
+            {selected(option) && (
               <Check className="select-option-check" size={14} aria-hidden />
             )}
           </div>

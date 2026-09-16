@@ -3404,7 +3404,6 @@ export const en = {
   "transcriptread.effectFailedTitle": "Accepted, but the task never appeared",
 
   "create.cancel": "Cancel",
-  "create.multiselect.required": "Required — select at least one.",
   "create.save": "Create",
   "create.saving": "Creating…",
   "create.contact": "New contact",

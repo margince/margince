@@ -3276,8 +3276,6 @@ export const de = {
     "Angenommen, aber die Aufgabe entstand nie",
 
   "create.cancel": "Abbrechen",
-  "create.multiselect.required":
-    "Erforderlich – mindestens eine Option wählen.",
   "create.save": "Anlegen",
   "create.saving": "Wird angelegt…",
   "create.contact": "Neuer Kontakt",
