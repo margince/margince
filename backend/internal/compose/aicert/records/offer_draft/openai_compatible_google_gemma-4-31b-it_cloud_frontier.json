@@ -20,8 +20,8 @@
     "positioning",
     "proof"
   ],
-  "score_p50": 100,
-  "score_min": 85,
+  "judge_score_p50": 100,
+  "judge_score_min": 85,
   "latency_p50": 4558,
   "latency_p95": 8371,
   "mean_tokens": 857,

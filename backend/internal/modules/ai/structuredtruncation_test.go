@@ -29,8 +29,11 @@ import (
 )
 
 // truncatedStep is a successful call whose body stops mid-document.
-func truncatedStep(text string) FakeStep {
-	return FakeStep{Text: text, FinishReason: model.FinishReasonLength}
+//
+// The body is fixed rather than a parameter: what every case here needs is one
+// document cut mid-value, and which document it is carries nothing.
+func truncatedStep() FakeStep {
+	return FakeStep{Text: `{"answer":"aaaa`, FinishReason: model.FinishReasonLength}
 }
 
 // The retry has to tell the model the truth, because the truth is actionable
@@ -38,10 +41,10 @@ func truncatedStep(text string) FakeStep {
 // cannot, by a model whose JSON was fine until it was cut.
 func TestATruncatedAnswerIsRetriedAsTooLongAndNotAsMalformed(t *testing.T) {
 	cheap := NewFakeClient().ScriptSteps(
-		truncatedStep(`{"answer":"aaaa`),
-		truncatedStep(`{"answer":"aaaa`),
+		truncatedStep(),
+		truncatedStep(),
 	)
-	premium := NewFakeClient().ScriptSteps(truncatedStep(`{"answer":"aaaa`))
+	premium := NewFakeClient().ScriptSteps(truncatedStep())
 	r := testRouter(map[Tier]model.Client{TierCheapCloud: cheap, TierPremium: premium},
 		&memMeter{}, DefaultMonthlyTokens, ProfileEUHosted)
 
@@ -65,8 +68,8 @@ func TestATruncatedAnswerIsRetriedAsTooLongAndNotAsMalformed(t *testing.T) {
 // And the terminal error names truncation, so an operator reading a log is sent
 // to the output budget rather than to the prompt or the schema.
 func TestTheTerminalErrorSaysTheAnswerWasCutOffRatherThanMalformed(t *testing.T) {
-	cheap := NewFakeClient().ScriptSteps(truncatedStep(`{"answer":"aaaa`), truncatedStep(`{"answer":"aaaa`))
-	premium := NewFakeClient().ScriptSteps(truncatedStep(`{"answer":"aaaa`))
+	cheap := NewFakeClient().ScriptSteps(truncatedStep(), truncatedStep())
+	premium := NewFakeClient().ScriptSteps(truncatedStep())
 	r := testRouter(map[Tier]model.Client{TierCheapCloud: cheap, TierPremium: premium},
 		&memMeter{}, DefaultMonthlyTokens, ProfileEUHosted)
 

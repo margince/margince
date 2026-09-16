@@ -18,8 +18,8 @@
   "context_scopes": [
     "identity"
   ],
-  "score_p50": 95,
-  "score_min": 60,
+  "judge_score_p50": 95,
+  "judge_score_min": 60,
   "latency_p50": 4760,
   "latency_p95": 6381,
   "mean_tokens": 1791,

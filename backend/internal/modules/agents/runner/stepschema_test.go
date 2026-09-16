@@ -57,7 +57,7 @@ func TestTheStepSchemaAdmitsExactlyWhatTheStepParserAccepts(t *testing.T) {
 	var declared struct {
 		Type                 string                     `json:"type"`
 		Properties           map[string]json.RawMessage `json:"properties"`
-		AdditionalProperties *bool                      `json:"additionalProperties"`
+		AdditionalProperties *bool                      `json:"additionalProperties"` //nolint:tagliatelle // JSON Schema's own key spelling
 	}
 	if err := json.Unmarshal(schema, &declared); err != nil {
 		t.Fatalf("the ResponseSchema is not an object schema: %v", err)
