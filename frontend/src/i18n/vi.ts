@@ -2284,7 +2284,8 @@ export const vi = {
     "Kh\u00e1ch h\u00e0ng ti\u1ec1m n\u0103ng n\u00e0y \u0111ang \u1edf \u0111\u00e2u",
   "lead.detailsUnset": "Chưa đặt",
   "lead.rail.deal.title": "Deal",
-  "lead.rail.deal.empty": "Chưa có deal. Qualify lead này sẽ tạo một deal.",
+  "lead.rail.deal.empty":
+    "Chưa có deal. Khi thẩm định lead này, bạn có thể mở một deal.",
   "lead.rail.project.title": "Dự án",
   "lead.rail.project.empty": "Chưa có dự án.",
   "lead.rail.project.attach": "Gắn dự án",

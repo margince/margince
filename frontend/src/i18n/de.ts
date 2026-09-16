@@ -2301,7 +2301,8 @@ export const de = {
   "lead.ladder.title": "Wo dieser Lead steht",
   "lead.detailsUnset": "Nicht gesetzt",
   "lead.rail.deal.title": "Deal",
-  "lead.rail.deal.empty": "Noch kein Deal. Beim Qualifizieren entsteht einer.",
+  "lead.rail.deal.empty":
+    "Noch kein Deal. Beim Qualifizieren kann einer entstehen.",
   "lead.rail.project.title": "Projekt",
   "lead.rail.project.empty": "Noch kein Projekt.",
   "lead.rail.project.attach": "Projekt verknüpfen",

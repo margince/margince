@@ -2382,7 +2382,7 @@ export const en = {
   "lead.ladder.title": "Where this lead stands",
   "lead.detailsUnset": "Not set",
   "lead.rail.deal.title": "Deal",
-  "lead.rail.deal.empty": "No deal yet. Qualifying this lead opens one.",
+  "lead.rail.deal.empty": "No deal yet. Qualifying this lead can open one.",
   "lead.rail.project.title": "Project",
   "lead.rail.project.empty": "No project yet.",
   "lead.rail.project.attach": "Attach project",

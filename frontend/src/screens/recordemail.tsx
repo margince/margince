@@ -124,6 +124,21 @@ export function EmailVerb({
 }
 
 /**
+ * Whether the composer's open state is the CALLER's, for a page with a second
+ * control that opens this same composer: a lead's "Answer" row hands its Reply
+ * verb the header's own modal rather than mounting a copy of it.
+ *
+ * Both halves or neither, spelled as a union rather than as two optional
+ * props. A caller that passed only the setter never saw the composer open,
+ * because the state it drove was not the state this component reads; one that
+ * passed only the value could never ask for it to close. Both were a type the
+ * compiler accepted and a control the reader could not work.
+ */
+type Lifted =
+  | Readonly<{ open: boolean; onOpenChange: (open: boolean) => void }>
+  | Readonly<{ open?: undefined; onOpenChange?: undefined }>;
+
+/**
  * RecordEmailVerb is the header's Email verb with its own composer, for a
  * record whose page keeps no composer state of its own: the deal and the lead.
  */
@@ -142,16 +157,8 @@ export function RecordEmailVerb({
   /** The record's own address, for a first message to it. See ComposeModal. */
   recordAddress?: string;
   disabledReasonId?: string;
-  /**
-   * Lifts the composer's open state to the caller, for a page with a second
-   * control that opens this SAME composer: a lead's "Answer" row hands its
-   * Reply verb the header's own modal rather than mounting a copy of it.
-   * Absent for every caller with no such second control, which keeps the
-   * state here as before.
-   */
-  open?: boolean;
-  onOpenChange?: (open: boolean) => void;
-}>) {
+}> &
+  Lifted) {
   const [ownComposing, setOwnComposing] = useState(false);
   const composing = open ?? ownComposing;
   const setComposing = onOpenChange ?? setOwnComposing;
