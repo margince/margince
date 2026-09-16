@@ -117,7 +117,7 @@ func linkScope(ctx context.Context, alias string, arg func(any) int) (string, er
 // otherwise hand back the id of a deal the caller may not read — the task
 // is theirs to see, the colleague's deal is not.
 func nextStepsSection(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now time.Time, opts AssembleOptions) ([]crmcontracts.Company360NextStep, crmcontracts.PageInfo, error) {
-	steps, page, _, err := readNextSteps(ctx, tx, companyID, now, opts, sectionLimit)
+	steps, page, _, err := readNextSteps(ctx, tx, companyID, now, opts, sectionLimit, false)
 	return steps, page, err
 }
 
@@ -139,15 +139,28 @@ func nextStepsSection(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, n
 // a due date. The wire contract does not carry it — the account's task list does
 // not show when a task was filed — so it rides beside the rows rather than
 // widening a payload with a field no client renders.
+//
+// SYSTEM-MINTED TASKS ARE NOT PROMISES, so this read excludes them and the
+// task list keeps them. A check-in or renewal reminder the clock minted is
+// the product nudging the reader; rendering it as "You owe them" tells the
+// reader they made a promise nobody made. Excluded in the statement rather
+// than after it, so that a page of overdue reminders cannot crowd a genuine
+// promise out of the bound. The contact page's promise rungs and the
+// review_commitments sweep hold the same line (contact360's owedPromises,
+// activities' ExcludeSystemMinted), so no two surfaces disagree about what
+// is owed.
 func openTaskPromises(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now time.Time, opts AssembleOptions, limit int) ([]crmcontracts.Company360NextStep, []time.Time, error) {
-	steps, _, filed, err := readNextSteps(ctx, tx, companyID, now, opts, limit)
+	steps, _, filed, err := readNextSteps(ctx, tx, companyID, now, opts, limit, true)
 	return steps, filed, err
 }
 
 // readNextSteps is the read both callers share: same statement, same gates,
-// same scan. Only the bound moves, and the filing moments come back for the
-// caller that ranks on them.
-func readNextSteps(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now time.Time, opts AssembleOptions, limit int) ([]crmcontracts.Company360NextStep, crmcontracts.PageInfo, []time.Time, error) {
+// same scan. Two things move per caller: the bound, which the cut honours —
+// the promise read's wide cap and the section's page are different bounds,
+// and cutting both at the page's is how the row that mattered falls off —
+// and whether system-minted rows are excluded. The filing moments come back
+// for the caller that ranks on them.
+func readNextSteps(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now time.Time, opts AssembleOptions, limit int, promisesOnly bool) ([]crmcontracts.Company360NextStep, crmcontracts.PageInfo, []time.Time, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	companyPos := arg(companyID)
@@ -169,6 +182,10 @@ func readNextSteps(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now 
 	if err != nil {
 		return nil, crmcontracts.PageInfo{}, nil, err
 	}
+	extra := ""
+	if promisesOnly {
+		extra = " AND " + activities.NotSystemMinted("a", arg)
+	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT a.id, coalesce(a.subject, ''), a.due_at, a.assignee_id, a.occurred_at, a.version,
 		       (SELECT dl.deal_id FROM activity_link dl
@@ -179,11 +196,11 @@ func readNextSteps(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now 
 		         ORDER BY pl.id LIMIT 1)
 		FROM activity a
 		WHERE a.kind = 'task' AND NOT a.is_done AND a.archived_at IS NULL AND %[1]s
-		  AND %[2]s%[6]s
+		  AND %[2]s%[6]s%[7]s
 		ORDER BY (a.due_at IS NULL), a.due_at, a.occurred_at, a.id
 		LIMIT %[5]d`,
 		activityScope, activities.CompanyLinkedActivityExists(companyPos), linkVisible, contactVisible, limit+1,
-		opts.projectScope(arg)), args...)
+		opts.projectScope(arg), extra), args...)
 	if err != nil {
 		return nil, crmcontracts.PageInfo{}, nil, err
 	}
@@ -219,11 +236,12 @@ func readNextSteps(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now 
 	}
 	// Overdue leads by construction: the SQL orders dated before undated and
 	// earliest first, and overdue is exactly "dated before now".
-	steps, page := truncate(steps)
-	// truncate drops the sentinel row the +1 fetched; the filing moments have
-	// to lose the same one or the two slices stop lining up.
-	if len(filed) > len(steps) {
-		filed = filed[:len(steps)]
+	page := crmcontracts.PageInfo{HasMore: len(steps) > limit}
+	if len(steps) > limit {
+		// Drop the sentinel row the +1 fetched; the filing moments have to
+		// lose the same one or the two slices stop lining up.
+		steps = steps[:limit]
+		filed = filed[:limit]
 	}
 	if steps == nil {
 		steps = []crmcontracts.Company360NextStep{}

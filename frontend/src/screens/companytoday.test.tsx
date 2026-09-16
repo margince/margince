@@ -381,6 +381,36 @@ describe("the day's call, and which record it is read from", () => {
     ).toBeTruthy();
   });
 
+  // A task's evidence is its own subject: a disclosure that opens on the
+  // headline restated answers nothing, so the card draws none.
+  it("draws no rests-on box for a promise whose only evidence restates it", () => {
+    show({
+      ...BASE,
+      moment: {
+        claim_key: "moment:open_promise",
+        evidence_fingerprint: "fp-2",
+        rule: "open_promise",
+        headline: "You owe them: Send the signed contract",
+        why_now: "Due in 2 days.",
+        confidence: "observed_fact",
+        evidence: [
+          { type: "task", id: "a-2", label: "Send the signed contract" },
+        ],
+        recommended_action: {
+          kind: "complete_task",
+          label: "Open it from the task list",
+          state: "blocked",
+        },
+      },
+    });
+    expect(
+      screen.getByText("You owe them: Send the signed contract"),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: /What this rests on/ }),
+    ).toBeNull();
+  });
+
   it("carries the account's suggestions as moves alongside the context band", () => {
     show({
       ...BASE,
