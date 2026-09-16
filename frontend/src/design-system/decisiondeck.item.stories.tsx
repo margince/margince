@@ -112,9 +112,9 @@ const BUNDLE: DecisionDeckItem = {
   id: "bn-1",
   bundleId: "bn-1",
   members: [
-    approval("11", { summary: "Lead from acme.example: Anna Weber" }),
-    approval("12", { summary: "Lead from acme.example: Mira Osei" }),
-    approval("13", { summary: "Lead from acme.example: Jonas Feld" }),
+    approval("11", { summary: "Found on acme.example: Anna Weber" }),
+    approval("12", { summary: "Found on acme.example: Mira Osei" }),
+    approval("13", { summary: "Found on acme.example: Jonas Feld" }),
   ],
 };
 
@@ -181,10 +181,10 @@ export const ABundleWhoseOldestLapsed: Story = {
       bundleId: "bn-2",
       members: [
         approval("21", {
-          summary: "Lead from acme.example: ran out of time",
+          summary: "Found on acme.example: ran out of time",
           expires_at: new Date(NOW - HOUR).toISOString(),
         }),
-        approval("22", { summary: "Lead from acme.example: Mira Osei" }),
+        approval("22", { summary: "Found on acme.example: Mira Osei" }),
       ],
     },
   },

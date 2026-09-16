@@ -15,6 +15,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/url"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -220,6 +222,19 @@ func siteLeadStageInput(readID, companyID ids.UUID, seedURL string, contact site
 		Identity:       identity,
 		JoinPending:    true,
 		BundleID:       bundleID,
-		Summary:        fmt.Sprintf("Lead from %s: %s — %s", seedURL, contact.Name, contact.Role),
+		Summary:        fmt.Sprintf("Found on %s: %s — %s", siteLeadHost(seedURL), contact.Name, contact.Role),
 	}, nil
+}
+
+// siteLeadHost is the site as a reader says it — "intrum.com", not the seed
+// URL's scheme and www noise. The summary opens with it because provenance is
+// the one fact that tells a scraped contact apart from somebody who wrote in.
+// A seed that does not parse is shown verbatim rather than hidden: the reader
+// still learns where the name came from.
+func siteLeadHost(seedURL string) string {
+	parsed, err := url.Parse(seedURL)
+	if err != nil || parsed.Hostname() == "" {
+		return seedURL
+	}
+	return strings.TrimPrefix(parsed.Hostname(), "www.")
 }
