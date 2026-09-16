@@ -377,7 +377,7 @@ export function ContactCommercialCard({
             onClick={() => navigate({ screen: "deals", id: deal.deal_id })}
           >
             {t("contact.commercial.openDeal")}{" "}
-            <ExternalLink size={13} aria-hidden="true" />
+            <ExternalLink aria-hidden="true" />
           </Button>
         )}
       </PanelBody>

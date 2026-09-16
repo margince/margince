@@ -106,8 +106,7 @@ export function ContactMemory({
           variant="ghost"
           onClick={() => navigate(contactTabRoute(view.contact.id, "timeline"))}
         >
-          {t("contact.memory.viewAll")}{" "}
-          <ChevronRight size={13} aria-hidden="true" />
+          {t("contact.memory.viewAll")} <ChevronRight aria-hidden="true" />
         </Button>
       }
     >

@@ -217,7 +217,7 @@ function IdentityRows({
                 aria-label={t("ownerIdentities.remove")}
                 onClick={() => onRemove(identity.id)}
               >
-                <Trash2 aria-hidden size={16} />
+                <Trash2 aria-hidden />
               </Button>
             }
           />

@@ -418,7 +418,7 @@ export function AiRuntimeChip({
             {labels.tokensShort !== undefined && ` ${labels.tokensShort}`}
           </small>
         )}
-        <ChevronDown className="mw-aistat-caret" aria-hidden size={12} />
+        <ChevronDown className="mw-aistat-caret" aria-hidden />
       </button>
       <div className="mw-aistat-pop" id={popoverId} hidden={!open}>
         <p className="mw-aistat-h">{labels.answering}</p>

@@ -114,7 +114,7 @@ export function EmailVerb({
   return (
     <IconAction
       label={label ?? t("contact.action.email")}
-      icon={icon ?? <Mail size={15} aria-hidden="true" />}
+      icon={icon ?? <Mail aria-hidden="true" />}
       disabled={disabled}
       reason={reason}
       reasonId={reasonId}

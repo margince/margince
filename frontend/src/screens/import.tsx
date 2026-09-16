@@ -234,7 +234,7 @@ function ImportWizard({
         disabled={busy}
         onClick={() => fileInput.current?.click()}
       >
-        <Upload size={16} aria-hidden />
+        <Upload aria-hidden />
         <span>{profile ? t("import.chooseAnother") : t("import.choose")}</span>
       </Button>
 

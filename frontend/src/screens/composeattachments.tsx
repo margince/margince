@@ -141,7 +141,7 @@ export function AttachAction({
       className="richtext-btn"
       label={
         <>
-          <Paperclip size={14} aria-hidden="true" />
+          <Paperclip aria-hidden="true" />
           <span className="sr-only">{t("compose.attach")}</span>
         </>
       }

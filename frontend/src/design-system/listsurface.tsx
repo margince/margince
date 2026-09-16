@@ -512,10 +512,10 @@ function FilterMenu({
         onClick={onToggle}
       >
         {hasApplied ? (
-          <Plus size={13} strokeWidth={1.8} aria-hidden="true" />
+          <Plus strokeWidth={1.8} aria-hidden="true" />
         ) : (
           <>
-            <Filter size={13} strokeWidth={1.6} aria-hidden="true" />
+            <Filter strokeWidth={1.6} aria-hidden="true" />
             {t("table.filter")}
           </>
         )}
@@ -729,7 +729,7 @@ function SortMenu({
         aria-expanded={open}
         onClick={onToggle}
       >
-        <ArrowDownUp size={13} strokeWidth={1.5} aria-hidden="true" />
+        <ArrowDownUp strokeWidth={1.5} aria-hidden="true" />
         {active
           ? t("table.sortNamed", { column: active.label })
           : t("table.sort")}

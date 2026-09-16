@@ -410,7 +410,7 @@ export function NewRecordButton({
 }>) {
   return (
     <Button onClick={onClick} data-testid={testId}>
-      <Plus aria-hidden style={{ width: 14, height: 14 }} /> {label}
+      <Plus aria-hidden /> {label}
     </Button>
   );
 }

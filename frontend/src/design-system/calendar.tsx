@@ -89,14 +89,14 @@ export function Calendar({
           aria-label={t("calendar.previousMonth")}
           onClick={() => onMonthChange(shiftMonth(month, -1))}
         >
-          <ChevronLeft aria-hidden="true" size={16} />
+          <ChevronLeft aria-hidden="true" />
         </Button>
         <Button
           iconOnly
           aria-label={t("calendar.nextMonth")}
           onClick={() => onMonthChange(shiftMonth(month, 1))}
         >
-          <ChevronRight aria-hidden="true" size={16} />
+          <ChevronRight aria-hidden="true" />
         </Button>
       </div>
       <div className="calendar-grid">

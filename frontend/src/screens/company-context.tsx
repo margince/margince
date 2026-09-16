@@ -803,8 +803,7 @@ function CompanySourceCard({
                   pending={refreshing}
                   onClick={onRefresh}
                 >
-                  <RefreshCw aria-hidden size={16} />{" "}
-                  {t("settings.companyRefresh")}
+                  <RefreshCw aria-hidden /> {t("settings.companyRefresh")}
                 </Button>
               }
             />

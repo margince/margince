@@ -2099,7 +2099,7 @@ function AuditLogRow({
           aria-label={t("settings.auditExpand")}
           onClick={() => setExpanded((value) => !value)}
         >
-          <ChevronDown aria-hidden size={14} className="expander-chevron" />
+          <ChevronDown aria-hidden className="expander-chevron" />
         </Button>
       </div>
       {expanded && (

@@ -1,11 +1,13 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import ts from "typescript";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { filesMatching, parseSource } from "../../scripts/lib/source-tree";
 import { Button } from "./atoms";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -532,5 +534,97 @@ describe("the link variant is the .link-button affordance, not a copy of it", ()
     expect(rule).not.toBeNull();
     expect(rule?.[1]).toMatch(/min-inline-size:\s*0/);
     expect(rule?.[1]).toMatch(/min-block-size:\s*0/);
+  });
+});
+
+// The control owns its icon's size, and this is the fitness function for it.
+//
+// A "New deal" button shipped its Plus at 14px while `.btn svg` said
+// --controlIcon, and the reason is worth stating because it decides what this
+// gate can be: lucide's `size` prop writes width/height ATTRIBUTES, which every
+// author rule outranks, so a `size={14}` inside a button renders at the
+// control's size anyway and is merely a false claim at the call site. An inline
+// STYLE is the one spelling that wins, and that is what drew the 14px. Both are
+// the same defect — a call site answering a question the control already
+// answers — so both are named here rather than only the one that shows.
+//
+// A census over the tree rather than a render of this file: what a reader sees
+// is the icon inside whichever of two hundred screens drew it, and a gate that
+// reads only its own imports reports PASS on a tree it never looked at.
+describe("a glyph inside a control takes no size of its own", () => {
+  const CONTROL_TAGS = new Set(["Button", "IconAction"]);
+  // The classes the control stylesheets key on, so an `<a className="btn">` and
+  // a row's own `.iconbtn` are judged as the controls they are drawn as.
+  const CONTROL_CLASS = /\b(btn|iconbtn|link-button)\b/;
+
+  function isControl(node: ts.Node): boolean {
+    const open = ts.isJsxElement(node)
+      ? node.openingElement
+      : ts.isJsxSelfClosingElement(node)
+        ? node
+        : undefined;
+    if (open === undefined) return false;
+    if (CONTROL_TAGS.has(open.tagName.getText())) return true;
+    return open.attributes.properties.some(
+      (attribute) =>
+        ts.isJsxAttribute(attribute) &&
+        attribute.name.getText() === "className" &&
+        attribute.initializer !== undefined &&
+        CONTROL_CLASS.test(attribute.initializer.getText()),
+    );
+  }
+
+  // Both spellings: the `size` prop that states a number the control already
+  // owns, and the inline width/height that actually overrides it.
+  function sizesItself(attribute: ts.JsxAttributeLike): boolean {
+    if (!ts.isJsxAttribute(attribute)) return false;
+    const name = attribute.name.getText();
+    const text = attribute.getText();
+    if (name === "size") return /^size=\{?\d+\}?$/.test(text);
+    if (name === "style") {
+      return /\b(width|height|inlineSize|blockSize)\s*:/.test(text);
+    }
+    return false;
+  }
+
+  it("names no size on a glyph any control already sizes", () => {
+    const root = join(here, "..");
+    const files = filesMatching(root, /\.tsx$/);
+    // The one way a census fails: it reads a smaller tree, finds nothing, and
+    // reports the same word a clean tree does. A floor makes an empty walk say
+    // so instead — the same guard `native-controls.test.ts` keeps.
+    expect(files.length).toBeGreaterThan(100);
+    const found: string[] = [];
+    for (const file of files) {
+      const source = parseSource(file, readFileSync(file, "utf8"));
+      const walk = (node: ts.Node, inControl: boolean) => {
+        const here = inControl || isControl(node);
+        const open = ts.isJsxElement(node)
+          ? node.openingElement
+          : ts.isJsxSelfClosingElement(node)
+            ? node
+            : undefined;
+        // The control's own props are its business; what is judged is what it
+        // WRAPS — the glyph a caller handed it, as a child or through `icon`.
+        if (
+          open !== undefined &&
+          here &&
+          !CONTROL_TAGS.has(open.tagName.getText())
+        ) {
+          for (const attribute of open.attributes.properties) {
+            if (!sizesItself(attribute)) continue;
+            const { line } = source.getLineAndCharacterOfPosition(
+              attribute.getStart(),
+            );
+            found.push(
+              `${relative(root, file)}:${line + 1}: <${open.tagName.getText()} ${attribute.getText()}>`,
+            );
+          }
+        }
+        node.forEachChild((child) => walk(child, here));
+      };
+      walk(source, false);
+    }
+    expect(found).toEqual([]);
   });
 });

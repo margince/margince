@@ -97,9 +97,11 @@ describe("the settings stories are filed where the product files them", () => {
   // story whose title stops resolving, or whose root is edited away from
   // `Settings/`, drops out of the filtered corpus and is never checked again.
   // So the count is EXACT and derived from the tree: adding or removing a
-  // settings story is a deliberate edit to this number.
+  // settings story is a deliberate edit to this number. 80 → 83 for
+  // `You/Connections/Backfill run`, `Data/Capture rules/Refused domain
+  // decision` and `You/Capture activity/Pipeline drawer`.
   it("reads every settings story, and says how many that is", () => {
-    expect(settingsStories.length).toBe(80);
+    expect(settingsStories.length).toBe(83);
   });
 
   // The filter above drops a file whose title does not resolve. That is the

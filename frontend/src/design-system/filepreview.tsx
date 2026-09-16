@@ -149,7 +149,7 @@ function FilePreviewDialog({
               {(file.bearer === undefined || object.status === "ready") && (
                 <IconAction
                   label={t("filePreview.download")}
-                  icon={<Download size={15} aria-hidden="true" />}
+                  icon={<Download aria-hidden="true" />}
                   onClick={() => save(file, object)}
                 />
               )}
@@ -163,13 +163,13 @@ function FilePreviewDialog({
               {object.status === "ready" && (
                 <IconAction
                   label={t("filePreview.print")}
-                  icon={<Printer size={15} aria-hidden="true" />}
+                  icon={<Printer aria-hidden="true" />}
                   onClick={() => printing(frame.current)}
                 />
               )}
               <IconAction
                 label={t("filePreview.close")}
-                icon={<X size={15} aria-hidden="true" />}
+                icon={<X aria-hidden="true" />}
                 onClick={onClose}
               />
             </div>

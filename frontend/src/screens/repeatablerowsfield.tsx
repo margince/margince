@@ -179,7 +179,7 @@ export function RepeatableRowsField({
             aria-label={t("field.moveRowUp", { n: ordinalNumber(index + 1) })}
             onClick={() => moveRow(index, "up")}
           >
-            <ChevronUp aria-hidden size={16} />
+            <ChevronUp aria-hidden />
           </Button>
           <Button
             type="button"
@@ -190,7 +190,7 @@ export function RepeatableRowsField({
             aria-label={t("field.moveRowDown", { n: ordinalNumber(index + 1) })}
             onClick={() => moveRow(index, "down")}
           >
-            <ChevronDown aria-hidden size={16} />
+            <ChevronDown aria-hidden />
           </Button>
           {/* field.removeRow and field.removeRowLabel are one control's two
               names — the short visible text and the row-numbered accessible

@@ -852,11 +852,14 @@
    instead of leading it. `.btn` and `.iconbtn` each size their own icon for
    exactly this reason; this class carried the same shape and none of the rule,
    so a link button was the one affordance in the product where an icon was the
-   caller's problem. The size belongs to the control, not to the call site. */
+   caller's problem. The size belongs to the control, not to the call site —
+   and it is the same --controlIcon the other two spend, because a link verb's
+   mark standing a pixel off a ghost verb's beside it is the drift this rule
+   was written to end, not a smaller version of it. */
 .link-button svg,
 .btn.btn-link svg {
-  inline-size: 16px;
-  block-size: 16px;
+  inline-size: var(--controlIcon);
+  block-size: var(--controlIcon);
   flex: none;
 }
 /* A SOLID outline, not the 9%-opacity ring the filled controls use.

@@ -362,7 +362,7 @@ export function EditAction<Updated extends { id: string }>({
       ) : (
         <IconAction
           label={label}
-          icon={<PenLine size={15} aria-hidden="true" />}
+          icon={<PenLine aria-hidden="true" />}
           reasonId={disabledReasonId}
           onClick={() => setEditing(true)}
           testId="edit-record"

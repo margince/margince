@@ -260,7 +260,7 @@ function CuratedDomains({
               reasonId={refusal}
               onClick={() => onRemove(domain.domain)}
             >
-              <Trash2 aria-hidden size={16} />
+              <Trash2 aria-hidden />
             </Button>
           }
         />

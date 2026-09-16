@@ -295,7 +295,7 @@ export function ConsumerMailDomainsCard() {
                               reasonId={canManage ? undefined : denialId}
                               onClick={() => remove.mutate(entry.id)}
                             >
-                              <Trash2 aria-hidden size={16} />
+                              <Trash2 aria-hidden />
                             </Button>
                           }
                         />

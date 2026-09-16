@@ -787,7 +787,7 @@ function EnrichNow({
         })
       }
     >
-      <Search size={15} aria-hidden="true" />{" "}
+      <Search aria-hidden="true" />{" "}
       {t(recheck ? "provider.profile.recheck" : "provider.profile.enrichNow")}
     </Button>
   );

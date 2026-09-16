@@ -44,21 +44,18 @@ export const InARecordHeader: Story = {
       }}
     >
       <Button variant="primary">
-        <Mail size={15} aria-hidden="true" />
+        <Mail aria-hidden="true" />
         Email
       </Button>
-      <IconAction label="Call" icon={<Phone size={15} aria-hidden="true" />} />
+      <IconAction label="Call" icon={<Phone aria-hidden="true" />} />
       <IconAction
         label="See meetings"
-        icon={<CalendarDays size={15} aria-hidden="true" />}
+        icon={<CalendarDays aria-hidden="true" />}
       />
-      <IconAction
-        label="Edit"
-        icon={<PenLine size={15} aria-hidden="true" />}
-      />
+      <IconAction label="Edit" icon={<PenLine aria-hidden="true" />} />
       <IconAction
         label="More actions"
-        icon={<MoreHorizontal size={15} aria-hidden="true" />}
+        icon={<MoreHorizontal aria-hidden="true" />}
       />
     </div>
   ),

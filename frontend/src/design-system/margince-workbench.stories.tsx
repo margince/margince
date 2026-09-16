@@ -202,7 +202,7 @@ export const Rail: Story = {
     },
     contactAction: (
       <Button iconOnly aria-label="Switch theme">
-        <SunMoon size={15} aria-hidden />
+        <SunMoon aria-hidden />
       </Button>
     ),
   },
@@ -225,7 +225,7 @@ export const RailWithoutContact: Story = {
     stepLabel: "Step 2 of 5 · Confirm",
     contactAction: (
       <Button iconOnly aria-label="Switch theme">
-        <SunMoon size={15} aria-hidden />
+        <SunMoon aria-hidden />
       </Button>
     ),
   },

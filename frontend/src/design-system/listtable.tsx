@@ -1480,7 +1480,7 @@ function TableTools<Row>({
             aria-expanded={open}
             onClick={() => setOpen(!open)}
           >
-            <Columns3 size={13} strokeWidth={1.5} aria-hidden="true" />
+            <Columns3 strokeWidth={1.5} aria-hidden="true" />
             {t("table.columns")}
           </button>
           <Menu open={open} head={t("table.shownColumns")} align="right">
@@ -1508,7 +1508,7 @@ function TableTools<Row>({
         aria-pressed={dense}
         onClick={onDense}
       >
-        <Rows3 size={13} strokeWidth={1.5} aria-hidden="true" />
+        <Rows3 strokeWidth={1.5} aria-hidden="true" />
         {t("table.compact")}
       </button>
     </>

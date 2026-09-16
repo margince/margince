@@ -92,7 +92,7 @@ export function ScheduleMenu({ onOpen }: Readonly<{ onOpen: () => void }>) {
       }
     >
       <Button variant="ghost" onClick={onOpen}>
-        <Clock aria-hidden="true" size={16} />
+        <Clock aria-hidden="true" />
         {t("compose.scheduleSend")}
       </Button>
     </Popover>
@@ -222,7 +222,7 @@ export function ScheduleDialog({
             </button>
           ))}
           <Button variant="ghost" onClick={() => setPicking(true)}>
-            <CalendarDays aria-hidden="true" size={16} />
+            <CalendarDays aria-hidden="true" />
             {t("compose.schedulePick")}
           </Button>
           {/* Only once a moment is set. Offered over an unscheduled send it
