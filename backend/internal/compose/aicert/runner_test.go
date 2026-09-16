@@ -75,8 +75,8 @@ func TestCertifyTaskCertifiesWhenEveryRunPassesAndScoresHigh(t *testing.T) {
 	if rec.Runs != 3 || rec.Reliability != 1 {
 		t.Fatalf("runs=%d reliability=%v, want 3 and 1", rec.Runs, rec.Reliability)
 	}
-	if rec.ScoreP50 != 90 || rec.ScoreMin != 90 {
-		t.Fatalf("score_p50=%d score_min=%d, want 90 and 90", rec.ScoreP50, rec.ScoreMin)
+	if rec.JudgeScoreP50 != 90 || rec.JudgeScoreMin != 90 {
+		t.Fatalf("judge_score_p50=%d judge_score_min=%d, want 90 and 90", rec.JudgeScoreP50, rec.JudgeScoreMin)
 	}
 	if !rec.SelfJudged {
 		t.Fatalf("both candidate and judge served through the fake provider — want self_judged true, record: %+v", rec)
@@ -207,8 +207,8 @@ func TestCertifyTaskJudgeRetriesOnceOnAParseFailureThenScores(t *testing.T) {
 	if err != nil {
 		t.Fatalf("certifyTask: %v", err)
 	}
-	if rec.ScoreP50 != 80 {
-		t.Fatalf("score_p50 = %d, want 80 (the retry's score)", rec.ScoreP50)
+	if rec.JudgeScoreP50 != 80 {
+		t.Fatalf("judge_score_p50 = %d, want 80 (the retry's score)", rec.JudgeScoreP50)
 	}
 	if rec.Verdict != VerdictCertified {
 		t.Fatalf("verdict = %q, want %q", rec.Verdict, VerdictCertified)
@@ -231,8 +231,8 @@ func TestCertifyTaskJudgeScoresZeroWhenBothAttemptsFailToParse(t *testing.T) {
 	if err != nil {
 		t.Fatalf("certifyTask: %v", err)
 	}
-	if rec.ScoreP50 != 0 || rec.ScoreMin != 0 {
-		t.Fatalf("score should be 0 after two failed parses, got p50=%d min=%d", rec.ScoreP50, rec.ScoreMin)
+	if rec.JudgeScoreP50 != 0 || rec.JudgeScoreMin != 0 {
+		t.Fatalf("score should be 0 after two failed parses, got p50=%d min=%d", rec.JudgeScoreP50, rec.JudgeScoreMin)
 	}
 	if rec.Verdict != VerdictNotSupported {
 		t.Fatalf("verdict = %q, want %q", rec.Verdict, VerdictNotSupported)
