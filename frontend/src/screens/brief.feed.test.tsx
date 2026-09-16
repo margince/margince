@@ -276,3 +276,44 @@ it("claims no moments when the server withheld them", () => {
   expect(screen.queryByText(en["worklist.pane.lastInbound"])).toBeNull();
   expect(screen.queryByText(en["worklist.pane.never"])).toBeNull();
 });
+
+// THE RANKED COLUMN NAMES ITS ROWS FROM THE CONTACT, not from a message.
+//
+// Read off `email_summary.counterparty`, the line named the sender of a
+// waiting message and left every other row anonymous — so a task the reader
+// owes somebody stood in the column with its reason and nobody's name, while
+// the same row in hand named them. The contact is the field every row carries.
+it("names a task's contact in the ranked column", () => {
+  stubApi({});
+  const owed = {
+    ...taskRow("owed", "Send the promised rollout comparison"),
+    contact: {
+      id: "contact-sonya",
+      label: "Sonya Beck",
+      touch: {
+        last_inbound_at: "2026-09-03T16:46:00Z",
+        last_outbound_at: "2026-08-28T09:12:00Z",
+      },
+    },
+  };
+  const { container } = render(
+    <BriefFeed
+      day={readingsDay({}, [waitingEmailRow(), owed])}
+      onContext={() => undefined}
+      state="ready"
+      changed={undefined}
+      refreshFailed={false}
+      onRetry={() => undefined}
+    />,
+  );
+
+  // THE TASK'S OWN ROW in the column, not the card and not the waiting message
+  // above it: both of those named her before, and either would carry a
+  // page-wide query over a line that still said nothing.
+  const column = container.querySelector(".brief-triage-queue");
+  if (!(column instanceof HTMLElement)) throw new Error("no ranked column");
+  const row = within(column).getByRole("button", {
+    name: /Send the promised rollout comparison/,
+  });
+  expect(within(row).getByText(/Sonya Beck/)).toBeTruthy();
+});

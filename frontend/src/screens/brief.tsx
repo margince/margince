@@ -31,6 +31,7 @@ import { WeeklySection } from "./brief.weekly";
 import { BriefCoverage } from "./briefcoverage";
 import { useMe } from "./common";
 import { TaskDetailModal, useTaskUpdate } from "./taskactions";
+import { drawerScope } from "./worklist.address";
 import { WorklistPane } from "./worklist.pane";
 import { useWorklist, worklistKey } from "./worklist.queries";
 import { readerTask } from "./worklist.reader";
@@ -47,6 +48,20 @@ export function BriefScreen() {
   const address = addressFrom(params, teamOffered);
   const query = own;
   const day = briefDay(query.data?.pages);
+  // THE QUEUE THE BUTTON OPENS, which is not always the reader's own. The
+  // drawer keeps its scope and its named owner in the address and both survive
+  // it closing, so a reader who switched it to the team and shut it had a
+  // button counting their own day over a list of somebody else's. The same
+  // query key the drawer itself uses, so the two share one read and cannot
+  // report two totals — and on the ordinary day, where neither is set, it IS
+  // `own` and costs nothing.
+  const owner = params.get("owner") ?? "";
+  const queued = useWorklist(
+    drawerScope(params),
+    "all",
+    owner === "" ? undefined : owner,
+  );
+  const queuedDay = briefDay(queued.data?.pages);
   const review = useWeeklyReview(address.week);
   const firstName = me.data?.user?.display_name?.trim().split(/\s+/)[0] ?? null;
   return (
@@ -88,13 +103,14 @@ export function BriefScreen() {
           {/* The way into the whole queue, as the head's PRIMARY control
               with the day's count on it: this is the one page whose pane is
               the day itself, so the switch is the main door and not a
-              detail fold. The count is the queue's own total, the same
-              figure the drawer's head sentence ends on. */}
+              detail fold. The count is the DRAWER's own total, read off the
+              drawer's own query — the same figure its head sentence ends
+              on, whichever queue it is showing. */}
           <PageAsideToggle
             prominent
             controlled={{
               open: params.get("queue") === "1",
-              count: day?.summary.total,
+              count: queuedDay?.summary.total,
               labels: {
                 show: t("brief.queue.show"),
                 hide: t("brief.queue.hide"),

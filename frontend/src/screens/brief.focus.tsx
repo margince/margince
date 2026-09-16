@@ -259,7 +259,13 @@ function queueLine(
   locale: Locale,
   zone: string,
 ): string | null {
-  const who = item.email_summary?.counterparty ?? null;
+  // The CONTACT the server put on the row, not the message's counterparty: a
+  // task or a meeting carries one and no message at all, so reading the
+  // message left those rows unnamed in the column while the row in hand named
+  // them. On a waiting message the two are the same person — the backend puts
+  // the sender there — so this is the one field for every row, and the same
+  // one the row's own captions read (`aboutRecord`).
+  const who = item.contact?.label ?? null;
   // The reader's own pin is the queue's reason and not the focus projection's,
   // for the reason the row in hand withholds it (`allowPin`).
   const reason =

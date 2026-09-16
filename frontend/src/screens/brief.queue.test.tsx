@@ -167,3 +167,40 @@ it("opens a meeting's own record from its focus row", async () => {
     screen.queryByRole("button", { name: en["tasks.complete"] }),
   ).toBeNull();
 });
+
+// THE BUTTON AND THE LIST IT OPENS NAME ONE QUEUE.
+//
+// The drawer keeps its scope in `queue_scope` and that survives the drawer
+// closing, so a reader who switched it to the team and shut it had a button
+// counting their own day over a list of somebody else's — two totals for one
+// control, and the one on screen was the wrong one.
+it("counts the queue the button actually opens", async () => {
+  window.location.hash = "#/home?queue_scope=team";
+  stubApi({
+    "GET /worklist": (_body, query) =>
+      jsonResponse(
+        query.get("scope") === "team"
+          ? {
+              ...readingsDay({}, [], undefined, { total: 42 }),
+              scope: "team",
+            }
+          : readingsDay({}, [taskRow("t", "Call Weber")], undefined, {
+              total: 3,
+            }),
+      ),
+  });
+  render(<BriefScreen />);
+
+  // The team's total, not the reader's own three. Read off the count element
+  // the switch carries rather than its accessible name, which is the verb
+  // alone — `OptionCount` is beside the words, not in them.
+  const toggle = await screen.findByRole("button", {
+    name: en["brief.queue.show"],
+  });
+  await waitFor(() => {
+    expect(
+      toggle.querySelector(".record-details-toggle-count")?.textContent,
+      "the switch counted a different queue from the one it opens",
+    ).toContain("42");
+  });
+});
