@@ -112,13 +112,22 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
   // what was said about the deal and what was changed on it are one order of
   // events, read in one place. Every arrival at the deal opens on the overview,
   // so each read of the chronology asks for the tab first.
-  const openDealHistory = () =>
-    page
-      .getByTestId("record-tabs")
-      .getByRole("button", { name: "Verlauf", exact: true })
-      .click();
-  await openDealHistory();
   const timeline = page.getByRole("region", { name: "Verlauf" });
+  const openDealHistory = async () => {
+    // The write lands, the dialog closes, and the reads it invalidated come
+    // back — and a record remounted by one of those refetches opens on its
+    // first tab again. So the tab is asked for until the chronology is the
+    // thing on screen, rather than once into a page still settling.
+    await expect(logDialog).toBeHidden();
+    await expect(async () => {
+      await page
+        .getByTestId("record-tabs")
+        .getByRole("button", { name: "Verlauf", exact: true })
+        .click();
+      await expect(timeline).toBeVisible({ timeout: 2000 });
+    }).toPass();
+  };
+  await openDealHistory();
   await expect(timeline.getByText("Kickoff mit Brandt IT")).toBeVisible();
 
   await page

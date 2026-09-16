@@ -1,0 +1,176 @@
+/** @vitest-environment happy-dom */
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+import "@testing-library/jest-dom/vitest";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { cleanup, render, screen, within } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import type { components } from "../../api/schema";
+import { meFixture } from "../../app/mefixture";
+import { LocaleProvider } from "../../i18n";
+import { en } from "../../i18n/en";
+import { DealCommitteeCard } from "./dealcommitteecard";
+
+// The card joins two reads of ONE set of edges: the stakeholder rows carry the
+// verbs, the coverage read carries who has answered. What is asserted here is
+// the join — that engagement lands on the row for the same contact, and that a
+// row the coverage read does not cover claims nothing about it. A card that
+// guessed there would report a silence nobody measured.
+
+type DealCoverage = components["schemas"]["DealCoverage"];
+
+const DEAL = "01a02e25-a5ac-7099-8099-581cbf001a99";
+const TALKING = "01a02be9-2293-75d2-9dd2-3027d9b63dc2";
+const QUIET = "01a02be9-4471-7a10-8a10-6f2b1cc4e0d1";
+const UNCOVERED = "01a02be9-9c02-7bb4-8bb4-11e4a7d3f550";
+
+const NAMES: Record<string, string> = {
+  [TALKING]: "Mai Trần",
+  [QUIET]: "Bảo Nguyễn",
+  [UNCOVERED]: "Linh Phạm",
+};
+
+function edge(contactId: string, role: string) {
+  return {
+    id: `rel-${contactId}`,
+    kind: "deal_stakeholder",
+    deal_id: DEAL,
+    contact_id: contactId,
+    role,
+    is_current_primary: false,
+    source: "manual",
+    captured_by: "human:u-1",
+    version: 1,
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+  };
+}
+
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "content-type": "application/json" },
+  });
+}
+
+function stubFetch(edges: unknown[]) {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (request: Request) => {
+      const { url } = request;
+      if (url.endsWith("/v1/me")) {
+        return json(
+          meFixture({
+            allow: { relationship: ["read", "create", "update", "delete"] },
+          }),
+        );
+      }
+      if (url.includes("/relationships")) {
+        return json({ data: edges, page: { next_cursor: null } });
+      }
+      // EntityRef resolves each far end by id, which is what puts a name on a
+      // row rather than the id the edge carries.
+      const named = Object.keys(NAMES).find((id) => url.includes(id));
+      if (named) {
+        return json({ id: named, full_name: NAMES[named] });
+      }
+      return json({ data: [], page: { next_cursor: null } });
+    }),
+  );
+}
+
+const coverage = (seats: DealCoverage["stakeholders"]): DealCoverage => ({
+  deal_id: DEAL,
+  stakeholders: seats,
+  our_side: [],
+  risks: [],
+  sections_omitted: [],
+});
+
+function draw(edges: unknown[], view?: DealCoverage) {
+  stubFetch(edges);
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <LocaleProvider initial="en">
+        <DealCommitteeCard
+          dealId={DEAL}
+          coverage={view}
+          withheld={false}
+          pending={false}
+        />
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+}
+
+/** The block a seat's facts are read from, found by the contact's own name. */
+async function seatOf(name: string) {
+  const link = await screen.findByRole("link", { name });
+  const block = link.closest(".panel-row");
+  if (!block) {
+    throw new Error(`the seat for ${name} is not drawn as a row of its own`);
+  }
+  return within(block as HTMLElement);
+}
+
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
+
+describe("the deal's committee card", () => {
+  it("puts each seat's engagement on that seat's own row", async () => {
+    draw(
+      [edge(TALKING, "economic_buyer"), edge(QUIET, "evaluator")],
+      coverage([
+        { contact_id: TALKING, role: "economic_buyer", engaged: true },
+        { contact_id: QUIET, role: "evaluator", engaged: false },
+      ]),
+    );
+
+    expect(
+      (await seatOf("Mai Trần")).getByText(en["coverage.engaged"]),
+    ).toBeInTheDocument();
+    expect(
+      (await seatOf("Bảo Nguyễn")).getByText(en["coverage.quiet"]),
+    ).toBeInTheDocument();
+  });
+
+  it("claims nothing about a seat the coverage read did not cover", async () => {
+    // The two reads can disagree — a seat added since the coverage view was
+    // built, or a view the reader is refused. Printing "quiet" there would
+    // report a silence nobody measured, which is the one wrong answer
+    // available: it reads exactly like a stakeholder who has not replied.
+    draw(
+      [edge(TALKING, "economic_buyer"), edge(UNCOVERED, "user")],
+      coverage([
+        { contact_id: TALKING, role: "economic_buyer", engaged: true },
+      ]),
+    );
+
+    const uncovered = await seatOf("Linh Phạm");
+    expect(uncovered.queryByText(en["coverage.quiet"])).toBeNull();
+    expect(uncovered.queryByText(en["coverage.engaged"])).toBeNull();
+    // The seat is still a seat: the row and its other facts stand.
+    expect(uncovered.getByText("user")).toBeInTheDocument();
+  });
+
+  it("says the committee is empty once, not twice", async () => {
+    // The picture and the rows both know the committee is empty, and both used
+    // to say so. The rows keep the sentence, because they carry the verb that
+    // ends the emptiness.
+    draw([], coverage([]));
+
+    expect(
+      await screen.findByText(en["rel.dealStakeholdersEmpty"]),
+    ).toBeInTheDocument();
+    expect(screen.getAllByText(en["rel.dealStakeholdersEmpty"])).toHaveLength(
+      1,
+    );
+  });
+});
