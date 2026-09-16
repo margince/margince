@@ -122,6 +122,16 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
   const onDealHistory = async (read: () => Promise<unknown>) => {
     await expect(logDialog).toBeHidden();
     await expect(async () => {
+      // At rest before pressing. The strip is sticky, so a scrolled record
+      // pins it over the head and the press lands on whatever is pinned above
+      // the tab — `toPass` then swallows the refused click and retries into the
+      // same state until the test times out. The shell scrolls an inner
+      // container rather than the window.
+      await page.evaluate(() => {
+        for (const box of document.querySelectorAll(".scroll")) {
+          box.scrollTop = 0;
+        }
+      });
       await page
         .getByTestId("record-tabs")
         .getByRole("button", { name: "Verlauf", exact: true })

@@ -55,7 +55,13 @@ function json(body: unknown, status = 200) {
   });
 }
 
-function stubFetch(edges: unknown[], deleted: string[] = []) {
+type Patch = { role: unknown; ifMatch: string | null };
+
+function stubFetch(
+  edges: unknown[],
+  deleted: string[] = [],
+  patched: Patch[] = [],
+) {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (request: Request) => {
@@ -63,6 +69,14 @@ function stubFetch(edges: unknown[], deleted: string[] = []) {
       if (method === "DELETE") {
         deleted.push(url.slice(url.lastIndexOf("/") + 1));
         return json({}, 204);
+      }
+      if (method === "PATCH") {
+        const body = await request.json();
+        patched.push({
+          role: body.role,
+          ifMatch: request.headers.get("If-Match"),
+        });
+        return json({ ...edge(TALKING, String(body.role)), version: 2 });
       }
       if (url.endsWith("/v1/me")) {
         return json(
@@ -93,8 +107,13 @@ const coverage = (seats: DealCoverage["stakeholders"]): DealCoverage => ({
   sections_omitted: [],
 });
 
-function draw(edges: unknown[], view?: DealCoverage, deleted: string[] = []) {
-  stubFetch(edges, deleted);
+function draw(
+  edges: unknown[],
+  view?: DealCoverage,
+  deleted: string[] = [],
+  patched: Patch[] = [],
+) {
+  stubFetch(edges, deleted, patched);
   render(
     <QueryClientProvider
       client={
@@ -222,6 +241,75 @@ describe("the deal's committee card", () => {
 
     expect(deleted).toEqual([]);
     expect(await screen.findByRole("link", { name: "Mai Trần" })).toBeVisible();
+  });
+
+  it("offers no way to add a seat to a reader whose role holds no grant", async () => {
+    // The verb is WITHHELD rather than refused: a reader with no
+    // relationship:create grant is told nothing about this deal by its absence,
+    // where a refused control would name a rule that is not about the record.
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        if (request.url.endsWith("/v1/me")) {
+          return json(meFixture({ allow: { relationship: ["read"] } }));
+        }
+        if (request.url.includes("/relationships")) {
+          return json({ data: [], page: { next_cursor: null } });
+        }
+        return json({ data: [], page: { next_cursor: null } });
+      }),
+    );
+    render(
+      <QueryClientProvider
+        client={
+          new QueryClient({ defaultOptions: { queries: { retry: false } } })
+        }
+      >
+        <LocaleProvider initial="en">
+          <DealCommitteeCard
+            dealId={DEAL}
+            coverage={coverage([])}
+            withheld={false}
+            pending={false}
+          />
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+
+    expect(
+      await screen.findByText(en["rel.dealStakeholdersEmpty"]),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: en["rel.addStakeholder"] }),
+    ).toBeNull();
+  });
+
+  it("sends a changed role against the row it was read from", async () => {
+    // The edit PATCHes with If-Match carrying the version the row was drawn
+    // with, so a seat somebody else moved in the meantime refuses the write
+    // rather than quietly overwriting their answer with a stale one.
+    const patched: Patch[] = [];
+    draw(
+      [edge(TALKING, "economic_buyer")],
+      coverage([
+        { contact_id: TALKING, role: "economic_buyer", engaged: true },
+      ]),
+      [],
+      patched,
+    );
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: en["record.edit"] }),
+    );
+    const form = within(await screen.findByRole("dialog"));
+    const role = form.getByLabelText(en["rel.role"]);
+    await userEvent.clear(role);
+    await userEvent.type(role, "champion");
+    await userEvent.click(
+      form.getByRole("button", { name: en["record.save"] }),
+    );
+
+    expect(patched).toEqual([{ role: "champion", ifMatch: "1" }]);
   });
 
   it("says the committee is empty once, not twice", async () => {
