@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
+import { company360 } from "./company.fixtures";
 import { CompanyWorkCard } from "./companywork";
 import { StoryProviders } from "./story-utils";
 
@@ -20,7 +21,15 @@ type View = components["schemas"]["Company360"];
 
 const page = { has_more: false, next_cursor: null };
 
-const base = {
+const deals: NonNullable<View["deals"]> = {
+  data: [],
+  page: { has_more: false, next_cursor: null },
+  won_lifetime: { amount_minor: 0, currency: "EUR" },
+  lost_count: 0,
+};
+
+const base: View = {
+  ...company360,
   as_of: "2026-08-25T09:00:00Z",
   company: {
     id: "o-1",
@@ -40,13 +49,13 @@ const base = {
   },
   projects: [],
   projects_page: page,
-} as unknown as View;
+};
 
 // Shaped as Company360Deal serves it: `status` is required, and the
 // money is a nested Money rather than two loose fields. The loose spelling
 // typechecked through the cast below and silently drew no figure at all —
 // the card reads `deal.amount.amount_minor`.
-const deal = {
+const deal: NonNullable<View["deals"]>["data"][number] = {
   deal_id: "d-1",
   name: "Shopsystem-Migration — zweiter Mandant",
   status: "open",
@@ -78,12 +87,11 @@ type Story = StoryObj<typeof Card>;
 export const Populated: Story = {
   render: () => (
     <Card
-      view={
-        {
-          ...base,
-          deals: { ...base.deals, data: [deal] },
-        } as unknown as View
-      }
+      view={{
+        ...company360,
+        ...base,
+        deals: { ...deals, data: [deal] },
+      }}
     />
   ),
 };
@@ -93,25 +101,24 @@ export const Populated: Story = {
 export const WithAttention: Story = {
   render: () => (
     <Card
-      view={
-        {
-          ...base,
-          deals: {
-            ...base.deals,
-            data: [
-              {
-                ...deal,
-                attention: {
-                  kind: "overdue_task",
-                  title: "Angebot nachfassen",
-                  who: "Sofia Meier",
-                  due_at: "2026-08-14T09:00:00Z",
-                },
+      view={{
+        ...company360,
+        ...base,
+        deals: {
+          ...deals,
+          data: [
+            {
+              ...deal,
+              attention: {
+                kind: "overdue_task",
+                title: "Angebot nachfassen",
+                who: "Sofia Meier",
+                due_at: "2026-08-14T09:00:00Z",
               },
-            ],
-          },
-        } as unknown as View
-      }
+            },
+          ],
+        },
+      }}
     />
   ),
 };
@@ -127,17 +134,16 @@ export const NothingInFlight: Story = { render: () => <Card view={base} /> };
 export const StatusesWithheld: Story = {
   render: () => (
     <Card
-      view={
-        {
-          ...base,
-          deals: { ...base.deals, data: [deal] },
-          // The refusal is recorded BOTH ways: the assembler names the section
-          // it could not read before it sets the flag, so a story carrying the
-          // flag alone is a payload the endpoint cannot emit.
-          sections_omitted: ["activities"],
-          attention_withheld: true,
-        } as unknown as View
-      }
+      view={{
+        ...company360,
+        ...base,
+        deals: { ...deals, data: [deal] },
+        // The refusal is recorded BOTH ways: the assembler names the section
+        // it could not read before it sets the flag, so a story carrying the
+        // flag alone is a payload the endpoint cannot emit.
+        sections_omitted: ["activities"],
+        attention_withheld: true,
+      }}
     />
   ),
 };
@@ -147,19 +153,18 @@ export const StatusesWithheld: Story = {
 export const MoreThanFits: Story = {
   render: () => (
     <Card
-      view={
-        {
-          ...base,
-          deals: {
-            ...base.deals,
-            data: [deal],
-            // `truncate` sets has_more and nothing else — a nested 360
-            // summary is not a paging surface, so there is no cursor to
-            // continue from.
-            page: { has_more: true, next_cursor: null },
-          },
-        } as unknown as View
-      }
+      view={{
+        ...company360,
+        ...base,
+        deals: {
+          ...deals,
+          data: [deal],
+          // `truncate` sets has_more and nothing else — a nested 360
+          // summary is not a paging surface, so there is no cursor to
+          // continue from.
+          page: { has_more: true, next_cursor: null },
+        },
+      }}
     />
   ),
 };
