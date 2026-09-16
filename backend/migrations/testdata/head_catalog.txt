@@ -4518,6 +4518,7 @@ public.notice.recipient_user_id uuid NOT NULL gen=- def=-
 public.notice.subject text NOT NULL gen=- def=-
 public.notice.target_id uuid gen=- def=-
 public.notice.target_type text gen=- def=-
+public.notice_history CREATE INDEX notice_history ON public.notice USING btree (recipient_user_id, created_at DESC, id DESC)
 public.notice_pkey CREATE UNIQUE INDEX notice_pkey ON public.notice USING btree (id)
 public.notice_unread CREATE INDEX notice_unread ON public.notice USING btree (recipient_user_id, created_at DESC) WHERE (read_at IS NULL)
 public.notification_digest_run acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false

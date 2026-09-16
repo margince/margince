@@ -165,8 +165,9 @@ type Server struct {
 	// because it reads the agents module's run tables without importing a
 	// sibling of its own.
 	aiActivityHandlers
-	// The notices transport: one verb (mark read); the content reaches the
-	// reader on the Worklist's notices lane.
+	// The notices transport: the reader's own centre and the settling of it,
+	// their per-class delivery settings, and one coach raising a notice. The
+	// Worklist's notices lane is the attention half of the same rows.
 	noticesHandlers
 	// Who is responsible for a record, and the administered roles they hold it
 	// under. Its authority is the parent record's own, so it wires no

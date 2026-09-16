@@ -135,7 +135,7 @@ func (s *Store) ListFor(ctx context.Context, limit int, cursor string) (CentrePa
 // shown is a lie to the reader. The ledger entry keeps the true figure.
 //
 // ONE ledger entry, and no announcement. A seat clearing a month of notices is
-// one act by one person, and the per-notice alternative puts a hundred
+// one act by one contact, and the per-notice alternative puts a hundred
 // notice.read events on the bus for a single tap — a fan-out every consumer
 // pays for to learn what one number already says. The cost of that ruling is
 // stated where it is ratified (backend/gates/writeshape_test.go): a seat's own
@@ -185,7 +185,7 @@ func (s *Store) MarkAllRead(ctx context.Context) (int, error) {
 		// no single one of them, so there is no notice id to name — and naming
 		// the seat's id under entity_type "notice" would leave a ledger reader
 		// resolving a notice that does not exist. What changed is a fact about
-		// the person.
+		// the contact.
 		//
 		// The count is the rows that MOVED and not the reader-facing figure:
 		// the ledger is what an operator reads to know what the write did.

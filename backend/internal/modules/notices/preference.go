@@ -209,7 +209,7 @@ func savePreference(ctx context.Context, tx pgx.Tx, human ids.UUID, class, deliv
 	chosen[class] = delivery
 	// The entity is the SEAT, the way their delivery settings are audited: the
 	// preference row has no id of its own, and what changed is a fact about the
-	// person. The images carry the value, because the ledger is what an operator
+	// contact. The images carry the value, because the ledger is what an operator
 	// reads to put back what somebody had — the class alone could not.
 	auditID, err := storekit.Audit(ctx, tx, "update", "user", human,
 		preferenceImage(class, previous), preferenceImage(class, &delivery))
