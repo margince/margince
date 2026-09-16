@@ -143,7 +143,7 @@ export function ContactMemory({
         </PanelBody>
       )}
       {shown.map((row) => (
-        <PanelRow className="pe-memory-row" key={row.key}>
+        <PanelRow className="meta-row" key={row.key}>
           {/* Who the row is with, as a face rather than a fact in the meta
               line: the counterparty on an email row, the contact themself on
               every other kind, so the column reads the same way a reader
@@ -155,8 +155,8 @@ export function ContactMemory({
               thread never reads as mail), how much of the conversation is
               folded behind the row, and its standing. A pill per fact made
               three rows carry nine pills. */}
-          <span className="pe-memory-meta t-caption">
-            <strong className="pe-memory-who">{row.who}</strong>
+          <span className="meta-row-line t-caption">
+            <strong className="meta-row-who">{row.who}</strong>
             <span className="pe-source">
               {interactionIcon(row.kind)}
               {row.channelLabel}
@@ -178,7 +178,7 @@ export function ContactMemory({
               than in its own gutter now that the gutter carries a face: the
               day and the hour, read together the way the History tab's
               chronology reads them. */}
-          <span className="pe-memory-time t-caption">
+          <span className="meta-row-time t-caption">
             {row.date} {row.time}
           </span>
           {/* Reply, on the same terms the 360 timelines offer it: available on
@@ -187,7 +187,7 @@ export function ContactMemory({
               it does there, the composer picks send-message over send-email
               from the row's kind, and nothing else about the interaction
               differs. A row with no anchor renders nothing. */}
-          <span className="pe-memory-action">
+          <span className="meta-row-action">
             {row.activityId && row.kind && (
               <ChannelReplyAction
                 activityId={row.activityId}
@@ -216,7 +216,7 @@ export function ContactMemory({
               whyNotOpenable="noDetail"
             />
           ) : (
-            <span className="pe-memory-entry">
+            <span className="meta-row-entry">
               <span className="pe-memory-title">{row.title}</span>
               <span className="pe-memory-summary">{row.summary}</span>
             </span>

@@ -987,6 +987,7 @@ export const en = {
   "company.rejectDone":
     "“{name}” archived, and {domain} will not create a company again",
   "company.name": "Company",
+  "company.brief.title": "Account brief",
   "company.description": "What they do",
   "company.website": "Website",
   "company.contactCount": "Contacts",
@@ -1315,15 +1316,14 @@ export const en = {
   "room.state.closed": "Closed",
   "room.state.expired": "Expired",
   "room.state.archived": "Archived",
-  "co.pulse.created": "Created {when}",
   // The later of the two directions \u2014 which side wrote last moved to the
   // daily brief's own detail line, so the header states only that the
   // relationship is or is not live.
   "co.pulse.owner": "Owner",
   "co.pulse.sizeBand": "{band} employees",
   "co.pulse.strongestLead": "Way in",
-  "co.pulse.strengthTail_one": "— the only contact here",
-  "co.pulse.strengthTail_other": "— of {count} contacts here",
+  "co.pulse.strengthTail_one": ", the only contact here",
+  "co.pulse.strengthTail_other": ", of {count} contacts here",
   "co.pulse.unowned": "Unassigned",
   "co.since.first": "You are opening this account for the first time.",
   "co.partial":
@@ -1530,25 +1530,8 @@ export const en = {
   "co.facts.projects_one": "1 project",
   "co.facts.projects_other": "{count} projects",
   "co.facts.atLeast": "or more",
-  "co.work.title": "What is in flight, and why",
-  "co.work.count": "{count} in flight",
-  "co.work.countAtLeast": "{count}+ in flight",
-  "co.work.deals": "Deals",
-  "co.work.noDealsDetail":
-    "A deal is where the money and the close date live. Open one when there is something to win.",
   "co.work.noDeals": "No open deals.",
   "co.work.closes": "closes {date}",
-  "co.work.stalled":
-    "Nothing has been filed against this deal in the last 60 days.",
-  "co.work.overdueTask":
-    "{who} was supposed to \u2018{title}\u2019 by {date} and has not.",
-  "co.work.overdueTaskUnnamed":
-    "\u2018{title}\u2019 was due {date} and is still open.",
-  "co.work.owesUs": "{who} said: \u2018{body}\u2019",
-  "co.work.owesUsUnnamed": "They said: \u2018{body}\u2019",
-  "co.work.wasDue": "\u2014 by {date}.",
-  "co.work.statusesWithheld":
-    "You cannot read this account\u2019s conversations, so the rows above carry no reasons.",
   "co.brief.by.model": "Written by Margince",
   "co.brief.by.deterministic": "Assembled from your records",
   "co.brief.generatedAt": "as of {when}",
@@ -1744,10 +1727,9 @@ export const en = {
   "co.rail.all": "All {count}",
   "co.rail.add": "Add",
   "co.rail.allUncounted": "All",
-  "co.rail.more": "More",
   "co.rail.deals.title": "Active deals",
   "co.rail.deals.empty": "No deals on this account yet.",
-  "co.rail.deals.emptyClosedOnly": "Nothing open — only closed history.",
+  "co.rail.deals.emptyClosedOnly": "Nothing open, only closed history.",
   "co.rail.deals.noCloseDate": "no close date",
   "co.rail.deals.attentionOverdue": "Overdue",
   "co.rail.deals.attentionCommitment": "They owe us",
@@ -1755,6 +1737,13 @@ export const en = {
   "co.rail.contacts.empty": "No contacts yet. Nobody to write to.",
   "co.rail.contacts.add": "Add a contact",
   "co.rail.contacts.inTouch": "Already in touch with them",
+  "co.rail.projects.title": "Projects",
+  "co.rail.projects.empty": "No projects yet.",
+
+  // Its own key rather than the shared `tab.deals`: the contact page's own
+  // Deals tab holds no projects, so renaming that key would rename a tab that
+  // did not change.
+  "co.tab.deals": "Deals & projects",
 
   "co.commercial.title": "Commercial",
   "co.commercial.lostFigure": "Lost deals",
@@ -2238,6 +2227,7 @@ export const en = {
   "tags.removeTag": "Remove {name}",
   "tags.removeTitle": "Remove {name} from this record?",
   "tags.addedBy": "Added by {who} · {when}",
+  "tags.addedByUndated": "Added by {who}",
   "tags.addedOn": "Added {when}",
   "tags.visibleWorkspaceWide": "Tag names are visible across the company.",
   "tags.removeFromRecord": "Remove from this record",
@@ -2763,7 +2753,6 @@ export const en = {
   "assignments.subjectInactive": "(inactive)",
   "assignments.add": "Assign",
   "assignments.change": "Change",
-  "assignments.remove": "Remove",
   "assignments.changeOne": "Change who holds this: {who}",
   "assignments.removeOne": "End this responsibility: {who}",
   "assignments.addTitle": "Name who is responsible",
@@ -3534,6 +3523,9 @@ export const en = {
   "today.silence.days": "no answer in {count} days",
   "today.draft.new": "Start a new email",
   "today.draft.act": "Draft",
+  "today.moment.act.openTask": "Open task",
+  "today.moment.act.followUp": "Follow up",
+  "today.moment.act.writeToThem": "Write to them",
 
   "evidence.mark": "read",
   "evidence.confirm": "Confirm",
@@ -8772,9 +8764,6 @@ export const en = {
   "contact.moment.suggest.missingNextStep":
     "Set the next step: nothing is planned with them.",
   "contact.moment.rule.nothing_needed": "Nothing needed",
-  "contact.moment.evidence.activity": "From an exchange",
-  "contact.moment.evidence.task": "From a task",
-  "contact.moment.evidence.relationship_change": "From a change on the record",
 
   "contact.overview.detailsPermissions": "Details & permissions",
   "contact.overview.detailsShow": "Show details & permissions",
@@ -9301,7 +9290,7 @@ export const en = {
   "unit.projects": "projects",
   "companyProjects.title": "Projects",
   "companyProjects.empty":
-    "A project is the body of work a deal is about. This company appears here once it is on one — as the client, a partner, or a subcontractor.",
+    "A project is the body of work a deal is about. This company appears here once it is on one: as the client, a partner, or a subcontractor.",
   "projectCompanies.title": "Companies",
   "projectCompanies.empty":
     "A project is work several companies do together — the client, and any partner or subcontractor delivering it.",

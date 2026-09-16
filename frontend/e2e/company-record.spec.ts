@@ -165,10 +165,10 @@ test.describe("company record — the glance's page shape", () => {
   });
 
   // The 360 is the first pane and the only one that may look like a feature
-  // (DESIGN.md §7): one pane naming the record and "· 360", the needs list
-  // and the money under it on the left, Ask on the right. What this pins is
-  // that they are PANES of the glance in that order, not a column of cards
-  // that each reads the account.
+  // (DESIGN.md §7): one pane, the account brief, the needs list and the money
+  // under it on the left, Ask on the right. What this pins is that they are
+  // PANES of the glance in that order, not a column of cards that each reads
+  // the account.
   //
   // Anchored on rendered TEXT rather than classes: the strings are the German
   // chrome the suite pins via `locale: de-DE`.
@@ -176,7 +176,7 @@ test.describe("company record — the glance's page shape", () => {
     page,
   }) => {
     await openCompany(page, POPULATED_COMPANY as string);
-    const call = page.getByText(/· 360$/);
+    const call = page.getByRole("heading", { name: "Kontobriefing" });
     await expect(call).toHaveCount(1);
     const needs = page.getByRole("heading", { name: "Was dich jetzt braucht" });
     await expect(needs).toHaveCount(1);
@@ -274,7 +274,9 @@ test.describe("company record — the glance's page shape", () => {
     // them: each slot says which reading it has none of. A shorter row would be
     // the sparse account quietly dropping part of the page again.
     await expect(page.locator(`${STRIP} > *`)).toHaveCount(5);
-    await expect(page.getByText(/· 360$/)).toHaveCount(1);
+    await expect(
+      page.getByRole("heading", { name: "Kontobriefing" }),
+    ).toHaveCount(1);
   });
 
   // Not an assertion — the artifact a human compares against the design. It is

@@ -61,10 +61,8 @@ const emptyPage = { has_more: false, next_cursor: null };
 // sense wired to the real tab strip it switches.
 const onTab = () => {};
 
-// Built loosely and cast once here, matching company360.test.tsx's own
-// fixture: a hand-typed 360 payload restates the generated schema by hand,
-// and the two would silently drift the moment the contract grows a field
-// this suite never needed.
+// The 360 this suite reads: every section present and empty, so a case names
+// only the one it is about. Typed as the contract declares it, never cast.
 function view(overrides: Record<string, unknown> = {}): Company360 {
   return {
     as_of: "2026-06-01T09:00:00Z",
@@ -77,6 +75,8 @@ function view(overrides: Record<string, unknown> = {}): Company360 {
       won_lifetime: { amount_minor: 0, currency: null },
       lost_count: 0,
     },
+    projects: [],
+    projects_page: emptyPage,
     tags: [],
     ...overrides,
   };
@@ -738,7 +738,7 @@ describe("CompanyRail", () => {
     // no compare at all.
     const names = within(dealsPanel)
       .getAllByRole("link")
-      .map((link) => link.textContent);
+      .map((link) => link.querySelector(".record-card-name")?.textContent);
     expect(names).toEqual([
       "Support renewal",
       "Berlin expansion",
@@ -793,7 +793,7 @@ describe("CompanyRail", () => {
     }
     const names = within(dealsPanel)
       .getAllByRole("link")
-      .map((link) => link.textContent);
+      .map((link) => link.querySelector(".record-card-name")?.textContent);
     // The larger EUR figure leads; the unpriced deal ranks after the priced.
     expect(names).toEqual([
       "Fleet renewal",
@@ -991,7 +991,7 @@ describe("CompanyRail", () => {
       }),
     });
     expect(
-      screen.getByText("Nothing open — only closed history."),
+      screen.getByText("Nothing open, only closed history."),
     ).toBeInTheDocument();
     // No first-deal verb here — the account has already had deals, it is
     // between two of them rather than never having started. The way to the

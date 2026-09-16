@@ -215,17 +215,28 @@ function TagOnRecord({
   const zone = viewerZone();
   const remove = useRemoveTag(entityType, entityID);
   const [confirming, setConfirming] = useState(false);
-  const added = tag.assigned_by?.display_name
-    ? t("tags.addedBy", {
-        who: tag.assigned_by.display_name,
-        when: formatDate(tag.assigned_at, locale, zone),
-      })
+  // A date the row cannot hold is a date this line does not print. The
+  // contract promises `assigned_at` on every tag, and a server one release out
+  // of step that answers without it used to take the whole record down here:
+  // Intl refuses an unparseable value by throwing, and the throw is not the
+  // tag row's to survive alone. Who applied the tag still reads.
+  const stamped = !Number.isNaN(Date.parse(tag.assigned_at));
+  const who = tag.assigned_by?.display_name;
+  const added = who
+    ? stamped
+      ? t("tags.addedBy", {
+          who,
+          when: formatDate(tag.assigned_at, locale, zone),
+        })
+      : t("tags.addedByUndated", { who })
     : // No name where the row records none: an assignment written before
       // the product recorded WHO has nobody to credit, and inventing one
       // would put a choice on somebody.
-      t("tags.addedOn", {
-        when: formatDate(tag.assigned_at, locale, zone),
-      });
+      stamped
+      ? t("tags.addedOn", {
+          when: formatDate(tag.assigned_at, locale, zone),
+        })
+      : undefined;
 
   return (
     <span className="tagspanel-combo">
@@ -264,7 +275,7 @@ function TagOnRecord({
               })
             }
           >
-            <p className="t-body">{added}</p>
+            {added && <p className="t-body">{added}</p>}
             <p className="t-caption">{t("tags.visibleWorkspaceWide")}</p>
           </ConfirmModal>
         </>

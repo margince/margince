@@ -2,7 +2,7 @@ import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
 import { routeHash } from "../app/router";
 import { Button, Disclosure } from "../design-system/atoms";
-import { PanelBody, PanelRow } from "../design-system/panel";
+import { PanelBody } from "../design-system/panel";
 import { SurfaceState, sectionState } from "../design-system/surfacestate";
 import {
   formatDate,
@@ -11,10 +11,12 @@ import {
 } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { NewDealAction } from "./companyactions";
-// The row and card shapes this file draws — co-rowlink, co-row-meta, co-card —
-// live in company360.css. Imported HERE rather than relied on from the rail:
-// this file renders wherever it is mounted, and a sibling having loaded the
-// stylesheet first is not something it can assume.
+// The row and card shapes this file draws — co-row-meta, co-deal-card — live
+// in company360.css, and the card face itself is the design system's
+// `.record-card`. Both imported HERE rather than relied on from the rail:
+// this file renders wherever it is mounted, and a sibling having loaded
+// either stylesheet first is not something it can assume.
+import "../design-system/recordcard.css";
 import "./company360.css";
 import { useCompanyReadOnlyReason } from "./companyheader";
 import {
@@ -85,9 +87,13 @@ export function DealsSection({
       }
     >
       {state === "ready" ? (
-        rows
-          .slice(0, RAIL_ROW_LIMIT)
-          .map((deal) => <DealRailRow key={deal.deal_id} deal={deal} />)
+        <ul className="record-card-list">
+          {rows.slice(0, RAIL_ROW_LIMIT).map((deal) => (
+            <li key={deal.deal_id}>
+              <DealRailRow deal={deal} />
+            </li>
+          ))}
+        </ul>
       ) : (
         <PanelBody>
           <SurfaceState
@@ -210,6 +216,11 @@ function dealFlag(deal: Deal, t: ReturnType<typeof useT>): string | undefined {
   return deal.stalled ? t("deal.stalled") : undefined;
 }
 
+// The same card face the contact page's employer card wears
+// (design-system/recordcard.css): border, r-md, elevated background, hover.
+// The whole card is the link, not a name inside it — a deal row carries no
+// other control to collide with, unlike RecordCard's contact use, which
+// keeps the link to the mark alone because a popover trigger sits beside it.
 function DealRailRow({ deal }: Readonly<{ deal: Deal }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -224,21 +235,23 @@ function DealRailRow({ deal }: Readonly<{ deal: Deal }>) {
     .filter(Boolean)
     .join(" · ");
   return (
-    <PanelRow className="co-row">
-      <a
-        className="co-rowlink"
-        href={routeHash({ screen: "deals", id: deal.deal_id })}
-      >
-        {deal.name}
-      </a>
-      <span className="t-num">
+    <a
+      className="record-card co-deal-card"
+      href={routeHash({ screen: "deals", id: deal.deal_id })}
+      // Named for the deal alone: the card's other text (the amount, the
+      // note) would otherwise lead the link's computed name, the same reason
+      // RecordCard's own link carries an explicit label.
+      aria-label={deal.name}
+    >
+      <span className="record-card-name">{deal.name}</span>
+      <span className="t-num co-deal-amount">
         {formatMoneyOrAbsent(
           deal.amount?.amount_minor,
           deal.amount?.currency,
           locale,
         )}
       </span>
-      <p className="co-row-meta t-caption">{note}</p>
-    </PanelRow>
+      <p className="co-row-meta t-caption co-deal-meta">{note}</p>
+    </a>
   );
 }

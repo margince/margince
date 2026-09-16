@@ -76,7 +76,12 @@ export function CoverageExplorer({
       >
         {t("acctCoverage.open")}
       </button>
-      <Modal open={open} onClose={() => setOpen(false)} labelledBy={titleId}>
+      <Modal
+        open={open}
+        onClose={() => setOpen(false)}
+        labelledBy={titleId}
+        size="wide"
+      >
         <h2 id={titleId} className="t-h2 modal-title">
           {t("acctCoverage.title")}
         </h2>
@@ -146,7 +151,7 @@ function CoverageGrid({ companyId }: Readonly<{ companyId: string }>) {
   );
 
   return (
-    <div>
+    <div className="coverage-body">
       <SearchField
         value={contactFilter}
         aria-label={t("acctCoverage.findContact")}
@@ -156,7 +161,7 @@ function CoverageGrid({ companyId }: Readonly<{ companyId: string }>) {
       {/* The columns are a choice, not a default view of everybody. Colleagues
           with no edge to this account are absent entirely rather than offered
           as empty columns. */}
-      <div>
+      <div className="coverage-colleagues">
         {colleagues.map((colleague) => {
           const on = shown.includes(colleague.id);
           const full = shown.length >= COLUMN_CAP && !on;
@@ -200,7 +205,7 @@ function CoverageGrid({ companyId }: Readonly<{ companyId: string }>) {
           been the same specificity as TableScroll's, winning only if this
           screen's stylesheet happened to load second. */}
       <TableScroll label={t("acctCoverage.title")}>
-        <table className="coverage-table">
+        <table className="table coverage-table">
           <thead>
             <tr>
               <th>{t("acctCoverage.contact")}</th>
