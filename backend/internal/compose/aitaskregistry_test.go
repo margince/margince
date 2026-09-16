@@ -32,6 +32,10 @@ var narrowedSites = map[string]string{
 	// A below-floor message is re-asked SOLO on the next rung, and whether the
 	// row ends up judged at all is decided there rather than here.
 	"owed_verdict/owed": aitasks.ScopeSingleCall,
+	// A below-floor conversation is re-asked solo, and the verdict the request
+	// ends up wearing — including the unsure this site records rather than
+	// guessing — is decided by that second answer.
+	"request_settlement/request_settle": aitasks.ScopeSingleCall,
 	// An unreadable verdict is asked again, and the retry's score is the score.
 	"cert_judge/judge": aitasks.ScopeSingleCall,
 	// A deep read calls this once per crawled page and merges the answers.

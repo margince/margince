@@ -43,7 +43,7 @@ import (
 // of them.
 //
 // It covers ONLY the floor. The model prompt versions itself below.
-const floorVersion = "contact-brief-floor-v2"
+const floorVersion = "contact-brief-floor-v3"
 
 // promptVersion is DERIVED from the prompt as it is SENT — boundary rule
 // included — so editing that wording bumps it whether or not anybody remembers
@@ -58,12 +58,28 @@ var promptVersion = ai.PromptDigest(func(fence promptfence.Fence) string {
 	return briefSystemFor(fence, string(textlang.English))
 })
 
-// briefInputActivities bounds the timeline the brief reads. Each row now
-// carries a line of what was actually written, so six of them say more than the
-// ten subjects they replace — and a brief is four or five sentences, so a longer
-// window buys nothing a reader will see while making the fingerprint churn on
-// activity that never changes the text.
-const briefInputActivities = 6
+// BriefInputActivities bounds the timeline the brief reads.
+//
+// TWELVE, and the number is load-bearing rather than generous. Six was chosen
+// when each row carried a line of what was written, on the reasoning that a
+// brief is four or five sentences and a longer window buys nothing a reader
+// sees. That reasoning holds for a contact with a varied recent timeline and
+// fails completely for one whose last six messages are a single exchange: the
+// window then contains one topic, the prompt is told to lead with what changed,
+// and the brief reports a booked meeting as the state of the relationship —
+// which is what it did on a real contact whose substantive history sat in the
+// seventh row and below.
+//
+// Free, which is why the number can move at all: the 360 timeline read already
+// fetches its own section cap and this fold TRUNCATES what it was handed, so a
+// wider window is rows already in memory rather than a second query or a wider
+// gate. The ceiling is that cap, not this constant.
+// EXPORTED because the certification fixture folds through this same bound.
+// That fold used to append every message a scenario supplied, so a corpus case
+// written to prove the window reaches older material would have passed with
+// production still capped at six — a test supplying its own version of the
+// thing it certifies.
+const BriefInputActivities = 12
 
 // briefInputClaims bounds the claims the brief reads, newest first. The
 // commitments card renders them all — the brief only needs enough to say what
@@ -370,7 +386,7 @@ func foldRecent(in *Input, view crmcontracts.Contact360) {
 		return
 	}
 	for _, activity := range view.Activities.Data {
-		if len(in.Recent) == briefInputActivities {
+		if len(in.Recent) == BriefInputActivities {
 			break
 		}
 		folded := ActIn{
