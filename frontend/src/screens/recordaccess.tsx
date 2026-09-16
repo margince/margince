@@ -153,7 +153,7 @@ export function RecordAccess({
       >
         {(tipId) => (
           <VisibilityLine
-            state={isPrivate ? "private" : "team"}
+            state={isPrivate ? "private" : "workspace"}
             action={
               mayChange && (
                 <Button

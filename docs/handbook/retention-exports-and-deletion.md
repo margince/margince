@@ -22,16 +22,30 @@ These are the defaults. All six are editable.
 | Lost deals | 1825 days (5 years) | Archive |
 | AI call payloads | 365 days | Erase |
 
-There is a seventh scope you can write a rule for — **Won deals** — and it is
-deliberately left empty. The product takes no view on when your company
-should stop keeping a won deal. That is your decision, not its default.
+Two more scopes exist that you can write a rule for, and both are deliberately
+left empty:
+
+- **Won deals.** The product takes no view on when your company should stop
+  keeping a won deal. That is your decision, not its default.
+- **Stored originals.** Capture keeps the original of every message it filed,
+  separately from the timeline entry it became. Until you write a rule here,
+  nothing ages those originals out on their own — they are only reached when
+  the activity they belong to is reached, or by an erasure. On a busy mailbox
+  they are usually the largest thing in the database, so this is the rule worth
+  writing first.
+
+  What it may destroy is bounded by the activity it belongs to, which is the
+  safety rather than a convenience: an original is never destroyed while the
+  correspondence it is the original *of* is held under the statutory floor, and
+  the timeline entry stays standing so the same message cannot be captured
+  again.
 
 If you delete every rule, the screen tells you what that means: "No retention
 policy yet — nothing in this installation ages out."
 
 ### What each window counts from
 
-This matters more than contacts expect.
+This matters more than readers expect.
 
 - **Leads** and **contacts** count from when the record was created.
 - **Captured activity** and **call transcripts** count from the message's own
@@ -78,8 +92,10 @@ Each scope carries **at most one** rule. There is no stacking, and you cannot
 re-point an existing rule at a different scope; a different scope is a different
 rule.
 
-Not every combination is allowed. The legal pairs are: erase or anonymise a
-contact, archive or erase an activity, archive a deal, erase an AI call payload,
+Not every combination is allowed, because only some have anything to execute
+them — there is no way to archive an AI call payload, or to anonymise an
+activity. The legal pairs are: erase or anonymise a contact, archive or erase
+an activity, archive a deal, erase an AI call payload, erase a stored original,
 and anonymise a lead.
 
 A rule can carry an optional **lawful basis** — the Article 6 basis the window is
@@ -146,7 +162,7 @@ is anonymise or erase, and a fulfilled erasure request.
 ## The privacy inbox
 
 **Settings → Privacy inbox** holds data-subject requests with their statutory
-deadlines. Only an admin can see it, because the queue names the contacts who
+deadlines. Only an admin can see it, because the queue names whoever
 asked.
 
 A request has a kind, a subject, an assignee, a due date, and a resolution. It
@@ -189,8 +205,8 @@ audit trail.
 
 ## When erasure does not win: the retention floor
 
-Sometimes the law requires keeping something that a contact has asked you to
-delete. Margince handles this as a visible, named state rather than a silent
+Sometimes the law requires keeping something that a data subject has asked you
+to delete. Margince handles this as a visible, named state rather than a silent
 partial success.
 
 When an erasure hits a statutory retention obligation, you are told:

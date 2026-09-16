@@ -340,9 +340,8 @@ func TestCompanyGraphHierarchyEdgePointsParentToChild(t *testing.T) {
 }
 
 // The transport is thin, but "thin" is a claim: it has to bind the path id,
-// let the service's gates decide, hand back the assembled body — and a native
-// workspace must reach it rather than meeting the overlay guard.
-func TestCompanyGraphTransportServesANativeWorkspace(t *testing.T) {
+// let the service's gates decide and hand back the assembled body.
+func TestCompanyGraphTransportServesAWorkspace(t *testing.T) {
 	e := integration.Setup(t)
 	handlers := company360svc.NewHandlers(company360Service(e))
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme", &e.Rep1))

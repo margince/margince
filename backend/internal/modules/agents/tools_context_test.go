@@ -82,7 +82,7 @@ func TestEverySearchHitIsReadBackThroughTheSeam(t *testing.T) {
 	if len(result.Hits[0].Excerpts) != 1 || result.Hits[0].Excerpts[0].Snippet != "pilot stalled after Q2" {
 		t.Errorf("the excerpt that ranked hit 0 did not survive hydration: %+v", result.Hits[0].Excerpts)
 	}
-	// The mirror-backed record's tier came off the seam read, not off the hit.
+	// The non-authoritative record's tier came off the seam read, not off the hit.
 	if result.Hits[1].Record.TrustTier != "external" {
 		t.Errorf("hit 1 trust tier = %q, want the tier the seam stamped", result.Hits[1].Record.TrustTier)
 	}

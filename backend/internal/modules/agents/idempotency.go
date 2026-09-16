@@ -125,7 +125,7 @@ func WithIdempotency(claims Idempotency) RegistryOption {
 
 // ReplayReader re-reads one record as the caller is now. It is the read half of
 // the datasource seam, narrowed to the one verb a replay needs — the composite
-// provider the tools are already composed over satisfies it, so a mirror-backed
+// provider the tools are already composed over satisfies it, so a non-authoritative
 // record is probed exactly as a live read of it would be.
 type ReplayReader interface {
 	Read(ctx context.Context, ref datasource.EntityRef) (datasource.Record, error)

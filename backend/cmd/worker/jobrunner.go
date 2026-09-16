@@ -265,6 +265,7 @@ func newJobRunner(pool *pgxpool.Pool, logger *slog.Logger, cfg workerConfig, cap
 		// configured; without one both are absent by omission.
 		ClassifyBrain:        modelPath.CaptureClassify,
 		OwedBrain:            modelPath.OwedVerdict,
+		SettlementBrain:      modelPath.RequestSettlement,
 		VerdictBrain:         modelPath.CaptureCounterpartyVerdict,
 		ConfidentialityBrain: modelPath.CaptureConfidentialityVerdict,
 		EnrichBrain:          modelPath.Enrich,

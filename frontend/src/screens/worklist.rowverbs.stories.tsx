@@ -195,11 +195,11 @@ export const AWaitingRowWithEveryVerb: Story = {
  * A LANE WHOSE VERBS ARE EQUAL has no answer, and nothing on the line is
  * filled.
  *
- * Held, no-show and cancelled are three records of what already happened, and
- * promoting one of them would be the product claiming an expectation it has not
- * got about a meeting it knows nothing about. They arrive as `equals` rather
- * than as `primary`, which is the whole difference: no fill, and no claim on
- * the end of the line.
+ * Saying what came of a meeting and recording that it was called off are two
+ * answers of equal standing, and promoting either would be the product claiming
+ * an expectation it has not got about a meeting it knows nothing about. They
+ * arrive as `equals` rather than as `primary`, which is the whole difference:
+ * no fill, and no claim on the end of the line.
  */
 export const EqualVerbsHaveNoAnswer: Story = {
   args: {
@@ -208,8 +208,7 @@ export const EqualVerbsHaveNoAnswer: Story = {
     owner: "",
     equals: (
       <>
-        <Verb message="worklist.verb.meetingHeld" />
-        <Verb message="worklist.verb.meetingNoShow" />
+        <Verb message="worklist.verb.meetingUpdate" />
         <Verb message="worklist.verb.meetingCanceled" />
       </>
     ),

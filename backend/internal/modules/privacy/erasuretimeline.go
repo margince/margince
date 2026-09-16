@@ -164,6 +164,11 @@ func redactSubjectTimeline(ctx context.Context, tx pgx.Tx, contactID ids.Contact
 	if err := deleteReplyVerdictHistoryFor(ctx, tx, contactID); err != nil {
 		return nil, err
 	}
+	// And what we concluded our own replies did about what they asked, which is
+	// the same kind of claim over the same emptied words.
+	if err := deleteRequestSettlementsFor(ctx, tx, contactID, emails); err != nil {
+		return nil, err
+	}
 	// And the handoffs naming them, for the same reason and on the same act.
 	if err := deleteSubjectHandoffs(ctx, tx, contactID); err != nil {
 		return nil, err
@@ -336,6 +341,40 @@ func deleteReplyVerdictHistoryFor[ID ids.UUID | ids.ContactID](ctx context.Conte
 		WHERE activity_id IN (SELECT l.activity_id FROM activity_link l WHERE l.contact_id = $1)`,
 		contactID); err != nil {
 		return fmt.Errorf("privacy: clearing the subject's reply verdicts: %w", err)
+	}
+	return nil
+}
+
+// deleteRequestSettlementsFor drops what this installation concluded about
+// whether our replies settled what one contact asked of us.
+//
+// What it destroys is a reading OF the subject's correspondence — a verdict,
+// and in the still_owed case a sentence the model wrote naming what we still
+// owe them — so it goes with the words it was read from rather than outliving
+// them. One spelling for both acts, typed over the two id forms the callers
+// hold, like the reply verdicts above.
+//
+// BOTH ARMS, and the second is the one that matters. A link walk alone would
+// leave every settlement about mail linked to nobody — and since ADR-0072
+// stopped creating a counterparty for every captured message, that class is
+// ordinary rather than exotic: a deferred or still-unsure sender produces
+// activities with no contact link at all, and the settlement pass is happy to
+// judge them because its candidate read requires no link either. It selects
+// through the same two selectors redactSubjectTimeline empties the timeline
+// through, so the rows this destroys are the rows whose words are destroyed
+// beside it.
+//
+// Keyed on the REQUEST, which is the row the settlement hangs from. The
+// judged-through reply is an activity of ours on the same thread, and deleting
+// by the request alone is enough: the table holds one row per request, so no
+// settlement survives its own subject.
+func deleteRequestSettlementsFor[ID ids.UUID | ids.ContactID](ctx context.Context, tx pgx.Tx, contactID ID, emails []string) error {
+	if _, err := tx.Exec(ctx, `
+		DELETE FROM activity_request_settlement
+		WHERE request_activity_id IN (`+subjectOnlyActivities+`)
+		   OR request_activity_id IN (`+unlinkedSubjectMail+`)`,
+		contactID, emails); err != nil {
+		return fmt.Errorf("privacy: clearing the subject's request settlements: %w", err)
 	}
 	return nil
 }

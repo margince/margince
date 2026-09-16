@@ -1567,7 +1567,6 @@ function CompanyRecordBody({
             view={view}
             loading={loading}
             failed={failed}
-            readOnly={readOnly}
             onOpenHistory={onOpenHistory}
             onOpenTab={onTab}
             onOpenRecord={receipt.open}
@@ -1785,7 +1784,6 @@ function CompanyOverviewStack({
   view,
   loading,
   failed,
-  readOnly,
   onOpenHistory,
   onOpenRecord,
   onOpenEmail,
@@ -1808,9 +1806,6 @@ function CompanyOverviewStack({
   // The composite read's own pending flag — see CompanyRecordBody's own doc.
   loading: boolean;
   failed: boolean;
-  // An archived company takes no new deal, task or role, so the panels below
-  // show no verb that would only be refused.
-  readOnly: boolean;
   onOpenHistory: () => void;
   // Where a cited chip leads. Owned by the page, because the profile tab cites
   // the same records and two owners would mean two receipts open over each
@@ -2051,10 +2046,10 @@ function CompanyDealsAndTasksTabs({
               deals card under it already implies. */}
           {view?.state_strip?.contracts &&
             view.state_strip.contracts.active_count > 0 && (
-            <Panel title={t("co.commercial.title")}>
-              <CompanyContractState view={view} />
-            </Panel>
-          )}
+              <Panel title={t("co.commercial.title")}>
+                <CompanyContractState view={view} />
+              </Panel>
+            )}
           <CompanyDealsTab
             company={company}
             view={view}

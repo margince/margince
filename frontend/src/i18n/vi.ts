@@ -1783,6 +1783,7 @@ export const vi = {
   "email.access.sentence.selected":
     "Chỉ những người được nêu bên dưới mới đọc được thư này.",
   "visibility.team": "Nhóm",
+  "visibility.workspace": "Được chia sẻ",
   "visibility.participants": "Người tham gia",
   "visibility.selected": "Được chọn",
   "visibility.private": "Chỉ bạn",
@@ -3727,6 +3728,8 @@ export const vi = {
     "Các chỉnh sửa của bạn được giữ lại. Hãy tạo bản nháp mới khi sẵn sàng.",
   "compose.threadFailed":
     "Không đọc được thư này. Hãy thử lại trong cuộc hội thoại.",
+  "compose.anchorGone":
+    "Thư này không còn nữa nên không có gì để trả lời. Hãy soạn một thư mới.",
   "compose.threadPending": "Đang tải cuộc trao đổi\u2026",
   "compose.sendBody":
     "Xem lại và chỉnh sửa bản nháp. Nhấn Gửi sẽ gửi email và không thể hoàn tác.",
@@ -3810,6 +3813,7 @@ export const vi = {
   "tasks.moveTo": "Dời sang",
   "tasks.detail": "Công việc",
   "tasks.source": "Cuộc họp",
+  "tasks.sourceEmail": "Email tạo ra việc này",
   "tasks.openSource": "Mở bản gốc",
   "tasks.detailLoading": "Đang đọc công việc này…",
   "tasks.isDone": "Đã hoàn thành",
@@ -9505,9 +9509,15 @@ export const vi = {
   "worklist.verb.promiseKept": "Xong",
   "worklist.verb.promiseSettled": "Đã ghi nhận là hoàn thành.",
   "worklist.verb.promiseSettleFailed": "Không thể ghi nhận.",
+  "worklist.verb.meetingUpdate": "Cập nhật",
+  "worklist.verb.meetingUpdateTitle": "Cuộc họp",
+  "worklist.verb.meetingReading": "Đang đọc cuộc họp này…",
+  "worklist.verb.meetingWhatHappened": "Điều gì đã xảy ra",
+  "worklist.verb.meetingBodyHint":
+    "Nội dung đã trao đổi và bước tiếp theo. Ghi chú từ lịch có sẵn ở đây để chỉnh sửa.",
   "worklist.verb.meetingHeld": "Đã diễn ra",
   "worklist.verb.meetingNoShow": "Không ai đến",
-  "worklist.verb.meetingCanceled": "Đã bị hủy",
+  "worklist.verb.meetingCanceled": "Đã hủy",
   "worklist.verb.meetingOutcomeRecorded": "Đã ghi lại kết quả cuộc họp.",
   "worklist.verb.meetingOutcomeFailed": "Không thể ghi lại.",
   "worklist.verb.retry": "Chạy lại",

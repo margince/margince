@@ -1795,6 +1795,7 @@ export const de = {
   "email.access.sentence.selected":
     "Nur die unten genannten Personen können das lesen.",
   "visibility.team": "Team",
+  "visibility.workspace": "Geteilt",
   "visibility.participants": "Beteiligte",
   "visibility.selected": "Ausgewählte",
   "visibility.private": "Nur Sie",
@@ -3771,6 +3772,8 @@ export const de = {
     "Deine Änderungen bleiben erhalten. Erstelle einen neuen Entwurf, wenn du bereit bist.",
   "compose.threadFailed":
     "Diese Nachricht konnte nicht gelesen werden. Versuche es in der Unterhaltung erneut.",
+  "compose.anchorGone":
+    "Diese Nachricht gibt es nicht mehr, es ist also nichts da, worauf du antworten k\u00f6nntest. Schreib stattdessen eine neue Nachricht.",
   "compose.threadPending": "Verlauf wird geladen\u2026",
   "compose.sendBody":
     "Prüfen und bearbeiten Sie Ihren Entwurf. Ein Klick auf Senden verschickt die E-Mail und kann nicht rückgängig gemacht werden.",
@@ -3858,6 +3861,7 @@ export const de = {
   "tasks.moveTo": "Verschieben auf",
   "tasks.detail": "Aufgabe",
   "tasks.source": "Das Meeting",
+  "tasks.sourceEmail": "Die E-Mail, aus der das entstand",
   "tasks.openSource": "Original öffnen",
   "tasks.detailLoading": "Aufgabe wird gelesen…",
   "tasks.isDone": "Abgeschlossen",
@@ -9648,9 +9652,15 @@ export const de = {
   "worklist.verb.promiseKept": "Erledigt",
   "worklist.verb.promiseSettled": "Als eingehalten vermerkt.",
   "worklist.verb.promiseSettleFailed": "Das konnte nicht vermerkt werden.",
+  "worklist.verb.meetingUpdate": "Bearbeiten",
+  "worklist.verb.meetingUpdateTitle": "Termin",
+  "worklist.verb.meetingReading": "Termin wird gelesen…",
+  "worklist.verb.meetingWhatHappened": "Was ist passiert",
+  "worklist.verb.meetingBodyHint":
+    "Was besprochen wurde und was als Nächstes ansteht. Die Notizen aus dem Kalender stehen hier zum Bearbeiten.",
   "worklist.verb.meetingHeld": "Hat stattgefunden",
   "worklist.verb.meetingNoShow": "Niemand kam",
-  "worklist.verb.meetingCanceled": "Wurde abgesagt",
+  "worklist.verb.meetingCanceled": "Abgesagt",
   "worklist.verb.meetingOutcomeRecorded":
     "Der Verlauf des Termins wurde festgehalten.",
   "worklist.verb.meetingOutcomeFailed": "Das konnte nicht festgehalten werden.",

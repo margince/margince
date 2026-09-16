@@ -5,7 +5,7 @@ package compose
 
 // River wiring for the deals module's two scheduled passes, alongside the
 // per-module job files this package already keeps (jobs_capture.go,
-// jobs_overlay.go). The adapters are the only code that knows about River;
+// jobs_retention.go). The adapters are the only code that knows about River;
 // the deals correctors stay the River-agnostic seam.
 //
 // Each pass is a DISPATCHER plus a workspace worker: the dispatcher enumerates

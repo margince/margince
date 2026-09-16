@@ -169,8 +169,8 @@ func TestTheToolCatalogsTiersAreTheContractsTiers(t *testing.T) {
 //
 // It carried nineteen entries when this gate landed — governed verbs the
 // hand-kept page had never listed — ratcheted rather than swept because filling
-// a row in means writing the verb's overlay-mode behaviour, which is read out
-// of the code per verb rather than guessed at nineteen times. They have since
+// a row in means reading the verb's own behaviour out of the code, one verb at
+// a time, rather than guessing at nineteen of them. They have since
 // been read and written, and the backlog is gone.
 //
 // So a new entry here is not a smaller version of that backlog: it is one verb

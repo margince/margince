@@ -140,7 +140,7 @@ func (w *briefGenerateWorker) assembleWorkspace(ctx context.Context, wsID ids.UU
 // local day this is, what hour it is there, and which reps still need a run.
 type morningPass struct {
 	// due is false when this tick is not the workspace's morning at all — an
-	// overlay workspace, or an hour before the briefing hour. Nothing follows.
+	// hour before the briefing hour. Nothing follows.
 	due bool
 	// day is the installation's local date, which every run is filed under.
 	day time.Time

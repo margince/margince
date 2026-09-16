@@ -206,20 +206,44 @@ func contactOnMeeting(row crmcontracts.Activity) ids.UUID {
 // The STATUS FILTER IS IN SQL here, unlike the forward lane above, and the
 // difference is the direction. That lane's window is the rest of today, so the
 // non-booked rows it drops in Go come out of a set the database already made
-// small. This window is the day so far, where almost every meeting is settled:
-// filtering after the read would spend the page on rows to discard and push the
-// genuinely unreported meeting off the end, so the lane would draw "nothing to
-// report" over real work. `AwaitingOutcome` asks the database instead.
+// small. This window reaches back a fortnight, where almost every meeting is
+// settled: filtering after the read would spend the page on rows to discard and
+// push the genuinely unreported meeting off the end, so the lane would draw
+// "nothing to report" over real work. `AwaitingOutcome` asks the database
+// instead.
+//
+// AND IT READS DEEPER THAN IT RENDERS, which the forward lane has no need to.
+// The store orders `occurred_at DESC` (activityread.orderClause) and applies
+// the limit in SQL, so asking it for the lane's cap returns the NEWEST rows in
+// the window — while this lane shows the OLDEST first, because the meeting
+// waiting longest is the one whose record has been wrong longest. Asked for
+// exactly the cap, a fortnight holding more unanswered meetings than fit would
+// hand back the freshest dozen and sort those, dropping the very rows the
+// ordering exists to surface. So it reads a deeper page, sorts, and trims to
+// the cap at the end.
 type attentionMeetingsAwaitingOutcome struct{ store *activities.Store }
+
+// unansweredReadDepth is how many rows the read above asks for per lane card.
+//
+// The multiple is what makes the oldest-first ordering true rather than
+// approximately true: it is the number of unanswered meetings a fortnight may
+// hold before the newest-first page stops containing the whole set. Deep enough
+// that an ordinary backlog sorts correctly, bounded so a pathological one costs
+// a page rather than a scan. A window holding more than this still renders its
+// cap and still reports itself cut — the reader is told there is more, which is
+// the honest answer — but the dozen it shows are no longer guaranteed to be the
+// dozen oldest.
+const unansweredReadDepth = 8
 
 func (m attentionMeetingsAwaitingOutcome) Since(
 	ctx context.Context, from, until time.Time, limit int,
 	scope attention.TaskScope, owner ids.UUID,
 ) ([]attention.MeetingAwaitingOutcome, error) {
 	kind := string(crmcontracts.ActivityKindMeeting)
+	deep := limit * unansweredReadDepth
 	in := activities.ListActivitiesInput{
 		Kind: &kind, OccurredAfter: &from, OccurredBefore: &until,
-		AwaitingOutcome: true, Limit: &limit, ReadableOnly: true,
+		AwaitingOutcome: true, Limit: &deep, ReadableOnly: true,
 	}
 	if !applyMeetingScope(ctx, &in, scope, owner) {
 		return nil, nil
@@ -240,9 +264,15 @@ func (m attentionMeetingsAwaitingOutcome) Since(
 		})
 	}
 	// Longest unanswered first: the store returns activities newest-first, and
-	// the meeting that ended this morning has been waiting longer than the one
-	// that ended ten minutes ago. A reader clearing the top of this lane is
-	// clearing the oldest debt rather than the freshest.
+	// the meeting that ended last week has been waiting longer than the one that
+	// ended ten minutes ago. A reader clearing the top of this lane is clearing
+	// the oldest debt rather than the freshest.
 	sort.SliceStable(over, func(i, j int) bool { return over[i].StartedAt.Before(over[j].StartedAt) })
+	// Trimmed AFTER the sort, so what the cap keeps is the oldest rather than
+	// whichever rows the database happened to return first. The caller bounds
+	// the lane by what it renders, and the truncation flag counts this slice.
+	if len(over) > limit {
+		over = over[:limit]
+	}
 	return over, nil
 }

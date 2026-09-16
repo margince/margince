@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -41,6 +42,12 @@ func (OwedVerdictArgs) FleetWide() {}
 type owedVerdictWorker struct {
 	pool       *pgxpool.Pool
 	classifier *OwedClassifier
+	// settler asks the second half of the same question: once we have written
+	// back, did our own words settle what was asked. It runs AFTER the
+	// classifier on purpose — a request has to be recognised before it can be
+	// settled, and running the two in one tick means a request recognised this
+	// hour is judged this hour rather than next.
+	settler *RequestSettler
 }
 
 func (w *owedVerdictWorker) Work(ctx context.Context, _ *river.Job[OwedVerdictArgs]) error {
@@ -62,8 +69,35 @@ func (w *owedVerdictWorker) judgeWorkspace(ctx context.Context, workspace ids.UU
 	// would suggest they were consulted.
 	wsCtx = principal.WithCorrelationID(wsCtx, ids.NewV7())
 	wsCtx = principal.WithActor(wsCtx, principal.Principal{
-		Type: principal.PrincipalSystem, ID: "system:owed_verdict",
+		Type: principal.PrincipalSystem, ID: activities.OwedVerdictCapturedBy,
 		Permissions: principal.Permissions{RowScope: principal.RowScopeAll},
 	})
-	return w.classifier.RunWorkspace(wsCtx, 0)
+	if err := w.classifier.RunWorkspace(wsCtx, 0); err != nil {
+		return err
+	}
+	return w.settleWorkspace(ctx, workspace)
+}
+
+// settleWorkspace judges what our replies did, under its OWN principal.
+//
+// A principal of its own rather than the verdict pass's, because captured_by is
+// what the settlement store reads to decide whether a reminder was filed by a
+// machine and may therefore be retitled. Running this under
+// system:owed_verdict would make every task this pass touches look like one the
+// owed pass had filed.
+func (w *owedVerdictWorker) settleWorkspace(ctx context.Context, workspace ids.UUID) error {
+	// No settler is a deployment with no model bound to the settlement task,
+	// and then the pass does what it did before this existed: recognise
+	// requests and settle none. The engine's own nil-brain guard cannot answer
+	// this one — there is no engine to ask.
+	if w.settler == nil {
+		return nil
+	}
+	wsCtx := principal.WithWorkspaceID(ctx, workspace)
+	wsCtx = principal.WithCorrelationID(wsCtx, ids.NewV7())
+	wsCtx = principal.WithActor(wsCtx, principal.Principal{
+		Type: principal.PrincipalSystem, ID: "system:request_settlement",
+		Permissions: principal.Permissions{RowScope: principal.RowScopeAll},
+	})
+	return w.settler.RunWorkspace(wsCtx, 0)
 }

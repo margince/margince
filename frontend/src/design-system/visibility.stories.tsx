@@ -7,7 +7,7 @@ import { Badge, Button } from "./atoms";
 import { VisibilityBadge, VisibilityLine } from "./visibility";
 
 // Who may read a thing, drawn the same way on every surface. The states worth
-// a picture are all five side by side, because a reader tells them apart at a
+// a picture are all six side by side, because a reader tells them apart at a
 // glance or not at all — and the line with its verb, which is the shape the
 // drawer and the contact panel both draw.
 
@@ -21,15 +21,32 @@ export default meta;
 type Story = StoryObj<typeof VisibilityBadge>;
 
 /** The whole vocabulary. Open is outlined and quiet, every limit is filled,
- * and withheld is the one caution. */
+ * and withheld is the one caution. `team` and `workspace` share the open look
+ * and the same icon: a message narrowed by its filed record, and a record
+ * everyone in the workspace reads. The word is what tells them apart. */
 export const EveryState: Story = {
   render: () => (
     <div style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap" }}>
       <VisibilityBadge state="team" />
+      <VisibilityBadge state="workspace" />
       <VisibilityBadge state="participants" />
       <VisibilityBadge state="selected" />
       <VisibilityBadge state="private" />
       <VisibilityBadge state="withheld" />
+    </div>
+  ),
+};
+
+/** The record header's own pairing: the fact a company is shared, and the
+ * verb that narrows it. "Shared" reads as the opposite of "Make private",
+ * which is why the record states are worded as a pair. */
+export const ASharedRecord: Story = {
+  render: () => (
+    <div style={{ maxWidth: 480 }}>
+      <VisibilityLine
+        state="workspace"
+        action={<Button variant="link">Make private</Button>}
+      />
     </div>
   ),
 };

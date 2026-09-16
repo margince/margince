@@ -111,7 +111,9 @@ describe("RecordAccess — a contact", () => {
   it("says a promoted contact is the company's", async () => {
     stub();
     draw({ ...base, visibility: "workspace", writable: true });
-    expect(await screen.findByText("Team")).toBeTruthy();
+    // "Shared" and not "Team": the column has no team value, and the tooltip
+    // beside this badge says everyone in the company can see the record.
+    expect(await screen.findByText("Shared")).toBeTruthy();
   });
 
   it("publishes a private contact through the ordinary contact patch", async () => {
@@ -183,7 +185,7 @@ describe("RecordAccess — a contact", () => {
   it("offers no verb on any contact to a reader who cannot write it", async () => {
     stub();
     draw({ ...base, visibility: "workspace", writable: false, owner_id: "u1" });
-    expect(await screen.findByText("Team")).toBeTruthy();
+    expect(await screen.findByText("Shared")).toBeTruthy();
     expect(screen.queryByRole("button", { name: /make private/i })).toBeNull();
   });
 
@@ -215,7 +217,7 @@ describe("RecordAccess — a contact", () => {
       writable: true,
       archived_at: "2026-08-02T00:00:00Z",
     });
-    expect(screen.getByText("Team")).toBeTruthy();
+    expect(screen.getByText("Shared")).toBeTruthy();
     expect(screen.queryByRole("button")).toBeNull();
   });
 

@@ -24,14 +24,12 @@ import (
 
 // csvWriters implements migration.Writers for a delimited upload.
 //
-// It is NOT the flip's writers with a different source, and the difference is
-// the whole reason this type exists. flipWriters answers "already landed" with
-// Unchanged and writes nothing, which is correct there because its source is a
-// FROZEN snapshot — a re-imported row cannot carry different values than the
-// row that already landed. **An uploaded file is editable.** The customer
-// fixes a column and uploads the corrected file, and that same shortcut would
-// report "unchanged" and write nothing, silently. So a match here compares the
-// mapped fields and updates the ones that differ.
+// A writer whose source is FROZEN may answer "already landed" with Unchanged
+// and write nothing: a re-imported row cannot carry different values than the
+// row that already landed. **An uploaded file is editable**, so that shortcut
+// is wrong here. The customer fixes a column and uploads the corrected file,
+// and answering "unchanged" would write nothing, silently. So a match here
+// compares the mapped fields and updates the ones that differ.
 type csvWriters struct {
 	pool       *pgxpool.Pool
 	contacts   *contacts.Store

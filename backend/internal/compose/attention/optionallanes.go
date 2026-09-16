@@ -100,11 +100,17 @@ func (s *Service) optionalLanes(
 		{
 			name: "meetings_unreported", bound: s.meetingsAwaitingOutcome != nil,
 			read: func() ([]crmcontracts.AttentionItem, error) {
-				// The window is the day SO FAR — [today's start, now) — where
-				// the lane above reads [now, today's end). The two share a day
-				// and split it at the reader's own moment, so a meeting is on
-				// exactly one of them and never on both.
-				began, err := s.startOfDay(ctx, asOf)
+				// The window ENDS at the reader's own moment, which is where the
+				// lane above begins, so a meeting is on exactly one of the two
+				// and never on both. Only the upper bound does that work.
+				//
+				// The lower bound is a fortnight back rather than this morning.
+				// The two lanes ask opposite questions and only one of them is
+				// about today: what is still ahead expires at midnight, and what
+				// nobody has closed off does not. Opening this window at the
+				// day's start made an unanswered meeting disappear overnight
+				// with its status still unset and nothing left to raise it.
+				began, err := s.unansweredSince(ctx, asOf)
 				if err != nil {
 					return nil, err
 				}

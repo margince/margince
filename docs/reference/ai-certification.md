@@ -24,24 +24,24 @@ How to certify a model: [certify-an-ai-model.md](../how-to/certify-an-ai-model.m
 
 | | |
 |---|---:|
-| Shipped invocation sites | 45 |
-| … best state `current` | 42 |
+| Shipped invocation sites | 46 |
+| … best state `current` | 41 |
 | … best state `partial` | 0 |
-| … best state `stale` | 3 |
-| … `absent` on every binding | 0 |
-| Scenarios in the corpus | 163 |
+| … best state `stale` | 4 |
+| … `absent` on every binding | 1 |
+| Scenarios in the corpus | 167 |
 | Committed records | 76 |
 | Bindings measured | 10 |
 
 ### Why the stale records went stale
 
-Counted per record — one (task, binding) pair — over the 10 stale record(s) this build can attribute. A record appears on more than one row when a change moved a case and the prompt built from it together.
+Counted per record — one (task, binding) pair — over the 12 stale record(s) this build can attribute. A record appears on more than one row when a change moved a case and the prompt built from it together.
 
 | What moved | Records | What it means |
 |---|---:|---|
 | the case | 6 | Somebody rewrote the test. Re-certify: the old number measured a different question. |
-| **the prompt this build sends** | 9 | The product changed. The band describes the NEW prompt, so a drop is the cost of that change and not the model. |
-| the grader | 7 | The judge's own request moved. A band can shift with neither the test nor the product touched. |
+| **the prompt this build sends** | 11 | The product changed. The band describes the NEW prompt, so a drop is the cost of that change and not the model. |
+| the grader | 9 | The judge's own request moved. A band can shift with neither the test nor the product touched. |
 
 A site's *best* state is the strongest state any of its bindings reached. A
 site `current` on one model and `stale` on three is counted once, as
@@ -84,7 +84,7 @@ today. It says nothing about how well the model did — that is the band.
 
 ## Index
 
-### Sites (45)
+### Sites (46)
 
 Which model to run each site on, and what that choice rests on.
 
@@ -117,6 +117,7 @@ Which model to run each site on, and what that choice rests on.
 | [`propose_roles/committee`](#propose_rolescommittee) | `gemini · gemini-3.1-flash-lite · eu_hosted` | `certified` | 1.00 | `current` | 3 | 2 |
 | [`rate_extract/fx`](#rate_extractfx) | `openai_compatible · mistralai/mistral-large-2512 · eu_hosted` | `certified` | 1.00 | `current` | 2 | 4 |
 | [`rate_extract/pricing`](#rate_extractpricing) | `openai_compatible · mistralai/mistral-large-2512 · eu_hosted` | `certified` | 1.00 | `current` | 1 | 4 |
+| [`request_settlement/request_settle`](#request_settlementrequest_settle) | - | - | - | `absent` | 4 | 0 |
 | [`signal_extract/thread_events`](#signal_extractthread_events) | `gemini · gemini-3.1-flash-lite · eu_hosted` | `not_supported` | 0.75 | `current` | 4 | 2 |
 | [`site_extract/profile`](#site_extractprofile) | `openai_compatible · mistralai/mistral-large-2512 · eu_hosted` | `not_supported` | 0.80 | `current` | 5 | 5 |
 | [`site_fact_extract/page_facts`](#site_fact_extractpage_facts) | `gemini · gemini-3.1-flash-lite · eu_hosted` | `certified` | 1.00 | `current` | 3 | 3 |
@@ -125,7 +126,7 @@ Which model to run each site on, and what that choice rests on.
 | [`summarize/company_ask`](#summarizecompany_ask) | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `supported_degraded` | 0.83 | `current` | 2 | 2 |
 | [`summarize/company_brief`](#summarizecompany_brief) | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `not_supported` | 0.00 | `current` | 2 | 2 |
 | [`summarize/company_dossier`](#summarizecompany_dossier) | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `certified` | 1.00 | `current` | 1 | 2 |
-| [`summarize/contact_brief`](#summarizecontact_brief) | `gemini · gemini-3.1-flash-lite · eu_hosted` | `not_supported` | 0.67 | `current` | 2 | 2 |
+| [`summarize/contact_brief`](#summarizecontact_brief) | - | - | - | `stale` | 2 | 2 |
 | [`summarize/meeting_brief`](#summarizemeeting_brief) | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `not_supported` | 0.00 | `current` | 1 | 2 |
 | [`summarize/meeting_plan`](#summarizemeeting_plan) | `gemini · gemini-3.1-flash-lite · eu_hosted` | `certified` | 1.00 | `current` | 1 | 2 |
 | [`transcript_propose/next_steps`](#transcript_proposenext_steps) | `gemini · gemini-3.1-flash-lite · eu_hosted` | `certified` | 1.00 | `current` | 3 | 2 |
@@ -156,7 +157,7 @@ verdict each reached. Each record's own p50 and p95 are in the site tables.
 
 | Provider | Model | Env | Sites | `current` | `partial` | `stale` | Runs | Passed | Reliability | Slowest p95 | `certified` | `supported_degraded` | `not_supported` |
 |---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini` | `gemini-3.1-flash-lite` | `eu_hosted` | 39 | 35 | 0 | 4 | 444 | 387 | 0.87 | 4632ms | 17 | 7 | 15 |
+| `gemini` | `gemini-3.1-flash-lite` | `eu_hosted` | 39 | 34 | 0 | 5 | 444 | 387 | 0.87 | 4632ms | 17 | 7 | 15 |
 | `gemini` | `gemini-3.1-pro-preview` | `eu_hosted` | 6 | 0 | 0 | 6 | 36 | 36 | 1.00 | 46554ms | 4 | 0 | 2 |
 | `gemini` | `gemini-3.5-flash` | `eu_hosted` | 13 | 7 | 0 | 6 | 90 | 86 | 0.96 | 26168ms | 9 | 0 | 4 |
 | `openai_compatible` | `anthropic/claude-haiku-4.5` | `eu_hosted` | 1 | 0 | 0 | 1 | 15 | 9 | 0.60 | 3731ms | 0 | 0 | 1 |
@@ -164,7 +165,7 @@ verdict each reached. Each record's own p50 and p95 are in the site tables.
 | `openai_compatible` | `mistralai/ministral-8b-2512` | `cloud_frontier` | 3 | 0 | 0 | 3 | 15 | 14 | 0.93 | 22390ms | 1 | 2 | 0 |
 | `openai_compatible` | `mistralai/mistral-large-2512` | `cloud_frontier` | 5 | 0 | 0 | 5 | 30 | 27 | 0.90 | 4574ms | 4 | 0 | 1 |
 | `openai_compatible` | `mistralai/mistral-large-2512` | `eu_hosted` | 6 | 6 | 0 | 0 | 42 | 38 | 0.90 | 4313ms | 4 | 1 | 1 |
-| `openai_compatible` | `openai/gpt-oss-120b` | `eu_hosted` | 38 | 35 | 0 | 3 | 435 | 322 | 0.74 | 6122ms | 10 | 8 | 20 |
+| `openai_compatible` | `openai/gpt-oss-120b` | `eu_hosted` | 38 | 34 | 0 | 4 | 435 | 322 | 0.74 | 6122ms | 10 | 8 | 20 |
 | `openai_compatible` | `z-ai/glm-5.2` | `cloud_frontier` | 5 | 0 | 0 | 5 | 30 | 28 | 0.93 | 18372ms | 4 | 0 | 1 |
 
 ## Stale records, and why
@@ -225,6 +226,8 @@ model, real network).
 | `site_extract/profile` | `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
 | `site_extract/profile` | `openai_compatible · z-ai/glm-5.2 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
 | `site_fact_extract/page_facts` | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
+| `summarize/contact_brief` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 2 scenarios it scored have changed since (the prompt this build sends and the grader): contact_brief_reads_what_was_said, contact_brief_stays_silent_about_what_the_reader_may_not_see |
+| `summarize/contact_brief` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 2 scenarios it scored have changed since (the prompt this build sends and the grader): contact_brief_reads_what_was_said, contact_brief_stays_silent_about_what_the_reader_may_not_see |
 | `voice_build/derive` | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
 | `voice_build/eval_draft` | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
 | `voice_build/eval_scores` | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
@@ -857,6 +860,23 @@ Records (4):
 | `openai_compatible · mistralai/mistral-large-2512 · eu_hosted` | `current` | 1/1 | `certified` | 3 | 3 | 1.00 | 1848ms | 2482ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · z-ai/glm-5.2 · cloud_frontier` | `stale` | - | `certified` | 3 | 3 | 1.00 | 4206ms | 5262ms | 3 | 0 | 0 | 0 |
 
+### `request_settlement`
+
+#### `request_settlement/request_settle`
+
+Scope a run of it can claim: `single_call`.
+
+Scenarios (4):
+
+| Scenario | Expects | Case |
+|---|---|---|
+| `a_reply_that_says_nothing_either_way_is_answered_unsure` | `accepted` | [unsure_when_the_words_do_not_say_01.yaml](../../backend/internal/compose/aicert/corpus/request_settlement/unsure_when_the_words_do_not_say_01.yaml) |
+| `an_answer_settles_a_request_and_an_acknowledgement_does_not` | `accepted` | [answered_and_acknowledged_01.yaml](../../backend/internal/compose/aicert/corpus/request_settlement/answered_and_acknowledged_01.yaml) |
+| `answering_one_of_two_asks_leaves_the_other_owed` | `accepted` | [partial_answer_and_reask_01.yaml](../../backend/internal/compose/aicert/corpus/request_settlement/partial_answer_and_reask_01.yaml) |
+| `declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague` | `accepted` | [declined_and_handed_on_01.yaml](../../backend/internal/compose/aicert/corpus/request_settlement/declined_and_handed_on_01.yaml) |
+
+No record: this site has never been certified on any binding.
+
 ### `signal_extract`
 
 #### `signal_extract/thread_events`
@@ -1049,8 +1069,8 @@ Records (2):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · eu_hosted` | `current` | 2/2 | `not_supported` | 6 | 4 | 0.67 | 1849ms | 4196ms | 4 | 2 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `current` | 2/2 | `not_supported` | 6 | 1 | 0.17 | 1586ms | 2725ms | 1 | 5 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · eu_hosted` | `stale` | 0/2 | `not_supported` | 6 | 4 | 0.67 | 1849ms | 4196ms | 4 | 2 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `stale` | 0/2 | `not_supported` | 6 | 1 | 0.17 | 1586ms | 2725ms | 1 | 5 | 0 | 0 |
 
 #### `summarize/meeting_brief`
 

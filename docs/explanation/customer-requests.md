@@ -18,11 +18,34 @@ history, so a request remains reachable after newer messages fill the timeline.
 The deal's existing open-task read continues to supply the same tasks as the
 worklist, including on closed deals.
 
-A later email proves a reply was sent, not that a request was fulfilled. Confirmed
-requests survive acknowledgements, unrelated replies, and newer inbound messages.
-Completing the evidence-linked reminder settles its source request. Dismissing a
-conversation as not sales removes it from request review; a reader's snooze or
-not-mine decision changes that reader's queue, not the obligation for everybody.
+A later email proves a reply was sent, not that a request was fulfilled. The
+existence of an outbound message settles nothing: "thanks, I will check" is a
+reply and discharges nothing, so acknowledgements, unrelated replies and newer
+inbound messages all leave a confirmed request standing.
+
+What a reply does earn is a READING. Once the workspace has written back on the
+thread, the request-settlement pass hands the conversation — the request and
+everything after it, each message marked as from them or from us — to a model
+and asks what our own words did: `settled`, `still_owed`, or `unsure` below the
+confidence floor. A request nobody has answered is never judged, and an
+installation with no model configured for the task behaves exactly as it did
+before: a request stays owed until somebody ticks its reminder.
+
+A `settled` verdict completes the evidence-linked reminder through the ordinary
+activity writer, so it carries the audit row and the event a human ticking the
+box carries. `still_owed` may sharpen a machine-filed, undated reminder to name
+what is actually outstanding — "Send the quote" in place of the mail's subject
+line — and never touches a reminder a human accepted, dated or reopened. An open
+reminder always outranks the machine's verdict: somebody picking the work back
+up is the answer, and the request counts as outstanding again while their task
+stands. `unsure` records that the pass asked and would not commit, which leaves
+the request owed and stops the same conversation being re-read until somebody
+writes on it again.
+
+Completing the evidence-linked reminder settles its source request, whoever
+completes it. Dismissing a conversation as not sales removes it from request
+review; a reader's snooze or not-mine decision changes that reader's queue, not
+the obligation for everybody.
 
 Unclassified mail with a captured thread uses reply evidence as a fallback.
 Unthreaded mail needs a request verdict or scheduling/commitment evidence. An

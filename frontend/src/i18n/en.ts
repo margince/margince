@@ -1877,6 +1877,11 @@ export const en = {
   // workspace (see above); "Only you" is a captured contact's owner-only
   // state, which a message never has.
   "visibility.team": "Team",
+  // A shared company or contact, where the audience IS the whole workspace —
+  // no linked record narrows it the way one narrows a message. "Shared" pairs
+  // with the verb beside it ("Make private"), which is how a reader tells the
+  // two apart without reading the tooltip.
+  "visibility.workspace": "Shared",
   "visibility.participants": "Participants",
   "visibility.selected": "Selected",
   "visibility.private": "Only you",
@@ -3893,6 +3898,12 @@ export const en = {
   "compose.draftKept": "Your edits were kept. Draft again when you are ready.",
   "compose.threadFailed":
     "That message could not be read. Use Try again in the conversation.",
+  // The message a reply anchors on is gone — archived, or no longer this
+  // reader's to open. It names the state and what the reader can still do,
+  // because the server's own answer here is a bare "not found", which tells
+  // them neither.
+  "compose.anchorGone":
+    "That message is no longer available, so there is nothing to reply to. Write a new message instead.",
   "compose.threadPending": "Loading the conversation\u2026",
   "compose.sendBody":
     "Review and edit your draft. Clicking Send sends this email and cannot be undone.",
@@ -3981,6 +3992,7 @@ export const en = {
   "tasks.moveTo": "Move to",
   "tasks.detail": "Task",
   "tasks.source": "The meeting",
+  "tasks.sourceEmail": "The email this came from",
   "tasks.openSource": "Open original",
   "tasks.detailLoading": "Reading this task…",
   "tasks.isDone": "Completed",
@@ -9785,9 +9797,18 @@ export const en = {
   "worklist.verb.promiseKept": "Done",
   "worklist.verb.promiseSettled": "Marked as kept.",
   "worklist.verb.promiseSettleFailed": "That could not be marked as kept.",
+  // The card's two verbs. "Update" opens the composer on this meeting; the
+  // three answers below it are what that composer offers, and "Cancelled" is
+  // the one the card writes by itself.
+  "worklist.verb.meetingUpdate": "Update",
+  "worklist.verb.meetingUpdateTitle": "Meeting",
+  "worklist.verb.meetingReading": "Reading this meeting…",
+  "worklist.verb.meetingWhatHappened": "What happened",
+  "worklist.verb.meetingBodyHint":
+    "What was said, and what happens next. The calendar's own notes are here to edit.",
   "worklist.verb.meetingHeld": "It happened",
   "worklist.verb.meetingNoShow": "They didn't come",
-  "worklist.verb.meetingCanceled": "It was called off",
+  "worklist.verb.meetingCanceled": "Cancelled",
   "worklist.verb.meetingOutcomeRecorded": "Recorded how the meeting went.",
   "worklist.verb.meetingOutcomeFailed": "That could not be recorded.",
   "worklist.verb.retry": "Run it again",

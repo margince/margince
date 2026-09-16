@@ -40,8 +40,8 @@ import (
 )
 
 // contractAPI builds the generated contract router with the ADR-0055
-// admission layer, idempotency, and the overlay-mode write guard wrapped
-// around it (outermost last — see the wrap-order note inline).
+// admission layer and idempotency wrapped around it (outermost last — see the
+// wrap-order note inline).
 func contractAPI(srv Server, pool *pgxpool.Pool, identitySvc *identity.Service) http.Handler {
 	// The SAME meter the tool registry charges: this door refuses on the bound
 	// the other door pays into, so a Passport cannot spend its window on one
