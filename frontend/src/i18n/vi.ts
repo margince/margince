@@ -7047,7 +7047,7 @@ export const vi = {
   "pipeline.reason.thread_not_captured":
     "không còn cuộc hội thoại nào được thu thập trên chuỗi này, nên không có gì để đọc",
   "pipeline.reason.events_raised":
-    "cuộc hội thoại này đã được đọc, và nội dung của nó đã được lưu vào tài khoản",
+    "cuộc hội thoại này đã được đọc, và các sự kiện rút ra từ nó đã được ghi vào tài khoản",
   "pipeline.reason.nothing_material":
     "cuộc hội thoại này đã được đọc và không có gì đáng lưu",
   "pipeline.reason.thread_still_moving":
@@ -7063,7 +7063,7 @@ export const vi = {
   "pipeline.reason.thread_not_all_open":
     "một tin nhắn trong cuộc hội thoại này bị giới hạn với một phần đối tượng xem; bản tóm tắt toàn bộ sẽ là bản kể thiếu được trình bày như đầy đủ",
   "pipeline.reason.no_named_reader":
-    "cuộc hội thoại này không xác định được đối tượng nào để một phát hiện thuộc về",
+    "cuộc hội thoại này không xác định được đối tượng đọc nào để một phát hiện thuộc về",
   "pipeline.reason.transport_not_read":
     "bước này chỉ đọc email, còn tin nhắn đến qua kênh khác",
   "pipeline.reason.sender_undecided":

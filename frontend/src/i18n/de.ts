@@ -7133,7 +7133,7 @@ export const de = {
   "pipeline.reason.thread_not_captured":
     "auf diesem Verlauf ist keine erfasste Konversation mehr vorhanden, es gab also nichts zu lesen",
   "pipeline.reason.events_raised":
-    "diese Konversation wurde gelesen, und was darin stand, wurde beim Kunden abgelegt",
+    "diese Konversation wurde gelesen, und die daraus gewonnenen Ereignisse wurden beim Kunden abgelegt",
   "pipeline.reason.nothing_material":
     "diese Konversation wurde gelesen und enthielt nichts Ablagewürdiges",
   "pipeline.reason.thread_still_moving":

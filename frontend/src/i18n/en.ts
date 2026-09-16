@@ -7286,7 +7286,7 @@ export const en = {
   "pipeline.reason.thread_not_captured":
     "no captured conversation remains on this thread, so there was nothing to read",
   "pipeline.reason.events_raised":
-    "this conversation was read, and what it said was filed on the account",
+    "this conversation was read, and the events it raised were filed on the account",
   "pipeline.reason.nothing_material":
     "this conversation was read, and it said nothing worth filing",
   "pipeline.reason.thread_still_moving":
