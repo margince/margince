@@ -155,20 +155,19 @@ func (s *Store) adoptDomainIntoCompany(
 	if err := auth.Require(ctx, entityCompany, principal.ActionUpdate); err != nil {
 		return nil, err
 	}
-	// Lock FIRST, then ask whether this caller may write the row.
+	// The twin came from a scan that read its own snapshot, and the adoption
+	// writes to that row several statements later. The lock is what closes the
+	// gap: LockRow(LiveOnly) resolves only a live row, so a company archived
+	// between the scan and this write is refused here rather than handed a
+	// domain. It also settles what the row HOLDS, which is what makes the audit
+	// before-image below the state the write actually followed.
 	//
-	// The other order is a real defect rather than a theoretical one: under READ
-	// COMMITTED a privatization or an ownership change committing between the
-	// check and the lock is invisible to the check, so a caller the record no
-	// longer admits is admitted anyway. That is the interleaving
-	// companyvisibility.go describes, where the guard passed and the write would
-	// have landed. Asking UNDER the lock is this tree's answer to it, because
-	// there the answer cannot go stale before the write.
-	//
-	// The lock also settles what the row HOLDS. The twin was chosen from a scan,
-	// and between that scan and this write the company can be archived or its
-	// domains edited — which would adopt a domain onto a record that is gone,
-	// and audit a before-image that was already stale when it was read.
+	// EnsureWritable does not answer either question — it admits an archived
+	// row, and it reads grant and team state no row lock covers. So the lock is
+	// the liveness decision and the probe is the authority decision, and the
+	// probe runs second for the reason companyvisibility.go gives: under READ
+	// COMMITTED an unlocked check can be overtaken by a change to the row's own
+	// visibility or owner before the write lands.
 	if _, err := storekit.LockRow(ctx, tx, entityCompany, companyID.UUID, storekit.LiveOnly); err != nil {
 		return nil, err
 	}
