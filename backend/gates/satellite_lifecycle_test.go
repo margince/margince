@@ -133,22 +133,7 @@ var satelliteLifecyclePaths = []satellitePath{
 // unmatched, so a ratification cannot outlive the reason for it.
 var carriedElsewhere = gatekit.Waive(map[string]string{
 	"communication_suppression": "carried by consent, through the StopCarrier port (contacts/stopcarry.go), inside the merge's own transaction. The reach above is ONE package's call graph and stops at the port on purpose: following it would mean modelling the wiring, and a gate that models wiring agrees with itself rather than with the tree. What holds the carry instead is consent's own CarryStopsTx and the merge's refusal to proceed at all when the seam is unwired and the subject holds a live stop",
-	// THE CONSENT-OWNED SEVEN, and they are one item rather than seven: every
-	// one of them is a row consent writes, so contacts cannot move any of them
-	// and a port has to carry the lot — the shape StopCarrier already has for
-	// communication_suppression above. What each row means on a merge is
-	// consent's call and not this gate's: whether a live credential follows the
-	// survivor or is revoked, and whether a §7(3) flag one half held may widen
-	// who the survivor may be mailed about. Tracked as #5771.
-	"communication_basis":            "consent owns it; needs the carry port #5771 opens",
-	"confirm_token":                  "consent owns it; needs the carry port #5771 opens",
-	"consent_doi_token":              "consent owns it; needs the carry port #5771 opens",
-	"consent_existing_customer_flag": "consent owns it; needs the carry port #5771 opens",
-	"consent_qualifying_event":       "consent owns it; needs the carry port #5771 opens",
-	"preference_token":               "consent owns it; needs the carry port #5771 opens",
-	"withdrawal_credential":          "consent owns it; needs the carry port #5771 opens",
-	"intro_request":                  "introductions owns it; an ask between two colleagues about a contact, and whether it follows the survivor or closes is that module's call. Tracked as #5771",
-	"graph_interaction_edge":         "search owns it and REBUILDS it rather than moving it: graphedgegen.go consumes contact.merged and refolds the survivor's edges after dropping the source's, which is the right shape for a table derived entirely from activities the merge has already relinked. Moving the rows instead would carry a fold computed against the pre-merge graph",
+	"graph_interaction_edge":    "search owns it and REBUILDS it rather than moving it: graphedgegen.go consumes contact.merged and refolds the survivor's edges after dropping the source's, which is the right shape for a table derived entirely from activities the merge has already relinked. Moving the rows instead would carry a fold computed against the pre-merge graph",
 })
 
 var (
@@ -251,9 +236,35 @@ func pathWrites(t *testing.T, file string) map[string]bool {
 	return writes
 }
 
+// notYetCarried is NOT a ratification. It is a list of tables the merge does
+// not carry and SHOULD, kept apart from carriedElsewhere on purpose: that
+// register says who moves a row instead, and an entry saying "nobody, yet"
+// dressed as one would make this census report a clean merge over a defect it
+// can see. These are the defect, named.
+//
+// Each needs a port in the module that owns the table AND a decision only that
+// module can make — whether a live credential follows the survivor or is
+// revoked, whether a §7(3) flag one half held may widen who the survivor may be
+// mailed about. Tracked as #5771.
+//
+// CLOSED to new entries. It records what this census found when it was widened
+// to see them at all — before that, every one of these was invisible to it —
+// and it only shrinks. A table leaves when its owner carries it.
+var notYetCarried = gatekit.Waive(map[string]string{
+	"communication_basis":            "#5771 — the module that owns it has no carry port yet",
+	"confirm_token":                  "#5771 — the module that owns it has no carry port yet",
+	"consent_doi_token":              "#5771 — the module that owns it has no carry port yet",
+	"consent_existing_customer_flag": "#5771 — the module that owns it has no carry port yet",
+	"consent_qualifying_event":       "#5771 — the module that owns it has no carry port yet",
+	"preference_token":               "#5771 — the module that owns it has no carry port yet",
+	"withdrawal_credential":          "#5771 — the module that owns it has no carry port yet",
+	"intro_request":                  "#5771 — the module that owns it has no carry port yet",
+})
+
 func TestEveryContactSatelliteJoinsEveryLifecyclePathThatApplies(t *testing.T) {
 	t.Parallel()
 	defer carriedElsewhere.AssertAllMatched(t)
+	defer notYetCarried.AssertAllMatched(t)
 
 	satellites := contactSatellites(t)
 	var missing []string
@@ -277,6 +288,11 @@ func TestEveryContactSatelliteJoinsEveryLifecyclePathThatApplies(t *testing.T) {
 			// ratification shows up as unmatched rather than sitting there
 			// agreeing with a path that no longer needs it.
 			if path.name == mergeRelinkPath && carriedElsewhere.Waived(t, table) {
+				continue
+			}
+			// KNOWN AND UNFIXED, which is a different answer from discharged —
+			// see notYetCarried.
+			if path.name == mergeRelinkPath && notYetCarried.Waived(t, table) {
 				continue
 			}
 			missing = append(missing, "contact satellite "+table+" is not handled by the "+path.name+
