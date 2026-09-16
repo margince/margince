@@ -108,8 +108,15 @@ function spacing_prop(p) {
 # two corpora. This is only the question of WHOSE a size is; what sizes exist at
 # all is the root's, and a tier declaring none simply yields an empty `sized`
 # set, which the gate reads as a dormant arm rather than as a broken reader.
+#
+# The `font` SHORTHAND counts, and it is the whole reason this list is not just
+# the three longhands: `heading.css` states each rung as one `font:` value, so a
+# reader that knew only `font-size` would have seen the one class in the tier
+# that owns type declare none. `font-family`, `font-weight` and `font-variant`
+# do NOT count — a face or a weight is not a size, and `.t-h2` naming its family
+# while the root sets everything else owns no rung a screen could contradict.
 function type_prop(p) {
-  return p ~ /^(font-size|line-height|letter-spacing)$/
+  return p ~ /^(font|font-size|line-height|letter-spacing)$/
 }
 
 function shape_prop(p) {

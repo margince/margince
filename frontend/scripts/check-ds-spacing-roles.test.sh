@@ -342,9 +342,11 @@ cat >"$CORE/design-system/atoms.css" <<'CSS'
 .novel-primitive {
   gap: var(--gapActions);
 }
-/* A role hook with no rule on it yet. The comment is the second half of the
-   case: the rule that will set font-size: here is a later change, and prose
-   about a declaration must not be read as one and wake the arm. */
+/* A role hook with no rule on it yet: `font: inherit` hands the class the
+   root's type and states no rung, so it is not a size the tier owns. The
+   comment is the second half of the case: the rule that will set font-size:
+   here is a later change, and prose about a declaration must not be read as
+   one and wake the arm. */
 .t-caption {
   font: inherit;
 }
@@ -354,6 +356,40 @@ if ! MARGINCE_CORE_DIR="$CORE" MARGINCE_EXT_DIR="$TMP/no-units" "$GATE" >"$TMP/o
   sed 's/^/      /' "$TMP/out" >&2
 elif ! grep -q "the sized arm is dormant" "$TMP/out"; then
   fail "the gate slept the sized arm without saying so:"
+  sed 's/^/      /' "$TMP/out" >&2
+fi
+
+# The tier can own type through the `font` SHORTHAND as much as through
+# font-size — heading.css states every rung as one `font:` value — so the
+# shorthand wakes the arm, and the class it names is then protected like any
+# other sized primitive. A reader that knew only the longhands would have seen
+# the one class in this tier that owns type declare none, and slept through it.
+CORE="$TMP/shorthand-type"
+build_fixture "$CORE"
+cat >"$CORE/design-system/atoms.css" <<'CSS'
+.panel-head {
+  padding: 0 var(--padPanel);
+}
+.novel-shorthand {
+  font: var(--fontBody);
+}
+CSS
+if ! MARGINCE_CORE_DIR="$CORE" MARGINCE_EXT_DIR="$TMP/no-units" "$GATE" >"$TMP/out" 2>&1; then
+  fail "the gate failed a design system whose type is stated as a font shorthand:"
+  sed 's/^/      /' "$TMP/out" >&2
+elif grep -q "the sized arm is dormant" "$TMP/out"; then
+  fail "the gate slept the sized arm over a tier that sizes with the font shorthand:"
+  sed 's/^/      /' "$TMP/out" >&2
+fi
+
+# ...and awake, it fires: a screen re-sizing that class is the second opinion
+# the arm exists for, whichever spelling each side used.
+printf '.screen-root .novel-shorthand {\n  font-size: 20px;\n}\n' \
+  >>"$CORE/screens/x.css"
+if MARGINCE_CORE_DIR="$CORE" MARGINCE_EXT_DIR="$TMP/no-units" "$GATE" >"$TMP/out" 2>&1; then
+  fail "the gate passed a screen re-sizing a class the tier sizes with a font shorthand"
+elif ! grep -q "its type is set where it is declared" "$TMP/out"; then
+  fail "the finding does not name the primitive's own declaration:"
   sed 's/^/      /' "$TMP/out" >&2
 fi
 

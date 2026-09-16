@@ -15,17 +15,18 @@
 #               declares on its own (`.panel-head`, `.card-actions`, `.btn`,
 #               `.t-label`), and the rule re-shapes it in the kind the tier owns:
 #               an interval (padding, margin, gap) on a class the tier spaces, or
-#               a type (font-size, line-height, letter-spacing) on a class the
-#               tier sizes. A screen that does either has made a second opinion
-#               about a shape shared with every other screen, and the two then
-#               drift. A spacing variant spelled in the house's own vocabulary is
-#               not a second opinion and passes: `padding: var(--padCard)` on a
-#               rail's panel body says which surface it means, and moves when
-#               that surface is retuned. A type variant has no such vocabulary —
-#               every size is a rung — so any re-size is a finding, and a genuine
-#               one is waived with its reason. The sized half is DORMANT while
-#               the tier declares no type at all — there is then no size for a
-#               screen to contradict — and re-arms the day a role rule sets one.
+#               a type (the `font` shorthand, font-size, line-height,
+#               letter-spacing) on a class the tier sizes. A screen that does
+#               either has made a second opinion about a shape shared with every
+#               other screen, and the two then drift. A spacing variant spelled
+#               in the house's own vocabulary is not a second opinion and passes:
+#               `padding: var(--padCard)` on a rail's panel body says which
+#               surface it means, and moves when that surface is retuned. A type
+#               variant has no such vocabulary — every size is a rung — so any
+#               re-size is a finding, and a genuine one is waived with its
+#               reason. The sized half is DORMANT while the tier declares no
+#               type at all — there is then no size for a screen to contradict —
+#               and re-arms the day a role rule sets one.
 #
 #   role      — the subject names a context the design language has an answer
 #               for, and the declaration does not use it:
@@ -141,6 +142,13 @@ SIZED_COUNT="$(grep -c '^sized ' "$OWNED" || true)"
 # that has stopped reading, and that must fail closed rather than go quiet.
 # Comments are stripped first, or a sheet explaining why a role rule will set a
 # size would arm the arm on prose and fail a correct tree.
+#
+# The value has to MEASURE something, the same test the scanner's `measures()`
+# applies: `font: inherit` is the role hook with no rule on it — it hands the
+# class the root's type and declares no rung a screen could contradict — so a
+# reader that counted it would claim a size the scanner rightly refuses to put
+# in the corpus, and the two readings would disagree on a correct tree. The
+# `font` SHORTHAND counts because `heading.css` states every rung as one.
 TYPE_DECLS="$(
   find "$DESIGN_SYSTEM" -type f -name '*.css' -print0 \
     | xargs -0 awk '
@@ -164,7 +172,7 @@ TYPE_DECLS="$(
           }
           print code
         }' 2>/dev/null \
-    | grep -cE '(^|[^A-Za-z0-9_-])(font-size|line-height|letter-spacing)[[:space:]]*:' \
+    | grep -cE '(^|[^A-Za-z0-9_-])(font|font-size|line-height|letter-spacing)[[:space:]]*:[^;]*(var\(|[1-9])' \
   || true
 )"
 
