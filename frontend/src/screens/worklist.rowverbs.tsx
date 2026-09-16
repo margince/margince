@@ -20,7 +20,7 @@
 // at. The verbs do not DIVIDE here — every one of them is about this row — and
 // two groups held apart say which is which only while both edges are on screen.
 
-import { Pin, PinOff } from "lucide-react";
+import { Pin, PinOff, Sparkles } from "lucide-react";
 import type { ReactNode } from "react";
 import { Button } from "../design-system/atoms";
 import { IconAction } from "../design-system/iconaction";
@@ -56,9 +56,19 @@ export function RowActs({
   equals,
   onReview,
   onOpenEmail,
+  context,
+  shape,
 }: Readonly<{
   item: WorklistItem;
   href: string | undefined;
+  /**
+   * `triage` is the row IN HAND on the Brief: the verb that only reaches the
+   * record is withheld, because the card names and links that record itself;
+   * the set-asides lead the line from the other edge; and the move the
+   * product worked out stands LAST, because on the one row being answered
+   * that move is the answer.
+   */
+  shape?: "triage";
   /**
    * `compact` withholds the verb that only REACHES the record, because at that
    * density the row's title carries the link itself — two controls on one line
@@ -81,9 +91,50 @@ export function RowActs({
   /** Where a grouped row is reviewed, on the surface that has a filter. */
   onReview?: () => void;
   onOpenEmail?: (id: string) => void;
+  /**
+   * The way into what the row is ABOUT, where the surface has one. FIRST on
+   * the line: it opens a reading rather than acting on the row, so it stands
+   * with the quiet verbs and never near the answer at the end.
+   */
+  context?: ReactNode;
 }>) {
+  if (shape === "triage") {
+    return (
+      <div className="worklist-row-acts">
+        {/* The set-asides lead from the other edge, the way an `ActionRow`
+            divides: declining steps away from the work, the move steps in. */}
+        <span className="worklist-row-putdowns">
+          <DispositionVerbs item={item} />
+        </span>
+        {context}
+        {item.batch && onReview ? (
+          <BatchVerb onReview={onReview} />
+        ) : (
+          <RowVerbs
+            item={item}
+            href={href}
+            part="ways"
+            move={moveHref(item)}
+            onOpenEmail={onOpenEmail}
+          />
+        )}
+        {equals}
+        {!item.batch && (
+          <RowVerbs
+            item={item}
+            href={href}
+            part="act"
+            move={moveHref(item)}
+            onOpenEmail={onOpenEmail}
+          />
+        )}
+        {primary}
+      </div>
+    );
+  }
   return (
     <div className="worklist-row-acts">
+      {context}
       {item.batch && onReview ? (
         <BatchVerb onReview={onReview} />
       ) : (
@@ -163,12 +214,16 @@ function RowVerbs({
   density,
   move,
   onOpenEmail,
+  part,
 }: Readonly<{
   item: WorklistItem;
   href: string | undefined;
   density?: "compact";
   move: string | undefined;
   onOpenEmail?: (id: string) => void;
+  /** Which half, for the triage shape: the `act` is the move the product
+   *  worked out, the `ways` only reach the record. Absent, one flow. */
+  part?: "ways" | "act";
 }>) {
   const t = useT();
   const replyActivity =
@@ -208,7 +263,9 @@ function RowVerbs({
     //
     // `move` is untouched: it opens the composer, which is a different
     // destination and the most-pressed control on a waiting row.
-    if (density === "compact" && destination === href) {
+    // The triage shape's WAYS withhold it for the same reason: the row in hand
+    // names and links the record it is about under itself (brief.feed.tsx).
+    if ((density === "compact" || part === "ways") && destination === href) {
       return [];
     }
     drawn.add(destination);
@@ -217,17 +274,27 @@ function RowVerbs({
   if (verbs.length === 0 && !move) {
     return null;
   }
+  const act = part !== "ways";
+  const ways = part !== "act";
   return (
     <>
       {/* The step the product already worked out, offered where the reader is
-          standing rather than on a screen they have to go and find. */}
-      {readReply ? (
-        <Button small onClick={() => onOpenEmail(replyActivity)}>
+          standing. IN THE AGENT'S OWN COLOUR, with its mark: a rule wrote this
+          move and pressing it accepts it, the claim indigo makes everywhere
+          else (company360.tsx draws the same suggestion the same way). The
+          verbs that only reach the record stay ghost: opening a page is
+          navigation, and indigo on it would spend the one mark that means "a
+          machine worked this out" on a click where nothing did. */}
+      {act && readReply ? (
+        <Button small variant="ai" onClick={() => onOpenEmail(replyActivity)}>
+          <Sparkles aria-hidden="true" />
           {t("worklist.verb.draft_reply")}
         </Button>
       ) : (
+        act &&
         move && (
-          <a className={NAVIGATING_VERB} href={move}>
+          <a className={PREPARED_VERB} href={move}>
+            <Sparkles aria-hidden="true" />
             {/* THE LABEL MOVES WITH THE ROUTE AND WITH THE VERB. Where the
               address opens the composer the label is the act; where it only
               reaches the record it says so. And it names the verb the SERVER
@@ -237,11 +304,12 @@ function RowVerbs({
           </a>
         )
       )}
-      {verbs.map(({ action, destination }) => (
-        <a key={action} className={NAVIGATING_VERB} href={destination}>
-          {VERB_LABEL[action](t)}
-        </a>
-      ))}
+      {ways &&
+        verbs.map(({ action, destination }) => (
+          <a key={action} className={NAVIGATING_VERB} href={destination}>
+            {VERB_LABEL[action](t)}
+          </a>
+        ))}
     </>
   );
 }
@@ -277,6 +345,9 @@ function verbDestination(
 // the alternative is a second spelling of the small ghost button in
 // worklist.css. `screens/client.tsx` reaches the same conclusion the same way.
 const NAVIGATING_VERB = "btn btn-ghost btn-sm";
+// The move the product worked out, as an anchor in the agent's own chrome:
+// the same `ai` face `Button` draws, for the reason given where it is drawn.
+const PREPARED_VERB = "btn btn-ai btn-sm";
 
 // Where each verb lives. A total map over the ones this page can route, so a
 // verb the contract adds either gets a destination here or is not drawn —

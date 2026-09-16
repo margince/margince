@@ -55,8 +55,10 @@ it("restores the queue opener's keyboard focus after closing", async () => {
       jsonResponse(readingsDay({}, [taskRow("t", "Call Weber")])),
   });
   render(<BriefScreen />);
-  await screen.findByText("Call Weber");
-  const opener = screen.getByRole("button", { name: en["brief.queue.show"] });
+  await screen.findAllByText("Call Weber");
+  const opener = screen.getByRole("button", {
+    name: new RegExp(en["brief.queue.show"]),
+  });
   await user.click(opener);
   await screen.findByRole("dialog", { name: en["brief.queue.title"] });
   await user.click(screen.getByRole("button", { name: /close/i }));
@@ -123,4 +125,39 @@ it("opens a task's evidence without replacing the Home overview", async () => {
   await user.keyboard("{Escape}");
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   expect(document.activeElement).toBe(opener);
+});
+
+it("opens a meeting's own record from its focus row", async () => {
+  const user = userEvent.setup();
+  window.location.hash = "#/home";
+  const meeting: components["schemas"]["WorklistItem"] = {
+    ...taskRow("held-meeting", "Discovery call with Turbinenbau"),
+    source: "meeting_outcome",
+    category: "meetings",
+    actions: ["decide"],
+  };
+  stubApi({
+    "GET /worklist": () => jsonResponse(readingsDay({}, [meeting])),
+    "GET /activities/held-meeting": () =>
+      jsonResponse({
+        id: meeting.id,
+        kind: "meeting",
+        subject: meeting.title,
+        body: "Organizer: Weber. Attendees: Weber, Ziethen.",
+        occurred_at: "2026-09-01T10:00:00Z",
+        version: 1,
+        is_done: false,
+      }),
+  });
+  render(<BriefScreen />);
+  await user.click(
+    await screen.findByRole("button", { name: en["brief.focus.context"] }),
+  );
+  expect(
+    await screen.findByText("Organizer: Weber. Attendees: Weber, Ziethen."),
+  ).toBeTruthy();
+  // The row's own verbs answer a meeting; the read offers no "Done".
+  expect(
+    screen.queryByRole("button", { name: en["tasks.complete"] }),
+  ).toBeNull();
 });

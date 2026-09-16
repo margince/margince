@@ -16,8 +16,33 @@
    be wrong for most of those combinations the day it was written. `--gapCards`
    is the role between sibling surfaces, so the shell's own rule and this one
    resolve to the one interval and retune together. */
-.wrap.worklist > * + * {
+.wrap.worklist > * + *,
+.worklist-lanes > * + *,
+.worklist-day > * + * {
   margin-block-start: var(--gapCards);
+}
+
+/* TWO COLUMNS WHERE THE PAGE HAS THE WIDTH: the lanes beside the day. The
+   page measures ITSELF rather than the window, because this same queue is
+   drawn on a page of its own and inside the Brief's drawer, which are two
+   widths on one screen. 52rem is where a 14rem lanes column still leaves the
+   rows a reading measure. The lanes STICK to the top of whatever scrolls —
+   the page, or the drawer's body — so a reader ten rows down changes the cut
+   without going back up. */
+.wrap.worklist {
+  container-type: inline-size;
+}
+@container (min-width: 52rem) {
+  .worklist-columns {
+    display: grid;
+    grid-template-columns: 14rem minmax(0, 1fr);
+    column-gap: var(--space-6);
+    align-items: start;
+  }
+  .worklist-lanes {
+    position: sticky;
+    top: 0;
+  }
 }
 
 /* No interval of its own: the stack above owns what follows the head. Carrying
@@ -27,7 +52,7 @@
 .worklist-header {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-4);
 }
 
 /* The sentence and the scope share a line: the sentence takes the room, the
@@ -39,10 +64,35 @@
   justify-content: space-between;
   gap: var(--space-2) var(--space-4);
 }
+/* In the lanes column the line is a STACK: the sentence, then the dials under
+   it at the column's width, because a 14rem column holds neither beside the
+   other. The dials take the column and the picker its whole line. */
+@container (min-width: 52rem) {
+  .worklist-header-line {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .worklist-header-dials {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .worklist-owner-field {
+    max-width: none;
+    min-inline-size: 0;
+  }
+}
 
+/* The day's verdict in figures, in the display face: it is the one sentence
+   that says what the whole day holds, so it is set as a heading rather than as
+   a caption over the pills — the same face a zone's title and a record's name
+   take. The figures inside it are tabular so a day of 12 and a day of 3 hold
+   their words at one x. */
 .worklist-lead {
   margin: 0;
-  color: var(--textContent);
+  color: var(--textPrimary);
+  font-family: var(--f-display);
+  letter-spacing: var(--tracking-display);
+  font-variant-numeric: tabular-nums;
 }
 
 /* The two dials over the day, at the trailing end of the sentence they change.
@@ -232,8 +282,35 @@
    The first heading needs no gap above it. */
 .worklist-band {
   color: var(--textMeta);
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
   margin: var(--space-5) 0 var(--space-2);
+}
+.worklist-band > h3 {
+  margin: 0;
+}
+
+/* The band's own rule, running from the word to the count at the far inset:
+   a heading over rows reads as a section only when something draws the line
+   the section starts on, and the eyebrow alone read as one more caption in a
+   column of them. The rule is the seam hairline every other rule in a card
+   takes, drawn after the word so the word keeps the leading edge; `order`
+   puts it between the word and the count, which follows it in the tree. */
+.worklist-band::after {
+  content: "";
+  order: 1;
+  flex: 1 1 auto;
+  height: 1px;
+  background: var(--borderSubtle);
+}
+
+/* How much the band holds, at its far end, in the figure's own numerals. */
+.worklist-band-count {
+  order: 2;
+  color: var(--textMeta);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .worklist-queue-band:first-child .worklist-band {
@@ -264,11 +341,33 @@
    stand in the same column — a pressable rank and a bare one at different
    widths would put the titles beside them at two different x. */
 .worklist-rank {
-  color: var(--textMeta);
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex: 0 0 auto;
   min-width: var(--space-6);
-  text-align: right;
+  block-size: var(--space-6);
+  border-radius: var(--r-sm);
+  background: var(--bgChip);
+  color: var(--textChip);
+  font-weight: var(--fw-semibold);
+  font-variant-numeric: tabular-nums;
+  transition:
+    background-color var(--dur-state) var(--ease-out),
+    color var(--dur-state) var(--ease-out);
+}
+
+/* The tile of the row in hand goes to the accent: it is the one control on
+   the row that opens the pane, and the pane is what the accent says is open.
+   Lit under the pointer a step before that, so a rank that can be pressed
+   answers the pointer where a bare digit would not. */
+.worklist-rank-select:hover .worklist-rank {
+  background: var(--accentLight);
+  color: var(--accentText);
+}
+.worklist-row-selected .worklist-rank {
+  background: var(--accent);
+  color: var(--textOnAccentControl);
 }
 
 /* The guardrail over the queue's own hiding rules. A diagnostic behind a
@@ -443,6 +542,15 @@
   .wrap.worklist {
     display: flex;
     flex-direction: column;
+  }
+
+  /* The two wrappers dissolve: `display: contents` hands their children to
+     the column above, which is what lets the readings and the trailing
+     panels take the order the rules below give them. */
+  .worklist-columns,
+  .worklist-lanes,
+  .worklist-day {
+    display: contents;
   }
 
   .worklist-readings {

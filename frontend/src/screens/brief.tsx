@@ -51,6 +51,11 @@ export function BriefScreen() {
   const firstName = me.data?.user?.display_name?.trim().split(/\s+/)[0] ?? null;
   return (
     <div className="wrap brief-wrap">
+      {/* THE HEAD ON THE PAGE GROUND, the way a record's head stands: the
+          greeting where a record's name goes, the day over it, the sentence
+          under it, and the controls on the far edge where a record's verbs
+          stand. The one raised surface under it is the Focus panel — the
+          work is the card, and everything around it is the page. */}
       <div className="brief-head">
         <BriefGlance
           view={address.view}
@@ -80,9 +85,16 @@ export function BriefScreen() {
             offered={teamOffered}
             onChange={(next) => setParams(paramsFor(next, params))}
           />
+          {/* The way into the whole queue, as the head's PRIMARY control
+              with the day's count on it: this is the one page whose pane is
+              the day itself, so the switch is the main door and not a
+              detail fold. The count is the queue's own total, the same
+              figure the drawer's head sentence ends on. */}
           <PageAsideToggle
+            prominent
             controlled={{
               open: params.get("queue") === "1",
+              count: day?.summary.total,
               labels: {
                 show: t("brief.queue.show"),
                 hide: t("brief.queue.hide"),
@@ -150,16 +162,23 @@ function PersonalMorning({
     : query.isError && !day
       ? "failed"
       : "ready";
+  // A task and a meeting are both ACTIVITIES, and the door on either row
+  // opens the activity's own read: for a meeting, its subject and the
+  // calendar's excerpt of who was there and what it was about. The pane
+  // beside the queue draws only a contact, so a meeting sent there opened a
+  // frame with nothing in it.
+  const opensActivity =
+    context?.source === "task" || context?.source === "meeting_outcome";
   return (
     <>
-      <BriefFeed
-        day={day}
-        onContext={(item) => setSelected(`${item.source}-${item.id}`)}
-        state={state}
-        changed={changedSinceBrief(day)}
-        refreshFailed={query.isRefetchError}
-        onRetry={() => void query.refetch()}
-      />
+      {/* The figures FIRST, as one ruled line under the greeting: what the
+          day holds in five readings, then the work — the order every page
+          with figures reads in, and the order the opening sentence promises
+          ("First: … Then 5 more"). A line rather than a plate of tiles,
+          because the readings frame the work and must not stand in front of
+          it. The overview also carries what the read could not see and when
+          it was assembled, because both qualify the figures before they
+          qualify the rows. */}
       {day && (
         <div className="brief-overview">
           <BriefReadingsStrip day={day} />
@@ -184,11 +203,26 @@ function PersonalMorning({
           </p>
         </div>
       )}
+      {/* THE WORK, across the whole page: the Focus panel is the one card
+          the morning is for, with the row in hand and the queue beside it,
+          so it takes the page's width rather than sharing it with a rail. */}
+      <BriefFeed
+        day={day}
+        onContext={(item) => setSelected(`${item.source}-${item.id}`)}
+        state={state}
+        changed={changedSinceBrief(day)}
+        refreshFailed={query.isRefetchError}
+        onRetry={() => void query.refetch()}
+      />
+      {/* THE FOLLOW-THROUGH under it, in two columns: what was done for the
+          reader and the day's notices on the left, and on the right the
+          context the work is read against — the schedule as the day's line,
+          and the night. */}
       <PageZones
         shape="aside"
         className="brief-followthrough"
-        mainClassName="brief-main"
-        asideClassName="brief-rail"
+        mainClassName="record-stack brief-main"
+        asideClassName="record-aside brief-rail"
         asideLabel={t("brief.rail")}
         main={
           <>
@@ -203,7 +237,7 @@ function PersonalMorning({
           </>
         }
       />
-      {context?.source === "task" ? (
+      {context && opensActivity ? (
         <TaskDetailModal
           activityId={context.id}
           readOnly={!context.actions.includes("complete")}

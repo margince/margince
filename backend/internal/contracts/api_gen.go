@@ -39286,6 +39286,51 @@ type WorklistComparison struct {
 // when the two rows share a level.
 type WorklistComparisonComparator string
 
+// WorklistContactFacts The human behind the row — whom a reply would go to — and how the silence
+// runs both ways, so a reader knows whose row it is and who wrote last before
+// choosing a verb.
+//
+// Present on every row that names a contact: one whose `subject` is a contact,
+// a waiting message filed against one (whose `subject` may be the deal the
+// thread belongs to), a meeting with one (`with_contact`). Absent on a row that
+// names no human — a deal drifting, a mailbox that stopped.
+//
+// The `id` is the producer's claim and always travels. The label and the
+// moments are the READER's, filled under their own grants; each is absent
+// where the reader may not have it, which is not the same as unnamed or never.
+type WorklistContactFacts struct {
+	Id openapi_types.UUID `json:"id"`
+
+	// Label The contact's display name. Absent when the caller may not read the contact.
+	Label *string `json:"label,omitempty"`
+
+	// Touch When they last wrote to us and when we last wrote to them — the same two dates,
+	// over the same walk, that the contact's own page reports as `last_inbound_at` and
+	// `last_outbound_at`, so a queue row and the record it opens cannot disagree about
+	// who wrote last.
+	//
+	// Absent from the row when the caller may not read activity, or may not read this
+	// contact: a withheld answer. Present with both nulls for a contact nobody has ever
+	// exchanged a message with.
+	Touch *WorklistContactTouch `json:"touch,omitempty"`
+}
+
+// WorklistContactTouch When they last wrote to us and when we last wrote to them — the same two dates,
+// over the same walk, that the contact's own page reports as `last_inbound_at` and
+// `last_outbound_at`, so a queue row and the record it opens cannot disagree about
+// who wrote last.
+//
+// Absent from the row when the caller may not read activity, or may not read this
+// contact: a withheld answer. Present with both nulls for a contact nobody has ever
+// exchanged a message with.
+type WorklistContactTouch struct {
+	// LastInboundAt When they last wrote to us. Null means nothing inbound was ever captured.
+	LastInboundAt *time.Time `json:"last_inbound_at"`
+
+	// LastOutboundAt When we last wrote to them. Null means we never have.
+	LastOutboundAt *time.Time `json:"last_outbound_at"`
+}
+
 // WorklistCount What one CATEGORY of work held, and how much of it reached the page.
 //
 // The same three figures `WorklistReach` reports per source, asked of the thing a
@@ -39569,6 +39614,20 @@ type WorklistItem struct {
 	// source, because one source has several honest answers: a deal past its close
 	// date slips, one merely idle drifts.
 	Consequence WorklistItemConsequence `json:"consequence"`
+
+	// Contact The human behind the row — whom a reply would go to — and how the silence
+	// runs both ways, so a reader knows whose row it is and who wrote last before
+	// choosing a verb.
+	//
+	// Present on every row that names a contact: one whose `subject` is a contact,
+	// a waiting message filed against one (whose `subject` may be the deal the
+	// thread belongs to), a meeting with one (`with_contact`). Absent on a row that
+	// names no human — a deal drifting, a mailbox that stopped.
+	//
+	// The `id` is the producer's claim and always travels. The label and the
+	// moments are the READER's, filled under their own grants; each is absent
+	// where the reader may not have it, which is not the same as unnamed or never.
+	Contact *WorklistContactFacts `json:"contact,omitempty"`
 
 	// Deal The deal behind an item, with the facts its card states. `expected_minor_base` is
 	// `amount_minor` converted to the installation's base currency — the only figure by

@@ -1,15 +1,23 @@
 /** @vitest-environment happy-dom */
-import { cleanup, screen } from "@testing-library/react";
+import { cleanup, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { en } from "../i18n/en";
 import { BriefFeed } from "./brief.feed";
-import { readingsDay, taskRow } from "./brief.fixtures";
+import { readingsDay, taskRow, waitingEmailRow } from "./brief.fixtures";
 import { render, stubApi } from "./brief.testkit";
 
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
 });
+
+/** The row in hand, drawn whole on the panel's left. */
+function inHand(container: HTMLElement) {
+  const lead = container.querySelector(".brief-triage-lead");
+  if (!(lead instanceof HTMLElement)) throw new Error("no row is in hand");
+  return within(lead);
+}
 
 it("renders the server focus even when the queue page contains different rows", () => {
   stubApi({});
@@ -25,12 +33,57 @@ it("renders the server focus even when the queue page contains different rows", 
       state="ready"
     />,
   );
+  // The day's first row is in hand, drawn whole; the queue beside it names
+  // every focus row in the server's order, with its rank in the reader's own
+  // numerals.
   expect(
     [...container.querySelectorAll(".worklist-row-title")].map(
       (row) => row.textContent,
     ),
+  ).toEqual([rows[0].title]);
+  expect(
+    container.querySelector(".brief-focus-item-inhand .brief-focus-rank")
+      ?.textContent,
+  ).toBe("1");
+  expect(
+    [...container.querySelectorAll(".brief-focus-item-title")].map(
+      (item) => item.textContent,
+    ),
   ).toEqual(rows.slice(0, 6).map((row) => row.title));
-  expect(screen.getByText("6 focus cards")).toBeTruthy();
+  expect(
+    [...container.querySelectorAll(".brief-focus-list > li")].map(
+      (item) => item.querySelector(".brief-focus-rank")?.textContent,
+    ),
+  ).toEqual(["1", "2", "3", "4", "5", "6"]);
+  expect(screen.getByText("6 priorities in focus")).toBeTruthy();
+  expect(screen.getByText("1 of 6")).toBeTruthy();
+});
+
+it("puts a queued row in hand when it is pressed, and says where it stands", async () => {
+  stubApi({});
+  const user = userEvent.setup();
+  const rows = Array.from({ length: 3 }, (_, index) =>
+    taskRow(`task-${index}`, `Call buyer ${index}`),
+  );
+  const { container } = render(
+    <BriefFeed day={readingsDay({}, rows)} state="ready" />,
+  );
+  await user.click(screen.getByRole("button", { name: /Call buyer 2/ }));
+  expect(
+    [...container.querySelectorAll(".worklist-row-title")].map(
+      (row) => row.textContent,
+    ),
+  ).toEqual([rows[2].title]);
+  expect(
+    container.querySelector(".brief-focus-item-inhand .brief-focus-rank")
+      ?.textContent,
+  ).toBe("3");
+  expect(screen.getByText("3 of 3")).toBeTruthy();
+  expect(
+    screen
+      .getByRole("button", { name: /Call buyer 2/ })
+      .getAttribute("aria-pressed"),
+  ).toBe("true");
 });
 
 it("opens the full queue instead of growing focus when more pages exist", () => {
@@ -105,10 +158,12 @@ it("keeps approvals in the agenda and offers their review action", () => {
     category: "decisions" as const,
     actions: ["decide" as const],
   };
-  render(<BriefFeed day={readingsDay({}, [row])} state="ready" />);
-  expect(screen.getByText("Approve the buyer email")).toBeTruthy();
+  const { container } = render(
+    <BriefFeed day={readingsDay({}, [row])} state="ready" />,
+  );
+  expect(inHand(container).getByText("Approve the buyer email")).toBeTruthy();
   expect(
-    screen.getByRole("button", { name: en["worklist.verb.decide"] }),
+    inHand(container).getByRole("button", { name: en["worklist.verb.decide"] }),
   ).toBeTruthy();
 });
 
@@ -121,7 +176,9 @@ it.each([false, true])(
       because: pinned ? [{ kind: "pinned" }] : [],
       above_next: pinned ? { comparator: "pin" } : undefined,
     };
-    render(<BriefFeed day={readingsDay({}, [row])} state="ready" />);
+    const { container } = render(
+      <BriefFeed day={readingsDay({}, [row])} state="ready" />,
+    );
     expect(
       screen.queryByRole("button", {
         name: en["worklist.verb.pin"],
@@ -132,7 +189,90 @@ it.each([false, true])(
         name: en["worklist.verb.unpin"],
       }),
     ).toBeNull();
-    expect(screen.getByText("Call the buyer")).toBeTruthy();
+    expect(inHand(container).getByText("Call the buyer")).toBeTruthy();
     expect(screen.queryByText(/you pinned/i)).toBeNull();
   },
 );
+
+it("ends the row in hand's one line with the agent's move, every option beside it", () => {
+  stubApi({});
+  const { container } = render(
+    <BriefFeed
+      day={readingsDay({}, [waitingEmailRow()])}
+      state="ready"
+      onContext={() => {}}
+    />,
+  );
+  const lead = inHand(container);
+  const line = [
+    ...(container
+      .querySelector(".worklist-row-acts")
+      ?.querySelectorAll("button, a") ?? []),
+  ];
+  // The put-downs lead from the far edge, in the open; the way in follows;
+  // the move the product worked out closes the line, in the agent's chrome.
+  expect(line.at(0)?.closest(".worklist-row-putdowns")).not.toBeNull();
+  expect(
+    lead
+      .getByRole("button", { name: en["worklist.disposition.verb.not_mine"] })
+      .closest(".worklist-row-putdowns"),
+  ).not.toBeNull();
+  expect(
+    lead
+      .getByRole("button", { name: en["brief.focus.context"] })
+      .closest(".worklist-row-putdowns"),
+  ).toBeNull();
+  const draft = lead.getByRole("link", {
+    name: en["worklist.verb.draft_reply_now"],
+  });
+  expect(draft.className).toContain("btn-ai");
+  expect(line.at(-1)).toBe(draft);
+  // The verb that only reaches the record is withheld: the record is named
+  // and linked over the row.
+  expect(
+    lead.queryByRole("link", { name: en["worklist.verb.open"] }),
+  ).toBeNull();
+});
+
+it("names whose row is in hand, and how the silence runs both ways", () => {
+  stubApi({});
+  const row = waitingEmailRow();
+  const { container } = render(
+    <BriefFeed day={readingsDay({}, [row])} state="ready" />,
+  );
+  // Both moments off the row itself, no second read: the drawer draws the
+  // same pair on every row, and a fetch per row is what this field ends.
+  const about = container.querySelector(".brief-triage-about");
+  expect(about?.textContent).toContain(en["worklist.pane.lastInbound"]);
+  expect(about?.textContent).toContain(en["worklist.pane.lastOutbound"]);
+  expect(about?.textContent).toContain("03/09/2026");
+  expect(about?.textContent).toContain("28/08/2026");
+  expect(
+    screen.getByRole("link", { name: "Sonya Beck" }).getAttribute("href"),
+  ).toBe("#/contacts/contact-sonya");
+});
+
+it("names the sender of a thread filed under a deal", () => {
+  stubApi({});
+  const row = {
+    ...waitingEmailRow(),
+    subject: { type: "deal" as const, id: "deal-retrofit", label: "Retrofit" },
+    contact: { id: "contact-sonya", label: "Sonya Beck" },
+  };
+  render(<BriefFeed day={readingsDay({}, [row])} state="ready" />);
+  expect(
+    screen.getByRole("link", { name: "Sonya Beck" }).getAttribute("href"),
+  ).toBe("#/contacts/contact-sonya");
+});
+
+it("claims no moments when the server withheld them", () => {
+  stubApi({});
+  const row = {
+    ...waitingEmailRow(),
+    contact: { id: "contact-sonya", label: "Sonya Beck" },
+  };
+  render(<BriefFeed day={readingsDay({}, [row])} state="ready" />);
+  expect(screen.getByRole("link", { name: "Sonya Beck" })).toBeTruthy();
+  expect(screen.queryByText(en["worklist.pane.lastInbound"])).toBeNull();
+  expect(screen.queryByText(en["worklist.pane.never"])).toBeNull();
+});
