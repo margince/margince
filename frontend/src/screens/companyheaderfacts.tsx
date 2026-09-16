@@ -104,7 +104,9 @@ export function CompanyIdentityFacts({
       </Fact>
       {wayIn?.contributor_contact_id && (
         <Fact label={t("co.pulse.strongestLead")}>
-          <EntityRef kind="contact" id={wayIn.contributor_contact_id} />{" "}
+          {/* No space before the tail: it opens with its own comma, so the
+              name and the clause read as one sentence. */}
+          <EntityRef kind="contact" id={wayIn.contributor_contact_id} />
           {plural("co.pulse.strengthTail", wayIn.contact_count, {
             count: formatNumber(wayIn.contact_count, locale),
           })}

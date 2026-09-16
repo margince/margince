@@ -1248,8 +1248,8 @@ export const de = {
   "co.pulse.owner": "Betreut von",
   "co.pulse.sizeBand": "{band} Mitarbeitende",
   "co.pulse.strongestLead": "Zugang \u00fcber",
-  "co.pulse.strengthTail_one": "— der einzige Kontakt hier",
-  "co.pulse.strengthTail_other": "— von {count} Kontakten hier",
+  "co.pulse.strengthTail_one": ", der einzige Kontakt hier",
+  "co.pulse.strengthTail_other": ", von {count} Kontakten hier",
   "co.pulse.unowned": "Nicht zugewiesen",
   "co.since.first": "Du öffnest diesen Account zum ersten Mal.",
   "co.partial":
@@ -1456,24 +1456,8 @@ export const de = {
   "co.facts.projects_one": "1 Projekt",
   "co.facts.projects_other": "{count} Projekte",
   "co.facts.atLeast": "oder mehr",
-  "co.work.title": "Was läuft, und warum",
-  "co.work.count": "{count} laufend",
-  "co.work.countAtLeast": "{count}+ laufend",
-  "co.work.deals": "Deals",
-  "co.work.noDealsDetail":
-    "Im Deal stehen Betrag und Abschlussdatum. Leg einen an, sobald es etwas zu gewinnen gibt.",
   "co.work.noDeals": "Keine offenen Deals.",
   "co.work.closes": "Abschluss {date}",
-  "co.work.stalled": "Zu diesem Deal wurde seit 60 Tagen nichts erfasst.",
-  "co.work.overdueTask":
-    "{who} sollte \u201a{title}\u2018 bis {date} erledigen und hat es nicht getan.",
-  "co.work.overdueTaskUnnamed":
-    "\u201a{title}\u2018 war am {date} f\u00e4llig und ist offen.",
-  "co.work.owesUs": "{who} sagte: \u201a{body}\u2018",
-  "co.work.owesUsUnnamed": "Sie sagten: \u201a{body}\u2018",
-  "co.work.wasDue": "\u2014 bis {date}.",
-  "co.work.statusesWithheld":
-    "Du darfst die Konversationen dieses Accounts nicht lesen, deshalb tragen die Zeilen oben keine Begr\u00fcndungen.",
   "co.brief.by.model": "Von Margince geschrieben",
   "co.brief.by.deterministic": "Aus deinen Daten zusammengestellt",
   "co.brief.generatedAt": "Stand {when}",
@@ -1671,7 +1655,7 @@ export const de = {
   "co.rail.deals.title": "Aktive Deals",
   "co.rail.deals.empty": "Für diesen Account gibt es noch keine Deals.",
   "co.rail.deals.emptyClosedOnly":
-    "Nichts offen — nur abgeschlossene Historie.",
+    "Nichts offen, nur abgeschlossene Historie.",
   "co.rail.deals.noCloseDate": "kein Abschlussdatum",
   "co.rail.deals.attentionOverdue": "Überfällig",
   "co.rail.deals.attentionCommitment": "Sie schulden uns",
@@ -1680,6 +1664,10 @@ export const de = {
     "Noch keine Kontakte. Niemand, dem man schreiben kann.",
   "co.rail.contacts.add": "Kontakt hinzufügen",
   "co.rail.contacts.inTouch": "Bereits mit ihnen in Kontakt",
+  "co.rail.projects.title": "Projekte",
+  "co.rail.projects.empty": "Noch keine Projekte.",
+
+  "co.tab.deals": "Deals & Projekte",
 
   "co.commercial.title": "Kommerziell",
   "co.commercial.lostFigure": "Verlorene Deals",
@@ -2690,7 +2678,6 @@ export const de = {
   "assignments.subjectInactive": "(inaktiv)",
   "assignments.add": "Zuweisen",
   "assignments.change": "Ändern",
-  "assignments.remove": "Entfernen",
   "assignments.changeOne": "Zuständigkeit ändern: {who}",
   "assignments.removeOne": "Zuständigkeit beenden: {who}",
   "assignments.addTitle": "Zuständigkeit festhalten",
@@ -8629,10 +8616,6 @@ export const de = {
   "contact.moment.suggest.missingNextStep":
     "Nächsten Schritt festlegen: mit ihnen ist nichts geplant.",
   "contact.moment.rule.nothing_needed": "Nichts zu tun",
-  "contact.moment.evidence.activity": "Aus einem Austausch",
-  "contact.moment.evidence.task": "Aus einer Aufgabe",
-  "contact.moment.evidence.relationship_change":
-    "Aus einer Änderung am Datensatz",
 
   "contact.overview.detailsPermissions": "Details & Berechtigungen",
   "contact.overview.detailsShow": "Details & Berechtigungen einblenden",
@@ -9132,7 +9115,7 @@ export const de = {
   "unit.projects": "Projekte",
   "companyProjects.title": "Projekte",
   "companyProjects.empty":
-    "Ein Projekt ist die Arbeit, um die es in einem Deal geht. Dieses Unternehmen erscheint hier, sobald es an einem beteiligt ist — als Kunde, Partner oder Subunternehmer.",
+    "Ein Projekt ist die Arbeit, um die es in einem Deal geht. Dieses Unternehmen erscheint hier, sobald es an einem beteiligt ist: als Kunde, Partner oder Subunternehmer.",
   "projectCompanies.title": "Unternehmen",
   "projectCompanies.empty":
     "Ein Projekt ist Arbeit, die mehrere Unternehmen gemeinsam leisten — der Kunde und jeder Partner oder Subunternehmer, der liefert.",

@@ -546,9 +546,37 @@
   gap: var(--space-2);
   margin: 8px 0 0;
 }
+/* The reply itself: a white plate on the panel's indigo ground, so the answer
+   reads as the thing that came back rather than as more of the panel. */
+.co-ask-answer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--aiMed);
+  border-radius: var(--r-md);
+  background: var(--bgElevated);
+}
+/* The question over its answer, in the agent's own colour and one rung under
+   the prose: it names what was asked without competing with the reply. */
 .co-ask-asked {
-  margin: var(--space-2) 0 0;
+  margin: 0;
+  font-size: var(--fs-meta);
   font-weight: 600;
+  color: var(--aiText);
+}
+.co-ask-answer > .surfacestate-empty {
+  margin: 0;
+}
+/* Who wrote it and when, under a hairline: the plate's own footer band, told
+   apart from the answer the way every card on this page tells its foot apart
+   from its body. */
+.co-ask-foot {
+  margin: 0;
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--borderSubtle);
+  color: var(--textMeta);
 }
 
 /* The proposals count is a way into the queue it counts, so it is a button —
@@ -592,10 +620,6 @@
   margin-bottom: var(--space-4);
 }
 
-.co-facts-heading {
-  margin-bottom: var(--space-2);
-}
-
 /* The VAT consultation. Label above value rather than side by side, because
    two of the values — the registered name and the receipt — run long enough
    that a label column would wrap them into ribbons. */
@@ -624,24 +648,15 @@
   align-items: center;
   flex-wrap: wrap;
   gap: var(--space-2);
+}
+/* The prep foot stands under prose and pays its own interval off it; the
+   authorship meta sits inside the panel's footer band, which already spaces
+   it, so an interval of its own would drop it under the verb beside it. */
+.co-prep-foot {
   margin-top: var(--space-3);
 }
 .co-prep-foot:empty {
   display: none;
-}
-
-/* THE VALUE AND EVERYTHING THAT QUALIFIES IT, on one line.
-   The value, a warning about its shape, who vouched for it and the verbs that
-   change it are separate elements of unlike kinds — a mark, a badge, a chip, a
-   button — and inline with no rule between them they simply abutted: a fact
-   nobody has to confirm read as "1998Set by a contact", because it is the one
-   row where no button follows the value to force a gap. The row owns the
-   spacing, so it holds for every combination of the four. */
-.co-fact-line {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--space-2);
 }
 
 /* A fact whose value contradicts its field. It sits beside the value rather
@@ -814,6 +829,35 @@
   color: var(--textMeta);
 }
 
+/* The modal's own vertical rhythm: search, the colleague choice, then the
+ * grid. Without a gap the three ran together as one dense block and the
+ * search field read as a caption for the toggle row rather than its own
+ * control. */
+.coverage-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* The colleague toggles are a CHOICE, not a menu, so they read as a wrapping
+ * row rather than a list: `--gapActions` is the same gap every side-by-side
+ * button row in the product uses. */
+.coverage-colleagues {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gapActions);
+}
+/* The first cell of a row is the contact's NAME, a row header only so a
+   screen reader ties each band to its contact: it reads at the body's own
+   size and case, not as the column eyebrow `.table` sets every th in. */
+.coverage-table tbody th {
+  font-size: var(--fs-body);
+  font-weight: var(--fw-medium);
+  color: var(--textPrimary);
+  text-transform: none;
+  letter-spacing: normal;
+}
+
 /* ---- The coverage grid on a narrow screen (plan §10.3) ----------------------
  *
  * One column per colleague reads well on a desktop and not at all on a phone:
@@ -823,12 +867,11 @@
  *
  * Each row becomes a card, each cell a labelled line. The label comes from the
  * cell's own data-label, set from the column header, so the two cannot drift.
+ *
+ * Paired with the shared `.table` class for cell padding, hairlines and
+ * left-aligned headers: this block only adds what the narrow layout and the
+ * block-card fallback need on top of it.
  */
-.coverage-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
 @media (max-width: 720px) {
   /* No overflow override here. The rows below become block CARDS at this
    * width, so there is nothing left to run past the right edge and

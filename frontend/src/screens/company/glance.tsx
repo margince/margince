@@ -1,19 +1,15 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { useRecordZone } from "../../app/recordzone";
 import { Button, Disclosure } from "../../design-system/atoms";
-import { Panel, PanelBody, PanelGroupHead } from "../../design-system/panel";
+import { PanelBody } from "../../design-system/panel";
 import { SurfaceState, sectionState } from "../../design-system/surfacestate";
 import { formatDateAbbrev, formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
-import { CommercialPanel, recordNamesIn } from "../company360";
-import { CompanyContractState } from "../companycommercial";
-import { CompanyProjects } from "../companyprojects";
+import { recordNamesIn } from "../company360";
 import { activityHeadline, CompanyRecentList } from "../companyrecent";
-import { CompanyWorkCard } from "../companywork";
 import "./glance.css";
 
 type Company360 = components["schemas"]["Company360"];
@@ -123,104 +119,5 @@ export function ThreadFold({
         )}
       </Disclosure>
     </PanelBody>
-  );
-}
-
-/**
- * The money as one pane: what the account is under contract for and what it
- * has won and lost, then each open deal with its one status clause. The
- * contract block is the SAME component the Deals tab draws, so the two tabs
- * cannot say two things about one renewal.
- */
-export function MoneyPane({
-  companyId,
-  view,
-  loading,
-  readOnly,
-  onAllDeals,
-  onOpenRecord,
-  onOpenEmail,
-  verbs,
-}: Readonly<{
-  companyId: string;
-  view?: Company360;
-  loading: boolean;
-  // An archived company joins no new project, so the group offers no verb
-  // that would only be refused.
-  readOnly: boolean;
-  onAllDeals: () => void;
-  onOpenRecord?: (entityType: string, entityId: string) => void;
-  // Opens a cited message in the page's email drawer; see `Citations`.
-  onOpenEmail?: (activityId: string) => void;
-  verbs?: { deal?: ReactNode };
-}>) {
-  const t = useT();
-  const present =
-    Boolean(view?.deals) && !view?.sections_omitted.includes("deals");
-  // The projects group's own state, read the way the deals group reads its
-  // own: while the 360 is still arriving, or where this reader may not see
-  // the projects, the group says so — an absent list handed to the links
-  // section would draw "No projects yet" with an Attach verb over a section
-  // that has not answered.
-  const projects = view?.projects;
-  const projectsState = sectionState(
-    view,
-    "projects",
-    Boolean(projects),
-    projects?.length ?? 0,
-    loading,
-  );
-  return (
-    <Panel
-      title={t("co.commercial.title")}
-      titleAction={
-        present ? (
-          <button type="button" className="link-button" onClick={onAllDeals}>
-            {t("co.commercial.allDeals")}
-          </button>
-        ) : undefined
-      }
-    >
-      <CommercialPanel
-        view={view}
-        extra={<CompanyContractState view={view} />}
-        loading={loading}
-        figuresOnly
-      />
-      <CompanyWorkCard
-        view={view}
-        loading={loading}
-        onOpenRecord={onOpenRecord}
-        onOpenEmail={onOpenEmail}
-        bare
-        verbs={verbs}
-      />
-      {/* The deliveries this company is part of — as the client, a partner or
-          a subcontractor — as the group under the deals they came from. In
-          this pane rather than one of its own: the money and the work it
-          bought are one reading, and a third pane on the column read as a
-          second page starting. */}
-      {projectsState === "ready" || projectsState === "empty" ? (
-        <CompanyProjects
-          companyId={companyId}
-          projects={projects}
-          readOnly={readOnly}
-          bare
-        />
-      ) : (
-        <>
-          <PanelGroupHead title={t("companyProjects.title")} level="h3" />
-          <PanelBody>
-            <SurfaceState
-              loadingLabel={t("companyProjects.title")}
-              state={projectsState}
-              emptyLabel={t("projectLinks.emptyTitle")}
-            >
-              {null}
-            </SurfaceState>
-          </PanelBody>
-        </>
-      )}
-    </Panel>
   );
 }

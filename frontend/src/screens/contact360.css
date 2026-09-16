@@ -87,27 +87,6 @@
   color: var(--textPrimary);
 }
 
-/* The evidence rows: what the rule fired on, each openable. They are the
-   difference between a verdict and a claim with its receipts. */
-/* What the move rests on, as an inline run of links after its caption: one
-   quiet meta line under the ask, the way a citation reads, rather than a list
-   of bordered buttons that competed with the verbs beside it. */
-.pe-today-evidence {
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-1) var(--space-3);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.pe-today-evidence li {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
 /* Sources and freshness ride the panel's own footer band, quiet: they qualify
    the whole reading rather than any one line of it. */
 .pe-today-foot {
@@ -244,15 +223,6 @@
   }
 }
 
-/* A source names its kind with a glyph before its words, on the same
-   baseline; the link variant of Button already lays its children out this
-   way, so the rule covers the plain-text sources. */
-.pe-source {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-}
-
 .pe-chiprow {
   display: flex;
   flex-wrap: wrap;
@@ -377,91 +347,10 @@
    Conversation memory (§5.10): the last panel in the stack. Threads as
    entities, not transport events.
    --------------------------------------------------------------------------- */
-/* A thread as one row. It is a `PanelRow`, so the hairline and the gutters come
-   from there; the column template is the memory's own: the counterparty's
-   face, what was said, when. */
-/* A face and a body: the counterparty's avatar down a quiet left column, and
-   beside it the meta line over the message, with the time and the reply
-   closing each line at the far edge. The children arrive as avatar, meta,
-   time, reply, entry. Two rows, three columns: the entry takes the body
-   column under the meta line, never the avatar's, so the axis stays readable
-   down the card the way the History tab's does. */
-.pe-memory-row {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  column-gap: var(--space-3);
-  row-gap: var(--space-1);
-  align-items: start;
-}
-.pe-memory-row > .avatar {
-  grid-row: 1 / span 2;
-  grid-column: 1;
-}
-.pe-memory-meta {
-  grid-row: 1;
-  grid-column: 2;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
-  min-block-size: var(--space-6);
-}
-/* The counterparty's name, set apart from the rest of the meta line's plain
-   words the way a name is set apart everywhere else this product lists
-   contacts. */
-.pe-memory-who {
-  font-weight: var(--fw-medium);
-  color: var(--textPrimary);
-}
-/* A dot between the words of the meta line, drawn by the line rather than
-   typed into the copy, so a row with one fact carries no stray separator. */
-.pe-memory-meta > * + *::before {
-  content: "·";
-  margin-inline-end: var(--space-2);
-  color: var(--textMeta);
-}
-/* The standing pill is a mark, not a word in the sentence, so no dot leads
-   into it. The wrapper takes the cancel; the pill itself stays atoms.css's. */
-.pe-memory-meta > .pe-memory-standing::before {
-  content: none;
-}
-.pe-memory-time {
-  grid-row: 1;
-  grid-column: 3;
-  justify-self: end;
-  white-space: nowrap;
-}
-.pe-memory-action {
-  grid-row: 2;
-  grid-column: 3;
-  justify-self: end;
-}
-.pe-memory-row > .emailentry,
-.pe-memory-row > .pe-memory-entry {
-  grid-row: 2;
-  grid-column: 2;
-}
-/* The entry is a pressable plate with its own inset, so its words started a
-   pad to the right of the meta line above them. Pulled out by that inset, the
-   words line up with the meta and the hover plate still surrounds them. */
-.pe-memory-row > .emailentry {
-  /* ds:ignore pulls the plate out by its own inset so its words align with the
-     meta line; the primitive's inset is what is being cancelled */
-  margin-inline: calc(-1 * var(--space-3));
-}
-
-/* On a phone the meta line is too long for one row: the third column folds
-   away and the time and the reply drop under the subject, so nothing has to
-   overflow the panel to stay on its line. */
-@media (max-width: 600px) {
-  .pe-memory-row {
-    grid-template-columns: auto minmax(0, 1fr);
-  }
-}
-
-.pe-memory-action:empty {
-  display: none;
-}
+/* A thread as one row draws `.meta-row` (design-system/composed.css), the grid
+   the facts card reads its own rows in too: the counterparty's face, what was
+   said, when. Its rule cancelling the dot before `.pe-memory-standing` lives
+   there beside the grid it depends on, not here beside the badge. */
 
 /* Shared with the contact drawer and the timeline tab's own channel pill, so
    the same transport reads as the same shape everywhere it is named. */

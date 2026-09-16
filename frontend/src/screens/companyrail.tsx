@@ -18,6 +18,7 @@ import { problemCodeOf, throwProblem } from "./common";
 import { CompanyDetails } from "./companydetails";
 import { DealsSection } from "./companyraildeals";
 import { CompanyProfileDetails } from "./companyraildetails";
+import { ProjectsSection } from "./companyrailprojects";
 import {
   contactRole,
   contactsSlice,
@@ -40,11 +41,11 @@ import "./company360.css";
 // so it takes the wider of the two rail shares (page-zones-rail: 3fr/7fr)
 // rather than the narrower `aside` share a right-hand column would get.
 //
-// Drawn as separate panels, each answering one question about the account —
+// Drawn as separate panels, each answering one question about the account:
 // its details and tags, its registration, its team, its open deals, its
-// contacts, its hold — in the order a reader works down the column, rather
-// than the disclosures the rail used to fold into one card: a hairline
-// inside a panel reads as one story about that panel's own subject, and a
+// projects, its contacts, its hold, in the order a reader works down the
+// column, rather than the disclosures the rail used to fold into one card: a
+// hairline inside a panel reads as one story about that panel's own subject, and a
 // panel's own edge is what tells a reader they have moved on to a different
 // one. Tags file under Details rather than in their own panel: a tag is a
 // fact about the account, on the same card as the rest of them.
@@ -143,6 +144,7 @@ export function CompanyRail({
             each shows only the top RAIL_ROW_LIMIT rows — a summary beside a
             tab is not a duplicate of it, a full copy would be. */}
         <DealsSection view={view} loading={loading} onTab={onTab} />
+        <ProjectsSection view={view} loading={loading} onTab={onTab} />
         <ContactsSection view={view} loading={loading} onTab={onTab} />
         <CompanyHoldSection company={resolved} />
       </Panel>

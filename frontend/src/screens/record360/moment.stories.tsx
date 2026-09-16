@@ -13,7 +13,9 @@ import { MomentRow } from "./moment";
 // whenever it names a real destination, and the page's own fallback
 // otherwise (MomentRow's own doc says why). Both are the ONE `.today-actions`
 // column the kit owns — these stories are that column at its two most
-// different contents, task and reply.
+// different contents, task and reply. The task case carries two evidence
+// items, one with a snippet and one with only a label, so the chip row's own
+// two shapes both show.
 
 const meta: Meta<typeof MomentRow> = {
   title: "Records/Record reading/The moment row",
@@ -46,6 +48,11 @@ const TASK_MOMENT: ContactMoment = {
       id: "a-1",
       label: "Renewal call",
       snippet: "I'll get the paperwork over to you this week.",
+      observed_at: "2026-08-03T09:00:00Z",
+    },
+    {
+      type: "task",
+      label: "Send renewal paperwork",
       observed_at: "2026-08-03T09:00:00Z",
     },
   ],

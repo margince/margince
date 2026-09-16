@@ -10,6 +10,7 @@ import { FieldGrid } from "../design-system/fieldgrid";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useT } from "../i18n";
 import { profileFieldLabel } from "./companies";
+import { DossierPanel } from "./companydossier";
 import { CompanyFactsPanel } from "./companyfactspanel";
 import { useCompanyReadOnlyReason } from "./companyheader";
 import { SidecarFieldRow } from "./companyraildetails";
@@ -66,12 +67,21 @@ const NARRATIVE_FIELDS = [
 export function CompanyProfileForm({
   company,
   onOpenHistory,
+  nameOf,
+  onOpenRecord,
+  onOpenEmail,
   tools,
 }: Readonly<{
   company: Company;
   // Opens the record's own history drawer, for a reader following an evidence
   // mark back to what changed.
   onOpenHistory?: () => void;
+  // The dossier's own props, threaded straight from the page: this tab's copy
+  // reads the same names and opens through the same receipt as the
+  // overview's, so a chip cited in either place lands in the same drawer.
+  nameOf?: (entityType: string, entityId: string) => string | undefined;
+  onOpenRecord?: (entityType: string, entityId: string) => void;
+  onOpenEmail?: (activityId: string) => void;
   // The account's own tooling — custom fields, group rollup, the site read,
   // the technical profile. Passed in rather than built here: they are the
   // caller's existing cards and this file has no business knowing what is in
@@ -98,6 +108,16 @@ export function CompanyProfileForm({
 
   return (
     <div className="record-stack">
+      {/* The account in prose, leading the tab the same way it leads the
+          overview: what the account IS, before its fields and facts. The
+          overview keeps its own copy so a reader who never opens this tab
+          still meets it. */}
+      <DossierPanel
+        companyId={company.id}
+        nameOf={nameOf}
+        onOpenRecord={onOpenRecord}
+        onOpenEmail={onOpenEmail}
+      />
       {reason && (
         <Callout
           tone="info"

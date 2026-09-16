@@ -51,7 +51,7 @@ import {
   throwProblem,
   useViewerId,
 } from "./common";
-import { MoneyPane, ThreadFold } from "./company/glance";
+import { ThreadFold } from "./company/glance";
 import {
   DealsCard,
   NextSteps,
@@ -103,6 +103,7 @@ import {
   SIZE_BAND_OPTIONS,
 } from "./companylookups";
 import { CompanyProfileForm } from "./companyprofiletab";
+import { CompanyProjectsPanel } from "./companyprojects";
 import { CompanyRail, SignalsSection } from "./companyrail";
 import { wholeCount } from "./companyrailshared";
 import {
@@ -842,7 +843,11 @@ function CompanyRecord({
           // them is this.
           overview: t("tab.overview"),
           contacts: t("tab.contacts"),
-          deals: t("tab.deals"),
+          // Its own key rather than the shared `tab.deals`: the contact page's
+          // Deals tab holds no projects, so renaming the shared label would
+          // rename that tab too. This account's tab is the one that gained a
+          // second body of work.
+          deals: t("co.tab.deals"),
           tasks: t("tab.tasks"),
           timeline: t("tab.timeline"),
           // The tab's own key rather than `finance.title`, which the card
@@ -1539,6 +1544,9 @@ function CompanyRecordBody({
     view,
     read: useHasSiteRead(company.id),
   });
+  // The account's own names for the records the dossier cites, off the same
+  // 360 the overview's own copy of the card reads.
+  const dossierNames = recordNamesIn(view);
   return (
     <>
       {tab === "partner" && <PartnerTab companyId={company.id} />}
@@ -1560,7 +1568,6 @@ function CompanyRecordBody({
             loading={loading}
             failed={failed}
             readOnly={readOnly}
-            onAllDeals={() => onTab("deals")}
             onOpenHistory={onOpenHistory}
             onOpenTab={onTab}
             onOpenRecord={receipt.open}
@@ -1708,6 +1715,9 @@ function CompanyRecordBody({
         offerOnOverview={offerResearch}
         onOpenHistory={onOpenHistory}
         refusedReasonId={refusedReasonId}
+        nameOf={dossierNames}
+        onOpenRecord={receipt.open}
+        onOpenEmail={receipt.openEmail}
       />
     </>
   );
@@ -1770,40 +1780,12 @@ export function offerResearchOnOverview({
   return !read && nothingOnFile(view);
 }
 
-// The create verb the work card carries, only where the reader may actually
-// read the section. Undefined for an archived record, which takes no new work
-// at all, and undefined for a reader whose grant does not reach the deals —
-// a button that can only end in a refusal is worse than no button, and
-// mounting one is a disclosure of its own.
-function workVerbs({
-  view,
-  company,
-  readOnly,
-}: Readonly<{
-  view?: Company360View;
-  company: Company;
-  readOnly: boolean;
-}>): { deal?: ReactNode } | undefined {
-  if (readOnly) {
-    return undefined;
-  }
-  return {
-    deal: !view?.sections_omitted?.includes("deals") ? (
-      <NewDealAction
-        companyId={company.id}
-        companyName={company.display_name}
-      />
-    ) : undefined,
-  };
-}
-
 function CompanyOverviewStack({
   company,
   view,
   loading,
   failed,
   readOnly,
-  onAllDeals,
   onOpenHistory,
   onOpenRecord,
   onOpenEmail,
@@ -1829,7 +1811,6 @@ function CompanyOverviewStack({
   // An archived company takes no new deal, task or role, so the panels below
   // show no verb that would only be refused.
   readOnly: boolean;
-  onAllDeals: () => void;
   onOpenHistory: () => void;
   // Where a cited chip leads. Owned by the page, because the profile tab cites
   // the same records and two owners would mean two receipts open over each
@@ -1971,26 +1952,11 @@ function CompanyOverviewStack({
           cards of unequal height never share a row, so a tall needs list and a
           short Ask box beside it would leave the short one's row half empty.
           The order is the order a rep works them: what needs a contact, then
-          the money, then what the account is, then the questions the 360
-          already answers. */}
+          what the account is, then the questions the 360 already answers. The
+          money and the pipeline read on the Deals tab now, and the rail's own
+          DealsSection stands on every tab: a third copy of them here would be
+          a figure the reader has to reconcile against the other two. */}
       <NeedsList reading={reading} onOpenTasks={onOpenTasks} />
-      <MoneyPane
-        companyId={company.id}
-        view={view}
-        loading={loading}
-        readOnly={readOnly}
-        onAllDeals={onAllDeals}
-        onOpenRecord={onOpenRecord}
-        onOpenEmail={onOpenEmail}
-        // The verbs ride with the WORK rather than with the figures:
-        // this is the pane that names every open deal, so it is where a
-        // reader is standing when they notice one is missing. Each is
-        // gated on its own section being READABLE, and the guard is here
-        // rather than inside the verb: NewDealAction reads the pipelines
-        // the moment it mounts, which is itself a disclosure to a reader
-        // who may not see deals.
-        verbs={workVerbs({ view, company, readOnly })}
-      />
       {/* The account in prose, beside the reading of it: the 360 answers what
           to DO, this answers what the account IS, in sentences with their
           sources under them. */}
@@ -2014,9 +1980,9 @@ function CompanyOverviewStack({
         />
       </div>
       {/* Is this an account we should be selling to at all: the question an
-          account with nothing in flight is actually asking. Its own card
-          rather than a section of the money pane: it carries its own
-          attribution and its own reassess verb in a footer band. */}
+          account with nothing in flight is actually asking. Its own card,
+          carrying its own attribution and its own reassess verb in a footer
+          band. */}
       {!hasWorkInFlight(view) && (
         <GrowthFitPanel
           companyId={company.id}
@@ -2078,9 +2044,13 @@ function CompanyDealsAndTasksTabs({
               In its own Panel: the block renders PanelBody rows, and standing
               bare over the deals card it read as a line that fell out of one.
               The Panel is drawn only when the reader holds the contract grant
-              (the same `contracts` slice the block itself reads), so a reader
-              without it gets no empty card. */}
-          {view?.state_strip?.contracts && (
+              (the same `contracts` slice the block itself reads) AND the
+              account has an agreement: a reader without the grant gets no
+              empty card, and neither does an account with nothing on record,
+              whose one-line "no contract" was a card spent on an absence the
+              deals card under it already implies. */}
+          {view?.state_strip?.contracts &&
+            view.state_strip.contracts.active_count > 0 && (
             <Panel title={t("co.commercial.title")}>
               <CompanyContractState view={view} />
             </Panel>
@@ -2091,6 +2061,17 @@ function CompanyDealsAndTasksTabs({
             failed={failed}
             readOnly={readOnly}
           />
+          {/* The deliveries this account is part of, as its own block under
+              the pipeline: the tab reads "Deals & projects" because both are
+              the account's work in flight, and a reader who came here for
+              one finds the other without a second tab to try. */}
+          {(view || failed) && (
+            <CompanyProjectsPanel
+              companyId={company.id}
+              view={view}
+              readOnly={readOnly}
+            />
+          )}
         </div>
       )}
       {tab === "tasks" && (
@@ -2273,6 +2254,9 @@ function CompanyProfileTab({
   offerOnOverview,
   onOpenHistory,
   refusedReasonId,
+  nameOf,
+  onOpenRecord,
+  onOpenEmail,
 }: Readonly<{
   active: boolean;
   company: Company;
@@ -2280,6 +2264,11 @@ function CompanyProfileTab({
   onOpenHistory: () => void;
   // See ReferenceDisclosures: the page's one read-only sentence, by id.
   refusedReasonId?: string;
+  // The dossier's own props: the overview's copy and this tab's leading one
+  // read the same names and open through the same receipt.
+  nameOf?: (entityType: string, entityId: string) => string | undefined;
+  onOpenRecord?: (entityType: string, entityId: string) => void;
+  onOpenEmail?: (activityId: string) => void;
 }>) {
   if (!active) {
     return null;
@@ -2290,6 +2279,9 @@ function CompanyProfileTab({
       offerOnOverview={offerOnOverview}
       onOpenHistory={onOpenHistory}
       refusedReasonId={refusedReasonId}
+      nameOf={nameOf}
+      onOpenRecord={onOpenRecord}
+      onOpenEmail={onOpenEmail}
     />
   );
 }
@@ -2299,6 +2291,9 @@ function ReferenceDisclosures({
   offerOnOverview,
   onOpenHistory,
   refusedReasonId,
+  nameOf,
+  onOpenRecord,
+  onOpenEmail,
 }: Readonly<{
   company: Company;
   offerOnOverview: boolean;
@@ -2306,11 +2301,17 @@ function ReferenceDisclosures({
   // The page's one sentence about why this account takes no changes, while
   // it does not: an edge is written through the account's own write gate.
   refusedReasonId?: string;
+  nameOf?: (entityType: string, entityId: string) => string | undefined;
+  onOpenRecord?: (entityType: string, entityId: string) => void;
+  onOpenEmail?: (activityId: string) => void;
 }>): ReactNode {
   return (
     <CompanyProfileForm
       company={company}
       onOpenHistory={onOpenHistory}
+      nameOf={nameOf}
+      onOpenRecord={onOpenRecord}
+      onOpenEmail={onOpenEmail}
       tools={
         <>
           {/* Each of these names itself, so they stand in the profile's own
