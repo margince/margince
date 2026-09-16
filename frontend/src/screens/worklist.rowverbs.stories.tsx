@@ -258,6 +258,11 @@ export const TheLineInDark: Story = {
 export const TheLineOnAPhone: Story = {
   ...AWaitingRowWithEveryVerb,
   globals: { viewport: { value: "phone" } },
+  // `uat-phone` is what makes the capture gate drive the browser to 390px. The
+  // viewport global alone moves Storybook's own frame and not the gate's, so
+  // without the tag this frame was captured at the desktop width — which draws
+  // the band this story exists to show folded away.
+  tags: ["uat-phone"],
   decorators: [
     (Story) => (
       <div className="worklist-row">

@@ -351,19 +351,31 @@ export const CardReadOnly: Story = {
   },
 };
 
+// The gesture both multiple-choice frames make, named rather than inherited.
+//
+// A story that picks up its `play` through a spread of another story is indexed
+// WITHOUT the `play-fn` tag — the indexer reads the object literal in front of
+// it, not what the spread resolves to — and the capture gate keys its settle on
+// that tag. So the dark frame used to be screenshotted 250ms after paint rather
+// than 1.5s, which is before this interaction has landed. Naming the `play` on
+// each frame is what earns the tag back; the `render` can still be spread,
+// because nothing is keyed on it.
+const chooseMultiple: Story["play"] = async ({ canvasElement }) => {
+  const canvas = within(canvasElement);
+  await userEvent.type(canvas.getByLabelText("Label"), "Capabilities");
+  await userEvent.click(
+    canvas.getByRole("button", { name: "Multiple choice" }),
+  );
+  const [first] = await canvas.findAllByLabelText("Option label");
+  await userEvent.type(first, "Fit, scope");
+};
+
 export const BuilderMultipleChoices: Story = {
   ...BuilderPicklist,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.type(canvas.getByLabelText("Label"), "Capabilities");
-    await userEvent.click(
-      canvas.getByRole("button", { name: "Multiple choice" }),
-    );
-    const [first] = await canvas.findAllByLabelText("Option label");
-    await userEvent.type(first, "Fit, scope");
-  },
+  play: chooseMultiple,
 };
 export const BuilderMultipleChoicesDark: Story = {
-  ...BuilderMultipleChoices,
+  ...BuilderPicklist,
+  play: chooseMultiple,
   globals: { theme: "dark" },
 };
