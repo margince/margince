@@ -227,7 +227,7 @@ type wireReply struct {
 // rep before a meeting is noise.
 func ParseBriefSections(reply string, in Input) ([]Section, error) {
 	var parsed wireReply
-	if err := json.Unmarshal([]byte(reply), &parsed); err != nil {
+	if err := json.Unmarshal([]byte(ai.Unfence(reply)), &parsed); err != nil {
 		return nil, fmt.Errorf("parse meeting brief sections: %w", err)
 	}
 	known := knownRecords(in)

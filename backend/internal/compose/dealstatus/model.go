@@ -314,7 +314,7 @@ type WrittenLine struct {
 // posture, and the caller composes the deterministic card instead.
 func ParseStatus(reply string, in StatusInput) (WrittenStatus, error) {
 	var parsed replyShape
-	if err := json.Unmarshal([]byte(reply), &parsed); err != nil {
+	if err := json.Unmarshal([]byte(ai.Unfence(reply)), &parsed); err != nil {
 		return WrittenStatus{}, fmt.Errorf("parse deal status: %w", err)
 	}
 	known, citable := knownIDs(in), citableIDs(in)

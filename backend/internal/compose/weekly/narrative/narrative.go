@@ -200,8 +200,7 @@ func Parse(reply string, in Input) (string, error) {
 	var out struct {
 		Narrative *string `json:"narrative"`
 	}
-	trimmed := strings.TrimSpace(reply)
-	if err := json.Unmarshal([]byte(trimmed), &out); err != nil {
+	if err := json.Unmarshal([]byte(ai.Unfence(reply)), &out); err != nil {
 		return "", fmt.Errorf("weekly narrative: the reply is not the object asked for: %w", err)
 	}
 	if out.Narrative == nil {

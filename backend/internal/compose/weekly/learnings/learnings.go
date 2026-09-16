@@ -218,7 +218,7 @@ func Parse(reply string, in Input) ([]Learning, error) {
 	// answers. Decoded into a plain slice, `{}` and `{"learnings":[]}` both land
 	// as empty — and the caller stores that as "a pass ran and found nothing",
 	// which is the product telling a rep something a malformed reply never said.
-	if err := json.Unmarshal([]byte(strings.TrimSpace(reply)), &out); err != nil {
+	if err := json.Unmarshal([]byte(ai.Unfence(reply)), &out); err != nil {
 		return nil, fmt.Errorf("weekly learnings: the reply is not the object asked for: %w", err)
 	}
 	if out.Learnings == nil {

@@ -1,0 +1,346 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+//gate:kind parity H3
+
+package gates
+
+// A markdown fence around a model's JSON is presentation, and no site may read
+// it as a malformed answer.
+//
+// A model asked for structured output usually gives it; when one wraps the
+// document in ```json instead, it has still answered correctly. ai.Unfence is
+// the single reduction that settles this, and internal/modules/ai/output.go
+// says so outright: "one reduction defines what every downstream shape check
+// and gate parses — the callers must not each invent their own trim."
+//
+// That claim went false. Six model-reply parsers reached production reading
+// their reply with a bare json.Unmarshal or a strings.TrimSpace, so a fencing
+// model lost those sites entirely: the parser reported malformed JSON and the
+// caller dropped to its deterministic floor, which reads to an operator exactly
+// like a weak model. It surfaced as two `invalid` verdicts in a certification
+// run — the cheapest possible place to find it, and only because the candidate
+// happened to fence where the incumbent bindings do not.
+//
+// Two halves, because either alone fails short:
+//
+//   - The BEHAVIOUR half drives each parser with a fenced reply and an unfenced
+//     one and demands the same outcome. A spelling check cannot see a parser
+//     that calls ai.Unfence and then unmarshals the untouched string.
+//   - The CENSUS half reads the tree for model-reply parsers and fails when one
+//     is not in the table below. Without it this gate covers the six that were
+//     found and says nothing about the seventh, which is how the first six got
+//     here.
+
+import (
+	"go/ast"
+	"go/parser"
+	"go/token"
+	"io/fs"
+	"path/filepath"
+	"slices"
+	"strings"
+	"testing"
+
+	"github.com/margince/margince/backend/internal/compose/dealstatus"
+	"github.com/margince/margince/backend/internal/compose/meetingbrief"
+	"github.com/margince/margince/backend/internal/compose/proposeroles"
+	"github.com/margince/margince/backend/internal/compose/weekly/learnings"
+	"github.com/margince/margince/backend/internal/compose/weekly/narrative"
+)
+
+// replyParser is one site's reading of a model reply, reduced to what this gate
+// can compare: the refusal reason, or empty when the reply was accepted.
+//
+// An error STRING rather than a bool, because "both refused" is not agreement —
+// a parser that refuses the unfenced reply for citing nothing and the fenced one
+// for a backtick has changed its answer, and a bool cannot tell.
+type replyParser struct {
+	// site names the invocation site an operator would see fail, not the Go
+	// function, because that is what a reader has to go and look at.
+	site string
+	// pkgFunc is the parser this row drives, spelled as the census reports it so
+	// the two halves cannot disagree about which function is covered.
+	pkgFunc string
+	read    func(reply string) string
+}
+
+// errText is the shared reduction every row below uses, so one invariant is
+// spelled once rather than six times in five packages.
+func errText(err error) string {
+	if err == nil {
+		return ""
+	}
+	return err.Error()
+}
+
+// modelReplyParsers is every parser that reads a model's JSON reply at a
+// shipped site.
+//
+// The replies are minimal and deliberately NOT grounded in any Input: this gate
+// is about the fence and nothing else, so each row is driven with a zero Input
+// and both calls are refused for the same grounding reason. What may not differ
+// is that reason.
+func modelReplyParsers() []replyParser {
+	return []replyParser{
+		{
+			site:    "meeting_brief",
+			pkgFunc: "meetingbrief.ParseBriefSections",
+			read: func(reply string) string {
+				_, err := meetingbrief.ParseBriefSections(reply, meetingbrief.Input{})
+				return errText(err)
+			},
+		},
+		{
+			site:    "meeting_plan",
+			pkgFunc: "meetingbrief.ParsePlan",
+			read: func(reply string) string {
+				_, err := meetingbrief.ParsePlan(reply, meetingbrief.Input{}, meetingbrief.Plan{})
+				return errText(err)
+			},
+		},
+		{
+			site:    "deal_health",
+			pkgFunc: "dealstatus.ParseStatus",
+			read: func(reply string) string {
+				_, err := dealstatus.ParseStatus(reply, dealstatus.StatusInput{})
+				return errText(err)
+			},
+		},
+		{
+			site:    "propose_roles",
+			pkgFunc: "proposeroles.Parse",
+			read: func(reply string) string {
+				_, err := proposeroles.Parse(reply)
+				return errText(err)
+			},
+		},
+		{
+			site:    "weekly_review",
+			pkgFunc: "narrative.Parse",
+			read: func(reply string) string {
+				_, err := narrative.Parse(reply, narrative.Input{})
+				return errText(err)
+			},
+		},
+		{
+			site:    "weekly_learnings",
+			pkgFunc: "learnings.Parse",
+			read: func(reply string) string {
+				_, err := learnings.Parse(reply, learnings.Input{})
+				return errText(err)
+			},
+		},
+	}
+}
+
+// fencedRepliesReadTheSameAsPlainOnes is the behaviour half.
+//
+// Held by: TestAFenceNeverChangesWhatASiteReads (backend/gates/modelreplyfence_test.go) — this test.
+func TestAFenceNeverChangesWhatASiteReads(t *testing.T) {
+	t.Parallel()
+	// A shape no parser here declares, so every row refuses it for its own
+	// reason rather than one row's schema happening to accept it. The point is
+	// that the reason is the SAME either way.
+	const reply = `{"unrelated":"payload"}`
+	for _, parserRow := range modelReplyParsers() {
+		t.Run(parserRow.site, func(t *testing.T) {
+			t.Parallel()
+			plain := parserRow.read(reply)
+			fenced := parserRow.read("```json\n" + reply + "\n```")
+			if plain != fenced {
+				t.Errorf("%s (%s): a fence changed the reading.\n  unfenced: %s\n  fenced:   %s\n"+
+					"A ```json fence is presentation — the model answered. Reduce through ai.Unfence "+
+					"before json.Unmarshal, as internal/modules/ai/output.go says every caller must.",
+					parserRow.site, parserRow.pkgFunc, orAccepted(plain), orAccepted(fenced))
+			}
+		})
+	}
+}
+
+// orAccepted renders an empty refusal as words, so a failure message never reads
+// as though a parser returned nothing at all.
+func orAccepted(refusal string) string {
+	if refusal == "" {
+		return "(accepted)"
+	}
+	return refusal
+}
+
+// replyParamNames are the parameter names a model reply arrives under at the
+// sites this gate protects.
+//
+// A NAME-based census is the weak point and is stated rather than hidden: a
+// parser taking its reply as `s` would not be seen. The names are read off the
+// six known parsers and the ones that already reduce correctly, which is the
+// vocabulary this tree actually uses; a new spelling is the case to add here,
+// and TestTheCensusSeesEveryKnownModelReplyParser is what fails if the census
+// stops finding the parsers the table drives.
+var replyParamNames = []string{"reply", "raw", "text", "modelText", "content", "output", "replyText"}
+
+// modelReplyUnmarshalSites reads the tree for a function that takes a model
+// reply as a string and json.Unmarshals it, and reports whether that unmarshal
+// reduces through ai.Unfence.
+//
+// Production files only: a _test.go file may unmarshal a literal on purpose.
+func modelReplyUnmarshalSites(t *testing.T) map[string]bool {
+	t.Helper()
+	fset := token.NewFileSet()
+	sites := map[string]bool{}
+	// Relative to backend/, not to this package: gates_test.go's TestMain chdirs
+	// one level up so every gate reads the tree from the same place.
+	root := "internal/compose"
+	if err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
+			return nil
+		}
+		file, parseErr := parser.ParseFile(fset, path, nil, parser.SkipObjectResolution)
+		if parseErr != nil {
+			// FAIL, never skip: a file this gate cannot read is a file it cannot
+			// clear, and treating it as clean is the under-recognition this
+			// census exists to avoid.
+			t.Fatalf("parsing %s: %v", path, parseErr)
+		}
+		pkg := file.Name.Name
+		for _, decl := range file.Decls {
+			fn, isFunc := decl.(*ast.FuncDecl)
+			if !isFunc || fn.Body == nil {
+				continue
+			}
+			if _, takesAReply := replyParamOf(fn); !takesAReply {
+				continue
+			}
+			ast.Inspect(fn.Body, func(n ast.Node) bool {
+				call, isCall := n.(*ast.CallExpr)
+				if !isCall || !isJSONUnmarshal(call) || len(call.Args) == 0 {
+					return true
+				}
+				// EVERY unmarshal in the body, not only one whose argument
+				// spells the parameter. Requiring the name matched the reply
+				// variable made this census fail short on its first run:
+				// narrative.Parse assigns strings.TrimSpace(reply) to a local
+				// and unmarshals THAT, so the site went unseen — the exact
+				// under-recognition that reports PASS with nothing failing.
+				// Following the alias would be one more shape to miss, so the
+				// rule is coarser and errs loudly: a parser handed a model
+				// reply reduces everything it decodes, and a genuine unrelated
+				// decode is a waiver with a reason rather than a silent gap.
+				name := pkg + "." + fn.Name.Name
+				// OR, not assignment: one function may unmarshal twice (a
+				// re-ask path), and a single reduced site does not clear the
+				// other. Any un-reduced read is a finding.
+				sites[name] = sites[name] || !expressionMentions(call.Args[0], "Unfence")
+				return true
+			})
+		}
+		return nil
+	}); err != nil {
+		t.Fatalf("walking %s: %v", root, err)
+	}
+	return sites
+}
+
+// replyParamOf answers which parameter of fn carries the model reply, if any.
+func replyParamOf(fn *ast.FuncDecl) (string, bool) {
+	if fn.Type.Params == nil {
+		return "", false
+	}
+	for _, field := range fn.Type.Params.List {
+		ident, isIdent := field.Type.(*ast.Ident)
+		if !isIdent || ident.Name != "string" {
+			continue
+		}
+		for _, name := range field.Names {
+			if slices.Contains(replyParamNames, name.Name) {
+				return name.Name, true
+			}
+		}
+	}
+	return "", false
+}
+
+// isJSONUnmarshal reports whether call is json.Unmarshal.
+func isJSONUnmarshal(call *ast.CallExpr) bool {
+	sel, isSel := call.Fun.(*ast.SelectorExpr)
+	if !isSel || sel.Sel.Name != "Unmarshal" {
+		return false
+	}
+	pkg, isIdent := sel.X.(*ast.Ident)
+	return isIdent && pkg.Name == "json"
+}
+
+// expressionMentions reports whether ident appears anywhere inside expr — the reply
+// variable, or the Unfence call that should be wrapping it.
+func expressionMentions(expr ast.Expr, ident string) bool {
+	found := false
+	ast.Inspect(expr, func(n ast.Node) bool {
+		if name, isIdent := n.(*ast.Ident); isIdent && name.Name == ident {
+			found = true
+		}
+		return !found
+	})
+	return found
+}
+
+// The census half: no model-reply parser reads its reply without reducing it.
+//
+// Held by: TestNoModelReplyParserSkipsTheFenceReduction (backend/gates/modelreplyfence_test.go) — this test.
+func TestNoModelReplyParserSkipsTheFenceReduction(t *testing.T) {
+	t.Parallel()
+	var unreduced []string
+	for name, skipsUnfence := range modelReplyUnmarshalSites(t) {
+		if skipsUnfence {
+			unreduced = append(unreduced, name)
+		}
+	}
+	slices.Sort(unreduced)
+	if len(unreduced) > 0 {
+		t.Errorf("%d model-reply parser(s) json.Unmarshal their reply without ai.Unfence: %s\n"+
+			"A model that wraps its JSON in a ```json fence has answered correctly, and these sites "+
+			"read that as malformed — the caller then serves its deterministic floor and the deployment "+
+			"looks like a weak model. internal/modules/ai/output.go owns the reduction.",
+			len(unreduced), strings.Join(unreduced, ", "))
+	}
+}
+
+// The census must find the parsers the behaviour table drives.
+//
+// This is the half that keeps the other half honest. A census that silently
+// stops matching — a renamed parameter, a moved directory, an AST shape it does
+// not walk — reads a smaller tree, finds nothing, and reports PASS with no
+// failing assertion anywhere. Pinning it to the table means the table's own rows
+// are the floor: the census may find MORE than these, never fewer.
+//
+// Held by: TestTheCensusSeesEveryKnownModelReplyParser (backend/gates/modelreplyfence_test.go) — this test.
+func TestTheCensusSeesEveryKnownModelReplyParser(t *testing.T) {
+	t.Parallel()
+	seen := modelReplyUnmarshalSites(t)
+	for _, parserRow := range modelReplyParsers() {
+		if _, found := seen[parserRow.pkgFunc]; !found {
+			t.Errorf("the census did not find %s, which the behaviour table drives as site %s — "+
+				"so it is reading a smaller tree than it claims and would report PASS over a "+
+				"parser that skipped the reduction. Check replyParamNames and the walk root.",
+				parserRow.pkgFunc, parserRow.site)
+		}
+	}
+	if len(seen) < len(modelReplyParsers()) {
+		t.Errorf("the census found %d model-reply parser(s) and the table names %d; "+
+			"a census that can find fewer than the known set has already failed short",
+			len(seen), len(modelReplyParsers()))
+	}
+	// Said out loud so the number is not mistaken for a ceiling: the tree has
+	// more correct parsers than the table has broken ones, and the census should
+	// be seeing those too.
+	t.Logf("census sees %d model-reply parser(s) across internal/compose", len(seen))
+	if testing.Verbose() {
+		names := make([]string, 0, len(seen))
+		for name := range seen {
+			names = append(names, name)
+		}
+		slices.Sort(names)
+		t.Log(strings.Join(names, "\n"))
+	}
+}
