@@ -1,5 +1,6 @@
 /** @vitest-environment happy-dom */
-import { cleanup, screen } from "@testing-library/react";
+import { cleanup, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { en } from "../i18n/en";
 import { BriefFeed } from "./brief.feed";
@@ -10,6 +11,13 @@ afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
 });
+
+/** The row in hand, drawn whole on the panel's left. */
+function inHand(container: HTMLElement) {
+  const lead = container.querySelector(".brief-triage-lead");
+  if (!(lead instanceof HTMLElement)) throw new Error("no row is in hand");
+  return within(lead);
+}
 
 it("renders the server focus even when the queue page contains different rows", () => {
   stubApi({});
@@ -25,21 +33,55 @@ it("renders the server focus even when the queue page contains different rows", 
       state="ready"
     />,
   );
+  // The day's first row is in hand, drawn whole; the queue beside it names
+  // every focus row in the server's order, with its rank in the reader's own
+  // numerals.
   expect(
     [...container.querySelectorAll(".worklist-row-title")].map(
       (row) => row.textContent,
     ),
+  ).toEqual([rows[0].title]);
+  expect(container.querySelector(".worklist-rank")?.textContent).toBe("1");
+  expect(
+    [...container.querySelectorAll(".brief-focus-item-title")].map(
+      (item) => item.textContent,
+    ),
   ).toEqual(rows.slice(0, 6).map((row) => row.title));
-  expect(screen.getByText("6 priorities in focus")).toBeTruthy();
-  // Every focus row carries its rank, in the reader's own numerals: the lead
-  // through the queue's own rank, the rows after it through the list's tile.
   expect(
     [...container.querySelectorAll(".brief-focus-list > li")].map(
-      (item) =>
-        item.querySelector(".worklist-rank, .brief-focus-rank")?.textContent,
+      (item) => item.querySelector(".brief-focus-rank")?.textContent,
     ),
   ).toEqual(["1", "2", "3", "4", "5", "6"]);
+  expect(screen.getByText("6 priorities in focus")).toBeTruthy();
   expect(screen.getByText(en["brief.focus.startHere"])).toBeTruthy();
+  expect(screen.getByText("1 of 6")).toBeTruthy();
+});
+
+it("puts a queued row in hand when it is pressed, and says where it stands", async () => {
+  stubApi({});
+  const user = userEvent.setup();
+  const rows = Array.from({ length: 3 }, (_, index) =>
+    taskRow(`task-${index}`, `Call buyer ${index}`),
+  );
+  const { container } = render(
+    <BriefFeed day={readingsDay({}, rows)} state="ready" />,
+  );
+  await user.click(screen.getByRole("button", { name: /Call buyer 2/ }));
+  expect(
+    [...container.querySelectorAll(".worklist-row-title")].map(
+      (row) => row.textContent,
+    ),
+  ).toEqual([rows[2].title]);
+  expect(container.querySelector(".worklist-rank")?.textContent).toBe("3");
+  expect(screen.getByText("3 of 3")).toBeTruthy();
+  // "Start here" names the first row and only the first: over a row the
+  // reader chose it would claim the page had chosen for them.
+  expect(screen.queryByText(en["brief.focus.startHere"])).toBeNull();
+  expect(
+    screen
+      .getByRole("button", { name: /Call buyer 2/ })
+      .getAttribute("aria-pressed"),
+  ).toBe("true");
 });
 
 it("opens the full queue instead of growing focus when more pages exist", () => {
@@ -114,10 +156,12 @@ it("keeps approvals in the agenda and offers their review action", () => {
     category: "decisions" as const,
     actions: ["decide" as const],
   };
-  render(<BriefFeed day={readingsDay({}, [row])} state="ready" />);
-  expect(screen.getByText("Approve the buyer email")).toBeTruthy();
+  const { container } = render(
+    <BriefFeed day={readingsDay({}, [row])} state="ready" />,
+  );
+  expect(inHand(container).getByText("Approve the buyer email")).toBeTruthy();
   expect(
-    screen.getByRole("button", { name: en["worklist.verb.decide"] }),
+    inHand(container).getByRole("button", { name: en["worklist.verb.decide"] }),
   ).toBeTruthy();
 });
 
@@ -130,7 +174,9 @@ it.each([false, true])(
       because: pinned ? [{ kind: "pinned" }] : [],
       above_next: pinned ? { comparator: "pin" } : undefined,
     };
-    render(<BriefFeed day={readingsDay({}, [row])} state="ready" />);
+    const { container } = render(
+      <BriefFeed day={readingsDay({}, [row])} state="ready" />,
+    );
     expect(
       screen.queryByRole("button", {
         name: en["worklist.verb.pin"],
@@ -141,7 +187,7 @@ it.each([false, true])(
         name: en["worklist.verb.unpin"],
       }),
     ).toBeNull();
-    expect(screen.getByText("Call the buyer")).toBeTruthy();
+    expect(inHand(container).getByText("Call the buyer")).toBeTruthy();
     expect(screen.queryByText(/you pinned/i)).toBeNull();
   },
 );

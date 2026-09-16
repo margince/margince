@@ -55,8 +55,10 @@ it("restores the queue opener's keyboard focus after closing", async () => {
       jsonResponse(readingsDay({}, [taskRow("t", "Call Weber")])),
   });
   render(<BriefScreen />);
-  await screen.findByText("Call Weber");
-  const opener = screen.getByRole("button", { name: en["brief.queue.show"] });
+  await screen.findAllByText("Call Weber");
+  const opener = screen.getByRole("button", {
+    name: new RegExp(en["brief.queue.show"]),
+  });
   await user.click(opener);
   await screen.findByRole("dialog", { name: en["brief.queue.title"] });
   await user.click(screen.getByRole("button", { name: /close/i }));

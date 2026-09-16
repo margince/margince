@@ -1,6 +1,9 @@
-/* The morning's one feed: a ranked list in the Focus panel. The rows carry
-   their own layout from worklist.row.css; this sheet is the list they sit in,
-   the rank tile beside each, and the lead's own shape. */
+/* The Focus panel's inside: the row in hand, and the queue beside it. The row
+   carries its own layout from worklist.row.css; this sheet is the TRIAGE
+   around it — the two columns, the head over the row, the ranked column and
+   its presses — and the plain feed the Updates panel draws. */
+
+/* ── The plain feed (the Updates panel) ───────────────────────────────────── */
 .brief-feed-list {
   display: flex;
   flex-direction: column;
@@ -9,56 +12,210 @@
   padding: 0;
 }
 
-/* THE RULE BETWEEN TWO ROWS of the plain feed (the updates list), put back at
-   the boundary it belongs to. `PanelRow` draws its hairline against whatever
-   precedes it and drops it on a panel's first row. Wrapping each row in its own
-   <li> handed that reset to EVERY row, so the list drew no rule between rows at
-   all. The focus list below draws its own rule on the item and never reaches
-   this one: its row is not its item's first child. */
+/* THE RULE BETWEEN TWO ROWS, put back at the boundary it belongs to.
+   `PanelRow` draws its hairline against whatever precedes it and drops it on
+   a panel's first row. Wrapping each row in its own <li> handed that reset to
+   EVERY row, so the list drew no rule between rows at all. */
 .brief-feed-list > li + li > .panel-row:first-child::before {
   content: "";
 }
 
-/* ── The focus list ──────────────────────────────────────────────────────
- * One item is a rank tile in the gutter and the work beside it. The item pays
- * the panel's inset itself and draws the rule between items, because the row
- * inside it is stripped of both: a `PanelRow` inside a list item inside a
- * panel would pay the inset twice and rule the wrong boundary. */
+/* A row's standing line and its notice wrap in the feed rather than clip:
+   a glance page is read, not scanned. */
+.brief-feed-list .worklist-row-verdict,
+.brief-feed-list .worklist-row-notice {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+/* ── The triage ───────────────────────────────────────────────────────────
+ * The row in hand takes the wider column and the queue stands beside it,
+ * where the panel has the width for both; narrower, the queue drops under
+ * the row. The section is what the split measures: the panel's own width,
+ * not the window's, because the same panel is drawn in a work column and on
+ * a page of its own. */
+#brief-today {
+  container-type: inline-size;
+}
+.brief-triage {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+@container (min-width: 56rem) {
+  .brief-triage {
+    grid-template-columns: minmax(0, 3fr) minmax(16rem, 2fr);
+  }
+  .brief-triage-queue {
+    border-inline-start: 1px solid var(--borderSubtle);
+  }
+}
+
+/* ── The row in hand ──────────────────────────────────────────────────────
+ * The panel's inset is paid here, once: the row inside is a `PanelRow` and is
+ * stripped of its own, because a row inside a column inside a panel would
+ * pay it twice and rule the wrong boundary. */
+.brief-triage-lead {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+  padding: var(--space-5) var(--padPanel);
+}
+
+/* Over the row: the kicker that names the first row, and where this one
+   stands in the day's order at the far end. */
+.brief-triage-lead-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.brief-focus-kicker {
+  color: var(--accentText);
+}
+.brief-triage-position {
+  margin-inline-start: auto;
+  color: var(--textMeta);
+}
+
+.brief-triage-lead .worklist-row {
+  padding: 0;
+}
+.brief-triage-lead .worklist-row::before {
+  content: none;
+}
+
+/* THE VERBS GO UNDER THE WORK, on the work's own left edge and right-aligned
+   as every row's are: the row in hand is drawn in a column narrower than a
+   queue page, and the wide arrangement that puts the verbs beside the work
+   (worklist.row.css) would leave the message a strip. One class more than
+   that rule, so this wins on weight rather than on sheet order. */
+.brief-triage-lead .worklist-row > .worklist-row-acts {
+  grid-column: 2 / -1;
+}
+
+/* The rank of the row in hand is the queue's own tile in the accent — the
+   same mark the column beside it lights on the chosen row, because this IS
+   the chosen row. */
+.brief-triage-lead .worklist-rank {
+  background: var(--accent);
+  color: var(--textOnAccentControl);
+}
+
+/* THE NAME OF THE ROW IN HAND is the page's one headline after the greeting:
+   the display face at the section rung, wrapping rather than clipped,
+   because a glance page is read and not scanned. A waiting message names
+   itself through the canonical email row, whose subject takes the same
+   rung for the same reason. */
+.brief-triage-lead .worklist-row-title {
+  font-family: var(--f-display);
+  font-size: var(--fs-h2);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--tracking-display);
+  line-height: var(--lh-tight);
+}
+.brief-triage-lead .worklist-row-title > a {
+  overflow: visible;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.brief-triage-lead .emailentry {
+  padding: 0;
+}
+/* ds:ignore the row in hand is the page's one headline, and a waiting message's headline is its subject */
+.brief-triage-lead .emailentry__subject {
+  font-family: var(--f-display);
+  font-size: var(--fs-h2);
+  letter-spacing: var(--tracking-display);
+  line-height: var(--lh-tight);
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+/* What the sender wrote, drawn as their words rather than as a hint of them:
+   a quiet rule down its left side and room to wrap, where the queue's row
+   clips it to one line. Three lines, because the reader is deciding how to
+   answer and the message is what they are answering. */
+.brief-triage-lead .emailentry__preview {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  white-space: normal;
+  color: var(--textContent);
+  border-inline-start: 2px solid var(--borderStrong);
+  padding-inline-start: var(--space-3);
+}
+
+/* ── The queue beside it ──────────────────────────────────────────────────── */
+.brief-triage-queue {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.brief-triage-queue-head {
+  display: block;
+  margin: 0;
+  padding: var(--space-4) var(--padPanel) var(--space-2);
+  color: var(--textMeta);
+}
+.brief-focus-list {
+  display: flex;
+  flex-direction: column;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.brief-focus-list > li + li {
+  border-block-start: 1px solid var(--borderSubtle);
+}
+
+/* One row of the column is ONE PRESS that puts it in hand: the rank tile in
+   the gutter, the name and its line beside it, the whole row lit under the
+   pointer. A button carrying no chrome of its own, so the column reads as a
+   list rather than as a stack of buttons. */
 .brief-focus-item {
   position: relative;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   column-gap: var(--space-3);
   align-items: start;
-  padding: var(--space-4) var(--padPanel);
+  width: 100%;
+  padding: var(--space-3) var(--padPanel);
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--dur-state) var(--ease-out);
+}
+.brief-focus-item:hover {
+  background: var(--bgHover);
+}
+.brief-focus-item:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: -2px;
 }
 
-/* The seam rule, inset to the panel's padding like every other rule inside a
-   card. A pseudo-element rather than a border so it can be inset. */
-.brief-focus-item + .brief-focus-item::before {
+/* The row in hand: the accent wash, and the accent on its leading edge, the
+   same two marks the queue page puts on the row its pane is about. */
+.brief-focus-item-inhand,
+.brief-focus-item-inhand:hover {
+  background: var(--accentLight);
+}
+.brief-focus-item-inhand::before {
   content: "";
   position: absolute;
-  inset: 0 var(--padPanel) auto;
-  height: 1px;
-  background: var(--borderSubtle);
-}
-
-/* The row, stripped of the inset the item already paid. Three classes so this
-   outranks `.panel-row.worklist-row-compact` (worklist.row.compact.css) on
-   specificity rather than on sheet order. `align-items: start` because the
-   text column is two lines here — the name, then what the line says — and a
-   kind badge centred on two lines floats between them. */
-.brief-focus-list .worklist-row.worklist-row-compact,
-.brief-focus-list .brief-focus-lead > .worklist-row {
-  padding: 0;
-  align-items: start;
+  inset-block: 0;
+  inset-inline-start: 0;
+  inline-size: var(--space-1);
+  background: var(--accent);
 }
 
 /* The rank tile: a small square in the gutter so the order reads as a column
-   of markers rather than as digits that happen to lead each sentence. Type
-   comes from `t-label` and `t-num` on the element; this owns the box and the
-   ink the chip ground asks for. Sized to the row's first line so the digit and
-   the badge beside it sit on one centre. */
+   of markers rather than as digits that happen to lead each name. Type comes
+   from `t-label` and `t-num` on the element; this owns the box and the ink
+   the chip ground asks for. */
 .brief-focus-rank {
   display: inline-flex;
   align-items: center;
@@ -69,164 +226,60 @@
   background: var(--bgChip);
   color: var(--textChip);
   flex: none;
+  transition:
+    background-color var(--dur-state) var(--ease-out),
+    color var(--dur-state) var(--ease-out);
 }
-
-/* ── THE LEAD ─────────────────────────────────────────────────────────────
- * The first row is where the day starts, and the page's opening sentence has
- * already said so; the list says it again in shape. It is a BAND on the
- * accent wash rather than a card inside the panel — the one enclosed shape a
- * pane admits is a tinted row — under a kicker that names it, drawn at the
- * row's full density with its rank in the accent and its name a rung up. The
- * wash is the accent's, which the language spends on the move the page
- * names: this row is that move. */
-.brief-focus-lead {
-  display: block;
-  background: var(--accentLight);
-  padding-block: var(--space-5);
-}
-
-/* No seam under a tinted band: its ground is already the boundary. */
-.brief-focus-lead + .brief-focus-item::before {
-  content: none;
-}
-
-.brief-focus-kicker {
-  display: block;
-  color: var(--accentText);
-  margin-bottom: var(--space-3);
-}
-
-/* The lead's rank is the queue's own tile (worklist.css) a size up and in
-   the accent — the same mark the queue lights on the row in hand, because
-   this is the row in hand before the reader has chosen one. */
-.brief-focus-lead .worklist-rank {
-  min-width: var(--space-8);
-  block-size: var(--space-8);
-  border-radius: var(--r-control);
+.brief-focus-item-inhand .brief-focus-rank {
   background: var(--accent);
   color: var(--textOnAccentControl);
-  font-family: var(--f-display);
-  font-size: var(--fs-h3);
-  letter-spacing: var(--tracking-display);
 }
 
-/* The lead's name in the display face at the card-title rung: it is the
-   one line on the page the reader is meant to act on first. */
-.brief-focus-lead .worklist-row-title {
-  font-family: var(--f-display);
-  font-size: var(--fs-h3);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-display);
-}
-
-/* The lead's row is the ASK and the verbs that answer it, side by side: the
-   rank and the kind lead, the work takes the room, and the verbs stand in a
-   column at the far edge — one width, every verb filling it, so a short
-   label never reads as a smaller button than the long one above it. The same
-   shape a record's "What needs you" lead takes, so the two pages agree about
-   what an ask looks like. */
-.brief-focus-lead .worklist-row {
-  grid-template-columns: auto auto minmax(0, 1fr) auto;
-  column-gap: var(--space-4);
-}
-.brief-focus-lead .worklist-row > .worklist-row-acts {
-  grid-column: 4;
-  grid-row: 1;
+.brief-focus-item-text {
+  display: flex;
   flex-direction: column;
-  align-items: stretch;
-  min-width: 10rem;
-}
-/* A glyph-only verb keeps its square and stands at the column's trailing
-   edge, where the answer's own edge is: stretched, a square with one glyph
-   in it read as a button with its label missing. */
-.brief-focus-lead .worklist-row > .worklist-row-acts > .icon-action {
-  align-self: flex-end;
-}
-/* Anything the lead carries after its verbs — a duplicate pair drawn inside
-   it — still takes the full width under the line. */
-.brief-focus-lead .worklist-row > :nth-child(n + 5) {
-  grid-column: 1 / -1;
-}
-
-/* Dates and evidence stay readable beside the action, at every width: the
-   name on one line, what the line says on the next, both wrapping. One line
-   with an ellipsis is the queue's density, and a glance page is read, not
-   scanned. */
-.brief-feed-list .worklist-row-line {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  align-items: start;
   gap: var(--space-1);
+  min-width: 0;
+}
+.brief-focus-item-title {
+  color: var(--textPrimary);
+  font-weight: var(--fw-medium);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.brief-focus-item-line {
+  color: var(--textMeta);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.brief-feed-list .worklist-row-line > .worklist-row-title {
-  flex-wrap: wrap;
-  overflow: visible;
-  white-space: normal;
+/* ── The panel's head ─────────────────────────────────────────────────────── */
+.brief-focus-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gapActions);
 }
-
-.brief-feed-list .worklist-row-line > .worklist-row-title > a {
-  overflow: visible;
-  white-space: normal;
-  overflow-wrap: anywhere;
-}
-
-.brief-feed-list .worklist-row-inline {
-  white-space: normal;
-  overflow: visible;
-}
-
-.brief-feed-list .worklist-row-verdict,
-.brief-feed-list .worklist-row-notice {
-  white-space: normal;
-  overflow-wrap: anywhere;
-}
-
-/* The way into the whole queue, at the panel's foot: a button with its
-   arrow, because it is the panel's one destination and a bare link at the
-   foot of a list of verbs read as a caption. The glyph and the word are one
-   flow. */
+/* The way into the whole queue: a button with its arrow, the glyph and the
+   word one flow. */
 .brief-focus-open {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
 }
 
-/* Swipe gestures keep a real wrapper on phones; it follows the row's layout. */
-.brief-focus-list .swipe-row {
-  width: 100%;
-}
-
 @media (max-width: 720px) {
-  /* The tile keeps the gutter; the work takes the rest, and the row's own
-     phone arrangement (kind and verbs on the first line, the work under them)
-     does the rest. */
-  .brief-focus-item {
-    column-gap: var(--space-2);
+  .brief-triage-lead {
+    padding: var(--space-4) var(--padPanel);
   }
-
-  /* THE VERBS GO UNDER THE WORK on a phone. The compact row's own phone
-     arrangement keeps them on the kind's line, which holds one glyph on the
-     queue; a focus row carries the way into its context as well, and three
-     controls beside the kind left the name a strip. One class more than the
-     row's rule so it wins on weight rather than on sheet order. */
-  .brief-focus-list .worklist-row-compact .worklist-row-acts {
-    flex: 1 1 100%;
-    order: 3;
-    margin-inline-start: 0;
+  .brief-triage-lead .worklist-row-title,
+  .brief-triage-lead .emailentry__subject {
+    font-size: var(--fs-h3);
   }
-
-  .brief-focus-lead .worklist-row-title {
-    font-size: var(--fs-lead);
-  }
-}
-
-@media (max-width: 720px) {
-  /* The verbs' column has no room beside the work on a phone; they take
-     their own line under it, the way every other row's do. */
-  .brief-focus-lead .worklist-row > .worklist-row-acts {
-    flex-direction: row;
+  /* The way into the queue takes its own line under the title on a phone:
+     the head is one band, and a title beside a two-word button was neither. */
+  .brief-focus-actions {
     flex-wrap: wrap;
-    min-width: 0;
   }
 }

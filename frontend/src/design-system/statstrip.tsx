@@ -29,8 +29,16 @@ export function StatStrip({
   testId,
   label,
   floor,
+  shape,
 }: Readonly<{
   children: ReactNode;
+  // The row as one ruled LINE rather than a plate of tiles: figure and name
+  // on one baseline, a hairline between slots, no boxes, the receipt line
+  // withheld and the whole slot the door. For a page whose readings FRAME the
+  // work under them rather than being the work (the Brief). Still the plate's
+  // business alone: what it changes is the slot's box and which of the
+  // tile's lines it shows, never the tile's type — statstrip.css says why.
+  shape?: "line";
   // How the strip SITS in the layout around it — it lands on the strip's
   // outer box, which is the element the parent lays out. Not for restyling
   // the row of slots itself: the row's grid, gaps and fold are this
@@ -68,7 +76,9 @@ export function StatStrip({
   };
   const row = (
     <section
-      className="stat-strip"
+      className={["stat-strip", shape === "line" ? "stat-strip-line" : ""]
+        .filter(Boolean)
+        .join(" ")}
       style={vars}
       aria-label={label}
       data-testid={testId}

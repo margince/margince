@@ -59,6 +59,93 @@
   grid-column: span var(--stat-strip-tail, 1);
 }
 
+/* ── THE LINE FORM ────────────────────────────────────────────────────────
+ * The same readings as ONE RULED LINE under a page's head rather than a plate
+ * of tiles: the figure and its name on one baseline, a hairline between the
+ * slots, no boxes. It is for the page whose readings FRAME the work under them
+ * rather than being the work — on the Brief, five tiles stood between the
+ * greeting and the day's first row, and the row is what that page is for.
+ *
+ * Still the plate's business and nobody else's. What changes here is the
+ * slot's BOX — its edge, its ground, its inset — and which of the tile's lines
+ * it shows; nothing about the tile's type. The figure is the figure a record's
+ * readings draw, at the size they draw it, so the two pages agree about what a
+ * reading looks like. The receipt line is withheld: on one line there is no
+ * room for a sentence under every figure, and the door's own name says what
+ * the figure counts. */
+.stat-strip-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 0;
+}
+.stat-strip-line > * {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.stat-strip-line > * + * {
+  border-inline-start: 1px solid var(--borderSubtle);
+}
+.stat-strip-line .stat-card {
+  flex-direction: row;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  min-block-size: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+/* The figure leads and the name follows: "6 urgent" is how a reader says a
+   reading aloud, and on one line the number is what the eye lands on. */
+.stat-strip-line .stat-card-value {
+  order: -1;
+}
+.stat-strip-line .stat-card-detail {
+  display: none;
+}
+/* THE WHOLE SLOT IS THE DOOR, and the door's word is not drawn. The tile's
+   own door is a word in its foot with a press target stretched over the tile;
+   here the button IS the tile — laid over the slot, its words pushed out of
+   the box so they reach a screen reader and nobody else, its arrow gone. The
+   card's overlay is cancelled because the button no longer needs one, and the
+   focus ring the card draws round itself still lands on the whole slot. */
+.stat-strip-line .stat-card-foot {
+  margin-top: 0;
+  padding-top: 0;
+}
+.stat-strip-line .stat-card-open {
+  display: block;
+  position: absolute;
+  inset: 0;
+  min-height: 0;
+  overflow: hidden;
+  text-indent: 100%;
+  white-space: nowrap;
+}
+.stat-strip-line .stat-card-open::after {
+  content: none;
+}
+.stat-strip-line .stat-card-arrow {
+  display: none;
+}
+.stat-strip-line .stat-card:has(.stat-card-open):hover {
+  background: var(--bgHover);
+}
+/* Where the row folds into full-width rows (the `narrow="row"` fold below),
+   the line stacks with it: one reading per line and the hairline between
+   them is the fold's own. The inline rule between slots goes, because the
+   slots no longer stand beside each other. */
+@container (max-width: 26rem) {
+  .stat-strip-line {
+    flex-direction: column;
+  }
+  .stat-strip-line > * + * {
+    border-inline-start: 0;
+  }
+}
+
 /* A SLOT MAY BE A CONTROL. A strip of filters is still one comparison — the
  * reader is choosing between the same readings they are comparing — so the
  * press target is the slot itself rather than something inside it. The button

@@ -37,7 +37,7 @@ it("keeps the summary visible and puts informational updates after the prioritie
       }),
   });
   const { container } = render(<BriefScreen />);
-  await screen.findByText("Send the promised comparison");
+  await screen.findAllByText("Send the promised comparison");
   const summary = await screen.findByRole("region", {
     name: "Your morning, in five readings",
   });

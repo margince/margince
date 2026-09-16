@@ -51,60 +51,65 @@ export function BriefScreen() {
   const firstName = me.data?.user?.display_name?.trim().split(/\s+/)[0] ?? null;
   return (
     <div className="wrap brief-wrap">
-      {/* ONE SHEET, the way a record page is one sheet: the head, the
-          readings and the columns on one raised surface with a hairline
-          round it, so the morning reads as a document on the page ground
-          rather than as loose cards on it. `record-sheet` is the house's
-          sheet (composed.css); what is inside is the Brief's own. */}
-      <div className="record-sheet">
-        <div className="brief-head">
-          <BriefGlance
-            view={address.view}
-            scope={address.scope}
-            day={
-              address.scope === "mine" && day
-                ? {
-                    ...day,
-                    focus: day.focus
-                      ? {
-                          ...day.focus,
-                          items: day.focus.items.map((item) =>
-                            readerTask(item, me.data?.user, t),
-                          ),
-                        }
-                      : undefined,
-                  }
-                : undefined
-            }
-            week={address.scope === "mine" ? review.data : undefined}
-            firstName={firstName}
-            now={new Date(nowMs)}
+      {/* THE HEAD ON THE PAGE GROUND, the way a record's head stands: the
+          greeting where a record's name goes, the day over it, the sentence
+          under it, and the controls on the far edge where a record's verbs
+          stand. The one raised surface under it is the Focus panel — the
+          work is the card, and everything around it is the page. */}
+      <div className="brief-head">
+        <BriefGlance
+          view={address.view}
+          scope={address.scope}
+          day={
+            address.scope === "mine" && day
+              ? {
+                  ...day,
+                  focus: day.focus
+                    ? {
+                        ...day.focus,
+                        items: day.focus.items.map((item) =>
+                          readerTask(item, me.data?.user, t),
+                        ),
+                      }
+                    : undefined,
+                }
+              : undefined
+          }
+          week={address.scope === "mine" ? review.data : undefined}
+          firstName={firstName}
+          now={new Date(nowMs)}
+        />
+        <div className="brief-controls">
+          <BriefDials
+            address={address}
+            offered={teamOffered}
+            onChange={(next) => setParams(paramsFor(next, params))}
           />
-          <div className="brief-controls">
-            <BriefDials
-              address={address}
-              offered={teamOffered}
-              onChange={(next) => setParams(paramsFor(next, params))}
-            />
-            <PageAsideToggle
-              controlled={{
-                open: params.get("queue") === "1",
-                labels: {
-                  show: t("brief.queue.show"),
-                  hide: t("brief.queue.hide"),
-                },
-                onToggle: () => {
-                  const next = new Map(params);
-                  if (next.get("queue") === "1") next.delete("queue");
-                  else next.set("queue", "1");
-                  navigate({ screen: "home" }, next);
-                },
-              }}
-            />
-          </div>
+          {/* The way into the whole queue, as the head's PRIMARY control
+              with the day's count on it: this is the one page whose pane is
+              the day itself, so the switch is the main door and not a
+              detail fold. The count is the queue's own total, the same
+              figure the drawer's head sentence ends on. */}
+          <PageAsideToggle
+            prominent
+            controlled={{
+              open: params.get("queue") === "1",
+              count: day?.summary.total,
+              labels: {
+                show: t("brief.queue.show"),
+                hide: t("brief.queue.hide"),
+              },
+              onToggle: () => {
+                const next = new Map(params);
+                if (next.get("queue") === "1") next.delete("queue");
+                else next.set("queue", "1");
+                navigate({ screen: "home" }, next);
+              },
+            }}
+          />
         </div>
-        <BriefBody address={address} teamOffered={teamOffered} query={query} />
       </div>
+      <BriefBody address={address} teamOffered={teamOffered} query={query} />
       <BriefQueue />
     </div>
   );
@@ -166,12 +171,14 @@ function PersonalMorning({
     context?.source === "task" || context?.source === "meeting_outcome";
   return (
     <>
-      {/* The figures FIRST, as the lower band of the briefing: what the day
-          holds as five readings under the greeting, then the ranked list —
-          the order every page with figures reads in, and the order the
-          opening sentence promises ("First: … Then 5 more"). The overview
-          also carries what the read could not see and when it was assembled,
-          because both qualify the figures before they qualify the rows. */}
+      {/* The figures FIRST, as one ruled line under the greeting: what the
+          day holds in five readings, then the work — the order every page
+          with figures reads in, and the order the opening sentence promises
+          ("First: … Then 5 more"). A line rather than a plate of tiles,
+          because the readings frame the work and must not stand in front of
+          it. The overview also carries what the read could not see and when
+          it was assembled, because both qualify the figures before they
+          qualify the rows. */}
       {day && (
         <div className="brief-overview">
           <BriefReadingsStrip day={day} />
@@ -196,6 +203,21 @@ function PersonalMorning({
           </p>
         </div>
       )}
+      {/* THE WORK, across the whole page: the Focus panel is the one card
+          the morning is for, with the row in hand and the queue beside it,
+          so it takes the page's width rather than sharing it with a rail. */}
+      <BriefFeed
+        day={day}
+        onContext={(item) => setSelected(`${item.source}-${item.id}`)}
+        state={state}
+        changed={changedSinceBrief(day)}
+        refreshFailed={query.isRefetchError}
+        onRetry={() => void query.refetch()}
+      />
+      {/* THE FOLLOW-THROUGH under it, in two columns: what was done for the
+          reader and the day's notices on the left, and on the right the
+          context the work is read against — the schedule as the day's line,
+          and the night. */}
       <PageZones
         shape="aside"
         className="brief-followthrough"
@@ -204,18 +226,6 @@ function PersonalMorning({
         asideLabel={t("brief.rail")}
         main={
           <>
-            {/* The work leads the column and the rail reads beside it: the
-                schedule and the night are the context the ranked list is
-                read against, so they stand next to it rather than under
-                everything else. */}
-            <BriefFeed
-              day={day}
-              onContext={(item) => setSelected(`${item.source}-${item.id}`)}
-              state={state}
-              changed={changedSinceBrief(day)}
-              refreshFailed={query.isRefetchError}
-              onRetry={() => void query.refetch()}
-            />
             <BriefChanges />
             <BriefUpdates day={day} />
           </>

@@ -287,17 +287,30 @@
   gap: var(--space-3);
   margin: var(--space-5) 0 var(--space-2);
 }
+.worklist-band > h3 {
+  margin: 0;
+}
 
-/* The band's own rule, running from the word to the panel's far inset: a
-   heading over rows reads as a section only when something draws the line
+/* The band's own rule, running from the word to the count at the far inset:
+   a heading over rows reads as a section only when something draws the line
    the section starts on, and the eyebrow alone read as one more caption in a
    column of them. The rule is the seam hairline every other rule in a card
-   takes, drawn after the word so the word keeps the leading edge. */
+   takes, drawn after the word so the word keeps the leading edge; `order`
+   puts it between the word and the count, which follows it in the tree. */
 .worklist-band::after {
   content: "";
+  order: 1;
   flex: 1 1 auto;
   height: 1px;
   background: var(--borderSubtle);
+}
+
+/* How much the band holds, at its far end, in the figure's own numerals. */
+.worklist-band-count {
+  order: 2;
+  color: var(--textMeta);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .worklist-queue-band:first-child .worklist-band {

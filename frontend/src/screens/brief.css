@@ -77,11 +77,11 @@
 }
 
 /* ── The briefing ──────────────────────────────────────────────────────────
- * The head of the sheet, composed the way a record's head is: the greeting
- * where a record's name stands, the day over it as the one uppercase line,
- * the sentence under it where a record's subtitle goes, and the controls on
- * the far edge where a record's verbs stand. A hairline closes it, the way
- * the facts strip closes a record's head, and the readings band follows.
+ * The head on the page ground, composed the way a record's head is: the
+ * greeting where a record's name stands, the day over it as the one uppercase
+ * line, the sentence under it where a record's subtitle goes, and the controls
+ * on the far edge where a record's verbs stand. The readings line closes it,
+ * the way the facts strip closes a record's head.
  *
  * The first line: the greeting takes the room, the controls sit at the far
  * edge on the greeting's own top line, and on a phone they drop under it. */
@@ -91,8 +91,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--space-3) var(--space-5);
-  padding-block: var(--space-2) var(--space-5);
-  border-bottom: 1px solid var(--borderSubtle);
+  padding-block: var(--space-2) var(--space-4);
 }
 .brief-head > .glance {
   flex: 1 1 32rem;
@@ -180,20 +179,21 @@
   margin: 0;
 }
 
-/* ── The readings band ─────────────────────────────────────────────────────
- * Between the head and the columns, what describes the WHOLE day: the five
- * readings as the house's reading cards, the way a record's band draws its
- * readings, with the strip's own footnotes under them. The interval under
- * the band is the register change from the briefing to the work, one rung
- * wider than any gap inside either register. */
+/* ── The readings line ─────────────────────────────────────────────────────
+ * Between the head and the work, what describes the WHOLE day: the five
+ * readings as one ruled line — the strip's own line form — between two
+ * hairlines, the way the facts strip closes a record's head, with the strip's
+ * own footnotes under it. A line and not a plate: the readings frame the work
+ * and must not stand in front of it. */
 .brief-overview {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  margin: var(--space-5) 0 var(--space-6);
+  margin: 0;
 }
 .brief-readings {
   margin: 0;
+  border-block: 1px solid var(--borderSubtle);
 }
 
 /* The strip's own footnotes: what the page could not read, and when the page
@@ -207,17 +207,13 @@
 }
 
 /* ── The work ──────────────────────────────────────────────────────────────
- * The zones: the Focus panel leads the work column, with what was done for
- * the reader under it, and the rail beside them — the schedule as the day's
- * line, and the night. `PageZones` draws the grid. The interval over it is
- * the register change from the briefing, one rung wider than any gap inside
- * either register. */
-.brief-followthrough {
-  margin-top: 0;
-}
-/* A view with no readings band — the weekly, the team — meets the columns
-   straight under the head, so the register change is paid here instead. */
-.brief-head + .brief-followthrough,
+ * The Focus panel across the page, then the zones under it: what was done
+ * for the reader and the notices as the work column, and the rail beside
+ * them — the schedule as the day's line, and the night. `PageZones` draws the
+ * grid. The interval over each is the register change from the block before
+ * it, one rung wider than any gap inside either register. */
+.brief-wrap > #brief-today,
+.brief-followthrough,
 .brief-head + #brief-weekly {
   margin-top: var(--space-6);
 }
@@ -228,7 +224,7 @@
 }
 
 /* ── The follow-through ────────────────────────────────────────────────────
- * Two panels in the work column, in the order the day decides, and beside
+ * The panels of the work column, in the order the day decides, and beside
  * them the context rail. The gap between blocks is wider than the gap between
  * the rows inside either of them, which is what makes them read as blocks. */
 .brief-main {
@@ -413,6 +409,11 @@
 .brief-wrap > .record-details-toggle {
   margin-left: auto;
 }
+/* The queue's count on the switch that opens it, a weight up from the verb so
+   the figure reads before the words do. */
+.record-details-toggle-count {
+  font-weight: var(--fw-semibold);
+}
 
 /* ── The queue drawer ──────────────────────────────────────────────────────
  * The focus-context drawer's head carries a heading AND a way back to the
@@ -434,25 +435,33 @@
   padding: 0;
 }
 
-/* The drawer's own inset is the queue's page gutter, and its scrolling body
-   is what the lanes column sticks to (worklist.css): nothing to add here. */
-
-/* Queue rows respond to the drawer's width, not the viewport behind it. */
-.brief-queue-body .worklist-row {
-  grid-template-columns: auto minmax(0, 1fr);
+/* NO LANES COLUMN IN THE DRAWER: it is a column already. The head — the
+   day's figures, the dials and the cuts as one strip — stands across the top
+   of the queue and STICKS there while the rows scroll under it, so a reader
+   ten rows down changes the cut without going back up. It pays the drawer's
+   own inset on its sides and its top, because it has to reach the drawer's
+   edges to read as a band and not as a card stranded over the rows. The
+   columns wrapper is put back to a block, which is also what tells the head
+   (worklist.header.tsx) to draw its cuts as a strip. */
+.brief-queue-body .worklist-columns {
+  display: block;
+}
+.brief-queue-body .worklist-lanes {
+  position: sticky;
+  top: calc(-1 * var(--space-5));
+  z-index: 1;
+  margin: calc(-1 * var(--space-5)) calc(-1 * var(--space-5)) 0;
+  padding: var(--space-4) var(--space-5);
+  background: var(--bgElevated);
+  border-bottom: 1px solid var(--borderSubtle);
+}
+.brief-queue-body .worklist-day {
+  margin-block-start: var(--gapCards);
 }
 
-/* worklist.row.css spans the verbs and any child after them (a duplicate
-   pair's review card among them) to column 3 of its own three-column grid.
-   This override drops to two columns, so those children need the same
-   full-width span restated against THIS grid — column 3 does not exist here,
-   and without it the browser opens an implicit track sized to the child's own
-   content, crushing the title column beside it. */
-.brief-queue-body .worklist-row-text,
-.brief-queue-body .worklist-row > .worklist-row-acts,
-.brief-queue-body .worklist-row > :nth-child(n + 5) {
-  grid-column: 1 / -1;
-}
+/* The rows draw as they do on the queue's own page: their list is the
+   container they measure themselves against (worklist.row.css), so they
+   already answer to the drawer's width and not to the window behind it. */
 
 .brief-queue-body .page-zones-aside {
   grid-template-columns: minmax(0, 1fr) minmax(16rem, 0.7fr);
