@@ -69,6 +69,60 @@ var enumBindings = map[string]struct{ pkgDir, typeName string }{
 	// the former without being the latter, so the CHECK mirrors
 	// fieldcatalog.Target and the gate compares it against that.
 	"custom_field.object": {"internal/shared/ports/fieldcatalog", "Target"},
+
+	// The CONTRACT-BACKED columns: a column whose CHECK is mirrored by a named
+	// schema in crm.yaml, which the generator turns into a Go const set.
+	//
+	// These are the instance #1496 names — "a contract enum wider than the
+	// constraint behind it" — and what makes them different from the bindings
+	// above is where the drift hurts. A Go set drifting from its CHECK 500s at
+	// insert, which is loud. A CONTRACT set drifting wider is quiet and worse:
+	// the document promises a value, a caller sends it, and the database
+	// refuses a request the published contract said was well-formed.
+	//
+	// Bound by hand and deliberately not derived, because the derivation is
+	// what does not work. An exact-match scan over the committed head catalog
+	// finds forty-odd pairs and most are coincidence — MeetingPlanTier and
+	// assurance_exception.severity share [high, low, medium] and have nothing
+	// to do with each other, and a gate that bound those would fail the day one
+	// of them legitimately moved. The pairs below are the ones where the schema
+	// NAMES the column's concept, which is a judgement a scan cannot make.
+	"activity.audience":               {"internal/contracts", "ActivityAudience"},
+	"capture_exclusion.kind":          {"internal/contracts", "CaptureExclusionKind"},
+	"capture_exclusion.scope":         {"internal/contracts", "CaptureExclusionScope"},
+	"capture_owner_identity.kind":     {"internal/contracts", "CaptureOwnerIdentityKind"},
+	"capture_owner_identity.source":   {"internal/contracts", "CaptureOwnerIdentitySource"},
+	"commission_entry.status":         {"internal/contracts", "CommissionStatus"},
+	"conversation_claim.kind":         {"internal/contracts", "ConversationClaimKind"},
+	"deal_room.state":                 {"internal/contracts", "DealRoomState"},
+	"deal_stage_evidence.author_side": {"internal/contracts", "StageEvidenceAuthorSide"},
+	"deal_stage_evidence.commitment":  {"internal/contracts", "StageEvidenceCommitment"},
+	"deal_stage_evidence.source_type": {"internal/contracts", "StageEvidenceSource"},
+	"import_run.status":               {"internal/contracts", "ImportRunStatus"},
+	"intro_request.fallback_policy":   {"internal/contracts", "IntroFallbackPolicy"},
+	"intro_request.note_generated_by": {"internal/contracts", "IntroNoteOrigin"},
+	"intro_request.route_type":        {"internal/contracts", "ContactGraphRouteType"},
+	"intro_request.status":            {"internal/contracts", "IntroRequestStatus"},
+	"lead_manual_signal.signal_kind":  {"internal/contracts", "LeadManualSignalKind"},
+	"lead_source.intent":              {"internal/contracts", "LeadSourceIntent"},
+	"project_health_assessment.state": {"internal/contracts", "ProjectHealthState"},
+	"provider_connection.mode":        {"internal/contracts", "ProviderConnectionMode"},
+	"provider_connection.status":      {"internal/contracts", "ProviderConnectionStatus"},
+	"retention_policy.action":         {"internal/contracts", "RetentionAction"},
+	"saved_view.resource":             {"internal/contracts", "SavedViewResource"},
+
+	// One vocabulary, six columns. Every derived narrative row records whether
+	// a human template or a model wrote it, and WrittenBy is the word the
+	// contract uses for that everywhere — so a seventh narrative table gets the
+	// binding for free by naming its column the same way, and widening the
+	// contract without widening six CHECKs fails here rather than at the first
+	// insert of the new value.
+	"company_brief.generated_by":      {"internal/contracts", "WrittenBy"},
+	"company_dossier.generated_by":    {"internal/contracts", "WrittenBy"},
+	"company_growth_fit.generated_by": {"internal/contracts", "WrittenBy"},
+	"company_scan.generated_by":       {"internal/contracts", "WrittenBy"},
+	"contact_brief.generated_by":      {"internal/contracts", "WrittenBy"},
+	"deal_status_card.generated_by":   {"internal/contracts", "WrittenBy"},
 }
 
 // checkInList captures CHECK (col IN ('a','b',…)) allowing an optional
