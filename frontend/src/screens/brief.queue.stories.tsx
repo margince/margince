@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useEffect } from "react";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { announceAddressChanged } from "../app/router";
 import { en } from "../i18n/en";
 import {
@@ -109,17 +109,36 @@ export const Phone: Story = { tags: ["uat-phone"] };
  */
 export const AFullDay: Story = {
   render: () => <QueueFrame day={aLeadsDay()} />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
+  // The DOCUMENT, not the canvas: this drawer is a `Modal` and portals out of
+  // the story's own root, so a canvas-scoped query finds an empty div and the
+  // play reports a missing control rather than a missing portal.
+  play: async () => {
+    const drawer = within(document.body);
     // The readings open folded in the drawer — the work comes first — so the
-    // frame presses the disclosure to show the row this story is about.
+    // frame opens them to show the row this story is about. The trigger is the
+    // disclosure's own `<summary>`, which carries no button role to query by.
+    // WAITED FOR, not read once: the drawer fetches its day before it draws
+    // anything, so a synchronous query runs against an empty dialog and reports
+    // a missing control rather than one that has not arrived.
+    const summary = await waitFor(() => {
+      const found = [...document.querySelectorAll(".disclosure-summary")].find(
+        (node) => node.textContent?.includes(en["brief.readings.summary"]),
+      );
+      if (!found) {
+        throw new Error("the drawer has not drawn its readings disclosure");
+      }
+      return found as HTMLElement;
+    });
+    await userEvent.click(summary);
     await userEvent.click(
-      await canvas.findByRole("button", { name: en["brief.readings.summary"] }),
+      (await drawer.findAllByRole("button", { name: /Meet next Tues/ }))[0],
     );
-    await userEvent.click(
-      (await canvas.findAllByRole("button", { name: /Meet next Tues/ }))[0],
-    );
-    await expect(canvas.queryByRole("complementary")).toBeNull();
+    // The row is in hand and NO column opened beside it — the row already
+    // names the contact and both moments, and the drawer has no width to
+    // spend saying it twice.
+    await expect(
+      drawer.queryByRole("complementary", { name: en["worklist.pane.title"] }),
+    ).toBeNull();
   },
 };
 
