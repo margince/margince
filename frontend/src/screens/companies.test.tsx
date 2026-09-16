@@ -1669,20 +1669,24 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
     // exercises its own presence.
     const stack = container.querySelector(".co-overview-stack");
     expect(stack).toBeTruthy();
-    expect(stack?.textContent).toContain("Commercial");
     // The money is a TAB, so the overview column must not also carry it: a
-    // figure in two places is one the reader has to reconcile.
+    // figure in two places is one the reader has to reconcile. The contract
+    // and pipeline figures, the account's projects, and Finance all read on
+    // their own tab now. "Commercial" also names a health dimension in the
+    // account brief above the stack, so the panel's own HEADING is what is
+    // checked rather than the word wherever it appears.
+    const headings = within(stack as HTMLElement)
+      .getAllByRole("heading")
+      .map((heading) => heading.textContent);
+    expect(headings).not.toContain("Commercial");
     expect(stack?.textContent).not.toContain("Finance");
     expect(stack?.textContent).not.toContain("Lists & tags");
 
-    // What is in flight is drawn on EVERY account, this one included: "no open
-    // deals" is a fact about the account, and a section that vanished left the
-    // reader to work it out from a hole where a card had been on the last
-    // record they opened. The growth-fit card stands beside it rather than in
-    // its place — whether to sell here at all is a different question from
-    // what is running today.
+    // What is in flight reads on the Deals tab and the rail's own
+    // DealsSection now; this fixture has none, so the fit card takes the
+    // overview's work slot instead: whether to sell here at all is a
+    // different question from what is running today.
     expect(stack?.textContent).toContain("What they are worth to you");
-    expect(stack?.textContent).toContain("No open deals");
 
     // What Margince spotted reads in the WORK column, beside the rest of what
     // wants a decision, rather than in the context column.
@@ -1710,6 +1714,37 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
     await waitFor(() =>
       expect(screen.getByRole("heading", { name: "Deals" })).toBeTruthy(),
     );
+  });
+
+  // Content-driven cards of unequal height never share a row: a tall needs
+  // list beside a short Ask box left a gap the height of the difference. So
+  // the glance is one column at every width, in the order a rep works it.
+  it("stacks the glance in one column: what needs a contact, the money, what the account is, then the questions", async () => {
+    stubFetch(companyBackstop, { company360 });
+    const { container } = render(<CompanyScreen id="o-1" />);
+    await screen.findByText("Brandt Automotive GmbH");
+
+    const stack = container.querySelector(".co-overview-stack");
+    expect(container.querySelector(".co-glance-cols")).toBeNull();
+    if (!(stack instanceof HTMLElement)) {
+      throw new Error("overview stack did not render");
+    }
+
+    // Each pane's own title, in DOM order.
+    const headings = within(stack)
+      .getAllByRole("heading")
+      .map((heading) => heading.textContent);
+    const needsAt = headings.indexOf("What needs you");
+    const dossierAt = headings.indexOf("What this company is");
+    const askAt = headings.indexOf("Ask about this account");
+    // The fit card takes this account's slot: nothing in this fixture is in
+    // flight, so the question is whether to sell here at all rather than what
+    // is running today.
+    const fitAt = headings.indexOf("What they are worth to you");
+    expect(needsAt).toBeGreaterThanOrEqual(0);
+    expect(dossierAt).toBeGreaterThan(needsAt);
+    expect(askAt).toBeGreaterThan(dossierAt);
+    expect(fitAt).toBeGreaterThan(askAt);
   });
 
   // The drawer opens OVER the record rather than into a column of it: it is

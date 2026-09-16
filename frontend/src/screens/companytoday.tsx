@@ -9,7 +9,6 @@ import { Badge, EmptyState, Skeleton } from "../design-system/atoms";
 import { Eyebrow } from "../design-system/eyebrow";
 import { PanelBody, PanelRow } from "../design-system/panel";
 import { Popover } from "../design-system/popover";
-import { stable } from "../format/collate";
 import { formatDateTime, formatNumber } from "../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -28,6 +27,7 @@ import {
   HEALTH_STANDING_TONE,
   useAccountStanding,
 } from "./companylookups";
+import { byStrengthThenId, momentFallbackVerb } from "./companytodayverbs";
 import { EntityRef } from "./entityref";
 import {
   CallCard,
@@ -123,6 +123,14 @@ type TodayReadingInputs = Readonly<{
   // Performing a suggestion's own action. The composer, the deal and the
   // task form all live above this brief.
   onPerform?: (action: SuggestionAction) => void;
+  // Opens a named task's own detail modal, switching to the Tasks tab first
+  // where the modal lives. The moment's own destination sends a reader to the
+  // record's receipt, not to the task itself — this is the leading card's own
+  // fallback, for the ordinary case of a task already on the account's list.
+  onOpenTask?: (activityId: string) => void;
+  // Opens the header's Log-activity drawer. The leading card's second verb,
+  // beside whichever one answers what is owed.
+  onLogActivity?: () => void;
   // The reader's scan of the account, when the page holds one: its merged
   // advice replaces the 360's own rows, a read in flight draws the pending
   // row, and the foot says who read what and when.
@@ -139,6 +147,8 @@ export function useTodayReading({
   onOpenRecord,
   onOpenEmail,
   onPerform,
+  onOpenTask,
+  onLogActivity,
   scan,
 }: TodayReadingInputs): TodayReading {
   const t = useT();
@@ -233,6 +243,16 @@ export function useTodayReading({
   // measured off the rows below: `suggestions.rows` is one node carrying
   // several, and the section reports its own count for exactly this reason.
   const besidesTheMoment = scanRows.length + suggestions.count + manual.length;
+  // The moment's own verb only where the server named a destination for it;
+  // otherwise the card that says what is owed still closes with something to
+  // do about it.
+  const momentAction = momentFallbackVerb({
+    view,
+    t,
+    onOpenTask,
+    onDraftTo,
+    onLogActivity,
+  });
   // WHAT WE OWE leads the list. A promise past its date outranks a reading of
   // the account: one is a thing to do today and the other is context for it.
   const rows: ReactNode[] = [
@@ -242,6 +262,7 @@ export function useTodayReading({
             key="moment"
             moment={view.moment}
             onOpenRecord={onOpenRecord}
+            action={momentAction}
           />,
         ]
       : []),
@@ -285,27 +306,41 @@ export function useTodayReading({
 function DimensionChip({ dimension }: Readonly<{ dimension: TodayDimension }>) {
   const t = useT();
   return (
-    <Popover
-      onHover
-      className={
-        dimension.tone
-          ? `co-dim co-dim-${dimension.tone} t-sub`
-          : "co-dim t-sub"
-      }
-      label={`${dimension.label} · ${dimension.reading}`}
-    >
-      <p className="co-dim-means">{dimension.means}</p>
-      {dimension.because ? (
-        <>
-          {/* The same words the verdict's own grounding uses, over the same
-              quote: two names for one working would read as two readings. A
-              label beside a value, not a heading: the panel is already named
-              by the chip that opened it. */}
-          <Eyebrow className="co-dim-restson">{t("record.restsOn")}</Eyebrow>
-          <p className="co-dim-quote">{dimension.because}</p>
-        </>
-      ) : null}
-    </Popover>
+    <div className="co-360-reading">
+      <dt className="t-caption">{dimension.label}</dt>
+      <dd
+        className={
+          dimension.tone ? `co-360-reading-${dimension.tone}` : undefined
+        }
+      >
+        {/* The label travels INTO the trigger, not only beside it: two
+            dimensions reading the same word gave two buttons the same
+            accessible name, and the `dt` next to them is not part of it. */}
+        <Popover
+          onHover
+          label={
+            <>
+              <span className="sr-only">{dimension.label}: </span>
+              {dimension.reading}
+            </>
+          }
+        >
+          <p className="co-dim-means">{dimension.means}</p>
+          {dimension.because ? (
+            <>
+              {/* The same words the verdict's own grounding uses, over the
+                  same quote: two names for one working would read as two
+                  readings. A label beside a value, not a heading: the panel
+                  is already named by the value that opened it. */}
+              <Eyebrow className="co-dim-restson">
+                {t("record.restsOn")}
+              </Eyebrow>
+              <p className="co-dim-quote">{dimension.because}</p>
+            </>
+          ) : null}
+        </Popover>
+      </dd>
+    </div>
   );
 }
 
@@ -321,18 +356,26 @@ function DimensionChip({ dimension }: Readonly<{ dimension: TodayDimension }>) {
 export function Company360Call({
   reading,
   name,
+  title,
+  titleAction,
+  scale,
   footer,
   children,
 }: Readonly<{
   reading: TodayReading;
   name?: string;
+  // Forwarded to `CallCard`; see its own doc. Absent draws the kit's default
+  // head for every caller that does not opt in.
+  title?: string;
+  titleAction?: ReactNode;
+  scale?: "record" | "compact";
   footer?: ReactNode;
   children?: ReactNode;
 }>) {
   const t = useT();
   if (reading.state === "loading") {
     return (
-      <CallCard name={name}>
+      <CallCard name={name} title={title} titleAction={titleAction}>
         <PanelBody>
           <Skeleton width="100%" height={64} />
         </PanelBody>
@@ -341,7 +384,7 @@ export function Company360Call({
   }
   if (reading.state === "failed") {
     return (
-      <CallCard name={name}>
+      <CallCard name={name} title={title} titleAction={titleAction}>
         <PanelBody>
           <EmptyState>{t("co.section.unavailable")}</EmptyState>
         </PanelBody>
@@ -351,15 +394,20 @@ export function Company360Call({
   return (
     <CallCard
       name={name}
+      title={title}
+      titleAction={titleAction}
       standing={reading.standing}
       because={reading.because}
       restsOn={reading.restsOn}
+      scale={scale}
       footer={footer}
     >
       <PanelBody className="co-360-dims">
-        {reading.dimensions.map((dimension) => (
-          <DimensionChip key={dimension.key} dimension={dimension} />
-        ))}
+        <dl className="co-360-readings">
+          {reading.dimensions.map((dimension) => (
+            <DimensionChip key={dimension.key} dimension={dimension} />
+          ))}
+        </dl>
       </PanelBody>
       {children}
     </CallCard>
@@ -660,10 +708,3 @@ function silenceNote(
 }
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
-
-function byStrengthThenId(a: Company360Contact, b: Company360Contact): number {
-  const delta = (b.strength?.score ?? 0) - (a.strength?.score ?? 0);
-  return delta !== 0 ? delta : stable(a.contact_id, b.contact_id);
-}
-
-type Company360Contact = NonNullable<Company360["contacts"]>["data"][number];

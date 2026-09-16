@@ -126,9 +126,9 @@
    takes unconditionally (companyvatmark.css) for the identical shape one
    field over — kept as two rules rather than one shared selector because
    `.evmark` (unlike `.vatmark`, which has this one caller) also renders
-   inside `.co-fact-line`'s own flex `gap`, where a margin of its own would
-   double it. Scoped to this slot instead of to `.evmark` itself for that
-   reason. */
+   on the company facts rows (`.meta-row-entry`), where the row's own gap
+   spaces it and a margin of its own would double that. Scoped to this slot
+   instead of to `.evmark` itself for that reason. */
 .fieldgrid-value .evmark {
   margin-inline-start: var(--space-1);
 }

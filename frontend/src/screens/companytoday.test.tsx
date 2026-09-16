@@ -368,17 +368,13 @@ describe("the day's call, and which record it is read from", () => {
         },
       },
     });
-    fireEvent.click(screen.getByRole("button", { name: /What this rests on/ }));
-    // The verbatim words lead; the claim, the kind of record and the day it
-    // was said sit under them as the origin line.
+    // The evidence chip and its verbatim words sit under the reason,
+    // captioned "What this is based on" rather than behind a disclosure.
+    expect(screen.getByText("What this is based on")).toBeTruthy();
     expect(
       screen.getByText("We'll get the contract over to you by Friday."),
     ).toBeTruthy();
-    expect(
-      screen.getByText(
-        "They will send the contract · From an exchange · 03/08/2026",
-      ),
-    ).toBeTruthy();
+    expect(screen.getByText("They will send the contract")).toBeTruthy();
   });
 
   // A task's evidence is its own subject: a disclosure that opens on the

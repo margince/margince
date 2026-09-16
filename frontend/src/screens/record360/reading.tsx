@@ -60,30 +60,51 @@ export function RecordReadingPair({
  */
 export function CallCard({
   name,
+  title,
+  titleAction,
   standing,
   because,
   restsOn,
+  scale,
   footer,
   children,
 }: Readonly<{
   // What the reading is a reading OF — the record's own name.
   name?: string;
+  // Overrides the kit's own "<name> · 360" head with a plain title and no
+  // sparkle mark: the panel's `ai` tone plus `titleAction` carry the claim of
+  // authorship instead, the way the contact brief's own head does. Absent
+  // keeps the kit's default head — every caller that does not pass this draws
+  // byte-identical to before.
+  title?: string;
+  // The head's right side, beside `title` — a "Last update" line, a byline.
+  // Only meaningful together with `title`: the kit's own head has no room
+  // for a second claim beside the one `BriefTitle` already makes.
+  titleAction?: ReactNode;
   standing?: { label: string; tone: StandingTone };
   // One line saying what the call rests on: the half a scanner reads.
   because?: ReactNode;
   // The readings behind the call, one disclosure away.
   restsOn?: readonly Grounding[];
+  // Forwarded to `VerdictHead`; see its own doc.
+  scale?: "record" | "compact";
   footer?: ReactNode;
   children?: ReactNode;
 }>) {
   return (
-    <Panel tone="ai" title={<BriefTitle name={name} />} footer={footer}>
+    <Panel
+      tone="ai"
+      title={title ?? <BriefTitle name={name} />}
+      titleAction={title ? titleAction : undefined}
+      footer={footer}
+    >
       {standing ? (
         <VerdictHead
           label={standing.label}
           tone={standing.tone}
           because={because}
           restsOn={restsOn}
+          scale={scale}
         />
       ) : null}
       {children}

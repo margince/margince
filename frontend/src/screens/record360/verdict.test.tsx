@@ -67,3 +67,28 @@ describe("VerdictHead grounding", () => {
     expect(screen.getByText("At risk")).toBeTruthy();
   });
 });
+
+describe("VerdictHead scale", () => {
+  it("draws the record face when the caller does not opt in", () => {
+    renderHead();
+    expect(
+      screen.getByText("At risk").closest(".r360-verdict")?.className,
+    ).not.toContain("r360-verdict-compact");
+  });
+
+  it("draws the compact face for a caller whose head already claims its own authorship", () => {
+    render(
+      <LocaleProvider initial="en">
+        <VerdictHead
+          label="At risk"
+          tone="danger"
+          because="Waiting on them"
+          scale="compact"
+        />
+      </LocaleProvider>,
+    );
+    expect(
+      screen.getByText("At risk").closest(".r360-verdict")?.className,
+    ).toContain("r360-verdict-compact");
+  });
+});
