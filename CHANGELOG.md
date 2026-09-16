@@ -36,6 +36,17 @@ when it has content.
 
 ### Fixed
 
+- **A colleague connecting an MCP client no longer disconnects everyone else.**
+  A connection was superseded by `client_id` alone, which assumed that id names
+  one install. That holds for a client registered by DCR and fails for one
+  identified by a Client ID Metadata Document, where every human running the
+  software presents the same id — so an installation had one live connection in
+  total. Each new consent revoked the previous human's grant through the cascade
+  that answers token theft, killing their access token and spending their
+  refresh chain, so they were asked to reconnect mid-conversation and in turn
+  evicted whoever had connected before them. A connection is now superseded per
+  client registration **per human**: reconnecting from the same client still
+  replaces your own earlier connection, and never anyone else's.
 - Customer meeting requests remain actionable on won or lost deals and outside
   recent email history. Source-linked reminders reconcile without duplicates;
   accepting or completing one updates request state across the deal and email
