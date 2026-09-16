@@ -157,20 +157,30 @@ export function CompanyProjects({
 export function CompanyProjectsPanel({
   companyId,
   view,
+  loading,
+  failed,
   readOnly,
 }: Readonly<{
   companyId: string;
   view?: Company360;
+  // The composite read's own states, handed down rather than inferred from an
+  // absent `view`: a read still running and a read that failed are different
+  // answers, and `sectionState` can tell neither from the other on its own.
+  loading?: boolean;
+  failed?: boolean;
   readOnly?: boolean;
 }>) {
   const t = useT();
   const projects = view?.projects;
-  const state = sectionState(
-    view,
-    "projects",
-    Boolean(projects),
-    projects?.length ?? 0,
-  );
+  const state = failed
+    ? "failed"
+    : sectionState(
+        view,
+        "projects",
+        Boolean(projects),
+        projects?.length ?? 0,
+        loading,
+      );
   // NOT bare: the section draws its own Panel titled "Projects" here, unlike
   // its mount in `CompanyProjects` bare, which stands inside a caller's own
   // panel and would otherwise repeat the title on a second heading.

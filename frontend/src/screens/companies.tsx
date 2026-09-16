@@ -1595,6 +1595,7 @@ function CompanyRecordBody({
         tab={tab}
         company={company}
         view={view}
+        loading={loading}
         failed={failed}
         readOnly={readOnly}
         openTaskId={openTaskId}
@@ -2009,6 +2010,7 @@ function CompanyDealsAndTasksTabs({
   tab,
   company,
   view,
+  loading,
   failed,
   readOnly,
   openTaskId,
@@ -2019,6 +2021,9 @@ function CompanyDealsAndTasksTabs({
   tab: CompanyTab;
   company: Company;
   view?: Company360View;
+  // The composite read's own states, which the projects block needs to tell a
+  // wait from a failure.
+  loading: boolean;
   failed: boolean;
   readOnly: boolean;
   openTaskId: string | null;
@@ -2067,13 +2072,13 @@ function CompanyDealsAndTasksTabs({
               the pipeline: the tab reads "Deals & projects" because both are
               the account's work in flight, and a reader who came here for
               one finds the other without a second tab to try. */}
-          {(view || failed) && (
-            <CompanyProjectsPanel
-              companyId={company.id}
-              view={view}
-              readOnly={readOnly}
-            />
-          )}
+          <CompanyProjectsPanel
+            companyId={company.id}
+            view={view}
+            loading={loading}
+            failed={failed}
+            readOnly={readOnly}
+          />
         </div>
       )}
       {tab === "tasks" && (

@@ -133,5 +133,10 @@ export function momentFallbackVerb({
       </>
     );
   }
-  return sendVerb(t("today.moment.act.writeToThem"));
+  return (
+    <>
+      {sendVerb(t("today.moment.act.writeToThem"))}
+      {secondary}
+    </>
+  );
 }

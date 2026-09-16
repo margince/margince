@@ -1671,6 +1671,20 @@
   .meta-row {
     grid-template-columns: auto minmax(0, 1fr);
   }
+  /* The placements travel with the template. Left on column 3 they ask the
+     grid for an implicit third track, and the row keeps the very column this
+     rule exists to fold away. */
+  .meta-row-time,
+  .meta-row-action {
+    grid-column: 2;
+    justify-self: start;
+  }
+  .meta-row-time {
+    grid-row: 3;
+  }
+  .meta-row-action {
+    grid-row: 4;
+  }
 }
 
 .meta-row-action:empty {
