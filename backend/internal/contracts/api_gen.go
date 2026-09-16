@@ -20920,6 +20920,27 @@ type AuthCapabilities struct {
 // and currency are NOT here — every role reads those, and repeating them in a document
 // governed by a narrower grant would make the same fact answer to two authorities.
 type AuthenticationPolicy struct {
+	// OidcGroupRoleMap The stored group→role grant map: each key an IdP group as the ID token's
+	// `groups` claim spells it, each value the system role key it grants at
+	// corporate sign-in. GRANT-ONLY: a role granted this way is never revoked by
+	// leaving the group — revocation stays a deliberate admin action — and an
+	// empty object means no group grants anything. It admits nobody who was not
+	// already invited.
+	OidcGroupRoleMap map[string]string `json:"oidc_group_role_map"`
+
+	// RequireMfa When true, a second factor is mandatory: a member with no confirmed authenticator
+	// is admitted only to the MFA enrolment routes until they set one up, the same
+	// confinement a forced password change uses. A member who already holds a factor is
+	// unaffected — they are challenged for it at sign-in either way.
+	RequireMfa bool `json:"require_mfa"`
+
+	// RequireSso When true, this installation has closed the password path: an ordinary member
+	// may sign in only through a configured provider. Admins keep the password form
+	// regardless — the break-glass that stops a broken IdP from locking out the admins
+	// who fix it. Password is still never removed as a mechanism; this decides who may
+	// use it, not whether it exists.
+	RequireSso bool `json:"require_sso"`
+
 	// SignInProviders Every provider this deployment mounted, each marked with whether the
 	// installation has chosen to offer it — which is a stored choice, not a
 	// guarantee the provider has working credentials. Password is never listed: it
@@ -31739,6 +31760,39 @@ type MergeTagsResult struct {
 	Moved int `json:"moved"`
 }
 
+// MfaChallenge Handed back by a 202 login when a second factor is required. The token is opaque, short-lived, and stands in for "this member passed the password step"; present it to POST /auth/mfa with a code.
+type MfaChallenge struct {
+	// MfaChallenge The opaque challenge to return with the authenticator code.
+	MfaChallenge string `json:"mfa_challenge"`
+}
+
+// MfaDisableRequest The step-up that proves the caller holds the factor being removed, not merely a session that could have been hijacked.
+type MfaDisableRequest struct {
+	// Code A current authenticator code, or an unused recovery code. Verified only when a CONFIRMED factor guards the account; the codeless cases the operation describes (nothing enrolled, or a merely PENDING enrolment) accept it empty.
+	Code string `json:"code"`
+}
+
+// MfaLoginRequest defines model for MfaLoginRequest.
+type MfaLoginRequest struct {
+	// Code A current authenticator code, or an unused recovery code.
+	Code string `json:"code"`
+
+	// MfaChallenge The challenge from the 202 login response.
+	MfaChallenge string `json:"mfa_challenge"`
+}
+
+// MfaStatus The caller's own multi-factor state.
+type MfaStatus struct {
+	// Confirmed Whether the factor is active — a pending enrolment is not yet a factor.
+	Confirmed bool `json:"confirmed"`
+
+	// Enrolled Whether an enrolment exists (pending or confirmed).
+	Enrolled bool `json:"enrolled"`
+
+	// RecoveryCodesLeft How many one-time recovery codes remain unused.
+	RecoveryCodesLeft int `json:"recovery_codes_left"`
+}
+
 // Money Money as integer minor-units + ISO-4217 currency. Never a float.
 type Money struct {
 	// AmountMinor Smallest currency unit (e.g. cents). 100000 EUR-cents = €1,000.00.
@@ -32029,6 +32083,29 @@ type MyAgentGrantState string
 type MyAgentGrants struct {
 	// Data One entry per scheduled agent, including the ones never answered.
 	Data []MyAgentGrant `json:"data"`
+}
+
+// MySession One session open under the caller's account, as its owner sees it. The opaque token never appears; `id` is the session's own handle, which `DELETE /me/sessions/{sessionId}` takes. No IP address — the device is the coarser view this list deliberately offers in its place.
+type MySession struct {
+	// Current Whether this is the session making the request.
+	Current bool `json:"current"`
+
+	// Id The session's handle, for revoking it.
+	Id openapi_types.UUID `json:"id"`
+
+	// LastActiveAt When a request was last admitted on it.
+	LastActiveAt time.Time `json:"last_active_at"`
+
+	// SignedInAt When the session was opened.
+	SignedInAt time.Time `json:"signed_in_at"`
+
+	// UserAgent The User-Agent the session was opened from, verbatim, or null when the client sent none. Shown as given; the client formats it.
+	UserAgent *string `json:"user_agent,omitempty"`
+}
+
+// MySessionList The caller's live sessions, newest activity first.
+type MySessionList struct {
+	Sessions []MySession `json:"sessions"`
 }
 
 // MyWorkingHoursResponse The caller's own working hours, and whether they are theirs or the fallback.
@@ -34258,6 +34335,12 @@ type RecordViewAck struct {
 
 // RecordViewAckEntityType defines model for RecordViewAck.EntityType.
 type RecordViewAckEntityType string
+
+// RecoveryCodes One-time recovery codes, shown exactly once at confirmation.
+type RecoveryCodes struct {
+	// RecoveryCodes Each code works once, for signing in when the authenticator is unavailable.
+	RecoveryCodes []string `json:"recovery_codes"`
+}
 
 // RefreshAccepted An async refresh was enqueued; proposals will appear in the approvals inbox.
 type RefreshAccepted struct {
@@ -37012,6 +37095,21 @@ type ThreadAudienceOutcome struct {
 	Shared bool `json:"shared"`
 }
 
+// TotpConfirmRequest defines model for TotpConfirmRequest.
+type TotpConfirmRequest struct {
+	// Code The current code from the authenticator being enrolled.
+	Code string `json:"code"`
+}
+
+// TotpEnrolment A pending TOTP enrolment, returned once. Never retrievable again.
+type TotpEnrolment struct {
+	// OtpauthUri The otpauth:// URI the same app scans as a QR code.
+	OtpauthUri string `json:"otpauth_uri"`
+
+	// Secret The base32 shared secret, for manual entry into an authenticator app.
+	Secret string `json:"secret"`
+}
+
 // TranscriptReadReport What one reading of one transcript did. The three outcomes are kept apart on purpose: still reading, read it and it stated nothing, and could not read it are different answers, and collapsing the last two makes a correct empty result look like a broken feature.
 type TranscriptReadReport struct {
 	ActivityId openapi_types.UUID `json:"activity_id"`
@@ -37640,6 +37738,35 @@ type UpdateInstallationSettingsRequest struct {
 	// Name Rename the company.
 	Name *string `json:"name,omitempty"`
 
+	// OidcGroupRoleMap Directory groups that GRANT roles at corporate sign-in. Each key is a group
+	// exactly as the IdP spells it in the ID token's `groups` claim; each value is
+	// one of the system role keys (admin, management, manager, rep, read_only, ops).
+	//
+	// GRANT-ONLY, NEVER REVOKE — read that cost before mapping anything. At each
+	// sign-in the member's token groups are intersected with this map and every
+	// mapped role is ADDED to what they already hold. Removing a member from an
+	// IdP group does NOT take the role away here: revocation stays a deliberate
+	// admin action on the member's own account. Mapping a group onto `admin`
+	// grants admin to every invited member of that group at their next sign-in —
+	// this map is itself admin-only to edit, so that is a deliberate act.
+	//
+	// It creates no accounts: an email nobody invited is refused exactly as
+	// before, whether they have groups or not. Omit the field to leave the map unchanged; send an
+	// empty object to clear it; sending a map replaces the whole stored map.
+	OidcGroupRoleMap *map[string]string `json:"oidc_group_role_map,omitempty"`
+
+	// RequireMfa Make a second factor mandatory: a member without a confirmed authenticator is
+	// confined to the MFA enrolment routes until they set one up. Omit to leave the policy
+	// unchanged.
+	RequireMfa *bool `json:"require_mfa,omitempty"`
+
+	// RequireSso Close the password path: when true, an ordinary member may sign in only through a
+	// configured provider, while an admin keeps the password form as break-glass. Omit to
+	// leave the policy unchanged. This governs who may use password sign-in, never whether
+	// the mechanism exists — an installation cannot strand itself, because admins are
+	// always exempt.
+	RequireSso *bool `json:"require_sso,omitempty"`
+
 	// TimeFormat Display times using the UI language, a 24-hour clock, or a 12-hour clock. Defaults to locale; never changes timezones or stored instants.
 	TimeFormat *UpdateInstallationSettingsRequestTimeFormat `json:"time_format,omitempty"`
 
@@ -38067,6 +38194,26 @@ type UserStatus string
 type UserListResponse struct {
 	Data []User   `json:"data"`
 	Page PageInfo `json:"page"`
+}
+
+// UserSession One session open under a member's account as an admin sees it: the same view its owner gets from MySession, minus `current` — the admin's own request is never one of the target's sessions. No IP, the same coarser view the owner has.
+type UserSession struct {
+	// Id The session's handle, for revoking it.
+	Id openapi_types.UUID `json:"id"`
+
+	// LastActiveAt When a request was last admitted on it.
+	LastActiveAt time.Time `json:"last_active_at"`
+
+	// SignedInAt When the session was opened.
+	SignedInAt time.Time `json:"signed_in_at"`
+
+	// UserAgent The User-Agent the session was opened from, or null when the client sent none.
+	UserAgent *string `json:"user_agent,omitempty"`
+}
+
+// UserSessionList A member's live sessions, newest activity first.
+type UserSessionList struct {
+	Sessions []UserSession `json:"sessions"`
 }
 
 // VCardImportReport One entry per card in the file, in the order the file listed them.
@@ -45751,6 +45898,9 @@ type RequestPasswordResetJSONRequestBody RequestPasswordResetJSONBody
 // LoginJSONRequestBody defines body for Login for application/json ContentType.
 type LoginJSONRequestBody = LoginRequest
 
+// CompleteMfaChallengeJSONRequestBody defines body for CompleteMfaChallenge for application/json ContentType.
+type CompleteMfaChallengeJSONRequestBody = MfaLoginRequest
+
 // ResetPasswordJSONRequestBody defines body for ResetPassword for application/json ContentType.
 type ResetPasswordJSONRequestBody ResetPasswordJSONBody
 
@@ -46170,6 +46320,12 @@ type ImportLinkedInConnectionsMultipartRequestBody ImportLinkedInConnectionsMult
 
 // SaveMyLocaleJSONRequestBody defines body for SaveMyLocale for application/json ContentType.
 type SaveMyLocaleJSONRequestBody = SaveMyLocaleRequest
+
+// DisableMyMfaJSONRequestBody defines body for DisableMyMfa for application/json ContentType.
+type DisableMyMfaJSONRequestBody = MfaDisableRequest
+
+// ConfirmMyTotpJSONRequestBody defines body for ConfirmMyTotp for application/json ContentType.
+type ConfirmMyTotpJSONRequestBody = TotpConfirmRequest
 
 // SaveMyWorkingHoursJSONRequestBody defines body for SaveMyWorkingHours for application/json ContentType.
 type SaveMyWorkingHoursJSONRequestBody = WorkingHours
@@ -56391,6 +56547,9 @@ type ServerInterface interface {
 	// End the current session and clear the cookie.
 	// (POST /auth/logout)
 	Logout(w http.ResponseWriter, r *http.Request)
+	// Complete a second-factor challenge and open a session.
+	// (POST /auth/mfa)
+	CompleteMfaChallenge(w http.ResponseWriter, r *http.Request)
 	// Complete federated sign-in; sets the session cookie on success.
 	// (GET /auth/oidc/{provider}/callback)
 	OidcSignInCallback(w http.ResponseWriter, r *http.Request, provider OidcSignInCallbackParamsProvider, params OidcSignInCallbackParams)
@@ -57444,6 +57603,24 @@ type ServerInterface interface {
 	// Choose the language your own interface is in.
 	// (PUT /me/locale)
 	SaveMyLocale(w http.ResponseWriter, r *http.Request)
+	// Turn your own multi-factor authentication off.
+	// (DELETE /me/mfa)
+	DisableMyMfa(w http.ResponseWriter, r *http.Request)
+	// Your own multi-factor state.
+	// (GET /me/mfa)
+	GetMyMfa(w http.ResponseWriter, r *http.Request)
+	// Begin enrolling an authenticator app.
+	// (POST /me/mfa/totp)
+	StartMyTotpEnrolment(w http.ResponseWriter, r *http.Request)
+	// Confirm an authenticator and receive recovery codes.
+	// (POST /me/mfa/totp/confirm)
+	ConfirmMyTotp(w http.ResponseWriter, r *http.Request)
+	// The sessions open under your account.
+	// (GET /me/sessions)
+	ListMySessions(w http.ResponseWriter, r *http.Request)
+	// End one of your sessions.
+	// (DELETE /me/sessions/{sessionId})
+	RevokeMySession(w http.ResponseWriter, r *http.Request, sessionId openapi_types.UUID)
 	// When you are bookable.
 	// (GET /me/working-hours)
 	GetMyWorkingHours(w http.ResponseWriter, r *http.Request)
@@ -57939,6 +58116,12 @@ type ServerInterface interface {
 	// Set a member's system role. Admin-only, human-only.
 	// (PATCH /users/{id}/role)
 	ChangeUserRole(w http.ResponseWriter, r *http.Request, id Id)
+	// The sessions open under a member's account. Admin-only, human-only.
+	// (GET /users/{id}/sessions)
+	ListUserSessions(w http.ResponseWriter, r *http.Request, id Id)
+	// End one of a member's sessions. Admin-only, human-only.
+	// (DELETE /users/{id}/sessions/{sessionId})
+	RevokeUserSession(w http.ResponseWriter, r *http.Request, id Id, sessionId openapi_types.UUID)
 	// List the caller's saved views (per-user; optionally scoped to one resource).
 	// (GET /views)
 	ListSavedViews(w http.ResponseWriter, r *http.Request, params ListSavedViewsParams)
@@ -58611,6 +58794,12 @@ func (_ Unimplemented) Login(w http.ResponseWriter, r *http.Request) {
 // End the current session and clear the cookie.
 // (POST /auth/logout)
 func (_ Unimplemented) Logout(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Complete a second-factor challenge and open a session.
+// (POST /auth/mfa)
+func (_ Unimplemented) CompleteMfaChallenge(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -60720,6 +60909,42 @@ func (_ Unimplemented) SaveMyLocale(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Turn your own multi-factor authentication off.
+// (DELETE /me/mfa)
+func (_ Unimplemented) DisableMyMfa(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Your own multi-factor state.
+// (GET /me/mfa)
+func (_ Unimplemented) GetMyMfa(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Begin enrolling an authenticator app.
+// (POST /me/mfa/totp)
+func (_ Unimplemented) StartMyTotpEnrolment(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Confirm an authenticator and receive recovery codes.
+// (POST /me/mfa/totp/confirm)
+func (_ Unimplemented) ConfirmMyTotp(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The sessions open under your account.
+// (GET /me/sessions)
+func (_ Unimplemented) ListMySessions(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// End one of your sessions.
+// (DELETE /me/sessions/{sessionId})
+func (_ Unimplemented) RevokeMySession(w http.ResponseWriter, r *http.Request, sessionId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // When you are bookable.
 // (GET /me/working-hours)
 func (_ Unimplemented) GetMyWorkingHours(w http.ResponseWriter, r *http.Request) {
@@ -61707,6 +61932,18 @@ func (_ Unimplemented) ReactivateUser(w http.ResponseWriter, r *http.Request, id
 // Set a member's system role. Admin-only, human-only.
 // (PATCH /users/{id}/role)
 func (_ Unimplemented) ChangeUserRole(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The sessions open under a member's account. Admin-only, human-only.
+// (GET /users/{id}/sessions)
+func (_ Unimplemented) ListUserSessions(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// End one of a member's sessions. Admin-only, human-only.
+// (DELETE /users/{id}/sessions/{sessionId})
+func (_ Unimplemented) RevokeUserSession(w http.ResponseWriter, r *http.Request, id Id, sessionId openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -65331,6 +65568,20 @@ func (siw *ServerInterfaceWrapper) Logout(w http.ResponseWriter, r *http.Request
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.Logout(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CompleteMfaChallenge operation middleware
+func (siw *ServerInterfaceWrapper) CompleteMfaChallenge(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CompleteMfaChallenge(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -79955,6 +80206,138 @@ func (siw *ServerInterfaceWrapper) SaveMyLocale(w http.ResponseWriter, r *http.R
 	handler.ServeHTTP(w, r)
 }
 
+// DisableMyMfa operation middleware
+func (siw *ServerInterfaceWrapper) DisableMyMfa(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DisableMyMfa(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetMyMfa operation middleware
+func (siw *ServerInterfaceWrapper) GetMyMfa(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetMyMfa(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// StartMyTotpEnrolment operation middleware
+func (siw *ServerInterfaceWrapper) StartMyTotpEnrolment(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.StartMyTotpEnrolment(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ConfirmMyTotp operation middleware
+func (siw *ServerInterfaceWrapper) ConfirmMyTotp(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ConfirmMyTotp(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListMySessions operation middleware
+func (siw *ServerInterfaceWrapper) ListMySessions(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListMySessions(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RevokeMySession operation middleware
+func (siw *ServerInterfaceWrapper) RevokeMySession(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "sessionId" -------------
+	var sessionId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "sessionId", chi.URLParam(r, "sessionId"), &sessionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sessionId", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RevokeMySession(w, r, sessionId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetMyWorkingHours operation middleware
 func (siw *ServerInterfaceWrapper) GetMyWorkingHours(w http.ResponseWriter, r *http.Request) {
 
@@ -87580,6 +87963,79 @@ func (siw *ServerInterfaceWrapper) ChangeUserRole(w http.ResponseWriter, r *http
 	handler.ServeHTTP(w, r)
 }
 
+// ListUserSessions operation middleware
+func (siw *ServerInterfaceWrapper) ListUserSessions(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListUserSessions(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RevokeUserSession operation middleware
+func (siw *ServerInterfaceWrapper) RevokeUserSession(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "sessionId" -------------
+	var sessionId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "sessionId", chi.URLParam(r, "sessionId"), &sessionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sessionId", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RevokeUserSession(w, r, id, sessionId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListSavedViews operation middleware
 func (siw *ServerInterfaceWrapper) ListSavedViews(w http.ResponseWriter, r *http.Request) {
 
@@ -90278,6 +90734,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/auth/logout", wrapper.Logout)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/auth/mfa", wrapper.CompleteMfaChallenge)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/auth/oidc/{provider}/callback", wrapper.OidcSignInCallback)
 	})
 	r.Group(func(r chi.Router) {
@@ -91331,6 +91790,24 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Put(options.BaseURL+"/me/locale", wrapper.SaveMyLocale)
 	})
 	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/me/mfa", wrapper.DisableMyMfa)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/me/mfa", wrapper.GetMyMfa)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/me/mfa/totp", wrapper.StartMyTotpEnrolment)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/me/mfa/totp/confirm", wrapper.ConfirmMyTotp)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/me/sessions", wrapper.ListMySessions)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/me/sessions/{sessionId}", wrapper.RevokeMySession)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/me/working-hours", wrapper.GetMyWorkingHours)
 	})
 	r.Group(func(r chi.Router) {
@@ -91824,6 +92301,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/users/{id}/role", wrapper.ChangeUserRole)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/users/{id}/sessions", wrapper.ListUserSessions)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/users/{id}/sessions/{sessionId}", wrapper.RevokeUserSession)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/views", wrapper.ListSavedViews)

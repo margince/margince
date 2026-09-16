@@ -36,6 +36,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
@@ -278,6 +279,16 @@ type Server struct {
 	// it feeds a /readyz probe and backs the capture connector-credential
 	// path; nil means a role that resolves no stored connector credentials.
 	vault keyvault.Vault
+
+	// mfaSigner and mfaSignerUnusable carry WithMFAChallengeSigner's outcome so
+	// armMFAEnrolment can couple it with the vault in either option order: TOTP
+	// enrolment turns on only when BOTH the seal and a usable challenge signer
+	// exist, because a factor whose login challenge cannot be signed is a
+	// lockout, not a factor. mfaSignerUnusable distinguishes "the key was
+	// configured but too short/absent" (worth an ERROR when a vault is present)
+	// from "this role never declared MFA at all" (silence is correct).
+	mfaSigner         identity.MFAChallengeSigner
+	mfaSignerUnusable bool
 
 	// The three parts of the lane the installation's own mail rides, each
 	// supplied by a different option (WithOperatorMail, WithPublicBaseURL,

@@ -21,28 +21,26 @@ const meta: Meta<typeof SignInMethodsCard> = {
 export default meta;
 type Story = StoryObj<typeof SignInMethodsCard>;
 
-// The card reads the shared installation-settings query, so the story answers
-// that route rather than seeding a cache: data written with setQueryData is
-// stale on arrival and the mount's background refetch would reach the network.
+// The card reads the narrow authentication-policy projection, so the story
+// answers that route rather than seeding a cache: data written with
+// setQueryData is stale on arrival and the mount's background refetch would
+// reach the network.
 function Served({
   providers,
+  groupRoleMap = {},
   children,
 }: Readonly<{
   providers: { key: string; label: string; enabled: boolean }[];
+  groupRoleMap?: Record<string, string>;
   children: ReactNode;
 }>) {
   installFetchStub({
-    "GET /installation/settings": () =>
+    "GET /installation/authentication-policy": () =>
       jsonResponse({
-        name: "Brandt Automotive",
-        // Not a zone name: this card never reads the field, and zone literals
-        // are reserved to the module that owns them.
-        timezone: "",
-        base_currency: "EUR",
-        base_language: "de",
-        base_currency_locked: false,
-        max_upload_bytes: 25_000_000,
         sign_in_providers: providers,
+        require_sso: false,
+        require_mfa: false,
+        oidc_group_role_map: groupRoleMap,
       }),
     "GET /me": () =>
       jsonResponse({
@@ -83,6 +81,20 @@ export const ProviderDisabled: Story = {
 export const PasswordOnly: Story = {
   render: () => (
     <Served providers={[]}>
+      <SignInMethodsCard />
+    </Served>
+  ),
+};
+
+/** IdP groups mapped onto roles, with the grant-only warning standing beside
+ * the rows. The empty-map states above show the "nothing extra is granted"
+ * line instead. */
+export const GroupsGrantRoles: Story = {
+  render: () => (
+    <Served
+      providers={[{ key: "google", label: "Google", enabled: true }]}
+      groupRoleMap={{ "crm-admins": "admin", "field-sales": "rep" }}
+    >
       <SignInMethodsCard />
     </Served>
   ),
