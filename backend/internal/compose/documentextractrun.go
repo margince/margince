@@ -390,6 +390,15 @@ func (d *DocumentExtractor) ask(ctx context.Context, src documentSource) ([]extr
 			return nil, fmt.Errorf("%w: the model refused a document type its binding declares it carries: %w",
 				errRefusedDocument, err)
 		}
+		if errors.Is(err, model.ErrAttachmentMislabelled) {
+			// The bytes are not the kind the stored content type says. That is a
+			// fault of this DOCUMENT rather than of the binding — every model
+			// would read the same bytes the same way — so it is refused here
+			// like an unreadable one, and the run says which file it could not
+			// read instead of answering about a document nothing decoded.
+			return nil, fmt.Errorf("%w: this document's bytes are not the type it is stored as: %w",
+				errRefusedDocument, err)
+		}
 		if errors.Is(err, ai.ErrOutputRejected) {
 			return nil, fmt.Errorf("%w: %w", errRefusedDocument, err)
 		}

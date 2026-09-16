@@ -93,7 +93,7 @@ func TestAnthropicAndOllamaCarryAttachmentsInTheirOwnWireSpelling(t *testing.T) 
 	}))
 	defer srv.Close()
 
-	png := model.Attachment{MIME: "image/png", Bytes: []byte("PNG")}
+	png := model.Attachment{MIME: "image/png", Bytes: pngSample}
 	for name, tc := range map[string]struct {
 		cfg ProviderConfig
 		att model.Attachment
@@ -106,20 +106,20 @@ func TestAnthropicAndOllamaCarryAttachmentsInTheirOwnWireSpelling(t *testing.T) 
 		"anthropic": {
 			cfg:   ProviderConfig{Provider: "anthropic", BaseURL: srv.URL, Model: "m"},
 			att:   png,
-			wants: `{"type":"image","source":{"type":"base64","media_type":"image/png","data":"UE5H"}}`,
+			wants: `{"type":"image","source":{"type":"base64","media_type":"image/png","data":"` + pngSampleBase64 + `"}}`,
 		},
 		// The same wire, the other block kind: a PDF that arrived as an image
 		// block would be refused by the vendor, so the block type is as much
 		// part of "carried" as the bytes are.
 		"anthropic/pdf": {
 			cfg:   ProviderConfig{Provider: "anthropic", BaseURL: srv.URL, Model: "m"},
-			att:   model.Attachment{MIME: "application/pdf", Bytes: []byte("%PDF")},
-			wants: `{"type":"document","source":{"type":"base64","media_type":"application/pdf","data":"JVBERg=="}}`,
+			att:   model.Attachment{MIME: "application/pdf", Bytes: pdfSample},
+			wants: `{"type":"document","source":{"type":"base64","media_type":"application/pdf","data":"` + pdfSampleBase64 + `"}}`,
 		},
 		"ollama": {
 			cfg:   ProviderConfig{Provider: "ollama", BaseURL: srv.URL, Model: "m"},
 			att:   png,
-			wants: `"images":["UE5H"]`,
+			wants: `"images":["` + pngSampleBase64 + `"]`,
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -205,7 +205,7 @@ func TestDeclaredImageCarriageAcceptsImagesAndStillRejectsPDFs(t *testing.T) {
 				return err
 			}
 			sent, readErr = nil, nil
-			if err := ask(model.Attachment{MIME: "image/png", Bytes: []byte("PNG")}); err != nil {
+			if err := ask(model.Attachment{MIME: "image/png", Bytes: pngSample}); err != nil {
 				t.Fatalf("a binding declaring image must carry image/png, got %v", err)
 			}
 			if readErr != nil {
@@ -230,7 +230,7 @@ func TestDeclaredImageCarriageAcceptsImagesAndStillRejectsPDFs(t *testing.T) {
 			if url := last.Content[len(last.Content)-1].ImageURL.URL; !strings.HasPrefix(url, "data:image/png;base64,") {
 				t.Errorf("want the image as a data URL, got %q", url)
 			}
-			err = ask(model.Attachment{MIME: "application/pdf", Bytes: []byte("%PDF")})
+			err = ask(model.Attachment{MIME: "application/pdf", Bytes: pdfSample})
 			if !errors.Is(err, model.ErrAttachmentUnsupported) {
 				t.Fatalf("declaring image must not admit application/pdf, got %v", err)
 			}
@@ -307,7 +307,7 @@ func TestNativeCloudProvidersCarryPDFAttachments(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	pdf := model.Attachment{MIME: "application/pdf", Bytes: []byte("%PDF")}
+	pdf := model.Attachment{MIME: "application/pdf", Bytes: pdfSample}
 	canCarryPDF := map[string]ProviderConfig{
 		"openai": {Provider: "openai", BaseURL: srv.URL, Model: "m"},
 		"gemini": {Provider: "gemini", BaseURL: srv.URL, Model: "m"},
