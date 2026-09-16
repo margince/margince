@@ -206,14 +206,14 @@ estimated from bytes:
   clears ~6,100 — automatic reuse possible      1 of 46 sites
       agent_loop                     22,964 tok      4 calls / 7d
 
-  clears 1,024 — we could ASK, and never do     8 of 46 sites
+  clears 1,024 — we could ASK, and never do     7 of 46 sites
       draft_reply/contact             2,360 tok      7 calls / 7d
       capture_counterparty_verdict    1,806 tok     82 calls / 7d
       deal_health                     1,726 tok      0 calls / 7d
       summarize/contact_brief         1,182 tok     15 calls / 7d
-      site_fact_extract               1,021 tok     57 calls / 7d   (3 short)
 
-  below both — nothing is available            37 of 46 sites
+  below both — nothing is available            38 of 46 sites
+      site_fact_extract               1,021 tok     57 calls / 7d   (3 short)
       capture_confidentiality_verdict   878 tok  2,262 calls / 7d
       signal_extract                    213 tok    797 calls / 7d
       owed_verdict                      234 tok    293 calls / 7d
@@ -223,8 +223,8 @@ estimated from bytes:
 **The volume and the prefix size run opposite ways.** The tasks that run
 thousands of times a week carry a few hundred tokens of rules; the tasks with
 rules worth caching barely run. `capture_confidentiality_verdict` alone pays
-2.18M tokens a week re-stating 878 tokens of rules — 20% of everything we send —
-and it is 146 tokens under the lowest floor there is.
+~1.99M tokens a week re-stating 878 tokens of rules (2,262 calls × 878), and it
+is 146 tokens under the lowest floor there is.
 
 Nothing about where the password sits changes any line of that table. The
 password costs us the last ~64 tokens of a prefix; the floor costs us the other
@@ -280,12 +280,12 @@ is there so whoever comes next can see them and judge for themselves.
                           actually runs.
 ```
 
-**"Caching cannot work here" was too weak a reason and the right conclusion.**
-The accurate statement: the password costs a prefix its last ~64 tokens, and
-that is not what stops reuse — a provider floor of 1,024 tokens stops it, and
-37 of our 46 prompts are under it. Moving the password is free and worth doing;
-it will not show up in the dashboard, and expecting it to led three people to
-re-measure the same thing.
+**"Caching cannot work here" was the wrong conclusion, reached for too weak a
+reason.** The accurate statement: the password costs a prefix its last ~64
+tokens, and that is not what stops reuse — a provider floor of 1,024 tokens
+stops it, and 38 of our 46 prompts are under it. Moving the password is free
+and worth doing; it will not show up in the dashboard, and expecting it to led
+three people to re-measure the same thing.
 
 > **Careful: two different things are called "cache".** One dashboard number
 > counts answers we served from our own memory without calling the AI at all.
