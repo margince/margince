@@ -178,7 +178,11 @@ func (e *Eraser) EraseContact(ctx context.Context, contactID ids.UUID, reason st
 		if err := e.eraseAttachments(ctx, tx, reason, causeContactErasure, subjectAttachmentsWhere, subject, floorInterval, floorAnchor); err != nil {
 			return err
 		}
-		rawPurged, aiPayloadsPurged, err := purgeDerivedTraces(ctx, tx, subject, keys.displayName, emails, identities)
+		// The activities this erasure just destroyed travel with the subject:
+		// a model call made ABOUT one of them holds its text, and the activity
+		// row is now empty while that copy is not.
+		rawPurged, aiPayloadsPurged, err := purgeDerivedTraces(ctx, tx, subject, keys.displayName, emails, identities,
+			erasedCitations{activities: append(activitiesRedacted, activitiesHeld...), leads: leadsWiped})
 		if err != nil {
 			return err
 		}

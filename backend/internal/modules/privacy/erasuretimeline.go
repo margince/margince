@@ -192,7 +192,7 @@ var subjectActivityEmbeddingsDelete = `
 // (erasure_channels.go, kept apart for file length). Embeddings of
 // activities on the subject's timeline embed text ABOUT them; the vector
 // store must not keep what a similarity probe could partially reconstruct.
-func purgeDerivedTraces(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, displayName string, emails []string, identities []channelIdentity) (rawPurged, aiPayloadsPurged int64, err error) {
+func purgeDerivedTraces(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, displayName string, emails []string, identities []channelIdentity, erased erasedCitations) (rawPurged, aiPayloadsPurged int64, err error) {
 	for _, email := range emails {
 		tag, execErr := tx.Exec(ctx,
 			`DELETE FROM raw_capture WHERE payload::text ILIKE '%' || $1 || '%' ESCAPE '\'`,
@@ -243,20 +243,44 @@ func purgeDerivedTraces(ctx context.Context, tx pgx.Tx, contactID ids.ContactID,
 	if _, err := tx.Exec(ctx, subjectActivityEmbeddingsDelete, contactID); err != nil {
 		return 0, 0, err
 	}
-	// Captured AI payloads (Layer 3) are purged by the same identifier
-	// match as raw_capture's email lane: any opt-in request/response body
-	// whose content names one of the subject's addresses goes, and its
-	// ai_call metadata row survives (the FK is ON DELETE CASCADE from
-	// ai_call, never the reverse). This reaches ONLY payloads whose text
-	// mentions the subject — a call that never named them keeps no PII and
-	// ages out anyway via the 365d ai_call_payload retention erase; there is
-	// no subject FK to scope by, so a content match is the reachable
-	// boundary, crude on purpose (over-deleting captured content is
-	// recoverable, under-deleting PII is a violation).
+	// Captured AI payloads (Layer 3) go two ways, and the first is the one
+	// that reaches a transcript.
+	//
+	// BY CITATION: a call that said what record it was about names it on
+	// ai_call, so every payload of a call made about this contact — or about an
+	// activity or lead this erasure just wiped with them — is deleted whatever
+	// its text says.
+	// That is the difference between destroying what mentioned their address
+	// and destroying what was about them, and it is the only lane that reaches
+	// a meeting transcript, which names its speakers rather than addressing
+	// them and may never spell an address at all.
+	//
+	// BY CONTENT, unchanged: any opt-in body naming one of the subject's
+	// addresses. The citation does NOT replace it and is not the boundary — a
+	// call whose input spans several records names none, by design, and is
+	// reached by this match or not at all. The residual is exactly what it was
+	// for every task that names no record.
+	//
+	// Either way the ai_call metadata row survives (the FK is ON DELETE CASCADE
+	// from ai_call, never the reverse), and both are crude on purpose:
+	// over-deleting captured telemetry is recoverable, under-deleting personal
+	// data is a violation.
 	//
 	// No channel-identity lane here, unlike raw_capture above — see
 	// purgeChannelRawCapture's comment (erasure_channels.go) for why
 	// ai_call_payload cannot safely take the same match.
+	citedTag, err := tx.Exec(ctx, `
+		DELETE FROM ai_call_payload p
+		 USING ai_call c
+		 WHERE p.ai_call_id = c.id
+		   AND ((c.subject_type = 'contact' AND c.subject_id = $1)
+		     OR (c.subject_type = 'activity' AND c.subject_id = ANY($2))
+		     OR (c.subject_type = 'lead' AND c.subject_id = ANY($3)))`,
+		contactID, erased.activities, erased.leads)
+	if err != nil {
+		return 0, 0, err
+	}
+	aiPayloadsPurged += citedTag.RowsAffected()
 	for _, email := range emails {
 		tag, execErr := tx.Exec(ctx, `
 			DELETE FROM ai_call_payload
@@ -277,6 +301,15 @@ func purgeDerivedTraces(ctx context.Context, tx pgx.Tx, contactID ids.ContactID,
 		}
 	}
 	return rawPurged, aiPayloadsPurged, nil
+}
+
+// erasedCitations are the OTHER records this erasure destroyed alongside the
+// contact, named so a model call that cited one of them is purged with it. A
+// draft written for a lead and a reading of a meeting hold the subject's words
+// as surely as a call that named the contact.
+type erasedCitations struct {
+	activities []ids.UUID
+	leads      []ids.UUID
 }
 
 // deleteSubjectHandoffs drops every SDR handoff naming the subject, and with it

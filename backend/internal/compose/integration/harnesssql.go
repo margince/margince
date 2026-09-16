@@ -65,3 +65,17 @@ func (e *Env) WsCount(t *testing.T, sql string, args ...any) int {
 	}
 	return n
 }
+
+// WsScalar returns a single text value in a workspace-bound transaction — the
+// id a fixture planted through a writer that does not hand it back.
+func (e *Env) WsScalar(t *testing.T, sql string, args ...any) string {
+	t.Helper()
+	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	var out string
+	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, sql, args...).Scan(&out)
+	}); err != nil {
+		t.Fatalf("scalar query: %v", err)
+	}
+	return out
+}

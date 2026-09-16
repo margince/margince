@@ -332,3 +332,66 @@ func TestAICallPayloadErasureCascadePurgesSubjectMentions(t *testing.T) {
 		t.Fatalf("control payload wrongly purged: %d rows, want 1", n)
 	}
 }
+
+// seedCitedPayload plants a captured payload whose call SAID what record it was
+// about, and whose text names nobody: the shape the content match cannot reach
+// and the citation can.
+func seedCitedPayload(t *testing.T, e *Env, subjectType string, subjectID ids.UUID, requestJSON string) ids.UUID {
+	t.Helper()
+	callID := ids.NewV7()
+	e.WsExec(t, `INSERT INTO ai_call (id, logical_call_id, task, request_fingerprint, subject_type, subject_id)
+		VALUES ($1, $1, 'summarize', 'fp-cited', $2, $3)`, callID, subjectType, subjectID)
+	e.WsExec(t, `INSERT INTO ai_call_payload (ai_call_id, request_payload, response_payload)
+		VALUES ($1, $2::jsonb, '{}'::jsonb)`, callID, requestJSON)
+	return callID
+}
+
+// TestAICallPayloadErasureReachesACallThatNamedTheRecord is the citation lane,
+// and the fixture is the case the content match was always going to miss: a
+// transcript reading whose request is the whole meeting and whose text spells
+// no address at all, because a transcript names its speakers rather than
+// addressing them.
+//
+// Three payloads, one erasure, and each answers for a different reason. The
+// first is destroyed because its call named the subject's meeting; the second
+// because its call named the subject; the third survives because it is about
+// somebody else and says nothing about this one — which is what keeps the
+// first two from proving only that the purge deletes everything.
+func TestAICallPayloadErasureReachesACallThatNamedTheRecord(t *testing.T) {
+	e := Setup(t)
+	contactID := seedSubject(t, e)
+	activityID := ids.MustParse(e.WsScalar(t,
+		`SELECT activity_id::text FROM activity_link WHERE contact_id = $1`, contactID))
+
+	const transcript = `{"messages":[{"role":"user","content":"Selma: we will sign by Friday."}]}`
+	citedMeeting := seedCitedPayload(t, e, "activity", activityID, transcript)
+	citedSubject := seedCitedPayload(t, e, "contact", contactID,
+		`{"messages":[{"role":"user","content":"draft something warm"}]}`)
+	aboutSomebodyElse := seedCitedPayload(t, e, "contact", ids.NewV7(),
+		`{"messages":[{"role":"user","content":"draft something warm"}]}`)
+
+	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), contactID, "test"); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, gone := range []struct {
+		callID ids.UUID
+		what   string
+	}{
+		{citedMeeting, "a reading of the subject's meeting, whose text names no address"},
+		{citedSubject, "a call that named the subject itself"},
+	} {
+		if n := e.WsCount(t, `SELECT count(*) FROM ai_call_payload WHERE ai_call_id = $1`, gone.callID); n != 0 {
+			t.Errorf("%s survived the erasure: %d rows remain", gone.what, n)
+		}
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM ai_call_payload WHERE ai_call_id = $1`, aboutSomebodyElse); n != 1 {
+		t.Errorf("a payload about somebody else was purged: %d rows, want 1", n)
+	}
+	// The metadata row is not the content row, and only the content is
+	// personal: the citation stays readable so the telemetry still says a call
+	// was made and what it cost.
+	if n := e.WsCount(t, `SELECT count(*) FROM ai_call WHERE id = $1`, citedMeeting); n != 1 {
+		t.Errorf("the ai_call metadata row went with its payload: %d rows, want 1", n)
+	}
+}
