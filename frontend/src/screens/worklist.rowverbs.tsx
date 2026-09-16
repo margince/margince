@@ -20,7 +20,7 @@
 // at. The verbs do not DIVIDE here — every one of them is about this row — and
 // two groups held apart say which is which only while both edges are on screen.
 
-import { Pin, PinOff } from "lucide-react";
+import { Pin, PinOff, Sparkles } from "lucide-react";
 import type { ReactNode } from "react";
 import { Button } from "../design-system/atoms";
 import { IconAction } from "../design-system/iconaction";
@@ -30,6 +30,8 @@ import { moveHref, moveLabel } from "./worklist.copy";
 import { DispositionVerbs } from "./worklist.dispositions";
 import { ReassignControl } from "./worklist.manager";
 import { usePinRow, type WorklistItem } from "./worklist.queries";
+import { replyIsTheMove } from "./worklist.reply";
+import { TriageActs } from "./worklist.rowverbs.triage";
 
 /**
  * Every verb a row carries, on one right-aligned line, the lane's answer LAST.
@@ -56,9 +58,22 @@ export function RowActs({
   equals,
   onReview,
   onOpenEmail,
+  context,
+  shape,
+  framed,
 }: Readonly<{
   item: WorklistItem;
   href: string | undefined;
+  /**
+   * `triage` is the ORDER a row being ANSWERED reads in: the set-asides lead
+   * from the opening edge, because declining steps away from the work before
+   * any of it is done, and the move the product worked out stands LAST,
+   * because on the row being answered that move is the answer.
+   */
+  shape?: "triage";
+  /** A card around this row already names and links its record, so the verb
+   *  that only reaches it is withheld. The Brief's card, not the drawer. */
+  framed?: boolean;
   /**
    * `compact` withholds the verb that only REACHES the record, because at that
    * density the row's title carries the link itself — two controls on one line
@@ -81,9 +96,32 @@ export function RowActs({
   /** Where a grouped row is reviewed, on the surface that has a filter. */
   onReview?: () => void;
   onOpenEmail?: (id: string) => void;
+  /**
+   * The way into what the row is ABOUT, where the surface has one. FIRST on
+   * the line: it opens a reading rather than acting on the row, so it stands
+   * with the quiet verbs and never near the answer at the end.
+   */
+  context?: ReactNode;
 }>) {
+  if (shape === "triage") {
+    return (
+      <TriageActs
+        item={item}
+        href={href}
+        owner={owner}
+        allowPin={allowPin}
+        framed={framed}
+        primary={primary}
+        equals={equals}
+        context={context}
+        onReview={onReview}
+        onOpenEmail={onOpenEmail}
+      />
+    );
+  }
   return (
     <div className="worklist-row-acts">
+      {context}
       {item.batch && onReview ? (
         <BatchVerb onReview={onReview} />
       ) : (
@@ -138,7 +176,7 @@ export function RowActs({
 // address carrying `?filter=decisions` would be read by nobody and the control
 // would do nothing — which is the defect it exists to avoid. Moving them into
 // the URL is the right shape and is its own change.
-function BatchVerb({ onReview }: Readonly<{ onReview: () => void }>) {
+export function BatchVerb({ onReview }: Readonly<{ onReview: () => void }>) {
   const t = useT();
   return (
     <Button small onClick={onReview}>
@@ -157,20 +195,35 @@ function BatchVerb({ onReview }: Readonly<{ onReview: () => void }>) {
 //
 // A verb whose destination this page cannot name draws nothing. A control that
 // looks pressable and goes nowhere is worse than no control.
-function RowVerbs({
+export function RowVerbs({
   item,
   href,
   density,
   move,
   onOpenEmail,
+  part,
+  framed,
 }: Readonly<{
   item: WorklistItem;
   href: string | undefined;
   density?: "compact";
   move: string | undefined;
   onOpenEmail?: (id: string) => void;
+  /** Which half, for the triage shape: the `act` is the move the product
+   *  worked out, the `ways` only reach the record. Absent, one flow. */
+  part?: "ways" | "act";
+  /** A card around this row already names and links the record it is about,
+   *  so the verb that only reaches it would be the same press twice. */
+  framed?: boolean;
 }>) {
   const t = useT();
+  // THE MOVE IS NOT DRAWN TWICE. Where the row's answer IS this reply, that
+  // control already carries the move — the same act, the same indigo, the same
+  // mark — and it opens the composer in place rather than promising a draft
+  // over a link that lands on a record or a read of the message itself. Drawn
+  // here as well, the row asked one question with two buttons, and the one
+  // wearing the agent's mark was the one that did not draft.
+  const answered = replyIsTheMove(item);
   const replyActivity =
     item.move?.action === "draft_reply" ? item.move.activity_id : undefined;
   const readReply =
@@ -208,7 +261,11 @@ function RowVerbs({
     //
     // `move` is untouched: it opens the composer, which is a different
     // destination and the most-pressed control on a waiting row.
-    if (density === "compact" && destination === href) {
+    // A FRAMED row withholds it for the same reason: the card around the row
+    // in hand names and links that record itself. Keyed on the frame and not
+    // on the triage ORDER, which the drawer takes with no card around its
+    // rows — there the way to the record is the only one there is.
+    if ((density === "compact" || framed) && destination === href) {
       return [];
     }
     drawn.add(destination);
@@ -217,17 +274,27 @@ function RowVerbs({
   if (verbs.length === 0 && !move) {
     return null;
   }
+  const act = part !== "ways" && !answered;
+  const ways = part !== "act";
   return (
     <>
       {/* The step the product already worked out, offered where the reader is
-          standing rather than on a screen they have to go and find. */}
-      {readReply ? (
-        <Button small onClick={() => onOpenEmail(replyActivity)}>
+          standing. IN THE AGENT'S OWN COLOUR, with its mark: a rule wrote this
+          move and pressing it accepts it, the claim indigo makes everywhere
+          else (company360.tsx draws the same suggestion the same way). The
+          verbs that only reach the record stay ghost: opening a page is
+          navigation, and indigo on it would spend the one mark that means "a
+          machine worked this out" on a click where nothing did. */}
+      {act && readReply ? (
+        <Button small variant="ai" onClick={() => onOpenEmail(replyActivity)}>
+          <Sparkles aria-hidden="true" />
           {t("worklist.verb.draft_reply")}
         </Button>
       ) : (
+        act &&
         move && (
-          <a className={NAVIGATING_VERB} href={move}>
+          <a className={PREPARED_VERB} href={move}>
+            <Sparkles aria-hidden="true" />
             {/* THE LABEL MOVES WITH THE ROUTE AND WITH THE VERB. Where the
               address opens the composer the label is the act; where it only
               reaches the record it says so. And it names the verb the SERVER
@@ -237,11 +304,12 @@ function RowVerbs({
           </a>
         )
       )}
-      {verbs.map(({ action, destination }) => (
-        <a key={action} className={NAVIGATING_VERB} href={destination}>
-          {VERB_LABEL[action](t)}
-        </a>
-      ))}
+      {ways &&
+        verbs.map(({ action, destination }) => (
+          <a key={action} className={NAVIGATING_VERB} href={destination}>
+            {VERB_LABEL[action](t)}
+          </a>
+        ))}
     </>
   );
 }
@@ -277,6 +345,9 @@ function verbDestination(
 // the alternative is a second spelling of the small ghost button in
 // worklist.css. `screens/client.tsx` reaches the same conclusion the same way.
 const NAVIGATING_VERB = "btn btn-ghost btn-sm";
+// The move the product worked out, as an anchor in the agent's own chrome:
+// the same `ai` face `Button` draws, for the reason given where it is drawn.
+const PREPARED_VERB = "btn btn-ai btn-sm";
 
 // Where each verb lives. A total map over the ones this page can route, so a
 // verb the contract adds either gets a destination here or is not drawn —
@@ -370,7 +441,7 @@ const VERB_LABEL: Record<
 //
 // A BATCH row is skipped. Its id is synthetic and minted by the fold, so a pin
 // on one names a group that will not exist under that key on the next read.
-function PinVerb({ item }: Readonly<{ item: WorklistItem }>) {
+export function PinVerb({ item }: Readonly<{ item: WorklistItem }>) {
   const t = useT();
   const toast = useToast();
   const pin = usePinRow();

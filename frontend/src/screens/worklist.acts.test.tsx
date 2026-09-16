@@ -91,23 +91,27 @@ describe("a row's verbs are one line with the lane's answer last", () => {
   });
 
   // THE WHOLE LINE, in order, and every verb on it named — not a sample. The
-  // order IS the layout here: the ways to the record come first, the reader's
-  // own GLYPH sits among the labelled verbs, the ways to put the row down
-  // follow, and the answer is the tail. A test naming two of six would let a
-  // third be promoted past the call to action, or let the glyph slide out to
-  // the end of the line, with nothing failing.
+  // order IS the layout here: the ways to PUT THE ROW DOWN lead from the
+  // opening edge, because declining steps away from the work before any of it
+  // is done; the ways into it follow, the reader's own GLYPH among them; and
+  // the answer is the tail. A test naming two of six would let a third be
+  // promoted past the call to action, or let the glyph slide out to the end of
+  // the line, with nothing failing.
+  //
+  // THE SAME ORDER THE BRIEF'S CARD READS IN, and that is the point: the queue
+  // is a list of rows a reader answers one at a time, which is the act the card
+  // is shaped for. Drawn in two orders, a rep who opened the same row on two
+  // surfaces looked for its answer at two different places.
   //
   // The pin is among the WORDS on purpose: a lone 32px glyph closing a line has
   // no label to read as a verb, so it reads as a stray mark.
-  it("draws the quieter verbs before it, glyph among the words", async () => {
+  it("leads with the set-asides, glyph among the words", async () => {
     oneRow(waitingRow());
 
     const reply = await screen.findByRole("button", {
       name: en["compose.reply"],
     });
     const inOrder = [
-      screen.getByRole("link", { name: en["worklist.verb.open"] }),
-      screen.getByRole("button", { name: en["worklist.verb.pin"] }),
       screen.getByRole("button", {
         name: en["worklist.disposition.verb.snooze"],
       }),
@@ -117,6 +121,8 @@ describe("a row's verbs are one line with the lane's answer last", () => {
       screen.getByRole("button", {
         name: en["worklist.disposition.verb.not_mine"],
       }),
+      screen.getByRole("link", { name: en["worklist.verb.open"] }),
+      screen.getByRole("button", { name: en["worklist.verb.pin"] }),
       reply,
     ];
 
@@ -148,7 +154,9 @@ describe("a row's verbs are one line with the lane's answer last", () => {
         screen.getByRole("button", { name: en["worklist.verb.pin"] }),
       ),
     );
-    expect(drawn.indexOf(reassign)).toBeLessThan(
+    // After the set-asides, which now lead the line: the two glyphs stay
+    // together among the labelled verbs and neither opens nor closes it.
+    expect(drawn.indexOf(reassign)).toBeGreaterThan(
       drawn.indexOf(
         screen.getByRole("button", {
           name: en["worklist.disposition.verb.not_mine"],

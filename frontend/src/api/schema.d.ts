@@ -35308,6 +35308,7 @@ export interface components {
              *     attendees are all withheld both produce, and both mean the same thing here.
              */
             with_contact?: string;
+            contact?: components["schemas"]["WorklistContactFacts"];
             /**
              * Format: date-time
              * @description When this is due, or when the meeting starts.
@@ -35854,6 +35855,49 @@ export interface components {
              *     reader cannot act on it and cannot tell it from a bug.
              */
             label?: string;
+        };
+        /**
+         * @description The human behind the row — whom a reply would go to — and how the silence
+         *     runs both ways, so a reader knows whose row it is and who wrote last before
+         *     choosing a verb.
+         *
+         *     Present on every row that names a contact: one whose `subject` is a contact,
+         *     a waiting message filed against one (whose `subject` may be the deal the
+         *     thread belongs to), a meeting with one (`with_contact`). Absent on a row that
+         *     names no human — a deal drifting, a mailbox that stopped.
+         *
+         *     The `id` is the producer's claim and always travels. The label and the
+         *     moments are the READER's, filled under their own grants; each is absent
+         *     where the reader may not have it, which is not the same as unnamed or never.
+         */
+        WorklistContactFacts: {
+            /** Format: uuid */
+            id: string;
+            /** @description The contact's display name. Absent when the caller may not read the contact. */
+            label?: string;
+            touch?: components["schemas"]["WorklistContactTouch"];
+        };
+        /**
+         * @description When they last wrote to us and when we last wrote to them — the same two dates,
+         *     over the same walk, that the contact's own page reports as `last_inbound_at` and
+         *     `last_outbound_at`, so a queue row and the record it opens cannot disagree about
+         *     who wrote last.
+         *
+         *     Absent from the row when the caller may not read activity, or may not read this
+         *     contact: a withheld answer. Present with both nulls for a contact nobody has ever
+         *     exchanged a message with.
+         */
+        WorklistContactTouch: {
+            /**
+             * Format: date-time
+             * @description When they last wrote to us. Null means nothing inbound was ever captured.
+             */
+            last_inbound_at: string | null;
+            /**
+             * Format: date-time
+             * @description When we last wrote to them. Null means we never have.
+             */
+            last_outbound_at: string | null;
         };
         /** @description The lead's contact context, without inventing an inbound request or response deadline. */
         WorklistLeadFacts: {

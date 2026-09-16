@@ -31,13 +31,14 @@ type Cut = "all" | "conversations" | "changes";
 
 // Live, so the pressed pill can be judged as the reader's own choice rather
 // than a fixed prop — `onChange` is the point of the row.
-function Live(props: Readonly<{ initial: Cut }>) {
+function Live(props: Readonly<{ initial: Cut; layout?: "row" | "list" }>) {
   const [value, setValue] = useState<Cut>(props.initial);
   return (
     <FilterPills
       label="Timeline"
       value={value}
       onChange={setValue}
+      layout={props.layout}
       pills={[
         { value: "all", label: "All", count: 42 },
         { value: "conversations", label: "Conversations", count: 18 },
@@ -58,4 +59,14 @@ export const Counted: Story = {
 // nothing about being current depends on carrying a figure.
 export const PressedPillHasNoCount: Story = {
   render: () => <Live initial="changes" />,
+};
+
+// The same cuts as a column: the lanes beside a queue, each a full-width row
+// with its count at the far end.
+export const AsList: Story = {
+  render: () => (
+    <div style={{ maxInlineSize: "14rem" }}>
+      <Live initial="all" layout="list" />
+    </div>
+  ),
 };

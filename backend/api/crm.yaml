@@ -46246,6 +46246,8 @@ components:
             A client MUST NOT draw a way into the brief without it. Absent means there is
             no page to read this brief on, which an internal meeting and a meeting whose
             attendees are all withheld both produce, and both mean the same thing here.
+        contact:
+          $ref: '#/components/schemas/WorklistContactFacts'
         due_at: { type: string, format: date-time, description: 'When this is due, or when the meeting starts.' }
         overdue: { type: boolean, description: 'Past due at the read instant, resolved server-side so every surface agrees.' }
         due_group:
@@ -46891,6 +46893,44 @@ components:
             A client then names the group by its kind alone and NEVER falls back to
             `cause`, because an identity on screen is worse than a vaguer sentence: the
             reader cannot act on it and cannot tell it from a bug.
+
+    WorklistContactFacts:
+      type: object
+      description: |
+        The human behind the row — whom a reply would go to — and how the silence
+        runs both ways, so a reader knows whose row it is and who wrote last before
+        choosing a verb.
+
+        Present on every row that names a contact: one whose `subject` is a contact,
+        a waiting message filed against one (whose `subject` may be the deal the
+        thread belongs to), a meeting with one (`with_contact`). Absent on a row that
+        names no human — a deal drifting, a mailbox that stopped.
+
+        The `id` is the producer's claim and always travels. The label and the
+        moments are the READER's, filled under their own grants; each is absent
+        where the reader may not have it, which is not the same as unnamed or never.
+      required: [id]
+      properties:
+        id: { type: string, format: uuid }
+        label: { type: string, description: "The contact's display name. Absent when the caller may not read the contact." }
+        touch:
+          $ref: '#/components/schemas/WorklistContactTouch'
+
+    WorklistContactTouch:
+      type: object
+      description: |
+        When they last wrote to us and when we last wrote to them — the same two dates,
+        over the same walk, that the contact's own page reports as `last_inbound_at` and
+        `last_outbound_at`, so a queue row and the record it opens cannot disagree about
+        who wrote last.
+
+        Absent from the row when the caller may not read activity, or may not read this
+        contact: a withheld answer. Present with both nulls for a contact nobody has ever
+        exchanged a message with.
+      required: [last_inbound_at, last_outbound_at]
+      properties:
+        last_inbound_at: { type: [string, 'null'], format: date-time, description: 'When they last wrote to us. Null means nothing inbound was ever captured.' }
+        last_outbound_at: { type: [string, 'null'], format: date-time, description: 'When we last wrote to them. Null means we never have.' }
 
     WorklistLeadFacts:
       type: object
