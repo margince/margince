@@ -55,11 +55,13 @@
   cursor: pointer;
   border-radius: var(--r-control);
   /* The HEIGHT is the invariant, not the inset: --controlHeight is what every
-     button and the Select trigger agree on, and the vertical padding
-     falls out of it — 32 less the 1px border either side less the 20px line
-     leaves 5px above and below, which `align-items: center` places. Stated as
-     a height, one number moves every control together; stated as padding, the
-     three shapes drift apart the moment one of them wraps. */
+     button agrees on (the Select trigger is a FIELD and takes --inputHeight,
+     because it stands in a form column where a text box would), and the
+     vertical padding falls out of it — 32 less the 1px border either side less
+     the 20px line leaves 5px above and below, which `align-items: center`
+     places. Stated as a height, one number moves every control together;
+     stated as padding, the three shapes drift apart the moment one of them
+     wraps. */
   padding: 0 var(--controlPaddingX);
   min-block-size: var(--controlHeight);
   /* The one resting layer, so a verb has a top side. Every variant carries a

@@ -1103,8 +1103,8 @@
    and --inputPaddingX for the room around what a reader puts in it. This is the
    one place a field and the button beside it part company — a verb you hit and
    a box you fill are not the same object, and the room inside is what says
-   which is which. Every button, and the Select trigger below, stays on
-   --controlHeight.
+   which is which. The Select trigger below takes this same box — it stands in a
+   form column where a text box would; every BUTTON stays on --controlHeight.
 
    `font: inherit` and NOTHING else about type. What is typed here is the
    reader's own text, not a component's label, so it wears the root face, size
@@ -1146,12 +1146,14 @@
 .textarea::placeholder {
   color: var(--textSecondary);
 }
-/* The Select trigger is the one `.input` that is NOT a place to type: it holds
-   a closed face, so it is verb-shaped and keeps the CONTROL box every button
-   takes — --controlHeight, the control's own inset, and medium, because a
-   trigger's face is a component's text where a typed value is the reader's. A
-   trigger standing 8px taller than the button next to it is the misalignment
-   the one control size was bought to end.
+/* The Select trigger is the one `.input` that is NOT a place to type — it holds
+   a closed face rather than a caret — but it is still a FIELD: it stands where a
+   text box would stand, in the same column of a form and under the same label,
+   so it keeps the field's box at --inputHeight. A trigger 8px shorter than the
+   text box above it is the ragged form column this height was bought to end.
+   What it keeps of the CONTROL is the inset and the medium weight: a trigger's
+   face is a component's text where a typed value is the reader's, so it is set
+   like a label rather than like an answer.
 
    In THIS sheet rather than in select.css, which is its own chunk: the order of
    the two sheets is a bundler routing decision, so a rule that has to beat
@@ -1161,7 +1163,7 @@
    re-shape this trigger with two classes and would have tied with a
    `.input.select-control` spelling. */
 .select-control {
-  min-block-size: var(--controlHeight);
+  min-block-size: var(--inputHeight);
   padding: 0 var(--controlPaddingX);
   font-weight: var(--fontWeightMedium);
 }

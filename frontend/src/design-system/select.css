@@ -4,9 +4,10 @@
  * input are the same FACE on screen, so the surface — fill, border, radius,
  * focus ring, and the resting depth that makes this one a face rather than a
  * well — is declared once there, and only the layout the button needs lives
- * here. The BOX is where the two part company, and atoms.css carries that too:
- * a trigger is a button that opens a list, not a place to type, so `.input` is
- * overridden there by `.select-control` back onto --controlHeight.
+ * here. The BOX is the field's as well: a trigger holds a closed face rather
+ * than a caret, but it stands in a form column where a text box would, so
+ * `.select-control` in atoms.css keeps --inputHeight and overrides `.input` only
+ * on the inset and the weight a component's own label is set at.
  *
  * The popup is `position: fixed` and portalled to the body, so nothing in this
  * sheet may assume a positioned ancestor: every coordinate arrives as an inline

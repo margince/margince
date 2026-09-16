@@ -437,10 +437,10 @@
      padding taller than the height, which clips the text being typed, and that
      stays true whatever the margin is set to.
 
-     Everything else stays on --controlHeight, the select's TRIGGER included: a
-     trigger is a button that opens a list, not a place to type, and a select
-     standing 8px taller than the button beside it is the misalignment the one
-     control size was bought to end. */
+     The select's TRIGGER takes this height too: it holds a closed face rather
+     than a caret, but it stands in a form column where a text box would, and a
+     trigger 8px shorter than the field above it is the ragged form column this
+     height was bought to end. Every BUTTON stays on --controlHeight. */
   --inputHeight: 40px;
   --inputPaddingX: 6px;
   --inputPaddingY: var(--space-2);

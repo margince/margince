@@ -147,9 +147,9 @@ function BrandBlock({ narrow }: Readonly<{ narrow: boolean }>) {
           <span className="ws-chip">
             <Logomark />
           </span>
-          <span className="ws-name">
-            <b>{t("shell.logoAria")}</b>
-          </span>
+          <Heading size="small" as="div" className="ws-name">
+            {t("shell.logoAria")}
+          </Heading>
         </a>
         {/* No attribution line here: the product's own mark is already above it,
             and a company name is never invented to fill the row. */}
@@ -216,9 +216,12 @@ function BrandBlock({ narrow }: Readonly<{ narrow: boolean }>) {
             shape="company"
           />
         </span>
-        <span className="ws-name">
-          <b>{installation.display_name}</b>
-        </span>
+        {/* `as="div"`: the workspace name is the rail's identity, not a section
+            of the page. It sits above every h1 the content column draws, so an
+            h5 here would be a level nothing opened. */}
+        <Heading size="small" as="div" className="ws-name">
+          {installation.display_name}
+        </Heading>
       </a>
       <span className="ws-company">
         <span className="ws-company-text">{t("shell.poweredBy")}</span>

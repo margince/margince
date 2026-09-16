@@ -116,9 +116,9 @@
    --inputHeight like the field in a form and like the palette this toolbar's
    magnifier promises, because 30px here and 40px there was the same control
    twice. A floor rather than a height, so the box cannot clip what it holds.
-   Nothing on the row has to be re-aligned for it — `.lt-tools` is a centred
-   flex row, so the 32px triggers beside this sit on its middle line, which is
-   the answer: the trigger is a button and does not grow to meet a field. */
+   Nothing on the row has to be re-aligned for it — the select triggers beside
+   this are the same box (`.select-control` in atoms.css), and the buttons that
+   are shorter sit on the middle line `.lt-tools` centres them on. */
 .lt-search {
   display: inline-flex;
   align-items: center;
@@ -157,8 +157,8 @@
  * takes the pill silhouette instead of claiming its own line. Silhouette only:
  * the HEIGHT and the INSET are not the toolbar's to choose — a control here is
  * the same control as one in a form, and a field that is 40px in a form and
- * something else here is two answers to what a field is. The trigger's own
- * --controlHeight and the field's --inputHeight both arrive from atoms.css. */
+ * something else here is two answers to what a field is. --inputHeight, for the
+ * trigger as much as for the text box, arrives from atoms.css. */
 .lt-tools .select-control.input,
 .lt-tools input.input {
   width: auto;
@@ -191,19 +191,34 @@
 }
 
 /* The toolbar's buttons carry a pill silhouette so the row reads as one kind
- * of thing rather than several. */
+ * of thing rather than several. The SILHOUETTE is the only thing the toolbar
+ * chooses: the BOX is the control's own — --controlHeight, the control's inset,
+ * the control's icon-to-label gap, and the medium a label takes beside a line
+ * glyph — because a verb in a toolbar is the same object as a verb in a form,
+ * and a 30px pill beside a 32px button was one control answering the question
+ * of its own height twice. */
 .lt-btn {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-1);
-  height: 30px;
-  padding: 0 var(--space-3);
+  gap: var(--controlGap);
+  min-block-size: var(--controlHeight);
+  padding: 0 var(--controlPaddingX);
+  font-weight: var(--fontWeightMedium);
   background: var(--bgElevated);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-full);
   corner-shape: round;
   cursor: pointer;
   white-space: nowrap;
+}
+/* The one line this pill ADDS rather than inherits, and it is here because
+ * `.lt-btn` is a bare <button> and not a `.btn`: nothing above it sizes a glyph.
+ * Every call site passes a lucide icon with no `size=`, so the toolbar drew the
+ * library's own 24px default beside a 16px icon on the button next to it. */
+.lt-btn svg {
+  inline-size: var(--controlIcon);
+  block-size: var(--controlIcon);
+  flex: none;
 }
 .lt-btn:hover {
   border-color: var(--borderStrong);
@@ -227,7 +242,12 @@
   padding: 0;
   display: inline-flex;
   align-items: stretch;
-  height: 30px;
+  /* Four segments read as ONE control, so the row stands at the control height
+   * every other pill on this line stands at. A floor rather than a height: a
+   * condition or a value long enough to need a second line grows the row rather
+   * than being clipped by it, and `align-items: stretch` still hands whatever
+   * the row ends up at to each segment. */
+  min-block-size: var(--controlHeight);
   background: var(--bgElevated);
   border: 1px solid var(--accentMed);
   border-radius: var(--r-full);
@@ -961,11 +981,14 @@
   justify-content: center;
 }
 
+/* Colour and corner only. The INSET is the trigger's own (`.select-control` in
+ * atoms.css), and the two classes here were beating it with a second answer —
+ * the one control in the footer sitting on a different inset from every other
+ * trigger in the product. */
 .lt-perpage .select-control {
   background: var(--bgElevated);
   border: 1px solid var(--borderStrong);
   border-radius: var(--r-sm);
-  padding: var(--space-1) var(--space-2);
   cursor: pointer;
 }
 

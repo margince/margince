@@ -573,9 +573,6 @@
   height: 0;
   opacity: 0;
 }
-.rail .ws-name b {
-  color: var(--textPrimary);
-}
 /* The head's second line: what this installation runs on, and which build of it
    this is. One row for both, because they are one statement.
    It is a SIBLING of the brand anchor and not a child of it: the marker is a
@@ -589,8 +586,13 @@
 /* The ellipsis is the TEXT's, not the row's: an installation name is user data
    of unbounded length in a narrow column, and a row that clipped itself would
    take the marker with it — the one thing on this line that must always be
-   legible. */
+   legible.
+
+   Body S, because this is the attribution UNDER the name and not a second name:
+   at the body size it read as a peer of the heading above it and the head had
+   two titles. */
 .rail .ws-company-text {
+  font: var(--fontBodySmall);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
