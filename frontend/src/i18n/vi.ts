@@ -5544,8 +5544,7 @@ export const vi = {
   "blockedDomains.source.human": "Một con người",
   "blockedDomains.source.unevidenced": "Trang web không nêu tên công ty nào",
   "blockedDomains.source.staleEvidence": "Thư ủng hộ điều đó đã quá cũ",
-  "blockedDomains.source.nearDuplicate":
-    "Đã có một công ty trùng tên ở đây",
+  "blockedDomains.source.nearDuplicate": "Đã có một công ty trùng tên ở đây",
   "blockedDomains.rowAdmit": "Cho tên miền này vào",
   "blockedDomains.rowRefuse": "Từ chối tên miền này",
   "blockedDomains.rowReopen": "Hỏi lại",
