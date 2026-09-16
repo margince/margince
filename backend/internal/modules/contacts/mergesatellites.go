@@ -25,6 +25,15 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// relinkStrandedSatellites is the one call the merge makes for both halves
+// below, so relinkContactReferences names this concern once rather than twice.
+func relinkStrandedSatellites(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.ContactID) error {
+	if err := relinkReaderJudgements(ctx, tx, sourceID, targetID); err != nil {
+		return err
+	}
+	return relinkWorkInFlight(ctx, tx, sourceID, targetID)
+}
+
 // relinkReaderJudgements moves what a READER decided about this contact, and
 // drops what was merely computed about them.
 //

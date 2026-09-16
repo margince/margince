@@ -127,48 +127,36 @@ func relinkContactReferences(ctx context.Context, tx pgx.Tx, sourceID, targetID 
 	if err := relinkAcquisitionAndDuty(ctx, tx, sourceID, targetID); err != nil {
 		return counts, err
 	}
-	// What a reader DECIDED about this contact, and what is still OPEN against
-	// them. Both live in mergesatellites.go; neither is a plain repoint, and
-	// both used to be left behind.
-	if err := relinkReaderJudgements(ctx, tx, sourceID, targetID); err != nil {
+	// What a reader DECIDED and what is still OPEN, in mergesatellites.go.
+	if err := relinkStrandedSatellites(ctx, tx, sourceID, targetID); err != nil {
 		return counts, err
 	}
-	if err := relinkWorkInFlight(ctx, tx, sourceID, targetID); err != nil {
-		return counts, err
-	}
-	if err := repointWhatNamesTheContact(ctx, tx, sourceID, targetID); err != nil {
-		return counts, err
-	}
-	return counts, nil
-}
-
-// repointWhatNamesTheContact moves the three pointers AT the merged-away
-// record, as distinct from the satellites hanging OFF it.
-//
-// The promotion outcome pointer follows the survivor so a re-promote 409 names
-// a live contact. The confirm-page submission — a correction the contact typed,
-// or a request to be removed — follows it because the workspace still owes an
-// answer and a rep reading the survivor's queue is the only reader there now
-// is; left behind it is a data subject's request quietly dropped. And an
-// earlier merged-away row repoints so the redirect chain stays one hop deep and
-// following merged_into_id always lands live.
-func repointWhatNamesTheContact(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.ContactID) error {
+	// The promotion outcome pointer follows the survivor so a
+	// re-promote 409 names a live contact.
 	if _, err := tx.Exec(ctx,
 		`UPDATE lead SET promoted_contact_id = $2 WHERE promoted_contact_id = $1`,
 		sourceID, targetID); err != nil {
-		return fmt.Errorf("repoint lead promotions: %w", err)
+		return counts, fmt.Errorf("repoint lead promotions: %w", err)
 	}
+	// What the merged-away contact sent back through their own confirm link —
+	// a correction they typed, or a request to be removed. It moves onto the
+	// survivor because it is a request the workspace still owes an answer to,
+	// and a rep reading the survivor's queue is the only reader there now is.
+	// Left behind it hangs off a record no read returns, which is a data
+	// subject's request quietly dropped.
 	if _, err := tx.Exec(ctx,
 		`UPDATE contact_confirm_submission SET contact_id = $2 WHERE contact_id = $1`,
 		sourceID, targetID); err != nil {
-		return fmt.Errorf("relink confirm-page submissions: %w", err)
+		return counts, fmt.Errorf("relink confirm-page submissions: %w", err)
 	}
+	// Earlier merged-away rows repoint too: the redirect chain stays
+	// one hop deep, so following merged_into_id always lands live.
 	if _, err := tx.Exec(ctx,
 		`UPDATE contact SET merged_into_id = $2 WHERE merged_into_id = $1`,
 		sourceID, targetID); err != nil {
-		return fmt.Errorf("repoint earlier merges: %w", err)
+		return counts, fmt.Errorf("repoint earlier merges: %w", err)
 	}
-	return nil
+	return counts, nil
 }
 
 // readContactMergeState loads one end of a contact merge: a live row

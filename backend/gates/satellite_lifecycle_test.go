@@ -311,8 +311,8 @@ func (p satellitePath) where() string {
 	return p.from + " and what it calls"
 }
 
-// reachedWrites is every table written by `from` or by anything it calls, read
-// from the package's own call graph.
+// reachedWrites collects the tables written by `from` and by anything it calls,
+// reading the package's own call graph.
 //
 // A CROSS-MODULE CARRY IS INVISIBLE TO IT, on purpose: the graph is one
 // package's, so a satellite another module owns and moves through a port —
