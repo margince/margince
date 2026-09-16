@@ -61,10 +61,11 @@ import (
 // the read — not a destructive write at merge time — decides which one speaks.
 //
 // THE AUTHORITY — AND THE REASON — TRAVEL. RevokeOverride only lets a caller
-// take back a row recorded at a level they outrank. If a merge downgraded a
-// carried row to the merging rep's own level, a plain rep could revoke an
-// admin's vouch simply by merging the vouched-for contact into one of their
-// own first — the same laundering path stopcarry.go closes for a stop. So the
+// take back a row their own level may revoke, and a rep's never reaches a level
+// above their own. If a merge downgraded a carried row to the merging rep's own
+// level, a plain rep could revoke an admin's vouch simply by merging the
+// vouched-for contact into one of their own first — the same laundering path
+// stopcarry.go closes for a stop. So the
 // carried row keeps the original decided_by_level and the original reason,
 // verbatim, and gains only a new captured_by (whoever merged) and
 // carried_from (which row it came from).

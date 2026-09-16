@@ -316,7 +316,7 @@ func (h Handlers) LiftSuppression(
 }
 
 // RevokeOverride serves POST /contacts/{id}/consent/allow/{overrideId}/revoke:
-// somebody taking back a standing vouch they outrank.
+// somebody taking back a standing vouch their level may revoke.
 //
 // Wire-only, matching LiftSuppression exactly: the store judges the reason,
 // the row scope and the level. The comparison in particular belongs beside
