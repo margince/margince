@@ -1129,6 +1129,10 @@ export const en = {
     "Conversations whose content you may not open are left out of a search.",
   "tab.contacts": "Contacts",
   "tab.deals": "Deals",
+  // Shared by the account's own tab and the lead's: both hold a deal AND the
+  // projects beside it, unlike `tab.deals`, which the contact page's own
+  // Deals tab uses for a list with no projects in it.
+  "tab.dealsProjects": "Deals & projects",
   "tab.tasks": "Tasks",
   "tab.timeline": "History",
   "tab.finance": "Finance",
@@ -1739,11 +1743,6 @@ export const en = {
   "co.rail.contacts.inTouch": "Already in touch with them",
   "co.rail.projects.title": "Projects",
   "co.rail.projects.empty": "No projects yet.",
-
-  // Its own key rather than the shared `tab.deals`: the contact page's own
-  // Deals tab holds no projects, so renaming that key would rename a tab that
-  // did not change.
-  "co.tab.deals": "Deals & projects",
 
   "co.commercial.title": "Commercial",
   "co.commercial.lostFigure": "Lost deals",
@@ -2381,6 +2380,12 @@ export const en = {
   "lead.details": "Details",
   "lead.ladder.title": "Where this lead stands",
   "lead.detailsUnset": "Not set",
+  "lead.rail.deal.title": "Deal",
+  "lead.rail.deal.empty": "No deal yet. Qualifying this lead opens one.",
+  "lead.rail.project.title": "Project",
+  "lead.rail.project.empty": "No project yet.",
+  "lead.rail.project.attach": "Attach project",
+  "lead.rail.project.change": "Change project",
   "lead.terminalReadOnly": "This lead is closed and takes no changes.",
   "lead.notYoursToChange":
     "You cannot change this lead. Ask its owner to share it with you, or your administrator for the right to edit it.",

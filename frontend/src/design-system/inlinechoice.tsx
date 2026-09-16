@@ -117,6 +117,7 @@ export function InlineChoice({
             ref={trigger}
             type="button"
             className="inline-editable inline-editable-choice"
+            data-empty={!value}
             // aria-label, not title: the button's content is the VALUE, so
             // without this a screen reader announces "Not assessed, button" —
             // the state, with no hint that pressing it changes anything. title
@@ -133,7 +134,10 @@ export function InlineChoice({
               setEditing(true);
             }}
           >
-            {render(value)}
+            {/* A choice nobody has made still says so. Rendered blank, the row
+                was a caret with nothing in front of it, and a reader could not
+                tell an unset owner from a value that failed to load. */}
+            {value ? render(value) : t("field.unset")}
             <ChevronDown
               className="inline-editable-caret"
               size={12}
@@ -141,7 +145,12 @@ export function InlineChoice({
             />
           </button>
         ) : (
-          <span title={readOnlyReason}>{render(value)}</span>
+          <span
+            className={value ? undefined : "inlinechoice-unset"}
+            title={readOnlyReason}
+          >
+            {value ? render(value) : t("field.unset")}
+          </span>
         )}
       </span>
     );

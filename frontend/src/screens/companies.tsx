@@ -843,11 +843,11 @@ function CompanyRecord({
           // them is this.
           overview: t("tab.overview"),
           contacts: t("tab.contacts"),
-          // Its own key rather than the shared `tab.deals`: the contact page's
-          // Deals tab holds no projects, so renaming the shared label would
-          // rename that tab too. This account's tab is the one that gained a
-          // second body of work.
-          deals: t("co.tab.deals"),
+          // `tab.dealsProjects` rather than the shared `tab.deals`: the contact
+          // page's own Deals tab holds no projects, so renaming that key would
+          // rename a tab that did not change. This label now also names the
+          // lead's own Deals & projects tab, which reads the same two things.
+          deals: t("tab.dealsProjects"),
           tasks: t("tab.tasks"),
           timeline: t("tab.timeline"),
           // The tab's own key rather than `finance.title`, which the card

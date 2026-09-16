@@ -54,6 +54,7 @@ import {
   scoreFactorLabel,
   scoreTone,
 } from "./leadpresentation";
+import { LeadDealsProjectsTab, LeadRail } from "./leadraillinks";
 import { LeadReadings } from "./leadreadings";
 import { ACTION_PARAM, CALL_ACTION } from "./leads.address";
 import { DisqualifyDialog } from "./leads.disqualify";
@@ -675,28 +676,6 @@ function LeadLadderPanel({
 }
 
 /**
- * The rail: the lead's own words.
- *
- * What a rep CONSULTS while doing the work in the column beside it. Two things
- * have left this column for the same reason — the score, which is a reading
- * with an edit behind it and belongs beside the inputs that feed it, and the
- * owner, which is a thing a reader ACTS on and belongs in the header.
- */
-function LeadRail({
-  lead,
-  writer,
-}: Readonly<{
-  lead: Lead;
-  writer: LeadWriter;
-}>) {
-  return (
-    <div className="record-stack">
-      <LeadIdentityFields lead={lead} writer={writer} />
-    </div>
-  );
-}
-
-/**
  * The score as a card of the reading: it folds to one line with its top
  * factor, and opens for the breakdown and the override. Beside it, in the
  * pair, the inputs a rep enters by hand.
@@ -1026,7 +1005,7 @@ function PromotedLeadPanel({
   );
 }
 
-const LEAD_TABS = ["overview", "history"] as const;
+const LEAD_TABS = ["overview", "deals", "history"] as const;
 type LeadTab = (typeof LEAD_TABS)[number];
 
 /** isLeadTab narrows a URL segment, which is any string a reader can type. */
@@ -1485,7 +1464,15 @@ function LeadRecord({ lead, id }: Readonly<{ lead: Lead; id: string }>) {
         // fold and memory of it as every other record page.
         // At every width, and told whether it is showing, so the column
         // folds rather than vanishing when the toggle shuts it.
-        aside={<LeadRail lead={lead} writer={writer} />}
+        aside={
+          <LeadRail
+            lead={lead}
+            writer={writer}
+            onQualify={() => setDialog("qualify")}
+            reasonId={writer.readOnly ? terminalReasonId : undefined}
+            details={<LeadIdentityFields lead={lead} writer={writer} />}
+          />
+        }
         asideOpen={details.open}
         name={leadIdentityName(lead) || t("lead.unnamed")}
         avatarSrc={null}
@@ -1547,6 +1534,9 @@ function LeadRecord({ lead, id }: Readonly<{ lead: Lead; id: string }>) {
             }}
             labels={{
               overview: t("tab.overview"),
+              // The same key the account's own Deals & projects tab carries:
+              // both hold one deal and one project, read the same way.
+              deals: t("tab.dealsProjects"),
               history: t("tab.history"),
             }}
             // The switch for the details pane, at the end of the tab row: it
@@ -1578,6 +1568,14 @@ function LeadRecord({ lead, id }: Readonly<{ lead: Lead; id: string }>) {
             onQualify={() => setDialog("qualify")}
             onDisqualify={() => setDialog("disqualify")}
             onReply={() => setComposing(true)}
+          />
+        )}
+        {tab === "deals" && (
+          <LeadDealsProjectsTab
+            lead={lead}
+            writer={writer}
+            onQualify={() => setDialog("qualify")}
+            reasonId={writer.readOnly ? terminalReasonId : undefined}
           />
         )}
         <LeadDialogs

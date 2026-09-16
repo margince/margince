@@ -1051,6 +1051,7 @@ export const vi = {
     "Khi tìm kiếm, những cuộc trò chuyện bạn không được mở nội dung sẽ không xuất hiện.",
   "tab.contacts": "Liên hệ",
   "tab.deals": "Deals",
+  "tab.dealsProjects": "Deal & dự án",
   "tab.tasks": "Công việc",
   "tab.timeline": "Lịch sử",
   "tab.finance": "Tài chính",
@@ -1655,8 +1656,6 @@ export const vi = {
   "co.rail.contacts.inTouch": "Đã liên hệ với họ",
   "co.rail.projects.title": "Dự án",
   "co.rail.projects.empty": "Chưa có dự án.",
-
-  "co.tab.deals": "Deal & dự án",
 
   "co.commercial.title": "Thương mại",
   "co.commercial.lostFigure": "Deal đã thua",
@@ -2283,6 +2282,12 @@ export const vi = {
   "lead.ladder.title":
     "Kh\u00e1ch h\u00e0ng ti\u1ec1m n\u0103ng n\u00e0y \u0111ang \u1edf \u0111\u00e2u",
   "lead.detailsUnset": "Chưa đặt",
+  "lead.rail.deal.title": "Deal",
+  "lead.rail.deal.empty": "Chưa có deal. Qualify lead này sẽ tạo một deal.",
+  "lead.rail.project.title": "Dự án",
+  "lead.rail.project.empty": "Chưa có dự án.",
+  "lead.rail.project.attach": "Gắn dự án",
+  "lead.rail.project.change": "Đổi dự án",
   "lead.terminalReadOnly":
     "Khách hàng tiềm năng này đã đóng và không nhận thay đổi.",
   "lead.notYoursToChange":

@@ -2311,6 +2311,7 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
     // why a mutation added later is still caught by construction.
     const viewControls = new Set([
       "Overview",
+      "Deals & projects",
       "History",
       "Hide details",
       // The trigger discloses; the open above sweeps the verbs behind it.
