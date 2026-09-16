@@ -326,7 +326,7 @@ func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 	// thread belongs to says more than the company it is filed under.
 	row.Subject = waitingSubject(waiting)
 	// The sender, whatever the subject: a thread filed under a deal is still a
-	// message from a person, and the reply goes to them.
+	// message from a contact, and the reply goes to them.
 	row.Contact = waitingContact(waiting)
 	if openableSubject(row.Subject) {
 		row.Actions = append(row.Actions, crmcontracts.WorklistItemActions(actionOpen))

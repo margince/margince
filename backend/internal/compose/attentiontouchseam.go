@@ -46,4 +46,3 @@ func (r attentionContactTouch) LastTouch(
 	}
 	return out, nil
 }
-

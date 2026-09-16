@@ -37,7 +37,7 @@ func contactRow(contact ids.UUID, label *string) crmcontracts.WorklistItem {
 	}
 }
 
-// A waiting message filed under a deal is still a message from a person: the
+// A waiting message filed under a deal is still a message from a contact: the
 // subject is the deal and the contact is the sender, and both travel.
 func TestAWaitingRowNamesItsSenderBesideTheDealItIsFiledUnder(t *testing.T) {
 	contact, deal := ids.NewV7(), ids.NewV7()
@@ -58,9 +58,9 @@ func TestAWaitingRowNamesItsSenderBesideTheDealItIsFiledUnder(t *testing.T) {
 	}
 }
 
-// A lane item whose subject is a person, and a meeting read on a person's
-// page, both name that person — with the subject's label where it has one.
-func TestALaneItemNamesThePersonItIsAbout(t *testing.T) {
+// A lane item whose subject is a contact, and a meeting read on a contact's
+// page, both name that contact — with the subject's label where it has one.
+func TestALaneItemNamesTheContactItIsAbout(t *testing.T) {
 	contact := ids.NewV7()
 	name := "Sonya Beck"
 	about := crmcontracts.AttentionItem{Subject: &crmcontracts.AttentionSubject{

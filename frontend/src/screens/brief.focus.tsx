@@ -211,9 +211,9 @@ export function Triage({
 function AboutLine({ item }: Readonly<{ item: WorklistItem }>) {
   const t = useT();
   const { locale } = useLocale();
-  // The person the server put on the row, else the record it is about: the
-  // sender of a thread filed under a deal is a person, and the reply goes to
-  // them.
+  // The contact the server put on the row, else the record it is about: the
+  // sender of a thread filed under a deal is a contact, and the reply goes
+  // to them.
   const contact = item.contact;
   const label = contact?.label ?? item.subject?.label;
   const href = contact?.label ? contactHref(contact) : subjectHref(item);

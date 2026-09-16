@@ -117,6 +117,8 @@ var emailPassthroughs = gatekit.Waive(map[string]string{
 	"screens/openemail.ts":               "the drawer controller: it reads emailSummary only to decide an entry HAS a message to open, and holds no part of one",
 	"screens/recordchronology.tsx":       "wires onOpenEmail onto the entries it hands to the timeline; the rendering is composed.tsx's",
 	"screens/worklist.row.tsx":           "same branch as the focus card, for the list row",
+	"screens/brief.focus.tsx":            "the Brief's card in hand: it reads the message's own moment and where it sits for the card's label row, and hands the message itself to WorklistRow, which draws it through EmailEntry",
+	"screens/brief.fixtures.ts":          "builds the rows a story and a test hand to the Brief; it constructs an EmailSummary and renders nothing",
 	"screens/emailaccesseditor.tsx":      "draws the ACCESS block and no part of the message: who may read it, the named members, and the control to change that. No subject, no body, no party, no attachment. It takes the whole presentation because the audience write needs the id and version off it",
 	"screens/emailrecords.tsx":           "draws WHICH RECORDS the message is filed against and no part of the message: each link is an EntityRef naming a contact, an account or a deal. No subject, no body, no party, no attachment. It takes the whole presentation because the drawer hands it one",
 	"screens/emailreply.tsx":             "draws no part of the message at all: it reads can_reply and links to decide whether the drawer may offer the verb and which record a reply files under, and mounts ChannelReplyAction, which is the product's one reply affordance",

@@ -30,6 +30,7 @@ import { moveHref, moveLabel } from "./worklist.copy";
 import { DispositionVerbs } from "./worklist.dispositions";
 import { ReassignControl } from "./worklist.manager";
 import { usePinRow, type WorklistItem } from "./worklist.queries";
+import { TriageActs } from "./worklist.rowverbs.triage";
 
 /**
  * Every verb a row carries, on one right-aligned line, the lane's answer LAST.
@@ -100,36 +101,16 @@ export function RowActs({
 }>) {
   if (shape === "triage") {
     return (
-      <div className="worklist-row-acts">
-        {/* The set-asides lead from the other edge, the way an `ActionRow`
-            divides: declining steps away from the work, the move steps in. */}
-        <span className="worklist-row-putdowns">
-          <DispositionVerbs item={item} />
-        </span>
-        {context}
-        {item.batch && onReview ? (
-          <BatchVerb onReview={onReview} />
-        ) : (
-          <RowVerbs
-            item={item}
-            href={href}
-            part="ways"
-            move={moveHref(item)}
-            onOpenEmail={onOpenEmail}
-          />
-        )}
-        {equals}
-        {!item.batch && (
-          <RowVerbs
-            item={item}
-            href={href}
-            part="act"
-            move={moveHref(item)}
-            onOpenEmail={onOpenEmail}
-          />
-        )}
-        {primary}
-      </div>
+      <TriageActs
+        item={item}
+        href={href}
+        owner={owner}
+        primary={primary}
+        equals={equals}
+        context={context}
+        onReview={onReview}
+        onOpenEmail={onOpenEmail}
+      />
     );
   }
   return (
@@ -189,7 +170,7 @@ export function RowActs({
 // address carrying `?filter=decisions` would be read by nobody and the control
 // would do nothing — which is the defect it exists to avoid. Moving them into
 // the URL is the right shape and is its own change.
-function BatchVerb({ onReview }: Readonly<{ onReview: () => void }>) {
+export function BatchVerb({ onReview }: Readonly<{ onReview: () => void }>) {
   const t = useT();
   return (
     <Button small onClick={onReview}>
@@ -208,7 +189,7 @@ function BatchVerb({ onReview }: Readonly<{ onReview: () => void }>) {
 //
 // A verb whose destination this page cannot name draws nothing. A control that
 // looks pressable and goes nowhere is worse than no control.
-function RowVerbs({
+export function RowVerbs({
   item,
   href,
   density,

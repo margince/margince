@@ -52,7 +52,7 @@ it("links the record a message row is about", async () => {
   ).toBe("#/contacts/01a05500-0000-7000-8000-000000000009");
 });
 
-// The server names the person behind a thread even when the thread is filed
+// The server names the contact behind a thread even when the thread is filed
 // under a deal, and says when each side last wrote: a rep reads both before
 // choosing how to answer, on the row, with nothing to open.
 it("names the sender behind a deal-filed thread, and which side wrote last", async () => {

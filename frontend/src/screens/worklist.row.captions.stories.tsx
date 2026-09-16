@@ -25,7 +25,7 @@ type WorklistItem = components["schemas"]["WorklistItem"];
 const SONYA = "01a05500-0000-7000-8000-000000000009";
 const DEAL = "01a05500-0000-7000-8000-0000000000da";
 
-/** A thread filed under a deal, from a person the server named beside it. */
+/** A thread filed under a deal, from a contact the server named beside it. */
 function dealFiledThread(): WorklistItem {
   return {
     id: "waiting-1",

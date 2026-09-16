@@ -51,7 +51,7 @@ type TouchMoments struct {
 }
 
 // contactOf names the human behind a lane item: the attendee a meeting's brief
-// is read on, else the subject when the subject is a person. The label
+// is read on, else the subject when the subject is a contact. The label
 // travels with the subject's, already resolved under the reader's grants, so
 // the pass below never asks twice for one name.
 func contactOf(item crmcontracts.AttentionItem) *crmcontracts.WorklistContactFacts {
@@ -66,7 +66,7 @@ func contactOf(item crmcontracts.AttentionItem) *crmcontracts.WorklistContactFac
 
 // waitingContact names the sender of a waiting message, whatever record the
 // thread is filed under: the subject may be the deal, the reply goes to a
-// person. Nil for a stranger's message, which names nobody.
+// contact. Nil for a stranger's message, which names nobody.
 func waitingContact(waiting WaitingCustomer) *crmcontracts.WorklistContactFacts {
 	if waiting.ContactID.IsZero() {
 		return nil
@@ -149,9 +149,9 @@ func (s *Service) labelContacts(ctx context.Context, rows []crmcontracts.Worklis
 	return nil
 }
 
-// contactsOn is every contact the page names, once each, in the order met —
-// so a reader that bounds its answer drops the same contacts for the same
-// page rather than a different set each read.
+// contactsOn gathers the contacts a page names, once each, in the order they
+// were met — so a reader that bounds its answer drops the same contacts for
+// the same page rather than a different set each read.
 func contactsOn(rows []crmcontracts.WorklistItem) []ids.UUID {
 	var named []ids.UUID
 	seen := map[ids.UUID]bool{}

@@ -311,9 +311,9 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, contactID ids.C
 // we mailed a fortnight ago with no reply and one who wrote to us this
 // morning have the same last-touch date and opposite meanings.
 //
-// The set reader over a set of one, so this page and a queue row naming the
-// same contact read the same statement and cannot disagree about who wrote
-// last. The record read above already admitted the contact, so the set
+// The set reader over a set of one: this page and a queue row naming the same
+// contact are answered by the statement in lasttouch.go, under the same
+// scopes. The record read above already admitted the contact, so the set
 // reader's own row scope narrows nothing here.
 func (s *Service) lastTouchSection(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, opts AssembleOptions, out *crmcontracts.Contact360) error {
 	touched, err := LastTouchFor(ctx, tx, []ids.ContactID{contactID}, opts)

@@ -49,11 +49,11 @@ export function contactHref(contact: NonNullable<WorklistItem["contact"]>) {
  * Whom a row is about, linked — where the row does not already say so.
  *
  * A message names its sender as text and draws no title line, so it links the
- * person behind it here; a thread filed under a deal still came from one, and
- * the reply goes to them. Every other title names and links its own record
+ * contact behind it here; a thread filed under a deal still came from one,
+ * and the reply goes to them. Every other title names and links its own record
  * (`itemTitle`, `rowHref`), so the line repeats nothing — unless the server
  * put a contact on the row that the record is not: a task about a deal, with
- * the person it is owed to beside it.
+ * the contact it is owed to beside it.
  */
 export function aboutRecord(
   item: WorklistItem,
