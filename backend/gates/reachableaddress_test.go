@@ -71,10 +71,6 @@ var (
 	// a name to the list. Under-recognition is the one direction this must not
 	// fail in.
 	readsTheTable = regexp.MustCompile(`(?is)\bFROM\s+contact_email\b`)
-	// ordersItself matches a hand-written ORDER BY that decides between
-	// addresses. The shared constant is a Go identifier, so it never appears
-	// inside a SQL literal and a statement that uses it has no such text left.
-	ordersItself = regexp.MustCompile(`(?is)ORDER\s+BY[^)]*\bis_primary\b`)
 	// aliasedArchived matches the archived filter bound to a named relation, so
 	// the census can ask whether it is the ADDRESS row that was filtered.
 	aliasedArchived = regexp.MustCompile(`(?is)([a-z_][a-z0-9_]*)\.archived_at\s+IS\s+NULL`)
@@ -359,16 +355,24 @@ func TestWhatCountsAsPickingAnAddress(t *testing.T) {
 		sql      string
 		filtered bool
 	}{
-		{"the address row, unaliased and alone",
-			`SELECT email FROM contact_email WHERE contact_id = $1 AND archived_at IS NULL LIMIT 1`, true},
-		{"the address row, by its alias",
-			`SELECT pe.email FROM contact_email pe WHERE pe.contact_id = $1 AND pe.archived_at IS NULL LIMIT 1`, true},
-		{"no filter at all",
-			`SELECT email FROM contact_email WHERE contact_id = $1 LIMIT 1`, false},
+		{
+			"the address row, unaliased and alone",
+			`SELECT email FROM contact_email WHERE contact_id = $1 AND archived_at IS NULL LIMIT 1`, true,
+		},
+		{
+			"the address row, by its alias",
+			`SELECT pe.email FROM contact_email pe WHERE pe.contact_id = $1 AND pe.archived_at IS NULL LIMIT 1`, true,
+		},
+		{
+			"no filter at all",
+			`SELECT email FROM contact_email WHERE contact_id = $1 LIMIT 1`, false,
+		},
 		// The shape the loose form got wrong: the CONTACT is filtered and the
 		// address row is not, so a retired address still comes back.
-		{"a joined table's filter, not the address row's",
-			`SELECT ce.email FROM contact c JOIN contact_email ce ON ce.contact_id = c.id WHERE c.archived_at IS NULL LIMIT 1`, false},
+		{
+			"a joined table's filter, not the address row's",
+			`SELECT ce.email FROM contact c JOIN contact_email ce ON ce.contact_id = c.id WHERE c.archived_at IS NULL LIMIT 1`, false,
+		},
 	} {
 		if got := filtersTheAddressRow(c.sql); got != c.filtered {
 			t.Errorf("%s: filtersTheAddressRow = %v, want %v", c.name, got, c.filtered)
