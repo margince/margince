@@ -26,7 +26,7 @@
 // below is currently unreachable. It becomes reachable with the mapping
 // writer, and it is silent when it arrives:
 //
-// finance_customer_link_organization_ux admits one LIVE link per
+// finance_customer_link_company_ux admits one LIVE link per
 // (connection, company). Merging two companies that each hold one on the
 // same connection therefore cannot move both. The merge repoints the
 // invoices and payments onto the survivor, moves the link only into a
