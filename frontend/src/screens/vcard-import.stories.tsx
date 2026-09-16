@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 import { VCardImport } from "./vcard-import";
 
@@ -41,7 +41,12 @@ export const Empty: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = await openDialog(canvasElement);
-    await expect(await canvas.findByTestId("vcard-import-file")).toBeVisible();
+    // The dialog ARRIVES: `overlay-arrive` (atoms.css) fades the scrim and the
+    // box in over --dur-move, so the dropzone is in the DOM a frame before it
+    // is visible, and a query that resolves on the node alone reads the
+    // half-arrived state. The settled dialog is what this story is about.
+    const dropzone = await canvas.findByTestId("vcard-import-file");
+    await waitFor(() => expect(dropzone).toBeVisible());
   },
 };
 
