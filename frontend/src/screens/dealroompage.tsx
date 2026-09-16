@@ -441,7 +441,7 @@ function RoomText({
   const dirty =
     title !== room.title || welcome !== (room.welcome_message ?? "");
   return (
-    <Panel title={t("roompage.text.title")} sub={t("roompage.text.sub")}>
+    <Panel title={t("roompage.text.title")}>
       <PanelBody>
         <div className="form-stack">
           <Field label={t("roompage.text.titleLabel")}>

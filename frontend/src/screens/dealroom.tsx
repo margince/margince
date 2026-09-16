@@ -200,7 +200,7 @@ function OpenRoomCard({
     return null;
   }
   return (
-    <Panel title={t("room.card.title")} sub={t("room.create.sub")}>
+    <Panel title={t("room.card.title")}>
       <PanelBody>
         <div className="card-actions">
           <Button onClick={() => setCreating(true)}>

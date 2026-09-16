@@ -119,7 +119,7 @@ export function PartnerCommissions({
   });
 
   return (
-    <Panel title={t("commission.panelTitle")} sub={t("commission.panelSub")}>
+    <Panel title={t("commission.panelTitle")}>
       <QueryGate query={query} pendingLabel={t("commission.panelTitle")}>
         {(entries) =>
           entries.length === 0 ? (

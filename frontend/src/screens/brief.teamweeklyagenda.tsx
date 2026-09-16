@@ -175,7 +175,6 @@ export function AgendaPanel({
   return (
     <Panel
       title={t("teamweekly.agenda.title")}
-      sub={t("teamweekly.agenda.sub")}
       titleAction={rows.length > 0 ? <CopyAgenda rows={rows} /> : undefined}
     >
       {rows.length === 0 && (

@@ -116,7 +116,7 @@ export function AiRoutingCard({
 
   if (!canSee) {
     return (
-      <Panel title={t("aiRouting.title")} sub={t("aiRouting.sub")}>
+      <Panel title={t("aiRouting.title")}>
         <PanelBody>
           <EmptyState>{t("aiRouting.withheld")}</EmptyState>
         </PanelBody>
@@ -348,7 +348,6 @@ function RoutingForm({
 
         <Panel
           title={t("aiRouting.lanes.title")}
-          sub={t("aiRouting.lanes.sub")}
           titleAction={
             onPriceSheet ? (
               <button
@@ -885,7 +884,7 @@ function RoutingPreview({
   const t = useT();
   if (!data) return null;
   return (
-    <Panel title={t("aiAdmin.preview")} sub={t("aiAdmin.shared")}>
+    <Panel title={t("aiAdmin.preview")}>
       <PanelBody>
         <AiFeatureTable rows={data.features} />
         {data.unused_tiers.length > 0 && (

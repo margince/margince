@@ -3,7 +3,7 @@
 
 import { type ReactNode, useId } from "react";
 import { Eyebrow } from "./eyebrow";
-import { Heading } from "./heading";
+import { Heading, type HeadingElement } from "./heading";
 import {
   type SectionDetail,
   type SectionState,
@@ -11,20 +11,31 @@ import {
 } from "./surfacestate";
 import "./panel.css";
 
+// Which element the title takes at each level. A table rather than an element
+// name built from the number, which would render a raw magnitude — and the
+// SIZE is not in it, because the head's type does not step with the outline: a
+// panel head is a panel head at either depth.
+const TITLE_ELEMENT: Readonly<Record<2 | 3, HeadingElement>> = {
+  2: "h2",
+  3: "h3",
+};
+
 // Panel is the titled-card shape Card does not offer: a header band, full-bleed
 // rows under it, and an optional footer for a figure that belongs to the whole
 // panel rather than to any one row.
 //
-// ONE band, and its height is fixed at `--panel-head-h` whatever the head
-// carries: a title alone, a title over a `sub`, a title beside a badge or a
-// button all draw the same measure, so a page of panels reads as a column of
-// titles at one interval. A floor is what this used to be, and a floor is an
-// invitation — a description raised the band here, a screen re-spaced it
-// there, and the same card stood at three heights on one page. So whatever
-// does not fit on one band is not header content: it goes in the body, as a
-// toolbar row or a `PanelBody`. What overruns INSIDE the band ends in an
-// ellipsis, and only the title block gives way — a badge squeezed to buy the
-// title room reads as a different control, or loses its label outright.
+// THE HEAD IS A TITLE AND, OPTIONALLY, THE VERBS THAT ACT ON IT. Never a
+// description: the title and the body are what give the panel its meaning, and
+// a sentence between them is a third voice saying what one of the two already
+// said. So the band carries a title alone or a title beside a badge or a
+// button, and both draw the same fixed `--panel-head-h`, which is what makes a
+// page of panels read as a column of titles at one interval. A floor is what
+// this used to be, and a floor is an invitation — a description raised the band
+// here, a screen re-spaced it there, and the same card stood at three heights
+// on one page. Whatever does not fit on one band is not header content: it goes
+// in the body, as a toolbar row or a `PanelBody`. What overruns INSIDE the band
+// ends in an ellipsis, and only the title gives way — a badge squeezed to buy
+// the title room reads as a different control, or loses its label outright.
 //
 // The header and the body are two different rhythms living in one box — that
 // band versus the body's padded content versus a row that wants to touch the
@@ -34,7 +45,6 @@ import "./panel.css";
 // siblings instead of fighting one slot that tries to be both.
 export function Panel({
   title,
-  sub,
   titleAction,
   tone,
   titleLevel,
@@ -44,25 +54,15 @@ export function Panel({
   className,
 }: Readonly<{
   title?: ReactNode;
-  // One line of description under the title, inside the same header band. It
-  // is here so that a card whose anatomy is otherwise exactly this one's —
-  // header band, full-bleed rows, a footer carrying the total — does not have
-  // to be a `Card` for the sake of one sentence. That trade is how the record
-  // page and settings came to draw two different cards: the sentence was the
-  // only thing Panel could not hold, so the caller changed surface instead of
-  // asking for the slot.
-  //
-  // A caller-translated node, like every other slot in this file. No copy
-  // lives in a primitive.
-  sub?: ReactNode;
   // Rendered right-aligned in the header, beside the title — a badge, a
   // button, a count. Absent leaves the title alone in its row.
   titleAction?: ReactNode;
   // The LEAD panel's tint: the one card on a page that ASKS FOR A MOVE rather
   // than reporting state, drawn with a tinted border, a tinted header band and
-  // the title at reading size so a reader finds it before the panels around
-  // it. This is not a palette — a second tinted panel on the same page is two
-  // leads, which is none.
+  // the title in the tone's own ink, so a reader finds it before the panels
+  // around it. A tone only TINTS — the band's measure and the title's size are
+  // the head's, whatever the tone. This is not a palette either: a second
+  // tinted panel on the same page is two leads, which is none.
   //
   // The three tones are three kinds of lead, not three colours to choose from:
   // "accent" is the ordinary ask; "warn" is a lead whose FINDING is the bad
@@ -83,6 +83,10 @@ export function Panel({
   // own title is already the h2 these sit under. A caller that knows its
   // surrounding outline says so rather than leaving a reader on a screen
   // reader two h2s that are not siblings.
+  //
+  // It moves the ELEMENT and nothing else. The band is one measure and its
+  // title is one size, so a nested panel does not announce its depth by
+  // shrinking — the outline says where it sits.
   titleLevel?: 2 | 3;
   // Verbs that CHANGE this panel, in their own band under the body — not one
   // more row, and not a footer, which reports rather than acts. A caller
@@ -117,22 +121,17 @@ export function Panel({
     >
       {title && (
         <header className="panel-head">
-          {/* The title and its description are ONE item in the header row, not
-              two: the row's far-end push anchors on this block, so a
-              titleAction lands at the end whether or not a description is
-              there. Rendered even with no `sub`, because a wrapper that comes
-              and goes is a second header shape, and the height the band
-              guarantees is measured on this one. */}
-          <div className="panel-head-text">
-            <Heading
-              size={titleLevel === 3 ? "medium" : "large"}
-              className="panel-title"
-              id={titleId}
-            >
-              {title}
-            </Heading>
-            {sub && <span className="panel-head-sub">{sub}</span>}
-          </div>
+          {/* The title is the row's far-end push: it absorbs the free space, so
+              a titleAction lands at the end of the band whatever the title's
+              length. */}
+          <Heading
+            size="medium"
+            as={TITLE_ELEMENT[titleLevel ?? 2]}
+            className="panel-title"
+            id={titleId}
+          >
+            {title}
+          </Heading>
           {titleAction}
         </header>
       )}

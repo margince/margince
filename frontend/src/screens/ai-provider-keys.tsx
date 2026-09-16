@@ -118,7 +118,7 @@ export function AiProviderKeysCard() {
     // no credentials — a claim about the DATA — where the truth is only that
     // which vendors are keyed is not this reader's to know.
     return (
-      <Panel title={t("aiProviderKeys.title")} sub={t("aiProviderKeys.sub")}>
+      <Panel title={t("aiProviderKeys.title")}>
         <PanelBody>
           <EmptyState>{t("aiProviderKeys.withheld")}</EmptyState>
         </PanelBody>
@@ -131,7 +131,7 @@ export function AiProviderKeysCard() {
   // reader auditing the page travels one column instead of reading six open
   // paste fields to find the one vendor that is not set up.
   return (
-    <Panel title={t("aiProviderKeys.title")} sub={t("aiProviderKeys.sub")}>
+    <Panel title={t("aiProviderKeys.title")}>
       <QueryGate query={query} pendingLabel={t("aiProviderKeys.title")}>
         {(list) => (
           <>

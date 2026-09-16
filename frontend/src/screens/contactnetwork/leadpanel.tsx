@@ -64,7 +64,6 @@ export function LeadPanel({
     <Panel
       tone="accent"
       title={verdict(route, mine, t)}
-      sub={t("contact.intro.leadEyebrow")}
       titleAction={
         <Badge tone={blocked ? undefined : "success"}>
           {blocked ?? t("contact.intro.leadRouteBadge")}

@@ -87,7 +87,7 @@ export const RichValues: Story = {
 // scans before reading anything else on the page.
 export const InACard: Story = {
   render: (args) => (
-    <Card title="At a glance" sub="Globex GmbH">
+    <Card title="At a glance">
       <FactList {...args} />
     </Card>
   ),

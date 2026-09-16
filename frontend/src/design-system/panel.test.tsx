@@ -275,7 +275,7 @@ function cssRules(css: string): readonly CssRule[] {
 // What a rule STYLES is the last compound of its selector: `.pe-memory
 // .panel-head` re-shapes the band, `.panel-head .panel-title` shapes the title
 // inside it, `.panel-head > .ext-unit-actions` an action beside it. Combinators
-// inside parentheses do not divide a compound, so `:has(.panel-head-sub)` stays
+// inside parentheses do not divide a compound, so `:has(.panel-title)` stays
 // part of the band it qualifies.
 function lastCompound(selector: string): string {
   let depth = 0;
@@ -289,8 +289,8 @@ function lastCompound(selector: string): string {
   return selector.slice(start);
 }
 
-// `.panel-head-text` and `.panel-head-sub` open with the same eleven characters
-// and are content, not the band.
+// A class whose name merely BEGINS with the band's — `.panel-head-count`, say —
+// is content inside it, not the band.
 function stylesTheBand(selector: string): boolean {
   return /^\.panel-head(?![\w-])/.test(lastCompound(selector));
 }
@@ -353,7 +353,11 @@ describe("the panel head is one band, fixed at the height every panel shares", (
     expect(declarations).toHaveLength(1);
   });
 
-  it("holds a description inside the band instead of growing for one", () => {
+  // The band's height is a constant, not a function of what the head holds. A
+  // `:has()` rule is how that stops being true without anyone editing the
+  // height: the band grows for one kind of content and a page of panels goes
+  // ragged.
+  it("never sizes the band from what the head carries", () => {
     expect(panelCss()).not.toMatch(/\.panel-head:has\(/);
   });
 
@@ -366,27 +370,25 @@ describe("the panel head is one band, fixed at the height every panel shares", (
     ]);
   });
 
-  // Nothing in the band wraps to a second line, because a second line is a
-  // second height. The title and the description end in an ellipsis instead,
-  // and only they give way: a badge or a button squeezed by a long title reads
-  // as a different control.
-  it("truncates the two lines and lets nothing else give way", () => {
-    const rules = cssRules(panelCss());
-    for (const selector of [".panel-head .panel-title", ".panel-head-sub"]) {
-      const declared = rules
-        .filter((rule) => rule.selector === selector)
-        .map((rule) => rule.block)
-        .join(";");
-      expect(declaredValue(declared, "white-space"), selector).toBe("nowrap");
-      expect(declaredValue(declared, "overflow"), selector).toBe("hidden");
-      expect(declaredValue(declared, "text-overflow"), selector).toBe(
-        "ellipsis",
-      );
-      expect(declaredValue(declared, "min-width"), selector).toBe("0");
-    }
+  // The title does not wrap, because a second line is a second height. It ends
+  // in an ellipsis instead, and it is the only thing that gives way: a badge or
+  // a button squeezed by a long title reads as a different control, or loses
+  // its label outright.
+  it("truncates the title and lets nothing else give way", () => {
+    const selector = ".panel-head .panel-title";
+    const declared = cssRules(panelCss())
+      .filter((rule) => rule.selector === selector)
+      .map((rule) => rule.block)
+      .join(";");
+    expect(declaredValue(declared, "white-space"), selector).toBe("nowrap");
+    expect(declaredValue(declared, "overflow"), selector).toBe("hidden");
+    expect(declaredValue(declared, "text-overflow"), selector).toBe("ellipsis");
+    expect(declaredValue(declared, "min-width"), selector).toBe("0");
+    // The push that keeps an action at the far end rides on the title, so a
+    // pair of actions cannot split around it the way a `:last-child` push lets
+    // them.
+    expect(declaredValue(declared, "margin-right"), selector).toBe("auto");
 
-    const stack = /(?:^|\n)\.panel-head-text\s*\{([^}]*)\}/.exec(panelCss());
-    expect(stack?.[1]).toMatch(/min-width:\s*0/);
     // The band itself does not clip: a menu or a tooltip opened from a button
     // in the head has to be able to leave it.
     const head = bandRules(panelCss()).find(
@@ -458,11 +460,14 @@ describe("panel.css is the only sheet that shapes the head band", () => {
     expect(own.map((rule) => rule.selector)).toContain(".panel-head");
   });
 
+  // No `.panel-head-*` class exists today — the head carries its title and its
+  // actions and nothing else — so the fixture names one a future head might
+  // add. That is the near miss: a detector reading it as the band would fail a
+  // sheet that never re-spaced anything.
   it("reads a rule about the head's CONTENT as content", () => {
     const inside = bandRules(`
       .ext-unit > .panel-head > .ext-unit-actions { flex: 0 1 auto; }
-      .panel-head-text { gap: 0; }
-      .panel-head-sub { color: var(--textPrimary); }
+      .panel-head-count { margin-inline-start: var(--space-2); }
     `);
     expect(inside).toEqual([]);
   });

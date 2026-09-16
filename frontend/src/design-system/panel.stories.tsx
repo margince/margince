@@ -76,13 +76,15 @@ export const WithFooter: Story = {
   },
 };
 
-// `sub`: one line of description inside the header band. The band is FIXED, so
-// the description rides inside it rather than raising it — put this story
-// beside `WithBody` above and the two heads are the same height.
-export const WithSub: Story = {
+// `titleLevel`: the outline, and only the outline. Put this beside `WithBody`
+// above — the two titles are drawn at the same size, and what differs is that
+// this one is an h3 a screen reader reads as sitting INSIDE the section above
+// it rather than beside it. A title that shrank with its depth said the group
+// mattered less than the box holding it, which is not what nesting means.
+export const NestedTitleLevel: Story = {
   args: {
     title: "Passports",
-    sub: "Credentials you minted for an agent. Every call re-authenticates.",
+    titleLevel: 3,
     children: (
       <PanelBody>
         <p>Two active, one revoked this morning.</p>
@@ -91,48 +93,12 @@ export const WithSub: Story = {
   },
 };
 
-// A description and an action in the same header. The title block absorbs the
-// row's free space, so the button sits at the far end of a two-line band the
-// same way it does on a one-line one — the layout the old `:last-child` push
-// could not draw once the title stopped being the header's only child.
-export const WithSubAndTitleAction: Story = {
-  args: {
-    title: "Purposes",
-    sub: "Why this installation may hold personal data. Each one is answerable on its own.",
-    titleAction: <Button>Add a purpose</Button>,
-    children: (
-      <>
-        <PanelRow>Contract performance</PanelRow>
-        <PanelRow>Legitimate interest — account management</PanelRow>
-      </>
-    ),
-  },
-};
-
-// The shape `sub` exists for: a header that explains itself, full-bleed rows,
-// and a footer carrying the figure for the whole panel. Before the slot a card
-// needing that sentence had to be a `Card` and lose the rows and the band.
-export const WithSubRowsAndFooter: Story = {
-  args: {
-    title: "Won deals",
-    sub: "Closed and invoiced. Reporting currency, at the day's rate.",
-    children: (
-      <>
-        <PanelRow>Renewal — €48,000</PanelRow>
-        <PanelRow>Expansion, EU — €12,500</PanelRow>
-        <PanelRow>Pilot — €4,200</PanelRow>
-      </>
-    ),
-    footer: <span className="t-num">€64,700.00</span>,
-  },
-};
-
-// The band under pressure: a name longer than the panel is wide, a description
-// under it, and two things at the far end that must keep their own size. Both
-// lines end in an ellipsis on one row each — the band stays exactly as tall as
-// every other head on the page, and the badge and the button are not squeezed
-// to buy the title room. Narrowed to 320px on purpose; widen the frame and the
-// ellipsis is the first thing to go.
+// The band under pressure: a name longer than the panel is wide, and two things
+// at the far end that must keep their own size. The title ends in an ellipsis on
+// its one row — the band stays exactly as tall as every other head on the page,
+// and the badge and the button are not squeezed to buy the title room. Narrowed
+// to 320px on purpose; widen the frame and the ellipsis is the first thing to
+// go.
 export const LongTitleTruncates: Story = {
   decorators: [
     (Story) => (
@@ -143,7 +109,6 @@ export const LongTitleTruncates: Story = {
   ],
   args: {
     title: "Brandt Automotive Zulieferbetriebe Deutschland GmbH & Co. KG",
-    sub: "Every purpose this installation holds personal data under, and who answers for it.",
     titleAction: (
       <>
         <Badge tone="accent">7</Badge>
@@ -247,16 +212,15 @@ export const AiTone: Story = {
   },
 };
 
-// The indigo head with a description under the title — who read the record over
-// what they read. A tone TINTS: put this beside `WithSubAndTitleAction` and the
-// two bands are the same height, because the ai head used to hug its own two
-// lines and stood shorter than every other panel on the page. What differs is
-// the ground, the hairline's colour and the title, and nothing else.
-export const AiToneWithSub: Story = {
+// A tone TINTS, and nothing else: put this beside `WithTitleAction` and the two
+// bands are the same height and the two titles the same size. What differs is
+// the ground, the hairline's colour and the title's colour — the indigo head
+// used to hug its own content and so stood at a height of its own on a page of
+// panels.
+export const AiToneRowsOnly: Story = {
   args: {
     tone: "ai",
     title: "What changed on this account",
-    sub: "Read from 41 records this morning. Nothing here is decided yet.",
     titleAction: <Badge tone="ai">AI-assisted</Badge>,
     children: (
       <>
@@ -429,7 +393,7 @@ const DETAIL: SectionDetail = {
 // and the caret stood hard against the card's edge.
 export const WithDisclosure: Story = {
   render: () => (
-    <Panel title="Overnight" sub="digest for 14/09/2026">
+    <Panel title="Overnight">
       <Disclosure summary="Sync details">
         <PanelRow>3 messages synced</PanelRow>
         <PanelRow>1 contact created</PanelRow>

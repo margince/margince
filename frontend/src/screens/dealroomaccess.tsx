@@ -126,7 +126,6 @@ export function DealRoomAccess({
   return (
     <Panel
       title={t("access.title")}
-      sub={t("access.sub")}
       titleAction={
         mayManage ? (
           <Button onClick={() => setInviting(true)}>

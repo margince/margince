@@ -584,11 +584,7 @@ export const Cards: Story = {
           of stacking a second raised edge on the first.
         </p>
       </Card>
-      <Card
-        title="Passports"
-        sub="Credentials you minted for an agent. Every call re-authenticates, so a revoked passport stops working mid-session."
-        actions={<Button>Mint</Button>}
-      >
+      <Card title="Passports" actions={<Button>Mint</Button>}>
         <p className="t-caption">
           The header comes from props: title over description across the full
           width, actions beside the pair.
@@ -638,18 +634,17 @@ export const Sections: Story = {
   render: () => (
     <div style={stack}>
       <SectionHeader title="Pipeline" />
-      <SectionHeader title="Pipeline" sub="Six open deals · 1.2M weighted" />
+      <SectionHeader title="Pipeline" />
       <SectionHeader
         title="Reporting currency"
-        sub="Every aggregate on this installation converts to it at the day's rate, and the rate that was used stays on the figure."
         actions={<Button>Change</Button>}
       />
       <Card>
-        <SectionHeader title="Contacts" sub="Three contacts at this company" />
+        <SectionHeader title="Contacts" />
         <p className="t-caption">Carol Wagner · Bob Schmidt · Alice Müller</p>
       </Card>
       <Card>
-        <SectionHeader title="Delivery" sub="Where webhooks are sent" />
+        <SectionHeader title="Delivery" />
         <SectionHeader title="Endpoints" level={3} />
         <p className="t-caption">Two subscriptions, both healthy.</p>
         <SectionHeader title="Dead-lettered" level={3} />
@@ -837,7 +832,7 @@ export const Tables: Story = {
   render: () => (
     <div style={stack}>
       <DealTableDemo />
-      <SectionHeader title="No rows" sub="The same table with rows={[]}" />
+      <SectionHeader title="No rows" />
       <DataTable
         label={"Deals"}
         columns={DEAL_COLUMNS}
@@ -978,7 +973,7 @@ function DrawerDemo() {
       {/* Something behind the drawer, because "the record stays legible" is
           the whole claim the placement makes and an empty canvas cannot show
           it being kept. */}
-      <SectionHeader title="Globex GmbH" sub="Enterprise · Munich" />
+      <SectionHeader title="Globex GmbH" />
       <p className="t-body">
         Anna Brandt replied on Tuesday and is waiting on pricing. Nobody has
         written since.

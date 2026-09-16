@@ -89,11 +89,7 @@ export function TagsPanel({
   const hidden = tags.length - visible.length;
 
   return (
-    <TagsFrame
-      title={t("tags.panelTitle")}
-      sub={tags.length > 0 ? t("tags.panelSub") : undefined}
-      bare={bare}
-    >
+    <TagsFrame title={t("tags.panelTitle")} bare={bare}>
       {tags.length === 0 ? (
         <div className="tagspanel-empty">
           <p className="tagspanel-empty-title">{t("tags.emptyTitle")}</p>
@@ -152,12 +148,10 @@ export function TagsPanel({
  */
 function TagsFrame({
   title,
-  sub,
   bare,
   children,
 }: Readonly<{
   title: string;
-  sub?: string;
   bare: boolean;
   children: ReactNode;
 }>) {
@@ -165,7 +159,7 @@ function TagsFrame({
     return <PanelBody>{children}</PanelBody>;
   }
   return (
-    <Panel title={title} sub={sub}>
+    <Panel title={title}>
       <PanelBody>{children}</PanelBody>
     </Panel>
   );

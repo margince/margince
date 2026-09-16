@@ -314,7 +314,7 @@ function collect(sel, spaces, sizes,   i, n, parts, subj, bare) {
     if (subj == "") continue
     if (spaces) print "spaced " subj
     if (sizes) print "sized " subj
-    # `.card`, `.panel-head:has(.panel-head-sub)` and `.card.card-inset` all
+    # `.card`, `.panel-head:has(.panel-title)` and `.card.card-inset` all
     # declare their own subject; `.panel-body > .empty` and `.settinglist >
     # .disclosure` place someone else's inside them.
     bare = parts[i]

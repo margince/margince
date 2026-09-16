@@ -191,8 +191,6 @@ export function RecordEmailAside({
   // back to the generic `recordmail.*` catalog entries.
   strings?: Readonly<{
     title: MessageKey;
-    subReply: MessageKey;
-    subFresh: MessageKey;
     reply: MessageKey;
     send: MessageKey;
   }>;
@@ -219,12 +217,10 @@ export function RecordEmailAside({
   };
   const effectiveReplyTo = replyTo ?? waitingReply;
   const title = strings?.title ?? "recordmail.title";
-  const subReply = strings?.subReply ?? "recordmail.sub.reply";
-  const subFresh = strings?.subFresh ?? "recordmail.sub.fresh";
   const replyLabel = strings?.reply ?? "recordmail.reply";
   const sendLabel = strings?.send ?? "recordmail.send";
   return (
-    <Panel title={t(title)} sub={effectiveReplyTo ? t(subReply) : t(subFresh)}>
+    <Panel title={t(title)}>
       <PanelBody>
         <Button variant="primary" onClick={() => setComposing(true)}>
           <Mail aria-hidden />

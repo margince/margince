@@ -549,7 +549,6 @@ function InstallationProfileDialog({
         <SectionHeader
           level={3}
           title={t("installationSettings.currencyTitle")}
-          sub={t("installationSettings.currencySub")}
         />
         <Field
           label={t("installationSettings.baseCurrency")}

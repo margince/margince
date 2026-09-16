@@ -121,7 +121,6 @@ export function AccountArc({
     <Panel
       title={t("contact.meeting.arc")}
       titleLevel={3}
-      sub={t("contact.meeting.arcSub")}
       tone={plan.generated_by === "model" ? "ai" : undefined}
     >
       {plan.account_arc.map((moment) => (

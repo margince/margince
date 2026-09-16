@@ -333,7 +333,6 @@ function DocumentSetRow({
         <SectionHeader
           level={3}
           title={set.name}
-          sub={set.topic_statement}
           actions={
             canManage ? (
               <Button

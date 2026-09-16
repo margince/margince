@@ -30,7 +30,6 @@ it("renders the server focus even when the queue page contains different rows", 
       (row) => row.textContent,
     ),
   ).toEqual(rows.slice(0, 6).map((row) => row.title));
-  expect(screen.getByText("6 focus cards")).toBeTruthy();
 });
 
 it("opens the full queue instead of growing focus when more pages exist", () => {

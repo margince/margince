@@ -261,7 +261,6 @@ export function BuyerBoard({
         {docs.data && threads.data ? (
           <DocumentBoard
             title={t("buyer.docs.title")}
-            sub={t("buyer.docs.sub")}
             groups={DOCUMENT_GROUPS.map((g) => ({
               key: g.key,
               label: t(g.labelKey),

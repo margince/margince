@@ -68,17 +68,6 @@ export function WeeklySection() {
     <section id="brief-weekly">
       <Panel
         title={t("brief.panel.weekly")}
-        sub={
-          review.data
-            ? t("brief.weekly.weekOf", {
-                day: formatDate(
-                  middayInstant(review.data.local_week_start, recordZone),
-                  locale,
-                  recordZone,
-                ),
-              })
-            : undefined
-        }
         // The mark and the way out of the week, in that order.
         //
         // FROZEN is the claim that separates this panel from every other on

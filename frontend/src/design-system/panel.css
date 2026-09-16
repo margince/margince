@@ -15,10 +15,11 @@
 
 /* The header band, and its rule runs the full width of the card.
  *
- * ONE height, and it is fixed: --panel-head-h, whatever the head carries. A
- * title alone, a title over a description, a title beside a badge or a button
- * all draw the same band, so a reader scanning a page of panels reads a column
- * of titles at one interval instead of a ragged one. A floor is what this used
+ * ONE height, and it is fixed: --panel-head-h, whatever the head carries. The
+ * head is a title and, optionally, the verbs that act on it — never a
+ * description — so a title alone and a title beside a badge or a button draw
+ * the same band, and a reader scanning a page of panels reads a column of
+ * titles at one interval instead of a ragged one. A floor is what this used
  * to be, and a floor is an invitation: a description raised the band here, two
  * screens then re-spaced it there, and the same card stood at three heights.
  * What does not fit on one band is not header content — a toolbar row or a
@@ -45,52 +46,35 @@
   border-bottom: 1px solid var(--borderSubtle);
 }
 /* The zone's title in the display face: the one word a reader finds a zone
- * by, so it is set as a heading rather than as a label on a card. */
+ * by, so it is set as a heading rather than as a label on a card.
+ *
+ * It absorbs the row's free space, so whatever comes after it (a badge, a
+ * button, two of them) sits at the far end rather than crowding it. The push is
+ * anchored on the title rather than on the row's last child: `:last-child` can
+ * only move ONE node, so a pair of actions splits with one of them still
+ * crowding the title.
+ *
+ * It ends in an ellipsis rather than in a second row: the band's height is
+ * fixed, so a title long enough to wrap would otherwise be clipped mid-letter
+ * with nothing to say it had been. A record named by a legal entity is the case
+ * — the ellipsis is what tells a reader the name goes on, and the full string is
+ * still the element's text for a screen reader and for the pointer. */
 .panel-head .panel-title {
   font-family: var(--fontFamilyHeading);
   color: var(--textPrimary);
-}
-
-/* The title and its description are one stacked item, and that item absorbs the
- * row's free space — so whatever comes after it (a badge, a button, two of
- * them) sits at the far end rather than crowding the title.
- *
- * The push is anchored on the title block rather than on the row's last child.
- * `:last-child` can only move ONE node, so a pair of actions splits with one of
- * them still crowding the title, and it identifies an action by NOT being an
- * `h2` — a test that stops being true the moment the title carries a
- * description of its own. */
-.panel-head-text {
-  display: flex;
-  flex-direction: column;
-  /* No gap: the two lines' own leading is already the interval between them,
-     and inside a fixed band a gap on top of it is what pushes the pair past the
-     band's edges. The stack measures 35px of the 56 the band gives it. */
-  gap: 0;
   min-width: 0;
   margin-right: auto;
-}
-
-/* Both lines of the head end in an ellipsis rather than in a second row: the
- * band's height is fixed, so a title long enough to wrap would otherwise be
- * clipped mid-letter with nothing to say it had been. A record named by a
- * legal entity is the case — the ellipsis is what tells a reader the name goes
- * on, and the full string is still the element's text for a screen reader and
- * for the pointer. */
-.panel-head .panel-title,
-.panel-head-sub {
-  min-width: 0;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 
-/* Only the title block gives way. A badge, a button or a count is sized by its
- * own words, and a shrunken one reads as a different control — or loses its
- * label to the ellipsis above. `:where()` carries no specificity, so a caller
- * whose action genuinely can give way (a wrapping action strip) says so with an
+/* Only the title gives way. A badge, a button or a count is sized by its own
+ * words, and a shrunken one reads as a different control — or loses its label
+ * to the ellipsis above. `:where()` carries no specificity, so a caller whose
+ * action genuinely can give way (a wrapping action strip) says so with an
  * ordinary class of its own and wins without depending on sheet order. */
-.panel-head > :where(:not(.panel-head-text)) {
+.panel-head > :where(:not(.panel-title)) {
   flex-shrink: 0;
 }
 

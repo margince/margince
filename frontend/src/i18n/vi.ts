@@ -76,8 +76,6 @@ export const vi = {
   "aiAdmin.editBinding": "Sửa liên kết dùng chung",
   "aiAdmin.effect": "Tác động",
   "aiAdmin.advanced": "Nâng cao: liên kết mô hình dùng chung",
-  "aiAdmin.shared":
-    "Các liên kết này được dùng chung. Kiểm tra mọi hoạt động bị ảnh hưởng trước khi lưu.",
   "aiAdmin.unused": "Không được hoạt động hiện có sử dụng: {tiers}",
   "aiAdmin.inputRate": "Đầu vào {input} mỗi 1 triệu token",
   "aiAdmin.rates": "Đầu vào {input} · Đầu ra {output} mỗi 1 triệu token",
@@ -197,8 +195,6 @@ export const vi = {
   "brief.feed.incomplete":
     "Chưa tải được mục nào. Không thể kiểm tra một phần công việc.",
   "brief.feed.fullWorklist": "Mở danh sách công việc đầy đủ",
-  "brief.feed.visible_one": "{count} thẻ ưu tiên",
-  "brief.feed.visible_other": "{count} thẻ ưu tiên",
   "brief.week.workRecorded": "Có công việc hoàn thành trong tuần.",
   "brief.week.leads": "Đã phân công {count} khách hàng tiềm năng.",
   "brief.week.responses":
@@ -446,7 +442,6 @@ export const vi = {
 
   "ext.notFound":
     "Bản cài đặt này không bật tiện ích mở rộng nào tên “{name}”.",
-  "ext.operations": "Các thao tác đã công bố",
 
   "search.placeholder":
     "Tìm liên hệ, công ty, deal, dự án, sản phẩm, hoạt động, lead…",
@@ -664,7 +659,6 @@ export const vi = {
   "deal.attributionSourced": "Mang deal này về (được hoa hồng)",
   "deal.attributionInfluenced": "Hỗ trợ deal đã có sẵn (không hoa hồng)",
   "partnerDeals.panelTitle": "Deal đã mang về",
-  "partnerDeals.panelSub": "Các deal ở công ty khác đến từ đối tác này",
   "partnerDeals.none": "Chưa mang về deal nào",
   "partnerDeals.column.deal": "Thuộc deal",
   "partnerDeals.column.customer": "Khách hàng",
@@ -672,8 +666,6 @@ export const vi = {
   "partnerDeals.column.amount": "Giá trị deal",
   "partnerDeals.column.status": "Trạng thái",
   "commission.panelTitle": "Hoa hồng",
-  "commission.panelSub":
-    "Đối tác này đã kiếm được bao nhiêu từ các deal họ mang về",
   "commission.none": "Chưa kiếm được gì",
   "commission.column.deal": "Thuộc deal",
   "commission.column.amount": "Đã kiếm",
@@ -1119,8 +1111,6 @@ export const vi = {
   "room.card.contacts": "{invited} được mời · {active} đã đăng nhập",
   "room.card.lastSeen": "Người mua xem lần cuối: {when}",
   "room.card.open": "Mở Deal Room",
-  "room.create.sub":
-    "Một không gian người mua vào bằng liên kết để đọc những gì bạn chia sẻ và trao đổi về chúng.",
   "room.create.open": "Mở một Deal Room",
   "room.create.confirm": "Mở",
   "room.create.titleLabel": "Tiêu đề phòng",
@@ -1155,7 +1145,6 @@ export const vi = {
   "roompage.banner.liveUntil":
     "Đang hoạt động. Quyền truy cập kết thúc vào {when}.",
   "roompage.text.title": "Tiêu đề và lời chào",
-  "roompage.text.sub": "Điều người mua đọc đầu tiên. Họ thấy ngay.",
   "roompage.text.titleLabel": "Tiêu đề phòng",
   "roompage.text.welcomeLabel": "Lời chào",
   "roompage.viewAsBuyer": "Xem như người mua",
@@ -1163,7 +1152,6 @@ export const vi = {
   "roompage.previewNotYours":
     "Quyền truy cập của bạn với deal này không bao gồm bản xem trước cho người mua.",
   "access.title": "Quyền truy cập",
-  "access.sub": "Ai được vào, và mỗi người được làm gì.",
   "access.invite": "Mời",
   "access.empty": "Chưa mời ai.",
   "access.cap.view": "Chỉ đọc",
@@ -1214,7 +1202,6 @@ export const vi = {
     "Phiên của họ kết thúc ngay và liên kết ngừng hoạt động. Bình luận của họ vẫn hiển thị và ghi tên. Không thể khôi phục bằng cách xin liên kết.",
   "access.changeCapabilityTitle": "{name} được làm gì?",
   "contactdealrooms.title": "Deal Room",
-  "contactdealrooms.sub": "Các phòng liên hệ này vẫn có thể vào.",
   "contactdealrooms.open": "Mở",
   "contactdealrooms.seatGone": "Địa chỉ này không còn chỗ trong phòng đó.",
   "contactdealrooms.cut":
@@ -1856,8 +1843,6 @@ export const vi = {
   "co.profileField.industry": "Ngành",
   "co.profileField.history": "Lịch sử",
   "co.narrative.title": "Họ làm gì",
-  "co.narrative.sub":
-    "Câu chuyện của tài khoản, theo cách trang web của họ kể. Hãy sửa bất cứ điều gì sai - một chỉnh sửa sẽ được giữ lại và lần đọc tiếp theo sẽ không ghi đè lên nó.",
   "co.narrative.add": "Thêm",
   "co.contacts.engagement": "Trạng thái liên hệ",
   "co.contacts.lastInteraction": "Trao đổi gần nhất",
@@ -2131,7 +2116,6 @@ export const vi = {
   "tags.columnHeaderPartial": "Tag (danh sách rút gọn)",
   "tags.loading": "Đang tải tag…",
   "tags.panelTitle": "Tag",
-  "tags.panelSub": "Mở tag, hoặc dùng menu của nó để quản lý gán này",
   "tags.add": "Thêm tag",
   "tags.more": "+{count} nữa",
   "tags.showLess": "Thu gọn",
@@ -2608,7 +2592,6 @@ export const vi = {
   "reviewTemplates.save": "Lưu mẫu",
   "reviewTemplates.edit": "Sửa câu hỏi",
   "reviewTemplates.title": "Câu hỏi đánh giá kết quả",
-  "reviewTemplates.sub": "Những gì được hỏi khi một thương vụ thắng hoặc thua.",
   "reviewTemplates.empty": "Chưa thiết lập câu hỏi đánh giá",
   "reviewTemplates.retired": "Đã ngừng dùng",
   "reviewTemplates.required": "(bắt buộc)",
@@ -2769,7 +2752,6 @@ export const vi = {
   "deal.offerRevision": "Bản",
   "deal.offersEmpty": "Chưa có báo giá",
 
-  "offer.revision": "Bản {revision}",
   "offer.backToDeal": "Quay lại deal",
   "offer.totals": "Tổng",
   "offer.net": "Trước thuế",
@@ -2842,7 +2824,6 @@ export const vi = {
   "decision.status.expired": "Đã hết hạn",
 
   "brief.panel.weekly": "Tổng kết tuần",
-  "brief.weekly.weekOf": "Tuần từ {day}",
   "brief.weekly.learnings.title": "Nhận xét cần xem xét",
   "brief.weekly.learnings.worked": "Kết quả tích cực",
   "brief.weekly.learnings.didNotWork": "Kết quả chưa thành công",
@@ -2949,8 +2930,6 @@ export const vi = {
   "teamweekly.movement.meetings": "Cuộc họp đã diễn ra",
   "teamweekly.movement.leads": "Lead được phân",
   "teamweekly.agenda.title": "Chương trình họp thứ Hai",
-  "teamweekly.agenda.sub":
-    "Các mục của chính tuần này, việc cần nêu trước nằm trên cùng. Mỗi thành viên một mục, kể cả người có tuần tốt.",
   "teamweekly.agenda.empty":
     "Không đọc được tuần của bất kỳ ai trong nhóm này, nên không có gì để mang tới buổi họp.",
   "teamweekly.agenda.summary": "{count} mục cho thứ Hai, bắt đầu với {first}.",
@@ -2966,7 +2945,6 @@ export const vi = {
   "teamweekly.focus.strong_week": "Đáng để học theo",
   "teamweekly.focus.quiet_week": "Chưa xác định ưu tiên",
 
-  "plan.sub": "Điều bạn đã cam kết, và điều bạn cần để làm được.",
   "plan.loading": "Đang đọc kế hoạch của bạn",
   "plan.empty": "Chưa có gì trong kế hoạch.",
   "plan.none": "Bạn chưa lập kế hoạch cho tuần này.",
@@ -2998,8 +2976,6 @@ export const vi = {
   "plan.contract.edit": "Sửa",
   "plan.contract.save": "Lưu",
   "plan.contract.cancel": "Hủy",
-  "plan.contract.capacityLine":
-    "Tuần đó đã có {meetings} cuộc họp và {tasks} công việc.",
   "plan.contract.crowded": "Tuần đó đã kín",
   "plan.contract.crowdedBody":
     "{committed} việc đã được đặt và bạn đã ghi {commitments} cam kết. Sẽ phải bỏ bớt điều gì đó.",
@@ -3068,7 +3044,6 @@ export const vi = {
   "brief.act": "Đánh dấu xong",
   "brief.dismiss": "Bỏ qua",
 
-  "brief.digestFor": "tổng hợp ngày {date}",
   "brief.digestSynced": "Chi tiết đồng bộ",
   "brief.digestContacts": "Liên hệ đã tạo",
   "brief.digestCompanies": "Công ty đã tạo",
@@ -3200,8 +3175,6 @@ export const vi = {
   "deepread.kindOther": "Khác",
 
   "transcriptread.title": "Đọc bản chép lời này",
-  "transcriptread.sub":
-    "Tìm các bước tiếp theo và cam kết mà cuộc trò chuyện này nêu ra. Không có gì được ghi cho đến khi bạn xác nhận.",
   "transcriptread.cta": "Đọc bản chép lời",
   "transcriptread.starting": "Đang bắt đầu…",
   "transcriptread.unavailable":
@@ -3494,8 +3467,6 @@ export const vi = {
   "docs.category.message": "Tệp đính kèm tin nhắn",
   "docs.category.other": "Khác",
   "files.title": "Tệp",
-  "files.sub":
-    "Những gì bạn đã tải lên deal này và những gì đến cùng email và tin nhắn của nó.",
   "files.empty":
     "Chưa có tệp nào trên deal này. Hãy tải lên một tệp hoặc liên kết một email có đính kèm.",
   "files.origin": "Tệp đính kèm của tin nhắn từ {who}, {when}",
@@ -3520,7 +3491,6 @@ export const vi = {
   "docs.state.superseded": "Đã thay thế",
   "log.title": "Ghi nhận hoạt động",
   "log.addTask": "Thêm công việc",
-  "log.sub": "một ghi chú hay công việc, thẳng lên timeline này",
   "log.kind": "Loại",
   "log.kindNote": "Ghi chú",
   "log.kindTask": "Công việc",
@@ -6237,8 +6207,6 @@ export const vi = {
 
   "client.back": "Quay lại Margince",
   "client.title": "Margince ngay cạnh hộp thư của bạn",
-  "client.sub":
-    "bề mặt tiện ích mở rộng — không khung ứng dụng, biết bản ghi đang xem",
   "client.sender": "Người gửi",
   "client.lookup": "Tra cứu",
   "client.open360": "Mở màn hình 360",
@@ -6251,7 +6219,6 @@ export const vi = {
     "Mọi lượt ghi nhận đều được quy trách và kiểm toán được.",
 
   "book.title": "Đặt lịch họp",
-  "book.sub": "lịch trống lấy trực tiếp từ lịch đã kết nối",
   "book.min15": "15 phút",
   "book.min30": "30 phút",
   "book.min60": "60 phút",
@@ -6262,7 +6229,6 @@ export const vi = {
   "book.tellThemYourself":
     "Margince không gửi thư mời — bạn hãy tự báo giờ hẹn cho người tham dự.",
   "book.failed": "Việc đặt lịch không thành — không có gì được lên lịch.",
-  "book.publicSub": "chọn một khung giờ — không cần tài khoản",
   "book.name": "Tên của bạn",
   "book.email": "Email của bạn",
   "book.consentWording":
@@ -6348,8 +6314,6 @@ export const vi = {
     "Hãy đặt câu hỏi ngay dưới tài liệu liên quan; câu hỏi sẽ đến thẳng {steward}.",
   "buyer.closedOn": "Đã đóng vào {date}",
   "room.docs.title": "Tài liệu",
-  "room.docs.sub":
-    "Những gì người mua có thể đọc, kèm cuộc trao đổi về từng tài liệu bên dưới.",
   "room.docs.empty": "Chưa có tài liệu nào trong phòng.",
   "room.docs.fileLabel": "Tệp từ deal này",
   "room.docs.fileHint":
@@ -6365,8 +6329,6 @@ export const vi = {
   "room.docs.group.security_privacy": "Bảo mật & Quyền riêng tư",
   "room.docs.group.delivery_operations": "Triển khai & Vận hành",
   "buyer.docs.title": "Tài liệu",
-  "buyer.docs.sub":
-    "Những gì đã được chia sẻ với bạn, kèm cuộc trao đổi về từng tài liệu bên dưới.",
   "buyer.docs.empty": "Chưa có tài liệu.",
   "buyer.docs.download": "Tải xuống {title}",
   "buyer.docs.downloadFailed":
@@ -6375,7 +6337,6 @@ export const vi = {
   "buyer.poweredBy": "Powered by",
   "buyer.poweredByMargince": "Powered by Margince",
   "threads.roomTitle": "Toàn bộ phòng",
-  "threads.roomSub": "Mọi điều không thuộc về một tài liệu cụ thể.",
   "threads.aboutThis_other": "{count} chủ đề về tài liệu này",
   "threads.aboutThis_one": "{count} chủ đề về tài liệu này",
   "threads.askAbout": "Hỏi về tài liệu này",
@@ -6403,13 +6364,9 @@ export const vi = {
   "deal360.verdict.blocked": "Bị chặn",
   "deal360.verdict.cold": "Nguội",
   "dealmail.title": "Email",
-  "dealmail.sub.reply": "Họ đã viết và chưa ai trả lời.",
-  "dealmail.sub.fresh": "Viết cho những liên hệ trong deal này.",
   "dealmail.reply": "Soạn thư trả lời",
   "dealmail.send": "Gửi email",
   "recordmail.title": "Email",
-  "recordmail.sub.reply": "Vẫn còn một câu trả lời đang chờ.",
-  "recordmail.sub.fresh": "Viết cho họ.",
   "recordmail.reply": "Soạn thư trả lời",
   "recordmail.send": "Viết email",
   "deal360.rewrite": "Viết lại",
@@ -6687,12 +6644,8 @@ export const vi = {
   "settings.home.yours": "C\u00e0i \u0111\u1eb7t c\u1ee7a b\u1ea1n",
   "settings.home.manage":
     "Nh\u1eefng g\u00ec b\u1ea1n c\u00f3 th\u1ec3 thay \u0111\u1ed5i",
-  "settings.home.manageSub":
-    "C\u00e1c c\u00e0i \u0111\u1eb7t b\u1ea1n c\u00f3 quy\u1ec1n ch\u1ec9nh s\u1eeda.",
   "settings.home.lookUp":
     "Nh\u1eefng g\u00ec b\u1ea1n c\u00f3 th\u1ec3 tra c\u1ee9u",
-  "settings.home.lookUpSub":
-    "B\u1ea1n c\u00f3 th\u1ec3 \u0111\u1ecdc; vi\u1ec7c thay \u0111\u1ed5i kh\u00f4ng thu\u1ed9c vai tr\u00f2 c\u1ee7a b\u1ea1n.",
   "settings.home.rolesLabel": "Vai tr\u00f2 c\u1ee7a b\u1ea1n",
   "settings.home.seatLabel": "Ch\u1ed7 ng\u1ed3i c\u1ee7a b\u1ea1n",
   "settings.home.seat.full":
@@ -7653,8 +7606,6 @@ export const vi = {
   "installationSettings.companySub":
     "Tên của bản cài đặt này và múi giờ dùng để tính mọi kỳ báo cáo.",
   "installationSettings.currencyTitle": "Tiền tệ",
-  "installationSettings.currencySub":
-    "Đơn vị tiền tệ duy nhất mà mọi số liệu tổng hợp quy đổi về.",
   "installationSettings.dateFormat": "Định dạng ngày",
   "installationSettings.timeFormat": "Định dạng giờ",
   "installationSettings.formatsHint":
@@ -7818,7 +7769,6 @@ export const vi = {
     "Tầng định tuyến cục bộ cao hơn; kiểm tra điểm cuối",
   "aiRouting.lane.embeddings": "Tìm kiếm và truy hồi trên dữ liệu của bạn",
   "aiRouting.lanes.title": "Các làn định tuyến",
-  "aiRouting.lanes.sub": "Rẻ nhất trước. Tác vụ chọn làn; làn chọn mô hình.",
   "aiRouting.priceSheet": "Bảng giá",
   "aiRouting.provider.label": "Nhà cung cấp",
   "aiRouting.change": "Đổi",
@@ -7828,8 +7778,6 @@ export const vi = {
   "aiRouting.effect":
     "Ràng buộc đã lưu sẽ đến mọi tiến trình trong vòng một phút, không cần khởi động lại.",
   "aiProviderKeys.title": "Khóa nhà cung cấp mô hình",
-  "aiProviderKeys.sub":
-    "Thông tin xác thực mà bản cài đặt này dùng để gọi từng nhà cung cấp mô hình. Khóa được niêm phong trong kho khóa và không bao giờ hiển thị lại — hãy thay thế nếu bạn cần đổi.",
   "aiProviderKeys.keyless": "Không cần khoá",
   "aiProviderKeys.field": "Khoá API",
   "aiProviderKeys.save": "Lưu khoá",
@@ -7859,8 +7807,6 @@ export const vi = {
     "Danh sách mô hình là bảng giá tính đến {date}. Mọi ID mới hơn mà nhà cung cấp của bạn phục vụ cũng dùng được — cứ gõ vào.",
   "aiRouting.sheetUnknown":
     "Danh sách mô hình lấy từ bảng giá, mà bạn không có quyền đọc. Mọi ID nhà cung cấp của bạn phục vụ đều dùng được — cứ gõ vào.",
-  "aiRouting.sub":
-    "Mô hình nào phục vụ từng bậc. Thay đổi có hiệu lực mà không cần khởi động lại; mọi tiến trình sẽ nhận trong vòng một phút.",
   "aiRouting.unboundTitle": "Chưa có mô hình nào được ràng buộc",
   "aiRouting.unboundUnkeyed":
     "Cài đặt này chưa ràng buộc mô hình nào nên các tính năng AI đang tắt. Hãy thêm khóa nhà cung cấp mô hình bên dưới, rồi ràng buộc các tầng tại đây. Bản triển khai cũng có thể khai báo ràng buộc đầu tiên tại seeds.ai_routing trong margince.yaml; mục này chỉ được đọc một lần khi tạo tổ chức.",
@@ -8206,7 +8152,6 @@ export const vi = {
   "contact.graph.withheldAccount":
     "Một số liên hệ tại công ty này không được hiển thị.",
   "contact.intro.askFirstName": "Nhờ {name} giới thiệu",
-  "contact.intro.leadEyebrow": "Hướng được đề xuất",
   "contact.intro.leadRouteBadge": "Hướng mạnh",
   "contact.intro.heroDirect": "quen trực tiếp",
   "contact.intro.heroIndirect": "tiếp cận qua {through}",
@@ -8264,8 +8209,6 @@ export const vi = {
   "contact.intro.ownerYou": "bạn",
   "contact.intro.ownerNobody": "không ai",
   "contact.intro.relayTitle": "Tiến trình giới thiệu",
-  "contact.intro.relaySubOpen": "Việc chuyển tiếp đã đi tới đâu.",
-  "contact.intro.relaySubNone": "Không có lời nhờ nào đang mở.",
   "contact.intro.stepRoute": "Chọn hướng",
   "contact.intro.stepRoutePick": "chọn người để nhờ",
   "contact.intro.stepRequest": "Lời nhờ",
@@ -8346,7 +8289,6 @@ export const vi = {
   "contact.intro.answerDeclineHelp":
     "Lời nhờ khép lại. Bạn có thể cho biết lý do.",
   "contact.intro.asksTitle": "Lời giới thiệu",
-  "contact.intro.asksSub": "Những lời nhờ bạn có tham gia, mới nhất trước.",
   "contact.intro.answerAction": "Trả lời",
   "contact.intro.completeIntroducedAction": "Đánh dấu đã giới thiệu",
   "contact.intro.completeNameDroppedAction": "Đánh dấu đã dùng tên",
@@ -9767,7 +9709,6 @@ export const vi = {
   "stageAutomation.intro":
     "\u0110i\u1ec1u g\u00ec \u0111\u00e3 x\u1ea3y ra v\u1edbi c\u00e1c b\u01b0\u1edbc chuy\u1ec3n giai \u0111o\u1ea1n m\u00e0 Margince \u0111\u1ec1 xu\u1ea5t. \u1ede \u0111\u00e2y kh\u00f4ng thay \u0111\u1ed5i g\u00ec c\u1ea3.",
   "stageAutomation.pipeline": "Quy tr\u00ecnh",
-  "stageAutomation.window": "{days} ng\u00e0y qua",
   "stageAutomation.transition": "B\u01b0\u1edbc chuy\u1ec3n",
   "stageAutomation.reviewed": "\u0110\u00e3 tr\u1ea3 l\u1eddi",
   "stageAutomation.reviewedHint":

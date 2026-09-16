@@ -56,13 +56,6 @@ export function BriefFeed({
         title={t(
           day?.scope === "team" ? "brief.feed.teamTitle" : "brief.feed.title",
         )}
-        sub={
-          day?.summary
-            ? plural("brief.feed.visible", rows.length, {
-                count: formatNumber(rows.length, locale),
-              })
-            : undefined
-        }
         titleAction={
           changed ? (
             <a className="entity-link" href={changed.href}>

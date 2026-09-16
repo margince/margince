@@ -63,8 +63,6 @@ export const en = {
   "aiAdmin.editBinding": "Edit shared binding",
   "aiAdmin.effect": "Effect",
   "aiAdmin.advanced": "Advanced: shared model bindings",
-  "aiAdmin.shared":
-    "These bindings are shared. Review every affected activity before saving.",
   "aiAdmin.unused": "Not used by current shipped activities: {tiers}",
   "aiAdmin.inputRate": "Input {input} per 1M tokens",
   "aiAdmin.rates": "Input {input} · Output {output} per 1M tokens",
@@ -180,8 +178,6 @@ export const en = {
   "brief.readings.unavailable": "Unknown",
   "brief.feed.incomplete": "No items loaded. Some work could not be checked.",
   "brief.feed.fullWorklist": "Open full work queue",
-  "brief.feed.visible_one": "{count} focus card",
-  "brief.feed.visible_other": "{count} focus cards",
   "brief.week.workRecorded": "Work completed this week.",
   "brief.week.leads": "{count} leads assigned.",
   "brief.week.responses": "{count} leads answered within target.",
@@ -450,7 +446,6 @@ export const en = {
   // unit surface the core catalogs own.
   "ext.notFound":
     "No extension named “{name}” is enabled on this installation.",
-  "ext.operations": "Published operations",
 
   // The reference extension's own screen (#/ext/notes) carries no keys here:
   // a unit that ships a screen ships its copy with it, under
@@ -675,8 +670,6 @@ export const en = {
   "deal.attributionInfluenced":
     "Helped on a deal we already had (no commission)",
   "partnerDeals.panelTitle": "Deals they brought",
-  "partnerDeals.panelSub":
-    "Deals at other companies that came through this partner",
   "partnerDeals.none": "No deals brought in yet",
   "partnerDeals.column.deal": "Deal",
   "partnerDeals.column.customer": "Customer",
@@ -684,7 +677,6 @@ export const en = {
   "partnerDeals.column.amount": "Deal value",
   "partnerDeals.column.status": "Status",
   "commission.panelTitle": "Commission",
-  "commission.panelSub": "What this partner has earned on deals they brought",
   "commission.none": "Nothing earned yet",
   "commission.column.deal": "Deal",
   "commission.column.amount": "Earned",
@@ -1205,8 +1197,6 @@ export const en = {
   "room.card.contacts": "{invited} invited · {active} signed in",
   "room.card.lastSeen": "Last seen by a buyer: {when}",
   "room.card.open": "Open the Deal Room",
-  "room.create.sub":
-    "A space the buyer enters by link to read what you share and discuss it.",
   "room.create.open": "Open a Deal Room",
   "room.create.confirm": "Open",
   "room.create.titleLabel": "Room title",
@@ -1238,7 +1228,6 @@ export const en = {
   "roompage.banner.archived": "Archived. Nobody can enter this room.",
   "roompage.banner.liveUntil": "Live. Access ends on {when}.",
   "roompage.text.title": "Title and welcome",
-  "roompage.text.sub": "What the buyer reads first. They see it straight away.",
   "roompage.text.titleLabel": "Room title",
   "roompage.text.welcomeLabel": "Welcome message",
   "roompage.viewAsBuyer": "View as buyer",
@@ -1250,7 +1239,6 @@ export const en = {
   "roompage.previewNotYours":
     "Your access to this deal does not include the buyer preview.",
   "access.title": "Access",
-  "access.sub": "Who may enter, and what each person may do.",
   "access.invite": "Invite",
   "access.empty": "Nobody has been invited yet.",
   "access.cap.view": "Read only",
@@ -1299,7 +1287,6 @@ export const en = {
     "Their session ends now and their link stops working. Their comments stay visible and attributed. Access cannot be restored by them asking for a link.",
   "access.changeCapabilityTitle": "What may {name} do?",
   "contactdealrooms.title": "Deal Rooms",
-  "contactdealrooms.sub": "Rooms this contact can still enter.",
   "contactdealrooms.open": "Open",
   "contactdealrooms.seatGone":
     "This address no longer holds a seat in that room.",
@@ -1947,8 +1934,6 @@ export const en = {
   "co.profileField.industry": "Industry",
   "co.profileField.history": "History",
   "co.narrative.title": "What they do",
-  "co.narrative.sub":
-    "The account's own story, as its website tells it. Correct anything wrong - a correction sticks, and the next read will not overwrite it.",
   "co.narrative.add": "Add",
   "co.contacts.engagement": "Engagement",
   "co.contacts.lastInteraction": "Last exchange",
@@ -2227,7 +2212,6 @@ export const en = {
   "tags.columnHeaderPartial": "Tags (partial list)",
   "tags.loading": "Loading tags…",
   "tags.panelTitle": "Tags",
-  "tags.panelSub": "Open a tag, or use its menu to manage this assignment",
   "tags.add": "Add tag",
   "tags.more": "+{count} more",
   "tags.showLess": "Show less",
@@ -2699,7 +2683,6 @@ export const en = {
   "reviewTemplates.save": "Save template",
   "reviewTemplates.edit": "Edit questions",
   "reviewTemplates.title": "Outcome review questions",
-  "reviewTemplates.sub": "What a rep is asked when a deal is won or lost.",
   "reviewTemplates.empty": "No review questions are set up",
   "reviewTemplates.retired": "Retired",
   "reviewTemplates.required": "(required)",
@@ -2862,7 +2845,6 @@ export const en = {
   "deal.offerRevision": "Rev.",
   "deal.offersEmpty": "No offers yet",
 
-  "offer.revision": "Revision {revision}",
   "offer.backToDeal": "Back to deal",
   "offer.totals": "Totals",
   "offer.net": "Net",
@@ -2949,7 +2931,6 @@ export const en = {
   // The week just gone. No nav entry of its own: Today is the single door to
   // the work that waits on a contact, and this is a view of that same work.
   "brief.panel.weekly": "Weekly review",
-  "brief.weekly.weekOf": "Week of {day}",
   // What the week TAUGHT, as against what it was. Every learning shows what it
   // rests on, because a claim about cause is one the reader cannot check
   // against anything else on the page.
@@ -3064,8 +3045,6 @@ export const en = {
   "teamweekly.movement.meetings": "Meetings held",
   "teamweekly.movement.leads": "Leads routed",
   "teamweekly.agenda.title": "Monday agenda",
-  "teamweekly.agenda.sub":
-    "The week's own items, first to raise at the top. One per member, including the member whose week went well.",
   "teamweekly.agenda.empty":
     "Nobody's week could be read for this team, so there is nothing to take to the meeting.",
   "teamweekly.agenda.summary":
@@ -3081,7 +3060,6 @@ export const en = {
   "teamweekly.focus.strong_week": "Worth copying",
   "teamweekly.focus.quiet_week": "No priority identified",
 
-  "plan.sub": "What you said you would do, and what you need to do it.",
   "plan.loading": "Reading your plan",
   "plan.empty": "Nothing on the plan yet.",
   "plan.none": "You have not planned this week yet.",
@@ -3116,8 +3094,6 @@ export const en = {
   "plan.contract.edit": "Edit",
   "plan.contract.save": "Save",
   "plan.contract.cancel": "Cancel",
-  "plan.contract.capacityLine":
-    "That week already holds {meetings} meetings and {tasks} tasks.",
   "plan.contract.crowded": "That week is already full",
   "plan.contract.crowdedBody":
     "{committed} things are already booked and you have written {commitments} commitments. Something will have to give.",
@@ -3187,7 +3163,6 @@ export const en = {
   "brief.act": "Done",
   "brief.dismiss": "Dismiss",
 
-  "brief.digestFor": "digest for {date}",
   "brief.digestSynced": "Sync details",
   "brief.digestContacts": "Contacts created",
   "brief.digestCompanies": "Companies created",
@@ -3360,8 +3335,6 @@ export const en = {
   "deepread.kindOther": "Other",
 
   "transcriptread.title": "Read this transcript",
-  "transcriptread.sub":
-    "Find the next steps and commitments this conversation states. Nothing is written until you confirm.",
   "transcriptread.cta": "Read transcript",
   "transcriptread.starting": "Starting…",
   "transcriptread.unavailable":
@@ -3652,8 +3625,6 @@ export const en = {
   "docs.category.message": "Message attachment",
   "docs.category.other": "Other",
   "files.title": "Files",
-  "files.sub":
-    "What you uploaded on this deal, and what arrived with its emails and messages.",
   "files.empty":
     "No files on this deal yet. Upload one, or link an email that carries one.",
   "files.origin": "Attachment of a message from {who}, {when}",
@@ -3678,7 +3649,6 @@ export const en = {
   "docs.state.superseded": "Superseded",
   "log.title": "Log activity",
   "log.addTask": "Add task",
-  "log.sub": "a note or task, straight onto this timeline",
   "log.kind": "Type",
   "log.kindNote": "Note",
   "log.kindTask": "Task",
@@ -6474,7 +6444,6 @@ export const en = {
 
   "client.back": "Back to Margince",
   "client.title": "Margince alongside your inbox",
-  "client.sub": "the extension surface — shell-free, record-aware",
   "client.sender": "Sender",
   "client.lookup": "Look up",
   "client.open360": "Open the 360",
@@ -6486,7 +6455,6 @@ export const en = {
   "client.attribution": "Every capture is attributed and auditable.",
 
   "book.title": "Book a meeting",
-  "book.sub": "live availability from the connected calendar",
   "book.min15": "15 min",
   "book.min30": "30 min",
   "book.min60": "60 min",
@@ -6497,7 +6465,6 @@ export const en = {
   "book.tellThemYourself":
     "Margince does not send the invite — tell your attendee the time yourself.",
   "book.failed": "Booking didn't go through — nothing was scheduled.",
-  "book.publicSub": "pick a slot — no account needed",
   "book.name": "Your name",
   "book.email": "Your email",
   "book.consentWording":
@@ -6580,8 +6547,6 @@ export const en = {
     "Ask under the document your question is about; it reaches {steward} directly.",
   "buyer.closedOn": "Closed on {date}",
   "room.docs.title": "Documents",
-  "room.docs.sub":
-    "What the buyer can read, with the conversation about each document under it.",
   "room.docs.empty": "No documents in the room yet.",
   "room.docs.fileLabel": "File from this deal",
   "room.docs.fileHint":
@@ -6597,8 +6562,6 @@ export const en = {
   "room.docs.group.security_privacy": "Security & Privacy",
   "room.docs.group.delivery_operations": "Delivery & Operations",
   "buyer.docs.title": "Documents",
-  "buyer.docs.sub":
-    "What has been shared with you, with the conversation about each document under it.",
   "buyer.docs.empty": "No documents yet.",
   "buyer.docs.download": "Download {title}",
   "buyer.docs.downloadFailed":
@@ -6607,7 +6570,6 @@ export const en = {
   "buyer.poweredBy": "Powered by",
   "buyer.poweredByMargince": "Powered by Margince",
   "threads.roomTitle": "The room as a whole",
-  "threads.roomSub": "Anything not about one document.",
   "threads.aboutThis_other": "{count} threads about this document",
   "threads.aboutThis_one": "{count} thread about this document",
   "threads.askAbout": "Ask about this document",
@@ -6635,13 +6597,9 @@ export const en = {
   "deal360.verdict.blocked": "Blocked",
   "deal360.verdict.cold": "Cold",
   "dealmail.title": "Email",
-  "dealmail.sub.reply": "They wrote and nobody has answered yet.",
-  "dealmail.sub.fresh": "Write to the contacts on this deal.",
   "dealmail.reply": "Draft the reply",
   "dealmail.send": "Send an email",
   "recordmail.title": "Email",
-  "recordmail.sub.reply": "An answer is owed.",
-  "recordmail.sub.fresh": "Write to them.",
   "recordmail.reply": "Draft the reply",
   "recordmail.send": "Write email",
   "deal360.rewrite": "Write it again",
@@ -6925,10 +6883,7 @@ export const en = {
   "settings.home": "Overview",
   "settings.home.yours": "Your settings",
   "settings.home.manage": "What you can change",
-  "settings.home.manageSub": "Settings you have the permission to edit.",
   "settings.home.lookUp": "What you can look up",
-  "settings.home.lookUpSub":
-    "You can read these; changing them is not part of your role.",
   "settings.home.rolesLabel": "Your role",
   "settings.home.seatLabel": "Your seat",
   "settings.home.seat.full": "Full seat \u2014 you can make changes",
@@ -7871,8 +7826,6 @@ export const en = {
   "installationSettings.companySub":
     "What this installation is called, and the zone every reporting period is computed in.",
   "installationSettings.currencyTitle": "Currency",
-  "installationSettings.currencySub":
-    "The one currency every roll-up converts amounts to.",
   "installationSettings.dateFormat": "Date format",
   "installationSettings.timeFormat": "Time format",
   "installationSettings.formatsHint":
@@ -8037,8 +7990,6 @@ export const en = {
     "Higher local-tier route; inspect the configured endpoint",
   "aiRouting.lane.embeddings": "Search and retrieval across your records",
   "aiRouting.lanes.title": "Routing lanes",
-  "aiRouting.lanes.sub":
-    "Cheapest first. A task picks a lane; the lane picks the model.",
   "aiRouting.priceSheet": "Price sheet",
   "aiRouting.provider.label": "Provider",
   "aiRouting.change": "Change",
@@ -8048,8 +7999,6 @@ export const en = {
   "aiRouting.effect":
     "Saved bindings reach every process within a minute, without a restart.",
   "aiProviderKeys.title": "Model provider keys",
-  "aiProviderKeys.sub":
-    "The credentials this installation calls each model vendor with. A key is sealed in the key vault and never shown again — replace it if you need to change it.",
   "aiProviderKeys.keyless": "No key needed",
   "aiProviderKeys.field": "API key",
   "aiProviderKeys.save": "Save key",
@@ -8079,8 +8028,6 @@ export const en = {
     "Model lists are the price sheet as of {date}. Any newer id your provider serves works too — type it.",
   "aiRouting.sheetUnknown":
     "Model lists come from the price sheet, which is not yours to read. Any id your provider serves works — type it.",
-  "aiRouting.sub":
-    "Which model serves each tier. Changes take effect without a restart, and every process picks them up within a minute.",
   "aiRouting.unboundTitle": "No models are bound yet",
   "aiRouting.unboundUnkeyed":
     "This installation has no models bound, so its AI features are off. Add a model provider key below, then bind the tiers here. A deployment can also declare its first binding under seeds.ai_routing in margince.yaml, which is read once when the company is created.",
@@ -8430,7 +8377,6 @@ export const en = {
   "contact.graph.withheldAccount":
     "Some contacts at this company are not shown.",
   "contact.intro.askFirstName": "Ask {name} for an intro",
-  "contact.intro.leadEyebrow": "Recommended route",
   "contact.intro.leadRouteBadge": "Strong route",
   "contact.intro.heroDirect": "knows them directly",
   "contact.intro.heroIndirect": "reaches them through {through}",
@@ -8490,8 +8436,6 @@ export const en = {
   "contact.intro.ownerYou": "you",
   "contact.intro.ownerNobody": "nobody",
   "contact.intro.relayTitle": "Introduction status",
-  "contact.intro.relaySubOpen": "Where the handoff has got to.",
-  "contact.intro.relaySubNone": "No request is open.",
   "contact.intro.stepRoute": "Choose route",
   "contact.intro.stepRoutePick": "pick who to ask",
   "contact.intro.stepRequest": "Request",
@@ -8573,7 +8517,6 @@ export const en = {
   "contact.intro.answerDecline": "Not this time",
   "contact.intro.answerDeclineHelp": "The ask closes. Say why if it helps.",
   "contact.intro.asksTitle": "Introductions",
-  "contact.intro.asksSub": "The asks you are part of, newest first.",
   "contact.intro.answerAction": "Answer",
   "contact.intro.completeIntroducedAction": "Mark introduced",
   "contact.intro.completeNameDroppedAction": "Mark name used",
@@ -10075,7 +10018,6 @@ export const en = {
   "stageAutomation.intro":
     "What happened to the stage moves Margince proposed. Nothing here changes anything \u2014 it is the evidence behind letting a transition move deals on its own.",
   "stageAutomation.pipeline": "Pipeline",
-  "stageAutomation.window": "Last {days} days",
   "stageAutomation.transition": "Transition",
   "stageAutomation.reviewed": "Answered",
   "stageAutomation.reviewedHint":

@@ -883,12 +883,10 @@
   padding: 1px 5px;
 }
 
-/* Title over description, both across the card's full width. Side by side on
- * one baseline the two competed for the same line: a description long enough to
- * be worth writing pushed the title around, and at narrow widths one of them
- * lost. Stacked, the title is read first and the description is a full-width
- * line under it. Actions, when a section has them, are the only thing that sits
- * beside the pair. */
+/* The section's head: its title, and the verbs that act on it at the far end.
+ * Never a description — a sentence between the title and the body is a third
+ * voice repeating one of them, and copy that genuinely adds something is body
+ * content. */
 .section-header {
   display: flex;
   align-items: flex-start;
@@ -897,12 +895,10 @@
   width: 100%;
   margin: var(--space-6) 0 var(--space-3);
 }
-.section-header-text {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  /* min-width:0 so a long unbroken title ellipsises inside the row rather than
-   * widening it past the card. */
+/* The title takes the row's free space, so the actions sit at the far end.
+ * min-width:0 so a long unbroken title ellipsises inside the row rather than
+ * widening it past the card. */
+.section-header-title {
   min-width: 0;
   flex: 1;
 }
@@ -939,19 +935,13 @@
 .section-header h3 {
   color: var(--textPrimary);
 }
-/* The page-naming variant (SectionHeader level={1}): a record whose surface
-   carries the page's only heading reads at the record scale, not the section
-   one, and it sets its margins rather than inheriting the UA's — the row is
-   baseline-aligned with the subtitle beside it. */
+/* The page-naming variant (SectionHeader level={1}): it sets its margins rather
+   than inheriting the UA's, so the row sits on the interval this head declares
+   instead of on the browser's own. */
 .section-header h1 {
   margin: 0;
   font-family: var(--fontFamilyHeading);
   color: var(--textPrimary);
-}
-/* A measure, not a width: a description that runs the whole width of a wide
-   card is a line the eye loses its place in. */
-.section-header .sub {
-  max-width: 78ch;
 }
 
 .field {

@@ -44,7 +44,7 @@ export function ClientSurfaceScreen() {
         </a>
       </header>
       <div className="wrap narrow">
-        <SectionHeader title={t("client.title")} sub={t("client.sub")} />
+        <SectionHeader title={t("client.title")} />
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <span className="t-label" id={emailId}>
             {t("client.sender")}

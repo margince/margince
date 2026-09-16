@@ -2,13 +2,11 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { ArrowRight } from "lucide-react";
-import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import { Button, Disclosure } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
-import { middayInstant } from "../format/calendarday";
-import { formatDate, formatNumber } from "../format/format";
+import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { type MorningDigest, useMorningDigest } from "./brief.queries";
@@ -183,9 +181,6 @@ export function OvernightPanel() {
 function DigestBody({ digest }: Readonly<{ digest: MorningDigest }>) {
   const t = useT();
   const { locale } = useLocale();
-  // The digest's own day is a fact about the installation's calendar, so it
-  // reads the installation's zone rather than a constant.
-  const recordZone = useRecordZone();
   const { capture, review, connectors, projects } = digest;
   // A healthy connector is not news, and a permanent green row is noise. Only
   // an unhealthy one surfaces here, in Settings' own vocabulary so the two
@@ -194,17 +189,7 @@ function DigestBody({ digest }: Readonly<{ digest: MorningDigest }>) {
     (c) => c.status != null && isUnhealthy(c.status),
   );
   return (
-    <Panel
-      title={t("brief.panel.overnight")}
-      sub={t("brief.digestFor", {
-        date: formatDate(
-          middayInstant(digest.date, recordZone),
-          locale,
-          recordZone,
-        ),
-      })}
-      className="rail-panel"
-    >
+    <Panel title={t("brief.panel.overnight")} className="rail-panel">
       {projects && <DigestProjectsBlock projects={projects} />}
       {unhealthy.length > 0 && (
         <PanelBody>

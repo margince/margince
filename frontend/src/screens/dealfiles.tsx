@@ -86,7 +86,6 @@ export function DealFiles({ deal }: Readonly<{ deal: Deal }>) {
   return (
     <Panel
       title={t("files.title")}
-      sub={t("files.sub")}
       titleAction={
         mayWrite ? (
           <Button onClick={() => setAdding(true)}>

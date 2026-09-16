@@ -77,7 +77,7 @@ export function ContactDealRooms({
     return null;
   }
   return (
-    <Panel title={t("contactdealrooms.title")} sub={t("contactdealrooms.sub")}>
+    <Panel title={t("contactdealrooms.title")}>
       <QueryStates
         query={rooms}
         pendingLines={2}

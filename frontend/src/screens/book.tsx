@@ -123,7 +123,7 @@ function SessionBookingScreen() {
 
   return (
     <div className="wrap narrow">
-      <SectionHeader title={t("book.title")} sub={t("book.sub")} />
+      <SectionHeader title={t("book.title")} />
       <div
         style={{
           display: "flex",
@@ -285,7 +285,7 @@ function PublicBookingScreen({ hostSlug }: Readonly<{ hostSlug: string }>) {
 
   return (
     <div className="wrap narrow">
-      <SectionHeader title={t("book.title")} sub={t("book.publicSub")} />
+      <SectionHeader title={t("book.title")} />
       <div
         style={{
           display: "flex",

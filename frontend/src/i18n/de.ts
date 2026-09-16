@@ -68,8 +68,6 @@ export const de = {
   "aiAdmin.editBinding": "Gemeinsame Bindung bearbeiten",
   "aiAdmin.effect": "Auswirkung",
   "aiAdmin.advanced": "Erweitert: gemeinsame Modellbindungen",
-  "aiAdmin.shared":
-    "Diese Bindungen werden gemeinsam genutzt. Vor dem Speichern alle betroffenen Tätigkeiten prüfen.",
   "aiAdmin.unused":
     "Von aktuellen ausgelieferten Tätigkeiten nicht genutzt: {tiers}",
   "aiAdmin.inputRate": "Eingabe {input} pro 1 Mio. Tokens",
@@ -192,8 +190,6 @@ export const de = {
   "brief.feed.incomplete":
     "Keine Einträge geladen. Ein Teil der Arbeit konnte nicht geprüft werden.",
   "brief.feed.fullWorklist": "Vollständige Arbeitsliste öffnen",
-  "brief.feed.visible_one": "{count} Fokuskarte",
-  "brief.feed.visible_other": "{count} Fokuskarten",
   "brief.week.workRecorded": "Diese Woche wurde Arbeit erledigt.",
   "brief.week.leads": "{count} Leads zugewiesen.",
   "brief.week.responses": "{count} Leads innerhalb der Zielzeit beantwortet.",
@@ -443,7 +439,6 @@ export const de = {
 
   "ext.notFound":
     "Auf dieser Installation ist keine Erweiterung namens „{name}“ aktiviert.",
-  "ext.operations": "Veröffentlichte Operationen",
 
   "search.placeholder":
     "Kontakte, Firmen, Deals, Projekte, Produkte, Aktivitäten, Leads durchsuchen…",
@@ -665,8 +660,6 @@ export const de = {
   "deal.attributionInfluenced":
     "Hat bei einem bestehenden Deal geholfen (ohne Provision)",
   "partnerDeals.panelTitle": "Gebrachte Deals",
-  "partnerDeals.panelSub":
-    "Deals bei anderen Firmen, die über diesen Partner zustande kamen",
   "partnerDeals.none": "Noch keine Deals gebracht",
   "partnerDeals.column.deal": "Deal",
   "partnerDeals.column.customer": "Kunde",
@@ -674,8 +667,6 @@ export const de = {
   "partnerDeals.column.amount": "Deal-Wert",
   "partnerDeals.column.status": "Status",
   "commission.panelTitle": "Provision",
-  "commission.panelSub":
-    "Was dieser Partner an selbst gebrachten Deals verdient hat",
   "commission.none": "Noch nichts verdient",
   "commission.column.deal": "Deal",
   "commission.column.amount": "Verdient",
@@ -1134,8 +1125,6 @@ export const de = {
   "room.card.contacts": "{invited} eingeladen · {active} angemeldet",
   "room.card.lastSeen": "Zuletzt von einem Käufer gesehen: {when}",
   "room.card.open": "Deal Room öffnen",
-  "room.create.sub":
-    "Ein Raum, den der Käufer per Link betritt, um zu lesen, was Sie teilen, und darüber zu sprechen.",
   "room.create.open": "Deal Room eröffnen",
   "room.create.confirm": "Eröffnen",
   "room.create.titleLabel": "Titel des Raums",
@@ -1169,7 +1158,6 @@ export const de = {
   "roompage.banner.archived": "Archiviert. Niemand kann diesen Raum betreten.",
   "roompage.banner.liveUntil": "Live. Der Zugang endet am {when}.",
   "roompage.text.title": "Titel und Begrüßung",
-  "roompage.text.sub": "Was der Käufer zuerst liest. Er sieht es sofort.",
   "roompage.text.titleLabel": "Titel des Raums",
   "roompage.text.welcomeLabel": "Begrüßungstext",
   "roompage.viewAsBuyer": "Als Käufer ansehen",
@@ -1177,7 +1165,6 @@ export const de = {
   "roompage.previewNotYours":
     "Ihr Zugriff auf diesen Deal umfasst die Käufer-Vorschau nicht.",
   "access.title": "Zugang",
-  "access.sub": "Wer eintreten darf und was jede Person tun kann.",
   "access.invite": "Einladen",
   "access.empty": "Noch niemand eingeladen.",
   "access.cap.view": "Nur lesen",
@@ -1228,7 +1215,6 @@ export const de = {
     "Die Sitzung endet sofort und der Link funktioniert nicht mehr. Kommentare bleiben sichtbar und zugeordnet. Der Zugang lässt sich nicht durch eine Link-Anfrage wiederherstellen.",
   "access.changeCapabilityTitle": "Was darf {name} tun?",
   "contactdealrooms.title": "Deal Rooms",
-  "contactdealrooms.sub": "Räume, die dieser Kontakt noch betreten kann.",
   "contactdealrooms.open": "Öffnen",
   "contactdealrooms.seatGone":
     "Diese Adresse hat in dem Raum keinen Platz mehr.",
@@ -1868,8 +1854,6 @@ export const de = {
   "co.profileField.industry": "Branche",
   "co.profileField.history": "Historie",
   "co.narrative.title": "Was sie tun",
-  "co.narrative.sub":
-    "Die Geschichte des Kontos, wie sie die Website erzählt. Korrigieren Sie, was falsch ist - eine Korrektur bleibt, der nächste Lesevorgang überschreibt sie nicht.",
   "co.narrative.add": "Hinzufügen",
   "co.contacts.engagement": "Kontaktstand",
   "co.contacts.lastInteraction": "Letzter Austausch",
@@ -2150,7 +2134,6 @@ export const de = {
   "tags.columnHeaderPartial": "Tags (Teilliste)",
   "tags.loading": "Tags werden geladen…",
   "tags.panelTitle": "Tags",
-  "tags.panelSub": "Tag öffnen oder über das Menü diese Zuordnung verwalten",
   "tags.add": "Tag hinzufügen",
   "tags.more": "+{count} weitere",
   "tags.showLess": "Weniger anzeigen",
@@ -2631,8 +2614,6 @@ export const de = {
   "reviewTemplates.save": "Vorlage speichern",
   "reviewTemplates.edit": "Fragen bearbeiten",
   "reviewTemplates.title": "Fragen zum Abschlussreview",
-  "reviewTemplates.sub":
-    "Was gefragt wird, wenn ein Deal gewonnen oder verloren wurde.",
   "reviewTemplates.empty": "Keine Reviewfragen eingerichtet",
   "reviewTemplates.retired": "Stillgelegt",
   "reviewTemplates.required": "(Pflicht)",
@@ -2793,7 +2774,6 @@ export const de = {
   "deal.offerRevision": "Rev.",
   "deal.offersEmpty": "Noch keine Angebote",
 
-  "offer.revision": "Revision {revision}",
   "offer.backToDeal": "Zurück zum Deal",
   "offer.totals": "Summen",
   "offer.net": "Netto",
@@ -2869,7 +2849,6 @@ export const de = {
   "decision.status.expired": "Abgelaufen",
 
   "brief.panel.weekly": "Wochenrückblick",
-  "brief.weekly.weekOf": "Woche ab {day}",
   "brief.weekly.learnings.title": "Beobachtungen zur Prüfung",
   "brief.weekly.learnings.worked": "Positives Ergebnis",
   "brief.weekly.learnings.didNotWork": "Nicht erfolgreiches Ergebnis",
@@ -2975,8 +2954,6 @@ export const de = {
   "teamweekly.movement.meetings": "Gehaltene Termine",
   "teamweekly.movement.leads": "Zugewiesene Leads",
   "teamweekly.agenda.title": "Agenda für Montag",
-  "teamweekly.agenda.sub":
-    "Die Themen dieser Woche, das Wichtigste zuerst. Eines pro Mitglied — auch für das Mitglied, dessen Woche gut lief.",
   "teamweekly.agenda.empty":
     "Für dieses Team ließ sich niemandes Woche lesen, also gibt es nichts für das Meeting.",
   "teamweekly.agenda.summary":
@@ -2994,7 +2971,6 @@ export const de = {
   "teamweekly.focus.strong_week": "Zum Nachmachen",
   "teamweekly.focus.quiet_week": "Keine Priorität erkannt",
 
-  "plan.sub": "Was du dir vorgenommen hast — und was du dafür brauchst.",
   "plan.loading": "Plan wird gelesen",
   "plan.empty": "Noch nichts auf dem Plan.",
   "plan.none": "Du hast diese Woche noch nicht geplant.",
@@ -3027,8 +3003,6 @@ export const de = {
   "plan.contract.edit": "Bearbeiten",
   "plan.contract.save": "Speichern",
   "plan.contract.cancel": "Abbrechen",
-  "plan.contract.capacityLine":
-    "Diese Woche hält bereits {meetings} Termine und {tasks} Aufgaben.",
   "plan.contract.crowded": "Diese Woche ist schon voll",
   "plan.contract.crowdedBody":
     "{committed} Dinge sind bereits gebucht und Sie haben {commitments} Vorhaben notiert. Etwas wird weichen müssen.",
@@ -3101,7 +3075,6 @@ export const de = {
   "brief.act": "Erledigt",
   "brief.dismiss": "Ausblenden",
 
-  "brief.digestFor": "Digest vom {date}",
   "brief.digestSynced": "Synchronisationsdetails",
   "brief.digestContacts": "Kontakte angelegt",
   "brief.digestCompanies": "Firmen angelegt",
@@ -3234,8 +3207,6 @@ export const de = {
   "deepread.kindOther": "Sonstiges",
 
   "transcriptread.title": "Dieses Transkript lesen",
-  "transcriptread.sub":
-    "Findet die nächsten Schritte und Zusagen, die dieses Gespräch nennt. Nichts wird geschrieben, bis du bestätigst.",
   "transcriptread.cta": "Transkript lesen",
   "transcriptread.starting": "Wird gestartet…",
   "transcriptread.unavailable":
@@ -3533,8 +3504,6 @@ export const de = {
   "docs.category.message": "Nachrichtenanhang",
   "docs.category.other": "Sonstiges",
   "files.title": "Dateien",
-  "files.sub":
-    "Was Sie an diesem Deal hochgeladen haben und was mit seinen E-Mails und Nachrichten eingegangen ist.",
   "files.empty":
     "Noch keine Dateien an diesem Deal. Laden Sie eine hoch oder verknüpfen Sie eine E-Mail mit Anhang.",
   "files.origin": "Anhang einer Nachricht von {who}, {when}",
@@ -3559,7 +3528,6 @@ export const de = {
   "docs.state.superseded": "Ersetzt",
   "log.title": "Aktivität erfassen",
   "log.addTask": "Aufgabe anlegen",
-  "log.sub": "eine Notiz oder Aufgabe, direkt auf diese Timeline",
   "log.kind": "Art",
   "log.kindNote": "Notiz",
   "log.kindTask": "Aufgabe",
@@ -6316,7 +6284,6 @@ export const de = {
 
   "client.back": "Zurück zu Margince",
   "client.title": "Margince neben deinem Postfach",
-  "client.sub": "die Extension-Oberfläche — ohne Shell, kennt den Datensatz",
   "client.sender": "Absender",
   "client.lookup": "Nachschlagen",
   "client.open360": "360 öffnen",
@@ -6328,7 +6295,6 @@ export const de = {
   "client.attribution": "Jede Erfassung ist zugeordnet und prüfbar.",
 
   "book.title": "Termin buchen",
-  "book.sub": "echte Verfügbarkeit aus dem verbundenen Kalender",
   "book.min15": "15 Min.",
   "book.min30": "30 Min.",
   "book.min60": "60 Min.",
@@ -6339,7 +6305,6 @@ export const de = {
   "book.tellThemYourself":
     "Margince verschickt die Einladung nicht — informiere die teilnehmende Person bitte selbst über den Termin.",
   "book.failed": "Die Buchung ging nicht durch — es wurde nichts eingetragen.",
-  "book.publicSub": "Slot auswählen — ganz ohne Konto",
   "book.name": "Dein Name",
   "book.email": "Deine E-Mail",
   "book.consentWording":
@@ -6425,8 +6390,6 @@ export const de = {
     "Stellen Sie Ihre Frage unter dem Dokument, um das es geht; sie erreicht {steward} direkt.",
   "buyer.closedOn": "Geschlossen am {date}",
   "room.docs.title": "Dokumente",
-  "room.docs.sub":
-    "Was der Käufer lesen kann, mit dem Gespräch zu jedem Dokument darunter.",
   "room.docs.empty": "Noch keine Dokumente im Raum.",
   "room.docs.fileLabel": "Datei aus diesem Deal",
   "room.docs.fileHint":
@@ -6442,8 +6405,6 @@ export const de = {
   "room.docs.group.security_privacy": "Sicherheit & Datenschutz",
   "room.docs.group.delivery_operations": "Lieferung & Betrieb",
   "buyer.docs.title": "Dokumente",
-  "buyer.docs.sub":
-    "Was mit Ihnen geteilt wurde, mit dem Gespräch zu jedem Dokument darunter.",
   "buyer.docs.empty": "Noch keine Dokumente.",
   "buyer.docs.download": "{title} herunterladen",
   "buyer.docs.downloadFailed":
@@ -6452,7 +6413,6 @@ export const de = {
   "buyer.poweredBy": "Powered by",
   "buyer.poweredByMargince": "Powered by Margince",
   "threads.roomTitle": "Der Raum als Ganzes",
-  "threads.roomSub": "Alles, was nicht ein einzelnes Dokument betrifft.",
   "threads.aboutThis_other": "{count} Threads zu diesem Dokument",
   "threads.aboutThis_one": "{count} Thread zu diesem Dokument",
   "threads.askAbout": "Zu diesem Dokument fragen",
@@ -6480,14 +6440,9 @@ export const de = {
   "deal360.verdict.blocked": "Blockiert",
   "deal360.verdict.cold": "Kalt",
   "dealmail.title": "E-Mail",
-  "dealmail.sub.reply":
-    "Sie haben geschrieben, und noch hat niemand geantwortet.",
-  "dealmail.sub.fresh": "Schreiben Sie den Beteiligten dieses Deals.",
   "dealmail.reply": "Antwort entwerfen",
   "dealmail.send": "E-Mail senden",
   "recordmail.title": "E-Mail",
-  "recordmail.sub.reply": "Eine Antwort steht noch aus.",
-  "recordmail.sub.fresh": "Schreiben Sie ihnen.",
   "recordmail.reply": "Antwort entwerfen",
   "recordmail.send": "E-Mail schreiben",
   "deal360.rewrite": "Neu schreiben",
@@ -6767,11 +6722,7 @@ export const de = {
   "settings.home": "\u00dcbersicht",
   "settings.home.yours": "Ihre Einstellungen",
   "settings.home.manage": "Was Sie \u00e4ndern k\u00f6nnen",
-  "settings.home.manageSub":
-    "Einstellungen, f\u00fcr die Sie die Berechtigung haben.",
   "settings.home.lookUp": "Was Sie nachschlagen k\u00f6nnen",
-  "settings.home.lookUpSub":
-    "Sie k\u00f6nnen diese lesen; das \u00c4ndern geh\u00f6rt nicht zu Ihrer Rolle.",
   "settings.home.rolesLabel": "Ihre Rolle",
   "settings.home.seatLabel": "Ihr Sitzplatz",
   "settings.home.seat.full":
@@ -7750,8 +7701,6 @@ export const de = {
   "installationSettings.companySub":
     "Wie diese Installation heißt und in welcher Zeitzone jede Auswertungsperiode berechnet wird.",
   "installationSettings.currencyTitle": "Währung",
-  "installationSettings.currencySub":
-    "Die eine Währung, in die jede Auswertung alle Beträge umrechnet.",
   "installationSettings.dateFormat": "Datumsformat",
   "installationSettings.timeFormat": "Zeitformat",
   "installationSettings.formatsHint":
@@ -7918,8 +7867,6 @@ export const de = {
     "Höhere lokale Routing-Stufe; konfigurierten Endpunkt prüfen",
   "aiRouting.lane.embeddings": "Suche und Retrieval über die eigenen Daten",
   "aiRouting.lanes.title": "Routing-Bahnen",
-  "aiRouting.lanes.sub":
-    "Günstigste zuerst. Eine Aufgabe wählt die Bahn, die Bahn wählt das Modell.",
   "aiRouting.priceSheet": "Preisliste",
   "aiRouting.provider.label": "Anbieter",
   "aiRouting.change": "Ändern",
@@ -7929,8 +7876,6 @@ export const de = {
   "aiRouting.effect":
     "Gespeicherte Bindungen erreichen jeden Prozess innerhalb einer Minute, ohne Neustart.",
   "aiProviderKeys.title": "Anbieter-Schlüssel",
-  "aiProviderKeys.sub":
-    "Die Zugangsdaten, mit denen diese Installation die Modellanbieter aufruft. Ein Schlüssel wird im Schlüsseltresor versiegelt und nie wieder angezeigt — ersetze ihn, wenn du ihn ändern willst.",
   "aiProviderKeys.keyless": "Kein Schlüssel nötig",
   "aiProviderKeys.field": "API-Schlüssel",
   "aiProviderKeys.save": "Schlüssel speichern",
@@ -7961,8 +7906,6 @@ export const de = {
     "Die Modelllisten sind die Preisliste mit Stand {date}. Jede neuere ID, die Ihr Anbieter bedient, funktioniert ebenfalls — einfach eintippen.",
   "aiRouting.sheetUnknown":
     "Die Modelllisten stammen aus der Preisliste, die Sie nicht einsehen dürfen. Jede ID, die Ihr Anbieter bedient, funktioniert — einfach eintippen.",
-  "aiRouting.sub":
-    "Welches Modell welche Stufe bedient. Änderungen wirken ohne Neustart; jeder Prozess übernimmt sie innerhalb einer Minute.",
   "aiRouting.unboundTitle": "Noch sind keine Modelle gebunden",
   "aiRouting.unboundUnkeyed":
     "Diese Installation hat keine Modelle gebunden, daher sind ihre KI-Funktionen aus. Hinterlegen Sie unten einen Modellanbieter-Schlüssel und binden Sie die Stufen anschließend hier. Eine Bereitstellung kann die erste Bindung auch unter seeds.ai_routing in margince.yaml deklarieren; diese wird einmalig beim Anlegen der Firma gelesen.",
@@ -8315,7 +8258,6 @@ export const de = {
   "contact.graph.withheldAccount":
     "Einige Kontakte dieses Unternehmens werden nicht angezeigt.",
   "contact.intro.askFirstName": "{name} um eine Vorstellung bitten",
-  "contact.intro.leadEyebrow": "Empfohlener Weg",
   "contact.intro.leadRouteBadge": "Starker Weg",
   "contact.intro.heroDirect": "kennt den Kontakt direkt",
   "contact.intro.heroIndirect": "erreicht sie über {through}",
@@ -8377,8 +8319,6 @@ export const de = {
   "contact.intro.ownerYou": "Sie",
   "contact.intro.ownerNobody": "niemand",
   "contact.intro.relayTitle": "Stand der Vorstellung",
-  "contact.intro.relaySubOpen": "Wie weit die Übergabe ist.",
-  "contact.intro.relaySubNone": "Es ist keine Anfrage offen.",
   "contact.intro.stepRoute": "Weg wählen",
   "contact.intro.stepRoutePick": "wen Sie fragen",
   "contact.intro.stepRequest": "Anfrage",
@@ -8462,8 +8402,6 @@ export const de = {
   "contact.intro.answerDeclineHelp":
     "Die Anfrage wird geschlossen. Sagen Sie gern, warum.",
   "contact.intro.asksTitle": "Vorstellungen",
-  "contact.intro.asksSub":
-    "Die Anfragen, an denen Sie beteiligt sind, neueste zuerst.",
   "contact.intro.answerAction": "Antworten",
   "contact.intro.completeIntroducedAction": "Als vorgestellt markieren",
   "contact.intro.completeNameDroppedAction": "Als Namen verwendet markieren",
@@ -9917,7 +9855,6 @@ export const de = {
   "stageAutomation.intro":
     "Was aus den Phasenwechseln wurde, die Margince vorgeschlagen hat. Hier \u00e4ndert sich nichts \u2014 das ist die Grundlage daf\u00fcr, einen \u00dcbergang selbst\u00e4ndig arbeiten zu lassen.",
   "stageAutomation.pipeline": "Pipeline",
-  "stageAutomation.window": "Letzte {days} Tage",
   "stageAutomation.transition": "\u00dcbergang",
   "stageAutomation.reviewed": "Beantwortet",
   "stageAutomation.reviewedHint":

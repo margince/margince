@@ -120,7 +120,6 @@ describe("extension routes (composed screen registry)", () => {
   it("falls back to the descriptor card for a unit whose name is an Object.prototype member", async () => {
     window.location.hash = "#/ext/constructor";
     renderApp();
-    expect(await screen.findByText("Published operations")).toBeTruthy();
     expect(await screen.findByText(/Ping/)).toBeTruthy();
   });
 

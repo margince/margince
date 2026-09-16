@@ -345,7 +345,6 @@ export function TranscriptReadCard({
   return (
     <Card
       title={t("transcriptread.title")}
-      sub={t("transcriptread.sub")}
       actions={
         <Button
           pending={start.isPending}

@@ -139,10 +139,7 @@ export function SettingsHome({ reach }: Readonly<{ reach: SettingsReach }>) {
       </Panel>
 
       {manageable.length > 0 && (
-        <Panel
-          title={t("settings.home.manage")}
-          sub={t("settings.home.manageSub")}
-        >
+        <Panel title={t("settings.home.manage")}>
           <PanelBody>
             {manageable.map(({ group, items }) => (
               <GroupRows key={group} group={group} items={items} />
@@ -152,10 +149,7 @@ export function SettingsHome({ reach }: Readonly<{ reach: SettingsReach }>) {
       )}
 
       {consultable.length > 0 && (
-        <Panel
-          title={t("settings.home.lookUp")}
-          sub={t("settings.home.lookUpSub")}
-        >
+        <Panel title={t("settings.home.lookUp")}>
           <PanelBody>
             {consultable.map(({ group, items }) => (
               <GroupRows key={group} group={group} items={items} />

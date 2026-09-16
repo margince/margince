@@ -1049,15 +1049,14 @@ type CardElement = "section" | "div" | "article" | "form" | "li";
  * padding. Every surface that reads as a card comes from here — a hand-rolled
  * `<div className="card">` drifts the moment one of those five values changes.
  *
- * `title`/`sub`/`actions` render the card's SectionHeader, so the header sits at
- * the top of the card's own padding without the caller re-deriving that; a card
+ * `title`/`actions` render the card's SectionHeader, so the header sits at the
+ * top of the card's own padding without the caller re-deriving that; a card
  * whose head is genuinely bespoke passes children only.
  */
 export function Card({
   as = "section",
   inset,
   title,
-  sub,
   actions,
   level,
   children,
@@ -1071,8 +1070,9 @@ export function Card({
 }: Readonly<{
   as?: CardElement;
   inset?: boolean;
+  // The card's head, drawn as its SectionHeader: a title and, optionally, the
+  // verbs that act on it. A description belongs in the body — see SectionHeader.
   title?: string;
-  sub?: string;
   actions?: ReactNode;
   // Passed straight to the card's SectionHeader. A card nested inside a
   // section that already has an h2 passes 3, so the outline says "inside"
@@ -1108,12 +1108,7 @@ export function Card({
       onSubmit={onSubmit}
     >
       {title !== undefined && (
-        <SectionHeader
-          title={title}
-          sub={sub}
-          actions={actions}
-          level={level}
-        />
+        <SectionHeader title={title} actions={actions} level={level} />
       )}
       {children}
     </Tag>
@@ -1302,27 +1297,32 @@ export function EmptyState({
   );
 }
 
-// Level picks the element AND the type together: an inner heading drawn at its
-// parent's size says the group matters as much as the page holding it. A table
-// rather than a tag built from the number, which would render a raw magnitude.
+// Level picks the ELEMENT; between 2 and 3 the type stays put, because a card
+// head is a card head wherever it sits and the outline already says where the
+// group belongs. `1` is not a step in that scale but a different job: that
+// header IS the page's name, the only thing naming a surface the shell has
+// yielded to, so it reads at the page-title size. A table rather than a tag
+// built from the number, which would render a raw magnitude.
 const LEVEL_HEADING: Readonly<
   Record<1 | 2 | 3, { size: HeadingSize; as: HeadingElement }>
 > = {
-  1: { size: "xlarge", as: "h1" },
-  2: { size: "large", as: "h2" },
+  1: { size: "large", as: "h1" },
+  2: { size: "medium", as: "h2" },
   3: { size: "medium", as: "h3" },
 };
 
 export function SectionHeader({
   title,
-  sub,
   actions,
   level = 2,
 }: Readonly<{
+  // A head is a title and, optionally, the verbs that act on it. Never a
+  // description: the title and the body below it are what give the section its
+  // meaning, and a sentence between them is a third voice saying what one of
+  // the two already said. Copy that genuinely adds something is body content.
   title: string;
-  sub?: string;
-  // Controls that act on this section, placed beside the title stack rather
-  // than under it. A caller that needs them anywhere else lays them out itself.
+  // Controls that act on this section, placed beside the title rather than
+  // under it. A caller that needs them anywhere else lays them out itself.
   actions?: ReactNode;
   // A section heading by default. `1` is for the one header on a page that IS
   // the page's name — a record surface the app shell deliberately yields to,
@@ -1334,17 +1334,17 @@ export function SectionHeader({
   // Without it those headers were h2s nested in an h2, which tells a screen
   // reader the inner block is a sibling of the page's own section — the
   // outline says the group is as important as the page it sits in, and a
-  // reader navigating by heading cannot tell where they are. The type follows
-  // the level down with it: an inner heading that is the same size as its
-  // parent is the same defect drawn instead of announced.
+  // reader navigating by heading cannot tell where they are. Between 2 and 3
+  // it moves the ELEMENT and nothing else — a card head reads at one size
+  // however deeply it sits. `1` is the exception, because it is not a deeper
+  // head but the page's own name, and it reads at the page-title size.
   level?: 1 | 2 | 3;
 }>) {
   return (
     <div className="section-header">
-      <div className="section-header-text">
-        <Heading {...LEVEL_HEADING[level]}>{title}</Heading>
-        {sub && <span className="sub">{sub}</span>}
-      </div>
+      <Heading {...LEVEL_HEADING[level]} className="section-header-title">
+        {title}
+      </Heading>
       {actions && <div className="section-header-actions">{actions}</div>}
     </div>
   );

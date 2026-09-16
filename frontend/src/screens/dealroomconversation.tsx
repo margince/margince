@@ -148,7 +148,6 @@ export function DealRoomConversation({
         {threads.data && docs.data ? (
           <DocumentBoard
             title={t("room.docs.title")}
-            sub={t("room.docs.sub")}
             groups={DOCUMENT_GROUPS.map((g) => ({
               key: g.key,
               label: t(g.labelKey),

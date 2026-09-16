@@ -421,7 +421,7 @@ export function LogActivity({
   const logRefused = me.data?.authorization !== undefined && !canLog;
   if (logRefused) {
     return (
-      <Panel title={t("log.title")} sub={t("log.sub")}>
+      <Panel title={t("log.title")}>
         <PanelBody>
           <p className="t-caption">{t("record.logActivityRefused")}</p>
         </PanelBody>
@@ -429,7 +429,7 @@ export function LogActivity({
     );
   }
   return (
-    <Panel title={t("log.title")} sub={t("log.sub")}>
+    <Panel title={t("log.title")}>
       <PanelBody>
         <LogActivityForm
           entityType={entityType}

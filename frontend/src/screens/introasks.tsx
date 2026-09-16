@@ -70,10 +70,7 @@ export function IntroAsksPanel({
   }
 
   return (
-    <Panel
-      title={t("contact.intro.asksTitle")}
-      sub={t("contact.intro.asksSub")}
-    >
+    <Panel title={t("contact.intro.asksTitle")}>
       <PanelBody>
         <ul className="pn-asks">
           {rows.map((ask) => (

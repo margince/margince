@@ -52,7 +52,6 @@ export type BoardGroup = Readonly<{ key: string; label: string }>;
 
 export function DocumentBoard({
   title,
-  sub,
   titleAction,
   groups,
   documents,
@@ -62,7 +61,6 @@ export function DocumentBoard({
   footer,
 }: Readonly<{
   title: string;
-  sub: string;
   titleAction?: ReactNode;
   groups: readonly BoardGroup[];
   documents: readonly BoardDocument[];
@@ -93,7 +91,7 @@ export function DocumentBoard({
   );
   return (
     <>
-      <Panel title={title} sub={sub} titleAction={titleAction}>
+      <Panel title={title} titleAction={titleAction}>
         {documents.length === 0 ? (
           <PanelBody>
             <p className="t-caption">{empty}</p>
@@ -125,7 +123,6 @@ export function DocumentBoard({
       </Panel>
       <Panel
         title={t("threads.roomTitle")}
-        sub={t("threads.roomSub")}
         titleAction={<Badge>{formatNumber(roomThreads.length, locale)}</Badge>}
       >
         <PanelBody>

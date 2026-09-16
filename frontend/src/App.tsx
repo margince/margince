@@ -422,7 +422,7 @@ function ExtensionRoute({ name }: Readonly<{ name?: string }>) {
       {/* level 1: the head yields to a composed unit, so this card is the only
           thing left that can name the page. A unit with no screen would
           otherwise have no page-level heading at all. */}
-      <SectionHeader title={unit.name} sub={t("ext.operations")} level={1} />
+      <SectionHeader title={unit.name} level={1} />
       <Card>
         <ul>
           {unit.verbs.map((verb) => (
