@@ -102,7 +102,7 @@ see §4.
 
 ---
 
-## 2. Prompt caching — capped, not impossible
+## 2. Prompt caching — what actually stops it
 
 AI providers MAY reuse part of a previous question if the new one *starts with
 exactly the same text*. "May" is the honest word: where it happens
@@ -115,28 +115,36 @@ the request asks. The password limits how much of ours can ever qualify:
     reusable      everything from here differs
 ```
 
-So **where the password sits decides how much can be reused.** That is a design
-choice, not a law — and one prompt had it in the worst possible place.
+So **where the password sits decides how much of ours could qualify.** That is a
+design choice, not a law — and one prompt had it in the worst possible place.
+
+But where the password sits is not what decides whether anything is reused. A
+provider will not cache a prefix **below a minimum size**, and every prefix in
+this product except one is far under it. That floor, not the password, is why
+the measured reuse is nearly zero. *The floor*, below, has the measurement.
 
 ### What we measured
 
 Over 7 days on staging — `margince-staging`, every task on its configured
-binding, which at the time meant Gemini on `gemini-3.1-flash-lite` for the
-background lanes:
+binding, which means Gemini on `gemini-3.1-flash-lite` for the background lanes
+and `gemini-3.5-flash` above them:
 
 ```
-  text we sent .................. 32,150,000 units
-  reused from a provider cache ..     90,900 units   = 0.28%
+  input tokens sent ............. 10,700,530
+  reused from a provider cache ..     40,969   = 0.38%
   caches we created ourselves ...          0   never
 ```
 
-Be careful what that 0.28% proves. It shows reuse is **rare**, not that it is
-impossible — a provider's automatic reuse is best-effort and needs the same
-prefix to come round again quickly. And "caches we created: 0" has a simpler
-explanation than the password: **the one provider whose caching we would have to
-ask for, we never ask.** Anthropic requires a marker on the request to cache
-anything; nothing in our code sets it. The other providers cache automatically
-where they can — which is where those 90,900 reused units came from.
+Be careful what that 0.38% proves, because it is not what it looks like. **Every
+reused token in the window belongs to ONE task** — `growth_fit`, which ran four
+times at about 33,500 input tokens a call. No other task has ever recorded a
+single cached token. The figure moves between 0% and 5% depending on whether one
+of those four calls falls inside the window; it is not a trend and it does not
+respond to anything we have changed.
+
+"Caches we created: 0" is a separate fact with a separate cause: **the caching we
+would have to ask for, we never ask for.** Gemini has a `cachedContents` API and
+Anthropic has a per-block marker. Nothing in our code calls either one.
 
 ### The one that was in the wrong place
 
@@ -161,6 +169,67 @@ the kind of text reuse exists for. Nothing about the protection changed: the
 sentence still names the boundary that bounds the captured text, and the
 captured text still arrives after the whole instruction block either way.
 
+That move was right and it is not what the dashboard is waiting for. `agent_loop`
+ran **four times in seven days** on staging; there is no volume there for a
+percentage to move.
+
+### The floor — why almost nothing is reused
+
+A provider will not cache a prefix below a minimum number of tokens, and the two
+kinds of caching have **different** minimums. Neither is documented for the model
+we actually run, so both were measured against it directly — send the same prefix
+three times and read what the provider says it reused:
+
+```
+  gemini-3.1-flash-lite, prefix repeated 3x, cachedContentTokenCount on call 2
+
+     5,974 tok  ->      0        6,095 tok  ->      0
+     6,028 tok  ->      0        6,121 tok  ->  4,072   <- first reuse
+```
+
+```
+  AUTOMATIC reuse (nothing to ask for)   floor ~6,100 tokens, granted in
+                                         blocks of ~4,096
+
+  ASKED-FOR reuse (cachedContents)       floor 1,024 tokens, stated by the
+                                         API when it refuses:
+                                         "Cached content is too small.
+                                          total_token_count=880,
+                                          min_total_token_count=1024"
+```
+
+Now put every prompt in the product against those two floors. The rules block
+ahead of the password, counted by the provider's own tokenizer rather than
+estimated from bytes:
+
+```
+  clears ~6,100 — automatic reuse possible      1 of 46 sites
+      agent_loop                     22,964 tok      4 calls / 7d
+
+  clears 1,024 — we could ASK, and never do     8 of 46 sites
+      draft_reply/contact             2,360 tok      7 calls / 7d
+      capture_counterparty_verdict    1,806 tok     82 calls / 7d
+      deal_health                     1,726 tok      0 calls / 7d
+      summarize/contact_brief         1,182 tok     15 calls / 7d
+      site_fact_extract               1,021 tok     57 calls / 7d   (3 short)
+
+  below both — nothing is available            37 of 46 sites
+      capture_confidentiality_verdict   878 tok  2,262 calls / 7d
+      signal_extract                    213 tok    797 calls / 7d
+      owed_verdict                      234 tok    293 calls / 7d
+      capture_classify                  298 tok    212 calls / 7d
+```
+
+**The volume and the prefix size run opposite ways.** The tasks that run
+thousands of times a week carry a few hundred tokens of rules; the tasks with
+rules worth caching barely run. `capture_confidentiality_verdict` alone pays
+2.18M tokens a week re-stating 878 tokens of rules — 20% of everything we send —
+and it is 146 tokens under the lowest floor there is.
+
+Nothing about where the password sits changes any line of that table. The
+password costs us the last ~64 tokens of a prefix; the floor costs us the other
+thousand.
+
 ### Reading the numbers on the reference page
 
 [ai-prompts.md](../reference/ai-prompts.md) prints the split for every site, and
@@ -178,6 +247,12 @@ captured text still arrives after the whole instruction block either way.
   however identical it is. **Should normally be 0.**
 - **cacheable** — rules as a share of the whole.
 
+The token figures on that page are estimated from bytes and run about 10% high:
+`capture_confidentiality_verdict` reads as ~962 there and counts 878 on the
+model. Estimated is the right thing for a generated page to carry — it needs no
+provider call — but when a number decides whether a prefix clears a floor, count
+it against the model.
+
 A small prompt shows a low percentage simply because the 280-byte boundary
 sentence is a big slice of a 600-byte prompt. That is not a problem to fix;
 there is nothing there to save.
@@ -191,20 +266,26 @@ is there so whoever comes next can see them and judge for themselves.
 ### Where that leaves us
 
 ```
-  small verdict tasks    the rules ahead of the password are a few hundred
-                         units. Even perfectly placed, there is little to win.
+  the high-volume tasks   under 1,024 tokens of rules. No caching of any kind
+                          is available to them at any price. This is a floor,
+                          not a tuning knob.
 
-  agent_loop             ~97,000 units per turn, now in front of the password.
-                         Worth measuring properly.
+  the large-prompt tasks  over 1,024, so we could ask — but they run tens of
+                          times a week, and asked-for caching bills storage by
+                          the token-hour. Measure the arrival rate before
+                          asking; a cache nobody reads costs more than it saves.
 
-  opting in              Anthropic-style caching is a field we do not set.
-                         Turning it on is a decision nobody has made, not a
-                         thing the design forbids.
+  agent_loop              the one prompt above the automatic floor, and the one
+                          with no traffic to prove it. Measure it somewhere it
+                          actually runs.
 ```
 
-**"Caching cannot work here" is too strong.** The accurate statement: the
-password caps what can be reused, the cap is wherever the password sits, and it
-is worth checking where that is before concluding there is nothing to win.
+**"Caching cannot work here" was too weak a reason and the right conclusion.**
+The accurate statement: the password costs a prefix its last ~64 tokens, and
+that is not what stops reuse — a provider floor of 1,024 tokens stops it, and
+37 of our 46 prompts are under it. Moving the password is free and worth doing;
+it will not show up in the dashboard, and expecting it to led three people to
+re-measure the same thing.
 
 > **Careful: two different things are called "cache".** One dashboard number
 > counts answers we served from our own memory without calling the AI at all.
@@ -410,7 +491,15 @@ something specific.
 | Routing, metering, tracing | [ai-runtime.md](ai-runtime.md) |
 | What the company block carries | [company-context.md](company-context.md) |
 
-Measurements on this page were taken from staging in September 2026: the 0.28%
-cache figure over a 7-day window, and the 86.3% open rate from
-`capture_thread_verdict`. Both are worth re-taking before they are relied on
-again.
+Measurements on this page were taken from staging in September 2026 over a 7-day
+window: the 0.38% cache figure and the per-task table in §2.2, and the 86.3%
+open rate from `capture_thread_verdict`. All are worth re-taking before they are
+relied on again.
+
+To re-take them: the cache share is `margince_ai_tokens_total{class="cached_read"}`
+against `class=~"prompt|cached_read"` on the AI router dashboard, and the
+per-task split is the same metric summed `by (task)` — ask that question first,
+because a share that looks like a trend has twice turned out to be one task's
+handful of calls. The floors are not published per model; get them from the
+model itself by repeating one prefix and reading `cachedContentTokenCount`, and
+from the `cachedContents` refusal, which names the minimum it wanted.
