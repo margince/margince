@@ -313,7 +313,18 @@ function DimensionChip({ dimension }: Readonly<{ dimension: TodayDimension }>) {
           dimension.tone ? `co-360-reading-${dimension.tone}` : undefined
         }
       >
-        <Popover onHover label={dimension.reading}>
+        {/* The label travels INTO the trigger, not only beside it: two
+            dimensions reading the same word gave two buttons the same
+            accessible name, and the `dt` next to them is not part of it. */}
+        <Popover
+          onHover
+          label={
+            <>
+              <span className="sr-only">{dimension.label}: </span>
+              {dimension.reading}
+            </>
+          }
+        >
           <p className="co-dim-means">{dimension.means}</p>
           {dimension.because ? (
             <>

@@ -2142,6 +2142,7 @@ export const de = {
   "tags.removeTag": "{name} entfernen",
   "tags.removeTitle": "{name} von diesem Datensatz entfernen?",
   "tags.addedBy": "Hinzugefügt von {who} · {when}",
+  "tags.addedByUndated": "Hinzugefügt von {who}",
   "tags.addedOn": "Hinzugefügt {when}",
   "tags.visibleWorkspaceWide": "Tag-Namen sind in der gesamten Firma sichtbar.",
   "tags.removeFromRecord": "Von diesem Datensatz entfernen",
@@ -3267,8 +3268,6 @@ export const de = {
     "Angenommen, aber die Aufgabe entstand nie",
 
   "create.cancel": "Abbrechen",
-  "create.multiselect.required":
-    "Erforderlich – mindestens eine Option wählen.",
   "create.save": "Anlegen",
   "create.saving": "Wird angelegt…",
   "create.contact": "Neuer Kontakt",
@@ -4315,6 +4314,13 @@ export const de = {
   "agent.activity.offerDraft.stalled":
     "Das Entwerfen deines Angebots dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen.",
   "agent.panel.runningNow": "Läuft jetzt",
+
+  // Vier Dinge, die der Agentenbereich sagt, wenn es nichts Neues gibt. Kurz
+  // halten: die Zeile im Rail wird nach zwei Zeilen abgeschnitten.
+  "agent.tip.day": "To-dos, Entscheidungen und Dubletten: {name}.",
+  "agent.tip.ask": "Frag mich überall mit ⌘K.",
+  "agent.tip.recap": "Öffne mich für alles, was ich heute getan habe.",
+  "agent.tip.edge": "Der Bildschirmrand leuchtet, während ich arbeite.",
 
   "agents.connected": "Verbundene Agenten",
   "agents.connectedSub":

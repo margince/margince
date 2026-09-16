@@ -10,7 +10,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { type ReactNode, useLayoutEffect, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { pickOption } from "../design-system/select-testing";
+import { pickOption, toggleOptions } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { ContactsScreen } from "./contacts";
@@ -301,9 +301,9 @@ describe("contact create flow", () => {
   });
 });
 
-// The multiselect CreateField type (A10): a checkbox group over `options`
-// that collects the toggled selection as a comma-joined string in the SAME
-// `values: Record<string, string>` channel every scalar field already uses —
+// The multiselect CreateField type (A10): a MultiSelect dropdown over
+// `options` that collects the toggled selection as a comma-joined string in
+// the SAME `values: Record<string, string>` channel every scalar field uses —
 // `splitMultiselectValue`/`joinMultiselectValue` are the documented mapper a
 // screen's transport uses to recover the `string[]`. This keeps every
 // existing single-string field (text/email/number/date/select) untouched.
@@ -322,7 +322,8 @@ describe("multiselect CreateField", () => {
     },
   ];
 
-  it("renders each option as a toggleable checkbox", () => {
+  it("renders the options in a dropdown that stays open across toggles", async () => {
+    const user = userEvent.setup();
     render(
       <CreateRecordModal
         open
@@ -334,14 +335,26 @@ describe("multiselect CreateField", () => {
         onSubmit={() => {}}
       />,
     );
-    const dealCreated = screen.getByLabelText(
-      "Deal created",
-    ) as HTMLInputElement;
-    expect(dealCreated.type).toBe("checkbox");
-    expect(dealCreated.checked).toBe(false);
+    const control = screen.getByRole("combobox", { name: "Event types" });
+    await user.click(control);
+    const listbox = screen.getByRole("listbox");
+    expect(listbox.getAttribute("aria-multiselectable")).toBe("true");
+    const dealCreated = within(listbox).getByRole("option", {
+      name: "Deal created",
+    });
+    expect(dealCreated.getAttribute("aria-selected")).toBe("false");
+    await user.click(dealCreated);
+    // The list survives the toggle — that is the control's whole point — and
+    // the toggled option now reads as chosen.
+    expect(
+      within(screen.getByRole("listbox"))
+        .getByRole("option", { name: "Deal created" })
+        .getAttribute("aria-selected"),
+    ).toBe("true");
   });
 
   it("collects toggled options as a string[] on submit, leaving an existing text field's plain string untouched", async () => {
+    const user = userEvent.setup();
     const onSubmit = vi.fn();
     render(
       <CreateRecordModal
@@ -354,12 +367,14 @@ describe("multiselect CreateField", () => {
         onSubmit={onSubmit}
       />,
     );
-    await userEvent.type(screen.getByLabelText("Name *"), "Peter");
-    await userEvent.click(screen.getByLabelText("Deal created"));
-    await userEvent.click(screen.getByLabelText("Contact created"));
-    // toggling back off removes it from the collected selection
-    await userEvent.click(screen.getByLabelText("Deal created"));
-    await userEvent.click(screen.getByRole("button", { name: "Create" }));
+    await user.type(screen.getByLabelText("Name *"), "Peter");
+    // toggling "Deal created" a second time removes it from the selection
+    await toggleOptions(
+      user,
+      screen.getByRole("combobox", { name: "Event types" }),
+      ["Deal created", "Contact created", "Deal created"],
+    );
+    await user.click(screen.getByRole("button", { name: "Create" }));
 
     expect(onSubmit).toHaveBeenCalledTimes(1);
     const [values] = onSubmit.mock.calls[0] as [Record<string, string>];

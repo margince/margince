@@ -120,8 +120,14 @@ const NAME_PLACEHOLDER = "{name}";
  * A template without the slot is one the copy gate does not admit, so the
  * branch is a guard against a fake translator rather than a case the catalog
  * can reach; it keeps the words and drops nothing.
+ *
+ * Exported for the resting rotation's tips (`agentrail-resting.ts`), which name
+ * a DESTINATION rather than a record but split their sentence on the same
+ * placeholder and hand the result to the same `RailLine`. A second spelling of
+ * the split would be a second answer to "where does the link start", and the
+ * two would disagree the first time either was touched.
  */
-function aroundTheName(
+export function aroundTheName(
   template: string,
   name: string,
   route: Route | null,

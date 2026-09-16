@@ -1595,6 +1595,7 @@ function CompanyRecordBody({
         tab={tab}
         company={company}
         view={view}
+        loading={loading}
         failed={failed}
         readOnly={readOnly}
         openTaskId={openTaskId}
@@ -1898,11 +1899,18 @@ function CompanyOverviewStack({
         titleAction={
           view && (
             <>
-              <span className="t-caption">
-                {t("contact.brief.updatedAt", {
-                  when: formatDate(view.as_of, locale, recordZone),
-                })}
-              </span>
+              {/* The reading's own date, and only where the payload carries a
+                  date this can read. A server one release out of step answers
+                  the 360 without `as_of`, and Intl refuses an unparseable
+                  value by throwing, which took the whole record down over a
+                  line that only qualifies the head. */}
+              {!Number.isNaN(Date.parse(view.as_of)) && (
+                <span className="t-caption">
+                  {t("contact.brief.updatedAt", {
+                    when: formatDate(view.as_of, locale, recordZone),
+                  })}
+                </span>
+              )}
               {/* The 360 call is a composition read off this account's own
                   records rather than model prose, so its claim of authorship
                   is the deterministic one — the same distinction the sources
@@ -2002,6 +2010,7 @@ function CompanyDealsAndTasksTabs({
   tab,
   company,
   view,
+  loading,
   failed,
   readOnly,
   openTaskId,
@@ -2012,6 +2021,9 @@ function CompanyDealsAndTasksTabs({
   tab: CompanyTab;
   company: Company;
   view?: Company360View;
+  // The composite read's own states, which the projects block needs to tell a
+  // wait from a failure.
+  loading: boolean;
   failed: boolean;
   readOnly: boolean;
   openTaskId: string | null;
@@ -2060,13 +2072,13 @@ function CompanyDealsAndTasksTabs({
               the pipeline: the tab reads "Deals & projects" because both are
               the account's work in flight, and a reader who came here for
               one finds the other without a second tab to try. */}
-          {(view || failed) && (
-            <CompanyProjectsPanel
-              companyId={company.id}
-              view={view}
-              readOnly={readOnly}
-            />
-          )}
+          <CompanyProjectsPanel
+            companyId={company.id}
+            view={view}
+            loading={loading}
+            failed={failed}
+            readOnly={readOnly}
+          />
         </div>
       )}
       {tab === "tasks" && (

@@ -50,14 +50,30 @@ const CARD: DecisionCardLabels = {
   loading: "Reading the proposal",
 };
 
-const LABELS = {
+const LABELS: DecisionDeckLabels = {
   card: CARD,
   deckLabel: "Waiting on you",
   keys: "Arrows stage a decision: → accept · ← reject · ↑ edit · ↓ later · Enter sends",
   behind: (count: number) => `${count} more behind`,
   bundleSummary: (members: number) => `One decision · ${members} items`,
   bundleMembers: (members: number) => `Show the ${members} items`,
-} as unknown as DecisionDeckLabels;
+  // Below here is what the TYPE requires and this stack never draws. They were
+  // missing while a cast stood in front of the annotation.
+  viewLabel: "How to work the queue",
+  viewDeck: "Deck",
+  viewList: "List",
+  staged: (count: number) => `${count} decisions staged`,
+  edited: (count: number) => `${count} being edited`,
+  skipped: (count: number) => `${count} skipped`,
+  commit: "Commit",
+  commitNothingToSend: "Clear skipped",
+  unstage: "Undo the last",
+  clearedTitle: "The queue is clear.",
+  cleared: (count: number) => `You decided ${count} things.`,
+  clearedTime: (atMs: number) =>
+    `Finished at ${new Date(atMs).toISOString().slice(11, 16)}.`,
+  empty: "Nothing is waiting on you.",
+};
 
 function item(seed: string): DecisionDeckItem {
   return {

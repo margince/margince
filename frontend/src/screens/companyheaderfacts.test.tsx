@@ -115,7 +115,7 @@ describe("who wrote this record", () => {
     expect(screen.queryByText("Typed by a person")).toBeNull();
   });
 
-  it("says a person wrote it, not a uuid, when the roster cannot resolve them", async () => {
+  it("names the hand that typed it, not a uuid, when the roster cannot resolve them", async () => {
     stub([{ id: "u-owner", display_name: "Mira Voss" }]);
     renderFacts();
 

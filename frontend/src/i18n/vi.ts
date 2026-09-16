@@ -2123,6 +2123,7 @@ export const vi = {
   "tags.removeTag": "Gỡ {name}",
   "tags.removeTitle": "Gỡ {name} khỏi bản ghi này?",
   "tags.addedBy": "Được thêm bởi {who} · {when}",
+  "tags.addedByUndated": "Được thêm bởi {who}",
   "tags.addedOn": "Đã thêm {when}",
   "tags.visibleWorkspaceWide": "Tên tag hiển thị cho toàn bộ tổ chức.",
   "tags.removeFromRecord": "Gỡ khỏi bản ghi này",
@@ -3232,7 +3233,6 @@ export const vi = {
     "Đã chấp nhận, nhưng công việc không xuất hiện",
 
   "create.cancel": "Huỷ",
-  "create.multiselect.required": "Bắt buộc — chọn ít nhất một.",
   "create.save": "Tạo",
   "create.saving": "Đang tạo…",
   "create.contact": "Liên hệ mới",
@@ -4250,6 +4250,13 @@ export const vi = {
   "agent.activity.offerDraft.stalled":
     "Việc soạn báo giá của bạn kéo dài bất thường. Có thể nó đã dừng.",
   "agent.panel.runningNow": "Đang chạy",
+
+  // Bốn câu phần agent nói khi không còn tin gì mới. Giữ ngắn: dòng
+  // trên rail bị cắt sau hai dòng.
+  "agent.tip.day": "Việc, quyết định và bản trùng đều nằm ở {name}.",
+  "agent.tip.ask": "Hỏi tôi từ bất kỳ đâu bằng ⌘K.",
+  "agent.tip.recap": "Mở tôi để xem hôm nay tôi đã làm gì.",
+  "agent.tip.edge": "Viền màn hình sáng lên khi tôi làm việc.",
 
   "agents.connected": "Agent đã kết nối",
   "agents.connectedSub":

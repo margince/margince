@@ -2226,6 +2226,7 @@ export const en = {
   "tags.removeTag": "Remove {name}",
   "tags.removeTitle": "Remove {name} from this record?",
   "tags.addedBy": "Added by {who} · {when}",
+  "tags.addedByUndated": "Added by {who}",
   "tags.addedOn": "Added {when}",
   "tags.visibleWorkspaceWide": "Tag names are visible across the company.",
   "tags.removeFromRecord": "Remove from this record",
@@ -3398,7 +3399,6 @@ export const en = {
   "transcriptread.effectFailedTitle": "Accepted, but the task never appeared",
 
   "create.cancel": "Cancel",
-  "create.multiselect.required": "Required — select at least one.",
   "create.save": "Create",
   "create.saving": "Creating…",
   "create.contact": "New contact",
@@ -4456,6 +4456,20 @@ export const en = {
   "agent.activity.offerDraft.stalled":
     "Drafting your offer has taken unusually long. It may have stopped.",
   "agent.panel.runningNow": "Running now",
+
+  // The four things the agent section says once it has run out of news
+  // (`agentrail-copy.ts`). None of them claims the agent did anything: they are
+  // standing facts about the product, which is what lets them be written here
+  // rather than read from the installation.
+  //
+  // SHORT, and that is a hard constraint rather than a style: the rail clamps
+  // its line to two lines at about 200px (`.arline` in agentrail.css), so a
+  // sentence past roughly fifty characters is a sentence with its end cut off.
+  // Every translation of these is held to the same ceiling.
+  "agent.tip.day": "To-dos, decisions and duplicates live on {name}.",
+  "agent.tip.ask": "Ask me from anywhere with ⌘K.",
+  "agent.tip.recap": "Open me for what I have done today.",
+  "agent.tip.edge": "The screen edge lights while I work.",
 
   "agents.connected": "Connected agents",
   "agents.connectedSub":

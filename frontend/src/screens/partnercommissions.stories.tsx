@@ -43,7 +43,7 @@ function entry(over: Partial<CommissionEntry>): CommissionEntry {
     created_at: "2026-08-01T00:00:00Z",
     updated_at: "2026-08-01T00:00:00Z",
     ...over,
-  } as unknown as CommissionEntry;
+  };
 }
 
 function Panel({ entries }: Readonly<{ entries: CommissionEntry[] }>) {

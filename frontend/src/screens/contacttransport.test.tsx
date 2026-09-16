@@ -119,23 +119,55 @@ function viewWith(
     contact: {
       id: "p-1",
       full_name: "Dana Buyer",
+      source: "manual",
+      captured_by: "human:u-1",
+      created_at: "2026-06-01T08:00:00Z",
+      updated_at: "2026-06-01T08:00:00Z",
       version: 1,
       emails: options.emails
-        ? [{ id: "pe-1", email: "dana@brandt.example", is_primary: true }]
+        ? [
+            {
+              id: "pe-1",
+              email: "dana@brandt.example",
+              is_primary: true,
+              email_type: "work",
+              position: 0,
+              source: "manual",
+              captured_by: "human:u-1",
+            },
+          ]
         : [],
-      phones: options.phones ? [{ id: "pp-1", phone: "+49 30 111" }] : [],
+      phones: options.phones
+        ? [
+            {
+              id: "pp-1",
+              phone: "+49 30 111",
+              phone_type: "work",
+              is_primary: true,
+              position: 0,
+              source: "manual",
+              captured_by: "human:u-1",
+            },
+          ]
+        : [],
       reachability: (options.reachability ?? []).map((entry) => ({
         ...entry,
         since: AT,
       })),
     },
-    activities: { data: options.activities ?? [] },
+    activities: {
+      data: options.activities ?? [],
+      page: { has_more: false },
+    },
     sections_omitted: [],
-  } as unknown as Contact360;
+  };
 }
 
 // A brief whose one sentence cites one record — the shape the chip row reads.
-function briefCiting(entityType: string, entityId: string): ContactBrief {
+function briefCiting(
+  entityType: ContactBrief["sentences"][number]["evidence"][number]["entity_type"],
+  entityId: string,
+): ContactBrief {
   return {
     contact_id: "p-1",
     generated_at: AT,
@@ -146,7 +178,7 @@ function briefCiting(entityType: string, entityId: string): ContactBrief {
         evidence: [{ entity_type: entityType, entity_id: entityId }],
       },
     ],
-  } as unknown as ContactBrief;
+  };
 }
 
 function render(node: ReactNode) {
@@ -346,20 +378,18 @@ describe("consent and channels", () => {
     render(
       <ContactRail
         view={view}
-        guard={
-          {
-            contact_id: "p-1",
-            entries: [
-              {
-                purpose_key: "business_correspondence",
-                purpose_class: "business_correspondence",
-                channel: "email",
-                verdict: "allowed",
-                reason: "she wrote to you on 15 Aug",
-              },
-            ],
-          } as unknown as components["schemas"]["ContactConsentGuard"]
-        }
+        guard={{
+          contact_id: "p-1",
+          entries: [
+            {
+              purpose_key: "business_correspondence",
+              purpose_class: "business_correspondence",
+              channel: "email",
+              verdict: "allowed",
+              reason: "she wrote to you on 15 Aug",
+            },
+          ],
+        }}
       />,
     );
     return within(screen.getByTestId("contact-rail"));

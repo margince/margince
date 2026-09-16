@@ -28,12 +28,14 @@ export default meta;
 type Story = StoryObj;
 type Contract = components["schemas"]["Contract"];
 
-const AGREEMENT = {
+const AGREEMENT: Contract = {
   id: "c-1",
   company_id: "o-1",
   title: "Pallet pooling framework",
   contract_number: "SM-2026-014",
   status: "active",
+  source: "manual",
+  captured_by: "human:u1",
   under_contract: true,
   auto_renew: false,
   value_basis: "annualized_12m",
@@ -43,7 +45,7 @@ const AGREEMENT = {
   version: 3,
   created_at: "2026-10-20T00:00:00Z",
   updated_at: "2026-10-20T00:00:00Z",
-} as unknown as Contract;
+};
 
 function routes() {
   installFetchStub({
