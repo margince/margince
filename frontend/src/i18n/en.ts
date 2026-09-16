@@ -87,6 +87,10 @@ export const en = {
   "home.change.stageUnknown": "Unknown stage",
   "home.change.unidentified": "Unknown",
   "home.change.by": "Changed by: {actor}",
+  "brief.focus.inQueue": "In the queue",
+  "brief.focus.position": "{at} of {count}",
+  "worklist.bandCount_one": "{count} item",
+  "worklist.bandCount_other": "{count} items",
   "brief.focus.context": "View details",
   "brief.focus.back": "Back to Focus",
   "brief.queue.back": "Back to queue",
@@ -181,8 +185,8 @@ export const en = {
   "brief.readings.unavailable": "Unknown",
   "brief.feed.incomplete": "No items loaded. Some work could not be checked.",
   "brief.feed.fullWorklist": "Open full work queue",
-  "brief.feed.visible_one": "{count} focus card",
-  "brief.feed.visible_other": "{count} focus cards",
+  "brief.feed.visible_one": "{count} priority in focus",
+  "brief.feed.visible_other": "{count} priorities in focus",
   "brief.week.workRecorded": "Work completed this week.",
   "brief.week.leads": "{count} leads assigned.",
   "brief.week.responses": "{count} leads answered within target.",
@@ -2381,7 +2385,7 @@ export const en = {
   "lead.details": "Details",
   "lead.detailsUnset": "Not set",
   "lead.rail.deal.title": "Deal",
-  "lead.rail.deal.empty": "No deal yet. Qualifying this lead opens one.",
+  "lead.rail.deal.empty": "No deal yet. Qualifying this lead can open one.",
   "lead.rail.project.title": "Project",
   "lead.rail.project.empty": "No project yet.",
   "lead.rail.project.attach": "Attach project",
@@ -5744,6 +5748,8 @@ export const en = {
   "blockedDomains.source.human": "A person",
   "blockedDomains.source.unevidenced": "Nothing on the site named a company",
   "blockedDomains.source.staleEvidence": "The mail arguing for it is too old",
+  "blockedDomains.source.nearDuplicate":
+    "A company with this name is already here",
   "blockedDomains.rowAdmit": "Allow this one",
   "blockedDomains.rowRefuse": "Refuse this one",
   "blockedDomains.rowReopen": "Ask again",
@@ -7266,6 +7272,26 @@ export const en = {
     "this sender was suppressed, so no record was made",
   "pipeline.reason.no_open_question":
     "there was no open question about this sender",
+  "pipeline.reason.thread_not_captured":
+    "no captured conversation remains on this thread, so there was nothing to read",
+  "pipeline.reason.events_raised":
+    "this conversation was read, and the events it raised were filed on the account",
+  "pipeline.reason.nothing_material":
+    "this conversation was read, and it said nothing worth filing",
+  "pipeline.reason.thread_still_moving":
+    "this conversation is still moving; it is read once it has been quiet for a while",
+  "pipeline.reason.awaiting_scan":
+    "this conversation is due to be read and has not been reached yet",
+  "pipeline.reason.reading_parked":
+    "reading this conversation was refused several times, so it is paused until it changes or the pause expires",
+  "pipeline.reason.no_single_account":
+    "this conversation does not reach exactly one account, so its findings would have nowhere certain to go",
+  "pipeline.reason.two_bodies_of_work":
+    "this conversation spans two projects, so its findings would be wrong for one of them",
+  "pipeline.reason.thread_not_all_open":
+    "a message on this conversation is withheld from some of its readers, so a summary of the whole would be a partial account presented as a complete one",
+  "pipeline.reason.no_named_reader":
+    "this conversation has no reader a finding could answer to",
   "pipeline.reason.transport_not_read":
     "this step reads email only, and the message arrived over another transport",
   "pipeline.reason.sender_undecided":

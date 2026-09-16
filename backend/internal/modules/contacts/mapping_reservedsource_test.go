@@ -21,7 +21,7 @@ import (
 )
 
 func TestLeadCreateInputRefusesTheImporterNamespace(t *testing.T) {
-	reserved := "mirror:hubspot"
+	reserved := "mirror:legacy_crm"
 	_, err := leadCreateInput(crmcontracts.CreateLeadRequest{
 		SourceSystem: &reserved, SourceId: ptr("501"),
 	})
@@ -35,7 +35,7 @@ func TestLeadCreateInputRefusesTheImporterNamespace(t *testing.T) {
 }
 
 func TestLeadCreateInputAcceptsAnOrdinarySourceSystem(t *testing.T) {
-	ordinary := "hubspot"
+	ordinary := "legacy_crm"
 	in, err := leadCreateInput(crmcontracts.CreateLeadRequest{
 		SourceSystem: &ordinary, SourceId: ptr("501"),
 	})
@@ -52,7 +52,7 @@ func TestLeadCreateInputAcceptsAnOrdinarySourceSystem(t *testing.T) {
 // classes with no (source_system, source_id) replay key — so a gap in
 // any one of these lets a planted row be adopted as the importer's own.
 func TestEveryProvenanceWireRefusesTheImporterNamespace(t *testing.T) {
-	const reserved = "mirror:hubspot:contact:p-1"
+	const reserved = "mirror:legacy_crm:contact:p-1"
 	var refused *provenance.ReservedError
 
 	if _, err := contactCreateInput(crmcontracts.CreateContactRequest{
@@ -80,7 +80,7 @@ func TestEveryProvenanceWireRefusesTheImporterNamespace(t *testing.T) {
 	// An ordinary provenance string stays writable — the guard is a
 	// prefix rule, not a ban on the field.
 	if _, err := contactCreateInput(crmcontracts.CreateContactRequest{
-		FullName: "Real", Source: "hubspot:contact:p-1",
+		FullName: "Real", Source: "legacy_crm:contact:p-1",
 	}); err != nil {
 		t.Errorf("an ordinary source must stay writable: %v", err)
 	}

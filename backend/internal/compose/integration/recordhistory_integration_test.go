@@ -119,7 +119,7 @@ func TestRecordHistoryRendersEveryActorChronologically(t *testing.T) {
 		nil, map[string]any{"title": "CTO"}, base.Add(time.Hour))
 	seedRecordAuditRow(t, e, "archive", contactID, "system", "system", nil,
 		nil, nil, base.Add(2*time.Hour))
-	seedRecordAuditRow(t, e, "update", contactID, "connector", "connector:hubspot", nil,
+	seedRecordAuditRow(t, e, "update", contactID, "connector", "connector:legacy_crm", nil,
 		nil, map[string]any{"phone": "1"}, base.Add(3*time.Hour))
 
 	page, err := privacy.ListRecordHistory(e.Admin(), e.DB(), privacy.RecordHistoryFilter{

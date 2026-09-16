@@ -53,7 +53,12 @@ type activityScan struct {
 	// audienceReason says why a derived audience is what it is. It travels with
 	// the content, not with the markers: "held because personnel" describes
 	// what the message is about.
-	audienceReason   *string
+	audienceReason *string
+	// raw is the source system's own representation of an imported activity.
+	// It is content — it holds the message text an importer handed over — so
+	// it is scanned aside and only reaches the record when the audience test
+	// passed, exactly like the subject and body.
+	raw              map[string]any
 	bulkMailAttested bool
 	version          int64
 	audience         string
@@ -108,6 +113,7 @@ var activityProjection = []activityColumn{
 	{"a.bulk_mail_attested", func(s *activityScan) any { return &s.bulkMailAttested }},
 	{"a.audience", func(s *activityScan) any { return &s.audience }},
 	{"a.audience_reason", func(s *activityScan) any { return &s.audienceReason }},
+	{"a.raw", func(s *activityScan) any { return &s.raw }},
 	{"", func(s *activityScan) any { return &s.contentAvailable }},
 }
 
@@ -173,6 +179,13 @@ func (s *activityScan) record() crmcontracts.Activity {
 	if s.language != nil && s.contentAvailable {
 		lang := crmcontracts.ActivityLanguage(*s.language)
 		a.Language = &lang
+	}
+	// raw carries the importer's own copy of the message, so it reaches the
+	// caller only when the body does: serving it to a withheld reader would
+	// hand back in another shape exactly what was just withheld.
+	if s.contentAvailable && s.raw != nil {
+		raw := s.raw
+		a.Raw = &raw
 	}
 	a.Kind = crmcontracts.ActivityKind(s.kind)
 	a.ChannelProvider = s.channelProvider

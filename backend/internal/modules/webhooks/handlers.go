@@ -126,13 +126,17 @@ func (h Handlers) RotateWebhookSecret(w http.ResponseWriter, r *http.Request, id
 }
 
 // ListWebhookDeliveries returns a subscription's delivery attempts
-// newest-first — the dead-letter inspection surface.
+// newest-first — the dead-letter inspection surface — a page at a time.
 func (h Handlers) ListWebhookDeliveries(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, params crmcontracts.ListWebhookDeliveriesParams) {
 	limit := 0
 	if params.Limit != nil {
 		limit = *params.Limit
 	}
-	deliveries, hasMore, err := h.store.ListDeliveries(r.Context(), ids.UUID(id), limit)
+	cursor := ""
+	if params.Cursor != nil {
+		cursor = *params.Cursor
+	}
+	deliveries, page, err := h.store.ListDeliveries(r.Context(), ids.UUID(id), limit, cursor)
 	if err != nil {
 		writeErr(w, r, err)
 		return
@@ -141,9 +145,11 @@ func (h Handlers) ListWebhookDeliveries(w http.ResponseWriter, r *http.Request, 
 	for _, d := range deliveries {
 		data = append(data, wireDelivery(d))
 	}
-	httperr.WriteJSON(w, http.StatusOK, crmcontracts.WebhookDeliveryListResponse{
-		Data: data, Page: crmcontracts.PageInfo{HasMore: hasMore},
-	})
+	info := crmcontracts.PageInfo{HasMore: page.HasMore}
+	if page.NextCursor != "" {
+		info.NextCursor = &page.NextCursor
+	}
+	httperr.WriteJSON(w, http.StatusOK, crmcontracts.WebhookDeliveryListResponse{Data: data, Page: info})
 }
 
 // ReplayWebhookDelivery re-attempts a parked delivery on demand; 503 when

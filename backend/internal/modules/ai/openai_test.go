@@ -142,7 +142,7 @@ func TestOpenAIMapsPDFAttachmentToInputFilePart(t *testing.T) {
 	})
 	if _, err := client.Complete(context.Background(), model.Request{
 		Messages:    []model.Message{{Role: "user", Content: "read this"}},
-		Attachments: []model.Attachment{{MIME: "application/pdf", Bytes: []byte("%PDF"), Name: "contract.pdf"}},
+		Attachments: []model.Attachment{{MIME: "application/pdf", Bytes: pdfSample, Name: "contract.pdf"}},
 	}); err != nil {
 		t.Fatal(err)
 	}

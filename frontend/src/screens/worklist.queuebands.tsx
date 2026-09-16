@@ -10,7 +10,8 @@
 
 import type { ReactNode } from "react";
 import { Eyebrow } from "../design-system/eyebrow";
-import { useT } from "../i18n";
+import { formatNumber } from "../format/format";
+import { useLocale, usePlural, useT } from "../i18n";
 import { type BandSection, dueRunHeading, dueRuns } from "./worklist.bands";
 import type { WorklistItem } from "./worklist.queries";
 
@@ -40,15 +41,19 @@ export function QueueBand<RowProps>({
   rowProps: RowProps;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const plural = usePlural();
   if (section.items.length === 0) {
     if (!canReportEmpty) {
       return null;
     }
     return (
       <div className="worklist-queue-band">
-        <Eyebrow as="h3" className="worklist-band">
-          {t(`worklist.band.${section.band}` as const)}
-        </Eyebrow>
+        <div className="worklist-band">
+          <Eyebrow as="h3">
+            {t(`worklist.band.${section.band}` as const)}
+          </Eyebrow>
+        </div>
         {/* Said, not left blank. A heading with nothing under it reads as a
             page that failed to draw. */}
         <p className="t-body worklist-band-clear">
@@ -59,9 +64,19 @@ export function QueueBand<RowProps>({
   }
   return (
     <div className="worklist-queue-band">
-      <Eyebrow as="h3" className="worklist-band">
-        {t(`worklist.band.${section.band}` as const)}
-      </Eyebrow>
+      <div className="worklist-band">
+        <Eyebrow as="h3">{t(`worklist.band.${section.band}` as const)}</Eyebrow>
+        {/* How much the band holds, at its far end — only once the whole queue
+            is loaded, because a count over a page that stopped early would
+            name a size the band does not have. */}
+        {canReportEmpty && (
+          <span className="t-caption worklist-band-count">
+            {plural("worklist.bandCount", section.items.length, {
+              count: formatNumber(section.items.length, locale),
+            })}
+          </span>
+        )}
+      </div>
       {/* Work due later carries a sub-heading of its own, so a reader can tell
           tomorrow's deadline from today's without reading every date. Overdue
           and today's draw under the band heading, which already says what they

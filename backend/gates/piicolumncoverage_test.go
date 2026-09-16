@@ -128,6 +128,11 @@ var erasureColumnBaseline = map[string][]string{
 		// subject wrote nor anything written about them — it is a reading OF the
 		// text, and the text itself is cleared on its own terms.
 		"owed_verdict",
+		// A digest of the product's own classifier prompt, naming which rules
+		// reached the verdict beside it. Nothing the subject wrote and nothing
+		// derived from what they wrote — the same string on every row one build
+		// judged.
+		"owed_verdict_ruleset",
 		"captured_by",
 		"channel_provider",
 		"direction",

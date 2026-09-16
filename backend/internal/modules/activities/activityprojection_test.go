@@ -100,6 +100,11 @@ func (r *sentinelRow) fill(dest any, name string, index int) {
 	case **int64:
 		v := int64(index)
 		*d = &v
+	case *map[string]any:
+		// A jsonb column. The map carries the column's own name, so a value
+		// landing in the wrong field is as visible here as a transposed
+		// string is.
+		*d = map[string]any{"column": name}
 	default:
 		r.t.Fatalf("the projection declares a destination this row cannot fill for %s: %T", name, dest)
 	}

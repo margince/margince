@@ -169,7 +169,8 @@ func (s *VoiceStore) persistPreparedSource(ctx context.Context, tx pgx.Tx, profi
 		}
 	}
 	source, err := scanVoiceSource(tx.QueryRow(ctx, storekit.SQLf(
-		`SELECT %s FROM voice_corpus_source WHERE id = $1`, voiceSourceColumns), sourceID))
+		`SELECT %s FROM voice_corpus_source WHERE id = $1`, voiceSourceColumns,
+	), sourceID))
 	return source, prior, err
 }
 
@@ -255,7 +256,8 @@ func (s *VoiceStore) ListSources(ctx context.Context, profileID ids.UUID) ([]Voi
 			`SELECT %s FROM voice_corpus_source
 			 WHERE voice_profile_id = $1 AND archived_at IS NULL
 			 ORDER BY created_at DESC, id DESC`,
-			voiceSourceColumns), profileID)
+			voiceSourceColumns,
+		), profileID)
 		if err != nil {
 			return err
 		}

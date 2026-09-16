@@ -36,17 +36,30 @@ export function FilterPills<Value extends string>({
   value,
   onChange,
   label,
+  layout = "row",
 }: Readonly<{
   pills: readonly FilterPill<Value>[];
   value: Value;
   onChange: (next: Value) => void;
   // What this row cuts, for a reader who meets the buttons without the list.
   label?: string;
+  /**
+   * `row` is the strip across the top of a list. `list` stacks the cuts as
+   * a column of full-width rows with the count at the far end — the shape a
+   * lanes column beside a queue takes, where the reader runs down the cuts
+   * the way they run down the rows.
+   */
+  layout?: "row" | "list";
 }>) {
   const t = useT();
   const { locale } = useLocale();
   return (
-    <fieldset className="filterpills" aria-label={label ?? t("filter.label")}>
+    <fieldset
+      className={
+        layout === "list" ? "filterpills filterpills-list" : "filterpills"
+      }
+      aria-label={label ?? t("filter.label")}
+    >
       {pills.map((pill) => (
         <button
           key={pill.value}

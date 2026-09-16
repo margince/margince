@@ -179,7 +179,7 @@ func (h Handlers) GetPartner(w http.ResponseWriter, r *http.Request, id crmcontr
 }
 
 func (h Handlers) ListPartners(w http.ResponseWriter, r *http.Request, params crmcontracts.ListPartnersParams) {
-	in := ListPartnersInput{Limit: params.Limit}
+	in := ListPartnersInput{Limit: params.Limit, Sort: params.Sort}
 	if params.PartnerRole != nil {
 		role := string(*params.PartnerRole)
 		in.PartnerRole = &role

@@ -11,7 +11,9 @@ import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 //    transport that carried the conversation, and withheld where they are not;
 //  - where the row's content is withheld it keeps working but changes its WORD
 //    to "Write email", because writing to a contact is not answering a message
-//    nobody may read.
+//    nobody may read;
+//  - where a rule PREPARED this reply it wears the agent's face and mark, and
+//    the caller's own word for the act.
 //
 // Every story keeps the row behind the verb, for two reasons. The verb belongs
 // to a row and reads as a loose button without one — and the last story's whole
@@ -164,4 +166,53 @@ export const UnreachableOffersNothing: Story = {
       </StoryProviders>
     );
   },
+};
+
+/**
+ * THE PREPARED REPLY: the same control, wearing the agent's face.
+ *
+ * The queue ranks a waiting message and works out what the answer should be
+ * about, and both of those are a machine's doing — so the button takes indigo
+ * and the Sparkles mark, the claim this house makes about who decided, and the
+ * caller's word for the act rather than the bare "Reply".
+ *
+ * It is the SAME control: pressing it opens the same composer the frames above
+ * open, over the row rather than away from it. That sameness is the point —
+ * the row used to draw this move as a second button beside the reply, and the
+ * marked one was the one that navigated instead of drafting.
+ *
+ * What to check: the fill reads as the answer against the row, the mark reads
+ * as a mark rather than as a stray glyph, and the word sits on one line beside
+ * it. In DARK too, where indigo lifts and the ink under it is re-derived.
+ */
+export const PreparedReply: Story = {
+  render: () => {
+    installFetchStub({});
+    return (
+      <StoryProviders>
+        <Row
+          when="3 September, 16:46"
+          said="Hey Josh — let's meet next Tues instead of Monday."
+        >
+          <ChannelReplyAction
+            activityId="a-5"
+            kind="email"
+            entityType="deal"
+            entityId="d-1"
+            prepared={{
+              label: "Draft the reply",
+              intent: "reply to their last message: waiting 13 days",
+            }}
+          />
+        </Row>
+      </StoryProviders>
+    );
+  },
+};
+
+/** The same frame in dark, where the agent's ground is no longer the brightest
+ *  thing on screen and the word on it is re-derived off that lift. */
+export const PreparedReplyInDark: Story = {
+  ...PreparedReply,
+  globals: { theme: "dark" },
 };

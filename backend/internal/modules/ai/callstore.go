@@ -60,8 +60,19 @@ type Call struct {
 	AttemptReason string
 	// Kind distinguishes a chat-ladder attempt from an embed-lane call —
 	// callKindCompletion or callKindEmbedding.
-	Kind          string
-	CorrelationID *ids.UUID
+	Kind string
+	// SecretsRemoved and SecretKinds are the stripper's report for THIS
+	// attempt's marshalled body — how many matches it replaced and which rule
+	// kinds fired.
+	//
+	// Recorded rather than discarded, which every real adapter used to do.
+	// model.StripReport says in its own doc that it exists "for the audit
+	// trail", and a control that leaves no witness cannot answer the question an
+	// audit asks: what did we remove from that request. Per ATTEMPT, because the
+	// report describes one marshalled body and a retry's body can differ.
+	SecretsRemoved int
+	SecretKinds    []string
+	CorrelationID  *ids.UUID
 	// Subject is the record the call was about, when the site that made it
 	// said so. It travels to the rail's occurrence and never to ai_call: the
 	// trace is about the call, the occurrence is about the reader's work.
@@ -254,6 +265,14 @@ func aiCallBindings(c Call) []boundColumn {
 	if contextScopes == nil {
 		contextScopes = []string{}
 	}
+	// The stripper's own answer about this attempt's body. Nil becomes the empty
+	// array rather than NULL, for contextScopes' reason and one of its own: a
+	// reader asking "what did we remove" must be able to tell "nothing" from
+	// "nobody recorded it", and the count beside it already says which.
+	secretKinds := c.SecretKinds
+	if secretKinds == nil {
+		secretKinds = []string{}
+	}
 	// error_sentinel is nullable and an absent sentinel is NULL, not ''. The
 	// statement used to spell that as NULLIF on the placeholder; with the
 	// placeholders derived it is decided here instead, where the rest of this
@@ -294,6 +313,8 @@ func aiCallBindings(c Call) []boundColumn {
 		{"finish_reason", c.FinishReason},
 		{"cache_off", c.CacheOff},
 		{"config_hash", c.ConfigHash},
+		{"secrets_removed", c.SecretsRemoved},
+		{"secret_kinds", secretKinds},
 	}
 }
 
@@ -306,7 +327,8 @@ func (m *CallMeter) recordAttempts(ctx context.Context, tx pgx.Tx, attempts []Ca
 		var callID ids.UUID
 		err := tx.QueryRow(ctx, storekit.SQLf(
 			`INSERT INTO ai_call (%s) VALUES (%s) RETURNING id`,
-			strings.Join(namesOf(bound), ", "), bindPlaceholders(len(args))),
+			strings.Join(namesOf(bound), ", "), bindPlaceholders(len(args)),
+		),
 			args...).Scan(&callID)
 		if err != nil {
 			return fmt.Errorf("ai: recording call: %w", err)

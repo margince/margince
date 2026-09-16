@@ -167,8 +167,7 @@ func (d *DocumentExtractor) Read(ctx context.Context, store documentReadStore, r
 		if errors.Is(err, errRefusedDocument) {
 			d.log.WarnContext(ctx, "document reading refused",
 				"attachment_extraction_id", readID, "attachment_id", attachmentID, "reason", err)
-			return d.fail(ctx, store, readID, claimedAt,
-				"the model's reading of this document could not be used; the document is unchanged and can be read again")
+			return d.fail(ctx, store, readID, claimedAt, refusedReadingDetail(err))
 		}
 		return d.retryable(ctx, store, readID, claimedAt, err)
 	}
@@ -266,7 +265,8 @@ func (d *DocumentExtractor) sourceFor(
 	if len(bytes) > maxDocumentBytes {
 		return documentSource{}, fmt.Sprintf(
 			"this document is larger than the %d MB one reading carries; a reading of part of it could not say which part it saw",
-			maxDocumentBytes>>20), nil
+			maxDocumentBytes>>20,
+		), nil
 	}
 	src, detail := d.laneFor(ctx, meta, mime, bytes)
 	return src, detail, nil
@@ -301,7 +301,8 @@ func (d *DocumentExtractor) laneFor(
 	}
 	return documentSource{}, fmt.Sprintf(
 		"this installation's model cannot read a %s document; a file whose text can be read directly, or a model bound to carry documents, would be read",
-		mime)
+		mime,
+	)
 }
 
 // extractedSource takes the lane that exists because no wire agrees about a PDF.
@@ -336,7 +337,8 @@ func (d *DocumentExtractor) extractedSource(
 		// document was half again as long as it is.
 		return documentSource{}, fmt.Sprintf(
 			"this document is %d characters, and one reading addresses at most %d",
-			chars, maxDocumentTextChars)
+			chars, maxDocumentTextChars,
+		)
 	}
 	return documentSource{Text: text, Filename: meta.Filename, ExtractedFrom: documentPDFMIME}, ""
 }
@@ -366,9 +368,27 @@ func (d *DocumentExtractor) textSource(meta crmcontracts.Attachment, raw []byte)
 	if utf8.RuneCountInString(text) > maxDocumentTextChars {
 		return documentSource{}, fmt.Sprintf(
 			"this document is %d characters, and one reading addresses at most %d",
-			len(text), maxDocumentTextChars)
+			len(text), maxDocumentTextChars,
+		)
 	}
 	return documentSource{Text: text, Filename: meta.Filename}, ""
+}
+
+// refusedReadingDetail is what the panel says about a refused reading, and there
+// are two answers because one of them would otherwise be false.
+//
+// The general refusal is honest about a reply the model produced and this
+// product would not act on: nothing about the document changed, so reading it
+// again is a reasonable thing to offer. A document whose BYTES are not the type
+// it was stored as is the opposite — every model reads them the same way, so
+// "can be read again" invites a rep to spend the same call twice and reach the
+// same place. The file has to change.
+func refusedReadingDetail(err error) string {
+	if errors.Is(err, model.ErrAttachmentMislabelled) {
+		return "this document's bytes are not the type it was uploaded as, so no model can read it; " +
+			"upload it again as the file it actually is"
+	}
+	return "the model's reading of this document could not be used; the document is unchanged and can be read again"
 }
 
 // ask puts one document to the model and returns what it may act on.
@@ -388,6 +408,15 @@ func (d *DocumentExtractor) ask(ctx context.Context, src documentSource) ([]extr
 			// which is a configuration fault rather than a fault of this
 			// document — so it is refused, not retried.
 			return nil, fmt.Errorf("%w: the model refused a document type its binding declares it carries: %w",
+				errRefusedDocument, err)
+		}
+		if errors.Is(err, model.ErrAttachmentMislabelled) {
+			// The bytes are not the kind the stored content type says. That is a
+			// fault of this DOCUMENT rather than of the binding — every model
+			// would read the same bytes the same way — so it is refused here
+			// like an unreadable one, and the run says which file it could not
+			// read instead of answering about a document nothing decoded.
+			return nil, fmt.Errorf("%w: this document's bytes are not the type it is stored as: %w",
 				errRefusedDocument, err)
 		}
 		if errors.Is(err, ai.ErrOutputRejected) {

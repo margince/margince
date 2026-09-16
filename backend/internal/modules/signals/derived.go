@@ -351,3 +351,32 @@ func AcknowledgeOpenForCompanyTx(
 // concrete type and ids.UUID is already one; the alias exists only so the
 // generic call reads as what it collects.
 type idsUUID = ids.UUID
+
+// CitesActivity reports whether any live signal was raised citing this message.
+//
+// The question the pipeline trace asks after a conversation has been read: the
+// reading either produced a finding that names this message or it did not, and
+// the two are different answers to a member.
+//
+// Evidence is jsonb and the containment test is over one element, so a signal
+// citing several messages answers true for each of them. Archived signals are
+// excluded: a finding somebody removed is not one the message produced any
+// more, and reporting it would explain a card the reader cannot open.
+//
+// It takes the caller's transaction rather than opening one, because the trace
+// assembles several reads into one answer and a second connection would let
+// this one see a state the others did not.
+func CitesActivity(ctx context.Context, tx pgx.Tx, activityID ids.UUID) (bool, error) {
+	var cited bool
+	err := tx.QueryRow(ctx, `
+		SELECT EXISTS (
+		  SELECT 1 FROM signal
+		   WHERE archived_at IS NULL
+		     AND evidence @> jsonb_build_array(
+		           jsonb_build_object('source_type', 'activity', 'source_id', $1::text)))`,
+		activityID.String()).Scan(&cited)
+	if err != nil {
+		return false, fmt.Errorf("signals: reading whether a signal cites this message: %w", err)
+	}
+	return cited, nil
+}

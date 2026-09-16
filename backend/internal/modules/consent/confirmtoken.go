@@ -32,6 +32,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/contactaddress"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -171,7 +172,11 @@ func (s *Store) IssueConsentLink(ctx context.Context, contactID ids.ContactID, p
 }
 
 // deliveryAddressTx reads the subject's own live primary address, the same way
-// the confirm card reads it.
+// every other reader of that question does — contactaddress.ReachableOrder.
+//
+// It used to spell its own `is_primary DESC, created_at`, leaving out the
+// record's own arrangement, so a contact who had moved an address up had the
+// link MAILED to one address while the preference centre named another.
 //
 // A contact carrying none has no mailbox to prove, so there is nothing the link
 // could evidence: it is refused rather than minted against an address nobody
@@ -180,8 +185,8 @@ func deliveryAddressTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) 
 	var deliveredTo string
 	err := tx.QueryRow(ctx, `
 		SELECT email FROM contact_email
-		 WHERE contact_id = $1 AND archived_at IS NULL
-		 ORDER BY is_primary DESC, created_at
+		 WHERE contact_id = $1 AND archived_at IS NULL`+
+		contactaddress.ReachableOrder+`
 		 LIMIT 1`, contactID).Scan(&deliveredTo)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return "", &ValidationError{

@@ -104,7 +104,7 @@ var unscopedReferenceReads = gatekit.Waive(map[string]string{
 	// auth.SignalScopeClause.
 	"internal/compose:scanGhostedThreads": "the ghosted-thread rule's account scan, under the signal-scan sweep's system principal: the company it names is what the signal is ABOUT, and it is handed to signals.RecordDerived, never to a reader",
 	"internal/compose:scanQuietProjects":  "the quiet-project rule's scan, under the same sweep and the same system principal: the company it names is the account the project's signal is attributed to, handed to signals.RecordDerived and never to a reader",
-	"internal/compose:dueThreads":         "the signal extractor's settled-conversation backlog, under the same sweep and the same system principal: the single company a thread resolves to is what the extraction is filed against, and the rows go to the model lane rather than to a caller",
+	"internal/compose:conversationCTE":    "the signal extractor's conversation fold, read by the sweep under the system principal and by the pipeline trace for the message whose ladder is already gated: the single company a thread resolves to is what an extraction is filed against, and the rows go to the model lane or to a rung that names no company",
 
 	// The company rollup's tree walk, found by the aliased-column pass:
 	// `parent_company_id` is an FK to company named for its role, so the
@@ -505,7 +505,7 @@ func reachesRowScope(fns map[string]*rowScopeFnInfo, name, table string, seen ma
 //
 // SQL lives in two places, and both are read. A literal inside a function body
 // attributes to that function directly. A query grown long enough to move to a
-// package-level var (signalextractread.go's dueThreadsQuery is the standing
+// package-level var (signalextractrule.go's dueThreadsQuery is the standing
 // example) attributes to every function that mentions the var's name: leaving
 // declarations unread would let any query walk out of this census by being
 // promoted, which is the quiet narrowing the extractor floor below exists to

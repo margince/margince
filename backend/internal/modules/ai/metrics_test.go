@@ -51,7 +51,8 @@ func TestEveryFamilyIsKeyedByProviderAndModel(t *testing.T) {
 	m.observeAttempt(served(func(c *Call) { c.TokensIn, c.TokensOut, c.LatencyMS = 10, 5, 1200 }))
 	m.observe(served())
 
-	mustContain(t, render(m),
+	mustContain(
+		t, render(m),
 		"margince_ai_calls_total{"+servedLabels+"} 1",
 		"margince_ai_call_attempts_total{"+servedLabels+"} 1",
 		"margince_ai_tokens_total{"+servedLabels+`,class="prompt",direction="in"} 10`,
@@ -74,7 +75,8 @@ func TestTheTokenClassesAreDisjointSoDirectionDoesNotDoubleCount(t *testing.T) {
 	}))
 
 	out := render(m)
-	mustContain(t, out,
+	mustContain(
+		t, out,
 		"margince_ai_tokens_total{"+servedLabels+`,class="prompt",direction="in"} 50`,
 		"margince_ai_tokens_total{"+servedLabels+`,class="cached_read",direction="in"} 30`,
 		"margince_ai_tokens_total{"+servedLabels+`,class="cache_write",direction="in"} 20`,
@@ -109,7 +111,8 @@ func TestAttemptsCountEveryRungAndCallsCountOnlyTheTerminal(t *testing.T) {
 	m.observeAttempt(served())
 	m.observe(served())
 
-	mustContain(t, render(m),
+	mustContain(
+		t, render(m),
 		"margince_ai_calls_total{"+servedLabels+"} 1",
 		"margince_ai_call_attempts_total{"+servedLabels+"} 2",
 		"margince_ai_call_errors_total{"+servedLabels+`,sentinel="provider_error"} 1`,
@@ -124,7 +127,8 @@ func TestErrorsAreSplitByTheSentinelTheRouterClassified(t *testing.T) {
 	m.observeAttempt(served(func(c *Call) { c.ErrorSentinel = "timeout" }))
 	m.observeAttempt(served(func(c *Call) { c.ErrorSentinel = "timeout" }))
 
-	mustContain(t, render(m),
+	mustContain(
+		t, render(m),
 		"margince_ai_call_errors_total{"+servedLabels+`,sentinel="rate_limited"} 1`,
 		"margince_ai_call_errors_total{"+servedLabels+`,sentinel="timeout"} 2`,
 	)
@@ -138,7 +142,8 @@ func TestACacheHitIsCountedButNotTimed(t *testing.T) {
 	m.observeAttempt(served(func(c *Call) { c.CacheHit, c.LatencyMS = true, 0 }))
 	m.observeAttempt(served(func(c *Call) { c.LatencyMS = 2000 }))
 
-	mustContain(t, render(m),
+	mustContain(
+		t, render(m),
 		"margince_ai_call_cache_hits_total{"+servedLabels+"} 1",
 		// One timed sample, not two: the hit is absent from the histogram.
 		"margince_ai_call_duration_seconds_count{"+servedLabels+"} 1",
@@ -222,7 +227,8 @@ func TestCompanyContextIsCountedPerLogicalCall(t *testing.T) {
 	m.observeAttempt(served(func(c *Call) { c.ContextBytes, c.ContextTokensEstimate = 400, 100 }))
 	m.observe(served(func(c *Call) { c.ContextBytes, c.ContextTokensEstimate = 400, 100 }))
 
-	mustContain(t, render(m),
+	mustContain(
+		t, render(m),
 		`margince_ai_company_context_bytes_total{task="cold_start"} 400`,
 		`margince_ai_company_context_tokens_estimate_total{task="cold_start"} 100`,
 	)
@@ -366,7 +372,8 @@ func TestAnUnknownFinishReasonFoldsRatherThanMintingASeries(t *testing.T) {
 	m.observeAttempt(served(func(c *Call) { c.FinishReason = "vendor_specific_novelty" }))
 
 	out := render(m)
-	mustContain(t, out,
+	mustContain(
+		t, out,
 		"margince_ai_call_finish_reasons_total{"+servedLabels+`,reason="stop"} 1`,
 		"margince_ai_call_finish_reasons_total{"+servedLabels+`,reason="other"} 1`,
 	)
@@ -421,7 +428,8 @@ func TestReasoningIsNotCountedTwiceOnTheOutputSide(t *testing.T) {
 	m.observeAttempt(served(func(c *Call) { c.TokensOut, c.ReasoningTokens = 100, 40 }))
 
 	out := render(m)
-	mustContain(t, out,
+	mustContain(
+		t, out,
 		"margince_ai_tokens_total{"+servedLabels+`,class="completion",direction="out"} 60`,
 		"margince_ai_tokens_total{"+servedLabels+`,class="reasoning",direction="out"} 40`,
 	)
@@ -512,7 +520,8 @@ func TestVendorFinishReasonsNormalizeRatherThanFold(t *testing.T) {
 	}
 
 	out := render(m)
-	mustContain(t, out,
+	mustContain(
+		t, out,
 		"margince_ai_call_finish_reasons_total{"+servedLabels+`,reason="max_tokens"} 2`,
 		"margince_ai_call_finish_reasons_total{"+servedLabels+`,reason="safety"} 1`,
 		"margince_ai_call_finish_reasons_total{"+servedLabels+`,reason="end_turn"} 1`,

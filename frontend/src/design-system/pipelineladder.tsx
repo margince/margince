@@ -200,7 +200,19 @@ const REASON_KEYS: Partial<Record<string, MessageKey>> = {
   "erasure_check.would_restore_erased": "pipeline.reason.would_restore_erased",
   "claim_extraction.no_writer_yet": "pipeline.reason.no_writer_yet",
   "company_triage.not_reported_yet": "pipeline.reason.not_reported_yet",
-  "material_events.not_reported_yet": "pipeline.reason.not_reported_yet",
+  "material_events.transport_not_read": "pipeline.reason.transport_not_read",
+  "material_events.archived": "pipeline.reason.thread_not_captured",
+  "material_events.record_not_available":
+    "pipeline.reason.record_not_available",
+  "material_events.events_raised": "pipeline.reason.events_raised",
+  "material_events.nothing_material": "pipeline.reason.nothing_material",
+  "material_events.thread_still_moving": "pipeline.reason.thread_still_moving",
+  "material_events.awaiting_scan": "pipeline.reason.awaiting_scan",
+  "material_events.reading_parked": "pipeline.reason.reading_parked",
+  "material_events.no_single_account": "pipeline.reason.no_single_account",
+  "material_events.two_bodies_of_work": "pipeline.reason.two_bodies_of_work",
+  "material_events.thread_not_all_open": "pipeline.reason.thread_not_all_open",
+  "material_events.no_named_reader": "pipeline.reason.no_named_reader",
 };
 
 // stageName prefers this build's own catalog and falls back to the server's.

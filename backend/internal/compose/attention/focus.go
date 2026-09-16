@@ -77,5 +77,8 @@ func (s *Service) nameWorklistRows(ctx context.Context, rows []crmcontracts.Work
 	if err := s.nameTheStanding(ctx, rows, findings); err != nil {
 		return err
 	}
+	if err := s.nameTheContacts(ctx, rows); err != nil {
+		return err
+	}
 	return s.nameTheOwners(ctx, rows)
 }

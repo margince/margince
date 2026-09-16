@@ -234,9 +234,9 @@ changes ──┬─> deterministic-gates ──> craftsmanship
           ├─> vuln                                              │   │
           ├─> license gate  (`deps` scope)                      │   │
           ├─> frontend  →  _lane-frontend.yml                  │   │
-          │                  fe-quality ┐                       │   │
-          │                  fe-unit    ├─> fan-in              │   │
-          │                  fe-bundle  ┘                       │   │
+          │                  fe-quality   ┐                     │   │
+          │                  fe-unit (×4) ├─> fan-in (+ merge)   │   │
+          │                  fe-bundle    ┘                     │   │
           ├─> uat  (`frontend` scope, beside the lane)          │   │
           ├─> live-boot                                         │   │
           v                                                     v   v
@@ -457,9 +457,10 @@ third-party actions it calls, which would otherwise ride in unread.
 | `vuln` | `make vuln` (govulncheck over all packages). **Advisory** — outside the `ci` aggregate, so a red one does not stop a merge. It still runs on every backend change, so a vulnerable dependency a PR *introduces* is reported before merge; what it cannot report is a vulnerability disclosed after one, which is why `scheduled.yml` runs it daily on `main` as well |
 | `license gate` | `make sbom` then `make sbom-check` — the dependency-license policy (`grant`, policy in `.grant.yaml`) over the resolved dependency graph, not the manifests. Lives here rather than in `sbom.yml` because it is a **gate** and that workflow is an artifact producer: `sbom.yml` filters at the workflow level, so on a PR touching no dependency it produces no check run at all, and a required context that never posts blocks the merge forever. Job-level gating makes a path skip report as passing instead. Runs on `merge_group` as well as `pull_request`, and it is the **only** automatic run of this policy — `sbom.yml` is dispatch-only, so the copy of the gate inside it fires just before a signing run. The merge-queue run is what makes that sufficient, and makes it a stronger claim than it was: `main` receives a dependency change only through a queue build this job passed, so the policy is judged against the tree that lands rather than a PR head that may not match it |
 | `fe-quality` | `make fe-quality` — the design-system script gates, the contract type-drift check, Biome, the composed-SPA typecheck (ADR-0120) and the unit screens' own vitest suites. The only frontend job carrying a Go toolchain: the composed lane needs `gen-composition` output, which nothing else produces |
-| `fe-unit` | `make fe-unit FE_COVERAGE=1` — the vitest suite, instrumented so the run that decides the verdict also writes the lcov. Emits `fe-coverage`, after `frontend/scripts/check-lcov-paths.sh` has proved every path in it resolves from the repo root (see below). Not sharded: the v8 provider's branch records cannot be merged across shards without skewing condition coverage — issue #966 has the measurements and the fix |
+| `fe-unit (k/4)` | `make fe-unit FE_COVERAGE=1 FE_SHARD=k/4` — a quarter of the vitest suite, instrumented so the run that decides the verdict also carries the coverage. Uploads a **blob** report rather than an lcov: one slice measures the part of the tree its tests happened to load, and is a measurement of nothing until the four are added up. Four because that is where the measurement's knee is — the comment above the job carries the arithmetic |
+| `frontend` (merge half) | `make fe-unit-merge` in the fan-in: `vitest --merge-reports` adds the four blobs into one verdict and one lcov, then `frontend/scripts/check-shard-union.sh` proves the slices partition the suite — every discovered file ran, exactly once — and `check-lcov-paths.sh` proves every path in the report resolves from the repo root (see below). Emits `fe-coverage` |
 | `fe-bundle` | `make fe-bundle` — the Vite production build plus the Storybook catalog build (stories must compile & register) |
-| `frontend` | The fan-in the `ci` aggregate reads, standing for all three SPA jobs. Asserts all three succeeded: a failed lane must turn this fan-in **red, not skipped**, because a skip is what the aggregate reads as "this area was legitimately out of scope". The three run concurrently because they share no state; serially the lane was ~340s, of which vitest alone was ~207s, so the greps and the type gates sat behind a test run that could tell them nothing |
+| `frontend` | The fan-in the `ci` aggregate reads, standing for every SPA job. Asserts all of them succeeded: a failed lane must turn this fan-in **red, not skipped**, because a skip is what the aggregate reads as "this area was legitimately out of scope". That assertion runs FIRST, before the merge half above, so a red shard ends the job rather than handing the merge a partial set of blobs. The jobs run concurrently because they share no state; serially the lane was ~340s, of which vitest alone was ~207s, so the greps and the type gates sat behind a test run that could tell them nothing |
 | `uat` | `make frontend-e2e`: the AC-`<screen>`-N screen-acceptance criteria as named Playwright tests + axe WCAG 2.2 AA + the 390px no-horizontal-scroll sweep + PERF-1's held-read claim for a record open (the perceived BUDGET is `make bench-mobile`'s, not this lane's — a wall-clock sample on a runner shared with six integration shards measures the machine). Mocks the API at the network edge, so it is self-contained |
 | `live-boot` | The README quickstart run literally: compose up → migrate → api → `seed-dev` → `verify-boot`. Keeps the API-driven seed and the boot proof honest — the integration shards never boot the api or run the seed script, so those would rot invisibly without this job |
 | `sonarcloud` | The CI-based scan (below) |
@@ -531,7 +532,7 @@ Wiring details:
   one (#38) until #1541, while the project reported the backend's 84% as the
   whole measurement. `coverage.reporter`
   in `frontend/vite.config.ts` now sets the reporter's `projectRoot` to the repo
-  root, and `frontend/scripts/check-lcov-paths.sh` fails `fe-unit` if any record
+  root, and `frontend/scripts/check-lcov-paths.sh` fails the merge if any record
   stops resolving. The Go profiles carry package import paths and were never
   affected.
 

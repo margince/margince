@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/mailrole"
+	"github.com/margince/margince/backend/internal/shared/kernel/contactaddress"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -109,8 +110,8 @@ func (s *Store) ReplyRecipientFor(ctx context.Context, id ids.ActivityID) (Reply
 			SELECT p.full_name, coalesce(p.first_name, ''), coalesce(p.last_name, ''),
 			       coalesce((SELECT pe.email
 			                   FROM contact_email pe
-			                  WHERE pe.contact_id = p.id AND pe.archived_at IS NULL
-			                  ORDER BY pe.is_primary DESC, pe.position, pe.id
+			                  WHERE pe.contact_id = p.id AND pe.archived_at IS NULL` +
+			contactaddress.ReachableOrder + `
 			                  LIMIT 1), '')
 			  FROM contact p
 			  JOIN (

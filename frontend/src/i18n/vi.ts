@@ -100,6 +100,10 @@ export const vi = {
   "home.change.stageUnknown": "Giai đoạn không rõ",
   "home.change.unidentified": "Không rõ",
   "home.change.by": "Người thực hiện: {actor}",
+  "brief.focus.inQueue": "Trong hàng đợi",
+  "brief.focus.position": "{at} / {count}",
+  "worklist.bandCount_one": "{count} mục",
+  "worklist.bandCount_other": "{count} mục",
   "brief.focus.context": "Mở ngữ cảnh",
   "brief.focus.back": "Quay lại ưu tiên",
   "brief.queue.back": "Quay lại danh sách",
@@ -198,8 +202,8 @@ export const vi = {
   "brief.feed.incomplete":
     "Chưa tải được mục nào. Không thể kiểm tra một phần công việc.",
   "brief.feed.fullWorklist": "Mở danh sách công việc đầy đủ",
-  "brief.feed.visible_one": "{count} thẻ ưu tiên",
-  "brief.feed.visible_other": "{count} thẻ ưu tiên",
+  "brief.feed.visible_one": "{count} ưu tiên trong tiêu điểm",
+  "brief.feed.visible_other": "{count} ưu tiên trong tiêu điểm",
   "brief.week.workRecorded": "Có công việc hoàn thành trong tuần.",
   "brief.week.leads": "Đã phân công {count} khách hàng tiềm năng.",
   "brief.week.responses":
@@ -2282,7 +2286,8 @@ export const vi = {
   "lead.details": "Chi ti\u1ebft",
   "lead.detailsUnset": "Chưa đặt",
   "lead.rail.deal.title": "Deal",
-  "lead.rail.deal.empty": "Chưa có deal. Qualify lead này sẽ tạo một deal.",
+  "lead.rail.deal.empty":
+    "Chưa có deal. Khi thẩm định lead này, bạn có thể mở một deal.",
   "lead.rail.project.title": "Dự án",
   "lead.rail.project.empty": "Chưa có dự án.",
   "lead.rail.project.attach": "Gắn dự án",
@@ -5527,6 +5532,7 @@ export const vi = {
   "blockedDomains.source.human": "Một con người",
   "blockedDomains.source.unevidenced": "Trang web không nêu tên công ty nào",
   "blockedDomains.source.staleEvidence": "Thư ủng hộ điều đó đã quá cũ",
+  "blockedDomains.source.nearDuplicate": "Đã có một công ty trùng tên ở đây",
   "blockedDomains.rowAdmit": "Cho tên miền này vào",
   "blockedDomains.rowRefuse": "Từ chối tên miền này",
   "blockedDomains.rowReopen": "Hỏi lại",
@@ -7026,6 +7032,26 @@ export const vi = {
     "người gửi này bị chặn nên không tạo bản ghi",
   "pipeline.reason.no_open_question":
     "không có câu hỏi nào đang mở về người gửi này",
+  "pipeline.reason.thread_not_captured":
+    "không còn cuộc hội thoại nào được thu thập trên chuỗi này, nên không có gì để đọc",
+  "pipeline.reason.events_raised":
+    "cuộc hội thoại này đã được đọc, và các sự kiện rút ra từ nó đã được ghi vào tài khoản",
+  "pipeline.reason.nothing_material":
+    "cuộc hội thoại này đã được đọc và không có gì đáng lưu",
+  "pipeline.reason.thread_still_moving":
+    "cuộc hội thoại này vẫn đang tiếp diễn; nó được đọc sau khi đã yên lặng một thời gian",
+  "pipeline.reason.awaiting_scan":
+    "cuộc hội thoại này đến hạn được đọc nhưng chưa được xử lý",
+  "pipeline.reason.reading_parked":
+    "việc đọc cuộc hội thoại này đã bị từ chối nhiều lần nên tạm dừng cho đến khi nó thay đổi hoặc hết thời gian tạm dừng",
+  "pipeline.reason.no_single_account":
+    "cuộc hội thoại này không dẫn tới đúng một tài khoản, nên các phát hiện sẽ không có nơi xác định để lưu",
+  "pipeline.reason.two_bodies_of_work":
+    "cuộc hội thoại này trải trên hai dự án, nên các phát hiện sẽ sai với một trong hai",
+  "pipeline.reason.thread_not_all_open":
+    "một tin nhắn trong cuộc hội thoại này bị giới hạn với một phần đối tượng xem; bản tóm tắt toàn bộ sẽ là bản kể thiếu được trình bày như đầy đủ",
+  "pipeline.reason.no_named_reader":
+    "cuộc hội thoại này không xác định được đối tượng đọc nào để một phát hiện thuộc về",
   "pipeline.reason.transport_not_read":
     "bước này chỉ đọc email, còn tin nhắn đến qua kênh khác",
   "pipeline.reason.sender_undecided":

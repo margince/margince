@@ -344,7 +344,8 @@ func admitVerdict(ctx context.Context, in RecordInput) error {
 // audit_log, where every other mutation's history lives.
 func upsertVerdict(ctx context.Context, tx pgx.Tx, in RecordInput, key, capturedBy string) (ids.UUID, error) {
 	var id ids.UUID
-	if err := tx.QueryRow(ctx, `
+	if err := tx.QueryRow(
+		ctx, `
 		INSERT INTO ai_feedback
 		  (subject_type, subject_id, claim_kind, claim_key,
 		   verdict, corrected_value, note, source, captured_by, value_captured_at, value_shown)
@@ -445,7 +446,8 @@ func (s *FeedbackStore) VerdictsForTx(ctx context.Context, tx pgx.Tx, subjectTyp
 			return nil, fmt.Errorf("ai: reading a recorded verdict: %w", err)
 		}
 		out[VerdictLookupKey(claimKind, claimKey)] = NewVerdict(
-			claimKind, claimKey, verdict, correctedValue, note, recordedAt, valueCapturedAt, valueShown)
+			claimKind, claimKey, verdict, correctedValue, note, recordedAt, valueCapturedAt, valueShown,
+		)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("ai: reading the recorded verdicts: %w", err)

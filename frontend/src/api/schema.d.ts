@@ -8900,10 +8900,11 @@ export interface paths {
          *     deliberate one.
          *
          *     An `undecided` entry is a question, not a decision. The crawl found nothing that named a
-         *     company (`unevidenced`), or the newest mail from the domain is too old to mint one from
-         *     today's site (`stale_evidence`). Such a domain is dropped from the retry sweep — a
-         *     re-crawl cannot make old mail newer — so it stays open until new mail arrives or somebody
-         *     here answers it. Without this list those rows are invisible, and a company that never
+         *     company (`unevidenced`), the newest mail from the domain is too old to mint one from
+         *     today's site (`stale_evidence`), or the name it resolved to is close to a company already
+         *     here and creating would put one company in the workspace twice (`near_duplicate`). Such a
+         *     domain is dropped from the retry sweep — a re-crawl reads the same site and reaches the
+         *     same answer — so it stays open until new mail arrives or somebody here answers it. Without this list those rows are invisible, and a company that never
          *     appeared looks the same as one nobody ever asked about.
          *
          *     Every human role may read the list; changing an entry demands `company:update`
@@ -15320,8 +15321,7 @@ export interface paths {
          *     run that is still in flight, was never approved, has already failed,
          *     or has already finished undoing is a conflict, as is a run whose
          *     `undoing` state carries no recorded progress to resume; the
-         *     `hubspot`/`salesforce` connectors have no reversal path — they are
-         *     unbuilt.
+         *     the `salesforce` connector has no reversal path — it is unbuilt.
          *
          *     Reverses only the rows this run created that nobody has touched since
          *     (A93): never an all-or-nothing hard rollback that clobbers a later
@@ -16626,10 +16626,12 @@ export interface components {
              * @description What decided it, or — for an `undecided` domain — what stopped the machine deciding.
              *     `human` decisions outrank every machine one. `unevidenced` means nothing the crawl
              *     found named a company; `stale_evidence` means the newest mail from the domain is too
-             *     old to mint one from today's site.
+             *     old to mint one from today's site; `near_duplicate` means the name it resolved to is
+             *     close to a company already here, and which of them this domain belongs to is a
+             *     human's call rather than the machine's.
              * @enum {string}
              */
-            source: "verdict" | "heuristic" | "human" | "unevidenced" | "stale_evidence";
+            source: "verdict" | "heuristic" | "human" | "unevidenced" | "stale_evidence" | "near_duplicate";
             /**
              * Format: date-time
              * @description When the decision was recorded. For an `undecided` domain, when the row last moved.
@@ -18094,7 +18096,7 @@ export interface components {
         };
         CreateImportRunRequest: {
             /**
-             * @description The source kind. The HubSpot and Salesforce connectors run the same engine and arrive with their own tickets (IEM-AC-8).
+             * @description The source kind. The Salesforce connector runs the same engine and arrives with its own ticket (IEM-AC-8).
              * @enum {string}
              */
             connector: "csv";
@@ -18329,7 +18331,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            connector: "csv" | "hubspot" | "salesforce";
+            connector: "csv" | "salesforce";
             object: components["schemas"]["ImportObject"];
             status: components["schemas"]["ImportRunStatus"];
             /** @description Absolute offset into the source's rows for a forward run (`running`/`failed`), or into import_record_map's rows once the run is `undoing` (IEM-WIRE-9) — 0 = not started either way. What a resume continues from. */
@@ -24723,9 +24725,24 @@ export interface components {
                 entity_id: string;
             }[];
             source: string;
+            /** @description Provenance an importer keeps with the record — the source system's own representation of this activity. Stored verbatim and returned by `getActivity`. It is content: a reader who may not read this activity's subject and body does not receive it either, and the retention and noise-redaction paths destroy it with the rest of the text. */
             raw?: {
                 [key: string]: unknown;
             } | null;
+            /** @description The message's own address headers, for mail this installation never captured. Email only — any other kind returns `422 code: field_not_valid_for_kind` — and `direction` is required alongside it, because the counterparty is derived from the two together: an inbound message is with its sender, an outbound one with the first recipient who is not the sending mailbox. */
+            participants?: {
+                from?: string | null;
+                to?: string[];
+                cc?: string[];
+            } | null;
+            /** @description This message's RFC 5322 Message-ID, angle brackets optional. Email only. It is the identity a later capture of the same message resolves against, so an import that supplies it is recognised rather than duplicated. */
+            rfc_message_id?: string | null;
+            /** @description The conversation this message belongs to. Email only. Defaults to `rfc_message_id` when absent, which files a message under itself — the same root a captured message takes when it starts a thread. */
+            thread_key?: string | null;
+            /** @description The calendar event's iCal UID. Meeting only. A recurring series shares one UID across every occurrence, so this identifies the series and `ical_instance` identifies the occurrence within it; neither alone identifies a meeting. */
+            ical_uid?: string | null;
+            /** @description Which occurrence of `ical_uid` this is — the occurrence's own original start, as the calendar states it. Meeting only. Required whenever `ical_uid` is given, because a series without an occurrence names every meeting in it at once. */
+            ical_instance?: string | null;
         };
         /**
          * @description Who may read an activity's content — see Activity.audience.
@@ -35291,6 +35308,7 @@ export interface components {
              *     attendees are all withheld both produce, and both mean the same thing here.
              */
             with_contact?: string;
+            contact?: components["schemas"]["WorklistContactFacts"];
             /**
              * Format: date-time
              * @description When this is due, or when the meeting starts.
@@ -35837,6 +35855,49 @@ export interface components {
              *     reader cannot act on it and cannot tell it from a bug.
              */
             label?: string;
+        };
+        /**
+         * @description The human behind the row — whom a reply would go to — and how the silence
+         *     runs both ways, so a reader knows whose row it is and who wrote last before
+         *     choosing a verb.
+         *
+         *     Present on every row that names a contact: one whose `subject` is a contact,
+         *     a waiting message filed against one (whose `subject` may be the deal the
+         *     thread belongs to), a meeting with one (`with_contact`). Absent on a row that
+         *     names no human — a deal drifting, a mailbox that stopped.
+         *
+         *     The `id` is the producer's claim and always travels. The label and the
+         *     moments are the READER's, filled under their own grants; each is absent
+         *     where the reader may not have it, which is not the same as unnamed or never.
+         */
+        WorklistContactFacts: {
+            /** Format: uuid */
+            id: string;
+            /** @description The contact's display name. Absent when the caller may not read the contact. */
+            label?: string;
+            touch?: components["schemas"]["WorklistContactTouch"];
+        };
+        /**
+         * @description When they last wrote to us and when we last wrote to them — the same two dates,
+         *     over the same walk, that the contact's own page reports as `last_inbound_at` and
+         *     `last_outbound_at`, so a queue row and the record it opens cannot disagree about
+         *     who wrote last.
+         *
+         *     Absent from the row when the caller may not read activity, or may not read this
+         *     contact: a withheld answer. Present with both nulls for a contact nobody has ever
+         *     exchanged a message with.
+         */
+        WorklistContactTouch: {
+            /**
+             * Format: date-time
+             * @description When they last wrote to us. Null means nothing inbound was ever captured.
+             */
+            last_inbound_at: string | null;
+            /**
+             * Format: date-time
+             * @description When we last wrote to them. Null means we never have.
+             */
+            last_outbound_at: string | null;
         };
         /** @description The lead's contact context, without inventing an inbound request or response deadline. */
         WorklistLeadFacts: {
@@ -46774,6 +46835,17 @@ export interface operations {
             query?: {
                 /** @description Max items in the page. */
                 limit?: components["parameters"]["Limit"];
+                /**
+                 * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
+                 *     effective `sort` of the originating request (field + direction) plus the last row's keyset
+                 *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
+                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     together with a `sort` that differs from the one the cursor was minted under returns
+                 *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
+                 *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
+                 *     remaining pages see, so re-issue the query without the cursor when changing filters.
+                 */
+                cursor?: components["parameters"]["Cursor"];
             };
             header?: never;
             path: {
@@ -46784,7 +46856,11 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Delivery attempts, newest first. */
+            /**
+             * @description Delivery attempts, newest first. `page.next_cursor` continues the walk: the bound
+             *     cuts the OLDEST attempts, which on a failing subscription are the parked ones an
+             *     operator opened this surface to find.
+             */
             200: {
                 headers: {
                     [name: string]: unknown;
