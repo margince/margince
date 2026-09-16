@@ -284,8 +284,8 @@ is there so whoever comes next can see them and judge for themselves.
 reason.** The accurate statement: the password costs a prefix its last ~64
 tokens, and that is not what stops reuse — a provider floor of 1,024 tokens
 stops it, and 38 of our 46 prompts are under it. Moving the password is free
-and worth doing; it will not show up in the dashboard, and expecting it to led
-three people to re-measure the same thing.
+and worth doing; it will not show up in the dashboard, and expecting it to lead
+three sessions to re-measure the same thing.
 
 > **Careful: two different things are called "cache".** One dashboard number
 > counts answers we served from our own memory without calling the AI at all.
