@@ -12,7 +12,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { subscribableEventTypeValues } from "../api/public-events";
 import { type GrantSpec, meFixture } from "../app/mefixture";
-import { pickOption } from "../design-system/select-testing";
+import { pickOption, toggleOptions } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
 import { WebhooksCard } from "./webhooks";
 
@@ -380,18 +380,24 @@ describe("WebhooksCard", () => {
 
     await user.click(await screen.findByTestId("new-webhook-subscription"));
 
+    await user.click(screen.getByRole("combobox", { name: /event types/i }));
+    const listbox = within(screen.getByRole("listbox"));
     // A couple of known values from across the published catalog families —
     // not the full count, so the assertion doesn't ossify into a second
     // hardcoded list the moment the backend catalog grows again.
-    expect(screen.getByLabelText("deal.stage_changed")).toBeTruthy();
-    expect(screen.getByLabelText("lead.promoted")).toBeTruthy();
-    expect(screen.getByLabelText("contact.merged")).toBeTruthy();
-    // Every rendered checkbox is one of the generated catalog's values —
+    expect(
+      listbox.getByRole("option", { name: "deal.stage_changed" }),
+    ).toBeTruthy();
+    expect(listbox.getByRole("option", { name: "lead.promoted" })).toBeTruthy();
+    expect(
+      listbox.getByRole("option", { name: "contact.merged" }),
+    ).toBeTruthy();
+    // Every offered option is one of the generated catalog's values —
     // confirms the option list is DERIVED from subscribableEventTypeValues
     // (imported straight from the generated public-events module) rather
     // than independently maintained.
     for (const eventType of subscribableEventTypeValues) {
-      expect(screen.getByLabelText(eventType)).toBeTruthy();
+      expect(listbox.getByRole("option", { name: eventType })).toBeTruthy();
     }
   });
 
@@ -406,8 +412,11 @@ describe("WebhooksCard", () => {
       screen.getByLabelText(/target url/i),
       "https://example.test/inbound",
     );
-    await user.click(screen.getByLabelText("deal.stage_changed"));
-    await user.click(screen.getByLabelText("lead.promoted"));
+    await toggleOptions(
+      user,
+      screen.getByRole("combobox", { name: /event types/i }),
+      ["deal.stage_changed", "lead.promoted"],
+    );
     await user.click(screen.getByRole("button", { name: "Create" }));
 
     await waitFor(() =>
