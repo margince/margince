@@ -1,5 +1,4 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ExternalLink } from "lucide-react";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
@@ -12,29 +11,29 @@ import {
   EmptyState,
   Field,
   OverflowMenu,
-  Textarea,
   TextInput,
 } from "../design-system/atoms";
 import { Callout, type CalloutTone } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Eyebrow } from "../design-system/eyebrow";
-import { Panel, PanelBody } from "../design-system/panel";
-import { formatDateAbbrev, formatNumber } from "../format/format";
+import { formatDateAbbrev } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { problemMessageOf, QueryStates, throwProblem } from "./common";
+import { RoomFacts, RoomText, ViewAsBuyerButton } from "./deal360/dealroomtab";
 import {
   FINISHED_STATES,
   RoomStateBadge,
   refusalFor,
   useDealRoom,
 } from "./dealroom";
-import { buyerLink, DealRoomAccess, useRoomAttendance } from "./dealroomaccess";
+import { DealRoomAccess } from "./dealroomaccess";
 import { DealRoomConversation } from "./dealroomconversation";
 import "./dealroompage.css";
 
-// The seller's Deal Room page: one place to decide who may enter, what they
-// read, when it goes out, and to hold the conversation. Reached from the deal
-// page; the deal page keeps only a card that points here.
+// The seller's Deal Room page: the room's own identity, its lifecycle verbs
+// and the buyer preview, around the same reading its Deal Room tab draws on
+// the deal record (deal360/dealroomtab.tsx). Reached from a mailed link or a
+// bookmark, since the tab is not the only door to a room already open.
 //
 // Everything on this page is live. A document added is shared, a title changed
 // is read: the invitation is the only gate, and the seller does not press a
@@ -119,100 +118,6 @@ function RoomPage({
         </div>
       </div>
     </div>
-  );
-}
-
-// Who is in the room, under its name: how many were invited, how many have
-// been through the door, and when a buyer last looked. The counts come from
-// the same participants read the Access panel on this page already makes, so
-// this is a second READING of one request rather than a second request.
-//
-// It is a summary and the panel is the register: the line says how many, the
-// panel says who — which is why the two are not one fact said twice.
-function RoomFacts({ room }: Readonly<{ room: DealRoom }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const { invited, active, lastSeen, counted } = useRoomAttendance(room.id);
-  if (!counted) {
-    return null;
-  }
-  return (
-    <p className="t-caption roompage-facts">
-      <span>
-        {t("room.card.contacts", {
-          invited: formatNumber(invited, locale),
-          active: formatNumber(active, locale),
-        })}
-      </span>
-      {lastSeen ? (
-        <span>{t("room.card.lastSeen", { when: lastSeen.slice(0, 10) })}</span>
-      ) : null}
-    </p>
-  );
-}
-
-// "View as buyer": a real buyer session, minted for the rep's own hidden
-// preview seat and opened through the public screen — so what the rep sees
-// is what the buyer gets, release and all. The credential rides in the new
-// tab's fragment exactly as a mailed link would, and is never kept here.
-function ViewAsBuyerButton({ room }: Readonly<{ room: DealRoom }>) {
-  const t = useT();
-  const preview = useMutation({
-    mutationFn: async (roomId: string) => {
-      const { data, error } = await api.POST("/deal-rooms/{id}/preview", {
-        params: { path: { id: roomId } },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
-      return data;
-    },
-    onSuccess: (data) => {
-      if (data) {
-        window.open(buyerLink(data.credential), "_blank", "noopener");
-      }
-    },
-  });
-  // Why the preview is not on offer, or undefined when it is.
-  //
-  // Archived is named first because it is the specific thing a reader can act
-  // on: unarchive the room. The general refusal covers the other three
-  // conditions the server checks — the caller's grant, being a contact rather
-  // than an agent, and the deal being writable and live — which a screen cannot
-  // tell apart and should not guess between.
-  //
-  // The button used to gate on archived ALONE, so a colleague who could read
-  // the room was offered a preview that failed after the click, with a
-  // permission message where the buyer's view should have been.
-  //
-  // An ABSENT preview_available is an older server that does not answer the
-  // question, and offering the button is the honest reading of "unknown": the
-  // press still asks, and its refusal is the one this exists to pre-empt.
-  const reason = (() => {
-    if (room.state === "archived") {
-      return t("roompage.previewArchived");
-    }
-    if (room.preview_available === false) {
-      return t("roompage.previewNotYours");
-    }
-    return undefined;
-  })();
-  return (
-    <>
-      <Button
-        reason={reason}
-        pending={preview.isPending}
-        onClick={() => preview.mutate(room.id)}
-      >
-        <ExternalLink aria-hidden />
-        {t("roompage.viewAsBuyer")}
-      </Button>
-      {preview.isError ? (
-        <span className="t-caption t-danger">
-          {problemMessageOf(preview.error, t)}
-        </span>
-      ) : null}
-    </>
   );
 }
 
@@ -406,91 +311,5 @@ function ExpiryDialog({
         )}
       </Field>
     </ConfirmModal>
-  );
-}
-
-// Title and welcome text, edited in place. Editorial: reaches the buyer at
-// the next publish, and the changes list below says so.
-function RoomText({
-  room,
-  refusal,
-}: Readonly<{ room: DealRoom; refusal: string | undefined }>) {
-  const { t, refresh } = useRoomVerb(room.deal_id);
-  const [title, setTitle] = useState(room.title);
-  const [welcome, setWelcome] = useState(room.welcome_message ?? "");
-  const save = useMutation({
-    mutationFn: async (input: {
-      title: string;
-      welcome: string;
-      version: number;
-    }) => {
-      const { error } = await api.PATCH("/deal-rooms/{id}", {
-        params: { path: { id: room.id }, ...ifMatch(input.version) },
-        body: {
-          title: input.title,
-          welcome_message: input.welcome === "" ? null : input.welcome,
-        },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
-    },
-    onSuccess: refresh,
-  });
-  const dirty =
-    title !== room.title || welcome !== (room.welcome_message ?? "");
-  return (
-    <Panel title={t("roompage.text.title")} sub={t("roompage.text.sub")}>
-      <PanelBody>
-        <div className="form-stack">
-          <Field label={t("roompage.text.titleLabel")}>
-            {(control) => (
-              <TextInput
-                {...control}
-                value={title}
-                disabled={refusal !== undefined}
-                onChange={(e) => setTitle(e.target.value)}
-              />
-            )}
-          </Field>
-          <Field label={t("roompage.text.welcomeLabel")}>
-            {(control) => (
-              <Textarea
-                {...control}
-                rows={3}
-                value={welcome}
-                disabled={refusal !== undefined}
-                onChange={(e) => setWelcome(e.target.value)}
-              />
-            )}
-          </Field>
-          {refusal ? (
-            <p className="t-caption">{refusal}</p>
-          ) : (
-            <div className="card-actions">
-              <Button
-                small
-                disabled={!dirty || title.trim() === ""}
-                pending={save.isPending}
-                onClick={() =>
-                  save.mutate({
-                    title: title.trim(),
-                    welcome: welcome.trim(),
-                    version: requireVersion(room.version),
-                  })
-                }
-              >
-                {t("access.save")}
-              </Button>
-              {save.isError ? (
-                <span className="t-caption t-danger">
-                  {problemMessageOf(save.error, t)}
-                </span>
-              ) : null}
-            </div>
-          )}
-        </div>
-      </PanelBody>
-    </Panel>
   );
 }

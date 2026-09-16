@@ -1689,7 +1689,7 @@ async function openEditForm(user: UserEvent | typeof userEvent = userEvent) {
   );
 }
 
-describe("DealScreen — edit, archive, FX line (A3)", () => {
+describe("DealScreen — edit, archive (A3)", () => {
   beforeEach(() => localStorage.setItem("margince.workspaceSlug", "acme"));
 
   it("edit prefills and PATCHes with If-Match", async () => {
@@ -1819,10 +1819,12 @@ describe("DealScreen — edit, archive, FX line (A3)", () => {
     expect("partner_attribution" in body).toBe(false);
   });
 
-  // The facts run together without a separator: three adjacent spans in a
-  // plain text line rendered "€48,000.00Acme Corpvia Northgate", which is why
-  // the partner looked missing on screen while every assertion about it passed.
-  it("separates the subtitle's facts so they do not run together", async () => {
+  // The facts used to run together without a separator on the identity line:
+  // three adjacent spans in a plain text row rendered "€48,000.00Acme Corpvia
+  // Northgate", which is why the partner looked missing on screen while every
+  // assertion about it passed. Each is its own cell in the facts strip now, so
+  // two facts cannot share a text node no matter what either one contains.
+  it("keeps each fact in its own cell rather than running them together", async () => {
     const d = deal({
       id: "x",
       amount_minor: 4_800_000,
@@ -1847,10 +1849,12 @@ describe("DealScreen — edit, archive, FX line (A3)", () => {
 
     render(<DealScreen id="x" />);
     await screen.findByRole("link", { name: "Northgate" });
-    const line = document.querySelector(".identity-line")?.textContent ?? "";
+    const cells = [...document.querySelectorAll(".record-facts .record-fact")];
+    const texts = cells.map((cell) => cell.textContent);
 
-    expect(line).toContain("·");
-    expect(line).not.toContain("€48,000.00Acme");
+    expect(texts.some((text) => text?.includes("€48,000.00"))).toBe(true);
+    expect(texts.some((text) => text?.includes("Acme Corp"))).toBe(true);
+    expect(texts.every((text) => !text?.includes("€48,000.00Acme"))).toBe(true);
   });
 
   // Sourced and influenced are paid differently, so the line has to say which.
@@ -1874,19 +1878,6 @@ describe("DealScreen — edit, archive, FX line (A3)", () => {
 
     expect(await screen.findByText("helped by")).toBeTruthy();
     expect(screen.queryByText("via")).toBeNull();
-  });
-
-  it("shows the FX base line only when fx_rate_to_base is set", async () => {
-    const d = deal({
-      id: "x",
-      amount_minor: 100_000,
-      currency: "USD",
-      fx_rate_to_base: "0.92",
-      fx_rate_date: "2026-07-01",
-    });
-    vi.stubGlobal("fetch", stubBackend([d], { single: d }));
-    render(<DealScreen id="x" />);
-    await waitFor(() => expect(screen.getByText(/rate 0.92/)).toBeTruthy());
   });
 
   it("archive confirms then DELETEs", async () => {
@@ -2306,7 +2297,7 @@ describe("DealScreen pending approvals", () => {
 });
 
 describe("DealScreen — History tab", () => {
-  it("shows a History tab that lists record changes", async () => {
+  it("shows record changes on the Changes cut of the chronology", async () => {
     vi.stubGlobal("fetch", stubDealBackend(deal({}), []));
     render(<DealScreen id="d1" />);
 
@@ -2314,6 +2305,7 @@ describe("DealScreen — History tab", () => {
       expect(screen.getByRole("button", { name: /history/i })).toBeTruthy(),
     );
     await userEvent.click(screen.getByRole("button", { name: /history/i }));
+    await userEvent.click(screen.getByRole("button", { name: "Changes" }));
 
     await waitFor(() =>
       expect(screen.getByText("Deal amount changed")).toBeTruthy(),

@@ -632,49 +632,6 @@ function useLeadPatch(lead: Lead, id: string, onChanged: () => void) {
  * rather than the layout: a first response already breached is bad news, and
  * the warn family is what says so, in the same pairing `Callout` draws.
  */
-function LeadLadderPanel({
-  lead,
-  writer,
-  onQualify,
-  onDisqualify,
-}: Readonly<{
-  lead: Lead;
-  writer: LeadWriter;
-  onQualify: () => void;
-  onDisqualify: () => void;
-}>) {
-  const t = useT();
-  const { readOnly } = writer;
-  return (
-    <Panel
-      title={t("lead.ladder.title")}
-      tone={lead.sla_state === "breached" ? "warn" : "accent"}
-    >
-      <PanelBody>
-        <div className="lead-stack">
-          {/* The ladder leads: where this lead stands and how it got there is
-              the first thing a rep needs, and the step they take next is one
-              click on it (the terminal steps open their own dialogs). */}
-          <LeadStepper
-            lead={lead}
-            pending={writer.patch.isPending}
-            readOnlyReason={writer.readOnlyReason}
-            onStep={(status) => {
-              // Same one-write-at-a-time rule as the inline rows: a status
-              // sent while another save is in flight races it for If-Match.
-              if (!writer.patch.isPending && !readOnly) {
-                writer.save({ status });
-              }
-            }}
-            onQualify={onQualify}
-            onDisqualify={onDisqualify}
-          />
-        </div>
-      </PanelBody>
-    </Panel>
-  );
-}
-
 /**
  * The score as a card of the reading: it folds to one line with its top
  * factor, and opens for the breakdown and the override. Beside it, in the
@@ -1069,8 +1026,6 @@ function LeadOverviewPane({
   promotion,
   terminalReasonId,
   thread,
-  onQualify,
-  onDisqualify,
   onReply,
   onOpenEmail,
 }: Readonly<{
@@ -1082,8 +1037,6 @@ function LeadOverviewPane({
   // The lead's unfiltered timeline read, which the thread under the call is
   // drawn from — the whole read, so its failure reaches the call too.
   thread: RecordTimeline;
-  onQualify: () => void;
-  onDisqualify: () => void;
   // The "Answer" row's own verb: opens the SAME composer the header's Email
   // verb opens, owned by LeadRecord so both controls answer to one open
   // state rather than each mounting its own copy of it.
@@ -1111,12 +1064,6 @@ function LeadOverviewPane({
       {lead.promoted_contact_id && (
         <PromotedLeadPanel lead={lead} promotion={promotion} />
       )}
-      <LeadLadderPanel
-        lead={lead}
-        writer={writer}
-        onQualify={onQualify}
-        onDisqualify={onDisqualify}
-      />
       {/* ONE READING, IN PARTS — the shape every record page reads in: the
           call with the lead's own thread under it, what needs a contact, and
           under them the two sections a reader consults rather than reads —
@@ -1520,6 +1467,25 @@ function LeadRecord({ lead, id }: Readonly<{ lead: Lead; id: string }>) {
         // honest default for a prospect: a lead carries no workspace location of
         // its own to prefer over where the reader is.
         zone={viewerZone()}
+        // Where the lead stands, above the choice of what to read about it,
+        // the way a deal's own ladder stands over its tabs: one shape for the
+        // question both records are asked first.
+        standing={
+          <LeadStepper
+            lead={lead}
+            pending={writer.patch.isPending}
+            readOnlyReason={writer.readOnlyReason}
+            onStep={(status) => {
+              // Same one-write-at-a-time rule as the inline rows: a status
+              // sent while another save is in flight races it for If-Match.
+              if (!writer.patch.isPending && !writer.readOnly) {
+                writer.save({ status });
+              }
+            }}
+            onQualify={() => setDialog("qualify")}
+            onDisqualify={() => setDialog("disqualify")}
+          />
+        }
         band={leadBand({ lead, writer, reasonId: terminalReasonId, id, t })}
         // The same strip every record in the product carries: a place a reader
         // navigates, drawn as a rule with the open body underlined, rather than
@@ -1565,8 +1531,6 @@ function LeadRecord({ lead, id }: Readonly<{ lead: Lead; id: string }>) {
             terminalReasonId={terminalReasonId}
             thread={threadQuery}
             onOpenEmail={setOpenEmail}
-            onQualify={() => setDialog("qualify")}
-            onDisqualify={() => setDialog("disqualify")}
             onReply={() => setComposing(true)}
           />
         )}

@@ -147,6 +147,7 @@ export function RecordView({
   markShape = "contact",
   actionsInline,
   scale = "record",
+  standing,
   band,
   rail,
   railLabel,
@@ -209,6 +210,13 @@ export function RecordView({
   // to the single column every existing caller already renders.
   // Full-width content between the tab strip and the columns: what describes
   // the WHOLE record — its readings, its stepper, the refusal of an edit.
+  /**
+   * Where the record STANDS, above the choice of what to read about it: a
+   * deal's stage ladder. Over the tabs rather than under them, because the
+   * ladder answers the question a reader arrives with, and a reader who has
+   * already chosen a tab has passed it.
+   */
+  standing?: ReactNode;
   band?: ReactNode;
   rail?: ReactNode;
   // What the rail and the aside ARE, for a reader navigating by landmark: each
@@ -300,6 +308,7 @@ export function RecordView({
   );
   // What describes the WHOLE record frames the columns from between the strip
   // and them at full width, not from the work column beside the rail.
+  const stands = standing && <div className="record-standing">{standing}</div>;
   const frame = band && <div className="record-band">{band}</div>;
   const story = timeline && (
     <RecordStory
@@ -322,6 +331,7 @@ export function RecordView({
     <div className="arrive-stack">
       {head}
       {actionsAt === "below" && <div className="record-actions">{actions}</div>}
+      {stands}
       {strip}
       {frame}
       <PageZones
