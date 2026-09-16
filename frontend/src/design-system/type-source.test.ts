@@ -4,8 +4,9 @@
 import { readFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
+import ts from "typescript";
 import { describe, expect, it } from "vitest";
-import { filesMatching } from "../../scripts/lib/source-tree";
+import { filesMatching, parseSource } from "../../scripts/lib/source-tree";
 
 // ONE source for type. Outside tokens.css nothing in this tree declares a size,
 // a leading, a weight or a tracking BY VALUE: a rule wears a `--font*` token or
@@ -65,10 +66,24 @@ const WEIGHT_TOKEN = /^var\(\s*--fontWeight[A-Z][A-Za-z]*\s*\)$/;
 const INHERIT = "inherit";
 
 // Longest property first, so `font-size` is tried before `font` at the same
-// position. `font-family` is deliberately absent: which FACE an element wears
-// is mono.test.ts's question, and a family is not a size.
+// position. Two absences are deliberate. `font-family` is mono.test.ts's
+// question, and a family is not a size. `font-variant-numeric` is not listed at
+// all, which is what ALLOWS it: `.t-num`'s tabular figures are an alignment
+// fact about a column of money, not a decision about how loud text is, and the
+// tree draws it about seventy times.
 const CSS_DECLARATION =
-  /(?:^|[;{}\s])(font-size|font-weight|line-height|letter-spacing|text-transform|font)\s*:\s*([^;}]*)/g;
+  /(?:^|[;{}\s])(font-feature-settings|font-variant-caps|font-variant|font-size|font-weight|line-height|letter-spacing|text-transform|font)\s*:\s*([^;}]*)/g;
+
+// Small caps are UPPERCASE by another road. `text-transform` is the spelling
+// this gate has always refused, and refusing only that leaves three ways to
+// draw the same shouted label — the caps keyword on `font-variant-caps`, the
+// same keyword inside the `font-variant` shorthand, and the OpenType feature
+// turned on by hand. All four are one decision, so they answer to one rule.
+const CAPS_KEYWORD =
+  /\b(small-caps|all-small-caps|petite-caps|all-petite-caps|unicase|titling-caps)\b/;
+// The features themselves: smcp is small caps, c2sc caps-to-small-caps, pcap
+// petite. Quoted, because that is the only way the property takes a tag.
+const CAPS_FEATURE = /["'](smcp|c2sc|pcap)["']/;
 
 // A style object's property. Matches wherever the object is written — inline in
 // a `style={{ … }}`, or hoisted to a `const … : CSSProperties`, which is the
@@ -136,6 +151,12 @@ function cssDeclarationHolds(
   if (value === INHERIT) return true;
   if (property === "font") return TYPE_TOKEN.test(value);
   if (property === "font-weight") return WEIGHT_TOKEN.test(value);
+  // The caps family: each is allowed to say anything EXCEPT draw capitals.
+  // `font-variant` and `font-feature-settings` carry other things too — figure
+  // shapes, ligatures, kerning — and those are not this gate's business.
+  if (property === "font-variant-caps") return value === "normal";
+  if (property === "font-variant") return !CAPS_KEYWORD.test(value);
+  if (property === "font-feature-settings") return !CAPS_FEATURE.test(value);
   if (!RESETS.includes(file)) return false;
   if (property === "text-transform") return value === "none";
   if (property === "line-height") {
@@ -188,6 +209,69 @@ function inlineFindings(file: string, source: string): string[] {
   });
 }
 
+const UPPERCASING = new Set(["toUpperCase", "toLocaleUpperCase"]);
+
+/**
+ * Whether an expression stands where JSX RENDERS it: as a child, as an
+ * attribute value, or as a piece of a template literal in either place.
+ *
+ * The distinction is the whole arm. `code.toUpperCase()` compared against
+ * another string, used as a map key, or normalising a currency before it is
+ * sent to the server is data handling, and none of it is visible; the same call
+ * dropped between two tags is a casing decision taken at the call site, which
+ * is what `text-transform` was refused for. A rule that could not tell them
+ * apart would have to refuse the language's own uppercase function.
+ *
+ * Parentheses and template spans are climbed through because they change where
+ * the call is WRITTEN and not where its result lands. A binary expression is
+ * deliberately not: `a.toUpperCase() === b` renders nothing, and a
+ * concatenation would need its own decision rather than this one by default.
+ */
+function isRendered(call: ts.Node): boolean {
+  let here: ts.Node = call;
+  let parent: ts.Node | undefined = here.parent;
+  while (
+    parent &&
+    (ts.isParenthesizedExpression(parent) ||
+      ts.isTemplateSpan(parent) ||
+      ts.isTemplateExpression(parent))
+  ) {
+    here = parent;
+    parent = here.parent;
+  }
+  if (!parent || !ts.isJsxExpression(parent)) return false;
+  const holder = parent.parent;
+  return (
+    holder !== undefined &&
+    (ts.isJsxAttribute(holder) ||
+      ts.isJsxElement(holder) ||
+      ts.isJsxFragment(holder) ||
+      ts.isJsxSelfClosingElement(holder))
+  );
+}
+
+/** Every uppercased string one module puts on the screen. */
+function uppercasingFindings(file: string, source: string): string[] {
+  const tree = parseSource(file, source);
+  const found: string[] = [];
+  const visit = (node: ts.Node): void => {
+    if (
+      ts.isCallExpression(node) &&
+      ts.isPropertyAccessExpression(node.expression) &&
+      UPPERCASING.has(node.expression.name.text) &&
+      isRendered(node)
+    ) {
+      const { line } = tree.getLineAndCharacterOfPosition(node.getStart(tree));
+      found.push(
+        `${file}:${line + 1}: ${node.getText(tree).replace(/\s+/g, " ")}`,
+      );
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(tree);
+  return found;
+}
+
 const under = (pattern: RegExp) =>
   filesMatching(join(frontendRoot, "src"), pattern).map((file) =>
     relative(frontendRoot, file),
@@ -222,6 +306,17 @@ describe("type comes from tokens.css and from nowhere else", () => {
 
   it("puts no type on a style object", () => {
     const found = modules.flatMap((file) => inlineFindings(file, read(file)));
+    expect(found, found.join("\n")).toEqual([]);
+  });
+
+  // Only .tsx, and that is completeness rather than a shortcut: JSX is decided
+  // by script kind, so a .ts file cannot hold the thing this looks for.
+  it("renders no string it uppercased on the way to the screen", () => {
+    const components = modules.filter((file) => file.endsWith(".tsx"));
+    expect(components.length).toBeGreaterThanOrEqual(100);
+    const found = components.flatMap((file) =>
+      uppercasingFindings(file, read(file)),
+    );
     expect(found, found.join("\n")).toEqual([]);
   });
 });
@@ -368,6 +463,41 @@ describe("the gate sees what it claims to see", () => {
     ]);
   });
 
+  it("refuses small caps by every road that draws them", () => {
+    for (const declaration of [
+      "font-variant-caps: small-caps",
+      "font-variant-caps: all-small-caps",
+      "font-variant: small-caps",
+      "font-variant: common-ligatures petite-caps",
+      'font-feature-settings: "smcp" 1',
+      'font-feature-settings: "c2sc", "smcp"',
+      'font-feature-settings: "pcap"',
+    ]) {
+      expect(cssFindings(sheet, `.a { ${declaration}; }`), declaration).toEqual(
+        [`${sheet}:1: ${declaration.replace(/:\s*/, ": ")}`],
+      );
+    }
+  });
+
+  it("leaves the rest of the font-variant family alone", () => {
+    // Tabular figures are the negative case that matters: `.t-num` is drawn
+    // about seventy times in this tree, and a rule that swept the whole
+    // font-variant family would refuse a column of money lining up.
+    for (const declaration of [
+      "font-variant-numeric: tabular-nums",
+      "font-variant-numeric: normal",
+      "font-variant-caps: normal",
+      "font-variant-caps: inherit",
+      "font-variant: common-ligatures tabular-nums",
+      'font-feature-settings: "tnum" 1',
+      "font-feature-settings: normal",
+    ]) {
+      expect(cssFindings(sheet, `.a { ${declaration}; }`), declaration).toEqual(
+        [],
+      );
+    }
+  });
+
   it("leaves fontFamily to the face gate", () => {
     expect(
       inlineFindings(
@@ -375,5 +505,37 @@ describe("the gate sees what it claims to see", () => {
         'const s = { fontFamily: "var(--fontFamilyMono)" };',
       ),
     ).toEqual([]);
+  });
+
+  it("catches an uppercased string wherever JSX renders it", () => {
+    for (const body of [
+      "<span>{name.toUpperCase()}</span>",
+      "<span>{name.toLocaleUpperCase(locale)}</span>",
+      "<abbr title={code.toUpperCase()} />",
+      // Template literals, so the interpolation these fixtures are ABOUT stays
+      // text rather than being read as one.
+      `<span>{\`\${code.toUpperCase()} · ok\`}</span>`,
+      `<abbr title={\`\${code.toUpperCase()}\`} />`,
+      "<span>{(name.toUpperCase())}</span>",
+    ]) {
+      const found = uppercasingFindings(moduleFile, `const a = ${body};`);
+      expect(found.length, body).toBe(1);
+      expect(found[0], body).toMatch(/^src\/screens\/fixture\.tsx:1: /);
+    }
+  });
+
+  it("leaves an uppercased string nobody reads alone", () => {
+    // The sharp one is the first: a comparison written INSIDE JSX is still a
+    // comparison, and the rule is about where the RESULT lands.
+    for (const source of [
+      'const a = <span>{code.toUpperCase() === want ? "y" : "n"}</span>;',
+      "if (a.toUpperCase() === b) { run(); }",
+      "const key = name.toUpperCase();",
+      "seen.set(code.toUpperCase(), value);",
+      "const sorted = rows.sort((a, b) => a.toUpperCase() < b.toUpperCase() ? -1 : 1);",
+      "post({ currency: input.trim().toUpperCase() });",
+    ]) {
+      expect(uppercasingFindings(moduleFile, source), source).toEqual([]);
+    }
   });
 });
