@@ -60,8 +60,6 @@ type workerConfig struct {
 	graphNotifyURL       string
 	graphWatchInterval   time.Duration
 	graphWatchRenew      time.Duration
-	overlayInterval      time.Duration
-	overlayBackfillLimit int
 	sendRateLimit        int
 	sendRateWindow       time.Duration
 	sendMaxAge           time.Duration
@@ -138,8 +136,6 @@ func workerFlagSet() (*flag.FlagSet, *cliflags.Env, *workerConfig, error) {
 	env.String(fs, &cfg.graphNotifyURL, "graph-notification-url", "MARGINCE_GRAPH_NOTIFICATION_URL", "", "public URL Microsoft posts Graph change notifications to, operator token and all (https://<api>/webhooks/graph?token=...); enables the subscription register+renew job. Empty leaves Outlook capture on the poll.")
 	fs.DurationVar(&cfg.graphWatchInterval, "graph-watch-interval", 6*time.Hour, "Graph subscription maintenance scan interval")
 	fs.DurationVar(&cfg.graphWatchRenew, "graph-watch-renew-within", 24*time.Hour, "renew a Graph subscription this far ahead of its <3-day deadline")
-	fs.DurationVar(&cfg.overlayInterval, "overlay-reconcile-interval", 2*time.Minute, "overlay-mode incumbent mirror reconcile poll interval (design.md §4.4)")
-	fs.IntVar(&cfg.overlayBackfillLimit, "overlay-backfill-limit", 0, "cap the overlay initial mirror backfill at this many records per object class (dev/demo; 0 = uncapped)")
 	if err := registerDeepReadFlags(fs, cfg); err != nil {
 		return nil, nil, nil, err
 	}
@@ -215,17 +211,14 @@ func parseWorkerFlags(args []string) (workerConfig, error) {
 	if cfg.dsn == "" {
 		return workerConfig{}, errors.New("worker: --dsn or MARGINCE_DSN required")
 	}
-	if err := overlayBackfillLimitFromEnv(&cfg.overlayBackfillLimit); err != nil {
-		return workerConfig{}, err
-	}
 	// The refusal half of the auto-enrich daily cap: a typo fails the boot
 	// here; compose resolves the value where it is spent, from the same
 	// process environment, which is fixed at exec.
 	if _, err := compose.AutoEnrichDailyCapFromEnv(config.FromOS); err != nil {
 		return workerConfig{}, err
 	}
-	if cfg.deepReadMaxPages < 0 || cfg.deepReadMaxBytes < 0 || cfg.deepReadWall < 0 || cfg.overlayBackfillLimit < 0 {
-		return workerConfig{}, errors.New("worker: the deep-read caps and the overlay backfill limit must be zero (default/uncapped) or positive")
+	if cfg.deepReadMaxPages < 0 || cfg.deepReadMaxBytes < 0 || cfg.deepReadWall < 0 {
+		return workerConfig{}, errors.New("worker: the deep-read caps must be zero (default/uncapped) or positive")
 	}
 	// A negative pacing value would read as "take the default" downstream,
 	// which quietly ignores what the operator actually typed.
@@ -244,13 +237,12 @@ func parseWorkerFlags(args []string) (workerConfig, error) {
 // unparseable value there is a boot error rather than a silent fallback to the
 // built-in — an operator who typed a cap and got the default instead would have
 // no way to tell.
-// The deep-read caps and the overlay backfill limit, named so each role can
-// declare them without spelling the strings a second time.
+// The deep-read caps, named so each role can declare them without spelling the
+// strings a second time.
 const (
-	deepReadMaxPagesEnv     = "MARGINCE_DEEPREAD_MAX_PAGES"
-	deepReadMaxBytesEnv     = "MARGINCE_DEEPREAD_MAX_BYTES"
-	deepReadWallEnv         = "MARGINCE_DEEPREAD_WALL"
-	overlayBackfillLimitEnv = "MARGINCE_OVERLAY_BACKFILL_LIMIT"
+	deepReadMaxPagesEnv = "MARGINCE_DEEPREAD_MAX_PAGES"
+	deepReadMaxBytesEnv = "MARGINCE_DEEPREAD_MAX_BYTES"
+	deepReadWallEnv     = "MARGINCE_DEEPREAD_WALL"
 )
 
 func registerDeepReadFlags(fs *flag.FlagSet, cfg *workerConfig) error {
@@ -299,7 +291,6 @@ func validateSchedulerIntervals(cfg workerConfig) error {
 		{"gmail-sync-interval", cfg.gmailSyncInterval},
 		{"gmail-watch-interval", cfg.gmailWatchInterval},
 		{"graph-watch-interval", cfg.graphWatchInterval},
-		{"overlay-reconcile-interval", cfg.overlayInterval},
 		{"webhook-retry-interval", cfg.webhookRetryInterval},
 	}
 	for _, iv := range intervals {
@@ -315,23 +306,6 @@ func validateSchedulerIntervals(cfg workerConfig) error {
 	if cfg.graphWatchRenew < 0 {
 		return fmt.Errorf("worker: --graph-watch-renew-within must be zero or positive, got %s", cfg.graphWatchRenew)
 	}
-	return nil
-}
-
-// overlayBackfillLimitFromEnv folds MARGINCE_OVERLAY_BACKFILL_LIMIT into
-// limit when the flag was left at its 0 default, so either the flag or the
-// env sets the cap. An unset env leaves limit untouched; a set-but-invalid
-// env (non-integer or negative) is a boot error, never a silent default.
-func overlayBackfillLimitFromEnv(limit *int) error {
-	v := config.FromOS(overlayBackfillLimitEnv)
-	if v == "" || *limit != 0 {
-		return nil
-	}
-	n, err := strconv.Atoi(v)
-	if err != nil || n < 0 {
-		return fmt.Errorf("invalid MARGINCE_OVERLAY_BACKFILL_LIMIT %q: want a non-negative integer", v)
-	}
-	*limit = n
 	return nil
 }
 

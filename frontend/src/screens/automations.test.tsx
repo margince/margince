@@ -15,7 +15,8 @@ import type { components } from "../api/schema";
 import { type GrantSpec, meFixture } from "../app/mefixture";
 import { pickOption } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
-import { AutomationRow, AutomationsAdmin, paramFields } from "./automations";
+import { AutomationRow, AutomationsAdmin } from "./automations";
+import { paramFields } from "./automations.params";
 
 // B-EP09.15 acceptance: the editor is catalog-driven end to end — the
 // anti-DSL guard (no free-form rule body, no user-defined trigger; form
@@ -388,7 +389,7 @@ describe("AutomationsAdmin (B-EP09.15)", () => {
     // No switch to flip, and the badge in its place so the state is still a
     // read this row answers.
     expect(screen.queryByRole("switch")).toBeNull();
-    expect(screen.getByText("paused")).toBeTruthy();
+    expect(screen.getByText("Paused")).toBeTruthy();
     await openRowMenu();
     expect(screen.queryByRole("button", { name: "Edit" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Delete" })).toBeNull();
@@ -506,7 +507,7 @@ describe("AutomationsAdmin (B-EP09.15)", () => {
   });
 
   // Every library entry is one ROW of the same language, so the hairlines do the
-  // separating. As a bare `<ul>` an entry ran a name, a sentence and a mono
+  // separating. As a bare `<ul>` an entry ran a name, a sentence and a
   // trigger/action pair together with no interval between the lines and no rule
   // between entries, and its verb floated at the right of the first line.
   it("gives every library entry a row, its recipe, and its verb in the answer column", async () => {
@@ -747,13 +748,11 @@ describe("AutomationRow — Runs/Preview toggles", () => {
   });
 });
 
-// GH-706: renewal_reminder's real catalog schema (automations_catalog.go's
-// renewalReminderSchema) — days_before stays the one integer param; object
-// and date_field name the workspace's own cf_* column to watch; recurs_yearly
-// opts a stored value into yearly re-arming. This is the boolean case and
-// the date_field picker, proven against the CLOSED catalog-driven renderer
-// (paramKind/paramFields/paramsFromValues) rather than a renewal_reminder
-// special case in the component.
+// renewal_reminder's real catalog schema — days_before stays the one integer
+// param; object and date_field name the workspace's own cf_* column to watch;
+// recurs_yearly opts a stored value into yearly re-arming. This is the boolean
+// case and the date_field picker, proven against the CLOSED reader in
+// automations.params.ts rather than a special case in the component.
 type CustomField = components["schemas"]["CustomField"];
 
 const renewalReminderSchema = {

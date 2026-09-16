@@ -153,12 +153,10 @@ func (s *Store) advanceOnTx(
 		if err != nil {
 			return fmt.Errorf("read deal before advance: %w", err)
 		}
-		// pipeline_id/stage_id became nullable for overlay-mirror deals
-		// (OVA-MAP-6), but a NATIVE deal — the only kind this native advance
-		// path ever runs against — always carries both (NOT NULL columns).
-		// Refuse a deal missing them rather than nil-deref below: an overlay
-		// deal cannot reach here (advance_deal is unsupported in overlay mode),
-		// so a nil is corruption, not a valid transition.
+		// Both columns are NOT NULL, so a deal that reads back without them is
+		// corruption rather than a valid transition. Refuse it here rather than
+		// nil-deref below: the contract type carries them as pointers, and a
+		// panic would say nothing about which row was wrong.
 		if current.StageId == nil || current.PipelineId == nil {
 			return fmt.Errorf("advance deal %s: deal has no native pipeline/stage", id)
 		}

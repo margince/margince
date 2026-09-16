@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { useEffect, useId, useRef, useState } from "react";
-import { Button } from "../../design-system/atoms";
+import { Badge, Button } from "../../design-system/atoms";
 import { formatNumber } from "../../format/format";
 import { type Locale, useLocale, useT } from "../../i18n";
 import type { CompanyFieldName } from "../onboarding";
@@ -296,10 +296,10 @@ function DeckCardFace({
   return (
     <div className="rdeck-card staging-card" data-required={card.required}>
       <div className="rdeck-head">
-        <span className="rdeck-tag t-eyebrow" data-required={card.required}>
+        <Badge tone={card.required ? "danger" : "default"}>
           {t(card.required ? "ob.deck.needed" : "ob.deck.optional")}
-        </span>
-        <span className="rdeck-count t-caption">
+        </Badge>
+        <span className="t-caption">
           {t("ob.deck.counter", {
             n: formatNumber(index + 1, locale),
             m: formatNumber(total, locale),
@@ -391,7 +391,7 @@ function DeckFoot({
         {/* The quiet half of the sentence: the reader did not have to do this,
             and saying so is what makes the short list of cards credible rather
             than suspicious. */}
-        <span className="rdeck-settled t-caption">
+        <span className="t-caption">
           {t("ob.deck.settled", { count: formatNumber(settled, locale) })}
         </span>
       </p>

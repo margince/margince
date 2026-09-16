@@ -33,15 +33,17 @@ function t(key: MessageKey, values?: Record<string, string>): string {
 function item(over: Partial<WorklistItem> = {}): WorklistItem {
   return {
     id: "i1",
-    source: "waiting_customer",
+    source: "customer_waiting",
+    level: 1,
     category: "customer_waiting",
     title: "Aster Handel",
     because: [],
+    consequence: "buyer_waits",
     actions: ["open"],
     dispositions: [],
     overdue: false,
     ...over,
-  } as unknown as WorklistItem;
+  };
 }
 
 function day(queue: WorklistItem[]): Worklist {
@@ -58,8 +60,16 @@ function day(queue: WorklistItem[]): Worklist {
     counts: [],
     reach: [],
     sources_unavailable: [],
-    summary: { total: queue.length, urgent: 0 },
-  } as unknown as Worklist;
+    summary: { total: queue.length, urgent: 0, due: 0, lower_priority: 0 },
+    readings: {
+      changed_since_brief: 0,
+      revenue_at_risk_minor: 0,
+      buyer_replies: 0,
+      prospecting: 0,
+      review: 0,
+      more_available: false,
+    },
+  };
 }
 
 describe("the opening sentence", () => {
@@ -68,6 +78,9 @@ describe("the opening sentence", () => {
   // answer; a cheerful one is not.
   it("says nothing at all about a day it could not read", () => {
     expect(briefSentence(undefined, t, "en")).toBeNull();
+    // contract:cast `{}` is not a Worklist and is not meant to be. The case is
+    // about a payload the function cannot read, which is the one shape a typed
+    // fixture cannot express.
     expect(briefSentence({} as unknown as Worklist, t, "en")).toBeNull();
   });
 

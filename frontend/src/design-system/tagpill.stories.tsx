@@ -41,9 +41,9 @@ export const NoTone: Story = {
 
 /**
  * An archived word stays ON the record it was applied to: retiring a tag stops
- * it being applied, it does not un-tag history. It draws quiet and says so,
- * because a reader who saw it plain would go looking for it in a picker that
- * no longer offers it.
+ * it being applied, it does not un-tag history. It drops its colour and says
+ * so in words, because a reader who saw it plain would go looking for it in a
+ * picker that no longer offers it.
  */
 export const Archived: Story = {
   render: () => <TagPill name="Trade Fair 2025" tone="amber" archived />,

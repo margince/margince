@@ -128,6 +128,88 @@ func TestBuildExtensionToolsAdaptsHandlerBearingTools(t *testing.T) {
 	}
 }
 
+// TestBuildExtensionToolsAdaptsAHumanOnlyVerbWithNoTierOrScope: a verb
+// declaring x-agent-access: human-only (no Tier/RequestedScope) is still
+// served — REST still needs to dispatch it by name — with HumanOnly carried
+// onto the adapted spec and Tier/RequiredScope left at their zero value.
+func TestBuildExtensionToolsAdaptsAHumanOnlyVerbWithNoTierOrScope(t *testing.T) {
+	exts := []extension.Extension{{
+		Name:    "demo",
+		Version: "1.0.0",
+		Tools: []extension.Tool{
+			{Name: "human_op", Handle: servedHandle},
+		},
+	}}
+	verb := extension.Verb{
+		Unit:        "demo",
+		Contract:    "crm.yaml",
+		OperationID: "demoHumanOp",
+		Route:       "/ext/demo/human-op",
+		Method:      http.MethodPost,
+		Tool:        "human_op",
+		Title:       "A human-only op",
+		Description: unitToolDescription,
+		Version:     "1.0.0",
+		HumanOnly:   true,
+		RbacObject:  "ext_demo_record",
+		RbacAction:  extension.RbacUpdate,
+	}
+	tools, err := buildExtensionTools(exts, []extension.Verb{verb})
+	if err != nil {
+		t.Fatalf("a human-only verb with no Tier must be accepted: %v", err)
+	}
+	if len(tools) != 1 {
+		t.Fatalf("want 1 served tool, got %d", len(tools))
+	}
+	spec := tools[0].Spec()
+	if !spec.HumanOnly {
+		t.Fatal("the adapted spec must carry HumanOnly")
+	}
+	if spec.Tier != 0 || spec.RequiredScope != "" {
+		t.Fatalf("a human-only spec must carry a zero Tier/RequiredScope, got %+v", spec)
+	}
+}
+
+// TestBuildExtensionToolsRejectsAHumanOnlyToolWithNoDescription mirrors the
+// non-human-only refusal: adaptHumanOnlyExtensionTool owes a served tool the
+// same Description a client reads to know what it is, even though it carries
+// no Tier to fall back to.
+func TestBuildExtensionToolsRejectsAHumanOnlyToolWithNoDescription(t *testing.T) {
+	verb := extension.Verb{
+		Unit: "demo", Contract: "crm.yaml", OperationID: "demoHumanOp", Route: "/ext/demo/human-op",
+		Method: http.MethodPost, Tool: "human_op", Version: "1.0.0", HumanOnly: true,
+		RbacObject: "ext_demo_record", RbacAction: extension.RbacUpdate,
+	}
+	_, err := buildExtensionTools([]extension.Extension{{
+		Name: "demo", Version: "1.0.0",
+		Tools: []extension.Tool{{Name: "human_op", Handle: servedHandle}},
+	}}, []extension.Verb{verb})
+	if err == nil || !strings.Contains(err.Error(), "declares no Description") {
+		t.Fatalf("err = %v, want the undescribed human-only tool rejection", err)
+	}
+}
+
+// TestAdaptExtensionToolRejectsAHumanOnlyToolWithNoVersion: every result this
+// surface seals carries the tool's Version as schema_version, whatever its
+// governance — a human-only tool owes the same guarantee a tool-verb one
+// does. Verb.Validate already refuses an empty Version at gen time (so
+// buildExtensionTools never reaches this for a composed set assembled through
+// the normal path), which is exactly why adaptExtensionTool's own check is
+// tested directly here — it is the restated guarantee for a composed set
+// assembled outside that path, the same reasoning as the tool-verb branch's
+// own Version check.
+func TestAdaptExtensionToolRejectsAHumanOnlyToolWithNoVersion(t *testing.T) {
+	verb := extension.Verb{
+		Unit: "demo", Contract: "crm.yaml", OperationID: "demoHumanOp", Route: "/ext/demo/human-op",
+		Method: http.MethodPost, Tool: "human_op", Description: unitToolDescription, HumanOnly: true,
+		RbacObject: "ext_demo_record", RbacAction: extension.RbacUpdate,
+	}
+	_, err := adaptExtensionTool("demo", extension.Tool{Name: "human_op", Handle: servedHandle}, verb)
+	if err == nil || !strings.Contains(err.Error(), "declares no Version") {
+		t.Fatalf("err = %v, want the versionless human-only tool rejection", err)
+	}
+}
+
 // TestBuildExtensionToolsRejectsAServedConfirmationRequiredToolWithNoSubject:
 // a handler-bearing 🟡 tool the gate cannot park a refused call for is a dead
 // capability — refused on every call with no approval to redeem — so building

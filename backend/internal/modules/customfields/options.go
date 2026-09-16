@@ -80,7 +80,7 @@ func lockPicklistField(ctx context.Context, tx pgx.Tx, id ids.UUID) (lockedField
 	if err != nil {
 		return lockedField{}, fmt.Errorf("customfields: locking catalog row: %w", err)
 	}
-	if f.Type != TypePicklist {
+	if !hasOptions(f.Type) {
 		return lockedField{}, ErrNotPicklist
 	}
 	if err := f.mutable(); err != nil {
@@ -97,7 +97,7 @@ func (s *Service) setOptionsInTx(ctx context.Context, tx pgx.Tx, id ids.UUID, op
 	if err != nil {
 		return crmcontracts.CustomField{}, err
 	}
-	ddl, err := BuildOptionsDDL(f.Object, f.ColumnName, options)
+	ddl, err := buildTypedOptionsDDL(f.Object, f.ColumnName, f.Type, options)
 	if err != nil {
 		return crmcontracts.CustomField{}, err
 	}

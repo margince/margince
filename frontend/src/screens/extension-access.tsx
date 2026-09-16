@@ -431,7 +431,7 @@ function UnitCard({
             everything else because it is what an operator deciding whether to
             grant the switches below is actually missing: the unit name alone
             leaves "de" meaning nothing. */}
-        <p className="t-caption ext-unit-description">{unit.description}</p>
+        <p className="t-caption">{unit.description}</p>
         {/* Said, not silently omitted, and only where the two registries
             DISAGREE: a unit the running binary composed whose descriptor this
             bundle does not carry is a version skew an operator has to be able
@@ -529,7 +529,7 @@ function UnitBrings({ unit }: Readonly<{ unit: ExtensionUnit }>) {
           content: (
             <>
               <span className="ext-method">{route.method}</span>
-              <span className="ext-route-path">{route.path}</span>
+              <span>{route.path}</span>
             </>
           ),
         }))}
@@ -570,8 +570,8 @@ function BringsRow({
         ) : (
           <ul className="ext-chips">
             {items.map((item) => (
-              <li key={item.id} className="ext-chip t-mono">
-                {item.content}
+              <li key={item.id}>
+                <Badge>{item.content}</Badge>
               </li>
             ))}
           </ul>

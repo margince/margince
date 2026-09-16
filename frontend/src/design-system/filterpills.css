@@ -52,7 +52,7 @@
   color: var(--textPrimary);
 }
 
-/* The figure in the mono face, where digits share one width — a row of counts
+/* The figure in tabular digits (`.t-num`), each one width — a row of counts
    keeps its rhythm instead of shifting pill to pill. Quieter than the word it
    follows: the reader is looking for the cut and checks the number after. */
 .filterpill-count {

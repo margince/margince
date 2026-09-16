@@ -16,9 +16,7 @@ import (
 // every other lane answers empty, which keeps this about the decision lane.
 func serviceForDuplicates(t *testing.T, dup Duplicates) *Service {
 	t.Helper()
-	return NewService(
-		stubApprovals{}, dup, &stubTasks{}, stubReceipts{},
-		stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+	return NewService(stubApprovals{}, dup, &stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
 }
 
 // pairsOf builds n open candidate pairs of one entity type, which is 2n records

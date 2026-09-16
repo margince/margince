@@ -24,10 +24,10 @@ shared  →  platform  →  modules  →  compose  →  cmd
   `database/storekit` (the one spelling of the write shape), `auth` (the
   one admission point), `events` (outbox relay/subscriber/dedupe),
   `dbmigrate`, `httperr`, `httpserver`.
-- **`internal/modules/`** — the twenty bounded capabilities (identity,
+- **`internal/modules/`** — the nineteen bounded capabilities (identity,
   contacts, deals, activities, approvals, agents, automation, ai, search,
   capture, comms, consent, privacy, collections, signals, customfields,
-  webhooks, overlay, migration; the `de` jurisdiction pack is an
+  webhooks, migration; the `de` jurisdiction pack is an
   extension under `extensions/`, not a module). A
   module package starts flat (store + mapping + transport + provider in
   one package) and earns a subpackage only under the
@@ -217,3 +217,9 @@ Approving takes the authority the effect itself takes; a passport may
 answer on the authority of the human who lent it, bounded by the caps
 they lent and never on the proposal it made itself. An agent never
 exceeds the granting human's live RBAC.
+
+Every operation — core or extension — declares exactly one of `x-mcp-tool`
+or `x-agent-access: human-only`: the latter stays REST/UI-reachable but is
+refused for any Agent (or Buyer) principal before admission, tiering or
+staging ever runs, and never appears in an agent's tool listing. Extensions
+carry the identical vocabulary (`docs/how-to/add-an-extension.md`).

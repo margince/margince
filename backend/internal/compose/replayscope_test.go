@@ -20,9 +20,26 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 const approveRoute = "POST /v1/approvals/{id}/approve"
+
+// replaySeat is a human seat holding `read` on every object named below, so a
+// case about the ROW half reaches it. The object half is asked first now, and a
+// bare context refuses there — correctly, but for a reason these cases are not
+// about.
+func replaySeat(objects ...string) context.Context {
+	grants := map[string]principal.ObjectGrant{}
+	for _, object := range objects {
+		grants[object] = principal.ObjectGrant{Read: true}
+	}
+	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	return principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:replay", UserID: ids.NewV7(),
+		Permissions: principal.Permissions{Objects: grants, RowScope: principal.RowScopeAll},
+	})
+}
 
 // routeCtx binds the chi route context the probe reads its id from, exactly
 // as the middleware sees it mid-request.
@@ -163,7 +180,7 @@ func TestReplayRecordIDReadsBothShapes(t *testing.T) {
 // a probe — the reason is recorded in its entry, and the fitness test holds
 // that reason to the contract.
 func TestReplayAllowsARouteWithNothingToProbe(t *testing.T) {
-	if err := ensureReplayVisible(context.Background(), nil, nil, "POST /v1/products", `{"id":"x"}`); err != nil {
+	if err := ensureReplayVisible(replaySeat(objectProduct), nil, nil, "POST /v1/products", `{"id":"x"}`); err != nil {
 		t.Fatalf("err = %v, want nil — this body carries no row-scoped record", err)
 	}
 }
@@ -173,6 +190,9 @@ func TestReplayAllowsARouteWithNothingToProbe(t *testing.T) {
 func TestReplayPolymorphicProbeRefusesWithoutItsTable(t *testing.T) {
 	const grants = "POST /v1/record-grants"
 	for _, body := range []string{`{"record_id":"x"}`, `{"record_type":null,"record_id":"x"}`, `{}`} {
+		// A bare context on purpose: this route carries an objectNote rather
+		// than an object — sharing is gated by the manage-sharing permission —
+		// so there is no object half for a seat to satisfy.
 		if err := ensureReplayVisible(context.Background(), nil, nil, grants, body); !errors.Is(err, apperrors.ErrNotFound) {
 			t.Fatalf("body %s: err = %v, want ErrNotFound", body, err)
 		}
@@ -183,15 +203,15 @@ func TestReplayPolymorphicProbeRefusesWithoutItsTable(t *testing.T) {
 // refuses before it ever opens a transaction: there is nothing to probe, and
 // "cannot tell" is not "allowed".
 func TestReplayRefusesBeforeQueryingWhenTheIDIsUnreadable(t *testing.T) {
-	for _, tc := range []struct{ name, route, body string }{
-		{"the record's own id is unusable", "PATCH /v1/contacts/{id}", `{"id":"garbage"}`},
-		{"the referenced parent id is unusable", "POST /v1/offers/{id}/send", `{"id":"x","deal_id":"garbage"}`},
-		{"the nested id is unusable", "POST /v1/leads/{id}/promote", `{"contact":{"id":"garbage"}}`},
+	for _, tc := range []struct{ name, route, object, body string }{
+		{"the record's own id is unusable", "PATCH /v1/contacts/{id}", tableContact, `{"id":"garbage"}`},
+		{"the referenced parent id is unusable", "POST /v1/offers/{id}/send", objectOffer, `{"id":"x","deal_id":"garbage"}`},
+		{"the nested id is unusable", "POST /v1/leads/{id}/promote", tableContact, `{"contact":{"id":"garbage"}}`},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			// A nil pool would panic if the gate reached the database, so
 			// surviving this call is itself the assertion that it did not.
-			if err := ensureReplayVisible(context.Background(), nil, nil, tc.route, tc.body); !errors.Is(err, apperrors.ErrNotFound) {
+			if err := ensureReplayVisible(replaySeat(tc.object), nil, nil, tc.route, tc.body); !errors.Is(err, apperrors.ErrNotFound) {
 				t.Fatalf("err = %v, want ErrNotFound", err)
 			}
 		})
@@ -206,25 +226,28 @@ func TestReplayRefusesBeforeQueryingWhenTheIDIsUnreadable(t *testing.T) {
 // this case readable — a companion whose value is garbage is a body the
 // middleware cannot vouch for, and "cannot tell" is not "allowed".
 func TestReplayRefusesACompanionItCannotRead(t *testing.T) {
-	for _, tc := range []struct{ name, route, body string }{
+	for _, tc := range []struct{ name, route, object, body string }{
 		{
-			name:  "quick capture names an unreadable employer",
-			route: "POST /v1/contacts/quick-capture",
-			body:  `{"contact":{"id":"01a00000-0000-7000-8000-000000000001"},"company_id":"garbage"}`,
+			name:   "quick capture names an unreadable employer",
+			object: tableContact,
+			route:  "POST /v1/contacts/quick-capture",
+			body:   `{"contact":{"id":"01a00000-0000-7000-8000-000000000001"},"company_id":"garbage"}`,
 		},
 		{
-			name:  "a promotion names an unreadable deal",
-			route: "POST /v1/leads/{id}/promote",
-			body:  `{"contact":{"id":"01a00000-0000-7000-8000-000000000001"},"deal_id":"garbage"}`,
+			name:   "a promotion names an unreadable deal",
+			object: tableContact,
+			route:  "POST /v1/leads/{id}/promote",
+			body:   `{"contact":{"id":"01a00000-0000-7000-8000-000000000001"},"deal_id":"garbage"}`,
 		},
 		{
-			name:  "a demotion names an unreadable contact",
-			route: "POST /v1/leads/{id}/demote",
-			body:  `{"lead":{"id":"01a00000-0000-7000-8000-000000000001"},"contact_id":"garbage"}`,
+			name:   "a demotion names an unreadable contact",
+			object: tableLead,
+			route:  "POST /v1/leads/{id}/demote",
+			body:   `{"lead":{"id":"01a00000-0000-7000-8000-000000000001"},"contact_id":"garbage"}`,
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			if err := ensureReplayVisible(context.Background(), nil, nil, tc.route, tc.body); !errors.Is(err, apperrors.ErrNotFound) {
+			if err := ensureReplayVisible(replaySeat(tc.object), nil, nil, tc.route, tc.body); !errors.Is(err, apperrors.ErrNotFound) {
 				t.Fatalf("err = %v, want ErrNotFound", err)
 			}
 		})
@@ -341,9 +364,52 @@ func TestReplayTableForPicksTheShapeTheBodyIs(t *testing.T) {
 // reader that "the field is there but says nothing" refuses while "the field is
 // not there" does not.
 func TestReplayRefusesAnEmptyCompanionID(t *testing.T) {
-	err := ensureReplayVisible(context.Background(), nil, nil, "POST /v1/contacts/quick-capture",
+	err := ensureReplayVisible(replaySeat(tableContact), nil, nil, "POST /v1/contacts/quick-capture",
 		`{"contact":{"id":"01a00000-0000-7000-8000-000000000001"},"company_id":""}`)
 	if !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("err = %v, want ErrNotFound", err)
 	}
+}
+
+// TestAReplayReAsksTheObjectGrant.
+//
+// The row half was re-run on every replay and the object half was recorded
+// beside it and never asked. So a caller who made a keyed write while
+// authorized, and whose grant was revoked afterwards, replayed the same key and
+// was handed the stored record — for as long as the idempotency row lived.
+// Revoking somebody's access to an administered catalog did not reach the
+// requests they had already keyed.
+//
+// A catalog route is the sharpest case: `POST /v1/products` carries no
+// row-scoped record at all (`rowNote: noOwnerCatalog`), so before this the
+// object grant was the ONLY thing that could have refused, and nothing asked
+// it. The nil pool is the assertion that the refusal came before any database
+// work.
+func TestAReplayReAsksTheObjectGrant(t *testing.T) {
+	const catalogRoute = "POST /v1/products"
+	const body = `{"id":"01a00000-0000-7000-8000-000000000001"}`
+
+	t.Run("a seat that has lost the grant is refused", func(t *testing.T) {
+		revoked := replaySeat() // every other object, and not this one
+		err := ensureReplayVisible(revoked, nil, nil, catalogRoute, body)
+		if !errors.Is(err, apperrors.ErrPermissionDenied) {
+			t.Fatalf("err = %v, want ErrPermissionDenied — a replay answers what a fresh request would, and a fresh request from this seat is refused", err)
+		}
+	})
+
+	t.Run("a seat that still holds it replays", func(t *testing.T) {
+		if err := ensureReplayVisible(replaySeat(objectProduct), nil, nil, catalogRoute, body); err != nil {
+			t.Fatalf("err = %v, want nil — the grant is intact, so the stored answer stands", err)
+		}
+	})
+
+	t.Run("the object half is asked before the row half", func(t *testing.T) {
+		// A row-scoped route with a nil pool: reaching the row work would
+		// panic. Refusing on the object alone is what keeps a seat that may
+		// not read contacts at all from learning whether this one exists.
+		err := ensureReplayVisible(replaySeat(), nil, nil, "PATCH /v1/contacts/{id}", body)
+		if !errors.Is(err, apperrors.ErrPermissionDenied) {
+			t.Fatalf("err = %v, want ErrPermissionDenied", err)
+		}
+	})
 }

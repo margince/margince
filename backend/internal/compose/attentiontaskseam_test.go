@@ -66,7 +66,7 @@ func TestAnUnheldTaskCrossesTheSeamCarryingNoHolder(t *testing.T) {
 func TestATaskCrossesTheSeamWithTheFactsTheRowNeeds(t *testing.T) {
 	deal := ids.NewV7()
 	row := storedTask(nil, &[]crmcontracts.ActivityLink{
-		{EntityType: flipObjectDeal, EntityId: openapi_types.UUID(deal)},
+		{EntityType: entityDeal, EntityId: openapi_types.UUID(deal)},
 	})
 
 	task := taskFromActivity(row)
@@ -82,7 +82,7 @@ func TestATaskCrossesTheSeamWithTheFactsTheRowNeeds(t *testing.T) {
 	}
 	// The record the task is FOR. Without it the row is a sentence the reader
 	// cannot act on, and the lane knew which deal it meant all along.
-	if task.LinkType != string(flipObjectDeal) || task.LinkID != deal {
+	if task.LinkType != string(entityDeal) || task.LinkID != deal {
 		t.Errorf("the task is filed under %s/%v, want the deal %v", task.LinkType, task.LinkID, deal)
 	}
 }

@@ -135,7 +135,7 @@ export function CounterpartyHoldRow({
 
   if (held) {
     return (
-      <div className="pe-rail-hold">
+      <div>
         <p className="t-caption">
           {held.kind === "domain"
             ? t("hold.heldByDomain", { domain: held.value })
@@ -158,7 +158,7 @@ export function CounterpartyHoldRow({
   }
 
   return (
-    <div className="pe-rail-hold">
+    <div>
       <p className="t-caption">{t("hold.notHeld")}</p>
       <div className="card-actions">
         <Button small variant="ghost" onClick={() => setAsking("address")}>
@@ -167,7 +167,16 @@ export function CounterpartyHoldRow({
         {/* A domain hold is the one worth having for an advisor: a firm answers
             from whichever address picked up the file. Offered as its own verb
             rather than a modifier, because the two reach very different sets. */}
-        <Button small variant="ghost" onClick={() => setAsking("domain")}>
+        {/* The label carries the domain itself, whose length nothing here
+            chooses — a subdomain under a regional TLD is routinely longer than
+            this rail is wide, and a button that will not wrap draws it past
+            both of its own edges. */}
+        <Button
+          small
+          variant="ghost"
+          className="btn-valuelabel"
+          onClick={() => setAsking("domain")}
+        >
           {t("hold.holdDomain", { domain })}
         </Button>
       </div>

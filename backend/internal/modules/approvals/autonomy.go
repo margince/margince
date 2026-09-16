@@ -12,10 +12,10 @@ package approvals
 //
 // WHAT IS HERE. Decisions are counted as they are made, so the record exists by
 // the time there is something to weigh it for. Beside the counters sit the mode
-// a rep has chosen per kind, read by the auto-applier and written by the rep
-// themselves: an agent principal carrying the owner's authority is the decider
-// approvals were missing, so a mode column that once described a promise the
-// product could not keep now describes one it keeps.
+// stored for each kind, read by the auto-applier. A row can begin with the
+// default at the first decision or with a setting the rep changes themselves.
+// Stored modes are preserved in either case: older counter-created rows cannot
+// be distinguished from deliberate opt-outs.
 //
 // The counters are stored rather than counted from the approval table, which
 // was the first design. Approvals expire and are swept, and a retention policy
@@ -56,11 +56,11 @@ func countDecisionTx(ctx context.Context, tx pgx.Tx, userID ids.UUID, kind strin
 	// caller's string, so it is safe to format in — and it must be, because a
 	// counter name is an identifier rather than a value.
 	_, err = tx.Exec(ctx, fmt.Sprintf(
-		`INSERT INTO approval_autonomy_policy (user_id, kind, %[1]s)
-		 VALUES ($1, $2, 1)
+		`INSERT INTO approval_autonomy_policy (user_id, kind, mode, %[1]s)
+		 VALUES (@user, @kind, @mode, 1)
 		 ON CONFLICT (user_id, kind) DO UPDATE
 		   SET %[1]s = approval_autonomy_policy.%[1]s + 1`, column),
-		userID, kind)
+		pgx.NamedArgs{"user": userID, "kind": kind, "mode": string(unsetAutonomy(kind))})
 	return err
 }
 
@@ -196,7 +196,7 @@ func SortedAutoApplyKinds() []string {
 type AutonomyMode string
 
 const (
-	// ModeManual asks every time. What every rep has until they choose.
+	// ModeManual disables automatic application.
 	ModeManual AutonomyMode = "manual"
 	// ModeAuto applies on sight, undoably.
 	ModeAuto AutonomyMode = "auto"
@@ -216,10 +216,8 @@ const (
 // principal, so the policy it reads is the owner's own — the same row that rep
 // would see in their settings.
 //
-// Absence is 'manual', which is why a missing row is not an error: a rep who
-// has never decided this kind has no policy row, and "never chose" and "chose
-// to be asked" are the same answer. Reading them differently would make the
-// first decision of a kind behave unlike every one after it.
+// Missing preferences use the same defaults as Settings. Stored choices,
+// including manual and veto, always take precedence.
 //
 // The kind is checked against AutoApplyKinds here as well as on the write. A
 // set that shrinks — a kind that stops being reversible — must stop applying
@@ -241,7 +239,7 @@ func (s *Service) AutoApplyMode(ctx context.Context, kind string) (AutonomyMode,
 			rep.UserID, kind).Scan(&mode)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
-		return ModeManual, nil
+		return unsetAutonomy(kind), nil
 	}
 	if err != nil {
 		return ModeManual, fmt.Errorf("crmapprovals: reading the autonomy mode: %w", err)
@@ -249,63 +247,11 @@ func (s *Service) AutoApplyMode(ctx context.Context, kind string) (AutonomyMode,
 	return AutonomyMode(mode), nil
 }
 
-// AutonomyChoice is one rep's standing on one kind, and whether they actually
-// made it.
-//
-// Chosen is the field AutoApplyMode cannot express. That reader answers
-// ModeManual both for a rep who asked to be asked and for a rep who has never
-// seen the setting, which is right for a queue of staged cards: an unanswered
-// card must wait either way. It is wrong for a caller whose default is not
-// manual, because it cannot tell consent from silence.
-type AutonomyChoice struct {
-	Mode AutonomyMode
-	// Chosen reports that a policy row exists — the rep has decided this kind,
-	// whichever way. False means no row: they have never been asked.
-	Chosen bool
-}
-
-// AutonomyChoiceFor reads the rep's standing on a kind AND whether they set it.
-//
-// Same query and same refusals as AutoApplyMode; the difference is that a
-// missing row is reported as missing rather than folded into 'manual'. A caller
-// whose kind defaults to something other than manual has to be able to tell the
-// two apart, and no caller may infer consent from a mode this returns without
-// looking at Chosen.
-func (s *Service) AutonomyChoiceFor(ctx context.Context, kind string) (AutonomyChoice, error) {
-	if !AutoApplyKinds[kind] {
-		return AutonomyChoice{Mode: ModeManual}, nil
-	}
-	rep, ok := principal.Actor(ctx)
-	if !ok || rep.UserID.IsZero() {
-		return AutonomyChoice{Mode: ModeManual}, fmt.Errorf(
-			"a policy belongs to a contact, and this call names none: %w", apperrors.ErrPermissionDenied)
-	}
-	var mode string
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx,
-			`SELECT mode FROM approval_autonomy_policy WHERE user_id = $1 AND kind = $2`,
-			rep.UserID, kind).Scan(&mode)
-	})
-	if errors.Is(err, pgx.ErrNoRows) {
-		return AutonomyChoice{Mode: ModeManual}, nil
-	}
-	if err != nil {
-		return AutonomyChoice{Mode: ModeManual},
-			fmt.Errorf("crmapprovals: reading the autonomy choice: %w", err)
-	}
-	return AutonomyChoice{Mode: AutonomyMode(mode), Chosen: true}, nil
-}
-
-// unsetAutonomy is what a kind means for a rep with no policy row, for the
-// surfaces that must show a default rather than wait for one.
-//
-// Deliberately NOT consulted by AutoApplyMode. That reader serves the staged-card
-// applier, where absence must stay 'manual': a card nobody has answered waits,
-// and a kind defaulting to auto there would confirm leftover cards on upgrade
-// for reps who never opted in. The sweep asks AutonomyChoiceFor and applies this
-// default itself, so the two callers cannot be conflated.
+// unsetAutonomy is shared by the settings read, the applier and the first
+// decision counter insert. The insert stores today's default; future default
+// changes leave that stored mode intact, just like an explicit setting.
 func unsetAutonomy(kind string) AutonomyMode {
-	if kind == closeDateCorrectionKind {
+	if AutoApplyKinds[kind] {
 		return ModeAuto
 	}
 	return ModeManual
@@ -331,8 +277,7 @@ type KindAutonomy struct {
 // It returns the whole of AutoApplyKinds rather than the rows the table holds. A
 // rep who has never met a kind has no row, and a settings screen that listed
 // only rows would hide exactly the choices nobody has made yet — the ones a rep
-// opens the screen to make. Absence is 'manual', the same reading AutoApplyMode
-// takes.
+// opens the screen to make. Defaults match AutoApplyMode.
 //
 // NO OBJECT GATE, for the reason the single-kind read gives: this reads the rows
 // of the principal on the context and takes no user id, so there is no row a
@@ -388,15 +333,6 @@ func autonomySettingsInTx(ctx context.Context, tx pgx.Tx, repID ids.UUID) ([]Kin
 	for _, kind := range kinds {
 		row, held := stored[kind]
 		if !held {
-			// The kind's OWN default for a rep who has never touched it.
-			//
-			// Manual for almost every kind, and that is the rule: a machine
-			// acting on somebody's records unasked has to be something they
-			// chose. Close-date corrections are the exception, and this screen
-			// has to say so — a switch drawn off unconditionally would read
-			// "off" while the nightly sweep corrected that rep's deals, and a
-			// rep who left that apparently-disabled switch alone would never
-			// record the opt-out they thought they already had.
 			row = KindAutonomy{Kind: kind, Mode: unsetAutonomy(kind)}
 		}
 		// The stored mode is reported as it stands. The table's CHECK admits a

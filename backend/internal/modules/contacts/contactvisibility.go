@@ -27,6 +27,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -44,11 +45,13 @@ import (
 // deliberately closed, and the audit records `workspace -> workspace` because
 // the before-image came from the stale read.
 //
-// So this re-reads the column under the row lock and refuses when it no longer
-// matches what the caller was shown. A conflict, not a permission error: the
-// caller may write the row, they are just writing over an answer they never
-// saw. If-Match makes the whole question moot — that path never reaches here —
-// and the panel sends one; this is what protects every OTHER client.
+// So this LOCKS the row and asks both questions again against it: whether the
+// caller is still admitted, and whether the column still reads as they were
+// shown. The first is not optional — see the comment on it below — and the
+// second is a conflict rather than a permission error, because the caller may
+// write the row and is only writing over an answer they never saw. If-Match
+// makes that half moot — that path never reaches here — and the panel sends
+// one; this is what protects every OTHER client.
 func refuseStaleVisibility(
 	ctx context.Context, tx pgx.Tx, id ids.ContactID, current crmcontracts.Contact,
 ) error {
@@ -56,6 +59,18 @@ func refuseStaleVisibility(
 	if err := tx.QueryRow(ctx,
 		`SELECT visibility FROM contact WHERE id = $1 FOR UPDATE`, id).Scan(&live); err != nil {
 		return fmt.Errorf("contacts: re-reading visibility under the row lock: %w", err)
+	}
+	// Authorization, re-asked under the lock, and BEFORE the comparison below.
+	//
+	// The comparison alone cannot see an admission that has lapsed. UpdateContact
+	// asks auth.EnsureWritable before it reads the row, so under READ COMMITTED a
+	// privatization committing in that window reaches the caller's own
+	// before-image too: both sides then say 'owner', they match, and a colleague
+	// who may no longer see the contact at all is admitted to re-publish it. The
+	// refusal is the existence-hiding one rather than a conflict, because which of
+	// the two a caller gets must not tell them the record is still there.
+	if err := auth.EnsureWritable(ctx, tx, "contact", id.UUID); err != nil {
+		return err
 	}
 	was := ""
 	if current.Visibility != nil {

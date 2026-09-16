@@ -39,6 +39,19 @@ import (
 // full list in Go means the rows crossed a boundary they should not have, and
 // the count of what was dropped is itself a statement about how much there is.
 func AssuranceExceptions(ctx context.Context, tx pgx.Tx) ([]assurance.Exception, error) {
+	// Both halves, and the object half first. Every finding here is ABOUT a
+	// deal and carries its name, so the row scope below answers which deals
+	// and never whether this caller may read deals at all — under row_scope=all
+	// it answers everything. The one caller is a model tool (list_input_checks),
+	// which makes the object half the difference between a scoped answer and a
+	// list of deal names a seat could not open on any screen.
+	//
+	// No findings rather than a refusal: "nothing to check" is a real answer
+	// this tool already returns, and it is the one that leaves the caller with
+	// what they may see.
+	if !auth.ReadGranted(ctx, tableDeal) {
+		return nil, nil
+	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 

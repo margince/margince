@@ -114,6 +114,38 @@ func TestAPurposeScopedObjectionBindsOnlyItsPurpose(t *testing.T) {
 	}
 }
 
+// TestABasisSurvivesAStopThatDoesNotReachTheSend covers suppressionBindsAny,
+// which decides whether an allowed send records the ground it relied on.
+//
+// Two ways a live stop can fail to reach a message, and both must leave the
+// basis written: a category it does not bind, and — since the purpose column —
+// a marketing send that is not the one a narrow row names. The third case is
+// the send the evidence arms resolve, which names no purpose at all: a narrow
+// row must not catch it, or a reply the subject themselves started goes out
+// with no record of what allowed it.
+func TestABasisSurvivesAStopThatDoesNotReachTheSend(t *testing.T) {
+	pressed, other := ids.NewV7(), ids.NewV7()
+	narrow := []liveStop{{Kind: commsauthz.ReasonObjection, PurposeID: &pressed}}
+
+	if !suppressionBindsAny(narrow, commsauthz.CategoryMarketing, &pressed) {
+		t.Error("a narrow stop did not bind its own purpose — the send it was pressed " +
+			"against would record a ground and go out")
+	}
+	if suppressionBindsAny(narrow, commsauthz.CategoryMarketing, &other) {
+		t.Error("a narrow stop bound a different marketing purpose")
+	}
+	if suppressionBindsAny(narrow, commsauthz.CategoryMarketing, nil) {
+		t.Error("a narrow stop bound a send that resolved no purpose — the evidence arms " +
+			"name none, and withholding their basis is the Art. 15 gap this write closes")
+	}
+	if suppressionBindsAny(narrow, commsauthz.CategoryInvoiceOrPayment, &pressed) {
+		t.Error("an objection bound an invoice — the category test does its own work here")
+	}
+	if suppressionBindsAny(nil, commsauthz.CategoryMarketing, &pressed) {
+		t.Error("no live stop at all was read as binding")
+	}
+}
+
 // TestTheEarlyExitAgreesWithTheRule holds the two spellings together.
 //
 // bindsEveryCategory lets decideOne answer without resolving the record, which

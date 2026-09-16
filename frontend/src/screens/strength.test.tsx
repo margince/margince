@@ -39,11 +39,8 @@ function mount(body: unknown, status = 200) {
     "fetch",
     vi.fn(async (request: Request) => {
       const pathname = new URL(request.url).pathname;
-      // `/me` decides native vs overlay, and overlay skips the read entirely —
-      // an unstubbed probe would leave the card in its unavailable state and a
-      // test could not tell that from a card that never rendered its rows.
       if (pathname.endsWith("/me")) {
-        return jsonResponse({ system_of_record: { mode: "native" } });
+        return jsonResponse({});
       }
       return jsonResponse(body, status);
     }),

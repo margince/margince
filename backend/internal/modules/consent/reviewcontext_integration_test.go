@@ -8,8 +8,8 @@ package consent
 // A review must bind a stop the way the send path binds it: by the purpose the
 // SEND resolved to, not merely by category.
 //
-// Task 2 made applySuppression purpose-aware: a narrow marketing objection
-// binds only the one purpose it was pressed against. aStopThatBindsTheMessage
+// applySuppression is purpose-aware: a narrow marketing objection binds only
+// the one purpose it was pressed against. aStopThatBindsTheMessage
 // — the review path's own reader, asked when a rep tries to answer a refusal
 // with a statement of fact — could not make the same comparison: nothing
 // carried the send's resolved purpose as far as the stored refusal, so it
@@ -37,7 +37,7 @@ import (
 //
 // EVERYTHING IS SEEDED THROUGH THE REAL WRITER. The stop is pressed through
 // StopForCredential exactly as a mailbox provider's POST would press it
-// (withdrawalcredential_integration_test.go's TestANarrowPressBindsOnlyItsOwnPurpose
+// (withdrawalnarrowstop_integration_test.go's TestANarrowPressBindsOnlyItsOwnPurpose
 // is the harness this borrows). The refused decision comes from gate.decideOne
 // itself, not a hand-built commsauthz.Decision, so the test also proves
 // decideOne/decideLead actually carry PurposeID onto the decision rather than
@@ -86,7 +86,7 @@ func TestAReviewBindsAStopByTheSendsResolvedPurpose(t *testing.T) {
 		Address: leadEmail, LeadID: lead,
 		Scope: WithdrawalScopeNamedPurpose, PurposeID: pressed.UUID,
 	})
-	if err := e.store.StopForCredential(e.ctx, token); err != nil {
+	if _, err := e.store.StopForCredential(e.ctx, token); err != nil {
 		t.Fatalf("the press errored: %v", err)
 	}
 

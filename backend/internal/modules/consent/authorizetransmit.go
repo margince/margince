@@ -292,7 +292,7 @@ func (g *Gate) decideOne(ctx context.Context, tx pgx.Tx, r connector.Recipient, 
 	d, sendPurpose, err := g.decideResolved(ctx, tx, req, subjectRef{
 		Kind: entityContact, ID: contactID, Address: address,
 		ChannelProvider: channelProvider, ChannelUserID: channelUserID,
-	}, d, phase, len(stops) > 0)
+	}, d, phase, stops)
 	if err != nil {
 		return commsauthz.Decision{}, err
 	}

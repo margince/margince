@@ -10,7 +10,7 @@ import { filesMatching } from "../../scripts/lib/source-tree";
 // Fitness function for a type class that does not exist.
 //
 // `base.css` owns the type scale, and a component asks for a step by name:
-// `t-caption`, `t-label`, `t-mono`. Ask for a name the scale does not carry and
+// `t-caption`, `t-label`, `t-num`. Ask for a name the scale does not carry and
 // CSS says nothing at all — no warning, no fallback, no failing build. The
 // element simply inherits, so the figure a card exists to show renders at body
 // size and the provenance line under a fact renders at the same weight as the

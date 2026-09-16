@@ -25,19 +25,20 @@ import (
 var theOwedContact = ids.MustParse("01a05500-0000-7000-8000-0000000000d1")
 
 type stubNoticeCases struct {
-	rows []NoticeCase
-	err  error
+	scope TaskScope
+	owner ids.UUID
+	team  []ids.UUID
+	rows  []NoticeCase
+	err   error
 }
 
-func (s *stubNoticeCases) OpenDueSoonest(context.Context, int) ([]NoticeCase, error) {
+func (s *stubNoticeCases) OpenDueSoonest(_ context.Context, _ int, scope TaskScope, owner ids.UUID, team []ids.UUID) ([]NoticeCase, error) {
+	s.scope, s.owner, s.team = scope, owner, team
 	return s.rows, s.err
 }
 
 func noticeCaseLaneService(cases NoticeCases) *Service {
-	return NewService(
-		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
-		stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock,
-		WithNoticeCases(cases))
+	return NewService(stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock, WithNoticeCases(cases))
 }
 
 func TestAnUndischargedDutyReachesTheAdminWithItsDeadline(t *testing.T) {
@@ -143,5 +144,31 @@ func TestADueDutyReachesTheWorklist(t *testing.T) {
 	}
 	if found.DueAt == nil || found.Overdue == nil || !*found.Overdue {
 		t.Errorf("the row lost the deadline the whole lane exists for: %+v", found)
+	}
+}
+
+func TestNoticeLaneReceivesTheResolvedScope(t *testing.T) {
+	owner := ids.NewV7()
+	for _, tc := range []struct {
+		name  string
+		scope TaskScope
+		owner ids.UUID
+	}{
+		{"mine", TasksMine, ids.Nil},
+		{"unassigned", TasksUnassigned, ids.Nil},
+		{"named", TasksOwnedBy, owner},
+		{"all", TasksVisible, ids.Nil},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			lane := &stubNoticeCases{}
+			svc := noticeCaseLaneService(lane)
+			svc.taskScope, svc.taskOwner = tc.scope, tc.owner
+			if _, err := svc.Assemble(pageReader()); err != nil {
+				t.Fatal(err)
+			}
+			if lane.scope != tc.scope || lane.owner != tc.owner {
+				t.Fatalf("scope/owner = %v/%v, want %v/%v", lane.scope, lane.owner, tc.scope, tc.owner)
+			}
+		})
 	}
 }

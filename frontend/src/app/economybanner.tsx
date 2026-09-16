@@ -2,49 +2,33 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { api } from "../api/client";
 import { Callout } from "../design-system/callout";
-import { calendarDay } from "../format/calendarday";
-import { viewerZone } from "../format/timezone";
 import { useT } from "../i18n";
 import { throwProblem } from "../screens/common";
-import { useCan } from "./capability";
+import { settingsHref } from "../screens/settingsrouting";
+import { useCan, useCanWrite } from "./capability";
+import { routeHash } from "./router";
 
 export function EconomyBanner() {
   const t = useT();
-  // GET /ai/usage asks for ai_diagnostics:read (ai/usage.go). It used to ride
-  // automation:update — an AI reading behind another object's WRITE grant — and
-  // three client gates were left on that object when the server moved. The
-  // object is named here rather than a role so a rebinding fails in a test
-  // instead of 403-ing in a browser.
-  const enabled = useCan("ai_diagnostics", "read");
+  const canRead = useCan("ai_budget", "read");
+  const enabled = useCanWrite("ai_budget", "update") && canRead;
   const previousBand = useRef<string | undefined>(undefined);
   const [occurrence, setOccurrence] = useState(0);
   const [dismissedOccurrence, setDismissedOccurrence] = useState<string | null>(
     null,
   );
   const query = useQuery({
-    queryKey: ["ai-usage-band"],
+    queryKey: ["ai-budget"],
     enabled,
     staleTime: 5 * 60_000,
     queryFn: async () => {
-      // A one-day window, and the day is the reader's own.
-      //
-      // The window is here to keep the response small — this banner reads only
-      // `budget.band`, and an unbounded query returns every day of the month
-      // with its per-task rows. It does NOT decide the band: that is a
-      // month-to-date figure the server computes for itself (ai.Meter's
-      // MonthTokens), and `from`/`to` never reach it. So the reader's day
-      // rather than UTC's is honesty about what the word "today" means here,
-      // not a fix for a wrong band — the band was never wrong.
-      const today = calendarDay(new Date(), viewerZone());
-      const { data, error } = await api.GET("/ai/usage", {
-        params: { query: { from: today, to: today } },
-      });
+      const { data, error } = await api.GET("/ai/budget");
       if (error) throwProblem(error);
-      if (!data?.budget) throw new Error("malformed AI usage response");
+      if (!data) throw new Error("AI allowance unavailable");
       return data;
     },
   });
-  const band = query.data?.budget?.band;
+  const band = query.data?.band;
   useEffect(() => {
     if (band !== previousBand.current) {
       previousBand.current = band;
@@ -80,7 +64,9 @@ export function EconomyBanner() {
               ? t("aibanner.degraded")
               : t("aibanner.unknown")
         }
-        actions={<a href="#/settings/ai">{t("aibanner.link")}</a>}
+        actions={
+          <a href={routeHash(settingsHref("usage"))}>{t("aibanner.link")}</a>
+        }
         dismiss={{
           label: t("aibanner.dismiss"),
           onDismiss: () => setDismissedOccurrence(occurrenceKey),

@@ -366,6 +366,22 @@ public.activity_reply_verdict_history.id uuid NOT NULL gen=- def=uuidv7()
 public.activity_reply_verdict_history.is_human boolean NOT NULL gen=- def=-
 public.activity_reply_verdict_history.verdict text gen=- def=-
 public.activity_reply_verdict_history_pkey CREATE UNIQUE INDEX activity_reply_verdict_history_pkey ON public.activity_reply_verdict_history USING btree (id)
+public.activity_request_settlement acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.activity_request_settlement.activity_request_settlement_confidence CHECK (((confidence >= (0)::numeric) AND (confidence <= (1)::numeric)))
+public.activity_request_settlement.activity_request_settlement_judged_through_activity_id_fkey FOREIGN KEY (judged_through_activity_id) REFERENCES activity(id) ON DELETE CASCADE
+public.activity_request_settlement.activity_request_settlement_pkey PRIMARY KEY (request_activity_id)
+public.activity_request_settlement.activity_request_settlement_remaining CHECK (((verdict = 'still_owed'::text) OR ((remaining IS NULL) AND (due_at IS NULL))))
+public.activity_request_settlement.activity_request_settlement_request_activity_id_fkey FOREIGN KEY (request_activity_id) REFERENCES activity(id) ON DELETE CASCADE
+public.activity_request_settlement.activity_request_settlement_verdict CHECK ((verdict = ANY (ARRAY['settled'::text, 'still_owed'::text, 'unsure'::text])))
+public.activity_request_settlement.confidence numeric NOT NULL gen=- def=-
+public.activity_request_settlement.decided_at timestamp with time zone NOT NULL gen=- def=now()
+public.activity_request_settlement.decided_by text NOT NULL gen=- def=-
+public.activity_request_settlement.due_at timestamp with time zone gen=- def=-
+public.activity_request_settlement.judged_through_activity_id uuid NOT NULL gen=- def=-
+public.activity_request_settlement.remaining text gen=- def=-
+public.activity_request_settlement.request_activity_id uuid NOT NULL gen=- def=-
+public.activity_request_settlement.verdict text NOT NULL gen=- def=-
+public.activity_request_settlement_pkey CREATE UNIQUE INDEX activity_request_settlement_pkey ON public.activity_request_settlement USING btree (request_activity_id)
 public.activity_retention_evidence acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.activity_retention_evidence.activity_id uuid NOT NULL gen=- def=-
 public.activity_retention_evidence.activity_retention_evidence_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
@@ -472,6 +488,7 @@ public.activity_review_response.activity_review_response_questions_shape CHECK (
 public.activity_review_response.activity_review_response_revision_check CHECK ((revision >= 1))
 public.activity_review_response.answers jsonb NOT NULL gen=- def=-
 public.activity_review_response.captured_by text NOT NULL gen=- def=-
+public.activity_review_response.choice_answers jsonb NOT NULL gen=- def='{}'::jsonb
 public.activity_review_response.closing_occurrence_id uuid NOT NULL gen=- def=-
 public.activity_review_response.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.activity_review_response.deal_id uuid NOT NULL gen=- def=-
@@ -594,6 +611,7 @@ public.ai_call.ai_call_context_scopes_check CHECK ((context_scopes <@ ARRAY['ide
 public.ai_call.ai_call_context_tokens_estimate_check CHECK ((context_tokens_estimate >= 0))
 public.ai_call.ai_call_kind_check CHECK ((kind = ANY (ARRAY['completion'::text, 'embedding'::text])))
 public.ai_call.ai_call_pkey PRIMARY KEY (id)
+public.ai_call.ai_call_secrets_removed_check CHECK ((secrets_removed >= 0))
 public.ai_call.ai_call_source_check CHECK ((served_identity_source = ANY (ARRAY['response'::text, 'echo'::text, 'configured'::text])))
 public.ai_call.attempt integer NOT NULL gen=- def=1
 public.ai_call.attempt_reason text NOT NULL gen=- def=''::text
@@ -620,6 +638,8 @@ public.ai_call.occurred_at timestamp with time zone NOT NULL gen=- def=now()
 public.ai_call.provider text NOT NULL gen=- def=''::text
 public.ai_call.reasoning_tokens bigint NOT NULL gen=- def=0
 public.ai_call.request_fingerprint text NOT NULL gen=- def=-
+public.ai_call.secret_kinds text[] NOT NULL gen=- def='{}'::text[]
+public.ai_call.secrets_removed bigint NOT NULL gen=- def=0
 public.ai_call.served_identity_source text NOT NULL gen=- def='configured'::text
 public.ai_call.served_model text NOT NULL gen=- def=''::text
 public.ai_call.served_provider text NOT NULL gen=- def=''::text
@@ -1276,7 +1296,7 @@ public.capture_backfill.after_date date NOT NULL gen=- def=-
 public.capture_backfill.capture_backfill_connection_fkey FOREIGN KEY (connection_id) REFERENCES capture_connection(id) ON DELETE CASCADE
 public.capture_backfill.capture_backfill_pkey PRIMARY KEY (id)
 public.capture_backfill.capture_backfill_status_check CHECK ((status = ANY (ARRAY['queued'::text, 'running'::text, 'done'::text, 'error'::text, 'cancelled'::text])))
-public.capture_backfill.capture_backfill_window_months_check CHECK ((window_months = ANY (ARRAY[3, 6, 12, 24, 60])))
+public.capture_backfill.capture_backfill_window_months_check CHECK ((window_months = ANY (ARRAY[3, 6, 12, 24, 36, 60, 84, 120])))
 public.capture_backfill.captured integer NOT NULL gen=- def=0
 public.capture_backfill.companies_created integer NOT NULL gen=- def=0
 public.capture_backfill.completed_at timestamp with time zone gen=- def=-
@@ -2034,7 +2054,7 @@ public.company_domain_disposition.company_domain_disposition_admission_source_ch
 public.company_domain_disposition.company_domain_disposition_company_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
 public.company_domain_disposition.company_domain_disposition_domain_check CHECK (((domain = lower(domain)) AND (domain <> ''::text)))
 public.company_domain_disposition.company_domain_disposition_owner_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE SET NULL (owner_id)
-public.company_domain_disposition.company_domain_disposition_pending_reason_check CHECK (((pending_reason IS NULL) OR (pending_reason = 'unevidenced'::text)))
+public.company_domain_disposition.company_domain_disposition_pending_reason_check CHECK (((pending_reason IS NULL) OR (pending_reason = ANY (ARRAY['unevidenced'::text, 'stale_evidence'::text]))))
 public.company_domain_disposition.company_domain_disposition_pending_reason_shape CHECK (((pending_reason IS NULL) OR ((status = 'pending'::text) AND (admission IS DISTINCT FROM 'suppressed'::text))))
 public.company_domain_disposition.company_domain_disposition_pkey PRIMARY KEY (id)
 public.company_domain_disposition.company_domain_disposition_settled_shape CHECK ((((status = 'pending'::text) AND (source IS NULL)) OR ((status = 'company'::text) AND (source IS NOT NULL) AND (company_id IS NOT NULL)) OR ((status = ANY (ARRAY['personal'::text, 'provider'::text, 'no_site'::text])) AND (source IS NOT NULL))))
@@ -2047,6 +2067,7 @@ public.company_domain_disposition.domain text NOT NULL gen=- def=-
 public.company_domain_disposition.evidence text gen=- def=-
 public.company_domain_disposition.id uuid NOT NULL gen=- def=uuidv7()
 public.company_domain_disposition.last_attempt_at timestamp with time zone gen=- def=-
+public.company_domain_disposition.last_evidence_at timestamp with time zone gen=- def=-
 public.company_domain_disposition.next_attempt_at timestamp with time zone gen=- def=now()
 public.company_domain_disposition.owner_id uuid gen=- def=-
 public.company_domain_disposition.pending_reason text gen=- def=-
@@ -2885,7 +2906,7 @@ public.custom_field.custom_field_currency_check CHECK (((currency IS NULL) OR (c
 public.custom_field.custom_field_object_check CHECK ((object = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'activity'::text, 'project'::text, 'relationship'::text, 'partner'::text, 'contract'::text])))
 public.custom_field.custom_field_pkey PRIMARY KEY (id)
 public.custom_field.custom_field_status_check CHECK ((status = ANY (ARRAY['active'::text, 'retired'::text])))
-public.custom_field.custom_field_type_check CHECK ((type = ANY (ARRAY['text'::text, 'number'::text, 'date'::text, 'currency'::text, 'picklist'::text, 'boolean'::text])))
+public.custom_field.custom_field_type_check CHECK ((type = ANY (ARRAY['text'::text, 'number'::text, 'date'::text, 'currency'::text, 'picklist'::text, 'multiselect'::text, 'boolean'::text])))
 public.custom_field.id uuid NOT NULL gen=- def=uuidv7()
 public.custom_field.label text NOT NULL gen=- def=-
 public.custom_field.object text NOT NULL gen=- def=-
@@ -3907,7 +3928,6 @@ public.idx_graph_edge_user CREATE INDEX idx_graph_edge_user ON public.graph_inte
 public.idx_idempotency_key_created CREATE INDEX idx_idempotency_key_created ON public.idempotency_key USING btree (created_at)
 public.idx_import_record_map_run CREATE INDEX idx_import_record_map_run ON public.import_record_map USING btree (import_run_id)
 public.idx_import_run_ws CREATE INDEX idx_import_run_ws ON public.import_run USING btree (status)
-public.idx_incumbent_connection_account CREATE INDEX idx_incumbent_connection_account ON public.incumbent_connection USING btree (incumbent, incumbent_account_id) WHERE ((status = 'active'::text) AND (incumbent_account_id IS NOT NULL))
 public.idx_lead_cand_company CREATE INDEX idx_lead_cand_company ON public.lead USING btree (candidate_company_key) WHERE ((candidate_company_key IS NOT NULL) AND (archived_at IS NULL))
 public.idx_lead_disqualify_reason CREATE INDEX idx_lead_disqualify_reason ON public.lead USING btree (disqualify_reason_id) WHERE (disqualify_reason_id IS NOT NULL)
 public.idx_lead_linkedin CREATE INDEX idx_lead_linkedin ON public.lead USING btree (linkedin_url) WHERE (linkedin_url IS NOT NULL)
@@ -3927,15 +3947,11 @@ public.idx_linkedin_connection_email CREATE INDEX idx_linkedin_connection_email 
 public.idx_linkedin_connection_match CREATE INDEX idx_linkedin_connection_match ON public.linkedin_connection USING btree (normalized_name, normalized_company) WHERE (tombstoned_at IS NULL)
 public.idx_list_member_entity CREATE INDEX idx_list_member_entity ON public.list_member USING btree (entity_type, entity_id)
 public.idx_list_member_list CREATE INDEX idx_list_member_list ON public.list_member USING btree (list_id)
-public.idx_mirror_user_map CREATE INDEX idx_mirror_user_map ON public.mirror_user_map USING btree (incumbent, incumbent_user_id)
-public.idx_mirror_visibility_record CREATE INDEX idx_mirror_visibility_record ON public.mirror_visibility USING btree (object_class, external_id)
 public.idx_offer_deal CREATE INDEX idx_offer_deal ON public.offer USING btree (deal_id, revision DESC) WHERE (archived_at IS NULL)
 public.idx_offer_status CREATE INDEX idx_offer_status ON public.offer USING btree (status) WHERE (archived_at IS NULL)
 public.idx_offer_template_fk CREATE INDEX idx_offer_template_fk ON public.offer USING btree (template_id) WHERE (template_id IS NOT NULL)
 public.idx_offer_template_search CREATE INDEX idx_offer_template_search ON public.offer_template USING gin (search_tsv)
 public.idx_oli_offer CREATE INDEX idx_oli_offer ON public.offer_line_item USING btree (offer_id, "position")
-public.idx_overlay_association_to CREATE INDEX idx_overlay_association_to ON public.overlay_association USING btree (to_type, to_id)
-public.idx_overlay_sync_due CREATE INDEX idx_overlay_sync_due ON public.overlay_sync_state USING btree (next_sweep_at)
 public.idx_partner_stage CREATE INDEX idx_partner_stage ON public.partner USING btree (relationship_stage) WHERE (archived_at IS NULL)
 public.idx_partner_tier CREATE INDEX idx_partner_tier ON public.partner USING btree (margin_tier) WHERE (archived_at IS NULL)
 public.idx_passport_obo CREATE INDEX idx_passport_obo ON public.passport USING btree (on_behalf_of) WHERE (revoked_at IS NULL)
@@ -4002,7 +4018,6 @@ public.idx_stage_progression_outcome_deal_target CREATE INDEX idx_stage_progress
 public.idx_stage_progression_outcome_transition CREATE INDEX idx_stage_progression_outcome_transition ON public.stage_progression_outcome USING btree (pipeline_id, from_stage_id, to_stage_id, decided_at DESC)
 public.idx_system_log_action CREATE INDEX idx_system_log_action ON public.system_log USING btree (action, occurred_at DESC)
 public.idx_system_log_actor CREATE INDEX idx_system_log_actor ON public.system_log USING btree (actor_id, occurred_at DESC)
-public.idx_system_log_mirror_conflict_class CREATE INDEX idx_system_log_mirror_conflict_class ON public.system_log USING btree (((detail ->> 'object_class'::text)), occurred_at DESC) WHERE (action = 'mirror.conflict'::text)
 public.idx_system_log_time CREATE INDEX idx_system_log_time ON public.system_log USING btree (occurred_at DESC)
 public.idx_tag_search CREATE INDEX idx_tag_search ON public.tag USING gin (search_tsv)
 public.idx_taggable_entity CREATE INDEX idx_taggable_entity ON public.taggable USING btree (entity_type, entity_id)
@@ -4044,7 +4059,7 @@ public.import_run.connector text NOT NULL gen=- def=-
 public.import_run.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.import_run.error text gen=- def=-
 public.import_run.id uuid NOT NULL gen=- def=uuidv7()
-public.import_run.import_run_connector_check CHECK ((connector = ANY (ARRAY['csv'::text, 'hubspot'::text, 'salesforce'::text, 'bundle'::text, 'mirror'::text])))
+public.import_run.import_run_connector_check CHECK ((connector = ANY (ARRAY['csv'::text, 'hubspot'::text, 'salesforce'::text])))
 public.import_run.import_run_pkey PRIMARY KEY (id)
 public.import_run.import_run_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'validating'::text, 'awaiting_approval'::text, 'running'::text, 'complete'::text, 'failed'::text, 'undoing'::text, 'undone'::text])))
 public.import_run.mapping jsonb NOT NULL gen=- def='{}'::jsonb
@@ -4056,20 +4071,6 @@ public.import_run.undo_report jsonb gen=- def=-
 public.import_run.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.import_run.uq_import_run UNIQUE (id)
 public.import_run_pkey CREATE UNIQUE INDEX import_run_pkey ON public.import_run USING btree (id)
-public.incumbent_connection acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.incumbent_connection.connected_at timestamp with time zone NOT NULL gen=- def=now()
-public.incumbent_connection.credential_ref text NOT NULL gen=- def=-
-public.incumbent_connection.id uuid NOT NULL gen=- def=uuidv7()
-public.incumbent_connection.incumbent text NOT NULL gen=- def=-
-public.incumbent_connection.incumbent_account_id text gen=- def=-
-public.incumbent_connection.incumbent_connection_pkey PRIMARY KEY (id)
-public.incumbent_connection.incumbent_connection_status_check CHECK ((status = ANY (ARRAY['active'::text, 'revoked'::text, 'error'::text])))
-public.incumbent_connection.region text NOT NULL gen=- def=-
-public.incumbent_connection.revoked_at timestamp with time zone gen=- def=-
-public.incumbent_connection.scopes text[] NOT NULL gen=- def='{}'::text[]
-public.incumbent_connection.status text NOT NULL gen=- def='active'::text
-public.incumbent_connection_pkey CREATE UNIQUE INDEX incumbent_connection_pkey ON public.incumbent_connection USING btree (id)
-public.incumbent_connection_singleton CREATE UNIQUE INDEX incumbent_connection_singleton ON public.incumbent_connection USING btree ((true))
 public.intro_request acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.intro_request.archived_at timestamp with time zone gen=- def=-
 public.intro_request.captured_by text NOT NULL gen=- def=-
@@ -4434,33 +4435,6 @@ public.list_member.list_member_unique UNIQUE (list_id, entity_type, entity_id)
 public.list_member_pkey CREATE UNIQUE INDEX list_member_pkey ON public.list_member USING btree (id)
 public.list_member_unique CREATE UNIQUE INDEX list_member_unique ON public.list_member USING btree (list_id, entity_type, entity_id)
 public.list_pkey CREATE UNIQUE INDEX list_pkey ON public.list USING btree (id)
-public.mirror_user_automap_block acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.mirror_user_automap_block.app_user_id uuid NOT NULL gen=- def=-
-public.mirror_user_automap_block.blocked_at timestamp with time zone NOT NULL gen=- def=now()
-public.mirror_user_automap_block.blocked_by uuid NOT NULL gen=- def=-
-public.mirror_user_automap_block.incumbent text NOT NULL gen=- def=-
-public.mirror_user_automap_block.mirror_user_automap_block_app_user_id_fkey FOREIGN KEY (app_user_id) REFERENCES app_user(id) ON DELETE CASCADE
-public.mirror_user_automap_block.mirror_user_automap_block_blocked_by_fkey FOREIGN KEY (blocked_by) REFERENCES app_user(id) ON DELETE RESTRICT
-public.mirror_user_automap_block.mirror_user_automap_block_pkey PRIMARY KEY (app_user_id, incumbent)
-public.mirror_user_automap_block_pkey CREATE UNIQUE INDEX mirror_user_automap_block_pkey ON public.mirror_user_automap_block USING btree (app_user_id, incumbent)
-public.mirror_user_map acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.mirror_user_map.app_user_id uuid NOT NULL gen=- def=-
-public.mirror_user_map.incumbent text NOT NULL gen=- def=-
-public.mirror_user_map.incumbent_user_id text NOT NULL gen=- def=-
-public.mirror_user_map.match_source text NOT NULL gen=- def='email'::text
-public.mirror_user_map.mirror_user_map_app_user_id_fkey FOREIGN KEY (app_user_id) REFERENCES app_user(id) ON DELETE CASCADE
-public.mirror_user_map.mirror_user_map_app_user_id_incumbent_key UNIQUE (app_user_id, incumbent)
-public.mirror_user_map.mirror_user_map_match_source_check CHECK ((match_source = ANY (ARRAY['email'::text, 'manual'::text])))
-public.mirror_user_map_app_user_id_incumbent_key CREATE UNIQUE INDEX mirror_user_map_app_user_id_incumbent_key ON public.mirror_user_map USING btree (app_user_id, incumbent)
-public.mirror_visibility acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.mirror_visibility.can_see boolean NOT NULL gen=- def=-
-public.mirror_visibility.external_id text NOT NULL gen=- def=-
-public.mirror_visibility.incumbent text NOT NULL gen=- def=-
-public.mirror_visibility.mirror_user_id uuid NOT NULL gen=- def=-
-public.mirror_visibility.mirror_visibility_pkey PRIMARY KEY (incumbent, mirror_user_id, object_class, external_id)
-public.mirror_visibility.object_class text NOT NULL gen=- def=-
-public.mirror_visibility.snapshot_at timestamp with time zone NOT NULL gen=- def=now()
-public.mirror_visibility_pkey CREATE UNIQUE INDEX mirror_visibility_pkey ON public.mirror_visibility USING btree (incumbent, mirror_user_id, object_class, external_id)
 public.move_last_activity(tbl regclass, rid uuid) secdef=false cfg=- acl=- 
 DECLARE
   v timestamptz;
@@ -4712,93 +4686,6 @@ public.onboarding_wizard_state.voice_skipped boolean NOT NULL gen=- def=false
 public.onboarding_wizard_state.website_url text gen=- def=-
 public.onboarding_wizard_state_pkey CREATE UNIQUE INDEX onboarding_wizard_state_pkey ON public.onboarding_wizard_state USING btree (id)
 public.onboarding_wizard_state_user_id_key CREATE UNIQUE INDEX onboarding_wizard_state_user_id_key ON public.onboarding_wizard_state USING btree (user_id)
-public.overlay_association acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.overlay_association.category text NOT NULL gen=- def=-
-public.overlay_association.direction text NOT NULL gen=- def=-
-public.overlay_association.from_id text NOT NULL gen=- def=-
-public.overlay_association.from_type text NOT NULL gen=- def=-
-public.overlay_association.label text gen=- def=-
-public.overlay_association.overlay_association_pkey PRIMARY KEY (from_type, from_id, to_type, to_id, type_id)
-public.overlay_association.to_id text NOT NULL gen=- def=-
-public.overlay_association.to_type text NOT NULL gen=- def=-
-public.overlay_association.type_id integer NOT NULL gen=- def=-
-public.overlay_association_pkey CREATE UNIQUE INDEX overlay_association_pkey ON public.overlay_association USING btree (from_type, from_id, to_type, to_id, type_id)
-public.overlay_backfill_cursor acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.overlay_backfill_cursor.cursor text NOT NULL gen=- def=''::text
-public.overlay_backfill_cursor.done boolean NOT NULL gen=- def=false
-public.overlay_backfill_cursor.object_class text NOT NULL gen=- def=-
-public.overlay_backfill_cursor.overlay_backfill_cursor_pkey PRIMARY KEY (object_class)
-public.overlay_backfill_cursor.truncated boolean NOT NULL gen=- def=false
-public.overlay_backfill_cursor.updated_at timestamp with time zone NOT NULL gen=- def=now()
-public.overlay_backfill_cursor_pkey CREATE UNIQUE INDEX overlay_backfill_cursor_pkey ON public.overlay_backfill_cursor USING btree (object_class)
-public.overlay_mirror acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.overlay_mirror.external_id text NOT NULL gen=- def=-
-public.overlay_mirror.fields jsonb NOT NULL gen=- def=-
-public.overlay_mirror.last_synced_at timestamp with time zone NOT NULL gen=- def=now()
-public.overlay_mirror.object_class text NOT NULL gen=- def=-
-public.overlay_mirror.overlay_mirror_pkey PRIMARY KEY (object_class, external_id)
-public.overlay_mirror.overlay_mirror_sync_state_check CHECK ((sync_state = ANY (ARRAY['fresh'::text, 'pending_sync'::text, 'stale'::text])))
-public.overlay_mirror.owner_external_id text gen=- def=-
-public.overlay_mirror.projection_fingerprint text gen=- def=-
-public.overlay_mirror.reprojection_failed_for text gen=- def=-
-public.overlay_mirror.sync_state text NOT NULL gen=- def='fresh'::text
-public.overlay_mirror.updated_at_baseline timestamp with time zone NOT NULL gen=- def=-
-public.overlay_mirror_halt acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.overlay_mirror_halt.detected_at timestamp with time zone NOT NULL gen=- def=now()
-public.overlay_mirror_halt.reason text NOT NULL gen=- def=-
-public.overlay_mirror_halt_singleton CREATE UNIQUE INDEX overlay_mirror_halt_singleton ON public.overlay_mirror_halt USING btree ((true))
-public.overlay_mirror_pkey CREATE UNIQUE INDEX overlay_mirror_pkey ON public.overlay_mirror USING btree (object_class, external_id)
-public.overlay_mode acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.overlay_mode.created_at timestamp with time zone NOT NULL gen=- def=now()
-public.overlay_mode.incumbent text gen=- def=-
-public.overlay_mode.overlay_mode_incumbent_check CHECK (((incumbent IS NULL) OR (incumbent = ANY (ARRAY['hubspot'::text, 'salesforce'::text, 'dynamics'::text]))))
-public.overlay_mode.overlay_mode_overlay_iff_incumbent CHECK (((sor_mode = 'overlay'::text) = (incumbent IS NOT NULL)))
-public.overlay_mode.overlay_mode_pkey PRIMARY KEY (singleton)
-public.overlay_mode.overlay_mode_singleton_check CHECK (singleton)
-public.overlay_mode.overlay_mode_sor_mode_check CHECK ((sor_mode = ANY (ARRAY['native'::text, 'overlay'::text])))
-public.overlay_mode.singleton boolean NOT NULL gen=- def=true
-public.overlay_mode.sor_mode text NOT NULL gen=- def='native'::text
-public.overlay_mode.trg_overlay_mode_undeletable CREATE TRIGGER trg_overlay_mode_undeletable BEFORE DELETE ON public.overlay_mode FOR EACH ROW EXECUTE FUNCTION overlay_mode_undeletable()
-public.overlay_mode.trg_overlay_mode_updated CREATE TRIGGER trg_overlay_mode_updated BEFORE UPDATE ON public.overlay_mode FOR EACH ROW EXECUTE FUNCTION set_updated_at()
-public.overlay_mode.updated_at timestamp with time zone NOT NULL gen=- def=now()
-public.overlay_mode_pkey CREATE UNIQUE INDEX overlay_mode_pkey ON public.overlay_mode USING btree (singleton)
-public.overlay_mode_undeletable() secdef=false cfg=- acl=- 
-BEGIN
-  RAISE EXCEPTION 'overlay_mode holds the installation''s system-of-record mode and always has exactly one row; it is updated, never deleted'
-    USING ERRCODE = 'check_violation';
-END; 
-public.overlay_reconcile_watermark acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.overlay_reconcile_watermark.object_class text NOT NULL gen=- def=-
-public.overlay_reconcile_watermark.overlay_reconcile_watermark_pkey PRIMARY KEY (object_class)
-public.overlay_reconcile_watermark.updated_at timestamp with time zone NOT NULL gen=- def=now()
-public.overlay_reconcile_watermark.watermark timestamp with time zone NOT NULL gen=- def=-
-public.overlay_reconcile_watermark_pkey CREATE UNIQUE INDEX overlay_reconcile_watermark_pkey ON public.overlay_reconcile_watermark USING btree (object_class)
-public.overlay_sync_state acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.overlay_sync_state.consecutive_failures integer NOT NULL gen=- def=0
-public.overlay_sync_state.flip_snapshot_id text gen=- def=-
-public.overlay_sync_state.last_error_class text gen=- def=-
-public.overlay_sync_state.last_failure_at timestamp with time zone gen=- def=-
-public.overlay_sync_state.last_success_at timestamp with time zone gen=- def=-
-public.overlay_sync_state.mirror_frozen_at timestamp with time zone gen=- def=-
-public.overlay_sync_state.next_sweep_at timestamp with time zone NOT NULL gen=- def=now()
-public.overlay_sync_state.overlay_sync_state_last_error_class_check CHECK (((last_error_class IS NULL) OR (last_error_class = ANY (ARRAY['rate_limited'::text, 'auth'::text, 'internal'::text]))))
-public.overlay_sync_state.updated_at timestamp with time zone NOT NULL gen=- def=now()
-public.overlay_sync_state_singleton CREATE UNIQUE INDEX overlay_sync_state_singleton ON public.overlay_sync_state USING btree ((true))
-public.overlay_tombstone acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.overlay_tombstone.created_at timestamp with time zone NOT NULL gen=- def=now()
-public.overlay_tombstone.external_id text NOT NULL gen=- def=-
-public.overlay_tombstone.object_class text NOT NULL gen=- def=-
-public.overlay_tombstone.overlay_tombstone_pkey PRIMARY KEY (object_class, external_id)
-public.overlay_tombstone_pkey CREATE UNIQUE INDEX overlay_tombstone_pkey ON public.overlay_tombstone USING btree (object_class, external_id)
-public.overlay_write_ledger acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.overlay_write_ledger.external_id text NOT NULL gen=- def=-
-public.overlay_write_ledger.object_class text NOT NULL gen=- def=-
-public.overlay_write_ledger.opened_at timestamp with time zone NOT NULL gen=- def=now()
-public.overlay_write_ledger.overlay_write_ledger_pkey PRIMARY KEY (object_class, external_id, property, value_hash)
-public.overlay_write_ledger.property text NOT NULL gen=- def=-
-public.overlay_write_ledger.value_canonical text NOT NULL gen=- def=''::text
-public.overlay_write_ledger.value_hash text NOT NULL gen=- def=-
-public.overlay_write_ledger_pkey CREATE UNIQUE INDEX overlay_write_ledger_pkey ON public.overlay_write_ledger USING btree (object_class, external_id, property, value_hash)
 public.partner acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.partner.archived_at timestamp with time zone gen=- def=-
 public.partner.captured_by text NOT NULL gen=- def=-

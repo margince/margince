@@ -61,7 +61,11 @@ describe("a contact with little context", () => {
     expect(
       screen.queryByRole("heading", { name: "What needs you" }),
     ).toBeNull();
-    await user.click(screen.getByRole("button", { name: /Source:/ }));
+    const sourceFact = screen.getByText("Source").closest(".record-fact");
+    if (!(sourceFact instanceof HTMLElement)) {
+      throw new Error("the Source fact is not on the page");
+    }
+    await user.click(within(sourceFact).getByRole("button"));
     expect(screen.getByText("manual")).toBeTruthy();
   });
 
@@ -198,7 +202,7 @@ it("opens details and permissions in a narrow-screen drawer and restores focus",
   }));
   mount("overview", sparse);
   const toggle = await screen.findByRole("button", {
-    name: "Details & permissions",
+    name: "Show details & permissions",
   });
   expect(
     screen.queryByRole("heading", { name: "Communication permissions" }),
@@ -246,7 +250,7 @@ it("names restricted overview sections even when an open commitment leads", asyn
   ).toBeTruthy();
   expect(
     screen.getByText(
-      /Not shown: Conversation memory, Where this contact stands, what Margince found, open tasks/,
+      /Not shown: Activity, Where this contact stands, what Margince found, open tasks/,
     ),
   ).toBeTruthy();
   expect(screen.queryByText("No interactions recorded")).toBeNull();
@@ -305,7 +309,9 @@ it("keeps a mobile Details edit open until it is saved or cancelled", async () =
     </UnsavedGuard>
   ));
   await user.click(
-    await screen.findByRole("button", { name: "Details & permissions" }),
+    await screen.findByRole("button", {
+      name: "Show details & permissions",
+    }),
   );
   const dialog = await screen.findByRole("dialog", {
     name: "Details & permissions",
@@ -315,6 +321,8 @@ it("keeps a mobile Details edit open until it is saved or cancelled", async () =
   );
   const input = within(dialog).getByRole("textbox", { name: "Title" });
   await user.type(input, "Director");
+  // The drawer's own way out refuses while a field edit is open, and says so
+  // on the control rather than answering the press with nothing.
   await waitFor(() =>
     expect(
       within(dialog)

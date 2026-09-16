@@ -15,7 +15,7 @@ import {
 import { type ReactNode, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { Button, Card } from "../design-system/atoms";
+import { Badge, Button, Card } from "../design-system/atoms";
 import type { MarginceCoreState } from "../design-system/margince-core";
 import { MarginceWorkbench } from "../design-system/margince-workbench";
 import { formatDateTime, formatNumber } from "../format/format";
@@ -681,7 +681,7 @@ function WebsiteStatusMessage({
       <p>{presentation.body}</p>
       <ReadActivity read={read} refreshing={refreshing} />
       {read.status === "deferred" && read.next_attempt_at && (
-        <p className="mw-resume">
+        <p>
           {t("deepread.resumesAt", {
             when: formatDateTime(read.next_attempt_at, locale, viewerZone()),
           })}
@@ -721,17 +721,17 @@ function ReadActivity({
         </p>
       )}
       <div>
-        <span className="t-caption">
+        <Badge>
           <b>{formatNumber(read.pages_read ?? 0, locale)}</b>{" "}
           {t("ob.pagesRead")}
-        </span>
-        <span className="t-caption">
+        </Badge>
+        <Badge>
           <b>{formatNumber(legalCount, locale)}</b> {t("ob.legalEntitiesFound")}
-        </span>
-        <span className="t-caption">
+        </Badge>
+        <Badge>
           <b>{formatNumber(findingCount, locale)}</b>{" "}
           {plural("ob.ai.finding", findingCount)}
-        </span>
+        </Badge>
       </div>
     </div>
   );

@@ -118,7 +118,7 @@ Doing it in the browser is smoother — it carries the CSRF cookie the callback 
 New mail flows in on the sync poll; to fill the CRM *backward* over a window, use the **backfill panel**
 that appears right after a Google connect:
 
-1. Pick a **window** — `3m` / `6m` / `12m` (default `6m`). The panel auto-**previews**: it shows the
+1. Pick a **window** — 3 months, 6 months, 1 year, 2 years, 3 years, 5 years, 7 years or 10 years (default 6 months). The panel auto-**previews**: it shows the
    estimated message count and estimated AI cost. This is the consent surface and spends nothing.
 2. Click **Start the import**. A live progress bar tracks scanned vs. estimated — moving *within* a page,
    not only at each page commit — with running counts of captured emails, contacts created, and **domains
@@ -126,7 +126,7 @@ that appears right after a Google connect:
    see [mail-history-import.md](../explanation/mail-history-import.md)). **Cancel** keeps everything
    already captured.
 
-Windows are **widen-only** (`3m` → `6m` → `12m`).
+Windows are **widen-only**, up to ten years. Extending a completed import preserves already captured emails. The wider scan revisits overlapping messages, but capture deduplicates them.
 
 <details><summary>Same thing via <code>curl</code></summary>
 

@@ -65,7 +65,10 @@
   border: 1px solid var(--borderControl);
   border-radius: var(--r-md);
   background: var(--bgElevated);
-  box-shadow: var(--shadow-card);
+  /* A field, so it takes the floor and not the top side — the same depth the
+     design system's own fields wear, because this one is a hand-rolled shell
+     and a reader cannot tell it apart from theirs. */
+  box-shadow: var(--shadow-well);
   transition:
     border-color 0.15s,
     box-shadow 0.15s;
@@ -231,7 +234,6 @@
   overflow: hidden;
   max-width: 100%;
   color: var(--textContent);
-  font-family: var(--f-mono);
   font-size: var(--fs-meta);
   font-weight: var(--fw-medium);
 }
@@ -418,20 +420,17 @@
 .ob-scan-cost-line {
   margin: 0;
   min-height: 15px;
-  font-family: var(--f-mono);
   font-variant-numeric: tabular-nums;
 }
 /* Warn, not the line's own meta tone: the figure beside it is missing a call
    the provider billed with no effective rate, so it reads as a caveat on the
    number rather than more of the same disclosure. */
 .ob-scan-cost-unpriced {
-  font-family: var(--f-body);
   font-variant-numeric: normal;
   color: var(--warnText);
 }
 .ob-scan-cost-model {
   margin: 0;
-  font-family: var(--f-mono);
   overflow-wrap: anywhere;
 }
 
@@ -484,7 +483,6 @@
   min-width: 0;
   overflow: hidden;
   color: var(--textContent);
-  font-family: var(--f-mono);
   font-size: var(--fs-meta);
   text-overflow: ellipsis;
   white-space: nowrap;

@@ -37,17 +37,12 @@
   }
 }
 
-/* The key, gone. Green because this one IS recorded — the vault holds it, and
-   the sentence is about what happened rather than what an agent proposes. */
+/* The key, gone. Its badge is green because this one IS recorded — the vault
+   holds it, and the sentence is about what happened rather than what an agent
+   proposes. The paragraph only places it and times its beat. */
 .ob-ig-sealed {
   margin: 0;
   align-self: flex-start;
-  padding: var(--space-1) var(--space-3);
-  border-radius: var(--r-full);
-  corner-shape: round;
-  background: var(--accentLight);
-  color: var(--accentText);
-  font-size: var(--fs-meta);
   animation: ob-ig-appear var(--ig-beat) var(--ease-out) 150ms both;
 }
 
@@ -108,12 +103,11 @@
    may not: the refusal is not a warning, it is the shape of the product. */
 /* The type is `.t-eyebrow` on the element itself (base.css owns the size, the
    tracking and the case). What is left here is what belongs to THIS list: a
-   label column the two rows align down, set in mono because it names a machine
-   state, and indigo because the state it names is the agent's. */
+   label column the two rows align down, and indigo because the state it names
+   is the agent's. */
 .ob-ig-can li b {
   flex: none;
   min-width: 6.5ch;
-  font-family: var(--f-mono);
   color: var(--aiText);
 }
 .ob-ig-can li[data-can="false"] b {

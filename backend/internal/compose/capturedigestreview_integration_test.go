@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -100,6 +101,17 @@ func (b *backfillWireEnv) buildWith(
 	t *testing.T, authority authz.Resolver, now time.Time,
 ) (approvalsPending int) {
 	t.Helper()
+	pending, _ := b.buildCounts(t, authority, now)
+	return pending
+}
+
+// buildCounts is buildWith's two-count form: the digest carries an approvals
+// number and a duplicates number, both written under the reader's own
+// authority, and each needs its own end-to-end case.
+func (b *backfillWireEnv) buildCounts(
+	t *testing.T, authority authz.Resolver, now time.Time,
+) (approvalsPending, dedupeOpen int) {
+	t.Helper()
 	e := b.env
 	reg := capture.NewRegistry(e.DB(), capture.NewSink(e.DB()), authority, keyvault.NewMemory()).
 		WithDigestReview(newDigestReviewSource(e.Pool, approvals.NewService(e.DB())))
@@ -108,11 +120,72 @@ func (b *backfillWireEnv) buildWith(
 		t.Fatalf("BuildDigests: %v", err)
 	}
 	_, digest := b.readDigest(t, nil)
-	if digest.Review.ApprovalsPending == nil {
-		t.Fatal("a wired build reported no count at all, which is the answer reserved " +
-			"for a build that could not count")
+	if digest.Review.ApprovalsPending == nil || digest.Review.DedupeOpen == nil {
+		t.Fatalf("a wired build reported no count at all (approvals=%v duplicates=%v), which is "+
+			"the answer reserved for a build that could not count",
+			digest.Review.ApprovalsPending, digest.Review.DedupeOpen)
 	}
-	return *digest.Review.ApprovalsPending
+	return *digest.Review.ApprovalsPending, *digest.Review.DedupeOpen
+}
+
+// seedDuplicatePair plants one open dedupe candidate through the real writer,
+// and answers the id of the side a caller may be denied.
+//
+// Through CreateContact rather than an INSERT, because the candidate row is a
+// side effect of the near-match scan a create runs: a hand-written row would
+// prove the count reads a table, not that it reads what production writes.
+func (b *backfillWireEnv) seedDuplicatePair(t *testing.T, name, email, dupName, dupEmail string) ids.UUID {
+	t.Helper()
+	incumbent, err := b.env.Contacts.CreateContact(b.env.Admin(), contacts.CreateContactInput{
+		FullName: name, Source: "manual",
+		Emails: []contacts.ContactEmailInput{{Email: email, EmailType: "work", IsPrimary: true}},
+	})
+	if err != nil {
+		t.Fatalf("seeding the incumbent: %v", err)
+	}
+	if _, err := b.env.Contacts.CreateContact(b.env.Admin(), contacts.CreateContactInput{
+		FullName: dupName, Source: "manual",
+		Emails: []contacts.ContactEmailInput{{Email: dupEmail, EmailType: "work", IsPrimary: true}},
+	}); err != nil {
+		t.Fatalf("seeding the near-duplicate: %v", err)
+	}
+	return ids.UUID(incumbent.Id)
+}
+
+// The duplicates count carries the reader's own scope, end to end.
+//
+// #1690 is named for this number: the detector reads across row scope on
+// purpose — a duplicate you cannot see is still a duplicate — so creating a
+// record that near-matches a colleague's PRIVATE one used to bump a counter
+// every digest reader saw. That is a weak existence oracle over records the
+// reader cannot open.
+//
+// The store-level rule is held next to the clause. What this adds is the wiring
+// above it: the digest builds one payload per reader, and a count that is
+// correct in the store and mis-plumbed in the builder discloses exactly what
+// the store refused. The approvals half has had this case since the seam
+// landed; this is its twin.
+func TestTheDigestCountsOnlyTheDuplicatesItsReaderCouldOpen(t *testing.T) {
+	b := setupBackfillWire(t)
+	now := time.Now().UTC()
+
+	// One pair both readers may open, so the assertion below is about the
+	// SECOND pair rather than about a count that hides from everybody.
+	b.seedDuplicatePair(t, "Ada Vance", "ada@wire.test", "Ada Vanse", "ada.v@wire.test")
+
+	// And one whose incumbent is capture-private to somebody else. Capture
+	// privacy bounds even an all-scope human (dedupescope.go says so), so this
+	// side is unreadable without giving the reader a narrower row scope than
+	// the first pair needs.
+	hidden := b.seedDuplicatePair(t, "Bea Lund", "bea@wire.test", "Bea Lundt", "bea.l@wire.test")
+	b.env.MakeCapturePrivate(t, "contact", hidden, b.env.Rep3)
+
+	_, open := b.buildCounts(t, readsContacts{}, now)
+	if open != 1 {
+		t.Errorf("the digest reported %d open duplicates, want 1 — the second pair's incumbent "+
+			"is private to another seat, and counting it tells this reader that somebody "+
+			"else's record exists", open)
+	}
 }
 
 // A staged proposal this reader could not decide is not in their count.
@@ -165,5 +238,38 @@ func (r decidesNothing) AdmittedAuthority(ctx context.Context, ws, human, _ ids.
 // AdmittedAuthority delegates to this fixture's own two reads; see
 // authztest.AdmittedFromPair for why the body is not written out here.
 func (r decidesDeals) AdmittedAuthority(ctx context.Context, ws, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
+	return authztest.AdmittedFromPair(ctx, ws, human, r.EffectiveRBAC, r.SeatType)
+}
+
+// readsContacts holds what the duplicates count asks of its reader.
+//
+// ALL THREE record grants, because requireDedupeRead asks for contact, company
+// AND lead when no entity type narrows the queue — the queue spans the three
+// vocabularies, so a reader missing one may not be told how many pairs it
+// holds. Worth stating in the fixture, because a missing grant does not surface
+// as an error: countOrNoneVisible reads the refusal as an empty queue, so the
+// count silently reads 0 and a test asserting "hidden" would pass for the
+// wrong reason. Mine did, until this line.
+//
+// Full row scope deliberately — capture privacy bounds an all-scope human
+// anyway, so a narrower scope would hide the private side for the wrong reason
+// and the test would pass without the clause under test.
+type readsContacts struct{ backfillAuthority }
+
+func (readsContacts) EffectiveRBAC(context.Context, ids.UUID, ids.UUID) (authz.RBAC, error) {
+	return authz.RBAC{Permissions: principal.Permissions{
+		Objects: map[string]principal.ObjectGrant{
+			"activity": {Create: true, Read: true},
+			"contact":  {Read: true, Update: true},
+			"company":  {Read: true},
+			"lead":     {Read: true},
+		},
+		RowScope: principal.RowScopeAll,
+	}}, nil
+}
+
+// AdmittedAuthority delegates to this fixture's own two reads; see
+// authztest.AdmittedFromPair for why the body is not written out here.
+func (r readsContacts) AdmittedAuthority(ctx context.Context, ws, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
 	return authztest.AdmittedFromPair(ctx, ws, human, r.EffectiveRBAC, r.SeatType)
 }

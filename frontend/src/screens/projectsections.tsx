@@ -134,7 +134,7 @@ export function PhaseHistoryCard({
             {history.phase_durations.map((duration) => (
               <li key={duration.phase}>
                 <span>{phaseWord(duration.phase, t)}</span>
-                <span className="t-mono">
+                <span className="t-num">
                   {formatDuration(duration.seconds * 1000, locale)}
                   {duration.current && ` · ${t("project.history.current")}`}
                 </span>
@@ -221,10 +221,10 @@ function ProjectDealRow({
         {deal.name}
       </button>
       <span className="project-row-meta t-caption">
-        <Badge tone={deal.status === "won" ? "success" : undefined} quiet>
+        <Badge tone={deal.status === "won" ? "success" : undefined}>
           {deal.status}
         </Badge>
-        <span className="t-mono">
+        <span className="t-num">
           {formatMoneyOrAbsent(deal.amount_minor, deal.currency, locale)}
         </span>
       </span>
@@ -311,7 +311,7 @@ function StakeholderRow({
     <PanelRow className="project-row">
       <EntityRef kind="contact" id={seat.contact_id} name={seat.contact_name} />
       <span className="project-row-meta t-caption">
-        {seat.role && <Badge quiet>{projectRoleLabel(seat.role, t)}</Badge>}
+        {seat.role && <Badge>{projectRoleLabel(seat.role, t)}</Badge>}
         {writable && (
           <RemoveProjectStakeholder
             projectId={projectId}
@@ -402,7 +402,7 @@ function DocumentRow({
       </a>
       <span className="project-row-meta t-caption">
         {doc.byte_size != null && (
-          <span className="t-mono">{formatBytes(doc.byte_size, locale)}</span>
+          <span className="t-num">{formatBytes(doc.byte_size, locale)}</span>
         )}
         <span>{formatDateAbbrev(doc.created_at, locale, recordZone)}</span>
       </span>

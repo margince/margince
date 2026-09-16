@@ -414,8 +414,8 @@ func TestEachReadingCountsItsOwnCategory(t *testing.T) {
 
 // A decision this reader cannot settle is not counted as waiting on them.
 //
-// The headline says somebody is blocked until you answer. Counting a duplicate
-// pair whose two records the reader may not both write tells them a contact is
+// The headline says how much is waiting on this reader. Counting a duplicate
+// pair whose two records they may not both write tells them a contact is
 // waiting on an answer they are unable to give — the audited page read "10
 // decisions waiting" over two the rep could take and eight only an admin could,
 // each of which said in its own card that a lead or admin had to settle it.
@@ -440,5 +440,27 @@ func TestTheDecisionCountLeavesOutWhatThisReaderCannotSettle(t *testing.T) {
 
 	if got.Review != 1 {
 		t.Errorf("counted %d decisions, want the one this reader can actually take", got.Review)
+	}
+}
+
+// And a decision whose only verb is the DISMISSAL is still this reader's.
+//
+// The count asks for a verb rather than for a settling one, and this is the
+// case that separates the two: a duplicate pair of companies each carrying live
+// projects can never be merged by anybody, and a reader who may write both can
+// still clear it as a false positive. Counting only the mergeable rows would
+// leave the headline short by exactly the pairs nobody else is going to answer.
+func TestTheDecisionCountKeepsAPairOnlyTheDismissalCanSettle(t *testing.T) {
+	day := crmcontracts.Attention{
+		AsOf: rankInstant,
+		NeedsYou: []crmcontracts.AttentionItem{
+			item("blocked", "dedupe_candidate", withKind("company"), dismissable()),
+		},
+	}
+
+	got := readingsOf(classifyDay(day, rankInstant, dayMoney{}), nil, nil)
+
+	if got.Review != 1 {
+		t.Errorf("counted %d decisions over a pair this reader is the one to clear", got.Review)
 	}
 }

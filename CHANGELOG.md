@@ -14,6 +14,26 @@ when it has content.
 
 ## [Unreleased]
 
+### Added
+
+- Mail history: setup and Settings share a dropdown through ten years, show the
+  preview start date, and qualify capped message and cost estimates.
+
+### Removed
+
+- **A company no longer carries a `classification`.** It was superseded a release
+  ago by `lifecycle` — where an account stands with us, one value at a time — and
+  `relationship_types`, what the company IS to us, which is legitimately several
+  things at once. Nothing had written the old field since, so every unassessed
+  account was served the column default `prospect` as though somebody had judged
+  it. The API stops returning it, the company list stops offering it as a filter,
+  and both generated clients drop it. A segment already written against it keeps
+  evaluating — the column survives and the saved-filter vocabulary still reads it
+  — but no surface offers it for a new one.
+- **The backfill stops reporting `dedupe_candidates`.** No statement ever wrote
+  that counter, so it was served as a constant zero to every client polling an
+  import. The column stays; the wire field is gone.
+
 ### Fixed
 
 - Customer meeting requests remain actionable on won or lost deals and outside

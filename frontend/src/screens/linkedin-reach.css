@@ -13,8 +13,7 @@
   white-space: nowrap;
 }
 
-/* Two figures a reader compares down the column, so the digits have to line up.
-   `.t-mono` only sets the family — tabular figures are their own declaration. */
+/* Two figures a reader compares down the column, so the digits have to line up. */
 .li-reach-figure {
   font-variant-numeric: tabular-nums;
 }

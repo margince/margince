@@ -1,6 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { CheckSquare, FileText } from "lucide-react";
-import { type ReactElement, useId } from "react";
+import { useId } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
@@ -9,210 +8,37 @@ import {
   useCanWriteRecord,
   useRecordWriteRefusal,
 } from "../app/capability";
-import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import { Badge, Button, OverflowMenu } from "../design-system/atoms";
-import { IdentityLine, IdentityMeta } from "../design-system/identityline";
 import { InlineChoice } from "../design-system/inlinechoice";
-import { ProvenanceTag } from "../design-system/trust";
-import { formatDateAbbrev, formatNumber } from "../format/format";
-import { useLocale, usePlural, useT } from "../i18n";
+import { useT } from "../i18n";
 import { ArchiveAction } from "./archive";
 import { useClaimRecord } from "./claimrecord";
-import {
-  provenanceOf,
-  throwProblem,
-  useMe,
-  useSorMode,
-  useViewerId,
-} from "./common";
+import { throwProblem, useViewerId } from "./common";
 import { LIFECYCLE_LABELS, LIFECYCLE_OPTIONS } from "./companies";
 import { DecisionsChip } from "./companyapprovals";
 import { patchCompanyField, searchCompanyTargets } from "./companyform";
 import { RELATIONSHIP_TYPE_LABELS, relationshipBadges } from "./companylookups";
 import { CompanyRejectAction } from "./companyreject";
-import { ComposeModal } from "./compose";
-import {
-  EntityRef,
-  rosterMissLabel,
-  useRoster,
-  useRosterPartial,
-} from "./entityref";
-import { LogActivityAction } from "./logactivity";
+import { rosterMissLabel, useRoster, useRosterPartial } from "./entityref";
 import { MergeAction } from "./merge";
-import { EmailVerb } from "./recordemail";
 import { ShareAction } from "./share";
 
-// The account header: the verbs a rep reaches for, the two values they change
-// in place, and the lines of facts that say who the account is and where the
-// relationship stands.
-//
-// Lifecycle reads beside the account's NAME — the target header's own
-// arrangement — rather than in the meta line below with everything else the
-// account carries: it is the one value a reader looks for first, and both it
-// and owner stay editable in place (InlineChoice) rather than moving into an
-// edit modal, which is what buried them behind a form the last time this
-// header changed shape.
+// The account header's editable pieces: lifecycle and owner, the two values a
+// rep changes in place (InlineChoice) rather than through an edit modal, plus
+// what the account IS (CompanyRelationshipBadges) and the record's own menu
+// (CompanyActionBadges). The subtitle and facts strip live in
+// companyheaderfacts.tsx and the header's other verbs in
+// companyheaderactions.tsx, so this file holds only the pieces that write.
 //
 // Split out of companies.tsx because that file had grown past 2,700 lines
 // carrying the list screen, the enrichment tools, the evidence cards and this
-// at once — and the V2 work adds to every one of them.
+// at once, and the V2 work adds to every one of them.
 
 type Company = components["schemas"]["Company"];
 type Company360View = components["schemas"]["Company360"];
 type Lifecycle = NonNullable<Company["lifecycle"]>;
 type UpdateCompanyRequest = components["schemas"]["UpdateCompanyRequest"];
-
-// The verbs a rep reaches for on an account, in the header where they can see
-// them. They were one button — "Log activity" — and setting what happens NEXT
-// was two clicks inside it, behind a type picker, which is why accounts get
-// notes and no follow-ups.
-//
-// "Write email" leads, because it is the account's primary action (plan §4.1):
-// a rep opening a company is usually about to start a conversation, not log
-// one that happened. It sends through POST /emails, the account-started origin
-// — a new thread filed under this company — rather than fabricating an
-// activity to reply to.
-export function CompanyPrimaryActions({
-  company,
-  composerOpen,
-  onComposerOpen,
-  archivedReasonId,
-}: Readonly<{
-  company: Company;
-  // The composer's open state belongs to the PAGE, not to this button: the
-  // drawer opens into the right rail's column, so the rail has to know it is
-  // open in order to stand down. Held here as a controlled pair rather than
-  // privately, which is what kept the rail rendering underneath it.
-  composerOpen: boolean;
-  onComposerOpen: (open: boolean) => void;
-  // The sentence the caller states once for the whole action strip. Both groups
-  // in that strip refuse for the same reason, so the reason is the page's to
-  // say — a component that minted its own would put a second copy of one fact
-  // on screen the moment the other group drew its own.
-  archivedReasonId?: string;
-}>) {
-  // An archived record takes no new activity — the write is refused
-  // server-side — so all three verbs are refused rather than removed. Removing
-  // them told a reader nothing: an absent button reads as a build without the
-  // feature, and this account has the feature and will not accept it. One
-  // sentence for the three of them, because it is one fact about the record.
-  const t = useT();
-  const ownReasonId = useId();
-  // The caller's id when it has stated the sentence for the whole strip, our
-  // own when nobody has. The refusal never depends on being handed one: a
-  // caller that forgot would otherwise turn an archived account back into one
-  // that LOOKS writable, which is worse than saying it twice.
-  const reasonId = archivedReasonId ?? ownReasonId;
-  const archived = company.archived_at ? reasonId : undefined;
-  // useCanWrite, not useCan: the two log verbs below issue a POST, and a read
-  // seat is refused before RBAC is consulted — the same rule contactpage.tsx
-  // states for the identical verb. Independent of `archived`: a live record a
-  // seat may not write to is refused for this reason, not that one, and the
-  // two must not be merged into one sentence that names the wrong cause.
-  const me = useMe();
-  const canLog = useCanWrite("activity", "create");
-  const logRefusedId = useId();
-  // A guard that has not answered yet refuses nothing: claiming a refusal
-  // `/me` has not decided is worse than a control that is briefly quiet — the
-  // same rule contactpage.tsx's writeRefusal states for the identical shape.
-  const logGrantKnown = me.data?.authorization !== undefined;
-  const logRefused =
-    archived ?? (logGrantKnown && !canLog ? logRefusedId : undefined);
-  const logPending = !archived && !logGrantKnown;
-  // LogActivityAction's own trigger renders nothing in overlay, so the two
-  // buttons below are already absent there — but this caption is drawn by
-  // the caller, not by them, and would otherwise be left explaining buttons
-  // the page never draws.
-  const overlay = useSorMode() === "overlay";
-  return (
-    <>
-      {archived && !archivedReasonId && (
-        <p className="t-caption" id={ownReasonId}>
-          {t("record.archivedReadOnly")}
-        </p>
-      )}
-      {!archived && logGrantKnown && !canLog && !overlay && (
-        <p className="t-caption" id={logRefusedId}>
-          {t("record.logActivityRefused")}
-        </p>
-      )}
-      <WriteEmailAction
-        company={company}
-        open={composerOpen}
-        onOpen={onComposerOpen}
-        disabledReasonId={archived}
-      />
-      {/* Icon AND words, the shape contactactions.tsx draws the same two verbs
-          in: a strip of label-only buttons reads as a list of links, and
-          neither glyph says the verb on its own — a tick box is the mark for
-          COMPLETING a task, not for filing one. The button sizes them. */}
-      <LogActivityAction
-        entityType="company"
-        entityId={company.id}
-        triggerIcon={<FileText aria-hidden="true" />}
-        disabled={logPending}
-        disabledReasonId={logRefused}
-      />
-      <LogActivityAction
-        entityType="company"
-        entityId={company.id}
-        askedKind="task"
-        triggerLabel="log.addTask"
-        triggerIcon={<CheckSquare aria-hidden="true" />}
-        disabled={logPending}
-        disabledReasonId={logRefused}
-      />
-    </>
-  );
-}
-
-// WriteEmailAction opens the composer with no anchor. The modal owns the send,
-// the consent gate and the refusal vocabulary; this owns only whether the
-// surface is offered and the open/close state, so the account-started and
-// reply surfaces stay one component.
-//
-// It is NOT hidden in overlay mode, unlike the two log verbs beside it, and the
-// difference is real rather than an oversight: writing to the account is a side
-// service, not a record write, so the server's overlay write guard never
-// reaches it — only the record-write tool verbs are refused for a mirrored
-// type, and sending mail is not one of them. Hiding it would take a working
-// capability away from a mirrored workspace.
-function WriteEmailAction({
-  company,
-  open,
-  onOpen,
-  disabledReasonId,
-}: Readonly<{
-  company: Company;
-  open: boolean;
-  onOpen: (open: boolean) => void;
-  disabledReasonId?: string;
-}>) {
-  return (
-    <>
-      {/* One of three equal verbs, not the record's primary action: on an
-          account writing is one of several things a reader might do, and the
-          move worth doing is the one the Brief names. The same verb every
-          record page draws, so it is found by its place and its word. */}
-      <EmailVerb reasonId={disabledReasonId} onClick={() => onOpen(true)} />
-      {open && (
-        // Keyed by the record, so navigating to another company while the
-        // composer is open REMOUNTS it rather than re-pointing it. Without the
-        // key the form keeps the text written for the previous account while
-        // the links payload follows the new one — a message composed for A,
-        // filed against B, with nothing on screen saying so.
-        <ComposeModal
-          key={company.id}
-          entityType="company"
-          entityId={company.id}
-          open={open}
-          onClose={() => onOpen(false)}
-        />
-      )}
-    </>
-  );
-}
 
 // patchCompanyField sends one field through the ordinary company PATCH,
 // with the record's own version as If-Match. The inline controls share it so a
@@ -273,16 +99,14 @@ type CompanyFieldPress = Readonly<{
 }>;
 
 // companyReadOnlyReason says why this record cannot be edited, when there is
-// something worth saying. Archived first: it is the one a reader can act on
-// (restore it), where the overlay case is a property of the installation.
+// something worth saying.
 //
 // Exported for the same reason as useCompanyFieldPatch above: the rail's
-// Details grid gates its own edit affordances on `writable`, and the reason
-// an archived or overlay-mirrored account is read-only is a fact about the
-// RECORD, not about which component happens to be drawing it.
+// Details grid gates its own edit affordances on `writable`, and the reason an
+// archived account is read-only is a fact about the RECORD, not about which
+// component happens to be drawing it.
 export function useCompanyReadOnlyReason(company: Company): string | undefined {
   const t = useT();
-  const overlay = useSorMode() === "overlay";
   // The per-ROW question only. The object grant and the seat ceiling are the
   // caller's to apply — every mount point here already ANDs `useCan` with this
   // reason, and folding them in again would answer "no grant" as though it were
@@ -293,9 +117,6 @@ export function useCompanyReadOnlyReason(company: Company): string | undefined {
   // that is simply somebody else's is not a problem to solve, it is who owns it.
   if (company.archived_at) {
     return t("record.archivedReadOnly");
-  }
-  if (overlay) {
-    return t("overlay.partialWriteBack");
   }
   // An UNOWNED record is not "somebody else's" — it is nobody's yet, and the
   // claim door is deliberately open to every seat. Reporting it read-only here
@@ -474,12 +295,6 @@ export function CompanyOwnerControl({
 // answer: the verb stays visible and says why, because a missing button reads
 // as a build without the feature.
 //
-// Overlay is deliberately NOT one of them, which is why this is its own function
-// rather than useCompanyReadOnlyReason. Overlay's sentence says a write reaches
-// the incumbent only in part: a caveat on a write that still happens, not a
-// reason it is refused. Disabling these verbs on it would take away edits the
-// mirror does support.
-//
 // An UNOWNED record is refused like any other the server marks unwritable:
 // the write gate treats an ownerless row as nobody's to change, so Edit on it
 // could only fail. The way IN stays open regardless — the owner control keeps
@@ -545,11 +360,12 @@ export function CompanyActionBadges({
   onOpenHistory: () => void;
   onSetUpPartner: () => void;
   onOpenDecisions?: () => void;
-  // Stated by the caller for the whole strip; see CompanyPrimaryActions.
+  // Stated by the caller for the whole strip; see companyheaderactions.tsx's
+  // CompanyHeaderActions, which reads the same reason for the row beside
+  // this menu.
   archivedReasonId?: string;
 }>) {
   const t = useT();
-  const overlay = useSorMode() === "overlay";
   // An archived record is read-only: the backend rejects edit/merge/archive
   // on a non-live row (there is no unarchive path). The verbs stay VISIBLE
   // and refused rather than disappearing (STATE-4a) — a control blocked by
@@ -559,8 +375,8 @@ export function CompanyActionBadges({
   // it has been put away.
   //
   // Undefined on a live account, which is what leaves those verbs pressable.
-  // See CompanyPrimaryActions: the id is an override, never what decides
-  // whether these verbs are refused.
+  // See companyheaderactions.tsx's CompanyHeaderActions: the id is an
+  // override, never what decides whether these verbs are refused.
   const ownReasonId = useId();
   const menuReasonId = archivedReasonId ?? ownReasonId;
   const refusedReason = useCompanyVerbRefusal(company);
@@ -584,75 +400,59 @@ export function CompanyActionBadges({
           </p>
         )}
 
-        {/* Merge has no incumbent-first projection — the seam refuses it
-            outright (overlay/provider_writes.go Merge) — unlike edit and
-            archive, which it serves, so it stays hidden here.
-            Unsupported is the OTHER cause STATE-4a sorts, and absence is
-            its answer: there is no fact about this account to report. */}
-        {!overlay && (
-          <MergeAction
-            disabledReasonId={refusedByState}
-            label={t("merge.company")}
-            sourceId={company.id}
-            sourceName={company.display_name}
-            searchTargets={searchCompanyTargets}
-            merge={async (targetId) => {
-              const { data, error } = await api.POST("/companies/{id}/merge", {
-                params: {
-                  path: { id: company.id },
-                  ...ifMatch(requireVersion(company.version)),
-                },
-                body: { target_id: targetId },
-              });
-              if (error) {
-                throwProblem(error, t);
-              }
-              return data;
-            }}
-            invalidate="companies"
-            recordKey="company"
-            survivorRoute={(targetId) => ({
-              screen: "companies",
-              id: targetId,
-            })}
-          />
-        )}
-        {/* A record grant probes the native row via auth.EnsureLinkTarget,
-            which a mirrored record has no row for — sharing stays hidden
-            in overlay regardless of record type (see deals.tsx's
-            DealBadges). */}
-        {!overlay && (
-          <ShareAction
-            recordType="company"
-            recordId={company.id}
-            disabledReasonId={refusedByState}
-          />
-        )}
+        <MergeAction
+          disabledReasonId={refusedByState}
+          label={t("merge.company")}
+          sourceId={company.id}
+          sourceName={company.display_name}
+          searchTargets={searchCompanyTargets}
+          merge={async (targetId) => {
+            const { data, error } = await api.POST("/companies/{id}/merge", {
+              params: {
+                path: { id: company.id },
+                ...ifMatch(requireVersion(company.version)),
+              },
+              body: { target_id: targetId },
+            });
+            if (error) {
+              throwProblem(error, t);
+            }
+            return data;
+          }}
+          invalidate="companies"
+          recordKey="company"
+          survivorRoute={(targetId) => ({
+            screen: "companies",
+            id: targetId,
+          })}
+        />
+        <ShareAction
+          recordType="company"
+          recordId={company.id}
+          disabledReasonId={refusedByState}
+        />
         {/* The audit spine: who changed this record and when. It reads as an
             inspection of the record rather than part of its story, so it sits
             with the other rare verbs instead of beside the account's own
             timeline. */}
-        {!overlay && (
-          <Button
-            small
-            data-testid="company-full-history"
-            onClick={onOpenHistory}
-          >
-            {t("record.fullHistory")}
-          </Button>
-        )}
+        <Button
+          small
+          data-testid="company-full-history"
+          onClick={onOpenHistory}
+        >
+          {t("record.fullHistory")}
+        </Button>
         {/* The way in to the partner programme for an account that has none.
             The tab only shows once there IS one, so without this the first
             partner row would be unreachable — this is the same form, asked
             for rather than offered. Below Full history rather than beside
             Merge: every row above is a verb EVERY record carries, in the order
             they all carry them, and every row below is this account's own. */}
-        {!overlay &&
-          !(company.relationship_types ?? []).includes("partner") && (
-            <Button small reasonId={refusedByState} onClick={onSetUpPartner}>
-              {t("company.partnerSetUp")}
-            </Button>
-          )}
+        {!(company.relationship_types ?? []).includes("partner") && (
+          <Button small reasonId={refusedByState} onClick={onSetUpPartner}>
+            {t("company.partnerSetUp")}
+          </Button>
+        )}
         {/* The account's own waiting decisions. It reads as a count in the
               header, which is a state, and this is the verb that answers it —
               so it sits with the other rare verbs rather than as a chip beside
@@ -665,14 +465,11 @@ export function CompanyActionBadges({
             came from mail, so the same domain mints it again next week. Drawn
             only where there is a domain to refuse and only for a seat holding
             both halves — CompanyRejectAction decides both, and returns nothing
-            when either says no. Hidden in overlay with the rest of the native
-            verbs; the server refuses it there too. */}
-        {!overlay && (
-          <CompanyRejectAction
-            company={company}
-            disabledReasonId={refusedByState}
-          />
-        )}
+            when either says no. */}
+        <CompanyRejectAction
+          company={company}
+          disabledReasonId={refusedByState}
+        />
         {/* Last, and set apart by the panel's own seam (atoms.css). This is
             the one verb here a reader cannot walk back from the header, so it
             does not sit in the run of routine ones where a slipped pointer
@@ -716,125 +513,19 @@ export function displayHost(url: string): string {
   }
 }
 
-// `website_url` is derived server-side from the primary domain row, and an
-// overlay-mirrored company carries the domain without it. Falling back to
-// the row keeps the domain on those records rather than silently dropping
-// the one identifying fact the reader had before. Shared by every reader of
-// the company's web presence, so the fallback lives in one place rather than
-// being re-derived per caller.
-function companyWebsite(company: Company): string | undefined {
+// `website_url` is derived server-side from the primary domain row, and a
+// company can carry the domain without it. Falling back to the row keeps the
+// domain on those records rather than silently dropping the one identifying
+// fact the reader had before. Shared by every reader of the company's web
+// presence, so the fallback lives in one place rather than being re-derived
+// per caller.
+export function companyWebsite(company: Company): string | undefined {
   const primaryDomain = (company.domains ?? []).find(
     (d) => d.is_primary,
   )?.domain;
   return (
     company.website_url ??
     (primaryDomain ? `https://${primaryDomain}` : undefined)
-  );
-}
-
-// CompanyIdentityLine is the header's ONE line of facts under the name and
-// its standing, the mock's `gfacts`: the way in, where the account is, what it
-// does, how big it is, who owns it here, and the strongest contact. Facts
-// about the ACCOUNT, then, last and quietest, when the row itself was
-// written and by whom — the readings row under the tabs carries the pipeline
-// and the last touch, so neither is repeated here.
-export function CompanyIdentityLine({
-  company,
-  view,
-  loading,
-}: Readonly<{
-  company: Company;
-  view?: Company360View;
-  loading?: boolean;
-}>) {
-  const plural = usePlural();
-  const t = useT();
-  const { locale } = useLocale();
-  const roster = useRoster("user", true);
-  const owner = company.owner_id
-    ? roster.data?.find((candidate) => candidate.id === company.owner_id)
-    : undefined;
-  const ownerName =
-    owner && "display_name" in owner ? owner.display_name : undefined;
-  const wayIn = loading ? undefined : view?.strength;
-  const website = companyWebsite(company);
-  const facts: ReactElement[] = [];
-  if (website) {
-    facts.push(
-      <a key="website" className="co-meta-link" href={website}>
-        {displayHost(website)}
-      </a>,
-    );
-  }
-  if (company.address?.city) {
-    facts.push(<span key="city">{company.address.city}</span>);
-  }
-  if (company.industry) {
-    facts.push(<span key="industry">{company.industry}</span>);
-  }
-  if (company.size_band) {
-    facts.push(
-      <span key="size">
-        {t("co.pulse.sizeBand", { band: company.size_band })}
-      </span>,
-    );
-  }
-  // An owner named only once the roster can name them: "Unassigned" while the
-  // roster is still loading would call a real owner gone.
-  if (!company.owner_id || ownerName) {
-    facts.push(
-      <span key="owner">
-        {t("co.pulse.owner")} <b>{ownerName ?? t("co.pulse.unowned")}</b>
-      </span>,
-    );
-  }
-  if (wayIn?.contributor_contact_id) {
-    facts.push(
-      <span key="wayin">
-        {t("co.pulse.strongestLead")}{" "}
-        <EntityRef kind="contact" id={wayIn.contributor_contact_id} />{" "}
-        {plural("co.pulse.strengthTail", wayIn.contact_count, {
-          count: formatNumber(wayIn.contact_count, locale),
-        })}
-      </span>,
-    );
-  }
-  facts.push(<CompanyRecordProvenance key="provenance" company={company} />);
-  // Clauses of ONE sentence about the account — what it is, where, how big,
-  // whose — so they are strung on dots rather than left to stand apart.
-  return (
-    <IdentityMeta>
-      <IdentityLine>{facts}</IdentityLine>
-    </IdentityMeta>
-  );
-}
-
-// When the record's row was written and by whom: the governance reading the
-// provenance tag exists for, on every record page. A fact about the ROW rather
-// than about the account, so it closes the line in the meta ink rather than
-// opening it.
-function CompanyRecordProvenance({ company }: Readonly<{ company: Company }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const viewerId = useViewerId();
-  const recordZone = useRecordZone();
-  const roster = useRoster("user", true);
-  const authorName = (userId: string) => {
-    const entry = roster.data?.find((candidate) => candidate.id === userId);
-    return entry && "display_name" in entry ? entry.display_name : undefined;
-  };
-  return (
-    <span className="co-record-provenance">
-      <span>
-        {t("co.pulse.created", {
-          when: formatDateAbbrev(company.created_at, locale, recordZone),
-        })}
-      </span>
-      <ProvenanceTag
-        provenance={provenanceOf(company.captured_by, viewerId)}
-        renderUser={authorName}
-      />
-    </span>
   );
 }
 

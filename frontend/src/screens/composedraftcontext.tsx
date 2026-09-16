@@ -41,9 +41,7 @@ export function AccountDraftContext({
 }>) {
   const t = useT();
   const query = useCompany360(companyId);
-  // An overlay workspace has no native 360 to ground from; the endpoint
-  // refuses there too, so the pickers simply have nothing to offer.
-  const view = query.data?.state === "ready" ? query.data.view : undefined;
+  const view = query.data;
   const contacts = view?.contacts?.data ?? [];
   const deals = view?.deals?.data ?? [];
 

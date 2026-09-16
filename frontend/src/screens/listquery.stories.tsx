@@ -15,10 +15,9 @@ import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // ListTable (screens/listquery.tsx) binds useListQuery's server-query state
 // to the design-system list surface (ListTable in listtable.tsx, imported
-// there under the alias ListSurface). It also reads the shared workspace
-// mode off the cached ["me"] query — to drop the sort/filter dials the
-// overlay mirror refuses — so every story needs the same QueryClientProvider
-// + stubbed /me every screen story provides, not just LocaleProvider.
+// there under the alias ListSurface). It reads the cached ["me"] query, so
+// every story needs the same QueryClientProvider + stubbed /me every screen
+// story provides, not just LocaleProvider.
 function nativeMe() {
   return () =>
     jsonResponse({
@@ -128,26 +127,6 @@ export const ErrorState: Story = {
 
 export const Empty: Story = {
   render: () => <Harness fetchPage={async () => pageOf([])} />,
-};
-
-// The overlay mirror 422s the sort/filter dials, so the bound ListTable
-// passes neither through and shows the note explaining why instead.
-export const OverlayDialsUnavailable: Story = {
-  decorators: [
-    (Story) => {
-      installFetchStub({
-        "GET /me": () =>
-          jsonResponse({
-            user: { id: "u1", email: "ada@acme.test", display_name: "Ada" },
-            roles: ["admin"],
-            teams: [],
-            system_of_record: { mode: "overlay" },
-          }),
-      });
-      return <Story />;
-    },
-  ],
-  render: () => <Harness fetchPage={async () => pageOf(rows(3))} />,
 };
 
 // Views, a filter chip and a keyset cursor with more than one page: the

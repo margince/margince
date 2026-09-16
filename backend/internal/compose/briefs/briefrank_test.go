@@ -16,8 +16,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// briefTestClock is the fixed evaluation instant of every fold below.
-var briefTestClock = time.Date(2026, 6, 4, 12, 0, 0, 0, time.UTC)
+// briefTestClock is the fixed evaluation DAY every fold scores against — the
+// installation-zone calendar day Rank resolves and hands the scorer, at UTC
+// midnight the way localDay returns it.
+var briefTestClock = time.Date(2026, 6, 4, 0, 0, 0, 0, time.UTC)
 
 func datePtr(t time.Time) *time.Time { return &t }
 

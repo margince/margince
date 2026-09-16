@@ -17,8 +17,8 @@ import {
   type BoardMoneyColumn,
   DealCard,
   PipelineBoard,
-  RecordView,
 } from "./composed";
+import { RecordView } from "./recordview";
 
 // B-EP09.3b acceptance: the composed surfaces consume the 3a primitives and
 // the staged / real / human-typed three-way distinction carries through.
@@ -48,7 +48,7 @@ describe("DealCard + PipelineBoard", () => {
   it("renders value/age and the stalled aging flag (AC-pipeline-5)", () => {
     render(<DealCard deal={deal} href="#/deals/d1" zone="Europe/Berlin" />);
     expect(screen.getByText("€48,000.00")).toBeTruthy();
-    expect(screen.getByText("stalled")).toBeTruthy();
+    expect(screen.getByText("Stalled")).toBeTruthy();
     expect(screen.getByRole("link").className).not.toContain("stalled");
   });
 
@@ -399,7 +399,7 @@ describe("RecordView's chrome", () => {
       />,
     );
 
-    const tabs = chrome(".record-tabs");
+    const tabs = chrome("[data-testid='record-tabs']");
     const band = chrome(".record-band");
     // The work column, which every shape of `PageZones` draws; the grid class
     // itself is absent on a record that has neither rail nor aside.
@@ -422,9 +422,12 @@ describe("RecordView's chrome", () => {
     );
 
     expect(document.querySelector(".record-band")).toBeNull();
-    expect(precedes(chrome(".record-tabs"), chrome(".page-zones-main"))).toBe(
-      true,
-    );
+    expect(
+      precedes(
+        chrome("[data-testid='record-tabs']"),
+        chrome(".page-zones-main"),
+      ),
+    ).toBe(true);
   });
 });
 
@@ -458,7 +461,7 @@ describe("RecordView + timeline", () => {
     ).toBeTruthy();
     expect(screen.getByText("12/06/2026")).toBeTruthy();
     expect(screen.getByText("Automated by capture")).toBeTruthy();
-    expect(screen.getByText("typed by you")).toBeTruthy();
+    expect(screen.getByText("Typed by you")).toBeTruthy();
   });
 
   it("keeps the whole message in the document, clamped but never cut", () => {

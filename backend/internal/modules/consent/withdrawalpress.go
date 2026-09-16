@@ -23,8 +23,13 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
+// sourcePublicLink marks every row a press on a mailed link writes, so a later
+// reader can tell an unauthenticated press from a seat's own act.
+const sourcePublicLink = "public_link"
+
 // StopForCredentialTx records the stop a withdrawal link presses when its
-// subject holds no per-purpose consent state to withdraw.
+// subject holds no per-purpose consent state to withdraw, and answers whether
+// this press is the one that moved something.
 //
 // A LEAD HAS NO contact_consent ROWS, and neither does a bare address. The
 // per-purpose withdrawal every other press performs therefore has nothing to
@@ -56,13 +61,18 @@ import (
 // pressed it, and a subject-level row is one no seat may ever lift. An
 // operator must be able to correct a mis-scanned link; they must not be able
 // to undo a contact's Art. 21 objection. This is the former.
-func (s *Store) StopForCredentialTx(ctx context.Context, tx pgx.Tx, ref WithdrawalRef) error {
+//
+// FALSE MEANS NOTHING MOVED, which a replayed one-click POST is: the stop was
+// already standing. The public handler turns that into the same "nothing
+// changed" answer a contact's replayed press gets, so the two subjects stay
+// indistinguishable to whoever holds the link.
+func (s *Store) StopForCredentialTx(ctx context.Context, tx pgx.Tx, ref WithdrawalRef) (bool, error) {
 	if !ref.ContactID.IsZero() {
-		return fmt.Errorf("consent: a contact's link withdraws their purposes rather than " +
+		return false, fmt.Errorf("consent: a contact's link withdraws their purposes rather than " +
 			"recording an address stop")
 	}
 	if ref.LeadID.IsZero() && ref.Address == "" {
-		return apperrors.ErrNotFound
+		return false, apperrors.ErrNotFound
 	}
 	// THE NAMED-PURPOSE ROW NARROWS TO THE LINK'S OWN PURPOSE, and nothing
 	// narrower is possible: the link carries one purpose id, so that is the
@@ -75,7 +85,7 @@ func (s *Store) StopForCredentialTx(ctx context.Context, tx pgx.Tx, ref Withdraw
 	}
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
-		return err
+		return false, err
 	}
 	// SERIALISED FIRST, because NOT EXISTS does not serialise: two concurrent
 	// first presses — a mailbox provider retrying while the first is still in
@@ -84,7 +94,7 @@ func (s *Store) StopForCredentialTx(ctx context.Context, tx pgx.Tx, ref Withdraw
 	// first was still refusing. The lock is the one every writer of this
 	// subject's stops takes, so a carry or a lift queues behind this too.
 	if err := lockStopKey(ctx, tx, stopSubjectKey(ref)); err != nil {
-		return err
+		return false, err
 	}
 	// THE DEDUP KEYS ON PURPOSE TOO, or a broad live row would silently absorb
 	// a narrow press (the recipient asked to leave one list and the row would
@@ -96,29 +106,29 @@ func (s *Store) StopForCredentialTx(ctx context.Context, tx pgx.Tx, ref Withdraw
 	tag, err := tx.Exec(ctx, `
 		INSERT INTO communication_suppression
 		    (lead_id, address, kind, source, captured_by, decided_by_level, purpose_id)
-		SELECT $1, $2, $3, 'public_link', $4, $5, $6
+		SELECT $1, $2, $3, $6, $4, $5, $7
 		 WHERE NOT EXISTS (
 		       SELECT 1 FROM communication_suppression live
 		        WHERE live.revoked_at IS NULL
 		          AND live.kind = $3
-		          AND live.purpose_id IS NOT DISTINCT FROM $6
+		          AND live.purpose_id IS NOT DISTINCT FROM $7
 		          AND (($1::uuid IS NOT NULL AND live.lead_id = $1)
 		            OR ($1::uuid IS NULL AND lower(live.address) = $2)))`,
 		zeroAsNull(ref.LeadID.UUID), ref.Address, commsauthz.ReasonObjection,
-		by, string(commsauthz.LevelMachine), purposeID)
+		by, string(commsauthz.LevelMachine), sourcePublicLink, purposeID)
 	if err != nil {
-		return fmt.Errorf("consent: recording the stop this link pressed: %w", err)
+		return false, fmt.Errorf("consent: recording the stop this link pressed: %w", err)
 	}
 	if tag.RowsAffected() == 0 {
 		// Already stopped. The press succeeded the first time and this one
 		// changes nothing, which is what a replayed one-click POST is.
-		return nil
+		return false, nil
 	}
 	entity, entityID := entityLead, ref.LeadID.UUID
 	if entityID.IsZero() {
 		// No record to audit against: the stop is about an address nobody
 		// holds. The row itself is the record, and it names its own source.
-		return nil
+		return true, nil
 	}
 	// AUDITED BUT NOT ANNOUNCED. consent.suppressed declares
 	// x-entity-type: contact, so a lead subject would ship an envelope naming
@@ -127,10 +137,10 @@ func (s *Store) StopForCredentialTx(ctx context.Context, tx pgx.Tx, ref Withdraw
 	// event for the same reason. Widening the contract to leads is a question
 	// for the slice that asks it.
 	if _, err := storekit.AuditEvent(ctx, tx, "update", entity, entityID,
-		map[string]any{"stopped": commsauthz.ReasonObjection, "source": "public_link"}); err != nil {
-		return err
+		map[string]any{"stopped": commsauthz.ReasonObjection, "source": sourcePublicLink}); err != nil {
+		return false, err
 	}
-	return nil
+	return true, nil
 }
 
 // StopForCredential is the press in its own transaction, for the public
@@ -146,14 +156,19 @@ func (s *Store) StopForCredentialTx(ctx context.Context, tx pgx.Tx, ref Withdraw
 // Re-resolving inside the write makes the erasure's own deletion of the
 // credential decisive: a token whose row is gone answers not-found here, and
 // the press writes nothing.
-func (s *Store) StopForCredential(ctx context.Context, token string) error {
-	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+func (s *Store) StopForCredential(ctx context.Context, token string) (bool, error) {
+	var stopped bool
+	if err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		ref, err := resolveWithdrawalTokenTx(ctx, tx, token)
 		if err != nil {
 			return err
 		}
-		return s.StopForCredentialTx(ctx, tx, ref)
-	})
+		stopped, err = s.StopForCredentialTx(ctx, tx, ref)
+		return err
+	}); err != nil {
+		return false, err
+	}
+	return stopped, nil
 }
 
 // WithdrawMarketingNamed stops ONE purpose, and only if it is one an

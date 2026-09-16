@@ -41,6 +41,7 @@ const preview =
     jsonResponse({
       window: "6m",
       estimated_messages: 4820,
+      after_date: "2026-01-31",
       computed_at: "2026-07-31T09:12:00Z",
       ...extra,
     });
@@ -227,4 +228,27 @@ export const Stopping: Story = {
     );
     await canvas.findByText(/Nothing was written/i);
   },
+};
+
+export const CappedHistory: Story = {
+  render: backreadStory(
+    { state: "none" },
+    {
+      "POST /connectors/gmail/backfill/preview": () =>
+        jsonResponse({
+          window: "6m",
+          after_date: "2026-01-31",
+          computed_at: "2026-07-23T10:00:00Z",
+          estimated_messages: 20000,
+          estimate_is_floor: true,
+          estimated_cost_minor: 300,
+          currency: "USD",
+        }),
+    },
+  ),
+};
+
+export const CappedHistoryDark: Story = {
+  ...CappedHistory,
+  globals: { theme: "dark" },
 };

@@ -23,9 +23,15 @@ type resultCache struct {
 
 type cacheEntry struct {
 	workspaceID ids.WorkspaceID
-	resp        model.Response
-	tier        Tier
-	expires     time.Time
+	// generation names the Router binding that produced this answer, and it
+	// is what makes clear a reclamation rather than the correctness step. A
+	// completion in flight when a rebind lands finishes on the binding it
+	// loaded and writes AFTER that clear, so the clear alone cannot keep the
+	// old binding's words out of the new binding's answers.
+	generation uint64
+	resp       model.Response
+	tier       Tier
+	expires    time.Time
 }
 
 // maxResultCacheEntries bounds resident memory: expired entries are only
@@ -37,7 +43,7 @@ func newResultCache(ttl time.Duration) *resultCache {
 	return &resultCache{ttl: ttl, now: time.Now, entries: map[string]cacheEntry{}}
 }
 
-func (c *resultCache) get(key string, wsID ids.WorkspaceID) (model.Response, Tier, bool) {
+func (c *resultCache) get(key string, wsID ids.WorkspaceID, generation uint64) (model.Response, Tier, bool) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	entry, ok := c.entries[key]
@@ -50,16 +56,24 @@ func (c *resultCache) get(key string, wsID ids.WorkspaceID) (model.Response, Tie
 	if entry.workspaceID != wsID {
 		return model.Response{}, "", false
 	}
+	// An answer belongs to the binding that produced it. Serving one across a
+	// rebind would report a previous model's words under the provider and
+	// model identity of the one now bound, and that identity decides whether a
+	// caller is told "no AI provider is configured" or "the model answered
+	// badly" — two different things for an operator to do.
+	if entry.generation != generation {
+		return model.Response{}, "", false
+	}
 	return entry.resp, entry.tier, true
 }
 
-func (c *resultCache) put(key string, wsID ids.WorkspaceID, resp model.Response, tier Tier) {
+func (c *resultCache) put(key string, wsID ids.WorkspaceID, generation uint64, resp model.Response, tier Tier) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if _, exists := c.entries[key]; !exists && len(c.entries) >= maxResultCacheEntries {
 		c.makeRoomLocked()
 	}
-	c.entries[key] = cacheEntry{workspaceID: wsID, resp: resp, tier: tier, expires: c.now().Add(c.ttl)}
+	c.entries[key] = cacheEntry{workspaceID: wsID, generation: generation, resp: resp, tier: tier, expires: c.now().Add(c.ttl)}
 }
 
 // forget drops one request's cached completion. The structured-output
@@ -97,9 +111,11 @@ func (c *resultCache) makeRoomLocked() {
 }
 
 // clear drops every cached answer, whatever workspace produced it. A rebind
-// calls it: each entry was produced by a model binding that no longer exists,
-// and serving one afterwards would attribute a previous model's words to the
-// one now bound.
+// calls it to reclaim the memory: each entry was produced by a model binding
+// that no longer exists, so none of them can ever be read again, and left
+// resident they would evict live entries through the size cap. Keeping them
+// OUT of the new binding's answers is the generation stamp's job, not this
+// one's — a call already in flight writes after this runs.
 func (c *resultCache) clear() {
 	c.mu.Lock()
 	defer c.mu.Unlock()

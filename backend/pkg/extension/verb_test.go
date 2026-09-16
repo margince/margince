@@ -440,3 +440,82 @@ func TestABodylessMethodAcceptsFlatPrimitiveArguments(t *testing.T) {
 		t.Fatalf("a DELETE write taking a flat id must validate: %v", err)
 	}
 }
+
+// wellFormedHumanOnly is the human-only counterpart to wellFormed: no Tier,
+// no RequestedScope, no Subject, but still a Tool verb (the registry
+// dispatch key) and — because it mutates — still an RBAC object.
+func wellFormedHumanOnly() Verb {
+	return Verb{
+		Unit:        "crm-demo",
+		Contract:    "crm.yaml",
+		OperationID: "crmDemoRotateKey",
+		Route:       "/ext/crm-demo/key",
+		Method:      http.MethodPost,
+		Tool:        "demo_rotate_key",
+		Title:       "Rotate the demo signing key",
+		Description: "Rotate the unit's own signing key. Never reachable by an agent.",
+		Version:     "1.0.0",
+		HumanOnly:   true,
+		RbacObject:  "ext_crm_demo_widget",
+		RbacAction:  RbacUpdate,
+	}
+}
+
+func TestVerbValidateAcceptsAWellFormedHumanOnlyDeclaration(t *testing.T) {
+	if err := wellFormedHumanOnly().Validate(); err != nil {
+		t.Fatalf("a well-formed human-only declaration must validate: %v", err)
+	}
+	// A read-only human-only verb needs no RBAC object, same as a tool verb.
+	read := wellFormedHumanOnly()
+	read.Method = http.MethodGet
+	read.RbacObject, read.RbacAction = "", ""
+	if err := read.Validate(); err != nil {
+		t.Fatalf("a read-only human-only declaration must validate: %v", err)
+	}
+}
+
+func TestVerbValidateRefusesHumanOnlyWithGovernanceFields(t *testing.T) {
+	for name, mutate := range map[string]func(*Verb){
+		"a declared Tier":           func(v *Verb) { v.Tier = TierAutoExecute },
+		"a declared RequestedScope": func(v *Verb) { v.RequestedScope = ScopeWrite },
+		"a declared Subject":        func(v *Verb) { v.Subject = Subject{Arg: "id", Table: "ext_crm_demo_widget"} },
+	} {
+		t.Run(name, func(t *testing.T) {
+			v := wellFormedHumanOnly()
+			mutate(&v)
+			if err := v.Validate(); err == nil {
+				t.Fatalf("a human-only verb with %s must be refused", name)
+			}
+		})
+	}
+}
+
+func TestVerbValidateRefusesAHumanOnlyMutationWithNoRbacObject(t *testing.T) {
+	for _, method := range []string{http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete} {
+		t.Run(method, func(t *testing.T) {
+			v := wellFormedHumanOnly()
+			v.Method = method
+			v.RbacObject, v.RbacAction = "", ""
+			err := v.Validate()
+			if err == nil {
+				t.Fatalf("a %s human-only operation with no RBAC object must be refused", method)
+			}
+			if !strings.Contains(err.Error(), "RBAC object") {
+				t.Fatalf("refusal must name the missing RBAC object, got: %v", err)
+			}
+		})
+	}
+}
+
+func TestVerbValidateRefusesATooLikeVerbWithNoTool(t *testing.T) {
+	v := wellFormed()
+	v.Tool = ""
+	if err := v.Validate(); err == nil {
+		t.Fatal("a non-human-only verb with no Tool must still be refused")
+	}
+	humanOnlyNoTool := wellFormedHumanOnly()
+	humanOnlyNoTool.Tool = ""
+	if err := humanOnlyNoTool.Validate(); err == nil {
+		t.Fatal("a human-only verb still needs a Tool — it is the registry dispatch key")
+	}
+}

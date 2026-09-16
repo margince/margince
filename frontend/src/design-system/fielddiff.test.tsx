@@ -31,7 +31,7 @@ describe("FieldDiff", () => {
 });
 
 describe("PassportChip", () => {
-  it("renders the passport id in mono", () => {
+  it("shows the agent's passport id", () => {
     render(<PassportChip id="psp_7Q3fa91" />);
     expect(screen.getByText(/psp_7Q3fa91/)).toBeTruthy();
   });

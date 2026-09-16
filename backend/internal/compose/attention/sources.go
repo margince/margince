@@ -57,3 +57,12 @@ const subjectDeal = "deal"
 // decay lane against a waiting row matches on it, and a misspelt literal there
 // fails silently — it matches nothing, drops nothing, and reads green.
 const subjectContact = "contact"
+
+// sourceDuplicate names the dedupe queue's producer. Four readers spell it —
+// the renderer, the batch key, the reach table and the truncation snapshot —
+// and the last of those compares it against a count, so a typo there would
+// report a complete lane rather than a missing row.
+const sourceDuplicate = "dedupe_candidate"
+
+// sourceNoticeCase names contact-linked disclosure duties across ranking and scope.
+const sourceNoticeCase = "notice_case"

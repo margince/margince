@@ -24,6 +24,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -290,5 +291,48 @@ func TestAStaleVisibilityWriteIsRefused(t *testing.T) {
 		return refuseStaleVisibility(ctx, tx, published, fresh)
 	}); err != nil {
 		t.Errorf("a write built on a current read was refused: %v", err)
+	}
+}
+
+// TestContactAuthorizationIsRecheckedUnderTheRowLock is the company column's
+// twin, and it is here because the defect was found on that side first.
+//
+// UpdateContact asks auth.EnsureWritable before it reads the row. Under READ
+// COMMITTED a privatization committing in that window reaches the caller's own
+// before-image too, so a guard that only compares the column to what the
+// caller was shown sees 'owner' on both sides, matches, and admits a colleague
+// who may no longer read the contact at all to re-publish it.
+//
+// Driven as the real interleaving: authorize while the contact is public, let
+// the owner privatize and COMMIT, then carry on as the update path does.
+func TestContactAuthorizationIsRecheckedUnderTheRowLock(t *testing.T) {
+	e := setupCapturePrivacy(t)
+	published := e.captureContact(t, "workspace")
+	colleague := e.as(e.teammate, principal.RowScopeTeam)
+
+	active, err := e.store.activeColumns(colleague, "contact")
+	if err != nil {
+		t.Fatalf("reading the active columns: %v", err)
+	}
+
+	err = e.store.tx(colleague, func(tx pgx.Tx) error {
+		if err := auth.EnsureWritable(colleague, tx, "contact", published.UUID); err != nil {
+			return err
+		}
+		if _, err := e.store.UpdateContact(e.as(e.owner, principal.RowScopeOwn), published,
+			UpdateContactInput{Visibility: visibility("owner")}); err != nil {
+			t.Fatalf("the owner privatizing mid-race: %v", err)
+		}
+		current, err := readContact(colleague, tx, published, storekit.LiveOnly, active)
+		if err != nil {
+			return err
+		}
+		return refuseStaleVisibility(colleague, tx, published, current)
+	})
+	if !errors.Is(err, apperrors.ErrNotFound) {
+		t.Errorf("republishing a contact privatized after admission: err = %v, want not found", err)
+	}
+	if got := e.visibilityOf(t, published); got != "owner" {
+		t.Errorf("visibility = %q, want owner — the owner's decision must stand", got)
 	}
 }

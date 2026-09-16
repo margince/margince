@@ -616,7 +616,7 @@ function VoiceSampleCard({
   const [index, setIndex] = useState(0);
   const sample = drafts[index % drafts.length];
   return (
-    <div className="ob-voice-result-card ob-voice-sample">
+    <div className="ob-voice-result-card">
       <div className="ob-voice-sample-head">
         <p className="ob-voice-result-label t-eyebrow">
           {t("ob.conv.voice.sampleEyebrow")}
@@ -719,7 +719,7 @@ function measuredDimensions(
 // slider-shaped element a reader could not move must not look movable.
 function VoiceDimensionGauge({ dim }: Readonly<{ dim: MeasuredDimension }>) {
   return (
-    <div className="ob-voice-dim">
+    <div>
       <div className="ob-voice-dim-head">
         <span className="ob-voice-dim-name">{dim.name}</span>
         <span className="t-sub">{dim.value}</span>

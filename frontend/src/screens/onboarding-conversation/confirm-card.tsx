@@ -9,7 +9,7 @@ import {
 import type { ChangeEvent } from "react";
 import { Fragment, useEffect, useRef, useState } from "react";
 import type { components } from "../../api/schema";
-import { Avatar, Button, Disclosure } from "../../design-system/atoms";
+import { Avatar, Badge, Button, Disclosure } from "../../design-system/atoms";
 import {
   ConfidenceMeter,
   type Evidence,
@@ -151,13 +151,17 @@ function OutstandingMark({
 }
 
 // isWork's complement, the settled half: `typed` already has a word
-// (ProvenanceTag's fixed human/agent/connector vocabulary covers it —
-// "typed by you"), but neither `stored` nor `chosen` has an entry in that
-// vocabulary at all. A row a human typed, a row still carrying an untouched
-// profile value, and a row quoted off the site's own legal notice are three
-// different truths; saying "typed by you" over the
-// last two would be wrong, not just imprecise, so each gets its own quiet
-// label instead, reusing the exact words the expanded row already says.
+// (ProvenanceTag's fixed human/agent/connector vocabulary covers it — "typed
+// by you"), but neither `stored` nor `chosen` has an entry in that vocabulary
+// at all. A row a human typed, a row still carrying an untouched profile
+// value, and a row quoted off the site's own legal notice are three different
+// truths; saying "typed by you" over the last two would be wrong, not just
+// imprecise, so each gets its own quiet label: the expanded row's words, in
+// sentence case. The default tone, not `ai`: none is a machine's claim.
+const PROVENANCE_WORD: Readonly<Record<"stored" | "quoted", MessageKey>> = {
+  stored: "ob.conv.triage.stateStoredBadge",
+  quoted: "ob.conv.triage.stateQuotedBadge",
+};
 function ProvenanceMark({
   state,
   t,
@@ -168,11 +172,7 @@ function ProvenanceMark({
   if (state === "typed") {
     return <ProvenanceTag provenance={{ kind: "human", self: true }} />;
   }
-  return (
-    <span className="ob-triage-row-provenance t-label">
-      {t(STATE_WORD[state])}
-    </span>
-  );
+  return <Badge>{t(PROVENANCE_WORD[state])}</Badge>;
 }
 
 // A collapsed value reads one short line's worth in the row; the cut lands
@@ -319,7 +319,7 @@ function FieldRow({
                     since a proposal field carries a single evidence pair, but
                     said as a count rather than assumed. */}
                 {row.evidence !== null && (
-                  <span className="ob-triage-source t-caption">
+                  <span className="t-caption">
                     {/* A row carries at most one evidence record, so this
                         count is the literal one — a single digit no locale
                         groups or punctuates differently. */}
@@ -509,9 +509,9 @@ const NAV_NAMED_LIMIT = 5;
 // this section's own state. A section with outstanding work always shows
 // something here, blocking or not, so scanning the nav alone (without
 // reading a single named list) already tells settled from advisory from
-// blocking apart. Only the shape differs by tier: the blocking count keeps
-// the danger pill (the one count that actually gates confirm), the
-// advisory count is the same quiet mono numeral the Contacts/Facts counts
+// blocking apart. Only the shape differs by tier: the blocking count is the
+// solid danger badge (the one count that actually gates confirm), the
+// advisory count is the same quiet tabular numeral the Contacts/Facts counts
 // use — never the danger tone, since none of these fields stop anything.
 function SectionBadge({
   blocking,
@@ -544,14 +544,14 @@ function SectionBadge({
     );
   }
   return (
-    <span className="ob-triage-nav-badge" data-blocking="true">
+    <Badge variant="primary" tone="danger">
       <b aria-hidden>{formatNumber(blocking.length, locale)}</b>
       <span className="sr-only">
         {t("ob.conv.triage.sectionBlocking", {
           count: formatNumber(blocking.length, locale),
         })}
       </span>
-    </span>
+    </Badge>
   );
 }
 
@@ -874,9 +874,7 @@ function ContactRow({ contact }: Readonly<{ contact: SiteContact }>) {
         <span className="t-caption">{contact.published_email}</span>
       )}
       {contact.linkedin_url && (
-        <span className="ob-triage-contact-url t-caption">
-          {contact.linkedin_url}
-        </span>
+        <span className="t-caption">{contact.linkedin_url}</span>
       )}
       {evidence && <EvidenceChip evidence={evidence} collapsed />}
     </li>
@@ -1037,8 +1035,8 @@ function FactTypeGroup({
       summary={
         <>
           {coldFieldLabel(field, t)}
-          <span className="ob-triage-fact-type-count t-caption">
-            {formatNumber(facts.length, locale)}
+          <span className="ob-triage-fact-type-count">
+            <Badge>{formatNumber(facts.length, locale)}</Badge>
           </span>
         </>
       }

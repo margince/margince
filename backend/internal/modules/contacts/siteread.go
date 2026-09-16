@@ -25,7 +25,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // SiteReadPage is one page the crawl read, classified by kind.
@@ -213,15 +212,8 @@ func (s *Store) StartDomainTriageSiteRead(ctx context.Context, domain, requested
 }
 
 func (s *Store) createOrJoinSiteRead(ctx context.Context, companyID *ids.CompanyID, targetKind, seedURL, requestedBy string, enqueue SiteReadEnqueue) (SiteRead, bool, error) {
-	// An unbound read is not updating anything — it runs to decide whether a
-	// row should exist at all — so create is the honest permission for it.
-	if err := auth.Require(ctx, "company", principal.ActionUpdate); err != nil {
-		if targetKind == TargetKindCompany {
-			return SiteRead{}, false, err
-		}
-		if createErr := auth.Require(ctx, "company", principal.ActionCreate); createErr != nil {
-			return SiteRead{}, false, createErr
-		}
+	if err := requireSiteReadGrant(ctx, targetKind); err != nil {
+		return SiteRead{}, false, err
 	}
 	var out SiteRead
 	var joined bool

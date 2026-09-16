@@ -290,15 +290,9 @@ export function DealCard({
         <span className="deal-flags">
           {deal.staged && <Badge tone="ai">{t("deal.staged")}</Badge>}
           {deal.singleThreaded && (
-            <Badge quiet tone="danger">
-              {t("deal.singleThreaded")}
-            </Badge>
+            <Badge tone="danger">{t("deal.singleThreaded")}</Badge>
           )}
-          {deal.stalled && (
-            <Badge quiet tone="warn">
-              {t("deal.stalled")}
-            </Badge>
-          )}
+          {deal.stalled && <Badge tone="warn">{t("deal.stalledBadge")}</Badge>}
           {/* How long it has sat is the size of the stall, and only then: on a
               healthy card the number is a fact nobody acts on. */}
           {deal.stalled && (
@@ -306,7 +300,7 @@ export function DealCard({
               {formatDuration(deal.ageMs, locale)}
             </span>
           )}
-          {deal.archived && <Badge quiet>{t("deal.archived")}</Badge>}
+          {deal.archived && <Badge>{t("deal.archived")}</Badge>}
         </span>
       )}
       <span className="deal-head">

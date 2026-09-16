@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { isImportWindow } from "../mail-history/window-picker";
 import { throwProblem } from "./common";
 
 // The connect-time import, as both of its surfaces need it: the run row, the
@@ -198,7 +199,9 @@ export function useBackfillRun({
      * that run captured anything.
      */
     restart: (run: BackfillStatus) => {
-      setWindow(run.window ?? DEFAULT_IMPORT_WINDOW);
+      setWindow(
+        isImportWindow(run.window) ? run.window : DEFAULT_IMPORT_WINDOW,
+      );
       setPreviewedWindow(null);
       setRestarting(true);
     },

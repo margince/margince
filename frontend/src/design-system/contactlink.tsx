@@ -39,7 +39,7 @@ type Contact = Readonly<
     className?: string;
     // What a REFUSED value wears instead. Never the control's class: a pointer
     // and an underline on text that opens nothing promise an action the reader
-    // cannot take. A caller whose layout the text must keep (a mono face, a
+    // cannot take. A caller whose layout the text must keep (a truncation, a
     // wrapping width) names that here; by default the text is plain.
     textClassName?: string;
   } & (

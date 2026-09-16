@@ -14,10 +14,11 @@ package gates
 // which happened, because the type IS the discriminator. The tables have a gate
 // saying this (TestEveryPackageOnlyWritesTablesItOwns); the event types did not.
 //
-// Sharing is not always wrong, and the ratified set below is the proof: an
-// overlay write-back announces the NATIVE module's event on purpose, because a
-// subscriber to contact.updated must hear about a contact changing however the
-// write arrived. What this gate refuses is a NEW sharer arriving unnoticed.
+// Sharing is not always wrong, and the ratified set below is the proof: the
+// cohort repair in contacts announces activities' own activity.updated on
+// purpose, because a subscriber to it must hear about the association changing
+// however the write arrived. What this gate refuses is a NEW sharer arriving
+// unnoticed.
 //
 // It walks composite literals of the generated payload structs rather than the
 // emit calls, which is what makes it sound over both outbox writers (storekit's
@@ -308,32 +309,7 @@ var sharedEventTypes = gatekit.Waive(map[string]string{
 	"ai_task.state_changed <- internal/modules/contacts":    "a website read announces its own transitions from the dossier row; source=site_read keys its occurrences, one per crawl, beside the router's lines for the model calls the crawl makes",
 	"ai_task.state_changed <- internal/compose/companyscan": "an account scan announces its own transitions from the row that carries the read; source=account_scan keys its occurrences on the row id, so one reader's read of one account is one line that moves from queued to settled",
 
-	// Structure 1 — the overlay write-back announces the NATIVE module's event.
-	// overlay/writeaudit.go switches on datasource.EntityRef and emits the
-	// system-of-record type for the entity it just wrote. That is the point: a
-	// subscriber to contact.updated is subscribed to A CONTACT CHANGING, and must
-	// hear about one whether the write arrived natively or through the write-back.
-	// An overlay.* type instead would make every consumer subscribe twice to
-	// learn one fact, and would leak which path a write took into a contract
-	// that deliberately does not say.
-	"contact.updated <- internal/modules/overlay":  "the write-back's update path: a contact changed, and the overlay wrote it",
-	"contact.archived <- internal/modules/overlay": "the write-back's archive path, one of the three archivable types",
-	"company.updated <- internal/modules/overlay":  "the write-back's update path",
-	"company.archived <- internal/modules/overlay": "the write-back's archive path",
-	"deal.updated <- internal/modules/overlay":     "the write-back's update path",
-	"deal.archived <- internal/modules/overlay":    "the write-back's archive path",
-	"lead.updated <- internal/modules/overlay":     "the write-back's update path; lead is one of its five updatable types",
-	"activity.updated <- internal/modules/overlay": "the write-back's update path, and the one that NARROWS rather than passes through: activity.updated's changed_fields is a bounded typed key set where the other four carry open maps, so the patch is projected onto it in activityChangedFields",
-
-	// The native side of those seven, listed so the pair map is complete and a
-	// module losing its own event is as visible as one gaining somebody else's.
-	"contact.updated <- internal/modules/contacts":    "the record's own module, natively and for a relationship anchored on a contact",
-	"contact.archived <- internal/modules/contacts":   "the record's own module",
-	"company.updated <- internal/modules/contacts":    "the record's own module, natively and for a relationship anchored on a company",
-	"company.archived <- internal/modules/contacts":   "the record's own module",
 	"deal.updated <- internal/modules/deals":          "the record's own module",
-	"deal.archived <- internal/modules/deals":         "the record's own module",
-	"lead.updated <- internal/modules/contacts":       "the record's own module",
 	"activity.updated <- internal/modules/activities": "the record's own module",
 
 	// Structure 2 — a relationship emits its ANCHOR's event.
@@ -403,15 +379,14 @@ var unemittedEventTypes = gatekit.Waive(map[string]string{
 	"audit.appended":              "deliberate and documented in the contract: no emit site and none planned. It exists so the catalog is completely covered by a payload schema, never carrying a subscribable type with no contract",
 	"deal.restored":               "documented in the contract as never emitted today — there is no restore path",
 	"contact.restored":            "the same, for the contact restore path that does not exist",
-	"mirror.write_rejected":       "documented in the contract as never emitted today, reserved for the overlay write-back's refusal case",
 	"deal_room.decision_recorded": "the buyer's approval of a document version was retired as a product decision — sharing a document with a buyer is sharing it, not submitting it for approval — so nothing writes a decision any more and nothing emits this. The deal_room_decision table went with it. The TYPE stays because the deal timeline still decodes events emitted before the retirement, which are on the bus whether or not the rows behind them survive",
 })
 
 // A payload type nothing emits is either deliberate or a gap, and the contract
 // should say which.
 //
-// The four the contract already marks "Never emitted today" are the shape this
-// is checking for: a type reserved so the catalog stays completely covered by
+// The types the contract already marks "Never emitted today" are the shape
+// this is checking for: a type reserved so the catalog stays completely covered by
 // schemas. What this refuses is a type that quietly stops being emitted — the
 // contract keeps promising it, subscribers keep waiting, and nothing fails.
 func TestEveryUnemittedEventTypeSaysWhyNothingEmitsIt(t *testing.T) {

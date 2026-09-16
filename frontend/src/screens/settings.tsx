@@ -61,6 +61,7 @@ import { viewerZone } from "../format/timezone";
 import { LOCALES, type Locale, localeNameKey, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { AcquisitionSourcesCard } from "./acquisitionsources";
+import { AiBudgetCard, AiFeaturesCard } from "./ai-admin";
 import { AiHealthCard } from "./ai-health";
 import { AiProviderKeysCard } from "./ai-provider-keys";
 import { AiRoutingCard } from "./ai-routing";
@@ -112,8 +113,6 @@ import { SEARCH_DEBOUNCE_MS } from "./listquery";
 import { MailSharingCard, MailSharingPostureRow } from "./mail-sharing";
 import { OAuthAppCard } from "./oauth-app";
 import { OfferTemplatesAdmin } from "./offertemplates";
-import { OverlayCard } from "./overlay";
-import { MirrorUserMapCard } from "./overlay-usermap";
 import { OvernightGrantCard } from "./overnight-grant";
 import { OwnDomainsCard } from "./own-domains";
 import { PasswordSettingRow } from "./passwordcard";
@@ -334,9 +333,11 @@ export function tabContent(id: SettingsPageId): ReactNode {
       return (
         <>
           {/* What the month has cost, above the breakdown that explains it. */}
+          <AiBudgetCard />
+          <AiFeaturesCard />
           <SpendStat />
           <AiUsageCard />
-          <ModelCostsCard />
+          <ModelPriceDetails />
         </>
       );
     case "model-calls":
@@ -433,27 +434,17 @@ function ConnectionsTab() {
   );
 }
 
-// What the INSTALLATION is wired to: one shared contact-data credential, the
-// outbound subscriptions, the incumbent CRM it mirrors, and who each of its users
-// is over there. All four are workspace-wide — a key everybody spends from, a webhook everybody's writes
-// fire, a system-of-record flip that re-points every read — which is why they
-// sit under the company heading and the personal connections do not.
+// What the INSTALLATION is wired to: one shared contact-data credential and the
+// outbound subscriptions. Both are workspace-wide — a key everybody spends from
+// and a webhook everybody's writes fire — which is why they sit under the
+// company heading and the personal connections do not.
 function IntegrationsTab() {
   return (
     <>
       <ProviderCard />
       <WebhooksCard />
-      {/* Everything overlay — connect, live sync/budget health (OverlayCard
-          renders OverlayLiveSection itself once a connection is active or in
-          error, so it is not rendered a second time here), and the user
-          mapping. Deliberately NOT gated on useSorMode() === "overlay": a
-          workspace is native until an overlay is connected, so mode-gating
-          would hide the only surface that can connect one. In native mode
-          OverlayCard renders its connect form and the rest stays quiet. */}
-      <OverlayCard />
-      <MirrorUserMapCard />
       {/* The other half of the units split: a unit whose secret is
-          `workspace`-scoped holds the INSTALLATION's credential, like the four
+          `workspace`-scoped holds the INSTALLATION's credential, like the two
           cards above it, so it is offered here and not on a member's own
           Connections page. Which page a unit lands on is its manifest's
           decision, never this file's. */}
@@ -755,7 +746,10 @@ function SignatureSettingRow({ toast }: Readonly<{ toast: Toast }>) {
   // The same comparison the Save button already made, now also the claim that
   // stops a sidebar click throwing the draft away.
   const dirty = shown !== stored;
-  useUnsavedGuard(dirty);
+  // Only while the dialog is SHOWING. It outlives its own close, so a draft the
+  // reader already walked away from would otherwise go on blocking navigation
+  // from behind a dialog that is no longer on screen.
+  useUnsavedGuard(open && dirty);
   // The first line, because a sign-off is several lines and only the first one
   // identifies it. `.split` on a string always yields at least one element, so
   // the empty signature reads as the empty string and the row says so instead —
@@ -772,10 +766,15 @@ function SignatureSettingRow({ toast }: Readonly<{ toast: Toast }>) {
   // Leaving discards the draft rather than keeping it: the reader closed the
   // form, and a sign-off half-typed into a dialog nobody reopened is not an
   // edit anybody is coming back to.
-  const close = () => {
+  // Closing only CLOSES. The dialog outlives it so it can animate out, and a
+  // draft cleared on the way out snaps back to the stored sign-off in front of
+  // a reader still watching the dialog leave. The discarding happens on the
+  // next OPEN, which is the same moment the reader asks for a blank form.
+  const close = () => setOpen(false);
+  const edit = () => {
     setBody(null);
     save.reset();
-    setOpen(false);
+    setOpen(true);
   };
 
   return (
@@ -785,57 +784,55 @@ function SignatureSettingRow({ toast }: Readonly<{ toast: Toast }>) {
         description={t("settings.signatureSub")}
         value={answer}
         control={
-          <Button small variant="ghost" onClick={() => setOpen(true)}>
+          <Button small variant="ghost" onClick={edit}>
             {t("settings.signatureEdit")}
           </Button>
         }
       />
-      {open && (
-        <Modal open onClose={close} labelledBy={titleId}>
-          {/* A real form, so Enter from the field commits it — and the Save
+      <Modal open={open} onClose={close} labelledBy={titleId}>
+        {/* A real form, so Enter from the field commits it — and the Save
               button keeps the semantics it had as a card action: nothing is
               written until it is pressed. */}
-          <form
-            className="form-stack"
-            onSubmit={(event) => {
-              event.preventDefault();
-              if (dirty && !save.isPending) save.mutate(shown);
-            }}
-          >
-            <h2 className="t-h3 modal-title" id={titleId}>
-              {t("settings.signature")}
-            </h2>
-            <WriteRefused titleKey="settings.saveFailed" error={save.error} />
-            <Field label={t("settings.signatureLabel")}>
-              {(control) => (
-                <Textarea
-                  {...control}
-                  rows={5}
-                  value={shown}
-                  placeholder={t("settings.signaturePlaceholder")}
-                  onChange={(event) => setBody(event.target.value)}
-                />
-              )}
-            </Field>
-            <p className="t-caption">{t("settings.signatureHint")}</p>
-            <div className="form-actions">
-              <Button small variant="ghost" onClick={close}>
-                {t("settings.signatureCancel")}
-              </Button>
-              <Button
-                small
-                type="submit"
-                variant="primary"
-                disabled={!save.isPending && !dirty}
-                pending={save.isPending}
-                busyLabel={t("settings.signatureSaving")}
-              >
-                {t("record.save")}
-              </Button>
-            </div>
-          </form>
-        </Modal>
-      )}
+        <form
+          className="form-stack"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (dirty && !save.isPending) save.mutate(shown);
+          }}
+        >
+          <h2 className="t-h3 modal-title" id={titleId}>
+            {t("settings.signature")}
+          </h2>
+          <WriteRefused titleKey="settings.saveFailed" error={save.error} />
+          <Field label={t("settings.signatureLabel")}>
+            {(control) => (
+              <Textarea
+                {...control}
+                rows={5}
+                value={shown}
+                placeholder={t("settings.signaturePlaceholder")}
+                onChange={(event) => setBody(event.target.value)}
+              />
+            )}
+          </Field>
+          <p className="t-caption">{t("settings.signatureHint")}</p>
+          <div className="form-actions">
+            <Button small variant="ghost" onClick={close}>
+              {t("settings.signatureCancel")}
+            </Button>
+            <Button
+              small
+              type="submit"
+              variant="primary"
+              disabled={!save.isPending && !dirty}
+              pending={save.isPending}
+              busyLabel={t("settings.signatureSaving")}
+            >
+              {t("record.save")}
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </>
   );
 }
@@ -1274,7 +1271,7 @@ function PassportCard() {
           {mint.isSuccess && (
             <PanelPlate>
               <p className="t-label">{t("settings.tokenOnce")}</p>
-              <p className="t-mono passport-token-value">{mint.data.token}</p>
+              <p className="passport-token-value">{mint.data.token}</p>
             </PanelPlate>
           )}
         </div>
@@ -1658,11 +1655,7 @@ function ToolRow({
     <div data-tool={tool.name}>
       <SettingRow
         label={
-          <span
-            className={["t-mono", "tool-name", struck]
-              .filter(Boolean)
-              .join(" ")}
-          >
+          <span className={["tool-name", struck].filter(Boolean).join(" ")}>
             {tool.name}
           </span>
         }
@@ -2111,7 +2104,7 @@ function AuditLogRow({
         {entry.entity_id && isEntityKind(entry.entity_type) ? (
           <EntityRef kind={entry.entity_type} id={entry.entity_id} />
         ) : (
-          <span className="t-mono t-caption">
+          <span className="t-caption">
             {entry.entity_type}
             {entry.entity_id ? ` ${entry.entity_id}` : ""}
           </span>
@@ -2139,8 +2132,7 @@ function AuditLogRow({
           {entry.passport_id && <PassportChip id={entry.passport_id} />}
           {entry.on_behalf_of && (
             <span className="t-caption">
-              {t("settings.auditOnBehalf")}{" "}
-              <span className="t-mono">{entry.on_behalf_of}</span>
+              {t("settings.auditOnBehalf")} <span>{entry.on_behalf_of}</span>
             </span>
           )}
           {entry.authorization_rule && (
@@ -2213,9 +2205,7 @@ function AuditLogEntries({
     return (
       <EmptyState>
         <p>{t("common.error")}</p>
-        <p className="t-mono audit-error-cause">
-          {problemMessageOf(query.error, t)}
-        </p>
+        <p className="audit-error-cause">{problemMessageOf(query.error, t)}</p>
         <Button small onClick={() => query.refetch()}>
           {t("common.retry")}
         </Button>
@@ -2289,5 +2279,14 @@ export function AuditLogCard() {
         </SettingList>
       </PanelBody>
     </Panel>
+  );
+}
+
+function ModelPriceDetails() {
+  const t = useT();
+  return (
+    <Disclosure summary={t("aiRouting.priceSheet")}>
+      <ModelCostsCard />
+    </Disclosure>
   );
 }

@@ -145,7 +145,7 @@ func liveSuppression(ctx context.Context, tx pgx.Tx, contactID string, r connect
 	// order, so the caller is given all of them and applies each.
 	//
 	// Reading the row is not applying it: what a suppression BINDS depends on
-	// the category and, since Task 1's column, the send's own resolved
+	// the category and, since the purpose column, the send's own resolved
 	// purpose — neither known here. applySuppression decides that, after
 	// resolution.
 	//

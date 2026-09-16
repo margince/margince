@@ -241,12 +241,10 @@ func TestOwnerCanSeeEarlyReturns(t *testing.T) {
 }
 
 // TestEntityVisibleToClassification pins the fan-out visibility classifier
-// for the branches that resolve WITHOUT touching the pool: the event-keyed
-// deferral (mirror.*), the workspace-level allow-list, the entity-keyed
-// deferral (retention telemetry), and the fail-closed default. A nil pool
-// is deliberate — any case that reached a row-scope probe would panic, so
-// this also proves the event-first ordering short-circuits before the
-// object_class collision could route a mirror.* subject into a probe.
+// for the branches that resolve WITHOUT touching the pool: the workspace-level
+// allow-list, the entity-keyed deferral (retention telemetry), and the
+// fail-closed default. A nil pool is deliberate — any case that reached a
+// row-scope probe would panic.
 func TestEntityVisibleToClassification(t *testing.T) {
 	s := NewStore(nil, nil)
 	for _, tc := range []struct {
@@ -255,12 +253,6 @@ func TestEntityVisibleToClassification(t *testing.T) {
 		entityType string
 		want       bool
 	}{
-		// mirror.* is deferred by EVENT even when its runtime object_class
-		// collides with a row-scoped entity name — caught before any probe.
-		{"mirror.conflict over deal object_class", "mirror.conflict", "deal", false},
-		{"mirror.budget_degraded over contact object_class", "mirror.budget_degraded", "contact", false},
-		{"mirror.deleted over company object_class", "mirror.deleted", "company", false},
-		{"mirror.write_rejected over lead object_class", "mirror.write_rejected", "lead", false},
 		// retention telemetry subjects are deferred by ENTITY.
 		{"retention.applied over ai_call", "retention.applied", "ai_call", false},
 		{"retention.applied over ai_call_payload", "retention.applied", "ai_call_payload", false},
@@ -269,7 +261,6 @@ func TestEntityVisibleToClassification(t *testing.T) {
 		{"user (user.* / role.changed)", "role.changed", "user", true},
 		{"passport", "passport.revoked", "passport", true},
 		{"onboarding wizard state", "onboarding.state_changed", "onboarding_wizard_state", true},
-		{"incumbent connection", "incumbent.connected", "incumbent_connection", true},
 		{"audit ledger", "audit.appended", "audit", true},
 		{"pipeline config", "pipeline.created", "pipeline", true},
 		{"stage config", "stage.updated", "stage", true},

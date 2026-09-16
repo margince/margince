@@ -320,10 +320,12 @@ if (storyFiles.size > 0) {
     );
     let rendered = true;
     try {
-      await page.waitForSelector("#storybook-root > *", { timeout: 10_000 });
+      // Large histories can still be rendering after the network is idle.
+      // Keep a finite visibility deadline separate from network settling.
+      await page.waitForSelector("#storybook-root > *", { timeout: 30_000 });
     } catch {
       rendered = false;
-      errors.push("#storybook-root stayed empty (component did not render)");
+      errors.push("#storybook-root had no visible content within the render deadline");
     }
     // Let any play() interaction settle before the frame.
     //

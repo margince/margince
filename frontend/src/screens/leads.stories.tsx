@@ -359,28 +359,3 @@ export const LeadArrivedToLogACall: Story = {
     );
   },
 };
-
-// The same address on a mirrored lead. Every write the composer makes answers
-// unsupported_by_sor, so it is absent for every reader here — and a reader who
-// followed a link TO it is told why rather than left on a page that looks
-// broken.
-export const LeadCallRefusedInOverlay: Story = {
-  render: () => {
-    installFetchStub({
-      "GET /leads/l-1": () => jsonResponse(lead),
-      "GET /me": () =>
-        jsonResponse({
-          user: { id: "u-9", display_name: "Me" },
-          roles: ["rep"],
-          teams: [],
-          system_of_record: { mode: "overlay" },
-        }),
-    });
-    globalThis.location.hash = "#/leads/l-1?action=call";
-    return (
-      <StoryProviders>
-        <LeadScreen id="l-1" />
-      </StoryProviders>
-    );
-  },
-};

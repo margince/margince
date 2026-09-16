@@ -211,7 +211,7 @@ func (r *Router) attemptLadder(ctx context.Context, b *binding, lc *logicalCall,
 		// a disproportionate share of it".
 		r.spendAgentTokens(ctx, out.InputTokens+out.OutputTokens)
 		if !r.cacheOff {
-			r.cache.put(key, wsID, out, t)
+			r.cache.put(key, wsID, b.generation, out, t)
 		}
 		return out, t, true, nil
 	}

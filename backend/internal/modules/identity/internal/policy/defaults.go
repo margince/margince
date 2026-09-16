@@ -22,7 +22,7 @@ import (
 // finance — the ingested accounting mirror (ADR-0083/A128). READ is broad:
 // every role that opens a company page sees whether the customer pays on time.
 // Connecting or disconnecting the source is destructive workspace-wide config,
-// so create/update/delete are admin/ops-only, exactly like overlay_connection.
+// so create/update/delete are admin/ops-only.
 // No role holds a write on a finance RECORD, because there is no such action:
 // the mirror's read-only posture is the ABSENCE of the grant (FIN-DDL-N-1),
 // not a runtime refusal.
@@ -44,12 +44,12 @@ import (
 // record. Delete stays manager/admin/ops — archiveOfferTemplate carries no
 // x-agent-access gate, so any role holding delete may call it directly.
 //
-// overlay_connection, channel_connection and webhook_subscription share one
-// posture: each binds the whole workspace to something outside it — an
-// incumbent CRM, a chat bot carrying every seat's inbound traffic, an outbound
-// egress of governed events — so create/update/delete are admin/ops-only while
-// every role reads the binding's status. A rep needs to know whether overlay
-// mode is live, or whether the channel is up, before expecting a reply to
+// channel_connection and webhook_subscription share one posture: each binds
+// the whole workspace to something outside it — a chat bot carrying every
+// seat's inbound traffic, an outbound egress of governed events — so
+// create/update/delete are admin/ops-only while every role reads the binding's
+// status. A rep needs to know whether the channel is up before expecting a
+// reply to
 // arrive there. (UC-E10-04 narrates a Rep registering a subscription; that
 // posture question is tracked upstream, not settled here.)
 //
@@ -67,6 +67,7 @@ import (
 var managerObjects = grid(crud, map[string]grant{
 	objAiModelRate:          none,
 	objAiRouting:            none,
+	objAiBudget:             none,
 	"automation":            readOnly,
 	objCaptureSettings:      createRead,
 	objCaptureTrace:         readOnly,
@@ -85,7 +86,6 @@ var managerObjects = grid(crud, map[string]grant{
 	"knowledge_corpus":      readOnly,
 	"knowledge_document":    readOnly,
 	objLicense:              none,
-	"overlay_connection":    readOnly,
 	"pipeline":              readOnly,
 	objRetentionPolicy:      none,
 	"tag":                   readOnly,
@@ -124,6 +124,7 @@ var managementObjects = func() map[string]grant {
 	out := maps.Clone(managerObjects)
 	for _, object := range []string{
 		objAiDiagnostics,
+		objAiBudget,
 		objConsentConfig,
 		objAuthenticationPolicy,
 		objOauthApplication,
@@ -145,6 +146,7 @@ var defaults = map[string]Document{
 		Objects: grid(crud, map[string]grant{
 			objAiModelRate:          writeNoDelete,
 			objAiRouting:            readUpdate,
+			objAiBudget:             readUpdate,
 			objCaptureSettings:      writeNoDelete,
 			objCaptureTrace:         readOnly,
 			objComputedField:        readOnly,
@@ -231,6 +233,7 @@ var defaults = map[string]Document{
 			"activity":          writeNoDelete,
 			objAiModelRate:      none,
 			objAiRouting:        none,
+			objAiBudget:         none,
 			objCaptureSettings:  createRead,
 			objCaptureTrace:     none,
 			"contract":          writeNoDelete,
@@ -287,6 +290,7 @@ var defaults = map[string]Document{
 		Objects: grid(readOnly, map[string]grant{
 			objAiModelRate:      none,
 			objAiRouting:        none,
+			objAiBudget:         none,
 			objCaptureTrace:     none,
 			objDataCoverage:     none,
 			objEmbeddingReindex: none,
@@ -325,6 +329,7 @@ var defaults = map[string]Document{
 		Objects: grid(crud, map[string]grant{
 			objAiModelRate:          writeNoDelete,
 			objAiRouting:            readUpdate,
+			objAiBudget:             readUpdate,
 			objCaptureSettings:      writeNoDelete,
 			objCaptureTrace:         readOnly,
 			objComputedField:        readOnly,

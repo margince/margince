@@ -1,21 +1,12 @@
 /** @vitest-environment happy-dom */
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  cleanup,
-  render as rtlRender,
-  screen,
-  waitFor,
-} from "@testing-library/react";
+import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { meFixture } from "../app/mefixture";
-import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { BriefScreen } from "./brief";
 import { readingsDay } from "./brief.fixtures";
-import type { Deal } from "./brief.queries";
 import { OvernightPanel } from "./brief.rail.overnight";
+import { fleetDeal, jsonResponse, render, stubApi } from "./brief.testkit";
 import type { WorklistItem } from "./worklist.queries";
 
 // Context panels keep their own loading and failure states so a failed source
@@ -26,100 +17,6 @@ afterEach(() => {
   vi.unstubAllGlobals();
   window.location.hash = "";
 });
-
-function jsonResponse(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
-}
-
-function render(ui: ReactNode) {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-  return rtlRender(
-    <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">{ui}</LocaleProvider>
-    </QueryClientProvider>,
-  );
-}
-
-const emptyPage = { data: [], page: { next_cursor: null, has_more: false } };
-
-/** One request the screen made, as the route it names and what it carried. */
-type Call = { method: string; path: string; body: unknown };
-
-type Routes = Record<string, (body: unknown) => Response | Promise<Response>>;
-
-// Every read Brief fans out to, answered honestly by default so each case
-// declares only the route it is about: a session, no nightly digest, and no
-// brief run. The deals-by-stage report is NOT here any more — Brief stopped
-// asking for it when the open-pipeline panel left the rail, and a default route
-// for a read nobody makes is a stub that outlives its caller.
-const DEFAULTS: Routes = {
-  "GET /me": () => jsonResponse(meFixture()),
-  "GET /brief": () => jsonResponse({ title: "Not Found" }, 404),
-  "GET /digest": () =>
-    jsonResponse({ title: "Not Found", code: "no_digest_yet" }, 404),
-  // The fallback empty PAGE carries no
-  // `readings` and no `counts`, and the Brief's strip reads both as required
-  // fields. An unrouted worklist read has to answer with a worklist.
-  "GET /worklist": () => jsonResponse(readingsDay({}, [])),
-};
-
-/**
- * Routes the stubbed fetch by method+path and RECORDS every call: the pipeline
- * report's FILTER is only visible in the request, and no rendering of the
- * figures it returns can prove the screen asked for open deals.
- */
-function stubApi(routes: Routes): Call[] {
-  const calls: Call[] = [];
-  const mock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-    const request = input instanceof Request ? input : null;
-    const url = new URL(
-      request ? request.url : String(input),
-      "https://test.local",
-    );
-    const method = request?.method ?? init?.method ?? "GET";
-    const path = url.pathname.replace(/^\/v1/, "");
-    let body: unknown = null;
-    if (method !== "GET") {
-      try {
-        // `clone()`: the client sends a Request and the handler below may read
-        // the same body again.
-        body = request
-          ? await request.clone().json()
-          : JSON.parse(String(init?.body));
-      } catch {
-        // A write with no body at all is not a malformed one.
-        body = null;
-      }
-    }
-    calls.push({ method, path, body });
-    const handler =
-      routes[`${method} ${path}`] ?? DEFAULTS[`${method} ${path}`];
-    return handler ? handler(body) : jsonResponse(emptyPage);
-  });
-  vi.stubGlobal("fetch", mock);
-  return calls;
-}
-
-const fleetDeal: Deal = {
-  id: "d-1",
-  name: "Fleet retrofit",
-  amount_minor: 4_800_000,
-  currency: "EUR",
-  pipeline_id: "pl",
-  stage_id: "s2",
-  status: "open",
-  stalled: false,
-  source: "manual",
-  captured_by: "human:u1",
-  version: 1,
-  created_at: "2026-05-01T08:00:00Z",
-  updated_at: "2026-06-01T08:00:00Z",
-};
 
 // ── The context rail ──
 

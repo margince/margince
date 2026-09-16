@@ -97,6 +97,12 @@ function stub(
       if (pathname.endsWith("/profile-fields")) {
         return json({ data: profileFields });
       }
+      // The tags row reads its own list. Answered as empty rather than left to
+      // the fallthrough below, whose rows are colleagues, not tags: a tag row
+      // built from a colleague has no assignment date to print.
+      if (pathname.endsWith("/tags")) {
+        return json({ data: [] });
+      }
       // The verdict the VAT mark reads. Answered here rather than left to fall
       // through: the mark draws NOTHING until this settles, so a stub that gave
       // it a list shape would render no mark and a test asserting its absence

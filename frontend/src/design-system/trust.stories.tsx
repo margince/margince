@@ -156,7 +156,7 @@ export const Provenance: Story = {
       </div>
       {/* A contact from outside the company, beside the unattributed row
           on purpose: reading a buyer as "source not recorded" was the defect,
-          and only the wording and the ink tell the two apart. */}
+          and both are the neutral badge, so only the wording tells them apart. */}
       <div style={row}>
         <ProvenanceTag provenance={{ kind: "buyer" }} />
         <ProvenanceTag provenance={{ kind: "unknown" }} />

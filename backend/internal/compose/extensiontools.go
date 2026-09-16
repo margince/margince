@@ -103,6 +103,9 @@ func buildExtensionTools(exts []extension.Extension, verbs []extension.Verb) ([]
 // only place that fact exists, and the handler must never be able to supply
 // it.
 func adaptExtensionTool(unit extension.Name, tool extension.Tool, verb extension.Verb) (extensionTool, error) {
+	if verb.HumanOnly {
+		return adaptHumanOnlyExtensionTool(unit, tool, verb)
+	}
 	tier, err := mcpTier(verb.Tier)
 	if err != nil {
 		return extensionTool{}, err
@@ -222,6 +225,42 @@ func adaptExtensionTool(unit extension.Name, tool extension.Tool, verb extension
 		unit:    string(unit),
 		version: verb.Version,
 		subject: verb.Subject,
+		handle:  tool.Handle,
+	}, nil
+}
+
+// adaptHumanOnlyExtensionTool is adaptExtensionTool's other branch: a verb
+// declaring x-agent-access: human-only requests no agent authority, so none
+// of the tier/scope/subject/egress refusals that exist only to validate an
+// MCP-served tool's governance apply — extension.Verb.Validate already
+// refused a HumanOnly verb carrying any of them. What still applies: a served
+// tool needs a real Description/Version, the same reason the core registry's
+// Register would otherwise panic on an empty one.
+func adaptHumanOnlyExtensionTool(unit extension.Name, tool extension.Tool, verb extension.Verb) (extensionTool, error) {
+	if strings.TrimSpace(verb.Description) == "" {
+		return extensionTool{}, errors.New("a served human-only tool declares no Description — the text an operator reads to know what it is")
+	}
+	if strings.TrimSpace(verb.Version) == "" {
+		return extensionTool{}, errors.New("a served human-only tool declares no Version — every result carries it as schema_version")
+	}
+	input := verb.InputSchema
+	if input == nil {
+		input = json.RawMessage(`{"type":"object"}`)
+	}
+	return extensionTool{
+		rbacObject: verb.RbacObject,
+		rbacAction: verb.RbacAction,
+		spec: mcp.ToolSpec{
+			Name:         tool.Name,
+			Title:        cmp.Or(verb.Title, tool.Name),
+			Description:  verb.Description,
+			Version:      verb.Version,
+			InputSchema:  input,
+			OutputSchema: verb.OutputSchema,
+			HumanOnly:    true,
+		},
+		unit:    string(unit),
+		version: verb.Version,
 		handle:  tool.Handle,
 	}, nil
 }

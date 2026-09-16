@@ -524,6 +524,21 @@ export const WhatWentWrong: Story = {
           because: [],
           actions: [],
         },
+        // An undecided domain, which is a JUDGEMENT rather than a broken pipe:
+        // it sits with the decisions, and the domain itself is the title
+        // because that name is the whole of what the reader recognises.
+        {
+          id: "mckinsey.com",
+          source: "domain_question",
+          category: "decisions",
+          level: 6,
+          consequence: "data_drifts",
+          title: "mckinsey.com",
+          detail:
+            "Nothing on the site named a company, and the sender's name did not explain the domain.",
+          because: [],
+          actions: ["keep", "discard"],
+        },
         {
           id: "w1",
           source: "ai_work_health",

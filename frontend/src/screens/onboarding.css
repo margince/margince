@@ -68,24 +68,6 @@
   line-height: var(--lh-relaxed);
   max-width: 520px;
 }
-.trustpill {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-size: var(--fs-meta);
-  color: var(--teal);
-  background: color-mix(in srgb, var(--teal) 8%, transparent);
-  border-radius: var(--r-full);
-  corner-shape: round;
-  padding: var(--space-2) var(--space-3);
-  margin-top: var(--space-3);
-  line-height: var(--lh-snug);
-}
-.trustpill svg {
-  width: 14px;
-  height: 14px;
-  flex: none;
-}
 
 .urlnote {
   display: flex;
@@ -127,7 +109,7 @@
   background: var(--bgElevated);
   border: 1px solid var(--borderStrong);
   border-radius: var(--r-md);
-  box-shadow: var(--shadow-card);
+  box-shadow: var(--shadow-rest);
   padding: var(--space-5);
   margin-top: var(--space-6);
   align-items: flex-start;
@@ -472,7 +454,6 @@
 .ob-core-url span {
   padding-left: var(--space-3);
   color: var(--railIconHover);
-  font-family: var(--f-mono);
   font-size: var(--fs-meta);
 }
 .ob-core-url input {
@@ -543,7 +524,7 @@
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-lg);
   background: var(--bgElevated);
-  box-shadow: var(--shadow-card);
+  box-shadow: var(--shadow-rest);
 }
 /* The facts block wraps its heading in a <section> of its own, so the card's
    inset reaches it only if that heading is named here too — a child selector
@@ -600,7 +581,6 @@
 }
 .legal-preview-card small {
   color: var(--accentText);
-  font-family: var(--f-mono);
   font-size: var(--fs-meta);
 }
 .ob-manual-progress {
@@ -804,7 +784,7 @@
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-xs) var(--r-md) var(--r-md) var(--r-md);
   background: var(--bgElevated);
-  box-shadow: var(--shadow-card);
+  box-shadow: var(--shadow-rest);
 }
 .mw-message-assistant h2,
 .mw-message-assistant p {
@@ -893,7 +873,7 @@
   color: var(--textContent);
   border: 1px solid var(--borderSubtle);
   background: var(--bgCard);
-  box-shadow: var(--shadow-card);
+  box-shadow: var(--shadow-rest);
   backdrop-filter: none;
 }
 .ob-conv-artifact .ob-core-dialog h1 {
@@ -950,12 +930,6 @@
   flex-wrap: wrap;
   gap: var(--space-2);
   margin-top: var(--space-2);
-}
-.mw-read-activity > div span {
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--r-full);
-  corner-shape: round;
-  background: var(--bgHover);
 }
 .mw-read-activity b {
   color: var(--textPrimary);

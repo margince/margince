@@ -215,11 +215,42 @@ func lastTouchLine(in Input, last ActIn) string {
 		// is the honest sentence: silence here reads as nobody having written.
 		return "The most recent message on this contact is one you may not read."
 	case in.LastInbound != "" && in.LastInbound > in.LastOutbound:
-		return fmt.Sprintf("They wrote last, %s, and it is unanswered.", aboutClause(last))
+		return fmt.Sprintf("They wrote last, %s%s", aboutClause(last), answerStateClause(last, ", and it is unanswered."))
 	case in.LastOutbound != "":
-		return fmt.Sprintf("You wrote last, %s, with no reply yet.", aboutClause(last))
+		return fmt.Sprintf("You wrote last, %s%s", aboutClause(last), answerStateClause(last, ", with no reply yet."))
 	default:
 		return fmt.Sprintf("The last thing captured was %s.", aboutClause(last))
+	}
+}
+
+// The two moves that mean somebody still owes something. DERIVED from the
+// contract's own enum rather than re-spelled, the way SpeakerFor derives the
+// speakers beside it: a rename upstream fails to compile here instead of
+// silently making every message read as settled.
+const (
+	moveNeedsReply     = string(crmcontracts.EmailSummaryMoveNeedsReply)
+	moveWaitingForThem = string(crmcontracts.EmailSummaryMoveWaitingForThem)
+)
+
+// answerStateClause decides whether the floor may say a message is outstanding.
+//
+// The DIRECTION alone cannot answer it, which is what this exists to stop the
+// floor claiming. "They wrote last" is true of a scheduling note that settled
+// the thing it was about, and the floor reported exactly that as unanswered on
+// a contact whose meeting was agreed — the words said settled and the frame
+// said owed, in one sentence.
+//
+// Move is the server's own reading of whose turn it is, and it is EMPTY where
+// the question cannot be answered honestly: on a row that is not mail, on one
+// with no summary, and on `none` — which the fold leaves empty rather than
+// spelling out. Empty therefore says nothing rather than guessing, and the
+// sentence simply ends after what the message was about.
+func answerStateClause(last ActIn, outstanding string) string {
+	switch last.Move {
+	case moveNeedsReply, moveWaitingForThem:
+		return outstanding
+	default:
+		return "."
 	}
 }
 

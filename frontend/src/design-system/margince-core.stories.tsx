@@ -181,7 +181,6 @@ export const Ladder: Story = {
           <figcaption
             style={{
               color: "var(--textMeta)",
-              fontFamily: "var(--f-mono)",
               fontSize: "var(--fs-eyebrow)",
               letterSpacing: "var(--tracking-eyebrow)",
               textTransform: "uppercase",

@@ -6,6 +6,7 @@ package approvals
 import (
 	"fmt"
 
+	"github.com/margince/margince/backend/internal/platform/approvalsubject"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -45,7 +46,7 @@ import (
 // survives names a seat the reader is not, so it is withheld from the very
 // contact it was staged for.
 func subjectScopedShape(in StageInput) bool {
-	if selfOnlyKinds[in.Kind] || decidedByTheSeatStagedFor[in.Kind] {
+	if approvalsubject.PayloadOwned(in.Kind) || selfOnlyKinds[in.Kind] || decidedByTheSeatStagedFor[in.Kind] {
 		return true
 	}
 	var targetType *string
@@ -73,6 +74,12 @@ func subjectScopedShape(in StageInput) bool {
 func subjectScope(in StageInput, p principal.Principal, args *[]any) string {
 	if !subjectScopedShape(in) {
 		return ""
+	}
+	// Persisted import ownership also covers worker rows with no on_behalf_of.
+	// The production staging test holds this JSON key against the shared DTO.
+	if approvalsubject.PayloadOwned(in.Kind) {
+		*args = append(*args, approvalsubject.Owner(in.ProposedChange).String())
+		return fmt.Sprintf(" AND proposed_change->>'owner_id' = $%d", len(*args))
 	}
 	*args = append(*args, nullUUID(p.OnBehalfOf))
 	return fmt.Sprintf(" AND on_behalf_of IS NOT DISTINCT FROM $%d", len(*args))

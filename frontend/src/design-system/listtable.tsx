@@ -180,9 +180,9 @@ function IdentityCell<Row>({
  * It does NOT wrap, which is the whole of why it exists: a cell that grows a
  * second line pushes every row below it down, and a page of fifty rows stops
  * being a scannable grid — the reasoning `RowTags` already states for a tag
- * strip. What does not fit is CLIPPED at the column edge, because the reader's
- * answer to a strip cut short is to widen the column, which this table offers,
- * and every other answer costs the rows their rhythm.
+ * strip. What does not fit ends in an ellipsis, text before badges (why, in
+ * listtable.css): the reader's answer to a strip cut short is to widen the
+ * column, and every other answer costs the rows their rhythm.
  *
  * A `<span>`, so a column renderer can return it wherever it returns text.
  * Offered rather than applied: the table wraps the identity cell and nothing
@@ -448,7 +448,6 @@ export function ListTable<Row>({
   scopeKey = "",
   action,
   caption,
-  note,
   footer,
   hasMore = false,
   onLoadMore,
@@ -523,16 +522,14 @@ export function ListTable<Row>({
    * a reader who owns nothing is the case this was written for and is a
    * narrowed list, so a note shown only over the unnarrowed one never appeared.
    * A caller whose note would blame the data source for what the reader's own
-   * dial did passes none — the overlay owner hint goes quiet under a live
-   * search for exactly that reason.
+   * dial did passes none.
    */
   emptyNote?: ReactNode;
   /** Omit for a list whose GET has no `q` param; the box is then not rendered. */
   search?: { value: string; onChange: (next: string) => void };
   /**
-   * Omit when the data source refuses to sort. The overlay mirror 422s the
-   * dial, so its screens pass nothing and the headers render inert — the
-   * table never offers a control the server would reject.
+   * Omit when the data source refuses to sort: the headers then render inert,
+   * so the table never offers a control the server would reject.
    */
   sort?: SortControl;
   chips?: readonly ListChip[];
@@ -572,8 +569,6 @@ export function ListTable<Row>({
    * and repeating it here would title the surface twice.
    */
   caption?: ReactNode;
-  /** Says why the dials are missing, when they are. */
-  note?: ReactNode;
   /** An aggregate row under the table, e.g. a count and a total value. */
   footer?: ReactNode;
   /**
@@ -1031,7 +1026,6 @@ export function ListTable<Row>({
       }
       action={action}
       caption={caption}
-      note={note}
       search={search}
       sort={sort}
       sortOptions={sortOptions}
@@ -1250,10 +1244,8 @@ export function ListTable<Row>({
                         was written for never appeared at all: a "Mine" view
                         for a reader who owns nothing is a NARROWED list. A
                         caller whose note would blame the data source for what
-                        the reader's own dial did passes none — the overlay
-                        owner hint goes quiet under a live search for exactly
-                        that reason. The generic line stays above it either
-                        way: "clear filters" undoes every narrowing, and a
+                        the reader's own dial did passes none. The generic line
+                        stays above it either way: "clear filters" undoes every narrowing, and a
                         screen's own way back usually undoes one. */}
                     {emptyNote && (
                       <p

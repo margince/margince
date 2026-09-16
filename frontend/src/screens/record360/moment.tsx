@@ -9,18 +9,17 @@
 // account brief both read it, and the second one used to reach into the first
 // for the vocabulary — the same borrowing that leaves two pages free to drift
 // on what "Nothing needed" is coloured or which evidence line quotes what.
-// Every type here is already the kit's own (`Grounding`, `StandingTone`),
-// which is the tell that this was kit material sitting on a screen.
+// Every type here is already the kit's own (`StandingTone`), which is the
+// tell that this was kit material sitting on a screen.
 
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
-import { useRecordZone } from "../../app/recordzone";
 import { Button } from "../../design-system/atoms";
 import { PanelRow } from "../../design-system/panel";
-import { formatDate } from "../../format/format";
-import { type Locale, useLocale, useT } from "../../i18n";
+import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { type Grounding, Proof, type StandingTone } from "./verdict";
+import { MomentEvidence } from "./momentevidence";
+import type { StandingTone } from "./verdict";
 // The row's classes — `co-move`, `co-move-lead`, `co-dim` — live in the screen
 // stylesheet, as every `co-`prefixed class in this kit still does (README.md
 // says why the rename is its own job). Imported HERE and not left to whichever
@@ -28,9 +27,13 @@ import { type Grounding, Proof, type StandingTone } from "./verdict";
 // unstyled the first time a page draws it without that stylesheet in its
 // graph, which is a defect nothing fails on.
 import "../company360.css";
+// The verb column: `.today-actions` and `.today-verb`, the kit's own now that
+// two record pages draw one shape for it.
+import "./record360.css";
 
 type ContactMoment = components["schemas"]["ContactMoment"];
-type ContactMomentEvidence = components["schemas"]["ContactMomentEvidence"];
+export type ContactMomentEvidence =
+  components["schemas"]["ContactMomentEvidence"];
 
 // The rule that fired, in one word over the sentence it produced.
 //
@@ -51,44 +54,6 @@ export const MOMENT_RULE_LABEL = {
   thin_relationship: "contact.moment.rule.thin_relationship",
   nothing_needed: "contact.moment.rule.nothing_needed",
 } as const satisfies Record<ContactMoment["rule"], MessageKey>;
-
-export const MOMENT_EVIDENCE_LABEL = {
-  activity: "contact.moment.evidence.activity",
-  task: "contact.moment.evidence.task",
-  relationship_change: "contact.moment.evidence.relationship_change",
-} as const satisfies Record<ContactMomentEvidence["type"], MessageKey>;
-
-/**
- * What one piece of a moment's evidence says, in the shape every claim on a
- * record states it. The QUOTE is the verbatim excerpt when the server has
- * one — the words that were actually written — and the label otherwise; the
- * origin line names the kind of record it came from and when. A label put
- * where the quote goes, over a kind word, read "record" twice and quoted
- * nothing.
- */
-export function momentGrounding(
-  evidence: readonly ContactMomentEvidence[],
-  t: ReturnType<typeof useT>,
-  locale: Locale,
-  recordZone: string,
-): Grounding[] {
-  return evidence.map((item) => {
-    const observed = item.observed_at
-      ? formatDate(item.observed_at, locale, recordZone)
-      : undefined;
-    return {
-      key: `${item.type}-${item.id ?? item.label}`,
-      quote: item.snippet ?? item.label,
-      from: [
-        item.snippet ? item.label : undefined,
-        t(MOMENT_EVIDENCE_LABEL[item.type]),
-        observed,
-      ]
-        .filter(Boolean)
-        .join(" · "),
-    };
-  });
-}
 
 // The standing's colour. Two rules mean somebody is being kept waiting and
 // read as warnings; the quiet success state reads as settled rather than as
@@ -136,24 +101,42 @@ export function momentIsARow(
 
 /**
  * The moment as the lead row of the needs list: the rule it fired on as the
- * eyebrow, the headline in the display face, why now, the evidence one
- * disclosure away, and the one filled verb on the page.
+ * eyebrow, the headline in the display face, why now, what it rests on
+ * under it, and a verb to answer it with.
  *
- * The button appears only where the server said the action can be taken AND
- * named somewhere to go. A card whose verb lands nowhere is worse than a card
- * with no verb: the reader clicks, nothing happens, and they stop trusting
- * the ones that work.
+ * The server's own verb draws first, and only where it said the action can be
+ * taken AND named somewhere to go. Where it did not, `action` is the page's
+ * own fallback — a verb the page can back with a control it already owns
+ * (a task modal, the composer) rather than a destination the server never
+ * named. A card that names what is owed and offers nothing to do about it is
+ * an answer with no working verb; the fallback is what keeps that promise
+ * even when the server's own move has nowhere to land.
  */
 export function MomentRow({
   moment,
   onOpenRecord,
+  onOpenEvidence,
+  evidenceKind,
+  action,
 }: Readonly<{
   moment: ContactMoment;
   onOpenRecord?: (entityType: string, entityId: string) => void;
+  // Opens one piece of evidence the moment rests on. Absent where the record
+  // has nowhere to send the reader for it: an item with an id then renders as
+  // a source rather than a control that goes nowhere.
+  onOpenEvidence?: (item: ContactMomentEvidence) => void;
+  // Resolves the glyph's kind for one evidence item: the contact page looks
+  // an activity item up in its own activity list for the email glyph rather
+  // than the generic "activity" one. Absent draws the item's own `type`.
+  evidenceKind?: (item: ContactMomentEvidence) => string | undefined;
+  // The page's own fallback verb, drawn only when the server named no
+  // destination of its own — zero or more verbs, each already in the shared
+  // `.today-verb` shape (record360.css). This row owns the `.today-actions`
+  // column itself, the same way `FoundMove` owns its own: a caller handing in
+  // a column of its own nested one inside the other.
+  action?: ReactNode;
 }>): ReactNode {
   const t = useT();
-  const { locale } = useLocale();
-  const recordZone = useRecordZone();
   const destination = moment.recommended_action.destination;
   const target =
     moment.recommended_action.state === "available" &&
@@ -162,6 +145,24 @@ export function MomentRow({
       ? { type: destination.entity_type, id: destination.entity_id }
       : undefined;
   const tone = standingTone(moment.rule);
+  const verb =
+    target && onOpenRecord ? (
+      <span className="today-verb">
+        {/* Indigo, because pressing it hands the work to Margince: the
+            hue is the product's one claim about who is acting, and a
+            verb the agent performs drawn in the accent would read as
+            the reader's own move. */}
+        <Button
+          small
+          variant="ai"
+          onClick={() => onOpenRecord(target.type, target.id)}
+        >
+          {moment.recommended_action.label}
+        </Button>
+      </span>
+    ) : (
+      action
+    );
   return (
     <PanelRow className="co-move co-move-lead">
       <span className="co-move-body">
@@ -172,26 +173,21 @@ export function MomentRow({
         </span>
         <span className="co-move-ask co-move-headline">{moment.headline}</span>
         <span className="co-move-reason t-sub">{moment.why_now}</span>
-        <Proof
-          label={t("record.restsOn")}
-          items={momentGrounding(moment.evidence, t, locale, recordZone)}
-          count
-        />
-        {target && onOpenRecord && (
-          <span className="co-move-do">
-            <span className="co-move-actions">
-              {/* Indigo, because pressing it hands the work to Margince: the
-                  hue is the product's one claim about who is acting, and a
-                  verb the agent performs drawn in the accent would read as
-                  the reader's own move. */}
-              <Button
-                small
-                variant="ai"
-                onClick={() => onOpenRecord(target.type, target.id)}
-              >
-                {moment.recommended_action.label}
-              </Button>
+        {moment.evidence.length > 0 && (
+          <div className="co-move-basis">
+            <span className="co-move-basis-head t-caption">
+              {t("co.suggest.basedOn")}
             </span>
+            <MomentEvidence
+              evidence={moment.evidence}
+              kindOf={evidenceKind}
+              onOpen={onOpenEvidence}
+            />
+          </div>
+        )}
+        {verb && (
+          <span className="co-move-do">
+            <div className="today-actions">{verb}</div>
           </span>
         )}
       </span>

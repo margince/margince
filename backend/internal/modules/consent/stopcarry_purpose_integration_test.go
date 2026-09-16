@@ -57,16 +57,17 @@ func TestACarryKeepsANarrowAndABroadStopOfOneKindBothOnTheSurvivor(t *testing.T)
 	// to, and a hand-written row could silently drift from what a press
 	// actually produces.
 	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
-		if err := e.store.StopForCredentialTx(e.ctx, tx, WithdrawalRef{
+		if _, err := e.store.StopForCredentialTx(e.ctx, tx, WithdrawalRef{
 			LeadID: from, Address: "two-stops@example.test",
 			Scope: WithdrawalScopeNamedPurpose, PurposeID: e.newsletter.UUID,
 		}); err != nil {
 			return err
 		}
-		return e.store.StopForCredentialTx(e.ctx, tx, WithdrawalRef{
+		_, err := e.store.StopForCredentialTx(e.ctx, tx, WithdrawalRef{
 			LeadID: from, Address: "two-stops@example.test",
 			Scope: WithdrawalScopeAllMarketing,
 		})
+		return err
 	}); err != nil {
 		t.Fatalf("seeding the two stops: %v", err)
 	}

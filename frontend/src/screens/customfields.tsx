@@ -66,6 +66,7 @@ const TYPE_ICON: Record<CfType, LucideIcon> = {
   date: Calendar,
   currency: Euro,
   picklist: List,
+  multiselect: List,
   boolean: ToggleRight,
 };
 
@@ -102,7 +103,8 @@ export function FieldBuilder({
   // needs a well-formed 3-letter ISO-4217 code — Confirm stays disabled until
   // the type-specific shape is valid, not just the label.
   const typeShapeValid =
-    (type !== "picklist" || options.some((opt) => opt.trim().length > 0)) &&
+    ((type !== "picklist" && type !== "multiselect") ||
+      options.some((opt) => opt.trim().length > 0)) &&
     (type !== "currency" || /^[A-Za-z]{3}$/.test(currency.trim()));
   const canConfirm =
     !pending && label.trim().length > 0 && !structural && typeShapeValid;
@@ -147,15 +149,10 @@ export function FieldBuilder({
             />
           )}
         </Field>
-        <Field
-          label={t("cf.apiKey")}
-          className="cf-field"
-          hint={t("cf.apiKeyHint")}
-        >
+        <Field label={t("cf.apiKey")} hint={t("cf.apiKeyHint")}>
           {(control) => (
             <TextInput
               {...control}
-              className="t-mono"
               value={apiKey(object, label)}
               disabled
               readOnly
@@ -182,15 +179,10 @@ export function FieldBuilder({
       </div>
 
       {type === "currency" && (
-        <Field
-          label={t("cf.currencyCode")}
-          className="cf-field"
-          hint={t("cf.currencyHint")}
-        >
+        <Field label={t("cf.currencyCode")} hint={t("cf.currencyHint")}>
           {(control) => (
             <TextInput
               {...control}
-              className="t-mono"
               value={currency}
               maxLength={3}
               onChange={(event) =>
@@ -201,7 +193,7 @@ export function FieldBuilder({
         </Field>
       )}
 
-      {type === "picklist" && (
+      {(type === "picklist" || type === "multiselect") && (
         <div className="field">
           <span className="t-label">{t("cf.options")}</span>
           <div className="cf-options">
@@ -330,7 +322,7 @@ export function FieldTable({
 
   const typeChip = (field: CustomField): string => {
     const base = t(`cf.type.${field.type}`);
-    if (field.type === "picklist") {
+    if (field.type === "picklist" || field.type === "multiselect") {
       return `${base} · ${field.options?.length ?? 0}`;
     }
     if (field.type === "currency") {
@@ -368,7 +360,7 @@ export function FieldTable({
                   <Badge tone="warn">{t("cf.retired")}</Badge>
                 )}
               </span>
-              <span className="cf-key t-mono">
+              <span className="cf-key">
                 {`${field.object}.${field.column_name}`}
               </span>
             </div>
@@ -380,13 +372,7 @@ export function FieldTable({
       key: "type",
       header: t("cf.col.type"),
       render: (field) => {
-        const Icon = TYPE_ICON[field.type];
-        return (
-          <span className="cf-typechip t-caption">
-            <Icon aria-hidden />
-            {typeChip(field)}
-          </span>
-        );
+        return <Badge icon={TYPE_ICON[field.type]}>{typeChip(field)}</Badge>;
       },
     },
     {
@@ -518,7 +504,7 @@ function createBody(
     type: draft.type,
     source: "manual",
     ...(draft.type === "currency" ? { currency: draft.currency } : {}),
-    ...(draft.type === "picklist"
+    ...(draft.type === "picklist" || draft.type === "multiselect"
       ? { options: cleanOptions(draft.options) }
       : {}),
   };
@@ -555,7 +541,10 @@ function stagedField(draft: NewFieldDraft, createdBy: string): CustomField {
     status: "active",
     column_name: columnName(draft.label),
     currency: draft.type === "currency" ? draft.currency : null,
-    options: draft.type === "picklist" ? cleanOptions(draft.options) : null,
+    options:
+      draft.type === "picklist" || draft.type === "multiselect"
+        ? cleanOptions(draft.options)
+        : null,
     created_by: createdBy,
     created_at: now,
     updated_at: now,
@@ -599,10 +588,12 @@ export function CustomFieldsAdmin() {
   const toast = useToast();
   const [renaming, setRenaming] = useState<CustomField | null>(null);
   const [renameLabel, setRenameLabel] = useState("");
-  // The builder is mounted only while its dialog is open, which is what stops a
-  // second Confirm resubmitting the same, now-committed, draft (m6): a
-  // successful create closes the dialog and the form's state goes with it.
+  // The dialog stays MOUNTED so it can animate out, so `addSeq` is what gives
+  // each open a builder of its own: it re-keys the form, which discards a
+  // half-typed label rather than leaving it waiting under an object nobody
+  // re-chose, and stops a second Confirm resubmitting a draft already created.
   const [adding, setAdding] = useState(false);
+  const [addSeq, setAddSeq] = useState(0);
   const renameId = useId();
   const addId = useId();
 
@@ -739,7 +730,6 @@ export function CustomFieldsAdmin() {
 
   return (
     <Panel
-      className="cf-screen"
       title={t("cf.title")}
       // The create verb is the card's, so it stands in the header band. As a
       // trailing row its label ("Add a field to Deal") said the same thing as
@@ -750,7 +740,13 @@ export function CustomFieldsAdmin() {
       // being there.
       titleAction={
         canCreate && (
-          <Button small onClick={() => setAdding(true)}>
+          <Button
+            small
+            onClick={() => {
+              setAddSeq((seq) => seq + 1);
+              setAdding(true);
+            }}
+          >
             {t("cf.builder.open")}
           </Button>
         )
@@ -842,34 +838,29 @@ export function CustomFieldsAdmin() {
         )}
       </PanelBody>
 
-      {/* Mounted only while it is open, so a half-typed label is gone the next
-          time the dialog opens rather than waiting there under an object
-          nobody re-chose.
-
-          `wide` is the variant's stated case: the builder carries the pending
+      {/* `wide` is the variant's stated case: the builder carries the pending
           DDL, and a 440px dialog wraps
           `ALTER company ADD COLUMN cf_contract_end_date (date)` into an
           unreadable stack — the one line a reader is meant to check before
           confirming a live schema change. It also keeps the label and the API
           key derived from it side by side. */}
-      {adding && (
-        <Modal
-          open
-          size="wide"
-          onClose={() => setAdding(false)}
-          labelledBy={addId}
-        >
-          <h2 id={addId} className="t-h2 modal-title">
-            {t("cf.builder.addTo", { object: objectName })}
-          </h2>
-          <FieldBuilder
-            object={object}
-            pending={create.isPending}
-            onSubmit={(draft) => create.mutate(draft)}
-            onCancel={() => setAdding(false)}
-          />
-        </Modal>
-      )}
+      <Modal
+        open={adding}
+        size="wide"
+        onClose={() => setAdding(false)}
+        labelledBy={addId}
+      >
+        <h2 id={addId} className="t-h2 modal-title">
+          {t("cf.builder.addTo", { object: objectName })}
+        </h2>
+        <FieldBuilder
+          key={addSeq}
+          object={object}
+          pending={create.isPending}
+          onSubmit={(draft) => create.mutate(draft)}
+          onCancel={() => setAdding(false)}
+        />
+      </Modal>
 
       <Modal
         open={renaming !== null}

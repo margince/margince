@@ -123,7 +123,7 @@ export const WithSubRowsAndFooter: Story = {
         <PanelRow>Pilot — €4,200</PanelRow>
       </>
     ),
-    footer: <span className="t-mono">€64,700.00</span>,
+    footer: <span className="t-num">€64,700.00</span>,
   },
 };
 
@@ -411,20 +411,17 @@ const RAIL_PANEL_STATES: readonly RailPanelState[] = [
   "withheld",
   "unavailable",
   "loading",
-  "unsupported",
   "failed",
 ];
 
 // Every field at once, and each state reads exactly one of them: `failed` the
-// retry, `stale` the as-of, `partial` the count still missing, `unsupported`
-// and `withheld` their sentence. A state whose field is absent falls back to
-// the generic line, which is the floor rather than the target.
+// retry, `stale` the as-of, `partial` the count still missing, `withheld` its
+// sentence. A state whose field is absent falls back to the generic line,
+// which is the floor rather than the target.
 const DETAIL: SectionDetail = {
   onRetry: () => undefined,
   staleAsOf: "9:15 this morning",
   remaining: 4,
-  unsupportedReason:
-    "This workspace reads deals from HubSpot, and a composite section cannot be assembled from a mirror.",
   withheldReason:
     "Deal amounts on this account are readable by its owner and by finance.",
 };

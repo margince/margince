@@ -78,10 +78,7 @@ var pinExemptWrites = gatekit.Waive(map[string]string{
 // This set is EMPTY when nothing is pending, which is the state to get it back
 // to. It stays declared rather than deleted, because the next write that cannot
 // carry a pin today needs somewhere honest to go.
-var pinDeferredWrites = gatekit.Waive(map[string]string{
-	"promoteLead": "stages a pinnable lead version and applies none: LeadPromoter cannot carry one, exactly as LeadDisqualifier could not. The promotion mints a contact from lead fields a concurrent edit may have changed since the human approved. Tracked in issue 5021 — the cost of leaving it is that an approved promotion can read content nobody released",
-	"demoteLead":  "stages a pinnable lead version and applies none, on the same seam shape as promoteLead. The reversal unwinds a promotion the approval may no longer be describing. Tracked in issue 5021 — same cost, in the opposite direction",
-})
+var pinDeferredWrites = gatekit.Waive(map[string]string{})
 
 // pinnedWriteFloor is set below the live count of tools that must apply a pin.
 // It catches the reflection or the registry walk going to zero, which reports

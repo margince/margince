@@ -26,10 +26,10 @@ func TestEveryVerdictKindHasAnEffect(t *testing.T) {
 	// — asserting the map and the schema agree — is what the defect already
 	// passed, because both were consistent with an effect switch that ignored
 	// two of them.
-	source := readSource(t, "captureverdict.go")
+	source := readSource(t, "captureverdictapply.go")
 	body, ok := cutBetween(source, "switch kind {", "\n\t\t}")
 	if !ok {
-		t.Fatal("apply's effect switch not found in captureverdict.go — this gate reads it by shape, so a refactor must re-point it")
+		t.Fatal("apply's effect switch not found in captureverdictapply.go — this gate reads it by shape, so a refactor must re-point it")
 	}
 	for _, kind := range verdictKindNames() {
 		if !strings.Contains(body, "capture.Kind"+goName(kind)) {

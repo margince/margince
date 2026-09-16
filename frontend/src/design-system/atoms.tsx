@@ -1,8 +1,10 @@
 import {
   ChevronRight,
   LoaderCircle,
+  type LucideIcon,
   MoreHorizontal,
   Search,
+  Sparkles,
 } from "lucide-react";
 import {
   type ComponentPropsWithRef,
@@ -26,6 +28,7 @@ import { useAnchoredToTrigger } from "./anchored";
 import { useDialogFocus } from "./dialogfocus";
 import { Popover } from "./popover";
 import "./atoms.css";
+import "./evidencemark.css";
 
 // The Margince atom library (B-EP09.2, re-scoped to our own
 // system, no gw-ui port; atoms are added as screens need them). Copy always
@@ -366,44 +369,42 @@ function ButtonSentences({
   );
 }
 
+type BadgeTone = "default" | "accent" | "success" | "warn" | "danger" | "ai";
+// The leading slot holds ONE mark, a glyph or the `live` dot. An `ai` badge's
+// mark is always Sparkles, so that tone is given neither to choose.
+type BadgeMark =
+  | { tone?: Exclude<BadgeTone, "ai">; icon?: LucideIcon; live?: never }
+  | { tone?: Exclude<BadgeTone, "ai">; icon?: never; live?: boolean }
+  | { tone: "ai"; icon?: never; live?: never };
+
 export function Badge({
-  tone,
-  children,
-  quiet,
+  variant = "soft",
+  tone = "default",
+  icon,
   live,
-}: Readonly<{
-  tone?: "success" | "warn" | "danger" | "ai" | "accent";
-  children: ReactNode;
-  // The same status in a column of them. A pill states one status against
-  // surrounding prose; a table row states one per row, and a stack of filled
-  // pills reads as decoration a reader learns to skip. `quiet` keeps the tone
-  // and drops the fill: a dot in the tone's colour, and the label as plain
-  // text. Same vocabulary, so a status cannot be worded one way in a list and
-  // another on the record the list opens.
-  quiet?: boolean;
-  // A status that is true AT THIS MOMENT rather than one recorded earlier: a
-  // Deal Room an invited buyer can walk into as the page is read. It draws a
-  // breathing dot in the tone's own ink, which is the one place in this
-  // vocabulary where motion is a FACT — "this is happening now" — rather than
-  // decoration, so it belongs to a handful of states and not to a palette.
-  // Under `prefers-reduced-motion` the dot stays and stops moving: the mark is
-  // the claim, and removing it would take the claim with it.
-  live?: boolean;
-}>) {
-  const classes = ["badge"];
-  if (quiet) {
-    classes.push("badge-quiet");
-  }
-  if (tone) {
-    classes.push(`badge-${tone}`);
-  }
-  if (live) {
-    classes.push("badge-live");
-  }
+  children,
+}: Readonly<
+  {
+    // `soft` is the tint a status wears beside prose and down a column;
+    // `primary` the solid fill for the one status a reader must not miss.
+    variant?: "soft" | "primary";
+    children: ReactNode;
+  } & BadgeMark
+>) {
+  // `live` is true AS THE PAGE IS READ: the one place motion is a fact. The ai
+  // mark is decided here as well, for a tone that arrives untyped.
+  const provenance = tone === "ai";
+  const Icon = provenance ? Sparkles : icon;
+  const classes = [
+    "badge",
+    variant === "primary" && "badge-primary",
+    tone !== "default" && `badge-${tone}`,
+  ].filter(Boolean);
   return (
     <span className={classes.join(" ")}>
-      {live && <span className="badge-live-dot" aria-hidden />}
-      {children}
+      {live && !provenance && <span className="badge-live-dot" aria-hidden />}
+      {Icon && <Icon size={12} aria-hidden="true" />}
+      <span className="badge-label">{children}</span>
     </span>
   );
 }
@@ -918,8 +919,8 @@ export function StatCard({
   detail?: ReactNode;
   // The way OUT of the reading: the tab that holds what it was read from. The
   // whole CARD is this button's target (atoms.css stretches it over the tile).
-  // ONE control and not two — the basis chip layers above that target and keeps
-  // its own press, so asking what a figure rests on never also leaves the page.
+  // ONE control and not two — the basis trigger layers above it and keeps its
+  // own press, so asking what a figure rests on never also leaves the page.
   onOpen?: () => void;
   // What the door SAYS, where "Open" is not enough. The default stays "Open"
   // and 90-odd callers keep it, because doors each inventing a destination were
@@ -978,8 +979,7 @@ export function StatCard({
   return (
     <section className={cardClass}>
       <span className="stat-card-label">
-        {/* The name in its own box: the row also holds the source badge and the
-            receipt chip, and a clamp on the row would take those with it. */}
+        {/* Its own box, so a clamp on the name spares the badge and trigger. */}
         <span className="stat-card-label-text" id={labelId}>
           {label}
         </span>
@@ -993,7 +993,7 @@ export function StatCard({
           // could reach. The door lives once, in the card's foot, where a
           // reader who has just read the working finds it directly below.
           <Popover
-            className="stat-card-basis"
+            className="stat-card-basis evmark-trigger"
             onHover
             label={t("stat.evidence")}
           >
@@ -1347,8 +1347,8 @@ export function SectionHeader({
  * The figure beside an option's name, in a strip that counts what is behind
  * each one.
  *
- * One component because the count is four decisions, not a number: the mono
- * face so a column of them lines up, the reader's own number format, the host's
+ * One component because the count is four decisions, not a number: tabular
+ * figures so a column of them lines up, the reader's own number format, the host's
  * class, and the SEPARATOR — which is the one that was missing. Both strips
  * rendered `{label}{count}` as adjacent nodes, so the accessible name a screen
  * reader speaks was "Contacts2", "Deals0", "Tasks0". The comma is
@@ -1366,7 +1366,7 @@ export function OptionCount({
   return (
     <>
       <span className="sr-only">, </span>
-      <span className={`${className} t-mono`}>
+      <span className={`${className} t-num`}>
         {formatNumber(count, locale)}
       </span>
     </>
@@ -1435,124 +1435,10 @@ export function Kbd({ children }: Readonly<{ children: ReactNode }>) {
   return <kbd className="kbd">{children}</kbd>;
 }
 
-export function Modal({
-  open,
-  onClose,
-  labelledBy,
-  size = "default",
-  placement = "center",
-  returnFocusTo,
-  initialFocusTo,
-  children,
-}: Readonly<{
-  open: boolean;
-  onClose: () => void;
-  labelledBy: string;
-  // "wide" roomier variant for content-dense dialogs (code/YAML previews);
-  // "default" keeps the compact form width every confirm/create modal uses.
-  // "split" is a drawer holding TWO columns rather than one — the conversation
-  // being answered beside the reply being written. It is a width because that
-  // is what a second column costs; a drawer at the wide clamp splits into two
-  // unreadable halves.
-  size?: "default" | "wide" | "split";
-  // "right" anchors the dialog to the right edge, full height — the drawer
-  // form the composer and the evidence receipt use, where the record behind
-  // stays visible as context rather than being covered by a centred box.
-  // With size="wide" it takes the roomier clamp and a sticky header/footer,
-  // for the surfaces a rep works IN rather than glances at.
-  //
-  // "full" is the lightbox: the box takes the screen it is on, inset far
-  // enough that the darkened page still frames it, for content READ rather
-  // than answered — a contract, a scan. It is a placement rather than a
-  // `size` because what it decides is where the dialog sits, and it decides
-  // that completely: `size` names widths for a centred box and there is
-  // nothing left for one to vary here.
-  placement?: "center" | "right" | "full";
-  // Resolve at close time when a mutation replaces the opener (for example,
-  // Deactivate becoming Reactivate). A callback can find the newly mounted control.
-  returnFocusTo?: () => HTMLElement | null;
-  /** The writing field can take focus before supporting context controls. */
-  initialFocusTo?: () => HTMLElement | null;
-  children: ReactNode;
-}>) {
-  const dialog = useRef<HTMLDivElement | null>(null);
-  // The palette shares keyboard behavior without sharing modal chrome.
-  useDialogFocus({
-    open,
-    onClose,
-    container: dialog,
-    returnFocusTo,
-    initialFocusTo,
-  });
-
-  if (!open) {
-    return null;
-  }
-  // Portalled to the document body rather than rendered in place: a dialog
-  // opened from inside a collapsed container — the record header's overflow
-  // menu — would otherwise be hidden along with it, and the click that opened
-  // the dialog is the same click that collapses the menu.
-  return createPortal(
-    // biome-ignore lint/a11y/noStaticElementInteractions: backdrop dismiss is a convention; Esc is the keyboard path
-    // biome-ignore lint/a11y/useKeyWithClickEvents: Esc handles the keyboard path above
-    <div // NOSONAR: backdrop dismiss only; keyboard path (Esc) handled by the effect above
-      className={placement === "right" ? "overlay overlay-right" : "overlay"}
-      onClick={(event) => {
-        if (event.target === event.currentTarget) {
-          onClose();
-        }
-      }}
-    >
-      <div
-        // NOSONAR: styled modal overlay driven by React state, not a native <dialog>; conversion would change focus/backdrop behavior
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={labelledBy}
-        className={modalClass(size, placement)}
-        ref={dialog}
-        // Focusable so a dialog whose body is pure text still receives focus
-        // when it opens, rather than leaving it on the page behind.
-        tabIndex={-1}
-      >
-        {children}
-      </div>
-    </div>,
-    document.body,
-  );
-}
-
-// A right-anchored dialog draws its width from the viewport, so the `size`
-// variants — which exist to widen a centred box — do not apply to it.
-function modalClass(
-  size: "default" | "wide" | "split",
-  placement: "center" | "right" | "full",
-) {
-  // The lightbox answers before either branch below, because neither has
-  // anything to say about it: it is as wide as the screen allows, so no width
-  // varies it, and it is centred, so no edge anchors it.
-  if (placement === "full") {
-    return "modal modal-full";
-  }
-  if (placement === "right") {
-    // A drawer's width normally comes from the viewport, but a surface a rep
-    // WORKS in — a numbered claim list, a message being written — wraps into an
-    // unreadable column at the default clamp. `size` is what asks for the
-    // roomier one, and it brings sticky header and footer with it.
-    //
-    // A split drawer is the wide one plus the room its second column needs, so
-    // it keeps the wide band behaviour rather than restating it.
-    if (size === "split") {
-      return "modal modal-drawer modal-drawer-wide modal-drawer-split";
-    }
-    return size === "wide"
-      ? "modal modal-drawer modal-drawer-wide"
-      : "modal modal-drawer";
-  }
-  // Centred, a split has no second column to hold — the layout that earns the
-  // extra width is the drawer's — so it falls back to the roomy box rather
-  // than to a width nothing on screen uses.
-  return size === "default" ? "modal" : "modal modal-wide";
-}
+// The one dialog lives in modal.tsx and is published from here, because `Modal`
+// is the name three hundred call sites import from `./atoms` and moving a file
+// is not a reason to make every one of them say where it went.
+export { Modal } from "./modal";
 
 /** Whether a box is holding more width than it is showing. */
 function overflowsSideways(element: HTMLElement | null): boolean {
@@ -1954,27 +1840,16 @@ export function Disclosure({
   summary,
   action,
   open,
+  onToggle,
   className,
   children,
 }: Readonly<{
   summary: ReactNode;
-  /**
-   * One verb belonging to this section, drawn on the summary's line and OUTSIDE
-   * the `<summary>` element.
-   *
-   * That is the whole point of the prop. A `<summary>` is itself the control
-   * that opens the section, so a button placed inside it is a control inside a
-   * control: axe fails it as `nested-interactive`, and a reader who presses the
-   * button also toggles the section under it. Two rail sections had done exactly
-   * that, and the verb they nested was the one that opens a form — so pressing
-   * "Add employment" collapsed the employments it was about to add to.
-   *
-   * It stays visible while the section is closed, which is what a section-level
-   * verb wants: "Add employment" is a thing to do whether or not the list is on
-   * screen.
-   */
+  /** A section-level action stays outside summary to avoid nested controls and
+   * remains visible while the section is closed. */
   action?: ReactNode;
   open?: boolean;
+  onToggle?: (open: boolean) => void;
   className?: string;
   children: ReactNode;
 }>) {
@@ -1982,6 +1857,7 @@ export function Disclosure({
     <details
       className={className ? `disclosure ${className}` : "disclosure"}
       open={open}
+      onToggle={(event) => onToggle?.(event.currentTarget.open)}
     >
       <summary className="disclosure-summary">
         <ChevronRight className="disclosure-chevron" aria-hidden="true" />

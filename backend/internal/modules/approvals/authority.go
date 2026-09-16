@@ -16,6 +16,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/approvalsubject"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -243,7 +244,7 @@ var decisionGrants = map[string][]grantRequirement{
 	// sender the verdict engine could not judge) creates the contact and, unless
 	// the domain is free-mail, the company behind them — so deciding it
 	// needs both create grants, exactly as if the approver had typed them in.
-	"capture_counterparty": {{tableContact, principal.ActionCreate}, {tableCompany, principal.ActionCreate}},
+	approvalsubject.KindCounterparty: {{tableContact, principal.ActionCreate}, {tableCompany, principal.ActionCreate}},
 	// Accepting a vcard_create proposal (an imported card the dedupe pass
 	// refused to create beside its near-match) creates the contact; when the
 	// card names an employer, also the employment edge (relationship create

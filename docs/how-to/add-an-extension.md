@@ -112,18 +112,22 @@ the values you declare must be ones a core engine already understands:
 
 Get the statutory content right — it's legal content, not a default. Pin it with a test (below).
 
-## Declare a governed agent tool (optional)
+## Declare a governed operation (optional)
 
-A unit may also contribute **agent tools** — named verbs the MCP surface serves alongside the core
-ones. `extensions/openchannel` is the first-party worked example; copy its shape:
+A unit may also contribute served operations — named verbs `extroutes.go` mounts REST calls onto, and
+that a governed agent tool (`x-mcp-tool`) additionally serves over MCP. `extensions/openchannel` is the
+first-party worked example; copy its shape. (Every one of openchannel's 7 operations is
+`x-agent-access: human-only` today — REST/UI-reachable, never MCP-reachable — so read
+[below](#publish-an-http-surface-and-its-governed-tools) for which annotation your own operation wants.)
 
 **Governance lives in the contract, not in Go.** An `extension.Tool` is a **verb and a function** and
-nothing else — the tier, the Passport scope, the RBAC object, the title, the prose, the version and both
-schemas all come from the contract operation that declares the verb (see the next section):
+nothing else — whichever annotation declares the verb (`x-mcp-tool` or `x-agent-access`), the tier (or
+its absence), the Passport scope, the RBAC object, the title, the prose, the version and both schemas
+all come from the contract operation, not from this struct (see the next section):
 
 ```go
 Tools: []extension.Tool{{
-	Name:   "openchannel_open", // lower snake_case; must equal an x-mcp-tool verb in THIS unit's api/ fragment
+	Name:   "openchannel_open", // lower snake_case; must equal an x-mcp-tool OR x-agent-access verb in THIS unit's api/ fragment
 	Handle: open,               // omit for a contract-only request: declared, published, answers 501
 }}
 ```
@@ -210,6 +214,35 @@ Copy `extensions/openchannel/api/crm.yaml`. The rules that will otherwise bite:
 - **`x-mcp-tool` is where governance lives**: `verb`, `version`, `title`, `tier`, `scope`, `description`.
   The `verb` must equal the `Name` of one of your unit's `Tools` entries for the operation to be served;
   `description` is required (it is the text a model selects the tool by) and so is `version`.
+- **Every operation declares exactly one of `x-mcp-tool` or `x-agent-access`** — never both, never
+  neither. `x-agent-access` is core's own vocabulary (`crm.yaml`'s header states the same invariant for
+  core operations), restated here for the one value an extension may ever declare:
+
+  ```yaml
+  x-agent-access:
+    access: human-only
+    verb: openchannel_open      # still the registry dispatch key — REST invokes it by this name
+    version: 1.0.0
+    title: Open an inbound endpoint
+    description: >-
+      Open the calling contact's own inbound endpoint...
+  ```
+
+  A `human-only` operation stays REST/UI-reachable exactly like a tool-verb one — `verb` still names
+  the `Name` of one of your unit's `Tools` entries, so `Handle` still decides whether it runs — but it
+  is **never** MCP/agent-reachable: an Agent (or Buyer) principal calling it over REST is refused
+  `403 permission_denied` before anything is parsed, staged or charged, and it never appears in an
+  agent's `tools/list` or on the operator's `GET /v1/agent-tools` console. Use it for a capability that
+  should stay human/UI-only — openchannel's whole surface is the worked example (all 7 operations:
+  opening or reading an endpoint, minting its signing secret, pausing it, registering where it sends,
+  and listing what has arrived or gone out).
+
+  `x-agent-access` carries **no** `tier`, `scope` or `subject` — those are requests for agent
+  authority, and a human-only operation asks for none; declaring one alongside `access: human-only` is
+  refused. `x-rbac-object`/`x-rbac-action` still apply exactly as they do for a tool verb, and are
+  **still required on every mutating method** (there is no `RequestedScope` to key that rule on here,
+  so it keys on `POST`/`PUT`/`PATCH`/`DELETE` instead) — a human-only mutation still needs something a
+  role document can withhold.
 - **`x-rbac-object` / `x-rbac-action`** declare the object grant the caller must hold. The object is
   registered into the RBAC vocabulary `/me` serves and must be named `ext_<name>_*`. Declare both or
   neither.
@@ -316,10 +349,9 @@ for a subject they cannot see, audited, published as an event, and attributed to
 the transaction your own row is in, so the two commit together or not at all.
 `backend/pkg/extension/crm` holds the shapes it takes and returns.
 
-Three refusals to design for rather than discover: a scheduled JOB TICK gets `ErrForbidden` (it runs as
+Two refusals to design for rather than discover: a scheduled JOB TICK gets `ErrForbidden` (it runs as
 your unit, with no caller whose permissions a core write could be checked against — your own tables stay
-writable); an OVERLAY workspace gets `ErrOverlayUnsupported` (its native records are not the live ones);
-and custom fields are refused rather than dropped. Grants are the other thing to plan: filing needs the
+writable), and custom fields are refused rather than dropped. Grants are the other thing to plan: filing needs the
 caller to hold your unit's object AND the core `activity` one, and nothing declares that pairing yet.
 
 **And what your migrations may CREATE is what your SQL may NAME — in your tests too.** `rt.Tx()` runs

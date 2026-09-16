@@ -28,12 +28,13 @@ import "context"
 // and platform/database/storekit both consume this set rather than
 // hand-rolling their own copies.
 const (
-	TypeText     = "text"
-	TypeNumber   = "number"
-	TypeDate     = "date"
-	TypeCurrency = "currency"
-	TypePicklist = "picklist"
-	TypeBoolean  = "boolean"
+	TypeText        = "text"
+	TypeNumber      = "number"
+	TypeDate        = "date"
+	TypeCurrency    = "currency"
+	TypePicklist    = "picklist"
+	TypeMultiselect = "multiselect"
+	TypeBoolean     = "boolean"
 )
 
 // Types answers the closed set above, so a consumer that has to handle EVERY
@@ -49,7 +50,7 @@ const (
 // A fresh slice per call: the alternative is an exported package-level slice,
 // which any consumer can reorder or overwrite for every other consumer.
 func Types() []string {
-	return []string{TypeText, TypeNumber, TypeDate, TypeCurrency, TypePicklist, TypeBoolean}
+	return []string{TypeText, TypeNumber, TypeDate, TypeCurrency, TypePicklist, TypeMultiselect, TypeBoolean}
 }
 
 // Column is one custom-field column for a (workspace, object) pair,

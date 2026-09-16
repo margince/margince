@@ -120,29 +120,6 @@ export function useMe(enabled = true) {
   });
 }
 
-// The workspace system-of-record mode, read off the shared ["me"] cache.
-// `native` is the safe default (full list capability) while /me is loading
-// or if an older server omits the field; the list surfaces gate on `overlay`
-// to drop sort/filter dials the incumbent mirror refuses (422). AuthGate
-// resolves /me before any list screen mounts, so a screen sees the real value.
-export function useSorMode(): "native" | "overlay" {
-  return useMe().data?.system_of_record?.mode === "overlay"
-    ? "overlay"
-    : "native";
-}
-
-// The honest "this surface can't be served from the incumbent mirror" state,
-// shown in overlay mode where a feature needs a capability the mirror does not
-// hold — entity-scoped timelines, relationship strength, the context graph,
-// task filtering, the morning brief. It is NOT an error: it is a deliberate,
-// documented read-subset gap that closes when the workspace flips to native.
-// Rendered in place of the feature so the user never hits "Couldn't load this
-// view" for a capability overlay mode was never going to answer.
-export function OverlayUnavailable() {
-  const t = useT();
-  return <EmptyState>{t("overlay.unavailable")}</EmptyState>;
-}
-
 /**
  * What a record's timeline zone shows when it has no entries to show YET.
  *
@@ -152,16 +129,12 @@ export function OverlayUnavailable() {
  * as complete — which both pops and pushes the rest of the column down.
  *
  * `undefined` for the ordinary case, because the zone's own renderer is right
- * once there is something to render. Overlay mode wins over the wait: a
- * capability the mirror will never answer is not a wait at all.
+ * once there is something to render.
  */
 export function timelineZoneNotice(
-  state: Readonly<{ overlay: boolean; pending: boolean }>,
+  state: Readonly<{ pending: boolean }>,
   t: ReturnType<typeof useT>,
 ): ReactNode {
-  if (state.overlay) {
-    return <OverlayUnavailable />;
-  }
   if (state.pending) {
     return <PendingBody label={t("record.timelineLoading")} lines={5} />;
   }
@@ -273,7 +246,7 @@ export function QueryStates({
             button is something to reach, not something to hear. */}
         <div role="alert">
           <p>{t("common.error")}</p>
-          <p className="t-mono" style={{ marginTop: "var(--space-2)" }}>
+          <p style={{ marginTop: "var(--space-2)" }}>
             {problemMessageOf(query.error, t)}
           </p>
         </div>
@@ -532,8 +505,8 @@ function connectorLabel(rest: string): string {
 // The reader's own user id, for the provenance tags on this screen. Undefined
 // while /me is in flight, which the tags read as "a contact, not provably you"
 // — the honest reading until the session is known.
-export function useViewerId(): string | undefined {
-  return useMe().data?.user.id;
+export function useViewerId(enabled = true): string | undefined {
+  return useMe(enabled).data?.user.id;
 }
 
 // RFC 7807 bodies carry the honest detail; surface it instead of a generic
@@ -546,17 +519,6 @@ export function useViewerId(): string | undefined {
 // reader can use" are different facts, and only the second may be answered
 // with catalog copy. A caller that cannot tell them apart either invents copy
 // over a real detail or shows a placeholder as though the server had spoken.
-//
-// A refusal overlay mode causes is a state, not a fault, but it is TWO
-// distinct states, not one: `unsupported_by_sor` is a WRITE the mirror
-// cannot serve (mutating a mirrored record — create/log-activity/advance/
-// merge/promote/disqualify); `unsupported_in_overlay_mode` is a READ whose
-// list/sort/filter dial the mirror does not hold (compose/overlayread.go's
-// unsupportedOverlayParam — e.g. tasks' `kind` filter). Collapsing both onto
-// one "can't serve this write" string would be false for the read case, so a
-// caller holding a translator gets copy naming which kind of refusal
-// happened. Callers without a translator — and every other problem code —
-// keep the server's own detail verbatim, exactly as before.
 //
 // A refusal is the OPPOSITE case: `permission_denied` is one code over two
 // authorities — an object-RBAC denial (this role does not admit the action on
@@ -590,12 +552,6 @@ function problemDetail(
   t?: (key: MessageKey) => string,
 ): string | null {
   const code = problemCode(problem);
-  if (t && code === "unsupported_by_sor") {
-    return t("overlay.refused");
-  }
-  if (t && code === "unsupported_in_overlay_mode") {
-    return t("overlay.filterUnsupported");
-  }
   if (t && code === "gateway_unavailable") {
     return t("common.gatewayUnavailable");
   }

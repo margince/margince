@@ -11,10 +11,12 @@ package contacts
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -758,5 +760,178 @@ func TestTheBlockedDomainListWithholdsAnInvisibleCompany(t *testing.T) {
 	}
 	if theirs[0].Domain != "private.example" || theirs[0].Reason == "" {
 		t.Fatalf("the colleague's entry = %+v, want the decision and its reason", theirs[0])
+	}
+}
+
+// What the operator's list carries — decisions, and the questions nobody owns —
+// lives in domainadmissionlist_integration_test.go, beside the WHERE clause that
+// is its whole subject.
+
+// Re-asking puts the question back in the sweep's path. The machine cleared the
+// cursor because re-crawling could not help; somebody may know otherwise, and
+// this is the verb that says so.
+func TestReopeningAnUndecidedDomainPutsItBackInTheSweep(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	e.openTriage(ctx, t, "hello@pwc.example", "", "pwc.example")
+	if _, err := e.store.ResolveUnreadableDomainTriage(ctx, ResolveDomainTriageInput{
+		Domain: "pwc.example", SeedURL: TriageSeedURL("pwc.example"),
+		Evidence: "the site could not be read",
+	}); err != nil {
+		t.Fatalf("resolve unreadable: %v", err)
+	}
+	if e.dueContains(ctx, t, "pwc.example") {
+		t.Fatal("a withheld domain is still being offered for a crawl")
+	}
+
+	stored, err := e.store.ReopenWithheldDomain(ctx, "pwc.example")
+	if err != nil {
+		t.Fatalf("reopen: %v", err)
+	}
+	// It answers with where the domain stands NOW: the question is open, so
+	// there is still no decision to report.
+	if stored.Admission != DomainUndecided {
+		t.Errorf("admission = %q, want it still undecided — re-asking decides nothing", stored.Admission)
+	}
+	if !e.dueContains(ctx, t, "pwc.example") {
+		t.Fatal("re-asking did not reopen the question; the crawl would never run again")
+	}
+	_, reason, _, _, _ := e.dispositionRow(ctx, t, "pwc.example")
+	if reason != "" {
+		t.Errorf("pending_reason = %q, want it cleared — the row is waiting on a crawl again", reason)
+	}
+}
+
+// Only an open question can be re-asked. A domain carrying a decision has an
+// answer, and re-opening it silently would undo somebody's call without
+// recording that anything happened.
+func TestReopeningRefusesADomainThatAlreadyHasAnAnswer(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	if _, err := e.store.SetDomainAdmission(ctx, "expensify.example", DomainSuppressed,
+		"a tool we use, not a customer"); err != nil {
+		t.Fatalf("block: %v", err)
+	}
+
+	_, err := e.store.ReopenWithheldDomain(ctx, "expensify.example")
+	if !errors.Is(err, apperrors.ErrConflict) {
+		t.Fatalf("reopen of a decided domain = %v, want a conflict", err)
+	}
+	// And the decision is untouched.
+	_, _, admission, source, _ := e.dispositionRow(ctx, t, "expensify.example")
+	if admission != DomainSuppressed || source != AdmissionSourceHuman {
+		t.Errorf("admission = %q/%q, want the human refusal left exactly as it was", admission, source)
+	}
+}
+
+// What a reopen ANSWERS with has to stay inside the contract's own vocabulary.
+// Clearing pending_reason is what re-opening means, and the row then carries no
+// admission either — so a standing built from "whatever is left" answers with a
+// source the published enum does not contain, on every successful re-ask.
+func TestReopeningAnswersWithAStandingTheContractPublishes(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	e.openTriage(ctx, t, "hello@pwc.example", "", "pwc.example")
+	if _, err := e.store.ResolveUnreadableDomainTriage(ctx, ResolveDomainTriageInput{
+		Domain: "pwc.example", SeedURL: TriageSeedURL("pwc.example"),
+		Evidence: "the site could not be read",
+	}); err != nil {
+		t.Fatalf("resolve unreadable: %v", err)
+	}
+
+	stored, err := e.store.ReopenWithheldDomain(ctx, "pwc.example")
+	if err != nil {
+		t.Fatalf("reopen: %v", err)
+	}
+	// Derived from the contract's enum rather than restated: a value added
+	// there and not handled here is the case this guards.
+	published := map[string]bool{
+		DomainSuppressed: true, DomainAdmitted: true, DomainUndecided: true,
+	}
+	if !published[stored.Admission] {
+		t.Errorf("admission = %q, which the contract does not publish", stored.Admission)
+	}
+	publishedSource := map[string]bool{
+		AdmissionSourceVerdict: true, AdmissionSourceHeuristic: true,
+		AdmissionSourceHuman: true, PendingUnevidenced: true, PendingStaleEvidence: true,
+	}
+	if !publishedSource[stored.Source] {
+		t.Errorf("source = %q, which the contract does not publish", stored.Source)
+	}
+}
+
+// A SETTLED domain is not an open question, however little it says about its
+// admission. settleDisposition never writes that column, so a domain answered
+// personal, provider or no_site carries NULL there exactly as an unjudged one
+// does — and re-asking about it would spend an attempt on a question that has
+// an answer, while the underlying guard silently matched no row at all.
+func TestReopeningRefusesADomainAlreadySettled(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	e.openTriage(ctx, t, "anna@weber.example", "Anna Weber", "weber.example")
+	readID := e.startTriageRead(ctx, t, "weber.example")
+	if _, err := e.store.ResolveDomainTriage(ctx, ResolveDomainTriageInput{
+		Domain: "weber.example", Status: DomainPersonal, Source: DomainSourceSiteRead,
+		SeedURL:  TriageSeedURL("weber.example"),
+		Evidence: "the site is a personal page naming the domain's owner", ReadID: readID,
+	}); err != nil {
+		t.Fatalf("resolve personal: %v", err)
+	}
+
+	_, err := e.store.ReopenWithheldDomain(ctx, "weber.example")
+	if !errors.Is(err, apperrors.ErrConflict) {
+		t.Fatalf("reopen of a settled domain = %v, want a conflict", err)
+	}
+	// And the settled answer is untouched.
+	status, _, _, _, _ := e.dispositionRow(ctx, t, "weber.example")
+	if status != DomainPersonal {
+		t.Errorf("status = %q, want the settled answer left exactly as it was", status)
+	}
+}
+
+// A domain nothing ever asked about has no question to re-open.
+func TestReopeningADomainNobodyAskedAboutIsNotFound(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	_, err := e.store.ReopenWithheldDomain(ctx, "stranger.example")
+	if !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("reopen of an unknown domain = %v, want not-found", err)
+	}
+}
+
+// Re-asking stamps the human answerable for the domain. Triage refuses to mint
+// records for a domain nobody is accountable for, so a row re-opened under
+// nobody's name would come straight back having spent an attempt for nothing.
+func TestReopeningStampsTheHumanAnswerableForTheDomain(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	// A machine suppression records no owner, then a human lifts it — which
+	// leaves the question open with the owner the unblock stamped. The case
+	// that matters here is the withheld row whose owner was never set, so the
+	// domain is opened by capture and withheld without any human touching it.
+	e.openTriage(ctx, t, "hello@orphan.example", "", "orphan.example")
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx,
+			`UPDATE company_domain_disposition SET owner_id = NULL WHERE domain = $1`, "orphan.example")
+		return err
+	}); err != nil {
+		t.Fatalf("clearing the owner: %v", err)
+	}
+	if _, err := e.store.ResolveUnreadableDomainTriage(ctx, ResolveDomainTriageInput{
+		Domain: "orphan.example", SeedURL: TriageSeedURL("orphan.example"),
+		Evidence: "the site could not be read",
+	}); err != nil {
+		t.Fatalf("resolve unreadable: %v", err)
+	}
+
+	if _, err := e.store.ReopenWithheldDomain(ctx, "orphan.example"); err != nil {
+		t.Fatalf("reopen: %v", err)
+	}
+	owner := e.dispositionOwner(ctx, t, "orphan.example")
+	if owner == nil {
+		t.Fatal("re-asking recorded no owner; triage refuses to mint rows for a domain nobody answers for")
+	}
+	if *owner != e.rep {
+		t.Errorf("owner = %v, want the acting human %v", *owner, e.rep)
 	}
 }

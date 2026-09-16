@@ -112,9 +112,17 @@ func addCapturePipelineJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerC
 	}
 
 	// Existing request verdicts remain actionable when no model is configured.
+	//
+	// The settler rides the same worker rather than a job of its own: it asks
+	// the second half of one question, over candidates the first half produced,
+	// and a separate hourly job would read the same rows minutes apart and
+	// judge a request the owed pass had not yet recognised. Nil without a model
+	// configured for it, and then the pass does what it did before — recognise
+	// requests and settle none.
 	addDeclaredWorker[OwedVerdictArgs](reg, &owedVerdictWorker{
 		pool:       pool,
 		classifier: NewOwedClassifier(pool, cfg.OwedBrain, nil, log),
+		settler:    NewRequestSettler(pool, cfg.SettlementBrain, nil, log),
 	})
 
 	if cfg.EnrichBrain != nil {
@@ -137,8 +145,10 @@ func addCapturePipelineJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerC
 	// AI-less deployment never staged a review for an existing unsure row and
 	// never redacted mail it had already hidden.
 	addDeclaredWorker[CounterpartyVerdictArgs](reg, &counterpartyVerdictWorker{
-		pool:   pool,
-		engine: NewCounterpartyVerdictEngine(pool, cfg.VerdictBrain, log),
+		pool: pool,
+		// The capture list config is the SAME value the sink is composed from, so
+		// the tier ladder and the verdict lane read one operator allowlist.
+		engine: NewCounterpartyVerdictEngine(pool, cfg.VerdictBrain, cfg.CaptureConfig, log),
 		// The personal-mail purge, and only when an object store is bound. A
 		// nil store means no purger and the stage is skipped: destroying the
 		// rows that name an attachment while its bytes stay in a bucket would

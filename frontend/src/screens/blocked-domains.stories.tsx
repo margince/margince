@@ -38,6 +38,28 @@ const BY_HUMAN = {
   decided_at: "2026-08-11T07:05:00Z",
   company_id: "018f3a1b-0000-7000-8000-00000000c001",
 };
+// The two open questions that reach this list: the ones belonging to nobody.
+// Nothing decided them, their retry cursor is cleared, and no colleague's queue
+// can carry them — a question is addressed by the mailbox that raised it, and
+// these have none left. Without this surface they would be visible to nobody.
+const UNEVIDENCED = {
+  domain: "pwc.example",
+  admission: "undecided",
+  reason:
+    "Nothing on the site named a company, and the sender's name did not explain the domain.",
+  source: "unevidenced",
+  decided_at: "2026-08-14T11:20:00Z",
+  company_id: null,
+};
+const STALE = {
+  domain: "oldclient.example",
+  admission: "undecided",
+  reason:
+    "The newest mail from this domain is too old to trust today's site as evidence about it.",
+  source: "stale_evidence",
+  decided_at: "2026-08-15T06:40:00Z",
+  company_id: null,
+};
 
 function story(
   entries: Record<string, unknown>[],
@@ -74,6 +96,14 @@ export const Populated: Story = {
   render: story([BY_VERDICT, BY_HEURISTIC, BY_HUMAN], 3, OPS),
 };
 
+// Decisions and ownerless open questions in one list, which is the case the card
+// exists for: an operator hunting a company that never appeared has to be able to
+// tell "we refused this" from "nobody ever answered". The undecided rows carry a
+// different verb — asking again, not deciding — and a neutral badge.
+export const WithOpenQuestions: Story = {
+  render: story([UNEVIDENCED, STALE, BY_HEURISTIC, BY_HUMAN], 4, OPS),
+};
+
 // Nothing refused yet. It has to read as a fact about the installation rather
 // than as a table that failed to draw.
 export const Empty: Story = { render: story([], 0, OPS) };
@@ -98,5 +128,5 @@ export const ReadOnly: Story = {
 export const PopulatedPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
-  render: story([BY_VERDICT, BY_HEURISTIC, BY_HUMAN], 3, OPS),
+  render: story([UNEVIDENCED, BY_HEURISTIC, BY_HUMAN], 3, OPS),
 };

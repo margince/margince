@@ -11,6 +11,7 @@ import { SurfaceState } from "../design-system/surfacestate";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { QueryGate, throwProblem } from "./common";
+import { factsKey } from "./companyfactspanel";
 import { derivedSource } from "./evidencesource";
 
 type CompanyFact = components["schemas"]["CompanyFact"];
@@ -64,7 +65,7 @@ export function TechnicalProfilePanel({
   const t = useT();
 
   const facts = useQuery({
-    queryKey: ["company-facts", companyId],
+    queryKey: factsKey(companyId),
     queryFn: async () => {
       const { data, error } = await api.GET("/companies/{id}/facts", {
         params: { path: { id: companyId } },
@@ -226,9 +227,7 @@ function LaneNotices({
     <div className="co-facts-group">
       {notices.map((lane) => (
         <p key={lane.lane} className="t-caption">
-          <Badge tone="warn" quiet>
-            {t(laneLabel(lane.lane))}
-          </Badge>{" "}
+          <Badge tone="warn">{t(laneLabel(lane.lane))}</Badge>{" "}
           {lane.outcome === "refused"
             ? t("co.tech.laneRefused")
             : t("co.tech.laneFailed", { lane: t(laneLabel(lane.lane)) })}

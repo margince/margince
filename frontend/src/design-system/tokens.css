@@ -36,7 +36,7 @@
    *
    * The page is no longer the brightest thing on screen; --bgElevated is, and
    * a card is therefore separated by its own lightness rather than by the
-   * shadow alone. That is what lets --shadow-card be as slight as it now is.
+   * shadow alone. That is what lets --shadow-rest be as slight as it is.
    */
   --bgPage: #f1f5f2;
   --bgElevated: #fbfcfb;
@@ -336,6 +336,7 @@
     var(--textPrimary) 49%
   );
   --successBg: color-mix(in srgb, var(--success) 12%, transparent);
+  --successBorder: color-mix(in srgb, var(--success) 45%, transparent);
   --warn: color-mix(
     in oklab,
     lab(74.4448% 23.7172 71.6451),
@@ -359,6 +360,14 @@
     var(--textPrimary) 34%
   );
   --dangerBg: color-mix(in srgb, var(--danger) 10%, transparent);
+  --dangerBorder: color-mix(in srgb, var(--danger) 45%, transparent);
+  /* Each tint laid over --bgElevated as ONE opaque colour, for a badge: a
+   * translucent tint takes its contrast from whatever it lands on, and this
+   * reads the same on every surface. Same share as the tint, which
+   * tokens.test.ts holds equal in every theme. */
+  --successSurface: color-mix(in srgb, var(--success) 12%, var(--bgElevated));
+  --warnSurface: color-mix(in srgb, var(--warn) 16%, var(--bgElevated));
+  --dangerSurface: color-mix(in srgb, var(--danger) 10%, var(--bgElevated));
 
   /* ===== Tag tones =====
    * The eight hues an admin picks from when naming a tag, and the ONLY colours
@@ -503,8 +512,9 @@
 
   /* Three families (DESIGN.md §4): a display face with character for the one
    * line a reader identifies a record by, a quiet grotesk for everything read,
-   * and a mono with tabular figures for every number, so figures align in a
-   * column and never look like words. */
+   * and a mono for code — `code`, `pre`, `samp` and `.code-block` (base.css) and
+   * nothing else. Figures stay in the grotesk and align through tabular-nums
+   * (`.t-num`); an id or a key is read, not compiled, so it is body text too. */
   --f-display: "Outfit", system-ui, sans-serif;
   --f-body: "Geist", system-ui, sans-serif;
   --f-mono: "Geist Mono", ui-monospace, monospace;
@@ -599,20 +609,27 @@
   --overlayLight: #ffffff;
   --overlayDark: #000000;
 
-  /* ONE layer, and a tight one: a card is separated from the page by its own
-   * lightness (--bgElevated white on the --bgPage grey above), so the shadow's
-   * job is only to say which of the two is in front. The two-layer version this
-   * replaces was carrying the separation on its own, because the page it sat on
-   * was also white — a 16px ambient wash under every card, on every screen,
-   * which read as a product of soft floating tiles rather than of surfaces. The
-   * negative spread is what keeps the shadow narrower than the card: it hugs the
-   * bottom edge instead of haloing all four.
+  /* ONE resting layer, worn by everything AT REST that has a FACE: a pane, a
+   * card, a reading, a filled control, a field. Not to make them float — at
+   * 1px and 5% it is under the threshold a reader would call a shadow — but to
+   * give a flat rectangle on a flat ground a top side. It stays tight because
+   * separation is the surface ladder's job (--bgElevated over --bgPage); the
+   * 16px wash it replaces carried that alone and read as soft floating tiles.
    *
-   * Read by every panel and card in the tree through this one token, so the
-   * elevation of a card is not a decision any screen gets to make. */
-  /* A pane is separated by its ground and its hairline (--paneEdge), not by a
-   * drop shadow; the card shadow is kept as a hairline so nothing floats. */
-  --shadow-card: 0 0 0 1px #0000000a;
+   * A CONTROL drops it on hover, active and focus: the shadow is the gap
+   * between the control and the page, so removing it is the control pressed
+   * INTO the page. Deepening it instead lifts the control toward the pointer,
+   * which is backwards, and is a second depth to keep in step with this one.
+   *
+   * Changed here and nowhere else — every consumer reads the token, so how
+   * deep a resting thing sits is no screen's decision. --shadow-pop is the
+   * other half, for what is genuinely above the plane; nothing wears both. */
+  --shadow-rest: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  /* The same layer turned inside, for a field. A surface and a verb have a top
+   * side; a field is a place to PUT something, so its depth goes inward and it
+   * has a floor instead. One light source, two ways of meeting it — which is
+   * why the geometry is --shadow-rest's exactly and only `inset` differs. */
+  --shadow-well: inset 0 1px 2px 0 rgb(0 0 0 / 0.05);
   --shadow-pop: 0 8px 30px rgba(41, 37, 36, 0.14);
 
   /*
@@ -803,13 +820,13 @@
      control boundary, held to the same 1.4.11 floor. */
   --borderControl: #5f7a6e;
 
-  /* Themed, because the light hairline is a 4% black — invisible on the near-black page.
-     Any card whose separation depends on it simply lost its edge in dark, and
-     the login surface's brand pane is exactly that case: its fill sits within
-     a couple of ΔE of the pane behind it. The GEOMETRY is the light theme's
-     (a hairline, not a drop shadow); only the ink is a theme's decision, and
-     on a dark ground the edge is a faint white rather than a faint black. */
-  --shadow-card: 0 0 0 1px #ffffff14;
+  /* Themed, because a 5% black is invisible on a near-black page: any surface
+     whose face depends on this simply loses its top side in dark. Only the INK
+     is a theme's decision — the offset and the blur are the light block's and
+     must not diverge, or one button would sit at two different heights in the
+     two themes. A deeper alpha for the same apparent step. */
+  --shadow-rest: 0 1px 2px 0 rgb(0 0 0 / 0.4);
+  --shadow-well: inset 0 1px 2px 0 rgb(0 0 0 / 0.4);
   --shadow-pop: 0 8px 30px rgba(0, 0, 0, 0.55);
 
   /* higher alpha so the teal read-pill fill stays legible on the darker card
@@ -841,6 +858,7 @@
    * reads weaker laid on a near-black ground than on a near-white one, and at
    * 0.10 the red wash stops reading as a wash. */
   --dangerBg: color-mix(in srgb, var(--danger) 16%, transparent);
+  --dangerSurface: color-mix(in srgb, var(--danger) 16%, var(--bgElevated));
 
   /* The tag tones lift on a dark ground. Each keeps its hue and its distance
    * from its neighbours — a tag that reads teal in light must not read sky in
@@ -931,7 +949,8 @@
 
     --borderControl: #5f7a6e;
 
-    --shadow-card: 0 0 0 1px #ffffff14;
+    --shadow-rest: 0 1px 2px 0 rgb(0 0 0 / 0.4);
+    --shadow-well: inset 0 1px 2px 0 rgb(0 0 0 / 0.4);
     --shadow-pop: 0 8px 30px rgba(0, 0, 0, 0.55);
 
     --tealLight: rgba(14, 116, 144, 0.28);
@@ -946,6 +965,7 @@
     --warnText: var(--warn);
     --dangerText: color-mix(in oklab, var(--danger), var(--textPrimary) 14%);
     --dangerBg: color-mix(in srgb, var(--danger) 16%, transparent);
+    --dangerSurface: color-mix(in srgb, var(--danger) 16%, var(--bgElevated));
 
     --tagTeal: #2dd4bf;
     --tagAmber: #fbbf24;

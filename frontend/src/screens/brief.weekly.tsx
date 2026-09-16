@@ -94,7 +94,7 @@ export function WeeklySection() {
           <span className="brief-weekly-mark">
             {review.data && (
               <>
-                <Badge quiet>{t("brief.weekly.frozen")}</Badge>
+                <Badge>{t("brief.weekly.frozen")}</Badge>
                 {/* Two badges, two different facts: the one beside it says how
                     settled the week is, this says part of what is under it was
                     written by a model. Drawn only when a narrative actually
@@ -314,7 +314,7 @@ function WeeklyBody({
     }
     const delta = now - before;
     return (
-      <span className="brief-weekly-delta t-caption">
+      <span className="t-caption">
         {t("brief.weekly.sincePrior", {
           delta: formatSignedNumber(delta, locale),
           week: formatDate(

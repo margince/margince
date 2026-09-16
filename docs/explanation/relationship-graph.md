@@ -381,9 +381,6 @@ see [authorization.md](authorization.md) and [privacy-and-consent.md](privacy-an
 
 ## Honest limitations
 
-- **Overlay mode has no graph.** The projection is folded from natively captured participants, which
-  the incumbent mirror does not hold. Both cards render the honest unavailable state rather than a
-  doomed fetch that would read as "nobody knows them" ([overlay-augmentation.md](overlay-augmentation.md)).
 - **The 90-day counts are bounded-stale by contract** — up to 24h over-inclusive between reconciles.
   Stated in the migration rather than hidden; recency is exact and dominates the score.
 - **Calendar attendees are not backfilled.** The historical pass recovers the mailbox owner and the

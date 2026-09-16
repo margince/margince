@@ -76,7 +76,7 @@ func NewColumnCatalog(db *database.DB) *ColumnCatalog { return &ColumnCatalog{db
 func (c *ColumnCatalog) Columns(ctx context.Context, table string) ([]StoredColumn, error) {
 	// rls-exempt: information_schema is the database's own schema catalog; it holds no tenant rows, so there is no workspace to bind
 	rows, err := c.db.Pool().Query(ctx,
-		`SELECT column_name, data_type FROM information_schema.columns
+		`SELECT column_name, CASE WHEN data_type = 'ARRAY' AND udt_name = '_text' THEN 'text[]' ELSE data_type END FROM information_schema.columns
 		  WHERE table_schema = current_schema() AND table_name = $1`, table)
 	if err != nil {
 		return nil, fmt.Errorf("search: reading the columns of %s: %w", table, err)
@@ -138,7 +138,8 @@ func newStorage(columns []StoredColumn) *storage {
 // field whose contract kind the column cannot answer is out of the vocabulary,
 // the same as a field with no column at all.
 var kindsByColumnType = map[string]FieldKind{
-	"text": KindText, "character varying": KindText, "character": KindText,
+	"text[]": KindMultiselect,
+	"text":   KindText, "character varying": KindText, "character": KindText,
 	"uuid":     KindID,
 	"boolean":  KindBoolean,
 	"smallint": KindNumber, "integer": KindNumber, "bigint": KindNumber,

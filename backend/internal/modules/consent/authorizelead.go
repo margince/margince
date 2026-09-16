@@ -145,7 +145,7 @@ func (g *Gate) decideLead(ctx context.Context, tx pgx.Tx, r connector.Recipient,
 	// an earlier version applied it at three separate returns and the third was
 	// a hand-inlined partial copy that set Suppression without consulting the
 	// rule.
-	decided, sendPurpose, err := g.decideLeadOnItsRecord(ctx, tx, r, req, d, phase, leadID, len(stops) > 0)
+	decided, sendPurpose, err := g.decideLeadOnItsRecord(ctx, tx, r, req, d, phase, leadID, stops)
 	if err != nil {
 		return commsauthz.Decision{}, err
 	}
@@ -165,7 +165,7 @@ func (g *Gate) decideLead(ctx context.Context, tx pgx.Tx, r connector.Recipient,
 // purpose this send resolved to — nil on the evidence arm, set once the
 // purpose-key arm below has read one off the record — for the same reason
 // decideResolved returns it on the contact path.
-func (g *Gate) decideLeadOnItsRecord(ctx context.Context, tx pgx.Tx, r connector.Recipient, req commsauthz.Request, d commsauthz.Decision, phase commsauthz.Phase, leadID string, suppressed bool) (commsauthz.Decision, *ids.UUID, error) {
+func (g *Gate) decideLeadOnItsRecord(ctx context.Context, tx pgx.Tx, r connector.Recipient, req commsauthz.Request, d commsauthz.Decision, phase commsauthz.Phase, leadID string, stops []liveStop) (commsauthz.Decision, *ids.UUID, error) {
 	purposeKey := req.LegacyPurposeKey
 
 	// The evidence arms, before any purpose key is consulted, through the same
@@ -180,7 +180,7 @@ func (g *Gate) decideLeadOnItsRecord(ctx context.Context, tx pgx.Tx, r connector
 	res, err := g.resolveAndRecord(ctx, tx, req, subjectRef{
 		Kind: entityLead, ID: leadID, Address: address,
 		ChannelProvider: channelProvider, ChannelUserID: channelUserID,
-	}, phase, suppressed)
+	}, phase, stops)
 	if err != nil {
 		return commsauthz.Decision{}, nil, err
 	}

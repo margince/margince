@@ -74,6 +74,29 @@ func purposeSortKey(p *ids.UUID) string {
 	return p.String()
 }
 
+// suppressionBindsAny reports whether ANY live stop binds this category and
+// this send's purpose.
+//
+// The same question applySuppression asks, asked earlier: the basis writers run
+// before the decision is assembled, and what they need to know is not whether
+// the subject carries a stop but whether one reaches THIS message. A contact
+// who objected to marketing and is being sent an invoice carries a live stop
+// that binds nothing here, and the send is lawful — so the ground it relied on
+// belongs on the record like any other.
+//
+// Built from suppressionBinds rather than repeating its cases, so the write and
+// the refusal cannot come to disagree about what a stop covers — including
+// about the send's purpose, which a narrow row is compared against here exactly
+// as applySuppression compares it later.
+func suppressionBindsAny(stops []liveStop, category commsauthz.Category, sendPurpose *ids.UUID) bool {
+	for _, s := range stops {
+		if suppressionBinds(s.Kind, category, s.PurposeID, sendPurpose) {
+			return true
+		}
+	}
+	return false
+}
+
 // suppressionBinds reports whether one kind of suppression stops one category.
 //
 // FOUR RULES, and the default refuses. Each widening below is a deliberate line

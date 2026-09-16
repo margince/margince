@@ -63,7 +63,26 @@ import (
 // waiting on a reply is not recoverable by that queue's reader.
 // personalServiceDomains is the list only this gate and T2 see.
 func (s *Sink) recordWorthy(cp connector.Counterparty) bool {
-	address := strings.TrimSpace(cp.Email)
+	return AddressCouldNameAContact(cp.Email, cp.Domain, s.transactional)
+}
+
+// AddressCouldNameAContact is recordWorthy asked from outside the Sink, and it
+// is the same answer rather than a second one.
+//
+// The verdict lane needs it. A deferred sender reaches a model, and the model
+// answers `contact` for an expense tool's `receipts@` often enough to have put
+// one in a real CRM — fifteen `transactional` answers for that address and one
+// `contact` at 0.95, which is all it takes, because nothing re-reads the
+// fifteen. A question with a right answer readable off the address should not
+// be spent on a model call whose answer varies, and the refusal has to sit
+// where the record is created rather than only at the tier ladder's T1 gate:
+// T1 governs the sink, the verdict path never passes it, and until now nothing
+// deterministic stood between a model's answer and EnsureCounterpartyTx.
+//
+// list carries the operator's `transactional_never` allowlist and may be nil —
+// an installation that declared none, or a caller that holds no registry.
+func AddressCouldNameAContact(email, domain string, list *TransactionalList) bool {
+	address := strings.TrimSpace(email)
 	if address == "" {
 		return false
 	}
@@ -73,12 +92,12 @@ func (s *Sink) recordWorthy(cp connector.Counterparty) bool {
 	if machineLocalpart(address) {
 		return false
 	}
-	if s.transactional != nil && s.transactional.Allowlisted(cp.Domain) {
+	if list != nil && list.Allowlisted(domain) {
 		// The operator declared this domain always-legitimate, which outranks
 		// both domain lists below.
 		return true
 	}
-	base := freemail.Registrable(cp.Domain)
+	base := freemail.Registrable(domain)
 	if base == "" {
 		// Not a hostname. Nothing that cannot be a domain names a company, and
 		// a contact may still be reachable at it, so this is not a refusal.

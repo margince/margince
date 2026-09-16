@@ -1,8 +1,8 @@
 import { ArrowRight, ChevronRight, Pencil, Trash2 } from "lucide-react";
 import { type ReactNode, useState } from "react";
-import { usePlural, useT } from "../i18n";
+import { type Translator, usePlural, useT } from "../i18n";
 import { ActionRow } from "./actionrow";
-import { Button } from "./atoms";
+import { Badge, Button } from "./atoms";
 import { IconAction } from "./iconaction";
 import "./panel.css"; // StagingCard's box is drawn by the panel-ai family.
 import "./trust.css";
@@ -310,62 +310,59 @@ export function ProvenanceTag({
   renderUser?: (userId: string) => ReactNode;
 }>) {
   const t = useT();
-  if (provenance.kind === "agent") {
-    const { agent } = provenance;
-    return (
-      <span className="provenance provenance-agent">
-        {agent ? t("trust.agentTag", { agent }) : t("trust.agentUnnamed")}
-      </span>
-    );
-  }
-  if (provenance.kind === "system") {
-    const { job } = provenance;
-    return (
-      <span className="provenance provenance-system">
-        {job ? t("trust.systemTag", { job }) : t("trust.systemUnnamed")}
-      </span>
-    );
-  }
-  if (provenance.kind === "connector") {
-    return (
-      <span className="provenance provenance-agent">
-        {t("trust.connectorTag", { connector: provenance.connector })}
-      </span>
-    );
-  }
-  if (provenance.kind === "buyer") {
-    return (
-      <span className="provenance provenance-buyer">
-        {t("trust.typedByBuyer")}
-      </span>
-    );
-  }
-  if (provenance.kind === "unknown") {
-    return (
-      <span className="provenance provenance-unknown">
-        {t("trust.sourceUnknown")}
-      </span>
-    );
-  }
-  if (provenance.self) {
-    return (
-      <span className="provenance provenance-human">
-        {t("trust.typedByYou")}
-      </span>
-    );
-  }
-  const named = provenance.userId ? renderUser?.(provenance.userId) : undefined;
+  // Indigo is the claim that a model wrote it, so only the agent arm wears it.
+  // A connector copies what a mailbox already held and a system job runs a
+  // rule nobody inferred: drawn in the AI tone, either would tell a reader a
+  // model decided something. Every other arm is the neutral badge, told apart
+  // by its words.
   return (
-    <span className="provenance provenance-human">
-      {named ? (
+    <Badge tone={provenance.kind === "agent" ? "ai" : "default"}>
+      {provenanceLabel(provenance, t, renderUser)}
+    </Badge>
+  );
+}
+
+/**
+ * The provenance as words alone, for a meta line that names where a value came
+ * from beside other plain words (a fact row's source). The tag above is the
+ * same words on a badge, for a value that stands on its own.
+ */
+export function provenanceLabel(
+  provenance: Provenance,
+  t: Translator,
+  renderUser: ((userId: string) => ReactNode) | undefined,
+): ReactNode {
+  switch (provenance.kind) {
+    case "agent":
+      return provenance.agent
+        ? t("trust.agentTag", { agent: provenance.agent })
+        : t("trust.agentUnnamed");
+    case "system":
+      return provenance.job
+        ? t("trust.systemTag", { job: provenance.job })
+        : t("trust.systemUnnamed");
+    case "connector":
+      return t("trust.connectorTag", { connector: provenance.connector });
+    case "buyer":
+      return t("trust.typedByBuyer");
+    case "unknown":
+      return t("trust.sourceUnknown");
+    case "human": {
+      if (provenance.self) {
+        return t("trust.typedByYou");
+      }
+      const named = provenance.userId
+        ? renderUser?.(provenance.userId)
+        : undefined;
+      return named ? (
         <>
           {t("trust.typedByPrefix")} {named}
         </>
       ) : (
         t("trust.typedByHuman")
-      )}
-    </span>
-  );
+      );
+    }
+  }
 }
 
 // The universal triad, with ONE of the three a call to action. Accept keeps its
@@ -601,12 +598,12 @@ function DiffSide({
   );
 }
 
-// A governed agent's passport id, shown mono so it reads as an identifier.
+// A governed agent's passport id: an agent's identity, so the provenance tone.
 export function PassportChip({ id }: Readonly<{ id: string }>) {
   const t = useT();
   return (
-    <span className="passport-chip" title={t("history.passport")}>
-      {id}
+    <span title={t("history.passport")}>
+      <Badge tone="ai">{id}</Badge>
     </span>
   );
 }

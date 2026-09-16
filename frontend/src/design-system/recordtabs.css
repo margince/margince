@@ -134,7 +134,10 @@
   border-block-end: 2px solid transparent;
   background: none;
   font-family: var(--f-body);
-  font-size: var(--fs-sm);
+  /* The body rung: the strip ends in a Button (the details toggle), and a tab
+     word half a pixel smaller than the button beside it reads as drift, not as
+     a second kind of control. */
+  font-size: var(--fs-body);
   font-weight: var(--fw-medium);
   color: var(--textMeta);
   white-space: nowrap;
@@ -170,8 +173,9 @@
   cursor: default;
 }
 
-/* The count is a figure, so it reads in the mono face where digits share one
-   width — a strip of counts lines up instead of shifting tab to tab. Quieter
+/* The count is a figure, so it reads in tabular digits (`.t-num`, through
+   `OptionCount`) that share one width — a strip of counts lines up instead of
+   shifting tab to tab. Quieter
    than the label it follows: the word is what a reader is looking for and the
    number is what they check once they have found it. */
 .recordtabs-count {

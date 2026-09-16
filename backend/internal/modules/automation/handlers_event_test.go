@@ -72,7 +72,7 @@ func (p *fakeReadProvider) Merge(context.Context, datasource.MergeInput) (dataso
 	panic("fakeReadProvider: Merge not stubbed for this test")
 }
 
-func (p *fakeReadProvider) PromoteLead(context.Context, ids.UUID, string, *string) (datasource.EntityRef, bool, error) {
+func (p *fakeReadProvider) PromoteLead(context.Context, ids.UUID, string, *string, *int64) (datasource.EntityRef, bool, error) {
 	panic("fakeReadProvider: PromoteLead not stubbed for this test")
 }
 

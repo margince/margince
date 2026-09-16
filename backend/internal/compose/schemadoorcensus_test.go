@@ -64,8 +64,8 @@ const schemaDocumentPrefix = "margince://schema/"
 //
 // And it proves a door is REGISTERED, not that it answers. describe_report_
 // vocabulary and describe_analytics_vocabulary are registered on every build
-// behind readers that refuse at call time, so in an overlay workspace this
-// census says a tools-only caller can reach a vocabulary they cannot.
+// behind readers that may refuse at call time, so this census can say a
+// tools-only caller reaches a vocabulary they cannot.
 func TestEveryPublishedSchemaDocumentHasAToolThatAnswersIt(t *testing.T) {
 	specs := servedSurface(t).Specs()
 	if len(specs) == 0 {

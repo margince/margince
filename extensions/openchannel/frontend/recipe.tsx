@@ -126,13 +126,13 @@ export function Recipe({ endpoint }: Readonly<{ endpoint: Endpoint }>) {
         {t("extOpenchannel.recipe.urlNotSecret")}
       </Callout>
       <p className="t-caption">{t("extOpenchannel.recipe.urlLabel")}</p>
-      <pre className="code-block t-mono" data-testid="openchannel-inbound-url">
+      <pre className="code-block" data-testid="openchannel-inbound-url">
         {url}
       </pre>
       <p className="t-caption">
         {t("extOpenchannel.recipe.signedOver", { material: SIGNED_MATERIAL })}
       </p>
-      <pre className="code-block t-mono" data-testid="openchannel-curl">
+      <pre className="code-block" data-testid="openchannel-curl">
         {curlRecipe(
           url,
           endpoint.slug,

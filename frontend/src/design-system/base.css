@@ -60,6 +60,10 @@
      and the field beside it share one token and land on one line. */
   line-height: 1;
   min-block-size: var(--control-h);
+  /* The one resting layer, so a verb has a top side. Every variant carries a
+     fill — the ghost's is the pane — except `link`, which is text and takes it
+     straight back off below. */
+  box-shadow: var(--shadow-rest);
   /* Named properties, not `all`. `transition: <time>` alone is the shorthand
      for `transition-property: all`, which put min-block-size, padding, width
      and font-size on a timer too — so a button whose label changed ("Save" →
@@ -88,9 +92,45 @@
      rows and toolbars, where a 96px minimum is what would break the layout. An
      icon-only control opts out through .btn-icon, which is square by intent. */
   min-inline-size: 6rem;
+  /* And the ceiling that floor made necessary. Naming `min-inline-size` at all
+     replaces the flex `auto` minimum, which is the content width — so from
+     here on a button in a container narrower than its own label shrinks below
+     it instead of refusing to. Capped at the container and measured with the
+     border inside, so the box a caller sees is the box that gets drawn. What
+     the box does with a label too long for it is the label's own business:
+     one of our verbs holds the `nowrap` below, and a label carrying a VALUE
+     says so with `.btn-valuelabel`. */
+  box-sizing: border-box;
+  max-inline-size: 100%;
   gap: var(--space-1);
   white-space: nowrap;
   text-decoration: none;
+}
+
+/* A label that carries a VALUE takes a second line rather than being drawn past
+   the edges of the button holding it.
+ *
+ * `.btn` pins `nowrap` because every other label in the product is one of our
+ * verbs, of a length we chose. A domain, a provider's own sign-in sentence, a
+ * file name — none of those is, and "Keep all of
+ * thraud-2026-09-mtl5igk5616s6.example private" came out of both sides of its
+ * own ghost button at once in a contact's rail.
+ *
+ * `overflow-wrap: anywhere` because the value need not contain a space: a
+ * domain is one long word to a line breaker, and permission to wrap that it
+ * cannot act on is no permission at all.
+ *
+ * Two callers, one spelling. The federated variant needed exactly this pair
+ * first and said so in its own rule; the need is the label being DATA rather
+ * than the variant it arrives in, so both take it from here. */
+.btn-valuelabel,
+.btn-federated {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  /* `.btn` pins the leading at 1 because a one-line label should add none of
+     its own to a box the control's height token decides. Two lines set solid
+     touch. */
+  line-height: 1.25;
 }
 /* Every button in the product had NO focus style: no rule here, none in
    app.css, none in tokens.css or brand.css, so a keyboard reader got whatever
@@ -101,6 +141,9 @@
 .btn:focus-visible {
   outline: var(--focus-ring);
   outline-offset: 2px;
+  /* Pressed in like every other interaction — the ring is drawn outside the
+     box and does not stand in for the layer the way a field's glow does. */
+  box-shadow: none;
 }
 /* An icon a caller drops into a button arrives from lucide at its own default
    of 24px, which is taller than the 13.5px label beside it — 31 call sites
@@ -147,10 +190,12 @@
 /* The agent's own verb. Filled indigo rather than outlined, because it is the
    move the card is recommending and an outlined control beside a bordered
    "not now" offers a reader two equal choices when only one advances the
-   account. */
+   account. --ai does not lift in dark, so the ink is --textOnAccent, the light
+   ink every fill that stays put takes: the dark --textOnAccentControl reads
+   3.26:1 on it. */
 .btn-ai {
   background: var(--ai);
-  color: var(--textOnAccentControl);
+  color: var(--textOnAccent);
 }
 .btn-ai:hover {
   filter: brightness(1.06);
@@ -240,15 +285,9 @@
   padding: 11px 12px;
   /* The label is a SENTENCE the installation wrote, in a language and a length
      nothing here chooses — "Continue with Google", or a German clause twice
-     that. Every other variant labels itself with one of our verbs and holds the
-     `nowrap` on `.btn`; this one has to be allowed to take a second line rather
-     than push its own box past the column it fills. */
-  white-space: normal;
-  /* And the leading that second line needs. `.btn` pins `line-height: 1`
-     because a one-line label should add none of its own to a box `min-block-size`
-     decides; this is the only variant that can wrap, and two lines set solid
-     touch. */
-  line-height: 1.25;
+     that. That is the `.btn-valuelabel` case above, which this variant is
+     named in rather than restating: the wrap belongs to a label that is data,
+     and this is one of the two places such a label arrives. */
   border-radius: var(--r-control);
   border-color: var(--borderControl);
   background: var(--bgElevated);
@@ -313,16 +352,30 @@
  * the finger left, the control comes back. That is the one place a bounce is
  * honest here.
  *
- * `:not(:disabled)` because `:active` and `:disabled` have the same
- * specificity and this rule is the later one: without it a refused button
- * would push down under a press it is not accepting.
+ * BOTH spellings of refusal are excluded, because this product uses both: a
+ * barred control is `:disabled`, and a BUSY one is `[aria-disabled="true"]`,
+ * which stays focusable so a reader can still reach the control that is not
+ * answering yet. Either way the control is refusing the press and is
+ * therefore at rest — a button that travels while the write it is already
+ * running has not come back says it took a second press it did not take.
+ * Naming them is not optional here: `:active` and `:disabled` tie on
+ * specificity and this rule is the later one, so it wins by default.
  */
-.btn:active:not(:disabled),
-.iconbtn:active:not(:disabled) {
+.btn:active:not(:disabled, [aria-disabled="true"]),
+.iconbtn:active:not(:disabled, [aria-disabled="true"]) {
   transform: translateY(1px);
   transition-duration: var(--dur-tap);
 }
-.iconbtn:active:not(:disabled) {
+/* The other half of the press, and the half a hover already starts: the
+   resting layer is the gap between the control and the page, so dropping it
+   is the control going INTO the page rather than chrome arriving around it.
+   The same two refusals the travel above names, for the same reason — a
+   control refusing the press is still at rest, and keeps its layer. */
+.btn:hover:not(:disabled, [aria-disabled="true"]),
+.btn:active:not(:disabled, [aria-disabled="true"]) {
+  box-shadow: none;
+}
+.iconbtn:active:not(:disabled, [aria-disabled="true"]) {
   background: var(--bgCard);
 }
 
@@ -526,7 +579,7 @@ a:not([class]):focus-visible {
 }
 
 /* Conservative type-scale realizing the hierarchy already implied by usage
- * across the app (record headings, field labels, captions, mono figures) —
+ * across the app (record headings, field labels, captions, figures) —
  * no new sizes invented, just named. */
 .t-display {
   font-family: var(--f-display);
@@ -575,8 +628,13 @@ a:not([class]):focus-visible {
   font-size: var(--fs-body);
   color: var(--textContent);
 }
-.t-mono {
-  font-family: var(--f-mono);
+/* A figure that is read down a column — an amount, a count, a percentage, a
+   duration, a date in a table — in the face around it, with every digit one
+   width so the column lines up. The family is never changed for alignment:
+   mono is for code, and a figure is not code. No size either, so it rides on
+   whichever size class or context the figure already sits in. */
+.t-num {
+  font-variant-numeric: tabular-nums;
 }
 /* The eyebrow: the micro-label above the thing it names. THE one spelling of
    uppercase micro-type — five sheets used to carry their own copy of it, at
@@ -596,6 +654,23 @@ a:not([class]):focus-visible {
   letter-spacing: var(--tracking-eyebrow);
   text-transform: uppercase;
   color: var(--textMeta);
+}
+
+/* Mono is for code, and only for code: an element that IS code — `<code>`,
+   `<pre>`, `<samp>` — or the `.code-block` below. Everything else, an id, a key
+   or a figure included, reads in the body face; a figure aligns through `.t-num`
+   instead. `<kbd>` names a key someone presses rather than text a machine
+   reads, so it sits in the body face too — the browser's own sheet would set it
+   in monospace, which is why this says so rather than leaving it to inherit.
+   Held by mono.test.ts and check-font-lock.sh: a mono family on any other
+   selector fails. */
+code,
+pre,
+samp {
+  font-family: var(--f-mono);
+}
+kbd {
+  font-family: var(--f-body);
 }
 
 /* Code / payload preview surface (AI observability: the call-trace panel and
@@ -636,8 +711,8 @@ a:not([class]):focus-visible {
  * so document order is what settles the tie.
  */
 @media (prefers-reduced-motion: reduce) {
-  .btn:active:not(:disabled),
-  .iconbtn:active:not(:disabled) {
+  .btn:active:not(:disabled, [aria-disabled="true"]),
+  .iconbtn:active:not(:disabled, [aria-disabled="true"]) {
     transform: none;
     filter: brightness(0.96);
   }

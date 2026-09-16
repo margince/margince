@@ -36,4 +36,7 @@ var pipelineEventTypes = map[string]struct{}{
 	// is also what keeps it off the subscribable set — see its schema in
 	// api/internal-events.yaml.
 	"brief.opened": {},
+	// Allowance policy belongs to installation settings, not a readable domain
+	// record. Only the internal recovery consumer needs its revision notice.
+	"ai_budget.updated": {},
 }

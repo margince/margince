@@ -10,7 +10,7 @@ import { Badge, EmptyState } from "../design-system/atoms";
 import { Chip } from "../design-system/readings";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { throwProblem, useMe, useSorMode } from "./common";
+import { throwProblem, useMe } from "./common";
 import { CreateAction } from "./create";
 import { useObjectCustomFields } from "./customfields.form";
 import { EntityRef } from "./entityref";
@@ -75,7 +75,7 @@ async function fetchProjectsPage(
 export function PhaseBadge({ phase }: Readonly<{ phase: ProjectPhase }>) {
   const t = useT();
   return (
-    <Badge tone={phase === "closed" ? undefined : "success"} quiet>
+    <Badge tone={phase === "closed" ? undefined : "success"}>
       {t(PHASE_LABEL[phase])}
     </Badge>
   );
@@ -83,7 +83,7 @@ export function PhaseBadge({ phase }: Readonly<{ phase: ProjectPhase }>) {
 
 /**
  * The key as a fact chip. A key is the handle a human writes in a subject
- * line, so it draws in the mono face beside the name rather than as a status.
+ * line, so it draws as a fact beside the name rather than as a status.
  */
 export function ProjectKeyChip({
   projectKey,
@@ -101,10 +101,7 @@ export function ProjectKeyChip({
         A reader learns it once by hovering the code they are already looking
         at; a permanent sentence under the title pays every day for a lesson
         taught once, which is what it was doing. */}
-      <span
-        className="t-mono"
-        title={t("project.keyMinted", { key: projectKey })}
-      >
+      <span title={t("project.keyMinted", { key: projectKey })}>
         {projectKey}
       </span>
     </Chip>
@@ -184,7 +181,6 @@ export function ProjectsScreen() {
   const { locale } = useLocale();
   const recordZone = useRecordZone();
   const me = useMe();
-  const overlay = useSorMode() === "overlay";
   const companies = useCompanyOptions();
   const views = useSavedViews("projects");
   const savedViews = useSavedViewTabs("projects");
@@ -197,7 +193,7 @@ export function ProjectsScreen() {
   // mounts its own copy of this verb, and a button pressed in the table's
   // header a moment before the plate replaces it would open a dialog the
   // swap throws away.
-  const createAction = !overlay && !state.isPending && (
+  const createAction = !state.isPending && (
     <NewProjectAction companies={companies} me={me.data?.user.id ?? ""} />
   );
   // The first-run plate: nothing exists yet, and nothing is narrowing the

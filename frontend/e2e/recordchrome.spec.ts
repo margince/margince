@@ -128,17 +128,30 @@ test.describe("the record's rhythm", () => {
    *  restated here: a suite that hard-codes 20px passes a tree that has moved
    *  the whole scale and fails one that has renamed nothing. */
   async function recordStep(page: Page): Promise<number> {
-    const step = await page.evaluate(() =>
-      Number.parseFloat(
-        getComputedStyle(document.documentElement).getPropertyValue(
-          "--space-5",
+    return token(page, "--space-5");
+  }
+
+  /** The interval under the tab strip. On a record drawn on a sheet the strip
+   *  is stuck inside the sheet and the first card under it keeps the stack's
+   *  own gap, so the strip-to-card interval reads as one more card-to-card
+   *  interval; every other record keeps the record step. */
+  async function stripStep(page: Page): Promise<number> {
+    const sheet = await page.locator(".record-sheet").count();
+    return token(page, sheet > 0 ? "--space-6" : "--space-5");
+  }
+
+  async function token(page: Page, name: string): Promise<number> {
+    const value = await page.evaluate(
+      (name) =>
+        Number.parseFloat(
+          getComputedStyle(document.documentElement).getPropertyValue(name),
         ),
-      ),
+      name,
     );
-    if (!Number.isFinite(step) || step <= 0) {
-      throw new Error("the page publishes no --space-5 to measure against");
+    if (!Number.isFinite(value) || value <= 0) {
+      throw new Error(`the page publishes no ${name} to measure against`);
     }
-    return step;
+    return value;
   }
 
   /** A pixel of tolerance, because a gap between two laid-out boxes is
@@ -151,9 +164,9 @@ test.describe("the record's rhythm", () => {
     ).toBeLessThanOrEqual(1);
   }
 
-  /** Opens the record with its details pane out, measures every interval the
-   *  opening claims, and answers the band's edges — or null on a record with
-   *  nothing to say about itself as a whole, which draws none. */
+  /** Opens the record, whose details pane is out on arrival, measures every
+   *  interval the opening claims, and answers the band's edges, or null on a
+   *  record with nothing to say about itself as a whole, which draws none. */
   async function measureOpening(
     page: Page,
     route: string,
@@ -168,15 +181,14 @@ test.describe("the record's rhythm", () => {
     // rest from the first frame.
     await page.emulateMedia({ reducedMotion: "reduce" });
     await openRecord(page, route, options);
-    await detailsSwitch(page).click();
     await expect(
       page.locator(".record-aside"),
-      "the switch did not open the pane",
+      "the pane is not open on arrival",
     ).toBeVisible();
 
     const step = await recordStep(page);
     const head = await present(page, ".record-head");
-    const tabs = await present(page, ".record-tabs");
+    const tabs = await present(page, "[data-testid='record-tabs']");
     const band = await edge(page, ".record-band");
     // The work column rather than the grid around it: a record with neither
     // rail nor aside draws no `.page-zones` at all, and this column is the
@@ -194,7 +206,7 @@ test.describe("the record's rhythm", () => {
     const next = band ?? columns;
     isOneStep(
       next.top - tabs.bottom,
-      step,
+      await stripStep(page),
       "the block under the strip does not sit one interval below it",
     );
     if (band) {
@@ -258,15 +270,18 @@ test.describe("the record's details pane", () => {
       await openRecord(page, record.route);
 
       const pane = page.locator(".record-aside");
-      // Closed on arrival: the pane is where a reader goes for the attributes,
-      // not what they open a record to see.
-      await expect(pane, "the pane is open on arrival").toBeHidden();
+      // Open on arrival: the attributes stand beside the work from the first
+      // frame, and the switch at the end of the tab row is how a reader
+      // folds them away and brings them back.
+      await expect(pane, "the pane is not open on arrival").toBeVisible();
       await detailsSwitch(page).click();
-      await expect(pane, "the switch did not open the pane").toBeVisible();
+      await expect(pane, "the switch did not close the pane").toBeHidden();
+      await detailsSwitch(page).click();
+      await expect(pane, "the switch did not reopen the pane").toBeVisible();
 
       const paneBox = await pane.boundingBox();
       const work = await page.locator(".page-zones-main").boundingBox();
-      const tabs = await page.locator(".record-tabs").boundingBox();
+      const tabs = await page.locator("[data-testid='record-tabs']").boundingBox();
       if (!paneBox || !work || !tabs) {
         throw new Error(
           "the pane, the work column and the tab row are visible but one has no box",
@@ -294,26 +309,34 @@ test.describe("the record's details pane", () => {
         await openRecord(page, record.route);
 
         const pane = page.locator(".record-aside");
-        await expect(pane, "the pane is open on arrival").toBeHidden();
-        await detailsSwitch(page).click();
         if (mobileDrawer) {
+          // The phone drawer is the one shape that waits to be asked for.
+          await expect(pane, "the pane is open on arrival").toBeHidden();
+          await detailsSwitch(page).click();
           const dialog = page.getByRole("dialog", {
             name: "Details & Berechtigungen",
           });
           await expect(dialog).toBeVisible();
           await expect(dialog.getByTestId("contact-rail")).toBeVisible();
           await expect(pane).toHaveCount(0);
-          const box = await dialog.boundingBox();
-          if (!box) throw new Error("the visible Details drawer has no box");
-          expect(box.x).toBeGreaterThanOrEqual(0);
-          expect(box.x + box.width).toBeLessThanOrEqual(width + 1);
-          expect(box.width).toBeGreaterThan(width * 0.9);
+          // Where the drawer comes to REST, not where it is on the frame it
+          // became visible: it arrives by sliding in from the trailing edge,
+          // so measured on the first visible frame it is still most of a
+          // screen to the right of where it lands. Retried rather than waited
+          // out, so the assertion needs no copy of the duration.
+          await expect(async () => {
+            const box = await dialog.boundingBox();
+            if (!box) throw new Error("the visible Details drawer has no box");
+            expect(box.x).toBeGreaterThanOrEqual(0);
+            expect(box.x + box.width).toBeLessThanOrEqual(width + 1);
+            expect(box.width).toBeGreaterThan(width * 0.9);
+          }).toPass();
           await page.keyboard.press("Escape");
           await expect(dialog).toBeHidden();
           await expect(detailsSwitch(page)).toBeFocused();
           return;
         }
-        await expect(pane, "the switch did not open the pane").toBeVisible();
+        await expect(pane, "the pane is not open on arrival").toBeVisible();
 
         const paneBox = await pane.boundingBox();
         const work = await page.locator(".page-zones-main").boundingBox();

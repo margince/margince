@@ -1,6 +1,7 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render as rtlRender, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { meFixture } from "../../app/mefixture";
@@ -175,4 +176,81 @@ it("says which question went unanswered rather than dropping the row", async () 
   );
   expect(await screen.findByText("Who else?")).toBeTruthy();
   expect(screen.getByText("Not answered")).toBeTruthy();
+});
+
+it("shows a review the reader just wrote, without a reload", async () => {
+  // The list is a cached read; writing to it is a POST. Nothing on screen
+  // changes unless the write says so, and a panel still inviting a review the
+  // reader has just written is how somebody files a second one.
+  let written = false;
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const req =
+        input instanceof Request ? input : new Request(String(input), init);
+      if (req.method === "POST") {
+        written = true;
+        return new Response(JSON.stringify(REVIEW), {
+          status: 201,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      const body = req.url.endsWith("/v1/me")
+        ? meFixture({ allow: { activity: ["read", "create"] } })
+        : req.url.includes("outcome-reviews")
+          ? { data: written ? [REVIEW] : [] }
+          : { data: TEMPLATES };
+      return new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }),
+  );
+
+  render(
+    <OutcomeReviewPanel
+      dealId="d-1"
+      status="won"
+      closingOccurrenceId={CLOSING}
+    />,
+  );
+  await userEvent.click(
+    await screen.findByRole("button", { name: "Add review" }),
+  );
+  await userEvent.type(
+    await screen.findByRole("textbox", { name: /Why did we win/ }),
+    "Price.",
+  );
+  await userEvent.click(screen.getByRole("button", { name: "Save review" }));
+
+  expect(await screen.findByText("Price.")).toBeTruthy();
+});
+
+it("renders the selected choices from the frozen review", async () => {
+  stubFetch([
+    {
+      ...REVIEW,
+      questions: [
+        {
+          key: "reasons",
+          label: "Reasons",
+          type: "multiselect",
+          required: false,
+          options: ["Fit, scope", "Trust"],
+        },
+      ],
+      answers: {},
+      choice_answers: { reasons: ["Fit, scope", "Trust"] },
+    },
+  ]);
+  render(
+    <OutcomeReviewPanel
+      dealId="d-1"
+      status="won"
+      closingOccurrenceId={CLOSING}
+    />,
+  );
+  expect((await screen.findByText("Fit, scope, Trust")).textContent).toBe(
+    "Fit, scope, Trust",
+  );
 });

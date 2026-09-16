@@ -262,9 +262,7 @@ function UndoButton({
       >
         {t(label)}
       </Button>
-      {refused && (
-        <span className="entry-undo-refusal t-caption">{refused}</span>
-      )}
+      {refused && <span className="t-caption">{refused}</span>}
       <ConfirmModal
         open={confirming}
         onClose={() => setConfirming(false)}
@@ -353,7 +351,7 @@ function HistoryEntryRow({
             // sentence above was fixed to avoid.
             renderUser={() => entry.actor_name}
           />
-          {note && <span className="entry-note t-caption">{note}</span>}
+          {note && <span className="t-caption">{note}</span>}
         </span>
         {edge ? (
           <HistoryEdgeDetail edge={edge} />

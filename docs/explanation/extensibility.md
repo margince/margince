@@ -309,7 +309,11 @@ validated to the full identifier budget, so a name chosen today stays valid for 
   that is merged into the composed `crm.yaml`. `build/composition/api/crm.yaml` is a real merge now, not
   a byte-copy of the core contract.
 - **Its own governed tools** — an `x-mcp-tool` verb on a declared operation, served through the same
-  admission gate a core tool passes, at the tier and scope the contract declares.
+  admission gate a core tool passes, at the tier and scope the contract declares. An operation that
+  should stay REST/UI-reachable but never agent-reachable declares `x-agent-access: human-only`
+  instead — core's own vocabulary, restated for extensions (`docs/how-to/add-an-extension.md`).
+  `openchannel`'s whole surface is `human-only`: it mints and returns a durable signing secret over an
+  anonymous edge, which is not a capability any agent should hold unattended.
 - **Its own scheduled jobs** — declared in a `jobs.yaml` fragment, dispatched as a fleet fan-out with a
   worker child per live tenant.
 - **Its own secret namespace** — reached through `Runtime.Secrets()`, keyed by the unit's own bare names.
@@ -455,7 +459,6 @@ The tier is defended by fitness tests and scripts, so the guarantees can't rot i
 | A `Send` without a `Live` is refused, and the core asks `Live` BEFORE handing over a message — a disconnected member parks where a human can see it, an unreachable provider is retried | `backend/pkg/extension/channel.go`, `internal/compose/extchannelsend.go` |
 | A unit's listener consumes only the streams its declared event types route to, and no core group consumes the extension stream | `internal/compose/extsubscribe.go`, `internal/shared/kernel/events/extensiontypes_test.go` |
 | A subscription naming an event type nothing can route is refused at boot, rather than registering a consumer group that never delivers | `internal/compose/extensions.go` (`preflightSubscriptions`) |
-| A core write is refused in an overlay workspace rather than landing in a native table nothing reads, resolved FRESH per write | `internal/compose/extcore.go` (`admit` → `overlayModeOf`) |
 | A unit's shipped `migrations/` is actually embedded and applied — the directory and the field are two facts, and the gates read different ones | `backend/tools/gen-composition` (the `Migrations` field must name a var whose `//go:embed` covers the layer) |
 | The runtime pool is not the migration owner: no superuser, no BYPASSRLS, and no ownership of the `ext` schema *or* anything in it | `compose.AssertRuntimeRole`, at boot and on `/readyz` |
 | A declaration the composer cannot honour is refused rather than discarded — an unknown job role, governance declared on the wrong half of a pair, a `$ref` in an advertised schema, a multi-document base contract | `backend/tools/gen-composition` |

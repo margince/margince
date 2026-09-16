@@ -171,7 +171,7 @@ export function ScheduleDialog({
                   <button
                     key={option}
                     type="button"
-                    className="schedule-hour t-mono"
+                    className="schedule-hour t-num"
                     aria-pressed={option === hour}
                     onClick={() => setHour(option)}
                   >

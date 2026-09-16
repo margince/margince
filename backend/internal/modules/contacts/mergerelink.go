@@ -127,6 +127,10 @@ func relinkContactReferences(ctx context.Context, tx pgx.Tx, sourceID, targetID 
 	if err := relinkAcquisitionAndDuty(ctx, tx, sourceID, targetID); err != nil {
 		return counts, err
 	}
+	// What a reader DECIDED and what is still OPEN, in mergesatellites.go.
+	if err := relinkStrandedSatellites(ctx, tx, sourceID, targetID); err != nil {
+		return counts, err
+	}
 	// The promotion outcome pointer follows the survivor so a
 	// re-promote 409 names a live contact.
 	if _, err := tx.Exec(ctx,

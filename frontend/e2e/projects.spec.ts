@@ -52,14 +52,13 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
   // SHOW the key it was given. This is the half a create form could not prove
   // once the field was removed: without it, a create that came back with no key
   // at all would look exactly like a success.
-  // Scoped to the mono chip: the key also appears in the prose that explains
-  // what a key is for, and a bare text match would pass on the explanation
-  // alone — which renders whether or not the project actually got a key.
-  await expect(
-    page
-      .locator(".t-mono")
-      .filter({ hasText: new RegExp(`^${MOCK_MINTED_KEY}$`) }),
-  ).toBeVisible();
+  // Scoped to the key chip — the element whose hover text explains what THIS
+  // key is for — and asserted to read the key alone: a bare text match would
+  // pass on the explanation, which renders whether or not the project actually
+  // got a key.
+  const keyChip = page.getByTitle(`[${MOCK_MINTED_KEY}]`);
+  await expect(keyChip).toBeVisible();
+  await expect(keyChip).toHaveText(MOCK_MINTED_KEY);
   await expect(
     page.getByRole("heading", { level: 1, name: "Brandt ERP" }),
   ).toBeVisible();
@@ -67,11 +66,8 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
   // The current phase is the one step rendered as text, not as a button.
   const current = phase.locator('[aria-current="step"]');
   await expect(current).toHaveText("Initiative");
-  // The phase history lives in the details column, which starts closed: the
-  // reader opens it from the Details switch before the birth row is on screen.
-  // That switch stands at the end of the tab row, where every record page
-  // carries it, so it is found by its name rather than by where it sits.
-  await page.getByRole("button", { name: "Details" }).click();
+  // The phase history lives in the details column, which is open on arrival,
+  // so the birth row is on screen without a press.
   await expect(page.getByText("Gestartet in Initiative")).toBeVisible();
   await expect(
     page.getByText("Unter diesem Projekt ist noch nichts abgelegt", {

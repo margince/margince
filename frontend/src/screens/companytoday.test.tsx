@@ -368,17 +368,43 @@ describe("the day's call, and which record it is read from", () => {
         },
       },
     });
-    fireEvent.click(screen.getByRole("button", { name: /What this rests on/ }));
-    // The verbatim words lead; the claim, the kind of record and the day it
-    // was said sit under them as the origin line.
+    // The evidence chip and its verbatim words sit under the reason,
+    // captioned "What this is based on" rather than behind a disclosure.
+    expect(screen.getByText("What this is based on")).toBeTruthy();
     expect(
       screen.getByText("We'll get the contract over to you by Friday."),
     ).toBeTruthy();
+    expect(screen.getByText("They will send the contract")).toBeTruthy();
+  });
+
+  // A task's evidence is its own subject: a disclosure that opens on the
+  // headline restated answers nothing, so the card draws none.
+  it("draws no rests-on box for a promise whose only evidence restates it", () => {
+    show({
+      ...BASE,
+      moment: {
+        claim_key: "moment:open_promise",
+        evidence_fingerprint: "fp-2",
+        rule: "open_promise",
+        headline: "You owe them: Send the signed contract",
+        why_now: "Due in 2 days.",
+        confidence: "observed_fact",
+        evidence: [
+          { type: "task", id: "a-2", label: "Send the signed contract" },
+        ],
+        recommended_action: {
+          kind: "complete_task",
+          label: "Open it from the task list",
+          state: "blocked",
+        },
+      },
+    });
     expect(
-      screen.getByText(
-        "They will send the contract · From an exchange · 03/08/2026",
-      ),
+      screen.getByText("You owe them: Send the signed contract"),
     ).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: /What this rests on/ }),
+    ).toBeNull();
   });
 
   it("carries the account's suggestions as moves alongside the context band", () => {

@@ -136,7 +136,7 @@ func setupRunner(t *testing.T) *runnerEnv {
 	return &runnerEnv{
 		AppEnv: e,
 		pool:   pool,
-		svc: compose.NewRunnerService(pool, modelPath.AgentLoop, modelPath.DraftReply, nil, logger, nil,
+		svc: compose.NewRunnerService(pool, modelPath.AgentLoop, modelPath.DraftReply, nil, logger,
 			compose.SendPath{}, compose.WithSpecResolver(stagingSpec)),
 		store: runner.NewStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](wsID))),
 		brain: brain,

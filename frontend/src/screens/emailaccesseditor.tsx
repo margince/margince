@@ -95,7 +95,7 @@ export function EmailAccessEditor({
     <div className="emailaccess">
       <VisibilityLine
         state={access.display_status}
-        marks={reasonKey && <Badge quiet>{t(reasonKey)}</Badge>}
+        marks={reasonKey && <Badge>{t(reasonKey)}</Badge>}
         action={changeable && <ChangeAccess presentation={presentation} />}
       />
       {sentence && <p className="emailaccess__sentence">{t(sentence)}</p>}
@@ -272,51 +272,49 @@ function MessageAudience({
       >
         {t("compose.audience")}
       </Button>
-      {open && (
-        <ConfirmModal
-          open={open}
-          onClose={() => setOpen(false)}
-          title={t("compose.audienceTitle")}
-          confirmLabel={t("compose.audienceConfirm")}
-          confirmDisabled={
-            unchanged || (choice === "selected" && members.length === 0)
-          }
-          onConfirm={() =>
-            mutation.mutate({
-              activityId: presentation.id,
-              version: presentation.version,
-              audience: choice,
-              members: choice === "selected" ? members : undefined,
-            })
-          }
-          pending={mutation.isPending}
-          error={mutation.isError ? problemMessageOf(mutation.error, t) : null}
-        >
-          <div className="compose-fields">
-            <ChoiceList
-              legend={t("compose.audienceLegend")}
-              value={choice}
-              onChange={setChoice}
-              choices={AUDIENCE_CHOICES.map((value) => ({
-                value,
-                label: t(AUDIENCE_LABEL[value]),
-                description: t(AUDIENCE_HINT[value]),
-              }))}
-            />
-            {/* The picker only where the choice needs one. A limited-to-nobody
+      <ConfirmModal
+        open={open}
+        onClose={() => setOpen(false)}
+        title={t("compose.audienceTitle")}
+        confirmLabel={t("compose.audienceConfirm")}
+        confirmDisabled={
+          unchanged || (choice === "selected" && members.length === 0)
+        }
+        onConfirm={() =>
+          mutation.mutate({
+            activityId: presentation.id,
+            version: presentation.version,
+            audience: choice,
+            members: choice === "selected" ? members : undefined,
+          })
+        }
+        pending={mutation.isPending}
+        error={mutation.isError ? problemMessageOf(mutation.error, t) : null}
+      >
+        <div className="compose-fields">
+          <ChoiceList
+            legend={t("compose.audienceLegend")}
+            value={choice}
+            onChange={setChoice}
+            choices={AUDIENCE_CHOICES.map((value) => ({
+              value,
+              label: t(AUDIENCE_LABEL[value]),
+              description: t(AUDIENCE_HINT[value]),
+            }))}
+          />
+          {/* The picker only where the choice needs one. A limited-to-nobody
                 audience is not a limit anybody meant, so the confirm above
                 refuses an empty set rather than writing it. */}
-            {choice === "selected" && (
-              <AudienceMembers
-                candidates={candidates}
-                chosen={members}
-                onChange={setMembers}
-              />
-            )}
-            <p className="t-caption">{t("compose.audienceNote")}</p>
-          </div>
-        </ConfirmModal>
-      )}
+          {choice === "selected" && (
+            <AudienceMembers
+              candidates={candidates}
+              chosen={members}
+              onChange={setMembers}
+            />
+          )}
+          <p className="t-caption">{t("compose.audienceNote")}</p>
+        </div>
+      </ConfirmModal>
     </span>
   );
 }

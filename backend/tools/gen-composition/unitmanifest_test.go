@@ -553,6 +553,26 @@ func TestToolDerivesIntoRiskTier(t *testing.T) {
 	}
 }
 
+// TestAHumanOnlyToolRequestsNoRiskTier: a verb declaring x-agent-access:
+// human-only requests no agent authority, so it contributes no
+// risk-tier request — symmetric with TestJurisdictionPackRequestsNoRiskTier,
+// and with why a human-only core operation carries no tier for an operator to
+// resolve either.
+func TestAHumanOnlyToolRequestsNoRiskTier(t *testing.T) {
+	src := toolUnitSource("\t\t\tName: \"human_op\",")
+	verb := syntheticVerb("x", "human_op", "", "")
+	verb.verb.HumanOnly = true
+	verb.verb.RbacObject = "ext_x_widget"
+	verb.verb.RbacAction = extension.RbacUpdate
+	derived, err := deriveSynthetic(t, "x", src, verb)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(derived), `"tool/human_op"`) {
+		t.Fatalf("a human-only verb must produce no risk-tier request — nothing for an operator to resolve:\n%s", derived)
+	}
+}
+
 // TestEveryDescriptorFieldMovesTheDigest: the widened descriptor is only worth
 // widening if each field it names actually re-opens operator resolution. One
 // mutation per field, against the same baseline — a field present in the JSON

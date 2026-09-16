@@ -108,7 +108,6 @@ func censusJobConfig() JobRunnerConfig {
 		GmailWatch:             GmailWatchConfig{Topic: "projects/census/topics/census", Interval: censusInterval},
 		GraphWatch:             GraphWatchConfig{NotificationURL: "https://census.example/webhooks/graph", Interval: censusInterval},
 		ChannelVault:           keyvault.NewMemory(),
-		OverlayVault:           keyvault.NewMemory(),
 		ClassifyBrain:          seam,
 		OwedBrain:              seam,
 		EnrichBrain:            seam,
@@ -132,7 +131,6 @@ func censusJobConfig() JobRunnerConfig {
 		CloseDateInterval:      censusInterval,
 		ReconcileInterval:      censusInterval,
 		TimeScanInterval:       censusInterval,
-		OverlayInterval:        censusInterval,
 	}
 }
 

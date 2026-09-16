@@ -20,8 +20,8 @@ import type { ConversationQuestion } from "./conversation-machine";
 export type CandidateFacts = Readonly<{
   /** The reading-size line under the name (a registered address). */
   meta?: string;
-  /** The mono detail line (registry / VAT number). */
-  mono?: string;
+  /** The identifier line under the name (registry / VAT number). */
+  identifier?: string;
   /** The verbatim quote and the page it was read from. */
   snippet?: string;
   source?: string;
@@ -152,9 +152,9 @@ function CandidateCard({
             {facts?.meta !== undefined && facts.meta !== "" && (
               <span>{facts.meta}</span>
             )}
-            {((facts?.mono !== undefined && facts.mono !== "") ||
+            {((facts?.identifier !== undefined && facts.identifier !== "") ||
               (detail !== undefined && detail !== "")) && (
-              <small className="t-caption">{facts?.mono || detail}</small>
+              <small className="t-caption">{facts?.identifier || detail}</small>
             )}
           </span>
         </label>
@@ -162,7 +162,7 @@ function CandidateCard({
           // The consequence, beside the choice rather than after it. Two
           // candidates can read almost identically and put very different
           // strings on a record every later screen quotes, so the string itself
-          // is shown, verbatim and in mono, before the answer is given.
+          // is shown, verbatim, before the answer is given.
           <span className="ob-decision-writes">
             <span className="ob-decision-writes-lead">
               {t("ob.conv.scene.writes")}

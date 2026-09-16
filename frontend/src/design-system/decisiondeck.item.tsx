@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { Disclosure } from "./atoms";
+import { Badge, Disclosure } from "./atoms";
 import { type DecisionApproval, DecisionCard } from "./decisioncard";
 import type {
   DecisionDeckChips,
@@ -61,9 +61,8 @@ export function DeckItemCard({
         <>
           {trim.meta}
           {members.length > 0 && (
-            <span className="ddeck-bundle-count">
-              {labels.bundleSummary(members.length)}
-            </span>
+            // A fact about the card rather than a status: the neutral tone.
+            <Badge>{labels.bundleSummary(members.length)}</Badge>
           )}
         </>
       }

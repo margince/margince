@@ -8,7 +8,7 @@
 // the record.
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { watchStartedAiRun } from "../app/ai-activity";
@@ -21,6 +21,7 @@ import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, throwProblem } from "./common";
+import { factsKey } from "./companyfactspanel";
 import { type ConfiguredStopReason, stopIsConfigured } from "./sitereadkind";
 
 type SiteReadReport = components["schemas"]["SiteReadReport"];
@@ -125,6 +126,7 @@ type SiteReadStopReason = NonNullable<SiteReadReport["stopped_reason"]>;
 const SITE_READ_CAPPED_LABELS: Record<ConfiguredStopReason, MessageKey> = {
   page_cap: "deepread.statusPageCapped",
   byte_cap: "deepread.statusByteCapped",
+  deadline: "deepread.statusTimeCapped",
 };
 
 /**
@@ -139,7 +141,6 @@ const SITE_READ_STOP_LABELS: Record<
   MessageKey
 > = {
   budget: "deepread.stopBudget",
-  deadline: "deepread.stopDeadline",
 };
 
 /**
@@ -193,6 +194,7 @@ function SiteReadPanel({
   const plural = usePlural();
   const t = useT();
   const { locale } = useLocale();
+  const queryClient = useQueryClient();
   const reportQuery = useQuery({
     queryKey: ["site-read", companyId, readId],
     queryFn: async () => {
@@ -214,6 +216,32 @@ function SiteReadPanel({
     },
   });
 
+  // Terminal, computed off the STATUS rather than the report itself, because
+  // this has to stay a hook called on every render — including the pending
+  // and error ones below — and the report is only defined once neither of
+  // those early returns fires. `cancelled` is terminal on the wire (the
+  // engine never resumes one), same as `done`/`partial`/`failed`.
+  const status = reportQuery.data?.status;
+  const terminal =
+    status === "done" ||
+    status === "partial" ||
+    status === "failed" ||
+    status === "cancelled";
+  // The facts this read staged land on the SAME query the Facts and
+  // Technology panels already hold, and nothing else watches this read for
+  // them: the start mutation invalidates `site-read-latest`, not the facts
+  // themselves, because at that moment there are none yet. This effect only
+  // re-runs when `terminal` actually changes, so it fires once per read
+  // reaching a terminal status — on the poll that lands there for a read
+  // this tab is watching live, and on MOUNT for one that already had, which
+  // is what covers a read started from elsewhere (Overview, or another tab)
+  // and finished before this panel existed to poll it.
+  useEffect(() => {
+    if (terminal) {
+      queryClient.invalidateQueries({ queryKey: factsKey(companyId) });
+    }
+  }, [terminal, companyId, queryClient]);
+
   if (reportQuery.isPending) {
     return <Skeleton width="60%" />;
   }
@@ -226,10 +254,6 @@ function SiteReadPanel({
   }
 
   const report = reportQuery.data;
-  const terminal =
-    report.status === "done" ||
-    report.status === "partial" ||
-    report.status === "failed";
 
   return (
     <div style={{ marginTop: "var(--space-3)" }}>

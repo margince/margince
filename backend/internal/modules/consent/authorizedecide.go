@@ -35,7 +35,7 @@ import (
 // not, the caller asks its own subject kind's grant, which is the ONLY part
 // that differs: a contact's is VerdictForContact and a lead's is grantedForLead,
 // and each reads a column the other's query does not.
-func (g *Gate) resolveAndRecord(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef, phase commsauthz.Phase, suppressed bool) (resolution, error) {
+func (g *Gate) resolveAndRecord(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef, phase commsauthz.Phase, stops []liveStop) (resolution, error) {
 	res, err := g.resolveCategory(ctx, tx, req, subject)
 	if err != nil {
 		return resolution{}, err
@@ -54,13 +54,32 @@ func (g *Gate) resolveAndRecord(ctx context.Context, tx pgx.Tx, req commsauthz.R
 	// UNSCOPED row matching every other unscoped one, collapsing the thread
 	// separation staging established. Transmit still re-checks the
 	// evidence; what it does not do is write a second, weaker record of it.
-	// NOT WHILE A SUPPRESSION STANDS. A basis row asserts we hold a lawful
-	// ground to write to this contact; writing one about somebody whose
+	// NOT WHILE A SUPPRESSION BINDS THIS MESSAGE. A basis row asserts we hold a
+	// lawful ground to write to this contact; writing one about somebody whose
 	// processing is restricted is itself processing, and it lands in their own
 	// Art. 15 export as a claim made after they said stop. The category is
 	// still resolved — the decision row records what the message was — but the
 	// ground is not written down.
-	if phase == commsauthz.PhaseStaging && !suppressed {
+	//
+	// BINDS, not merely stands. This asked whether the subject held any live
+	// stop at all, which is a different question: an objection to marketing
+	// does not reach an invoice, and the invoice goes out lawfully with no
+	// record of the ground it went out on. Their own Art. 15 export then
+	// answered "we relied on nothing" for a send that was in fact lawful —
+	// the exact gap the paragraph above says this write exists to close.
+	//
+	// res.Category is what the decision resolves to on every path that reaches
+	// here: the supported arm sets d.Resolved from it whether it allows,
+	// contradicts, or finds a withdrawal. So this is the same test
+	// applySuppression will apply to the same message, asked once earlier.
+	//
+	// NIL PURPOSE, and not because one is merely unavailable yet: this write
+	// is reached only on the SUPPORTED arm, and every supported arm returns
+	// above legacyVerdictFor without consulting a purpose key at all. A send
+	// resolved on a thread or a live deal has no purpose for a narrow stop to
+	// match, so nil is the purpose it will still have when applySuppression
+	// asks — the same answer, not a guess standing in for one.
+	if phase == commsauthz.PhaseStaging && !suppressionBindsAny(stops, res.Category, nil) {
 		w, err := g.store.packRulesFor(ctx, tx)
 		if err != nil {
 			return resolution{}, err
@@ -124,8 +143,8 @@ func denyContradiction(d commsauthz.Decision, resolved commsauthz.Category) comm
 // Also returns the send's own resolved PURPOSE, for applySuppression: nil on
 // the evidence arms below (a thread or a live deal names a category, never a
 // purpose key), and set once legacyVerdictFor has read one off the record.
-func (g *Gate) decideResolved(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef, d commsauthz.Decision, phase commsauthz.Phase, suppressed bool) (commsauthz.Decision, *ids.UUID, error) {
-	res, err := g.resolveAndRecord(ctx, tx, req, subject, phase, suppressed)
+func (g *Gate) decideResolved(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef, d commsauthz.Decision, phase commsauthz.Phase, stops []liveStop) (commsauthz.Decision, *ids.UUID, error) {
+	res, err := g.resolveAndRecord(ctx, tx, req, subject, phase, stops)
 	if err != nil {
 		return commsauthz.Decision{}, nil, err
 	}
@@ -198,7 +217,7 @@ func (g *Gate) decideResolved(ctx context.Context, tx pgx.Tx, req commsauthz.Req
 	// TestAnUnsupportedClaimIsRecordedButNeverResolvedTo, which is what that
 	// test's own comment records.
 	d.Requested = res.Category
-	return g.legacyVerdictFor(ctx, tx, subject.ID, req.LegacyPurposeKey, req.Context, res, d, suppressed)
+	return g.legacyVerdictFor(ctx, tx, subject.ID, req.LegacyPurposeKey, req.Context, res, d, stops)
 }
 
 // legacyVerdictFor answers on the old purpose model when the record supports no
@@ -214,7 +233,7 @@ func (g *Gate) decideResolved(ctx context.Context, tx pgx.Tx, req commsauthz.Req
 // caller's suppression re-check needs it to tell a narrow row that binds this
 // purpose from one that binds some OTHER marketing purpose, which
 // suppressionBinds cannot do from the category alone.
-func (g *Gate) legacyVerdictFor(ctx context.Context, tx pgx.Tx, contactID, purposeKey string, claimed commsauthz.Category, res resolution, d commsauthz.Decision, suppressed bool) (commsauthz.Decision, *ids.UUID, error) {
+func (g *Gate) legacyVerdictFor(ctx context.Context, tx pgx.Tx, contactID, purposeKey string, claimed commsauthz.Category, res resolution, d commsauthz.Decision, stops []liveStop) (commsauthz.Decision, *ids.UUID, error) {
 	purpose, defined, err := purposeRowFor(ctx, tx, purposeKey)
 	if err != nil {
 		return commsauthz.Decision{}, nil, err
@@ -323,10 +342,15 @@ func (g *Gate) legacyVerdictFor(ctx context.Context, tx pgx.Tx, contactID, purpo
 		// it (Art. 5(2)). The engine is the only authority now, so it is the
 		// only thing left that can make that record: grantedForRecipient used
 		// to stamp here, and nothing calls it on the send path any more.
-		// Not while a suppression stands, for recordBasis's reason: the stamp
-		// writes a consent_qualifying_event asserting a ground to correspond,
-		// and the send is about to be refused anyway.
-		if err := stampDerivedBasis(ctx, tx, contactID, verdict, suppressed); err != nil {
+		// Not while a suppression BINDS, for recordBasis's reason and with its
+		// correction: the stamp writes a consent_qualifying_event asserting a
+		// ground to correspond, and a stop that does not reach this category —
+		// or reaches marketing but names another purpose — is not a reason to
+		// leave that ground unrecorded. fromPurpose is the category this arm
+		// resolves to and purposeID the purpose it resolved through, so the
+		// test is the one applySuppression will apply.
+		if err := stampDerivedBasis(ctx, tx, contactID, verdict,
+			suppressionBindsAny(stops, fromPurpose, &purposeID)); err != nil {
 			return commsauthz.Decision{}, nil, err
 		}
 		d.Verdict = commsauthz.VerdictAllow

@@ -120,7 +120,7 @@ describe("VoiceInsights", () => {
       screen.getByText(/Verdict first, then the operational why./),
     ).toBeTruthy();
     expect(screen.getByText(/We ship on Monday, no excuses./)).toBeTruthy();
-    expect(screen.getByText(/draft only/)).toBeTruthy();
+    expect(screen.getByText(/Draft only/)).toBeTruthy();
     expect(screen.getByText(/Add a call transcript./)).toBeTruthy();
     expect(screen.getByText(/v3/)).toBeTruthy();
   });

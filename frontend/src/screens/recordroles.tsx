@@ -1,6 +1,13 @@
 import { useState } from "react";
 import { useCanWrite } from "../app/capability";
-import { Badge, Button, Field, Modal, TextInput } from "../design-system/atoms";
+import {
+  Badge,
+  Button,
+  Checkbox,
+  Field,
+  Modal,
+  TextInput,
+} from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
@@ -8,6 +15,8 @@ import { Switch } from "../design-system/switch";
 import { useT } from "../i18n";
 import { problemMessageOf, QueryGate } from "./common";
 import {
+  type AssignmentRecordType,
+  type AssignmentSubjectKind,
   type RecordRole,
   useCreateRecordRole,
   useRecordRoles,
@@ -26,10 +35,9 @@ import {
  * withdrawal is the active switch — which keeps the entry readable everywhere
  * it is already stored while removing it from every picker.
  *
- * Applicability is shown but not edited here. Narrowing it is refused by the
- * server while a live assignment depends on what would be removed, and a
- * control whose save usually fails is worse than none: retiring the role and
- * adding its replacement is the move that always works.
+ * Applicability is chosen at creation and read-only on existing roles. The
+ * server refuses narrowing while a live assignment depends on the removed
+ * scope; retiring a role preserves those assignments and permits a replacement.
  */
 export function RecordRolesCard() {
   const t = useT();
@@ -91,19 +99,8 @@ export function RecordRolesCard() {
         {adding && (
           <AddRecordRoleDialog
             onClose={() => setAdding(false)}
-            onAdd={(label) =>
-              create.mutate(
-                {
-                  label,
-                  // The widest applicability a new role can have, narrowed
-                  // afterwards by retiring and replacing rather than by editing
-                  // — which is the only direction the server accepts once an
-                  // assignment depends on it.
-                  record_types: ["company", "deal", "project"],
-                  assignee_kinds: ["user", "team"],
-                },
-                { onSuccess: () => setAdding(false) },
-              )
+            onAdd={(body) =>
+              create.mutate(body, { onSuccess: () => setAdding(false) })
             }
             pending={create.isPending}
           />
@@ -149,7 +146,7 @@ function RecordRoleRow({
       </Field>
       {/* Where the role may be held, and by whom. Read-only, because narrowing
           either set is refused while a live assignment depends on it. */}
-      <span className="t-caption mute">
+      <span className="t-caption">
         {role.record_types.join(", ")} · {role.assignee_kinds.join(", ")}
       </span>
       <span className="lead-vocab-flags">
@@ -172,11 +169,19 @@ function AddRecordRoleDialog({
   pending,
 }: Readonly<{
   onClose: () => void;
-  onAdd: (label: string) => void;
+  onAdd: (body: {
+    label: string;
+    record_types: AssignmentRecordType[];
+    assignee_kinds: AssignmentSubjectKind[];
+  }) => void;
   pending: boolean;
 }>) {
   const t = useT();
   const [label, setLabel] = useState("");
+  const [recordTypes, setRecordTypes] = useState<AssignmentRecordType[]>([]);
+  const [assigneeKinds, setAssigneeKinds] = useState<AssignmentSubjectKind[]>(
+    [],
+  );
   return (
     <Modal open onClose={onClose} labelledBy="record-role-add-title">
       <h2 className="t-h3 modal-title" id="record-role-add-title">
@@ -191,13 +196,60 @@ function AddRecordRoleDialog({
           />
         )}
       </Field>
+      <fieldset className="field-multiselect" disabled={pending}>
+        <legend className="t-label">{t("recordRoles.recordTypes")}</legend>
+        {(["company", "deal", "project"] as const).map((kind) => (
+          <Checkbox
+            key={kind}
+            label={t(`search.kind.${kind}`)}
+            checked={recordTypes.includes(kind)}
+            onChange={(e) =>
+              setRecordTypes((current) =>
+                e.target.checked
+                  ? [...current, kind]
+                  : current.filter((value) => value !== kind),
+              )
+            }
+          />
+        ))}
+      </fieldset>
+      <fieldset className="field-multiselect" disabled={pending}>
+        <legend className="t-label">{t("recordRoles.assigneeKinds")}</legend>
+        {(["user", "team"] as const).map((kind) => (
+          <Checkbox
+            key={kind}
+            label={t(
+              kind === "user" ? "assignments.kindUser" : "assignments.kindTeam",
+            )}
+            checked={assigneeKinds.includes(kind)}
+            onChange={(e) =>
+              setAssigneeKinds((current) =>
+                e.target.checked
+                  ? [...current, kind]
+                  : current.filter((value) => value !== kind),
+              )
+            }
+          />
+        ))}
+      </fieldset>
       <div className="action-row">
         <Button variant="ghost" onClick={onClose}>
           {t("deals.cancel")}
         </Button>
         <Button
-          disabled={!label.trim() || pending}
-          onClick={() => onAdd(label.trim())}
+          disabled={
+            !label.trim() ||
+            !recordTypes.length ||
+            !assigneeKinds.length ||
+            pending
+          }
+          onClick={() =>
+            onAdd({
+              label: label.trim(),
+              record_types: recordTypes,
+              assignee_kinds: assigneeKinds,
+            })
+          }
         >
           {t("recordRoles.addConfirm")}
         </Button>

@@ -530,10 +530,12 @@ function ShareScreenBody({
     name: string;
     access: Access;
   } | null>(null);
-  // The draft a downgrade is waiting on: the dialog is open exactly while one
-  // exists, and confirming submits THIS draft rather than re-reading a form
-  // the reader has been looking at a dialog instead of.
+  // The draft a downgrade is waiting on. Confirming submits THIS draft rather
+  // than re-reading a form the reader has been looking at a dialog instead of,
+  // and closing KEEPS it: the copy names the contact and the two levels, so a
+  // dropped draft would word that question about nobody mid-close.
   const [downgrade, setDowngrade] = useState<ReassertDraft | null>(null);
+  const [askingDowngrade, setAskingDowngrade] = useState(false);
 
   // The whole submit arrives as the mutation's variable, not through this
   // closure: react-query re-arms a mutation's options in a passive effect, so a
@@ -569,7 +571,7 @@ function ShareScreenBody({
           ? { name: draft.subject.name, access: draft.access }
           : null,
       );
-      setDowngrade(null);
+      setAskingDowngrade(false);
       resetForm();
     },
   });
@@ -651,6 +653,7 @@ function ShareScreenBody({
     const draft = draftFor(picked);
     if (draft.change === "lower") {
       setDowngrade(draft);
+      setAskingDowngrade(true);
       return;
     }
     grant.mutate(draft);
@@ -872,9 +875,9 @@ function ShareScreenBody({
                         <span className="t-caption">{g.reason}</span>
                       )}
                       {g.expires_at && (
-                        <span className="share-expiry-badge">
+                        <Badge tone="warn">
                           {formatDate(g.expires_at, locale, zone)}
-                        </span>
+                        </Badge>
                       )}
                     </div>
                   </div>
@@ -914,14 +917,11 @@ function ShareScreenBody({
         <p>{t("share.revokeConfirm")}</p>
       </ConfirmModal>
 
-      {/* Mounted only while a downgrade is waiting, because its copy names the
-          contact and the two levels — a dialog kept mounted with nothing to ask
-          about would have to word that question about nobody. */}
-      {downgrade && (
+      {downgrade !== null && (
         <ConfirmModal
-          open
+          open={askingDowngrade}
           onClose={() => {
-            setDowngrade(null);
+            setAskingDowngrade(false);
             grant.reset();
           }}
           title={t("share.downgradeTitle")}

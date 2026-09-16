@@ -65,6 +65,24 @@ const systemCapturedBy = "system"
 // no caller can reach this pattern by writing one.
 const systemCapturedByPattern = systemCapturedBy + ":%"
 
+// NotSystemMinted renders "this row was not written by the product itself"
+// for one activity alias: captured_by is neither the bare system id nor any
+// job's namespaced form. It is the SQL twin of principal.SystemMintedID —
+// one namespace, two languages — spelled from the same pair of constants the
+// follow-up resolvers build their inclusion predicate from.
+//
+// A surface that ATTRIBUTES a task — "you promised", "a commitment is owed"
+// — excludes these rows with it; a surface that merely lists open work keeps
+// them, because a reminder is real work even though it is nobody's promise.
+//
+// The two values bind through the caller's own arg closure, the shape every
+// fragment helper in this module has; only the alias is formatted in, and it
+// is a compile-time literal at every call site, never input.
+func NotSystemMinted(alias string, arg func(any) int) string {
+	return fmt.Sprintf("NOT (%[1]s.captured_by = $%[2]d OR %[1]s.captured_by LIKE $%[3]d)",
+		alias, arg(systemCapturedBy), arg(systemCapturedByPattern))
+}
+
 // FollowUpWorkflows returns the system handlers that complete open system
 // follow-up tasks when the follow-up demonstrably happened: a real
 // activity lands on the lead, or the lead leaves the open pool (promoted

@@ -15,6 +15,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -60,6 +61,16 @@ const (
 	// the moment this changes, and the two would then agree by coincidence.
 	DomainTriageMaxAttempts = 2
 	domainTriageBackoff     = 7 * 24 * time.Hour
+	// staleEvidenceYears is how old the newest mail from a domain may be and
+	// still justify minting a company from a crawl of it TODAY.
+	//
+	// The crawl reads the site as it stands now, and a domain changes hands. A
+	// decade-old thread argues that somebody was there then, not that this
+	// company is there now — so answering from today's site would attach a
+	// decade of contacts to whoever owns the domain currently, confidently and
+	// wrongly. Past the threshold the question is withheld for a human rather
+	// than answered by a machine.
+	staleEvidenceYears = 3
 	// triageReadStaleAfter is when a dossier that still claims to be running
 	// stops being believed. Comfortably past any real crawl — the worker's own
 	// job timeout is minutes — so it only ever catches a read whose terminal
@@ -80,6 +91,11 @@ type DomainDisposition struct {
 	OwnerID   *ids.UUID
 	CompanyID *ids.CompanyID
 	Attempts  int
+	// LastEvidenceAt is the newest mail that argued this domain is worth a
+	// company. NIL means the row predates the column or no message could be
+	// dated, and it is treated as FRESH: withholding every company on a missing
+	// value would refuse the ordinary case to catch the rare one.
+	LastEvidenceAt *time.Time
 	// Admission is the standing decision about the domain, "" when none was
 	// made. It travels on the LOCKED read so a caller decides from the same row
 	// version it is about to write: a suppression committing between an
@@ -119,10 +135,11 @@ func readDispositionTx(ctx context.Context, tx pgx.Tx, domain string) (DomainDis
 	var companyID *ids.UUID
 	err := tx.QueryRow(ctx, `
 		SELECT domain, status, source, owner_id, company_id, attempts,
-		       COALESCE(admission, '')
+		       COALESCE(admission, ''), last_evidence_at
 		FROM company_domain_disposition
 		WHERE domain = $1
-		FOR UPDATE`, domain).Scan(&d.Domain, &d.Status, &source, &d.OwnerID, &companyID, &d.Attempts, &d.Admission)
+		FOR UPDATE`, domain).Scan(&d.Domain, &d.Status, &source, &d.OwnerID, &companyID,
+		&d.Attempts, &d.Admission, &d.LastEvidenceAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return DomainDisposition{}, false, nil
 	}
@@ -150,16 +167,121 @@ func readDispositionTx(ctx context.Context, tx pgx.Tx, domain string) (DomainDis
 // crawl and worth counting: a hundred messages from one unjudged domain are one
 // question, and treating each as new would enqueue a hundred reads and report a
 // hundred companies on the backfill that produced one.
-func recordPendingDispositionTx(ctx context.Context, tx pgx.Tx, domain string, ownerID ids.UUID) (bool, error) {
+func recordPendingDispositionTx(
+	ctx context.Context, tx pgx.Tx, domain string, ownerID ids.UUID, evidenceAt *time.Time,
+) (bool, error) {
 	tag, err := tx.Exec(ctx, `
-		INSERT INTO company_domain_disposition (domain, status, owner_id)
-		VALUES ($1, 'pending', $2)
+		INSERT INTO company_domain_disposition (domain, status, owner_id, last_evidence_at)
+		VALUES ($1, 'pending', $2, $3)
 		ON CONFLICT (domain) DO NOTHING`,
-		domain, ownerID)
+		domain, ownerID, evidenceAt)
 	if err != nil {
 		return false, fmt.Errorf("contacts: opening the disposition question for %s: %w", domain, err)
 	}
 	return tag.RowsAffected() > 0, nil
+}
+
+// newestEvidenceFor dates the most recent mail that argues this domain is worth
+// a company — the value the stale-evidence gate reads back when the crawl
+// finally answers.
+//
+// It is the sibling of acquisitionTimeFor and deliberately not a reuse: that one
+// asks when a CONTACT was first heard from (min, keyed on one address), this one
+// asks how fresh a DOMAIN's evidence is (max, across every address under it).
+// Sharing a query would make one of the two answer the wrong question.
+//
+// NIL ON EVERY FAILURE, and never an error, for the same reason acquisitionTimeFor
+// is: a capture that failed because a timestamp would not read would drop the
+// whole record, and a nil lands a row treated as fresh — the behaviour that
+// existed before this column.
+func newestEvidenceFor(ctx context.Context, tx pgx.Tx, domain string, activityID ids.ActivityID) *time.Time {
+	domain = strings.ToLower(strings.TrimSpace(domain))
+	if domain == "" {
+		return nil
+	}
+	// The triggering activity is a floor rather than the answer, exactly as in
+	// acquisitionTimeFor: the message being captured right now may have no
+	// participant rows visible to this statement yet, and a domain whose only
+	// mail is this one must still be dated from it.
+	// The domain is the REGISTRABLE one (freemail.Hostname returns eTLD+1), so
+	// the match is by suffix rather than equality: mail from `alice@mail.acme.test`
+	// is evidence about `acme.test`, and comparing the address's full host to the
+	// registrable domain would drop every subdomain sender. Dropping them is the
+	// dangerous direction — the max would then come from an older exact-domain
+	// message and withhold a company the recent mail had earned.
+	//
+	// The dot is part of the suffix so `notacme.test` cannot match `acme.test`.
+	// A FORGED date is not evidence. The header's date is the sender's to type,
+	// so one message claiming to be from 2040 would otherwise become the newest
+	// evidence on the domain and wave every later question through — and the
+	// exclusion belongs here, at the write, because once a forged value is
+	// stored as last_evidence_at no reader can tell it from a real one. The
+	// horizon carries mailClockSkewAllowance because forgery is what it is for
+	// and a fast clock is not forgery: a sender a few seconds ahead of this
+	// server would otherwise be read as the future and dropped, which ages the
+	// domain and withholds the company that mail had just earned — the same
+	// direction the subdomain match above exists to avoid.
+	// A row under a statutory hold is out of every ordinary read path, and here
+	// the exclusion is also the SAFE direction: dropping a held message can only
+	// make the domain's evidence look older, which withholds a company rather
+	// than minting one. That is the opposite of acquiredwhen.go's reader, whose
+	// ratification turns on excluding a held row moving a compliance deadline
+	// LATER — this gate has no deadline to miss.
+	var occurred *time.Time
+	err := tx.QueryRow(ctx, `
+		SELECT max(a.occurred_at)
+		  FROM activity a
+		  LEFT JOIN activity_participant ap ON ap.activity_id = a.id
+		 WHERE a.restricted_at IS NULL AND a.archived_at IS NULL
+		   AND a.occurred_at <= now() + $3::interval
+		   AND (lower(split_part(ap.address, '@', 2)) = $1
+		    OR lower(split_part(ap.address, '@', 2)) LIKE '%.' || $1
+		    OR a.id = $2)`, domain, activityID, mailClockSkewAllowance).Scan(&occurred)
+	if err != nil {
+		return nil
+	}
+	return occurred
+}
+
+// mailClockSkewAllowance is how far ahead of this server a mail header may be
+// dated and still count as evidence about its domain.
+//
+// Minutes rather than zero because the two ends of this comparison are two
+// clocks: the timestamp is whatever wrote the message, the horizon is this
+// database's now(), and nothing keeps them in step. At zero the guard fired on
+// the difference between them rather than on anything a sender had claimed.
+// Minutes are far below the forged date this guard is for and far above what two
+// working clocks disagree by.
+//
+// consent holds an allowance of its own and this is deliberately not a reuse of
+// it: that one bounds what a CALLER may assert over the API, this one bounds what
+// a mail header may claim. A module never imports a sibling in any case.
+const mailClockSkewAllowance = "5 minutes"
+
+// recordEvidenceAgeTx dates a domain's newest mail, on EVERY message rather than
+// only on the ones that reopen something.
+//
+// The reopen is guarded on the withheld state, so without this a message
+// arriving while the question is merely open leaves no trace: the crawl then
+// reads a stale timestamp, withholds the domain and clears the cursor — and the
+// newer mail that should have rearmed it was never written down, which strands
+// the row with nothing left able to free it.
+//
+// GREATEST, so a backfill walking old mail cannot age a row BACKWARDS past
+// evidence a newer message already recorded.
+func recordEvidenceAgeTx(ctx context.Context, tx pgx.Tx, domain string, evidenceAt *time.Time) error {
+	if evidenceAt == nil {
+		return nil
+	}
+	if _, err := tx.Exec(ctx, `
+		UPDATE company_domain_disposition
+		   SET last_evidence_at = GREATEST(last_evidence_at, $2), updated_at = now()
+		 WHERE domain = $1
+		   AND last_evidence_at IS DISTINCT FROM GREATEST(last_evidence_at, $2)`,
+		domain, evidenceAt); err != nil {
+		return fmt.Errorf("contacts: recording new evidence for %s: %w", domain, err)
+	}
+	return nil
 }
 
 // ListDueDomains returns domains still owed a verdict whose next attempt is due

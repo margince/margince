@@ -131,6 +131,10 @@ func (stubs) ListActivityReviewTemplates(w nethttp.ResponseWriter, r *nethttp.Re
 	httperr.NotImplemented(w, r, "ListActivityReviewTemplates")
 }
 
+func (stubs) UpdateActivityReviewTemplate(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "UpdateActivityReviewTemplate")
+}
+
 func (stubs) GetCaptureHealth(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetCaptureHealth")
 }
@@ -161,6 +165,18 @@ func (stubs) ProposeAiModelRateRefresh(w nethttp.ResponseWriter, r *nethttp.Requ
 
 func (stubs) ListAvailableModels(w nethttp.ResponseWriter, r *nethttp.Request, provider string, params crmcontracts.ListAvailableModelsParams) {
 	httperr.NotImplemented(w, r, "ListAvailableModels")
+}
+
+func (stubs) GetAiBudget(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetAiBudget")
+}
+
+func (stubs) ReplaceAiBudget(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ReplaceAiBudget")
+}
+
+func (stubs) PreviewAiBudget(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "PreviewAiBudget")
 }
 
 func (stubs) ListAiCalls(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListAiCallsParams) {
@@ -201,6 +217,14 @@ func (stubs) GetAiRouting(w nethttp.ResponseWriter, r *nethttp.Request) {
 
 func (stubs) ReplaceAiRouting(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ReplaceAiRouting")
+}
+
+func (stubs) PreviewAiRouting(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "PreviewAiRouting")
+}
+
+func (stubs) GetAiStatus(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetAiStatus")
 }
 
 func (stubs) GetAiUsage(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetAiUsageParams) {
@@ -447,6 +471,10 @@ func (stubs) SetBlockedDomain(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "SetBlockedDomain")
 }
 
+func (stubs) ReopenWithheldDomain(w nethttp.ResponseWriter, r *nethttp.Request, domain string) {
+	httperr.NotImplemented(w, r, "ReopenWithheldDomain")
+}
+
 func (stubs) ListConsumerMailBaseline(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListConsumerMailBaselineParams) {
 	httperr.NotImplemented(w, r, "ListConsumerMailBaseline")
 }
@@ -477,6 +505,14 @@ func (stubs) ShareCaptureCounterpartyHoldHistory(w nethttp.ResponseWriter, r *ne
 
 func (stubs) DeleteCaptureCounterpartyHold(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "DeleteCaptureCounterpartyHold")
+}
+
+func (stubs) DiscardDomainQuestion(w nethttp.ResponseWriter, r *nethttp.Request, domain string) {
+	httperr.NotImplemented(w, r, "DiscardDomainQuestion")
+}
+
+func (stubs) KeepDomainQuestion(w nethttp.ResponseWriter, r *nethttp.Request, domain string) {
+	httperr.NotImplemented(w, r, "KeepDomainQuestion")
 }
 
 func (stubs) ListWorkspaceEmailDomains(w nethttp.ResponseWriter, r *nethttp.Request) {
@@ -1375,6 +1411,10 @@ func (stubs) CreateFilteredExport(w nethttp.ResponseWriter, r *nethttp.Request) 
 	httperr.NotImplemented(w, r, "CreateFilteredExport")
 }
 
+func (stubs) DownloadExportBundle(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "DownloadExportBundle")
+}
+
 func (stubs) ListExtensions(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ListExtensions")
 }
@@ -1829,58 +1869,6 @@ func (stubs) GetOnboardingState(w nethttp.ResponseWriter, r *nethttp.Request) {
 
 func (stubs) PutOnboardingState(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.PutOnboardingStateParams) {
 	httperr.NotImplemented(w, r, "PutOnboardingState")
-}
-
-func (stubs) GetOverlayBudget(w nethttp.ResponseWriter, r *nethttp.Request) {
-	httperr.NotImplemented(w, r, "GetOverlayBudget")
-}
-
-func (stubs) DisconnectOverlay(w nethttp.ResponseWriter, r *nethttp.Request) {
-	httperr.NotImplemented(w, r, "DisconnectOverlay")
-}
-
-func (stubs) GetOverlayConnection(w nethttp.ResponseWriter, r *nethttp.Request) {
-	httperr.NotImplemented(w, r, "GetOverlayConnection")
-}
-
-func (stubs) ConnectOverlay(w nethttp.ResponseWriter, r *nethttp.Request) {
-	httperr.NotImplemented(w, r, "ConnectOverlay")
-}
-
-func (stubs) DownloadOverlayExport(w nethttp.ResponseWriter, r *nethttp.Request) {
-	httperr.NotImplemented(w, r, "DownloadOverlayExport")
-}
-
-func (stubs) ExecuteOverlayFlip(w nethttp.ResponseWriter, r *nethttp.Request) {
-	httperr.NotImplemented(w, r, "ExecuteOverlayFlip")
-}
-
-func (stubs) PreflightOverlayFlip(w nethttp.ResponseWriter, r *nethttp.Request) {
-	httperr.NotImplemented(w, r, "PreflightOverlayFlip")
-}
-
-func (stubs) ListOverlayOwners(w nethttp.ResponseWriter, r *nethttp.Request) {
-	httperr.NotImplemented(w, r, "ListOverlayOwners")
-}
-
-func (stubs) ReconcileOverlay(w nethttp.ResponseWriter, r *nethttp.Request) {
-	httperr.NotImplemented(w, r, "ReconcileOverlay")
-}
-
-func (stubs) GetOverlaySyncStatus(w nethttp.ResponseWriter, r *nethttp.Request) {
-	httperr.NotImplemented(w, r, "GetOverlaySyncStatus")
-}
-
-func (stubs) ListOverlayUserMap(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListOverlayUserMapParams) {
-	httperr.NotImplemented(w, r, "ListOverlayUserMap")
-}
-
-func (stubs) DeleteOverlayUserMap(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
-	httperr.NotImplemented(w, r, "DeleteOverlayUserMap")
-}
-
-func (stubs) SetOverlayUserMap(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
-	httperr.NotImplemented(w, r, "SetOverlayUserMap")
 }
 
 func (stubs) ListPartners(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListPartnersParams) {

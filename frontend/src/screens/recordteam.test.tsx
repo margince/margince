@@ -112,6 +112,18 @@ it("invites an assignment on a record that has none", async () => {
   expect(screen.getByRole("button", { name: "Assign" })).toBeTruthy();
 });
 
+it("draws no panel of its own when a section already names it", async () => {
+  stubFetch([]);
+  render(<RecordTeam recordType="company" recordId={RECORD_ID} bare />);
+  expect(await screen.findByText(/Nobody is assigned yet/)).toBeTruthy();
+  // The company rail is one pane of headed slices and names this one itself;
+  // a second heading and a titled region inside it would be a card in a card.
+  expect(screen.queryByRole("heading", { name: "Responsible" })).toBeNull();
+  expect(screen.queryByRole("region")).toBeNull();
+  // The verb still stands: the shape changed, not what a writer may do.
+  expect(screen.getByRole("button", { name: "Assign" })).toBeTruthy();
+});
+
 it("offers no verbs at all on a record this reader cannot write", async () => {
   stubFetch([ROW]);
   render(<RecordTeam recordType="deal" recordId={RECORD_ID} readOnly />);
@@ -165,5 +177,7 @@ it("says so when ending a responsibility is refused", async () => {
   // The button re-enables either way, so a refusal that said nothing would
   // read exactly like a responsibility that ended.
   expect(await screen.findByRole("alert")).toBeTruthy();
-  expect(screen.getByText(/Mara Feld/)).toBeTruthy();
+  // Exact match: the row's own name, not the removal verb's tooltip, which
+  // also carries "Mara Feld" as part of its own sentence.
+  expect(screen.getByText("Mara Feld")).toBeTruthy();
 });

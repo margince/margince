@@ -371,7 +371,7 @@ function SecretRevealModal({
           secret and the copy attempt do not each set a margin of their own. */}
       <div className="form-stack">
         <p className="t-caption">{t("webhooks.secret.warning")}</p>
-        <pre className="code-block t-mono" data-testid="webhook-signing-secret">
+        <pre className="code-block" data-testid="webhook-signing-secret">
           {secret}
         </pre>
         {copyFailed && (
@@ -570,9 +570,7 @@ function deliveryColumns(
     {
       key: "event",
       header: t("webhooks.deliveries.column.event"),
-      render: (delivery: WebhookDelivery) => (
-        <span className="t-mono">{delivery.event_type}</span>
-      ),
+      render: (delivery: WebhookDelivery) => <span>{delivery.event_type}</span>,
     },
     {
       key: "attempts",
@@ -769,9 +767,7 @@ function SubscriptionRow({
     <>
       <SettingRow
         label={
-          <span className="t-mono webhook-target">
-            {subscription.target_url}
-          </span>
+          <span className="webhook-target">{subscription.target_url}</span>
         }
         description={
           subscription.updated_at

@@ -203,9 +203,7 @@ function RecentRow({
                   painting it on a human's email tells the reader something
                   false. */}
               <Badge>{kind}</Badge>
-              {direction && (
-                <span className="co-recent-dir t-caption">{t(direction)}</span>
-              )}
+              {direction && <span className="t-caption">{t(direction)}</span>}
             </span>
             <span className="co-recent-title">{title}</span>
           </>
@@ -226,7 +224,7 @@ function RecentRow({
             ))}
         </span>
       </span>
-      <span className="co-recent-when t-mono t-caption">{when}</span>
+      <span className="co-recent-when t-caption">{when}</span>
     </li>
   );
 }

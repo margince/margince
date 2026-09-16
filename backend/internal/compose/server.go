@@ -132,7 +132,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		contactsHandlers: newContactsHandlers(pool).WithUploadLimit(limits.LinkedInImport),
 		dealsHandlers:    dealsH,
 		projectsHandlers: projects.HandlersOver(ProjectsStore(pool)),
-		contractsHandlers: contracts.NewHandlers(InstallationDB(pool), ContractFreezeRate(pool)).
+		contractsHandlers: contracts.NewHandlers(InstallationDB(pool), ContractFreezeRate(pool), ContractTimezone()).
 			WithFieldCatalog(customfields.NewService(pool, nil)),
 		dealroomsHandlers:   dealrooms.NewHandlers(InstallationDB(pool)),
 		commissionsHandlers: commissions.NewHandlers(InstallationDB(pool)),
@@ -269,13 +269,6 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		webhooksHandlers: newWebhookHandlers(pool, nil, log),
 		log:              log,
 		dealsStore:       deals.NewStore(InstallationDB(pool), DealsInstallation()),
-		// Constructed unconditionally: WithKeyvault rebuilds
-		// overlayHandlers over this SAME instance rather than minting a
-		// second one, and contractAPI's Dispatcher spends force-fresh
-		// reads against it too (see compose/overlay.go's NewOverlayMeter
-		// doc). Fail-closed until WithOverlayMeter Rebinds it with the live
-		// Redis client + config.
-		overlayMeter: failClosedOverlayMeter(),
 		// Fail-closed until WithAgentVolume Rebinds it: a role serving the agent
 		// surface with no Redis cannot tell whether an agent has passed its
 		// read bound, and answers that it has.
@@ -289,7 +282,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 	// The day's surface reads the SAME approvals engine the inbox decides
 	// through, so a card here and a row there are one queue rather than two
 	// readings of it.
-	srv.attentionHandlers = newAttentionHandlers(pool, approvalsServiceWithEffects(pool), srv.overlayMeter)
+	srv.attentionHandlers = newAttentionHandlers(pool, approvalsServiceWithEffects(pool))
 	// The machinery's receipt: what ran without being asked, in the window since
 	// the reader last looked. It reads the same clock the rest of the surface
 	// does, so "since your brief" means the same instant everywhere.
@@ -300,19 +293,12 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 	srv.wireExportSurface(pool, log)
 	srv.wireOnboardingSurface(pool)
 	srv.wireSystemOfRecordReads(pool)
-	// toolRegistry backs ListAgentTools AND the MCP tool transport; it carries
-	// the vault-backed live-incumbent resolver that lets force-fresh reads and
-	// HUMAN write-back reach HubSpot (an AGENT write is refused before it gets
-	// there — egressbackstop.go).
+	// toolRegistry backs ListAgentTools AND the MCP tool transport.
 	//
 	// The tool registry is NOT built here: newServer returns by value and New
 	// applies the options to its own copy, so a registry built on this one
 	// would hold a Server that WithScrape and WithDeepRead never reach — an
 	// enrich tool answering "not configured" while its REST twin works. New
 	// builds it after the option loop, where the Server is the one served.
-	// /me reports the workspace's system-of-record mode so the client can
-	// gate its list UI (an overlay mirror refuses sort/filter dials). The
-	// dispatch owns mode resolution; identity never imports overlay.
-	srv.authHandlers = srv.WithSorMode(srv.sorDispatch.isOverlay)
 	return srv
 }

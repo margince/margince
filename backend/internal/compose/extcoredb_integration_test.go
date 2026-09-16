@@ -11,8 +11,8 @@ package compose
 // reach any of them: the port's own suite runs on a fake runtime whose Tx
 // merely calls the callback, so it models neither transaction ownership nor
 // rollback and the atomicity claim is proven by construction and by nothing
-// else. The overlay refusal reads a real row. The attribution is merged into
-// audit_log.evidence by storekit, which no fake runs. And the whole point of
+// else. The attribution is merged into audit_log.evidence by storekit, which no
+// fake runs. And the whole point of
 // holding the caller's transaction rather than taking a connection is invisible
 // until the pool has one connection in it.
 //
@@ -275,28 +275,6 @@ func TestAUnitsLaterFailureTakesTheFiledActivityWithIt(t *testing.T) {
 	}
 	if n := e.count(t, `SELECT count(*) FROM event_outbox`); n != 0 {
 		t.Errorf("%d event(s) survived — a subscriber would be told about a record the database never kept", n)
-	}
-}
-
-// An overlay workspace's native tables are not the live ones, so a core write
-// there lands where nothing reads it. The port refuses instead, and the refusal
-// is the DECLARED one.
-func TestACoreWriteInAnOverlayWorkspaceIsRefusedAndWritesNothing(t *testing.T) {
-	e := setupCore(t)
-	if _, err := e.owner.Exec(context.Background(),
-		// The incumbent rides along: overlay_mode_overlay_iff_incumbent holds the
-		// two together, because an overlay installation with nothing to mirror is
-		// a state no reader of the mode could act on.
-		`UPDATE overlay_mode SET sor_mode = 'overlay', incumbent = 'hubspot'`); err != nil {
-		t.Fatalf("putting the workspace in overlay mode: %v", err)
-	}
-
-	_, err := e.file(t, e.subject, nil)
-	if !errors.Is(err, extension.ErrOverlayUnsupported) {
-		t.Fatalf("filing in an overlay workspace = %v, want ErrOverlayUnsupported", err)
-	}
-	if n := e.count(t, `SELECT count(*) FROM activity`); n != 0 {
-		t.Errorf("%d activity row(s) written in overlay mode, want none", n)
 	}
 }
 

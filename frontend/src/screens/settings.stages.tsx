@@ -268,7 +268,7 @@ export function StageRow({
       <Badge tone={stageSemanticTone(stage.semantic)}>
         {stageSemanticLabel(stage.semantic, t)}
       </Badge>
-      <span className="t-mono t-caption">
+      <span className="t-num t-caption">
         {formatNumber(stage.win_probability, locale)}%
       </span>
       {/* Each control carries its own verb — editing a stage is

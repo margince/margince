@@ -17,9 +17,9 @@
   background: var(--bgElevated);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-md);
-  /* The list surface is one card, and takes the card shadow: the same plate
-     rule as `.card`, `Panel` and the readings strip. */
-  box-shadow: var(--shadow-card);
+  /* The list surface is one card, and takes the resting shadow: the same
+     plate rule as `.card`, `Panel` and the readings strip. */
+  box-shadow: var(--shadow-rest);
   overflow: hidden;
 }
 
@@ -172,11 +172,6 @@
   border-radius: var(--r-full);
   corner-shape: round;
   border-color: var(--borderSubtle);
-}
-
-.lt-note {
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
 }
 
 .lt-toggle {
@@ -589,13 +584,33 @@
   overflow: hidden;
 }
 
+/* What gives way first, and how. A flex item keeps its content width by
+ * default, so text beside a badge ran past the strip and was cut mid-word with
+ * no ellipsis — `text-overflow` on the cell never reaches a flex item's text.
+ * Each item therefore truncates itself: a badge inside `.badge-label`, and any
+ * other child here — which is why text in a strip sits in an element, since a
+ * bare text node is an anonymous flex item no rule can reach.
+ *
+ * The TEXT goes first. The badge is the value the column is about — a score, a
+ * stalled flag — and the words beside it only gloss it, so a narrow column
+ * keeps "72" whole and ends the reason in "…". The weight is lopsided rather
+ * than the badge rigid: a badge that refused to shrink would be cut at the
+ * strip edge once the text is gone, which is the defect again one item over.
+ * Below the text's share every badge ellipsises in turn. */
+.lt-strip > :not(.badge) {
+  flex-shrink: 1000;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* The floor under a cell's strip. The `nowrap` above governs TEXT, not the
- * layout of a flex container inside the cell: `.badge` and `.chip` are nowrap
- * only by flexbox's own default, and a strip that took a second line here would
- * cost every row below it its place. Stated on the TABLE as well as on
- * `.rowtags` and `.lt-strip`, so an edit to one of those sheets cannot give it
- * up in a cell without saying so. */
-.lt-table td .badge,
+ * layout of a flex container inside the cell: `.chip` is nowrap only by
+ * flexbox's own default, and a strip that took a second line here would cost
+ * every row below it its place. Stated on the TABLE as well as on `.rowtags`
+ * and `.lt-strip`, so an edit to one of those sheets cannot give it up in a
+ * cell without saying so. `.badge` holds its own line in atoms.css. */
 .lt-table td .chip,
 .lt-table td .rowtags,
 .lt-table td .lt-strip {

@@ -140,18 +140,18 @@ function ReviewCard({
   return (
     <div className="outcome-review">
       <div className="outcome-review-head">
-        <Badge quiet tone={review.outcome === "won" ? "success" : "danger"}>
+        <Badge tone={review.outcome === "won" ? "success" : "danger"}>
           {t(
             review.outcome === "won"
               ? "outcomeReview.outcomeWon"
               : "outcomeReview.outcomeLost",
           )}
         </Badge>
-        <span className="muted">
+        <span className="t-caption">
           {formatDate(review.created_at, locale, recordZone)}
         </span>
         {earlier && (
-          <span className="muted">{t("outcomeReview.earlierMark")}</span>
+          <span className="t-caption">{t("outcomeReview.earlierMark")}</span>
         )}
       </div>
       <dl className="firmo">
@@ -167,8 +167,10 @@ function ReviewCard({
                 than a missing row, so the reader sees WHICH question went
                 unanswered instead of a shorter list. */}
             <dd>
-              {review.answers?.[question.key] || (
-                <span className="muted">{t("outcomeReview.noAnswer")}</span>
+              {(question.type === "multiselect"
+                ? review.choice_answers?.[question.key]?.join(", ")
+                : review.answers?.[question.key]) || (
+                <span className="t-caption">{t("outcomeReview.noAnswer")}</span>
               )}
             </dd>
           </div>

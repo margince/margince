@@ -235,7 +235,7 @@ export function BarList({
   const largestRow = rows.reduce((high, row) => Math.max(high, row.value), 0);
   const denominator = Math.max(max ?? 0, largestRow);
   return (
-    <div className="barlist">
+    <div>
       {/* The bars carry the shape and the table carries the figures. A reader
           on a screen reader gets the second, which is the one with the values
           in it — so the bars are hidden rather than announced twice. */}
@@ -251,7 +251,7 @@ export function BarList({
               dense
               flat
             />
-            <span className="barlist-amount num">{row.amount}</span>
+            <span className="barlist-amount t-num">{row.amount}</span>
           </li>
         ))}
       </ul>

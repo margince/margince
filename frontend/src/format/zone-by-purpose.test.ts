@@ -142,6 +142,10 @@ function code(path: string, source: string): string {
 // output moved with the machine it ran on would assert nothing.
 const pinnedZones: { file: string; why: string }[] = [
   {
+    file: "screens/ai-admin.tsx",
+    why: "The allowance period resets on the server’s UTC month boundary; the card explicitly labels this operational clock UTC rather than presenting it as a record or viewer date.",
+  },
+  {
     file: "screens/worklist.reader.test.ts",
     why: "Pins different viewer and record zones to prove a delayed notification dates the original change in the viewer’s zone.",
   },
@@ -336,6 +340,10 @@ const pinnedZones: { file: string; why: string }[] = [
   {
     file: "screens/contractform.currency.test.tsx",
     why: "Installation-settings fixture: the company timezone the contract form reads back.",
+  },
+  {
+    file: "screens/contractform.customseed.test.tsx",
+    why: "The same installation-settings fixture, behind the contract form's custom-field seeding cases.",
   },
   {
     file: "screens/dealbulk.stories.tsx",

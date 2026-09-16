@@ -5,7 +5,7 @@
  *  - the scope region and the progress line hold their own height, so an
  *    arriving estimate or an incremented count never moves the button someone
  *    is about to press;
- *  - every number is mono and tabular, so a tally counting upward changes its
+ *  - every number sets tabular figures, so a tally counting upward changes its
  *    digits without changing its width.
  *
  * Copy never lives here (conformance gate) and no colour is a literal: literals
@@ -33,36 +33,6 @@
   line-height: var(--lh-snug);
   letter-spacing: var(--tracking-display);
   text-wrap: balance;
-}
-
-/* ---- the window pick --------------------------------------------------- */
-
-.ob-backread-windows {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-sm);
-  background: var(--bgElevated);
-  padding: var(--space-2);
-}
-
-.ob-backread-window {
-  /* A finger target, not a text line. */
-  min-height: 44px;
-  padding: 0 var(--space-2);
-  border-radius: var(--r-sm);
-  font-size: var(--fs-sm);
-  color: var(--textContent);
-}
-
-.ob-backread-window:hover {
-  background: var(--bgHover);
-}
-
-.ob-backread-window:has(input:checked) {
-  color: var(--textPrimary);
-  font-weight: var(--fw-medium);
 }
 
 /* ---- the scope before the spend ---------------------------------------- */
@@ -208,14 +178,8 @@
   }
 }
 
-/* Narrower still, and the frame around the window pick costs more width than
-   the labels inside it, while the two closing actions stop sitting side by
-   side without one of them losing its verb to an ellipsis. */
+/* At narrow widths the closing actions each need a row to keep their labels. */
 @container (max-width: 280px) {
-  .ob-backread-windows {
-    padding: var(--space-1);
-  }
-
   .ob-backread-acts > * {
     flex: 1 1 100%;
   }

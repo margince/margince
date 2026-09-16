@@ -28,6 +28,9 @@ import {
 import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
 import { useT } from "../../i18n";
 import "../company360.css";
+// The verb column: `.today-actions` and `.today-verb`, drawn here rather than
+// left to whichever page mounts a row that needs them.
+import "./record360.css";
 
 /**
  * TodayPanel is the panel: its head, the rows a caller hands in, and the one
@@ -86,19 +89,22 @@ export function TodayPanel({
   return (
     <Panel
       tone="ai"
-      className="co-reading-today"
+      // `co-lead` is the company lead's two-column move: the claim on the
+      // left, the verbs opposite it. Without it a contact's verbs fell UNDER
+      // the claim, right-aligned, and the whole width beside them was empty.
+      className="co-lead"
       title={t("today.title")}
       titleAction={
         <div className="co-reading-today-actions">
-          {/* The rows under this head are the agent's reading of the record —
-              what it found and what it prepared — so the claim is read before
-              any of them. */}
-          <Badge tone="ai">{t("co.assistant.aiTag")}</Badge>
           {onOpenTasks && (
             <button type="button" className="link-button" onClick={onOpenTasks}>
               {tasksLabel ?? t("co.suggest.viewTasks")}
             </button>
           )}
+          {/* The rows under this head are the agent's reading of the record,
+              what it found and what it prepared. The claim closes the band,
+              after the way out, so the head reads verb then mark. */}
+          <Badge tone="ai">{t("co.assistant.aiTag")}</Badge>
         </div>
       }
       footer={footer}
@@ -190,11 +196,16 @@ export function FoundMove({
   // rest on one hover away. With no reason to hang under, the records are
   // listed in the reason's place.
   basis?: ReactNode;
-  // What performing the move means, as the caller's own control. Absent when
-  // the record cannot say — a rule that named no action draws nothing rather
-  // than a control that does nothing.
+  // What performing the move means, as the caller's own control — zero or
+  // more verbs, each already in the shared `.today-verb` shape (record360.css)
+  // rather than pre-wrapped in a column of its own: this row is the one place
+  // that owns the column, so a caller handing in its own `.today-actions`
+  // nested inside this one laid the defer button beside it in a row instead
+  // of under it. Absent when the record cannot say — a rule that named no
+  // action draws nothing rather than a control that does nothing.
   action?: ReactNode;
-  // Putting the move off. Not the row's verb and never drawn as one.
+  // Putting the move off. Not the row's verb and never drawn as one, but
+  // still one more item in the same column, last.
   defer?: { onDefer: () => void; pending?: boolean };
 }>) {
   const t = useT();
@@ -210,14 +221,14 @@ export function FoundMove({
           <span className="co-move-by">
             <Sparkles aria-hidden="true" className="co-move-spark" />
             {t("co.suggest.byline")}
-            {when && <span className="t-mono co-move-when">{when}</span>}
+            {when && <span className="t-num co-move-when">{when}</span>}
           </span>
         )}
         <span className="co-move-ask">{title}</span>
         {why && <span className="co-move-reason t-sub">{why}</span>}
         {basis && (
           <div className="co-move-basis">
-            <span className="co-move-basis-head t-eyebrow">
+            <span className="co-move-basis-head t-caption">
               {t("co.suggest.basedOn")}
             </span>
             {basis}
@@ -225,19 +236,22 @@ export function FoundMove({
         )}
         {(action || defer) && (
           <span className="co-move-do">
-            <span className="co-move-actions">
+            <div className="today-actions">
               {action}
               {defer && (
-                <Button
-                  small
-                  className="co-move-defer"
-                  onClick={defer.onDefer}
-                  disabled={defer.pending}
-                >
-                  {t("co.suggest.dismiss")}
-                </Button>
+                <span className="today-verb">
+                  <Button
+                    variant="ghost"
+                    small
+                    className="co-move-defer"
+                    onClick={defer.onDefer}
+                    disabled={defer.pending}
+                  >
+                    {t("co.suggest.dismiss")}
+                  </Button>
+                </span>
               )}
-            </span>
+            </div>
           </span>
         )}
       </div>
@@ -283,7 +297,7 @@ export function TodoRow({
       {who && <Avatar name={who} size="xs" />}
       <span className="co-todo-body">
         <span className="co-todo-title">{title}</span>
-        {meta && <span className="co-todo-meta t-caption">{meta}</span>}
+        {meta && <span className="t-caption">{meta}</span>}
       </span>
       {due && (
         <span

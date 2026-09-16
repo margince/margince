@@ -68,26 +68,12 @@ func (p closeDatePolicy) CorrectsWithoutAsking(ctx context.Context, owner ids.UU
 		}
 		return false, err
 	}
-	// The CHOICE, not the mode alone. AutoApplyMode reports 'manual' both for a
-	// rep who asked to be asked and for one who has never seen the setting, and
-	// this is the one caller whose default is not manual — so folding the two
-	// together would read silence as a refusal and leave every deal in the
-	// pipeline on a date nobody maintains.
-	choice, err := p.svc.AutonomyChoiceFor(ownerCtx, deals.CloseDateCorrectionKind)
+
+	mode, err := p.svc.AutoApplyMode(ownerCtx, deals.CloseDateCorrectionKind)
 	if err != nil {
 		return false, err
 	}
-	if !choice.Chosen {
-		// Nobody has decided. The sweep corrects and reports itself on the
-		// morning receipt with a way back, which is the honest version of the
-		// card it replaced: that card wrote the date FIRST and then asked a
-		// question whose answer changed nothing.
-		return true, nil
-	}
-	// Compared against auto explicitly rather than as "not manual": a third
-	// stored rung, veto, exists, and reading it as consent would write
-	// unattended for the one rep who asked hardest not to be written for.
-	return choice.Mode == approvals.ModeAuto, nil
+	return mode == approvals.ModeAuto, nil
 }
 
 // quietReviewReader adapts the deals module's QuietReviewReader seam: read one
@@ -186,8 +172,8 @@ func NewCloseDateCorrector(pool *pgxpool.Pool, log *slog.Logger) *deals.CloseDat
 // redeem-then-execute like every 🟡 executor, then apply the confirmed
 // (possibly human-edited) date through the deals store — the same
 // RBAC-gated, INV-CLOSE-PAST-validating update a direct edit takes. It
-// runs as the deciding human: confirming the date IS their write, and
-// their update also clears the provisional flag.
+// runs under the deciding authority: a human approval or the owner's
+// automatic-change policy. The update also clears the provisional flag.
 func closeDateConfirmEffect(svc *approvals.Service, store *deals.Store) approvals.ApprovedEffect {
 	return func(ctx context.Context, approvalID ids.ApprovalID, proposedChange json.RawMessage, diffHash string) error {
 		version, pinned, err := svc.Redeem(ctx, approvalID, deals.CloseDateCorrectionKind, diffHash)
@@ -204,7 +190,7 @@ func closeDateConfirmEffect(svc *approvals.Service, store *deals.Store) approval
 		}
 		// A reversal since this card was staged has already answered its
 		// question, and this door is the unattended one: close_date_correction
-		// is auto-applied for a rep who has turned autonomy on, so a confirm
+		// is auto-applied when the owner's policy permits it, so a confirm
 		// redeemed after an Undo would silently put back what the Undo removed.
 		blocked, err := store.ReversalBlocksConfirming(ctx, correction, &confirmed)
 		if err != nil {

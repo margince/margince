@@ -39,7 +39,7 @@ func leadReader() context.Context {
 func leadLaneService(leads LeadResponses) *Service {
 	return NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
-		stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
+		stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
 		fixedClock).WithLeadResponses(leads)
 }
 
@@ -296,7 +296,7 @@ func TestTheEscalationTaskForAnOwedLeadFoldsIntoTheLeadRow(t *testing.T) {
 	}}}
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, tasks, stubReceipts{},
-		stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
+		stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
 		fixedClock).WithLeadResponses(&stubLeads{tracked: true, rows: []OwedLead{
 		{ID: lead, Name: "the late one", DeadlineAt: readInstant.Add(-time.Hour), State: "breached"},
 	}})
@@ -327,7 +327,7 @@ func TestATaskAboutALeadTheQueueDoesNotShowSurvives(t *testing.T) {
 	}}}
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, tasks, stubReceipts{},
-		stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
+		stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
 		fixedClock).WithLeadResponses(&stubLeads{tracked: true, rows: []OwedLead{
 		{ID: ids.NewV7(), Name: "the owed one", DeadlineAt: readInstant.Add(-time.Hour), State: "breached"},
 	}})

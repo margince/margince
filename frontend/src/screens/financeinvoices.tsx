@@ -89,7 +89,7 @@ function InvoiceRow({
           Zero and negative say nothing worth a line: on time is what the
           status alone already says. */}
       <td className="fin-col-status">
-        <Badge tone={STATUS_TONE[invoice.status]} quiet>
+        <Badge tone={STATUS_TONE[invoice.status]}>
           {late && invoice.days_late != null
             ? plural(daysLateBase(invoice.status), invoice.days_late, {
                 days: formatNumber(invoice.days_late, locale),

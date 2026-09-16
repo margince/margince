@@ -370,7 +370,13 @@ func (h *httpMCPHandler) exchange(w http.ResponseWriter, r *http.Request, req rp
 		})
 		return
 	}
-	ctx := r.Context()
+	// The same figure on the other half of the call. A write deadline alone
+	// bounds when the answer stops being deliverable; it does not stop the
+	// handler behind it, which keeps its goroutine and every database
+	// connection it takes from there on. Both halves, or the response is lost
+	// and the pool is still paying for it.
+	ctx, done := context.WithTimeout(r.Context(), mcpCallDeadline)
+	defer done()
 	resp := h.server.handle(ctx, req, fr)
 	status := http.StatusOK
 	if fr.modern {

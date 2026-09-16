@@ -6,6 +6,7 @@ import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { extensionLayers, filesMatching } from "../../scripts/lib/source-tree";
+import { type CssRule as Rule, rulesIn } from "../testing/css";
 
 // A type utility has one spelling, and it is the class.
 //
@@ -95,54 +96,6 @@ function corpus(): string[] {
     .filter(
       (where) => where !== owner && !where.startsWith(standaloneDocuments),
     );
-}
-
-/** One CSS rule: its selector, its OWN declarations, and where it starts. */
-type Rule = { selector: string; body: string; raw: string; line: number };
-
-/**
- * The rules in one sheet, read by brace-matching rather than by regex over the
- * whole file — a regex spanning `{...}` cannot tell a rule from the gap between
- * two. At-rules (`@media`, `@supports`) are descended into rather than
- * skipped: a copy inside a breakpoint is a copy. A nested rule's declarations
- * belong to the nested rule, not to its parent.
- *
- * `body` has comments blanked (line breaks kept, so a reported line still
- * points at the rule); `raw` keeps them, because the waiver lives in one.
- */
-function rulesIn(source: string): Rule[] {
-  const css = source.replaceAll(/\/\*[\s\S]*?\*\//g, (block) =>
-    block.replaceAll(/[^\n]/g, " "),
-  );
-  const out: Rule[] = [];
-  let selectorStart = 0;
-  const opens: { selector: string; at: number; line: number }[] = [];
-  for (let i = 0; i < css.length; i++) {
-    if (css[i] === "{") {
-      opens.push({
-        selector: css.slice(selectorStart, i).trim(),
-        at: i + 1,
-        line: css.slice(0, i).split("\n").length,
-      });
-      selectorStart = i + 1;
-    } else if (css[i] === "}") {
-      const open = opens.pop();
-      if (open && !open.selector.startsWith("@")) {
-        out.push({
-          selector: open.selector,
-          body: css.slice(open.at, i).replaceAll(/\{[^{}]*\}/g, ""),
-          raw: source.slice(open.at, i),
-          line: open.line,
-        });
-      }
-      selectorStart = i + 1;
-    } else if (css[i] === ";") {
-      // Inside a rule this ends a declaration, and what follows up to the next
-      // `{` is a NESTED rule's selector; at the top it ends an at-rule.
-      selectorStart = i + 1;
-    }
-  }
-  return out;
 }
 
 /** A rule's declarations as property → value, whitespace normalised. */
@@ -321,21 +274,18 @@ function shown(finding: Finding): string {
  */
 const eyebrowBaseline: Record<string, number> = {
   "src/app/agentrail.css": 1,
-  "src/app/shell.css": 1,
   "src/design-system/atoms.css": 1,
-  "src/design-system/composed.css": 4,
+  "src/design-system/composed.css": 2,
   "src/design-system/listtable.css": 2,
   "src/design-system/margince-workbench.css": 3,
   "src/screens/auth.css": 1,
   "src/screens/backfill.css": 1,
-  "src/screens/company360.css": 2,
+  "src/screens/company360.css": 1,
   "src/screens/onboarding-backread.css": 1,
-  "src/screens/onboarding-conversation/conversation.css": 1,
   "src/screens/onboarding-gate.css": 2,
   "src/screens/onboarding-live-panel.css": 2,
   "src/screens/onboarding.css": 4,
   "src/screens/contact360.css": 2,
-  "src/screens/preferences.css": 1,
   "src/screens/record360/spine.css": 1,
 };
 

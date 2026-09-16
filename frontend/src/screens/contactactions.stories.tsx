@@ -90,7 +90,6 @@ function Header({
       <ContactActions
         view={view}
         contactId={view.contact.id}
-        overlay={false}
         onWrite={() => undefined}
         onResearch={() => undefined}
         onLogActivity={() => undefined}

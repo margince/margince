@@ -108,11 +108,24 @@
   background: var(--pane);
   text-align: left;
   cursor: pointer;
+  /* What is drawn as a field takes a field's depth: this is a button, but it
+     is shaped like the search box it opens, and a reader reads the shape. */
+  box-shadow: var(--shadow-well);
+  /* Named, never `all` — the border and ink this button changes on hover have
+     always snapped, and only the depth is introduced here. */
+  transition: box-shadow var(--dur-state) var(--ease-out);
   /* Pinned the way `.btn` pins it, and for the same reason: this button is a
      row of unlike boxes — a glyph, a label and two key caps on `line-height: 1`
      — and the body's 1.55 puts half a line of leading under the label alone, so
      its glyphs settle below the caps they sit beside. */
   line-height: 1.25;
+}
+/* And a press takes it away, like every other verb: the button is a field to
+   look at and a verb to use, so it rests as one and answers as the other. */
+.topbar-search:hover,
+.topbar-search:active,
+.topbar-search:focus-visible {
+  box-shadow: none;
 }
 .topbar-search:hover {
   border-color: var(--borderStrong);
@@ -149,7 +162,6 @@
   border-radius: var(--r-sm);
   background: var(--bgPage);
   color: var(--textMeta);
-  font-family: var(--f-body);
   font-size: var(--fs-eyebrow);
   font-weight: var(--fw-medium);
   line-height: 1;
@@ -205,6 +217,9 @@
     padding: 0;
     border-color: transparent;
     background: transparent;
+    /* And the floor with them: nothing here is drawn as a field any more, and
+       a well under nothing is a line on the page. */
+    box-shadow: none;
   }
   .topbar-search:hover {
     border-color: transparent;

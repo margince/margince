@@ -144,15 +144,6 @@ function profileUrlOrUndefined(raw: string | undefined) {
   return stated ? normalizeProfileUrl(stated) : undefined;
 }
 
-/**
- * ContactAside is the relationship column, and in overlay mode it SAYS it
- * cannot answer rather than disappearing.
- *
- * Both panels read the interaction projection, which is folded from natively
- * captured participants — a mirror-backed workspace has none. Rendering
- * nothing would let the page read as "nobody here knows them", which is a lie
- * about the relationship rather than an empty answer about the data.
- */
 export function ContactsScreen() {
   const t = useT();
   const pageName = usePageName("contacts");
@@ -243,9 +234,8 @@ export function ContactsScreen() {
             // by it and each surface that needed the address answered again.
             //
             // An address is words a reader reads, so it takes the body face
-            // like every other value in the row. The mono face is for a
-            // machine name — a name and a domain set in it read as an
-            // identifier rather than as somebody a reader could write to.
+            // like every other value in the row — somebody a reader could
+            // write to, not an identifier.
             cell: (contact: Contact) => contact.primary_email ?? "",
             sort: "primary_email",
           },
