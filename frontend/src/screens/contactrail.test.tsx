@@ -515,6 +515,40 @@ describe("adding a company", () => {
     expect(currentEmployerTicked()).toBe(true);
   });
 
+  // The start date is the field #415 is about: an employment with no window
+  // lets the account walk resolve three-year-old mail to the company this
+  // contact joined last month. This form is the only place a human is ever
+  // asked for it, so what it SENDS is the assertion — and the month case is
+  // the one that matters, because a reader who knows the month and not the day
+  // must not have a day invented for them.
+  it("sends the start date it was given, at the precision it was given", async () => {
+    const user = driver();
+    mount(emptyButGranted);
+    await screen.findByRole("button", { name: "Add company" });
+    await openAndPickEmployer(user);
+    await user.type(screen.getByLabelText("Start date"), "2024-05");
+    await user.click(screen.getByRole("button", { name: "Create" }));
+
+    const body = await employmentBody();
+    expect(body.started_at).toBe("2024-05-01");
+    expect(body.started_precision).toBe("month");
+  });
+
+  it("says nothing about a start nobody gave", async () => {
+    // Absent, not today. An unknown start is a real answer, and a form that
+    // filled it in would write a fact nobody holds — onto the very column the
+    // account walk trusts to bound a window.
+    const user = driver();
+    mount(emptyButGranted);
+    await screen.findByRole("button", { name: "Add company" });
+    await openAndPickEmployer(user);
+    await user.click(screen.getByRole("button", { name: "Create" }));
+
+    const body = await employmentBody();
+    expect("started_at" in body).toBe(false);
+    expect("started_precision" in body).toBe(false);
+  });
+
   it("starts unticked for somebody who already has a current job", async () => {
     // The other half of the default, and the reason it is read off the rows
     // rather than hardcoded: which of two employers is the main one is not

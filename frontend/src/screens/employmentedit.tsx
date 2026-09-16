@@ -12,7 +12,7 @@ import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import { problemMessageOf } from "./common";
 import { stillHeld } from "./employmentcurrency";
-import { patchEmployment } from "./employmentpatch";
+import { datePatch, patchEmployment } from "./employmentpatch";
 
 type Employment = components["schemas"]["Contact360Employment"];
 type Patch = components["schemas"]["UpdateRelationshipRequest"];
@@ -168,14 +168,4 @@ export function EmploymentEdit({
       </div>
     </Modal>
   );
-}
-
-function datePatch(value: string): {
-  date?: string;
-  precision?: "month" | "day";
-} {
-  if (!value) return {};
-  return value.length === 7
-    ? { date: `${value}-01`, precision: "month" }
-    : { date: value, precision: "day" };
 }
