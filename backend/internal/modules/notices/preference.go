@@ -127,7 +127,7 @@ type Preference struct {
 // entry per class, the effective delivery in each, and whether it was chosen.
 // The seat is not a parameter: another contact's settings cannot be expressed.
 func (s *Store) MyNotificationPreferences(ctx context.Context) ([]Preference, error) {
-	human, err := preferenceSeat(ctx, "reading your notification settings")
+	human, err := actingSeat(ctx, "reading your notification settings")
 	if err != nil {
 		return nil, err
 	}
@@ -146,7 +146,7 @@ func (s *Store) MyNotificationPreferences(ctx context.Context) ([]Preference, er
 // and answers their WHOLE set, so a screen rendering one row per class cannot
 // take a stale copy of the others from its own memory.
 func (s *Store) SaveNotificationPreference(ctx context.Context, class, delivery string) ([]Preference, error) {
-	human, err := preferenceSeat(ctx, "changing your notification settings")
+	human, err := actingSeat(ctx, "changing your notification settings")
 	if err != nil {
 		return nil, err
 	}
@@ -255,13 +255,18 @@ func preferenceIdentity(human ids.UUID, class string) string {
 	return human.String() + ":" + class
 }
 
-// preferenceSeat is the acting human, named by the act for the refusal message.
+// actingSeat is the acting human, named by the act for the refusal message.
 //
 // The CONTACT and not merely a user id: an agent or system principal can carry
 // a human's id, and an agent acting under its grantor's authority must not
-// decide what reaches its grantor — the same ruling identity's delivery
-// settings make, for the same inbox.
-func preferenceSeat(ctx context.Context, act string) (ids.UUID, error) {
+// decide what reaches its grantor, nor read or settle what already has — the
+// same ruling identity's delivery settings make, for the same inbox.
+//
+// One gate for the whole module: reading a notice, settling one, settling them
+// all and deciding where a class is delivered ask the same question of the same
+// principal, and five inline copies of it would drift the first time the answer
+// moved.
+func actingSeat(ctx context.Context, act string) (ids.UUID, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.Type != principal.PrincipalHuman || actor.UserID.IsZero() {
 		return ids.Nil, fmt.Errorf("notices: %s needs an authenticated contact: %w", act, apperrors.ErrPermissionDenied)
