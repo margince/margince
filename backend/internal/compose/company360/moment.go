@@ -35,7 +35,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/owedwork"
@@ -246,8 +245,8 @@ func owedWhyNow(now time.Time, due *time.Time) string {
 	if due == nil {
 		return "Promised with no date set. It stays open until somebody does it or closes it."
 	}
-	if past, ok := deadline.DaysPast(due, now); ok {
-		return fmt.Sprintf("Due %d days ago and still open.", past)
+	if words, late := owedwork.LateWords(due, now); late {
+		return words
 	}
 	if days := elapsed.FullDaysUntil(now, *due); days > 0 {
 		return fmt.Sprintf("Due in %d days.", days)

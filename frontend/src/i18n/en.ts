@@ -3404,7 +3404,6 @@ export const en = {
   "transcriptread.effectFailedTitle": "Accepted, but the task never appeared",
 
   "create.cancel": "Cancel",
-  "create.multiselect.required": "Required — select at least one.",
   "create.save": "Create",
   "create.saving": "Creating…",
   "create.contact": "New contact",
@@ -3907,6 +3906,12 @@ export const en = {
   "compose.draftKept": "Your edits were kept. Draft again when you are ready.",
   "compose.threadFailed":
     "That message could not be read. Use Try again in the conversation.",
+  // The message a reply anchors on is gone — archived, or no longer this
+  // reader's to open. It names the state and what the reader can still do,
+  // because the server's own answer here is a bare "not found", which tells
+  // them neither.
+  "compose.anchorGone":
+    "That message is no longer available, so there is nothing to reply to. Write a new message instead.",
   "compose.threadPending": "Loading the conversation\u2026",
   "compose.sendBody":
     "Review and edit your draft. Clicking Send sends this email and cannot be undone.",
@@ -4453,6 +4458,20 @@ export const en = {
   "agent.activity.offerDraft.stalled":
     "Drafting your offer has taken unusually long. It may have stopped.",
   "agent.panel.runningNow": "Running now",
+
+  // The four things the agent section says once it has run out of news
+  // (`agentrail-copy.ts`). None of them claims the agent did anything: they are
+  // standing facts about the product, which is what lets them be written here
+  // rather than read from the installation.
+  //
+  // SHORT, and that is a hard constraint rather than a style: the rail clamps
+  // its line to two lines at about 200px (`.arline` in agentrail.css), so a
+  // sentence past roughly fifty characters is a sentence with its end cut off.
+  // Every translation of these is held to the same ceiling.
+  "agent.tip.day": "To-dos, decisions and duplicates live on {name}.",
+  "agent.tip.ask": "Ask me from anywhere with ⌘K.",
+  "agent.tip.recap": "Open me for what I have done today.",
+  "agent.tip.edge": "The screen edge lights while I work.",
 
   "agents.connected": "Connected agents",
   "agents.connectedSub":

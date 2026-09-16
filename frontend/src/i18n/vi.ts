@@ -3241,7 +3241,6 @@ export const vi = {
     "Đã chấp nhận, nhưng công việc không xuất hiện",
 
   "create.cancel": "Huỷ",
-  "create.multiselect.required": "Bắt buộc — chọn ít nhất một.",
   "create.save": "Tạo",
   "create.saving": "Đang tạo…",
   "create.contact": "Liên hệ mới",
@@ -3740,6 +3739,8 @@ export const vi = {
     "Các chỉnh sửa của bạn được giữ lại. Hãy tạo bản nháp mới khi sẵn sàng.",
   "compose.threadFailed":
     "Không đọc được thư này. Hãy thử lại trong cuộc hội thoại.",
+  "compose.anchorGone":
+    "Thư này không còn nữa nên không có gì để trả lời. Hãy soạn một thư mới.",
   "compose.threadPending": "Đang tải cuộc trao đổi\u2026",
   "compose.sendBody":
     "Xem lại và chỉnh sửa bản nháp. Nhấn Gửi sẽ gửi email và không thể hoàn tác.",
@@ -4254,6 +4255,13 @@ export const vi = {
   "agent.activity.offerDraft.stalled":
     "Việc soạn báo giá của bạn kéo dài bất thường. Có thể nó đã dừng.",
   "agent.panel.runningNow": "Đang chạy",
+
+  // Bốn câu phần agent nói khi không còn tin gì mới. Giữ ngắn: dòng
+  // trên rail bị cắt sau hai dòng.
+  "agent.tip.day": "Việc, quyết định và bản trùng đều nằm ở {name}.",
+  "agent.tip.ask": "Hỏi tôi từ bất kỳ đâu bằng ⌘K.",
+  "agent.tip.recap": "Mở tôi để xem hôm nay tôi đã làm gì.",
+  "agent.tip.edge": "Viền màn hình sáng lên khi tôi làm việc.",
 
   "agents.connected": "Agent đã kết nối",
   "agents.connectedSub":

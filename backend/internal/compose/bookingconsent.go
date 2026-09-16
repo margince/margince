@@ -187,35 +187,36 @@ func (a bookingConsentAdapter) askMarketing(ctx context.Context, contactID ids.U
 		}
 		return activities.MarketingPendingConfirmation, nil
 	}
-	// TWO KINDS OF REFUSAL, and only one of them may cost the meeting.
+	// NO REFUSAL OF THE QUESTION COSTS THE MEETING, whatever the reason.
 	//
-	// A refusal about THIS INSTALLATION'S ability to ask — no live address on
-	// the record, a purpose archived since the form was published, a mail lane
-	// that would not take the message — is reported and not raised. The tick
-	// was optional and the meeting was not: the subject can be asked again from
-	// the preference centre or the next mail, and the slot they booked cannot
-	// be handed back. Before this, every one of those took the booking with it.
+	// The tick was optional and the meeting was not: the subject can be asked
+	// again from the preference centre or the next mail, and the slot they
+	// booked cannot be handed back. Reporting not_asked is what the response
+	// field exists for, so a booker who ticked the box is not left waiting for
+	// a mail that is not coming.
 	//
-	// A refusal about WHERE THE QUESTION WOULD GO is fatal, and stays fatal.
-	// A misdirected link mails a stranger's mailbox about a request made from
-	// an address they do not hold; a re-solicitation mails somebody who
-	// explicitly withdrew. Neither is a question worth asking at any price, and
-	// swallowing either would turn a booking form into the way around a
-	// withdrawal.
-	// Returned as themselves rather than translated: both implement
-	// apperrors.FieldFault, which httperr renders as the 422 naming the field —
-	// and which the MCP surface reads too, where a translation done here would
-	// not reach.
-	var misdirected *consent.MisdirectedLinkError
-	if errors.As(err, &misdirected) {
-		return activities.MarketingNotRequested, misdirected
-	}
-	var resolicit *consent.ReSolicitationError
-	if errors.As(err, &resolicit) {
-		return activities.MarketingNotRequested, resolicit
-	}
-	// AN AUTHORIZATION REFUSAL IS NOT A MAIL FAILURE either, and it is the one
-	// remaining refusal that says something about the CALLER rather than about
+	// THE TWO NAMED REFUSALS ARE STILL ENFORCED, and they are enforced where
+	// they matter: inside the mint, which writes no token and stages no mail.
+	// A misdirected link would have gone to a mailbox other than the one that
+	// asked; a re-solicitation would have gone to somebody who explicitly
+	// withdrew. Neither is sent either way. What used to happen as well was
+	// that the booking died with them — a visitor who typed the second address
+	// they hold, or who unsubscribed from the newsletter last year, lost the
+	// meeting they came for over a checkbox they could have left empty, and
+	// the transactional grant recorded a moment earlier then stood for a
+	// booking that did not exist. Refusing to ask does not require refusing
+	// the meeting, and a booking form is not a way around a withdrawal when
+	// nothing is mailed and nothing is granted.
+	//
+	// The refusals keep their FieldFault types for the operator's own door:
+	// handlers.go's confirm-link verb raises them as the 422 naming the field,
+	// where a seat pressing the button HAS made a mistake it can act on.
+	// Answering the same to an anonymous booking form would be an oracle
+	// besides — it would say which addresses a contact holds and what they
+	// have withdrawn, to anyone who can guess an email.
+	//
+	// AN AUTHORIZATION REFUSAL IS THE ONE EXCEPTION, and it is not a refusal of
+	// the question at all: it says something about the CALLER rather than about
 	// this installation's ability to ask. The mint takes auth.Require before it
 	// opens a transaction, and the contact probe inside it can answer a denial
 	// or a not-found for a subject the caller may not write.

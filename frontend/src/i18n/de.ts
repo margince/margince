@@ -3276,8 +3276,6 @@ export const de = {
     "Angenommen, aber die Aufgabe entstand nie",
 
   "create.cancel": "Abbrechen",
-  "create.multiselect.required":
-    "Erforderlich – mindestens eine Option wählen.",
   "create.save": "Anlegen",
   "create.saving": "Wird angelegt…",
   "create.contact": "Neuer Kontakt",
@@ -3783,6 +3781,8 @@ export const de = {
     "Deine Änderungen bleiben erhalten. Erstelle einen neuen Entwurf, wenn du bereit bist.",
   "compose.threadFailed":
     "Diese Nachricht konnte nicht gelesen werden. Versuche es in der Unterhaltung erneut.",
+  "compose.anchorGone":
+    "Diese Nachricht gibt es nicht mehr, es ist also nichts da, worauf du antworten k\u00f6nntest. Schreib stattdessen eine neue Nachricht.",
   "compose.threadPending": "Verlauf wird geladen\u2026",
   "compose.sendBody":
     "Prüfen und bearbeiten Sie Ihren Entwurf. Ein Klick auf Senden verschickt die E-Mail und kann nicht rückgängig gemacht werden.",
@@ -4319,6 +4319,13 @@ export const de = {
   "agent.activity.offerDraft.stalled":
     "Das Entwerfen deines Angebots dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen.",
   "agent.panel.runningNow": "Läuft jetzt",
+
+  // Vier Dinge, die der Agentenbereich sagt, wenn es nichts Neues gibt. Kurz
+  // halten: die Zeile im Rail wird nach zwei Zeilen abgeschnitten.
+  "agent.tip.day": "To-dos, Entscheidungen und Dubletten: {name}.",
+  "agent.tip.ask": "Frag mich überall mit ⌘K.",
+  "agent.tip.recap": "Öffne mich für alles, was ich heute getan habe.",
+  "agent.tip.edge": "Der Bildschirmrand leuchtet, während ich arbeite.",
 
   "agents.connected": "Verbundene Agenten",
   "agents.connectedSub":
