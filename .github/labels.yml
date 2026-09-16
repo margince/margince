@@ -138,6 +138,9 @@
 - name: "margince-qc"
   color: "0052CC"
   description: "Found by margince-qc, the UAT acceptance-test repo, while building or running a scenario"
+- name: "schema-review"
+  color: "5319E7"
+  description: "Found by the table-by-table database review; the fix is a migration or a column contract"
 
 # ---------------------------------------------------------------------------
 # GitHub's own defaults, kept because they are what a drive-by contributor and
