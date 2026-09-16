@@ -193,7 +193,7 @@ describe("a waiting message whose prepared move is the reply", () => {
       id: "01a05500-0000-7000-8000-00000000bbbb",
       label: "Acme Expansion",
     },
-    move: { action: "draft_reply", activity_id: ACTIVITY },
+    move: { action: "draft_reply" as const, activity_id: ACTIVITY },
   };
 
   function aWaitingRow() {
