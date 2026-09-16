@@ -74,7 +74,7 @@ export function ReviewTemplateEditor({
       <Heading size="large" id="review-template-heading" className="t-h2">
         {template.label}
       </Heading>
-      <p className="t-caption">{t("reviewTemplates.editHint")}</p>
+      <p>{t("reviewTemplates.editHint")}</p>
       <div className="form-stack">
         {questions.map((question, index) => (
           <div key={question.key} className="form-stack">
@@ -160,11 +160,7 @@ export function ReviewTemplateEditor({
         >
           {t("reviewTemplates.addQuestion")}
         </Button>
-        {save.isError && (
-          <p role="alert" className="t-caption">
-            {problemMessageOf(save.error, t)}
-          </p>
-        )}
+        {save.isError && <p role="alert">{problemMessageOf(save.error, t)}</p>}
         <div className="actions">
           <Button variant="ghost" disabled={save.isPending} onClick={onClose}>
             {t("deals.cancel")}

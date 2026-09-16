@@ -108,7 +108,7 @@ export function PrivacyNotice({
             </li>
           ))}
         </ul>
-        <p className="t-caption">{t("privacynotice.rights.how")}</p>
+        <p>{t("privacynotice.rights.how")}</p>
       </Card>
     </div>
   );

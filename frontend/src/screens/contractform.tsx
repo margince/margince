@@ -259,11 +259,7 @@ export function ContractForm({
         onPick={setFile}
       />
 
-      {save.error && (
-        <p className="t-caption" role="alert">
-          {problemMessageOf(save.error, t)}
-        </p>
-      )}
+      {save.error && <p role="alert">{problemMessageOf(save.error, t)}</p>}
 
       <div className="actions">
         <Button onClick={onClose}>{t("create.cancel")}</Button>

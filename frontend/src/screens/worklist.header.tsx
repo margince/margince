@@ -238,7 +238,7 @@ export function WorklistHeader({
             which reads as a broken page rather than a narrowed one. The way
             back out is the same control, so the sentence carries it. */}
         {isLinkedOnlyFilter(filter) && (
-          <p className="t-caption worklist-completeness">
+          <p className="worklist-completeness">
             {t(`worklist.filter.linked.${filter}` as const)}{" "}
             <button
               type="button"

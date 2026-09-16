@@ -225,9 +225,7 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
         // every control it refuses points at it. Absent while the project is
         // writable, where a reserved gap reads as a record with nothing said.
         readOnlyReason ? (
-          <p id={readOnlyReasonId} className="t-caption">
-            {readOnlyReason}
-          </p>
+          <p id={readOnlyReasonId}>{readOnlyReason}</p>
         ) : undefined
       }
       {...chronology}

@@ -364,7 +364,7 @@ function PreferenceCenterBody({ token }: Readonly<{ token: string }>) {
           {t("prefs.unsubscribeAll")}
         </Button>
         {unsubscribeAll.isError && (
-          <p className="t-caption pref-unsub-error">
+          <p className="pref-unsub-error">
             {explainPublicError(unsubscribeAll.error, t)}
           </p>
         )}
@@ -379,7 +379,7 @@ function PreferenceCenterBody({ token }: Readonly<{ token: string }>) {
           </p>
           {lastUnsubscribed.length > 0 &&
             (undoStaged ? (
-              <p className="t-caption">{t("prefs.undoExplicit")}</p>
+              <p>{t("prefs.undoExplicit")}</p>
             ) : (
               <Button disabled={writePending} onClick={undoUnsubscribe}>
                 {t("prefs.undo")}

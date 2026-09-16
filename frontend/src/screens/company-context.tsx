@@ -198,7 +198,7 @@ export function ManualCompanySetup() {
       >
         <PanelBody className="form-stack">
           <Eyebrow>{t("settings.companyManualKicker")}</Eyebrow>
-          <p className="t-caption">{t("settings.companyManualSub")}</p>
+          <p>{t("settings.companyManualSub")}</p>
           {(["display_name", "offer_summary", "icp"] as const).map((field) => (
             <Field key={field} label={coldFieldLabel(field, t)}>
               {(control) =>
@@ -662,9 +662,7 @@ function CompanyFactsCard({
             PERMISSION, which is why it speaks at all — the rollout flag returns
             null instead, because a capability this installation does not have
             is not a fact about the reader. */}
-        {readOnly && (
-          <p className="t-caption">{t("settings.companyReadOnly")}</p>
-        )}
+        {readOnly && <p>{t("settings.companyReadOnly")}</p>}
         <QueryGate
           query={company}
           pendingLabel={t("settings.companySourceTitle")}

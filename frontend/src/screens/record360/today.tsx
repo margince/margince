@@ -147,7 +147,7 @@ export function WithheldNotice({
     return null;
   }
   return (
-    <p className="today-withheld t-caption">
+    <p className="today-withheld">
       {t("today.withheld", { sections: sections.join(", ") })}
     </p>
   );

@@ -163,7 +163,7 @@ export function InviteUserForm({
           <Heading size="large" className="t-h3 modal-title" id={titleId}>
             {t("users.inviteTitle")}
           </Heading>
-          <p className="t-caption">{t("users.inviteSub")}</p>
+          <p>{t("users.inviteSub")}</p>
         </>
       )}
       <Field label={t("users.emailLabel")} required>
@@ -205,7 +205,7 @@ export function InviteUserForm({
           team edits only its own records, and the preview below says so
           before the invite goes out. */}
       <fieldset className="users-invite-teams">
-        <legend className="t-caption">{t("users.teamsLabel")}</legend>
+        <legend>{t("users.teamsLabel")}</legend>
         {(teams.data ?? []).flatMap((entry) =>
           "name" in entry ? (
             <Checkbox
@@ -230,7 +230,7 @@ export function InviteUserForm({
             an admin invite contacts into no team at all on the strength of
             pages nothing read. */}
         {teams.data?.length === 0 && !teamsPartial && (
-          <p className="t-caption">{t("users.noTeamsYet")}</p>
+          <p>{t("users.noTeamsYet")}</p>
         )}
         <RosterPartialNote partial={teamsPartial} />
       </fieldset>

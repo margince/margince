@@ -160,7 +160,7 @@ export function lastMailColumn(t: Translator): ListColumn<Deal> {
       ) : (
         // A word rather than the card's blank: a column is scanned down, and
         // an empty cell in one cannot be told from a cell still loading.
-        <span className="t-caption">{t("deals.lastMailNone")}</span>
+        <span>{t("deals.lastMailNone")}</span>
       );
     },
   };

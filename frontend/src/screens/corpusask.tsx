@@ -173,7 +173,7 @@ export function CorpusAskCard({
       titleAction={<Badge tone="ai">{t("co.assistant.aiTag")}</Badge>}
     >
       <PanelBody className="form-stack">
-        <p className="t-caption">{t("corpusAsk.sub")}</p>
+        <p>{t("corpusAsk.sub")}</p>
         {items && items.length > 1 ? (
           <Field label={t("corpusAsk.whichSet")}>
             {(control) => (

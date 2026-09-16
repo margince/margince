@@ -151,7 +151,7 @@ function HeldThreadTable({ rows }: Readonly<{ rows: HeldThread[] }>) {
               row.has_message ? (
                 <ThreadSubject row={row} onOpen={setOpenEmail} />
               ) : (
-                <span className="t-caption">{t("heldThreads.noSubject")}</span>
+                <span>{t("heldThreads.noSubject")}</span>
               ),
           },
           {
@@ -166,7 +166,7 @@ function HeldThreadTable({ rows }: Readonly<{ rows: HeldThread[] }>) {
               row.occurred_at ? (
                 formatDateTime(row.occurred_at, locale, zone)
               ) : (
-                <span className="t-caption">—</span>
+                <span>—</span>
               ),
           },
           {

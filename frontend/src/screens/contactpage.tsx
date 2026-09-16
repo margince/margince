@@ -462,9 +462,7 @@ export function ContactPageV2({
           // nothing said.
           band={
             readOnlyReason ? (
-              <p id={readOnlyReasonId} className="t-caption">
-                {readOnlyReason}
-              </p>
+              <p id={readOnlyReasonId}>{readOnlyReason}</p>
             ) : undefined
           }
           tabs={

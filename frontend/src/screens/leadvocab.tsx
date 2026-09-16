@@ -228,7 +228,6 @@ function LeadSourceRow({
         ) : (
           canRemove && (
             <span
-              className="t-caption"
               title={
                 builtIn
                   ? t("leadSources.builtInKept")
@@ -526,9 +525,7 @@ export function LeadSourcesCard() {
             }
           }}
         >
-          <p className="t-caption">
-            {t("leadSources.removeBody", { label: removing?.label ?? "" })}
-          </p>
+          <p>{t("leadSources.removeBody", { label: removing?.label ?? "" })}</p>
         </ConfirmModal>
       </PanelBody>
     </Panel>
@@ -670,7 +667,6 @@ export function LeadDisqualifyReasonsCard() {
                             ) : (
                               canRemove && (
                                 <span
-                                  className="t-caption"
                                   title={
                                     builtIn
                                       ? t("leadSources.builtInKept")
@@ -748,9 +744,7 @@ export function LeadDisqualifyReasonsCard() {
             }
           }}
         >
-          <p className="t-caption">
-            {t("leadReasons.removeBody", { label: removing?.label ?? "" })}
-          </p>
+          <p>{t("leadReasons.removeBody", { label: removing?.label ?? "" })}</p>
         </ConfirmModal>
       </PanelBody>
     </Panel>

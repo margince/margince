@@ -123,9 +123,7 @@ function BuyerDocumentVerbs({
         {t("buyer.docs.downloadShort")}
       </Button>
       {download.isError ? (
-        <p className="t-caption t-danger">
-          {problemMessageOf(download.error, t)}
-        </p>
+        <p className="t-danger">{problemMessageOf(download.error, t)}</p>
       ) : null}
     </div>
   );

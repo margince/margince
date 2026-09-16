@@ -194,9 +194,7 @@ function ConsentSelector({
           <input type="hidden" name="deny" value="1" />
           <Button type="submit">{t("consent.deny")}</Button>
         </form>
-        {granted.size === 0 && (
-          <p className="t-caption">{t("consent.pickOne")}</p>
-        )}
+        {granted.size === 0 && <p>{t("consent.pickOne")}</p>}
       </div>
     </Card>
   );

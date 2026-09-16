@@ -215,7 +215,7 @@ export function PairDecision({ item }: Readonly<{ item: WorklistItem }>) {
         // Said in words rather than shown as disabled buttons. A greyed-out
         // control asks the reader to work out why it is grey; a sentence tells
         // them the pair is real, that they cannot settle it, and who can.
-        <p className="t-caption worklist-pair-steward">
+        <p className="worklist-pair-steward">
           {t("worklist.pair.stewardOnly")}
         </p>
       )}

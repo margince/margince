@@ -118,14 +118,10 @@ export function CompanyPrimaryActions({
   return (
     <>
       {archived && !archivedReasonId && (
-        <p className="t-caption" id={ownReasonId}>
-          {t("record.archivedReadOnly")}
-        </p>
+        <p id={ownReasonId}>{t("record.archivedReadOnly")}</p>
       )}
       {!archived && logGrantKnown && !canLog && (
-        <p className="t-caption" id={logRefusedId}>
-          {t("record.logActivityRefused")}
-        </p>
+        <p id={logRefusedId}>{t("record.logActivityRefused")}</p>
       )}
       <WriteEmailAction
         company={company}
@@ -550,9 +546,7 @@ export function CompanyActionBadges({
           no items at all would be worth hiding. */}
       <OverflowMenu label={t("record.moreActions")}>
         {refusedReason && !archivedReasonId && (
-          <p id={ownReasonId} className="t-caption">
-            {refusedReason}
-          </p>
+          <p id={ownReasonId}>{refusedReason}</p>
         )}
 
         <MergeAction

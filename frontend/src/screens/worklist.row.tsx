@@ -797,9 +797,7 @@ function Rank({
   // decorative: the list element carries the order for a screen reader and the
   // number states it for everybody else.
   const digit = (
-    <span className="t-caption worklist-rank">
-      {formatNumber(position, locale)}
-    </span>
+    <span className="worklist-rank">{formatNumber(position, locale)}</span>
   );
   if (!onSelect) {
     return digit;

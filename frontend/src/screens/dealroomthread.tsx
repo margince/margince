@@ -174,7 +174,7 @@ function ThreadRow({
           </div>
         </div>
       ) : null}
-      {error ? <p className="t-caption t-danger">{error}</p> : null}
+      {error ? <p className="t-danger">{error}</p> : null}
     </div>
   );
 }
@@ -218,7 +218,7 @@ export function ThreadComposer({
     return (
       <>
         {collapsible ? null : (
-          <p className="t-caption t-danger" id={REFUSAL_ID}>
+          <p className="t-danger" id={REFUSAL_ID}>
             {verbs.refusal}
           </p>
         )}
@@ -300,7 +300,7 @@ export function ThreadComposer({
           </Button>
         ) : null}
       </div>
-      {error ? <p className="t-caption t-danger">{error}</p> : null}
+      {error ? <p className="t-danger">{error}</p> : null}
     </div>
   );
 }

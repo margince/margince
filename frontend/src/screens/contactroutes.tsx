@@ -219,7 +219,7 @@ function StrengthMeter({
   const t = useT();
   const band = bucket ?? "none";
   return (
-    <span className="pn-meter t-caption" data-band={band}>
+    <span className="pn-meter" data-band={band}>
       <span className="pn-meter-bars" aria-hidden="true">
         <i />
         <i />

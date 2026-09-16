@@ -216,12 +216,10 @@ function ScoreShortfall({ lead }: Readonly<{ lead: Lead }>) {
 
   return (
     <div className="lead-stack-tight">
-      <span className="t-caption">{t("lead.shortfall.lead")}</span>
+      <span>{t("lead.shortfall.lead")}</span>
       <ul className="lead-plainlist">
         {missing.map((reason) => (
-          <li key={reason} className="t-caption">
-            {reason}
-          </li>
+          <li key={reason}>{reason}</li>
         ))}
       </ul>
     </div>
@@ -245,12 +243,10 @@ function ScoreBreakdown({ id, lead }: Readonly<{ id: string; lead: Lead }>) {
   });
 
   if (explain.isPending) {
-    return <span className="t-caption">{t("lead.scoreLoading")}</span>;
+    return <span>{t("lead.scoreLoading")}</span>;
   }
   if (explain.isError) {
-    return (
-      <span className="t-caption">{problemMessageOf(explain.error, t)}</span>
-    );
+    return <span>{problemMessageOf(explain.error, t)}</span>;
   }
   const current = explain.data?.current;
   if (!explain.data?.explained || !current) {
@@ -266,7 +262,7 @@ function ScoreBreakdown({ id, lead }: Readonly<{ id: string; lead: Lead }>) {
     return lead.score === 0 ? (
       <ScoreShortfall lead={lead} />
     ) : (
-      <span className="t-caption">{t("lead.scoreNotStoredYet")}</span>
+      <span>{t("lead.scoreNotStoredYet")}</span>
     );
   }
   const factors = current.factors ?? [];
@@ -278,14 +274,14 @@ function ScoreBreakdown({ id, lead }: Readonly<{ id: string; lead: Lead }>) {
   return (
     <div className="lead-stack-tight">
       {overridden && (
-        <span className="t-caption">
+        <span>
           {t("lead.scoreFactorsExplainMachine", {
             score: formatNumber(current.score_computed, locale),
           })}
         </span>
       )}
       {factors.length === 0 ? (
-        <span className="t-caption">{t("lead.scoreNoFactors")}</span>
+        <span>{t("lead.scoreNoFactors")}</span>
       ) : (
         <ul className="lead-plainlist">
           {factors.map((factor) => (
@@ -377,14 +373,12 @@ function AssigneePicker({
 }>) {
   const t = useT();
   if (roster.isPending) {
-    return <span className="t-caption">{t("share.rosterLoading")}</span>;
+    return <span>{t("share.rosterLoading")}</span>;
   }
   if (roster.isError) {
     return (
       <div className="lead-line">
-        <span className="t-caption share-error">
-          {t("share.rosterErrorUsers")}
-        </span>
+        <span className="share-error">{t("share.rosterErrorUsers")}</span>
         <Button onClick={() => roster.refetch()}>{t("common.retry")}</Button>
       </div>
     );
@@ -394,7 +388,7 @@ function AssigneePicker({
   // lead as unassignable when the colleague to hand it to sits on a page
   // nothing here read.
   if (candidates.length === 0 && !rosterPartial) {
-    return <span className="t-caption">{t("lead.assignNobodyElse")}</span>;
+    return <span>{t("lead.assignNobodyElse")}</span>;
   }
   return (
     <>
@@ -450,15 +444,15 @@ function LeadOwner({
   return (
     <div className="lead-stack">
       <div className="lead-line">
-        <span className="t-caption">{t("lead.ownerLabel")}</span>
+        <span>{t("lead.ownerLabel")}</span>
         {lead.owner_id ? (
           lead.owner_id === meId ? (
-            <span className="t-caption">{t("lead.ownerYou")}</span>
+            <span>{t("lead.ownerYou")}</span>
           ) : (
             <EntityRef kind="user" id={lead.owner_id} />
           )
         ) : (
-          <span className="t-caption">{t("lead.unassigned")}</span>
+          <span>{t("lead.unassigned")}</span>
         )}
         {/* ONE control, not a button that assigns to you beside a button
             that reveals a picker nobody can see until they press it
@@ -541,7 +535,7 @@ function LeadScorePanel({
 
   return (
     <div className="lead-stack">
-      <span className="t-caption">{t("lead.explainScore")}</span>
+      <span>{t("lead.explainScore")}</span>
       <ScoreBreakdown id={id} lead={lead} />
       {lead.score_override_reason ? (
         <div className="lead-stack">

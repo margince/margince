@@ -155,7 +155,7 @@ function SessionBookingScreen() {
         />
       </div>
       {recognized && (
-        <p className="t-caption" style={{ marginBottom: "var(--space-3)" }}>
+        <p style={{ marginBottom: "var(--space-3)" }}>
           {t("book.welcomeBack", { name: recognized })}
         </p>
       )}
@@ -173,7 +173,7 @@ function SessionBookingScreen() {
               client never hears about a meeting and nobody finds out until
               they do not turn up. */}
           {book.variables?.attendee !== "" && (
-            <p className="t-caption" style={{ marginTop: "var(--space-1)" }}>
+            <p style={{ marginTop: "var(--space-1)" }}>
               {t("book.tellThemYourself")}
             </p>
           )}
@@ -209,9 +209,7 @@ function SessionBookingScreen() {
           style={{ marginTop: "var(--space-3)" }}
         >
           <p className="t-label">{t("book.failed")}</p>
-          <p className="t-caption" style={{ marginTop: 4 }}>
-            {problemMessageOf(book.error, t)}
-          </p>
+          <p style={{ marginTop: 4 }}>{problemMessageOf(book.error, t)}</p>
         </Card>
       )}
     </div>
@@ -325,7 +323,6 @@ function PublicBookingScreen({ hostSlug }: Readonly<{ hostSlug: string }>) {
       </div>
       <div style={{ marginBottom: "var(--space-3)" }}>
         <Checkbox
-          className="t-caption"
           checked={consented}
           onChange={(event) => setConsented(event.target.checked)}
           label={<span data-consent-wording>{consentWording}</span>}
@@ -367,9 +364,7 @@ function PublicBookingScreen({ hostSlug }: Readonly<{ hostSlug: string }>) {
           style={{ marginTop: "var(--space-3)" }}
         >
           <p className="t-label">{t("book.failed")}</p>
-          <p className="t-caption" style={{ marginTop: 4 }}>
-            {problemMessageOf(book.error, t)}
-          </p>
+          <p style={{ marginTop: 4 }}>{problemMessageOf(book.error, t)}</p>
         </Card>
       )}
     </div>

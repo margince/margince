@@ -234,7 +234,7 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
         <ul className="confirm-fields">
           {CORRECTABLE.map((field) => (
             <li key={field} className="confirm-field">
-              <label className="t-caption" htmlFor={`confirm-${field}`}>
+              <label htmlFor={`confirm-${field}`}>
                 {t(FIELD_LABELS[field])}
               </label>
               <TextInput
@@ -247,7 +247,7 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
             </li>
           ))}
           <li className="confirm-field">
-            <span className="t-caption">{t("confirm.field.company")}</span>
+            <span>{t("confirm.field.company")}</span>
             <span className="confirm-readonly">
               {card.company || t("confirm.field.none")}
             </span>
@@ -280,9 +280,9 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
       </Card>
 
       <details className="confirm-provenance">
-        <summary className="t-caption">{t("confirm.provenance.title")}</summary>
+        <summary>{t("confirm.provenance.title")}</summary>
         {card.provenance.length === 0 ? (
-          <p className="t-caption">{t("confirm.provenance.empty")}</p>
+          <p>{t("confirm.provenance.empty")}</p>
         ) : (
           <ul>
             {card.provenance.map((origin) => (
@@ -302,9 +302,7 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
       </details>
 
       {submit.error && (
-        <p className="t-caption confirm-error">
-          {explainPublicError(submit.error, t)}
-        </p>
+        <p className="confirm-error">{explainPublicError(submit.error, t)}</p>
       )}
 
       <div className="confirm-actions">

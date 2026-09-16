@@ -415,7 +415,7 @@ function CompanyArtifact(props: ReadCompanyStepProps) {
       <div className="mw-review-heading">
         <span>{t("ob.ai.liveArtifact")}</span>
         <Heading size="large">{t("ob.ai.companyKnowledge")}</Heading>
-        <p className="t-caption">
+        <p>
           {t(
             props.mode === "manual"
               ? "ob.ai.companyKnowledgeManualBody"
@@ -544,9 +544,7 @@ export function ConversationEntries({
               {keyedSuggestedChanges(entry.reply.proposed_changes).map(
                 ({ change, key }) => (
                   <li key={`${entry.id}:${key}`}>
-                    <span className="t-caption">
-                      {coldFieldLabel(change.field, t)}
-                    </span>
+                    <span>{coldFieldLabel(change.field, t)}</span>
                     <strong>{change.value}</strong>
                     <small className="t-caption">{change.reason}</small>
                   </li>
@@ -899,7 +897,7 @@ export function ReadEvidence({ read }: Readonly<{ read: CompanySiteRead }>) {
       {legalEntities.length > 0 && (
         <section className="legal-preview">
           <Heading size="large">{t("ob.legalFoundTitle")}</Heading>
-          <p className="t-caption">{t("ob.legalFoundBody")}</p>
+          <p>{t("ob.legalFoundBody")}</p>
           <div className="legal-preview-grid">
             {legalEntities.map((entity) => (
               <Card
@@ -912,7 +910,7 @@ export function ReadEvidence({ read }: Readonly<{ read: CompanySiteRead }>) {
                 </div>
                 <strong>{entity.name}</strong>
                 {entity.registered_address && (
-                  <span className="t-caption">{entity.registered_address}</span>
+                  <span>{entity.registered_address}</span>
                 )}
                 {entity.register_number && (
                   <small>{entity.register_number}</small>
@@ -925,7 +923,7 @@ export function ReadEvidence({ read }: Readonly<{ read: CompanySiteRead }>) {
       {read.profile_fields.length > 0 && (
         <>
           <Heading size="large">{t("ob.coreFindingsTitle")}</Heading>
-          <p className="t-caption">{t("ob.coreFindingsBody")}</p>
+          <p>{t("ob.coreFindingsBody")}</p>
           <div className="finding-grid">
             {read.profile_fields.map((field) => (
               <Card
@@ -971,7 +969,7 @@ export function ReadEvidence({ read }: Readonly<{ read: CompanySiteRead }>) {
         </section>
       )}
       {(skippedPages.length > 0 || read.warnings.length > 0) && (
-        <details className="read-coverage t-caption">
+        <details className="read-coverage">
           <summary>
             <Info aria-hidden /> {t("ob.coverageDetails")}
           </summary>

@@ -222,7 +222,7 @@ function GroupRows({
   const t = useT();
   return (
     <section className="settings-home-group">
-      <Heading size="medium" className="t-caption settings-home-groupname">
+      <Heading size="medium" className="settings-home-groupname">
         {t(`settings.group.${group}`)}
       </Heading>
       <PageRows pages={items} />

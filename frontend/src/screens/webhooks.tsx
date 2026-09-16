@@ -370,7 +370,7 @@ function SecretRevealModal({
       {/* One stack owns every interval in this dialog, so the warning, the
           secret and the copy attempt do not each set a margin of their own. */}
       <div className="form-stack">
-        <p className="t-caption">{t("webhooks.secret.warning")}</p>
+        <p>{t("webhooks.secret.warning")}</p>
         <pre className="code-block" data-testid="webhook-signing-secret">
           {secret}
         </pre>
@@ -390,7 +390,7 @@ function SecretRevealModal({
           available before a copy — abandoning a subscription must be possible —
           but the caution says in words what it costs. */}
       {!copied && (
-        <p className="t-caption webhook-secret-caution">
+        <p className="webhook-secret-caution">
           {t("webhooks.secret.leaveWarning")}
         </p>
       )}

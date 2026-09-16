@@ -77,7 +77,7 @@ export function AcquisitionSourcesCard() {
             }
           />
         </SettingList>
-        {!canEdit && <p className="t-caption">{t("acqSources.readOnly")}</p>}
+        {!canEdit && <p>{t("acqSources.readOnly")}</p>}
         {failure?.error && (
           <Callout
             tone="danger"

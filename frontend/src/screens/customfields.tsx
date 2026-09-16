@@ -136,7 +136,7 @@ export function FieldBuilder({
   return (
     <div className="cf-builder">
       <div className="cf-builder-head">
-        <p className="cf-hint t-caption">{t("cf.builder.intro")}</p>
+        <p className="cf-hint">{t("cf.builder.intro")}</p>
         <Badge>{t("cf.builder.noCode")}</Badge>
       </div>
 

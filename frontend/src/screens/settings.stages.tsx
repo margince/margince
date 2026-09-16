@@ -236,9 +236,7 @@ function StageRemove({
         // back to (design-system/confirmmodal).
         returnFocusTo={returnFocusTo}
       >
-        <p className="t-caption">
-          {t("stage.removeBody", { name: stage.name })}
-        </p>
+        <p>{t("stage.removeBody", { name: stage.name })}</p>
       </ConfirmModal>
     </>
   );
@@ -266,7 +264,7 @@ export function StageRow({
       <Badge tone={stageSemanticTone(stage.semantic)}>
         {stageSemanticLabel(stage.semantic, t)}
       </Badge>
-      <span className="t-num t-caption">
+      <span className="t-num">
         {formatNumber(stage.win_probability, locale)}%
       </span>
       {/* Each control carries its own verb — editing a stage is

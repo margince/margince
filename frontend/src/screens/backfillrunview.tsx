@@ -168,7 +168,7 @@ export function RunView({
         staleForMs={stale ? agoMs : null}
       />
       {run.state === "error" && (
-        <p className="t-caption backfill-error">
+        <p className="backfill-error">
           {t("backfill.errorNote")}
           {run.last_error_class ? ` (${run.last_error_class})` : ""}
         </p>
@@ -182,12 +182,8 @@ export function RunView({
           <Button onClick={onRestart}>{t("backfill.restart")}</Button>
         )}
       </div>
-      {live && cancelError && (
-        <p className="t-caption backfill-error">{cancelError}</p>
-      )}
-      {run.state === "cancelled" && (
-        <p className="t-caption">{t("backfill.cancelledNote")}</p>
-      )}
+      {live && cancelError && <p className="backfill-error">{cancelError}</p>}
+      {run.state === "cancelled" && <p>{t("backfill.cancelledNote")}</p>}
     </div>
   );
 }

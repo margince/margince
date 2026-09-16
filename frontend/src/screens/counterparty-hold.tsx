@@ -136,7 +136,7 @@ export function CounterpartyHoldRow({
   if (held) {
     return (
       <div className="pe-rail-hold">
-        <p className="t-caption">
+        <p>
           {held.kind === "domain"
             ? t("hold.heldByDomain", { domain: held.value })
             : t("hold.heldByAddress")}
@@ -151,14 +151,14 @@ export function CounterpartyHoldRow({
         {/* Said on the way OUT, not behind a confirm on the way in: lifting is
             the reversible half, and what surprises a reader is that it does not
             re-open what was already held. */}
-        <p className="t-caption">{t("hold.liftingWidensNothing")}</p>
+        <p>{t("hold.liftingWidensNothing")}</p>
       </div>
     );
   }
 
   return (
     <div className="pe-rail-hold">
-      <p className="t-caption">{t("hold.notHeld")}</p>
+      <p>{t("hold.notHeld")}</p>
       <div className="card-actions">
         <Button variant="ghost" onClick={() => setAsking("address")}>
           {t("hold.holdAddress")}
@@ -178,11 +178,7 @@ export function CounterpartyHoldRow({
           {t("hold.holdDomain", { domain })}
         </Button>
       </div>
-      {place.isError && (
-        <p className="t-caption" role="alert">
-          {problemMessageOf(place.error, t)}
-        </p>
-      )}
+      {place.isError && <p role="alert">{problemMessageOf(place.error, t)}</p>}
       <ConfirmModal
         open={asking !== null}
         onClose={() => setAsking(null)}

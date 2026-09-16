@@ -183,9 +183,7 @@ function ShareLinkReveal({
         <Button onClick={onClose}>{t("analytics.share.done")}</Button>
       }
     >
-      <p id={headingId} className="t-caption">
-        {t("analytics.share.linkWarning")}
-      </p>
+      <p id={headingId}>{t("analytics.share.linkWarning")}</p>
       <pre className="code-block" data-testid="forecast-share-link">
         {url}
       </pre>
@@ -198,9 +196,7 @@ function ShareLinkReveal({
           {t("analytics.share.copyFailed")}
         </Callout>
       )}
-      {!copied && (
-        <p className="t-caption">{t("analytics.share.leaveWarning")}</p>
-      )}
+      {!copied && <p>{t("analytics.share.leaveWarning")}</p>}
     </ConfirmModal>
   );
 }

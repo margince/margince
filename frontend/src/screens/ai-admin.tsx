@@ -137,7 +137,7 @@ function BudgetPreview({
     <>
       <Heading size="medium">{t("aiAdmin.preview")}</Heading>
       <BudgetReading budget={preview.proposed} />
-      <p className="t-caption">{t("aiAdmin.previewHint")}</p>
+      <p>{t("aiAdmin.previewHint")}</p>
       {canDiagnose && <DeferredWork rows={preview.deferred_work} />}
       {canRoute && (
         <Disclosure summary={t("aiAdmin.features")}>

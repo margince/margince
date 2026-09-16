@@ -215,11 +215,7 @@ export function BlockedDomainsCard() {
             }
           />
         </SettingList>
-        {!canManage && (
-          <p className="t-caption" id={denialId}>
-            {t("blockedDomains.adminOnly")}
-          </p>
-        )}
+        {!canManage && <p id={denialId}>{t("blockedDomains.adminOnly")}</p>}
         {/* What LANDED, named, and on the CARD rather than in the dialog: the
             server normalizes the domain to its registrable form and the write
             replaces any entry already on it, so without this a sub-domain

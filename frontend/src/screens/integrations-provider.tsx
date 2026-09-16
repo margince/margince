@@ -707,7 +707,7 @@ function CredentialDialog({
       pending={pending}
       error={error}
     >
-      <p className="t-caption">{t("provider.connectConfirm.body")}</p>
+      <p>{t("provider.connectConfirm.body")}</p>
       {/* The field is write-only in both states: a sealed key is never sent
           back to the browser, so the box is empty even when one is in place.
           Left unexplained that reads as "no key connected" while the card
@@ -946,10 +946,8 @@ function FreeTierNote({
     // nothing about the surface, so it reads as the list's own lead caption. A
     // band that never changes teaches a reader to skip it.
     <div className="provider-free-note">
-      <p className="t-caption">{t("provider.freeTier.hint")}</p>
-      {priced.length > 0 && (
-        <p className="t-caption">{t("provider.pricedTier.hint")}</p>
-      )}
+      <p>{t("provider.freeTier.hint")}</p>
+      {priced.length > 0 && <p>{t("provider.pricedTier.hint")}</p>}
     </div>
   );
 }

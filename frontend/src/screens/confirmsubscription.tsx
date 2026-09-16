@@ -151,7 +151,7 @@ export function SubscriptionConfirmBody({
           {t("confirm.subscription.confirm")}
         </Button>
         {error && (
-          <p className="t-caption confirm-error" role="status">
+          <p className="confirm-error" role="status">
             {error}
           </p>
         )}

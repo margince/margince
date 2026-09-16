@@ -288,7 +288,7 @@ export function MailSharingPostureRow() {
           </dd>
         </dl>
         {canChangeIt && (
-          <p className="t-caption">
+          <p>
             <a href="#/settings/capture">{t("mailSharing.posture.where")}</a>
           </p>
         )}

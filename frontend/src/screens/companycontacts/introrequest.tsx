@@ -121,9 +121,7 @@ export function IntroRequestModal({
         </div>
       )}
       {draft.isError && (
-        <p className="t-caption cp-intro-error">
-          {problemMessageOf(draft.error, t)}
-        </p>
+        <p className="cp-intro-error">{problemMessageOf(draft.error, t)}</p>
       )}
       {written && (
         <>
@@ -167,7 +165,7 @@ export function IntroRequestModal({
           />
           {written.reasoning && written.reasoning.length > 0 && (
             <>
-              <p className="t-caption cp-intro-why">{t("co.intro.basedOn")}</p>
+              <p className="cp-intro-why">{t("co.intro.basedOn")}</p>
               <ul className="chips">
                 {written.reasoning.map((reason) => (
                   <li key={`${reason.kind}:${reason.label}`}>{reason.label}</li>
@@ -176,9 +174,7 @@ export function IntroRequestModal({
             </>
           )}
           {copyFailed && (
-            <p className="t-caption cp-intro-error">
-              {t("co.intro.copyFailed")}
-            </p>
+            <p className="cp-intro-error">{t("co.intro.copyFailed")}</p>
           )}
           <div className="cp-intro-actions">
             {/* Copy first, because it is the one that always works. A mailto:

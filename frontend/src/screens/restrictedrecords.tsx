@@ -145,7 +145,7 @@ function OverrideModal({
       pending={decide.isPending}
       error={decide.error ? problemMessageOf(decide.error, t) : null}
     >
-      <p className="t-caption">{t(`restricted.${kind}.body`)}</p>
+      <p>{t(`restricted.${kind}.body`)}</p>
       <Field
         label={t("restricted.reasonLabel")}
         hint={t("restricted.reasonHint")}
@@ -365,7 +365,7 @@ export function RestrictedRecordsCard() {
                     </Button>
                     {pinIdIsMalformed && (
                       <p
-                        className="t-caption restricted-pin-error"
+                        className="restricted-pin-error"
                         id={pinErrorId}
                         role="alert"
                       >

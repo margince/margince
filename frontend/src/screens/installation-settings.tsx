@@ -332,9 +332,7 @@ function InstallationSettingsForm({
           {t("installationSettings.companySub")}
         </p>
         {!canManage && (
-          <p className="t-caption" id={denialId}>
-            {t("installationSettings.readOnly")}
-          </p>
+          <p id={denialId}>{t("installationSettings.readOnly")}</p>
         )}
         <SettingList>
           <SettingRow

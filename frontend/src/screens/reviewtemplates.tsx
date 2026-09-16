@@ -49,7 +49,7 @@ export function ReviewTemplatesCard() {
                 )}
               </div>
             ))}
-            <p className="t-caption">{t("reviewTemplates.editHint")}</p>
+            <p>{t("reviewTemplates.editHint")}</p>
             {editing && (
               <ReviewTemplateEditor
                 template={editing}

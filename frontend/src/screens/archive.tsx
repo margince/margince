@@ -143,11 +143,7 @@ export function ArchiveAction<Archived extends { id: string }>({
           // role="alert" so a refused archive is announced: the dialog stays
           // open either way, and without this the only difference between "it
           // failed" and "it is still working" is a line of red text.
-          <p
-            className="t-caption"
-            role="alert"
-            style={{ color: "var(--dangerText)" }}
-          >
+          <p role="alert" style={{ color: "var(--dangerText)" }}>
             {problemMessageOf(mutation.error, t)}
           </p>
         )}

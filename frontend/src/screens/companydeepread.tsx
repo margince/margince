@@ -219,7 +219,7 @@ function SiteReadPanel({
   }
   if (reportQuery.isError) {
     return (
-      <p className="t-caption" style={{ color: "var(--dangerText)" }}>
+      <p style={{ color: "var(--dangerText)" }}>
         {problemMessageOf(reportQuery.error, t)}
       </p>
     );
@@ -419,7 +419,7 @@ export function DeepReadPanel({ companyId }: Readonly<{ companyId: string }>) {
             the panel is still an offer — see `offering`. */}
         {offering && <p className="t-sub">{t("deepread.sub")}</p>}
         {start.isError && (
-          <p className="t-caption" style={{ color: "var(--dangerText)" }}>
+          <p style={{ color: "var(--dangerText)" }}>
             {problemMessageOf(start.error, t)}
           </p>
         )}

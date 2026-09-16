@@ -363,7 +363,7 @@ export function LogActivityForm({
         </Field>
       )}
       {log.isError && (
-        <p className="t-caption form-error">{problemMessageOf(log.error, t)}</p>
+        <p className="form-error">{problemMessageOf(log.error, t)}</p>
       )}
       <div className="form-actions">
         <Button
@@ -423,7 +423,7 @@ export function LogActivity({
     return (
       <Panel title={t("log.title")}>
         <PanelBody>
-          <p className="t-caption">{t("record.logActivityRefused")}</p>
+          <p>{t("record.logActivityRefused")}</p>
         </PanelBody>
       </Panel>
     );

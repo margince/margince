@@ -535,7 +535,7 @@ function DecisionHead({
         </p>
       )}
       {named && approval.summary && (
-        <p className="t-caption approval-why">{approval.summary}</p>
+        <p className="approval-why">{approval.summary}</p>
       )}
     </>
   );
@@ -689,7 +689,7 @@ export function DecisionCard({
               {/* The sentence that says WHY, which the line gave up to stay
                   one line. It leads here for the same reason it led the card. */}
               {named && approval.summary && (
-                <p className="t-caption approval-why">{approval.summary}</p>
+                <p className="approval-why">{approval.summary}</p>
               )}
               {proposal}
             </Popover>

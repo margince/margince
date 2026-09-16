@@ -49,12 +49,10 @@ export function ReceiptReview({ receipt }: Readonly<{ receipt: Receipt }>) {
   });
   const review = receipt.review;
   if (!review) return <ReceiptUndo receipt={receipt} />;
-  if (review.reversed)
-    return <span className="t-caption">{t("brief.changes.undone")}</span>;
-  if (review.accepted)
-    return <span className="t-caption">{t("brief.changes.accepted")}</span>;
+  if (review.reversed) return <span>{t("brief.changes.undone")}</span>;
+  if (review.accepted) return <span>{t("brief.changes.accepted")}</span>;
   if (!review.can_accept && !review.can_undo)
-    return <p className="t-caption">{t("brief.changes.superseded")}</p>;
+    return <p>{t("brief.changes.superseded")}</p>;
   const subject = receipt.subject;
   if (!writable || !review.writable || subject?.type !== "deal") return null;
   const press = (action: "accept" | "undo") =>
@@ -83,11 +81,7 @@ export function ReceiptReview({ receipt }: Readonly<{ receipt: Receipt }>) {
           {t("brief.changes.accept")}
         </Button>
       )}
-      {decide.error && (
-        <p role="alert" className="t-caption">
-          {problemMessageOf(decide.error, t)}
-        </p>
-      )}
+      {decide.error && <p role="alert">{problemMessageOf(decide.error, t)}</p>}
     </div>
   );
 }

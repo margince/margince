@@ -378,9 +378,7 @@ export function CommercialPanel({
         present && (onAllDeals || truncated) ? (
           <>
             {truncated && (
-              <p className="co-row-meta t-caption">
-                {t("co.commercial.truncated")}
-              </p>
+              <p className="co-row-meta">{t("co.commercial.truncated")}</p>
             )}
             {onAllDeals && (
               <Button variant="ghost" onClick={onAllDeals}>

@@ -260,11 +260,9 @@ export function NoticeCasesCard() {
               modal can be dismissed while its submit is still in flight, and
               an error that only rendered there would leave the reader
               believing a duty was excused when it was not. */}
-          {assign.isError ? (
-            <p className="t-caption">{problemMessageOf(assign.error, t)}</p>
-          ) : null}
+          {assign.isError ? <p>{problemMessageOf(assign.error, t)}</p> : null}
           {excuse.isError && excusing === null ? (
-            <p className="t-caption">{problemMessageOf(excuse.error, t)}</p>
+            <p>{problemMessageOf(excuse.error, t)}</p>
           ) : null}
         </CardBoundary>
         <ExcuseModal

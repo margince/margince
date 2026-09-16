@@ -693,7 +693,7 @@ function AgentPanel({
                   scans for, and its NAME leads with the label because "10"
                   spoken alone is not a sentence about anything. */}
               <a
-                className="arbox artile t-caption"
+                className="arbox artile"
                 href="#/worklist"
                 aria-label={`${LABELS.approvals} ${formatNumber(signals.waiting, locale)}`}
               >

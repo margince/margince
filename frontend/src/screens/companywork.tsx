@@ -113,9 +113,7 @@ export function CompanyWorkCard({
       </WorkGroup>
       {view?.attention_withheld && (
         <PanelBody>
-          <p className="t-caption co-work-incomplete">
-            {t("co.work.statusesWithheld")}
-          </p>
+          <p className="co-work-incomplete">{t("co.work.statusesWithheld")}</p>
         </PanelBody>
       )}
     </>
@@ -521,5 +519,5 @@ function StatusLine({
       </span>
     );
   }
-  return <span className="co-work-status t-caption">{children}</span>;
+  return <span className="co-work-status">{children}</span>;
 }

@@ -94,7 +94,7 @@ export function DocumentBoard({
       <Panel title={title} titleAction={titleAction}>
         {documents.length === 0 ? (
           <PanelBody>
-            <p className="t-caption">{empty}</p>
+            <p>{empty}</p>
           </PanelBody>
         ) : (
           groups.map((group) => {
@@ -126,9 +126,7 @@ export function DocumentBoard({
         titleAction={<Badge>{formatNumber(roomThreads.length, locale)}</Badge>}
       >
         <PanelBody>
-          {roomThreads.length === 0 ? (
-            <p className="t-caption">{t("threads.empty")}</p>
-          ) : null}
+          {roomThreads.length === 0 ? <p>{t("threads.empty")}</p> : null}
           <ThreadList threads={roomThreads} verbs={verbs} />
           <ThreadComposer
             verbs={verbs}

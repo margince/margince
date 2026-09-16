@@ -108,10 +108,8 @@ export function StageRulesCard({
   return (
     <QueryStates query={rules} pendingLabel={t("stageAutomation.rulesLoading")}>
       <section>
-        <Heading size="medium" className="t-caption">
-          {t("stageAutomation.rules")}
-        </Heading>
-        <p className="t-caption">{t("stageAutomation.rulesIntro")}</p>
+        <Heading size="medium">{t("stageAutomation.rules")}</Heading>
+        <p>{t("stageAutomation.rulesIntro")}</p>
         {save.isError && (
           <Callout
             tone="danger"

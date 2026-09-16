@@ -1454,7 +1454,7 @@ function dealColumns(
             )}
           </CellStrip>
         ) : (
-          <span className="t-caption">{t("deals.lastSignalNone")}</span>
+          <span>{t("deals.lastSignalNone")}</span>
         ),
     },
     lastMailColumn(t),
@@ -2463,10 +2463,7 @@ export function DealsScreen({
         views={[{ label: "deals.sortNewest", sort: "-created_at" }]}
       />
       {advance.isError && (
-        <p
-          className="t-caption"
-          style={{ color: "var(--dangerText)", marginTop: "var(--space-2)" }}
-        >
+        <p style={{ color: "var(--dangerText)", marginTop: "var(--space-2)" }}>
           {problemMessageOf(advance.error, t)}
         </p>
       )}
@@ -2625,7 +2622,7 @@ function ReopenAction({
           ))}
         </div>
         {reopen.isError && (
-          <p className="t-caption" style={{ color: "var(--dangerText)" }}>
+          <p style={{ color: "var(--dangerText)" }}>
             {problemMessageOf(reopen.error, t)}
           </p>
         )}
@@ -3386,11 +3383,7 @@ function dealBand({
   if (reason === undefined) {
     return undefined;
   }
-  return (
-    <p id={reasonId} className="t-caption">
-      {reason}
-    </p>
-  );
+  return <p id={reasonId}>{reason}</p>;
 }
 
 /**
@@ -3742,7 +3735,6 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
               )}
               {advance.isError && (
                 <p
-                  className="t-caption"
                   style={{
                     color: "var(--dangerText)",
                     marginTop: "var(--space-2)",

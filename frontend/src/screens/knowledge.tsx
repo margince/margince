@@ -274,7 +274,7 @@ export function KnowledgeCard() {
     return (
       <Panel title={t("knowledge.title")}>
         <PanelBody>
-          <p className="t-caption">{t("knowledge.sub")}</p>
+          <p>{t("knowledge.sub")}</p>
           <EmptyState>{t("knowledge.withheld")}</EmptyState>
         </PanelBody>
       </Panel>
@@ -284,7 +284,7 @@ export function KnowledgeCard() {
   return (
     <Panel title={t("knowledge.title")}>
       <PanelBody className="form-stack">
-        <p className="t-caption">{t("knowledge.sub")}</p>
+        <p>{t("knowledge.sub")}</p>
         <QueryGate query={query} pendingLabel={t("knowledge.title")}>
           {(data) => (
             <DocumentSetList sets={data.items} canManage={canManage} />
@@ -372,7 +372,7 @@ function DocumentSetRow({
           setConfirming(false);
         }}
       >
-        <p className="t-caption">{t("knowledge.archiveConfirm.body")}</p>
+        <p>{t("knowledge.archiveConfirm.body")}</p>
       </ConfirmModal>
     </PanelRow>
   );
@@ -452,7 +452,7 @@ function DocumentRow({
           setConfirming(false);
         }}
       >
-        <p className="t-caption">{t("knowledge.deleteConfirm.body")}</p>
+        <p>{t("knowledge.deleteConfirm.body")}</p>
       </ConfirmModal>
     </div>
   );

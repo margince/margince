@@ -287,11 +287,9 @@ function AttachPicker({
       {library.isPending ? (
         <PendingBody label={t("compose.filesLoading")} lines={2} />
       ) : library.isError ? (
-        <p className="t-caption" role="alert">
-          {problemMessageOf(library.error, t)}
-        </p>
+        <p role="alert">{problemMessageOf(library.error, t)}</p>
       ) : files.length === 0 ? (
-        <p className="t-caption">{t("compose.filesNone")}</p>
+        <p>{t("compose.filesNone")}</p>
       ) : (
         <ul className="compose-files-list">
           {files.map((file) => (
@@ -319,15 +317,9 @@ function AttachPicker({
         onPick={(picked) => upload.mutate(picked)}
       />
       {upload.isPending && (
-        <p className="t-caption" aria-live="polite">
-          {t("compose.fileUploading")}
-        </p>
+        <p aria-live="polite">{t("compose.fileUploading")}</p>
       )}
-      {failed && (
-        <p className="t-caption" role="alert">
-          {failed}
-        </p>
-      )}
+      {failed && <p role="alert">{failed}</p>}
     </div>
   );
 }

@@ -171,9 +171,7 @@ export function ProjectHealthModal({
           <p className="t-caption mute">{t("projectHealth.correctionNote")}</p>
         )}
         {write.isError && (
-          <p className="t-caption" role="alert">
-            {problemMessageOf(write.error, t)}
-          </p>
+          <p role="alert">{problemMessageOf(write.error, t)}</p>
         )}
         <div className="actions">
           <Button variant="ghost" onClick={onClose} disabled={write.isPending}>

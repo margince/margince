@@ -119,11 +119,7 @@ export function ConfirmModal({
       {error && (
         // role="alert" (assertive live region) so a screen reader announces the
         // mutation failure when it appears — e.g. a rejected reset confirmation.
-        <p
-          className="t-caption"
-          role="alert"
-          style={{ color: "var(--dangerText)" }}
-        >
+        <p role="alert" style={{ color: "var(--dangerText)" }}>
           {error}
         </p>
       )}

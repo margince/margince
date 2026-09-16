@@ -47,11 +47,11 @@ export function MailRow({
   return (
     <div className="mailrow">
       {htmlFor ? (
-        <label className="mailrow-label t-caption" htmlFor={htmlFor}>
+        <label className="mailrow-label" htmlFor={htmlFor}>
           {label}
         </label>
       ) : (
-        <span className="mailrow-label t-caption">{label}</span>
+        <span className="mailrow-label">{label}</span>
       )}
       <div className="mailrow-value">{children}</div>
       {trailing && <div className="mailrow-trailing">{trailing}</div>}
@@ -68,7 +68,7 @@ export function FieldNeed({
     return null;
   }
   return (
-    <p className="t-caption compose-need" role="alert">
+    <p className="compose-need" role="alert">
       {need}
     </p>
   );

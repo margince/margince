@@ -162,7 +162,7 @@ function ContractRow({
           {/* Nothing written is not an empty answer but the absence of one,
               so it reads at the caption's tone rather than as a value the rep
               chose. */}
-          <span className={value == null ? "t-caption" : undefined}>
+          <span>
             {value == null
               ? t("plan.contract.unwritten")
               : value === ""

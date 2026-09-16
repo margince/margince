@@ -127,9 +127,7 @@ export function LinkRequest() {
         {t("buyer.requestLink")}
       </Button>
       {request.isError ? (
-        <p className="t-caption t-danger">
-          {problemMessageOf(request.error, t)}
-        </p>
+        <p className="t-danger">{problemMessageOf(request.error, t)}</p>
       ) : null}
     </form>
   );

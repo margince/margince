@@ -448,7 +448,7 @@ export function StagedProposal({
   if (state.phase === "resolved") {
     const { resolution } = state;
     if (resolution.outcome === "dismissed") {
-      return <p className="t-caption">{t("trust.dismissed")}</p>;
+      return <p>{t("trust.dismissed")}</p>;
     }
     // Accepted keeps agent provenance; an edit makes the value human-typed.
     // Either way the original evidence stays attached (§4.4).

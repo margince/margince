@@ -116,9 +116,7 @@ export function ConnectPostureStep({
       {/* A visible label rather than an aria-label: the question is one a
           reader has to READ to answer, and Settings gives it the same words
           through SettingRow. */}
-      <p className="t-caption" id={labelId}>
-        {t("connectors.mailPosture.label")}
-      </p>
+      <p id={labelId}>{t("connectors.mailPosture.label")}</p>
       <Select
         aria-labelledby={labelId}
         aria-describedby={helpId}
@@ -154,7 +152,7 @@ export function ConnectPostureStep({
           : ` ${t("connectors.mailPosture.sharedNeedsAdmin")}`}
       </p>
       {save.isError && (
-        <p className="t-caption readfail warn" role="alert">
+        <p className="readfail warn" role="alert">
           {problemMessageOf(save.error, t)}
         </p>
       )}

@@ -196,7 +196,7 @@ function RevokeSeat({
       <p>
         {email} <RoomStateBadge state={room.state} />
       </p>
-      <p className="t-caption">{t("access.revokeBody")}</p>
+      <p>{t("access.revokeBody")}</p>
     </ConfirmModal>
   );
 }

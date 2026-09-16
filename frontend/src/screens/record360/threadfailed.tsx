@@ -14,7 +14,7 @@ export function ThreadFailed({ onRetry }: Readonly<{ onRetry: () => void }>) {
   const t = useT();
   return (
     <PanelBody className="co-thread-failed">
-      <p className="t-caption">{t("co.spine.failed")}</p>
+      <p>{t("co.spine.failed")}</p>
       <Button variant="ghost" onClick={onRetry}>
         {t("common.retry")}
       </Button>

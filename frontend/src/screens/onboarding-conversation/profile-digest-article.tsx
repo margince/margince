@@ -105,7 +105,7 @@ export function ProfileArticle({
           </Eyebrow>
           {factGroups.map((group) => (
             <div key={group.category} className="pdigest-factgroup">
-              <p className="pdigest-subhead t-caption">
+              <p className="pdigest-subhead">
                 {t(factCategoryLabelKey(group.category))}
               </p>
               {group.facts.map((fact) => (

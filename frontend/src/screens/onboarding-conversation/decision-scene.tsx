@@ -173,7 +173,7 @@ function CandidateCard({
         {hasEvidence && (
           <button
             type="button"
-            className="ob-decision-toggle t-caption"
+            className="ob-decision-toggle"
             aria-expanded={open}
             aria-controls={panel}
             onClick={() => setOpen((prev) => !prev)}

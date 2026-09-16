@@ -60,7 +60,7 @@ export function CompanyMark({
     <div className="company-mark">
       <div className="company-mark-body">
         <b>{t("settings.companyMark")}</b>
-        <p className="t-caption">{t("settings.companyMarkIntro")}</p>
+        <p>{t("settings.companyMarkIntro")}</p>
         <div className="company-mark-slots">
           <MarkSlot
             profile={profile}
@@ -228,9 +228,7 @@ function MarkSlot({
 
   return (
     <section className="company-mark-slot" aria-labelledby={headingId}>
-      <b className="t-caption" id={headingId}>
-        {name}
-      </b>
+      <b id={headingId}>{name}</b>
       <p className="t-caption">{status}</p>
       {!picking && <p className="t-caption">{hint}</p>}
       <MarkPreview profile={profile} src={src} square={square} />

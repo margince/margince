@@ -219,9 +219,7 @@ function EvidencePlate({
             {formatNumber(ev.interactions_90d, locale)}
             <small>{t("contact.intro.evidenceWindow")}</small>
           </b>
-          <span className="t-caption">
-            {t("contact.intro.evidenceExchanges")}
-          </span>
+          <span>{t("contact.intro.evidenceExchanges")}</span>
           <ExchangeSplit
             evidence={ev}
             viaName={route.via_display_name}
@@ -231,9 +229,7 @@ function EvidencePlate({
         </div>
         <div className="pn-reading">
           <b>{lastContactReading(ev, t, locale)}</b>
-          <span className="t-caption">
-            {t("contact.intro.evidenceLastContact")}
-          </span>
+          <span>{t("contact.intro.evidenceLastContact")}</span>
         </div>
       </div>
       {receipts.length > 0 ? (

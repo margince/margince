@@ -228,7 +228,7 @@ export function ActivityGroup({
         <ul>
           {entries.map((entry) =>
             entry.findingIds !== undefined && entry.findingIds.length > 0 ? (
-              <li key={entry.id} className="t-caption">
+              <li key={entry.id}>
                 <button
                   type="button"
                   onClick={() => jumpToFindings(entry.findingIds ?? [])}
@@ -237,9 +237,7 @@ export function ActivityGroup({
                 </button>
               </li>
             ) : (
-              <li key={entry.id} className="t-caption">
-                {textOf(entry)}
-              </li>
+              <li key={entry.id}>{textOf(entry)}</li>
             ),
           )}
         </ul>
@@ -408,9 +406,7 @@ export function QuestionCard({
             >
               <span>{label}</span>
               {option.detailKey && (
-                <small className="t-caption">
-                  {t(option.detailKey, option.params)}
-                </small>
+                <small>{t(option.detailKey, option.params)}</small>
               )}
             </Button>
           );

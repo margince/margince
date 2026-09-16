@@ -360,16 +360,12 @@ function RosterPicker({
   // Gate explicitly on loading/error first — the empty picker only renders
   // once both queries have actually succeeded with no subjects.
   if (usersQuery.isPending || teamsQuery.isPending) {
-    return (
-      <p className="t-caption" data-testid="share-roster-loading">
-        {t("share.rosterLoading")}
-      </p>
-    );
+    return <p data-testid="share-roster-loading">{t("share.rosterLoading")}</p>;
   }
   if (usersQuery.isError || teamsQuery.isError) {
     return (
       <div data-testid="share-roster-error">
-        <p className="t-caption share-error">
+        <p className="share-error">
           {usersQuery.isError && teamsQuery.isError
             ? t("share.rosterErrorBoth")
             : usersQuery.isError
@@ -395,9 +391,7 @@ function RosterPicker({
   if (filteredRoster.length === 0) {
     return (
       <>
-        <p className="t-caption" data-testid="share-roster-empty">
-          {t("share.rosterEmpty")}
-        </p>
+        <p data-testid="share-roster-empty">{t("share.rosterEmpty")}</p>
         {/* "Nobody matches" over a roster that stopped early is the reader
             being told the subject they are looking for does not exist, on the
             strength of pages nothing read. */}
@@ -835,7 +829,7 @@ function ShareScreenBody({
           )}
 
           {grantErrorMessage && (
-            <p className="t-caption share-error">{grantErrorMessage}</p>
+            <p className="share-error">{grantErrorMessage}</p>
           )}
         </PanelBody>
       </Panel>

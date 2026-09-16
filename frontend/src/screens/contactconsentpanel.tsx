@@ -122,7 +122,7 @@ export function ConsentAndChannels({
               ))}
           </>
         )}
-        <p className="t-caption">{t("consent.permissionScope")}</p>
+        <p>{t("consent.permissionScope")}</p>
         <Button variant="ghost" onClick={() => setManage(true)}>
           {t("consent.manage")}
         </Button>

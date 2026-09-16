@@ -76,7 +76,7 @@ export function VoiceActArtifact({
       <div className="mw-review-heading">
         <span>{t("ob.ai.liveArtifact")}</span>
         <Heading size="large">{t("ob.conv.voice.artifactTitle")}</Heading>
-        <p className="t-caption">{t("ob.conv.voice.artifactBody")}</p>
+        <p>{t("ob.conv.voice.artifactBody")}</p>
       </div>
       {summary === null && manifest.length === 0 ? (
         <p className="ob-conv-artifact-empty">

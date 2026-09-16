@@ -177,7 +177,7 @@ function BaselineRow() {
               onChange={(e) => setQ(e.target.value)}
             />
             {needle !== "" && result && result.matched === 0 && (
-              <p className="t-caption">{t("consumerMail.baselineNone")}</p>
+              <p>{t("consumerMail.baselineNone")}</p>
             )}
             {needle !== "" && result && result.matched > 0 && (
               <>
@@ -186,9 +186,7 @@ function BaselineRow() {
                   data-testid="consumer-mail-baseline-list"
                 >
                   {result.data.map((domain) => (
-                    <li key={domain} className="t-caption">
-                      {domain}
-                    </li>
+                    <li key={domain}>{domain}</li>
                   ))}
                 </ul>
                 {result.matched > result.data.length && (
@@ -314,11 +312,7 @@ export function ConsumerMailDomainsCard() {
             <BaselineRow />
           </Disclosure>
         </SettingList>
-        {denial && (
-          <p className="t-caption" id={denialId}>
-            {denial}
-          </p>
-        )}
+        {denial && <p id={denialId}>{denial}</p>}
         {remove.isError && (
           <Callout
             tone="danger"
@@ -402,11 +396,7 @@ function AddConsumerMailDialog({
             />
           )}
         </Field>
-        {!canManage && (
-          <p className="t-caption" id={carveOutDenialId}>
-            {t("consumerMail.addOnly")}
-          </p>
-        )}
+        {!canManage && <p id={carveOutDenialId}>{t("consumerMail.addOnly")}</p>}
         {add.isError && (
           <Callout
             tone="danger"

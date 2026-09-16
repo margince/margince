@@ -123,9 +123,7 @@ export function AddEmploymentModal({
             disabled={create.isPending}
           />
           {!company && allConnected && (
-            <p className="t-caption">
-              {t("contact.rail.allCompaniesConnected")}
-            </p>
+            <p>{t("contact.rail.allCompaniesConnected")}</p>
           )}
         </div>
         <Field label={t("rel.role")}>
@@ -146,11 +144,7 @@ export function AddEmploymentModal({
         />
       </div>
       {create.isError && (
-        <p
-          className="t-caption"
-          role="alert"
-          style={{ color: "var(--dangerText)" }}
-        >
+        <p role="alert" style={{ color: "var(--dangerText)" }}>
           {problemMessageOf(create.error, t)}
         </p>
       )}

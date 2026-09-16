@@ -168,7 +168,7 @@ function PolicyRow({
         // whether the posture is letting it happen.
         value={
           <span className="retention-answer">
-            <span className="t-caption">
+            <span>
               {t("retention.windowDays", {
                 days: formatNumber(policy.retain_days, locale),
               })}
@@ -256,7 +256,7 @@ function PolicyRow({
             }
           />
           {patch.isError && (
-            <p className="t-caption retention-error" role="alert">
+            <p className="retention-error" role="alert">
               {problemMessageOf(patch.error, t)}
             </p>
           )}
@@ -410,7 +410,7 @@ function PostureToggle({
         onChange={(next) => update.mutate(next)}
       />
       {update.isError && (
-        <p className="t-caption retention-error" role="alert">
+        <p className="retention-error" role="alert">
           {problemMessageOf(update.error, t)}
         </p>
       )}
@@ -529,7 +529,7 @@ export function RetentionCard() {
                   // percentage of.
                   <Skeleton width={40} height={22} />
                 ) : settings.isError ? (
-                  <p className="t-caption retention-error" role="alert">
+                  <p className="retention-error" role="alert">
                     {problemMessageOf(settings.error, t)}
                   </p>
                 ) : (

@@ -457,7 +457,7 @@ function EmploymentRow({
         </span>
       )}
       {endFailed && (
-        <p className="pe-colleague-proof t-caption" role="alert">
+        <p className="pe-colleague-proof" role="alert">
           {problemMessageOf(actions.end.error, t)}
         </p>
       )}

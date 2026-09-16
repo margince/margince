@@ -99,7 +99,7 @@ export function DraftBand({
               })}
             </p>
             {maturity === "provisional" && (
-              <p className="t-caption">
+              <p>
                 <Badge>{t("compose.provisional")}</Badge>{" "}
                 {t("compose.provisionalHint")}
               </p>

@@ -179,7 +179,6 @@ export function RetentionPolicyForm({
       </Field>
 
       <Checkbox
-        className="t-caption"
         label={t("retention.enabled")}
         checked={enabled}
         onChange={(event) => {
@@ -189,7 +188,7 @@ export function RetentionPolicyForm({
       />
 
       {errorMessage && (
-        <p className="t-caption retention-error" role="alert">
+        <p className="retention-error" role="alert">
           {errorMessage}
         </p>
       )}

@@ -233,9 +233,7 @@ function CoverageGrid({ companyId }: Readonly<{ companyId: string }>) {
                           {t(BAND_LABELS[band])}
                         </Badge>
                       ) : (
-                        <span className="t-caption">
-                          {t("acctCoverage.untried")}
-                        </span>
+                        <span>{t("acctCoverage.untried")}</span>
                       )}
                     </td>
                   );

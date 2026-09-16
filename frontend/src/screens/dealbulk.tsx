@@ -268,10 +268,10 @@ export function DealBulkBar({
           archive();
         }}
       >
-        <p className="t-caption">{t("deals.bulkArchiveConfirmBody")}</p>
+        <p>{t("deals.bulkArchiveConfirmBody")}</p>
       </ConfirmModal>
       {failed.length > 0 && (
-        <span className="t-caption" style={{ color: "var(--dangerText)" }}>
+        <span style={{ color: "var(--dangerText)" }}>
           {t("deals.bulkFailed", {
             count: formatNumber(failed.length, locale),
           })}{" "}

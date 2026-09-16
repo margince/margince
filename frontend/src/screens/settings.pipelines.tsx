@@ -117,11 +117,7 @@ function PipelineRetirement({
           // ArchiveAction gives a refused retire. Without it the button simply
           // comes back and the admin cannot tell a failure from a success —
           // and the row they are looking at still says Retired either way.
-          <span
-            className="t-caption"
-            role="alert"
-            style={{ color: "var(--dangerText)" }}
-          >
+          <span role="alert" style={{ color: "var(--dangerText)" }}>
             {problemMessageOf(restore.error, t)}
           </span>
         )}
@@ -160,13 +156,11 @@ function PipelineRetirement({
         disabledReasonId={pipeline.is_default ? blockedId : undefined}
       />
       {pipeline.is_default && (
-        // t-caption, the same treatment Button gives a reason it renders
-        // itself: ArchiveAction takes only the id of a sentence the page
-        // already owns, so the sentence is written here and must read the
-        // same as one the design system would have drawn.
-        <span id={blockedId} className="t-caption">
-          {t("pipeline.retireBlocked")}
-        </span>
+        // The same treatment Button gives a reason it renders itself:
+        // ArchiveAction takes only the id of a sentence the page already owns,
+        // so the sentence is written here and must read the same as one the
+        // design system would have drawn.
+        <span id={blockedId}>{t("pipeline.retireBlocked")}</span>
       )}
     </>
   );

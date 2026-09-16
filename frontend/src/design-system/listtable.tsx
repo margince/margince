@@ -1248,12 +1248,7 @@ export function ListTable<Row>({
                         stays above it either way: "clear filters" undoes every narrowing, and a
                         screen's own way back usually undoes one. */}
                     {emptyNote && (
-                      <p
-                        className="t-caption"
-                        style={{ marginTop: "var(--space-2)" }}
-                      >
-                        {emptyNote}
-                      </p>
+                      <p style={{ marginTop: "var(--space-2)" }}>{emptyNote}</p>
                     )}
                   </td>
                 </tr>

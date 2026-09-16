@@ -168,7 +168,7 @@ function EstimateBody({
       <p className="t-caption">{t("embedreindex.estimateQualityHeuristic")}</p>
       {preview.utilization_impact && (
         <>
-          <p className="t-caption">{t("embedreindex.utilizationTitle")}</p>
+          <p>{t("embedreindex.utilizationTitle")}</p>
           <p>
             <Badge tone={bandTone(preview.utilization_impact)}>
               {impactLabel(preview.utilization_impact, t)}
@@ -422,9 +422,7 @@ export function EmbedReindexCard() {
                   }}
                 >
                   {preview.isPending && (
-                    <p className="t-caption">
-                      {t("embedreindex.previewLoading")}
-                    </p>
+                    <p>{t("embedreindex.previewLoading")}</p>
                   )}
                   {/* A failed estimate is what this dialog says about ITSELF,
                       and it is the reason Confirm is refused — so it is a

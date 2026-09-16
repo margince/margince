@@ -279,9 +279,7 @@ function WonReasonFields({
   const t = useT();
   return (
     <>
-      <p className="t-caption" style={{ marginTop: "var(--space-2)" }}>
-        {t("deals.winNoEvidence")}
-      </p>
+      <p style={{ marginTop: "var(--space-2)" }}>{t("deals.winNoEvidence")}</p>
       <div className="field" style={{ marginTop: "var(--space-2)" }}>
         <span className="t-label" id="won-reason-label">
           {t("deals.winReason")}

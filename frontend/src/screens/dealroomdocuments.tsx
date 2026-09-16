@@ -80,7 +80,7 @@ export function AddDocument({
   });
   const add = useAddDocument(room.id);
   if (refusal !== undefined) {
-    return <p className="t-caption">{refusal}</p>;
+    return <p>{refusal}</p>;
   }
   const options = (files.data?.data ?? []).map((doc) => ({
     value: doc.attachment.id,
@@ -147,7 +147,7 @@ export function AddDocument({
       />
       <p className="t-caption">{t("room.editorial")}</p>
       {add.isError ? (
-        <p className="t-caption t-danger">{problemMessageOf(add.error, t)}</p>
+        <p className="t-danger">{problemMessageOf(add.error, t)}</p>
       ) : null}
     </>
   );

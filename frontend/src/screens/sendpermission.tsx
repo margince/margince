@@ -141,19 +141,11 @@ export function SendPermission({
   const { state, recipient } = decidingRecipient(preview, asking);
 
   if (unanswered) {
-    return (
-      <p className="t-caption" role="status">
-        {t("sendPermission.unanswered")}
-      </p>
-    );
+    return <p role="status">{t("sendPermission.unanswered")}</p>;
   }
 
   if (state === "checking") {
-    return (
-      <p className="t-caption" role="status">
-        {t("sendPermission.checking")}
-      </p>
-    );
+    return <p role="status">{t("sendPermission.checking")}</p>;
   }
 
   if (state === "allowed") return null;

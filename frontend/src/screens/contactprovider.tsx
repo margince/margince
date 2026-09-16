@@ -361,7 +361,7 @@ function BuyPriced({
               // flag off — so the second charge is the vendor's rule, not a
               // choice this product makes. Said plainly rather than hidden
               // behind a cheaper-looking number or a button that disappears.
-              <p className="t-caption">
+              <p>
                 {t("provider.profile.buyRebuys", {
                   categories: categoryNamesTogether(rebought, t, locale),
                 })}

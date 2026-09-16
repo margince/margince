@@ -137,9 +137,7 @@ export function MergeAction<Survivor extends { id: string }>({
         >
           {label}
         </Heading>
-        <p className="t-caption" style={{ marginBottom: 8 }}>
-          {t("merge.pickTarget")}
-        </p>
+        <p style={{ marginBottom: 8 }}>{t("merge.pickTarget")}</p>
         <SearchField
           placeholder={t("merge.searchPlaceholder")}
           aria-label={t("merge.searchPlaceholder")}
@@ -150,7 +148,7 @@ export function MergeAction<Survivor extends { id: string }>({
           }}
         />
         {searchFailure ? (
-          <p className="t-caption" style={{ color: "var(--dangerText)" }}>
+          <p style={{ color: "var(--dangerText)" }}>
             {problemMessageOf(searchFailure, t)}
           </p>
         ) : null}
@@ -173,7 +171,7 @@ export function MergeAction<Survivor extends { id: string }>({
           </p>
         )}
         {mutation.isError && (
-          <p className="t-caption" style={{ color: "var(--dangerText)" }}>
+          <p style={{ color: "var(--dangerText)" }}>
             {problemMessageOf(mutation.error, t)}
           </p>
         )}

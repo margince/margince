@@ -159,9 +159,7 @@ export function FxRatesCard() {
             not change it — no write verb on the object, or a read licensing seat.
             On the withheld body these two lines would explain one denial twice,
             in two different ways. */}
-        {!canManage && (
-          <p className="t-caption">{t("settings.rates.readOnly")}</p>
-        )}
+        {!canManage && <p>{t("settings.rates.readOnly")}</p>}
         <SettingList>
           {/* The sheet IS this card's subject rather than an answer that fits
               beside a label, so it takes the full width below the naming
@@ -385,9 +383,7 @@ export function ModelCostsCard() {
             not change it — no write verb on the object, or a read licensing seat.
             On the withheld body these two lines would explain one denial twice,
             in two different ways. */}
-        {!canManage && (
-          <p className="t-caption">{t("settings.rates.readOnly")}</p>
-        )}
+        {!canManage && <p>{t("settings.rates.readOnly")}</p>}
         <SettingList>
           {/* Stacked for the reason spelled out on FxRatesCard: the price sheet
               is the subject, and this row names which prices they are. */}

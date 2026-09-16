@@ -346,9 +346,7 @@ export function TaskDetailModal({
       <div className="drawer-body">
         {query.isPending && <PendingBody label={t("tasks.detailLoading")} />}
         {query.isError && (
-          <p className="t-caption form-error">
-            {problemMessageOf(query.error, t)}
-          </p>
+          <p className="form-error">{problemMessageOf(query.error, t)}</p>
         )}
         {task && (
           <div className="form-stack">
@@ -454,9 +452,7 @@ function SourceActivity({
       </Heading>
       {query.isPending && <PendingBody label={t("tasks.detailLoading")} />}
       {query.isError && (
-        <p className="t-caption form-error">
-          {problemMessageOf(query.error, t)}
-        </p>
+        <p className="form-error">{problemMessageOf(query.error, t)}</p>
       )}
       {meeting && (
         <div className="form-stack">

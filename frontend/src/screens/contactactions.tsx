@@ -127,11 +127,7 @@ export function ContactActions({
           navigate({ screen: "contacts", id: contactId, id2: "meetings" })
         }
       />
-      {logRefused && (
-        <p className="t-caption" id={logRefusedId}>
-          {t("record.logActivityRefused")}
-        </p>
-      )}
+      {logRefused && <p id={logRefusedId}>{t("record.logActivityRefused")}</p>}
       {/* A CRM a rep cannot write a meeting into is a CRM that only reads.
           This is the standing way in; the moment card offers the same form
           when its rung decides logging is the thing to do next. */}

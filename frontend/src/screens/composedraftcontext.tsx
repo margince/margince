@@ -58,7 +58,7 @@ export function AccountDraftContext({
   // thread to inherit a project from. It would land unfiled, and the ladder
   // would ask about it in Approvals afterwards instead.
   if (query.isSuccess && contacts.length === 0) {
-    return <p className="t-caption">{t("compose.noGroundableRecipient")}</p>;
+    return <p>{t("compose.noGroundableRecipient")}</p>;
   }
   return (
     <>
@@ -141,7 +141,7 @@ export function DraftReasons({
           inputs: reasons.map((reason) => reason.label).join(" · "),
         })}
       </p>
-      <p className="t-caption">{t("compose.whyThisDraft")}</p>
+      <p>{t("compose.whyThisDraft")}</p>
       <ul className="chips">
         {reasons.map((reason) => (
           <li key={`${reason.kind}:${reason.label}`}>
@@ -236,7 +236,7 @@ export function DraftOffer({
         </Button>
       </div>
       {unavailable && (
-        <p className="t-caption">
+        <p>
           {unavailable === "no_model"
             ? t("compose.draftUnavailable")
             : t("compose.draftUnsupportedHere")}
@@ -246,11 +246,7 @@ export function DraftOffer({
           than merely coloured: a rep who cannot see the line has to be told
           the draft did not land, on the same terms the send refusals are. */}
       {!unavailable && draft.error && (
-        <p
-          className="t-caption"
-          role="alert"
-          style={{ color: "var(--dangerText)" }}
-        >
+        <p role="alert" style={{ color: "var(--dangerText)" }}>
           {draft.error}
         </p>
       )}

@@ -266,9 +266,7 @@ export function DecisionsSection({
         state={state}
         loadingLabel={t("brief.panel.decisions")}
         commitState={commitState}
-        notice={
-          notice ? <p className="brief-error t-caption">{notice}</p> : undefined
-        }
+        notice={notice ? <p className="brief-error">{notice}</p> : undefined}
         onCommit={(staged) => commit.mutate({ staged, items })}
         // The four facts a reader needs BEFORE they say yes, and none of them
         // is the deck's to know: which agent tier staged this, what kind of act

@@ -546,7 +546,7 @@ function AutomationEditor({
         onCancel={onClose}
       />
       {refusal !== null && (
-        <p className="t-caption auto-error" role="alert">
+        <p className="auto-error" role="alert">
           {refusal}
         </p>
       )}
@@ -695,7 +695,7 @@ export function AutomationRow({
           report that it did not land, and it has to be spoken. The edit
           dialog's own refusal stays inside it, and so does the delete's. */}
       {refused === "status" && (
-        <p className="t-caption auto-error" role="alert">
+        <p className="auto-error" role="alert">
           {refusal}
         </p>
       )}
@@ -802,7 +802,7 @@ export function AutomationsAdmin() {
             toggle with nothing on the page saying why, which is the one thing
             this line exists to prevent. */}
         {me.isSuccess && !canEdit && (
-          <p className="t-caption auto-readonly">{t("auto.readOnly")}</p>
+          <p className="auto-readonly">{t("auto.readOnly")}</p>
         )}
         <div data-automations-admin>
           <SettingList>
@@ -826,7 +826,7 @@ export function AutomationsAdmin() {
         {/* The outcome lands on the CARD, because by the time it is true the
             dialog that produced it is gone. */}
         {create.isSuccess && (
-          <p className="t-caption auto-outcome" role="status">
+          <p className="auto-outcome" role="status">
             {t("auto.createdPaused")}
           </p>
         )}
@@ -856,7 +856,7 @@ export function AutomationsAdmin() {
                 over the card, so a line underneath it would report the failure
                 behind the thing covering it. */}
             {create.isError && (
-              <p className="t-caption auto-error" role="alert">
+              <p className="auto-error" role="alert">
                 {problemMessageOf(create.error, t)}
               </p>
             )}

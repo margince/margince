@@ -84,9 +84,7 @@ export function RecordTeam({
             exactly like one that ended — and the next thing the reader does,
             they do believing it is gone. */}
         {archive.isError && (
-          <p className="t-caption" role="alert">
-            {problemMessageOf(archive.error, t)}
-          </p>
+          <p role="alert">{problemMessageOf(archive.error, t)}</p>
         )}
         {isPending || isError || rows.length === 0 ? (
           <SurfaceState

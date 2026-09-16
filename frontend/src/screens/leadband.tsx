@@ -71,7 +71,7 @@ export function leadBand({
           this element by id, so a screen reader reaches it from each of them
           without the sentence being printed beside all six. */}
       {writer.readOnlyReason && (
-        <p id={reasonId} className="t-caption">
+        <p id={reasonId}>
           {/* Which closure, not merely THAT it is closed. Both terminal states
               archive the row, so keying this off archived_at alone told every
               promoted lead it had been disqualified — invisible until ADR-0119

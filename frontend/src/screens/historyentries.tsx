@@ -116,7 +116,7 @@ function EntryFieldDetail({
     <ul className="entry-fields">
       {changes.map((change) => (
         <li key={change.field} className="entry-field">
-          <span className="entry-field-name t-caption">
+          <span className="entry-field-name">
             {historyFieldLabel(change.field, t)}
           </span>
           <HistoryFieldDiff
@@ -261,9 +261,7 @@ function UndoButton({
       >
         {t(label)}
       </Button>
-      {refused && (
-        <span className="entry-undo-refusal t-caption">{refused}</span>
-      )}
+      {refused && <span className="entry-undo-refusal">{refused}</span>}
       <ConfirmModal
         open={confirming}
         onClose={() => setConfirming(false)}
@@ -286,7 +284,7 @@ function UndoButton({
         <ul className="entry-fields">
           {changes.map((change) => (
             <li key={change.field} className="entry-field">
-              <span className="entry-field-name t-caption">
+              <span className="entry-field-name">
                 {historyFieldLabel(change.field, t)}
               </span>
               <span>

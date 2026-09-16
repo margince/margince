@@ -184,9 +184,7 @@ function MutationError({ error }: Readonly<{ error: unknown }>) {
     return null;
   }
   return (
-    <p className="t-caption" style={{ color: "var(--dangerText)" }}>
-      {problemMessageOf(error, t)}
-    </p>
+    <p style={{ color: "var(--dangerText)" }}>{problemMessageOf(error, t)}</p>
   );
 }
 
@@ -300,7 +298,7 @@ function ConsentRow({
           {t("consent.proofLog")}
         </Button>
       </div>
-      {requiresDoi && <p className="t-caption">{t("consent.doiBySubject")}</p>}
+      {requiresDoi && <p>{t("consent.doiBySubject")}</p>}
       {setState.isError && <MutationError error={setState.error} />}
       {showLog && <ConsentProofLog events={events} />}
     </PanelRow>
@@ -482,7 +480,7 @@ export function ConfirmDetailsAction({
           {t("consent.confirmRecipient", { address: recipient })}
         </p>
       )}
-      <p className="t-caption">{t("consent.askToConfirmWhat")}</p>
+      <p>{t("consent.askToConfirmWhat")}</p>
       {ask.isError && <MutationError error={ask.error} />}
       {ask.data && (
         <p className="t-caption" data-testid="confirm-details-sent">

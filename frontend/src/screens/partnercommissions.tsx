@@ -264,7 +264,7 @@ function CommissionLedger({
               }
               if (!canDecide) {
                 return (
-                  <span className="t-caption" data-testid="commission-withheld">
+                  <span data-testid="commission-withheld">
                     {t("commission.decide.withheld")}
                   </span>
                 );

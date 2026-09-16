@@ -348,11 +348,7 @@ function ButtonSentences({
   return (
     <span className={reason === undefined ? "btn-shell" : "btn-with-reason"}>
       {children}
-      {reason !== undefined && (
-        <span id={reasonId} className="t-caption">
-          {reason}
-        </span>
-      )}
+      {reason !== undefined && <span id={reasonId}>{reason}</span>}
       {/* Rendered whether or not the write is out, and emptied rather than
           removed. A description that arrives together with the element holding
           it is frequently missed; one that is already there and CHANGES is what
@@ -1221,7 +1217,7 @@ export function PendingBody({
           never both: this is a live region, and the same sentence twice inside
           it is announced twice. */}
       {visible ? (
-        <p className="t-caption pending-note">{label}</p>
+        <p className="pending-note">{label}</p>
       ) : (
         <span className="sr-only">{label}</span>
       )}

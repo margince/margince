@@ -95,7 +95,7 @@ export function BriefFeed({
         >
           {rows.length === 0 && partial && (
             <PanelBody>
-              <p className="t-caption">{t("brief.feed.incomplete")}</p>
+              <p>{t("brief.feed.incomplete")}</p>
             </PanelBody>
           )}
           <AgendaRows

@@ -641,15 +641,13 @@ function SearchedRecordValue({
               it is the failure this control exists to avoid: it reads as a
               confident "this workspace has none" for a question that never got
               an answer. */}
-          {!query && <p className="t-caption">{t("filters.typeToSearch")}</p>}
-          {query && pending && (
-            <p className="t-caption">{t("filters.searching")}</p>
-          )}
+          {!query && <p>{t("filters.typeToSearch")}</p>}
+          {query && pending && <p>{t("filters.searching")}</p>}
           {query && failed && (
-            <p className="t-caption error">{t("filters.searchFailed")}</p>
+            <p className="error">{t("filters.searchFailed")}</p>
           )}
           {query && !pending && !failed && results.length === 0 && (
-            <p className="t-caption">{t("filters.noRecordMatches")}</p>
+            <p>{t("filters.noRecordMatches")}</p>
           )}
           {results.map((option) => (
             <button

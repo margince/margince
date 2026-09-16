@@ -83,7 +83,7 @@ function RoomPage({
     <div className="roompage">
       <header className="roompage-head">
         <div className="roompage-id">
-          <p className="t-caption">
+          <p>
             <button
               type="button"
               className="link-button"
@@ -211,9 +211,7 @@ function ViewAsBuyerButton({ room }: Readonly<{ room: DealRoom }>) {
         {t("roompage.viewAsBuyer")}
       </Button>
       {preview.isError ? (
-        <span className="t-caption t-danger">
-          {problemMessageOf(preview.error, t)}
-        </span>
+        <span className="t-danger">{problemMessageOf(preview.error, t)}</span>
       ) : null}
     </>
   );
@@ -298,7 +296,7 @@ function LifecycleMenu({ room }: Readonly<{ room: DealRoom }>) {
             onClick={() => move.mutate("pause")}
           >
             {t("roompage.pause")}
-            <span className="t-caption roompage-menu-hint">
+            <span className="roompage-menu-hint">
               {t("roompage.pauseHint")}
             </span>
           </Button>
@@ -315,7 +313,7 @@ function LifecycleMenu({ room }: Readonly<{ room: DealRoom }>) {
         {room.state === "live" || room.state === "paused" ? (
           <Button variant="ghost" onClick={() => setClosing(true)}>
             {t("roompage.close")}
-            <span className="t-caption roompage-menu-hint">
+            <span className="roompage-menu-hint">
               {t("roompage.closeHint")}
             </span>
           </Button>
@@ -323,14 +321,14 @@ function LifecycleMenu({ room }: Readonly<{ room: DealRoom }>) {
         {!FINISHED_STATES.has(room.state) ? (
           <Button variant="ghost" onClick={() => setExpiring(true)}>
             {t("roompage.setExpiry")}
-            <span className="t-caption roompage-menu-hint">
+            <span className="roompage-menu-hint">
               {t("roompage.setExpiryHint")}
             </span>
           </Button>
         ) : null}
       </OverflowMenu>
       {move.isError ? (
-        <p className="t-caption t-danger">{problemMessageOf(move.error, t)}</p>
+        <p className="t-danger">{problemMessageOf(move.error, t)}</p>
       ) : null}
       <ConfirmModal
         open={closing}
@@ -466,7 +464,7 @@ function RoomText({
             )}
           </Field>
           {refusal ? (
-            <p className="t-caption">{refusal}</p>
+            <p>{refusal}</p>
           ) : (
             <div className="card-actions">
               <Button
@@ -483,7 +481,7 @@ function RoomText({
                 {t("access.save")}
               </Button>
               {save.isError ? (
-                <span className="t-caption t-danger">
+                <span className="t-danger">
                   {problemMessageOf(save.error, t)}
                 </span>
               ) : null}

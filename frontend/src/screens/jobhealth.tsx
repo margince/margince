@@ -306,7 +306,7 @@ function FailureSection({
             <div className="settingrow-measure">
               <FactList facts={failureFacts(failures, t, locale, zone)} />
             </div>
-            <p className="t-caption">{t("jobs.reasonVetted")}</p>
+            <p>{t("jobs.reasonVetted")}</p>
           </>
         )
       }

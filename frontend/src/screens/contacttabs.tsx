@@ -198,9 +198,7 @@ export function ContactTimelineTab({
                   partial record for a complete one is the failure this line
                   exists to prevent. Above the rows, because a caveat under a
                   list is read after the list it qualifies. */}
-            {chronology.changesUnread && (
-              <p className="t-caption">{t("state.failed")}</p>
-            )}
+            {chronology.changesUnread && <p>{t("state.failed")}</p>}
             <List
               groups={groupChronology(chronology.entries, timeline.hasNextPage)}
               zone={recordZone}
@@ -414,7 +412,7 @@ export function ContactMeetingsTab({
                     <div className="pe-chiprow">
                       {next.participants.map((who) => (
                         <span
-                          className="pe-memory-channel t-caption"
+                          className="pe-memory-channel"
                           key={who.contact_id}
                         >
                           <Avatar

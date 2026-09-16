@@ -90,9 +90,7 @@ export function ImportedEmploymentHistory({
           {warning}
         </p>
       ))}
-      {reading.isPending && (
-        <p className="t-caption">{t("employment.importLoading")}</p>
-      )}
+      {reading.isPending && <p>{t("employment.importLoading")}</p>}
       {reading.isError && (
         <p role="alert">{problemMessageOf(reading.error, t)}</p>
       )}
@@ -133,7 +131,7 @@ export function ImportedEmploymentHistory({
                 {item.provider}
               </span>
               {item.state !== "linked" && (
-                <span className="t-caption">
+                <span>
                   {t(
                     item.state === "needs_review"
                       ? "employment.review"
@@ -179,7 +177,7 @@ export function ImportedEmploymentHistory({
           (item, index, items) =>
             items.findIndex((peer) => peer.company_id === item.company_id) ===
               index && (
-              <p className="t-caption" key={item.key}>
+              <p key={item.key}>
                 <Button
                   variant="ghost"
                   onClick={() => {

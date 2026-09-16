@@ -344,9 +344,7 @@ function SendRow({
           unmapped token prints nothing rather than the token — a reason nobody
           can act on is worse than the sentence above it standing alone. */}
       {heldReasonKey && (
-        <p className="t-caption" style={{ marginTop: "var(--space-1)" }}>
-          {t(heldReasonKey)}
-        </p>
+        <p style={{ marginTop: "var(--space-1)" }}>{t(heldReasonKey)}</p>
       )}
       {/* The held reason above says a gate stopped it; this says WHOSE decision
           that was and whether anybody may change it, in the same words the

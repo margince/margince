@@ -166,7 +166,7 @@ export function DealStatusCardPanel({
             // the shape the contract promises. Saying so beats an empty panel,
             // which reads as a deal nobody has touched.
             <PanelBody>
-              <p className="t-caption">{t("deal360.unreadable")}</p>
+              <p>{t("deal360.unreadable")}</p>
             </PanelBody>
           ) : null}
         </QueryStates>
@@ -348,7 +348,7 @@ function Section({
   return (
     <PanelBody>
       {heading ? (
-        <p className={tone === "warn" ? "t-caption deal360-warn" : "t-caption"}>
+        <p className={tone === "warn" ? "deal360-warn" : undefined}>
           {heading}
         </p>
       ) : null}

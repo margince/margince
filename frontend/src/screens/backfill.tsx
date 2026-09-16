@@ -96,17 +96,15 @@ export function BackfillPanel({
   useDrawsImportRun(isLiveRun(status.data?.state));
 
   if (skipped) {
-    return (
-      <p className="t-caption backfill-skipped">{t("backfill.skippedNote")}</p>
-    );
+    return <p className="backfill-skipped">{t("backfill.skippedNote")}</p>;
   }
   if (status.isPending) {
-    return <p className="t-caption">{t("backfill.loading")}</p>;
+    return <p>{t("backfill.loading")}</p>;
   }
   if (status.isError) {
     // The status read failing must not block the wizard — the nightly sweep
     // still runs; the user just loses the live view here.
-    return <p className="t-caption">{t("backfill.statusUnavailable")}</p>;
+    return <p>{t("backfill.statusUnavailable")}</p>;
   }
 
   const run = status.data;
@@ -184,9 +182,7 @@ function BackfillSetup({
         <Heading size="medium" className="backfill-h">
           <History aria-hidden /> {t("backfill.title")}
         </Heading>
-        <p className="t-caption backfill-unsupported">
-          {t("backfill.unsupportedNote")}
-        </p>
+        <p className="backfill-unsupported">{t("backfill.unsupportedNote")}</p>
       </div>
     );
   }
@@ -196,7 +192,7 @@ function BackfillSetup({
       <Heading size="medium" className="backfill-h">
         <History aria-hidden /> {t("backfill.title")}
       </Heading>
-      <p className="t-caption">{t("backfill.intro")}</p>
+      <p>{t("backfill.intro")}</p>
       <ImportWindowPicker
         value={window}
         onChange={onWindowChange}
@@ -204,7 +200,7 @@ function BackfillSetup({
       />
       <p className="t-caption">{t("backfill.extendNote")}</p>
       {previewErrorMessage && (
-        <p className="t-caption backfill-error">{previewErrorMessage}</p>
+        <p className="backfill-error">{previewErrorMessage}</p>
       )}
       <EstimateCard
         preview={previewData}
@@ -214,7 +210,7 @@ function BackfillSetup({
         onStart={onStart}
       />
       {startErrorMessage && (
-        <p className="t-caption backfill-error">
+        <p className="backfill-error">
           {narrowing ? t("backfill.narrowingNote") : startErrorMessage}
         </p>
       )}
@@ -260,7 +256,7 @@ function EstimateCard({
   const costMinor = preview?.estimated_cost_minor;
   return (
     <div className="backfill-estimate">
-      {counting && <p className="t-caption">{t("backfill.previewLoading")}</p>}
+      {counting && <p>{t("backfill.previewLoading")}</p>}
       {/* THE WINDOW FIRST. What the mailbox owner consents to is a period of their own
           mailbox; the count describes that period and is not the thing being
           agreed to. It also degrades better — the scope sentence is true while

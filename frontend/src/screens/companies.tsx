@@ -1271,11 +1271,7 @@ function CompanyPage({
               for the same reason, so the reason belongs to the page rather than
               to whichever group is drawing — stated in each, an archived
               account said the same thing twice as soon as the menu opened. */}
-          {verbRefusal && (
-            <p className="t-caption" id={archivedParagraphId}>
-              {verbRefusal}
-            </p>
-          )}
+          {verbRefusal && <p id={archivedParagraphId}>{verbRefusal}</p>}
           <CompanyPrimaryActions
             company={company}
             composerOpen={writingEmail}

@@ -70,7 +70,7 @@ export function AccessPreviewPanel({
   const preview = useAccessPreview(role, teamIds);
   return (
     <div className="users-access-preview" aria-live="polite">
-      <p className="t-caption">{t("users.access.title")}</p>
+      <p>{t("users.access.title")}</p>
       <QueryGate query={preview} pendingLabel={t("users.access.title")}>
         {(access) => <AccessSummary access={access} />}
       </QueryGate>
@@ -92,7 +92,7 @@ function AccessSummary({ access }: Readonly<{ access: AccessPreview }>) {
   };
   const teams = (access.teams ?? []).map((team) => team.name).join(", ");
   return (
-    <ul className="t-caption users-access-list">
+    <ul className="users-access-list">
       <li>{t("users.access.identity")}</li>
       <li>
         {access.row_scope === "all"
@@ -415,7 +415,7 @@ function TeamMembers({
   });
 
   if (!canSeeMembership) {
-    return <p className="t-caption">{t("users.teamMembersAdminOnly")}</p>;
+    return <p>{t("users.teamMembersAdminOnly")}</p>;
   }
 
   return (
@@ -442,9 +442,7 @@ function TeamMembers({
               <EmptyState>{t("users.teamNobodyToAdd")}</EmptyState>
             ) : (
               <fieldset className="users-team-members">
-                <legend className="t-caption">
-                  {t("users.teamMembersLabel")}
-                </legend>
+                <legend>{t("users.teamMembersLabel")}</legend>
                 {contacts.map((contact) => (
                   <Checkbox
                     key={contact.id}

@@ -67,7 +67,7 @@ function SettledFace({
       <ul className="entry-fields">
         {entryFieldChanges(row.reversal).map((change) => (
           <li key={change.field} className="entry-field">
-            <span className="entry-field-name t-caption">
+            <span className="entry-field-name">
               {historyFieldLabel(change.field, t)}
             </span>
             <span>
@@ -105,7 +105,7 @@ function ResidualFace({
       <ul className="entry-fields">
         {netChanges(row).map((change) => (
           <li key={change.field} className="entry-field">
-            <span className="entry-field-name t-caption">
+            <span className="entry-field-name">
               {historyFieldLabel(change.field, t)}
             </span>
             <HistoryFieldDiff

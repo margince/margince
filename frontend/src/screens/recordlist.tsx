@@ -79,7 +79,7 @@ export function createdColumn<Row extends OwnedRecord>(
     key: "created",
     header: t("list.created"),
     cell: (row) => (
-      <span className="t-caption">
+      <span>
         {row.created_at
           ? formatDateAbbrev(row.created_at, locale, recordZone)
           : ""}
@@ -107,7 +107,7 @@ export function lastActivityCell<Row extends OwnedRecord>(
   recordZone: string,
 ): (row: Row) => ReactNode {
   return (row) => (
-    <span className="t-caption">
+    <span>
       {row.last_activity_at
         ? formatDateAbbrev(row.last_activity_at, locale, recordZone)
         : ""}

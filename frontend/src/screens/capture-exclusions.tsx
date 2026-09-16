@@ -178,11 +178,7 @@ export function CaptureExclusionsCard() {
             }
           />
         </SettingList>
-        {refusesARow && (
-          <p className="t-caption" id={denialId}>
-            {t("captureSettings.adminOnly")}
-          </p>
-        )}
+        {refusesARow && <p id={denialId}>{t("captureSettings.adminOnly")}</p>}
         {remove.isError && (
           <Callout
             tone="danger"
@@ -331,11 +327,7 @@ function ExcludeDialog({
           aria-describedby={refused ? denialId : undefined}
           onChange={(event) => setDraft(event.target.value)}
         />
-        {refused && (
-          <p className="t-caption" id={denialId}>
-            {t("captureSettings.adminOnly")}
-          </p>
-        )}
+        {refused && <p id={denialId}>{t("captureSettings.adminOnly")}</p>}
         {add.isError && (
           <Callout
             tone="danger"

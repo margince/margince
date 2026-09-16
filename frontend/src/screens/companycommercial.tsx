@@ -81,9 +81,7 @@ export function CompanyLastOffer({ view }: Readonly<{ view?: Company360 }>) {
   }
   return (
     <PanelBody className="com-block">
-      <span className="t-caption">
-        {t("commercial.lastOffer", { deal: leading.name })}
-      </span>
+      <span>{t("commercial.lastOffer", { deal: leading.name })}</span>
       <span className="co-row-meta t-caption">
         <button
           type="button"
@@ -200,14 +198,14 @@ export function CompanyContractState({
   if (contracts.active_count === 0) {
     return (
       <PanelBody className="com-block">
-        <span className="t-caption">{t("contracts.state.none")}</span>
+        <span>{t("contracts.state.none")}</span>
       </PanelBody>
     );
   }
 
   return (
     <PanelBody className="com-block">
-      <span className="t-caption">
+      <span>
         {t("contracts.state.title", {
           count: formatNumber(contracts.active_count, locale),
         })}

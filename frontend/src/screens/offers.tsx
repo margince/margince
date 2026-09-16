@@ -308,10 +308,7 @@ function EditOfferHeaderModal({
         </div>
       </div>
       {errorMessage && (
-        <p
-          className="t-caption"
-          style={{ color: "var(--dangerText)", marginTop: "var(--space-2)" }}
-        >
+        <p style={{ color: "var(--dangerText)", marginTop: "var(--space-2)" }}>
           {errorMessage}
         </p>
       )}
@@ -806,7 +803,6 @@ function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
         </div>
         {errorMessage && (
           <p
-            className="t-caption"
             style={{ color: "var(--dangerText)", marginTop: "var(--space-2)" }}
           >
             {errorMessage}
@@ -1077,10 +1073,7 @@ function RegenerateOfferAction({ offer }: Readonly<{ offer: Offer }>) {
         <RefreshCw aria-hidden /> {t("offer.regenerate")}
       </Button>
       {errorMessage && (
-        <p
-          className="t-caption"
-          style={{ color: "var(--dangerText)", marginTop: "var(--space-1)" }}
-        >
+        <p style={{ color: "var(--dangerText)", marginTop: "var(--space-1)" }}>
           {errorMessage}
         </p>
       )}
@@ -1269,14 +1262,10 @@ function RenderOfferPdfAction({ offer }: Readonly<{ offer: Offer }>) {
       {(unavailable || errorMessage) && (
         <PanelBody>
           {unavailable && (
-            <p className="t-caption" data-testid="pdf-unavailable">
-              {t("offer.pdfUnavailable")}
-            </p>
+            <p data-testid="pdf-unavailable">{t("offer.pdfUnavailable")}</p>
           )}
           {errorMessage && (
-            <p className="t-caption" style={{ color: "var(--dangerText)" }}>
-              {errorMessage}
-            </p>
+            <p style={{ color: "var(--dangerText)" }}>{errorMessage}</p>
           )}
         </PanelBody>
       )}

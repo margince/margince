@@ -1782,7 +1782,7 @@ function ResetDataCard() {
           </p>
         )}
         {summary?.drain_timed_out && (
-          <p className="t-caption settings-danger-warning" role="alert">
+          <p className="settings-danger-warning" role="alert">
             {t("settings.resetDataDrainWarning")}
           </p>
         )}
@@ -1814,7 +1814,7 @@ function ResetDataCard() {
       >
         <p>{t("settings.resetDataConfirmBody")}</p>
         {workspaceName ? (
-          <p className="t-caption">
+          <p>
             {t("settings.resetDataConfirmName")}{" "}
             {/* userSelect:all lets one click select the whole name to copy */}
             <code style={{ userSelect: "all" }}>{workspaceName}</code>

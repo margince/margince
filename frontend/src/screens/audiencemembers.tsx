@@ -159,7 +159,7 @@ export function AudienceMembers({
     // The list has not answered yet, or answered with nobody. Either way the
     // reader is told rather than shown an empty box that reads as an
     // company with no contacts in it.
-    return <p className="t-caption">{t("compose.audienceMembersLoading")}</p>;
+    return <p>{t("compose.audienceMembersLoading")}</p>;
   }
   return (
     <fieldset className="compose-audience-members">

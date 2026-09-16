@@ -178,7 +178,7 @@ function CandidateBanner({
           n: identifierNumber(candidate.profile_version),
         })}
       </b>
-      <p className="t-caption">{t("voice.candidate.whatItIs")}</p>
+      <p>{t("voice.candidate.whatItIs")}</p>
       {/* The decision this card asks for cannot be taken without the thing it
           is about. It used to show a title, the evaluator's raw sentences and
           two buttons — so "Use this version" meant approving writing the
@@ -193,9 +193,7 @@ function CandidateBanner({
       </Disclosure>
       {candidate.review_reasons.length > 0 && (
         <>
-          <p className="t-caption vdna-label">
-            {t("voice.candidate.concernsLabel")}
-          </p>
+          <p className="vdna-label">{t("voice.candidate.concernsLabel")}</p>
           <ul className="vdna-reasons">
             {candidate.review_reasons.map((reason) => (
               <li key={reason}>{reviewReasonText(t, locale, reason)}</li>
@@ -204,11 +202,7 @@ function CandidateBanner({
         </>
       )}
       <p className="t-caption">{t("voice.candidate.applyHint")}</p>
-      {error && (
-        <p className="t-caption" role="alert">
-          {error}
-        </p>
-      )}
+      {error && <p role="alert">{error}</p>}
       {canEdit && (
         <div className="vdna-candidate-acts">
           <Button
@@ -367,7 +361,7 @@ export function VoiceChangeLog({ profileId }: Readonly<{ profileId: string }>) {
     <QueryGate query={deltas} pendingLabel={t("voice.history.label")}>
       {(page) =>
         allDeltas.length === 0 ? (
-          <p className="t-caption">{t("voice.history.deltasEmpty")}</p>
+          <p>{t("voice.history.deltasEmpty")}</p>
         ) : (
           <div>
             <ul className="vdna-list">
@@ -464,11 +458,7 @@ function VersionRow({
           <RotateCcw aria-hidden />
         </button>
       )}
-      {error && (
-        <span className="t-caption" role="alert">
-          {error}
-        </span>
-      )}
+      {error && <span role="alert">{error}</span>}
     </li>
   );
 }

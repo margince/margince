@@ -189,11 +189,7 @@ export function OwnDomainsCard() {
             }
           />
         </SettingList>
-        {!canManage && (
-          <p className="t-caption" id={denialId}>
-            {t("captureSettings.adminOnly")}
-          </p>
-        )}
+        {!canManage && <p id={denialId}>{t("captureSettings.adminOnly")}</p>}
         {remove.isError && (
           <Callout
             kind="outcome"

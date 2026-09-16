@@ -190,7 +190,7 @@ export function ContractRenewModal({
       <Heading size="large" id={titleId}>
         {t("contracts.renew.title")}
       </Heading>
-      <p className="t-caption">{t("contracts.renew.hint")}</p>
+      <p>{t("contracts.renew.hint")}</p>
 
       <ContractTermsFields
         draft={draft}
@@ -228,11 +228,7 @@ export function ContractRenewModal({
         </Field>
       )}
 
-      {renew.error && (
-        <p className="t-caption" role="alert">
-          {problemMessageOf(renew.error, t)}
-        </p>
-      )}
+      {renew.error && <p role="alert">{problemMessageOf(renew.error, t)}</p>}
 
       <div className="actions">
         <Button onClick={onClose}>{t("create.cancel")}</Button>
@@ -337,11 +333,7 @@ export function ContractStatusModal({
         )}
       </Field>
 
-      {assert.error && (
-        <p className="t-caption" role="alert">
-          {problemMessageOf(assert.error, t)}
-        </p>
-      )}
+      {assert.error && <p role="alert">{problemMessageOf(assert.error, t)}</p>}
 
       <div className="actions">
         <Button onClick={onClose}>{t("create.cancel")}</Button>
@@ -456,7 +448,7 @@ export function ContractCancelModal({
       <Heading size="large" id={titleId}>
         {t("contracts.cancel.title")}
       </Heading>
-      <p className="t-caption">{t("contracts.cancel.hint")}</p>
+      <p>{t("contracts.cancel.hint")}</p>
 
       <Field label={t("contracts.cancel.noticeOn")} required>
         {(props) => (
@@ -484,11 +476,7 @@ export function ContractCancelModal({
         )}
       </Field>
 
-      {cancel.error && (
-        <p className="t-caption" role="alert">
-          {problemMessageOf(cancel.error, t)}
-        </p>
-      )}
+      {cancel.error && <p role="alert">{problemMessageOf(cancel.error, t)}</p>}
 
       <div className="actions">
         <Button onClick={onClose}>{t("create.cancel")}</Button>

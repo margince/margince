@@ -241,7 +241,7 @@ export function PlanSection() {
         >
           {readOnly && (
             <PanelBody>
-              <p className="t-caption plan-readonly">{t("plan.readOnly")}</p>
+              <p className="plan-readonly">{t("plan.readOnly")}</p>
             </PanelBody>
           )}
           {plan.isSuccess && plan.data === null && (

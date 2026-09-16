@@ -151,9 +151,7 @@ function PurposeCreateForm({ onDone }: Readonly<{ onDone: () => void }>) {
 
   return (
     <div className="form-stack">
-      <p className="t-caption purpose-form-warning">
-        {t("privacy.purposeAppendOnly")}
-      </p>
+      <p className="purpose-form-warning">{t("privacy.purposeAppendOnly")}</p>
       <Field label={t("privacy.purposeKey")}>
         {(control) => (
           <TextInput
@@ -179,7 +177,6 @@ function PurposeCreateForm({ onDone }: Readonly<{ onDone: () => void }>) {
         )}
       </Field>
       <Checkbox
-        className="t-caption"
         label={t("privacy.purposeDoi")}
         checked={requiresDoi}
         onChange={(event) => {
@@ -188,7 +185,7 @@ function PurposeCreateForm({ onDone }: Readonly<{ onDone: () => void }>) {
         }}
       />
       {create.isError && (
-        <p className="t-caption purpose-form-error">
+        <p className="purpose-form-error">
           {problemMessageOf(create.error, t)}
         </p>
       )}
@@ -473,9 +470,7 @@ function NewDsrForm({ onDone }: Readonly<{ onDone: () => void }>) {
       </Field>
 
       {create.isError && (
-        <p className="t-caption dsr-error">
-          {problemMessageOf(create.error, t)}
-        </p>
+        <p className="dsr-error">{problemMessageOf(create.error, t)}</p>
       )}
 
       <Button
@@ -821,13 +816,13 @@ function DsrRow({
                 either way. The paragraph mounts carrying its message, which is
                 the case an assertive region is for. */}
             {patchErrorMessage && (
-              <p className="t-caption dsr-error" role="alert">
+              <p className="dsr-error" role="alert">
                 {patchErrorMessage}
               </p>
             )}
 
             {terminal ? (
-              <p className="t-caption">{t("privacy.closed")}</p>
+              <p>{t("privacy.closed")}</p>
             ) : (
               <>
                 <Field

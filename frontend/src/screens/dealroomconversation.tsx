@@ -41,9 +41,7 @@ function RemoveButton({
         <Trash2 aria-hidden />
       </Button>
       {remove.isError ? (
-        <p className="t-caption t-danger">
-          {problemMessageOf(remove.error, t)}
-        </p>
+        <p className="t-danger">{problemMessageOf(remove.error, t)}</p>
       ) : null}
     </>
   );

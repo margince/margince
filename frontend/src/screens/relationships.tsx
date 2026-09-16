@@ -467,7 +467,7 @@ export function AddRelationshipAction({
               />
             )}
           </Field>
-          <p className="t-caption">{t("rel.pickCounterparty")}</p>
+          <p>{t("rel.pickCounterparty")}</p>
           <SearchField
             placeholder={t("merge.searchPlaceholder")}
             aria-label={t("merge.searchPlaceholder")}
@@ -478,7 +478,7 @@ export function AddRelationshipAction({
             }}
           />
           {searchFailure ? (
-            <p className="t-caption" style={{ color: "var(--dangerText)" }}>
+            <p style={{ color: "var(--dangerText)" }}>
               {problemMessageOf(searchFailure, t)}
             </p>
           ) : null}
@@ -504,7 +504,7 @@ export function AddRelationshipAction({
             </p>
           )}
           {mutation.isError && (
-            <p className="t-caption" style={{ color: "var(--dangerText)" }}>
+            <p style={{ color: "var(--dangerText)" }}>
               {problemMessageOf(mutation.error, t)}
             </p>
           )}
@@ -742,7 +742,7 @@ export function RelationshipsTab({
         </Heading>
         <p style={{ marginBottom: 16 }}>{t("rel.removeConfirm")}</p>
         {remove.isError && (
-          <p className="t-caption" style={{ color: "var(--dangerText)" }}>
+          <p style={{ color: "var(--dangerText)" }}>
             {problemMessageOf(remove.error, t)}
           </p>
         )}

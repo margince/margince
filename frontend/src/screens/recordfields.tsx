@@ -97,7 +97,7 @@ export function RecordFields(props: Readonly<Props>) {
   return (
     <Panel title={props.title}>
       <PanelBody>
-        {props.notice && <p className="t-caption mute">{props.notice}</p>}
+        {props.notice && <p className="mute">{props.notice}</p>}
         <FieldGrid>
           {sections.map((section) => (
             <RecordField

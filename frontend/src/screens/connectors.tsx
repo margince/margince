@@ -350,7 +350,7 @@ function TelegramNotice({
 }: Readonly<{ query: ReturnType<typeof useChannelConnections> }>) {
   const t = useT();
   if (query.isPending) {
-    return <p className="t-caption">{t("connectors.loading")}</p>;
+    return <p>{t("connectors.loading")}</p>;
   }
   if (query.isError) {
     return (
@@ -492,7 +492,7 @@ function TelegramConnectorsPanel() {
           }
         }}
       >
-        <p className="t-caption">{t("connectors.telegramDisconnectBody")}</p>
+        <p>{t("connectors.telegramDisconnectBody")}</p>
       </ConfirmModal>
     </Panel>
   );
@@ -1132,9 +1132,7 @@ function MailConnectorsPanel() {
       <PanelBody>
         <p className="settings-panel-sub">{t("connectors.sub")}</p>
         <OAuthOutcomeNote />
-        {connectors.isPending && (
-          <p className="t-caption">{t("connectors.loading")}</p>
-        )}
+        {connectors.isPending && <p>{t("connectors.loading")}</p>}
         {connectors.isError && (
           <Callout
             tone="danger"
@@ -1196,7 +1194,7 @@ function MailConnectorsPanel() {
           }
         }}
       >
-        <p className="t-caption">{t("connectors.disconnectBody")}</p>
+        <p>{t("connectors.disconnectBody")}</p>
         {disconnectNoteKey && (
           <p className="t-caption">{t(disconnectNoteKey)}</p>
         )}

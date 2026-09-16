@@ -89,7 +89,7 @@ export function RecordRolesCard() {
             }
           />
         </SettingList>
-        {!canEdit && <p className="t-caption">{t("recordRoles.readOnly")}</p>}
+        {!canEdit && <p>{t("recordRoles.readOnly")}</p>}
         {failure?.error && (
           <Callout
             tone="danger"

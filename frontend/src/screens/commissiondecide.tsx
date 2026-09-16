@@ -244,11 +244,7 @@ export function CommissionDecision({
           // role="alert" so a refused decision is announced: the dialog stays
           // open either way, and without this the only difference between "it
           // failed" and "it is still working" is a line of red text.
-          <p
-            className="t-caption"
-            role="alert"
-            style={{ color: "var(--dangerText)" }}
-          >
+          <p role="alert" style={{ color: "var(--dangerText)" }}>
             {mutation.error instanceof ProblemError &&
             isVersionSkew(mutation.error.problem)
               ? t("edit.versionSkew")

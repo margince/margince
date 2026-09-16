@@ -591,7 +591,7 @@ function NavOutstandingList({
         <li key={row.field}>
           <button
             type="button"
-            className="ob-triage-nav-item t-caption"
+            className="ob-triage-nav-item"
             data-blocking={isBlocking ? "true" : undefined}
             onClick={() => jumpToFindings([row.field])}
           >

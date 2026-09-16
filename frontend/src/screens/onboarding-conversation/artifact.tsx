@@ -170,7 +170,7 @@ export function CompanyActArtifact(props: CompanyActArtifactProps) {
         <div className="mw-review-heading">
           <span>{t("ob.ai.liveArtifact")}</span>
           <Heading size="large">{t("ob.ai.companyKnowledge")}</Heading>
-          <p className="t-caption">
+          <p>
             {t(
               props.manual
                 ? "ob.ai.companyKnowledgeManualBody"

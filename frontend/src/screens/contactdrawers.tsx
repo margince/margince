@@ -108,7 +108,7 @@ function ClaimMapRow({
             webUrl(source.url) ? (
               <a
                 key={source.url}
-                className="pe-memory-channel t-caption"
+                className="pe-memory-channel"
                 href={source.url}
                 target="_blank"
                 rel="noreferrer"
@@ -117,7 +117,7 @@ function ClaimMapRow({
                 <ExternalLink size={12} aria-hidden="true" />
               </a>
             ) : (
-              <span key={source.url} className="pe-memory-channel t-caption">
+              <span key={source.url} className="pe-memory-channel">
                 {source.label}
               </span>
             ),

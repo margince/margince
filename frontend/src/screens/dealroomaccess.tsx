@@ -308,9 +308,7 @@ function IssuedLink({ issued }: Readonly<{ issued: Issued }>) {
             : t("access.issued.copy")}
         </Button>
         {copied === "failed" ? (
-          <span className="t-caption t-danger">
-            {t("access.issued.copyFailed")}
-          </span>
+          <span className="t-danger">{t("access.issued.copyFailed")}</span>
         ) : null}
       </div>
       <p className="t-caption">{t("access.issued.oneTime")}</p>
@@ -421,7 +419,7 @@ function InviteDialog({
               description: t(CAPABILITY_HINTS[c]),
             }))}
           />
-          <p className="t-caption">{t("access.inviteNote")}</p>
+          <p>{t("access.inviteNote")}</p>
         </div>
       )}
     </ConfirmModal>
@@ -533,7 +531,7 @@ function RevokeDialog({
           ? ` · ${t("access.lastSeen", { when: formatDateAbbrev(participant.last_seen_at, locale, recordZone) })}`
           : ` · ${t("access.neverSignedIn")}`}
       </p>
-      <p className="t-caption">{t("access.revokeBody")}</p>
+      <p>{t("access.revokeBody")}</p>
     </ConfirmModal>
   );
 }

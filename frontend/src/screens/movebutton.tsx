@@ -156,9 +156,7 @@ export function MoveButton({
             {t("deal360.createTask")}
           </Button>
           {createTask.isError ? (
-            <p className="t-caption t-danger">
-              {problemMessageOf(createTask.error, t)}
-            </p>
+            <p className="t-danger">{problemMessageOf(createTask.error, t)}</p>
           ) : null}
         </>
       );

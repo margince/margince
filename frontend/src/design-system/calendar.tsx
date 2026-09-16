@@ -106,7 +106,7 @@ export function Calendar({
           // dates rather than as fourteen things.
           <span
             key={`weekday-${day.getDay()}`}
-            className="calendar-weekday t-caption"
+            className="calendar-weekday"
             aria-hidden="true"
           >
             {weekdayInitial(day, locale)}

@@ -85,9 +85,7 @@ export function BillingContactsPanel({
           // A refused removal is the one failure here a reader must not have
           // to infer: the row stays and the button re-enables, which reads
           // exactly like a contact who is still on the account.
-          <p className="t-caption" role="alert">
-            {problemMessageOf(actions.remove.error, t)}
-          </p>
+          <p role="alert">{problemMessageOf(actions.remove.error, t)}</p>
         )}
         {contacts.length === 0 ? (
           <p className="muted">{t("billing.none")}</p>

@@ -362,7 +362,7 @@ function ChannelReplyFiling({ activityId }: Readonly<{ activityId?: string }>) {
     return null;
   }
   return (
-    <p className="t-caption">
+    <p>
       {t("compose.channelFiling", {
         // The same shape the picker labels an option with, so the project a rep
         // reads here and the one they read on a mail reply are one name.
@@ -1025,7 +1025,7 @@ function MailSendNotices({
   return (
     <>
       {sharedUnsubscribeAhead(to, cc, context) && (
-        <p className="t-caption" style={{ color: "var(--dangerText)" }}>
+        <p style={{ color: "var(--dangerText)" }}>
           {t("compose.multiRecipientWarning")}
         </p>
       )}
@@ -2399,11 +2399,7 @@ export function ComposeModal({
             />
           )}
           <div className="compose-fields">
-            {draftKept && (
-              <p className="t-caption" role="status">
-                {t("compose.draftKept")}
-              </p>
-            )}
+            {draftKept && <p role="status">{t("compose.draftKept")}</p>}
             {/* HOW this is going, above everything that depends on it. A reader
             who changes the dial changes what the rest of the head even is —
             a channel carries no subject and names no addressee — so the
@@ -2587,7 +2583,7 @@ export function ComposeModal({
                 <p className="t-caption">{t("compose.whyHint")}</p>
               </>
             ) : (
-              <p className="t-caption">{t("compose.derivedReply")}</p>
+              <p>{t("compose.derivedReply")}</p>
             )}
 
             {!isChannelReply && (
@@ -2605,19 +2601,13 @@ export function ComposeModal({
                 />
               </>
             )}
-            {sendUnavailable && (
-              <p className="t-caption">{t("compose.sendUnavailable")}</p>
-            )}
+            {sendUnavailable && <p>{t("compose.sendUnavailable")}</p>}
             {/* The rejection failed, and the rep has to be told: the judgment is
             still open and the words on screen are still the ones it names.
             Announced rather than merely coloured, on the same terms as every
             other failure in this drawer. */}
             {discardControl?.error && (
-              <p
-                className="t-caption"
-                role="alert"
-                style={{ color: "var(--dangerText)" }}
-              >
+              <p role="alert" style={{ color: "var(--dangerText)" }}>
                 {discardControl.error}
               </p>
             )}
@@ -2626,7 +2616,7 @@ export function ComposeModal({
               contactId={contactId}
               review={sendReview}
             />
-            <p className="t-caption">
+            <p>
               {t(
                 isChannelReply
                   ? "compose.sendMessageBody"

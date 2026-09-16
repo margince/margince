@@ -426,7 +426,7 @@ export function TakeOwnershipControl({
   // cell's own fold.
   return (
     <div className="worklist-take">
-      <p className="t-caption">{t("worklist.manager.takeOwnershipAsk")}</p>
+      <p>{t("worklist.manager.takeOwnershipAsk")}</p>
       <div className="cell-actions">
         <Button
           variant="ghost"

@@ -75,9 +75,7 @@ export function ClientSurfaceScreen() {
                 {hit.snippet && (
                   <span className="t-caption">{hit.snippet}</span>
                 )}
-                <a className="t-caption" href={`#/contacts/${hit.id}`}>
-                  {t("client.open360")}
-                </a>
+                <a href={`#/contacts/${hit.id}`}>{t("client.open360")}</a>
               </div>
             ))}
           </Card>
@@ -86,9 +84,7 @@ export function ClientSurfaceScreen() {
         {lookup.isSuccess && lookup.data.length === 0 && (
           <Card inset style={{ marginTop: "var(--space-3)" }}>
             <p className="t-label">{t("client.unknown")}</p>
-            <p className="t-caption" style={{ marginTop: 4 }}>
-              {t("client.unknownDetail")}
-            </p>
+            <p style={{ marginTop: 4 }}>{t("client.unknownDetail")}</p>
             <div className="card-actions">
               <a className="btn btn-ghost" href="#/leads">
                 {t("client.createLead")}
@@ -99,7 +95,6 @@ export function ClientSurfaceScreen() {
 
         {lookup.isError && (
           <p
-            className="t-caption"
             style={{ color: "var(--dangerText)", marginTop: "var(--space-3)" }}
           >
             {problemMessageOf(lookup.error, t)}

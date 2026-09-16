@@ -218,9 +218,7 @@ export function OutcomeReviewModal({
           )}
         </Field>
         {create.isError && (
-          <p className="t-caption" role="alert">
-            {problemMessageOf(create.error, t)}
-          </p>
+          <p role="alert">{problemMessageOf(create.error, t)}</p>
         )}
         <div className="actions">
           <Button variant="ghost" onClick={close} disabled={create.isPending}>

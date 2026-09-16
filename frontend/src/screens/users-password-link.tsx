@@ -121,7 +121,7 @@ export function PasswordLinkModal({
       <Heading size="large" id={headingId} className="t-h3 modal-title">
         {t("users.link.title", { name: memberName })}
       </Heading>
-      {pending && <p className="t-caption">{t("users.link.pending")}</p>}
+      {pending && <p>{t("users.link.pending")}</p>}
       {/* `danger`: the credential does not exist. The member exists either way
           — only the link failed, and the retry is the whole point of this
           branch: without it the admin is left with an account nobody can sign
@@ -145,7 +145,7 @@ export function PasswordLinkModal({
       )}
       {link && !pending && (
         <>
-          <p className="t-caption">{t("users.link.body")}</p>
+          <p>{t("users.link.body")}</p>
           <CopyableLink url={link.url} />
           <Expiry iso={link.expiresAt} />
         </>

@@ -108,7 +108,7 @@ export function TimelineFilterBar({
           }}
         />
         <span className="timeline-filters-range">
-          <label htmlFor={`${id}-after`} className="t-caption">
+          <label htmlFor={`${id}-after`} className="t-label">
             {t("timeline.filters.from")}
           </label>
           <DateInput
@@ -119,7 +119,7 @@ export function TimelineFilterBar({
               onChange({ ...value, after: day(event.target.value) })
             }
           />
-          <label htmlFor={`${id}-before`} className="t-caption">
+          <label htmlFor={`${id}-before`} className="t-label">
             {t("timeline.filters.to")}
           </label>
           <DateInput

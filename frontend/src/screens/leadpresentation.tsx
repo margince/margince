@@ -378,24 +378,24 @@ export function LeadBoard({
   return (
     <>
       {move.isError && (
-        <p className="t-caption" style={{ color: "var(--dangerText)" }}>
+        <p style={{ color: "var(--dangerText)" }}>
           {problemMessageOf(move.error, t)}
         </p>
       )}
       {rows.length > 0 && live.length === 0 && (
-        <p className="t-caption">{t("lead.boardTerminalOnly")}</p>
+        <p>{t("lead.boardTerminalOnly")}</p>
       )}
       {/* The two reads behind the terminal columns, when they fail. A failed
           report renders as 0 and a failed row read as an empty column, and
           both read as fact — "nobody was ever disqualified" is a very
           different statement from "we could not ask". */}
       {counts.isError && (
-        <p className="t-caption" style={{ color: "var(--dangerText)" }}>
+        <p style={{ color: "var(--dangerText)" }}>
           {t("lead.boardCountsUnavailable")}
         </p>
       )}
       {terminalRows.isError && (
-        <p className="t-caption" style={{ color: "var(--dangerText)" }}>
+        <p style={{ color: "var(--dangerText)" }}>
           {t("lead.boardTerminalRowsUnavailable")}
         </p>
       )}
