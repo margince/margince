@@ -202,32 +202,36 @@ function sonya360() {
   });
 }
 
-it("stands the row in hand's answer apart from its ways in, and folds the put-downs", () => {
+it("ends the row in hand's one line with the agent's move, every option beside it", () => {
   stubApi({ "GET /contacts/contact-sonya/360": sonya360 });
   const { container } = render(
-    <BriefFeed day={readingsDay({}, [waitingEmailRow()])} state="ready" />,
+    <BriefFeed
+      day={readingsDay({}, [waitingEmailRow()])}
+      state="ready"
+      onContext={() => {}}
+    />,
   );
   const lead = inHand(container);
-  // The move the product worked out is the row's answer, alone on the
-  // trailing edge in the agent's own chrome.
+  const line = [
+    ...(container
+      .querySelector(".worklist-row-acts")
+      ?.querySelectorAll("button, a") ?? []),
+  ];
+  // The way in opens the line; the put-downs stand on it in the open; the
+  // move the product worked out closes it, in the agent's own chrome.
+  expect(line.at(0)?.textContent).toBe(en["brief.focus.context"]);
+  expect(
+    lead.getByRole("button", {
+      name: en["worklist.disposition.verb.not_mine"],
+    }),
+  ).toBeTruthy();
   const draft = lead.getByRole("link", {
     name: en["worklist.verb.draft_reply_now"],
   });
   expect(draft.className).toContain("btn-ai");
-  expect(container.querySelector(".worklist-row-answer")?.contains(draft)).toBe(
-    true,
-  );
-  // The put-downs fold into their menu rather than standing beside it.
-  expect(
-    lead.getByRole("button", { name: en["worklist.disposition.menu"] }),
-  ).toBeTruthy();
-  expect(
-    lead.queryByRole("button", {
-      name: en["worklist.disposition.verb.not_mine"],
-    }),
-  ).toBeNull();
+  expect(line.at(-1)).toBe(draft);
   // The verb that only reaches the record is withheld: the record is named
-  // and linked under the row.
+  // and linked over the row.
   expect(
     lead.queryByRole("link", { name: en["worklist.verb.open"] }),
   ).toBeNull();

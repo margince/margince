@@ -62,10 +62,11 @@ export function RowActs({
   item: WorklistItem;
   href: string | undefined;
   /**
-   * `triage` is the row IN HAND on the Brief, where one row is answered rather
-   * than a queue scanned: the ways INTO the work stand on the leading edge as
-   * quiet verbs, the answer alone on the trailing edge in the primary chrome,
-   * and the put-downs fold into their menu beside it.
+   * `triage` is the row IN HAND on the Brief. The same one line, every option
+   * on it, with two differences: the verb that only reaches the record is
+   * withheld, because the row names and links that record under itself; and
+   * the move the product worked out stands LAST, where the lane's answer
+   * stands, because on the one row being answered that move is the answer.
    */
   shape?: "triage";
   /**
@@ -99,35 +100,31 @@ export function RowActs({
 }>) {
   if (shape === "triage") {
     return (
-      <div className="worklist-row-acts worklist-row-acts-triage">
-        <span className="worklist-row-ways">
-          {context}
-          {item.batch && onReview ? (
-            <BatchVerb onReview={onReview} />
-          ) : (
-            <RowVerbs
-              item={item}
-              href={href}
-              part="ways"
-              move={moveHref(item)}
-              onOpenEmail={onOpenEmail}
-            />
-          )}
-        </span>
-        <span className="worklist-row-answer">
-          {!item.batch && (
-            <RowVerbs
-              item={item}
-              href={href}
-              part="act"
-              move={moveHref(item)}
-              onOpenEmail={onOpenEmail}
-            />
-          )}
-          {equals}
-          <DispositionVerbs item={item} asMenu />
-          {primary}
-        </span>
+      <div className="worklist-row-acts">
+        {context}
+        {item.batch && onReview ? (
+          <BatchVerb onReview={onReview} />
+        ) : (
+          <RowVerbs
+            item={item}
+            href={href}
+            part="ways"
+            move={moveHref(item)}
+            onOpenEmail={onOpenEmail}
+          />
+        )}
+        {equals}
+        <DispositionVerbs item={item} />
+        {!item.batch && (
+          <RowVerbs
+            item={item}
+            href={href}
+            part="act"
+            move={moveHref(item)}
+            onOpenEmail={onOpenEmail}
+          />
+        )}
+        {primary}
       </div>
     );
   }
