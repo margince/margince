@@ -230,7 +230,6 @@ function CriterionCreate({ stageId }: Readonly<{ stageId: string }>) {
   return (
     <>
       <Button
-        small
         data-testid={`new-criterion-${stageId}`}
         onClick={() => setOpen(true)}
       >
@@ -281,7 +280,7 @@ function CriterionRemove({
   });
   return (
     <>
-      <Button small variant="ghost" onClick={() => setOpen(true)}>
+      <Button variant="ghost" onClick={() => setOpen(true)}>
         {t("stage.criteria.remove")}
       </Button>
       <ConfirmModal

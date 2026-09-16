@@ -31,20 +31,35 @@ function stripComments(css: string): string {
 }
 
 describe("Button", () => {
-  it("names its variant and size in the class list the stylesheet keys on", () => {
+  it("names its variant in the class list the stylesheet keys on", () => {
     render(
       <>
         <Button variant="primary">Save</Button>
-        <Button variant="danger" small>
-          Delete
-        </Button>
+        <Button variant="danger">Delete</Button>
       </>,
     );
     expect(classesOf("Save")).toContain("btn");
     expect(classesOf("Save")).toContain("btn-primary");
-    expect(classesOf("Save")).not.toContain("btn-sm");
     expect(classesOf("Delete")).toContain("btn-danger");
-    expect(classesOf("Delete")).toContain("btn-sm");
+  });
+
+  // There is ONE button height, and the variant classes are the only thing a
+  // caller can pick. A size prop is what the class list used to also carry, and
+  // a second height is a second answer to "how tall is a control" — the pair
+  // drifted apart on every screen that mixed them. Held over the sheet as well
+  // as over the class list: a rule reintroducing a rung would render at a
+  // height no assertion here would otherwise see.
+  it("has one height, so no rule in the sheet sets a second one", () => {
+    render(<Button variant="primary">Save</Button>);
+    expect(
+      classesOf("Save").some((name) => /^btn-(sm|lg|xs)$/.test(name)),
+    ).toBe(false);
+
+    const css = stripComments(readFileSync(join(here, "base.css"), "utf8"));
+    expect(css).not.toContain("btn-sm");
+    const rule = /(?:^|\n)\.btn\s*\{([^}]*)\}/.exec(css);
+    expect(rule).not.toBeNull();
+    expect(rule?.[1]).toMatch(/min-block-size:\s*var\(--controlHeight\)/);
   });
 
   it("defaults to the ghost variant, so a bare Button is still a styled one", () => {
@@ -463,7 +478,7 @@ describe("base.css draws the federated door without touching the mark", () => {
     const rule =
       /(?:^|\n)\.btn-federated\s*\{([^}]*min-block-size[^}]*)\}/.exec(css);
     expect(rule).not.toBeNull();
-    // `--control-h` sits below 44 for a fine pointer and rises to 44 only for a
+    // `--controlHeight` sits below 44 for a fine pointer and rises to 44 only for a
     // coarse one, so leaning on the shared height alone lands this box short of
     // the target on a mouse. The floor is declared here, and `max()` keeps the
     // shared height wherever it is the taller of the two.
@@ -471,7 +486,7 @@ describe("base.css draws the federated door without touching the mark", () => {
     // `max()`; the login spec measures it. This asserts the declaration survives,
     // because a deletion here would only surface in that slower lane.
     expect(rule?.[1]).toMatch(
-      /min-block-size:\s*max\(var\(--control-h\),\s*44px\)/,
+      /min-block-size:\s*max\(var\(--controlHeight\),\s*44px\)/,
     );
   });
 });
@@ -507,7 +522,7 @@ describe("the link variant is the .link-button affordance, not a copy of it", ()
 
   // The two floors `.btn` keeps so a short verb still reads as a pressable box.
   // A text affordance is not a box: left in place they draw 6rem of width and
-  // 40px of height around a link, which is the button chrome surviving the
+  // a control's height around a link, which is the button chrome surviving the
   // variant that removed it.
   it("gives up the width and height floors the button box keeps", () => {
     const css = readFileSync(join(here, "atoms.css"), "utf8");

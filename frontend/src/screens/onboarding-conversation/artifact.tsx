@@ -209,7 +209,6 @@ function RefusalNotice({
         actions={
           refusal.retry === null ? undefined : (
             <Button
-              small
               variant="ghost"
               pending={refusal.retry.busy}
               onClick={refusal.retry.run}
@@ -250,11 +249,7 @@ function ArtifactBody(props: CompanyActArtifactProps) {
   if (props.mode === "edit") {
     return (
       <>
-        <Button
-          small
-          variant="ghost"
-          onClick={() => props.onSwitchMode("dossier")}
-        >
+        <Button variant="ghost" onClick={() => props.onSwitchMode("dossier")}>
           {t("ob.conv.review.backToDossier")}
         </Button>
         <CompanyStep
@@ -304,11 +299,7 @@ function DossierBody(props: CompanyActArtifactProps) {
     return (
       <>
         <p className="ob-conv-artifact-empty">{t("ob.conv.artifact.empty")}</p>
-        <Button
-          small
-          variant="ghost"
-          onClick={() => props.onSwitchMode("edit")}
-        >
+        <Button variant="ghost" onClick={() => props.onSwitchMode("edit")}>
           {t("ob.conv.review.editDirectly")}
         </Button>
       </>
@@ -319,7 +310,7 @@ function DossierBody(props: CompanyActArtifactProps) {
       <div className="ob-state-loading" role="status">
         <span className="ob-spinner" /> {t("ob.restoring")}
       </div>
-      <Button small variant="ghost" onClick={() => props.onSwitchMode("edit")}>
+      <Button variant="ghost" onClick={() => props.onSwitchMode("edit")}>
         {t("ob.conv.review.editDirectly")}
       </Button>
     </>

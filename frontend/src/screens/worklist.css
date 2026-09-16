@@ -355,7 +355,7 @@
    a third surface needs it, the rule belongs in the design system as "a list of
    choices in a floating panel" rather than copied a third time.
 
-   No inset of its own: `.btn-sm` already carries one, and restating it here
+   No inset of its own: `.btn` already carries one, and restating it here
    would be this sheet inventing a geometry the control tier owns. */
 .worklist-snooze-spans > .btn {
   justify-content: flex-start;

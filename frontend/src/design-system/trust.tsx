@@ -381,19 +381,17 @@ export function ApprovalGate({
     <ActionRow
       className="approval-gate"
       primary={
-        <Button variant="primary" small onClick={onAccept}>
+        <Button variant="primary" onClick={onAccept}>
           {t("trust.accept")}
         </Button>
       }
     >
       <IconAction
-        small
         label={t("trust.dismiss")}
         icon={<Trash2 aria-hidden />}
         onClick={onDismiss}
       />
       <IconAction
-        small
         label={t("trust.edit")}
         icon={<Pencil aria-hidden />}
         onClick={onEdit}
@@ -502,7 +500,7 @@ export function StagedProposal({
               setState({ phase: "editing", draft: event.target.value })
             }
           />
-          <Button type="submit" variant="primary" small>
+          <Button type="submit" variant="primary">
             {t("trust.save")}
           </Button>
         </form>

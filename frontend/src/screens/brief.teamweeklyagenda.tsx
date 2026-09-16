@@ -138,7 +138,7 @@ function CopyAgenda({ rows }: Readonly<{ rows: readonly TeamWeeklyRep[] }>) {
 
   return (
     <>
-      <Button small onClick={() => void copy()}>
+      <Button onClick={() => void copy()}>
         {copied ? t("teamweekly.agenda.copied") : t("teamweekly.agenda.copy")}
       </Button>
       {failed && (

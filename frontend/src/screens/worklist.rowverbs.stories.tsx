@@ -86,11 +86,7 @@ function Verb({
   answer,
 }: Readonly<{ message: MessageKey; answer?: boolean }>) {
   const t = useT();
-  return (
-    <Button small variant={answer ? "primary" : "ghost"}>
-      {t(message)}
-    </Button>
-  );
+  return <Button variant={answer ? "primary" : "ghost"}>{t(message)}</Button>;
 }
 
 function taskRow(): WorklistItem {

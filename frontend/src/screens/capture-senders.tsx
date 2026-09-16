@@ -163,7 +163,6 @@ export function CaptureSendersCard() {
                           {!admitted.has(row.kind ?? "") &&
                             row.decision !== "business" && (
                               <Button
-                                small
                                 variant="ghost"
                                 disabled={setDecision.isPending}
                                 onClick={() =>
@@ -178,7 +177,6 @@ export function CaptureSendersCard() {
                             )}
                           {row.decision !== "keep_out" && (
                             <Button
-                              small
                               variant="ghost"
                               disabled={setDecision.isPending}
                               onClick={() => setKeepingOut(row.address)}
@@ -188,7 +186,6 @@ export function CaptureSendersCard() {
                           )}
                           {row.overruled && (
                             <Button
-                              small
                               variant="ghost"
                               disabled={withdraw.isPending}
                               onClick={() => withdraw.mutate(row.address)}

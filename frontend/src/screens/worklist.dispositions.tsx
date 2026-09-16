@@ -363,7 +363,6 @@ function PutDownMenu({
       {offered.map((disposition) => (
         <Button
           key={disposition}
-          small
           variant="ghost"
           {...writeState(writing, { disposition })}
           onClick={() => put(disposition)}
@@ -384,7 +383,6 @@ function PutDownMenu({
         SNOOZE_SPANS.filter((days) => days !== SNOOZE_DAYS).map((days) => (
           <Button
             key={days}
-            small
             variant="ghost"
             {...writeState(writing, { disposition: "snooze", until: days })}
             onClick={() => put("snooze", days)}
@@ -404,7 +402,6 @@ function PutDownMenu({
         SNOOZE_EVENTS.map((event) => (
           <Button
             key={event}
-            small
             variant="ghost"
             {...writeState(writing, { disposition: "snooze", until: event })}
             onClick={() => put("snooze", event)}
@@ -481,7 +478,6 @@ export function DispositionVerbs({ item }: Readonly<{ item: WorklistItem }>) {
         ) : (
           <Button
             key={disposition}
-            small
             variant="ghost"
             {...writeState(writing, { disposition })}
             onClick={() => put(disposition)}
@@ -559,7 +555,6 @@ function SnoozeSplit({
   return (
     <span className="actions-split">
       <Button
-        small
         variant="ghost"
         // The default day is an answer of its own, so it is `pending` when the
         // press was this half's and `disabled` when it was one of the lines' —
@@ -572,13 +567,6 @@ function SnoozeSplit({
       </Button>
       <Popover
         variant="ghost"
-        // The small rung, which `Popover` has no prop for and the split cannot
-        // do without: `.actions-split` stretches its halves to the taller one,
-        // so a default-height caret would draw a 40px control against the 32px
-        // verbs on either side of it. The design system's own size class rather
-        // than a height rule of this screen's, which would be a second author
-        // of one geometry.
-        className="btn-sm"
         // Refused while ANY answer on this row is being written, its own lines
         // included: the caret starts no write, so it is the sibling case rather
         // than the pressed one, and a chooser opened over an in-flight write
@@ -602,7 +590,6 @@ function SnoozeSplit({
           {SNOOZE_SPANS.map((days) => (
             <Button
               key={days}
-              small
               variant="ghost"
               {...writeState(writing, { disposition: "snooze", until: days })}
               onClick={() => onPick(days)}
@@ -621,7 +608,6 @@ function SnoozeSplit({
           {SNOOZE_EVENTS.map((event) => (
             <Button
               key={event}
-              small
               variant="ghost"
               {...writeState(writing, { disposition: "snooze", until: event })}
               onClick={() => onPick(event)}

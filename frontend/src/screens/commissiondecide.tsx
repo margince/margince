@@ -183,7 +183,6 @@ export function CommissionDecision({
     <>
       <Button
         ref={triggerRef}
-        small
         variant={decision === "void" ? "danger" : "primary"}
         onClick={() => setOpen(true)}
         data-testid={`commission-${decision}`}
@@ -257,15 +256,10 @@ export function CommissionDecision({
           </p>
         )}
         <div className="actions">
-          <Button
-            small
-            onClick={() => setOpen(false)}
-            disabled={mutation.isPending}
-          >
+          <Button onClick={() => setOpen(false)} disabled={mutation.isPending}>
             {t("create.cancel")}
           </Button>
           <Button
-            small
             variant={decision === "void" ? "danger" : "primary"}
             onClick={submit}
             pending={mutation.isPending}

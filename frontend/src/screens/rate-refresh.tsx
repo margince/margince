@@ -48,7 +48,6 @@ export function RefreshFromSources({ path }: Readonly<{ path: RefreshPath }>) {
     <span className="rates-refresh">
       <Button
         variant="ghost"
-        small
         onClick={() => refresh.mutate(path)}
         // `pending`, not `disabled`. A natively disabled button drops the focus
         // of the reader who just pressed it and announces nothing; `pending` is

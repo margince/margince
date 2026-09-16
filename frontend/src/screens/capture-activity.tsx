@@ -340,7 +340,6 @@ function CaptureActivityWindow({ scope }: Readonly<{ scope: Scope }>) {
                     the reader had no way to fetch. */}
                 {query.hasNextPage && (
                   <Button
-                    small
                     disabled={query.isFetchingNextPage}
                     onClick={() => void query.fetchNextPage()}
                   >

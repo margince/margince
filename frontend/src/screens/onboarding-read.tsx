@@ -554,7 +554,6 @@ export function ConversationEntries({
               )}
             </ul>
             <Button
-              small
               variant="primary"
               disabled={applied.has(entry.id)}
               onClick={() => {

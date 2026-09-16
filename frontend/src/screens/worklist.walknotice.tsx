@@ -50,9 +50,7 @@ export function WalkNotice({
          problem and leave the reader to find the remedy. */
       actions={
         arrived > 0 ? (
-          <Button small onClick={onRefresh}>
-            {t("worklist.walk.refresh")}
-          </Button>
+          <Button onClick={onRefresh}>{t("worklist.walk.refresh")}</Button>
         ) : undefined
       }
     >

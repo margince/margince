@@ -150,11 +150,7 @@ export function BlockedDomainsCard() {
       // grows. Refused rather than hidden, like every other control on this
       // card — the sentence under the list is what `reasonId` names.
       titleAction={
-        <Button
-          small
-          reasonId={refusal}
-          onClick={() => setEditing(BLANK_DECISION)}
-        >
+        <Button reasonId={refusal} onClick={() => setEditing(BLANK_DECISION)}>
           {t("blockedDomains.recordOpen")}
         </Button>
       }
@@ -364,7 +360,6 @@ function decisionColumns({
       render: (row: BlockedDomain) =>
         row.admission === "undecided" ? (
           <Button
-            small
             variant="ghost"
             disabled={reopen.isPending}
             reasonId={refusal}
@@ -374,7 +369,6 @@ function decisionColumns({
           </Button>
         ) : (
           <Button
-            small
             variant="ghost"
             disabled={set.isPending}
             reasonId={refusal}

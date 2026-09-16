@@ -253,9 +253,7 @@ export function SurfaceState({
         <div className="surfacestate-failed">
           <p className="surfacestate-withheld">{t("state.failed")}</p>
           {detail?.onRetry && (
-            <Button small onClick={detail.onRetry}>
-              {t("state.retry")}
-            </Button>
+            <Button onClick={detail.onRetry}>{t("state.retry")}</Button>
           )}
         </div>
       )}

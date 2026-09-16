@@ -266,7 +266,7 @@ export function CompaniesScreen() {
         })}
         action={
           <>
-            <Button small onClick={() => navigate({ screen: "partners" })}>
+            <Button onClick={() => navigate({ screen: "partners" })}>
               {t("nav.partners")}
             </Button>
             <CreateAction

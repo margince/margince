@@ -119,11 +119,8 @@ export function ResolveSheet({
       )}
 
       <div className="card-actions">
-        <Button small onClick={onClose}>
-          {labels.cancel}
-        </Button>
+        <Button onClick={onClose}>{labels.cancel}</Button>
         <Button
-          small
           variant="primary"
           disabled={!complete || pending}
           onClick={() => {

@@ -202,7 +202,7 @@ function EditOfferHeaderModal({
         size="large"
         id={headingId}
         className="t-h2"
-        style={{ marginBottom: 12 }}
+        style={{ marginBottom: "var(--space-3)" }}
       >
         {t("offer.edit")}
       </Heading>
@@ -655,7 +655,6 @@ function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
       header: "",
       render: (line: OfferLineItem) => (
         <Button
-          small
           data-testid={`remove-line-${line.id}`}
           disabled={removeMutation.isPending}
           onClick={() => removeMutation.mutate(line.id)}
@@ -860,7 +859,6 @@ function SendOfferAction({ offer }: Readonly<{ offer: Offer }>) {
     <>
       <Button
         variant="primary"
-        small
         data-testid="send-offer"
         onClick={() => setOpen(true)}
       >
@@ -932,7 +930,6 @@ function AcceptOfferAction({ offer }: Readonly<{ offer: Offer }>) {
     <>
       <Button
         variant="primary"
-        small
         data-testid="accept-offer"
         onClick={() => setOpen(true)}
       >
@@ -1003,7 +1000,6 @@ function RejectOfferAction({ offer }: Readonly<{ offer: Offer }>) {
     <>
       <Button
         variant="danger"
-        small
         data-testid="reject-offer"
         onClick={() => setOpen(true)}
       >
@@ -1074,7 +1070,6 @@ function RegenerateOfferAction({ offer }: Readonly<{ offer: Offer }>) {
   return (
     <>
       <Button
-        small
         data-testid="regenerate-offer"
         disabled={mutation.isPending}
         onClick={() => mutation.mutate()}
@@ -1250,7 +1245,6 @@ function RenderOfferPdfAction({ offer }: Readonly<{ offer: Offer }>) {
       actions={
         <>
           <Button
-            small
             data-testid="render-pdf"
             disabled={mutation.isPending}
             onClick={() => mutation.mutate()}
@@ -1328,7 +1322,6 @@ export function OfferScreen({ id }: Readonly<{ id: string }>) {
               actions={
                 <>
                   <Button
-                    small
                     onClick={() =>
                       navigate({ screen: "deals", id: offer.deal_id })
                     }
@@ -1337,7 +1330,6 @@ export function OfferScreen({ id }: Readonly<{ id: string }>) {
                   </Button>
                   {offer.status === "draft" && (
                     <Button
-                      small
                       data-testid="edit-offer-header"
                       onClick={() => setEditing(true)}
                     >

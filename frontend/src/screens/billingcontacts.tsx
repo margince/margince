@@ -152,7 +152,6 @@ function BillingContactRow({
                 contacts draws one of these per row and "Change" alone tells a
                 reader on a screen reader nothing about which one. */}
             <Button
-              small
               variant="ghost"
               onClick={onChange}
               disabled={busy}
@@ -162,7 +161,6 @@ function BillingContactRow({
             </Button>
             {canRemove && (
               <Button
-                small
                 variant="ghost"
                 onClick={onRemove}
                 disabled={busy}

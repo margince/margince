@@ -297,7 +297,6 @@ function AttachPicker({
           {files.map((file) => (
             <li key={file.id}>
               <Button
-                small
                 className="compose-files-row"
                 disabled={disabled || taken.has(file.id) || full}
                 onClick={() => add(file)}

@@ -582,7 +582,6 @@ export function ContactPageV2({
                 {t("contact.overview.detailsPermissions")}
               </Heading>
               <Button
-                small
                 variant="ghost"
                 onClick={closeMobileDetails}
                 reason={detailsDirty ? t("record.finishFieldEdit") : undefined}

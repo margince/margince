@@ -661,10 +661,10 @@ function DestructiveActions({
   const t = useT();
   return (
     <OverflowMenu label={t("record.moreActions")}>
-      <Button small type="button" onClick={onDisconnect}>
+      <Button type="button" onClick={onDisconnect}>
         {t("provider.disconnect")}
       </Button>
-      <Button small variant="danger" type="button" onClick={onDeleteData}>
+      <Button variant="danger" type="button" onClick={onDeleteData}>
         {t("provider.deleteData")}
       </Button>
     </OverflowMenu>
@@ -835,7 +835,6 @@ function CredentialRow({
                 column. A reader who may not connect has nothing to open. */}
             {canConnect && (
               <Button
-                small
                 variant="primary"
                 type="button"
                 onClick={() => setConnecting(true)}

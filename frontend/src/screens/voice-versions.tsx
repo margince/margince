@@ -213,14 +213,12 @@ function CandidateBanner({
         <div className="vdna-candidate-acts">
           <Button
             variant="primary"
-            small
             disabled={transition.isPending}
             onClick={() => transition.mutate("apply")}
           >
             {t("voice.candidate.apply")}
           </Button>
           <Button
-            small
             disabled={transition.isPending}
             onClick={() => transition.mutate("reject")}
           >
@@ -313,7 +311,6 @@ export function VoiceHistory({
               </ul>
               {page.next && (
                 <Button
-                  small
                   onClick={() => setVersionCursor(page.next ?? undefined)}
                 >
                   {t("voice.history.loadMore")}
@@ -391,10 +388,7 @@ export function VoiceChangeLog({ profileId }: Readonly<{ profileId: string }>) {
                 ))}
             </ul>
             {page.next && (
-              <Button
-                small
-                onClick={() => setDeltaCursor(page.next ?? undefined)}
-              >
+              <Button onClick={() => setDeltaCursor(page.next ?? undefined)}>
                 {t("voice.history.loadMore")}
               </Button>
             )}

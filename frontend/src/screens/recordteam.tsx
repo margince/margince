@@ -61,7 +61,7 @@ export function RecordTeam({
   // that may already be there.
   const canWrite = !readOnly && !isPending && !isError;
   const assign = canWrite ? (
-    <Button small={bare} variant="ghost" onClick={() => setEditing("new")}>
+    <Button variant="ghost" onClick={() => setEditing("new")}>
       {t("assignments.add")}
     </Button>
   ) : undefined;

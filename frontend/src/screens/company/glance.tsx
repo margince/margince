@@ -106,7 +106,7 @@ export function ThreadFold({
         }
         action={
           onOpenHistory && (
-            <Button small variant="ghost" onClick={onOpenHistory}>
+            <Button variant="ghost" onClick={onOpenHistory}>
               {t("co.360.fullHistory")}
             </Button>
           )

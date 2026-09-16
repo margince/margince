@@ -208,7 +208,6 @@ function ProviderPanel({
             // changed. The empty-state twin below is the first lookup and says
             // so instead.
             recheck
-            small
           />
         )
       }
@@ -331,7 +330,6 @@ function BuyPriced({
         return (
           <div className="pe-buy-offer" key={entry.category}>
             <Button
-              small
               type="button"
               pending={enrich.isPending}
               busyLabel={t("provider.profile.lookingUp")}
@@ -740,7 +738,6 @@ function EnrichNow({
   catalogPending,
   running,
   recheck = false,
-  small = false,
 }: Readonly<{
   free: string[];
   /** Whether a run is still moving. See canEnrichNow: the section state alone
@@ -758,7 +755,6 @@ function EnrichNow({
   // "look this contact up" on a record already showing a lookup reads as the
   // thing that fetches the email, which is the one thing it never does.
   recheck?: boolean;
-  small?: boolean;
 }>) {
   const t = useT();
   if (!canEnrichNow(profile.state, running)) {
@@ -766,7 +762,6 @@ function EnrichNow({
   }
   return (
     <Button
-      small={small}
       type="button"
       pending={enrich.isPending}
       busyLabel={t("provider.profile.lookingUp")}

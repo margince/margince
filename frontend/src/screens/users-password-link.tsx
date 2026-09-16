@@ -190,7 +190,6 @@ function CopyableLink({ url }: Readonly<{ url: string }>) {
         onFocus={(e) => e.currentTarget.select()}
       />
       <Button
-        small
         onClick={() => {
           // navigator.clipboard is UNDEFINED outside a secure context, and a
           // bare property access would throw synchronously — leaving the admin

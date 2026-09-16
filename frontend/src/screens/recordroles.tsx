@@ -54,7 +54,7 @@ export function RecordRolesCard() {
       title={t("recordRoles.title")}
       titleAction={
         canCreate && (
-          <Button small onClick={() => setAdding(true)}>
+          <Button onClick={() => setAdding(true)}>
             {t("recordRoles.addOpen")}
           </Button>
         )

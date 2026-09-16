@@ -131,9 +131,7 @@ function ReopenAction({ id }: Readonly<{ id: string }>) {
   };
   return (
     <>
-      <Button small onClick={() => setOpen(true)}>
-        {t("lead.reopen")}
-      </Button>
+      <Button onClick={() => setOpen(true)}>{t("lead.reopen")}</Button>
       <ConfirmModal
         open={open}
         onClose={close}

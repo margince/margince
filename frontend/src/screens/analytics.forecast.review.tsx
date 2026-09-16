@@ -258,9 +258,7 @@ function CheckRow({
             locale,
           )}
         </span>
-        <Button small onClick={() => setOpen(true)}>
-          {t("review.answer")}
-        </Button>
+        <Button onClick={() => setOpen(true)}>{t("review.answer")}</Button>
       </PanelRow>
       <ResolveSheet
         open={open}

@@ -330,7 +330,7 @@ function MeetingBriefAction({
   }
   const activityId = activity.id;
   return (
-    <Button small onClick={() => onBriefMeeting(activityId)}>
+    <Button onClick={() => onBriefMeeting(activityId)}>
       {t("contact.meeting.brief")}
     </Button>
   );

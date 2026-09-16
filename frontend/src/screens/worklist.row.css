@@ -312,11 +312,12 @@
     min-width: 0;
   }
 
-  /* The touch floor. `--control-h-sm` rises only to 36px for a coarse pointer,
-     which is the size these verbs take — short of the 44px the sign-in door
-     and the list rows already keep. A queue worked with a thumb owes the same
-     target: a mis-hit here files somebody else's judgement on a customer's
-     message.
+  /* The touch floor, and it is about the controls `--controlHeight` does NOT
+     reach. That token takes every `.btn` to 44px for a coarse pointer already;
+     a bare `<button>` a row draws for itself and a `.link-button` take no
+     control height at all, and those were the small targets. A queue worked
+     with a thumb owes the same 44 the sign-in door and the list rows keep: a
+     mis-hit here files somebody else's judgement on a customer's message.
      Every pressable thing INSIDE a row, not a list of the verb groups: a row
      also carries the approval's own three decisions, and those were the
      smallest targets on the page at 32px. A selector naming today's groups is

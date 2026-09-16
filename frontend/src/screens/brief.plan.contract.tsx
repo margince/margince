@@ -190,7 +190,6 @@ function ContractRow({
           {editable && (
             <Button
               variant="ghost"
-              small
               onClick={() => {
                 setDraft(value ?? "");
                 setEditing(true);

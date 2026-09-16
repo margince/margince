@@ -1613,7 +1613,6 @@ function ThreadRow({
           <span className="tl-meta">
             {folded > 0 && (
               <Button
-                small
                 aria-expanded={allOpen}
                 onClick={() => setAllOpen(!allOpen)}
               >
@@ -1631,7 +1630,7 @@ function ThreadRow({
                 of it. */}
             {group.partial &&
               (threadKey && onOpenThread ? (
-                <Button small onClick={() => onOpenThread(threadKey)}>
+                <Button onClick={() => onOpenThread(threadKey)}>
                   {t("timeline.group.openThread")}
                 </Button>
               ) : (
@@ -1731,7 +1730,7 @@ function BulkGroupRow({
             {groupCountLabel(group, locale)}
           </span>
           <ProvenanceTag provenance={newest.provenance} />
-          <Button small aria-expanded={open} onClick={() => setOpen(!open)}>
+          <Button aria-expanded={open} onClick={() => setOpen(!open)}>
             {open ? t("timeline.group.collapse") : t("timeline.group.expand")}
           </Button>
           {/* A bulk send cannot be completed: it has no thread to ask the

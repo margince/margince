@@ -397,7 +397,6 @@ function PersonalityEditor({
       {canEdit && (
         <div className="vdna-composer-actions">
           <Button
-            small
             disabled={!dirty || save.isPending}
             onClick={() => save.mutate()}
           >
@@ -775,7 +774,6 @@ function BuildControls({
           <div className="vdna-buildcell">
             <Button
               variant="primary"
-              small
               // A refusal the reader can act on, attached to the control rather
               // than left in a `title` no screen reader announces on a disabled
               // button. It points at the description this row already draws.

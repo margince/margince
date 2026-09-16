@@ -138,7 +138,7 @@ export function FxRatesCard() {
         canManage ? (
           <>
             <RefreshFromSources path="/fx-rates/propose-refresh" />
-            <Button variant="primary" small onClick={() => setOpen(true)}>
+            <Button variant="primary" onClick={() => setOpen(true)}>
               {t("settings.rates.fxAdd")}
             </Button>
           </>
@@ -297,11 +297,10 @@ function FxRateModal({ onClose }: Readonly<{ onClose: () => void }>) {
         </Field>
         <WriteRefused titleKey="settings.rates.notSaved" message={error} />
         <div className="form-actions">
-          <Button small variant="ghost" onClick={onClose}>
+          <Button variant="ghost" onClick={onClose}>
             {t("create.cancel")}
           </Button>
           <Button
-            small
             variant="primary"
             onClick={() => {
               setError(null);
@@ -365,7 +364,7 @@ export function ModelCostsCard() {
         canManage ? (
           <>
             <RefreshFromSources path="/ai-model-rates/propose-refresh" />
-            <Button variant="primary" small onClick={() => setOpen(true)}>
+            <Button variant="primary" onClick={() => setOpen(true)}>
               {t("settings.rates.modelAdd")}
             </Button>
           </>
@@ -555,11 +554,10 @@ function ModelCostModal({ onClose }: Readonly<{ onClose: () => void }>) {
         </Field>
         <WriteRefused titleKey="settings.rates.notSaved" message={error} />
         <div className="form-actions">
-          <Button small variant="ghost" onClick={onClose}>
+          <Button variant="ghost" onClick={onClose}>
             {t("create.cancel")}
           </Button>
           <Button
-            small
             variant="primary"
             onClick={() => {
               setError(null);

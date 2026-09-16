@@ -222,9 +222,7 @@ function BackfillSetup({
           carrying a class from a sheet this file never imported, so on Settings
           it rendered as the browser's own grey chrome. */}
       <div className="backfill-foot">
-        <Button small onClick={onSkip}>
-          {t("backfill.skip")}
-        </Button>
+        <Button onClick={onSkip}>{t("backfill.skip")}</Button>
       </div>
     </div>
   );

@@ -261,10 +261,10 @@ export function VoiceCollectScene({
               {t("ob.conv.voice.dropSub")}
             </p>
             <div className="ob-voice-drop-acts">
-              <Button small onClick={() => fileRef.current?.click()}>
+              <Button onClick={() => fileRef.current?.click()}>
                 {t("ob.conv.voice.browse")}
               </Button>
-              <Button small variant="ghost" onClick={() => setPasteOpen(true)}>
+              <Button variant="ghost" onClick={() => setPasteOpen(true)}>
                 {t("ob.conv.voice.pasteInstead")}
               </Button>
             </div>
@@ -285,7 +285,6 @@ export function VoiceCollectScene({
                 />
                 <div className="ob-voice-drop-acts">
                   <Button
-                    small
                     variant="primary"
                     disabled={pasteText.trim() === ""}
                     onClick={() => {
@@ -297,7 +296,6 @@ export function VoiceCollectScene({
                     {t("ob.conv.voice.pasteAdd")}
                   </Button>
                   <Button
-                    small
                     variant="ghost"
                     onClick={() => {
                       setPasteText("");
@@ -623,7 +621,6 @@ function VoiceSampleCard({
         </p>
         {drafts.length > 1 && (
           <Button
-            small
             variant="ghost"
             onClick={() => setIndex((prev) => (prev + 1) % drafts.length)}
           >

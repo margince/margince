@@ -111,12 +111,12 @@ export function TagsPanel({
             />
           ))}
           {hidden > 0 && (
-            <Button small variant="ghost" onClick={() => setExpanded(true)}>
+            <Button variant="ghost" onClick={() => setExpanded(true)}>
               {t("tags.more", { count: formatNumber(hidden, locale) })}
             </Button>
           )}
           {expanded && tags.length > VISIBLE_TAGS && (
-            <Button small variant="ghost" onClick={() => setExpanded(false)}>
+            <Button variant="ghost" onClick={() => setExpanded(false)}>
               {t("tags.showLess")}
             </Button>
           )}
@@ -230,7 +230,6 @@ function TagOnRecord({
           <span className="t-caption">{t("tags.visibleWorkspaceWide")}</span>
           {canEdit && (
             <Button
-              small
               variant="ghost"
               disabled={remove.isPending}
               onClick={() => remove.mutate(tag.tag_id)}
@@ -255,7 +254,7 @@ function TagOnRecord({
 function AddTagButton({ onOpen }: Readonly<{ onOpen: () => void }>) {
   const t = useT();
   return (
-    <Button small variant="ghost" onClick={onOpen}>
+    <Button variant="ghost" onClick={onOpen}>
       <Plus aria-hidden /> {t("tags.add")}
     </Button>
   );

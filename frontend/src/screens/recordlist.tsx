@@ -187,7 +187,6 @@ export function mineEmptyNote<Row>({
     <span>
       {t("list.emptyMine", { unit: t(unit) })}{" "}
       <Button
-        small
         onClick={() =>
           state.setQuery((query) => {
             const { owner_id: _mine, ...rest } = query.filters;

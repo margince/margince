@@ -276,7 +276,6 @@ function Briefing({
               // Quiet rather than filled: this asks the panel's own writer to
               // run again, inside the panel that writer already filled.
               variant="aiQuiet"
-              small
               pending={rewriting}
               onClick={onRewrite}
             >

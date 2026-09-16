@@ -367,7 +367,6 @@ export function LogActivityForm({
       )}
       <div className="form-actions">
         <Button
-          small
           variant="primary"
           type="submit"
           // An unnamed attendee is refused by the server with a 422 the reader
@@ -502,7 +501,6 @@ export function LogActivityAction({
     <>
       {!openOnMount && (
         <Button
-          small
           disabled={disabled}
           reasonId={disabledReasonId}
           onClick={() => setOpen(true)}

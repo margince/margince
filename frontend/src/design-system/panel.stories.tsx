@@ -70,7 +70,7 @@ export const WithFooter: Story = {
     footer: (
       <>
         <span>Two of six shown</span>
-        <Button small>See all</Button>
+        <Button>See all</Button>
       </>
     ),
   },
@@ -99,7 +99,7 @@ export const WithSubAndTitleAction: Story = {
   args: {
     title: "Purposes",
     sub: "Why this installation may hold personal data. Each one is answerable on its own.",
-    titleAction: <Button small>Add a purpose</Button>,
+    titleAction: <Button>Add a purpose</Button>,
     children: (
       <>
         <PanelRow>Contract performance</PanelRow>
@@ -147,7 +147,7 @@ export const LongTitleTruncates: Story = {
     titleAction: (
       <>
         <Badge tone="accent">7</Badge>
-        <Button small>Add</Button>
+        <Button>Add</Button>
       </>
     ),
     children: (
@@ -234,11 +234,7 @@ export const AiTone: Story = {
     tone: "ai",
     title: "Brandt Automotive GmbH · 360",
     titleAction: <Badge tone="ai">AI-assisted</Badge>,
-    actions: (
-      <Button variant="aiQuiet" small>
-        Read it again
-      </Button>
-    ),
+    actions: <Button variant="aiQuiet">Read it again</Button>,
     children: (
       <>
         <PanelRow>
@@ -284,7 +280,7 @@ export const WithActions: Story = {
         <PanelRow>Expansion, EU — €12,500</PanelRow>
       </>
     ),
-    actions: <Button small>Add a deal</Button>,
+    actions: <Button>Add a deal</Button>,
   },
 };
 

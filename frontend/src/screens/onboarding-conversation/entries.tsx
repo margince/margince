@@ -399,7 +399,6 @@ export function QuestionCard({
           return (
             <Button
               key={option.value}
-              small
               className="ob-conv-option"
               // The chip clamps long values visually (CSS line-clamp); the
               // full text stays the accessible name via content and here as
@@ -419,7 +418,6 @@ export function QuestionCard({
       </div>
       {question.dismissLabelKey !== undefined && onDismiss !== undefined && (
         <Button
-          small
           variant="ghost"
           className="ob-conv-question-dismiss"
           onClick={() => onDismiss(question.id)}

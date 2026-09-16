@@ -2591,7 +2591,6 @@ function ReopenAction({
   return (
     <>
       <Button
-        small
         reasonId={disabledReasonId}
         data-testid="reopen-open"
         onClick={() => setOpen(true)}
@@ -2617,7 +2616,6 @@ function ReopenAction({
           {openStages.map((s) => (
             <Button
               key={s.id}
-              small
               aria-pressed={stageId === s.id}
               data-testid={`reopen-stage-${s.id}`}
               onClick={() => setStageId(s.id)}
@@ -2632,11 +2630,8 @@ function ReopenAction({
           </p>
         )}
         <div className="actions">
-          <Button small onClick={() => setOpen(false)}>
-            {t("deals.cancel")}
-          </Button>
+          <Button onClick={() => setOpen(false)}>{t("deals.cancel")}</Button>
           <Button
-            small
             variant="primary"
             data-testid="reopen-confirm"
             disabled={!stageId || reopen.isPending}
@@ -3024,7 +3019,6 @@ function DealApprovals({
               primary={
                 <Button
                   variant="primary"
-                  small
                   onClick={() =>
                     decide({ approvalId: approval.id, verdict: "approve" })
                   }
@@ -3036,7 +3030,6 @@ function DealApprovals({
               {/* Dismiss here sends the `reject` verdict — the same answer the
                 decision card's trash can gives, so it wears the same glyph. */}
               <IconAction
-                small
                 label={t("trust.dismiss")}
                 icon={<Trash2 aria-hidden />}
                 onClick={() =>
@@ -3085,7 +3078,6 @@ export function OffersPanel({
       // rather than to a strip under its rows.
       titleAction={
         <Button
-          small
           // `reason` disables the control AND points at the explanation. Passing
           // `disabled` beside it would cancel the refusal it sets, so the
           // in-flight case stays on `disabled` and the state case on `reason`.

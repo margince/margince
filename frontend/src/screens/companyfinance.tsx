@@ -466,7 +466,7 @@ function ConnectFinance() {
   const t = useT();
   return (
     <div className="card-actions">
-      <Button small>{t("finance.connect")}</Button>
+      <Button>{t("finance.connect")}</Button>
     </div>
   );
 }

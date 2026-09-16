@@ -106,7 +106,7 @@ export function ConfirmModal({
         size="large"
         id={headingId}
         className="t-h2"
-        style={{ marginBottom: 12 }}
+        style={{ marginBottom: "var(--space-3)" }}
       >
         {tier && (
           <>

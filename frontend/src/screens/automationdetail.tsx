@@ -233,7 +233,6 @@ export function AutomationRuns({
           return (
             <Button
               key={option}
-              small
               variant={active ? "primary" : "ghost"}
               aria-pressed={active}
               onClick={() => setOutcome(option === "all" ? undefined : option)}

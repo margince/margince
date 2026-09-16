@@ -129,7 +129,7 @@ export function DealRoomAccess({
       sub={t("access.sub")}
       titleAction={
         mayManage ? (
-          <Button small onClick={() => setInviting(true)}>
+          <Button onClick={() => setInviting(true)}>
             {t("access.invite")}
           </Button>
         ) : undefined
@@ -247,25 +247,13 @@ function ParticipantRow({
           <OverflowMenu
             label={t("access.rowActions", { name: participant.full_name })}
           >
-            <Button
-              small
-              variant="ghost"
-              onClick={() => setConfirming("reissue")}
-            >
+            <Button variant="ghost" onClick={() => setConfirming("reissue")}>
               {t("access.issueLink")}
             </Button>
-            <Button
-              small
-              variant="ghost"
-              onClick={() => setConfirming("capability")}
-            >
+            <Button variant="ghost" onClick={() => setConfirming("capability")}>
               {t("access.changeCapability")}
             </Button>
-            <Button
-              small
-              variant="ghost"
-              onClick={() => setConfirming("revoke")}
-            >
+            <Button variant="ghost" onClick={() => setConfirming("revoke")}>
               {t("access.revoke")}
             </Button>
           </OverflowMenu>
@@ -314,7 +302,7 @@ function IssuedLink({ issued }: Readonly<{ issued: Issued }>) {
         {(control) => <TextInput {...control} readOnly value={link} />}
       </Field>
       <div className="card-actions">
-        <Button small onClick={copy}>
+        <Button onClick={copy}>
           <Copy aria-hidden />
           {copied === "done"
             ? t("access.issued.copied")

@@ -28,7 +28,6 @@ export function TeamPlanReview({
   return (
     <>
       <Button
-        small
         variant="ghost"
         onClick={(event) => {
           event.stopPropagation();
@@ -157,7 +156,6 @@ function TeamCommitment({
                   )}
                 </Field>
                 <Button
-                  small
                   pending={answer.isPending}
                   disabled={
                     response.trim() === "" ||

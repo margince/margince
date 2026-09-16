@@ -185,7 +185,6 @@ export function MomentRow({
                   verb the agent performs drawn in the accent would read as
                   the reader's own move. */}
               <Button
-                small
                 variant="ai"
                 onClick={() => onOpenRecord(target.type, target.id)}
               >

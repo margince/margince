@@ -197,7 +197,6 @@ export function RedirectUris({
               value={<code>{uri.url}</code>}
               control={
                 <Button
-                  small
                   onClick={() => {
                     // The object itself is guarded, not just the promise: the
                     // Clipboard API is absent outside a secure context, so on a

@@ -179,9 +179,7 @@ function PolicyRow({
         }
         control={
           canEdit ? (
-            <Button small onClick={toggleEditor}>
-              {t("retention.edit")}
-            </Button>
+            <Button onClick={toggleEditor}>{t("retention.edit")}</Button>
           ) : null
         }
       />
@@ -264,7 +262,6 @@ function PolicyRow({
           )}
           <div className="retention-actions">
             <Button
-              small
               variant="primary"
               disabled={days === null || patch.isPending}
               onClick={() =>
@@ -284,16 +281,13 @@ function PolicyRow({
             {/* Closing keeps the draft exactly where the old inline panel
                   left it — the fields are re-seeded on the next open, so a
                   dismissed dialog abandons the edit rather than saving it. */}
-            <Button small onClick={toggleEditor}>
-              {t("deals.cancel")}
-            </Button>
+            <Button onClick={toggleEditor}>{t("deals.cancel")}</Button>
             {/* The confirm REPLACES this dialog rather than stacking on top of
                 it: two dialogs at once trap focus in the wrong one and share
                 one Escape key, and the question "delete, or did you mean
                 pause?" has to be the only thing on screen when it is asked. */}
             {canDelete && (
               <Button
-                small
                 variant="danger"
                 onClick={() => {
                   setEditing(false);
@@ -506,7 +500,7 @@ export function RetentionCard() {
       // once, and withholding it a second time per row is noise.
       titleAction={
         canCreate ? (
-          <Button small onClick={() => setAdding(true)}>
+          <Button onClick={() => setAdding(true)}>
             {t("retention.addPolicy")}
           </Button>
         ) : undefined

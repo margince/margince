@@ -247,7 +247,6 @@ export function ConsumerMailDomainsCard() {
       // which is the one that knows WHICH of the two grants is missing.
       titleAction={
         <Button
-          small
           reasonId={canAdd ? undefined : denialId}
           onClick={() => setAdding(true)}
         >
@@ -291,7 +290,6 @@ export function ConsumerMailDomainsCard() {
                           control={
                             <Button
                               variant="ghost"
-                              small
                               aria-label={t("consumerMail.remove")}
                               disabled={remove.isPending}
                               reasonId={canManage ? undefined : denialId}
@@ -419,11 +417,10 @@ function AddConsumerMailDialog({
           </Callout>
         )}
         <div className="form-actions">
-          <Button small type="button" onClick={onClose}>
+          <Button type="button" onClick={onClose}>
             {t("create.cancel")}
           </Button>
           <Button
-            small
             type="submit"
             variant="primary"
             disabled={add.isPending || typed === ""}

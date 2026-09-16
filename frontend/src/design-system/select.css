@@ -10,11 +10,15 @@
  * sheet may assume a positioned ancestor: every coordinate arrives as an inline
  * style from select.tsx, measured against the viewport. */
 
+/* The closed face takes its box from `.input` — height, inset, weight — and
+   adds only the row: the label, whatever marks it, and the chevron. The gap is
+   the control's icon-to-label gap, the same one a button spends between its
+   glyph and its verb. */
 .select-control {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-2);
+  gap: var(--controlGap);
   text-align: left;
   cursor: pointer;
 }

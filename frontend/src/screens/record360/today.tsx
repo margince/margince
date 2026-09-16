@@ -229,7 +229,6 @@ export function FoundMove({
               {action}
               {defer && (
                 <Button
-                  small
                   className="co-move-defer"
                   onClick={defer.onDefer}
                   disabled={defer.pending}
@@ -301,7 +300,6 @@ export function TodoRow({
       {action ??
         (verb && (
           <Button
-            small
             // Tinted, not filled: three filled buttons down a column outshout
             // the one move above them that the pane is actually recommending,
             // and `aiQuiet` is that volume for an agent's verb among equals.

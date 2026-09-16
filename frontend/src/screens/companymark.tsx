@@ -237,7 +237,6 @@ function MarkSlot({
       {canEdit && (
         <div className="company-mark-actions">
           <Button
-            small
             aria-label={src ? verbs.replace : verbs.add}
             onClick={() => setPicking((open) => !open)}
             disabled={remove.isPending}
@@ -249,7 +248,6 @@ function MarkSlot({
           </Button>
           {src && (
             <Button
-              small
               variant="ghost"
               aria-label={verbs.remove}
               onClick={removeMark}

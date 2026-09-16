@@ -247,7 +247,7 @@ export function InviteUserForm({
           its children, and a submit that fills the dialog reads as a banner
           rather than as the move the form is for. */}
       <div className="form-actions">
-        <Button variant="primary" small type="submit" disabled={!canInvite}>
+        <Button variant="primary" type="submit" disabled={!canInvite}>
           <UserPlus aria-hidden /> {t("users.invite")}
         </Button>
       </div>

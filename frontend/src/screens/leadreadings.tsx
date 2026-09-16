@@ -133,7 +133,7 @@ function ScoreCard({
   ) : explain.isError ? (
     <>
       <p className="t-caption">{t("lead.scoreFactorsFailed")}</p>
-      <Button small variant="ghost" onClick={() => explain.refetch()}>
+      <Button variant="ghost" onClick={() => explain.refetch()}>
         {t("common.retry")}
       </Button>
     </>

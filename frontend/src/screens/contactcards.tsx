@@ -105,7 +105,7 @@ export function ContactBriefCard({
         {failed && (
           <p role="alert">
             {t("contact.overview.briefFailed")}{" "}
-            <Button small variant="ghost" onClick={onRetry}>
+            <Button variant="ghost" onClick={onRetry}>
               {t("common.retry")}
             </Button>
           </p>
@@ -373,7 +373,6 @@ export function ContactCommercialCard({
 
         {deal && (
           <Button
-            small
             className="pe-rail-more"
             onClick={() => navigate({ screen: "deals", id: deal.deal_id })}
           >

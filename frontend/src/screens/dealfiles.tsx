@@ -89,13 +89,13 @@ export function DealFiles({ deal }: Readonly<{ deal: Deal }>) {
       sub={t("files.sub")}
       titleAction={
         mayWrite ? (
-          <Button small onClick={() => setAdding(true)}>
+          <Button onClick={() => setAdding(true)}>
             {t("docs.add.action")}
           </Button>
         ) : undefined
       }
       footer={
-        <Button small variant="ghost" onClick={() => setShowHidden((s) => !s)}>
+        <Button variant="ghost" onClick={() => setShowHidden((s) => !s)}>
           {showHidden ? t("files.hideHidden") : t("files.showHidden")}
         </Button>
       }
@@ -237,13 +237,12 @@ function FileMenu({
       label={t("files.rowActions", { name: doc.attachment.filename })}
     >
       {captured && !doc.hidden ? (
-        <Button small variant="ghost" onClick={onHide}>
+        <Button variant="ghost" onClick={onHide}>
           {t("files.hide")}
         </Button>
       ) : null}
       {captured && doc.hidden ? (
         <Button
-          small
           variant="ghost"
           pending={unhide.isPending}
           onClick={() => unhide.mutate()}
@@ -252,7 +251,7 @@ function FileMenu({
         </Button>
       ) : null}
       {!captured ? (
-        <Button small variant="ghost" onClick={onDelete}>
+        <Button variant="ghost" onClick={onDelete}>
           {t("files.delete")}
         </Button>
       ) : null}

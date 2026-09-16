@@ -247,7 +247,6 @@ export function LeadManualSignals({
                     </span>
                     {!readOnlyReason && (
                       <Button
-                        small
                         disabled={busy}
                         onClick={() => clear.mutate(name)}
                       >
@@ -373,7 +372,6 @@ export function LeadManualSignals({
           )}
           <div className="form-actions">
             <Button
-              small
               variant="primary"
               disabled={!canEdit || answered.length === 0}
               onClick={() => set.mutate(writes())}

@@ -41,9 +41,7 @@ export function ShareViewButton({
   const [open, setOpen] = useState(false);
   return (
     <>
-      <Button small onClick={() => setOpen(true)}>
-        {t("analytics.share.open")}
-      </Button>
+      <Button onClick={() => setOpen(true)}>{t("analytics.share.open")}</Button>
       {open && (
         <ShareDialog
           target={target}
@@ -182,9 +180,7 @@ function ShareLinkReveal({
       }
       onConfirm={copyLink}
       actionsLead={
-        <Button small onClick={onClose}>
-          {t("analytics.share.done")}
-        </Button>
+        <Button onClick={onClose}>{t("analytics.share.done")}</Button>
       }
     >
       <p id={headingId} className="t-caption">

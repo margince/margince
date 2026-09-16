@@ -177,14 +177,13 @@ function SpeakerPanel({
       </ul>
       <div className="vdna-composer-actions">
         <Button
-          small
           variant="primary"
           disabled={choice === null}
           onClick={() => choice !== null && onAnswer(choice)}
         >
           {t("settings.voice.speakerConfirm")}
         </Button>
-        <Button small onClick={onDismiss}>
+        <Button onClick={onDismiss}>
           {t("settings.voice.speakerDismiss")}
         </Button>
       </div>

@@ -98,7 +98,6 @@ export function ImportedEmploymentHistory({
       )}
       {canEdit && outstanding.some((item) => item.state === "pending") && (
         <Button
-          small
           disabled={apply.isPending}
           onClick={() =>
             apply.mutate({
@@ -114,7 +113,6 @@ export function ImportedEmploymentHistory({
         <div key={group} className="form-stack">
           {items[0]?.company_id ? (
             <Button
-              small
               variant="ghost"
               onClick={() => {
                 const company = items[0]?.company_id;
@@ -146,7 +144,6 @@ export function ImportedEmploymentHistory({
               {canEdit && item.state !== "linked" && (
                 <div className="card-actions">
                   <Button
-                    small
                     disabled={apply.isPending}
                     onClick={() => {
                       apply.reset();
@@ -156,7 +153,6 @@ export function ImportedEmploymentHistory({
                     {t("employment.resolve")}
                   </Button>
                   <Button
-                    small
                     disabled={apply.isPending}
                     onClick={() =>
                       apply.mutate({
@@ -185,7 +181,6 @@ export function ImportedEmploymentHistory({
               index && (
               <p className="t-caption" key={item.key}>
                 <Button
-                  small
                   variant="ghost"
                   onClick={() => {
                     if (item.company_id)

@@ -414,7 +414,6 @@ export function AddRelationshipAction({
   return (
     <>
       <Button
-        small
         reasonId={refusedReasonId}
         onClick={() => setOpen(true)}
         data-testid="add-relationship"
@@ -426,7 +425,7 @@ export function AddRelationshipAction({
           size="large"
           id={headingId}
           className="t-h2"
-          style={{ marginBottom: 12 }}
+          style={{ marginBottom: "var(--space-3)" }}
         >
           {t(copy.add)}
         </Heading>
@@ -516,11 +515,10 @@ export function AddRelationshipAction({
               justifyContent: "flex-end",
             }}
           >
-            <Button small onClick={close} disabled={mutation.isPending}>
+            <Button onClick={close} disabled={mutation.isPending}>
               {t("create.cancel")}
             </Button>
             <Button
-              small
               variant="primary"
               disabled={!target || mutation.isPending}
               onClick={() =>
@@ -707,7 +705,6 @@ export function RelationshipsTab({
                         )}
                         {canDelete && (
                           <Button
-                            small
                             variant="danger"
                             reasonId={refusedReasonId}
                             onClick={() => setRemoving(rel)}
@@ -739,7 +736,7 @@ export function RelationshipsTab({
           size="large"
           id={headingId}
           className="t-h2"
-          style={{ marginBottom: 12 }}
+          style={{ marginBottom: "var(--space-3)" }}
         >
           {t("rel.remove")}
         </Heading>
@@ -756,15 +753,10 @@ export function RelationshipsTab({
             justifyContent: "flex-end",
           }}
         >
-          <Button
-            small
-            onClick={() => setRemoving(null)}
-            disabled={remove.isPending}
-          >
+          <Button onClick={() => setRemoving(null)} disabled={remove.isPending}>
             {t("create.cancel")}
           </Button>
           <Button
-            small
             variant="danger"
             onClick={() => {
               if (removing) {

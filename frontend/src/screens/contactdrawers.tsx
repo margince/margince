@@ -189,9 +189,7 @@ function ClaimMapRow({
           )}
         </div>
       </div>
-      <Button small onClick={onDismiss}>
-        {t("contact.research.dismiss")}
-      </Button>
+      <Button onClick={onDismiss}>{t("contact.research.dismiss")}</Button>
     </article>
   );
 }
@@ -307,7 +305,6 @@ export function ContactResearchDrawer({
             {t("contact.research.title", { name: contactName })}
           </Heading>
           <Button
-            small
             iconOnly
             onClick={onClose}
             aria-label={t("contact.drawer.close")}

@@ -110,7 +110,6 @@ function RoomRow({
       </div>
       <div className="card-actions">
         <Button
-          small
           variant="ghost"
           onClick={() =>
             navigate({ screen: "deals", id: room.deal_id, id2: "room" })
@@ -120,7 +119,7 @@ function RoomRow({
           {t("contactdealrooms.open")}
         </Button>
         {mayManage ? (
-          <Button small variant="ghost" onClick={() => setConfirming(true)}>
+          <Button variant="ghost" onClick={() => setConfirming(true)}>
             <UserX aria-hidden />
             {t("access.revoke")}
           </Button>

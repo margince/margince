@@ -218,7 +218,6 @@ export function FieldBuilder({
                   onChange={(event) => setOptionAt(idx, event.target.value)}
                 />
                 <Button
-                  small
                   iconOnly
                   aria-label={t("cf.removeOption")}
                   onClick={() => removeOption(idx)}
@@ -228,10 +227,7 @@ export function FieldBuilder({
               </div>
             ))}
           </div>
-          <Button
-            small
-            onClick={() => setOptions((current) => [...current, ""])}
-          >
+          <Button onClick={() => setOptions((current) => [...current, ""])}>
             {t("cf.addOption")}
           </Button>
         </div>
@@ -268,15 +264,10 @@ export function FieldBuilder({
           this form used to live in: closing the dialog discards the draft, so
           a control that empties the inputs in place has nothing left to do. */}
       <div className="cf-actions">
-        <Button small variant="ghost" onClick={onCancel}>
+        <Button variant="ghost" onClick={onCancel}>
           {t("deals.cancel")}
         </Button>
-        <Button
-          small
-          variant="primary"
-          disabled={!canConfirm}
-          onClick={confirm}
-        >
+        <Button variant="primary" disabled={!canConfirm} onClick={confirm}>
           {t("cf.confirm")}
         </Button>
       </div>
@@ -413,12 +404,8 @@ export function FieldTable({
                 the shout a reader learns to ignore. An `aria-label` repeating
                 the button's own words is not a name either; the text is the
                 name. */}
-            <Button small onClick={() => onRename(field)}>
-              {t("cf.edit")}
-            </Button>
-            <Button small onClick={() => onArchive(field)}>
-              {t("cf.archive")}
-            </Button>
+            <Button onClick={() => onRename(field)}>{t("cf.edit")}</Button>
+            <Button onClick={() => onArchive(field)}>{t("cf.archive")}</Button>
           </div>
         ),
     });
@@ -748,7 +735,7 @@ export function CustomFieldsAdmin() {
       // being there.
       titleAction={
         canCreate && (
-          <Button small onClick={() => setAdding(true)}>
+          <Button onClick={() => setAdding(true)}>
             {t("cf.builder.open")}
           </Button>
         )
@@ -895,11 +882,10 @@ export function CustomFieldsAdmin() {
           )}
         </Field>
         <div className="cf-actions">
-          <Button small variant="ghost" onClick={() => setRenaming(null)}>
+          <Button variant="ghost" onClick={() => setRenaming(null)}>
             {t("deals.cancel")}
           </Button>
           <Button
-            small
             variant="primary"
             disabled={rename.isPending || renameLabel.trim().length === 0}
             onClick={() => {

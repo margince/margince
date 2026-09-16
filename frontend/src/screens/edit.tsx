@@ -241,7 +241,7 @@ export function EditRecordModal({
         size="large"
         id={headingId}
         className="t-h2"
-        style={{ marginBottom: 12 }}
+        style={{ marginBottom: "var(--space-3)" }}
       >
         {title}
       </Heading>
@@ -353,7 +353,6 @@ export function EditAction<Updated extends { id: string }>({
           row of the list that names nothing. */}
       {labelled ? (
         <Button
-          small
           reasonId={disabledReasonId}
           onClick={() => setEditing(true)}
           data-testid="edit-record"
@@ -362,7 +361,6 @@ export function EditAction<Updated extends { id: string }>({
         </Button>
       ) : (
         <IconAction
-          small
           label={label}
           icon={<PenLine size={15} aria-hidden="true" />}
           reasonId={disabledReasonId}

@@ -86,9 +86,7 @@ export function TimelineActions({
         contentWithheld={activity.content_state === "withheld"}
       />
       {extra?.(activity)}
-      <Button small onClick={() => setRelink(true)}>
-        {t("compose.relink")}
-      </Button>
+      <Button onClick={() => setRelink(true)}>{t("compose.relink")}</Button>
       {/* An EMAIL's audience is changed from the message, in the drawer, where
           the server states which write it would accept as `change_mode` and the
           editor opens on the set already standing. The row used to decide that
@@ -214,7 +212,6 @@ export function AudienceAction({
   return (
     <>
       <Button
-        small
         onClick={() => {
           setChoice(current);
           setOpen(true);

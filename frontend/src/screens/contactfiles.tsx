@@ -118,11 +118,7 @@ export function ContactFilesTab({
       // which the primitive documents as a place for verbs a caller renders
       // only once the panel's content is real.
       titleAction={
-        <Button
-          small
-          reasonId={refusedReasonId}
-          onClick={() => setAdding(true)}
-        >
+        <Button reasonId={refusedReasonId} onClick={() => setAdding(true)}>
           {t("docs.add.action")}
         </Button>
       }

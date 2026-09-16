@@ -383,7 +383,7 @@ export function CommercialPanel({
               </p>
             )}
             {onAllDeals && (
-              <Button small variant="ghost" onClick={onAllDeals}>
+              <Button variant="ghost" onClick={onAllDeals}>
                 {t("co.commercial.allDeals")}
               </Button>
             )}
@@ -682,7 +682,6 @@ export function AskSection({
         {QUESTIONS.map((question) => (
           <Button
             key={question}
-            small
             variant="aiQuiet"
             onClick={() => ask.mutate({ question, project: projectId })}
             disabled={ask.isPending}
@@ -1613,7 +1612,6 @@ function SuggestionActionButton({
   const byMargince = action.kind !== "open_deal";
   return (
     <Button
-      small
       variant={byMargince ? "ai" : "primary"}
       pending={pending}
       onClick={() => onPerform(action)}
@@ -1994,7 +1992,7 @@ export function SuggestionsSection({
           </Badge>
         )}
         {onOpenTasks && (
-          <Button small variant="ghost" onClick={onOpenTasks}>
+          <Button variant="ghost" onClick={onOpenTasks}>
             {t("co.suggest.viewTasks")}
           </Button>
         )}

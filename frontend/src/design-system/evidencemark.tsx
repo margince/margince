@@ -216,7 +216,6 @@ export function EvidenceMark({
             {source.at && <p className="evmark-at">{source.at}</p>}
             {onOpenHistory && (
               <Button
-                small
                 onClick={() => {
                   setOpen(false);
                   onOpenHistory();

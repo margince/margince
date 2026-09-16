@@ -489,7 +489,7 @@ function CitationWithReceipt({
       {provenance && <p className="co-cite-origin t-caption">{provenance}</p>}
       {onOpen && (
         <p className="co-cite-open">
-          <Button small variant="ghost" onClick={onOpen}>
+          <Button variant="ghost" onClick={onOpen}>
             {t("co.cite.open")}
           </Button>
         </p>

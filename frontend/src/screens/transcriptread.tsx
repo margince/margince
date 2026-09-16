@@ -185,7 +185,7 @@ function TranscriptReadProposals({ ids }: Readonly<{ ids: string[] }>) {
         {/* The worklist is where a pending suggestion is decided. Once none is,
             it is still where the decided ones are listed, so the button keeps
             leading somewhere real rather than disappearing. */}
-        <Button small onClick={() => navigate({ screen: "worklist" })}>
+        <Button onClick={() => navigate({ screen: "worklist" })}>
           {t("enrich.toInbox")}
         </Button>
       </p>
@@ -348,7 +348,6 @@ export function TranscriptReadCard({
       sub={t("transcriptread.sub")}
       actions={
         <Button
-          small
           pending={start.isPending}
           busyLabel={t("transcriptread.starting")}
           onClick={() => start.mutate()}

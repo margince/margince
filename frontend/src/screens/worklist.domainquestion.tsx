@@ -109,7 +109,6 @@ export function DomainQuestionAnswer({
     <>
       {actions.includes("keep") ? (
         <Button
-          small
           pending={keep.isPending}
           disabled={busy}
           onClick={() =>
@@ -128,7 +127,6 @@ export function DomainQuestionAnswer({
       ) : null}
       {actions.includes("discard") ? (
         <Button
-          small
           pending={discard.isPending}
           disabled={busy}
           onClick={() =>

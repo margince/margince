@@ -42,7 +42,7 @@ export function AcquisitionSourcesCard() {
       title={t("acqSources.title")}
       titleAction={
         canCreate && (
-          <Button small onClick={() => setAdding(true)}>
+          <Button onClick={() => setAdding(true)}>
             {t("acqSources.addOpen")}
           </Button>
         )

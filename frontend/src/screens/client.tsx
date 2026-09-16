@@ -57,7 +57,6 @@ export function ClientSurfaceScreen() {
           />
           <Button
             variant="primary"
-            small
             disabled={email.trim() === "" || lookup.isPending}
             onClick={() => lookup.mutate(email.trim())}
           >
@@ -91,7 +90,7 @@ export function ClientSurfaceScreen() {
               {t("client.unknownDetail")}
             </p>
             <div className="card-actions">
-              <a className="btn btn-ghost btn-sm" href="#/leads">
+              <a className="btn btn-ghost" href="#/leads">
                 {t("client.createLead")}
               </a>
             </div>

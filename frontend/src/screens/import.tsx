@@ -115,7 +115,7 @@ export function ImportCard() {
             label={t("import.startLabel")}
             description={t("import.sub")}
             control={
-              <Button small variant="ghost" onClick={() => setOpen(true)}>
+              <Button variant="ghost" onClick={() => setOpen(true)}>
                 {t("import.start")}
               </Button>
             }
@@ -230,7 +230,6 @@ function ImportWizard({
         tabIndex={-1}
       />
       <Button
-        small
         variant="ghost"
         disabled={busy}
         onClick={() => fileInput.current?.click()}
@@ -288,9 +287,7 @@ function ImportWizard({
 
       {/* Closing puts the act down; it does not abandon it. The flow outlives
           the dialog, so a reader who steps away comes back to the same step. */}
-      <Button small onClick={onClose}>
-        {t("common.close")}
-      </Button>
+      <Button onClick={onClose}>{t("common.close")}</Button>
     </div>
   );
 }
@@ -413,7 +410,6 @@ function ImportOutcome({
 
       {!committed ? (
         <Button
-          small
           variant="primary"
           disabled={busy && !commitBusy}
           pending={commitBusy}
@@ -426,7 +422,6 @@ function ImportOutcome({
 
       {resumable ? (
         <Button
-          small
           variant="primary"
           disabled={busy && !commitBusy}
           pending={commitBusy}
@@ -454,7 +449,7 @@ function ImportOutcome({
       />
 
       {committed && !resumable ? (
-        <Button small variant="ghost" onClick={onRestart}>
+        <Button variant="ghost" onClick={onRestart}>
           {t("import.another")}
         </Button>
       ) : null}
@@ -496,7 +491,6 @@ function UndoSection({
 
       {undoable || undoInterrupted ? (
         <Button
-          small
           variant="ghost"
           disabled={busy && !undoBusy}
           pending={undoBusy}
@@ -673,7 +667,6 @@ function ImportMappingStep({
           report never said would be filed. */}
       <ImportContextTag value={contextTagID} onChange={onContextTag} />
       <Button
-        small
         variant="primary"
         disabled={!identifiedBy || (busy && !pending)}
         pending={pending}

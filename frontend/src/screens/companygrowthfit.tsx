@@ -148,7 +148,6 @@ export function GrowthFitPanel({
           <div className="co-brief-foot">
             <WrittenBy by={readable.generated_by} />
             <Button
-              small
               // The assessor's own verb on the assessor's own ground: tinted
               // rather than filled, so the panel's one filled control is not
               // spent on having the reading written a second time.

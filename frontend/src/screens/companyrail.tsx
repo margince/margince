@@ -269,7 +269,7 @@ function ContactsSection({
               tab twice under two names. */}
           {state === "empty" && (
             <div className="card-actions">
-              <Button small variant="ghost" onClick={() => onTab("contacts")}>
+              <Button variant="ghost" onClick={() => onTab("contacts")}>
                 {t("co.rail.contacts.add")}
               </Button>
             </div>
@@ -278,7 +278,7 @@ function ContactsSection({
       )}
       {state === "ready" && (
         <div className="card-actions">
-          <Button small variant="ghost" onClick={() => onTab("contacts")}>
+          <Button variant="ghost" onClick={() => onTab("contacts")}>
             {count != null
               ? t("co.rail.all", { count: formatNumber(count, locale) })
               : t("co.rail.allUncounted")}

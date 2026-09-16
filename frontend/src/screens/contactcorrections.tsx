@@ -213,7 +213,6 @@ function EnrichedField({
           {t("contact.enriched.replaced", { was: field.superseded_value })}{" "}
           {mayCorrect && (
             <Button
-              small
               pending={restore.isPending}
               onClick={() => restore.mutate()}
             >
@@ -238,7 +237,6 @@ function EnrichedField({
                   is refused. Disabling on both would move focus off the control
                   they pressed, at the moment they are waiting on it. */}
               <Button
-                small
                 pending={record.isPending}
                 disabled={draft.trim() === ""}
                 onClick={() =>
@@ -248,7 +246,6 @@ function EnrichedField({
                 {t("contact.enriched.save")}
               </Button>
               <Button
-                small
                 disabled={record.isPending}
                 onClick={() => setEditing(false)}
               >
@@ -263,7 +260,6 @@ function EnrichedField({
                   overwrite the correction they just made with the one they
                   threw away. */}
               <Button
-                small
                 onClick={() => {
                   setDraft(field.value);
                   setShown({
@@ -282,7 +278,6 @@ function EnrichedField({
                   and `suppressed` is a decision to stop being asked at all. */}
               {!field.verdict && (
                 <Button
-                  small
                   disabled={record.isPending}
                   onClick={() => record.mutate({ verdict: "confirmed" })}
                 >

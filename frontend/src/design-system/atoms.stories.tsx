@@ -56,14 +56,15 @@ const stack: CSSProperties = {
 };
 
 // Every axis of the button on one screen. A ghost taller than the primary, an
-// icon at lucide's 24px beside a 13.5px label, a two-letter label shrunk to a
+// icon at lucide's own 24px beside the label, a two-letter label shrunk to a
 // pill and a missing focus ring each look fine one variant at a time; same-row
-// height, icon size and width floor show them in one look.
+// height, icon size and width floor show them in one look. There is no size
+// axis: one height, and the row beside a field is where that is visible.
 export const Buttons: Story = {
   render: () => (
     <div style={stack}>
       <div style={stack}>
-        <span className="t-label">Variants, default size</span>
+        <span className="t-label">Variants</span>
         <div style={row}>
           <Button variant="primary">Save</Button>
           <Button variant="ghost">Cancel</Button>
@@ -103,20 +104,6 @@ export const Buttons: Story = {
         </div>
       </div>
       <div style={stack}>
-        <span className="t-label">Variants, small</span>
-        <div style={row}>
-          <Button variant="primary" small>
-            Save
-          </Button>
-          <Button variant="ghost" small>
-            Cancel
-          </Button>
-          <Button variant="danger" small>
-            Delete
-          </Button>
-        </div>
-      </div>
-      <div style={stack}>
         <span className="t-label">With an icon</span>
         <div style={row}>
           <Button variant="primary">
@@ -124,10 +111,6 @@ export const Buttons: Story = {
             Add contact
           </Button>
           <Button variant="ghost">
-            <RefreshCw aria-hidden />
-            Reconnect
-          </Button>
-          <Button variant="ghost" small>
             <RefreshCw aria-hidden />
             Reconnect
           </Button>
@@ -142,9 +125,6 @@ export const Buttons: Story = {
             <Plus aria-hidden />
           </Button>
           <Button variant="ghost" iconOnly aria-label="Reconnect">
-            <RefreshCw aria-hidden />
-          </Button>
-          <Button variant="ghost" iconOnly small aria-label="Reconnect">
             <RefreshCw aria-hidden />
           </Button>
         </div>
@@ -200,7 +180,7 @@ export const Buttons: Story = {
           <Button variant="ghost" pending>
             Reconnect
           </Button>
-          <Button variant="primary" small pending>
+          <Button variant="primary" pending>
             Save
           </Button>
           <Button variant="ghost" iconOnly pending aria-label="Reconnect">
@@ -607,7 +587,7 @@ export const Cards: Story = {
       <Card
         title="Passports"
         sub="Credentials you minted for an agent. Every call re-authenticates, so a revoked passport stops working mid-session."
-        actions={<Button small>Mint</Button>}
+        actions={<Button>Mint</Button>}
       >
         <p className="t-caption">
           The header comes from props: title over description across the full
@@ -636,11 +616,7 @@ export const Placeholders: Story = {
       <EmptyState>No deals match these filters yet.</EmptyState>
       <EmptyState
         title="No projects yet"
-        action={
-          <Button small variant="primary">
-            New project
-          </Button>
-        }
+        action={<Button variant="primary">New project</Button>}
       >
         <p>
           A project is the body of work a deal is about. It starts during the
@@ -666,7 +642,7 @@ export const Sections: Story = {
       <SectionHeader
         title="Reporting currency"
         sub="Every aggregate on this installation converts to it at the day's rate, and the rate that was used stays on the figure."
-        actions={<Button small>Change</Button>}
+        actions={<Button>Change</Button>}
       />
       <Card>
         <SectionHeader title="Contacts" sub="Three contacts at this company" />

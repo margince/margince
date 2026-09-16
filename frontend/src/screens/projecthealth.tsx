@@ -147,7 +147,6 @@ function HistoryRow({
         {assessment.note}
         {onCorrect && (
           <Button
-            small
             variant="ghost"
             onClick={onCorrect}
             aria-label={t("projectHealth.correctOne", {

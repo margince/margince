@@ -1108,20 +1108,27 @@
   border-top: 1px solid var(--borderSubtle);
 }
 
-/* The horizontal padding is 11px rather than the button's 14px on purpose: a
-   field's text starts at its own left edge and a button's label is centred, so
-   matching the two numbers would put the field's first character further in
-   than it should be. The HEIGHT is shared, through --control-h — a field and
-   the button that submits it are the same box on screen, and before the floor
-   existed they computed 40.25px and 38.25px independently. */
+/* A field and the button that submits it are the same box on screen, so they
+   take the same two numbers: --controlHeight for the box, --controlPaddingX for
+   the inset from its edge to the first character. The inset used to be its own
+   figure, on the argument that a field's text is left-set where a label is
+   centred, and what that bought was a field whose value began in a different
+   place from the verb beside it. Before the shared height existed the two
+   computed 40.25px and 38.25px independently.
+
+   `font: inherit` states what the reset already hands a form control, so the
+   weight below has something to sit on: the shorthand resets weight, so a
+   medium declared above it would be thrown away. Medium because a field's value
+   is a component's text and sits beside a glyph as often as not. */
 .input {
-  font-family: var(--fontFamilyBody);
+  font: inherit;
+  font-weight: var(--fontWeightMedium);
   color: var(--textPrimary);
   background: var(--bgElevated);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-control);
-  padding: 8px 11px;
-  min-block-size: var(--control-h);
+  padding: 0 var(--controlPaddingX);
+  min-block-size: var(--controlHeight);
   width: 100%;
   outline: none;
   /* Named properties, not `all` — `transition: <time>` alone means
@@ -1208,9 +1215,9 @@
 .field-shell {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  padding-inline: 11px;
-  min-block-size: var(--control-h);
+  gap: var(--controlGap);
+  padding-inline: var(--controlPaddingX);
+  min-block-size: var(--controlHeight);
   background: var(--bgElevated);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-sm);
@@ -1407,9 +1414,11 @@
 }
 
 /* A textarea is the same field as .input, only taller: the two sit next to each
-   other in the same form, so type size, padding and focus transition are the
-   SAME values, not near ones. Only `resize` differs — that is what makes it a
-   textarea.
+   other in the same form, so type size, horizontal inset and focus transition
+   are the SAME values, not near ones. Two things differ. `resize` — that is
+   what makes it a textarea. And the WEIGHT: what a reader types here is
+   prose — a note, a draft, a reason — and prose is regular, where a field's
+   one-line value is a component's text and takes medium with the rest of it.
 
    `width: 100%` is part of the atom rather than each caller's job. Without it a
    textarea falls back to its intrinsic `cols`, which is narrower than the column
@@ -1422,7 +1431,11 @@
   background: var(--bgElevated);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-sm);
-  padding: 9px 11px;
+  /* The inset from the edge to the first character is the control's, so a
+     textarea and the field above it start their text in the same place. The
+     vertical figure is its own: a box of several lines has no single line for
+     `align-items` to centre, so the room above the first one is stated. */
+  padding: var(--space-2) var(--controlPaddingX);
   width: 100%;
   outline: none;
   box-shadow: var(--shadow-well);
@@ -1670,13 +1683,6 @@
      a menu item they cannot choose. */
   white-space: normal;
   overflow-wrap: anywhere;
-}
-/* One glyph size in the panel, whichever rung the caller's button is on:
-   .btn draws 16px and .btn-sm 14px, and a menu mixing the two puts its icons
-   on two different left edges. */
-.overflow-menu-items .btn svg {
-  inline-size: 14px;
-  block-size: 14px;
 }
 /* Prose in the panel starts where the LABELS start, not at the panel's edge:
    a Button's own `reason`, and the one sentence a caller prints above a run of

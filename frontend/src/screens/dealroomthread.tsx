@@ -145,7 +145,6 @@ function ThreadRow({
           </Field>
           <div className="card-actions">
             <Button
-              small
               disabled={reply.trim() === ""}
               pending={pending === "reply"}
               onClick={() => {
@@ -159,7 +158,6 @@ function ThreadRow({
             </Button>
             {verbs.resolve ? (
               <Button
-                small
                 variant="ghost"
                 pending={pending === "resolve"}
                 onClick={() => {
@@ -230,7 +228,7 @@ export function ThreadComposer({
               under each of them says it as many times as there are files.
               Naming it once and pointing each control at it says it once and
               still reaches a screen reader from every one of them. */}
-          <Button small variant="ghost" reasonId={REFUSAL_ID}>
+          <Button variant="ghost" reasonId={REFUSAL_ID}>
             <MessageSquare aria-hidden />
             {label}
           </Button>
@@ -242,7 +240,7 @@ export function ThreadComposer({
   if (!openForm) {
     return (
       <div className="card-actions">
-        <Button small variant="ghost" onClick={() => setOpenForm(true)}>
+        <Button variant="ghost" onClick={() => setOpenForm(true)}>
           <MessageSquare aria-hidden />
           {label}
         </Button>
@@ -290,7 +288,6 @@ export function ThreadComposer({
       ) : null}
       <div className="card-actions">
         <Button
-          small
           disabled={body.trim() === ""}
           pending={pending}
           onClick={submit}
@@ -298,7 +295,7 @@ export function ThreadComposer({
           {t("threads.open")}
         </Button>
         {collapsible ? (
-          <Button small variant="ghost" onClick={() => setOpenForm(false)}>
+          <Button variant="ghost" onClick={() => setOpenForm(false)}>
             {t("threads.cancel")}
           </Button>
         ) : null}

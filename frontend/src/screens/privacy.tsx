@@ -193,7 +193,6 @@ function PurposeCreateForm({ onDone }: Readonly<{ onDone: () => void }>) {
         </p>
       )}
       <Button
-        small
         variant="primary"
         disabled={!key.trim() || !label.trim() || create.isPending}
         onClick={() => create.mutate()}
@@ -249,7 +248,7 @@ export function ConsentPurposesCard() {
       // stated instead.
       titleAction={
         canAdminister ? (
-          <Button small onClick={() => setAdding(true)}>
+          <Button onClick={() => setAdding(true)}>
             {t("privacy.addPurpose")}
           </Button>
         ) : undefined
@@ -480,7 +479,6 @@ function NewDsrForm({ onDone }: Readonly<{ onDone: () => void }>) {
       )}
 
       <Button
-        small
         variant="primary"
         disabled={!subjectRef.trim() || !dueAt || create.isPending}
         onClick={() => create.mutate()}
@@ -621,7 +619,6 @@ function DsrTransitions({
       {nextStatuses(status).map((next) => (
         <Button
           key={next}
-          small
           disabled={
             ((next === "fulfilled" || next === "rejected") && !answered) ||
             pending
@@ -762,7 +759,6 @@ function DsrRow({
   return (
     <li className="dsr-row">
       <Button
-        small
         id={toggleId}
         className="dsr-row-toggle"
         onClick={onToggle}
@@ -1174,7 +1170,7 @@ export function PrivacyInboxCard() {
       // verb and refused it.
       titleAction={
         !canOpenRequest ? null : (
-          <Button small onClick={() => setCreating(true)}>
+          <Button onClick={() => setCreating(true)}>
             {t("privacy.newRequest")}
           </Button>
         )

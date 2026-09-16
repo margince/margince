@@ -472,7 +472,6 @@ function MailRosterFailed({ onRetry }: Readonly<{ onRetry: () => void }>) {
         <div className="rft">{t("ob.conv.connect.rosterFailedTitle")}</div>
         <p className="rfp">{t("ob.conv.connect.rosterFailedBody")}</p>
         <Button
-          small
           variant="ghost"
           onClick={onRetry}
           style={{ marginTop: "var(--space-3)" }}

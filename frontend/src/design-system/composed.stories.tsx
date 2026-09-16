@@ -131,19 +131,11 @@ export const WithRowActions: Story = {
     timeline: [
       {
         ...emailEntry,
-        actions: (
-          <Button small onClick={() => {}}>
-            Reply
-          </Button>
-        ),
+        actions: <Button onClick={() => {}}>Reply</Button>,
       },
       {
         ...meetingEntry,
-        actions: (
-          <Button small onClick={() => {}}>
-            Relink
-          </Button>
-        ),
+        actions: <Button onClick={() => {}}>Relink</Button>,
       },
       noteEntry,
     ],
@@ -251,7 +243,7 @@ export const BoardInSurface: StoryObj = {
     <ListSurface
       count="5 deals"
       search={{ value: "", onChange: () => undefined }}
-      action={<Button small>New deal</Button>}
+      action={<Button>New deal</Button>}
       // The board brings its own controls rather than the table's: which
       // pipeline is shown, and whether it is read as stages or as rows.
       tools={
@@ -595,7 +587,7 @@ function StageMidScroll() {
 
   return (
     <div ref={frame} style={{ display: "flex", height: FRAME_H_PX }}>
-      <ListSurface count="7 deals" action={<Button small>New deal</Button>}>
+      <ListSurface count="7 deals" action={<Button>New deal</Button>}>
         <PipelineBoard
           columns={scrollingStageColumns}
           cardHref={(d) => `#/deals/${d.id}`}

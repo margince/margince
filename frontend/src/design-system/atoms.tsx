@@ -55,9 +55,9 @@ import "./evidencemark.css";
  * for an `<a>` or a hand-rolled `<button>`, reached through this component by a
  * verb that also needs what only this component gives — the refusal contract
  * and the `pending` one. It wears that same class rather than a look of its
- * own, so the two spellings of a link affordance cannot drift apart. `small`
- * and `iconOnly` say nothing here: the class has no fill, no width floor and no
- * control height for either to shrink.
+ * own, so the two spellings of a link affordance cannot drift apart. `iconOnly`
+ * says nothing here: the class has no fill, no width floor and no control
+ * height for it to shrink.
  */
 export type ButtonVariant =
   | "primary"
@@ -72,7 +72,7 @@ export type ButtonVariant =
  * The turning mark a control shows while a write it started is in flight.
  *
  * Exported because `Switch` carries the same state and must draw it the same
- * way; sized by whatever control hosts it (`.btn svg` is 16px, 14px small), so
+ * way; sized by whatever control hosts it (`.btn svg` draws --controlIcon), so
  * it takes no size prop. Decorative — `aria-busy` on the control is the fact,
  * and a glyph that announced itself would say it twice.
  */
@@ -101,7 +101,6 @@ function swallowWhileBusy(event: ReactMouseEvent<HTMLButtonElement>) {
 
 export function Button({
   variant = "ghost",
-  small,
   iconOnly,
   className,
   reason,
@@ -118,7 +117,6 @@ export function Button({
   // component, so this costs nothing but the type.
 }: ComponentPropsWithRef<"button"> & {
   variant?: ButtonVariant;
-  small?: boolean;
   /**
    * This button's whole label IS its icon, so it drops the width floor that
    * keeps a short word readable and becomes square. The caller still owes it an
@@ -217,7 +215,6 @@ export function Button({
   const classes = [
     "btn",
     `btn-${variant}`,
-    small ? "btn-sm" : "",
     iconOnly ? "btn-icon" : "",
     unavailable ? "btn-unavailable" : "",
     className ?? "",
@@ -1900,12 +1897,11 @@ export function OverflowMenu({
           keyboard will really do. Announcing a menu we do not implement is
           worse than announcing the expandable region we do. */}
       {/* `iconOnly`, and not a class of this component's own: the ellipsis is
-          the whole label, so the control is the --control-h-sm square the
+          the whole label, so the control is the --controlHeight square the
           catalog defines and drops the width floor a WORD needs. Geometry
           belongs to the button — a padding rule beside it is a second author
           of one box, and which of the two wins is a fact about sheet order. */}
       <Button
-        small
         iconOnly
         ref={trigger}
         aria-expanded={open}

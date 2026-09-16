@@ -176,12 +176,11 @@ export function ContactActions({
                 disabledReasonId={refusedReasonId}
               />
               <Button
-                small
                 onClick={() => navigate(contactTabRoute(contactId, "timeline"))}
               >
                 {t("record.fullHistory")}
               </Button>
-              <Button small onClick={onResearch}>
+              <Button onClick={onResearch}>
                 {t("contact.action.research")}
               </Button>
             </>

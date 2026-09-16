@@ -110,7 +110,6 @@ export function StageLadder({
               </span>
             ) : (
               <Button
-                small
                 variant="ghost"
                 data-testid={step.testId}
                 disabled={step.disabled}

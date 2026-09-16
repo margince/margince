@@ -115,7 +115,6 @@ export function CompanyRejectAction({
   return (
     <>
       <Button
-        small
         variant="danger"
         reasonId={disabledReasonId}
         onClick={open}
@@ -170,14 +169,12 @@ export function CompanyRejectAction({
         )}
         <div className="actions">
           <Button
-            small
             onClick={() => setConfirming(false)}
             disabled={mutation.isPending}
           >
             {t("create.cancel")}
           </Button>
           <Button
-            small
             variant="danger"
             // The reason is REQUIRED by the contract, so the control that
             // sends it says so before the server has to: a refusal for an

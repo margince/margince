@@ -156,7 +156,6 @@ function RoomCard({ room }: Readonly<{ room: DealRoom }>) {
         ) : null}
         <div className="card-actions">
           <Button
-            small
             onClick={() =>
               navigate({ screen: "deals", id: room.deal_id, id2: "room" })
             }
@@ -204,7 +203,7 @@ function OpenRoomCard({
     <Panel title={t("room.card.title")} sub={t("room.create.sub")}>
       <PanelBody>
         <div className="card-actions">
-          <Button small onClick={() => setCreating(true)}>
+          <Button onClick={() => setCreating(true)}>
             <DoorOpen aria-hidden />
             {t("room.create.open")}
           </Button>

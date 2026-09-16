@@ -43,27 +43,20 @@ export const InARecordHeader: Story = {
         flexWrap: "wrap",
       }}
     >
-      <Button variant="primary" small>
+      <Button variant="primary">
         <Mail size={15} aria-hidden="true" />
         Email
       </Button>
+      <IconAction label="Call" icon={<Phone size={15} aria-hidden="true" />} />
       <IconAction
-        small
-        label="Call"
-        icon={<Phone size={15} aria-hidden="true" />}
-      />
-      <IconAction
-        small
         label="See meetings"
         icon={<CalendarDays size={15} aria-hidden="true" />}
       />
       <IconAction
-        small
         label="Edit"
         icon={<PenLine size={15} aria-hidden="true" />}
       />
       <IconAction
-        small
         label="More actions"
         icon={<MoreHorizontal size={15} aria-hidden="true" />}
       />

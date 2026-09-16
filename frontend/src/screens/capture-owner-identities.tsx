@@ -106,7 +106,7 @@ export function OwnerIdentitiesCard() {
             label={t("ownerIdentities.addLabel")}
             description={t("ownerIdentities.addDescription")}
             control={
-              <Button small onClick={() => setDeclaring(true)}>
+              <Button onClick={() => setDeclaring(true)}>
                 {t("ownerIdentities.add")}
               </Button>
             }
@@ -212,7 +212,6 @@ function IdentityRows({
             value={t(kindLabel[identity.kind])}
             control={
               <Button
-                small
                 variant="ghost"
                 disabled={pending}
                 aria-label={t("ownerIdentities.remove")}

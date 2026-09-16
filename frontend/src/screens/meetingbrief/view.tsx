@@ -97,7 +97,6 @@ export function MeetingBriefView({
             {t("contact.meeting.title")}
           </Heading>
           <Button
-            small
             iconOnly
             onClick={onClose}
             aria-label={t("contact.drawer.close")}

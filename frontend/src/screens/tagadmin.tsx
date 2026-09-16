@@ -66,9 +66,7 @@ export function TagVocabularyCard() {
       title={t("tagAdmin.title")}
       titleAction={
         canCreate && (
-          <Button small onClick={() => setAdding(true)}>
-            {t("tagAdmin.add")}
-          </Button>
+          <Button onClick={() => setAdding(true)}>{t("tagAdmin.add")}</Button>
         )
       }
     >
@@ -218,29 +216,29 @@ function TagVocabularyRow({
           // claim about the vocabulary nobody made.
           t("tagAdmin.usagePending")
         ) : (
-          <Button small variant="ghost" onClick={() => setWanted(true)}>
+          <Button variant="ghost" onClick={() => setWanted(true)}>
             {t("tagAdmin.countUsage")}
           </Button>
         )}
       </span>
       <span className="tagadmin-verbs">
         {canEdit && !archived && (
-          <Button small variant="ghost" onClick={onEdit}>
+          <Button variant="ghost" onClick={onEdit}>
             {t("tagAdmin.edit")}
           </Button>
         )}
         {canEdit && !archived && (
-          <Button small variant="ghost" onClick={onMerge}>
+          <Button variant="ghost" onClick={onMerge}>
             {t("tagAdmin.merge")}
           </Button>
         )}
         {canArchive &&
           (archived ? (
-            <Button small variant="ghost" onClick={onRestore}>
+            <Button variant="ghost" onClick={onRestore}>
               {t("tagAdmin.restore")}
             </Button>
           ) : (
-            <Button small variant="ghost" onClick={onArchive}>
+            <Button variant="ghost" onClick={onArchive}>
               {t("tagAdmin.archive")}
             </Button>
           ))}

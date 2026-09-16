@@ -201,7 +201,7 @@ export const Rail: Story = {
       identity: "alex@northwind.test",
     },
     contactAction: (
-      <Button small iconOnly aria-label="Switch theme">
+      <Button iconOnly aria-label="Switch theme">
         <SunMoon size={15} aria-hidden />
       </Button>
     ),
@@ -224,7 +224,7 @@ export const RailWithoutContact: Story = {
     footerLabel: "Tokens this setup",
     stepLabel: "Step 2 of 5 · Confirm",
     contactAction: (
-      <Button small iconOnly aria-label="Switch theme">
+      <Button iconOnly aria-label="Switch theme">
         <SunMoon size={15} aria-hidden />
       </Button>
     ),

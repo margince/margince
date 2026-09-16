@@ -223,7 +223,7 @@ export function AddressBlock({
           bccOpen ? undefined : (
             // Quiet, and against the field rather than at the drawer's margin:
             // it belongs to the Cc line it extends, not to the head as a whole.
-            <Button small variant="ghost" onClick={onOpenBcc}>
+            <Button variant="ghost" onClick={onOpenBcc}>
               {t("compose.bcc")}
             </Button>
           )

@@ -180,7 +180,6 @@ export function PairDecision({ item }: Readonly<{ item: WorklistItem }>) {
               // on the row rather than on whatever body the card has.
               <div className="card-actions">
                 <Button
-                  small
                   variant="primary"
                   pending={decide.isPending}
                   aria-label={keepLabel(pair, side, t)}
@@ -204,7 +203,6 @@ export function PairDecision({ item }: Readonly<{ item: WorklistItem }>) {
         // harder for the answer that says it was never a pair.
         <div className="worklist-pair-actions">
           <Button
-            small
             variant="ghost"
             pending={decide.isPending}
             onClick={() => answer("not_a_duplicate")}

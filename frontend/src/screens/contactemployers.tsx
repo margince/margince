@@ -245,7 +245,7 @@ export function Employers({ view }: Readonly<{ view: Contact360 }>) {
       title={t("contact.rail.employmentTitle")}
       titleAction={
         canEdit ? (
-          <Button small variant="ghost" onClick={() => setAdding(true)}>
+          <Button variant="ghost" onClick={() => setAdding(true)}>
             {t("contact.rail.addEmployment")}
           </Button>
         ) : undefined
@@ -279,7 +279,6 @@ export function Employers({ view }: Readonly<{ view: Contact360 }>) {
         {more.isError && <p role="alert">{problemMessageOf(more.error, t)}</p>}
         {more.hasNextPage && (
           <Button
-            small
             pending={more.isFetchingNextPage}
             onClick={() => more.fetchNextPage()}
           >
@@ -442,19 +441,16 @@ function EmploymentRow({
       {canEdit && (
         <span className="pe-employment-actions">
           <OverflowMenu label={t("record.moreActions")}>
-            <Button small onClick={onEdit}>
-              {t("employment.edit")}
-            </Button>
+            <Button onClick={onEdit}>{t("employment.edit")}</Button>
             {stillHeld(employment) && (
               <Button
-                small
                 disabled={ending}
                 onClick={() => actions.end.mutate(employment)}
               >
                 {t("contact.rail.markEnded")}
               </Button>
             )}
-            <Button small variant="danger" onClick={onRemove}>
+            <Button variant="danger" onClick={onRemove}>
               {t("rel.remove")}
             </Button>
           </OverflowMenu>

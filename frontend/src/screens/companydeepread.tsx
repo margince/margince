@@ -290,7 +290,7 @@ function SiteReadPanel({
               count: formatNumber(report.proposal_ids.length, locale),
             })}
           </span>
-          <Button small onClick={() => navigate({ screen: "worklist" })}>
+          <Button onClick={() => navigate({ screen: "worklist" })}>
             {t("enrich.toInbox")}
           </Button>
         </p>
@@ -405,7 +405,6 @@ export function DeepReadPanel({ companyId }: Readonly<{ companyId: string }>) {
       titleAction={<Badge tone="ai">{t("co.assistant.aiTag")}</Badge>}
       actions={
         <Button
-          small
           pending={start.isPending}
           busyLabel={t("deepread.starting")}
           onClick={() => start.mutate()}

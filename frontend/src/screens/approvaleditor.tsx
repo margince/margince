@@ -315,9 +315,7 @@ export function DecideOutcome({
           <p className="t-caption" style={{ color: "var(--dangerText)" }}>
             {t("decision.versionSkew")}
           </p>
-          <Button small onClick={onReRead}>
-            {t("decision.reRead")}
-          </Button>
+          <Button onClick={onReRead}>{t("decision.reRead")}</Button>
         </div>
       )}
     </>
@@ -441,14 +439,14 @@ export function StagedEditor({
           /* The edited approve is the same write as the plain one and was the
              one path with no gate at all, so a second press sent a second
              verdict. */
-          <Button variant="primary" small pending={pending} onClick={onApprove}>
+          <Button variant="primary" pending={pending} onClick={onApprove}>
             {t("decision.approveEdited")}
           </Button>
         }
       >
         {/* Cancel keeps its word: leaving the editor without a verdict is not a
             verb any glyph says, and an X here would be read as Reject. */}
-        <Button small disabled={pending} onClick={onCancel}>
+        <Button disabled={pending} onClick={onCancel}>
           {t("deals.cancel")}
         </Button>
       </ActionRow>

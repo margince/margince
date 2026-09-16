@@ -105,7 +105,7 @@ export function VCardImport() {
           creating a contact beside it are `CreateAction`s, which are small, and
           one control a rung taller in a row of three reads as a different kind
           of thing. */}
-      <Button small data-testid="vcard-import" onClick={() => setOpen(true)}>
+      <Button data-testid="vcard-import" onClick={() => setOpen(true)}>
         {t("vcardImport.action")}
       </Button>
       <Modal open={open} onClose={close} labelledBy={titleId}>

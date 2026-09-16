@@ -174,7 +174,6 @@ function HeldThreadTable({ rows }: Readonly<{ rows: HeldThread[] }>) {
             header: t("heldThreads.colActions"),
             render: (row) => (
               <Button
-                small
                 // A verdict outlives the message it was raised about, and the
                 // release endpoint works on the seat's MESSAGES on the thread —
                 // with none left it answers not-found. Offering the verb anyway

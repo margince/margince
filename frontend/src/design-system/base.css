@@ -40,7 +40,13 @@
 }
 
 .btn {
-  font-family: var(--fontFamilyBody);
+  /* The body's own size and leading, so a verb is set in the same type as the
+     sentence that asked for it. The weight comes AFTER: `font` is a shorthand
+     and resets weight to `normal`, so a medium declared above it would be
+     thrown away. Medium because a label sits beside a line icon and the stroke
+     of the glyph should match the stroke of the letter. */
+  font: inherit;
+  font-weight: var(--fontWeightMedium);
   /* Transparent rather than absent, so the ghost variant RECOLOURS a border
      every variant already reserves space for. When only the ghost declared one,
      border-box added its 2px to that variant alone and every [Cancel][Save] pair
@@ -48,8 +54,14 @@
   border: 1px solid transparent;
   cursor: pointer;
   border-radius: var(--r-control);
-  padding: 8px 14px;
-  min-block-size: var(--control-h);
+  /* The HEIGHT is the invariant, not the inset: --controlHeight is what a
+     button, a field and a Select trigger agree on, and the vertical padding
+     falls out of it — 32 less the 1px border either side less the 20px line
+     leaves 5px above and below, which `align-items: center` places. Stated as
+     a height, one number moves every control together; stated as padding, the
+     three shapes drift apart the moment one of them wraps. */
+  padding: 0 var(--controlPaddingX);
+  min-block-size: var(--controlHeight);
   /* The one resting layer, so a verb has a top side. Every variant carries a
      fill — the ghost's is the pane — except `link`, which is text and takes it
      straight back off below. */
@@ -77,9 +89,8 @@
   /* A short label still has to read as a button. "No", "Add" and "Save"
      shrink-wrapped to 46/55/62px, so a dialog footer was a row of ragged pills
      and a label that changes on click ("Save" → "Saving…") physically jumped.
-     The floor applies at the default size only: the small rung lives in table
-     rows and toolbars, where a 96px minimum is what would break the layout. An
-     icon-only control opts out through .btn-icon, which is square by intent. */
+     An icon-only control opts out through .btn-icon, which is square by intent:
+     there is no word to keep readable, so the floor has nothing to protect. */
   min-inline-size: 6rem;
   /* And the ceiling that floor made necessary. Naming `min-inline-size` at all
      replaces the flex `auto` minimum, which is the content width — so from
@@ -91,7 +102,7 @@
      says so with `.btn-valuelabel`. */
   box-sizing: border-box;
   max-inline-size: 100%;
-  gap: var(--space-1);
+  gap: var(--controlGap);
   white-space: nowrap;
   text-decoration: none;
 }
@@ -134,15 +145,13 @@
    of 24px, which is taller than the 13.5px label beside it — 31 call sites
    shipped that way because Button has no icon slot to size one through. The
    size belongs to the control, not to the call site: a button knows how big its
-   own icon is, and a `size=` prop per caller is the drift. */
+   own icon is, and a `size=` prop per caller is the drift. One figure, because
+   there is one button: an icon that shrank with a size class is a second answer
+   to how big a control's glyph is. */
 .btn svg {
-  inline-size: 16px;
-  block-size: 16px;
+  inline-size: var(--controlIcon);
+  block-size: var(--controlIcon);
   flex: none;
-}
-.btn-sm svg {
-  inline-size: 14px;
-  block-size: 14px;
 }
 /* The filled tones are FLAT: a fill and its ink, no shadow under it and no
    lift on hover. A button that casts a shadow sits above the pane it belongs
@@ -250,21 +259,21 @@
  * and the ink `--textPrimary`, since a door the reader is invited to take is
  * not a dismissal.
  *
- * The 44px target is this variant's own floor rather than `--control-h`'s. That
- * token is the shared control height and sits below 44 for a fine pointer,
+ * The 44px target is this variant's own floor rather than `--controlHeight`'s.
+ * That token is the shared control height and sits below 44 for a fine pointer,
  * rising to 44 only for a coarse one — tall enough for a verb in a row of them,
  * and short of the target a sign-in door owes every pointer, since a door taken
  * with a mouse is the same door. `max()` rather than a flat 44, so a future rise
  * in the shared control height is not capped here. */
 .btn-federated {
   inline-size: 100%;
-  min-block-size: max(var(--control-h), 44px);
+  min-block-size: max(var(--controlHeight), 44px);
   /* The width floor keeps a two-letter verb readable and has nothing to do with
      a control already as wide as its column. Left in place it becomes the floor
      of a NARROW column, and the box spills past the card instead. */
   min-inline-size: 0;
-  gap: 9px;
-  padding: 11px 12px;
+  gap: var(--controlGap);
+  padding: 0 var(--controlPaddingX);
   /* The label is a SENTENCE the installation wrote, in a language and a length
      nothing here chooses — "Continue with Google", or a German clause twice
      that. That is the `.btn-valuelabel` case above, which this variant is
@@ -288,35 +297,26 @@
   background: var(--accentSurface);
   border-color: color-mix(in srgb, var(--accent) 34%, var(--borderStrong));
 }
-.btn-sm {
-  padding: 6px 11px;
-  min-block-size: var(--control-h-sm);
-  min-inline-size: 0;
-}
 /* A button whose whole label is its icon. Square by intent, so the width floor
    that keeps a short WORD readable does not apply — there is no word to keep
    readable, and the icon carries the meaning through the accessible name the
    caller must still supply.
 
-   Both dimensions from the rung, and the row is not allowed to stretch it. A
-   width alone is half a square: a flex row stretched this button to the height
-   of the 40px verbs beside it and left the width at 32, and a ratio does not
-   save it — the cross size a stretched flex item is sized against is its own
-   content, not the height the row ends up giving it, so `aspect-ratio` resolved
-   against 32 in one place and 40 in another depending on whether a wrapper
-   stood between the button and the row. Stated as two figures, it is square
-   wherever it is put. */
+   Both dimensions from the shared height, and the row is not allowed to stretch
+   it. A width alone is half a square: a flex row stretched this button to the
+   height of the verbs beside it and left the width where it was, and a ratio
+   does not save it — the cross size a stretched flex item is sized against is
+   its own content, not the height the row ends up giving it, so `aspect-ratio`
+   resolved against one number in one place and another elsewhere depending on
+   whether a wrapper stood between the button and the row. Stated as two
+   figures, it is square wherever it is put. */
 .btn-icon {
-  inline-size: var(--control-h);
-  block-size: var(--control-h);
+  inline-size: var(--controlHeight);
+  block-size: var(--controlHeight);
   min-inline-size: 0;
   padding-inline: 0;
   flex: none;
   align-self: center;
-}
-.btn-icon.btn-sm {
-  inline-size: var(--control-h-sm);
-  block-size: var(--control-h-sm);
 }
 /*
  * The press. Until now nothing in this design system had one: `grep :active`
@@ -515,8 +515,8 @@ a:not([class]):focus-visible {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-inline-size: var(--control-h-sm);
-  min-block-size: var(--control-h-sm);
+  min-inline-size: var(--controlHeight);
+  min-block-size: var(--controlHeight);
   padding: 0;
   border: 0;
   border-radius: var(--r-sm);
@@ -531,8 +531,8 @@ a:not([class]):focus-visible {
     transform var(--dur-move) var(--ease-spring);
 }
 .iconbtn svg {
-  inline-size: 16px;
-  block-size: 16px;
+  inline-size: var(--controlIcon);
+  block-size: var(--controlIcon);
   flex: none;
 }
 .iconbtn:hover {

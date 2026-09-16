@@ -70,7 +70,7 @@ function CommitBand({
         </Callout>
       )}
       {dirty && (
-        <Button small variant="primary" disabled={pending} onClick={onSave}>
+        <Button variant="primary" disabled={pending} onClick={onSave}>
           {t("mailSharing.save")}
         </Button>
       )}

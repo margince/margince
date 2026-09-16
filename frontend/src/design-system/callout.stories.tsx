@@ -96,7 +96,7 @@ export const AlertAnatomy: Story = {
       <Callout
         tone="accent"
         title="The index is behind"
-        actions={<Button small>Refresh</Button>}
+        actions={<Button>Refresh</Button>}
       >
         Search is answering from the records as they stood an hour ago.
       </Callout>
@@ -105,11 +105,7 @@ export const AlertAnatomy: Story = {
         tone="danger"
         kind="outcome"
         title="That did not save"
-        actions={
-          <Button variant="primary" small>
-            Retry
-          </Button>
-        }
+        actions={<Button variant="primary">Retry</Button>}
       >
         <p>The record changed while you were editing it:</p>
         <ul>
@@ -196,7 +192,7 @@ export const Narrow: Story = {
       <Callout
         tone="accent"
         title="The index is behind"
-        actions={<Button small>Refresh</Button>}
+        actions={<Button>Refresh</Button>}
       >
         Search is answering from the records as they stood an hour ago.
       </Callout>
@@ -216,11 +212,7 @@ export const WithActions: Story = {
       tone="warn"
       kind="event"
       title="Connection interrupted"
-      actions={
-        <Button variant="primary" small>
-          Resume
-        </Button>
-      }
+      actions={<Button variant="primary">Resume</Button>}
       dismiss={{ label: "Dismiss", onDismiss: () => {} }}
     >
       Finish connecting Claude to pick up where you left off.

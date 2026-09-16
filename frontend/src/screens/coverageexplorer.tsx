@@ -158,7 +158,6 @@ function CoverageGrid({ companyId }: Readonly<{ companyId: string }>) {
           return (
             <Button
               key={colleague.id}
-              small
               disabled={full}
               // aria-pressed, not a glyph: a toggle's state belongs in the
               // control's semantics, where a screen reader can hear it, rather

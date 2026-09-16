@@ -305,10 +305,10 @@ function AutomationForm({
             nothing and is simply not available while the write is out, since
             backing out of something already on its way to the server would say
             it was stopped. */}
-        <Button small disabled={pending} onClick={onCancel}>
+        <Button disabled={pending} onClick={onCancel}>
           {t("deals.cancel")}
         </Button>
-        <Button type="submit" variant="primary" small pending={pending}>
+        <Button type="submit" variant="primary" pending={pending}>
           {submitLabel}
         </Button>
       </div>
@@ -336,7 +336,6 @@ function InspectorToggles({
   return (
     <>
       <Button
-        small
         variant={runsOpen ? "primary" : "ghost"}
         aria-expanded={runsOpen}
         onClick={onToggleRuns}
@@ -344,7 +343,6 @@ function InspectorToggles({
         {t("auto.runs.open")}
       </Button>
       <Button
-        small
         variant={previewOpen ? "primary" : "ghost"}
         aria-expanded={previewOpen}
         onClick={onTogglePreview}
@@ -388,7 +386,6 @@ function DeleteAutomationAction({
   return (
     <>
       <Button
-        small
         variant="danger"
         disabled={remove.isPending}
         onClick={() => setAsking(true)}
@@ -653,7 +650,7 @@ export function AutomationRow({
         {hasVerbs && (
           <OverflowMenu label={t("auto.rowActions", { name: automation.name })}>
             {canEdit && entry && (
-              <Button small onClick={() => setEditing(true)}>
+              <Button onClick={() => setEditing(true)}>
                 {t("trust.edit")}
               </Button>
             )}
@@ -1041,7 +1038,7 @@ function CatalogEntryItem({
       }
       control={
         canCreate ? (
-          <Button small variant="ghost" onClick={onUse}>
+          <Button variant="ghost" onClick={onUse}>
             {t("auto.use")}
           </Button>
         ) : null

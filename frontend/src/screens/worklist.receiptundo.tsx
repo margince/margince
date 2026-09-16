@@ -78,7 +78,6 @@ export function ReceiptUndo({ receipt }: Readonly<{ receipt: Receipt }>) {
   return (
     <>
       <Button
-        small
         variant="ghost"
         pending={putBack.isPending}
         busyLabel={t("history.undo.busy")}

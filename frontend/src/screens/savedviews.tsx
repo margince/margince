@@ -392,7 +392,7 @@ export function LoadFilterViewMenu({
   return (
     <OverflowMenu label={t("filters.loadView")}>
       {readable.map((view) => (
-        <Button key={view.id} small onClick={() => onLoad(view.tree)}>
+        <Button key={view.id} onClick={() => onLoad(view.tree)}>
           {view.name}
         </Button>
       ))}

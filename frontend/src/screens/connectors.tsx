@@ -227,7 +227,6 @@ function AddConnectionDialog({
               // hears.
               control={({ id, "aria-describedby": describedBy }) => (
                 <Button
-                  small
                   id={id}
                   aria-describedby={describedBy}
                   variant="ghost"
@@ -332,10 +331,10 @@ function TelegramConnectionRow({
       }
       control={
         <div className="connector-actions">
-          <Button small onClick={onEdit}>
+          <Button onClick={onEdit}>
             <RefreshCw aria-hidden /> {t("connectors.telegramEditToken")}
           </Button>
-          <Button small variant="ghost" onClick={onDisconnect}>
+          <Button variant="ghost" onClick={onDisconnect}>
             {t("connectors.disconnect")}
           </Button>
         </div>
@@ -427,7 +426,6 @@ function TelegramConnectorsPanel() {
         !query.data.notConfigured &&
         connections.length === 0 && (
           <Button
-            small
             data-testid="telegram-connect"
             onClick={() => setConnectOpen(true)}
           >
@@ -631,15 +629,15 @@ function ConnectorRow({
                 // different unavailability from one the reader could fix, and
                 // disabling the button they just pressed drops their focus to
                 // <body> at the moment there is something to say.
-                <Button small pending={connectPending} onClick={onReconnect}>
+                <Button pending={connectPending} onClick={onReconnect}>
                   <RefreshCw aria-hidden /> {t("connectors.reconnect")}
                 </Button>
               ) : (
-                <Button small onClick={onImapReconnect}>
+                <Button onClick={onImapReconnect}>
                   <RefreshCw aria-hidden /> {t("connectors.reconnect")}
                 </Button>
               ))}
-            <Button small variant="ghost" onClick={onDisconnect}>
+            <Button variant="ghost" onClick={onDisconnect}>
               {t("connectors.disconnect")}
             </Button>
           </div>
@@ -1125,7 +1123,7 @@ function MailConnectorsPanel() {
       // in the column a reader travels to find what each mailbox is set to.
       titleAction={
         offerAdd ? (
-          <Button small onClick={() => setAddOpen(true)}>
+          <Button onClick={() => setAddOpen(true)}>
             {t("connectors.addOpen")}
           </Button>
         ) : undefined

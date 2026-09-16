@@ -178,7 +178,6 @@ export function Callout({
       {dismiss !== undefined && (
         <span className="callout-dismiss">
           <IconAction
-            small
             label={dismiss.label}
             icon={<X aria-hidden />}
             onClick={dismiss.onDismiss}

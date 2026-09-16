@@ -247,7 +247,6 @@ function ResultGroup({
             test here for the same reason it is not the header. */}
         {listed.length >= PREVIEW_ROWS && (
           <Button
-            small
             variant="ghost"
             onClick={() => {
               window.location.hash = allRecordsHref(group.screen, tagID).slice(

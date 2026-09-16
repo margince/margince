@@ -748,7 +748,7 @@ function DecisionVerbs({
     return null;
   }
   const primary = onAccept ? (
-    <Button variant="primary" small pending={pending} onClick={onAccept}>
+    <Button variant="primary" pending={pending} onClick={onAccept}>
       {labels.accept}
     </Button>
   ) : undefined;
@@ -761,7 +761,7 @@ function DecisionVerbs({
     return (
       <ActionRow className="dcard-verbs" primary={primary}>
         {onSkip && labels.skip && (
-          <Button small disabled={pending} onClick={onSkip}>
+          <Button disabled={pending} onClick={onSkip}>
             {labels.skip}
           </Button>
         )}
@@ -770,12 +770,12 @@ function DecisionVerbs({
         {(onReject || onEdit) && (
           <OverflowMenu label={compact.more}>
             {onReject && (
-              <Button small disabled={pending} onClick={onReject}>
+              <Button disabled={pending} onClick={onReject}>
                 {labels.reject}
               </Button>
             )}
             {onEdit && (
-              <Button small disabled={pending} onClick={onEdit}>
+              <Button disabled={pending} onClick={onEdit}>
                 {labels.edit}
               </Button>
             )}
@@ -788,7 +788,6 @@ function DecisionVerbs({
     <ActionRow className="dcard-verbs" primary={primary}>
       {onReject && (
         <IconAction
-          small
           label={labels.reject}
           icon={<Trash2 aria-hidden />}
           disabled={pending}
@@ -797,7 +796,6 @@ function DecisionVerbs({
       )}
       {onSkip && labels.skip && (
         <IconAction
-          small
           label={labels.skip}
           icon={<RotateCcwClock aria-hidden />}
           disabled={pending}
@@ -806,7 +804,6 @@ function DecisionVerbs({
       )}
       {onEdit && (
         <IconAction
-          small
           label={labels.edit}
           icon={<Pencil aria-hidden />}
           disabled={pending}

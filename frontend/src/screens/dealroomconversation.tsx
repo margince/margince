@@ -30,7 +30,6 @@ function RemoveButton({
   return (
     <>
       <Button
-        small
         iconOnly
         aria-label={t("room.docs.remove", { title: doc.title })}
         reason={refusal}

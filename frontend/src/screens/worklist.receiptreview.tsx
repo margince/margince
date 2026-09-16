@@ -71,7 +71,6 @@ export function ReceiptReview({ receipt }: Readonly<{ receipt: Receipt }>) {
           <ReceiptUndo receipt={receipt} />
         ) : (
           <Button
-            small
             variant="ghost"
             pending={decide.isPending}
             onClick={() => press("undo")}
@@ -80,11 +79,7 @@ export function ReceiptReview({ receipt }: Readonly<{ receipt: Receipt }>) {
           </Button>
         ))}
       {review.can_accept && (
-        <Button
-          small
-          pending={decide.isPending}
-          onClick={() => press("accept")}
-        >
+        <Button pending={decide.isPending} onClick={() => press("accept")}>
           {t("brief.changes.accept")}
         </Button>
       )}

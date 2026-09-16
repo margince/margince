@@ -122,7 +122,7 @@ export function OwnDomainsCard() {
       // button says the same thing twice a hand apart. Refused, never hidden:
       // `reasonId` names the one sentence under the rows.
       titleAction={
-        <Button small reasonId={refusal} onClick={() => setAdding(true)}>
+        <Button reasonId={refusal} onClick={() => setAdding(true)}>
           {t("ownDomains.addOpen")}
         </Button>
       }
@@ -254,7 +254,6 @@ function CuratedDomains({
           }
           control={
             <Button
-              small
               variant="ghost"
               aria-label={t("ownDomains.remove", { domain: domain.domain })}
               disabled={pending}
@@ -309,11 +308,10 @@ function AddOwnDomainDialog({ onClose }: Readonly<{ onClose: () => void }>) {
           </Callout>
         )}
         <div className="form-actions">
-          <Button small type="button" onClick={onClose}>
+          <Button type="button" onClick={onClose}>
             {t("create.cancel")}
           </Button>
           <Button
-            small
             type="submit"
             variant="primary"
             disabled={add.isPending || domain === ""}

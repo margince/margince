@@ -144,7 +144,6 @@ export function CompanyFactsPanel({
       title={t("co.facts.title")}
       titleAction={
         <Button
-          small
           onClick={() => setAdding((was) => !was)}
           reasonId={canEdit ? undefined : reasonId}
           unavailable={!canEdit}
@@ -220,7 +219,7 @@ function FactCategoryBlock({
         />
       ))}
       {hidden > 0 && (
-        <Button small onClick={() => setExpanded(!expanded)}>
+        <Button onClick={() => setExpanded(!expanded)}>
           {expanded
             ? t("co.facts.showLess")
             : t("co.facts.showAll", {
@@ -282,7 +281,6 @@ function FactRow({
               value: fact.value,
             })}
             icon={<X aria-hidden />}
-            small
             onClick={() => setRemoving(true)}
           />
         )}
@@ -428,7 +426,6 @@ function AddFactForm({
         label={t("co.facts.addSave")}
         icon={<Check aria-hidden />}
         variant="primary"
-        small
         pending={add.isPending}
         // Authority first, then completeness: a reader who may not write this
         // record is not helped by being told their form is incomplete.
@@ -438,7 +435,6 @@ function AddFactForm({
       <IconAction
         label={t("co.facts.addCancel")}
         icon={<X aria-hidden />}
-        small
         onClick={onDone}
       />
       {add.error && (

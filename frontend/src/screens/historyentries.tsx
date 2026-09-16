@@ -253,7 +253,6 @@ function UndoButton({
   return (
     <span className="entry-undo">
       <Button
-        small
         variant="ghost"
         reason={upFront}
         pending={putBack.isPending}

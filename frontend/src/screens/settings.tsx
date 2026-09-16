@@ -628,11 +628,7 @@ function AccountCard() {
     <Panel
       title={t("settings.accountCard")}
       actions={
-        <Button
-          small
-          disabled={logout.isPending}
-          onClick={() => logout.mutate()}
-        >
+        <Button disabled={logout.isPending} onClick={() => logout.mutate()}>
           {t("auth.signOut")}
         </Button>
       }
@@ -777,7 +773,7 @@ function SignatureSettingRow({ toast }: Readonly<{ toast: Toast }>) {
         description={t("settings.signatureSub")}
         value={answer}
         control={
-          <Button small variant="ghost" onClick={() => setOpen(true)}>
+          <Button variant="ghost" onClick={() => setOpen(true)}>
             {t("settings.signatureEdit")}
           </Button>
         }
@@ -811,11 +807,10 @@ function SignatureSettingRow({ toast }: Readonly<{ toast: Toast }>) {
             </Field>
             <p className="t-caption">{t("settings.signatureHint")}</p>
             <div className="form-actions">
-              <Button small variant="ghost" onClick={close}>
+              <Button variant="ghost" onClick={close}>
                 {t("settings.signatureCancel")}
               </Button>
               <Button
-                small
                 type="submit"
                 variant="primary"
                 disabled={!save.isPending && !dirty}
@@ -954,7 +949,6 @@ function DisplayNameSettingRow({ toast }: Readonly<{ toast: Toast }>) {
             onChange={(event) => setDraft(event.target.value)}
           />
           <Button
-            small
             disabled={!dirty || trimmed === "" || tooLong || save.isPending}
             onClick={() => save.mutate(trimmed)}
           >
@@ -1189,7 +1183,7 @@ function PassportCard() {
       // only one on the page, and a page with one loud button reads as if the
       // other three cards had nothing to offer.
       titleAction={
-        <Button small onClick={() => setMinting(true)}>
+        <Button onClick={() => setMinting(true)}>
           {t("settings.mintOpen")}
         </Button>
       }
@@ -1276,7 +1270,7 @@ function PassportCard() {
           // still reading has no way back — the list carries metadata and the
           // server will not re-disclose a token.
           <div className="form-actions">
-            <Button small variant="primary" onClick={closeMint}>
+            <Button variant="primary" onClick={closeMint}>
               {t("settings.mintDone")}
             </Button>
           </div>
@@ -1334,11 +1328,10 @@ function PassportCard() {
             {/* Beside the button that produced it, not below the tokens. */}
             <WriteRefused titleKey="settings.mintFailed" error={mint.error} />
             <div className="form-actions">
-              <Button small disabled={mint.isPending} onClick={closeMint}>
+              <Button disabled={mint.isPending} onClick={closeMint}>
                 {t("settings.mintCancel")}
               </Button>
               <Button
-                small
                 type="submit"
                 variant="primary"
                 // A passport with no scope is a credential that can do nothing,
@@ -1460,7 +1453,6 @@ function PassportRow({
             <Badge tone="danger">{t("settings.revoked")}</Badge>
           ) : (
             <Button
-              small
               variant="danger"
               // The row is remembered from the CLICK rather than from
               // `confirmId`: the focus resolver runs as the dialog closes, by
@@ -1772,7 +1764,7 @@ function ResetDataCard() {
             label={t("settings.resetDataLabel")}
             description={t("settings.resetDataDesc")}
             control={
-              <Button small variant="danger" onClick={() => setOpen(true)}>
+              <Button variant="danger" onClick={() => setOpen(true)}>
                 {t("settings.resetDataButton")}
               </Button>
             }
@@ -2103,7 +2095,6 @@ function AuditLogRow({
           </span>
         )}
         <Button
-          small
           aria-expanded={expanded}
           aria-label={t("settings.auditExpand")}
           onClick={() => setExpanded((value) => !value)}
@@ -2199,9 +2190,7 @@ function AuditLogEntries({
       <EmptyState>
         <p>{t("common.error")}</p>
         <p className="audit-error-cause">{problemMessageOf(query.error, t)}</p>
-        <Button small onClick={() => query.refetch()}>
-          {t("common.retry")}
-        </Button>
+        <Button onClick={() => query.refetch()}>{t("common.retry")}</Button>
       </EmptyState>
     );
   }

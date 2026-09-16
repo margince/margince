@@ -459,7 +459,6 @@ function Panel({
             <Button
               key={action.id}
               variant={action.primary ? "primary" : "ghost"}
-              small
               onClick={() => onAction?.(node.id, action.id)}
             >
               {action.label}

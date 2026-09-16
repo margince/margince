@@ -169,7 +169,6 @@ function GroupNode({
         {depth > 1 && (
           <Button
             variant="ghost"
-            small
             onClick={() => onChange(removeNode(tree, group.id))}
           >
             {t("filters.removeGroup")}
@@ -209,7 +208,6 @@ function GroupNode({
       <div className="filter-group-actions">
         <Button
           variant="ghost"
-          small
           onClick={() =>
             onChange(addToGroup(tree, group.id, firstClause(fields)))
           }
@@ -219,7 +217,6 @@ function GroupNode({
         {canNest && (
           <Button
             variant="ghost"
-            small
             onClick={() =>
               onChange(
                 addToGroup(
@@ -369,7 +366,6 @@ function ClauseRow({
       />
       <Button
         variant="ghost"
-        small
         iconOnly
         aria-label={t("filters.removeClause", {
           field: fieldLabel(

@@ -251,7 +251,6 @@ export function QueryStates({
           </p>
         </div>
         <Button
-          small
           onClick={() => query.refetch()}
           style={{ marginTop: "var(--space-3)" }}
         >
@@ -323,7 +322,6 @@ export function LoadMoreButton({
   }
   return (
     <Button
-      small
       className="load-more"
       disabled={query.isFetchingNextPage}
       onClick={() => query.fetchNextPage()}

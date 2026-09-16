@@ -103,7 +103,6 @@ export function ContactMemory({
       // ledger a reader is sent to.
       footer={
         <Button
-          small
           variant="ghost"
           onClick={() => navigate(contactTabRoute(view.contact.id, "timeline"))}
         >

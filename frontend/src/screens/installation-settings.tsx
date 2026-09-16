@@ -314,7 +314,6 @@ function InstallationSettingsForm({
 
   const editVerb = (fact: EditedFact, field: string) => (
     <Button
-      small
       variant="ghost"
       // Named by the fact it changes, not "Edit": three rows offering three
       // identically-named buttons make a screen reader's user count them.
@@ -693,11 +692,10 @@ function InstallationProfileDialog({
           </Callout>
         ) : null}
         <div className="form-actions">
-          <Button small variant="ghost" type="button" onClick={onClose}>
+          <Button variant="ghost" type="button" onClick={onClose}>
             {t("create.cancel")}
           </Button>
           <Button
-            small
             type="submit"
             variant="primary"
             disabled={!pending && (!canManage || !dirty)}

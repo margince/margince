@@ -142,7 +142,6 @@ export function CounterpartyHoldRow({
             : t("hold.heldByAddress")}
         </p>
         <Button
-          small
           variant="ghost"
           pending={lift.isPending}
           onClick={() => lift.mutate(held.id)}
@@ -161,7 +160,7 @@ export function CounterpartyHoldRow({
     <div className="pe-rail-hold">
       <p className="t-caption">{t("hold.notHeld")}</p>
       <div className="card-actions">
-        <Button small variant="ghost" onClick={() => setAsking("address")}>
+        <Button variant="ghost" onClick={() => setAsking("address")}>
           {t("hold.holdAddress")}
         </Button>
         {/* A domain hold is the one worth having for an advisor: a firm answers
@@ -172,7 +171,6 @@ export function CounterpartyHoldRow({
             this rail is wide, and a button that will not wrap draws it past
             both of its own edges. */}
         <Button
-          small
           variant="ghost"
           className="btn-valuelabel"
           onClick={() => setAsking("domain")}

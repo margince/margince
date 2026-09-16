@@ -225,7 +225,6 @@ export function DraftOffer({
             record; a composer that said it in grey is the one surface where
             the reader has to guess. */}
         <Button
-          small
           variant="ai"
           onClick={draft.run}
           disabled={draft.disabled}

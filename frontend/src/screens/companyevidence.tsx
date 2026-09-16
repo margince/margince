@@ -185,12 +185,8 @@ function EvidenceSteps({
   }
   return (
     <div className="co-evidence-steps">
-      <Button small onClick={() => onStep(-1)}>
-        {t("co.evidence.previous")}
-      </Button>
-      <Button small onClick={() => onStep(1)}>
-        {t("co.evidence.next")}
-      </Button>
+      <Button onClick={() => onStep(-1)}>{t("co.evidence.previous")}</Button>
+      <Button onClick={() => onStep(1)}>{t("co.evidence.next")}</Button>
     </div>
   );
 }

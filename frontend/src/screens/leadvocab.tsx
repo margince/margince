@@ -222,7 +222,7 @@ function LeadSourceRow({
           onChange={(next) => onUpdate({ active: next })}
         />
         {removable ? (
-          <Button small variant="danger" onClick={onRemove}>
+          <Button variant="danger" onClick={onRemove}>
             {t("leadSources.remove")}
           </Button>
         ) : (
@@ -322,14 +322,13 @@ function AddSourceDialog({
           )}
         </Field>
         <div className="form-actions">
-          <Button small variant="ghost" onClick={onClose}>
+          <Button variant="ghost" onClick={onClose}>
             {t("deals.cancel")}
           </Button>
           {/* Two facts, two props: `!ready` is a form with nothing in it yet
               and `isPending` is a write already on its way, and one `disabled`
               covering both draws them the same. */}
           <Button
-            small
             type="submit"
             variant="primary"
             disabled={!create.isPending && !ready}
@@ -398,7 +397,7 @@ export function LeadSourcesCard() {
       // list of sources as though it were one of them.
       titleAction={
         canCreate && (
-          <Button small onClick={() => setAdding(true)}>
+          <Button onClick={() => setAdding(true)}>
             {t("leadSources.addOpen")}
           </Button>
         )
@@ -471,7 +470,6 @@ export function LeadSourcesCard() {
                       <span className="lead-vocab-flags">
                         {canCreate && (
                           <Button
-                            small
                             onClick={() =>
                               create.mutate({
                                 key: found.key,
@@ -664,7 +662,6 @@ export function LeadDisqualifyReasonsCard() {
                             />
                             {removable ? (
                               <Button
-                                small
                                 variant="danger"
                                 onClick={() => setRemoving(reason)}
                               >
@@ -720,7 +717,6 @@ export function LeadDisqualifyReasonsCard() {
                     onChange={(e) => setLabel(e.target.value)}
                   />
                   <Button
-                    small
                     type="submit"
                     variant="primary"
                     disabled={create.isPending}

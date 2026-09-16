@@ -190,7 +190,7 @@ export function StagingTray({
           .filter((part) => part !== null)
           .join(" · ")}
       </span>
-      <Button small onClick={onUnstage} disabled={commitState === "sending"}>
+      <Button onClick={onUnstage} disabled={commitState === "sending"}>
         {labels.unstage}
       </Button>
       {/* A tray holding ONLY skips has nothing to send, and a Send button over
@@ -200,7 +200,6 @@ export function StagingTray({
       <Button
         ref={commitRef}
         variant="primary"
-        small
         pending={commitState === "sending"}
         onClick={onCommit}
       >

@@ -125,7 +125,6 @@ export function AddProjectStakeholder({
   return (
     <>
       <Button
-        small
         onClick={() => setOpen(true)}
         data-testid="add-project-stakeholder"
       >
@@ -243,7 +242,6 @@ export function RemoveProjectStakeholder({
   return (
     <>
       <Button
-        small
         variant="danger"
         onClick={() => setOpen(true)}
         data-testid="remove-project-stakeholder"

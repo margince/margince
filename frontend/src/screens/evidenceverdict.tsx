@@ -219,7 +219,6 @@ export function EvidenceVerdict({
           onChange={(event) => setDraft(event.target.value)}
         />
         <Button
-          small
           disabled={!correct.isPending && draft.trim() === ""}
           pending={correct.isPending}
           busyLabel={t("evidence.saving")}
@@ -227,7 +226,7 @@ export function EvidenceVerdict({
         >
           {t("evidence.save")}
         </Button>
-        <Button small onClick={() => setCorrecting(false)}>
+        <Button onClick={() => setCorrecting(false)}>
           {t("evidence.cancel")}
         </Button>
         {/* The draft survives a failed save: the field above still holds what
@@ -244,7 +243,6 @@ export function EvidenceVerdict({
   return (
     <span className="evidence-verdict">
       <Button
-        small
         pending={confirm.isPending}
         busyLabel={t("evidence.saving")}
         onClick={() => confirm.mutate()}
@@ -252,7 +250,6 @@ export function EvidenceVerdict({
         {t("evidence.confirm")}
       </Button>
       <Button
-        small
         onClick={() => {
           setDraft(claim.value);
           setCorrecting(true);

@@ -134,7 +134,6 @@ export function BriefAct({
   const t = useT();
   return (
     <Button
-      small
       variant="primary"
       pending={brief.working}
       onClick={() => brief.answer({ itemId: item.id, mark: "act" })}
@@ -195,13 +194,12 @@ export function BriefSetAsides({
   return (
     <>
       {brief.offered("set_aside") && (
-        <Button small pending={brief.working} onClick={setAside}>
+        <Button pending={brief.working} onClick={setAside}>
           {t("brief.snooze")}
         </Button>
       )}
       {brief.offered("dismiss") && (
         <Button
-          small
           pending={brief.working}
           onClick={() => brief.answer({ itemId: item.id, mark: "dismiss" })}
         >

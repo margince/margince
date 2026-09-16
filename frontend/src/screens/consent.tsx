@@ -290,14 +290,13 @@ function ConsentRow({
             button would promise something every click fails to do. */}
         {mayWrite && (granted || !requiresDoi) && (
           <Button
-            small
             disabled={setState.isPending}
             onClick={() => setState.mutate(granted ? "withdrawn" : "granted")}
           >
             {granted ? t("consent.withdraw") : t("consent.grant")}
           </Button>
         )}
-        <Button small onClick={() => setShowLog((value) => !value)}>
+        <Button onClick={() => setShowLog((value) => !value)}>
           {t("consent.proofLog")}
         </Button>
       </div>
@@ -363,7 +362,7 @@ export function ConsentSection({
         <PanelBody>
           <EmptyState>
             <p>{t("consent.purposesUnavailable")}</p>
-            <Button small onClick={() => purposesQuery.refetch()}>
+            <Button onClick={() => purposesQuery.refetch()}>
               {t("common.retry")}
             </Button>
           </EmptyState>
@@ -471,7 +470,6 @@ export function ConfirmDetailsAction({
   return (
     <PanelBody className="consent-confirm-ask">
       <Button
-        small
         disabled={ask.isPending}
         reason={unavailableReason}
         data-testid="confirm-details-ask"

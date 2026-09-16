@@ -184,7 +184,6 @@ export function TaskQuickActions({
     <>
       {showComplete && (
         <Button
-          small
           variant="primary"
           disabled={pending}
           onClick={() =>
@@ -196,7 +195,6 @@ export function TaskQuickActions({
       )}
       {nextDue && (
         <Button
-          small
           disabled={pending}
           onClick={() =>
             update.mutate({

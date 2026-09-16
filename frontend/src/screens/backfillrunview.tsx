@@ -175,13 +175,11 @@ export function RunView({
       )}
       <div className="backfill-foot">
         {live ? (
-          <Button small disabled={cancelling} onClick={onCancel}>
+          <Button disabled={cancelling} onClick={onCancel}>
             {t("backfill.cancel")}
           </Button>
         ) : (
-          <Button small onClick={onRestart}>
-            {t("backfill.restart")}
-          </Button>
+          <Button onClick={onRestart}>{t("backfill.restart")}</Button>
         )}
       </div>
       {live && cancelError && (

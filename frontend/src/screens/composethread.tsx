@@ -165,7 +165,6 @@ export function ThreadPane({
         </Heading>
         {onLeave && (
           <Button
-            small
             className="compose-thread-leave"
             onClick={onLeave}
             disabled={disabled}
@@ -232,7 +231,6 @@ export function ThreadPane({
                             <EmailText body={message.body ?? ""} />
                           </Popover>
                           <Button
-                            small
                             variant="link"
                             onClick={() => setReading(message.id)}
                           >

@@ -137,7 +137,6 @@ function MomentMove({
               {evidenceIcon(item.type)}
               {item.id ? (
                 <Button
-                  small
                   variant="ghost"
                   onClick={() => {
                     const activity = view.activities?.data.find(
@@ -276,7 +275,6 @@ function ActionVerb({
           states keep the caption under the verb. */}
       <Button
         variant={primary ? "primary" : "ghost"}
-        small
         onClick={() => onAction(action)}
         reason={blocked ? state : undefined}
       >

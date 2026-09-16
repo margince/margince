@@ -140,11 +140,7 @@ export function RowActs({
 // the URL is the right shape and is its own change.
 function BatchVerb({ onReview }: Readonly<{ onReview: () => void }>) {
   const t = useT();
-  return (
-    <Button small onClick={onReview}>
-      {t("worklist.verb.review_batch")}
-    </Button>
-  );
+  return <Button onClick={onReview}>{t("worklist.verb.review_batch")}</Button>;
 }
 
 // What this row offers, as the item itself declares it.
@@ -222,7 +218,7 @@ function RowVerbs({
       {/* The step the product already worked out, offered where the reader is
           standing rather than on a screen they have to go and find. */}
       {readReply ? (
-        <Button small onClick={() => onOpenEmail(replyActivity)}>
+        <Button onClick={() => onOpenEmail(replyActivity)}>
           {t("worklist.verb.draft_reply")}
         </Button>
       ) : (
@@ -267,16 +263,15 @@ function verbDestination(
 // It stays an anchor, because that is what it is: middle-click, copy-link and
 // the browser's own status bar are the whole difference between a link and a
 // button, and a reader who wants the record in a second tab is a reader this
-// row is for. What changes is the chrome. Drawn as link text among small
-// buttons, "Draft the reply" — the most-pressed control on a waiting row —
-// read as a caption beside the verbs, and the row had two visual grammars for
-// one question.
+// row is for. What changes is the chrome. Drawn as link text among the verbs,
+// "Draft the reply" — the most-pressed control on a waiting row — read as a
+// caption beside them, and the row had two visual grammars for one question.
 //
 // The atom's own classes rather than a face of this screen's: `Button` renders
 // a `<button>` and takes no `href`, so there is no component to reach for, and
-// the alternative is a second spelling of the small ghost button in
-// worklist.css. `screens/client.tsx` reaches the same conclusion the same way.
-const NAVIGATING_VERB = "btn btn-ghost btn-sm";
+// the alternative is a second spelling of the ghost button in worklist.css.
+// `screens/client.tsx` reaches the same conclusion the same way.
+const NAVIGATING_VERB = "btn btn-ghost";
 
 // Where each verb lives. A total map over the ones this page can route, so a
 // verb the contract adds either gets a destination here or is not drawn —
@@ -380,7 +375,6 @@ function PinVerb({ item }: Readonly<{ item: WorklistItem }>) {
   const pinned = (item.because ?? []).some((why) => why.kind === "pinned");
   return (
     <IconAction
-      small
       // A GLYPH, because the pin already IS the verb: it is the one control on
       // the row that a reader recognises without reading, and a row that has
       // grown a move, an Open, three judgements, a hand-off and an answer can

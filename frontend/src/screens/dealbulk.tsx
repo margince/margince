@@ -222,7 +222,6 @@ export function DealBulkBar({
         }))}
       />
       <Button
-        small
         variant="primary"
         disabled={busy || ownerId === ""}
         onClick={assign}
@@ -240,10 +239,10 @@ export function DealBulkBar({
           label: stage.name,
         }))}
       />
-      <Button small disabled={busy || stageId === ""} onClick={moveStage}>
+      <Button disabled={busy || stageId === ""} onClick={moveStage}>
         {t("deals.bulkMove")}
       </Button>
-      <Button small disabled={busy} onClick={() => setConfirmingArchive(true)}>
+      <Button disabled={busy} onClick={() => setConfirmingArchive(true)}>
         {t("deals.bulkArchive")}
       </Button>
       {/* Last, after every verb. The bar is one wrapping flex row, so a sentence

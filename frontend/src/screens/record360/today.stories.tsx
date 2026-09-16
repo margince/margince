@@ -61,11 +61,7 @@ function Pane({ width = 720 }: Readonly<{ width?: number }>) {
             when="06:52"
             title="Send the breakdown Lena promised on 5 August."
             why="Lena promised this breakdown in the 5 August session and it never went out. The sheet is generated, so this can go on its own."
-            action={
-              <Button small variant="ai">
-                Draft it
-              </Button>
-            }
+            action={<Button variant="ai">Draft it</Button>}
             defer={{ onDefer: () => {} }}
           />
           {/* The agent's own verb: it writes the draft, so the chip is tinted. */}

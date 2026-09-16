@@ -103,7 +103,6 @@ function PipelineRetirement({
     return (
       <>
         <Button
-          small
           onClick={() => restore.mutate()}
           // `pending`, not `disabled`: the design system's Button keeps a
           // control focusable while its write is out and blocks the repeat

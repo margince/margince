@@ -590,11 +590,7 @@ export function CompanyActionBadges({
             inspection of the record rather than part of its story, so it sits
             with the other rare verbs instead of beside the account's own
             timeline. */}
-        <Button
-          small
-          data-testid="company-full-history"
-          onClick={onOpenHistory}
-        >
+        <Button data-testid="company-full-history" onClick={onOpenHistory}>
           {t("record.fullHistory")}
         </Button>
         {/* The way in to the partner programme for an account that has none.
@@ -604,7 +600,7 @@ export function CompanyActionBadges({
             Merge: every row above is a verb EVERY record carries, in the order
             they all carry them, and every row below is this account's own. */}
         {!(company.relationship_types ?? []).includes("partner") && (
-          <Button small reasonId={refusedByState} onClick={onSetUpPartner}>
+          <Button reasonId={refusedByState} onClick={onSetUpPartner}>
             {t("company.partnerSetUp")}
           </Button>
         )}

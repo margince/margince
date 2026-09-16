@@ -1563,7 +1563,7 @@ test.describe("§3.8: 390px mobile", () => {
 
     // Every verb in the QUEUE is a real target — the rows and the focus card
     // above them, which is the work this screen exists for. The focus CTA is a
-    // full-size `.btn` and already clears the floor through `--control-h`; it
+    // full-size `.btn` and already clears the floor through `--controlHeight`; it
     // is measured anyway, because a rule that holds only where somebody
     // remembered to look is not a floor.
     //

@@ -141,7 +141,6 @@ export function ReassignControl({
     // hover and in the accessible tree, which a bare square would not.
     return (
       <IconAction
-        small
         icon={<UserRoundArrowLeft aria-hidden="true" />}
         label={t("worklist.manager.reassign")}
         onClick={() => setOpen(true)}

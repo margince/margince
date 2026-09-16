@@ -119,7 +119,6 @@ export function AddDocument({
       </Field>
       <div className="card-actions">
         <Button
-          small
           disabled={attachmentId === ""}
           pending={add.isPending}
           onClick={() =>
@@ -136,7 +135,7 @@ export function AddDocument({
             deal's files and owns none — and the landed upload invalidates
             `deal-documents`, which is this list's own key, so the new file is
             in the picker when the dialog closes. */}
-        <Button small variant="ghost" onClick={() => setUploading(true)}>
+        <Button variant="ghost" onClick={() => setUploading(true)}>
           <Upload aria-hidden />
           {t("room.docs.upload")}
         </Button>

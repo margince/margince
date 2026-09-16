@@ -111,7 +111,7 @@ export function CallDetailPanel({
                   </pre>
                 </div>
                 <div>
-                  <Button small onClick={() => setExporting(true)}>
+                  <Button onClick={() => setExporting(true)}>
                     {t("aiexport.button")}
                   </Button>
                 </div>
@@ -316,7 +316,6 @@ export function AiCallsCard() {
                   {query.hasNextPage && (
                     <div>
                       <Button
-                        small
                         disabled={query.isFetchingNextPage}
                         onClick={() => void query.fetchNextPage()}
                       >
@@ -371,7 +370,6 @@ function FragmentRow({
               label, which is what makes the control square instead of a pill
               around 14px. */}
           <Button
-            small
             iconOnly
             variant="ghost"
             aria-expanded={expanded}
@@ -381,7 +379,7 @@ function FragmentRow({
             aria-label={t("aicalls.expandCall", { task: call.task, when })}
             onClick={onToggle}
           >
-            {/* No `size=`: `.btn-sm svg` already sizes a button's icon child
+            {/* No `size=`: `.btn svg` already sizes a button's icon child
                 (base.css), and a size at the call site is the drift that rule
                 exists to stop. */}
             <ChevronDown className="expander-chevron" aria-hidden />

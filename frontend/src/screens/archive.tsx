@@ -118,7 +118,6 @@ export function ArchiveAction<Archived extends { id: string }>({
   return (
     <>
       <Button
-        small
         variant="danger"
         reasonId={disabledReasonId}
         onClick={() => setConfirming(true)}
@@ -135,7 +134,7 @@ export function ArchiveAction<Archived extends { id: string }>({
           size="large"
           id={headingId}
           className="t-h2"
-          style={{ marginBottom: 12 }}
+          style={{ marginBottom: "var(--space-3)" }}
         >
           {label}
         </Heading>
@@ -154,14 +153,12 @@ export function ArchiveAction<Archived extends { id: string }>({
         )}
         <div className="actions">
           <Button
-            small
             onClick={() => setConfirming(false)}
             disabled={mutation.isPending}
           >
             {t("create.cancel")}
           </Button>
           <Button
-            small
             variant="danger"
             onClick={() => mutation.mutate()}
             disabled={mutation.isPending}

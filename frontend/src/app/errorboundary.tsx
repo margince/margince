@@ -21,7 +21,6 @@ function RenderFailure({ onRetry }: Readonly<{ onRetry: () => void }>) {
         <p className="card-sub">{t("app.errorBody")}</p>
         <Button
           variant="primary"
-          small
           onClick={onRetry}
           style={{ marginTop: "var(--space-3)" }}
         >

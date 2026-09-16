@@ -115,7 +115,6 @@ export function DossierPanel({
         })}
       </span>
       <Button
-        small
         // The writer's own verb, inside a panel already tinted for it: quiet
         // rather than filled, because a filled indigo control on indigo ground
         // reads as the panel's call to action when it is its footnote.

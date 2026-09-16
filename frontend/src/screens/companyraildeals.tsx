@@ -112,7 +112,7 @@ export function DealsSection({
       )}
       {state === "ready" && (
         <div className="card-actions">
-          <Button small variant="ghost" onClick={() => onTab("deals")}>
+          <Button variant="ghost" onClick={() => onTab("deals")}>
             {count != null
               ? t("co.rail.all", { count: formatNumber(count, locale) })
               : t("co.rail.allUncounted")}
@@ -145,7 +145,7 @@ function DealsEmptyVerb({
   if (betweenCycles || readOnlyReason) {
     return (
       <div className="card-actions">
-        <Button small variant="ghost" onClick={() => onTab("deals")}>
+        <Button variant="ghost" onClick={() => onTab("deals")}>
           {t("co.rail.add")}
         </Button>
       </div>

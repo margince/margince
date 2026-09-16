@@ -140,7 +140,7 @@ export function CaptureExclusionsCard() {
       // their OWN correspondent out — the dialog refuses the scope that binds
       // everyone, where that choice is made.
       titleAction={
-        <Button small onClick={() => setExcluding(true)}>
+        <Button onClick={() => setExcluding(true)}>
           {t("captureExclusions.addOpen")}
         </Button>
       }
@@ -252,7 +252,6 @@ function ExclusionRows({
           value={`${words.scope[rule.scope]} · ${words.kind[rule.kind]}`}
           control={
             <Button
-              small
               variant="ghost"
               aria-label={t("captureExclusions.remove", { value: rule.value })}
               disabled={pending}
@@ -347,11 +346,10 @@ function ExcludeDialog({
           </Callout>
         )}
         <div className="form-actions">
-          <Button small type="button" onClick={onClose}>
+          <Button type="button" onClick={onClose}>
             {t("create.cancel")}
           </Button>
           <Button
-            small
             type="submit"
             variant="primary"
             disabled={add.isPending || value === ""}

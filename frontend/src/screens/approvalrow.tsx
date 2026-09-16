@@ -94,7 +94,7 @@ export function useDecisionSink(): {
       <p className="t-caption" style={{ color: "var(--dangerText)", flex: 1 }}>
         {t("decision.alreadyDecided")}
       </p>
-      <Button small onClick={() => setAlreadyDecided(false)}>
+      <Button onClick={() => setAlreadyDecided(false)}>
         {t("decision.dismiss")}
       </Button>
     </Card>

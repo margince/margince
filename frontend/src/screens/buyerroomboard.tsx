@@ -108,7 +108,6 @@ function BuyerDocumentVerbs({
   return (
     <div className="buyer-doc-actions">
       <Button
-        small
         aria-label={t("buyer.docs.download", { title: doc.title })}
         pending={download.isPending}
         onClick={() =>

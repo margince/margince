@@ -168,7 +168,6 @@ export function RewriteRow({
       {REWRITES.map((rewrite) => (
         <Button
           key={rewrite.key}
-          small
           variant="aiQuiet"
           disabled={disabled}
           onClick={() => onRewrite(t(rewrite.instruction))}

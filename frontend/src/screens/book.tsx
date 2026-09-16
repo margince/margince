@@ -129,7 +129,7 @@ function SessionBookingScreen() {
           display: "flex",
           gap: "var(--space-2)",
           alignItems: "center",
-          marginBottom: 12,
+          marginBottom: "var(--space-3)",
         }}
       >
         <SegmentedControl
@@ -189,7 +189,6 @@ function SessionBookingScreen() {
               {data.slots.slice(0, 12).map((slot) => (
                 <Button
                   key={slot.start}
-                  small
                   disabled={book.isPending}
                   onClick={() =>
                     book.mutate({ ...slot, attendee: attendee.trim() })
@@ -293,7 +292,7 @@ function PublicBookingScreen({ hostSlug }: Readonly<{ hostSlug: string }>) {
           gap: "var(--space-2)",
           alignItems: "center",
           flexWrap: "wrap",
-          marginBottom: 12,
+          marginBottom: "var(--space-3)",
         }}
       >
         <SegmentedControl
@@ -350,7 +349,6 @@ function PublicBookingScreen({ hostSlug }: Readonly<{ hostSlug: string }>) {
               {data.slots.slice(0, 12).map((slot) => (
                 <Button
                   key={slot.start}
-                  small
                   disabled={!ready || book.isPending}
                   onClick={() => book.mutate(slot)}
                 >

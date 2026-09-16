@@ -283,7 +283,6 @@ export function RestrictedRecordsCard() {
       header: t("restricted.decide"),
       render: (row: RestrictedRecord) => (
         <Button
-          small
           variant="danger"
           onClick={() => setReleasing({ activityId: row.activity_id })}
         >
@@ -361,7 +360,7 @@ export function RestrictedRecordsCard() {
                     {/* The short verb, because the row's label already says
                         what the form does: the button carried the same three
                         words a hand to the left of it. */}
-                    <Button small type="submit" disabled={!pinIdIsWellFormed}>
+                    <Button type="submit" disabled={!pinIdIsWellFormed}>
                       {t("restricted.pin.submit")}
                     </Button>
                     {pinIdIsMalformed && (

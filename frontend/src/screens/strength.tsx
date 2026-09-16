@@ -155,7 +155,7 @@ function StrengthBody({
           alignItems: "center",
           gap: "var(--space-2)",
           flexWrap: "wrap",
-          marginBottom: 12,
+          marginBottom: "var(--space-3)",
         }}
       >
         <Badge tone={BUCKET_TONE[bucket]}>

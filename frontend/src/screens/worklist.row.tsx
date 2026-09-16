@@ -578,7 +578,6 @@ function NudgeDismiss({ contactId }: Readonly<{ contactId: string }>) {
   const { dismiss, restore } = useNudgeDismissal();
   return (
     <Button
-      small
       pending={dismiss.isPending}
       onClick={() =>
         dismiss.mutate(
@@ -915,7 +914,6 @@ function NoticeAcknowledge({ id }: Readonly<{ id: string }>) {
   const acknowledge = useNoticeRead([worklistKey]);
   return (
     <Button
-      small
       pending={acknowledge.isPending}
       onClick={() =>
         acknowledge.mutate(id, {
@@ -959,7 +957,6 @@ function TaskComplete({
     update.mutateAsync({ id: task, version: at, body: { is_done: false } });
   return (
     <Button
-      small
       variant="primary"
       pending={update.isPending}
       onClick={() =>
@@ -1023,7 +1020,6 @@ function AutomationRetry({ id }: Readonly<{ id: string }>) {
   const retry = useAutomationRetry([worklistKey]);
   return (
     <Button
-      small
       pending={retry.isPending}
       onClick={() =>
         retry.mutate(id, {
@@ -1096,13 +1092,13 @@ function MeetingOutcome({
     );
   return (
     <>
-      <Button small pending={record.isPending} onClick={answer("held")}>
+      <Button pending={record.isPending} onClick={answer("held")}>
         {t("worklist.verb.meetingHeld")}
       </Button>
-      <Button small pending={record.isPending} onClick={answer("no_show")}>
+      <Button pending={record.isPending} onClick={answer("no_show")}>
         {t("worklist.verb.meetingNoShow")}
       </Button>
-      <Button small pending={record.isPending} onClick={answer("canceled")}>
+      <Button pending={record.isPending} onClick={answer("canceled")}>
         {t("worklist.verb.meetingCanceled")}
       </Button>
     </>
@@ -1174,7 +1170,6 @@ function PromiseKept({ id }: Readonly<{ id: string }>) {
   const settle = useClaimSettle([worklistKey]);
   return (
     <Button
-      small
       variant="primary"
       pending={settle.isPending}
       onClick={() =>

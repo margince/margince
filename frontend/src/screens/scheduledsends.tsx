@@ -232,7 +232,6 @@ function MoveControl({
   if (!open) {
     return (
       <Button
-        small
         onClick={() => {
           setDraft(localDateTimeValue(send.scheduled_at));
           setOpen(true);
@@ -255,7 +254,6 @@ function MoveControl({
         style={{ maxWidth: 220 }}
       />
       <Button
-        small
         variant="primary"
         disabled={fields.scheduled_at === undefined}
         pending={pending}
@@ -271,9 +269,7 @@ function MoveControl({
       >
         {t("sched.moveSave")}
       </Button>
-      <Button small onClick={() => setOpen(false)}>
-        {t("sched.moveCancel")}
-      </Button>
+      <Button onClick={() => setOpen(false)}>{t("sched.moveCancel")}</Button>
     </>
   );
 }
@@ -337,7 +333,7 @@ function SendRow({
           <MoveControl send={send} pending={movePending} onMove={onMove} />
         )}
         {actionable && (
-          <Button small variant="danger" onClick={() => onWithdraw(send)}>
+          <Button variant="danger" onClick={() => onWithdraw(send)}>
             {t("sched.withdraw")}
           </Button>
         )}

@@ -312,7 +312,6 @@ function RotateSecretAction({
           confirm borrowed "Confirm" from the deals namespace, which named the
           dialog's mechanics rather than the act being confirmed. */}
       <Button
-        small
         variant="danger"
         onClick={() => setConfirming(true)}
         data-testid="rotate-webhook-secret"
@@ -396,10 +395,8 @@ function SecretRevealModal({
         </p>
       )}
       <div className="actions">
-        <Button small onClick={onClose}>
-          {t("webhooks.secret.done")}
-        </Button>
-        <Button small variant="primary" onClick={() => void copySecret()}>
+        <Button onClick={onClose}>{t("webhooks.secret.done")}</Button>
+        <Button variant="primary" onClick={() => void copySecret()}>
           {copied ? t("webhooks.secret.copied") : t("webhooks.secret.copy")}
         </Button>
       </div>
@@ -505,11 +502,7 @@ function ReplayDeliveryAction({
 
   return (
     <>
-      <Button
-        small
-        onClick={() => setConfirming(true)}
-        data-testid="replay-delivery"
-      >
+      <Button onClick={() => setConfirming(true)} data-testid="replay-delivery">
         {t("webhooks.deliveries.replay")}
       </Button>
       <ConfirmModal
@@ -806,7 +799,6 @@ function SubscriptionRow({
                 actually missing, so the button carries it: what it controls,
                 and whether it is open. */}
             <Button
-              small
               data-testid="view-deliveries"
               aria-expanded={showDeliveries}
               aria-controls={deliveriesId}
@@ -928,7 +920,6 @@ export function WebhooksCard() {
       titleAction={
         canCreateHere ? (
           <Button
-            small
             variant="primary"
             data-testid="new-webhook-subscription"
             onClick={() => setCreating(true)}

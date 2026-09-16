@@ -127,7 +127,7 @@ export function MoveButton({
       if (!activityId) return null;
       return (
         <>
-          <Button small onClick={() => setTaskOpen(true)}>
+          <Button onClick={() => setTaskOpen(true)}>
             {t("deal360.openTask")}
           </Button>
           {taskOpen && (
@@ -149,7 +149,6 @@ export function MoveButton({
         <>
           <Button
             variant="primary"
-            small
             pending={createTask.isPending}
             onClick={() => createTask.mutate(taskBody)}
           >
@@ -176,7 +175,7 @@ export function MoveButton({
       }
       return (
         <>
-          <Button variant="primary" small onClick={() => setBriefOpen(true)}>
+          <Button variant="primary" onClick={() => setBriefOpen(true)}>
             <Sparkles aria-hidden />
             {t("deal360.openBrief")}
           </Button>

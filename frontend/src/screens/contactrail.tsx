@@ -237,7 +237,7 @@ function RelationshipPulse({
     <Panel
       title={t("contact.rail.pulseTitle")}
       titleAction={
-        <Button small variant="ghost" onClick={onExplain}>
+        <Button variant="ghost" onClick={onExplain}>
           {t("contact.rail.explain")}
         </Button>
       }

@@ -139,7 +139,6 @@ export function StageCreate({ pipelineId }: Readonly<{ pipelineId: string }>) {
   return (
     <>
       <Button
-        small
         data-testid={`new-stage-${pipelineId}`}
         onClick={() => setOpen(true)}
       >
@@ -218,7 +217,6 @@ function StageRemove({
           the act it only ASKS about put six solid red buttons in one pipeline,
           which is the shout a reader stops reading. */}
       <Button
-        small
         data-testid={`remove-stage-${stage.id}`}
         onClick={() => setOpen(true)}
       >

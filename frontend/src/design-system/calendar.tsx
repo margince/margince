@@ -85,7 +85,6 @@ export function Calendar({
       <div className="calendar-head">
         <span className="calendar-month t-body">{heading}</span>
         <Button
-          small
           iconOnly
           aria-label={t("calendar.previousMonth")}
           onClick={() => onMonthChange(shiftMonth(month, -1))}
@@ -93,7 +92,6 @@ export function Calendar({
           <ChevronLeft aria-hidden="true" size={16} />
         </Button>
         <Button
-          small
           iconOnly
           aria-label={t("calendar.nextMonth")}
           onClick={() => onMonthChange(shiftMonth(month, 1))}

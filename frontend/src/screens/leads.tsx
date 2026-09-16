@@ -385,9 +385,7 @@ function AssigneePicker({
         <span className="t-caption share-error">
           {t("share.rosterErrorUsers")}
         </span>
-        <Button small onClick={() => roster.refetch()}>
-          {t("common.retry")}
-        </Button>
+        <Button onClick={() => roster.refetch()}>{t("common.retry")}</Button>
       </div>
     );
   }
@@ -467,7 +465,6 @@ function LeadOwner({
             (ADR-0108 §5). The viewer is the first option because
             self-assignment is the common case on a small team. */}
         <Button
-          small
           disabled={pending}
           reasonId={refusedReasonId}
           aria-expanded={picking}
@@ -561,7 +558,6 @@ function LeadScorePanel({
             </p>
           )}
           <Button
-            small
             disabled={writer.patch.isPending || readOnly}
             reasonId={readOnly ? terminalReasonId : undefined}
             onClick={() => writer.save({ score: null })}
@@ -596,7 +592,6 @@ function LeadScorePanel({
           <div className="lead-line">
             <Button
               variant="primary"
-              small
               disabled={reasonBlank || scoreInvalid || writer.patch.isPending}
               reasonId={readOnly ? terminalReasonId : undefined}
               onClick={() =>
@@ -608,7 +603,7 @@ function LeadScorePanel({
             >
               {t("lead.saveOverride")}
             </Button>
-            <Button small onClick={() => setOverriding(false)}>
+            <Button onClick={() => setOverriding(false)}>
               {t("create.cancel")}
             </Button>
           </div>
@@ -618,7 +613,6 @@ function LeadScorePanel({
         // naming what the badge above already says. The override is a rare
         // action and stands alone.
         <Button
-          small
           reasonId={readOnly ? terminalReasonId : undefined}
           onClick={() => setOverriding(true)}
         >
@@ -1242,9 +1236,7 @@ function DemoteAction({ id }: Readonly<{ id: string }>) {
   };
   return (
     <>
-      <Button small onClick={() => setOpen(true)}>
-        {t("lead.demote")}
-      </Button>
+      <Button onClick={() => setOpen(true)}>{t("lead.demote")}</Button>
       <ConfirmModal
         open={open}
         onClose={close}
@@ -1622,7 +1614,6 @@ function LeadActions({
                 seam (atoms.css) belongs to the destructive verbs. A terminal
                 lead keeps the control, disabled with the page's one reason. */}
         <Button
-          small
           data-testid="lead-disqualify"
           reasonId={refusedReasonId}
           onClick={onDisqualify}

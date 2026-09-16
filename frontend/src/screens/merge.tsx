@@ -122,7 +122,6 @@ export function MergeAction<Survivor extends { id: string }>({
   return (
     <>
       <Button
-        small
         reasonId={disabledReasonId}
         onClick={() => setOpen(true)}
         data-testid="merge-record"
@@ -134,7 +133,7 @@ export function MergeAction<Survivor extends { id: string }>({
           size="large"
           id={headingId}
           className="t-h2"
-          style={{ marginBottom: 12 }}
+          style={{ marginBottom: "var(--space-3)" }}
         >
           {label}
         </Heading>
@@ -179,11 +178,10 @@ export function MergeAction<Survivor extends { id: string }>({
           </p>
         )}
         <div className="actions">
-          <Button small onClick={close} disabled={mutation.isPending}>
+          <Button onClick={close} disabled={mutation.isPending}>
             {t("create.cancel")}
           </Button>
           <Button
-            small
             variant="danger"
             disabled={!target || mutation.isPending}
             onClick={() => {

@@ -161,7 +161,6 @@ export function ReversalPairRow({
             changes with opposite intents have no honest single label, so the
             verbs live on the rows they belong to, inside. */}
         <Button
-          small
           variant="ghost"
           className="reversal-toggle"
           aria-expanded={open}

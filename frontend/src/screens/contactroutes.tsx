@@ -199,7 +199,6 @@ function RouteRow({
       {onAsk && !mine && route.availability === "available" ? (
         <Button
           variant={lead ? "primary" : undefined}
-          small
           onClick={() => onAsk(route)}
         >
           {t("contact.intro.askFirstName", { name: route.via_display_name })}

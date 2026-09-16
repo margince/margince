@@ -174,7 +174,6 @@ export function ShareAction({
   return (
     <Button
       reasonId={disabledReasonId}
-      small
       data-testid="share-record"
       onClick={() =>
         navigate({ screen: "share", id: recordType, id2: recordId })
@@ -378,7 +377,6 @@ function RosterPicker({
               : t("share.rosterErrorTeams")}
         </p>
         <Button
-          small
           style={{ marginTop: "var(--space-2)" }}
           onClick={() => {
             if (usersQuery.isError) usersQuery.refetch();
@@ -879,7 +877,6 @@ function ShareScreenBody({
                     </div>
                   </div>
                   <Button
-                    small
                     variant="danger"
                     onClick={() => setRevokingId(g.id)}
                     data-testid="revoke-grant"

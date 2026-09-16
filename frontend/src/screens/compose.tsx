@@ -2704,7 +2704,7 @@ export function ChannelReplyAction({
   }
   return (
     <>
-      <Button small onClick={() => setReply(true)}>
+      <Button onClick={() => setReply(true)}>
         {contentWithheld ? t("compose.writeEmail") : t("compose.reply")}
       </Button>
       {reply && (

@@ -275,7 +275,6 @@ export function LeadBulkBar({
         }))}
       />
       <Button
-        small
         variant="primary"
         disabled={run.isPending || ownerId === "" || leads.length === 0}
         onClick={assign}
@@ -294,7 +293,6 @@ export function LeadBulkBar({
         }))}
       />
       <Button
-        small
         disabled={run.isPending || leads.length === 0}
         // The same requirement, and the same sentence, as the single-lead
         // dialog: a batch closed with no reason is exactly what the

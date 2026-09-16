@@ -64,7 +64,7 @@ export function DecisionsChip({
   // outranked the verbs beside it in the header while doing less than any of
   // them: this opens a queue, it does not decide anything.
   return (
-    <Button small variant="ghost" onClick={onOpen}>
+    <Button variant="ghost" onClick={onOpen}>
       {t("co.decisions.open", { count: formatNumber(count, locale) })}
     </Button>
   );

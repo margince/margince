@@ -176,7 +176,7 @@ function AgendaRows({
       <Panel
         footer={
           focus && onContext && (hasPane(item) || item.source === "task") ? (
-            <Button small variant="ghost" onClick={() => onContext(item)}>
+            <Button variant="ghost" onClick={() => onContext(item)}>
               {t("brief.focus.context")}
             </Button>
           ) : undefined

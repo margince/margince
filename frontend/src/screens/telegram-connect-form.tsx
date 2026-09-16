@@ -130,7 +130,6 @@ export function TelegramConnectForm({
           </div>
           <div className="actions">
             <Button
-              small
               variant="primary"
               onClick={() => {
                 onConnected?.();
@@ -189,7 +188,6 @@ export function TelegramConnectForm({
           )}
           <div className="actions">
             <Button
-              small
               type="button"
               onClick={onClose}
               disabled={connect.isPending}
@@ -197,7 +195,6 @@ export function TelegramConnectForm({
               {t("create.cancel")}
             </Button>
             <Button
-              small
               variant="primary"
               type="submit"
               disabled={!connect.isPending && !ready}

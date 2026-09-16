@@ -293,7 +293,6 @@ function LifecycleMenu({ room }: Readonly<{ room: DealRoom }>) {
       <OverflowMenu label={t("roompage.accessMenu")}>
         {room.state === "live" ? (
           <Button
-            small
             variant="ghost"
             pending={move.isPending}
             onClick={() => move.mutate("pause")}
@@ -306,7 +305,6 @@ function LifecycleMenu({ room }: Readonly<{ room: DealRoom }>) {
         ) : null}
         {room.state === "paused" ? (
           <Button
-            small
             variant="ghost"
             pending={move.isPending}
             onClick={() => move.mutate("resume")}
@@ -315,7 +313,7 @@ function LifecycleMenu({ room }: Readonly<{ room: DealRoom }>) {
           </Button>
         ) : null}
         {room.state === "live" || room.state === "paused" ? (
-          <Button small variant="ghost" onClick={() => setClosing(true)}>
+          <Button variant="ghost" onClick={() => setClosing(true)}>
             {t("roompage.close")}
             <span className="t-caption roompage-menu-hint">
               {t("roompage.closeHint")}
@@ -323,7 +321,7 @@ function LifecycleMenu({ room }: Readonly<{ room: DealRoom }>) {
           </Button>
         ) : null}
         {!FINISHED_STATES.has(room.state) ? (
-          <Button small variant="ghost" onClick={() => setExpiring(true)}>
+          <Button variant="ghost" onClick={() => setExpiring(true)}>
             {t("roompage.setExpiry")}
             <span className="t-caption roompage-menu-hint">
               {t("roompage.setExpiryHint")}
@@ -472,7 +470,6 @@ function RoomText({
           ) : (
             <div className="card-actions">
               <Button
-                small
                 disabled={!dirty || title.trim() === ""}
                 pending={save.isPending}
                 onClick={() =>

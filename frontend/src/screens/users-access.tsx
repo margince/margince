@@ -331,7 +331,6 @@ function TeamRow({
       action={
         canEditTeam ? (
           <Button
-            small
             variant="ghost"
             iconOnly
             aria-label={t("users.archiveTeam", { name: team.name })}
@@ -513,9 +512,7 @@ function NewTeamAction() {
     <>
       {/* Named for what it opens; the dialog's submit reads "Create team", so
           the two buttons on screen together are tellable apart. */}
-      <Button small onClick={() => setOpen(true)}>
-        {t("users.newTeamOpen")}
-      </Button>
+      <Button onClick={() => setOpen(true)}>{t("users.newTeamOpen")}</Button>
       <Modal open={open} onClose={() => setOpen(false)} labelledBy={titleId}>
         <form
           className="form-stack"
@@ -547,7 +544,7 @@ function NewTeamAction() {
           {/* `.form-stack` stretches its children, so the submit takes its own
               trailing row rather than filling the dialog's width. */}
           <div className="form-actions">
-            <Button type="submit" variant="primary" small disabled={!ready}>
+            <Button type="submit" variant="primary" disabled={!ready}>
               {t("users.createTeam")}
             </Button>
           </div>

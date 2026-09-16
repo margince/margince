@@ -466,7 +466,6 @@ function AskTheRegister({
           false about a request they made correctly. */}
       <Button
         variant="ghost"
-        small
         pending={ask.waiting}
         busyLabel={t("co.vat.askingBusy")}
         onClick={ask.press}

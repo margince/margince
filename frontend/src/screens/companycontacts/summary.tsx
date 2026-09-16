@@ -563,14 +563,13 @@ function SeatCard({
       {suggested && seat.relationship_id && seat.relationship_version && (
         <div className="cp-seat-verbs">
           <Button
-            small
             onClick={() => onConfirm(seat)}
             pending={confirming.has(seat.relationship_id)}
             busyLabel={t("co.contacts.board.confirming")}
           >
             {t("co.contacts.board.confirm")}
           </Button>
-          <Button small variant="ghost" onClick={() => onChange(seat)}>
+          <Button variant="ghost" onClick={() => onChange(seat)}>
             {t("co.contacts.board.change")}
           </Button>
         </div>
@@ -768,7 +767,6 @@ function SuggestRoles({
   const t = useT();
   return (
     <Button
-      small
       variant="ai"
       onClick={() => dealId && writes.suggest.mutate(dealId)}
       reason={dealId ? undefined : t("co.contacts.board.suggestNoDeal")}

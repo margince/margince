@@ -267,7 +267,7 @@ function ForecastCallEditor({
   if (!open) {
     return (
       <div className="card-actions">
-        <Button small onClick={() => setOpen(true)}>
+        <Button onClick={() => setOpen(true)}>
           {t("forecast.updateCall")}
         </Button>
       </div>
@@ -281,11 +281,8 @@ function ForecastCallEditor({
       // act on rather than in the band that names it.
       actions={
         <>
-          <Button small onClick={() => setOpen(false)}>
-            {t("forecast.cancel")}
-          </Button>
+          <Button onClick={() => setOpen(false)}>{t("forecast.cancel")}</Button>
           <Button
-            small
             variant="primary"
             disabled={save.isPending}
             onClick={() => save.mutate({ amountMinor, note })}

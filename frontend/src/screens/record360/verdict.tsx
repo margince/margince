@@ -160,7 +160,6 @@ export function Proof({
           head's hand-rolled chip was drawing for itself. The class is all
           that is left of it: where the control sits in the head's grid. */}
       <Button
-        small
         variant="aiQuiet"
         className="r360-rests-toggle"
         onClick={() => setOpen((shown) => !shown)}

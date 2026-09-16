@@ -64,7 +64,7 @@ export function ConsentAndChannels({
         ) : failed ? (
           <p role="alert">
             {t("consent.guardFailed")}{" "}
-            <Button small variant="ghost" onClick={onRetry}>
+            <Button variant="ghost" onClick={onRetry}>
               {t("common.retry")}
             </Button>
           </p>
@@ -123,7 +123,7 @@ export function ConsentAndChannels({
           </>
         )}
         <p className="t-caption">{t("consent.permissionScope")}</p>
-        <Button small variant="ghost" onClick={() => setManage(true)}>
+        <Button variant="ghost" onClick={() => setManage(true)}>
           {t("consent.manage")}
         </Button>
       </PanelBody>
@@ -147,7 +147,7 @@ export function ConsentAndChannels({
             <Heading size="large" id={titleId}>
               {t("consent.manage")}
             </Heading>
-            <Button small variant="ghost" onClick={() => setManage(false)}>
+            <Button variant="ghost" onClick={() => setManage(false)}>
               {t("common.close")}
             </Button>
           </div>

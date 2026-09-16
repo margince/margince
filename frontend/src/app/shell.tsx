@@ -663,9 +663,7 @@ function SectionSwitcher({
             left to click and a touch reader has no Escape, so the way out has to
             be a control in the sheet. */}
         <div className="actions">
-          <Button small onClick={close}>
-            {t("shell.closeMenu")}
-          </Button>
+          <Button onClick={close}>{t("shell.closeMenu")}</Button>
         </div>
       </Modal>
     </>

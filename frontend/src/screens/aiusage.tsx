@@ -209,14 +209,12 @@ function AiUsageBody({
           // button moves it.
           <>
             <Button
-              small
               aria-label={t("aiusage.prevMonth")}
               onClick={() => onMonth(adjacentMonth(month, -1))}
             >
               ‹
             </Button>
             <Button
-              small
               aria-label={t("aiusage.nextMonth")}
               disabled={isCurrentMonth(month)}
               onClick={() => onMonth(adjacentMonth(month, 1))}

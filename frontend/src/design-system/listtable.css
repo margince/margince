@@ -138,13 +138,15 @@
 
 /* Controls a body brings with it (the deals pipeline picker and its stage and
  * company selects). A bare `.input` is a full-width form control; in the
- * toolbar it is one item in a row of pills, so it takes the same height and
- * silhouette as the chips beside it instead of claiming its own line. */
+ * toolbar it is one item in a row of pills, so it shrinks to its content and
+ * takes the pill silhouette instead of claiming its own line. The HEIGHT is not
+ * the toolbar's to choose — a control here is the same control as one in a
+ * form, and a 30px trigger beside a 32px one is the misalignment a reader sees
+ * without being able to name it. */
 .lt-tools .select-control.input,
 .lt-tools input.input {
   width: auto;
-  height: 30px;
-  padding: 0 var(--space-3);
+  padding-inline: var(--controlPaddingX);
   border-radius: var(--r-full);
   corner-shape: round;
   border-color: var(--borderSubtle);

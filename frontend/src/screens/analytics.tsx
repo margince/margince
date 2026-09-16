@@ -901,7 +901,7 @@ function ExplainPanel({
             <>
               <p className="t-caption">{problemMessageOf(query.error, t)}</p>
               <div className="card-actions">
-                <Button small onClick={() => query.refetch()}>
+                <Button onClick={() => query.refetch()}>
                   {t("common.retry")}
                 </Button>
               </div>
@@ -1699,7 +1699,6 @@ function ReportCard({
             // reader who cannot see the panel appear is still told it did.
             actions={
               <Button
-                small
                 aria-expanded={explain}
                 aria-controls={explainId}
                 onClick={() => setExplain((value) => !value)}

@@ -432,7 +432,7 @@ export function AiFeatureTable({
                   ))}
                 </ol>
                 {onEdit && (
-                  <Button small onClick={() => onEdit(row.leading_tier)}>
+                  <Button onClick={() => onEdit(row.leading_tier)}>
                     {t("aiAdmin.editBinding")}
                   </Button>
                 )}

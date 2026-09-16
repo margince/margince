@@ -167,7 +167,6 @@ export function CompanyContractsCard({
         titleAction={
           mayAdd ? (
             <Button
-              small
               onClick={() => {
                 setEditing(undefined);
                 setFormOpen(true);
@@ -181,14 +180,12 @@ export function CompanyContractsCard({
         {present && (
           <PanelBody className="docs-filters">
             <Button
-              small
               aria-pressed={!activeOnly}
               onClick={() => setActiveOnly(false)}
             >
               {t("contracts.filter.all")}
             </Button>
             <Button
-              small
               aria-pressed={activeOnly}
               onClick={() => setActiveOnly(true)}
             >
@@ -349,27 +346,25 @@ function ContractRow({
                 A bare <button> here drew as centred unstyled text inside a
                 panel that was otherwise the design system's. */}
             {mayWrite && (
-              <Button small onClick={onEdit}>
-                {t("contracts.edit")}
-              </Button>
+              <Button onClick={onEdit}>{t("contracts.edit")}</Button>
             )}
             {mayRenewThis && (
-              <Button small onClick={() => setRenewing(true)}>
+              <Button onClick={() => setRenewing(true)}>
                 {t("contracts.renew.submit")}
               </Button>
             )}
             {mayWrite && !terminal && (
-              <Button small onClick={() => setChangingStatus(true)}>
+              <Button onClick={() => setChangingStatus(true)}>
                 {t("contracts.statusChange.submit")}
               </Button>
             )}
             {mayWrite && (
-              <Button small onClick={() => setCancelling(true)}>
+              <Button onClick={() => setCancelling(true)}>
                 {t("contracts.cancel.menuLabel")}
               </Button>
             )}
             {mayArchive && (
-              <Button small variant="danger" onClick={() => setAsking(true)}>
+              <Button variant="danger" onClick={() => setAsking(true)}>
                 {t("contracts.archive")}
               </Button>
             )}

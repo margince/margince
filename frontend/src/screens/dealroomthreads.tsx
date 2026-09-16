@@ -251,7 +251,6 @@ function DocumentCard({
           <div className="board-doc-verbs">
             {doc.read ? (
               <Button
-                small
                 variant="primary"
                 aria-label={t("threads.readTitle", { title: doc.title })}
                 onClick={doc.read}

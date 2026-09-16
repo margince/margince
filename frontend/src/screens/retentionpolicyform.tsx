@@ -195,7 +195,6 @@ export function RetentionPolicyForm({
       )}
 
       <Button
-        small
         variant="primary"
         disabled={days === null || create.isPending}
         onClick={() => days !== null && create.mutate(days)}

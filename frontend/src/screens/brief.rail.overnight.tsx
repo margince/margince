@@ -218,7 +218,6 @@ function DigestBody({ digest }: Readonly<{ digest: MorningDigest }>) {
             title={t("brief.overnight.connectorsUnhealthy")}
             actions={
               <Button
-                small
                 onClick={() =>
                   navigate({ screen: "settings", id: "connections" })
                 }

@@ -184,7 +184,6 @@ export function EmailDetail({
         <div className="emaildetail__actions">
           {read.data && renderReply?.(read.data)}
           <Button
-            small
             iconOnly
             onClick={onClose}
             aria-label={t("email.detail.close")}

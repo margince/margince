@@ -345,7 +345,6 @@ export function EmbedReindexCard() {
                         control={
                           <Button
                             variant="primary"
-                            small
                             onClick={() =>
                               openDialog("reindex", data.configured_identity)
                             }
@@ -370,7 +369,6 @@ export function EmbedReindexCard() {
                       description={t("embedreindex.rebuildHelp")}
                       control={
                         <Button
-                          small
                           onClick={() =>
                             openDialog("rebuild", data.configured_identity)
                           }

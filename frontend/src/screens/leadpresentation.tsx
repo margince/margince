@@ -405,7 +405,6 @@ export function LeadBoard({
         columnExtras={(column) =>
           column.stage === openTerminal && terminalRows.hasNextPage ? (
             <Button
-              small
               onClick={() => {
                 terminalRows.fetchNextPage();
               }}
@@ -483,11 +482,7 @@ export function LeadBoard({
           },
         })}
       />
-      {hasMore && (
-        <Button small onClick={loadMore}>
-          {t("list.loadMore")}
-        </Button>
-      )}
+      {hasMore && <Button onClick={loadMore}>{t("list.loadMore")}</Button>}
       {/* Keyed by lead so a half-filled deal block for one never carries to
           the next, the same reason the detail screen keys its pair. */}
       {pending?.dialog === "qualify" && (
