@@ -8896,7 +8896,6 @@ func (e ImportOnDuplicate) Valid() bool {
 // Defines values for ImportRunConnector.
 const (
 	ImportRunConnectorCsv        ImportRunConnector = "csv"
-	ImportRunConnectorHubspot    ImportRunConnector = "hubspot"
 	ImportRunConnectorSalesforce ImportRunConnector = "salesforce"
 )
 
@@ -8904,8 +8903,6 @@ const (
 func (e ImportRunConnector) Valid() bool {
 	switch e {
 	case ImportRunConnectorCsv:
-		return true
-	case ImportRunConnectorHubspot:
 		return true
 	case ImportRunConnectorSalesforce:
 		return true
@@ -26813,7 +26810,7 @@ type CreateDealRoomRequest struct {
 
 // CreateImportRunRequest defines model for CreateImportRunRequest.
 type CreateImportRunRequest struct {
-	// Connector The source kind. The HubSpot and Salesforce connectors run the same engine and arrive with their own tickets (IEM-AC-8).
+	// Connector The source kind. The Salesforce connector runs the same engine and arrives with its own ticket (IEM-AC-8).
 	Connector CreateImportRunRequestConnector `json:"connector"`
 
 	// ContextTagId A tag applied to every record this run CREATES, so a batch stays
@@ -26933,7 +26930,7 @@ type CreateImportRunRequest struct {
 	SourceRef string `json:"source_ref"`
 }
 
-// CreateImportRunRequestConnector The source kind. The HubSpot and Salesforce connectors run the same engine and arrive with their own tickets (IEM-AC-8).
+// CreateImportRunRequestConnector The source kind. The Salesforce connector runs the same engine and arrives with its own ticket (IEM-AC-8).
 type CreateImportRunRequestConnector string
 
 // CreateLeadDisqualifyReasonRequest defines model for CreateLeadDisqualifyReasonRequest.

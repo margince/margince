@@ -131,11 +131,11 @@ func newOutboundClient(provider string) *http.Client {
 	// which this side never sees. Every address dialGuard refuses is reachable
 	// that way on any deployment carrying HTTPS_PROXY.
 	//
-	// The third writer of this rule in the tree rather than a shared helper: the
-	// other two live in backend/pkg/extension (the extension surface, which a
-	// module may not import) and in the hubspot overlay's own gate. What holds
-	// them together is that each is a transport nobody else builds, and this one
-	// is held by TestTheOutboundClientCannotBeRoutedThroughAProxy.
+	// A second writer of this rule rather than a shared helper: the other lives
+	// in backend/pkg/extension (the extension surface, which a module may not
+	// import). What holds them together is that each is a transport nobody else
+	// builds, and this one is held by
+	// TestTheOutboundClientCannotBeRoutedThroughAProxy.
 	transport.Proxy = nil
 	transport.IdleConnTimeout = idleConnTimeout
 	transport.ForceAttemptHTTP2 = true

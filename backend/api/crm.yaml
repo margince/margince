@@ -134,7 +134,7 @@ tags:
   - name: CustomFields
     description: Workspace-defined runtime custom fields on core objects — the catalog plus the governed schema-change engine.
   - name: Reports
-    description: Run validated, typed reports (the clean-core HubSpot fix).
+    description: Run validated, typed reports against a clean core.
   - name: Search
     description: Cross-object search.
   - name: AI
@@ -21954,8 +21954,7 @@ paths:
         run that is still in flight, was never approved, has already failed,
         or has already finished undoing is a conflict, as is a run whose
         `undoing` state carries no recorded progress to resume; the
-        `hubspot`/`salesforce` connectors have no reversal path — they are
-        unbuilt.
+        the `salesforce` connector has no reversal path — it is unbuilt.
 
         Reverses only the rows this run created that nobody has touched since
         (A93): never an all-or-nothing hard rollback that clobbers a later
@@ -25819,7 +25818,7 @@ components:
       type: object
       required: [connector, object, source_ref, mapping]
       properties:
-        connector:  { type: string, enum: [csv], description: 'The source kind. The HubSpot and Salesforce connectors run the same engine and arrive with their own tickets (IEM-AC-8).' }
+        connector:  { type: string, enum: [csv], description: 'The source kind. The Salesforce connector runs the same engine and arrives with its own ticket (IEM-AC-8).' }
         object:     { $ref: '#/components/schemas/ImportObject' }
         source_ref: { type: string, description: 'From `uploadImportSource`.' }
         mapping:
@@ -26072,7 +26071,7 @@ components:
       required: [id, connector, object, status, checkpoint, source, captured_by, created_at, updated_at]
       properties:
         id:         { type: string, format: uuid }
-        connector:  { type: string, enum: [csv, hubspot, salesforce] }
+        connector:  { type: string, enum: [csv, salesforce] }
         object:     { $ref: '#/components/schemas/ImportObject' }
         status:     { $ref: '#/components/schemas/ImportRunStatus' }
         checkpoint: { type: integer, minimum: 0, description: 'Absolute offset into the source''s rows for a forward run (`running`/`failed`), or into import_record_map''s rows once the run is `undoing` (IEM-WIRE-9) — 0 = not started either way. What a resume continues from.' }

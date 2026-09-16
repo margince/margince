@@ -15320,8 +15320,7 @@ export interface paths {
          *     run that is still in flight, was never approved, has already failed,
          *     or has already finished undoing is a conflict, as is a run whose
          *     `undoing` state carries no recorded progress to resume; the
-         *     `hubspot`/`salesforce` connectors have no reversal path — they are
-         *     unbuilt.
+         *     the `salesforce` connector has no reversal path — it is unbuilt.
          *
          *     Reverses only the rows this run created that nobody has touched since
          *     (A93): never an all-or-nothing hard rollback that clobbers a later
@@ -18094,7 +18093,7 @@ export interface components {
         };
         CreateImportRunRequest: {
             /**
-             * @description The source kind. The HubSpot and Salesforce connectors run the same engine and arrive with their own tickets (IEM-AC-8).
+             * @description The source kind. The Salesforce connector runs the same engine and arrives with its own ticket (IEM-AC-8).
              * @enum {string}
              */
             connector: "csv";
@@ -18329,7 +18328,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            connector: "csv" | "hubspot" | "salesforce";
+            connector: "csv" | "salesforce";
             object: components["schemas"]["ImportObject"];
             status: components["schemas"]["ImportRunStatus"];
             /** @description Absolute offset into the source's rows for a forward run (`running`/`failed`), or into import_record_map's rows once the run is `undoing` (IEM-WIRE-9) — 0 = not started either way. What a resume continues from. */

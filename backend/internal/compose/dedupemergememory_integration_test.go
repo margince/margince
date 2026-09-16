@@ -104,7 +104,7 @@ func (e *mergeEnv) rejectMerge(t *testing.T, leadID ids.UUID) {
 func TestARejectedMergeIsNotProposedAgainOnTheNextSync(t *testing.T) {
 	e := setupMerge(t)
 	incumbent := e.capturedLead(t, "apollo", "a-1", "Dana Dup", "dana@example.test")
-	e.capturedLead(t, "hubspot", "h-9", "Dana Duplicate", "dana@example.test")
+	e.capturedLead(t, "legacy_crm", "h-9", "Dana Duplicate", "dana@example.test")
 	if got := e.pendingMerges(t, incumbent); got != 1 {
 		t.Fatalf("the first collision staged %d proposals, want 1", got)
 	}
@@ -112,7 +112,7 @@ func TestARejectedMergeIsNotProposedAgainOnTheNextSync(t *testing.T) {
 
 	// The connector syncs again, and its cursor was stale, so it re-sends the
 	// record it already sent.
-	e.capturedLead(t, "hubspot", "h-9", "Dana Duplicate", "dana@example.test")
+	e.capturedLead(t, "legacy_crm", "h-9", "Dana Duplicate", "dana@example.test")
 	if got := e.pendingMerges(t, incumbent); got != 0 {
 		t.Errorf("after a rejection the next sync staged %d merge proposals, want 0 — "+
 			"the rep is asked to merge two records they said were different", got)
@@ -131,11 +131,11 @@ func TestARejectedMergeIsNotProposedAgainOnTheNextSync(t *testing.T) {
 func TestARejectedMergeStaysRefusedWhenTheCapturedFieldsChange(t *testing.T) {
 	e := setupMerge(t)
 	incumbent := e.capturedLead(t, "apollo", "a-1", "Dana Dup", "dana@example.test")
-	e.capturedLead(t, "hubspot", "h-9", "Dana Duplicate", "dana@example.test")
+	e.capturedLead(t, "legacy_crm", "h-9", "Dana Duplicate", "dana@example.test")
 	e.rejectMerge(t, incumbent)
 
 	// Upstream fills in a fuller name for the same contact at the same address.
-	e.capturedLead(t, "hubspot", "h-9", "Dana Duplicate-Smith", "dana@example.test")
+	e.capturedLead(t, "legacy_crm", "h-9", "Dana Duplicate-Smith", "dana@example.test")
 	if got := e.pendingMerges(t, incumbent); got != 0 {
 		t.Errorf("a re-sync carrying a corrected name staged %d proposals over a "+
 			"rejection, want 0 — the memory is keyed on something that moves", got)
@@ -150,7 +150,7 @@ func TestARejectedMergeStaysRefusedWhenTheCapturedFieldsChange(t *testing.T) {
 func TestADifferentAddressIsStillProposedAfterARefusal(t *testing.T) {
 	e := setupMerge(t)
 	incumbent := e.capturedLead(t, "apollo", "a-1", "Dana Dup", "dana@example.test")
-	e.capturedLead(t, "hubspot", "h-9", "Dana Duplicate", "dana@example.test")
+	e.capturedLead(t, "legacy_crm", "h-9", "Dana Duplicate", "dana@example.test")
 	e.rejectMerge(t, incumbent)
 
 	// The rep adds that second address to the incumbent themselves, and a
@@ -159,7 +159,7 @@ func TestADifferentAddressIsStillProposedAfterARefusal(t *testing.T) {
 		`UPDATE lead SET email = 'dana.new@example.test' WHERE id = $1`, incumbent); err != nil {
 		t.Fatalf("moving the incumbent's address: %v", err)
 	}
-	e.capturedLead(t, "hubspot", "h-10", "Dana Duplicate", "dana.new@example.test")
+	e.capturedLead(t, "legacy_crm", "h-10", "Dana Duplicate", "dana.new@example.test")
 	if got := e.pendingMerges(t, incumbent); got != 1 {
 		t.Errorf("a collision on an address nobody refused staged %d proposals, want 1 — "+
 			"one refusal has ended dedupe on this lead for good", got)
@@ -174,11 +174,11 @@ func TestADifferentAddressIsStillProposedAfterARefusal(t *testing.T) {
 func TestARejectedMergeOnOneLeadDoesNotSilenceAnother(t *testing.T) {
 	e := setupMerge(t)
 	declined := e.capturedLead(t, "apollo", "a-1", "Dana Dup", "dana@example.test")
-	e.capturedLead(t, "hubspot", "h-9", "Dana Duplicate", "dana@example.test")
+	e.capturedLead(t, "legacy_crm", "h-9", "Dana Duplicate", "dana@example.test")
 	e.rejectMerge(t, declined)
 
 	other := e.capturedLead(t, "apollo", "a-2", "Sam Sample", "sam@example.test")
-	e.capturedLead(t, "hubspot", "h-11", "Samuel Sample", "sam@example.test")
+	e.capturedLead(t, "legacy_crm", "h-11", "Samuel Sample", "sam@example.test")
 	if got := e.pendingMerges(t, other); got != 1 {
 		t.Errorf("a lead nobody refused has %d merge proposals, want 1 — one "+
 			"rejection has silenced a lead it was never about", got)
@@ -198,10 +198,10 @@ func TestARejectedMergeOnOneLeadDoesNotSilenceAnother(t *testing.T) {
 func TestARejectedMergeStaysRefusedWhenTheAddressCaseChanges(t *testing.T) {
 	e := setupMerge(t)
 	incumbent := e.capturedLead(t, "apollo", "a-1", "Dana Dup", "dana@example.test")
-	e.capturedLead(t, "hubspot", "h-9", "Dana Duplicate", "dana@example.test")
+	e.capturedLead(t, "legacy_crm", "h-9", "Dana Duplicate", "dana@example.test")
 	e.rejectMerge(t, incumbent)
 
-	e.capturedLead(t, "hubspot", "h-9", "Dana Duplicate", "  DANA@Example.TEST ")
+	e.capturedLead(t, "legacy_crm", "h-9", "Dana Duplicate", "  DANA@Example.TEST ")
 	if got := e.pendingMerges(t, incumbent); got != 0 {
 		t.Errorf("the same address in another case staged %d proposals over a "+
 			"rejection, want 0", got)
