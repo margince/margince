@@ -40,6 +40,7 @@ const theCompanyFKFloor = 35
 // the schema are both untouched.
 var mergePathFiles = []string{
 	"internal/modules/contacts/mergerelink_company.go",
+	"internal/modules/contacts/mergecompanycollisions.go",
 	"internal/modules/contacts/merge_company.go",
 	"internal/modules/contacts/merge.go",
 	"internal/modules/contacts/mergecompanyedges.go",
@@ -55,10 +56,36 @@ var mergePathFiles = []string{
 // that must not move, say — and an entry with a stated cost is how that gets
 // declared. gatekit reports an entry that stops matching, so a waiver added
 // here cannot quietly outlive the column it was written for.
-var companyFKsTheMergeLeaves = gatekit.Waive(map[string]string{})
+var companyFKsTheMergeLeaves = gatekit.Waive(map[string]string{
+	"suggestion_dismissal.company_id": "a dismissal is keyed by a fingerprint computed over the company's OWN id, so a row moved onto the survivor would hash differently from anything the survivor is ever offered and could never match again. The merge retires them with the company instead of moving rows that cannot work; a reader may be offered the equivalent suggestion about the survivor once, and dismissing it again sticks. Re-deriving the fingerprints belongs to the suggestion engine that defines them",
+})
 
 // sqlWriteTarget matches the table a statement writes.
 var sqlWriteTarget = regexp.MustCompile(`(?i)\b(?:UPDATE|INSERT\s+INTO|DELETE\s+FROM)\s+([a-z_][a-z0-9_]*)`)
+
+// assignsToSurvivor matches a column assigned the survivor's id, in the three
+// spellings the merge path uses: a plain `SET company_id = $2`, the
+// storekit.SQLf form `SET company_id=$%d`, and a column name concatenated into
+// the statement (`SET `+column+` = $2`, which relinkLinkRows uses to serve both
+// record types from one statement).
+//
+// Matching an assignment and not merely the table name is what stops the census
+// certifying a merge that only DELETES. A relink whose UPDATE is removed leaves
+// its `DELETE FROM x WHERE company_id = $1` behind, and a census reading table
+// names alone reports that table covered while the merge destroys every row the
+// retired company held.
+var assignsToSurvivor = regexp.MustCompile(`(?i)([a-z_][a-z0-9_]*)\s*=\s*\$(?:2|%d)`)
+
+// carriesSurvivorIntoInsert matches the INSERT … SELECT $2 form, where the
+// survivor's id arrives positionally as the first selected value rather than as
+// an assignment. The column it lands in is the first name in the INSERT's
+// column list.
+var carriesSurvivorIntoInsert = regexp.MustCompile(`(?is)INSERT\s+INTO\s+[a-z_][a-z0-9_]*\s*\(\s*([a-z_][a-z0-9_]*).*?SELECT\s+\$2`)
+
+// concatenatedColumn matches a Go string concatenation standing where a column
+// name belongs, so a statement that assembles its column still counts as
+// covering the company column it is given.
+var concatenatedColumn = regexp.MustCompile(`SET\s+` + "`" + `\s*\+\s*[a-z]`)
 
 // TestEveryCompanyForeignKeyJoinsTheMerge is the coverage census.
 //
@@ -104,7 +131,7 @@ func TestEveryCompanyForeignKeyJoinsTheMerge(t *testing.T) {
 			t.Fatal(err)
 		}
 		seen++
-		if written[table] {
+		if written[table+"."+column] {
 			continue
 		}
 		// Asked only once the column is already an offender: a waiver checked
@@ -131,12 +158,18 @@ func TestEveryCompanyForeignKeyJoinsTheMerge(t *testing.T) {
 	}
 }
 
-// tablesTheMergeWrites reads the merge path's own source and returns every
-// table it writes.
+// tablesTheMergeWrites reads the merge path's own source and returns the
+// "table.column" pairs it MOVES onto the survivor.
 //
 // Source-scanned rather than listed, because a list would agree with itself
 // forever: the point is to notice when a statement LEAVES the merge, and only
 // the source can say that.
+//
+// A statement counts only when it both names the table and assigns some column
+// to the survivor parameter. Table name alone was the first shape of this
+// census and it was too weak in the direction that matters: a relink reduced to
+// its DELETE still mentioned the table, so the census certified a merge that
+// destroyed the rows instead of moving them.
 func tablesTheMergeWrites(t *testing.T) map[string]bool {
 	t.Helper()
 	written := map[string]bool{}
@@ -146,9 +179,45 @@ func tablesTheMergeWrites(t *testing.T) map[string]bool {
 		if err != nil {
 			t.Fatalf("reading the merge path %s: %v", rel, err)
 		}
-		for _, match := range sqlWriteTarget.FindAllStringSubmatch(string(body), -1) {
-			written[strings.ToLower(match[1])] = true
+		for _, stmt := range splitSQLStatements(string(body)) {
+			target := sqlWriteTarget.FindStringSubmatch(stmt)
+			if target == nil {
+				continue
+			}
+			table := strings.ToLower(target[1])
+			for _, moved := range assignsToSurvivor.FindAllStringSubmatch(stmt, -1) {
+				written[table+"."+strings.ToLower(moved[1])] = true
+			}
+			if insert := carriesSurvivorIntoInsert.FindStringSubmatch(stmt); insert != nil {
+				written[table+"."+strings.ToLower(insert[1])] = true
+			}
+			// A statement whose column name is concatenated in cannot say
+			// WHICH column it moves, so it covers the company pointer of the
+			// table it names — that being the only company column such a
+			// statement is ever given.
+			if concatenatedColumn.MatchString(stmt) {
+				written[table+".company_id"] = true
+			}
 		}
 	}
 	return written
 }
+
+// splitSQLStatements cuts a Go source file into the individual SQL statements
+// its string literals hold, so a column assignment is credited to the statement
+// that actually contains it rather than to whatever table was named last in the
+// file.
+func splitSQLStatements(body string) []string {
+	chunks := sqlStatementStart.Split(body, -1)
+	// Split drops the delimiter, so re-attach it: each chunk after the first
+	// begins where a statement keyword was found.
+	for i, keyword := range sqlStatementStart.FindAllString(body, -1) {
+		if i+1 < len(chunks) {
+			chunks[i+1] = keyword + chunks[i+1]
+		}
+	}
+	return chunks
+}
+
+// sqlStatementStart marks where one SQL statement begins in a Go source file.
+var sqlStatementStart = regexp.MustCompile(`(?i)\b(?:UPDATE|INSERT\s+INTO|DELETE\s+FROM)\s+`)
