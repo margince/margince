@@ -2,6 +2,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
+import { viewerZone } from "../format/timezone";
 import { LocaleProvider, useLocale, useT } from "../i18n";
 import { leadTodoRows } from "./leadtoday";
 import { TodayPanel } from "./record360";
@@ -47,7 +48,10 @@ function Rows({
         lead,
         t,
         locale,
-        "Asia/Ho_Chi_Minh",
+        // The reader's own zone, read the way every screen reads it: this
+        // case is about what the rows SAY, and a hand-picked zone here would
+        // be a second answer to a question the one module already answers.
+        viewerZone(),
         onReply,
         onOpenTasks,
         replyReasonId,
@@ -77,7 +81,10 @@ describe("what needs a contact on a lead, and the verb that resolves it", () => 
         },
         (key: string) => key,
         "en",
-        "Asia/Ho_Chi_Minh",
+        // The reader's own zone, read the way every screen reads it: this
+        // case is about what the rows SAY, and a hand-picked zone here would
+        // be a second answer to a question the one module already answers.
+        viewerZone(),
         vi.fn(),
         vi.fn(),
         undefined,
