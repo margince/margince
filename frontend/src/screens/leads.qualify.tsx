@@ -5,6 +5,7 @@ import type { components } from "../api/schema";
 import { useInstallationSettings } from "../app/uploadlimit";
 import { Checkbox, Field, Textarea, TextInput } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { Heading } from "../design-system/heading";
 import { Select } from "../design-system/select";
 import { formatDate } from "../format/format";
 import { leadIdentityName } from "../format/leadname";
@@ -253,7 +254,9 @@ export function QualifyDialog({
     >
       <div className="lead-qualify">
         <section className="lead-qualify-block">
-          <h3 className="t-label">{t("lead.qualify.contact")}</h3>
+          <Heading size="medium" className="t-label">
+            {t("lead.qualify.contact")}
+          </Heading>
           <PreviewSentence preview={preview} t={t} />
         </section>
 
@@ -331,7 +334,9 @@ export function QualifyDialog({
         </section>
 
         <section className="lead-qualify-block">
-          <h3 className="t-label">{t("lead.qualify.why")}</h3>
+          <Heading size="medium" className="t-label">
+            {t("lead.qualify.why")}
+          </Heading>
           <p className="t-caption">{reasonSentence(lead, t, locale, zone)}</p>
           <Field label={t("lead.evidenceNote")}>
             {(control) => (

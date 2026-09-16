@@ -5,6 +5,7 @@ import { ArrowLeft } from "lucide-react";
 import type { MouseEvent } from "react";
 import { navigate } from "../app/router";
 import { Badge, EmptyState } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { RoleBadge } from "../design-system/rbac";
 import { useT } from "../i18n";
@@ -227,9 +228,9 @@ function GroupRows({
   const t = useT();
   return (
     <section className="settings-home-group">
-      <h3 className="t-caption settings-home-groupname">
+      <Heading size="medium" className="t-caption settings-home-groupname">
         {t(`settings.group.${group}`)}
-      </h3>
+      </Heading>
       <PageRows pages={items} />
     </section>
   );

@@ -13,6 +13,7 @@ import {
   useRef,
 } from "react";
 import { Badge } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { useHoverIntent } from "../design-system/hoverintent";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
@@ -283,7 +284,9 @@ function NavLevelGroupView({
           and draws a hairline inside the same space. Swapping it for a shorter
           <hr> re-spaced every group and drifted the icons. */}
       {group.headingKey && (
-        <h2 className="navheading">{t(group.headingKey)}</h2>
+        <Heading size="large" className="navheading">
+          {t(group.headingKey)}
+        </Heading>
       )}
       {group.items.map((entry) => (
         <Fragment key={entry.id}>

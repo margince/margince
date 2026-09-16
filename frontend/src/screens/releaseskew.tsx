@@ -1,6 +1,7 @@
 import { useAuthCapabilities } from "../app/capabilities";
 import { releaseSkew } from "../app/release";
 import { Button } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
 import { usePageTitle, Wordmark } from "./auth";
 import { AuthExperience } from "./auth-core";
@@ -63,7 +64,7 @@ export function ReleaseSkewScreen({
     <AuthExperience phase="unavailable">
       <Wordmark alt={t("auth.title")} />
       <section className="auth-card" role="alert">
-        <h1>{t("release.skewTitle")}</h1>
+        <Heading size="xlarge">{t("release.skewTitle")}</Heading>
         <p className="card-sub">{t("release.skewBody")}</p>
         <p className="card-sub">{t("release.skewVersions", { app, server })}</p>
         <div className="auth-actions">

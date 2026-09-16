@@ -7,6 +7,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Button, Field, Modal, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { formatNumber } from "../format/format";
@@ -169,9 +170,9 @@ function LinkedInProfileRow() {
         }
       />
       <Modal open={editing} onClose={close} labelledBy={headingId}>
-        <h2 id={headingId} className="t-h2">
+        <Heading size="large" id={headingId} className="t-h2">
           {t("linkedinImport.editProfileTitle")}
-        </h2>
+        </Heading>
         <form
           className="form-stack li-import-profile-form"
           onSubmit={(event) => {

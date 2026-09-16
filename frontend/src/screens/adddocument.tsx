@@ -15,6 +15,7 @@ import { Button, Field, Modal, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ChoiceList } from "../design-system/choicelist";
 import { FileDropzone } from "../design-system/filedropzone";
+import { Heading } from "../design-system/heading";
 import {
   RecordPicker,
   type RecordPickerCandidate,
@@ -100,17 +101,15 @@ export type DocumentAnchor = Readonly<{
 }>;
 
 // Which record the file hangs off: the one this dialog was opened from, or one
-// of that account's deals. Two named answers rather than a Select carrying a
-// sentinel value beside a list of deal ids — filing against the account is a
-// different KIND of decision from picking one deal out of hundreds, and the two
-// spent a release smuggled into one dropdown where the account read as the
-// zeroth deal.
+// of that account's deals. Two named answers, not a Select carrying a sentinel
+// value beside a list of deal ids — filing against the account is a different
+// KIND of decision from picking one deal of hundreds, and the two spent a
+// release smuggled into one dropdown where the account read as the zeroth deal.
 type Filing = "anchor" | "deal";
 
 /**
- * The parent the bytes will be filed against, or null when the reader has
- * chosen "a deal" and not yet picked one — which is a refusal to state, not a
- * parent to guess.
+ * The parent the bytes are filed against, or null when the reader has chosen
+ * "a deal" not yet picked one — a refusal to state, not a parent to guess.
  */
 function parentOf(
   anchor: DocumentAnchor,
@@ -132,7 +131,7 @@ type Submission = {
 
 // Only what the reader actually chose is sent. A PATCH that also wrote the
 // defaults back would overwrite a category the server may have derived for
-// itself, and would put this dialog's assumptions into a record it did not read.
+// itself, and would put this dialog's assumptions into a record it never read.
 function metadataFor(submitted: Submission) {
   const title = submitted.title.trim();
   const patch: { category?: Category; title?: string } = {};
@@ -169,10 +168,9 @@ const DEAL_SEARCH_REACH = DEAL_PAGE_SIZE * DEAL_SEARCH_PAGES;
 // cheaper way to shorten it, which is one more word.
 const DEAL_MATCH_LIMIT = 25;
 
-// How long a walked page is reused. The reader re-runs the whole walk every
-// time they change a word, so the pages are cached under their own cursor;
-// a minute outlasts a dialog and is far shorter than the age of the deals a
-// walk this deep is reaching.
+// How long a walked page is reused. The reader re-runs the whole walk on each
+// word they change, so pages are cached under their cursor; a minute outlasts
+// a dialog and is far shorter than the age of the deals such a walk reaches.
 const DEAL_PAGE_FRESH_MS = 60_000;
 
 /**
@@ -396,7 +394,9 @@ export function AddDocumentDialog({
 
   return (
     <Modal open={open} onClose={closeAndClear} labelledBy={titleId}>
-      <h2 id={titleId}>{t("docs.add.title")}</h2>
+      <Heading size="large" id={titleId}>
+        {t("docs.add.title")}
+      </Heading>
 
       {partial && (
         <Callout tone="warn" kind="outcome" title={t("docs.add.partialTitle")}>

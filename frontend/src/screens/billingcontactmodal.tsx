@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useId, useState } from "react";
 import { Button, Field, Modal } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import {
   RecordPicker,
   type RecordPickerCandidate,
@@ -86,13 +87,14 @@ export function BillingContactModal({
 
   return (
     <Modal open={open} onClose={onClose} labelledBy={headingId}>
-      <h2
+      <Heading
+        size="large"
         id={headingId}
         className="t-h2"
         style={{ marginBottom: "var(--space-3)" }}
       >
         {editing ? t("billing.changeTitle") : t("billing.addTitle")}
-      </h2>
+      </Heading>
       <div className="form-stack">
         {editing ? (
           <div className="field">

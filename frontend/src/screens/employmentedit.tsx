@@ -8,6 +8,7 @@ import {
   Modal,
   TextInput,
 } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import { problemMessageOf } from "./common";
@@ -69,9 +70,14 @@ export function EmploymentEdit({
   const valid = validDate(start) && validDate(end);
   return (
     <Modal open onClose={onClose} labelledBy={id}>
-      <h2 id={id} className="t-h2" style={{ marginBottom: "var(--space-3)" }}>
+      <Heading
+        size="large"
+        id={id}
+        className="t-h2"
+        style={{ marginBottom: "var(--space-3)" }}
+      >
         {t("employment.edit")}
-      </h2>
+      </Heading>
       <div className="form-stack">
         <Field label={t("rel.role")}>
           {(control) => (

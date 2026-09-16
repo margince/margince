@@ -17,6 +17,7 @@ import { useUrlParams } from "../app/urlstate";
 import { Badge, Card, EmptyState, SearchField } from "../design-system/atoms";
 import { EmailEntry } from "../design-system/emailentry";
 import { FilterPills } from "../design-system/filterpills";
+import { Heading } from "../design-system/heading";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { formatDateTime, formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
@@ -173,7 +174,9 @@ function SearchGroups({
         results.some((r) => r.type === type),
       ).map((type) => (
         <Card key={type} className="search-group">
-          <h2 className="t-label">{t(SEARCH_HIT_GROUP_KEY[type])}</h2>
+          <Heading size="large" className="t-label">
+            {t(SEARCH_HIT_GROUP_KEY[type])}
+          </Heading>
           <ul className="search-hits">
             {results
               .filter((r) => r.type === type)

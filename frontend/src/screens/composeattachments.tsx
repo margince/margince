@@ -23,6 +23,7 @@ import type { components } from "../api/schema";
 import { Button, PendingBody } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { FileDropzone } from "../design-system/filedropzone";
+import { Heading } from "../design-system/heading";
 import { Popover } from "../design-system/popover";
 import { TokenList } from "../design-system/tokeninput";
 import { formatBytes, formatNumber } from "../format/format";
@@ -280,7 +281,9 @@ function AttachPicker({
   const files = library.data?.data ?? [];
   return (
     <div className="compose-files-picker">
-      <h3 className="t-eyebrow">{t("compose.filesOnRecord")}</h3>
+      <Heading size="medium" className="t-eyebrow">
+        {t("compose.filesOnRecord")}
+      </Heading>
       {library.isPending ? (
         <PendingBody label={t("compose.filesLoading")} lines={2} />
       ) : library.isError ? (

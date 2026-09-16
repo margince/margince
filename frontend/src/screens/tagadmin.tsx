@@ -7,6 +7,7 @@ import { useCan, useCanWrite } from "../app/capability";
 import { Button, Field, Modal, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Select, type SelectOption } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
@@ -434,7 +435,9 @@ function MergeDialog({
     return (
       <Modal open onClose={onClose} labelledBy="tagadmin-merged">
         <div className="tagadmin-merged">
-          <h2 id="tagadmin-merged">{t("tagAdmin.mergedTitle")}</h2>
+          <Heading size="large" id="tagadmin-merged">
+            {t("tagAdmin.mergedTitle")}
+          </Heading>
           {/* Moved and collapsed are counted apart because they are different
               facts: a record that carried only the source now carries the
               target, while a record that carried both simply loses a duplicate

@@ -3,6 +3,7 @@
 
 import type { components } from "../api/schema";
 import { Card } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { formatDate } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
@@ -62,11 +63,15 @@ export function PrivacyNotice({
 
   return (
     <div className="pref-page">
-      <h1 className="t-h2">{t("privacynotice.title")}</h1>
+      <Heading size="xlarge" className="t-h2">
+        {t("privacynotice.title")}
+      </Heading>
       <p className="t-body confirm-intro">{t("privacynotice.intro")}</p>
 
       <Card>
-        <h2 className="t-h3">{t("privacynotice.source.title")}</h2>
+        <Heading size="large" className="t-h3">
+          {t("privacynotice.source.title")}
+        </Heading>
         <p className="t-body">{t(sourceKey)}</p>
         {card.acquired_at ? (
           <p className="t-caption">
@@ -79,7 +84,9 @@ export function PrivacyNotice({
 
       {purposes.length > 0 ? (
         <Card>
-          <h2 className="t-h3">{t("privacynotice.purposes.title")}</h2>
+          <Heading size="large" className="t-h3">
+            {t("privacynotice.purposes.title")}
+          </Heading>
           <ul className="confirm-fields">
             {purposes.map((purpose) => (
               <li key={purpose} className="t-body">
@@ -91,7 +98,9 @@ export function PrivacyNotice({
       ) : null}
 
       <Card>
-        <h2 className="t-h3">{t("privacynotice.rights.title")}</h2>
+        <Heading size="large" className="t-h3">
+          {t("privacynotice.rights.title")}
+        </Heading>
         <ul className="confirm-fields">
           {card.rights.map((right) => (
             <li key={right} className="t-body">

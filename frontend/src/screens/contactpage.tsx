@@ -14,6 +14,7 @@ import { useFoldedViewport } from "../app/viewport";
 import { Button, Modal } from "../design-system/atoms";
 import { RecordView } from "../design-system/composed";
 import { ContactLink } from "../design-system/contactlink";
+import { Heading } from "../design-system/heading";
 import {
   IdentityFact,
   IdentityLine,
@@ -577,9 +578,9 @@ export function ContactPageV2({
             placement="right"
           >
             <div className="pe-drawer-title">
-              <h2 id={detailsTitle}>
+              <Heading size="large" id={detailsTitle}>
                 {t("contact.overview.detailsPermissions")}
-              </h2>
+              </Heading>
               <Button
                 small
                 variant="ghost"

@@ -4,6 +4,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { navigate } from "../app/router";
 import { Button, Field, Modal, TextInput } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import {
   RecordPicker,
   type RecordPickerCandidate,
@@ -243,13 +244,14 @@ function EmploymentMatchModal({
   );
   return (
     <Modal open onClose={onClose} labelledBy={heading}>
-      <h2
+      <Heading
+        size="large"
         id={heading}
         className="t-h2"
         style={{ marginBottom: "var(--space-3)" }}
       >
         {t("employment.resolve")}
-      </h2>
+      </Heading>
       <div className="form-stack">
         <p>
           {item.company_name} · {item.role}

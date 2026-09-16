@@ -12,6 +12,7 @@ import {
   Textarea,
   TextInput,
 } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import {
   RecordPicker,
@@ -511,12 +512,12 @@ export function LogActivityAction({
         </Button>
       )}
       <Modal open={open} onClose={close} labelledBy={titleId}>
-        <h2 id={titleId} className="t-h2 modal-title">
+        <Heading size="large" id={titleId} className="t-h2 modal-title">
           {/* The heading answers the verb that opened it. Titled "log an
               activity" regardless, a reader who pressed "Add task" was shown
               a different form's name and read it as the wrong dialog. */}
           {t(triggerLabel ?? "log.title")}
-        </h2>
+        </Heading>
         <LogActivityForm
           entityType={entityType}
           entityId={entityId}

@@ -6,6 +6,7 @@ import type { components } from "../api/schema";
 import { progressFraction } from "../app/capture-progress";
 import { Badge, Button } from "../design-system/atoms";
 import { CountUp } from "../design-system/countup";
+import { Heading } from "../design-system/heading";
 import { formatDuration, formatNumber, formatPercent } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -214,7 +215,9 @@ function RunHead({
           <History className={reading ? "spin-slow" : ""} />
         )}
       </span>
-      <h3 className="backfill-h">{t(stateTitle(state))}</h3>
+      <Heading size="medium" className="backfill-h">
+        {t(stateTitle(state))}
+      </Heading>
       {reading && (
         <span className="capture-head-tag">
           <Badge tone="ai">{t("backfill.readingBadge")}</Badge>

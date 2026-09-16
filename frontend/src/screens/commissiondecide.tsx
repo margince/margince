@@ -7,6 +7,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch } from "../api/version";
 import { Button, Field, Modal, Textarea } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -208,13 +209,14 @@ export function CommissionDecision({
         // top of the document without a named target.
         returnFocusTo={() => triggerRef.current}
       >
-        <h2
+        <Heading
+          size="large"
           id={headingId}
           className="t-h2"
           style={{ marginBottom: "var(--space-3)" }}
         >
           {t(copy.label)}
-        </h2>
+        </Heading>
         <p style={{ marginBottom: "var(--space-4)" }}>{t(copy.confirm)}</p>
         {needsReason && (
           <div style={{ marginBottom: "var(--space-4)" }}>

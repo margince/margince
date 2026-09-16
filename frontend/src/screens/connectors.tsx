@@ -13,6 +13,7 @@ import {
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
@@ -206,9 +207,9 @@ function AddConnectionDialog({
   return (
     <Modal open={open} onClose={onClose} labelledBy={headingId}>
       <div className="form-stack">
-        <h2 id={headingId} className="t-h2">
+        <Heading size="large" id={headingId} className="t-h2">
           {t("connectors.addConnection")}
-        </h2>
+        </Heading>
         <SettingList>
           {addable.map((provider) => (
             <SettingRow

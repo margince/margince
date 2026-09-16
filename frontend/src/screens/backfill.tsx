@@ -3,6 +3,7 @@ import { useState } from "react";
 import type { components } from "../api/schema";
 import { useDrawsImportRun } from "../app/import-onscreen";
 import { Button } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { formatMoney, formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import {
@@ -180,9 +181,9 @@ function BackfillSetup({
   if (unsupported) {
     return (
       <div className="backfill-setup">
-        <h3 className="backfill-h">
+        <Heading size="medium" className="backfill-h">
           <History aria-hidden /> {t("backfill.title")}
-        </h3>
+        </Heading>
         <p className="t-caption backfill-unsupported">
           {t("backfill.unsupportedNote")}
         </p>
@@ -192,9 +193,9 @@ function BackfillSetup({
 
   return (
     <div className="backfill-setup">
-      <h3 className="backfill-h">
+      <Heading size="medium" className="backfill-h">
         <History aria-hidden /> {t("backfill.title")}
-      </h3>
+      </Heading>
       <p className="t-caption">{t("backfill.intro")}</p>
       <ImportWindowPicker
         value={window}

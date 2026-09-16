@@ -13,6 +13,7 @@ import {
 } from "../design-system/atoms";
 import { CardBoundary } from "../design-system/cardboundary";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
@@ -187,9 +188,9 @@ function PolicyRow({
       <Modal open={editing} onClose={toggleEditor} labelledBy={editorTitleId}>
         {/* The scope names WHICH policy is open, because the dialog covers the
             row that would otherwise have said. */}
-        <h2 id={editorTitleId} className="t-h2 modal-title">
+        <Heading size="large" id={editorTitleId} className="t-h2 modal-title">
           {t(scopeLabelKey(policy.scope))}
-        </h2>
+        </Heading>
         <div className="form-stack">
           <Field
             label={t("retention.window")}
@@ -249,9 +250,8 @@ function PolicyRow({
             label={t("retention.enabled")}
             checked={policy.enabled}
             // `intent` is already on the write for exactly this reason: one
-            // `patch` serves this switch and the row's save form, so without
-            // it a saved edit made the pause switch announce a flip nobody
-            // made.
+            // `patch` serves this switch and the row's save form, so without it
+            // a saved edit made the pause switch announce a flip nobody made.
             pending={patch.isPending && patch.variables?.intent === "switch"}
             onChange={(next) =>
               patch.mutate({ intent: "switch", body: { enabled: next } })
@@ -563,9 +563,9 @@ export function RetentionCard() {
             onClose={() => setAdding(false)}
             labelledBy={addTitleId}
           >
-            <h2 id={addTitleId} className="t-h2 modal-title">
+            <Heading size="large" id={addTitleId} className="t-h2 modal-title">
               {t("retention.addPolicy")}
-            </h2>
+            </Heading>
             <RetentionPolicyForm onDone={() => setAdding(false)} />
           </Modal>
 

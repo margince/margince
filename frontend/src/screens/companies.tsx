@@ -21,6 +21,7 @@ import {
   type TimelineEntry,
   type TimelineGroup,
 } from "../design-system/composed";
+import { Heading } from "../design-system/heading";
 import type { ListChip } from "../design-system/listsurface";
 import { CellStrip } from "../design-system/listtable";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
@@ -1375,9 +1376,9 @@ function CompanyPage({
         labelledBy="co-audit-title"
         size="wide"
       >
-        <h2 id="co-audit-title" className="t-h2 modal-title">
+        <Heading size="large" id="co-audit-title" className="t-h2 modal-title">
           {t("record.fullHistory")}
-        </h2>
+        </Heading>
         {/* Mounted only while open: the two history reads behind it are the
             page's most expensive, and nobody who never opens the panel should
             pay for them. */}

@@ -17,6 +17,7 @@ import { createPortal } from "react-dom";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Badge } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import {
   MarginceCoreScene,
   type MarginceCoreState,
@@ -571,7 +572,9 @@ function RunSection({
   }
   return (
     <div className="arsect">
-      <h2 className="t-eyebrow">{t(heading)}</h2>
+      <Heading size="large" className="t-eyebrow">
+        {t(heading)}
+      </Heading>
       <ul className="arruns">
         {said.map(({ item, line }) => (
           <li className="arbox arrun" key={item.id}>
@@ -679,7 +682,9 @@ function AgentPanel({
           the agent looked, and there is nothing waiting. */}
       {signals.waiting !== undefined && (
         <div className="arsect">
-          <h2 className="t-eyebrow">{LABELS.acrossWorkspace}</h2>
+          <Heading size="large" className="t-eyebrow">
+            {LABELS.acrossWorkspace}
+          </Heading>
           {signals.waiting === 0 ? (
             <p className="arnone t-sub">{LABELS.allClear}</p>
           ) : (
@@ -701,12 +706,12 @@ function AgentPanel({
       )}
 
       <div className="arsect">
-        <h2 className="t-eyebrow">
+        <Heading size="large" className="t-eyebrow">
           {LABELS.recap}
           <a className="arplain" href={AI_SETTINGS_HREF}>
             {LABELS.fullLog}
           </a>
-        </h2>
+        </Heading>
         <Recap settled={settled} />
       </div>
 

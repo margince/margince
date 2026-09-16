@@ -19,6 +19,7 @@ import {
   SearchField,
   TextInput,
 } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
@@ -421,9 +422,14 @@ export function AddRelationshipAction({
         {t(copy.add)}
       </Button>
       <Modal open={open} onClose={close} labelledBy={headingId}>
-        <h2 id={headingId} className="t-h2" style={{ marginBottom: 12 }}>
+        <Heading
+          size="large"
+          id={headingId}
+          className="t-h2"
+          style={{ marginBottom: 12 }}
+        >
           {t(copy.add)}
-        </h2>
+        </Heading>
         <div className="form-stack">
           {!copy.singleKind && (
             <Field label={t("rel.kind")}>
@@ -729,9 +735,14 @@ export function RelationshipsTab({
         }}
         labelledBy={headingId}
       >
-        <h2 id={headingId} className="t-h2" style={{ marginBottom: 12 }}>
+        <Heading
+          size="large"
+          id={headingId}
+          className="t-h2"
+          style={{ marginBottom: 12 }}
+        >
           {t("rel.remove")}
-        </h2>
+        </Heading>
         <p style={{ marginBottom: 16 }}>{t("rel.removeConfirm")}</p>
         {remove.isError && (
           <p className="t-caption" style={{ color: "var(--dangerText)" }}>

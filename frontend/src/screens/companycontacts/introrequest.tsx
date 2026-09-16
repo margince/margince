@@ -3,6 +3,7 @@ import { useId, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { Button, Modal } from "../../design-system/atoms";
+import { Heading } from "../../design-system/heading";
 import { ProvenanceTag } from "../../design-system/trust";
 import { useT } from "../../i18n";
 import { problemMessageOf, throwProblem } from "../common";
@@ -96,7 +97,9 @@ export function IntroRequestModal({
 
   return (
     <Modal open={target !== null} onClose={onClose} labelledBy={titleId}>
-      <h2 id={titleId}>{t("co.intro.title")}</h2>
+      <Heading size="large" id={titleId}>
+        {t("co.intro.title")}
+      </Heading>
       {target && (
         <p className="t-caption cp-intro-who">
           {t("co.intro.who", {

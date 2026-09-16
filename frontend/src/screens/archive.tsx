@@ -4,6 +4,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { Button, Modal } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import { problemMessageOf } from "./common";
@@ -130,9 +131,14 @@ export function ArchiveAction<Archived extends { id: string }>({
         onClose={() => setConfirming(false)}
         labelledBy={headingId}
       >
-        <h2 id={headingId} className="t-h2" style={{ marginBottom: 12 }}>
+        <Heading
+          size="large"
+          id={headingId}
+          className="t-h2"
+          style={{ marginBottom: 12 }}
+        >
           {label}
-        </h2>
+        </Heading>
         <p style={{ marginBottom: 16 }}>{confirmText}</p>
         {mutation.isError && (
           // role="alert" so a refused archive is announced: the dialog stays

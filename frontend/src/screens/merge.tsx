@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useId, useState } from "react";
 import { navigate, type Route } from "../app/router";
 import { Button, Modal, SearchField } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
 import { problemMessageOf } from "./common";
 import "./candidatepicker.css";
@@ -129,9 +130,14 @@ export function MergeAction<Survivor extends { id: string }>({
         {label}
       </Button>
       <Modal open={open} onClose={close} labelledBy={headingId}>
-        <h2 id={headingId} className="t-h2" style={{ marginBottom: 12 }}>
+        <Heading
+          size="large"
+          id={headingId}
+          className="t-h2"
+          style={{ marginBottom: 12 }}
+        >
           {label}
-        </h2>
+        </Heading>
         <p className="t-caption" style={{ marginBottom: 8 }}>
           {t("merge.pickTarget")}
         </p>

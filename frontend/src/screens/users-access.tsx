@@ -14,6 +14,7 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SettingList } from "../design-system/settingrow";
 import { useToast } from "../design-system/toast";
@@ -523,9 +524,9 @@ function NewTeamAction() {
             if (ready) create.mutate(draft.trim());
           }}
         >
-          <h2 className="t-h3 modal-title" id={titleId}>
+          <Heading size="large" className="t-h3 modal-title" id={titleId}>
             {t("users.newTeamLabel")}
-          </h2>
+          </Heading>
           <Field label={t("users.teamNameLabel")} required>
             {(control) => (
               <TextInput

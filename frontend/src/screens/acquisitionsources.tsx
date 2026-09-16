@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useCanWrite } from "../app/capability";
 import { Badge, Button, Field, Modal, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
@@ -163,9 +164,13 @@ function AddAcquisitionSourceDialog({
   const [label, setLabel] = useState("");
   return (
     <Modal open onClose={onClose} labelledBy="acq-source-add-title">
-      <h2 className="t-h3 modal-title" id="acq-source-add-title">
+      <Heading
+        size="large"
+        className="t-h3 modal-title"
+        id="acq-source-add-title"
+      >
         {t("acqSources.addTitle")}
-      </h2>
+      </Heading>
       <Field label={t("acqSources.addLabel")} hint={t("acqSources.addHint")}>
         {(control) => (
           <TextInput

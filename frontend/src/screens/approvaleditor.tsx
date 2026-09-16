@@ -11,6 +11,7 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { DateInput, type ISODate, isISODate } from "../design-system/dateinput";
+import { Heading } from "../design-system/heading";
 import { Select } from "../design-system/select";
 import { EvidenceChip } from "../design-system/trust";
 import { isRealCalendarDay } from "../format/calendarday";
@@ -124,13 +125,14 @@ export function ApprovalDetailModal({
   });
   return (
     <Modal open={open} onClose={onClose} labelledBy={headingId}>
-      <h2
+      <Heading
+        size="large"
         id={headingId}
         className="t-h2"
         style={{ marginBottom: "var(--space-3)" }}
       >
         {t("decision.detail")}
-      </h2>
+      </Heading>
       {open && (
         <QueryGate query={detail} pendingLabel={t("decision.detailLoading")}>
           {(approval) => (

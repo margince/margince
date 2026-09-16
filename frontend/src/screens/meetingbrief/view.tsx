@@ -9,6 +9,7 @@ import { X } from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { Button } from "../../design-system/atoms";
+import { Heading } from "../../design-system/heading";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { useT } from "../../i18n";
 import { CoachPanel, MeetingPaths } from "./coaching";
@@ -92,7 +93,9 @@ export function MeetingBriefView({
     <>
       <div className="drawer-head">
         <div className="pe-drawer-title">
-          <h2 id={titleId}>{t("contact.meeting.title")}</h2>
+          <Heading size="large" id={titleId}>
+            {t("contact.meeting.title")}
+          </Heading>
           <Button
             small
             iconOnly

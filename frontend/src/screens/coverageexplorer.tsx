@@ -9,6 +9,7 @@ import {
   Skeleton,
   TableScroll,
 } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { forReader } from "../format/collate";
 import { formatNumber } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
@@ -70,9 +71,9 @@ export function CoverageExplorer({
       </button>
       {open && (
         <Modal open onClose={() => setOpen(false)} labelledBy={titleId}>
-          <h2 id={titleId} className="t-h2 modal-title">
+          <Heading size="large" id={titleId} className="t-h2 modal-title">
             {t("acctCoverage.title")}
-          </h2>
+          </Heading>
           <CoverageGrid companyId={companyId} />
         </Modal>
       )}

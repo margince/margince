@@ -1,6 +1,7 @@
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { ordinalNumber } from "../format/format";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -204,7 +205,9 @@ export function ManualCompanyInterview({
           {ordinalNumber(MANUAL_QUESTIONS.length)}
         </span>
       </div>
-      <h1 id={promptID}>{t(question.prompt)}</h1>
+      <Heading size="xlarge" id={promptID}>
+        {t(question.prompt)}
+      </Heading>
       <p>{t(question.hint)}</p>
       {isMultilineField(question.field) ? (
         <textarea

@@ -4,6 +4,7 @@ import type { components } from "../api/schema";
 import { useInstallationSettings } from "../app/uploadlimit";
 import { Button, Field, Modal } from "../design-system/atoms";
 import { FileDropzoneControl } from "../design-system/filedropzone";
+import { Heading } from "../design-system/heading";
 import { SurfaceState } from "../design-system/surfacestate";
 import { useT } from "../i18n";
 import { uploadAttachment } from "./attachmentupload";
@@ -235,9 +236,9 @@ export function ContractForm({
 
   return (
     <Modal open={open} onClose={onClose} labelledBy={titleId}>
-      <h2 id={titleId}>
+      <Heading size="large" id={titleId}>
         {t(contract ? "contracts.form.editTitle" : "contracts.form.title")}
-      </h2>
+      </Heading>
 
       <ContractTermsFields
         draft={draft}

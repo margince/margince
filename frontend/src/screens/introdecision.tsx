@@ -11,6 +11,7 @@
 import { useId, useState } from "react";
 import { Badge, Button, Field, Modal } from "../design-system/atoms";
 import { ChoiceList } from "../design-system/choicelist";
+import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
 import {
   type IntroDecision,
@@ -78,9 +79,9 @@ export function IntroDecisionDrawer({
       placement="right"
       size="wide"
     >
-      <h2 id={titleId}>
+      <Heading size="large" id={titleId}>
         {t("contact.intro.decideTitle", { name: contactName })}
-      </h2>
+      </Heading>
 
       <p>{request.internal_reason}</p>
       {request.value_for_target ? (
@@ -92,7 +93,7 @@ export function IntroDecisionDrawer({
 
       {request.forwardable_note ? (
         <section>
-          <h3>{t("contact.intro.noteLabel")}</h3>
+          <Heading size="medium">{t("contact.intro.noteLabel")}</Heading>
           {/* Provenance beside the words, not in a tooltip: the colleague is
               about to forward these under their own name, so whether a model
               wrote them is part of what they are deciding. */}

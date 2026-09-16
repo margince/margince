@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { useId } from "react";
 import { Modal } from "../../design-system/atoms";
+import { Heading } from "../../design-system/heading";
 import { ProviderMark } from "../../design-system/provider-mark";
 import { useT } from "../../i18n";
 
@@ -56,9 +57,13 @@ export function ConnectDialog({
         <div className="ob-connect-dialog-mark" aria-hidden="true">
           <ProviderMark providerKey={providerMarkKey} />
         </div>
-        <h2 id={headingId} className="ob-connect-dialog-title">
+        <Heading
+          size="large"
+          id={headingId}
+          className="ob-connect-dialog-title"
+        >
           {headline}
-        </h2>
+        </Heading>
         {intro && <p className="ob-connect-dialog-intro">{intro}</p>}
         <div className="ob-connect-dialog-body">{children}</div>
       </div>

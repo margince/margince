@@ -22,6 +22,7 @@ import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Button, Card } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
 import { throwProblem } from "./common";
 import {
@@ -119,7 +120,9 @@ export function SubscriptionConfirmBody({
     return (
       <div className="pref-page">
         <Card>
-          <h1 className="t-h2">{t("confirm.subscription.alreadyTitle")}</h1>
+          <Heading size="xlarge" className="t-h2">
+            {t("confirm.subscription.alreadyTitle")}
+          </Heading>
           <p className="t-body">
             {t("confirm.subscription.alreadyBody", {
               purpose: card.purpose_label,
@@ -132,9 +135,13 @@ export function SubscriptionConfirmBody({
 
   return (
     <div className="pref-page">
-      <h1 className="t-h2">{t("confirm.subscription.title")}</h1>
+      <Heading size="xlarge" className="t-h2">
+        {t("confirm.subscription.title")}
+      </Heading>
       <Card>
-        <h2 className="t-h3">{card.purpose_label}</h2>
+        <Heading size="large" className="t-h3">
+          {card.purpose_label}
+        </Heading>
         <p className="t-body">
           {t("confirm.subscription.ask", { purpose: card.purpose_label })}
         </p>

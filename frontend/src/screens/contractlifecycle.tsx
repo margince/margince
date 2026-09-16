@@ -9,6 +9,7 @@ import { ifMatch, requireVersion } from "../api/version";
 import { useInstallationSettings } from "../app/uploadlimit";
 import { Button, Field, Modal, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { Heading } from "../design-system/heading";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -45,12 +46,11 @@ const STATUS_LABEL_KEY: Record<ContractStatus, MessageKey> = {
   superseded: "contracts.status.superseded",
 };
 
-// A terminal status has no valid transition out of it other than a
-// same-status no-op (refuseInvalidTransition, contract_lifecycle.go), so
-// offering "change status" from one would be a control that can only refuse —
-// the reasoning #3573/#3700 already apply to the plan's write controls.
-// Cancel is NOT gated on this (companycontracts.tsx): Store.Cancel is a plain
-// column patch with no status check at all.
+// A terminal status has no valid transition out of it but a same-status no-op
+// (refuseInvalidTransition, contract_lifecycle.go), so offering "change status"
+// there is a control that can only refuse — #3573/#3700's reasoning already
+// applies to the plan's write controls. Cancel is NOT gated on it: Store.Cancel
+// (companycontracts.tsx) is a plain column patch with no status check.
 export function isTerminalContractStatus(status: Contract["status"]): boolean {
   return (
     status === "expired" || status === "cancelled" || status === "superseded"
@@ -80,11 +80,10 @@ function renewalBody(
   };
 }
 
-// The successor's terms, created in the same transaction that supersedes the
-// predecessor — the id and version this call takes are the predecessor's, and
-// they never come from a closure: a click that lands after the modal has
-// re-rendered for a different row would otherwise renew whichever contract the
-// previous render held.
+// The successor's terms, created in the transaction that supersedes the
+// predecessor — the id and version this call takes are the predecessor's, never
+// from a closure: a click landing after the modal re-rendered for a different
+// row would otherwise renew whichever contract the previous render held.
 async function renewContract(
   predecessor: Contract,
   draft: ContractDraft,
@@ -188,7 +187,9 @@ export function ContractRenewModal({
 
   return (
     <Modal open={open} onClose={onClose} labelledBy={titleId}>
-      <h2 id={titleId}>{t("contracts.renew.title")}</h2>
+      <Heading size="large" id={titleId}>
+        {t("contracts.renew.title")}
+      </Heading>
       <p className="t-caption">{t("contracts.renew.hint")}</p>
 
       <ContractTermsFields
@@ -255,7 +256,7 @@ export function ContractRenewModal({
 }
 
 // A status is a fact a human asserted, never inferred from a date — the same
-// invariant contract_lifecycle.go's own comment states. This is that assertion's
+// invariant contract_lifecycle.go states. This is that assertion's
 // only door: one Select, one submit, and the version the row was read at.
 async function changeContractStatus(
   contract: Contract,
@@ -318,7 +319,9 @@ export function ContractStatusModal({
 
   return (
     <Modal open={open} onClose={onClose} labelledBy={titleId}>
-      <h2 id={titleId}>{t("contracts.statusChange.title")}</h2>
+      <Heading size="large" id={titleId}>
+        {t("contracts.statusChange.title")}
+      </Heading>
 
       <Field label={t("contracts.statusChange.label")}>
         {(props) => (
@@ -450,7 +453,9 @@ export function ContractCancelModal({
 
   return (
     <Modal open={open} onClose={onClose} labelledBy={titleId}>
-      <h2 id={titleId}>{t("contracts.cancel.title")}</h2>
+      <Heading size="large" id={titleId}>
+        {t("contracts.cancel.title")}
+      </Heading>
       <p className="t-caption">{t("contracts.cancel.hint")}</p>
 
       <Field label={t("contracts.cancel.noticeOn")} required>

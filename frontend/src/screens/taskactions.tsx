@@ -18,6 +18,7 @@ import {
   PendingBody,
 } from "../design-system/atoms";
 import { DateInput, isISODate } from "../design-system/dateinput";
+import { Heading } from "../design-system/heading";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { calendarDay, dueInstant } from "../format/calendarday";
 import { formatDate, formatDateTime } from "../format/format";
@@ -337,9 +338,9 @@ export function TaskDetailModal({
   return (
     <Modal open onClose={onClose} labelledBy={titleId} placement="right">
       <div className="drawer-head task-detail-head">
-        <h2 id={titleId} className="t-h2">
+        <Heading size="large" id={titleId} className="t-h2">
           {task?.subject ?? t("tasks.detail")}
-        </h2>
+        </Heading>
         <Button variant="ghost" onClick={onClose}>
           {t("common.close")}
         </Button>
@@ -450,9 +451,9 @@ function SourceActivity({
   }
   return (
     <Modal open onClose={onClose} labelledBy={titleId}>
-      <h2 id={titleId} className="t-h2 modal-title">
+      <Heading size="large" id={titleId} className="t-h2 modal-title">
         {meeting?.subject ?? t("tasks.source")}
-      </h2>
+      </Heading>
       {query.isPending && <PendingBody label={t("tasks.detailLoading")} />}
       {query.isError && (
         <p className="t-caption form-error">

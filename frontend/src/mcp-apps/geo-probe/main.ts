@@ -27,7 +27,7 @@
 // every host in the matrix has answered it, it should be deleted rather than
 // left sitting in resources/list forever.
 
-import { el, onResult } from "../bridge";
+import { el, heading, onResult } from "../bridge";
 import { describeEnvironment, type GeoResult, readPosition } from "../geo";
 import "../view.css";
 
@@ -89,7 +89,7 @@ function report(into: HTMLElement, result: GeoResult): void {
 
 function render(root: HTMLElement): void {
   root.replaceChildren();
-  root.appendChild(el("h1", undefined, "Location check"));
+  root.appendChild(heading("xlarge", "Location check"));
   root.appendChild(
     el(
       "p",

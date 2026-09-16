@@ -1,6 +1,7 @@
 import { Bot, Check, CheckCircle2, Circle, ShieldCheck } from "lucide-react";
 import type { components } from "../api/schema";
 import { Textarea, TextInput } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import {
   ConfidenceMeter,
   confidenceLevel,
@@ -74,7 +75,9 @@ export function CompanyStep({
       {!embedded && (
         <>
           <div className="kick">{t("ob.s1.kick")}</div>
-          <h1 className="ttl">{t("ob.s1.title")}</h1>
+          <Heading size="xlarge" className="ttl">
+            {t("ob.s1.title")}
+          </Heading>
           <p className="ob-sub">{t("ob.s1.sub")}</p>
         </>
       )}

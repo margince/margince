@@ -7,6 +7,7 @@ import type { components } from "../api/schema";
 import { Button, Modal } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { FileDropzone } from "../design-system/filedropzone";
+import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, throwProblem } from "./common";
@@ -108,9 +109,9 @@ export function VCardImport() {
         {t("vcardImport.action")}
       </Button>
       <Modal open={open} onClose={close} labelledBy={titleId}>
-        <h2 id={titleId} className="t-h2 modal-title">
+        <Heading size="large" id={titleId} className="t-h2 modal-title">
           {t("vcardImport.title")}
-        </h2>
+        </Heading>
         {/* One stack owns every interval in this dialog, so the dropzone, a
             refusal and the report do not each set a margin of their own — the
             report is drawn whether or not the refusal above it is. */}

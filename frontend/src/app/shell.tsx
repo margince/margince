@@ -11,6 +11,7 @@ import {
 } from "react";
 import { Avatar, Badge, Button, Modal } from "../design-system/atoms";
 import { CompanyLogo } from "../design-system/companylogo";
+import { Heading } from "../design-system/heading";
 import { Logomark } from "../design-system/logomark";
 import { useLocale, useT } from "../i18n";
 import { useCompany } from "../screens/onboarding";
@@ -76,9 +77,9 @@ import "./shell.css";
 // The attention counts the rail badges on the rows a level declares badgeable.
 // They are the levels' own currency (app/subnav.ts), named here for the shell
 // because this is the seam a caller hands them in at. No caller does today: the
-// primary level badges nothing (app/nav.ts BADGE_SCREENS) now that the queues
-// that had counts are lanes inside Today, which reports its numbers on the page.
-// The prop stays because a deeper level declaring `badgeIds` needs this door.
+// primary level badges nothing (app/nav.ts BADGE_SCREENS) now the queues that
+// had counts are lanes inside Today, which reports its numbers on the page. The
+// prop stays because a deeper level declaring `badgeIds` needs this door.
 export type ShellCounts = NavCounts;
 
 const COLLAPSE_KEY = "margince.sidebarCollapsed";
@@ -102,11 +103,10 @@ function writeStored(key: string, value: string): void {
 }
 
 // `narrow` is the panel at its 56px width — the caller's own `collapsed &&
-// !sheetOpen`, which is the condition shell.css already uses for every rule that
-// means "this is a rail and not a column". The phone sheet is 600px wide
-// whatever the desktop preference was left at, so a block reading `collapsed`
-// alone would put the square badge in front of a reader with room for the
-// wordmark.
+// !sheetOpen`, which is the condition shell.css already uses for every rule
+// that means "this is a rail and not a column". The phone sheet is 600px wide
+// whatever the desktop preference was, so a block reading `collapsed` alone
+// would put the square badge in front of a reader with room for the wordmark.
 function BrandBlock({ narrow }: Readonly<{ narrow: boolean }>) {
   const t = useT();
   /* WHAT BUILD THIS IS, on the brand's own second line.
@@ -381,7 +381,7 @@ export function WorkspaceRail({
   //
   // The SKIP LINK goes inert with it, and is not an afterthought: it is a sibling
   // of the nav rather than a child of the column, so Tab past the sheet's last row
-  // wrapped onto it, drew it over the scrim, and pointed it at an inert element —
+  // wrapped onto it, drew it over the scrim, and pointed at an inert element —
   // a control that takes focus, shows itself, and does nothing.
   useEffect(() => {
     if (!sheetOpen) {
@@ -441,10 +441,9 @@ export function WorkspaceRail({
           onSelect={level.onSelect}
           onWalkUp={level.onWalkUp}
           // At phone width the agent stands in the MIDDLE of the bar rather
-          // than at the foot of a column that is not there — inside the row
-          // stream, so a thumb and a Tab key read the bar in the same order.
-          // One Core either way: the foot below renders only above the
-          // breakpoint.
+          // than at the foot of a column that is not there — in the row stream,
+          // so a thumb and a Tab key read the bar in the same order. One Core
+          // either way: the foot below renders only above the breakpoint.
           centre={phone ? <AgentRail route={route} bar={nav} /> : undefined}
         />
         {/* Phone-width only: expands the bar into a sheet carrying every
@@ -570,7 +569,11 @@ function SectionPickGroup({
     group.headingKey === section.titleKey ? undefined : group.headingKey;
   return (
     <div className="sectionpickgroup">
-      {heading && <h3 className="t-label">{t(heading)}</h3>}
+      {heading && (
+        <Heading size="medium" className="t-label">
+          {t(heading)}
+        </Heading>
+      )}
       {group.items.map((entry) => (
         <a
           key={entry.id}
@@ -637,9 +640,9 @@ function SectionSwitcher({
       <Modal open={open} onClose={close} labelledBy={titleId}>
         {/* Named by the SECTION: the list is everything Settings holds, and the
             entry the reader came from is marked inside it. */}
-        <h2 id={titleId} className="t-h2">
+        <Heading size="large" id={titleId} className="t-h2">
           {t(section.titleKey)}
-        </h2>
+        </Heading>
         {/* Above the rows, exactly where the rail puts it. Without this the
             search was unreachable at phone width — the one width where the
             navigation is hardest to scan, since the rail is gone and the whole
@@ -670,8 +673,7 @@ function SectionSwitcher({
 }
 
 /**
- * The page's own name, standing in the content column above the content it
- * names.
+ * The page's own name, standing in the content column above what it names.
  *
  * It is INSIDE the scroller and scrolls away with the page, because the heading
  * belongs to the document rather than to the chrome: the top bar says where you
@@ -696,7 +698,7 @@ export function PageTitle({
   const inSection = sectionHead(section, route);
   // On a screen that publishes a level, the page is the ENTRY the reader opened
   // rather than the section they opened it from: the section is named by the
-  // trail in the top bar and by the sidebar's level, and printing it here too
+  // trail in the top bar and the sidebar's level, and printing it here
   // named the section twice and the surface never — a settings page read
   // "Settings" above a heading reading "Settings" with the audit log under both.
   //
@@ -731,12 +733,11 @@ export function PageTitle({
   // heading joins a list instead of adding a clause, and the list is the one
   // place to read which screens do this.
   const selfHeaded = SELF_HEADED_SCREENS.has(route.screen);
-  // Read only on the branch that prints an h1: a surface that names itself gets
-  // no subtitle from here either, or the page would carry a description of a
-  // heading it is not showing.
-  // The ENTRY's own line first: a section is many pages behind one screen, and
-  // the screen-keyed table can only carry a sentence true of all of them. The
-  // table remains for screens that ARE one page.
+  // Read only on the branch that prints an h1: a surface naming itself gets no
+  // subtitle from here either, or the page would carry a description of a
+  // heading it is not showing. The ENTRY's own line first: a section is many
+  // pages behind one screen, and the screen-keyed table carries only a sentence
+  // true of all of them. The table remains for screens that ARE one page.
   const subKey = inSection?.entry.subKey ?? PAGE_SUB_KEYS[route.screen];
   // Whose state the page changes. Only a settings entry carries one, and only
   // then: on every other screen the answer is the record in front of you.
@@ -767,12 +768,13 @@ export function PageTitle({
             children, so a badge placed as a sibling would sit under the heading
             at full width and read as a second line of the title. */}
         <div className="pagetitle-head">
-          <h1
+          <Heading
+            size="xlarge"
             className={switcher ? "t-display pageswitchhead" : "t-display"}
             aria-label={switcher ? title : undefined}
           >
             {switcher || title}
-          </h1>
+          </Heading>
           {/* Beside the heading rather than inside it: the scope is about the
               page, not part of its name, and a heading carrying it would read
               "Capture rules Company" in every document outline and screen
@@ -824,10 +826,10 @@ export function Shell({
   const railless = RAIL_LESS_SCREENS.has(route.screen);
   // An extension unit's page is REACHED from settings and says so in its trail
   // (`Settings / <unit>`), so it keeps the settings level in the sidebar. It did
-  // not: the rail fell back to the destinations, and following "Open" from a
+  // not: the rail fell back to the destinations, and following "Open" on a
   // settings card swapped the whole sidebar out from under a reader whose URL
   // and breadcrumb still said Settings. `activeRowFor` in app/nav.ts has always
-  // answered `settings` for a unit route; this is the other half of that answer.
+  // answered `settings` for a unit route; this is the other half of it.
   //
   // Conditioned on the descriptor RESOLVING, like the page title's own branch:
   // `#/ext/nonesuch` is a genuinely unknown page and belongs to nothing.

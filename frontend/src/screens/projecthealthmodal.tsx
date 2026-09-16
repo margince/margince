@@ -6,6 +6,7 @@ import {
   SegmentedControl,
   Textarea,
 } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
 import { problemMessageOf } from "./common";
 import {
@@ -125,7 +126,8 @@ export function ProjectHealthModal({
 
   return (
     <Modal open={open} onClose={onClose} labelledBy={headingId}>
-      <h2
+      <Heading
+        size="large"
         id={headingId}
         className="t-h2"
         style={{ marginBottom: "var(--space-3)" }}
@@ -133,7 +135,7 @@ export function ProjectHealthModal({
         {correcting
           ? t("projectHealth.correctTitle")
           : t("projectHealth.recordTitle")}
-      </h2>
+      </Heading>
       <div className="form-stack">
         <SegmentedControl
           label={t("projectHealth.stateLabel")}

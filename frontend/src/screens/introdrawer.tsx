@@ -13,6 +13,7 @@ import { useId, useState } from "react";
 import type { components } from "../api/schema";
 import { Badge, Button, Field, Modal } from "../design-system/atoms";
 import { ChoiceList } from "../design-system/choicelist";
+import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
 import { RouteLine } from "./contactroutes";
 import { type IntroRequestInput, useCreateIntroRequest } from "./introrequests";
@@ -85,7 +86,9 @@ export function IntroDrawer({
       placement="right"
       size="wide"
     >
-      <h2 id={titleId}>{t("contact.intro.askTitle", { name: contactName })}</h2>
+      <Heading size="large" id={titleId}>
+        {t("contact.intro.askTitle", { name: contactName })}
+      </Heading>
 
       {route ? (
         <p className="pn-route">

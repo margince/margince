@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { useEffect, useRef } from "react";
 import type { components } from "../../api/schema";
 import { Button } from "../../design-system/atoms";
+import { Heading } from "../../design-system/heading";
 import { useT } from "../../i18n";
 import { WriteRefused } from "../common";
 import type { CompanyDraft, CompanyFieldName } from "../onboarding";
@@ -168,7 +169,7 @@ export function CompanyActArtifact(props: CompanyActArtifactProps) {
       {(props.review == null || props.mode !== "dossier") && (
         <div className="mw-review-heading">
           <span>{t("ob.ai.liveArtifact")}</span>
-          <h2>{t("ob.ai.companyKnowledge")}</h2>
+          <Heading size="large">{t("ob.ai.companyKnowledge")}</Heading>
           <p className="t-caption">
             {t(
               props.manual

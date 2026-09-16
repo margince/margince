@@ -14,6 +14,7 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { Heading } from "../design-system/heading";
 import { MoneyInput } from "../design-system/moneyinput";
 import { Panel, PanelBody } from "../design-system/panel";
 import {
@@ -142,10 +143,9 @@ function EditOfferHeaderModal({
     offer.buyer_company_id ?? null,
     open,
   );
-  // Only the closed→open transition reprimes the form — a background
-  // refetch handing this component a fresh `offer` reference mid-edit must
-  // never clobber what the user is typing (same convention as
-  // EditRecordModal, edit.tsx).
+  // Only the closed→open transition reprimes the form — a background refetch
+  // handing this component a fresh `offer` mid-edit must never clobber what the
+  // user is typing (same convention as EditRecordModal, edit.tsx).
   const wasOpen = useRef(false);
   useEffect(() => {
     if (open && !wasOpen.current) {
@@ -198,9 +198,14 @@ function EditOfferHeaderModal({
 
   return (
     <Modal open={open} onClose={onClose} labelledBy={headingId}>
-      <h2 id={headingId} className="t-h2" style={{ marginBottom: 12 }}>
+      <Heading
+        size="large"
+        id={headingId}
+        className="t-h2"
+        style={{ marginBottom: 12 }}
+      >
         {t("offer.edit")}
-      </h2>
+      </Heading>
       <div className="form-stack">
         <Field label={t("offer.currency")}>
           {(control) => (
@@ -1028,15 +1033,14 @@ function RejectOfferAction({ offer }: Readonly<{ offer: Offer }>) {
   );
 }
 
-// Regenerate a new draft revision from a sent offer (OP-11). The 201
-// response is the ONLY place the Art. 50 disclosure and diff summary ever
-// appear (every later read of the same offer returns them null), so the
-// cache for the NEW draft's id is seeded directly from this response —
-// before navigating — and OfferScreen's own query for that id skips its
-// refetch-on-mount for exactly this reason (see its `refetchOnMount: false`
-// below). Regenerate is non-destructive to the current (sent) offer, which
-// stays sent/superseded server-side rather than being deleted, so unlike
-// Send it isn't gated behind a confirm modal.
+// Regenerate a new draft revision from a sent offer (OP-11). The 201 response
+// is the ONLY place the Art. 50 disclosure and diff summary ever appear (every
+// later read of that offer returns them null), so the cache for the NEW draft's
+// id is seeded from this response — before navigating — and OfferScreen's own
+// query for that id skips its refetch-on-mount for this reason (see its
+// `refetchOnMount: false` below). Regenerate is non-destructive to the current
+// (sent) offer, which stays sent/superseded server-side rather than deleted, so
+// unlike Send it isn't gated behind a confirm modal.
 function RegenerateOfferAction({ offer }: Readonly<{ offer: Offer }>) {
   const t = useT();
   const queryClient = useQueryClient();

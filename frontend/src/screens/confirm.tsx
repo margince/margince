@@ -8,6 +8,7 @@ import {
   Skeleton,
   TextInput,
 } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { throwProblem } from "./common";
@@ -209,7 +210,9 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
     return (
       <div className="pref-page">
         <Card>
-          <h1 className="t-h2">{t("confirm.done.title")}</h1>
+          <Heading size="xlarge" className="t-h2">
+            {t("confirm.done.title")}
+          </Heading>
           <p className="t-body">{t("confirm.done.body")}</p>
           <RequestReceipts receipts={receipts} />
         </Card>
@@ -219,11 +222,15 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
 
   return (
     <div className="pref-page">
-      <h1 className="t-h2">{t("confirm.title")}</h1>
+      <Heading size="xlarge" className="t-h2">
+        {t("confirm.title")}
+      </Heading>
       <p className="t-body confirm-intro">{t("confirm.intro")}</p>
 
       <Card>
-        <h2 className="t-h3">{t("confirm.card.title")}</h2>
+        <Heading size="large" className="t-h3">
+          {t("confirm.card.title")}
+        </Heading>
         <ul className="confirm-fields">
           {CORRECTABLE.map((field) => (
             <li key={field} className="confirm-field">
@@ -249,7 +256,9 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
       </Card>
 
       <Card>
-        <h2 className="t-h3">{t("confirm.marketing.title")}</h2>
+        <Heading size="large" className="t-h3">
+          {t("confirm.marketing.title")}
+        </Heading>
         <p className="t-body">{marketingWording}</p>
         <div className="confirm-choices">
           <Button

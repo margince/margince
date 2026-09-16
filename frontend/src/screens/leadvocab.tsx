@@ -6,6 +6,7 @@ import { isOption } from "../app/options";
 import { Badge, Button, Field, Modal, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
@@ -276,9 +277,9 @@ function AddSourceDialog({
           );
         }}
       >
-        <h2 className="t-h3 modal-title" id={titleId}>
+        <Heading size="large" className="t-h3 modal-title" id={titleId}>
           {t("leadSources.newLabel")}
-        </h2>
+        </Heading>
         {create.isError && (
           <Callout
             kind="outcome"

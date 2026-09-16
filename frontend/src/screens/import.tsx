@@ -12,6 +12,7 @@ import {
   SegmentedControl,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
@@ -129,9 +130,9 @@ export function ImportCard() {
           labelledBy={headingId}
           size="wide"
         >
-          <h2 id={headingId} className="t-h2 modal-title">
+          <Heading size="large" id={headingId} className="t-h2 modal-title">
             {t("import.title")}
-          </h2>
+          </Heading>
           <ImportWizard flow={flow} onClose={() => setOpen(false)} />
         </Modal>
       </PanelBody>
@@ -352,9 +353,9 @@ function ImportOutcome({
 
   return (
     <div className="import__outcome">
-      <h3 className="import__outcomeTitle">
+      <Heading size="medium" className="import__outcomeTitle">
         {committed ? t("import.outcomeTitle") : t("import.previewTitle")}
-      </h3>
+      </Heading>
       {/* What the approver is about to apply. The mapping step is off screen by
           now, so without this the word chosen there is invisible at exactly the
           moment somebody decides whether to commit. */}

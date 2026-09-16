@@ -18,6 +18,7 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Meter } from "../design-system/readings";
 import { formatDateTime, formatNumber } from "../format/format";
@@ -134,7 +135,7 @@ function BudgetPreview({
   const canDiagnose = useCan("ai_diagnostics", "read");
   return (
     <>
-      <h3>{t("aiAdmin.preview")}</h3>
+      <Heading size="medium">{t("aiAdmin.preview")}</Heading>
       <BudgetReading budget={preview.proposed} />
       <p className="t-caption">{t("aiAdmin.previewHint")}</p>
       {canDiagnose && <DeferredWork rows={preview.deferred_work} />}

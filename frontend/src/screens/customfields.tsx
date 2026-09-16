@@ -25,6 +25,7 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
@@ -856,9 +857,9 @@ export function CustomFieldsAdmin() {
           onClose={() => setAdding(false)}
           labelledBy={addId}
         >
-          <h2 id={addId} className="t-h2 modal-title">
+          <Heading size="large" id={addId} className="t-h2 modal-title">
             {t("cf.builder.addTo", { object: objectName })}
-          </h2>
+          </Heading>
           <FieldBuilder
             object={object}
             pending={create.isPending}
@@ -881,9 +882,9 @@ export function CustomFieldsAdmin() {
             the modal's own padding. `.modal-title` is the catalog's own name for
             the interval under a dialog title, so the twelve pixels are declared
             once for every dialog rather than typed in here. */}
-        <h2 id={renameId} className="t-h2 modal-title">
+        <Heading size="large" id={renameId} className="t-h2 modal-title">
           {t("cf.edit")}
-        </h2>
+        </Heading>
         <Field label={t("cf.renamePrompt")}>
           {(control) => (
             <TextInput

@@ -22,6 +22,7 @@ import {
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { formatDateTime, formatNumber } from "../format/format";
@@ -364,9 +365,9 @@ function SecretRevealModal({
 
   return (
     <Modal open onClose={onClose} labelledBy={headingId}>
-      <h2 id={headingId} className="t-h2 modal-title">
+      <Heading size="large" id={headingId} className="t-h2 modal-title">
         {t("webhooks.secret.title")}
-      </h2>
+      </Heading>
       {/* One stack owns every interval in this dialog, so the warning, the
           secret and the copy attempt do not each set a margin of their own. */}
       <div className="form-stack">

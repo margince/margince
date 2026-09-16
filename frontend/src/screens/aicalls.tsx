@@ -68,7 +68,7 @@ export function CallDetailPanel({
                 })
               : t("aicalls.detail.contextNone")}
           </p>
-          {/* A bare <h3> carries no class, and preflight leaves it at body size
+          {/* A bare h3 carries no class, and preflight leaves it at body size
               and body weight — a heading only the document tree can see. The
               eyebrow is the one spelling of a label over a block, and `as="h3"`
               is what keeps it a real heading inside the card's own h2. */}

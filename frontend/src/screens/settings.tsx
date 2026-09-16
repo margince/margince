@@ -38,6 +38,7 @@ import {
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody, PanelPlate } from "../design-system/panel";
 import {
   PassportSelect,
@@ -793,9 +794,9 @@ function SignatureSettingRow({ toast }: Readonly<{ toast: Toast }>) {
               if (dirty && !save.isPending) save.mutate(shown);
             }}
           >
-            <h2 className="t-h3 modal-title" id={titleId}>
+            <Heading size="large" className="t-h3 modal-title" id={titleId}>
               {t("settings.signature")}
-            </h2>
+            </Heading>
             <WriteRefused titleKey="settings.saveFailed" error={save.error} />
             <Field label={t("settings.signatureLabel")}>
               {(control) => (
@@ -1249,9 +1250,9 @@ function PassportCard() {
         labelledBy={mintTitleId}
         placement="right"
       >
-        <h2 className="t-h2" id={mintTitleId}>
+        <Heading size="large" className="t-h2" id={mintTitleId}>
           {t("settings.mint")}
-        </h2>
+        </Heading>
         {/* The token region is mounted for the whole life of the drawer rather
             than appearing with the token in it: a live region inserted at the
             same moment as its content is not reliably announced, and this token

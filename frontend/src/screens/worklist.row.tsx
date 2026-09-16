@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useId, useRef, useState } from "react";
 import { useRecordZone } from "../app/recordzone";
 import { Badge, Button, Modal } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { PanelRow } from "../design-system/panel";
 import { useToast } from "../design-system/toast";
 import { formatNumber } from "../format/format";
@@ -878,7 +879,9 @@ function RowDecision({ item }: Readonly<{ item: WorklistItem }>) {
         size="wide"
         returnFocusTo={() => opener.current}
       >
-        <h2 id={titleId}>{t("worklist.decision.title")}</h2>
+        <Heading size="large" id={titleId}>
+          {t("worklist.decision.title")}
+        </Heading>
         {usable?.bundle_id ? (
           <ApprovalBundleReview approval={usable} />
         ) : usable ? (

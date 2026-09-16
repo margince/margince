@@ -9,6 +9,7 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
@@ -184,9 +185,13 @@ function AddRecordRoleDialog({
   );
   return (
     <Modal open onClose={onClose} labelledBy="record-role-add-title">
-      <h2 className="t-h3 modal-title" id="record-role-add-title">
+      <Heading
+        size="large"
+        className="t-h3 modal-title"
+        id="record-role-add-title"
+      >
         {t("recordRoles.addTitle")}
-      </h2>
+      </Heading>
       <Field label={t("recordRoles.addLabel")} hint={t("recordRoles.addHint")}>
         {(control) => (
           <TextInput

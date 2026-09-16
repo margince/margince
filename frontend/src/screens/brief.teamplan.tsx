@@ -5,6 +5,7 @@ import { useId, useState } from "react";
 import { useCanWrite } from "../app/capability";
 import { useRecordZone } from "../app/recordzone";
 import { Button, Field, Modal, Textarea } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { PanelRow } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
 import { middayInstant } from "../format/calendarday";
@@ -60,7 +61,9 @@ function TeamPlanDialog({
   const headingId = useId();
   return (
     <Modal open labelledBy={headingId} onClose={onClose}>
-      <h2 id={headingId}>{t("brief.team.planFor", { name })}</h2>
+      <Heading size="large" id={headingId}>
+        {t("brief.team.planFor", { name })}
+      </Heading>
       {plan.data && (
         <p>
           {t("brief.plan.period", {

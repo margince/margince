@@ -11,7 +11,7 @@
 // surface. Acting on a brief item is a human-only route by contract, so a button
 // here would be a door the contract does not have.
 
-import { count, el, onResult, percent } from "../bridge";
+import { count, el, heading, onResult, percent } from "../bridge";
 import { asList, asRecord, asText, type Warning } from "../types";
 import "../view.css";
 
@@ -95,7 +95,7 @@ export function render(
   }
   const answer = asRecord(data);
   const items = queued(answer);
-  root.appendChild(el("h1", undefined, "Morning brief"));
+  root.appendChild(heading("xlarge", "Morning brief"));
   // candidate_count already reports what the ranking left out, which is this
   // view's whole completeness story — read_brief raises no truncation warning,
   // so there is no second condition to surface and no branch here for one.

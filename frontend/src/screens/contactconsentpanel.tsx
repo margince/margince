@@ -3,6 +3,7 @@ import { type ReactNode, useId, useState } from "react";
 import type { components } from "../api/schema";
 import { useCanWriteRecord } from "../app/capability";
 import { Button, Modal, Skeleton } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useT } from "../i18n";
 import { useProviderLabel } from "./channelproviders";
@@ -143,7 +144,9 @@ export function ConsentAndChannels({
           placement="right"
         >
           <div className="pe-drawer-title">
-            <h2 id={titleId}>{t("consent.manage")}</h2>
+            <Heading size="large" id={titleId}>
+              {t("consent.manage")}
+            </Heading>
             <Button small variant="ghost" onClick={() => setManage(false)}>
               {t("common.close")}
             </Button>

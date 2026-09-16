@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Button, Field, TextInput } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { usePasswordReveal } from "../design-system/passwordreveal";
 import { Select } from "../design-system/select";
 import { viewerZone } from "../format/timezone";
@@ -220,7 +221,7 @@ export function SetupClaimScreen({
     <AuthExperience phase="unavailable">
       <Wordmark alt={t("auth.title")} />
       <form className="auth-card" onSubmit={submit}>
-        <h1>{t("setup.title")}</h1>
+        <Heading size="xlarge">{t("setup.title")}</Heading>
         <p className="card-sub">{t("setup.body")}</p>
         {error && (
           <p className="auth-error" role="alert">

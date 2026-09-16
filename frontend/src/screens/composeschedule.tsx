@@ -3,6 +3,7 @@ import { useEffect, useId, useState } from "react";
 import { Button, Modal } from "../design-system/atoms";
 import { Calendar, type ISODay, isoDay } from "../design-system/calendar";
 import { Eyebrow } from "../design-system/eyebrow";
+import { Heading } from "../design-system/heading";
 import { Popover } from "../design-system/popover";
 import {
   formatDateAbbrev,
@@ -146,9 +147,9 @@ export function ScheduleDialog({
   const picked = new Date(`${day}T${String(hour).padStart(2, "0")}:00`);
   return (
     <Modal open={open} onClose={onClose} labelledBy={headingId} size="wide">
-      <h2 id={headingId} className="t-h2">
+      <Heading size="large" id={headingId} className="t-h2">
         {picking ? t("compose.schedulePick") : t("compose.scheduleSend")}
-      </h2>
+      </Heading>
       {picking ? (
         <>
           <div className="schedule-pick">

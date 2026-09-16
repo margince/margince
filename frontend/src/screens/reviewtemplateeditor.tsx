@@ -9,6 +9,7 @@ import {
   Textarea,
   TextInput,
 } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import { problemMessageOf, throwProblem } from "./common";
@@ -70,9 +71,9 @@ export function ReviewTemplateEditor({
     );
   return (
     <Modal open onClose={onClose} labelledBy="review-template-heading">
-      <h2 id="review-template-heading" className="t-h2">
+      <Heading size="large" id="review-template-heading" className="t-h2">
         {template.label}
-      </h2>
+      </Heading>
       <p className="t-caption">{t("reviewTemplates.editHint")}</p>
       <div className="form-stack">
         {questions.map((question, index) => (

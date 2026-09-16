@@ -1,3 +1,4 @@
+import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
 import { usePageTitle, Wordmark } from "./auth";
 import { AuthExperience } from "./auth-core";
@@ -24,7 +25,7 @@ export function ForcedPasswordChangeScreen({
     <AuthExperience phase="unavailable">
       <Wordmark alt={t("auth.title")} />
       <section className="auth-card">
-        <h1>{t("forcedPassword.title")}</h1>
+        <Heading size="xlarge">{t("forcedPassword.title")}</Heading>
         <p className="card-sub">{t("forcedPassword.body")}</p>
       </section>
       <ChangePasswordCard onChanged={onChanged} />

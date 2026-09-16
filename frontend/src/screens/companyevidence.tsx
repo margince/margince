@@ -9,6 +9,7 @@ import {
   Modal,
   Skeleton,
 } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { formatDateTime, formatNumber } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -99,7 +100,9 @@ export function EvidenceModal({
       labelledBy="co-evidence-title"
       placement="right"
     >
-      <h2 id="co-evidence-title">{t("co.evidence.title")}</h2>
+      <Heading size="large" id="co-evidence-title">
+        {t("co.evidence.title")}
+      </Heading>
       {receipt.isPending ? (
         <Skeleton width="100%" height={120} />
       ) : !shown?.source_kind ? (

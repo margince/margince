@@ -3,6 +3,7 @@ import { useId, useState } from "react";
 import { api } from "../api/client";
 import { Button, Field, Modal, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { usePasswordReveal } from "../design-system/passwordreveal";
 import { SettingList, SettingRow } from "../design-system/settingrow";
@@ -161,9 +162,9 @@ export function PasswordSettingRow({
               if (ready && !change.isPending) change.mutate(fields);
             }}
           >
-            <h2 className="t-h3 modal-title" id={titleId}>
+            <Heading size="large" className="t-h3 modal-title" id={titleId}>
               {t("password.title")}
-            </h2>
+            </Heading>
             {change.isError && (
               <Callout
                 kind="outcome"

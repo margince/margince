@@ -8,6 +8,7 @@ import {
 } from "react";
 import { api } from "../api/client";
 import { Button, Modal, SegmentedControl } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import {
   RecordPicker,
   type RecordPickerCandidate,
@@ -164,13 +165,14 @@ export function RecordTeamAssign({
 
   return (
     <Modal open={open} onClose={close} labelledBy={headingId}>
-      <h2
+      <Heading
+        size="large"
         id={headingId}
         className="t-h2"
         style={{ marginBottom: "var(--space-3)" }}
       >
         {existing ? t("assignments.changeTitle") : t("assignments.addTitle")}
-      </h2>
+      </Heading>
       <div className="form-stack">
         <SegmentedControl
           label={t("assignments.subjectKind")}

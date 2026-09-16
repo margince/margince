@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Badge, Button, Field, Modal, TextInput } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { Select } from "../design-system/select";
 import { useToast } from "../design-system/toast";
 import { formatNumber, ordinalNumber } from "../format/format";
@@ -302,9 +303,9 @@ export function ContactResearchDrawer({
     >
       <div className="drawer-head">
         <div className="pe-drawer-title">
-          <h2 id="contact-research-title">
+          <Heading size="large" id="contact-research-title">
             {t("contact.research.title", { name: contactName })}
-          </h2>
+          </Heading>
           <Button
             small
             iconOnly

@@ -7,6 +7,7 @@ import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
 import { useCanWrite } from "../app/capability";
 import { Button, Field, Modal } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
 import { useArchiveRecord } from "./archive";
 import { problemMessageOf, throwProblem } from "./common";
@@ -127,13 +128,14 @@ export function CompanyRejectAction({
         onClose={() => setConfirming(false)}
         labelledBy={headingId}
       >
-        <h2
+        <Heading
+          size="large"
           id={headingId}
           className="t-h2"
           style={{ marginBottom: "var(--space-3)" }}
         >
           {t("company.reject")}
-        </h2>
+        </Heading>
         <p style={{ marginBottom: "var(--space-4)" }}>
           {t("company.rejectConfirm", {
             name: company.display_name,

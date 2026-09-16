@@ -16,6 +16,7 @@ import { type ReactNode, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Badge, Button, Card } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import type { MarginceCoreState } from "../design-system/margince-core";
 import { MarginceWorkbench } from "../design-system/margince-workbench";
 import { formatDateTime, formatNumber } from "../format/format";
@@ -116,8 +117,7 @@ function presenceState(
     props.read?.status === "partial" ||
     props.read?.status === "confirmed"
   ) {
-    // A finished run settles back to idle: there is no state of its own for
-    // "done".
+    // A finished run settles back to idle: there is no "done" state of its own.
     return "idle";
   }
   // Nothing running either way: a mode chosen and a mode not chosen are both a
@@ -414,7 +414,7 @@ function CompanyArtifact(props: ReadCompanyStepProps) {
     <div className="mw-review">
       <div className="mw-review-heading">
         <span>{t("ob.ai.liveArtifact")}</span>
-        <h2>{t("ob.ai.companyKnowledge")}</h2>
+        <Heading size="large">{t("ob.ai.companyKnowledge")}</Heading>
         <p className="t-caption">
           {t(
             props.mode === "manual"
@@ -648,7 +648,7 @@ function WebsiteStatusMessage({
   if (error) {
     return (
       <>
-        <h2>{t("ob.failTitle")}</h2>
+        <Heading size="large">{t("ob.failTitle")}</Heading>
         <p>{t("ob.coreFailedBody")}</p>
         <p className="mw-error-detail">{error}</p>
         <button type="button" className="ob-core-link" onClick={onManual}>
@@ -661,7 +661,7 @@ function WebsiteStatusMessage({
     if (mode === "manual") {
       return (
         <>
-          <h2>{t("ob.coreIntroTitle")}</h2>
+          <Heading size="large">{t("ob.coreIntroTitle")}</Heading>
           <p>{t("ob.coreIntroBody")}</p>
           <CoreJourney active={0} />
         </>
@@ -669,7 +669,7 @@ function WebsiteStatusMessage({
     }
     return (
       <>
-        <h2>{t("ob.coreWebsiteTitle")}</h2>
+        <Heading size="large">{t("ob.coreWebsiteTitle")}</Heading>
         <p>{t("ob.coreWebsiteBody")}</p>
         <CoreJourney active={0} />
       </>
@@ -677,7 +677,7 @@ function WebsiteStatusMessage({
   }
   return (
     <>
-      <h2>{presentation.title}</h2>
+      <Heading size="large">{presentation.title}</Heading>
       <p>{presentation.body}</p>
       <ReadActivity read={read} refreshing={refreshing} />
       {read.status === "deferred" && read.next_attempt_at && (
@@ -744,7 +744,7 @@ function WebsiteComposer(
   return (
     <div className="ob-core-dialog">
       <div className="ob-core-kicker">{t("ob.coreLegalKicker")}</div>
-      <h1>{t("ob.coreWebsiteTitle")}</h1>
+      <Heading size="xlarge">{t("ob.coreWebsiteTitle")}</Heading>
       <p>{t("ob.coreWebsiteBody")}</p>
       <CoreJourney active={0} />
       <div
@@ -899,7 +899,7 @@ export function ReadEvidence({ read }: Readonly<{ read: CompanySiteRead }>) {
     <div className="core-findings">
       {legalEntities.length > 0 && (
         <section className="legal-preview">
-          <h2>{t("ob.legalFoundTitle")}</h2>
+          <Heading size="large">{t("ob.legalFoundTitle")}</Heading>
           <p className="t-caption">{t("ob.legalFoundBody")}</p>
           <div className="legal-preview-grid">
             {legalEntities.map((entity) => (
@@ -925,7 +925,7 @@ export function ReadEvidence({ read }: Readonly<{ read: CompanySiteRead }>) {
       )}
       {read.profile_fields.length > 0 && (
         <>
-          <h2>{t("ob.coreFindingsTitle")}</h2>
+          <Heading size="large">{t("ob.coreFindingsTitle")}</Heading>
           <p className="t-caption">{t("ob.coreFindingsBody")}</p>
           <div className="finding-grid">
             {read.profile_fields.map((field) => (
@@ -950,7 +950,7 @@ export function ReadEvidence({ read }: Readonly<{ read: CompanySiteRead }>) {
       )}
       {read.facts.length > 0 && (
         <section className="live-fact-preview">
-          <h2>{t("ob.factsTitle")}</h2>
+          <Heading size="large">{t("ob.factsTitle")}</Heading>
           <div className="finding-grid">
             {read.facts.slice(0, FACT_PREVIEW_LIMIT).map((fact) => (
               <Card

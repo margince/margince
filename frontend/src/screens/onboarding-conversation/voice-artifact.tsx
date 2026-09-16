@@ -1,6 +1,7 @@
 import { Check, Loader } from "lucide-react";
 import type { components } from "../../api/schema";
 import { Button } from "../../design-system/atoms";
+import { Heading } from "../../design-system/heading";
 import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
@@ -74,7 +75,7 @@ export function VoiceActArtifact({
     <div className="mw-review ob-conv-artifact">
       <div className="mw-review-heading">
         <span>{t("ob.ai.liveArtifact")}</span>
-        <h2>{t("ob.conv.voice.artifactTitle")}</h2>
+        <Heading size="large">{t("ob.conv.voice.artifactTitle")}</Heading>
         <p className="t-caption">{t("ob.conv.voice.artifactBody")}</p>
       </div>
       {summary === null && manifest.length === 0 ? (

@@ -4,6 +4,7 @@
 import type { components } from "../api/schema";
 import { useDrawsImportRun } from "../app/import-onscreen";
 import { Button, Skeleton } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { formatMoney, formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -227,7 +228,9 @@ function BackreadSetup({
 
   return (
     <section className="ob-backread">
-      <h3 className="ob-backread-h t-h3">{t("ob.backread.heading")}</h3>
+      <Heading size="medium" className="ob-backread-h t-h3">
+        {t("ob.backread.heading")}
+      </Heading>
       <ImportWindowPicker
         value={selected}
         onChange={onSelect}
@@ -359,7 +362,11 @@ function BackreadRun({
 
   return (
     <section className="ob-backread">
-      {heading !== null && <h3 className="ob-backread-h t-h3">{t(heading)}</h3>}
+      {heading !== null && (
+        <Heading size="medium" className="ob-backread-h t-h3">
+          {t(heading)}
+        </Heading>
+      )}
       {live && <BackreadProgress run={run} />}
       <BackreadTallies counts={run.counts} />
       <BackreadOutcome run={run} />

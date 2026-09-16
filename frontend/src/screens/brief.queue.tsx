@@ -5,6 +5,7 @@ import { useEffect, useId, useRef } from "react";
 import { navigateReplacing } from "../app/router";
 import { useUrlParams } from "../app/urlstate";
 import { Button, Modal } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
 import { WorklistScreen } from "./worklist";
 import "./brief.css";
@@ -44,9 +45,9 @@ export function BriefQueue() {
       size="split"
     >
       <div className="drawer-head brief-queue-head">
-        <h2 id={titleId} className="t-h2">
+        <Heading size="large" id={titleId} className="t-h2">
           {t("brief.queue.title")}
-        </h2>
+        </Heading>
         <Button variant="ghost" onClick={close}>
           {t("brief.queue.close")}
         </Button>

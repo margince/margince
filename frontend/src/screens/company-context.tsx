@@ -24,6 +24,7 @@ import {
   type EvidenceMarkSource,
 } from "../design-system/evidencemark";
 import { Eyebrow } from "../design-system/eyebrow";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { confidenceLevel, FieldDiff } from "../design-system/trust";
@@ -173,7 +174,7 @@ export function ManualCompanySetup() {
   return (
     // One Panel, in the ONE lead tone, where a gradient with a decorative
     // circle and two bespoke boxes used to be. The heading is the panel's own
-    // title rather than a bare <h2>: preflight leaves an unclassed heading at
+    // title rather than a bare h2: preflight leaves an unclassed heading at
     // body size, so the page's lead sentence used to render as body text
     // inside a gradient.
     <div className="wrap narrow">
@@ -949,9 +950,9 @@ function CompanyProfileDialog({
   }, []);
   return (
     <Modal open onClose={onClose} labelledBy={titleId} size="wide">
-      <h2 id={titleId} className="t-h2 modal-title">
+      <Heading size="large" id={titleId} className="t-h2 modal-title">
         {t("settings.companyTitle")}
-      </h2>
+      </Heading>
       <form
         className="form-stack"
         onSubmit={(event) => {
@@ -1099,7 +1100,7 @@ function RefreshReview(
         );
   return (
     // The review as a Panel: the state sentence is its title (it was a bare
-    // <h3>, which preflight draws at body size), the comparisons are full-bleed
+    // h3, which preflight draws at body size), the comparisons are full-bleed
     // rows, and the coverage figure sits in the footer band because it belongs
     // to the whole read rather than to any one row. It used to be 24px — larger
     // than the page's own h1 — for a number nobody acts on.

@@ -13,6 +13,7 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
@@ -269,9 +270,9 @@ function AutomationForm({
     >
       {/* The dialog covers the row that would otherwise have said which
           automation is open, so the heading says it instead. */}
-      <h2 className="t-h3 modal-title" id={titleId}>
+      <Heading size="large" className="t-h3 modal-title" id={titleId}>
         {initialName}
-      </h2>
+      </Heading>
       <p className="t-caption">
         {entry.trigger} {"->"} {entry.action}
       </p>
@@ -513,11 +514,10 @@ function AutomationStatus({
 
 // The definition editor, behind the row's Edit verb.
 //
-// A name plus every parameter the schema declares is a form submitted
-// together, so it is a dialog rather than a panel that unfolds under the row —
-// which is what stopped the list reading as a list. Its own refusal stays
-// inside it, because the dialog is covering the row that would otherwise have
-// reported it.
+// A name plus every parameter the schema declares is a form submitted together,
+// so it is a dialog rather than a panel that unfolds under the row — which is
+// what stopped the list reading as a list. Its own refusal stays inside it,
+// because the dialog is covering the row that would otherwise have reported it.
 function AutomationEditor({
   automation,
   entry,

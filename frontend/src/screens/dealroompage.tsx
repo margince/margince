@@ -18,6 +18,7 @@ import {
 import { Callout, type CalloutTone } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Eyebrow } from "../design-system/eyebrow";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { formatDateAbbrev, formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
@@ -98,7 +99,9 @@ function RoomPage({
               the row, where a reader looking for the state found three
               buttons. */}
           <div className="roompage-title-row">
-            <h1 className="t-display">{room.title}</h1>
+            <Heading size="xlarge" className="t-display">
+              {room.title}
+            </Heading>
             <RoomStateBadge state={room.state} />
           </div>
           <RoomFacts room={room} />

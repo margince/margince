@@ -11,6 +11,7 @@ import {
   Modal,
   TextInput,
 } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useT } from "../i18n";
@@ -253,9 +254,9 @@ function FxRateModal({ onClose }: Readonly<{ onClose: () => void }>) {
           title starts the outline at level 2 — the spelling ConfirmModal uses
           for every other dialog in the tree. `.modal-title` is the catalog's
           own name for the interval under it. */}
-      <h2 id={labelId} className="t-h2 modal-title">
+      <Heading size="large" id={labelId} className="t-h2 modal-title">
         {t("settings.rates.fxModalTitle")}
-      </h2>
+      </Heading>
       {/* `Field` owns each box's id and hands it to the input, so the label a
           reader sees and the name the control announces are one string written
           once. The stack owns the interval between them: a `.field` sets no
@@ -523,9 +524,9 @@ function ModelCostModal({ onClose }: Readonly<{ onClose: () => void }>) {
 
   return (
     <Modal open onClose={onClose} labelledBy={labelId}>
-      <h2 id={labelId} className="t-h2 modal-title">
+      <Heading size="large" id={labelId} className="t-h2 modal-title">
         {t("settings.rates.modelModalTitle")}
-      </h2>
+      </Heading>
       <div className="form-stack">
         {field(t("settings.rates.colProvider"), provider, setProvider, {
           inputMode: "text",

@@ -8,6 +8,7 @@ import type { components } from "../api/schema";
 import { isOption } from "../app/options";
 import { Button, Field, Modal, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { Heading } from "../design-system/heading";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -112,9 +113,9 @@ export function DecisionDialog({
   const ready = trimmedDomain !== "" && trimmedReason !== "";
   return (
     <Modal open onClose={onClose} labelledBy={headingId}>
-      <h2 id={headingId} className="t-h2 modal-title">
+      <Heading size="large" id={headingId} className="t-h2 modal-title">
         {t("blockedDomains.record")}
-      </h2>
+      </Heading>
       <form
         className="form-stack"
         onSubmit={(event) => {

@@ -6,6 +6,7 @@ import {
   Modal,
   Textarea,
 } from "../../design-system/atoms";
+import { Heading } from "../../design-system/heading";
 import { useT } from "../../i18n";
 import { problemMessageOf } from "../common";
 import {
@@ -144,13 +145,14 @@ export function OutcomeReviewModal({
 
   return (
     <Modal open={open} onClose={close} labelledBy={headingId}>
-      <h2
+      <Heading
+        size="large"
         id={headingId}
         className="t-h2"
         style={{ marginBottom: "var(--space-3)" }}
       >
         {draftTemplate.label}
-      </h2>
+      </Heading>
       <div className="form-stack">
         {draftTemplate.questions.map((question) =>
           question.type === "multiselect" ? (

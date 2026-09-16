@@ -8,6 +8,7 @@ import { Building2, Contact, Handshake } from "lucide-react";
 import { api } from "../api/client";
 import { navigate } from "../app/router";
 import { Button } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
 import { isTagTone } from "../design-system/tagpill";
@@ -70,7 +71,7 @@ export function TagResultScreen({ tagID }: Readonly<{ tagID?: string }>) {
           small type, so a page title drawn as one renders chip-sized. The
           tag's colour still reads, as the pill's own dot. */}
       <header className="tagresult-head">
-        <h1 className="tagresult-title">
+        <Heading size="xlarge" className="tagresult-title">
           {isTagTone(tag.data.color) && !tag.data.archived_at && (
             <span
               className={`tagpill-dot tagpill-dot-${tag.data.color}`}
@@ -83,7 +84,7 @@ export function TagResultScreen({ tagID }: Readonly<{ tagID?: string }>) {
               {t("tags.archived")}
             </span>
           )}
-        </h1>
+        </Heading>
         {/* Not drawn for a RETIRED word. The usage total counts assignments
             that still exist, while every record list requires the tag to be
             live — so on a retired tag the sentence is the one line on the page

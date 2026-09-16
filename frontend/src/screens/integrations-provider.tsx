@@ -20,6 +20,7 @@ import {
 } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { type Fact, FactList } from "../design-system/factlist";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { ProviderMark } from "../design-system/provider-mark";
 import { Meter } from "../design-system/readings";
@@ -154,7 +155,9 @@ function ProviderConnectionRow({
           <span className="provider-mark">
             <ProviderMark providerKey={connection.provider} />
           </span>
-          <h3 className="provider-name">{connection.provider}</h3>
+          <Heading size="medium" className="provider-name">
+            {connection.provider}
+          </Heading>
           <Badge tone={connectionTone(connection.status)}>
             {t(connectionLabel(connection.status))}
           </Badge>

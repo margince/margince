@@ -22,6 +22,10 @@
  * the dark palette, which is the thing this file exists to stop. */
 
 @import "../design-system/tokens.css";
+/* The same heading rules the app draws from, so one heading is one heading
+   whichever document it is in. bridge.ts's heading() emits the class and the
+   data-size these rules key off. */
+@import "../design-system/heading.css";
 
 * {
   box-sizing: border-box;

@@ -9,6 +9,7 @@ import type { components } from "../api/schema";
 import { isOption } from "../app/options";
 import { Button, Checkbox, Field, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { Heading } from "../design-system/heading";
 import { Select, type SelectOption } from "../design-system/select";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -159,9 +160,9 @@ export function InviteUserForm({
     >
       {titleId !== undefined && (
         <>
-          <h2 className="t-h3 modal-title" id={titleId}>
+          <Heading size="large" className="t-h3 modal-title" id={titleId}>
             {t("users.inviteTitle")}
-          </h2>
+          </Heading>
           <p className="t-caption">{t("users.inviteSub")}</p>
         </>
       )}

@@ -22,6 +22,7 @@ import {
 } from "../design-system/atoms";
 import { CardBoundary } from "../design-system/cardboundary";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import {
   RecordPicker,
@@ -304,9 +305,9 @@ export function ConsentPurposesCard() {
           onClose={() => setAdding(false)}
           labelledBy={addTitleId}
         >
-          <h2 id={addTitleId} className="t-h2 modal-title">
+          <Heading size="large" id={addTitleId} className="t-h2 modal-title">
             {t("privacy.addPurpose")}
-          </h2>
+          </Heading>
           <PurposeCreateForm onDone={() => setAdding(false)} />
         </Modal>
       </PanelBody>
@@ -1218,9 +1219,13 @@ export function PrivacyInboxCard() {
             onClose={() => setCreating(false)}
             labelledBy={createTitleId}
           >
-            <h2 id={createTitleId} className="t-h2 modal-title">
+            <Heading
+              size="large"
+              id={createTitleId}
+              className="t-h2 modal-title"
+            >
               {t("privacy.newRequest")}
-            </h2>
+            </Heading>
             <NewDsrForm onDone={() => setCreating(false)} />
           </Modal>
           <FulfilErasureModal
