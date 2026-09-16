@@ -149,7 +149,9 @@ var calleeGatedCompanyReads = gatekit.Waive(map[string]string{
 
 // ruledCompanyReads: a DISCLOSING read the product has ruled needs no company
 // grant.
-var ruledCompanyReads = gatekit.Waive(map[string]string{})
+var ruledCompanyReads = gatekit.Waive(map[string]string{
+	"internal/modules/contacts/anchorissuername.go:ConfirmedIssuerLegalName": "the name this installation issues documents UNDER, read off its own anchor record so a quote names its issuer from a confirmed row rather than from a settings value with no provenance. The company object governs the accounts an installation sells TO; this answers what the installation itself is called, which every seat already reads off every quote it opens. Asked for a grant, it would refuse the send path for a rep who holds the offer grant and not the account list — which is most of them, and the reason this ruling exists rather than a Require",
+})
 
 // notTheCompanyTable: the read pattern matched English prose rather than SQL.
 //
