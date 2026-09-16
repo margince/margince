@@ -591,7 +591,10 @@
 
 /* The header is a quiet label row in sentence case: a table's headers are
  * read once, and set as shouting caps they competed with the rows for the
- * eye. A hairline under them, the same rule every row draws. */
+ * eye. Its WEIGHT is the `thead th` rule in app.css, which every table in the
+ * product reads — a copy here would be this table's own answer to a question
+ * the document already answers. A hairline under them, the same rule every row
+ * draws. */
 .lt-table th {
   position: sticky;
   top: 0;

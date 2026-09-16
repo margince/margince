@@ -548,26 +548,19 @@ a:not([class]):focus-visible {
   cursor: not-allowed;
 }
 
-/* Colour only, and deliberately: a failure is said in the ink of the type it is
-   worn over — `t-caption t-danger`, `t-sub t-danger` — never in a shape of its
-   own. */
-.t-danger {
-  color: var(--dangerText);
-}
-
 /* The type ROLES. Root type — size, leading, weight, face and neutral ink — is
    one declaration in `app.css`'s `html` rule, and every element inherits it.
    The ramp these classes used to name is gone; what is left is the role
    vocabulary a component wears (`t-display`, `t-h3`, `t-caption`, `t-eyebrow`,
-   `t-num`), and its rules will be layered on top of the root in a later change.
-   Only the display FACE, which is a family and not a size, survives here. */
+   `t-num`). Each role's rule is layered on top of the root one role at a time:
+   `t-caption` carries its own below, the rest are still hooks holding the name
+   declared until theirs is written. */
 .t-display,
 .t-h2,
 .t-h3 {
   font-family: var(--fontFamilyHeading);
 }
 .t-label,
-.t-caption,
 .t-sub,
 .t-body,
 .t-eyebrow {
@@ -575,6 +568,24 @@ a:not([class]):focus-visible {
      `font: inherit` is the hook itself — the one shorthand this sheet keeps,
      because it is what holds the class name declared rather than a style. */
   font: inherit;
+}
+/* The supporting line: a provenance note, the basis under a figure, the address
+   under a name. Body S in the meta ink, and the two travel together — the size
+   alone in the carrying ink reads as text somebody shrank, and the ink alone at
+   body size reads as prose that went grey. One rung quieter in both, so the
+   line it sits under is still the line being read. */
+.t-caption {
+  font: var(--fontBodySmall);
+  color: var(--textSecondary);
+}
+
+/* Colour only, and deliberately: a failure is said in the ink of the type it is
+   worn over — `t-caption t-danger`, `t-sub t-danger` — never in a shape of its
+   own. It stands AFTER the roles, and has to: a role that declares its own ink
+   weighs exactly what this class weighs, so ordered before them the failure
+   would come out grey at every one of those pairings. */
+.t-danger {
+  color: var(--dangerText);
 }
 /* A figure that is read down a column — an amount, a count, a percentage, a
    duration, a date in a table — in the face around it, with every digit one

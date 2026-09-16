@@ -18,6 +18,7 @@ import { Shell, WorkspaceRail } from "./shell";
 import {
   fixtureSection,
   ignoreSearch,
+  navGroupNames,
   newClient,
   render,
   renderWith,
@@ -169,22 +170,19 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
 
   it("groups the items under Records / Work / Intelligence when expanded", () => {
     render(<WorkspaceRail route={{ screen: "home" }} />);
-    const headings = screen
-      .getAllByRole("heading", { level: 2 })
-      .map((heading) => heading.textContent);
-    expect(headings).toEqual(["Records", "Work", "Intelligence"]);
+    expect(navGroupNames()).toEqual(["Records", "Work", "Intelligence"]);
   });
 
-  // Collapsed, a group heading has no word to show — 56px carries a glyph and
-  // not a label — so it is not drawn, and the break between two groups is what
-  // says where one ends. It stays in the DOCUMENT either way: the outline a
-  // screen reader walks does not depend on how wide the reader left the panel.
+  // Collapsed, a group label has no word to show — 56px carries a glyph and not
+  // a label — so it is not drawn, and the break between two groups is what says
+  // where one ends. It stays in the DOCUMENT either way: what a screen reader
+  // walks does not depend on how wide the reader left the panel.
   //
   // Asserted as a COMPARISON of the two states rather than as one absolute, for
   // the reason the brand head's own pair gives: two independent expectations
-  // would both pass against a heading that had quietly stopped being drawn in
+  // would both pass against a label that had quietly stopped being drawn in
   // either state.
-  it("draws the group headings expanded and not collapsed", () => {
+  it("draws the group labels expanded and not collapsed", () => {
     shellStyles = mountShellStyles();
     const expanded = render(<WorkspaceRail route={{ screen: "home" }} />);
     const collapsed = render(
@@ -196,7 +194,7 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
     for (const rail of [expanded, collapsed]) {
       expect(
         [...rail.container.querySelectorAll(".navheading")].map(
-          (heading) => heading.textContent,
+          (label) => label.textContent,
         ),
       ).toEqual(["Records", "Work", "Intelligence"]);
     }
@@ -475,22 +473,23 @@ describe("Rail levels (a section's entries as the second level)", () => {
     expect(current[0].getAttribute("aria-label")).toBe("Account");
   });
 
-  // A level draws no name of its own: it is named by the heading over its first
-  // group, so a level's groups stand at the same heading level the
-  // destinations' do and the outline never gains a rung with the depth. The one
-  // navigation landmark names the navigation; the headings inside it name the
-  // groups, and nothing between them names the panel twice.
-  it("gives a level's groups the destinations' own heading level", () => {
+  // A level draws no name of its own: it is named by the label over its first
+  // group, and a level reached by drilling in names its groups exactly the way
+  // the destinations do. The one navigation landmark names the navigation and
+  // the GROUPS inside it name themselves — asserted through the role and the
+  // accessible name, which is what a reader actually meets, and paired with the
+  // outline staying empty: a group that quietly became a heading again would
+  // put the whole panel back in a screen reader's heading list, and the name
+  // assertion alone would still pass while it did.
+  it("names a level's groups the way the destinations' are named", () => {
     render(
       <WorkspaceRail
         route={{ screen: "settings", id: "account" }}
         section={fixtureSection("account")}
       />,
     );
-    expect(
-      screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent),
-    ).toEqual(["You", "Governance"]);
-    expect(screen.queryAllByRole("heading", { level: 3 })).toHaveLength(0);
+    expect(navGroupNames()).toEqual(["You", "Governance"]);
+    expect(screen.queryAllByRole("heading")).toHaveLength(0);
   });
 
   // A section belongs to ONE screen. Without this the fixture's entries would
@@ -850,9 +849,7 @@ describe("Rail levels (a section's entries as the second level)", () => {
     );
     expect(levelLabels()).toEqual(["Data model"]);
     expect(document.querySelectorAll('[aria-current="page"]')).toHaveLength(0);
-    expect(
-      screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent),
-    ).toEqual(["Privacy & retention"]);
+    expect(navGroupNames()).toEqual(["Privacy & retention"]);
   });
 
   it("renders a third level from the data, addressed under the entry that opens it", () => {
@@ -867,9 +864,7 @@ describe("Rail levels (a section's entries as the second level)", () => {
     expect(
       screen.getByRole("link", { name: "Data model" }).getAttribute("href"),
     ).toBe("#/settings/deep/deeper");
-    expect(
-      screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent),
-    ).toEqual(["Privacy & retention"]);
+    expect(navGroupNames()).toEqual(["Privacy & retention"]);
   });
 
   // One step at a time, and the step is an ADDRESS: below the section's own

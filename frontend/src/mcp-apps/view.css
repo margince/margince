@@ -92,6 +92,16 @@ optgroup {
   color: inherit;
 }
 
+/* And the one weight the reset takes away that a table still needs: a COLUMN
+   head is medium, so it reads as a label over the values rather than as one
+   more row of them. `thead th` and not `th` — a row header in `tbody` is a
+   value's name and stays at body weight. Spelled here as well as in app.css
+   for the reason the reset above is: this document loads tokens.css and nothing
+   else, so it inherits no rule from the app's own sheet. */
+thead th {
+  font-weight: var(--fontWeightMedium);
+}
+
 button,
 input,
 select,

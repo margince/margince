@@ -75,6 +75,17 @@ optgroup {
   color: inherit;
 }
 
+/* And the one weight the reset takes away and a table still needs: a COLUMN
+   head is medium, the weight of text inside a component, so it reads beside the
+   icon-bearing dials above the grid rather than as one more row of values.
+   `thead th` and not `th` — a row header in `tbody` is a value's name and stays
+   at body weight. Declared here rather than per table, which is how eight
+   sheets came to answer one question; `mcp-apps/view.css` carries its own copy
+   beside its own reset, because a standalone view loads tokens.css alone. */
+thead th {
+  font-weight: var(--fontWeightMedium);
+}
+
 /* A sub- or superscript must not grow the line it sits in; the size still
    inherits from the root above. */
 sub,

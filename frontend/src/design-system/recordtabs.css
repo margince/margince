@@ -134,6 +134,10 @@
   border-block-end: 2px solid transparent;
   background: none;
   font-family: var(--fontFamilyBody);
+  /* Medium, the weight of text inside a component and of anything that may sit
+     beside a line icon: a tab carries a count and a mark on the same line, and
+     the stroke of the glyph and the stroke of the letter should match. */
+  font-weight: var(--fontWeightMedium);
   white-space: nowrap;
   cursor: pointer;
 }

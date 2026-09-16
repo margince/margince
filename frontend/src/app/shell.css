@@ -636,12 +636,14 @@
   margin-top: var(--space-5);
 }
 /* A quiet label over a group, not a heading competing with the rows under it:
-   sentence case, one step down from the rows in size and weight, in the meta
-   ink — the rows are what the eye is looking for. Not the uppercase eyebrow:
-   ten places to go under three shouted labels read as a form, and the mock
-   sets these small and plain. The group is separated by space, not by a rule:
-   a heading and a divider do the same job, and stacking both says it twice. */
+   sentence case, root type in the meta ink — the rows are what the eye is
+   looking for, and the ink is the whole difference between the label and them.
+   Not the uppercase eyebrow: ten places to go under three shouted labels read
+   as a form, and the mock sets these small and plain. The group is separated by
+   space, not by a rule: a label and a divider do the same job, and stacking
+   both says it twice. */
 .rail .navheading {
+  color: var(--textSecondary);
   padding: 0 var(--space-2);
   /* It is a label, not a place to go. Sitting in a column of links it inherited
      the text cursor, which offers a selection nobody wants over a word that

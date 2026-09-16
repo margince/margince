@@ -29,7 +29,10 @@
      carries the logomark is sized against it so the first destination's row
      begins exactly where this bar's rule ends. */
   height: var(--topbarH);
-  padding: var(--space-2) var(--pageGutter);
+  /* The gutter, and no vertical padding: the strip's height is the token above
+     and its children centre in it, so vertical padding only narrows the box the
+     40px search already stands taller than. */
+  padding: 0 var(--pageGutter);
   /* Translucent over the page that scrolls beneath, with the blur that makes
      text readable through it. `position: relative` + a z-index because the
      scroller reaches up behind this strip: in flow but pulled up, it would
@@ -241,7 +244,6 @@
    way: where they are, how to search, and who they are. */
 @media (max-width: 700px) {
   .topbar {
-    padding: var(--space-2) var(--pageGutter);
     gap: var(--space-2);
   }
   .topbar-toggle {
