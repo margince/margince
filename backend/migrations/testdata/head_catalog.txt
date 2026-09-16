@@ -626,6 +626,7 @@ public.ai_call.ai_call_kind_check CHECK ((kind = ANY (ARRAY['completion'::text, 
 public.ai_call.ai_call_pkey PRIMARY KEY (id)
 public.ai_call.ai_call_secrets_removed_check CHECK ((secrets_removed >= 0))
 public.ai_call.ai_call_source_check CHECK ((served_identity_source = ANY (ARRAY['response'::text, 'echo'::text, 'configured'::text])))
+public.ai_call.ai_call_subject_shape CHECK (((subject_type IS NULL) = (subject_id IS NULL)))
 public.ai_call.attempt integer NOT NULL gen=- def=1
 public.ai_call.attempt_reason text NOT NULL gen=- def=''::text
 public.ai_call.cache_hit boolean NOT NULL gen=- def=false
@@ -656,6 +657,8 @@ public.ai_call.secrets_removed bigint NOT NULL gen=- def=0
 public.ai_call.served_identity_source text NOT NULL gen=- def='configured'::text
 public.ai_call.served_model text NOT NULL gen=- def=''::text
 public.ai_call.served_provider text NOT NULL gen=- def=''::text
+public.ai_call.subject_id uuid gen=- def=-
+public.ai_call.subject_type text gen=- def=-
 public.ai_call.task text NOT NULL gen=- def=-
 public.ai_call.tier text NOT NULL gen=- def=''::text
 public.ai_call.tokens_in bigint NOT NULL gen=- def=0
@@ -683,6 +686,7 @@ public.ai_call_payload_call CREATE INDEX ai_call_payload_call ON public.ai_call_
 public.ai_call_payload_pkey CREATE UNIQUE INDEX ai_call_payload_pkey ON public.ai_call_payload USING btree (id)
 public.ai_call_payload_ws_time CREATE INDEX ai_call_payload_ws_time ON public.ai_call_payload USING btree (occurred_at)
 public.ai_call_pkey CREATE UNIQUE INDEX ai_call_pkey ON public.ai_call USING btree (id)
+public.ai_call_subject_idx CREATE INDEX ai_call_subject_idx ON public.ai_call USING btree (subject_type, subject_id) WHERE (subject_id IS NOT NULL)
 public.ai_call_terminal_trace_idx CREATE INDEX ai_call_terminal_trace_idx ON public.ai_call USING btree (occurred_at DESC, id DESC) WHERE is_terminal
 public.ai_call_ws_corr CREATE INDEX ai_call_ws_corr ON public.ai_call USING btree (correlation_id)
 public.ai_call_ws_run CREATE INDEX ai_call_ws_run ON public.ai_call USING btree (agent_run_id)

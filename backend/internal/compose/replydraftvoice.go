@@ -51,6 +51,11 @@ func (d replyDrafter) loadVoice(ctx context.Context) draftvoice.Context {
 // vestigial and the caller's degrade looks removable — and removing it turns
 // every transient model failure into a failed draft_reply.
 func (d replyDrafter) completeVoiced(ctx context.Context, anchor ids.UUID, data replyActivityData, voice draftvoice.Context) (replyDraft, *int, *string, error) {
+	// Every model call in this lane is ABOUT the message being answered, and
+	// the request carries that message's text. Named here rather than at each
+	// of the four calls below, so the critic retry and the fallback draft
+	// cite the same record the first attempt did.
+	ctx = ai.WithSubject(ctx, ids.From[ids.ActivityKind](anchor).Ref(), "")
 	if !voice.OK {
 		draft, err := d.completeChecked(ctx, replyDraftSystem, data, nil)
 		return draft, nil, nil, err

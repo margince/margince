@@ -291,6 +291,7 @@ func (d *DocumentExtractor) laneFor(
 		return documentSource{
 			Part:     model.Attachment{MIME: mime, Bytes: bytes, Name: meta.Filename},
 			Filename: meta.Filename,
+			Parent:   attachmentParent(meta),
 		}, ""
 	}
 	if mime == documentPDFMIME {
@@ -340,7 +341,9 @@ func (d *DocumentExtractor) extractedSource(
 			chars, maxDocumentTextChars,
 		)
 	}
-	return documentSource{Text: text, Filename: meta.Filename, ExtractedFrom: documentPDFMIME}, ""
+	return documentSource{
+		Text: text, Filename: meta.Filename, ExtractedFrom: documentPDFMIME, Parent: attachmentParent(meta),
+	}, ""
 }
 
 // mediaTypeOf reduces a stored Content-Type to the media type alone.
@@ -371,7 +374,19 @@ func (d *DocumentExtractor) textSource(meta crmcontracts.Attachment, raw []byte)
 			len(text), maxDocumentTextChars,
 		)
 	}
-	return documentSource{Text: text, Filename: meta.Filename}, ""
+	return documentSource{Text: text, Filename: meta.Filename, Parent: attachmentParent(meta)}, ""
+}
+
+// attachmentParent is the record a document hangs on, as the citation names it.
+//
+// Two kinds and no default: the contract's own enum is activity or company, and
+// a third arriving here as a zero Ref would make the call cite nothing rather
+// than fail — which is the quiet half of a purge that misses.
+func attachmentParent(meta crmcontracts.Attachment) ids.Ref {
+	if meta.EntityType == crmcontracts.AttachmentEntityTypeCompany {
+		return ids.From[ids.CompanyKind](ids.UUID(meta.EntityId)).Ref()
+	}
+	return ids.From[ids.ActivityKind](ids.UUID(meta.EntityId)).Ref()
 }
 
 // refusedReadingDetail is what the panel says about a refused reading, and there
@@ -400,7 +415,11 @@ func refusedReadingDetail(err error) string {
 func (d *DocumentExtractor) ask(ctx context.Context, src documentSource) ([]extraction.ExtractedField, error) {
 	req := documentExtractRequest(src)
 	validate := documentShapeValid(src)
-	resp, err := ai.Ask(ctx, d.brain, req, validate)
+	// The document's own text IS the request, so the call is about the record
+	// it hangs on. The filename is not offered as the label: it is the
+	// uploader's string and the rail draws its unnamed sentence rather than
+	// putting `Aufhebungsvertrag_final.pdf` on a colleague's screen.
+	resp, err := ai.Ask(ai.WithSubject(ctx, src.Parent, ""), d.brain, req, validate)
 	if err != nil {
 		if errors.Is(err, model.ErrAttachmentUnsupported) {
 			// The binding declared it carries this type and then refused it on
