@@ -1375,6 +1375,10 @@ export const en = {
   "finance.unmapped":
     "Connected, but this company is not matched to a customer in the accounting system yet",
   "finance.netInvoiced": "Net invoiced · 12 months",
+  "finance.coveragePeriod":
+    "These figures cover invoices issued {from} – {to}.",
+  "finance.overdueRelationshipEnded":
+    "Not shown: this relationship has ended, so an overdue figure would read as a collection to make.",
   "finance.overdue": "Overdue",
   "finance.behaviour": "Payment behaviour",
   "finance.behaviourShape": "Days late per settled invoice, oldest first",

@@ -19962,6 +19962,17 @@ export interface components {
              * @description When the last successful sync finished. Null when none has.
              */
             last_synced_at?: string | null;
+            /**
+             * Format: date
+             * @description The issue date of the OLDEST invoice this connection has mirrored for the customer, and with `coverage_end` the period every figure on this card describes. Null when the mirror holds none.
+             *     A different question from `last_synced_at`, which answers when we last looked. A card that has only the second can say the figures are fresh and not what period they are about — and a client rendering a window label must build it from these bounds rather than from a fixed string, or the heading and the numbers end up describing different months (FIN-AC-3).
+             */
+            coverage_start?: string | null;
+            /**
+             * Format: date
+             * @description The issue date of the NEWEST mirrored invoice. On a live account it is recent and the trailing windows below mean what they say; on an account that stopped buying it is the answer to "when did this end", and it is what makes a 365-day figure readable as the historical number it is.
+             */
+            coverage_end?: string | null;
             /** @description Issued minus credited over the last 365 days (FIN-FORM-1). Named "net invoiced" rather than "revenue": the source supports issued amounts, not a ledger revenue figure, and calling one the other is the kind of small wrong label a reader plans against. */
             net_invoiced?: components["schemas"]["Money"];
             /**
@@ -19971,7 +19982,11 @@ export interface components {
             net_invoiced_lifetime?: components["schemas"]["Money"];
             /** @description What is still open across unpaid invoices (FIN-FORM-2). */
             open_balance?: components["schemas"]["Money"];
-            /** @description The share of the open balance already past its due date. */
+            /**
+             * @description The share of the open balance already past its due date.
+             *     ABSENT on an account whose relationship has ended (`lifecycle: former_customer`), and a client should expect the null. An overdue figure reads as an outstanding collection, and a rep acting on the most natural reading makes a collection call about a relationship that finished — a customer-facing mistake rather than a display nit. The figure it would carry is one nobody can state a window for, which is the same "cannot be honestly computed" this schema already answers with absence rather than zero.
+             *     `open_balance` is unaffected: what is still open is a fact about the ledger whatever the relationship is now, and it carries no call to action.
+             */
             overdue?: components["schemas"]["Money"];
             /**
              * @description The median days between an invoice's DUE date and its settlement over the window (FIN-FORM-3) — how late they pay, not how long they take. Negative reads as early. Deliberately not issue-to-settlement: an invoice paid on the last day of 30-day terms is punctual, and a figure that called it "30 days to pay" would read as slow.
