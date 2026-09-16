@@ -98,13 +98,27 @@ type RepliedRequest struct {
 	// one a human accepted. Only a machine-minted, undated task may be retitled
 	// — a human's own subject and deadline are theirs.
 	TaskMachineMinted bool
+	// CounterpartyEmail is who this request was with. Carried out of the
+	// selection so the conversation read can bind to the same correspondent
+	// this statement matched on, rather than reading the column a second time:
+	// the two statements run under read-committed, and a value that moved in
+	// between would widen the window the selection had already narrowed.
+	CounterpartyEmail string
 }
 
 // repliedRequestsSQL selects requests the workspace has answered since.
 //
 // The reply test is the ordinary thread comparison — same key, same kind, same
 // provider — bounded at asOf so a SCHEDULED send cannot settle a request before
-// it has left the building. That bound is the one waitingengagement's own tests
+// it has left the building.
+//
+// It is ALSO bound to one correspondent, and the thread triple is not enough to
+// do that. thread_key can be the RFC822 References root, which the SENDER types:
+// a stranger who has seen one of our Message-IDs can forge a thread onto an
+// unrelated customer's conversation. Matching outbound on the key alone then
+// reads our reply to THEM as a reply to the stranger. counterparty_email names
+// who the message was actually with, and counterparty_outbound_attested is the
+// provider's own filing of it as sent there — a header cannot forge either. That bound is the one waitingengagement's own tests
 // hold, and for the same reason: a future-dated row is not something the
 // customer has received.
 //
@@ -114,10 +128,13 @@ type RepliedRequest struct {
 // longer the one the row names.
 const repliedRequestsSQL = outstandingRequestSQL + `
  AND a.audience = 'workspace'
+ AND a.counterparty_email IS NOT NULL
  AND EXISTS (SELECT 1 FROM activity reply
    WHERE reply.thread_key = a.thread_key AND reply.kind = a.kind
      AND reply.channel_provider IS NOT DISTINCT FROM a.channel_provider
      AND reply.direction = 'outbound' AND reply.archived_at IS NULL
+     AND reply.counterparty_email = a.counterparty_email
+     AND reply.counterparty_outbound_attested
      AND reply.occurred_at <= $1
      AND (reply.occurred_at, reply.id) > (a.occurred_at, a.id))
  AND NOT EXISTS (SELECT 1 FROM activity_request_settlement judged
@@ -127,6 +144,8 @@ const repliedRequestsSQL = outstandingRequestSQL + `
         WHERE newest.thread_key = a.thread_key AND newest.kind = a.kind
           AND newest.channel_provider IS NOT DISTINCT FROM a.channel_provider
           AND newest.direction = 'outbound' AND newest.archived_at IS NULL
+          AND newest.counterparty_email = a.counterparty_email
+          AND newest.counterparty_outbound_attested
           AND newest.occurred_at <= $1
           AND (newest.occurred_at, newest.id) > (a.occurred_at, a.id)
         ORDER BY newest.occurred_at DESC, newest.id DESC LIMIT 1))`
@@ -148,11 +167,13 @@ func (s *Store) RepliedRequests(ctx context.Context, asOf time.Time, limit int) 
 	var out []RepliedRequest
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, storekit.SQLf(`
-			SELECT a.id,
+			SELECT a.id, coalesce(a.counterparty_email, ''),
 			       (SELECT newest.id FROM activity newest
 			         WHERE newest.thread_key = a.thread_key AND newest.kind = a.kind
 			           AND newest.channel_provider IS NOT DISTINCT FROM a.channel_provider
 			           AND newest.direction = 'outbound' AND newest.archived_at IS NULL
+			           AND newest.counterparty_email = a.counterparty_email
+			           AND newest.counterparty_outbound_attested
 			           AND newest.occurred_at <= $1
 			           AND (newest.occurred_at, newest.id) > (a.occurred_at, a.id)
 			         ORDER BY newest.occurred_at DESC, newest.id DESC LIMIT 1),
@@ -179,7 +200,7 @@ func (s *Store) RepliedRequests(ctx context.Context, asOf time.Time, limit int) 
 		defer rows.Close()
 		for rows.Next() {
 			var r RepliedRequest
-			if err := rows.Scan(&r.RequestID, &r.NewestOutboundID,
+			if err := rows.Scan(&r.RequestID, &r.CounterpartyEmail, &r.NewestOutboundID,
 				&r.TaskID, &r.TaskVersion, &r.TaskMachineMinted); err != nil {
 				return err
 			}

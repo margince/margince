@@ -300,6 +300,11 @@ DECLARE
   contact_row uuid;
   activity_row uuid;
   capturer text;
+  -- Alice's own address, spelled once. It is the counterparty of an inbound
+  -- message AND the participant who wrote it, and the two must agree: a reader
+  -- that matches a thread on counterparty_email would otherwise find this row
+  -- has none and silently skip it.
+  counterparty constant text := 'alice@demo.test';
 BEGIN
   SELECT id INTO contact_row FROM contact
    WHERE full_name = 'Alice Müller' AND archived_at IS NULL
@@ -317,14 +322,19 @@ BEGIN
    WHERE email = 'admin@demo.test' LIMIT 1;
 
   activity_row := uuidv7();
+  -- counterparty_email is what capture stamps for a real inbound message: the
+  -- address it came FROM. Seeding it keeps this row the shape the readers
+  -- expect — a thread match on the counterparty is how they refuse a forged
+  -- References root, and a NULL here reads as "nobody", not as "anybody".
   INSERT INTO activity (id, kind, direction, subject, body, occurred_at, is_done,
                         source, captured_by, version, created_at, updated_at,
-                        counterparty_outbound_attested, thread_key, audience)
+                        counterparty_email, counterparty_outbound_attested,
+                        thread_key, audience)
   VALUES (activity_row, 'email', 'inbound',
           'Re: pricing for the retrofit',
           'Could you confirm the implementation cost before Friday?',
           now() - interval '2 days', false, 'system',
-          coalesce(capturer, 'system:seed'), 1, now(), now(), false,
+          coalesce(capturer, 'system:seed'), 1, now(), now(), counterparty, false,
           'seed-retrofit-pricing', 'workspace');
   -- Filed under a contact, which is what makes it SALES mail rather than a rep's
   -- own correspondence: the lane requires a link to a record the workspace
@@ -333,7 +343,7 @@ BEGIN
   VALUES (activity_row, 'contact', contact_row);
   -- Who wrote, so the lane can tell a contact from a notification service.
   INSERT INTO activity_participant (activity_id, role, address, contact_id)
-  VALUES (activity_row, 'from', 'alice@demo.test', contact_row);
+  VALUES (activity_row, 'from', counterparty, contact_row);
 
   RAISE NOTICE 'seed-dev.sql: a customer is waiting on the Worklist';
 END $$;
