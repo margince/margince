@@ -88,7 +88,11 @@
 .brief-head {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
+  /* The controls sit on the greeting block's LAST line: the day, the greeting
+     and the day's sentence are read top to bottom, and the dials and the way
+     into the queue meet the eye at the end of that read rather than beside
+     its first line. */
+  align-items: flex-end;
   justify-content: space-between;
   gap: var(--space-3) var(--space-5);
   padding-block: var(--space-2) var(--space-4);
@@ -168,12 +172,17 @@
    A column at the far edge, on the greeting's top line, so a reader scanning
    the head meets the greeting first and the controls where the hand expects
    them — where a record keeps its verbs. */
+/* ONE ROW of controls at the head's trailing edge: the two dials, then the
+   way into the whole queue as the primary. Stacked, the queue's door sat a
+   line below its own dials and the head read as two right-hand columns. They
+   wrap onto their own line only when the head is too narrow to hold both
+   halves. */
 .brief-controls {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
   gap: var(--space-3);
-  padding-top: var(--space-1);
 }
 .brief-controls .brief-dials {
   margin: 0;
