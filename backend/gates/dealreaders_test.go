@@ -126,8 +126,8 @@ var lifecycleDealReads = gatekit.Waive(map[string]string{
 var calleeGatedDealReads = gatekit.Waive(map[string]string{
 	"internal/compose/briefs/briefcontinuity.go:previousRanking":           "the previous run's ranking, so a brief can say what moved. The briefs package asks the deal object gate at its own entry points",
 	"internal/compose/briefs/brieflineage.go:briefLineage":                 "a brief item's lineage across runs, behind those same gated entry points",
-	"internal/compose/briefs/briefrank.go:briefCandidates":                 "the candidate deals a brief ranks, behind the gated brief entry",
-	"internal/compose/briefs/briefrank.go:briefRevenueNorm":                "the revenue normalisation the ranking divides by, behind the same gate",
+	"internal/compose/briefs/briefreads.go:briefCandidates":                "the candidate deals a brief ranks, behind the gated brief entry",
+	"internal/compose/briefs/briefreads.go:briefRevenueNorm":               "the revenue normalisation the ranking divides by, behind the same gate",
 	"internal/compose/briefs/briefstore.go:readRunItems":                   "the items of one brief run, read back for display or for the mail. Its callers ask the deal object gate; the mail path runs under the mailer's own principal",
 	"internal/compose/company360/pipelineread.go:openPipeline":             "the open-pipeline rows the advice, state-strip and dismissal paths rest on. Its ONE caller is gatherSuggestionInputs, which reads auth.ReadGranted(ctx, \"deal\") into in.pipeline and calls this only when it holds — so a seat with no deal grant is advised about everything else and told nothing about the pipeline. The census cannot see that gate because it is a field on a struct the caller branches on rather than a call in this body",
 	"internal/compose/company360/deals.go:closedTotals":                    "the won and lost totals under that same band and that same gate",

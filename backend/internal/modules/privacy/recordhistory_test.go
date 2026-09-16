@@ -118,7 +118,7 @@ func TestComposeRecordSummary(t *testing.T) {
 			// is the deliberate asymmetry with the agent case above.
 			name:             "connector with no authority is not a gap, unlike an agent",
 			actorType:        "connector",
-			actorDisplayName: "hubspot-sync",
+			actorDisplayName: "legacy-crm-sync",
 			action:           "import",
 			want:             "Connector imported the record",
 		},

@@ -9,11 +9,16 @@ package identity
 // able to renew it, and the client, the human, and the audience the consent
 // covered were recoverable only from the passport's label.
 //
-// A grant is one connection per CLIENT REGISTRATION: re-consenting from an
-// already-connected client supersedes its earlier grant
-// (supersedePriorGrants) rather than adding a row beside it. client_id is a
-// REGISTRATION, not a product — a laptop and a desktop install of one
-// client are two connections this does not fold together.
+// A grant is one connection per CLIENT REGISTRATION PER HUMAN: re-consenting
+// from an already-connected client supersedes that human's earlier grant
+// (supersedePriorGrants) rather than adding a row beside it. Both halves of
+// the key are load-bearing. client_id is not a product — a laptop and a
+// desktop install that each registered by DCR are two connections this does
+// not fold together. Neither is it an install: under CIMD (oauth_cimd.go) a
+// client_id is a metadata-document URL its author publishes, so every human
+// running that software presents the SAME one, and a seat keyed on it alone
+// would be one live connection per INSTALLATION — each colleague's consent
+// evicting the last, through the cascade that answers token theft.
 
 import (
 	"context"
@@ -141,7 +146,7 @@ func issueGrant(ctx context.Context, tx pgx.Tx, in issueGrantInput) (grantID ids
 		return ids.Nil, "", err
 	}
 	auditCtx := actorCtx(ctx, Identity{UserID: in.UserID, WorkspaceID: in.WorkspaceID})
-	if err := supersedePriorGrants(auditCtx, tx, in.ClientID); err != nil {
+	if err := supersedePriorGrants(auditCtx, tx, in.ClientID, in.UserID); err != nil {
 		return ids.Nil, "", err
 	}
 	// oauth_grant.lent_passport_id and oauth_authorization_code.lent_passport_id
@@ -226,24 +231,29 @@ const deactivatedUserRevokeReason = "the human who consented was deactivated"
 // again from the same client and the earlier connection made way for it.
 const supersededRevokeReason = "superseded by a later consent from the same client"
 
-// supersedePriorGrants ends the REGISTRATION's earlier connection, whoever
-// consented to it — not only this human's own prior grant — because the file
-// header's invariant is one row per client REGISTRATION, and a client_id
-// re-authorized by a second human (a shared machine, a handed-off install)
-// is still one registration changing hands, not two connections coexisting.
-// issueGrant already holds oauth_client FOR UPDATE (lockClientRegistration)
-// before calling here, which is what makes "no active grant yet" a fact
-// rather than a snapshot two racing consents could both read; the query below
-// orders by id so a registration with more than one prior grant releases its
-// locks in a fixed sequence. revokeGrantTx takes the grant lock first
-// regardless of whose grant it is, so entering through it preserves the
-// cascade's existing lock order without needing the prior human's own
-// app_user row.
-func supersedePriorGrants(ctx context.Context, tx pgx.Tx, clientID string) error {
+// supersedePriorGrants ends THIS human's earlier connection on the
+// registration, and never anyone else's: the file header's invariant is one
+// row per (registration, human), and a consent is authority over the
+// consenter's own records, so it may not spend a colleague's.
+//
+// requireLiveConsentingUser has already taken this human's app_user row FOR
+// UPDATE when we arrive, which is what makes "no active grant yet" a fact
+// rather than a snapshot two racing consents for one seat could both read —
+// the job lockClientRegistration used to do for a registration-wide key.
+// That client lock stays where it is: it carries liveClientPredicate, so
+// removing it would let a client disabled mid-transaction still mint a grant,
+// and keeping it leaves the oauth_client -> app_user -> oauth_grant order
+// every other path here obeys untouched.
+//
+// The query orders by id so a seat that somehow holds more than one prior
+// grant releases its locks in a fixed sequence, and revokeGrantTx takes the
+// grant lock first, so entering through it preserves the cascade's existing
+// lock order.
+func supersedePriorGrants(ctx context.Context, tx pgx.Tx, clientID string, userID ids.UserID) error {
 	rows, err := tx.Query(ctx, `
 		SELECT id FROM oauth_grant
-		WHERE client_id = $1 AND revoked_at IS NULL
-		ORDER BY id`, clientID)
+		WHERE client_id = $1 AND user_id = $2 AND revoked_at IS NULL
+		ORDER BY id`, clientID, userID)
 	if err != nil {
 		return err
 	}

@@ -5,7 +5,7 @@
     "sites_best_partial": 0,
     "sites_best_stale": 4,
     "sites_absent": 1,
-    "scenarios": 167,
+    "scenarios": 168,
     "records": 76,
     "bindings": 10
   },
@@ -3173,6 +3173,11 @@
           "file": "backend/internal/compose/aicert/corpus/owed_verdict/basic_01.yaml"
         },
         {
+          "name": "a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/owed_verdict/proposed_time_01.yaml"
+        },
+        {
           "name": "an_invitation_asks_nothing_a_calendar_reply_cannot_settle",
           "expects": "accepted",
           "file": "backend/internal/compose/aicert/corpus/owed_verdict/invitation_01.yaml"
@@ -3193,7 +3198,7 @@
           "state": "stale",
           "band": "certified",
           "scenarios_measured": 0,
-          "scenarios_total": 3,
+          "scenarios_total": 4,
           "runs": 9,
           "passed": 9,
           "reliability": 1,
@@ -3228,7 +3233,7 @@
           "state": "stale",
           "band": "not_supported",
           "scenarios_measured": 0,
-          "scenarios_total": 3,
+          "scenarios_total": 4,
           "runs": 9,
           "passed": 6,
           "reliability": 0.6666666666666666,

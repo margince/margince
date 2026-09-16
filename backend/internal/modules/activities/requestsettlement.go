@@ -279,12 +279,11 @@ func requestStillWritable(ctx context.Context, tx pgx.Tx, requestID ids.UUID) (b
 
 // recordSettlement writes the verdict, replacing any earlier one.
 //
-// Audited WITH A BEFORE-IMAGE, which is where this parts company with
-// SetOwedVerdict beside it. That write is exempt from the before-image rule on
-// the strength of its own CAS — `owed_verdict IS NULL` means a write that lands
-// had no prior state, so an image would record an absence forever. This one
-// replaces: a later reply is new evidence about the same question, so the row
-// moves, and what it said before is exactly what audit_log is for.
+// Audited WITH A BEFORE-IMAGE, for the reason every replacing write in this
+// tree carries one: a later reply is new evidence about the same question, so
+// the row moves, and what it said before is what audit_log is for. SetOwedVerdict
+// beside it images its prior state too, since a verdict reached under older
+// rules can now be replaced by one reached under newer.
 func recordSettlement(ctx context.Context, tx pgx.Tx, in RequestSettlementInput) error {
 	before, err := settlementImage(ctx, tx, in.Request.RequestID)
 	if err != nil {

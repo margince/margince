@@ -95,7 +95,7 @@ func TestLadderStepForReadsTheTouch(t *testing.T) {
 		{"outbound call by the system", leadResponseTouch{direction: "outbound", kind: "call", capturedBy: "connector:x"}, LeadStatusContacted, true},
 		{"a note a human logged", leadResponseTouch{kind: "note", source: "manual", capturedBy: "human:u1"}, LeadStatusContacted, true},
 		{"a note an agent wrote", leadResponseTouch{kind: "note", source: "manual", capturedBy: "agent:a1"}, "", false},
-		{"an imported note under the operator's identity", leadResponseTouch{kind: "note", source: "flip:hubspot:a1", capturedBy: "human:op"}, "", false},
+		{"an imported note under the operator's identity", leadResponseTouch{kind: "note", source: "mirror:legacy_crm:a1", capturedBy: "human:op"}, "", false},
 	}
 	for _, tc := range cases {
 		got, ok := ladderStepFor(tc.t)

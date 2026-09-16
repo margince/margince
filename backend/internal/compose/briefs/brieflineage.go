@@ -95,7 +95,7 @@ func briefLineage(
 		return nil, err
 	}
 	if dealScope == "" {
-		dealScope = "TRUE"
+		dealScope = briefUnnarrowed
 	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		WITH last_mark AS (

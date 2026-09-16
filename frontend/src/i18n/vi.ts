@@ -1055,6 +1055,7 @@ export const vi = {
     "Khi tìm kiếm, những cuộc trò chuyện bạn không được mở nội dung sẽ không xuất hiện.",
   "tab.contacts": "Liên hệ",
   "tab.deals": "Deals",
+  "tab.dealsProjects": "Deal & dự án",
   "tab.tasks": "Công việc",
   "tab.timeline": "Lịch sử",
   "tab.finance": "Tài chính",
@@ -1659,8 +1660,6 @@ export const vi = {
   "co.rail.contacts.inTouch": "Đã liên hệ với họ",
   "co.rail.projects.title": "Dự án",
   "co.rail.projects.empty": "Chưa có dự án.",
-
-  "co.tab.deals": "Deal & dự án",
 
   "co.commercial.title": "Thương mại",
   "co.commercial.lostFigure": "Deal đã thua",
@@ -2271,6 +2270,7 @@ export const vi = {
   "lead.bulkOutcomeNotFound": "không còn trong danh sách của bạn",
   "lead.bulkSelectRow": "Chọn {name}",
   "lead.unnamed": "Khách hàng tiềm năng chưa có tên",
+  "lead.timeline.empty": "Chưa ghi nhận gì trên khách hàng tiềm năng này.",
   "lead.sla.breached": "Quá hạn",
   "lead.sla.atRisk": "Sắp đến hạn",
   "lead.sla.withinTarget": "Đúng hạn",
@@ -2287,6 +2287,13 @@ export const vi = {
   "lead.ladder.title":
     "Kh\u00e1ch h\u00e0ng ti\u1ec1m n\u0103ng n\u00e0y \u0111ang \u1edf \u0111\u00e2u",
   "lead.detailsUnset": "Chưa đặt",
+  "lead.rail.deal.title": "Deal",
+  "lead.rail.deal.empty":
+    "Chưa có deal. Khi thẩm định lead này, bạn có thể mở một deal.",
+  "lead.rail.project.title": "Dự án",
+  "lead.rail.project.empty": "Chưa có dự án.",
+  "lead.rail.project.attach": "Gắn dự án",
+  "lead.rail.project.change": "Đổi dự án",
   "lead.terminalReadOnly":
     "Khách hàng tiềm năng này đã đóng và không nhận thay đổi.",
   "lead.notYoursToChange":
@@ -5541,6 +5548,7 @@ export const vi = {
   "blockedDomains.source.human": "Một con người",
   "blockedDomains.source.unevidenced": "Trang web không nêu tên công ty nào",
   "blockedDomains.source.staleEvidence": "Thư ủng hộ điều đó đã quá cũ",
+  "blockedDomains.source.nearDuplicate": "Đã có một công ty trùng tên ở đây",
   "blockedDomains.rowAdmit": "Cho tên miền này vào",
   "blockedDomains.rowRefuse": "Từ chối tên miền này",
   "blockedDomains.rowReopen": "Hỏi lại",
@@ -9741,6 +9749,7 @@ export const vi = {
   "contact.readings.title": "Vị thế của liên hệ này",
   "deal360.brief": "Deal này là gì",
   "deal.strip.lastTouch": "Lần chạm cuối",
+  "lead.brief.title": "Tóm tắt lead",
   "lead.standing.qualified": "Đã đủ điều kiện",
   "lead.standing.qualifiedOn":
     "Đủ điều kiện ngày {at}. Khách hàng tiềm năng này giờ là liên hệ trong CRM.",
@@ -9776,6 +9785,8 @@ export const vi = {
   "lead.today.answer": "Trả lời {name}",
   "lead.today.answerMeta": "Còn nợ phản hồi đầu tiên",
   "lead.today.nextTask": "Việc tiếp theo",
+  "lead.today.reply": "Trả lời",
+  "lead.today.openTasks": "Mở công việc",
   "lead.readings.answered": "Đã trả lời",
   "lead.standing.dueBy": "Chưa ai trả lời. Phản hồi đầu tiên hạn đến {at}.",
   "lead.standing.overdueSince":

@@ -1,0 +1,56 @@
+name: a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not
+task: owed_verdict
+site: owed
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+# A proposed slot in plain text is not an arrangement until the other side says
+# yes, so it waits on them. The same slot sent as a calendar invitation does not
+# — accepting or declining it is a calendar action, which invitation_01 already
+# holds. The pair is here because the distinction is the whole of the rule, and
+# a scenario carrying only one of them would certify half of it.
+#
+# The first message is the shape that opened this work: a warm, agreeable reply
+# that reserves one point and names a time, which a model reading the words
+# alone scores as an acknowledgement. It is shown with our own earlier message,
+# which is what makes "Dienstag 14 Uhr" legible as an answer to a question.
+fixture:
+  - subject: 'Re: Rollout-Plan Phase 1-3'
+    body: |
+      der Plan sieht gut aus. Phase 1 ist realistisch, bei Phase 3 haben wir
+      intern noch Klaerungsbedarf mit dem Haendlerteam.
+
+      Dienstag 14 Uhr wuerde bei uns passen.
+    to: ['j.weber@nordwind.test']
+    prior_outbound:
+      subject: 'Rollout-Plan Phase 1-3'
+      body: |
+        anbei der Rollout-Plan in drei Phasen. Wann passt Ihnen ein kurzes
+        Gespraech dazu naechste Woche?
+      at: '2026-09-08T09:00:00Z'
+  - subject: 'workshop slot'
+    body: |
+      When: Tuesday 14:00-14:30
+      Where: the small meeting room
+    to: ['j.weber@nordwind.test']
+    has_calendar_part: true
+expect:
+  outcome: accepted
+  answer: [asks_us, informs_us]
+  rubric: >
+    Both name a time and the verdicts differ. The first proposes one in plain
+    text that nobody has confirmed, and reserves phase 3 as still open, so two
+    separate things wait on the recipient side: asks_us. The second offers a
+    time as a calendar invitation and asks nothing a calendar response cannot
+    settle: informs_us.
+    Score high only if both are right. A model that answers informs_us to the
+    first is reading a warm opening line as the whole message and treating a
+    proposed slot as news — that is the exact failure this scenario exists to
+    catch, where a customer proposing a meeting was reported as waiting on
+    nobody, and it should score at the floor.
+    A model that answers asks_us to both errs toward keeping work visible, which
+    is the cheaper direction, and should score in the middle: it loses the
+    distinction that makes the verdict useful on invitations.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

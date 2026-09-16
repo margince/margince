@@ -1069,6 +1069,7 @@ export const de = {
     "Unterhaltungen, deren Inhalt Sie nicht öffnen dürfen, bleiben bei einer Suche außen vor.",
   "tab.contacts": "Kontakte",
   "tab.deals": "Deals",
+  "tab.dealsProjects": "Deals & Projekte",
   "tab.tasks": "Aufgaben",
   "tab.timeline": "Verlauf",
   "tab.finance": "Finanzen",
@@ -1669,8 +1670,6 @@ export const de = {
   "co.rail.contacts.inTouch": "Bereits mit ihnen in Kontakt",
   "co.rail.projects.title": "Projekte",
   "co.rail.projects.empty": "Noch keine Projekte.",
-
-  "co.tab.deals": "Deals & Projekte",
 
   "co.commercial.title": "Kommerziell",
   "co.commercial.lostFigure": "Verlorene Deals",
@@ -2289,6 +2288,7 @@ export const de = {
   "lead.bulkOutcomeNotFound": "nicht mehr in Ihrer Liste",
   "lead.bulkSelectRow": "{name} auswählen",
   "lead.unnamed": "Lead ohne Namen",
+  "lead.timeline.empty": "Zu diesem Lead ist noch nichts erfasst.",
   "lead.sla.breached": "Überfällig",
   "lead.sla.atRisk": "Bald fällig",
   "lead.sla.withinTarget": "Im Rahmen",
@@ -2304,6 +2304,13 @@ export const de = {
   "lead.details": "Details",
   "lead.ladder.title": "Wo dieser Lead steht",
   "lead.detailsUnset": "Nicht gesetzt",
+  "lead.rail.deal.title": "Deal",
+  "lead.rail.deal.empty":
+    "Noch kein Deal. Beim Qualifizieren kann einer entstehen.",
+  "lead.rail.project.title": "Projekt",
+  "lead.rail.project.empty": "Noch kein Projekt.",
+  "lead.rail.project.attach": "Projekt verknüpfen",
+  "lead.rail.project.change": "Projekt ändern",
   "lead.terminalReadOnly":
     "Dieser Lead ist abgeschlossen und nimmt keine Änderungen an.",
   "lead.notYoursToChange":
@@ -5617,6 +5624,8 @@ export const de = {
     "Auf der Website stand kein Unternehmensname",
   "blockedDomains.source.staleEvidence":
     "Die Post, die dafür spricht, ist zu alt",
+  "blockedDomains.source.nearDuplicate":
+    "Eine Firma mit diesem Namen gibt es hier schon",
   "blockedDomains.rowAdmit": "Diese zulassen",
   "blockedDomains.rowRefuse": "Diese ablehnen",
   "blockedDomains.rowReopen": "Erneut fragen",
@@ -9894,6 +9903,7 @@ export const de = {
   "contact.readings.title": "Wo dieser Kontakt steht",
   "deal360.brief": "Was dieser Deal ist",
   "deal.strip.lastTouch": "Letzter Kontakt",
+  "lead.brief.title": "Lead-Briefing",
   "lead.standing.qualified": "Qualifiziert",
   "lead.standing.qualifiedOn":
     "Qualifiziert am {at}. Dieser Lead ist jetzt ein Kontakt.",
@@ -9929,6 +9939,8 @@ export const de = {
   "lead.today.answer": "{name} antworten",
   "lead.today.answerMeta": "Erste Antwort steht aus",
   "lead.today.nextTask": "Nächste Aufgabe",
+  "lead.today.reply": "Antworten",
+  "lead.today.openTasks": "Aufgaben öffnen",
   "lead.readings.answered": "Beantwortet",
   "lead.standing.dueBy":
     "Noch hat niemand geantwortet. Die erste Antwort ist bis {at} fällig.",
