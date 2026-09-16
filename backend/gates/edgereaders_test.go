@@ -69,11 +69,12 @@ const edgeTable = "relationship"
 // matcher that stops seeing this tree's SQL finds nothing to object to and
 // reads exactly like a clean tree. Its boundary cases are tested where it lives.
 var relationshipGate = objectGate{
-	object:        edgeTable,
-	literal:       gatekit.TableReadPattern(edgeTable),
-	gateSeeds:     []string{"EdgeReadScope"},
-	rowHalfSeeds:  []string{"RelationshipEndpointScope", "EnsureRelationshipVisible"},
-	rowHalfOwners: []string{"internal/modules/contacts", "internal/platform/auth"},
+	object:              edgeTable,
+	literal:             gatekit.TableReadPattern(edgeTable),
+	objectGateSatisfies: true,
+	gateSeeds:           []string{"EdgeReadScope"},
+	rowHalfSeeds:        []string{"RelationshipEndpointScope", "EnsureRelationshipVisible"},
+	rowHalfOwners:       []string{"internal/modules/contacts", "internal/platform/auth"},
 }
 
 // predicateEdgeReads: the edge appears only inside a JOIN or EXISTS that

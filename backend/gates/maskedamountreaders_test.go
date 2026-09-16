@@ -48,6 +48,9 @@ const maskOwner = "internal/modules/deals/"
 // the gate refuses a tree it cannot yet read. A derivation over the exported
 // names would admit whatever a future function is called, which is the same
 // list with the safe direction reversed.
+// A mask spelling is the WHOLE admission here, so objectGateSatisfies stays
+// off and auth.Require(ctx, "deal", …) vouches for nothing — the field's own
+// comment says why the object half cannot answer this question.
 var maskGate = objectGate{
 	object:  "deal",
 	literal: dealAmountColumn,
@@ -407,4 +410,73 @@ func TestEveryReaderOfADealAmountCarriesTheMaskOrAVerdict(t *testing.T) {
 	notTheDealAmount.AssertAllMatched(t)
 	ruledMaskedAmountReads.AssertAllMatched(t)
 	deferredMaskedAmountReads.AssertAllMatched(t)
+}
+
+// TestTheObjectGateDoesNotVouchForAMask plants the shape this census could not
+// see, in both directions.
+//
+// auth.Require(ctx, "deal", …) is the whole admission the deal-TABLE census
+// asks for and no answer at all to this one — every masked read takes it too —
+// and while one flag served both, a statement that ranked an account's deals by
+// the figure a mask withholds reported as guarded.
+//
+// Both directions, because what was wrong is a distinction and not a
+// tightening: a walk that stopped recognising the object gate where it IS the
+// admission would fail every read dealreaders_test.go admits, and a census that
+// fails what it should admit teaches its readers to distrust it.
+func TestTheObjectGateDoesNotVouchForAMask(t *testing.T) {
+	t.Parallel()
+	const asksTheObjectGate = `func readDeals(ctx context.Context, tx pgx.Tx) error {
+		if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
+			return err
+		}
+		_, err := tx.Query(ctx, "SELECT d.amount_minor FROM deal d")
+		return err
+	}`
+	const rendersTheMask = `func readDeals(ctx context.Context, arg func(any) int) (string, error) {
+		return auth.MaskedColumnSQL(ctx, "deal", "amount_minor", "d", "amount_minor", arg)
+	}`
+	// Both gates are about the deal, so the census is named here rather than
+	// read off gate.object — a failure saying "the deal census" would leave a
+	// reader to guess which of the two it is.
+	for _, c := range []struct {
+		name    string
+		census  string
+		source  string
+		gate    objectGate
+		holding bool
+	}{
+		{
+			name:   "the object gate answers nothing about a mask",
+			census: "deal-amount mask",
+			source: asksTheObjectGate,
+			gate:   maskGate,
+		},
+		{
+			name:    "the same body IS gated for the census the object gate answers",
+			census:  "deal-table read",
+			source:  asksTheObjectGate,
+			gate:    dealGate,
+			holding: true,
+		},
+		{
+			name:    "a mask rendering is what this census asks for",
+			census:  "deal-amount mask",
+			source:  rendersTheMask,
+			gate:    maskGate,
+			holding: true,
+		},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+			file, err := parser.ParseFile(token.NewFileSet(), "fixture.go", "package p\n"+c.source, 0)
+			if err != nil {
+				t.Fatalf("parsing the fixture: %v", err)
+			}
+			refs := referencesIn(file.Decls[0], map[string]string{})
+			if got := c.gate.holdsSeedGate(refs, "internal/compose/company360"); got != c.holding {
+				t.Errorf("the %s census reads this body as gated=%v, want %v", c.census, got, c.holding)
+			}
+		})
+	}
 }

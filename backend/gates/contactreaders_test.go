@@ -49,8 +49,9 @@ const contactTable = "contact"
 // only that the caller was human; the row clause inside that helper is what had
 // been standing in for the grant.
 var contactGate = objectGate{
-	object:  contactTable,
-	literal: gatekit.TableReadPattern(contactTable),
+	object:              contactTable,
+	literal:             gatekit.TableReadPattern(contactTable),
+	objectGateSatisfies: true,
 }
 
 // predicateContactReads: the contact table appears only inside a JOIN or EXISTS
