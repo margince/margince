@@ -24,7 +24,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -66,18 +65,27 @@ func ResolveIdentity(ctx context.Context, tx pgx.Tx, kind, key string) (ids.Acti
 	return id, true, nil
 }
 
-// ClaimIdentity binds an external identity to an activity.
+// ClaimIdentity binds an external identity to an activity, and reports whether
+// this activity ended up holding it.
 //
-// The primary key refuses a second claim on one identity, and that refusal is
-// what makes a concurrent claim safe: two arrivals racing on one Message-ID
-// both try to insert, one wins, and the loser is told so rather than creating a
-// second row. The caller re-resolves and binds to the winner.
+// A claim that LOSES is not an error. Somebody else's row holds the identity —
+// a racing arrival that got there first, or a message this caller may not see —
+// and either way their own row still stands: it keeps its own
+// (source_system, source_id), its links and its content, and only the shared
+// identity belongs to somebody else.
 //
-// Already claimed by THIS activity is not a conflict — a replay re-states what
-// it stated before.
-func ClaimIdentity(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, kind, key, attestedBy string) error {
+// Failing the write instead would answer a question no caller may ask. A
+// Message-ID is typed by whoever sent the message, so refusing a guessed one
+// tells the guesser that somebody here already holds it — the existence of
+// another colleague's mail, disclosed by a status code. Reporting false is the
+// mitigation: a lost claim is indistinguishable from a message that had no
+// identity to claim.
+//
+// Already claimed by THIS activity reports true, because a replay re-states
+// what it stated before.
+func ClaimIdentity(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, kind, key, attestedBy string) (bool, error) {
 	if key == "" {
-		return nil
+		return false, nil
 	}
 	tag, err := tx.Exec(ctx, `
 		INSERT INTO activity_identity (identity_kind, identity_key, activity_id, attested_by)
@@ -85,20 +93,16 @@ func ClaimIdentity(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, ki
 		ON CONFLICT (identity_kind, identity_key) DO NOTHING`,
 		kind, key, activityID, attestedBy)
 	if err != nil {
-		return fmt.Errorf("activities: claiming a message identity: %w", err)
+		return false, fmt.Errorf("activities: claiming a message identity: %w", err)
 	}
-	if tag.RowsAffected() == 0 {
-		// Somebody holds it. Ours already, or somebody else's — the caller has
-		// to look, because the two mean opposite things.
-		holder, found, err := ResolveIdentity(ctx, tx, kind, key)
-		if err != nil {
-			return err
-		}
-		if !found || holder != activityID {
-			return apperrors.ErrConflict
-		}
+	if tag.RowsAffected() > 0 {
+		return true, nil
 	}
-	return nil
+	holder, found, err := ResolveIdentity(ctx, tx, kind, key)
+	if err != nil {
+		return false, err
+	}
+	return found && holder == activityID, nil
 }
 
 // IdentitiesOf lists every external identity an activity answers to, so a merge

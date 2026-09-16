@@ -62,11 +62,15 @@ func boundToKnownMessage(ctx context.Context, tx pgx.Tx, in LogActivityInput) (c
 	if err != nil || !same {
 		return crmcontracts.Activity{}, false, err
 	}
-	out, err := readActivity(ctx, tx, incumbent, storekit.IncludeArchived)
+	// LIVE rows only. An archived one is a message that was erased, redacted as
+	// noise, or folded into another row, and handing it back would serve a
+	// tombstone as though it were the message — and, for an erasure, disclose
+	// that the message was erased. The arrival files its own copy instead.
+	out, err := readActivity(ctx, tx, incumbent, storekit.LiveOnly)
 	if errors.Is(err, apperrors.ErrNotFound) {
-		// Out of scope. The message stays hidden and this caller files their
-		// own copy, which is the same answer capture reaches for an incumbent
-		// it may not see.
+		// Out of scope, or no longer live. The message stays hidden and this
+		// caller files their own copy, which is the answer capture reaches for
+		// an incumbent it may not see.
 		return crmcontracts.Activity{}, false, nil
 	}
 	if err != nil {
@@ -93,7 +97,11 @@ func recordImportedProvenance(ctx context.Context, tx pgx.Tx, id ids.ActivityID,
 	if key == "" {
 		return nil
 	}
-	return ClaimIdentity(ctx, tx, id, kind, key, by)
+	// A lost claim is not a failure: somebody else's row holds the identity and
+	// this one still stands on its own key. Whether we won is deliberately not
+	// reported to the caller — see ClaimIdentity.
+	_, err := ClaimIdentity(ctx, tx, id, kind, key, by)
+	return err
 }
 
 // sameKindAs reports whether the incumbent is the same sort of thing as the
