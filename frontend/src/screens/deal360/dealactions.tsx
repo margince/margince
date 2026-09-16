@@ -152,7 +152,14 @@ function ReopenAction({
           ))}
         </div>
         {reopen.isError && (
-          <p className="t-caption" style={{ color: "var(--dangerText)" }}>
+          <p
+            className="t-caption"
+            // The sentence arrives after the press, so it is announced: a
+            // reader who cannot see the dialog change otherwise learns the
+            // reopen failed only by tabbing back over it.
+            role="alert"
+            style={{ color: "var(--dangerText)" }}
+          >
             {problemMessageOf(reopen.error, t)}
           </p>
         )}
@@ -164,7 +171,12 @@ function ReopenAction({
             small
             variant="primary"
             data-testid="reopen-confirm"
-            disabled={!stageId || reopen.isPending}
+            // A write in flight is `pending`, never `disabled`: the two mean
+            // different things and Button keeps the focused control reachable
+            // for the first. Spelled as disabled, the browser drops focus from
+            // the button the reader just pressed.
+            disabled={!stageId}
+            pending={reopen.isPending}
             onClick={() => {
               if (stageId) {
                 reopen.mutate({ toStageId: stageId, version: dealVersion });

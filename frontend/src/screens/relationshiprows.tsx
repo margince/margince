@@ -357,7 +357,14 @@ export function RelationshipRows({
         >
           <Button
             small
-            onClick={() => setRemoving(null)}
+            // The mutation is reset with the dialog, not just the row it was
+            // aimed at: a failed remove left its sentence behind, and the next
+            // seat's dialog opened carrying an error for a write nobody had
+            // attempted on it.
+            onClick={() => {
+              setRemoving(null);
+              remove.reset();
+            }}
             disabled={remove.isPending}
           >
             {t("create.cancel")}

@@ -61,6 +61,7 @@ function stubFetch(
   edges: unknown[],
   deleted: string[] = [],
   patched: Patch[] = [],
+  refuseDelete = false,
 ) {
   vi.stubGlobal(
     "fetch",
@@ -68,6 +69,9 @@ function stubFetch(
       const { url, method } = request;
       if (method === "DELETE") {
         deleted.push(url.slice(url.lastIndexOf("/") + 1));
+        if (refuseDelete) {
+          return json({ title: "Nope", detail: "Nope" }, 409);
+        }
         return json({}, 204);
       }
       if (method === "PATCH") {
@@ -112,8 +116,9 @@ function draw(
   view?: DealCoverage,
   deleted: string[] = [],
   patched: Patch[] = [],
+  refuseDelete = false,
 ) {
-  stubFetch(edges, deleted, patched);
+  stubFetch(edges, deleted, patched, refuseDelete);
   render(
     <QueryClientProvider
       client={
@@ -310,6 +315,43 @@ describe("the deal's committee card", () => {
     );
 
     expect(patched).toEqual([{ role: "champion", ifMatch: "1" }]);
+  });
+
+  it("carries no refusal from one seat's remove into the next seat's", async () => {
+    // Backing out closes the question AND forgets the answer. A refused remove
+    // left its sentence on the mutation, so the next seat's dialog opened
+    // naming a failure for a write nobody had attempted on it.
+    draw(
+      [edge(TALKING, "economic_buyer"), edge(QUIET, "evaluator")],
+      coverage([
+        { contact_id: TALKING, role: "economic_buyer", engaged: true },
+        { contact_id: QUIET, role: "evaluator", engaged: false },
+      ]),
+      [],
+      [],
+      true,
+    );
+
+    const removes = await screen.findAllByTestId("remove-relationship");
+    await userEvent.click(removes[0]);
+    await userEvent.click(
+      await screen.findByTestId("remove-relationship-confirm"),
+    );
+    const refusal = await within(await screen.findByRole("dialog")).findByText(
+      /Nope/,
+    );
+    expect(refusal).toBeInTheDocument();
+
+    await userEvent.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: en["create.cancel"],
+      }),
+    );
+    await userEvent.click(removes[1]);
+
+    expect(
+      within(await screen.findByRole("dialog")).queryByText(/Nope/),
+    ).toBeNull();
   });
 
   it("says the committee is empty once, not twice", async () => {
