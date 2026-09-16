@@ -30,6 +30,21 @@ var ErrEmbeddingsUnsupported = errors.New("model: provider has no embedding lane
 // or surface honestly rather than silently dropping the attachment.
 var ErrAttachmentUnsupported = errors.New("model: provider cannot carry this attachment type")
 
+// ErrAttachmentMislabelled reports inline bytes that are not the kind their
+// attachment claims — a blob labelled image/png, or the text of an SVG on a
+// wire that would build an image part from it.
+//
+// A SEPARATE sentinel from ErrAttachmentUnsupported, because the two ask a
+// caller for opposite things. Carriage is a property of the binding: another
+// lane may carry what this one cannot, so falling back is the right move. This
+// is a property of the BYTES, and every lane will read them the same way — a
+// caller that retried would spend the second call to be told the same thing.
+//
+// Port-level so consumers in other modules can errors.Is against it without
+// importing a provider package. NOT an apperrors domain sentinel, for the same
+// reason ErrAttachmentUnsupported is not one.
+var ErrAttachmentMislabelled = errors.New("model: attachment bytes are not the type claimed")
+
 // Attachment is one cross-provider input part. Bytes XOR URI: Bytes for inline
 // content, URI for a provider file handle / URL. Name is optional provenance.
 type Attachment struct {

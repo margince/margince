@@ -327,7 +327,8 @@ func (m *CallMeter) recordAttempts(ctx context.Context, tx pgx.Tx, attempts []Ca
 		var callID ids.UUID
 		err := tx.QueryRow(ctx, storekit.SQLf(
 			`INSERT INTO ai_call (%s) VALUES (%s) RETURNING id`,
-			strings.Join(namesOf(bound), ", "), bindPlaceholders(len(args))),
+			strings.Join(namesOf(bound), ", "), bindPlaceholders(len(args)),
+		),
 			args...).Scan(&callID)
 		if err != nil {
 			return fmt.Errorf("ai: recording call: %w", err)

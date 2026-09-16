@@ -179,7 +179,8 @@ func ParseRouting(raw []byte) (RoutingConfig, error) {
 	if len(blank) > 0 {
 		return RoutingConfig{}, fmt.Errorf(
 			"ai: routing config: %s: `input` is written with no value; omit the field to bind a text-only model, or name the modalities the bound model accepts",
-			strings.Join(blank, ", "))
+			strings.Join(blank, ", "),
+		)
 	}
 	return cfg.finalize()
 }

@@ -48,7 +48,8 @@ func TestTheCallTraceRecordsWhichUpstreamServedAndHowItStopped(t *testing.T) {
 	}
 
 	var provider, finish, source string
-	if err := env.owner.QueryRow(ctx, `
+	if err := env.owner.QueryRow(
+		ctx, `
 		SELECT served_provider, finish_reason, served_identity_source
 		  FROM ai_call WHERE logical_call_id = $1`, logical,
 	).Scan(&provider, &finish, &source); err != nil {
@@ -90,7 +91,8 @@ func TestACallWithNoReportedUpstreamStoresNoUpstream(t *testing.T) {
 	}
 
 	var provider, finish string
-	if err := env.owner.QueryRow(ctx, `
+	if err := env.owner.QueryRow(
+		ctx, `
 		SELECT served_provider, finish_reason FROM ai_call WHERE logical_call_id = $1`, logical,
 	).Scan(&provider, &finish); err != nil {
 		t.Fatalf("reading the call back: %v", err)
@@ -131,7 +133,8 @@ func TestACallWithoutAnErrorStoresNullRatherThanEmptyText(t *testing.T) {
 				t.Fatalf("recording the call: %v", err)
 			}
 			var isNull bool
-			if err := env.owner.QueryRow(ctx, `
+			if err := env.owner.QueryRow(
+				ctx, `
 				SELECT error_sentinel IS NULL FROM ai_call WHERE logical_call_id = $1`, logical,
 			).Scan(&isNull); err != nil {
 				t.Fatalf("reading the call back: %v", err)
