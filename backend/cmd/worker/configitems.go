@@ -30,6 +30,7 @@ var workerPublic = map[string]bool{
 	"MARGINCE_LOG_LEVEL":          true,
 	"MARGINCE_LOG_FORMAT":         true,
 	"MARGINCE_REDIS":              true,
+	"MARGINCE_REDIS_TLS":          true,
 	"MARGINCE_OBSERVE_ADDR":       true,
 	"MARGINCE_PUBLIC_BASE_URL":    true,
 	"MARGINCE_GMAIL_CLIENT_ID":    true,

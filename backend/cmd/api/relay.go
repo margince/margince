@@ -32,8 +32,8 @@ import (
 // the moment the lane exists; on the served path that lands after the HTTP
 // drain, so late-committing requests usually ship before exit, and anything
 // still unshipped waits durably in the outbox for the next boot.
-func startInlineRelay(ctx context.Context, pool *pgxpool.Pool, redisAddr, redisPassword, webhookKey string, logger *slog.Logger) (compose.Option, func(), error) {
-	rdb, err := events.NewClient(ctx, redisAddr, redisPassword)
+func startInlineRelay(ctx context.Context, pool *pgxpool.Pool, redisAddr, redisPassword string, redisTLS bool, webhookKey string, logger *slog.Logger) (compose.Option, func(), error) {
+	rdb, err := events.NewClient(ctx, redisAddr, redisPassword, redisTLS)
 	if err != nil {
 		return nil, nil, err
 	}

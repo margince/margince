@@ -12,6 +12,7 @@ package events
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -40,10 +41,19 @@ import (
 // stack's event is simply gone, and the symptom — a projection that never
 // runs — is indistinguishable from a broken feature. `make dev` gives each
 // DEV_SLUG its own index for that reason.
-func NewClient(ctx context.Context, addr, password string) (*redis.Client, error) {
+//
+// useTLS is required rather than defaulted: an ElastiCache replication group
+// with transit_encryption_mode=required refuses a plaintext connection
+// outright, so a caller that forgot to opt in fails at Ping here — loud and
+// at boot — rather than the client silently never negotiating the
+// encryption the deployment already pays for.
+func NewClient(ctx context.Context, addr, password string, useTLS bool) (*redis.Client, error) {
 	opts, err := ClientOptions(addr, password)
 	if err != nil {
 		return nil, err
+	}
+	if useTLS {
+		opts.TLSConfig = RedisTLSConfig()
 	}
 	rdb := redis.NewClient(opts)
 	if err := rdb.Ping(ctx).Err(); err != nil {
@@ -93,6 +103,15 @@ func ClientOptions(addr, password string) (*redis.Options, error) {
 			addr, index, maxRedisDB)
 	}
 	return &redis.Options{Addr: host, DB: db, Password: password}, nil
+}
+
+// RedisTLSConfig is the tls.Config every TLS-enabled Redis client in this
+// process uses — NewClient applies it internally, and cmd/api's lazy shared
+// client (built from ClientOptions directly, bypassing NewClient's
+// Ping-verify) calls this too, so the two never drift onto different
+// MinVersions.
+func RedisTLSConfig() *tls.Config {
+	return &tls.Config{MinVersion: tls.VersionTLS12}
 }
 
 // maxRedisDB bounds the index this parser will accept. Redis's own default is
