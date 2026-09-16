@@ -37,7 +37,7 @@ var traceReadClock = time.Date(2026, 6, 4, 9, 0, 0, 0, time.UTC)
 // contact who works at the account.
 //
 // Filed against the CONTACT and never against the company, because that is what
-// capture writes: an account is reached through its people. A fixture with a
+// capture writes: an account is reached through its contacts. A fixture with a
 // direct company link would describe a row no connector produces, and the arm
 // under test — reaches exactly one account — would be satisfied by the wrong
 // shape.
