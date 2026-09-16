@@ -5759,6 +5759,8 @@ export const en = {
   "blockedDomains.source.human": "A person",
   "blockedDomains.source.unevidenced": "Nothing on the site named a company",
   "blockedDomains.source.staleEvidence": "The mail arguing for it is too old",
+  "blockedDomains.source.nearDuplicate":
+    "A company with this name is already here",
   "blockedDomains.rowAdmit": "Allow this one",
   "blockedDomains.rowRefuse": "Refuse this one",
   "blockedDomains.rowReopen": "Ask again",

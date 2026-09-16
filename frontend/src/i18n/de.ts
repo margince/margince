@@ -5620,6 +5620,8 @@ export const de = {
     "Auf der Website stand kein Unternehmensname",
   "blockedDomains.source.staleEvidence":
     "Die Post, die dafür spricht, ist zu alt",
+  "blockedDomains.source.nearDuplicate":
+    "Eine Firma mit diesem Namen gibt es hier schon",
   "blockedDomains.rowAdmit": "Diese zulassen",
   "blockedDomains.rowRefuse": "Diese ablehnen",
   "blockedDomains.rowReopen": "Erneut fragen",

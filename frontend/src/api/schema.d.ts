@@ -8900,10 +8900,11 @@ export interface paths {
          *     deliberate one.
          *
          *     An `undecided` entry is a question, not a decision. The crawl found nothing that named a
-         *     company (`unevidenced`), or the newest mail from the domain is too old to mint one from
-         *     today's site (`stale_evidence`). Such a domain is dropped from the retry sweep — a
-         *     re-crawl cannot make old mail newer — so it stays open until new mail arrives or somebody
-         *     here answers it. Without this list those rows are invisible, and a company that never
+         *     company (`unevidenced`), the newest mail from the domain is too old to mint one from
+         *     today's site (`stale_evidence`), or the name it resolved to is close to a company already
+         *     here and creating would put one company in the workspace twice (`near_duplicate`). Such a
+         *     domain is dropped from the retry sweep — a re-crawl reads the same site and reaches the
+         *     same answer — so it stays open until new mail arrives or somebody here answers it. Without this list those rows are invisible, and a company that never
          *     appeared looks the same as one nobody ever asked about.
          *
          *     Every human role may read the list; changing an entry demands `company:update`
@@ -16625,10 +16626,12 @@ export interface components {
              * @description What decided it, or — for an `undecided` domain — what stopped the machine deciding.
              *     `human` decisions outrank every machine one. `unevidenced` means nothing the crawl
              *     found named a company; `stale_evidence` means the newest mail from the domain is too
-             *     old to mint one from today's site.
+             *     old to mint one from today's site; `near_duplicate` means the name it resolved to is
+             *     close to a company already here, and which of them this domain belongs to is a
+             *     human's call rather than the machine's.
              * @enum {string}
              */
-            source: "verdict" | "heuristic" | "human" | "unevidenced" | "stale_evidence";
+            source: "verdict" | "heuristic" | "human" | "unevidenced" | "stale_evidence" | "near_duplicate";
             /**
              * Format: date-time
              * @description When the decision was recorded. For an `undecided` domain, when the row last moved.
