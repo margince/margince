@@ -7975,7 +7975,7 @@ export const en = {
     "This deployment has no external provider configured, so there is nothing to offer besides a password.",
   "groupRoles.title": "Group role grants",
   "groupRoles.sub":
-    "Grant a role at corporate sign-in to every invited member of an IdP group. Spell the group exactly as the ID token's groups claim does. No account is created this way — an email nobody invited is refused, groups or none.",
+    "Grant a role at corporate sign-in to every invited member of an IdP group. Spell the group exactly as the ID token's groups claim does. No account is created this way — an email nobody invited is refused, whether they have groups or not.",
   "groupRoles.grantOnlyTitle": "Grants only — the directory never revokes",
   "groupRoles.grantOnly":
     "Each sign-in grants the mapped roles and never removes any. Removing a member from an IdP group does not take the role away here: revocation stays a deliberate admin action on the member's own account.",

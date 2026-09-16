@@ -37717,7 +37717,7 @@ type UpdateInstallationSettingsRequest struct {
 	// this map is itself admin-only to edit, so that is a deliberate act.
 	//
 	// It creates no accounts: an email nobody invited is refused exactly as
-	// before, groups or none. Omit the field to leave the map unchanged; send an
+	// before, whether they have groups or not. Omit the field to leave the map unchanged; send an
 	// empty object to clear it; sending a map replaces the whole stored map.
 	OidcGroupRoleMap *map[string]string `json:"oidc_group_role_map,omitempty"`
 
