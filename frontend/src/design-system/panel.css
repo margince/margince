@@ -325,21 +325,21 @@
 }
 
 /* tone="warn": the lead whose FINDING is the bad news. The warn family's own
- * three tokens, the same pairing `Callout` draws — a title in `--warn` over
- * `--warnBg` — so the two surfaces that say "this is the bad news" say it in
+ * three tokens, the same pairing `Callout` draws — a title in `--warning` over
+ * `--warningBg` — so the two surfaces that say "this is the bad news" say it in
  * one colour rather than each picking its own amber. */
 .panel-warn {
-  border-color: var(--warnBorder);
+  border-color: var(--warningBorder);
 }
 .panel-warn > .panel-head {
-  background: var(--warnBg);
-  border-bottom: 1px solid var(--warnBorder);
+  background: var(--warningBg);
+  border-bottom: 1px solid var(--warningBorder);
 }
 .panel-warn > .panel-head .panel-title {
-  color: var(--warnText);
+  color: var(--warningText);
 }
 .panel-warn > .panel-foot {
-  border-top-color: var(--warnBorder);
+  border-top-color: var(--warningBorder);
 }
 
 /* tone="ai": the panel a MACHINE wrote or read. Indigo is the product's one

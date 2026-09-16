@@ -108,7 +108,7 @@ export const RunsMixed: Story = { render: renderMixedRuns };
 
 // The same five outcomes in dark, and the reason LINE is why this is worth a
 // picture rather than the badge legend above. A badge carries its tone on a
-// filled chip; `reasonColor` puts `--danger` and `--warn` on bare text over the
+// filled chip; `reasonColor` puts `--danger` and `--warning` on bare text over the
 // inset card, which is the shape that fails a contrast floor first when the
 // tokens re-resolve — a bright warn that reads on white is the same warn on
 // near-black. The card is `inset`, so its ground is recessed too.

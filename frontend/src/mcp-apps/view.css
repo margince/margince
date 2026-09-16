@@ -166,7 +166,7 @@ h1 {
 
 /* The warmth bands are TEXT, so each has to clear 4.5:1 against --bgElevated in
    both themes. Hence the Text half of the status family and not the bright hue
-   the same names carry for shapes: --successText and --warnText are the
+   the same names carry for shapes: --successText and --warningText are the
    readings the design system holds at AA for small text. Named by token because
    check-ds-purity.sh greps comments too, and a hex here would fail the gate this
    comment explains. */
@@ -175,7 +175,7 @@ h1 {
 }
 
 .band-medium {
-  color: var(--warnText);
+  color: var(--warningText);
 }
 
 /* A promise's state is TEXT, so it takes --dangerText, which the design system
@@ -205,7 +205,7 @@ h1 {
   display: flex;
   align-items: baseline;
   gap: var(--space-2);
-  border-left: 2px solid var(--warn);
+  border-left: 2px solid var(--warning);
   padding: var(--space-1) var(--space-3);
 }
 

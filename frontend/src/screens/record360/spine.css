@@ -135,30 +135,30 @@
      compared with nothing, rather than lined up with the body's tabular
      figures. */
   font-family: var(--fontFamilyHeading);
-  color: var(--warn);
+  color: var(--warning);
 }
 .co-spine-gap .co-spine-rail {
   border-block-start-style: dashed;
-  border-block-start-color: var(--warnBorder);
+  border-block-start-color: var(--warningBorder);
 }
 .co-spine-gap .co-spine-dot {
   display: none;
 }
 .co-spine-gap .co-spine-title {
-  color: var(--warnText);
+  color: var(--warningText);
 }
 .co-spine-gap .co-spine-detail {
-  color: var(--warnText);
+  color: var(--warningText);
 }
 
 /* PAST ITS DATE — a commitment that has slipped. Same tone as the gap, since
    both are somebody being kept waiting. */
 .co-spine-overdue .co-spine-dot {
-  background: var(--warnBorder);
-  border-color: var(--warnBorder);
+  background: var(--warningBorder);
+  border-color: var(--warningBorder);
 }
 .co-spine-overdue .co-spine-detail {
-  color: var(--warnText);
+  color: var(--warningText);
 }
 
 /* AHEAD — dated and not yet happened. A hollow dot, because the difference

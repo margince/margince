@@ -385,8 +385,8 @@
 }
 /* The label is absolutely positioned for the collapse animation, so it does not
    flow around the shortcut cap — it is held clear of it instead. */
-/* The head: the brand block, then the line that says what it runs on and which
-   build this is. TWO ROWS, so the marker stands beside the attribution instead
+/* The head: the brand block, then the line that says what it runs on and what
+   stage it is at. TWO ROWS, so the marker stands beside the attribution instead
    of at the foot of a column a demo never scrolls to — and the control that
    collapses this panel is not among them, it stands in the top bar
    (app/topbar.css) where it does not travel with the panel it opens.
@@ -573,8 +573,8 @@
   height: 0;
   opacity: 0;
 }
-/* The head's second line: what this installation runs on, and which build of it
-   this is. One row for both, because they are one statement.
+/* The head's second line: what this installation runs on, and what stage that
+   product is at. One row for both, because they are one statement.
    It is a SIBLING of the brand anchor and not a child of it: the marker is a
    fact about the build, and a fact inside a link is a fact a press carries you
    away from. */
@@ -597,18 +597,20 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-/* WHICH BUILD THIS IS, as a badge rather than a line of grey type (app/shell.tsx
-   draws it): a stamp on the product, soft because a version is a standing fact
-   rather than a status to act on. The wrapper only keeps it from shrinking. */
-.rail .ws-alpha {
-  display: inline-flex;
-  flex: none;
+/* Only the attribution gives way. Whatever else stands on this line is sized by
+   its own words, and one squeezed to buy the name room loses its label to the
+   ellipsis above — where the name can afford the ellipsis and still be read.
+   Said of the row's other children rather than of any one class, so the marker
+   beside it can be replaced or removed without taking its sizing with it; the
+   same direction `.panel-head` takes with its own title. */
+.rail .ws-company > :not(.ws-company-text) {
+  flex-shrink: 0;
 }
 /* Collapsed there is no room for the attribution and no need for it: the mark
-   above says whose installation this is, and 56px is one glyph wide. The badge
-   stays — it is the whole reason this line survives the collapse — shortened to
-   one letter by release.ts and centred under the mark by the head's own
-   `align-items`. */
+   above says whose installation this is, and 56px is one glyph wide. The marker
+   stays — it is the whole reason this line survives the collapse — at its full
+   word, which is short enough for the column, and centred under the mark by the
+   head's own `align-items`. */
 .rail.collapsed .ws-company-text {
   display: none;
 }

@@ -56,7 +56,7 @@
    current. The warn tone marks it as a caveat and not as prose. */
 .surfacestate-stale {
   margin-bottom: var(--space-2);
-  color: var(--warnText);
+  color: var(--warningText);
 }
 
 /* A surface holding two independently-governed parts labels each one, so a

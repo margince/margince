@@ -87,7 +87,7 @@
 
 .pref-partial-banner {
   margin-top: var(--space-4);
-  color: var(--warnText);
+  color: var(--warningText);
 }
 
 .pref-unsub {

@@ -42,9 +42,10 @@
    tint composites over its own --bgElevated so its contrast does not depend on
    which surface a caller put it on — the same reason .badge-warn does. */
 .visibility-withheld {
-  background: linear-gradient(var(--warnBg), var(--warnBg)), var(--bgElevated);
+  background:
+    linear-gradient(var(--warningBg), var(--warningBg)), var(--bgElevated);
   border-color: transparent;
-  color: var(--warnText);
+  color: var(--warningText);
 }
 
 /* The mark and its verb on one line, the verb immediately AFTER the fact it

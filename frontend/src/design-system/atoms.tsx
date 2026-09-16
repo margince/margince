@@ -362,7 +362,28 @@ function ButtonSentences({
   );
 }
 
-type BadgeTone = "default" | "accent" | "success" | "warn" | "danger" | "ai";
+/**
+ * The closed tone vocabulary, as a VALUE that the type is read from — so the
+ * story that draws every tone and the gate that checks every tone is painted
+ * walk the same list the compiler enforces. Spelled twice, they drift, and the
+ * copy that goes stale is always the one nobody renders.
+ *
+ * `discovery` says a thing is NEW — newly arrived, newly offered, not yet how
+ * things have always been. It is the one tone that reports no verdict: a status
+ * says how something is GOING and this says how long it has been here, which is
+ * why it is a word of its own rather than a borrowed `accent`.
+ */
+export const BADGE_TONES = [
+  "default",
+  "accent",
+  "success",
+  "warn",
+  "danger",
+  "ai",
+  "discovery",
+] as const;
+
+type BadgeTone = (typeof BADGE_TONES)[number];
 // The leading slot holds ONE mark, a glyph or the `live` dot. An `ai` badge's
 // mark is always Sparkles, so that tone is given neither to choose.
 type BadgeMark =

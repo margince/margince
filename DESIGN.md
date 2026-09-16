@@ -154,10 +154,31 @@ Rules 1 and 5 are already held by gates; this file adds 2, 3 and 4.
 ## 3. Colour
 
 The semantic split is unchanged: `--accent` (emerald) is brand and primary
-action, `--ai*` (indigo) is agent provenance, `--success` / `--warn` /
-`--danger` are status. Those names are the ones `tokens.test.ts` pins, together
-with `--ai`, `--aiLight`, `--aiMed` and `--aiText`. What changes is the ground,
-which is lit, and the surface, which is one translucent pane per zone.
+action, `--ai*` (indigo) is agent provenance, and the five state hues report how
+something went. Those names are the ones `tokens.test.ts` pins, together with
+`--ai`, `--aiLight`, `--aiMed` and `--aiText`. What changes is the ground, which
+is lit, and the surface, which is one translucent pane per zone.
+
+**Five states, and a screen may not invent a sixth.** *Information* is the
+neutral report and the work still in flight — an info mark, a spinner's ring, a
+row a job has not finished writing. *Success* is a favourable outcome. *Warning*
+is caution BEFORE the fact: the sentence that stops a mistake while it can still
+be stopped. *Danger* is the serious or irreversible one. *Discovery* is what is
+new to this reader — onboarding, a capability they have not met — and it is the
+one of the five that is not a verdict about the record.
+
+Each state has ONE base, and it is the only value anybody picks: `--info`
+`#0485f7`, `--success` `#17c964`, `--warning` `#f5a524`, `--danger` `#ff383c`,
+`--discovery` `#964ac0` in light, with warning, danger and discovery stepping to
+a lighter tone the dark ground can carry. Everything else in a family is derived
+from that base in `tokens.css` and nowhere else — the ink (`--<state>Text`, the
+base walked in OKLCh lightness until it clears 4.5:1 on every ground it lands on
+and on its own tint), the opaque badge tint (`--<state>Surface`), the
+translucent wash (`--<state>Bg`) and the hairline (`--<state>Border`). A filled
+control is grounded in the ink and not in the base, because a base is tuned to be
+SEEN at a bar's size and no ink reads on the set of them. `tokens.test.ts` reads
+the five states off the sheet, measures every pair in both themes, and fails when
+a state is missing from either.
 
 **The neutral ink is TWO tokens, not the four-rung ladder below.**
 `--textPrimary` is the ink that carries — names, headings, body — at `#15201b`
@@ -173,7 +194,7 @@ The tables below are the design TARGET, and they name some rungs the tree does
 not carry yet — `--ink4`, `--aiBg`, `--aiLine`, `--ok`, `--bad`. Read a name that
 does not appear in `frontend/src` as a value still to be introduced, not as one
 to reach for today: the shipped spelling of the agent tint is `--aiLight`, its
-edge is `--aiMed`, and status is `--success` / `--warn` / `--danger`.
+edge is `--aiMed`, and the state hues are the five named above.
 
 ### Light (the default)
 
@@ -188,7 +209,7 @@ edge is `--aiMed`, and status is `--success` / `--warn` / `--danger`.
 | `--ink` / `--ink2` / `--ink3` / `--ink4` | `#101a15` / `#33403a` / `#66736c` / `#9aa59f` | Names and values / body / labels and meta / placeholders and dates. |
 | `--accent` / `--accentText` / `--accentBg` | `#0b7a53` / `#0a6f4b` / `#e8f3ee` | The one filled verb; a link; a selected row or a done stage. |
 | `--ai` / `--aiText` / `--aiBg` / `--aiLine` | `#5b61d6` / `#3f45b0` / `rgba(91,97,214,.09)` / `.35` | The agent's filled verb; its label; the tinted row; the dashed edge of a staged row. |
-| `--ok` / `--warn` / `--bad` | `#15803d` / `#a16207` / `#b91c1c` | Status, as a soft badge — the tint behind a word, lettered in the tone's ink and edged in its hairline — or as a solid one for a count and the one status that must not be missed. |
+| `--info` / `--success` / `--warning` / `--danger` / `--discovery` | `#0485f7` / `#17c964` / `#f5a524` / `#ff383c` / `#964ac0` | The five states, as a soft badge — the tone's `Surface` behind a word, lettered in its `Text` ink and edged in its `Border` — or as a solid one for a count and the one state that must not be missed. |
 
 ### Dark
 
@@ -212,9 +233,9 @@ to step. The three-state theme pattern (`:root`,
 - **Indigo is a fact, not a mood.** The agent's read is a row on `--aiBg`; a
   staged change is a row with a dashed `--aiLine` edge until a contact accepts
   it. Nothing else is indigo.
-- **Status is a soft badge before it is a solid one.** A column of statuses
-  is a column of soft badges, one weight down the page; the solid fill is for
-  a count and the one status a reader must not miss.
+- **A state is a soft badge before it is a solid one.** A column of states is a
+  column of soft badges, one weight down the page; the solid fill is for a count
+  and the one state a reader must not miss.
 - **Avatars are neutral.** `--bg3` with `--ink2` initials; a record is told
   apart by its name.
 

@@ -80,7 +80,7 @@
 }
 
 .rmap-pill-waiting {
-  fill: var(--warn);
+  fill: var(--warning);
 }
 
 .rmap-pill-answered {
@@ -88,7 +88,7 @@
 }
 
 .rmap-pill-no_reply {
-  fill: var(--warn);
+  fill: var(--warning);
 }
 
 .rmap-pill-untried {
@@ -118,14 +118,14 @@
 /* A gap is a hole, and it looks like one: dashed, in the warning family, with
  * the words inside it. */
 .rmap-gap .rmap-box {
-  fill: var(--warnBg);
-  stroke: var(--warnBorder);
+  fill: var(--warningBg);
+  stroke: var(--warningBorder);
   stroke-width: 1.5;
   stroke-dasharray: 4 3;
 }
 
 .rmap-gap .rmap-name {
-  fill: var(--warn);
+  fill: var(--warning);
 }
 
 .rmap-node {

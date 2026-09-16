@@ -62,11 +62,11 @@
   --catCompany: color-mix(in oklab, var(--accent) 58%, var(--overlayLight));
   --catOffering: color-mix(in oklab, var(--accent) 88%, var(--overlayDark));
   --catMarket: color-mix(in oklab, var(--accent) 38%, var(--textPrimary));
-  --catSignal: color-mix(in oklab, var(--warn) 86%, var(--overlayLight));
+  --catSignal: color-mix(in oklab, var(--warning) 86%, var(--overlayLight));
 
-  /* The warn family's page-level wash. --warnBg is a fill strong enough to
+  /* The warn family's page-level wash. --warningBg is a fill strong enough to
    * carry a badge; a card that spans the panel needs a tint an order quieter,
    * or "a human is needed here" shouts over the content it is asking about.
    */
-  --warnSurface: color-mix(in srgb, var(--warn) 4%, var(--bgElevated));
+  --warningSurface: color-mix(in srgb, var(--warning) 4%, var(--bgElevated));
 }

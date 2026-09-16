@@ -18,7 +18,7 @@
 }
 /* The finished capture reads as arrival, not just a stopped process. */
 .capture-hero.done {
-  border-color: var(--online);
+  border-color: var(--success);
   background: var(--successBg);
 }
 .backfill-h {

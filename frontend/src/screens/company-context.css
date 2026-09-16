@@ -38,7 +38,7 @@
   border-left: 3px solid var(--accentMed);
 }
 .company-context-comparison.is-human_conflict {
-  border-left-color: var(--warn);
+  border-left-color: var(--warning);
 }
 .company-context-comparison-title {
   display: flex;

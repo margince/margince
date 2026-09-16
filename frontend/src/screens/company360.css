@@ -1190,7 +1190,7 @@
   background: var(--borderStrong);
 }
 .co-dot-warn {
-  background: var(--warn);
+  background: var(--warning);
 }
 .co-dot-danger {
   background: var(--danger);
@@ -1244,7 +1244,7 @@
   flex: none;
 }
 .today-lead-warn {
-  color: var(--warn);
+  color: var(--warning);
 }
 .today-lead-danger {
   color: var(--danger);
@@ -1543,7 +1543,7 @@
   background: var(--success);
 }
 .co-dim-warn::before {
-  background: var(--warn);
+  background: var(--warning);
 }
 .co-dim-danger::before {
   background: var(--danger);
@@ -1582,7 +1582,7 @@
   color: inherit;
 }
 .co-360-reading dd.co-360-reading-warn {
-  color: var(--warnText);
+  color: var(--warningText);
 }
 .co-360-reading dd.co-360-reading-danger {
   color: var(--dangerText);
@@ -1730,7 +1730,7 @@
   white-space: nowrap;
 }
 .co-todo-due-warn {
-  color: var(--warnText);
+  color: var(--warningText);
 }
 .co-todo-due-danger {
   color: var(--dangerText);

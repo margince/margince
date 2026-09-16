@@ -56,7 +56,7 @@ Some of this is held deterministically — `make native-controls`,
 can tell that the component you just wrote already existed under another name. The
 catalog gate keeps it findable; the grep is still yours.
 
-**A label in a pill is one `Badge`**: `soft` or `primary`, six tones, icon left.
+**A label in a pill is one `Badge`**: `soft` or `primary`, seven tones, icon left.
 Soft is a tint plus tone hairline, primary a solid fill; `ai` draws Sparkles.
 No caps, no click; `badge-spelling.test.ts` fails a hand-rolled pill or restyle.
 

@@ -71,7 +71,7 @@
   flex: none;
 }
 .urlnote.err {
-  color: var(--dnd);
+  color: var(--danger);
 }
 .urlnote.ok {
   color: var(--teal);
@@ -111,8 +111,8 @@
   margin-top: 1px; /* ds:ignore optical: sets the tile on the title's cap line */
 }
 .readfail.warn .rfi {
-  background: var(--warnBg);
-  color: var(--warn);
+  background: var(--warningBg);
+  color: var(--warning);
 }
 
 .readfail .rfi svg {
@@ -179,7 +179,7 @@
   gap: var(--space-3);
   margin-top: var(--space-5);
   background: var(--successBg);
-  border: 1px solid var(--online);
+  border: 1px solid var(--success);
   border-radius: var(--r-md);
   padding: var(--space-5);
   text-align: center;
@@ -243,9 +243,9 @@
   width: min(460px, 100%);
   margin: var(--space-3) auto 0;
   padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--warnBorder);
+  border: 1px solid var(--warningBorder);
   border-radius: var(--r-sm);
-  background: var(--warnBg);
+  background: var(--warningBg);
   text-align: start;
 }
 
@@ -270,7 +270,7 @@
 .confirm-origin svg {
   width: 16px;
   flex: none;
-  color: var(--online);
+  color: var(--success);
 }
 
 .ob-read-panel {
@@ -386,8 +386,8 @@
 }
 .ob-core-journey [data-state="done"] i {
   color: var(--textOnAccent);
-  border-color: var(--online);
-  background: var(--online);
+  border-color: var(--success);
+  background: var(--success);
 }
 
 .ob-core-url {
@@ -437,7 +437,7 @@
   justify-content: center;
   gap: var(--space-2);
   margin-top: var(--space-2);
-  color: var(--online);
+  color: var(--success);
 }
 .ob-core-url-note svg {
   width: 12px;
@@ -602,11 +602,11 @@
 }
 .finding-label svg {
   width: 12px;
-  color: var(--online);
+  color: var(--success);
 }
 .finding-label span {
   margin-left: auto;
-  color: var(--online);
+  color: var(--success);
 }
 .finding-card strong,
 .finding-card blockquote {

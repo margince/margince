@@ -13,7 +13,7 @@
   corner-shape: round;
 }
 .dot-auto {
-  background: var(--online);
+  background: var(--success);
 }
 .dot-confirm {
   background: var(--away);
@@ -88,13 +88,13 @@ button.evidence-chip:hover {
   gap: 6px;
 }
 .confidence-high .dot {
-  background: var(--online);
+  background: var(--success);
 }
 .confidence-med .dot {
   background: var(--away);
 }
 .confidence-low .dot {
-  background: var(--dnd);
+  background: var(--danger);
 }
 
 /* The agent's row: a staged proposal is visibly NOT yet real. Its ground, its

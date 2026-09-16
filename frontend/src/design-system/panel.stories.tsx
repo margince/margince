@@ -156,8 +156,8 @@ export const AccentTone: Story = {
 // badge inside it, and why the geometry does not move: an accent lead and a
 // warn lead are one card in two states, not two cards.
 //
-// Check it in both themes. `--warn` inverts across them (a dark amber-brown on
-// light, a bright amber on dark) while `--warnBg` and `--warnBorder` stay the
+// Check it in both themes. `--warning` inverts across them (a dark amber-brown on
+// light, a bright amber on dark) while `--warningBg` and `--warningBorder` stay the
 // same translucent amber, so the title's contrast against the band is the one
 // thing to look at twice.
 export const WarnTone: Story = {

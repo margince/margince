@@ -82,7 +82,7 @@ export function OutcomeBadge({
 function reasonColor(outcome: Outcome): string {
   return outcome === "failed" || outcome === "blocked"
     ? "var(--dangerText)"
-    : "var(--warnText)";
+    : "var(--warningText)";
 }
 
 // A labelled detail line, rendered ONLY by the caller when the field is

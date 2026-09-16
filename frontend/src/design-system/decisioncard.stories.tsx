@@ -20,7 +20,7 @@ import { AutonomyDot } from "./trust";
 // of time, and one that came back carrying nothing to read at all.
 //
 // Check every frame in BOTH themes. The urgency band is a `color-mix()` over
-// `--warn` and `--danger`, and the ground under it is the staged card's
+// `--warning` and `--danger`, and the ground under it is the staged card's
 // `--aiLight` tint — every one of those re-resolves when the theme flips, so a
 // band that reads clearly on paper can vanish on the dark surface.
 const meta: Meta<typeof DecisionCard> = {

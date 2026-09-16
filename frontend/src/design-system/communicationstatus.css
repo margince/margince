@@ -69,7 +69,7 @@
 }
 
 .commstatus-attention {
-  color: var(--warnText);
+  color: var(--warningText);
 }
 
 .commstatus-restricted {

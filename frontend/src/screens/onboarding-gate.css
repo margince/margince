@@ -184,8 +184,8 @@
    tones are also distinguished by their role (alert vs status), so the
    difference survives without colour. */
 .ob-gate-alert.is-paused {
-  border-color: var(--warnBorder);
-  background: var(--warnBg);
+  border-color: var(--warningBorder);
+  background: var(--warningBg);
 }
 
 /* Picking a setup back up is not a problem report. It wears the neutral card
@@ -403,7 +403,7 @@
    number rather than more of the same disclosure. */
 .ob-scan-cost-unpriced {
   font-variant-numeric: normal;
-  color: var(--warnText);
+  color: var(--warningText);
 }
 .ob-scan-cost-model {
   margin: 0;

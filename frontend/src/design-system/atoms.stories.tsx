@@ -9,6 +9,7 @@ import {
 } from "react";
 import {
   Avatar,
+  BADGE_TONES,
   Badge,
   Button,
   Card,
@@ -238,7 +239,10 @@ export const Buttons: Story = {
 };
 
 const BADGE_VARIANTS = ["soft", "primary"] as const;
-const BADGE_TONES = ["accent", "success", "warn", "danger", "ai"] as const;
+// The tinted tones, walked from the component's own vocabulary: `default` is
+// drawn on its own at the head of each row, and a grid that listed the rest
+// again would stop showing the newest tone on the day it was added.
+const BADGE_TINTS = BADGE_TONES.filter((tone) => tone !== "default");
 const badgeDocs = (story: string) => ({ docs: { description: { story } } });
 
 export const BadgeVariants: Story = {
@@ -249,13 +253,14 @@ export const BadgeVariants: Story = {
 - Soft has a tone hairline, primary none; add no border, caps or pill class.
 - Don't make a badge interactive: a pressable fact is \`Chip\`, a filter is
   \`FilterPills\`, a verb is \`Button\`.
-- No new colours. \`ai\` (always with Sparkles) means an agent proposed it.`),
+- No new colours. \`ai\` (always with Sparkles) means an agent proposed it, and
+  \`discovery\` means something new rather than something going well.`),
   render: () => (
     <div style={stack}>
       {BADGE_VARIANTS.map((variant) => (
         <div key={variant} style={row}>
           <Badge variant={variant}>default</Badge>
-          {BADGE_TONES.map((tone) => (
+          {BADGE_TINTS.map((tone) => (
             <Badge key={tone} variant={variant} tone={tone}>
               {tone}
             </Badge>

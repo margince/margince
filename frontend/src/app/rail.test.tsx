@@ -12,7 +12,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { displayVersion, narrowVersion } from "./release";
+import { en } from "../i18n/en";
 import { navigate, type Route } from "./router";
 import { Shell, WorkspaceRail } from "./shell";
 import {
@@ -136,6 +136,13 @@ function mountShellStyles(): HTMLStyleElement {
   document.head.append(style);
   return style;
 }
+
+// The head's stage marker: the house Badge on the attribution row, carrying no
+// class of its own. Named once here so the shape of that row is stated in one
+// place, and the word is READ from the catalog rather than typed out — a
+// literal here would go on passing after the marker started saying something
+// else. Temporary, with app/betabadge.tsx.
+const MARKER = ".ws-company .badge";
 
 // A row that is not in the rail at all is not the same thing as a hidden one,
 // and must not read as one: the head keeps its elements and the level takes
@@ -324,39 +331,35 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
   });
 
   // The half that is easy to break: the marker has to survive the collapse. At
-  // 56px the rail drops every label it has, so a build badge that rode the
+  // 56px the rail drops every label it has, so a stage badge that rode the
   // wordmark would be gone exactly where the product is hardest to identify —
   // and it is the one thing here a reader may need to read back to us.
   //
-  // Read from `release.ts` rather than typed out: the badge and the version are
-  // one answer, and a literal here would go on passing after a release changed
-  // it. The narrow form is the same string with one word abbreviated, so the two
-  // cannot drift into naming different builds.
-  it("stamps the build at both rail widths, one glyph narrower collapsed", () => {
+  // ONE WORD at both widths, asserted as one expectation of both renders rather
+  // than as two: the word is short enough for the 56px column, so a second,
+  // narrow spelling is exactly what must not creep back in — two strings for
+  // one marker can drift into naming two different stages.
+  it("stamps the stage at both rail widths, in the same word", () => {
     const expanded = render(<WorkspaceRail route={{ screen: "home" }} />);
-    expect(expanded.container.querySelector(".ws-alpha")?.textContent).toBe(
-      displayVersion(),
+    expect(expanded.container.querySelector(MARKER)?.textContent).toBe(
+      en["shell.beta"],
     );
     cleanup();
 
     const collapsed = render(
       <WorkspaceRail route={{ screen: "home" }} collapsed />,
     );
-    expect(collapsed.container.querySelector(".ws-alpha")?.textContent).toBe(
-      narrowVersion(),
+    expect(collapsed.container.querySelector(MARKER)?.textContent).toBe(
+      en["shell.beta"],
     );
-    // The abbreviation is what the 56px column buys, said once here so a
-    // `narrowVersion` that stopped abbreviating fails rather than passing
-    // against itself.
-    expect(narrowVersion()).not.toBe(displayVersion());
   });
 
   // The badge is not inside the link. A fact about the build sitting in an
   // anchor is a fact a press carries the reader away from, and the head's one
   // target is the mark.
-  it("keeps the build badge out of the brand's link", () => {
+  it("keeps the stage badge out of the brand's link", () => {
     const { container } = render(<WorkspaceRail route={{ screen: "home" }} />);
-    const badge = container.querySelector(".ws-alpha");
+    const badge = container.querySelector(MARKER);
     expect(badge).toBeTruthy();
     expect(badge?.closest("a")).toBeNull();
     // And the marker the foot used to carry is gone with it.
@@ -643,7 +646,7 @@ describe("Rail levels (a section's entries as the second level)", () => {
     shellStyles = mountShellStyles();
     const client = newClient();
     client.setQueryData(["company"], TWO_MARKS);
-    const parts = [".company-logo", ".ws-company-text", ".ws-alpha"];
+    const parts = [".company-logo", ".ws-company-text", MARKER];
     const plain = renderWith(
       client,
       <WorkspaceRail route={{ screen: "home" }} />,
@@ -782,7 +785,7 @@ describe("Rail levels (a section's entries as the second level)", () => {
       "an installation's monogram",
       { ...TWO_MARKS, logo_url: undefined, logo_icon_url: undefined },
     ],
-  ])("stamps the build on the head with %s", (_name, company) => {
+  ])("stamps the stage on the head with %s", (_name, company) => {
     const client = newClient();
     if (company) {
       client.setQueryData(["company"], company);
@@ -791,10 +794,8 @@ describe("Rail levels (a section's entries as the second level)", () => {
       client,
       <WorkspaceRail route={{ screen: "home" }} />,
     );
-    expect(container.querySelectorAll(".ws-alpha")).toHaveLength(1);
-    expect(container.querySelector(".ws-alpha")?.textContent).toBe(
-      displayVersion(),
-    );
+    expect(container.querySelectorAll(MARKER)).toHaveLength(1);
+    expect(container.querySelector(MARKER)?.textContent).toBe(en["shell.beta"]);
   });
 
   it("draws the square icon when the panel is collapsed", () => {

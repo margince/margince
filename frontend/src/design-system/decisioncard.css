@@ -37,7 +37,7 @@
  * deadline starts to matter.
  */
 .dcard[data-urgency="soon"] {
-  box-shadow: inset 3px 0 0 0 var(--warn);
+  box-shadow: inset 3px 0 0 0 var(--warning);
 }
 
 /* Urgent takes the outline as well as the band. Not the GROUND: the staged card

@@ -699,7 +699,7 @@ describe("a label in a pill has one spelling", () => {
     it("reads a pill split across its base and a modifier, in a breakpoint", () => {
       expect(
         pillsIn(
-          ".lead-tag { border-radius: 50%; }\n@media (min-width: 1px) { .lead-tag-warn { background-color: var(--warnBg); } }",
+          ".lead-tag { border-radius: 50%; }\n@media (min-width: 1px) { .lead-tag-warn { background-color: var(--warningBg); } }",
         ),
       ).toEqual(["lead-tag"]);
       expect(

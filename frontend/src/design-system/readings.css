@@ -35,7 +35,7 @@
  * agrees with the band badge the caller draws beside it. Flat, not a
  * gradient: the second colour of a gradient reads as a second meaning. */
 .meterbar-warn span {
-  background: var(--warn);
+  background: var(--warning);
 }
 .meterbar-danger span {
   background: var(--danger);

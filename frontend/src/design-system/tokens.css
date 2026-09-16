@@ -136,17 +136,21 @@
    * mode lightens --accent and not every --textOnAccent consumer's fill.
    * Unthemed here; the dark palette below is what makes it diverge. */
   --textOnAccentControl: #fff;
-  /* The ink for a control FILLED with a status tone — a destructive button, a
-   * completion disc. Its ground is the tone's *Text token and never the base
-   * hue: the base is tuned to be seen at a figure's size, and no ink clears
-   * 4.5:1 on it (white 2.55:1 on --success, the best dark ink 4.11:1 on
-   * --danger). This ink therefore FLIPS with the theme, because the ground it
-   * sits on does: a Text red is deep in light, where white reads on it, and
-   * bright in dark, where near-black does. White here gives 6.20:1 on
-   * --dangerText, 6.06:1 on --successText and 6.15:1 on --warnText; the dark
-   * block states the other half. Kept a token of its own rather than folded
-   * into --textOnAccentControl: the accent and the status hues are different
-   * fills that retune independently. */
+  /* The ink for a control FILLED with a state tone — a destructive button, a
+   * completion disc, a primary badge. Its ground is the tone's *Text token and
+   * never the base hue. A base is tuned to be SEEN at a figure's or a bar's
+   * size, and no ink sits on the set of them: white pays 3.68:1 on --info,
+   * 2.19:1 on --success, 2.04:1 on --warning and 3.57:1 on --danger, while a
+   * near-black pays 3.19:1 on --discovery — and in dark the danger base clears
+   * neither, 4.46:1 for white and 3.72:1 for the near-black. So the fill is the
+   * Text token, which was chosen to carry ink, and this one flips with the
+   * theme because the ground under it does: a Text red is deep in light, where
+   * white reads on it, and bright in dark, where near-black does. White here
+   * gives 6.26:1 on --infoText, 5.92:1 on --successText, 5.98:1 on
+   * --warningText, 6.19:1 on --dangerText and 12.46:1 on --discoveryText; the
+   * dark block states the other half. Kept a token of its own rather than
+   * folded into --textOnAccentControl: the accent and the state hues are
+   * different fills that retune independently. */
   --textOnStatusControl: #fff;
 
   --borderSubtle: #e3eae6;
@@ -162,7 +166,6 @@
      since controls sit on both. */
   --borderControl: #868f89;
 
-  --online: #22c55e;
   --teal: #0e7490;
   /* Readable teal text for a chip on the --tealLight fill. Split from --teal
    * (a fill/accent) so the dark theme can lift the text without shifting the
@@ -194,7 +197,6 @@
   --mono4Text: #0d5596;
   --mono5Fill: rgba(159, 18, 57, 0.12);
   --mono5Text: #8d1034;
-  --dnd: #ef4444;
   --bgRail: #13231d;
   /* §2b rail + brand chip + scrim — the rail is deliberately unthemed
    * (white-alpha icons on the dark green field in BOTH themes), and the
@@ -269,88 +271,90 @@
   --orbInk: #2e3168;
   --orbDeep: #1a1c40;
 
-  /* ===== Status: good, watch, bad =====
-   * ONE HUE PER TONE, and two roles for it.
+  /* ===== The five states =====
+   * INFORMATION is the neutral report and the work still in flight: an info
+   * mark, a spinner's ring, a row a job has not finished writing. SUCCESS is a
+   * favourable outcome — the thing finished the way the reader hoped. WARNING
+   * is caution BEFORE the fact, the sentence that stops a mistake while it can
+   * still be stopped. DANGER is the serious or irreversible one: the write that
+   * failed, the record that cannot be brought back. DISCOVERY is what is NEW to
+   * this reader — onboarding, a capability they have not met — and it is the
+   * one of the five that is not a verdict about the record.
    *
-   * The BASE token — --success / --warn / --danger — IS the hue: a solid fill,
-   * a meter bar, a dot, a border, the figure on a stat card, and any text set
-   * at or above that figure's size. It is declared here and in NEITHER dark
-   * block, because a verdict is the same verdict at any hour. The eight per
-   * cent of the page's own ink folded in is what settles a saturated hue into
-   * the type without moving which tone it is, and it follows the theme on its
-   * own — --textPrimary is themed, this declaration is not.
+   * Five states and no sixth. A hue that means something else is a family of
+   * its own: --accent is brand and primary action, --ai is agent provenance
+   * (indigo is a claim about WHO decided, never about how it went), --orbAmber
+   * / --orbRed are the outcome of an agent's run at a size chrome colours go
+   * muddy at, and the --tag* row means only "not that other tag".
    *
-   * The TEXT token — --successText / --warnText / --dangerText — is the SAME
-   * hue at the ink share ITS PANE needs: badge ink, an error or a warning
-   * line, a caption, anything under the figure's size. It is the only member
-   * of the family that lifts in dark, and that is the whole reason it exists.
-   * A near-white pane needs about half the page's ink folded in before the hue
-   * clears 4.5:1 both ON the pane and on its own tint over it; a near-black
-   * pane needs almost none. No single share serves both, and no single token
-   * serves both roles — a fill dark enough to read as 12px prose is a muddy
-   * fill, and a hue bright enough to read as a fill is not prose.
+   * ONE BASE PER STATE, and the base is the only value in the family anyone
+   * chooses. Everything else is derived HERE and nowhere else, so a retune
+   * moves the whole family at once:
    *
-   * The TINTS derive from the base rather than restating its hue as an rgba(),
-   * so retuning a tone cannot leave its own tint behind. --dangerBg is the one
-   * that states a second alpha in dark, for the reason given there.
+   *   --<state>        the hue. A fill, a bar, a dot, a border, the figure on
+   *                    a stat card — everything SEEN with nothing read on it.
+   *   --<state>Text    the same hue walked down in lightness (light) or up
+   *                    (dark) in OKLCh, chroma kept, until it clears 4.5:1 on
+   *                    every ground it lands on AND on its own Surface. Ink:
+   *                    badge lettering, an error line, a caption. It is also
+   *                    the GROUND of a filled control — see
+   *                    --textOnStatusControl for why the base cannot be.
+   *   --<state>Surface the opaque tint, for a badge: a translucent one takes
+   *                    its contrast from whatever it lands on, and this reads
+   *                    the same on every surface.
+   *   --<state>Bg      the same share left TRANSLUCENT, for a wash that has to
+   *                    sit on a ground the token cannot know — a page-level
+   *                    tint, a row, a gradient stop.
+   *   --<state>Border  the hairline, the tint at 45%.
    *
-   * --orbAmber / --orbRed above are OUTCOME — how an agent's run went — and
-   * not status. They stay: the orb's tones have to survive being a 34px
-   * glowing ball, where a chrome colour goes muddy.
+   * The dark block restates the bases rather than letting them stand, so a
+   * call site reads the role and never has to know which of the five a theme
+   * happens to leave where it was.
    *
-   * tokens.test.ts measures every Text token on every ground it sits on and on
-   * its own tint over each, in both themes, and holds each Text token to the
-   * same lab() hue as its base — the one pair of declarations in this family
-   * that repeats a hue. */
-  --success: color-mix(
-    in oklab,
-    lab(71.4376% -59.4106 38.0321),
-    var(--textPrimary) 8%
-  );
-  --successText: color-mix(
-    in oklab,
-    lab(71.4376% -59.4106 38.0321),
-    var(--textPrimary) 49%
-  );
+   * Discovery's LIGHT ink, surface and border are stated as hexes because the
+   * design source gives that ramp directly, and no share of #964ac0 over
+   * --bgElevated reproduces it: #eed7fc is bluer than the ground it would have
+   * to be mixed into. They are held by hue and by value in tokens.test.ts
+   * instead of by the share rule, which is the form the other four take.
+   *
+   * tokens.test.ts measures every Text token on every ground and on its own
+   * tint, in both themes, holds each Text token to its base's OKLCh hue, and
+   * fails when a state is missing from either theme. */
+  --info: #0485f7;
+  --infoText: #0060b7;
+  --infoSurface: color-mix(in srgb, var(--info) 12%, var(--bgElevated));
+  --infoBg: color-mix(in srgb, var(--info) 12%, transparent);
+  --infoBorder: color-mix(in srgb, var(--info) 45%, transparent);
+
+  --success: #17c964;
+  --successText: #007435;
+  --successSurface: color-mix(in srgb, var(--success) 12%, var(--bgElevated));
   --successBg: color-mix(in srgb, var(--success) 12%, transparent);
   --successBorder: color-mix(in srgb, var(--success) 45%, transparent);
-  --warn: color-mix(
-    in oklab,
-    lab(74.4448% 23.7172 71.6451),
-    var(--textPrimary) 8%
-  );
-  --warnText: color-mix(
-    in oklab,
-    lab(74.4448% 23.7172 71.6451),
-    var(--textPrimary) 52%
-  );
-  --warnBg: color-mix(in srgb, var(--warn) 16%, transparent);
-  --warnBorder: color-mix(in srgb, var(--warn) 45%, transparent);
-  --danger: color-mix(
-    in oklab,
-    lab(57.4234% 73.5589 48.0136),
-    var(--textPrimary) 8%
-  );
-  --dangerText: color-mix(
-    in oklab,
-    lab(57.4234% 73.5589 48.0136),
-    var(--textPrimary) 34%
-  );
+
+  --warning: #f5a524;
+  --warningText: #8a5900;
+  --warningSurface: color-mix(in srgb, var(--warning) 16%, var(--bgElevated));
+  --warningBg: color-mix(in srgb, var(--warning) 16%, transparent);
+  --warningBorder: color-mix(in srgb, var(--warning) 45%, transparent);
+
+  --danger: #ff383c;
+  --dangerText: #c5001b;
+  --dangerSurface: color-mix(in srgb, var(--danger) 10%, var(--bgElevated));
   --dangerBg: color-mix(in srgb, var(--danger) 10%, transparent);
   --dangerBorder: color-mix(in srgb, var(--danger) 45%, transparent);
-  /* Each tint laid over --bgElevated as ONE opaque colour, for a badge: a
-   * translucent tint takes its contrast from whatever it lands on, and this
-   * reads the same on every surface. Same share as the tint, which
-   * tokens.test.ts holds equal in every theme. */
-  --successSurface: color-mix(in srgb, var(--success) 12%, var(--bgElevated));
-  --warnSurface: color-mix(in srgb, var(--warn) 16%, var(--bgElevated));
-  --dangerSurface: color-mix(in srgb, var(--danger) 10%, var(--bgElevated));
+
+  --discovery: #964ac0;
+  --discoveryText: #48245d;
+  --discoverySurface: #eed7fc;
+  --discoveryBg: color-mix(in srgb, var(--discovery) 12%, transparent);
+  --discoveryBorder: #d8a0f7;
 
   /* ===== Tag tones =====
    * The eight hues an admin picks from when naming a tag, and the ONLY colours
    * in the product that carry no meaning: a tag's colour says "not that other
    * tag", nothing more. Named as their own family rather than borrowed from
-   * --accent/--warn/--danger, which is what the first four did: a tag that
+   * --accent/--warning/--danger, which is what the first four did: a tag that
    * reads --danger looks like a warning to anyone who knows the rest of the
    * palette, and a retune of the status colours would silently recolour every
    * tag in the workspace.
@@ -759,10 +763,10 @@
   /* --textOnAccent stays light in dark mode: it is the shared ink for every
      fill that ISN'T --accent and doesn't lighten here (the rail toast on
      --bgRail, the AI FAB on --ai, the voice orb over the Core's own glass,
-     the --online disc) — dark ink there is a control-boundary failure, not
-     a contrast fix, on backgrounds this palette never touches. The status
-     tones are NOT in that set: --textOnStatusControl is their ink, and it
-     flips here for the same reason --textOnAccentControl does — see its
+     the Core's own glass) — dark ink there is a control-boundary failure,
+     not a contrast fix, on backgrounds this palette never touches. The five
+     state tones are NOT in that set: --textOnStatusControl is their ink, and
+     it flips here for the same reason --textOnAccentControl does — see its
      declaration below. */
   /* Lifted off --accent, which cannot move. #4ade80 is the tone --mono0Text
      already uses for emerald text on an emerald tint here, so the accent
@@ -778,16 +782,16 @@
      in", "Send reset link", "Set new password". This ink gives 5.04:1.
      Light theme keeps white at 5.35:1. Scoped to --textOnAccentControl, not
      --textOnAccent: the latter still inks the fills that stay dark here
-     (--bgRail, --ai, --online), where this same dark ink would fail rather
-     than fix contrast. */
+     (--bgRail, --ai), where this same dark ink would fail rather than fix
+     contrast. */
   --textOnAccentControl: #04240f;
-  /* The same flip, one theme later: a filled status control's ground is the
-     tone's *Text token, and a Text red is DEEP in light and BRIGHT here — the
-     dark block barely folds any ink into a hue a near-black pane already
-     reads. So the ink that clears AA on it inverts with the theme rather than
-     staying put. Near-black gives 5.99:1 on --dangerText, 7.96:1 on
-     --successText and 8.53:1 on --warnText; white would give 2.77:1 on the
-     red. */
+  /* The same flip, one theme later: a filled state control's ground is the
+     tone's *Text token, and a Text red is DEEP in light and BRIGHT here — a
+     near-black pane barely has to move a hue before it reads on it. So the ink
+     that clears AA on that ground inverts with the theme rather than staying
+     put. Near-black gives 5.69:1 on --infoText, 7.57:1 on --successText,
+     9.37:1 on --warningText, 5.63:1 on --dangerText and 5.78:1 on
+     --discoveryText; white would give 3.08:1 on the red. */
   --textOnStatusControl: #04240f;
   /* Dark: the fills lift and the text tones brighten, so a monogram keeps the
    * same identity and the same contrast floor on the dark surface. */
@@ -831,25 +835,44 @@
 
   --aiText: #9ba0f0;
 
-  /* The status hues are unthemed — one hue per tone, both themes — so only the
-   * Text tokens are stated here, at the ink share a near-black pane asks for.
-   * Good and watch ask for NONE: on this ground the bright hue is already the
-   * readable ink, so the Text token and its base coincide. Named anyway,
-   * because a call site reads the role and must not have to know which theme
-   * collapses it — the same reason --textOnAccentControl exists.
+  /* The five states on a dark ground. Information and success keep their light
+   * base — a hue that reads on both papers needs no second value — while
+   * warning, danger and discovery step to one this ground can carry: the light
+   * amber and red go shrill against near-black, and the light violet
+   * disappears into it. All five bases are STATED here even where the value is
+   * unchanged, so a call site reads the role and never has to know which of
+   * them a theme leaves where it was.
    *
-   * Bad is the exception: its tint is painted on --bgCard and --bgHover as
-   * well as on the elevated ground, where the base over its own tint lands at
-   * 4.19:1 and 3.95:1, so this ink lifts a little further. The base itself
-   * stays put — it is also a FILL, and lightening it would cost the fill. */
+   * The Text tokens walk the other way from light: UP in lightness until the
+   * hue clears 4.5:1 on every dark ground and on its own tint. Success and
+   * warning ask for no walk at all — on this paper the bright hue already IS
+   * the readable ink — and are named anyway, for the same reason the bases
+   * are.
+   *
+   * Everything a base derives follows it here without being restated. Only two
+   * things move on their own: danger's tint share, because the same share of a
+   * bright ink reads weaker on a near-black ground and at 0.10 the red wash
+   * stops reading as a wash; and discovery's surface and border, which are
+   * hexes in light because the design source gives that ramp and are ordinary
+   * derivations of the dark base here. */
+  --info: #0485f7;
+  --infoText: #3d99ff;
+  --success: #17c964;
   --successText: var(--success);
-  --warnText: var(--warn);
-  --dangerText: color-mix(in oklab, var(--danger), var(--textPrimary) 14%);
-  /* The one tint that states a second alpha. The same share of a bright ink
-   * reads weaker laid on a near-black ground than on a near-white one, and at
-   * 0.10 the red wash stops reading as a wash. */
+  --warning: #f7b750;
+  --warningText: var(--warning);
+  --danger: #db3b3e;
+  --dangerText: #ff615e;
   --dangerBg: color-mix(in srgb, var(--danger) 16%, transparent);
   --dangerSurface: color-mix(in srgb, var(--danger) 16%, var(--bgElevated));
+  --discovery: #b76be3;
+  --discoveryText: #c478f1;
+  --discoverySurface: color-mix(
+    in srgb,
+    var(--discovery) 12%,
+    var(--bgElevated)
+  );
+  --discoveryBorder: color-mix(in srgb, var(--discovery) 45%, transparent);
 
   /* The tag tones lift on a dark ground. Each keeps its hue and its distance
    * from its neighbours — a tag that reads teal in light must not read sky in
@@ -948,11 +971,24 @@
 
     --aiText: #9ba0f0;
 
+    --info: #0485f7;
+    --infoText: #3d99ff;
+    --success: #17c964;
     --successText: var(--success);
-    --warnText: var(--warn);
-    --dangerText: color-mix(in oklab, var(--danger), var(--textPrimary) 14%);
+    --warning: #f7b750;
+    --warningText: var(--warning);
+    --danger: #db3b3e;
+    --dangerText: #ff615e;
     --dangerBg: color-mix(in srgb, var(--danger) 16%, transparent);
     --dangerSurface: color-mix(in srgb, var(--danger) 16%, var(--bgElevated));
+    --discovery: #b76be3;
+    --discoveryText: #c478f1;
+    --discoverySurface: color-mix(
+      in srgb,
+      var(--discovery) 12%,
+      var(--bgElevated)
+    );
+    --discoveryBorder: color-mix(in srgb, var(--discovery) 45%, transparent);
 
     --tagTeal: #2dd4bf;
     --tagAmber: #fbbf24;

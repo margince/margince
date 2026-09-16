@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import { cleanup, render, screen } from "@testing-library/react";
 import { Mail } from "lucide-react";
 import { afterEach, describe, expect, it } from "vitest";
-import { Badge } from "./atoms";
+import { BADGE_TONES, Badge } from "./atoms";
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -14,6 +14,13 @@ const here = dirname(fileURLToPath(import.meta.url));
 // tokens.test.ts, which measures every soft and primary pair in both themes.
 // What is testable here is the class contract those rules key on, and the
 // order of what the pill draws.
+
+// The tone vocabulary is the one `Badge`'s type is read from, walked here
+// rather than listed again: a list typed out in a test is a second copy of a
+// closed vocabulary, and the copy that goes stale is always this one — it
+// passes while the tone nobody added to it ships with no rule painting it.
+// `default` is the absent class, so the painted tones are every other one.
+const PAINTED = BADGE_TONES.filter((tone) => tone !== "default");
 
 afterEach(cleanup);
 
@@ -37,15 +44,14 @@ describe("Badge", () => {
   });
 
   it("names each tone, and adds badge-primary only for the solid fill", () => {
-    const tones = ["accent", "success", "warn", "danger", "ai"] as const;
     render(
       <>
-        {tones.map((tone) => (
+        {PAINTED.map((tone) => (
           <Badge key={`soft-${tone}`} tone={tone}>
             {`soft ${tone}`}
           </Badge>
         ))}
-        {tones.map((tone) => (
+        {PAINTED.map((tone) => (
           <Badge key={`primary-${tone}`} variant="primary" tone={tone}>
             {`primary ${tone}`}
           </Badge>
@@ -53,7 +59,7 @@ describe("Badge", () => {
         <Badge variant="primary">primary default</Badge>
       </>,
     );
-    for (const tone of tones) {
+    for (const tone of PAINTED) {
       expect(badgeFor(`soft ${tone}`).className).toBe(`badge badge-${tone}`);
       expect(badgeFor(`primary ${tone}`).className).toBe(
         `badge badge-primary badge-${tone}`,
@@ -184,14 +190,22 @@ describe("Badge", () => {
       expect(declared(".badge", "border")).toBe(
         "1px solid var(--borderSubtle)",
       );
-      const edges = {
+      const edges: Record<string, string> = {
         ".badge-success": "var(--successBorder)",
-        ".badge-warn": "var(--warnBorder)",
+        ".badge-warn": "var(--warningBorder)",
         ".badge-danger": "var(--dangerBorder)",
         ".badge-ai": "var(--aiMed)",
         ".badge-accent": "var(--accentMed)",
+        ".badge-discovery": "var(--discoveryBorder)",
         ".badge-primary": "transparent",
       };
+      // Which token each tone edges in is a decision, so it is named. WHICH
+      // tones must appear is not: the vocabulary decides that, and a tone added
+      // to the type with no hairline of its own fails here rather than shipping
+      // in the card's neutral edge.
+      expect([...Object.keys(edges)].sort()).toEqual(
+        [...PAINTED.map((tone) => `.badge-${tone}`), ".badge-primary"].sort(),
+      );
       for (const [selector, colour] of Object.entries(edges)) {
         expect(declared(selector, "border-color"), selector).toBe(colour);
       }
@@ -208,6 +222,18 @@ describe("Badge", () => {
           .map((name) => `${selector} { ${name} }`),
       );
       expect(stray).toEqual([]);
+    });
+
+    // The other half of a tone: its solid fill. Without a rule of its own a
+    // primary badge keeps `.badge-primary`'s neutral ink on the page's own
+    // ground, which is a badge drawn in a tone it does not carry — and nothing
+    // in the markup contract above can see it, because the class is there.
+    it("gives every tone a solid fill of its own as well as a tint", () => {
+      const missing = PAINTED.filter(
+        (tone) =>
+          declared(`.badge-primary.badge-${tone}`, "background") === undefined,
+      );
+      expect(missing).toEqual([]);
     });
 
     it("paints every ground as one plain colour, never a gradient", () => {

@@ -43,7 +43,7 @@
    because absence is the insight this map exists to carry. */
 .dc-ghost {
   fill: none;
-  stroke: var(--warn);
+  stroke: var(--warning);
   stroke-width: 2;
   stroke-dasharray: 3 3;
 }
@@ -81,7 +81,7 @@
 }
 
 .dc-swatch-gap {
-  border: 2px dashed var(--warn);
+  border: 2px dashed var(--warning);
 }
 
 .dc-seats {

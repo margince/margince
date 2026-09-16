@@ -339,7 +339,7 @@
 /* The size of the stall, in the stall's own tone: it sits beside the word, and
    only ever beside it. */
 .deal-card .deal-age {
-  color: var(--warnText);
+  color: var(--warningText);
   font-variant-numeric: tabular-nums;
 }
 .deal-card .deal-company {
@@ -379,7 +379,7 @@
    one already behind us. The tone marks the figure and leaves the card alone,
    which is the deal strip's rule for the same fact. */
 .deal-card .deal-closes-warn {
-  color: var(--warnText);
+  color: var(--warningText);
 }
 .deal-card .deal-name {
   color: var(--textPrimary);

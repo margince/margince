@@ -61,7 +61,7 @@
 }
 
 .r360-standing-warn {
-  color: var(--warn);
+  color: var(--warning);
 }
 
 .r360-standing-danger {

@@ -80,7 +80,7 @@
 }
 
 .vdna-notice-warn {
-  color: var(--warnText);
+  color: var(--warningText);
 }
 
 /* The speaker question sits above the composer: until it is answered the file
@@ -88,7 +88,7 @@
 .vdna-speaker {
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-sm);
-  background: var(--warnSurface);
+  background: var(--warningSurface);
   padding: var(--space-3);
   margin: var(--space-3) 0 0;
   min-inline-size: 0; /* a fieldset otherwise refuses to shrink in a flex column */

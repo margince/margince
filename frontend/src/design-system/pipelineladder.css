@@ -58,7 +58,7 @@
  * uses appear here too. Every other status keeps the resting tone: none of them
  * is a statement about the MESSAGE, and colouring them would read as one. */
 .pipeline-ladder__rung[data-status="done"] .pipeline-ladder__mark {
-  background: var(--online);
+  background: var(--success);
 }
 
 .pipeline-ladder__rung[data-status="pending"] .pipeline-ladder__mark {

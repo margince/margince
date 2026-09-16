@@ -410,6 +410,7 @@ export const vi = {
   "shell.companyLogoAria": "Trang chủ {company}, vận hành bởi Margince",
   "shell.poweredBy": "Vận hành bởi Margince",
   "shell.poweredByPrefix": "Vận hành bởi",
+  "shell.beta": "Beta",
   "shell.searchEverything": "Tìm hoặc hỏi Margince",
   "shell.breadcrumbAria": "Đường dẫn",
   "shell.license.none": "Chưa có giấy phép",

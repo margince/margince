@@ -417,7 +417,7 @@
 .mw-aistat-r dd small {
   display: block;
   margin-top: 2px;
-  color: var(--warnText);
+  color: var(--warningText);
   font-family: var(--fontFamilyBody);
 }
 

@@ -64,39 +64,49 @@ const canonical: Record<string, string> = {
   "--textOnAccent": "#fff",
   "--borderSubtle": "#E3EAE6",
   "--borderStrong": "#D1D8D4",
-  "--online": "#22c55e",
   "--teal": "#0E7490",
   "--tealLight": "rgba(14,116,144,.1)",
   "--away": "#fbbf24",
-  "--dnd": "#ef4444",
   "--bgRail": "#13231D",
   "--ai": "#5B61D6",
   "--aiLight": "rgba(91,97,214,.08)",
   "--aiMed": "rgba(91,97,214,.30)",
   "--aiText": "#3F45B0",
-  // The status family, one hue per tone. The base token is the hue itself; the
-  // Text token is the same hue at the ink share its pane needs; the tints
-  // derive from the base. The hue is what is pinned here — a share moving is a
-  // contrast decision the sweeps below judge, but the HUE moving is a new
-  // colour in the palette.
-  "--success":
-    "color-mix(in oklab, lab(71.4376% -59.4106 38.0321), var(--textPrimary) 8%)",
-  "--successText":
-    "color-mix(in oklab, lab(71.4376% -59.4106 38.0321), var(--textPrimary) 49%)",
+  // The five states, light. Only the BASE of each is a choice; every other
+  // member is derived from it, and the derivation itself is asserted further
+  // down rather than repeated here — this table is the pin that says a value
+  // moved at all.
+  "--info": "#0485f7",
+  "--infoText": "#0060b7",
+  "--infoSurface": "color-mix(in srgb, var(--info) 12%, var(--bgElevated))",
+  "--infoBg": "color-mix(in srgb, var(--info) 12%, transparent)",
+  "--infoBorder": "color-mix(in srgb, var(--info) 45%, transparent)",
+  "--success": "#17c964",
+  "--successText": "#007435",
+  "--successSurface":
+    "color-mix(in srgb, var(--success) 12%, var(--bgElevated))",
   "--successBg": "color-mix(in srgb, var(--success) 12%, transparent)",
   "--successBorder": "color-mix(in srgb, var(--success) 45%, transparent)",
-  "--warn":
-    "color-mix(in oklab, lab(74.4448% 23.7172 71.6451), var(--textPrimary) 8%)",
-  "--warnText":
-    "color-mix(in oklab, lab(74.4448% 23.7172 71.6451), var(--textPrimary) 52%)",
-  "--warnBg": "color-mix(in srgb, var(--warn) 16%, transparent)",
-  "--warnBorder": "color-mix(in srgb, var(--warn) 45%, transparent)",
-  "--danger":
-    "color-mix(in oklab, lab(57.4234% 73.5589 48.0136), var(--textPrimary) 8%)",
-  "--dangerText":
-    "color-mix(in oklab, lab(57.4234% 73.5589 48.0136), var(--textPrimary) 34%)",
+  "--warning": "#f5a524",
+  "--warningText": "#8a5900",
+  "--warningSurface":
+    "color-mix(in srgb, var(--warning) 16%, var(--bgElevated))",
+  "--warningBg": "color-mix(in srgb, var(--warning) 16%, transparent)",
+  "--warningBorder": "color-mix(in srgb, var(--warning) 45%, transparent)",
+  "--danger": "#ff383c",
+  "--dangerText": "#c5001b",
+  "--dangerSurface": "color-mix(in srgb, var(--danger) 10%, var(--bgElevated))",
   "--dangerBg": "color-mix(in srgb, var(--danger) 10%, transparent)",
   "--dangerBorder": "color-mix(in srgb, var(--danger) 45%, transparent)",
+  // Discovery's light ramp is given as hexes by the design source; no share of
+  // #964ac0 over --bgElevated reaches #eed7fc, which is bluer than the ground
+  // it would have to be mixed into. The hue gate below is what holds them to
+  // the same family the other four derive into.
+  "--discovery": "#964ac0",
+  "--discoveryText": "#48245d",
+  "--discoverySurface": "#eed7fc",
+  "--discoveryBg": "color-mix(in srgb, var(--discovery) 12%, transparent)",
+  "--discoveryBorder": "#d8a0f7",
   "--r-xs": "4px",
   "--r-sm": "8px",
   "--r-control": "12px",
@@ -159,8 +169,30 @@ describe("the token block's shape", () => {
   });
 });
 
+// The states, read off the sheet rather than listed beside it: a state is a
+// base that carries an opaque Surface, and every sweep below iterates THIS.
+// A list maintained by hand is the failure mode this whole file exists to
+// avoid — it goes on reporting PASS over a family it stopped covering.
+const states = Object.keys(parseBlock(tokenDecls, ":root"))
+  .map((name) => /^--([a-z]+)Surface$/.exec(name)?.[1])
+  .filter((name): name is string => name !== undefined);
+
 describe("Ledger-Green token layer (B-EP09.1)", () => {
   const light = parseBlock(tokenDecls, ":root");
+
+  // The one place the five names are written. It fails in BOTH directions on
+  // purpose: a state dropped from tokens.css takes its sweeps with it in
+  // silence, and a sixth one arriving is a palette decision somebody has to
+  // make rather than a family these gates quietly start covering.
+  it("names five states and no others", () => {
+    expect(states).toEqual([
+      "info",
+      "success",
+      "warning",
+      "danger",
+      "discovery",
+    ]);
+  });
 
   it("exports every canonical §2 token with the exact mockup value", () => {
     for (const [name, want] of Object.entries(canonical)) {
@@ -177,7 +209,9 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
   });
 
   it("keeps brand emerald and success grass-green tonally distinct (§2)", () => {
-    expect(normalize(light["--accent"])).not.toBe(normalize(light["--online"]));
+    expect(normalize(light["--accent"])).not.toBe(
+      normalize(light["--success"]),
+    );
   });
 
   // The surface ladder is a set of RELATIONS, not five independent colours, and
@@ -464,6 +498,14 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
       }),
     } as const;
 
+    // The same two AS DECLARED, for the assertions about how a value is
+    // WRITTEN rather than what it comes out at — a derivation resolves to the
+    // colour it derives, so a resolved palette cannot tell the two apart.
+    const blocks: Record<string, Record<string, string>> = {
+      light,
+      dark: { ...light, ...parseBlock(tokenDecls, '[data-theme="dark"]') },
+    };
+
     // Darkest first, as measured. The two themes are deliberately DIFFERENT
     // sequences: light recesses the rail's hover below its ground while dark
     // lifts it above, because a dark surface has only one direction to move in.
@@ -532,9 +574,7 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
         "--textSecondary",
         "--accentText",
         "--tealText",
-        "--successText",
-        "--warnText",
-        "--dangerText",
+        ...states.map((state) => `--${state}Text`),
       ];
       // Per ground, the roles that can actually be read on it — not a cross
       // product. A ground that carries less than everything is the reason this
@@ -550,19 +590,21 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
         "--bgSidebar": prose,
         "--bgSidebarHover": ["--textPrimary", "--accentText"],
         // A FILLED control or a primary badge is a ground too, its label read
-        // on the fill. A status fill is the tone's TEXT token, never the base:
-        // nothing clears 4.5:1 on the base (white 2.55:1 on --success), which
-        // is how a button filled with --danger shipped as an axe failure. Its
-        // ink FLIPS with the theme, because the ground under it does.
-        "--successText": ["--textOnStatusControl"],
-        "--warnText": ["--textOnStatusControl"],
-        "--dangerText": ["--textOnStatusControl"],
+        // on the fill, and so is the opaque Surface a soft badge letters on.
+        // A state's fill is its TEXT token, never its base: no one ink sits on
+        // the five bases (white pays 2.04:1 on --warning, a near-black 3.19:1
+        // on --discovery) and the dark danger base takes neither, which is how
+        // a button filled with --danger shipped as an axe failure. The ink
+        // FLIPS with the theme, because the ground under it does.
+        ...Object.fromEntries(
+          states.flatMap((state) => [
+            [`--${state}Text`, ["--textOnStatusControl"]],
+            [`--${state}Surface`, [`--${state}Text`]],
+          ]),
+        ),
         "--accent": ["--textOnAccentControl"],
         "--ai": ["--textOnAccent"],
         "--textPrimary": ["--bgPage"],
-        "--successSurface": ["--successText"],
-        "--warnSurface": ["--warnText"],
-        "--dangerSurface": ["--dangerText"],
       };
       const failures: string[] = [];
       for (const [theme, pal] of Object.entries(themes)) {
@@ -596,9 +638,7 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
         ["--accentText", "--accentLight"],
         ["--tealText", "--tealLight"],
         ["--aiText", "--aiLight"],
-        ["--successText", "--successBg"],
-        ["--warnText", "--warnBg"],
-        ["--dangerText", "--dangerBg"],
+        ...states.map((state) => [`--${state}Text`, `--${state}Bg`]),
         // --bgChip is the NEUTRAL member, whose ink its family does not fix:
         // it carries whatever the chip's rule sets, so every role that lands
         // on one is measured over it.
@@ -631,46 +671,131 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
       expect(failures.join("\n")).toBe("");
     });
 
-    // A tint and its opaque Surface state one base and one share twice, so the
-    // Surface must read as the tint with the elevated ground for transparent.
-    it("lays each status Surface at its tint's own share, in every theme", () => {
-      const dark = parseBlock(tokenDecls, '[data-theme="dark"]');
-      for (const block of [light, { ...light, ...dark }]) {
-        for (const tone of ["success", "warn", "danger"]) {
-          const tint = block[`--${tone}Bg`] ?? "";
-          expect(normalize(block[`--${tone}Surface`] ?? ""), tone).toBe(
-            normalize(tint.replace("transparent", "var(--bgElevated)")),
-          );
+    // A state's tint and its opaque Surface are one share spelled twice, so
+    // the Surface must read as the tint with the elevated ground standing in
+    // for transparent. Which arm a member takes is decided by the FORM it is
+    // written in and not by which state it belongs to: a value nobody
+    // recognises throws rather than passing unread, so a sixth spelling cannot
+    // arrive as a silent exemption.
+    it("derives each state's tints from its own base, in every theme", () => {
+      // The share a member takes of its own base, or undefined when the member
+      // is not written as one.
+      const shareOfBase = (value: string, state: string) =>
+        value.match(
+          new RegExp(
+            `^color-mix\\(\\s*in srgb\\s*,\\s*var\\(--${state}\\)\\s*(\\d+)%\\s*,`,
+          ),
+        )?.[1];
+      for (const [theme, block] of Object.entries(blocks)) {
+        for (const state of states) {
+          const tint = shareOfBase(block[`--${state}Bg`], state);
+          expect(
+            tint,
+            `${theme}: --${state}Bg is not a share of --${state}`,
+          ).toBeDefined();
+
+          for (const member of ["Surface", "Border"] as const) {
+            const value = block[`--${state}${member}`];
+            const share = shareOfBase(value, state);
+            if (share === undefined) {
+              // A stated hex is the other lawful spelling — discovery's light
+              // ramp is given directly by the design source. It buys no
+              // exemption: the hue assertion below measures exactly these.
+              expect(
+                value.trim(),
+                `${theme}: --${state}${member} is neither a share of ` +
+                  `--${state} nor a stated hex — nothing can measure it`,
+              ).toMatch(/^#[0-9a-f]{6}$/i);
+              continue;
+            }
+            if (member === "Border") {
+              expect(
+                share,
+                `${theme}: --${state}Border is not the family's 45% hairline`,
+              ).toBe("45");
+              continue;
+            }
+            // The opaque tint and the translucent one are ONE share written
+            // twice, so the Surface must read as the Bg with the elevated
+            // ground standing in for transparent.
+            expect(
+              normalize(value),
+              `${theme}: --${state}Surface and --${state}Bg state two shares`,
+            ).toBe(
+              normalize(
+                block[`--${state}Bg`].replace(
+                  "transparent",
+                  "var(--bgElevated)",
+                ),
+              ),
+            );
+          }
         }
       }
     });
 
-    // The status family names its lab() hue twice, in a base and its Text
-    // sibling, because the SHARE is what the pair is for. Held equal here.
-    it("declares each status Text token on the same hue as its base", () => {
-      const hueOf = (value: string) => value.match(/lab\([^)]*\)/)?.[0];
-      for (const tone of ["success", "warn", "danger"]) {
-        const base = hueOf(light[`--${tone}`]);
-        expect(base, `--${tone} names no lab() hue`).toBeDefined();
-        expect(hueOf(light[`--${tone}Text`]), `--${tone}Text`).toBe(base);
+    // Every member of a family is the SAME COLOUR at another lightness, which
+    // is the claim that makes one base enough. Held in OKLCh, where a hue is a
+    // number: a walk down in lightness keeps it, and a value picked by eye and
+    // pasted in does not. The stated hexes — discovery's light ramp — are
+    // measured by exactly this, so being written out costs them no rigour.
+    //
+    // The Bg and Surface tints are excluded on purpose and not by oversight: a
+    // tint is the hue MIXED WITH THE GROUND, and this tree's grounds are
+    // themselves faintly green, so a correct tint lands up to 20° off its base.
+    // The share rule above is what holds those.
+    it("keeps every member of a state on its base's own hue", () => {
+      const hueOf = (value: string) => {
+        const [, a, b] = linearToOklab(linearOf(value));
+        return ((Math.atan2(b, a) * 180) / Math.PI + 360) % 360;
+      };
+      const apart = (one: number, other: number) => {
+        const gap = Math.abs(one - other) % 360;
+        return gap > 180 ? 360 - gap : gap;
+      };
+      const failures: string[] = [];
+      for (const [theme, pal] of Object.entries(themes)) {
+        for (const state of states) {
+          const base = hueOf(pal[`--${state}`]);
+          for (const member of ["Text", "Border"]) {
+            const value = pal[`--${state}${member}`];
+            // A Border is a share of the base over transparent and keeps the
+            // hue exactly; an ink is the base walked in lightness. Two degrees
+            // is the room 8-bit rounding needs and no more.
+            if (!value.startsWith("#")) continue;
+            const drift = apart(base, hueOf(value));
+            if (drift > 2) {
+              failures.push(
+                `${theme}: --${state}${member} (${value}) sits ` +
+                  `${drift.toFixed(1)}° off --${state} (${pal[`--${state}`]})`,
+              );
+            }
+          }
+        }
       }
+      expect(failures.join("\n")).toBe("");
     });
 
-    // The other half of that claim: the base is stated ONCE. A verdict is the
-    // same verdict at any hour, and the ink folded into it follows the theme on
-    // its own because --textPrimary does. A dark block that redefined one would
-    // be a second answer to a question this family answers by not asking it.
-    it("states each status hue once — no dark block redefines a base", () => {
+    // Fail closed on a missing state. A theme that states no base for one of
+    // them does not render it wrong, it renders it in the OTHER theme's colour
+    // — and every sweep above still passes, because each reads whatever the
+    // light block left behind. So both dark arms are asked for all five by
+    // name, including the two whose value does not change.
+    it("states every state's base and ink in both dark arms", () => {
       for (const selector of [
         '[data-theme="dark"]',
         ':root:not([data-theme="light"])',
       ]) {
         const block = parseBlock(tokenDecls, selector);
-        for (const tone of ["success", "warn", "danger"]) {
+        for (const state of states) {
           expect(
-            block[`--${tone}`],
-            `${selector} redefines --${tone}`,
-          ).toBeUndefined();
+            block[`--${state}`],
+            `${selector} states no --${state}`,
+          ).toBeDefined();
+          expect(
+            block[`--${state}Text`],
+            `${selector} states no --${state}Text`,
+          ).toBeDefined();
         }
       }
     });
@@ -751,7 +876,17 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
         tokenDecls,
         ':root:not([data-theme="light"])',
       );
-      expect(preferred).toEqual(dark);
+      // Normalized on both sides: the two arms sit at different indents, so the
+      // formatter wraps a long value in one and not the other. That is where
+      // the line broke, not what the colour is.
+      const shape = (block: Record<string, string>) =>
+        Object.fromEntries(
+          Object.entries(block).map(([name, value]) => [
+            name,
+            normalize(value),
+          ]),
+        );
+      expect(shape(preferred)).toEqual(shape(dark));
     });
 
     // The guard is the half that has to keep the SPA exactly as it renders

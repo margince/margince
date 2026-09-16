@@ -183,7 +183,7 @@
 /* Warn only past zero: nothing left open is not a finding, and dyeing a
    settled count the same colour as an outstanding one would say otherwise. */
 .pdigest-figure[data-warn="true"] .pdigest-figure-value {
-  color: var(--warn);
+  color: var(--warning);
 }
 
 .pdigest-figure-caption {

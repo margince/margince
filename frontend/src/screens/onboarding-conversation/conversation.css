@@ -229,11 +229,11 @@
 }
 
 .ob-conv-outcome[data-tone="deferred"] {
-  border-inline-start-color: var(--warnBorder);
+  border-inline-start-color: var(--warningBorder);
 }
 
 .ob-conv-outcome[data-tone="deferred"] svg {
-  color: var(--warnText);
+  color: var(--warningText);
 }
 
 .ob-conv-outcome[data-tone="failure"] {
@@ -2566,11 +2566,11 @@
    same rule the attention list above states — and this board is the single
    surface that renders both tiers at once: a required-and-empty row marked
    in --danger sits inches from a weak-confidence row whose shared
-   ConfidenceMeter paints its dot --dnd, one red beside the other. A weak
+   ConfidenceMeter paints its dot --danger, one red beside the other. A weak
    value blocks nothing; the attention list files it as advisory. So the
    DOT goes, not the grade: the open row still names the band in words and
    its collapsed summary prints the score in figures, so low is still shown
-   as low. Retinting the dot to the advisory --warn instead would collide
+   as low. Retinting the dot to the advisory --warning instead would collide
    with the medium band's own dot, which resolves to the same amber in dark
    mode. */
 .ob-triage-row .confidence-low .dot {

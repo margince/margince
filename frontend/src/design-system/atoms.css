@@ -51,9 +51,9 @@
   color: var(--successText);
 }
 .badge-warn {
-  background: var(--warnSurface);
-  border-color: var(--warnBorder);
-  color: var(--warnText);
+  background: var(--warningSurface);
+  border-color: var(--warningBorder);
+  color: var(--warningText);
 }
 .badge-danger {
   background: var(--dangerSurface);
@@ -69,6 +69,14 @@
   background: var(--accentLight);
   border-color: var(--accentMed);
   color: var(--accentText);
+}
+/* `discovery` — something NEW — is painted the way the statuses above are, on
+   its own opaque Surface and lettered in its own Text ink, for the same reason:
+   the tint has to read the same on a card, a plate and the rail. */
+.badge-discovery {
+  background: var(--discoverySurface);
+  border-color: var(--discoveryBorder);
+  color: var(--discoveryText);
 }
 
 /* The PRIMARY variant: the same tone as a solid fill, for the one status a
@@ -87,7 +95,7 @@
   color: var(--textOnStatusControl);
 }
 .badge-primary.badge-warn {
-  background: var(--warnText);
+  background: var(--warningText);
   color: var(--textOnStatusControl);
 }
 .badge-primary.badge-danger {
@@ -97,6 +105,10 @@
 .badge-primary.badge-accent {
   background: var(--accent);
   color: var(--textOnAccentControl);
+}
+.badge-primary.badge-discovery {
+  background: var(--discoveryText);
+  color: var(--textOnStatusControl);
 }
 /* --ai does not lift in dark, so its ink is --textOnAccent, the light ink
  * shared by every fill that stays put: the dark --textOnAccentControl would
@@ -2248,7 +2260,7 @@
    identical grey tracks made the reader compare lengths to find the one that is
    wrong, when the colour already knows. */
 .stat-card-warn ~ .stat-card-meter .stat-card-meter-fill {
-  background: var(--warn);
+  background: var(--warning);
 }
 .stat-card-danger ~ .stat-card-meter .stat-card-meter-fill {
   background: var(--danger);
@@ -2267,7 +2279,7 @@
 }
 
 .stat-card-warn {
-  color: var(--warn);
+  color: var(--warning);
 }
 
 .stat-card-danger {

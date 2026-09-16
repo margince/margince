@@ -400,6 +400,7 @@ export const en = {
   "shell.companyLogoAria": "{company} home, powered by Margince",
   "shell.poweredBy": "Powered by Margince",
   "shell.poweredByPrefix": "Powered by",
+  "shell.beta": "Beta",
   "shell.searchEverything": "Find or ask Margince",
   "shell.breadcrumbAria": "Breadcrumb",
   "shell.license.none": "No license",

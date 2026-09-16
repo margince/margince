@@ -186,7 +186,7 @@
   color: var(--successText);
 }
 .pe-brief-trend-cooling {
-  color: var(--warnText);
+  color: var(--warningText);
 }
 .pe-brief-trend-none {
   color: var(--textSecondary);
@@ -307,7 +307,7 @@
 }
 
 .pe-loop-due {
-  color: var(--warnText);
+  color: var(--warningText);
   white-space: nowrap;
 }
 
@@ -438,7 +438,7 @@
 }
 
 .pe-rail-value-warn {
-  color: var(--warnText);
+  color: var(--warningText);
 }
 
 /* The pulse card's overall reading sits under a rule: it summarizes the rows
@@ -606,7 +606,7 @@
 }
 
 .pe-dot-warn {
-  background: var(--warn);
+  background: var(--warning);
 }
 
 .pe-dot-bad {
@@ -665,7 +665,7 @@
 }
 
 .pe-consent-line-blocked {
-  color: var(--warnText);
+  color: var(--warningText);
 }
 
 /* The way out of a refused send. It sits under the verdict rather than beside
@@ -731,7 +731,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  color: var(--warnText);
+  color: var(--warningText);
 }
 
 .pe-drawer-actions {

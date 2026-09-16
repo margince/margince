@@ -407,6 +407,7 @@ export const de = {
   "shell.companyLogoAria": "{company} Startseite, betrieben mit Margince",
   "shell.poweredBy": "Betrieben mit Margince",
   "shell.poweredByPrefix": "Betrieben mit",
+  "shell.beta": "Beta",
   "shell.searchEverything": "Finden oder Margince fragen",
   "shell.breadcrumbAria": "Navigationspfad",
   "shell.license.none": "Keine Lizenz",

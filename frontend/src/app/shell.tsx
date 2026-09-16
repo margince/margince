@@ -18,6 +18,7 @@ import { useCompany } from "../screens/onboarding";
 import { SETTINGS_SCREEN, useSettingsSection } from "../screens/settingsnav";
 import { AgentEdge } from "./agent-edge";
 import { AgentRail } from "./agentrail";
+import { BetaBadge } from "./betabadge";
 import { CaptureChip } from "./capture-chip";
 import { EconomyBanner } from "./economybanner";
 import { EmbedReindexBanner } from "./embedreindexbanner";
@@ -49,7 +50,6 @@ import {
 } from "./pagemeta";
 import { usePopoverDismiss } from "./popover";
 import { useReadingColumn } from "./readingcolumn";
-import { displayVersion, narrowVersion } from "./release";
 import { type Route, routeHash, useRoute } from "./router";
 import { useScrollMemory } from "./scrollmemory";
 import { TopBar } from "./topbar";
@@ -107,23 +107,13 @@ function writeStored(key: string, value: string): void {
 // would put the square badge in front of a reader with room for the wordmark.
 function BrandBlock({ narrow }: Readonly<{ narrow: boolean }>) {
   const t = useT();
-  /* WHAT BUILD THIS IS, on the brand's own second line.
-   *
-   * It is the alpha marker: a corner ribbon across the mark said the product is
-   * unfinished and nothing else, where a version says that AND which build a
-   * reader is looking at — the thing worth having in front of somebody the first
-   * time they see the product, which is why it stands beside the name rather
-   * than at the foot of a column a demo never scrolls to.
-   *
-   * On every branch, including the one with no installation to attribute: the
-   * marker is a fact about the BUILD, so it does not depend on whether there is
-   * a company name above it. At 56px the word shortens (release.ts) and nothing
-   * else in that column is a label at all. */
-  const marker = (
-    <span className="ws-alpha">
-      <Badge tone="accent">{narrow ? narrowVersion() : displayVersion()}</Badge>
-    </span>
-  );
+  /* WHAT STAGE THIS PRODUCT IS AT, on the brand's own second line. It stands
+   * beside the name rather than at the foot of a column a demo never scrolls
+   * to, and on every branch below including the one with no installation to
+   * attribute: the marker is a fact about the BUILD, so it does not depend on
+   * whether there is a company name above it. Temporary, and betabadge.tsx
+   * carries the list of what its deletion takes. */
+  const marker = <BetaBadge />;
   // The installation's own company (ADR-0061: one installation, one
   // company), OBSERVED on the entry the onboarding gate already filled.
   // A disabled observer: it never fetches, so it cannot re-trigger the gate's

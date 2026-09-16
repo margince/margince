@@ -134,7 +134,7 @@
 }
 
 .ob-live-coverage[data-kind="warn"] .ob-live-coverage-label {
-  color: var(--warnText);
+  color: var(--warningText);
 }
 
 /* What was missed, in the reader's vocabulary. It leads the row; the URL below
