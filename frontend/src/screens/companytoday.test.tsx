@@ -374,11 +374,7 @@ describe("the day's call, and which record it is read from", () => {
     expect(
       screen.getByText("We'll get the contract over to you by Friday."),
     ).toBeTruthy();
-    expect(
-      screen.getByText(
-        "They will send the contract",
-      ),
-    ).toBeTruthy();
+    expect(screen.getByText("They will send the contract")).toBeTruthy();
   });
 
   // A task's evidence is its own subject: a disclosure that opens on the

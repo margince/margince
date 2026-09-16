@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent } from "storybook/test";
 import type { components } from "../api/schema";
+import { company360 } from "./company.fixtures";
 import {
   CompanyActionBadges,
   CompanyLifecycleControl,
@@ -35,7 +36,7 @@ type View = components["schemas"]["Company360"];
 
 const page = { has_more: false, next_cursor: null };
 
-const company = {
+const company: Company = {
   id: "o-1",
   workspace_id: "w-1",
   display_name: "Brandt Automotive GmbH",
@@ -45,7 +46,15 @@ const company = {
   industry: "Automotive",
   size_band: "51-200",
   description: "Retrofits commercial fleets for zero-emission depots.",
-  domains: [{ domain: "brandt.example", is_primary: true, source: "manual" }],
+  domains: [
+    {
+      id: "dom-1",
+      domain: "brandt.example",
+      is_primary: true,
+      source: "manual",
+      captured_by: "human:u1",
+    },
+  ],
   captured_by: "human:u1",
   source: "manual",
   version: 1,
@@ -54,12 +63,13 @@ const company = {
   // as nothing rather than a legible date.
   created_at: "2026-06-01T08:00:00Z",
   updated_at: "2026-06-01T08:00:00Z",
-} as unknown as Company;
+};
 
 // The "way in" — the contact the relationship actually runs through — plus a
 // last exchange date. Both are withheld together whenever the 360 is still
 // loading, so this is the state a reader sees once it lands.
-const withWayIn = {
+const withWayIn: View = {
+  ...company360,
   as_of: "2026-06-01T09:00:00Z",
   company: company,
   sections_omitted: [],
@@ -72,12 +82,13 @@ const withWayIn = {
   },
   last_inbound_at: "2026-05-28T10:00:00Z",
   last_outbound_at: "2026-05-30T14:00:00Z",
-} as unknown as View;
+};
 
 // No contact has yet earned the "way in" — an account with an owner and a
 // touch history but nobody who carries the relationship. `strength` is
 // present (the 360 always returns it) but empty of a contributor.
-const noWayIn = {
+const noWayIn: View = {
+  ...company360,
   ...withWayIn,
   strength: {
     score: 0,
@@ -86,7 +97,7 @@ const noWayIn = {
     contributor_contact_id: null,
     factors: { recency: 0, frequency: 0, reciprocity: 0, direction: 0 },
   },
-} as unknown as View;
+};
 
 // The roster the owner control reads, and, since the facts strip's Source
 // fact resolves `captured_by` against the same `["users"]` entry, the only

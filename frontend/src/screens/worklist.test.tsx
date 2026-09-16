@@ -994,15 +994,18 @@ describe("the address opens a queue", () => {
 // click does not do… the label moves back when it lands". This is the assertion
 // that the two halves stay together — mutate either and one of these fails.
 describe("the draft_reply verb says what the click does", () => {
-  function replyRow(subjectType: string, id: string): WorklistItem {
+  function replyRow(
+    subjectType: NonNullable<WorklistItem["subject"]>["type"],
+    id: string,
+  ): WorklistItem {
     return row({
       id: `m-${id}`,
-      source: "waiting_customer",
+      source: "customer_waiting",
       category: "customer_waiting",
       title: "Aster Handel",
       subject: { type: subjectType, id },
       move: { action: "draft_reply", activity_id: "a-1" },
-    } as unknown as Partial<WorklistItem>);
+    });
   }
 
   it("names the ACT where the address opens the composer", async () => {

@@ -67,9 +67,7 @@ function contractBlock(caption: string): HTMLElement {
 }
 
 async function openDealsTab() {
-  await userEvent.click(
-    await screen.findByRole("button", { name: /^Deals/ }),
-  );
+  await userEvent.click(await screen.findByRole("button", { name: /^Deals/ }));
 }
 
 describe("the Deals tab's commercial card reports the contract standing", () => {
