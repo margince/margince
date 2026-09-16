@@ -10,6 +10,7 @@ import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import { Avatar, Badge, Button, Card } from "../design-system/atoms";
 import { Eyebrow } from "../design-system/eyebrow";
+import { openingCase } from "../format/collate";
 import {
   formatDayMonth,
   formatNumber,
@@ -92,9 +93,10 @@ export function Triage({
   // not a fragment of a line.
   const strongest = weighed.find((reason) => reason.value) ?? weighed[0];
   const phrased = strongest ? reasonText(strongest, t, locale, zone) : null;
-  const label = phrased
-    ? phrased.charAt(0).toLocaleUpperCase(locale) + phrased.slice(1)
-    : t(eyebrowKeyFor(lead));
+  // The reasons are written as fragments of a line ("waiting 13 days"); as a
+  // label one opens a line, and recasing its first letter is the reader's own
+  // locale decision, spelled once in `openingCase`.
+  const label = phrased ? openingCase(phrased, locale) : t(eyebrowKeyFor(lead));
   return (
     <div className="brief-triage">
       {/* THE ROW IN HAND IS A CARD on a STACK: one thing to answer, drawn

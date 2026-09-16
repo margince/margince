@@ -50,14 +50,25 @@
 }
 
 /* THE SECTION'S OWN HEAD, in the accent. `tone="accent"` tints the band at
-   the wash every accent panel wears; this is the ONE lead on the page, so it
-   takes the next step of the same family — the same hue, twice the presence —
-   and its title, its badge and its way out keep the accent ink they already
-   read in. Colour only: the band's height, padding and alignment stay the
-   design system's, which is what keeps this panel the same shape as the ones
-   under it. */
+   the wash every accent panel wears; this is the ONE lead on the page — the
+   day's work is what the page is for and everything under it reports — so its
+   band is the accent itself, with the ink that pairs with it. Colour only:
+   the band's height, padding and alignment stay the design system's, which is
+   what keeps this panel the same shape as the ones under it. */
 .brief-focus-panel > .panel-head {
-  background: var(--accentMed);
+  background: var(--accent);
+}
+.brief-focus-panel > .panel-head .panel-title,
+.brief-focus-panel > .panel-head .panel-head-sub {
+  color: var(--textOnAccentControl);
+}
+/* The way out, on the band's own ground: the control's ink and its hairline
+   are the band's ink, so it reads as a way out of an accent band rather than
+   as a white chip dropped on one. */
+.brief-focus-panel > .panel-head .brief-focus-open {
+  background: none;
+  border-color: currentcolor;
+  color: var(--textOnAccentControl);
 }
 
 /* ── The stack under it ───────────────────────────────────────────────────
@@ -74,9 +85,14 @@
 .brief-triage-stack {
   position: relative;
   min-width: 0;
-  /* The stack is as tall as the card on it, not as tall as the column beside
-     it: stretched, its edges would be drawn down a card's worth of nothing. */
-  align-self: start;
+  /* THE CARD TAKES THE COLUMN. The queue beside it is a list that grows with
+     the day and the card is one thing, so the two are never the same height:
+     pinned to the top the difference read as a hole under the card, centred
+     as a band of nothing above and below. Filling it, the difference becomes
+     the card's own air — the label at its top, the verbs on its floor — which
+     is the composition the reference card has. */
+  align-self: stretch;
+  display: grid;
 }
 .brief-triage-stack::before,
 .brief-triage-stack::after {
@@ -132,19 +148,18 @@
   }
 }
 
-/* TWO COLUMNS, the shape a record's own move card is laid out in
-   (`.co-lead .co-move-body`): what the row CLAIMS on the left — the label,
-   the work, whose it is — and what a reader can do about it opposite, on one
-   margin whatever the left column happens to hold. */
+/* FOUR ROWS: the label, the work, whose row it is, and the verbs — the order
+   a reader meets them in, whatever order the row hands its parts over in. */
 .brief-triage-lead {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  /* THREE EXPLICIT ROWS — the label, the work, whose it is — because the
-     verbs span to `-1` and that line is counted in the EXPLICIT grid: left
-     implicit, the span resolves against line 1 and the column of verbs lands
-     above the label it belongs beside. The record's own move card documents
-     the same trap (company360.css). */
-  grid-template-rows: auto auto auto;
+  grid-template-columns: minmax(0, 1fr);
+  /* The label at the top, the verbs on the floor, the work between them: the
+     card's own air rather than a hole beside it. */
+  align-content: space-between;
+  /* FOUR EXPLICIT ROWS — the label, the work, whose it is, the verbs —
+     because a row a child is placed INTO has to exist in the explicit grid.
+     The record's own move card documents the same trap (company360.css). */
+  grid-template-rows: auto auto auto auto;
   align-items: center;
   gap: var(--space-3) var(--space-4);
   min-width: 0;
@@ -183,30 +198,14 @@
   grid-column: 1;
   grid-row: 3;
 }
-/* The verbs stand opposite all of it, in a column of their own: the move the
-   product prepared first, the way into the record under it, the set-asides
-   last and quietest. A row of four controls under the work made the card's
-   floor its loudest line. */
+/* THE VERBS ACROSS THE CARD'S FLOOR, every option in the open: the set-asides
+   on the leading edge, the answer on the trailing one. A column of them beside
+   the work read as a toolbar and left the card's own words a strip; across the
+   floor they are one line a reader finishes the card on. */
 .brief-triage-lead .worklist-row-acts {
-  grid-column: 2;
-  grid-row: 2 / -1;
-  flex-direction: column;
-  align-items: stretch;
-}
-/* The move the product prepared leads the column, the way into the record
-   follows it, and the set-asides close it — quietest last, furthest from the
-   thumb that answers. Spelled as three orders rather than trusted to the
-   row's own sequence, which is written for a line and not a column. */
-.brief-triage-lead .worklist-row-acts > * {
-  order: 2;
-}
-.brief-triage-lead .worklist-row-acts > .btn-ai {
-  order: 1;
-}
-.brief-triage-lead .worklist-row-putdowns {
-  order: 3;
-  margin-inline-end: 0;
-  justify-content: flex-end;
+  grid-column: 1 / -1;
+  grid-row: 4;
+  padding-block-start: var(--space-1);
 }
 /* The head says where the row stands and why, and the about line says whose
    message it is, when, and where it sits — each already on the card once, so
