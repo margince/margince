@@ -44,10 +44,14 @@
   white-space: nowrap;
 }
 
-/* `VerdictHead`'s "compact" scale: the record ladder's own heading rung
-   rather than the kit's display face, for a caller whose head already
-   carries its own claim of authorship and so does not need the verdict
-   shouting a second one. */
+/* `VerdictHead`'s "compact" scale: the record ladder's own heading size in the
+   body face, for a caller whose head already carries its own claim of
+   authorship and so does not need the verdict shouting a second one in the
+   display face the record scale sets above.
+   The face is named rather than inherited: §2 admits the three families by
+   their tokens, and a rule that says `inherit` names none of them — it reads
+   as "whatever is around me", which is the one answer the family rule exists
+   to refuse. */
 .r360-verdict-compact .r360-standing {
   font-family: var(--f-body);
   font-size: var(--fs-h3);

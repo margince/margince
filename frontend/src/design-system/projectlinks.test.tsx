@@ -40,11 +40,17 @@ describe("ProjectLinks", () => {
     // The instructional line, not a bare "nothing here": a reader who cannot
     // see any is the reader who needs telling how one appears.
     expect(screen.getByText(/body of work a deal is about/)).toBeTruthy();
+    // And that line alone. As a pane of its own the section already carries
+    // its name in the head, so a heading under it says the same word twice
+    // and makes an absence the loudest thing in the column.
+    expect(screen.queryByText("No projects yet")).toBeNull();
   });
 
   // Bare, the section is a GROUP inside a pane the caller holds: no pane of
   // its own, the title as a group head one level down with the verb beside
-  // it, and the empty state as the plate an empty group draws.
+  // it, and the empty state as the plate an empty group draws — titled there,
+  // because a group head is not a pane head and the plate is what carries the
+  // absence.
   it("stands as a group inside a pane when the caller holds the pane", () => {
     const { container } = draw({}, true);
     expect(container.querySelector(".panel")).toBeNull();
@@ -55,6 +61,7 @@ describe("ProjectLinks", () => {
       container.querySelector(".panel-grouphead button")?.textContent,
     ).toBe("Attach project");
     expect(container.querySelector(".empty-plate")).toBeTruthy();
+    expect(screen.getByText("No projects yet")).toBeTruthy();
   });
 
   it("offers to MOVE rather than attach when the record carries at most one", () => {

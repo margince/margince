@@ -14,7 +14,6 @@ import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { navigate, type Route, type Screen } from "../app/router";
 import {
   Button,
-  Checkbox,
   Field,
   type FieldControl,
   Modal,
@@ -25,7 +24,11 @@ import {
   RecordPicker,
   type RecordPickerCandidate,
 } from "../design-system/recordpicker";
-import { Select, type SelectOption } from "../design-system/select";
+import {
+  MultiSelect,
+  Select,
+  type SelectOption,
+} from "../design-system/select";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { ProblemError, problemExistingId, problemMessageOf } from "./common";
@@ -527,64 +530,38 @@ export function fieldControl(
   );
 }
 
-// A multiselect field: each option renders as its own checkbox; toggling one
-// re-joins the whole selection back into `values` via `setValue` — the same
-// single-string channel every scalar field writes through (see
-// `splitMultiselectValue`/`joinMultiselectValue` above).
+// A multiselect field: a MultiSelect dropdown whose toggled set re-joins back
+// into `values` via `setValue` — the same single-string channel every scalar
+// field writes through (see `splitMultiselectValue`/`joinMultiselectValue`
+// above).
 function MultiselectField({
   field,
-  formId,
   value,
   setValue,
 }: Readonly<{
   field: CreateField;
-  formId: string;
   value: string;
   setValue: (next: string) => void;
 }>) {
   const t = useT();
-  const selected = splitMultiselectValue(value, field.multiselectEncoding);
-  const hintId = `${formId}-${field.key}-required-hint`;
-
-  function toggle(optionValue: string) {
-    const next = selected.includes(optionValue)
-      ? selected.filter((entry) => entry !== optionValue)
-      : [...selected, optionValue];
-    setValue(joinMultiselectValue(next, field.multiselectEncoding));
-  }
-
   return (
-    <fieldset
-      className="field-multiselect"
-      // A checkbox group has no native `required`, and aria-required is not a
-      // valid attribute on a group — so the mandatory-ness is announced via a
-      // described-by hint the screen reader reads when focus enters the group
-      // (the "*" alone is silent, and Save just stays disabled).
-      aria-describedby={field.required ? hintId : undefined}
+    <Field
+      label={fieldLabel(field, t)}
+      required={field.required}
+      hint={field.hint}
     >
-      <legend className="t-label">
-        {fieldLabel(field, t)}
-        {field.required ? " *" : ""}
-      </legend>
-      {field.required && (
-        <p id={hintId} className="t-caption">
-          {t("create.multiselect.required")}
-        </p>
+      {(control) => (
+        <MultiSelect
+          {...control}
+          options={field.options ?? []}
+          values={splitMultiselectValue(value, field.multiselectEncoding)}
+          onChange={(next) =>
+            setValue(joinMultiselectValue(next, field.multiselectEncoding))
+          }
+          placeholder={t("field.unset")}
+        />
       )}
-      {(field.options ?? []).map((option) => {
-        const optionId = `${formId}-${field.key}-${option.value}`;
-        return (
-          <Checkbox
-            key={option.value}
-            className="t-label"
-            id={optionId}
-            checked={selected.includes(option.value)}
-            onChange={() => toggle(option.value)}
-            label={option.label}
-          />
-        );
-      })}
-    </fieldset>
+    </Field>
   );
 }
 
@@ -681,7 +658,6 @@ export function RecordFormBody({
             <MultiselectField
               key={field.key}
               field={field}
-              formId={formId}
               value={values[field.key] ?? ""}
               setValue={(next) =>
                 setVisibleValues({ ...values, [field.key]: next })

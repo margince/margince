@@ -22,7 +22,7 @@ type Company = components["schemas"]["Company"];
 
 const COMPANY = "01a04298-1971-7076-8076-8064da20fdff";
 
-const company = {
+const company: Company = {
   writable: true,
   id: COMPANY,
   workspace_id: "01a04298-1971-7076-8076-8064da20fd01",
@@ -32,14 +32,22 @@ const company = {
   owner_id: "01a04298-1971-7076-8076-8064da20fd02",
   industry: "Automotive",
   size_band: "51-200",
-  domains: [{ domain: "brandt.example", is_primary: true, source: "manual" }],
+  domains: [
+    {
+      id: "dom-1",
+      domain: "brandt.example",
+      is_primary: true,
+      source: "manual",
+      captured_by: "human:u1",
+    },
+  ],
   description: "Fleet electrification pilot, renewing in Q3.",
   captured_by: "human:u1",
   source: "manual",
   version: 1,
   created_at: "2026-06-01T08:00:00Z",
   updated_at: "2026-06-01T08:00:00Z",
-} as unknown as Company;
+};
 
 function frame(company: Company, allow: Parameters<typeof meRoute>[0]) {
   const routes: RouteMap = {

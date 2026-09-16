@@ -78,9 +78,9 @@ describe("the opening sentence", () => {
   // answer; a cheerful one is not.
   it("says nothing at all about a day it could not read", () => {
     expect(briefSentence(undefined, t, "en")).toBeNull();
-    // Cast on purpose: `{}` is not a Worklist and is not meant to be. The case
-    // is about a payload the function cannot read, which is the one shape a
-    // typed fixture cannot express.
+    // contract:cast `{}` is not a Worklist and is not meant to be. The case is
+    // about a payload the function cannot read, which is the one shape a typed
+    // fixture cannot express.
     expect(briefSentence({} as unknown as Worklist, t, "en")).toBeNull();
   });
 

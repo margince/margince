@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
 import type { AccountScan } from "./accountscan";
+import { company360 } from "./company.fixtures";
 import {
   Company360Call,
   TodayOnThisAccount,
@@ -29,10 +30,11 @@ export default meta;
 
 type Story = StoryObj;
 type View = components["schemas"]["Company360"];
+type Company = components["schemas"]["Company"];
 
 const page = { has_more: false, next_cursor: null };
 
-const company = {
+const company: Company = {
   id: "o-1",
   workspace_id: "w-1",
   display_name: "Brandt Automotive GmbH",
@@ -42,23 +44,30 @@ const company = {
   updated_at: "2026-06-01T08:00:00Z",
 };
 
-const populated = {
+// THE STRIP ON ITS OWN, so a story that changes one reading of it spreads
+// something that is definitely there. Read back off `populated` it is
+// `View["state_strip"]` — optional on the contract — and the spread then makes
+// `account` optional in a place the type requires it.
+const strip: NonNullable<View["state_strip"]> = {
+  account: { lifecycle: "customer", relationship_types: ["customer"] },
+  engagement: {
+    state: "waiting_on_us",
+    last_inbound_at: "2026-07-11T09:00:00Z",
+    last_outbound_at: null,
+  },
+  signal: {
+    kind: "stalled_deal",
+    severity: "warn",
+    summary: "Depot pilot has had no activity in 18 days.",
+  },
+};
+
+const populated: View = {
+  ...company360,
   as_of: "2026-07-13T09:00:00Z",
   company: company,
   sections_omitted: [],
-  state_strip: {
-    account: { lifecycle: "customer", relationship_types: ["customer"] },
-    engagement: {
-      state: "waiting_on_us",
-      last_inbound_at: "2026-07-11T09:00:00Z",
-      last_outbound_at: null,
-    },
-    signal: {
-      kind: "stalled_deal",
-      severity: "warn",
-      headline: "Depot pilot has had no activity in 18 days.",
-    },
-  },
+  state_strip: strip,
   contacts: {
     data: [
       {
@@ -70,11 +79,12 @@ const populated = {
         routes: {
           top: [
             {
-              contact_id: "u-1",
+              user_id: "u-1",
               display_name: "Mira Voss",
               strength_bucket: "strong",
             },
           ],
+          untried: false,
           remainder: 0,
         },
         strength: {
@@ -127,11 +137,12 @@ const populated = {
     ],
     page,
   },
-} as unknown as View;
+};
 
 // Two of the three dimensions rated, each with the reading its rating was made
 // from: what the chips' asides carry.
-const rated = {
+const rated: View = {
+  ...company360,
   ...populated,
   health: {
     relationship: {
@@ -143,18 +154,19 @@ const rated = {
       reason: "The depot pilot has not moved in 18 days.",
     },
   },
-} as unknown as View;
+};
 
 // state_strip and contacts withheld — the two readings no seeded demo account
 // ever omits, so this is the only place the brief's own withheld path for
 // either one renders.
-const withheld = {
+const withheld: View = {
+  ...company360,
   ...populated,
   state_strip: undefined,
   contacts: undefined,
   next_meeting: undefined,
   sections_omitted: ["state_strip", "contacts", "next_meeting"],
-} as unknown as View;
+};
 
 function Brief({
   view,
@@ -188,7 +200,8 @@ export const Populated: Story = { render: () => <Brief view={populated} /> };
 // owed while the rules still have something to say, so the quiet card is NOT
 // drawn: "nothing needs you today" over a row asking for an answer is the
 // panel disagreeing with itself, and the row is the half a reader can check.
-const nothingOwed = {
+const nothingOwed: View = {
+  ...company360,
   ...populated,
   moment: {
     claim_key: "moment:nothing_needed",
@@ -204,7 +217,7 @@ const nothingOwed = {
       state: "will_confirm",
     },
   },
-} as unknown as View;
+};
 
 export const NothingOwedButAdviceStands: Story = {
   render: () => <Brief view={nothingOwed} />,
@@ -216,14 +229,13 @@ export const NothingOwedButAdviceStands: Story = {
 export const NothingOwedAndNothingAdvised: Story = {
   render: () => (
     <Brief
-      view={
-        {
-          ...nothingOwed,
-          suggestions: [],
-          next_meeting: undefined,
-          next_steps: { data: [], page },
-        } as unknown as View
-      }
+      view={{
+        ...company360,
+        ...nothingOwed,
+        suggestions: [],
+        next_meeting: undefined,
+        next_steps: { data: [], page },
+      }}
     />
   ),
 };
@@ -234,7 +246,8 @@ export const NothingOwedAndNothingAdvised: Story = {
 // is one long unbreakable line on purpose: the row owes the card an ellipsis
 // at the card's measure, and a basis sized to its own words rather than to
 // the card runs straight out of it.
-const restingOnAMail = {
+const restingOnAMail: View = {
+  ...company360,
   ...populated,
   suggestions: [
     {
@@ -264,7 +277,7 @@ const restingOnAMail = {
       ],
     },
   ],
-} as unknown as View;
+};
 
 export const AdviceRestingOnAMail: Story = {
   render: () => <Brief view={restingOnAMail} />,
@@ -365,19 +378,18 @@ export const SectionWithheld: Story = {
 export const WaitingOnThem: Story = {
   render: () => (
     <Brief
-      view={
-        {
-          ...populated,
-          state_strip: {
-            ...populated.state_strip,
-            engagement: {
-              state: "waiting_on_them",
-              last_inbound_at: null,
-              last_outbound_at: "2026-06-25T09:00:00Z",
-            },
+      view={{
+        ...company360,
+        ...populated,
+        state_strip: {
+          ...strip,
+          engagement: {
+            state: "waiting_on_them",
+            last_inbound_at: null,
+            last_outbound_at: "2026-06-25T09:00:00Z",
           },
-        } as unknown as View
-      }
+        },
+      }}
     />
   ),
 };
@@ -388,19 +400,18 @@ export const WaitingOnThem: Story = {
 export const Dormant: Story = {
   render: () => (
     <Brief
-      view={
-        {
-          ...populated,
-          state_strip: {
-            ...populated.state_strip,
-            engagement: {
-              state: "dormant",
-              last_inbound_at: "2026-04-02T09:00:00Z",
-              last_outbound_at: "2026-04-10T09:00:00Z",
-            },
+      view={{
+        ...company360,
+        ...populated,
+        state_strip: {
+          ...strip,
+          engagement: {
+            state: "dormant",
+            last_inbound_at: "2026-04-02T09:00:00Z",
+            last_outbound_at: "2026-04-10T09:00:00Z",
           },
-        } as unknown as View
-      }
+        },
+      }}
     />
   ),
 };
