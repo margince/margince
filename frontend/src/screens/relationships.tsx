@@ -496,7 +496,7 @@ export function AddRelationshipAction({
             ))}
           </ul>
           {target && (
-            <p style={{ marginBottom: 4 }}>
+            <p style={{ marginBottom: "var(--space-1)" }}>
               {t("rel.addConfirm", {
                 target: target.name,
                 kind: t(KIND_LABELS[kind]),
@@ -740,7 +740,9 @@ export function RelationshipsTab({
         >
           {t("rel.remove")}
         </Heading>
-        <p style={{ marginBottom: 16 }}>{t("rel.removeConfirm")}</p>
+        <p style={{ marginBottom: "var(--space-4)" }}>
+          {t("rel.removeConfirm")}
+        </p>
         {remove.isError && (
           <p style={{ color: "var(--dangerText)" }}>
             {problemMessageOf(remove.error, t)}

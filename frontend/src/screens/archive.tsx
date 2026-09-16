@@ -138,7 +138,7 @@ export function ArchiveAction<Archived extends { id: string }>({
         >
           {label}
         </Heading>
-        <p style={{ marginBottom: 16 }}>{confirmText}</p>
+        <p style={{ marginBottom: "var(--space-4)" }}>{confirmText}</p>
         {mutation.isError && (
           // role="alert" so a refused archive is announced: the dialog stays
           // open either way, and without this the only difference between "it

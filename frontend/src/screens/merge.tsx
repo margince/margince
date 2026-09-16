@@ -137,7 +137,9 @@ export function MergeAction<Survivor extends { id: string }>({
         >
           {label}
         </Heading>
-        <p style={{ marginBottom: 8 }}>{t("merge.pickTarget")}</p>
+        <p style={{ marginBottom: "var(--space-2)" }}>
+          {t("merge.pickTarget")}
+        </p>
         <SearchField
           placeholder={t("merge.searchPlaceholder")}
           aria-label={t("merge.searchPlaceholder")}
@@ -152,7 +154,9 @@ export function MergeAction<Survivor extends { id: string }>({
             {problemMessageOf(searchFailure, t)}
           </p>
         ) : null}
-        <ul style={{ listStyle: "none", margin: "8px 0", padding: 0 }}>
+        <ul
+          style={{ listStyle: "none", margin: "var(--space-2) 0", padding: 0 }}
+        >
           {candidates.map((candidate) => (
             <li key={candidate.id}>
               <Button
@@ -166,7 +170,7 @@ export function MergeAction<Survivor extends { id: string }>({
           ))}
         </ul>
         {target && (
-          <p style={{ marginBottom: 16 }}>
+          <p style={{ marginBottom: "var(--space-4)" }}>
             {t("merge.confirm", { source: sourceName, target: target.name })}
           </p>
         )}

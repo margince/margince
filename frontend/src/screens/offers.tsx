@@ -679,10 +679,10 @@ function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
         <div
           style={{
             display: "flex",
-            gap: 8,
+            gap: "var(--space-2)",
             flexWrap: "wrap",
             alignItems: "flex-end",
-            marginTop: 8,
+            marginTop: "var(--space-2)",
           }}
         >
           <Field label={t("offer.description")}>
@@ -753,9 +753,9 @@ function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
         <div
           style={{
             display: "flex",
-            gap: 8,
+            gap: "var(--space-2)",
             alignItems: "flex-start",
-            marginTop: 12,
+            marginTop: "var(--space-3)",
           }}
         >
           <div className="field" style={{ minWidth: 220 }}>
@@ -776,7 +776,7 @@ function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
             variant="primary"
             data-testid="add-line"
             disabled={addMutation.isPending}
-            style={{ marginTop: 24 }}
+            style={{ marginTop: "var(--space-6)" }}
             onClick={() =>
               addMutation.mutate({
                 product_id: product?.id ?? undefined,

@@ -459,7 +459,7 @@ export function StagedProposal({
     return (
       <section className="real-card" aria-label={t("trust.resolvedValue")}>
         <ProvenanceTag provenance={provenance} />
-        <p style={{ marginTop: 8 }}>
+        <p style={{ marginTop: "var(--space-2)" }}>
           {proposal.description}: <strong>{resolution.value}</strong>
         </p>
         {proposal.evidence && <EvidenceChip evidence={proposal.evidence} />}
@@ -469,11 +469,13 @@ export function StagedProposal({
 
   return (
     <StagingCard>
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <div
+        style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}
+      >
         <ProvenanceTag provenance={{ kind: "agent", agent: proposal.agent }} />
         <ConfidenceMeter level={proposal.confidence} />
       </div>
-      <p style={{ marginTop: 8 }}>
+      <p style={{ marginTop: "var(--space-2)" }}>
         {proposal.description}:{" "}
         <span className="staged-value">{proposal.value}</span>
       </p>

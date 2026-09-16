@@ -162,7 +162,7 @@ function SessionBookingScreen() {
       {book.isSuccess ? (
         <Card as="div" role="status">
           <p className="t-label">{t("book.confirmed")}</p>
-          <p className="t-caption" style={{ marginTop: 4 }}>
+          <p className="t-caption" style={{ marginTop: "var(--space-1)" }}>
             {book.data.occurred_at &&
               formatDateTime(book.data.occurred_at, locale, viewerZone())}
           </p>
@@ -185,7 +185,13 @@ function SessionBookingScreen() {
           empty={(data) => data.slots.length === 0}
         >
           {(data) => (
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: "var(--space-2)",
+              }}
+            >
               {data.slots.slice(0, 12).map((slot) => (
                 <Button
                   key={slot.start}
@@ -209,7 +215,9 @@ function SessionBookingScreen() {
           style={{ marginTop: "var(--space-3)" }}
         >
           <p className="t-label">{t("book.failed")}</p>
-          <p style={{ marginTop: 4 }}>{problemMessageOf(book.error, t)}</p>
+          <p style={{ marginTop: "var(--space-1)" }}>
+            {problemMessageOf(book.error, t)}
+          </p>
         </Card>
       )}
     </div>
@@ -331,7 +339,7 @@ function PublicBookingScreen({ hostSlug }: Readonly<{ hostSlug: string }>) {
       {book.isSuccess ? (
         <Card as="div" role="status">
           <p className="t-label">{t("book.confirmed")}</p>
-          <p className="t-caption" style={{ marginTop: 4 }}>
+          <p className="t-caption" style={{ marginTop: "var(--space-1)" }}>
             {formatDateTime(book.data.start, locale, viewerZone())}
           </p>
         </Card>
@@ -342,7 +350,13 @@ function PublicBookingScreen({ hostSlug }: Readonly<{ hostSlug: string }>) {
           empty={(data) => data.slots.length === 0}
         >
           {(data) => (
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: "var(--space-2)",
+              }}
+            >
               {data.slots.slice(0, 12).map((slot) => (
                 <Button
                   key={slot.start}
@@ -364,7 +378,9 @@ function PublicBookingScreen({ hostSlug }: Readonly<{ hostSlug: string }>) {
           style={{ marginTop: "var(--space-3)" }}
         >
           <p className="t-label">{t("book.failed")}</p>
-          <p style={{ marginTop: 4 }}>{problemMessageOf(book.error, t)}</p>
+          <p style={{ marginTop: "var(--space-1)" }}>
+            {problemMessageOf(book.error, t)}
+          </p>
         </Card>
       )}
     </div>

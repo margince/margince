@@ -45,7 +45,13 @@ export function ClientSurfaceScreen() {
       </header>
       <div className="wrap narrow">
         <SectionHeader title={t("client.title")} />
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <div
+          style={{
+            display: "flex",
+            gap: "var(--space-2)",
+            alignItems: "center",
+          }}
+        >
           <span className="t-label" id={emailId}>
             {t("client.sender")}
           </span>
@@ -69,7 +75,11 @@ export function ClientSurfaceScreen() {
             {lookup.data.map((hit) => (
               <div
                 key={hit.id}
-                style={{ display: "flex", gap: 8, alignItems: "center" }}
+                style={{
+                  display: "flex",
+                  gap: "var(--space-2)",
+                  alignItems: "center",
+                }}
               >
                 <strong>{hit.title}</strong>
                 {hit.snippet && (
@@ -84,7 +94,9 @@ export function ClientSurfaceScreen() {
         {lookup.isSuccess && lookup.data.length === 0 && (
           <Card inset style={{ marginTop: "var(--space-3)" }}>
             <p className="t-label">{t("client.unknown")}</p>
-            <p style={{ marginTop: 4 }}>{t("client.unknownDetail")}</p>
+            <p style={{ marginTop: "var(--space-1)" }}>
+              {t("client.unknownDetail")}
+            </p>
             <div className="card-actions">
               <a className="btn btn-ghost" href="#/leads">
                 {t("client.createLead")}

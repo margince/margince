@@ -165,7 +165,13 @@ function StrengthBody({
           {t("strength.score", { score: formatNumber(score, locale) })}
         </span>
       </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: "var(--space-2)",
+        }}
+      >
         {factorRows.map((row) => {
           const pct = factorPercent(row.value);
           return (
