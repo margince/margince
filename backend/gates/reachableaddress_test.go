@@ -279,7 +279,9 @@ func filtersTheAddressRow(statement string) bool {
 	return bareArchived.MatchString(statement) && readsOneRelation(statement)
 }
 
-// readsOneRelation reports whether contact_email is the only table read.
+// readsOneRelation reports whether the statement reads contact_email and no
+// other relation, which is the case where a bare archived filter cannot belong
+// to anything else.
 func readsOneRelation(statement string) bool {
 	seen := map[string]bool{}
 	for _, at := range otherRelation.FindAllStringSubmatch(statement, -1) {
