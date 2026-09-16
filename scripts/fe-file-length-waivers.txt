@@ -80,7 +80,6 @@
 527 frontend/src/screens/importflow.ts
 506 frontend/src/screens/contractlifecycle.tsx
 531 frontend/src/screens/voice-versions.tsx
-533 frontend/src/screens/companywork.tsx
 542 frontend/src/screens/leadpresentation.tsx
 547 frontend/src/screens/connected-agents.tsx
 547 frontend/src/screens/scheduledsends.tsx

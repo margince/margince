@@ -61,10 +61,8 @@ const emptyPage = { has_more: false, next_cursor: null };
 // sense wired to the real tab strip it switches.
 const onTab = () => {};
 
-// Built loosely and cast once here, matching company360.test.tsx's own
-// fixture: a hand-typed 360 payload restates the generated schema by hand,
-// and the two would silently drift the moment the contract grows a field
-// this suite never needed.
+// The 360 this suite reads: every section present and empty, so a case names
+// only the one it is about. Typed as the contract declares it, never cast.
 function view(overrides: Record<string, unknown> = {}): Company360 {
   return {
     as_of: "2026-06-01T09:00:00Z",

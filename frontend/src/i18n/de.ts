@@ -1654,8 +1654,7 @@ export const de = {
   "co.rail.allUncounted": "Alle",
   "co.rail.deals.title": "Aktive Deals",
   "co.rail.deals.empty": "Für diesen Account gibt es noch keine Deals.",
-  "co.rail.deals.emptyClosedOnly":
-    "Nichts offen, nur abgeschlossene Historie.",
+  "co.rail.deals.emptyClosedOnly": "Nichts offen, nur abgeschlossene Historie.",
   "co.rail.deals.noCloseDate": "kein Abschlussdatum",
   "co.rail.deals.attentionOverdue": "Überfällig",
   "co.rail.deals.attentionCommitment": "Sie schulden uns",
