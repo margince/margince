@@ -7,19 +7,30 @@
 # job inside skip while the lane still reported success, and the `ci` aggregate
 # reads a skip as "this area was out of scope".
 #
-# The three jobs run CONCURRENTLY because they share no state. Serially the lane
-# was ~340s, of which vitest alone was ~207s, so the greps, the type gates and
-# the bundle all sat behind a test run that could not tell them anything. A Biome
+# The jobs run CONCURRENTLY because they share no state. Serially the lane was
+# ~340s, of which vitest alone was ~207s, so the greps, the type gates and the
+# bundle all sat behind a test run that could not tell them anything. A Biome
 # failure now reports in about a minute instead of six.
 #
-# The suite itself is NOT split further. Sharding it would need the shards'
-# coverage merged, and the v8 provider enumerates a file's BRDA branch records
-# from the ranges that actually executed — so two shards that both load a file
-# describe its branches differently and the union inflates the denominator
-# (measured: 12979/16413 merged against a true 9667/11231). Line coverage merges
-# exactly; condition coverage does not, and a coverage number that is quietly
-# wrong is worse than a slower lane. Issue #966 carries the numbers and the
-# istanbul-provider fix that would unblock it.
+# The suite IS split, four ways, and the four slices are added back together by
+# the fan-in below. What made that safe is that vitest merges BLOB reports —
+# each shard's own coverage data — rather than the lcov files built from them.
+#
+# The distinction is the whole issue (#966). Unioning lcov text is unsound for
+# the v8 provider, whose BRDA records used to be enumerated from the ranges that
+# actually executed: two shards that both load a file described its branches
+# differently and the union inflated the denominator. Vitest 3 changed that —
+# @vitest/coverage-v8 now remaps through ast-v8-to-istanbul, so branch identity
+# comes from source AST positions and is stable per file however the tests were
+# split. Measured on this tree, three shards merged against one unsharded run of
+# the same 742 files: identical denominators (34979 lines, 30145 branches, 903
+# files), and 30295/24482 covered against 30317/24483. The merged report is also
+# exactly the union of the three shards' own reports, so nothing is lost in the
+# addition — the 22-line gap is three files whose own coverage moves. Two of them
+# move by that much between two unsharded runs of the same tree. The third is
+# App.tsx, whose `lazy()` import continuations the unsharded run resolves before
+# its tests end and a shard does not: coverage that was already a race, recorded
+# here rather than smoothed over.
 #
 # Every job sets `working-directory: .` for itself: a calling workflow's
 # `defaults` do not inherit, so nothing here may rely on ci.yml's.
@@ -74,12 +85,36 @@ jobs:
           cache-dependency-path: backend/go.sum
       - run: make fe-quality
 
+  # FOUR shards, and the number comes from a measurement rather than from the
+  # runner budget. The suite is 742 files and about 560s of test work on a
+  # two-core runner; the fixed cost of a leg — checkout, pnpm install, the node
+  # setup — is around 70s, and vitest slices by a hash of the file path, which
+  # distributes file COUNT evenly and duration only approximately. Modelled
+  # against the per-file durations this suite actually spends:
+  #
+  #   1 shard   632s (measured on main)    4 shards  ~225s
+  #   2 shards  ~350s                      6 shards  ~180s
+  #   3 shards  ~275s                      8 shards  ~155s
+  #
+  # The knee is at four: the step from one to four takes two thirds off the
+  # lane, and every step after it buys under a minute for another runner slot
+  # inside the same 20-concurrent ceiling the six integration shards already
+  # queue in. Raising it is a two-character change here and in the FE_SHARD
+  # argument below — the fan-in reads the matrix rather than a second copy of
+  # the number, and check-shard-union.sh fails if the two ever disagree.
   fe-unit:
-    name: fe-unit (vitest + coverage)
+    name: fe-unit (vitest + coverage ${{ matrix.shard }}/4)
     timeout-minutes: 20
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    # Every slice reports. fail-fast would cancel the siblings of the first red
+    # shard, and a cancelled leg is a leg whose failures nobody sees — one run
+    # would name one broken file at a time.
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
     defaults:
       run:
         working-directory: .
@@ -95,16 +130,19 @@ jobs:
           node-version: 24
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
-      # FE_COVERAGE=1 instruments the ONE vitest run this lane already performs,
-      # so the lcov the sonarcloud job downloads is a by-product of the run that
-      # decides the verdict rather than a second execution of the same suite.
-      - run: make fe-unit FE_COVERAGE=1
-      - name: Upload FE coverage
+      # FE_COVERAGE=1 instruments the ONE vitest run this slice already performs,
+      # so the coverage the fan-in merges is a by-product of the run that decides
+      # the verdict rather than a second execution of the same tests.
+      - run: make fe-unit FE_COVERAGE=1 FE_SHARD=${{ matrix.shard }}/4
+      # The BLOB, not an lcov. A slice's coverage report describes the third of
+      # the tree its tests happened to load and is not a measurement of anything
+      # on its own; the fan-in turns the four into one.
+      - name: Upload FE blob report
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: fe-coverage
-          path: frontend/coverage/lcov.info
-          if-no-files-found: ignore
+          name: fe-blob-${{ matrix.shard }}
+          path: frontend/.vitest-reports/
+          if-no-files-found: error
           retention-days: 1
 
   fe-bundle:
@@ -133,9 +171,17 @@ jobs:
       # render capture (make fe-uat) stays a coordinator lane, not a required gate.
       - run: make fe-bundle
 
-  # The fan-in. This job does no work — it exists to carry the verdict for the
-  # three jobs above, and its result is what the caller's `frontend` job reports
-  # and therefore what the `ci` aggregate reads.
+  # The fan-in. It carries the verdict for the jobs above — its result is what
+  # the caller's `frontend` job reports and therefore what the `ci` aggregate
+  # reads — and, once that verdict is green, it adds the four shards' coverage
+  # up into the one lcov the sonarcloud job downloads.
+  #
+  # The merge lives HERE rather than in a job of its own because it has to
+  # finish before this check reports either way: `sonarcloud` waits on the
+  # caller's `frontend` job, so a separate merge job would have to be in this
+  # one's `needs` and would cost the same minute plus a runner slot. The verdict
+  # step runs FIRST, so a red shard ends the job before the merge, and the merge
+  # is never handed a partial set of blobs.
   #
   # `always()` rather than the default, which is `success()` of every need: a job
   # skipped because a dependency failed reports as SKIPPED, and a skip is what the
@@ -145,7 +191,7 @@ jobs:
   # unit job was still going would skip this check and green the lane. `always()`
   # runs it in both cases, and the assertion below sees `cancelled` and fails.
   frontend:
-    name: frontend (biome + vitest + tsc + build)
+    name: frontend (biome + vitest + tsc + build + coverage merge)
     timeout-minutes: 20
     needs: [fe-quality, fe-unit, fe-bundle]
     if: always()
@@ -180,3 +226,39 @@ jobs:
             exit 1
           fi
           echo "fe-quality, fe-unit and fe-bundle all passed"
+      # Everything below builds the coverage report, and only runs because the
+      # step above did not exit.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # No version input: the pin is package.json's "packageManager", which pnpm
+      # and corepack read too. A second one here is refused as a mismatch.
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      # By PATTERN, so the shard count lives in the matrix above and nowhere
+      # else. merge-multiple lands every blob in the one directory
+      # `--merge-reports` reads, and that directory must hold blobs and nothing
+      # else — the merge parses every file in it.
+      - name: Download the shards' blob reports
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: fe-blob-*
+          merge-multiple: true
+          path: frontend/.vitest-reports
+      - run: make fe-unit-merge
+      - name: Upload FE coverage
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: fe-coverage
+          path: frontend/coverage/lcov.info
+          # `error`, not the ignore this upload carried while one job both ran
+          # the suite and wrote the report. The merge above has already proved
+          # the report exists and describes every test file in the tree, so a
+          # missing file here means the upload itself lost it — and the
+          # sonarcloud job reads an absent lcov as a frontend measured at zero.
+          if-no-files-found: error
+          retention-days: 1
