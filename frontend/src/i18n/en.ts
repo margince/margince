@@ -87,7 +87,6 @@ export const en = {
   "home.change.stageUnknown": "Unknown stage",
   "home.change.unidentified": "Unknown",
   "home.change.by": "Changed by: {actor}",
-  "brief.focus.startHere": "Start here",
   "brief.focus.inQueue": "In the queue",
   "brief.focus.position": "{at} of {count}",
   "worklist.bandCount_one": "{count} item",

@@ -94,7 +94,6 @@ export const de = {
   "home.change.stageUnknown": "Unbekannte Phase",
   "home.change.unidentified": "Unbekannt",
   "home.change.by": "Verantwortlich: {actor}",
-  "brief.focus.startHere": "Hier anfangen",
   "brief.focus.inQueue": "In der Liste",
   "brief.focus.position": "{at} von {count}",
   "worklist.bandCount_one": "{count} Eintrag",

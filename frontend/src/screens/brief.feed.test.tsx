@@ -5,7 +5,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { en } from "../i18n/en";
 import { BriefFeed } from "./brief.feed";
 import { readingsDay, taskRow, waitingEmailRow } from "./brief.fixtures";
-import { jsonResponse, render, stubApi } from "./brief.testkit";
+import { render, stubApi } from "./brief.testkit";
 
 afterEach(() => {
   cleanup();
@@ -41,7 +41,10 @@ it("renders the server focus even when the queue page contains different rows", 
       (row) => row.textContent,
     ),
   ).toEqual([rows[0].title]);
-  expect(container.querySelector(".worklist-rank")?.textContent).toBe("1");
+  expect(
+    container.querySelector(".brief-focus-item-inhand .brief-focus-rank")
+      ?.textContent,
+  ).toBe("1");
   expect(
     [...container.querySelectorAll(".brief-focus-item-title")].map(
       (item) => item.textContent,
@@ -53,7 +56,6 @@ it("renders the server focus even when the queue page contains different rows", 
     ),
   ).toEqual(["1", "2", "3", "4", "5", "6"]);
   expect(screen.getByText("6 priorities in focus")).toBeTruthy();
-  expect(screen.getByText(en["brief.focus.startHere"])).toBeTruthy();
   expect(screen.getByText("1 of 6")).toBeTruthy();
 });
 
@@ -72,11 +74,11 @@ it("puts a queued row in hand when it is pressed, and says where it stands", asy
       (row) => row.textContent,
     ),
   ).toEqual([rows[2].title]);
-  expect(container.querySelector(".worklist-rank")?.textContent).toBe("3");
+  expect(
+    container.querySelector(".brief-focus-item-inhand .brief-focus-rank")
+      ?.textContent,
+  ).toBe("3");
   expect(screen.getByText("3 of 3")).toBeTruthy();
-  // "Start here" names the first row and only the first: over a row the
-  // reader chose it would claim the page had chosen for them.
-  expect(screen.queryByText(en["brief.focus.startHere"])).toBeNull();
   expect(
     screen
       .getByRole("button", { name: /Call buyer 2/ })
@@ -192,18 +194,8 @@ it.each([false, true])(
   },
 );
 
-/** Sonya's own 360, as the pane beside the queue would read it. */
-function sonya360() {
-  return jsonResponse({
-    contact: { id: "contact-sonya", full_name: "Sonya Beck" },
-    last_inbound_at: "2026-09-03T16:46:00Z",
-    last_outbound_at: null,
-    sections_omitted: [],
-  });
-}
-
 it("ends the row in hand's one line with the agent's move, every option beside it", () => {
-  stubApi({ "GET /contacts/contact-sonya/360": sonya360 });
+  stubApi({});
   const { container } = render(
     <BriefFeed
       day={readingsDay({}, [waitingEmailRow()])}
@@ -217,14 +209,19 @@ it("ends the row in hand's one line with the agent's move, every option beside i
       .querySelector(".worklist-row-acts")
       ?.querySelectorAll("button, a") ?? []),
   ];
-  // The way in opens the line; the put-downs stand on it in the open; the
-  // move the product worked out closes it, in the agent's own chrome.
-  expect(line.at(0)?.textContent).toBe(en["brief.focus.context"]);
+  // The put-downs lead from the far edge, in the open; the way in follows;
+  // the move the product worked out closes the line, in the agent's chrome.
+  expect(line.at(0)?.closest(".worklist-row-putdowns")).not.toBeNull();
   expect(
-    lead.getByRole("button", {
-      name: en["worklist.disposition.verb.not_mine"],
-    }),
-  ).toBeTruthy();
+    lead
+      .getByRole("button", { name: en["worklist.disposition.verb.not_mine"] })
+      .closest(".worklist-row-putdowns"),
+  ).not.toBeNull();
+  expect(
+    lead
+      .getByRole("button", { name: en["brief.focus.context"] })
+      .closest(".worklist-row-putdowns"),
+  ).toBeNull();
   const draft = lead.getByRole("link", {
     name: en["worklist.verb.draft_reply_now"],
   });
@@ -237,32 +234,45 @@ it("ends the row in hand's one line with the agent's move, every option beside i
   ).toBeNull();
 });
 
-it("names whose row is in hand, and how the silence runs both ways", async () => {
-  stubApi({ "GET /contacts/contact-sonya/360": sonya360 });
-  render(
-    <BriefFeed day={readingsDay({}, [waitingEmailRow()])} state="ready" />,
+it("names whose row is in hand, and how the silence runs both ways", () => {
+  stubApi({});
+  const row = waitingEmailRow();
+  const { container } = render(
+    <BriefFeed day={readingsDay({}, [row])} state="ready" />,
   );
-  expect(
-    await screen.findByText(en["worklist.pane.lastOutbound"]),
-  ).toBeTruthy();
-  expect(screen.getByText(en["worklist.pane.lastInbound"])).toBeTruthy();
-  expect(screen.getByText(en["worklist.pane.never"])).toBeTruthy();
+  // Both moments off the row itself, no second read: the drawer draws the
+  // same pair on every row, and a fetch per row is what this field ends.
+  const about = container.querySelector(".brief-triage-about");
+  expect(about?.textContent).toContain(en["worklist.pane.lastInbound"]);
+  expect(about?.textContent).toContain(en["worklist.pane.lastOutbound"]);
+  expect(about?.textContent).toContain("03/09/2026");
+  expect(about?.textContent).toContain("28/08/2026");
   expect(
     screen.getByRole("link", { name: "Sonya Beck" }).getAttribute("href"),
   ).toBe("#/contacts/contact-sonya");
 });
 
-it("claims no moments when the read withheld them", async () => {
-  stubApi({
-    "GET /contacts/contact-sonya/360": () =>
-      jsonResponse({
-        contact: { id: "contact-sonya", full_name: "Sonya Beck" },
-        sections_omitted: ["last_touch"],
-      }),
-  });
-  render(
-    <BriefFeed day={readingsDay({}, [waitingEmailRow()])} state="ready" />,
-  );
-  expect(await screen.findByRole("link", { name: "Sonya Beck" })).toBeTruthy();
+it("names the sender of a thread filed under a deal", () => {
+  stubApi({});
+  const row = {
+    ...waitingEmailRow(),
+    subject: { type: "deal" as const, id: "deal-retrofit", label: "Retrofit" },
+    contact: { id: "contact-sonya", label: "Sonya Beck" },
+  };
+  render(<BriefFeed day={readingsDay({}, [row])} state="ready" />);
+  expect(
+    screen.getByRole("link", { name: "Sonya Beck" }).getAttribute("href"),
+  ).toBe("#/contacts/contact-sonya");
+});
+
+it("claims no moments when the server withheld them", () => {
+  stubApi({});
+  const row = {
+    ...waitingEmailRow(),
+    contact: { id: "contact-sonya", label: "Sonya Beck" },
+  };
+  render(<BriefFeed day={readingsDay({}, [row])} state="ready" />);
+  expect(screen.getByRole("link", { name: "Sonya Beck" })).toBeTruthy();
+  expect(screen.queryByText(en["worklist.pane.lastInbound"])).toBeNull();
   expect(screen.queryByText(en["worklist.pane.never"])).toBeNull();
 });

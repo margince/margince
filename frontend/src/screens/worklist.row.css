@@ -175,6 +175,27 @@
 .worklist-row-about {
   margin: 0;
 }
+/* The set-asides on the row in hand take the leading edge and push the rest
+   of the line to the trailing one, on every line the verbs wrap onto. */
+.worklist-row-putdowns {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gapActions);
+  margin-inline-end: auto;
+}
+/* The two moments of the silence as one caption: each term with its date,
+   the dates in the reading ink so the eye lands on them. */
+.worklist-row-touch {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  margin: 0;
+  color: var(--textMeta);
+}
+.worklist-row-touch-fact > .t-num {
+  color: var(--textPrimary);
+}
 
 /* EVERY VERB ON ONE RIGHT-ALIGNED LINE, the lane's answer LAST.
    One flow rather than two groups, and `flex-end` rather than `space-between`:

@@ -736,6 +736,14 @@ export function waitingEmailRow(): WorklistItem {
       { kind: "waiting_days", value: { kind: "days", days: 13 } },
     ],
     subject: { type: "contact", id: "contact-sonya", label: "Sonya Beck" },
+    contact: {
+      id: "contact-sonya",
+      label: "Sonya Beck",
+      touch: {
+        last_inbound_at: "2026-09-03T16:46:00Z",
+        last_outbound_at: "2026-08-28T09:12:00Z",
+      },
+    },
     email_summary: {
       activity_id: "mail-sonya",
       subject: "Meet next Tues?",

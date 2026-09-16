@@ -4,13 +4,14 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowRight } from "lucide-react";
 import { useState } from "react";
+import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
-import { Avatar, Badge, Button } from "../design-system/atoms";
+import { Avatar, Badge, Button, Card } from "../design-system/atoms";
 import { Eyebrow } from "../design-system/eyebrow";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { Panel, PanelBody } from "../design-system/panel";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
-import { formatNumber } from "../format/format";
+import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import {
   type Locale,
@@ -20,9 +21,14 @@ import {
   useT,
 } from "../i18n";
 import { isBriefUpdate, waitingRows } from "./brief.sentence";
-import { useContact360 } from "./contact360";
-import { phrasedReasons, reasonText, subjectHref } from "./worklist.copy";
+import {
+  phrasedReasons,
+  reasonText,
+  subjectHref,
+  whenText,
+} from "./worklist.copy";
 import { nextUpLine } from "./worklist.emailtitle";
+import { eyebrowKeyFor } from "./worklist.eyebrow";
 import { worklistLaneHref } from "./worklist.header";
 import { hasPane, lastTouch } from "./worklist.pane";
 import {
@@ -31,6 +37,7 @@ import {
   worklistKey,
 } from "./worklist.queries";
 import { WorklistRow } from "./worklist.row";
+import { contactHref } from "./worklist.row.captions";
 
 import "./worklist.css";
 import "./brief.feed.css";
@@ -210,6 +217,7 @@ function Triage({
   const t = useT();
   const { locale } = useLocale();
   const zone = viewerZone();
+  const recordZone = useRecordZone();
   // A meeting earns the door too. Its subject is the ACTIVITY rather than a
   // contact, so `hasPane` answers no for it — and the row would stand with
   // three verbs and no way through to the meeting they are about.
@@ -223,18 +231,42 @@ function Triage({
       {t("brief.focus.context")}
     </Button>
   ) : undefined;
+  // The head's facts, off the same helpers the row prints them with, so the
+  // card and the queue cannot describe one piece of work two ways. The
+  // reader's own pin is the queue's reason and not the focus projection's
+  // (`allowPin`).
+  const when =
+    whenText(lead, t, locale, zone, recordZone, new Date()) ??
+    (lead.email_summary
+      ? formatDateTime(lead.email_summary.occurred_at, locale, zone)
+      : null);
+  const weighed = phrasedReasons(lead, when !== null).filter(
+    (reason) => reason.kind !== "pinned",
+  );
+  // The label is the reason that carries a FIGURE where one does — "waiting
+  // 13 days" says more on its own than "they wrote last" — else the first.
+  const label = weighed.find((reason) => reason.value) ?? weighed[0];
+  const reasons = [label, ...weighed.filter((reason) => reason !== label)]
+    .filter((reason) => reason !== undefined)
+    .map((reason) => reasonText(reason, t, locale, zone))
+    .filter((reason): reason is string => reason !== null);
   return (
     <div className="brief-triage">
-      <div className="brief-triage-lead">
+      {/* THE ROW IN HAND IS A CARD: one thing to answer, drawn whole — its
+          state on top, its name, whose it is, the work, the verbs — on its own
+          surface beside the column of what comes next. */}
+      <Card as="article" className="brief-triage-lead">
         <div className="brief-triage-lead-head">
-          {/* The kicker names the FIRST row and only the first: "Start here"
-              over the third row would tell a reader who chose it that the
-              page had chosen for them. Every row in hand says where it stands
-              in the day's order instead. */}
-          {at === 0 && (
-            <Eyebrow className="brief-focus-kicker">
-              {t("brief.focus.startHere")}
-            </Eyebrow>
+          {/* Why it is here, as its label: the strongest reason the ranking
+              weighed, in the warn tone on a row the day put first; the kind
+              of work where the ranking gave none. Then the rest, quieter. */}
+          <Badge tone={lead.band === "now" ? "warn" : undefined}>
+            {reasons[0] ?? t(eyebrowKeyFor(lead))}
+          </Badge>
+          {(reasons.length > 1 || when) && (
+            <span className="t-caption brief-triage-reasons">
+              {[...reasons.slice(1), ...(when ? [when] : [])].join(" · ")}
+            </span>
           )}
           <span className="t-caption t-num brief-triage-position">
             {t("brief.focus.position", {
@@ -245,10 +277,10 @@ function Triage({
         </div>
         <AboutLine item={lead} />
         <WorklistRow
-          // Personal ordering is the queue's, not the focus projection's.
+          // Personal ordering is the queue's, not the focus projection's. No
+          // rank either: the head says where the row stands, in words.
           allowPin={false}
           item={lead}
-          position={at + 1}
           owner=""
           onOpenEmail={onOpenEmail}
           onReview={() =>
@@ -260,7 +292,7 @@ function Triage({
           context={details}
           acts="triage"
         />
-      </div>
+      </Card>
       <div className="brief-triage-queue">
         <Eyebrow as="h3" className="brief-triage-queue-head">
           {t("brief.focus.inQueue")}
@@ -322,17 +354,21 @@ function Triage({
 function AboutLine({ item }: Readonly<{ item: WorklistItem }>) {
   const t = useT();
   const { locale } = useLocale();
-  const subject = item.subject;
-  const href = subjectHref(item);
-  const contact = subject?.type === "contact" ? subject.id : "";
-  const view = useContact360(contact, contact !== "");
-  if (!subject?.label || !href) return null;
-  const touch = view.data ? lastTouch(view.data, t, locale, viewerZone()) : [];
+  // The person the server put on the row, else the record it is about: the
+  // sender of a thread filed under a deal is a person, and the reply goes to
+  // them.
+  const contact = item.contact;
+  const label = contact?.label ?? item.subject?.label;
+  const href = contact?.label ? contactHref(contact) : subjectHref(item);
+  if (!label || !href) return null;
+  const touch = lastTouch(contact?.touch, t, locale, viewerZone());
   return (
     <p className="t-caption brief-triage-about">
-      {contact && <Avatar name={subject.label} identity={contact} size="xs" />}
+      {contact?.label && (
+        <Avatar name={contact.label} identity={contact.id} size="xs" />
+      )}
       <a className="entity-link" href={href}>
-        {subject.label}
+        {label}
       </a>
       {touch.map((fact) => (
         <span key={fact.term} className="brief-triage-about-fact">

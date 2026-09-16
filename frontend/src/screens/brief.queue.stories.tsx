@@ -22,7 +22,19 @@ function QueueFrame() {
         jsonResponse(
           readingsDay(
             {},
-            [taskRow("buyer", "Send the promised rollout comparison")],
+            [
+              {
+                ...taskRow("buyer", "Send the promised rollout comparison"),
+                contact: {
+                  id: "contact-sonya",
+                  label: "Sonya Beck",
+                  touch: {
+                    last_inbound_at: "2026-09-03T16:46:00Z",
+                    last_outbound_at: "2026-08-28T09:12:00Z",
+                  },
+                },
+              },
+            ],
             [
               {
                 category: "tasks",

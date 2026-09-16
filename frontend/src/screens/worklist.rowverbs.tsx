@@ -62,11 +62,11 @@ export function RowActs({
   item: WorklistItem;
   href: string | undefined;
   /**
-   * `triage` is the row IN HAND on the Brief. The same one line, every option
-   * on it, with two differences: the verb that only reaches the record is
-   * withheld, because the row names and links that record under itself; and
-   * the move the product worked out stands LAST, where the lane's answer
-   * stands, because on the one row being answered that move is the answer.
+   * `triage` is the row IN HAND on the Brief: the verb that only reaches the
+   * record is withheld, because the card names and links that record itself;
+   * the set-asides lead the line from the other edge; and the move the
+   * product worked out stands LAST, because on the one row being answered
+   * that move is the answer.
    */
   shape?: "triage";
   /**
@@ -101,6 +101,11 @@ export function RowActs({
   if (shape === "triage") {
     return (
       <div className="worklist-row-acts">
+        {/* The set-asides lead from the other edge, the way an `ActionRow`
+            divides: declining steps away from the work, the move steps in. */}
+        <span className="worklist-row-putdowns">
+          <DispositionVerbs item={item} />
+        </span>
         {context}
         {item.batch && onReview ? (
           <BatchVerb onReview={onReview} />
@@ -114,7 +119,6 @@ export function RowActs({
           />
         )}
         {equals}
-        <DispositionVerbs item={item} />
         {!item.batch && (
           <RowVerbs
             item={item}

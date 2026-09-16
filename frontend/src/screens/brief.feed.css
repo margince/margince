@@ -29,9 +29,9 @@
 }
 
 /* ── The triage ───────────────────────────────────────────────────────────
- * The row in hand takes the wider column and the queue stands beside it,
+ * The card in hand takes the wider column and the queue stands beside it,
  * where the panel has the width for both; narrower, the queue drops under
- * the row. The section is what the split measures: the panel's own width,
+ * the card. The section is what the split measures: the panel's own width,
  * not the window's, because the same panel is drawn in a work column and on
  * a page of its own. */
 #brief-today {
@@ -40,66 +40,66 @@
 .brief-triage {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-5);
+  padding: var(--padPanel);
 }
 @container (min-width: 56rem) {
   .brief-triage {
     grid-template-columns: minmax(0, 3fr) minmax(16rem, 2fr);
   }
-  .brief-triage-queue {
-    border-inline-start: 1px solid var(--borderSubtle);
-  }
 }
 
-/* ── The row in hand ──────────────────────────────────────────────────────
- * The panel's inset is paid here, once: the row inside is a `PanelRow` and is
- * stripped of its own, because a row inside a column inside a panel would
- * pay it twice and rule the wrong boundary. */
+/* ── The card in hand ─────────────────────────────────────────────────────
+ * One thing to answer, drawn whole on its own surface: its state on top, the
+ * work, whose it is, the verbs. The row inside is a `PanelRow` stripped of
+ * its own box and laid open (`display: contents`), so the card orders the
+ * row's parts among its own — the work above the about line, the verbs last
+ * — without a second row layout. */
 .brief-triage-lead {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
   min-width: 0;
-  padding: var(--space-5) var(--padPanel);
+  /* Its own height, not the column's: a card stretched to the queue beside it
+     is a card with a blank floor. */
+  align-self: start;
 }
-
-/* Over the row: the kicker that names the first row, and where this one
-   stands in the day's order at the far end. */
 .brief-triage-lead-head {
+  order: 1;
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-3);
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
 }
-.brief-focus-kicker {
-  color: var(--accentText);
+.brief-triage-reasons {
+  color: var(--textMeta);
 }
 .brief-triage-position {
   margin-inline-start: auto;
   color: var(--textMeta);
 }
-
 .brief-triage-lead .worklist-row {
-  padding: 0;
+  display: contents;
 }
 .brief-triage-lead .worklist-row::before {
   content: none;
 }
-
-/* THE VERBS GO UNDER THE WORK, on the work's own left edge and right-aligned
-   as every row's are: the row in hand is drawn in a column narrower than a
-   queue page, and the wide arrangement that puts the verbs beside the work
-   (worklist.row.css) would leave the message a strip. One class more than
-   that rule, so this wins on weight rather than on sheet order. */
-.brief-triage-lead .worklist-row > .worklist-row-acts {
-  grid-column: 2 / -1;
+.brief-triage-lead .worklist-row-text {
+  order: 2;
 }
-
-/* The rank of the row in hand is the queue's own tile in the accent — the
-   same mark the column beside it lights on the chosen row, because this IS
-   the chosen row. */
-.brief-triage-lead .worklist-rank {
-  background: var(--accent);
-  color: var(--textOnAccentControl);
+.brief-triage-about {
+  order: 3;
+}
+.brief-triage-lead .worklist-row-acts {
+  order: 4;
+  padding-block-start: var(--space-2);
+  border-block-start: 1px solid var(--borderSubtle);
+}
+/* The kind of work is the head's label, and the message's own by-line says
+   again whose message it is and when — both already on the card, each once. */
+.brief-triage-lead .worklist-row-kind,
+.brief-triage-lead .emailentry__lead {
+  display: none;
 }
 
 /* THE NAME OF THE ROW IN HAND is the page's one headline after the greeting:
@@ -146,9 +146,9 @@
   padding-inline-start: var(--space-3);
 }
 
-/* WHOSE ROW IT IS, under the row: the record's chip and its name as the
-   link, then the two moments of the silence — how long since they wrote and
-   since we did — as one caption line, so a rep reads the relationship before
+/* WHOSE ROW IT IS, under the work: the contact's chip and name as the link,
+   then the two moments of the silence — how long since they wrote and since
+   we did — as one caption line, so a rep reads the relationship before
    choosing the verb. */
 .brief-triage-about {
   display: flex;
@@ -175,7 +175,7 @@
 .brief-triage-queue-head {
   display: block;
   margin: 0;
-  padding: var(--space-4) var(--padPanel) var(--space-2);
+  padding: 0 0 var(--space-2);
   color: var(--textMeta);
 }
 .brief-focus-list {
@@ -200,7 +200,7 @@
   column-gap: var(--space-3);
   align-items: start;
   width: 100%;
-  padding: var(--space-3) var(--padPanel);
+  padding: var(--space-3);
   border: 0;
   background: none;
   color: inherit;
@@ -290,8 +290,23 @@
 }
 
 @media (max-width: 720px) {
-  .brief-triage-lead {
-    padding: var(--space-4) var(--padPanel);
+  .brief-triage {
+    padding: var(--space-4);
+  }
+  /* Below the fold the row wraps its parts in the swipe surface that answers
+     the set-asides by thumb, so the card cannot order them one by one: the
+     whole row stands third, after the head and the about line, and reads
+     work then verbs as it does everywhere else. */
+  .brief-triage-lead .worklist-row > * {
+    order: 3;
+  }
+  .brief-triage-about {
+    order: 2;
+  }
+  /* The panel's own head has room for its title or for the way into the
+     queue, not both; the page head's primary control already opens it. */
+  .brief-focus-open {
+    display: none;
   }
   .brief-triage-lead .worklist-row-title,
   .brief-triage-lead .emailentry__subject {

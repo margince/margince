@@ -127,6 +127,16 @@ export const AFullDay: Story = {
             { kind: "buyer_wrote_last" },
             { kind: "waiting_days", value: { kind: "days", days: 83 } },
           ],
+          // Whose thread it is, and which side wrote last — the server puts
+          // both on the row, so the queue answers it without opening her.
+          contact: {
+            id: "01a05500-0000-7000-8000-0000000000c1",
+            label: "Kirsten Vogel",
+            touch: {
+              last_inbound_at: "2026-06-09T08:12:00Z",
+              last_outbound_at: "2026-05-30T15:40:00Z",
+            },
+          },
           above_next: {
             comparator: "level",
             mine: { kind: "level", level: 1 },
@@ -167,6 +177,14 @@ export const AFullDay: Story = {
           title: "Confirm the workshop date",
           because: [{ kind: "due_today" }],
           actions: [],
+          contact: {
+            id: "01a05500-0000-7000-8000-0000000000c2",
+            label: "Jonas Brandt",
+            touch: {
+              last_inbound_at: null,
+              last_outbound_at: "2026-08-27T10:05:00Z",
+            },
+          },
         },
         {
           id: "approval-1",
