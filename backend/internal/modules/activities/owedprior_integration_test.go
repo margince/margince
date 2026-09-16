@@ -16,17 +16,22 @@ package activities
 
 import (
 	"testing"
-	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // ourReply writes one outbound message into a thread, at a given age.
+//
+// Attested and addressed to the counterparty, because that is what capture
+// writes for a real send and what the context join requires — a fixture
+// without them would seed a row production never produces.
 func (e *loadEnv) ourReply(t *testing.T, subject, body, threadKey string, daysAgo int) {
 	t.Helper()
 	activity := ids.NewV7()
-	e.exec(t, `INSERT INTO activity (id, kind, direction, subject, body, occurred_at, thread_key, source, captured_by)
-		VALUES ($1, 'email', 'outbound', $2, $3, now() - make_interval(days => $5), $4, 'seed', 'system')`,
+	e.exec(t, `INSERT INTO activity (id, kind, direction, subject, body, occurred_at, thread_key,
+			counterparty_email, counterparty_outbound_attested, source, captured_by)
+		VALUES ($1, 'email', 'outbound', $2, $3, now() - make_interval(days => $5), $4,
+			'buyer@customer.test', true, 'seed', 'system')`,
 		activity, subject, body, threadKey, daysAgo)
 }
 
@@ -40,10 +45,20 @@ func threadKeyOf(t *testing.T, e *loadEnv, id ids.UUID) string {
 	return key
 }
 
+// fromCounterparty stamps the address capture would have recorded on an inbound
+// message. The shared waitingFrom helper predates the column and leaves it NULL,
+// and the context join matches on it — so a test about that join has to seed the
+// row the way capture writes one.
+func fromCounterparty(t *testing.T, e *loadEnv, id ids.UUID, address string) {
+	t.Helper()
+	e.exec(t, `UPDATE activity SET counterparty_email = $2 WHERE id = $1`, id, address)
+}
+
 // The newest of our earlier messages in the thread is the one carried.
 func TestTheCandidateCarriesOurLastMessageBeforeIt(t *testing.T) {
 	e := setupLoad(t)
 	activity := e.waitingFrom(t, "Re: the plan", "buyer@customer.test", e.buyer(t))
+	fromCounterparty(t, e, activity, "buyer@customer.test")
 	thread := threadKeyOf(t, e, activity)
 	e.ourReply(t, "the plan", "An early draft.", thread, 9)
 	e.ourReply(t, "the plan, revised", "Here is the plan. When suits you?", thread, 4)
@@ -111,13 +126,13 @@ func TestALaterMessageOfOursIsNotContext(t *testing.T) {
 	activity := e.waitingAgedFrom(t, "Re: the plan", "buyer@customer.test", e.buyer(t), 30)
 	thread := threadKeyOf(t, e, activity)
 	e.ourReply(t, "sent afterwards", "Later.", thread, 1)
-	if _, err := store.SetOwedVerdict(asClassifier(e), activity, OwedVerdictInformsUs, rulesetOld, time.Now()); err != nil {
+	if _, err := store.SetOwedVerdict(asClassifier(e), activity, OwedVerdictInformsUs, rulesetOld, dbNow(t, e)); err != nil {
 		t.Fatal(err)
 	}
 
 	// Read through the sweep, which does not apply the queue's reply anti-join,
 	// so the row is present and only the ordering decides.
-	rows, _, err := store.OwedRestale(e.as(), rulesetNew, 100, 400, 400)
+	rows, _, err := store.OwedRestale(asClassifier(e), rulesetNew, 100, 400, 400)
 	if err != nil {
 		t.Fatalf("reading the re-judge backlog: %v", err)
 	}
@@ -133,6 +148,71 @@ func TestALaterMessageOfOursIsNotContext(t *testing.T) {
 	t.Fatal("the seeded message is absent from the re-judge backlog")
 }
 
+// A forged thread root does not hand a stranger our correspondence with
+// somebody else.
+//
+// THE ATTACK: thread_key is the message's own References root, typed by whoever
+// sent the mail. Anyone who has seen one of our Message-IDs — copied on the
+// thread, a list, a forward — can send a cold mail carrying that root. Matching
+// on the key alone would then attach our real reply to a DIFFERENT customer and
+// ship it to the model as context. capture refuses the same forgery on the same
+// column; this holds that this read does too.
+func TestAForgedThreadRootCarriesNoContext(t *testing.T) {
+	e := setupLoad(t)
+	contact := e.buyer(t)
+	thread := "thread-forged-root"
+
+	// Our genuine outbound to the real customer, attested by the provider.
+	e.exec(t, `INSERT INTO activity (id, kind, direction, subject, body, occurred_at, thread_key,
+			counterparty_email, counterparty_outbound_attested, source, captured_by)
+		VALUES ($1, 'email', 'outbound', 'Your pricing', 'Confidential terms for the real customer.',
+			now() - interval '5 days', $2, 'real@customer.test', true, 'seed', 'system')`,
+		ids.NewV7(), thread)
+
+	// A stranger's cold mail, carrying the same root they had no part in.
+	attacker := ids.NewV7()
+	e.exec(t, `INSERT INTO activity (id, kind, direction, subject, body, occurred_at, thread_key,
+			counterparty_email, source, captured_by)
+		VALUES ($1, 'email', 'inbound', 'Re: Your pricing', 'What did you quote them?',
+			now() - interval '2 days', $2, 'stranger@elsewhere.test', 'seed', 'system')`,
+		attacker, thread)
+	e.exec(t, `INSERT INTO activity_participant (id, activity_id, role, address)
+		VALUES ($1, $2, 'from', 'stranger@elsewhere.test')`, ids.NewV7(), attacker)
+	e.exec(t, `INSERT INTO activity_link (id, activity_id, entity_type, contact_id)
+		VALUES ($1, $2, 'contact', $3)`, ids.NewV7(), attacker, contact)
+
+	if prior := candidate(t, e, attacker).PriorOutbound; prior != nil {
+		t.Errorf("a forged thread root attached our message to another customer as context: %q / %q",
+			prior.Subject, prior.Body)
+	}
+}
+
+// A thread a human marked "not sales work" is not swept back to the model.
+//
+// The sweep skips the waiting query because a wrong verdict can hide a row from
+// it. That argument covers the clauses DERIVED from the verdict; it does not
+// cover this one, which a rep sets by hand about their dentist or their lawyer
+// and which nothing about re-judging can feed back into.
+func TestADismissedThreadIsNotSwept(t *testing.T) {
+	e := setupLoad(t)
+	store := storeKnowing(e)
+	activity := e.waitingFrom(t, "About your appointment", "dentist@practice.test", e.buyer(t))
+	if _, err := store.SetOwedVerdict(asClassifier(e), activity, OwedVerdictInformsUs, rulesetOld, dbNow(t, e)); err != nil {
+		t.Fatal(err)
+	}
+	thread := threadKeyOf(t, e, activity)
+	e.exec(t, `INSERT INTO activity_sales_state (thread_key, kind, channel_provider, set_by)
+		VALUES ($1, 'email', '', $2)`, thread, e.rep)
+
+	stale, _, err := store.OwedRestale(asClassifier(e), rulesetNew, 100, 400, 400)
+	if err != nil {
+		t.Fatalf("reading the re-judge backlog: %v", err)
+	}
+	if containsCandidate(stale, activity) {
+		t.Error("a thread somebody dismissed as not sales work was swept back to the model")
+	}
+}
+
 // A subjectless earlier message still carries its body.
 //
 // subject is nullable, and keying the context block's presence on it would drop
@@ -141,9 +221,12 @@ func TestALaterMessageOfOursIsNotContext(t *testing.T) {
 func TestAPriorMessageWithNoSubjectStillCarries(t *testing.T) {
 	e := setupLoad(t)
 	activity := e.waitingFrom(t, "Re: the plan", "buyer@customer.test", e.buyer(t))
+	fromCounterparty(t, e, activity, "buyer@customer.test")
 	thread := threadKeyOf(t, e, activity)
-	e.exec(t, `INSERT INTO activity (id, kind, direction, subject, body, occurred_at, thread_key, source, captured_by)
-		VALUES ($1, 'email', 'outbound', NULL, 'Here is the plan. When suits you?', now() - interval '4 days', $2, 'seed', 'system')`,
+	e.exec(t, `INSERT INTO activity (id, kind, direction, subject, body, occurred_at, thread_key,
+			counterparty_email, counterparty_outbound_attested, source, captured_by)
+		VALUES ($1, 'email', 'outbound', NULL, 'Here is the plan. When suits you?', now() - interval '4 days', $2,
+			'buyer@customer.test', true, 'seed', 'system')`,
 		ids.NewV7(), thread)
 
 	prior := candidate(t, e, activity).PriorOutbound

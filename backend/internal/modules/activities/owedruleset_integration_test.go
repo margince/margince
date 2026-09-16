@@ -64,10 +64,10 @@ func TestAVerdictUnderAnOlderRulesetIsReplaced(t *testing.T) {
 	store := storeKnowing(e)
 	activity := e.waitingFrom(t, "Dienstag 14 Uhr", "buyer@customer.test", e.buyer(t))
 
-	if _, err := store.SetOwedVerdict(asClassifier(e), activity, OwedVerdictInformsUs, rulesetOld, time.Now()); err != nil {
+	if _, err := store.SetOwedVerdict(asClassifier(e), activity, OwedVerdictInformsUs, rulesetOld, dbNow(t, e)); err != nil {
 		t.Fatal(err)
 	}
-	applied, err := store.SetOwedVerdict(asClassifier(e), activity, OwedVerdictAsksUs, rulesetNew, time.Now())
+	applied, err := store.SetOwedVerdict(asClassifier(e), activity, OwedVerdictAsksUs, rulesetNew, dbNow(t, e))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -97,10 +97,10 @@ func TestAVerdictUnderTheSameRulesetDoesNotOverwrite(t *testing.T) {
 	store := storeKnowing(e)
 	activity := e.waitingFrom(t, "Anything", "buyer@customer.test", e.buyer(t))
 
-	if _, err := store.SetOwedVerdict(asClassifier(e), activity, OwedVerdictAsksUs, rulesetOld, time.Now()); err != nil {
+	if _, err := store.SetOwedVerdict(asClassifier(e), activity, OwedVerdictAsksUs, rulesetOld, dbNow(t, e)); err != nil {
 		t.Fatal(err)
 	}
-	applied, err := store.SetOwedVerdict(asClassifier(e), activity, OwedVerdictInformsUs, rulesetOld, time.Now())
+	applied, err := store.SetOwedVerdict(asClassifier(e), activity, OwedVerdictInformsUs, rulesetOld, dbNow(t, e))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -156,12 +156,12 @@ func TestALegacyVerdictWithNoRulesetIsStale(t *testing.T) {
 	e := setupLoad(t)
 	store := storeKnowing(e)
 	activity := e.waitingFrom(t, "Judged long ago", "buyer@customer.test", e.buyer(t))
-	if _, err := store.SetOwedVerdict(asClassifier(e), activity, OwedVerdictInformsUs, rulesetOld, time.Now()); err != nil {
+	if _, err := store.SetOwedVerdict(asClassifier(e), activity, OwedVerdictInformsUs, rulesetOld, dbNow(t, e)); err != nil {
 		t.Fatal(err)
 	}
 	e.exec(t, `UPDATE activity SET owed_verdict_ruleset = NULL WHERE id = $1`, activity)
 
-	rows, _, err := store.OwedRestale(e.as(), rulesetNew, 100, 400, 400)
+	rows, _, err := store.OwedRestale(asClassifier(e), rulesetNew, 100, 400, 400)
 	if err != nil {
 		t.Fatalf("reading the re-judge backlog: %v", err)
 	}
@@ -183,11 +183,11 @@ func TestTheSweepReachesARowTheQueueWouldNotShow(t *testing.T) {
 	// Older than any horizon the queue derives, and judged informs_us with no
 	// label and no task — invisible to the queue on both counts.
 	activity := e.waitingAgedFrom(t, "Dienstag 14 Uhr", "buyer@customer.test", e.buyer(t), 400)
-	if _, err := store.SetOwedVerdict(asClassifier(e), activity, OwedVerdictInformsUs, rulesetOld, time.Now()); err != nil {
+	if _, err := store.SetOwedVerdict(asClassifier(e), activity, OwedVerdictInformsUs, rulesetOld, dbNow(t, e)); err != nil {
 		t.Fatal(err)
 	}
 
-	stale, _, err := store.OwedRestale(e.as(), rulesetNew, 100, 400, 400)
+	stale, _, err := store.OwedRestale(asClassifier(e), rulesetNew, 100, 400, 400)
 	if err != nil {
 		t.Fatalf("reading the re-judge backlog: %v", err)
 	}
@@ -207,11 +207,11 @@ func TestACurrentVerdictIsNotSweptAgain(t *testing.T) {
 	e := setupLoad(t)
 	store := storeKnowing(e)
 	activity := e.waitingFrom(t, "Anything", "buyer@customer.test", e.buyer(t))
-	if _, err := store.SetOwedVerdict(asClassifier(e), activity, OwedVerdictAsksUs, rulesetNew, time.Now()); err != nil {
+	if _, err := store.SetOwedVerdict(asClassifier(e), activity, OwedVerdictAsksUs, rulesetNew, dbNow(t, e)); err != nil {
 		t.Fatal(err)
 	}
 
-	stale, _, err := store.OwedRestale(e.as(), rulesetNew, 100, 400, 400)
+	stale, _, err := store.OwedRestale(asClassifier(e), rulesetNew, 100, 400, 400)
 	if err != nil {
 		t.Fatalf("reading the re-judge backlog: %v", err)
 	}

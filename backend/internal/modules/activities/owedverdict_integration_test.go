@@ -92,7 +92,7 @@ func TestAnOlderUnjudgedMessageSurvivesNewerJudgedOnes(t *testing.T) {
 	// whole candidate set and the older one is unreachable.
 	for i := range WaitingScanCap {
 		newer := e.waitingAgedFrom(t, "Newer thread", "buyer@customer.test", contact, (i%70)+1)
-		if _, err := storeKnowing(e).SetOwedVerdict(asClassifier(e), newer, OwedVerdictAsksUs, "prompts-test", time.Now()); err != nil {
+		if _, err := storeKnowing(e).SetOwedVerdict(asClassifier(e), newer, OwedVerdictAsksUs, "prompts-test", dbNow(t, e)); err != nil {
 			t.Fatalf("judging newer message %d: %v", i, err)
 		}
 	}
@@ -134,7 +134,7 @@ func TestAJudgedMessageLeavesTheBacklogAndKeepsItsVerdict(t *testing.T) {
 	contact := e.buyer(t)
 	activity := e.waitingFrom(t, "Monthly reporting", "paul@customer.test", contact)
 
-	applied, err := storeKnowing(e).SetOwedVerdict(asClassifier(e), activity, OwedVerdictInformsUs, "prompts-test", time.Now())
+	applied, err := storeKnowing(e).SetOwedVerdict(asClassifier(e), activity, OwedVerdictInformsUs, "prompts-test", dbNow(t, e))
 	if err != nil {
 		t.Fatalf("setting the verdict: %v", err)
 	}
@@ -161,10 +161,10 @@ func TestASecondVerdictDoesNotOverwriteTheFirst(t *testing.T) {
 	activity := e.waitingFrom(t, "Can you confirm?", "buyer@customer.test", contact)
 	s := storeKnowing(e)
 
-	if _, err := s.SetOwedVerdict(asClassifier(e), activity, OwedVerdictAsksUs, "prompts-test", time.Now()); err != nil {
+	if _, err := s.SetOwedVerdict(asClassifier(e), activity, OwedVerdictAsksUs, "prompts-test", dbNow(t, e)); err != nil {
 		t.Fatalf("first verdict: %v", err)
 	}
-	applied, err := s.SetOwedVerdict(asClassifier(e), activity, OwedVerdictInformsUs, "prompts-test", time.Now())
+	applied, err := s.SetOwedVerdict(asClassifier(e), activity, OwedVerdictInformsUs, "prompts-test", dbNow(t, e))
 	if err != nil {
 		t.Fatalf("second verdict: %v", err)
 	}
@@ -194,7 +194,7 @@ func TestAMessageNarrowedDuringTheModelCallIsNotJudged(t *testing.T) {
 	// The narrowing lands AFTER the candidate was read, before the write.
 	e.exec(t, `UPDATE activity SET audience = 'participants' WHERE id = $1`, activity)
 
-	applied, err := storeKnowing(e).SetOwedVerdict(asClassifier(e), activity, OwedVerdictInformsUs, "prompts-test", time.Now())
+	applied, err := storeKnowing(e).SetOwedVerdict(asClassifier(e), activity, OwedVerdictInformsUs, "prompts-test", dbNow(t, e))
 	if err != nil {
 		t.Fatalf("setting the verdict: %v", err)
 	}
@@ -214,7 +214,7 @@ func TestAMessageArchivedDuringTheModelCallIsNotJudged(t *testing.T) {
 	activity := e.waitingFrom(t, "Filed away", "buyer@customer.test", contact)
 	e.exec(t, `UPDATE activity SET archived_at = now() WHERE id = $1`, activity)
 
-	applied, err := storeKnowing(e).SetOwedVerdict(asClassifier(e), activity, OwedVerdictInformsUs, "prompts-test", time.Now())
+	applied, err := storeKnowing(e).SetOwedVerdict(asClassifier(e), activity, OwedVerdictInformsUs, "prompts-test", dbNow(t, e))
 	if err != nil {
 		t.Fatalf("setting the verdict: %v", err)
 	}
@@ -240,7 +240,7 @@ func TestJudgingAMessageWritesAnAuditRow(t *testing.T) {
 		activity).Scan(&before); err != nil {
 		t.Fatalf("counting audit rows: %v", err)
 	}
-	if _, err := storeKnowing(e).SetOwedVerdict(asClassifier(e), activity, OwedVerdictInformsUs, "prompts-test", time.Now()); err != nil {
+	if _, err := storeKnowing(e).SetOwedVerdict(asClassifier(e), activity, OwedVerdictInformsUs, "prompts-test", dbNow(t, e)); err != nil {
 		t.Fatalf("setting the verdict: %v", err)
 	}
 	var after int
@@ -265,7 +265,7 @@ func TestAnUnknownVerdictIsRefused(t *testing.T) {
 	contact := e.buyer(t)
 	activity := e.waitingFrom(t, "Anything", "buyer@customer.test", contact)
 
-	if _, err := storeKnowing(e).SetOwedVerdict(asClassifier(e), activity, "maybe", "prompts-test", time.Now()); err == nil {
+	if _, err := storeKnowing(e).SetOwedVerdict(asClassifier(e), activity, "maybe", "prompts-test", dbNow(t, e)); err == nil {
 		t.Error("an undefined verdict was accepted")
 	}
 }
@@ -287,7 +287,7 @@ func (e *loadEnv) waitingAgedFrom(t *testing.T, subject, address string, contact
 // unjudged reads the backlog as a set of ids.
 func unjudged(t *testing.T, e *loadEnv) map[ids.UUID]bool {
 	t.Helper()
-	rows, _, err := storeKnowing(e).OwedBacklog(e.as(), time.Now(), 100, 400, 400)
+	rows, _, err := storeKnowing(e).OwedBacklog(asClassifier(e), time.Now(), 100, 400, 400)
 	if err != nil {
 		t.Fatalf("reading the unjudged backlog: %v", err)
 	}
@@ -301,7 +301,7 @@ func unjudged(t *testing.T, e *loadEnv) map[ids.UUID]bool {
 // candidate reads one message out of the backlog, failing if it is absent.
 func candidate(t *testing.T, e *loadEnv, id ids.UUID) OwedCandidate {
 	t.Helper()
-	rows, _, err := storeKnowing(e).OwedBacklog(e.as(), time.Now(), 100, 400, 400)
+	rows, _, err := storeKnowing(e).OwedBacklog(asClassifier(e), time.Now(), 100, 400, 400)
 	if err != nil {
 		t.Fatalf("reading the unjudged backlog: %v", err)
 	}

@@ -52,6 +52,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -133,14 +134,28 @@ const candidateColumns = `a.id, a.kind, coalesce(a.subject, ''), coalesce(left(a
 // The audience and hold clauses are on the prior message too. It is our own
 // text, but it goes to the same cloud tier as the message being judged, and a
 // thread the confidentiality engine narrowed is exactly the mail that must not.
+//
+// A THREAD KEY IS NOT EVIDENCE, and matching on it alone is the hole this
+// avoids. The key is the message's own References root, so the SENDER types it:
+// a stranger who has seen one of our Message-IDs — they were copied on the
+// thread, it went to a list, somebody forwarded it — can send a cold mail
+// carrying that root and manufacture a conversation out of correspondence we
+// had with somebody else. This join would then hand our half of it to the
+// model. capture's wroteBackTx refuses the same forgery on the same column, and
+// these are its two clauses: counterparty_email binds both halves to one
+// correspondent, and counterparty_outbound_attested is the provider's own
+// filing of a message as sent to them, which a typed header cannot reach.
 const priorOutboundJoin = `LEFT JOIN LATERAL (
   SELECT prior.id, prior.subject, left(prior.body, $%[4]d) AS body, prior.occurred_at
     FROM activity prior
    WHERE a.thread_key IS NOT NULL
+     AND a.counterparty_email IS NOT NULL
      AND prior.thread_key = a.thread_key
      AND prior.kind = a.kind
      AND prior.channel_provider IS NOT DISTINCT FROM a.channel_provider
      AND prior.direction = 'outbound'
+     AND prior.counterparty_email = a.counterparty_email
+     AND prior.counterparty_outbound_attested
      AND prior.archived_at IS NULL
      AND prior.audience = 'workspace'
      AND prior.restricted_at IS NULL
@@ -191,6 +206,15 @@ func scanCandidates(rows pgx.Rows) ([]OwedCandidate, error) {
 // widened predicate would put stale rows into competition with fresh mail for
 // this query's scan cap — see OwedRestale for what that costs.
 func (s *Store) OwedBacklog(ctx context.Context, asOf time.Time, limit, bodyLimit, priorBodyLimit int) ([]OwedCandidate, time.Time, error) {
+	// System principal only, like RepliedRequests beside it and for the same
+	// reason: this hands a customer's subject and body, and now our own earlier
+	// message, to a model. OwedRestale composes no row-scope clause of its own,
+	// so without this any principal holding activity:read that ever reached it
+	// would read every judged message in the installation.
+	actor, ok := principal.Actor(ctx)
+	if !ok || actor.Type != principal.PrincipalSystem {
+		return nil, time.Time{}, apperrors.ErrPermissionDenied
+	}
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return nil, time.Time{}, err
 	}
@@ -284,6 +308,15 @@ func (s *Store) OwedBacklog(ctx context.Context, asOf time.Time, limit, bodyLimi
 // The audience and hold clauses carry the same meaning they do in OwedBacklog:
 // what may leave the building, not who may read it.
 func (s *Store) OwedRestale(ctx context.Context, ruleset string, limit, bodyLimit, priorBodyLimit int) ([]OwedCandidate, time.Time, error) {
+	// System principal only, like RepliedRequests beside it and for the same
+	// reason: this hands a customer's subject and body, and now our own earlier
+	// message, to a model. OwedRestale composes no row-scope clause of its own,
+	// so without this any principal holding activity:read that ever reached it
+	// would read every judged message in the installation.
+	actor, ok := principal.Actor(ctx)
+	if !ok || actor.Type != principal.PrincipalSystem {
+		return nil, time.Time{}, apperrors.ErrPermissionDenied
+	}
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return nil, time.Time{}, err
 	}
@@ -313,6 +346,18 @@ func (s *Store) OwedRestale(ctx context.Context, ruleset string, limit, bodyLimi
 			   AND a.archived_at IS NULL
 			   AND a.audience = 'workspace'
 			   AND a.restricted_at IS NULL
+			   -- A human saying "this is not sales work" is the one rule from the
+			   -- waiting query this read keeps, and it is kept because it is a
+			   -- DECISION rather than a derivation. The clauses left behind are
+			   -- derived from the verdict and would exclude the rows this exists
+			   -- to correct; this one is set by a rep, about their dentist or
+			   -- their lawyer, and nothing about re-judging can feed back into
+			   -- it. Dropping it would ship a thread somebody dismissed back to
+			   -- the model every time the prompt moved.
+			   AND NOT EXISTS (SELECT 1 FROM activity_sales_state judged
+			         WHERE judged.thread_key = a.thread_key
+			           AND judged.kind = a.kind
+			           AND judged.channel_provider = coalesce(a.channel_provider, ''))
 			 GROUP BY `+candidateGroupBy+`
 			 ORDER BY a.occurred_at DESC
 			 LIMIT $%[3]d`, body, arg(ruleset), arg(limit), prior), args...)

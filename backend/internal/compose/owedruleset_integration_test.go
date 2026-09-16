@@ -14,6 +14,7 @@ package compose
 
 import (
 	"context"
+	"slices"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -110,6 +111,22 @@ func TestNewMailIsJudgedBeforeTheSweep(t *testing.T) {
 
 	brain := &owedBrainStub{verdict: activities.OwedVerdictAsksUs, confidence: 0.95}
 	runOwedWorker(t, e, brain)
+
+	// The ORDER is the assertion, not the outcome. Both rows end up judged
+	// whichever drain ran first, so asserting only that would pass with the two
+	// calls swapped — which is the change this is here to catch.
+	if len(brain.prompts) == 0 {
+		t.Fatal("the pass made no model call at all")
+	}
+	first := fencedIDs(brain.prompts[0].System, brain.prompts[0].Messages[0].Content, "source_id")
+	if !slices.Contains(first, fresh.String()) {
+		t.Errorf("the first model call judged %v, not the unjudged message %v — "+
+			"new mail is queued behind a sweep of history", first, fresh)
+	}
+	if slices.Contains(first, stale.String()) {
+		t.Errorf("the first model call carried the stale row %v, so the two populations "+
+			"share one read and one budget", stale)
+	}
 
 	if got := verdictOf(t, e, fresh); got == nil {
 		t.Error("the unjudged message was left unjudged while the pass re-read history")

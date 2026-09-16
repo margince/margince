@@ -177,7 +177,7 @@ func TestDifferentRequestsInOneConversationNeedSeparateResolution(t *testing.T) 
 		}
 		id := ids.UUID(source.Id)
 		requests = append(requests, id)
-		if _, err := store.SetOwedVerdict(asClassifier(e), id, OwedVerdictAsksUs, "prompts-test", time.Now()); err != nil {
+		if _, err := store.SetOwedVerdict(asClassifier(e), id, OwedVerdictAsksUs, "prompts-test", dbNow(t, e)); err != nil {
 			t.Fatal(err)
 		}
 	}
