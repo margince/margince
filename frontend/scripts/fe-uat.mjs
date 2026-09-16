@@ -24,6 +24,7 @@ import {
   readStoryIndex,
   serveStaticStorybook,
 } from "./lib/storybook-harness.mjs";
+import { needsStory } from "./lib/uat-scope.mjs";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const staticDir = join(repoRoot, "frontend/storybook-static");
@@ -207,17 +208,7 @@ for (const f of changed) {
   if (f === documentEntry) continue;
   if (/\.stories\.[tj]sx?$/.test(f)) {
     storyFiles.add(f);
-  } else if (
-    /\.[tj]sx$/.test(f) &&
-    !/\.d\.ts$/.test(f) &&
-    // `.testkit.` alongside `.test.`: a testkit holds the fixtures and fetch
-    // fakes a suite shares, and nothing ships it. Keyed on the NAME rather
-    // than on "imported only by tests", which would also excuse a real
-    // component whose only importer so far is its own test — the exact case
-    // this gate exists to catch. Naming a shipped component `x.testkit.tsx`
-    // to dodge the gate would have to be deliberate.
-    !/\.(test|testkit|stories)\./.test(f)
-  ) {
+  } else if (needsStory(f)) {
     const covering = new Set(coveringStories.get(f) ?? []);
     // The co-located story counts on its path alone: it may reach the component
     // through a barrel re-export rather than importing the file directly.
