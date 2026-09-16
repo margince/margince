@@ -125,3 +125,43 @@ func TestMaskedColumnSQLMasksTheBaseColumnUnderTheFieldsMask(t *testing.T) {
 			"or a sum in base currency reads what the row withholds", got)
 	}
 }
+
+// The expression form guards a value the caller rendered, and the ALIAS still
+// reaches the predicate: write authority is a question about the row, so a
+// projection that does arithmetic on the money must still be judged by whose
+// deal it is. The rendering is otherwise the column form's, which is the point
+// of their sharing a body.
+func TestMaskedExpressionSQLGuardsARenderedValueByItsRow(t *testing.T) {
+	t.Parallel()
+	const fold = "CASE WHEN d.currency = 'EUR' THEN d.amount_minor ELSE d.amount_minor_base END"
+	ctx := maskedActor(principal.FieldMask{
+		Object: "deal", Field: "amount_minor", Condition: principal.MaskOutsideWriteAuthority,
+	})
+	got, err := auth.MaskedExpressionSQL(ctx, "deal", "amount_minor", "d", fold, func(any) int { return 1 })
+	if err != nil {
+		t.Fatalf("MaskedExpressionSQL: %v", err)
+	}
+	if !strings.Contains(got, fold) {
+		t.Errorf("MaskedExpressionSQL = %q, want the caller's expression inside the guard", got)
+	}
+	if !strings.HasPrefix(got, "CASE WHEN ") || !strings.HasSuffix(got, "ELSE NULL END") {
+		t.Errorf("MaskedExpressionSQL = %q, want a CASE nulling the value outside write authority", got)
+	}
+	if !strings.Contains(got, "d.") {
+		t.Errorf("MaskedExpressionSQL = %q, want the predicate to name the aliased row", got)
+	}
+}
+
+// No mask: the expression goes out untouched, unqualified and unwrapped — the
+// caller already rendered every name in it, and there is nothing here to add.
+func TestMaskedExpressionSQLIsTheBareExpressionWithoutAMask(t *testing.T) {
+	t.Parallel()
+	const fold = "sum(d.amount_minor_base)"
+	got, err := auth.MaskedExpressionSQL(maskedActor(), "deal", "amount_minor", "d", fold, func(any) int { return 1 })
+	if err != nil {
+		t.Fatalf("MaskedExpressionSQL: %v", err)
+	}
+	if got != fold {
+		t.Errorf("MaskedExpressionSQL = %q, want the expression unchanged", got)
+	}
+}
