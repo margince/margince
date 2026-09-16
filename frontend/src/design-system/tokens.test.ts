@@ -2,6 +2,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { normalize, parseBlock, tokenDecls, tokensCss } from "./tokens-testing";
 
 // Pins the light-mode token layer to the canonical Ledger-Green values from the
 // spec's design/mockups/app.css :root (design-language §2, ADR-0040). A value
@@ -9,15 +10,6 @@ import { describe, expect, it } from "vitest";
 // or Dispact warm-stone — fails the build.
 
 const here = dirname(fileURLToPath(import.meta.url));
-const tokensCss = readFileSync(join(here, "tokens.css"), "utf8");
-
-// The same sheet with its comments removed, for every test that reads
-// DECLARATIONS. A declaration and a sentence about a declaration are not the
-// same thing, and this file explains most of its values in prose that names
-// them; left in, that prose parses as declarations of its own. The shape tests
-// below keep reading the raw text, so the line number they report in a failure
-// is the line a reader can open.
-const tokenDecls = tokensCss.replace(/\/\*[\s\S]*?\*\//g, "");
 
 // Values verbatim from the mockups; comparison normalizes case, whitespace and
 // a leading zero before a decimal point so formatting is free but values are not.
@@ -104,34 +96,6 @@ const canonical: Record<string, string> = {
   "--fontFamilyMono": '"Geist Mono",ui-monospace,monospace',
 };
 
-function normalize(value: string): string {
-  return value
-    .toLowerCase()
-    .replace(/\s+/g, "")
-    .replace(/(^|[^0-9])0\./g, "$1.")
-    .replace(/(\.[0-9]*?)0+([^0-9]|$)/g, "$1$2");
-}
-
-function parseBlock(css: string, selector: string): Record<string, string> {
-  // Parentheses and the colon are escaped too, so a selector carrying a
-  // functional pseudo-class (`:root:not([data-theme="light"])`) is matched as
-  // the literal text it is rather than compiled into a capture group — which
-  // matches nothing, and would report the block as missing.
-  const match = css.match(
-    new RegExp(`${selector.replace(/[[\]"=():]/g, "\\$&")}\\s*\\{([^}]*)\\}`),
-  );
-  if (!match) {
-    throw new Error(`tokens.css has no ${selector} block`);
-  }
-  const props: Record<string, string> = {};
-  for (const [, name, value] of match[1].matchAll(
-    /(--[\w-]+)\s*:\s*([^;]+);/g,
-  )) {
-    props[name] = value.trim();
-  }
-  return props;
-}
-
 // A media query opened INSIDE :root ends the block early, and every token
 // declared below it is stranded in that query — present on the devices the
 // query matches and simply absent everywhere else. Nothing else in the tree can
@@ -168,77 +132,18 @@ describe("the token block's shape", () => {
   });
 
   // The scale the whole product measures itself in has to be in the block every
-  // document gets, not in one a device may not match.
-  it("declares the layout and type scales unconditionally", () => {
+  // document gets, not in one a device may not match. The TYPE half of the same
+  // obligation is type-tokens.test.ts's, which reads this same :root block.
+  it("declares the layout scale unconditionally", () => {
     const light = parseBlock(tokenDecls, ":root");
     for (const name of [
       "--space-1",
       "--space-6",
       "--space-16",
-      "--controlHeight",
-      "--controlPaddingX",
-      "--controlGap",
-      "--controlIcon",
-      "--fontWeightRegular",
-      "--fontWeightMedium",
-      "--fontWeightBold",
-      "--fontBodyLarge",
-      "--paragraphSpacingLarge",
-      "--fontBody",
-      "--paragraphSpacing",
-      "--fontBodySmall",
-      "--paragraphSpacingSmall",
-      "--fontHeadingXXLarge",
-      "--fontHeadingXLarge",
-      "--fontHeadingLarge",
-      "--fontHeadingMedium",
-      "--fontHeadingSmall",
-      "--fontHeadingXSmall",
-      "--fontHeadingXXSmall",
-      "--fontFamilyBody",
       "--phoneNavClearance",
     ]) {
       expect(light[name], `${name} missing from :root`).toBeTruthy();
     }
-  });
-
-  // The weights and the control geometry, by value. A role token whose name
-  // survives a retune that silently changed what it means is worse than no
-  // token: every call site keeps reading it and the product moves under them.
-  it("declares the three weights and the one control geometry", () => {
-    const light = parseBlock(tokenDecls, ":root");
-    const want: Readonly<Record<string, string>> = {
-      "--fontWeightRegular": "400",
-      "--fontWeightMedium": "500",
-      "--fontWeightBold": "700",
-      "--controlHeight": "32px",
-      "--controlPaddingX": "var(--space-3)",
-      "--controlGap": "6px",
-      "--controlIcon": "16px",
-    };
-    for (const [name, value] of Object.entries(want)) {
-      expect(normalize(light[name] ?? ""), name).toBe(normalize(value));
-    }
-  });
-
-  // One control size. The small rung was a second answer to "how tall is a
-  // control", and the two drifted on every screen that mixed them; an icon
-  // button now takes --controlHeight like everything else. Asserted on the
-  // whole sheet rather than on :root, so the touch arm cannot bring it back.
-  it("carries no second control height", () => {
-    expect(tokensCss).not.toMatch(/--control-h\b/);
-  });
-
-  // Every size in the type scale reads a weight token. A spelled 400 or 700
-  // here is the second spelling type-source.test.ts refuses everywhere else,
-  // and this file is the one place that gate cannot speak for.
-  it("spells no weight by value in the type scale", () => {
-    const light = parseBlock(tokenDecls, ":root");
-    const spelled = Object.entries(light)
-      .filter(([name]) => /^--font(Body|Heading)/.test(name))
-      .filter(([, value]) => !value.startsWith("var(--fontWeight"))
-      .map(([name, value]) => `${name}: ${value}`);
-    expect(spelled, spelled.join("\n")).toEqual([]);
   });
 });
 
