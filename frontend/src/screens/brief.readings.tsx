@@ -218,7 +218,7 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
     ) || bounded.has(category);
   return (
     <section className="brief-readings" aria-label={t("brief.readings.label")}>
-      <StatStrip testId="brief-readings" shape="line">
+      <StatStrip testId="brief-readings">
         <LaneReading
           scope={day.scope}
           label={t("brief.readings.urgent")}

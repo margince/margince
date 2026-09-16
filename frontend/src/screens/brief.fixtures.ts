@@ -750,7 +750,7 @@ export function waitingEmailRow(): WorklistItem {
       version: 1,
     },
     move: { action: "draft_reply", activity_id: "mail-sonya" },
-    actions: ["open", "reply"],
+    actions: ["open"],
     dispositions: ["snooze", "not_mine"],
   };
 }

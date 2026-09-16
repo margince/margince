@@ -314,6 +314,16 @@ export const SixPriorities: Story = {
         taskRow(`followup-${n}`, `Follow up on customer commitment ${n}`),
       ),
     ]),
+    // Sonya's own record, for the two moments the row in hand reads off it.
+    extra: {
+      "GET /contacts/contact-sonya/360": () =>
+        jsonResponse({
+          contact: { id: "contact-sonya", full_name: "Sonya Beck" },
+          last_inbound_at: "2026-09-03T16:46:00Z",
+          last_outbound_at: "2026-08-28T09:12:00Z",
+          sections_omitted: [],
+        }),
+    },
   }),
 };
 export const TaskEvidence: Story = {

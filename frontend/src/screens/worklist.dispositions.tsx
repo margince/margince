@@ -428,18 +428,18 @@ function PutDownMenu({
 // were added to end. A menu line costs no height where a fourth 44px control
 // did, which is what made room for them without the band coming back.
 
-export function DispositionVerbs({ item }: Readonly<{ item: WorklistItem }>) {
+export function DispositionVerbs({
+  item,
+  // The menu above the fold too: the Brief's row in hand keeps its one answer
+  // apart from the put-downs, so they fold rather than stand beside it.
+  asMenu = false,
+}: Readonly<{ item: WorklistItem; asMenu?: boolean }>) {
   const folded = useFoldedViewport();
   // The row's own write, from the wrapper that holds it — one mutation per row,
-  // so a press here and a swipe confirm beside it cannot write twice.
-  //
-  // The fallback is for a caller that draws these verbs outside a row: it gets
-  // its own write rather than throwing on a missing provider. Every caller
-  // today goes through WorklistRow, the Brief's feed included, so nothing
-  // reaches it — it is what keeps a future caller from a crash it cannot read.
-  // Both hooks run either way, because a hook cannot be called conditionally;
-  // the unused one registers a mutation nobody fires, which costs a
-  // registration and never a request.
+  // so a press here and a swipe confirm beside it cannot write twice. The
+  // fallback is for a caller drawing these verbs outside a row; both hooks run
+  // either way, because a hook cannot be called conditionally, and the unused
+  // one registers a mutation nobody fires.
   const shared = useContext(PutDownContext);
   const own = usePutDown(item);
   const { offered, put, writing, t, locale } = shared ?? own;
@@ -449,7 +449,7 @@ export function DispositionVerbs({ item }: Readonly<{ item: WorklistItem }>) {
   // Below the fold the band goes and the menu stands in its place: one tab stop
   // rather than four 44px controls, so the judgements stay reachable by key
   // without the height that put the row over its ceiling.
-  if (folded) {
+  if (folded || asMenu) {
     return (
       <PutDownMenu
         offered={offered}

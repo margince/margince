@@ -4,8 +4,8 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { en } from "../i18n/en";
 import { BriefFeed } from "./brief.feed";
-import { readingsDay, taskRow } from "./brief.fixtures";
-import { render, stubApi } from "./brief.testkit";
+import { readingsDay, taskRow, waitingEmailRow } from "./brief.fixtures";
+import { jsonResponse, render, stubApi } from "./brief.testkit";
 
 afterEach(() => {
   cleanup();
@@ -191,3 +191,74 @@ it.each([false, true])(
     expect(screen.queryByText(/you pinned/i)).toBeNull();
   },
 );
+
+/** Sonya's own 360, as the pane beside the queue would read it. */
+function sonya360() {
+  return jsonResponse({
+    contact: { id: "contact-sonya", full_name: "Sonya Beck" },
+    last_inbound_at: "2026-09-03T16:46:00Z",
+    last_outbound_at: null,
+    sections_omitted: [],
+  });
+}
+
+it("stands the row in hand's answer apart from its ways in, and folds the put-downs", () => {
+  stubApi({ "GET /contacts/contact-sonya/360": sonya360 });
+  const { container } = render(
+    <BriefFeed day={readingsDay({}, [waitingEmailRow()])} state="ready" />,
+  );
+  const lead = inHand(container);
+  // The move the product worked out is the row's answer, alone on the
+  // trailing edge in the primary chrome.
+  const draft = lead.getByRole("link", {
+    name: en["worklist.verb.draft_reply_now"],
+  });
+  expect(draft.className).toContain("btn-primary");
+  expect(container.querySelector(".worklist-row-answer")?.contains(draft)).toBe(
+    true,
+  );
+  // The put-downs fold into their menu rather than standing beside it.
+  expect(
+    lead.getByRole("button", { name: en["worklist.disposition.menu"] }),
+  ).toBeTruthy();
+  expect(
+    lead.queryByRole("button", {
+      name: en["worklist.disposition.verb.not_mine"],
+    }),
+  ).toBeNull();
+  // The verb that only reaches the record is withheld: the record is named
+  // and linked under the row.
+  expect(
+    lead.queryByRole("link", { name: en["worklist.verb.open"] }),
+  ).toBeNull();
+});
+
+it("names whose row is in hand, and how the silence runs both ways", async () => {
+  stubApi({ "GET /contacts/contact-sonya/360": sonya360 });
+  render(
+    <BriefFeed day={readingsDay({}, [waitingEmailRow()])} state="ready" />,
+  );
+  expect(
+    await screen.findByText(en["worklist.pane.lastOutbound"]),
+  ).toBeTruthy();
+  expect(screen.getByText(en["worklist.pane.lastInbound"])).toBeTruthy();
+  expect(screen.getByText(en["worklist.pane.never"])).toBeTruthy();
+  expect(
+    screen.getByRole("link", { name: "Sonya Beck" }).getAttribute("href"),
+  ).toBe("#/contacts/contact-sonya");
+});
+
+it("claims no moments when the read withheld them", async () => {
+  stubApi({
+    "GET /contacts/contact-sonya/360": () =>
+      jsonResponse({
+        contact: { id: "contact-sonya", full_name: "Sonya Beck" },
+        sections_omitted: ["last_touch"],
+      }),
+  });
+  render(
+    <BriefFeed day={readingsDay({}, [waitingEmailRow()])} state="ready" />,
+  );
+  expect(await screen.findByRole("link", { name: "Sonya Beck" })).toBeTruthy();
+  expect(screen.queryByText(en["worklist.pane.never"])).toBeNull();
+});

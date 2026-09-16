@@ -57,9 +57,17 @@ export function RowActs({
   onReview,
   onOpenEmail,
   context,
+  shape,
 }: Readonly<{
   item: WorklistItem;
   href: string | undefined;
+  /**
+   * `triage` is the row IN HAND on the Brief, where one row is answered rather
+   * than a queue scanned: the ways INTO the work stand on the leading edge as
+   * quiet verbs, the answer alone on the trailing edge in the primary chrome,
+   * and the put-downs fold into their menu beside it.
+   */
+  shape?: "triage";
   /**
    * `compact` withholds the verb that only REACHES the record, because at that
    * density the row's title carries the link itself — two controls on one line
@@ -89,6 +97,42 @@ export function RowActs({
    */
   context?: ReactNode;
 }>) {
+  if (shape === "triage") {
+    return (
+      <div className="worklist-row-acts worklist-row-acts-triage">
+        <span className="worklist-row-ways">
+          {context}
+          {item.batch && onReview ? (
+            <BatchVerb onReview={onReview} />
+          ) : (
+            <RowVerbs
+              item={item}
+              href={href}
+              part="ways"
+              move={moveHref(item)}
+              onOpenEmail={onOpenEmail}
+            />
+          )}
+        </span>
+        <span className="worklist-row-answer">
+          {!item.batch && (
+            <RowVerbs
+              item={item}
+              href={href}
+              part="act"
+              // The move IS the answer where the lane sent none of its own.
+              lead={primary === undefined}
+              move={moveHref(item)}
+              onOpenEmail={onOpenEmail}
+            />
+          )}
+          {equals}
+          <DispositionVerbs item={item} asMenu />
+          {primary}
+        </span>
+      </div>
+    );
+  }
   return (
     <div className="worklist-row-acts">
       {context}
@@ -171,12 +215,19 @@ function RowVerbs({
   density,
   move,
   onOpenEmail,
+  part,
+  lead = false,
 }: Readonly<{
   item: WorklistItem;
   href: string | undefined;
   density?: "compact";
   move: string | undefined;
   onOpenEmail?: (id: string) => void;
+  /** Which half, for the triage shape: the `act` is the move the product
+   *  worked out, the `ways` only reach the record. Absent, one flow. */
+  part?: "ways" | "act";
+  /** The move in the primary chrome: it is the row's answer. */
+  lead?: boolean;
 }>) {
   const t = useT();
   const replyActivity =
@@ -216,7 +267,9 @@ function RowVerbs({
     //
     // `move` is untouched: it opens the composer, which is a different
     // destination and the most-pressed control on a waiting row.
-    if (density === "compact" && destination === href) {
+    // The triage shape's WAYS withhold it for the same reason: the row in hand
+    // names and links the record it is about under itself (brief.feed.tsx).
+    if ((density === "compact" || part === "ways") && destination === href) {
       return [];
     }
     drawn.add(destination);
@@ -225,17 +278,24 @@ function RowVerbs({
   if (verbs.length === 0 && !move) {
     return null;
   }
+  const act = part !== "ways";
+  const ways = part !== "act";
   return (
     <>
       {/* The step the product already worked out, offered where the reader is
           standing rather than on a screen they have to go and find. */}
-      {readReply ? (
-        <Button small onClick={() => onOpenEmail(replyActivity)}>
+      {act && readReply ? (
+        <Button
+          small
+          variant={lead ? "primary" : undefined}
+          onClick={() => onOpenEmail(replyActivity)}
+        >
           {t("worklist.verb.draft_reply")}
         </Button>
       ) : (
+        act &&
         move && (
-          <a className={NAVIGATING_VERB} href={move}>
+          <a className={lead ? ANSWERING_VERB : NAVIGATING_VERB} href={move}>
             {/* THE LABEL MOVES WITH THE ROUTE AND WITH THE VERB. Where the
               address opens the composer the label is the act; where it only
               reaches the record it says so. And it names the verb the SERVER
@@ -245,11 +305,12 @@ function RowVerbs({
           </a>
         )
       )}
-      {verbs.map(({ action, destination }) => (
-        <a key={action} className={NAVIGATING_VERB} href={destination}>
-          {VERB_LABEL[action](t)}
-        </a>
-      ))}
+      {ways &&
+        verbs.map(({ action, destination }) => (
+          <a key={action} className={NAVIGATING_VERB} href={destination}>
+            {VERB_LABEL[action](t)}
+          </a>
+        ))}
     </>
   );
 }
@@ -285,6 +346,8 @@ function verbDestination(
 // the alternative is a second spelling of the small ghost button in
 // worklist.css. `screens/client.tsx` reaches the same conclusion the same way.
 const NAVIGATING_VERB = "btn btn-ghost btn-sm";
+// The same anchor as the row's ANSWER, in the primary chrome (the triage shape).
+const ANSWERING_VERB = "btn btn-primary btn-sm";
 
 // Where each verb lives. A total map over the ones this page can route, so a
 // verb the contract adds either gets a destination here or is not drawn —

@@ -146,6 +146,26 @@
   padding-inline-start: var(--space-3);
 }
 
+/* WHOSE ROW IT IS, under the row: the record's chip and its name as the
+   link, then the two moments of the silence — how long since they wrote and
+   since we did — as one caption line, so a rep reads the relationship before
+   choosing the verb. */
+.brief-triage-about {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  margin: 0;
+  color: var(--textMeta);
+}
+.brief-triage-about-fact {
+  display: inline-flex;
+  gap: var(--space-1);
+}
+.brief-triage-about-fact > .t-num {
+  color: var(--textPrimary);
+}
+
 /* ── The queue beside it ──────────────────────────────────────────────────── */
 .brief-triage-queue {
   display: flex;

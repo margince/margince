@@ -179,21 +179,19 @@
   margin: 0;
 }
 
-/* ── The readings line ─────────────────────────────────────────────────────
+/* ── The readings band ─────────────────────────────────────────────────────
  * Between the head and the work, what describes the WHOLE day: the five
- * readings as one ruled line — the strip's own line form — between two
- * hairlines, the way the facts strip closes a record's head, with the strip's
- * own footnotes under it. A line and not a plate: the readings frame the work
- * and must not stand in front of it. */
+ * readings as the house's reading cards, each a door into its lane with its
+ * basis under the figure, the way a record's band draws its readings — with
+ * the strip's own footnotes under them. */
 .brief-overview {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  margin: 0;
+  margin: var(--space-2) 0 0;
 }
 .brief-readings {
   margin: 0;
-  border-block: 1px solid var(--borderSubtle);
 }
 
 /* The strip's own footnotes: what the page could not read, and when the page

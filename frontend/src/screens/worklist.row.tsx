@@ -36,6 +36,7 @@ import {
   phrasedReasons,
   reasonText,
   rowHref,
+  subjectHref,
   whenText,
 } from "./worklist.copy";
 import { PutDownByThumb } from "./worklist.dispositions";
@@ -57,6 +58,13 @@ import { CompactRowLine, type RowReadings } from "./worklist.row.compact";
 import { RowActs } from "./worklist.rowverbs";
 import { VerdictLine } from "./worklist.verdict";
 import "./worklist.row.css";
+
+/** The record a row is about, linked — for the row that names it only as text. */
+function aboutRecord(item: WorklistItem): RowReadings["about"] {
+  const label = item.subject?.label;
+  const href = subjectHref(item);
+  return label && href ? { href, label } : undefined;
+}
 
 // Preserve server order while naming each group member once.
 function namedMembers(item: WorklistItem): string[] {
@@ -100,11 +108,15 @@ export function WorklistRow({
   onReview,
   onOpenEmail,
   context,
+  acts,
 }: Readonly<{
   item: WorklistItem;
   /** The way into what this row is ABOUT, drawn among its verbs. The Brief
    *  has no pane beside its list, so its focus rows open a drawer instead. */
   context?: ReactNode;
+  /** How the verbs stand: one flow (the queue's), or the triage shape the
+   *  Brief's row in hand takes — worklist.rowverbs.tsx says what divides. */
+  acts?: "triage";
   // Whose queue this row is on, empty for the reader's own. It names the
   // contact a reassignment moves work AWAY from, which on the reader's own
   // queue is the reader — ReassignControl resolves that rather than this
@@ -178,6 +190,12 @@ export function WorklistRow({
   // rather than as a flag, so the row cannot be drawn without one — a caller
   // with no drawer keeps the title instead of losing the row's name with it.
   const emailOpener = item.email_summary != null ? onOpenEmail : undefined;
+  // WHICH RECORD THE ROW IS ABOUT, linked, on the one row that does not link
+  // it: a waiting message names its sender as text, where every other title
+  // names and links its record (`itemTitle`, `rowHref`). The triage shape
+  // names it under the row itself (brief.feed.tsx) and withholds this.
+  const about =
+    emailOpener && acts !== "triage" ? aboutRecord(item) : undefined;
   // Whether the day put a state on this row — overdue, or a meeting with
   // nothing prepared. They ride on the title line, which is why it is drawn on
   // a row that has no title of its own to draw.
@@ -205,6 +223,7 @@ export function WorklistRow({
     detail,
     sample,
     zone,
+    about,
   };
   const named = conditionOf(item);
   return (
@@ -297,6 +316,7 @@ export function WorklistRow({
           equals={answer.equals}
           onReview={onReview}
           context={context}
+          shape={acts}
         />
         {/* An answer that is not a VERB: a duplicate pair, whose two buttons
             each name the record they keep and cannot leave the list that names
@@ -389,6 +409,7 @@ function RowText({
             states why the label says which. */}
       <VerdictLine verdict={item.verdict} zone={zone} />
       <RowCaptions
+        about={readings.about}
         when={when}
         facts={facts}
         said={said}
@@ -751,6 +772,7 @@ function RowWhyHere({
  * linter allows, which is a fair reading of how much a contact can hold at once.
  */
 function RowCaptions({
+  about,
   when,
   facts,
   said,
@@ -758,6 +780,7 @@ function RowCaptions({
   consequence,
   above,
 }: Readonly<{
+  about?: RowReadings["about"];
   when: string | null;
   facts: string | null;
   said: readonly string[];
@@ -771,6 +794,15 @@ function RowCaptions({
           beside it are about: "starting shortly" explains a rank, and this says
           what time. */}
       <div className="worklist-row-facts-line">
+        {/* WHO it is with, first: a rep answering a row asks whose row it is
+            before how long it has waited. */}
+        {about && (
+          <p className="t-caption worklist-row-about">
+            <a className="entity-link" href={about.href}>
+              {about.label}
+            </a>
+          </p>
+        )}
         {when && <p className="t-caption worklist-row-when">{when}</p>}
         {facts && <p className="t-caption worklist-row-facts">{facts}</p>}
         <RowWhyHere said={said} folded={folded} above={above} />

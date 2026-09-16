@@ -47,6 +47,8 @@ export type RowReadings = Readonly<{
   sample: readonly string[];
   /** The zone a verdict's timestamps are read in. */
   zone: string;
+  /** The record the row is about, linked, where the row does not link it. */
+  about?: Readonly<{ href: string; label: string }>;
 }>;
 
 /** The linked title opens the record; optional details contain its evidence. */

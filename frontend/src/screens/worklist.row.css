@@ -172,6 +172,9 @@
   color: var(--textMeta);
   margin: 0;
 }
+.worklist-row-about {
+  margin: 0;
+}
 
 /* EVERY VERB ON ONE RIGHT-ALIGNED LINE, the lane's answer LAST.
    One flow rather than two groups, and `flex-end` rather than `space-between`:
@@ -191,6 +194,27 @@
   align-items: center;
   justify-content: flex-end;
   gap: var(--gapActions);
+}
+
+/* THE TRIAGE SHAPE, for the row in hand on the Brief: the ways INTO the work
+   on the leading edge and the answer on the trailing edge, held apart so a
+   reader answering one row sees one thing to press. The one-flow line above
+   is the queue's, where many rows are read down and the answer's x is what
+   matters — worklist.rowverbs.tsx says what divides the two. Each group is
+   its own wrapping line, so a row with many ways in never pushes its answer
+   off the edge. */
+.worklist-row-acts-triage {
+  justify-content: space-between;
+}
+.worklist-row-ways,
+.worklist-row-answer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gapActions);
+}
+.worklist-row-answer {
+  margin-inline-start: auto;
 }
 
 /* ROOM FOR AN INLINE FORM, AFTER THE VERBS IT BELONGS TO.

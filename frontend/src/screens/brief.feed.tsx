@@ -5,7 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { ArrowRight } from "lucide-react";
 import { useState } from "react";
 import { navigate } from "../app/router";
-import { Badge, Button } from "../design-system/atoms";
+import { Avatar, Badge, Button } from "../design-system/atoms";
 import { Eyebrow } from "../design-system/eyebrow";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { Panel, PanelBody } from "../design-system/panel";
@@ -20,10 +20,11 @@ import {
   useT,
 } from "../i18n";
 import { isBriefUpdate, waitingRows } from "./brief.sentence";
-import { phrasedReasons, reasonText } from "./worklist.copy";
+import { useContact360 } from "./contact360";
+import { phrasedReasons, reasonText, subjectHref } from "./worklist.copy";
 import { nextUpLine } from "./worklist.emailtitle";
 import { worklistLaneHref } from "./worklist.header";
-import { hasPane } from "./worklist.pane";
+import { hasPane, lastTouch } from "./worklist.pane";
 import {
   type Worklist,
   type WorklistItem,
@@ -237,6 +238,7 @@ function Triage({
             })}
           </span>
         </div>
+        <AboutLine item={lead} />
         <WorklistRow
           // Personal ordering is the queue's, not the focus projection's.
           allowPin={false}
@@ -251,6 +253,7 @@ function Triage({
             )
           }
           context={details}
+          acts="triage"
         />
       </div>
       <div className="brief-triage-queue">
@@ -294,6 +297,44 @@ function Triage({
         </ol>
       </div>
     </div>
+  );
+}
+
+/**
+ * WHOSE row this is, and how the silence runs in both directions — over the
+ * row, where a reader meets the relationship before the work.
+ *
+ * The record the row is about, linked, with the two moments a rep answering
+ * it would otherwise open a second page for: when they last wrote, and when
+ * we did. Which direction went last is the whole question — a customer we
+ * mailed yesterday is answered differently from one nobody has written to
+ * since March. The moments come off the contact's own 360 read, the SAME
+ * read the pane beside the queue makes and the same words it prints, so the
+ * row in hand and the pane cannot describe one relationship two ways; and
+ * because it is the same key, opening the pane afterwards costs no request.
+ * A record that is not a contact is linked and no moments are claimed.
+ */
+function AboutLine({ item }: Readonly<{ item: WorklistItem }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const subject = item.subject;
+  const href = subjectHref(item);
+  const contact = subject?.type === "contact" ? subject.id : "";
+  const view = useContact360(contact, contact !== "");
+  if (!subject?.label || !href) return null;
+  const touch = view.data ? lastTouch(view.data, t, locale, viewerZone()) : [];
+  return (
+    <p className="t-caption brief-triage-about">
+      {contact && <Avatar name={subject.label} identity={contact} size="xs" />}
+      <a className="entity-link" href={href}>
+        {subject.label}
+      </a>
+      {touch.map((fact) => (
+        <span key={fact.term} className="brief-triage-about-fact">
+          <span>{fact.term}</span> <span className="t-num">{fact.value}</span>
+        </span>
+      ))}
+    </p>
   );
 }
 

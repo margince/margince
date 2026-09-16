@@ -137,16 +137,11 @@ function ContactFacts({
   const employer = view.contact?.employer;
   const role = view.contact?.title;
   const facts: Fact[] = [
-    {
-      key: "inbound",
-      term: t("worklist.pane.lastInbound"),
-      value: spoken(view.last_inbound_at, t, locale, zone),
-    },
-    {
-      key: "outbound",
-      term: t("worklist.pane.lastOutbound"),
-      value: spoken(view.last_outbound_at, t, locale, zone),
-    },
+    ...lastTouch(view, t, locale, zone).map((fact) => ({
+      key: fact.term,
+      term: fact.term,
+      value: fact.value,
+    })),
     // The company is a LINK, for the reason the contact's name is: a rep
     // deciding how to answer often needs the account rather than the contact,
     // and the name is already resolved on this read.
@@ -190,4 +185,36 @@ function spoken(
   zone: string,
 ): string {
   return at ? formatDateTime(at, locale, zone) : t("worklist.pane.never");
+}
+
+/**
+ * When they last wrote and when we did, as the two facts every surface that
+ * answers a row prints — the pane beside the queue and the Brief's row in
+ * hand — so one relationship is never described two ways. Spelled once here,
+ * beside the read that carries them.
+ *
+ * NOTHING when the read withheld the section: a reader without the activity
+ * grant is not told "Never", which is a claim about the relationship the
+ * server declined to make. The two fields are simply absent then, and a
+ * missing field printed as "Never" is the wrong fact rather than no fact.
+ */
+export function lastTouch(
+  view: NonNullable<ReturnType<typeof useContact360>["data"]>,
+  t: Translator,
+  locale: Locale,
+  zone: string,
+): readonly { term: string; value: string }[] {
+  // Required on the wire; an answer without it is version skew, read as a
+  // record with nothing withheld rather than as one with nothing to say.
+  if ((view.sections_omitted ?? []).includes("last_touch")) return [];
+  return [
+    {
+      term: t("worklist.pane.lastInbound"),
+      value: spoken(view.last_inbound_at, t, locale, zone),
+    },
+    {
+      term: t("worklist.pane.lastOutbound"),
+      value: spoken(view.last_outbound_at, t, locale, zone),
+    },
+  ];
 }
