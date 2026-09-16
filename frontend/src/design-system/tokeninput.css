@@ -14,7 +14,7 @@
   gap: var(--space-1);
   /* Overrides .input's single-line height: the whole point is wrapping. */
   height: auto;
-  min-height: var(--control-h);
+  min-height: var(--controlHeight);
   cursor: text;
 }
 

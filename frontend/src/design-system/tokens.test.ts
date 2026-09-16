@@ -175,8 +175,13 @@ describe("the token block's shape", () => {
       "--space-1",
       "--space-6",
       "--space-16",
-      "--control-h",
-      "--control-h-sm",
+      "--controlHeight",
+      "--controlPaddingX",
+      "--controlGap",
+      "--controlIcon",
+      "--fontWeightRegular",
+      "--fontWeightMedium",
+      "--fontWeightBold",
       "--fontBodyLarge",
       "--paragraphSpacingLarge",
       "--fontBody",
@@ -195,6 +200,45 @@ describe("the token block's shape", () => {
     ]) {
       expect(light[name], `${name} missing from :root`).toBeTruthy();
     }
+  });
+
+  // The weights and the control geometry, by value. A role token whose name
+  // survives a retune that silently changed what it means is worse than no
+  // token: every call site keeps reading it and the product moves under them.
+  it("declares the three weights and the one control geometry", () => {
+    const light = parseBlock(tokenDecls, ":root");
+    const want: Readonly<Record<string, string>> = {
+      "--fontWeightRegular": "400",
+      "--fontWeightMedium": "500",
+      "--fontWeightBold": "700",
+      "--controlHeight": "32px",
+      "--controlPaddingX": "var(--space-3)",
+      "--controlGap": "6px",
+      "--controlIcon": "16px",
+    };
+    for (const [name, value] of Object.entries(want)) {
+      expect(normalize(light[name] ?? ""), name).toBe(normalize(value));
+    }
+  });
+
+  // One control size. The small rung was a second answer to "how tall is a
+  // control", and the two drifted on every screen that mixed them; an icon
+  // button now takes --controlHeight like everything else. Asserted on the
+  // whole sheet rather than on :root, so the touch arm cannot bring it back.
+  it("carries no second control height", () => {
+    expect(tokensCss).not.toMatch(/--control-h\b/);
+  });
+
+  // Every size in the type scale reads a weight token. A spelled 400 or 700
+  // here is the second spelling type-source.test.ts refuses everywhere else,
+  // and this file is the one place that gate cannot speak for.
+  it("spells no weight by value in the type scale", () => {
+    const light = parseBlock(tokenDecls, ":root");
+    const spelled = Object.entries(light)
+      .filter(([name]) => /^--font(Body|Heading)/.test(name))
+      .filter(([, value]) => !value.startsWith("var(--fontWeight"))
+      .map(([name, value]) => `${name}: ${value}`);
+    expect(spelled, spelled.join("\n")).toEqual([]);
   });
 });
 

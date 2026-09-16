@@ -157,7 +157,7 @@ button.evidence-chip:hover {
      Button that has one, and without it the two ends of that row were
      different heights — which reads as a field that has not finished loading
      rather than as a field beside its verb. */
-  min-block-size: var(--control-h);
+  min-block-size: var(--controlHeight);
 }
 
 .field-diff {

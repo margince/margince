@@ -43,7 +43,7 @@
 .stage-ladder-here {
   display: inline-flex;
   align-items: center;
-  min-block-size: var(--control-h-sm);
+  min-block-size: var(--controlHeight);
   padding-inline: var(--space-3);
   border-radius: var(--r-full);
   corner-shape: round;

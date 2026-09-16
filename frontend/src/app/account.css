@@ -25,8 +25,8 @@
 .account .user {
   display: grid;
   place-items: center;
-  width: var(--control-h-sm);
-  height: var(--control-h-sm);
+  width: var(--controlHeight);
+  height: var(--controlHeight);
   padding: 0;
   border: 0;
   border-radius: var(--r-full);

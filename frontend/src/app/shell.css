@@ -1743,7 +1743,7 @@
 
 .settingssearch input {
   width: 100%;
-  height: var(--control-h-sm);
+  height: var(--controlHeight);
   padding-inline: calc(var(--space-2) + 16px + var(--space-1)) var(--space-2);
   border: 1px solid var(--borderStrong);
   border-radius: var(--r-sm);

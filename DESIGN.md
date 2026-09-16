@@ -229,7 +229,11 @@ is text that sits beside a line icon and most text inside a component, 700 is a
 heading or an emphasis that has earned it.
 
 Everything is rem on the browser's own 1rem = 16px, so a reader who enlarges
-that moves the product with them.
+that moves the product with them. The three weights are named tokens
+(`--fontWeightRegular` / `Medium` / `Bold`) that the size tokens read, and the
+whole of the type — size, leading, weight, tracking — is declared in
+`tokens.css` and in no other file: `design-system/type-source.test.ts` fails a
+sheet or a style object that spells any of the four by value.
 
 **Almost none of it is applied yet.** `body` in `app.css` reads `--fontBody`,
 and that is the whole of it: no `h1`–`h6` mapping, no class hooks, and the
@@ -873,11 +877,11 @@ looks now.
 
 | Primitive | Treatment |
 |---|---|
-| `Button` primary | `--accent` fill, white text, 10px radius, 36px, weight 500. One per view. |
-| `Button` secondary | `--pane` fill, `--line2` outline, `--ink` text, flat. Icon-only at 36×36 for the overflow. |
+| `Button` primary | `--accent` fill, white text, 10px radius, `--controlHeight` (32px), `--fontWeightMedium`. One per view. |
+| `Button` secondary | `--pane` fill, `--line2` outline, `--ink` text, flat. Icon-only on the same `--controlHeight` square for the overflow — there is one control size, not two. |
 | `Button` ghost | No outline, `--ink2` text; hover `--bg3`. |
 | `Button` danger | Outlined in `--bad`; fills only inside a `ConfirmModal`. |
-| `TextInput` / `Select` | White, `--line2` outline, 36px, 10px radius; focus is a 2px emerald ring. Label above at 12px 500; helper below at 12px in `--ink3`. |
+| `TextInput` / `Select` | White, `--line2` outline, `--controlHeight`, 10px radius; focus is a 2px emerald ring. Label above at 12px 500; helper below at 12px in `--ink3`. |
 | `Badge` | One size (20px: an 18px line inside a 1px edge, 12px 500, full radius), never capitals. `soft` by default: the tone's tint behind the word in the tone's ink, edged in a hairline of the same tone — the record's standing badges beside its name, a status in a row. `primary` is the solid fill with its edge left clear, for a count and the one status that must not be missed. A glyph, when there is one, sits left of the word; the agent's badge always carries the sparkles. |
 | `Chip` | A fact a reader can act on rather than a status: a pill on the elevated ground with a neutral hairline and a glyph, a link when the fact has somewhere to go, and a hover that says so. A badge is the other thing — a tinted status, edged in its tone, that nobody presses. |
 | `Panel` | Becomes a **zone pane**: `--pane` with a `--paneEdge` and a 20px corner; inside, a display-face title with its count and its verb, a hairline, rows. `PanelPlate` (the inset well) becomes a row on `--bg3`. |

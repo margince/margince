@@ -379,33 +379,42 @@
   --r-lg: 20px; /* the pane */
   --r-full: 9999px;
 
-  /* The height of an interactive control, in its two sizes. A button, a text
+  /* The geometry of an interactive control, in ONE size. A button, a text
      input and the select's trigger are the same box on screen, and until this
      existed each computed its own number out of padding and line-height: the
      input landed on 40.25px, the primary button on 38.25px and the ghost button
      on 40.25px because its 1px border was added rather than absorbed. A
      [Cancel][Save] pair was therefore never the same height, and a button beside
-     a field never sat on the field's own line. The value is a floor rather than
-     a fixed height, so a control whose label wraps grows instead of clipping —
-     nothing here assumes a one-line label. 36px clears the 24px AA target of
-     WCAG 2.5.8 with room (the touch arm below raises it to 44), and the small
-     rung stays a deliberate step below it for dense rows rather than drifting
-     to whatever its padding produced. */
-  --control-h: 36px;
-  --control-h-sm: 32px;
-  /* One rung ABOVE the form control, for the verbs a page owns rather than the
-     ones inside a card: a record's own actions stand beside a name set at the
-     record rung, and at the form rung they read as chrome that happens to sit
-     near it. Under touch the pointer arm below takes every rung to 44, so this
-     one stops being a step up there — a bigger target is the right answer to a
-     finger, and a verb taller than 44 would be the only oversized thing on the
-     screen. */
-  --control-h-lg: 40px;
+     a field never sat on the field's own line. The height is a floor rather than
+     a fixed value, so a control whose label wraps grows instead of clipping —
+     nothing here assumes a one-line label. 32px still clears the 24px AA target
+     of WCAG 2.5.8 with room (the touch arm below raises it to 44).
+
+     There is no small rung any more. It existed for dense rows and for icon
+     affordances, and a second height is a second answer to "how tall is a
+     control": the pair drifted apart on screens that mixed them, and an icon
+     button one rung shorter than the input beside it is the thing a reader sees
+     as misaligned without being able to name why. An icon button takes
+     --controlHeight too. */
+  --controlHeight: 32px;
+  /* The inset from a control's edge to its label — the one horizontal padding
+     a control has, so a button and a field with the same label start their text
+     at the same place. */
+  --controlPaddingX: var(--space-3);
+  /* Icon-to-label gap INSIDE a control, and the one 6px in the product. The 4px
+     scale carries 4 and 8 and neither is this gap: at 4 the mark touches the
+     word, at 8 they read as two things standing side by side. A ROLE token here
+     and nowhere else — it is not a rung, and nothing outside a control may
+     reach for it. */
+  --controlGap: 6px;
+  /* The line icon a control carries. Sized by the control rather than at the
+     call site, because lucide's own default is 24px. */
+  --controlIcon: 16px;
 
   /* The height of a panel's header band, and it is a token for the same reason
-     --control-h is one: every panel on every screen draws the SAME band, so the
-     number belongs to the house rather than to whichever rule reaches for it
-     first. Left to each caller it drifted — a head carrying a description stood
+     --controlHeight is one: every panel on every screen draws the SAME band,
+     so the number belongs to the house rather than to whichever rule reaches
+     for it first. Left to each caller it drifted — a head carrying a description stood
      taller than a head carrying a button, and two screens re-spaced the band
      themselves — so the same card was a different object on two pages. Fixed
      rather than a floor: what does not fit on one band is not header content
@@ -487,6 +496,19 @@
      `--paragraphSpacing` are the pair app.css declares on `body`; every other
      level is chosen by the context it is used in. */
 
+  /* Three WEIGHTS, and every one of them a file the browser actually loads
+     (weights.test.ts). Named by role, so a rule asks for what its text IS
+     rather than for a number, and a retune moves every call site at once.
+     Read by the shorthands below: `var()` substitution happens before the
+     `font` shorthand's own grammar is checked, so a var() weight in a `font`
+     value is valid CSS (CSS Variables §3, "unresolved at parse time"). */
+  /* Regular: generic paragraphs. */
+  --fontWeightRegular: 400;
+  /* Medium: text beside a line icon, and most component text. */
+  --fontWeightMedium: 500;
+  /* Bold: emphasis, used sparingly, and headings. */
+  --fontWeightBold: 700;
+
   /* Three families (DESIGN.md §4): a face with character for a heading and for
    * the one line a reader identifies a record by, a quiet grotesk for
    * everything read, and a mono for code — `code`, `pre`, `samp` and
@@ -500,16 +522,17 @@
   --fontFamilyMono: "Geist Mono", ui-monospace, monospace;
 
   /* L — comfortable reading: marketing and blog prose, rare in the product. */
-  --fontBodyLarge: 400 1rem / 1.5rem var(--fontFamilyBody);
+  --fontBodyLarge: var(--fontWeightRegular) 1rem / 1.5rem var(--fontFamilyBody);
   /* The gap between two blocks of L prose. */
   --paragraphSpacingLarge: 1rem;
   /* M — the platform default: every screen, until a role rule says otherwise. */
-  --fontBody: 400 0.875rem / 1.25rem var(--fontFamilyBody);
+  --fontBody: var(--fontWeightRegular) 0.875rem / 1.25rem var(--fontFamilyBody);
   /* The gap between two blocks of default prose; app.css's paragraph rule
      reads this one. */
   --paragraphSpacing: 0.75rem;
   /* S — used sparingly: secondary-level content and semantic messaging. */
-  --fontBodySmall: 400 0.75rem / 1rem var(--fontFamilyBody);
+  --fontBodySmall:
+    var(--fontWeightRegular) 0.75rem / 1rem var(--fontFamilyBody);
   /* The gap between two blocks of S prose. */
   --paragraphSpacingSmall: 0.5rem;
 
@@ -517,19 +540,26 @@
      `<h1>`–`<h6>` carries is structure and is chosen separately — README's
      "Type comes from the tokens" has the pair of rules and why they are two. */
   /* Brand and marketing content. */
-  --fontHeadingXXLarge: 700 2rem / 2.25rem var(--fontFamilyHeading);
+  --fontHeadingXXLarge:
+    var(--fontWeightBold) 2rem / 2.25rem var(--fontFamilyHeading);
   /* Brand and marketing, and the largest page title in the product. */
-  --fontHeadingXLarge: 700 1.75rem / 2rem var(--fontFamilyHeading);
+  --fontHeadingXLarge:
+    var(--fontWeightBold) 1.75rem / 2rem var(--fontFamilyHeading);
   /* A page title in the product: a view's or a form's. */
-  --fontHeadingLarge: 700 1.5rem / 1.75rem var(--fontFamilyHeading);
+  --fontHeadingLarge:
+    var(--fontWeightBold) 1.5rem / 1.75rem var(--fontFamilyHeading);
   /* A large component with room — a modal's title, over Body M. */
-  --fontHeadingMedium: 700 1.25rem / 1.5rem var(--fontFamilyHeading);
+  --fontHeadingMedium:
+    var(--fontWeightBold) 1.25rem / 1.5rem var(--fontFamilyHeading);
   /* A title in a small component where space is tight. */
-  --fontHeadingSmall: 700 1rem / 1.25rem var(--fontFamilyHeading);
+  --fontHeadingSmall:
+    var(--fontWeightBold) 1rem / 1.25rem var(--fontFamilyHeading);
   /* The same, tighter still — a flag's own title. */
-  --fontHeadingXSmall: 700 0.875rem / 1.25rem var(--fontFamilyHeading);
+  --fontHeadingXSmall:
+    var(--fontWeightBold) 0.875rem / 1.25rem var(--fontFamilyHeading);
   /* Sparingly: fine print, over Body S. */
-  --fontHeadingXXSmall: 700 0.75rem / 1rem var(--fontFamilyHeading);
+  --fontHeadingXXSmall:
+    var(--fontWeightBold) 0.75rem / 1rem var(--fontFamilyHeading);
 
   /* Material overlays, NOT part of the §2 Ledger-Green canon and deliberately
    * not pinned by tokens.test.ts's canonical map: a highlight and a scrim are
@@ -899,17 +929,17 @@
   }
 }
 
-/* A finger is not a pointer, and a 40px control under one is a control you
+/* A finger is not a pointer, and a 32px control under one is a control you
  * miss. The height floor rises wherever the primary input is coarse — a phone,
  * a tablet, a touchscreen laptop — which is where SC 2.5.5's 44×44 was actually
- * aimed; AA's own SC 2.5.8 asks 24×24, and 40px clears that on a mouse with
+ * aimed; AA's own SC 2.5.8 asks 24×24, and 32px clears that on a mouse with
  * room to spare.
  *
  * Raised on the TOKEN, so the button, the field, the select's trigger and the
  * password reveal all grow together instead of one surface remembering and the
  * next forgetting. The sign-in screens used to hold their own 46px for exactly
  * this reason, and they were the only fields in the product that did — every
- * other form was 40px on a phone as much as on a desk.
+ * other form followed the token on a phone as much as on a desk.
  *
  * `pointer: coarse` rather than a width breakpoint, because the question is
  * what is touching the screen, not how wide it is. AFTER both palettes on
@@ -919,9 +949,7 @@
  */
 @media (pointer: coarse) {
   :root {
-    --control-h: 44px;
-    --control-h-sm: 36px;
-    --control-h-lg: 44px;
+    --controlHeight: 44px;
   }
 }
 

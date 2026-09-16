@@ -64,8 +64,8 @@
   display: grid;
   place-items: center;
   flex: none;
-  width: var(--control-h-sm);
-  height: var(--control-h-sm);
+  width: var(--controlHeight);
+  height: var(--controlHeight);
   border: 0;
   border-radius: var(--r-sm);
   background: transparent;
@@ -98,7 +98,7 @@
   align-items: center;
   gap: var(--space-2);
   width: 100%;
-  min-height: var(--control-h-sm);
+  min-height: var(--controlHeight);
   padding: 0 var(--space-2) 0 var(--space-3);
   /* One more pane on the glass, with the pane's own edge: a field drawn in the
      page's ground sat in the strip as a hole. */
@@ -167,7 +167,7 @@
 .topbar .accountmenu {
   top: calc(
     100% +
-    (var(--topbarH) - var(--control-h-sm)) /
+    (var(--topbarH) - var(--controlHeight)) /
     2 +
     var(--space-2) +
     1px
@@ -201,7 +201,7 @@
      are what say "type here"; with no room for the label they said nothing and
      left one of three icons in a box. */
   .topbar-search {
-    width: var(--control-h-sm);
+    width: var(--controlHeight);
     justify-content: center;
     padding: 0;
     border-color: transparent;
