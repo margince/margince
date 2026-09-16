@@ -80,16 +80,42 @@ function contractAliases(source: ts.SourceFile, path: string): Set<string> {
 function declaredAliases(source: ts.SourceFile): Set<string> {
   const out = new Set<string>();
   const visit = (node: ts.Node) => {
-    if (
-      ts.isTypeAliasDeclaration(node) &&
-      /\bcomponents\[/.test(node.type.getText(source))
-    ) {
+    if (ts.isTypeAliasDeclaration(node) && indexesTheContract(node.type)) {
       out.add(node.name.text);
     }
     ts.forEachChild(node, visit);
   };
   visit(source);
   return out;
+}
+
+/**
+ * Whether a type indexes into the generated contract — `components["schemas"][…]`
+ * anywhere inside it, however it is written.
+ *
+ * READ FROM THE TREE, not from the text. `components ["schemas"]["Deal"]` is the
+ * same type with one space in it, and a pattern requiring the bracket to sit
+ * against the identifier called it something other than the contract. That is
+ * under-recognition, which is the one direction this gate must not fail in: a
+ * cast it does not recognise is a cast it reports as clean.
+ */
+function indexesTheContract(node: ts.Node): boolean {
+  if (ts.isIndexedAccessTypeNode(node) && namesComponents(node.objectType)) {
+    return true;
+  }
+  return ts.forEachChild(node, indexesTheContract) ?? false;
+}
+
+/** The base of an indexed access, following the chain down to its root name. */
+function namesComponents(node: ts.TypeNode): boolean {
+  if (ts.isIndexedAccessTypeNode(node)) {
+    return namesComponents(node.objectType);
+  }
+  return (
+    ts.isTypeReferenceNode(node) &&
+    ts.isIdentifier(node.typeName) &&
+    node.typeName.text === "components"
+  );
 }
 
 /** The contract aliases one module declares, read once and remembered. */
@@ -118,10 +144,10 @@ function namesAContractShape(
   aliases: Set<string>,
   source: ts.SourceFile,
 ): boolean {
-  const text = target.getText(source);
-  if (/\bcomponents\[\s*["']schemas["']\s*\]/.test(text)) {
+  if (indexesTheContract(target)) {
     return true;
   }
+  const text = target.getText(source);
   // `Partial<Company360>` and `NonNullable<…>` are the contract shape with a
   // modifier on it, so the name inside is what decides.
   for (const name of text.matchAll(/\b([A-Z][A-Za-z0-9_]*)\b/g)) {
@@ -162,6 +188,29 @@ function waiverAt(lines: string[], line: number): Waiver {
   return "none";
 }
 
+/**
+ * Whether the expression being cast is itself `… as unknown`, through however
+ * many parentheses.
+ *
+ * `(value as unknown) as Deal` is the same cast with brackets round the middle
+ * of it, and a reader that demanded the inner `as` be the immediate child read
+ * it as an ordinary widening and passed over it.
+ */
+function bridgesThroughUnknown(expression: ts.Expression): boolean {
+  const inner = ts.isParenthesizedExpression(expression)
+    ? bare(expression.expression)
+    : expression;
+  return (
+    ts.isAsExpression(inner) && inner.type.kind === ts.SyntaxKind.UnknownKeyword
+  );
+}
+
+function bare(expression: ts.Expression): ts.Expression {
+  return ts.isParenthesizedExpression(expression)
+    ? bare(expression.expression)
+    : expression;
+}
+
 type Finding = { where: string; line: number; says: string };
 
 /** Every `x as unknown as T` in one module, with what it casts to. */
@@ -172,8 +221,7 @@ function castsIn(source: ts.SourceFile, where: string): Finding[] {
   const visit = (node: ts.Node) => {
     if (
       ts.isAsExpression(node) &&
-      ts.isAsExpression(node.expression) &&
-      node.expression.type.kind === ts.SyntaxKind.UnknownKeyword &&
+      bridgesThroughUnknown(node.expression) &&
       namesAContractShape(node.type, aliases, source)
     ) {
       const line =
@@ -277,6 +325,24 @@ describe("what counts as a contract type cast", () => {
 
   it("finds a cast to a contract type the module imported", () => {
     expect(found(`${aliasing}const w = {} as unknown as Worklist;`)).toEqual([
+      "`as unknown as Worklist`",
+    ]);
+  });
+
+  // SPACING IS NOT MEANING. `components ["schemas"]["Deal"]` is the same type,
+  // and the reader that demanded the bracket sit against the identifier called
+  // it something other than the contract.
+  it("finds a cast to the contract however it is spaced", () => {
+    expect(
+      found('const o = {} as unknown as components ["schemas"]["Offer"];'),
+    ).toEqual(['`as unknown as components ["schemas"]["Offer"]`']);
+  });
+
+  // BRACKETS ROUND THE BRIDGE ARE STILL THE BRIDGE. A reader that demanded the
+  // inner `as unknown` be the immediate child of the outer cast read this as an
+  // ordinary widening and passed over it.
+  it("finds a cast whose unknown bridge is parenthesised", () => {
+    expect(found(`${aliasing}const w = ({} as unknown) as Worklist;`)).toEqual([
       "`as unknown as Worklist`",
     ]);
   });
