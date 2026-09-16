@@ -223,7 +223,11 @@ func TestCompany360CostDoesNotGrowWithTheAccount(t *testing.T) {
 	// size of the account like every section above — an account naming three
 	// billing contacts costs the same one statement as one naming none, which
 	// is what the shape half of this test above has just confirmed.
-	const budget = 47
+	// 48 since the under-contract strip judges "active today" on the
+	// installation's calendar day rather than UTC's (#3266): one read of the
+	// installation timezone, flat in the size of the account — the same one
+	// statement whether the account holds two contracts or two hundred.
+	const budget = 48
 	if smallCost > budget {
 		t.Errorf("one 360 issued %d queries, budget is %d", smallCost, budget)
 	}

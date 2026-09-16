@@ -345,7 +345,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `writeauthority_test.go` | H2 | The read/write asymmetry of a manual record grant, as a fitness function: a path that CHANGES a shareable record probes for write authority, not for visibility. |
 | `writeliveness_test.go` | H2 | The LIVENESS obligation as a fitness function: a write that targets one standing row of a table which can be archived either REFUSES an archived row, DECLARES that it deliberately reaches one, or is ratified with a reason. |
 
-## Prohibition (64)
+## Prohibition (65)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -354,6 +354,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `authzmetriclabels_test.go` | H2 | The outbound decision counter labels only closed vocabularies, and never the recipient. |
 | `automationtarget_test.go` | H2 | An automation action targets the record its trigger fired on. |
 | `backfillledgerlock_test.go` | H2 | A transaction that writes the backfill creation ledger locks the run row first. |
+| `calendarday_test.go` | H2 | A calendar day is one derivation, and this is the census that keeps it one. |
 | `capabilitypathlog_test.go` | H2 | A request path reaches a log line through capabilitypath.Redact, never raw. |
 | `commentnamedtests_test.go` | H1 | A test named in a comment exists. |
 | `companyvocabulary_test.go` | H1 | The record type is called company, and this is what stops the other word coming back. |
