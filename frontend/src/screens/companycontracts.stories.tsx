@@ -29,18 +29,26 @@ type Contract = components["schemas"]["Contract"];
 
 const page = { has_more: false, next_cursor: null };
 
-const contracts = [
+const contracts: Contract[] = [
   {
     id: "c-1",
     title: "Pallet pooling framework",
     contract_number: "SM-2026-014",
     status: "active",
+    value_basis: "annualized_12m",
+    under_contract: true,
+    auto_renew: false,
+    source: "manual",
+    captured_by: "human:u1",
+    version: 1,
+    created_at: "2026-10-20T00:00:00Z",
+    updated_at: "2026-10-20T00:00:00Z",
     value_minor: 14850000,
     currency: "EUR",
     starts_on: "2026-11-01",
     ends_on: "2027-10-31",
     signed_on: "2026-10-20",
-  } as unknown as Contract,
+  },
 ];
 
 const FULL_GRANTS = {

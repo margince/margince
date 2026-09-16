@@ -44,14 +44,22 @@ const company: Company = {
     postal_code: "80331",
     country: "DE",
   },
-  domains: [{ domain: "brandt.example", is_primary: true, source: "manual" }],
+  domains: [
+    {
+      id: "dom-1",
+      domain: "brandt.example",
+      is_primary: true,
+      source: "manual",
+      captured_by: "human:u1",
+    },
+  ],
   description: "Fleet electrification pilot, renewing in Q3.",
   captured_by: "human:u1",
   source: "manual",
   version: 1,
   created_at: "2026-06-01T08:00:00Z",
   updated_at: "2026-06-01T08:00:00Z",
-} as unknown as Company;
+};
 
 // The two sidecar claims the grid reads, as a crawl that found an imprint
 // leaves them. Stories that want the unstated case pass an empty list.

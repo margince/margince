@@ -47,7 +47,7 @@ function approval(over: Partial<Approval>): Approval {
     on_behalf_of: "u-1",
     created_at: "2026-08-20T09:00:00Z",
     ...over,
-  } as unknown as Approval;
+  };
 }
 
 // `decide` is what the approve/reject buttons hit. A story that wants the row's
