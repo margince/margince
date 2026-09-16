@@ -129,18 +129,16 @@ export const Folded: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const user = userEvent.setup();
+    await expect(canvasElement.querySelector("aside")).toBeNull();
     // The switch renders nothing until the screen's `usePageAside` effect has
     // claimed the pane, which is a commit past mount: the query has to wait for
-    // it rather than assume the first paint carried it. The pane is open by
-    // default, so the first press folds it.
+    // it rather than assume the first paint carried it. This page hands the
+    // provider a folded pane whatever the reader's memory holds, so the switch
+    // stands at "show" and one press brings the pane back.
     await user.click(
       await canvas.findByRole("button", {
-        name: en["record.panel.hideDetails"],
+        name: en["record.panel.showDetails"],
       }),
-    );
-    await expect(canvasElement.querySelector("aside")).toBeNull();
-    await user.click(
-      canvas.getByRole("button", { name: en["record.panel.showDetails"] }),
     );
     await expect(canvasElement.querySelector("aside")).not.toBeNull();
     await expect(
@@ -173,11 +171,15 @@ function ControlledQueue() {
 export const WorkQueueControl: Story = {
   render: () => <ControlledQueue />,
   play: async ({ canvasElement }) => {
-    const toggle = within(canvasElement).getByRole("button", {
-      name: "Work queue",
-    });
-    await userEvent.click(toggle);
-    await expect(toggle).toHaveAttribute("aria-pressed", "true");
+    const canvas = within(canvasElement);
+    // The switch names the pane it governs in both verbs, so a page whose pane
+    // holds the work queue says so while folded and while open.
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Show work queue" }),
+    );
+    await expect(
+      canvas.getByRole("button", { name: "Hide work queue" }),
+    ).toHaveAttribute("aria-pressed", "true");
   },
 };
 
@@ -216,15 +218,17 @@ export const DraftProtected: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const user = userEvent.setup();
+    // The pane stands open, so the switch offers to fold it — and folding it
+    // over an unsaved field is the press the guard refuses.
+    const fold = () =>
+      canvas.getByRole("button", { name: en["record.panel.hideDetails"] });
     await user.click(
       await canvas.findByRole("button", { name: "Change Name" }),
     );
-    await expect(canvas.getByRole("button", { name: "Details" })).toBeEnabled();
+    await expect(fold()).toBeEnabled();
     await user.type(canvas.getByRole("textbox", { name: "Name" }), " revised");
-    await expect(
-      canvas.getByRole("button", { name: "Details" }),
-    ).toBeDisabled();
+    await expect(fold()).toBeDisabled();
     await user.keyboard("{Escape}");
-    await expect(canvas.getByRole("button", { name: "Details" })).toBeEnabled();
+    await expect(fold()).toBeEnabled();
   },
 };
