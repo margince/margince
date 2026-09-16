@@ -690,3 +690,66 @@ func TestAShutdownIsNotReportedAsAFailure(t *testing.T) {
 		t.Errorf("a cancelled refresh logged on the way down:\n%s", logged.String())
 	}
 }
+
+// The boot signal an operator acts on.
+//
+// A view that missed the boot stays missing for the life of the process: there
+// is no stream to announce a later arrival on, so the advertised set is frozen
+// however healthy the web tier becomes. That makes this line the whole of what
+// an operator gets, and it has to carry both halves — WHICH views are missing,
+// and that the fix is a restart rather than waiting.
+//
+// Counts alone were what it carried, and "held 1, catalog 2" leaves a reader to
+// work out which host will fail from per-view lines a log search has to find.
+func TestTheBootWarningNamesTheMissingViewsAndTheRestart(t *testing.T) {
+	tier, p := newWebTier(t)
+	tier.answer(RelationshipMapURI, broken(http.StatusNotFound))
+	var logged strings.Builder
+	p.log = slog.New(slog.NewTextHandler(&logged, &slog.HandlerOptions{Level: slog.LevelWarn}))
+
+	if err := p.Prime(t.Context()); err != nil {
+		t.Fatalf("priming: %v", err)
+	}
+
+	// The SUMMARY line alone. The per-view error lines beside it already carry
+	// a uri each, so reading the whole buffer would let this test pass on a
+	// summary that named nothing — which is the state it exists to refuse.
+	line := summaryLine(t, logged.String())
+	if !strings.Contains(line, RelationshipMapURI) {
+		t.Errorf("the warning does not name the view that is missing:\n%s", line)
+	}
+	if strings.Contains(line, AccountBriefURI) {
+		t.Errorf("the warning names a view that IS served, so a reader cannot tell which to chase:\n%s", line)
+	}
+	if !strings.Contains(line, "restart") {
+		t.Errorf("the warning does not say what to do about it:\n%s", line)
+	}
+}
+
+// summaryLine is the one boot line about the set as a whole, or a failure
+// saying the boot did not log one.
+func summaryLine(t *testing.T, logged string) string {
+	t.Helper()
+	for _, line := range strings.Split(logged, "\n") {
+		if strings.Contains(line, "some views are not served") {
+			return line
+		}
+	}
+	t.Fatalf("the boot logged no line about the set as a whole:\n%s", logged)
+	return ""
+}
+
+// A boot that held everything says nothing: a warning on a healthy start is how
+// the one that matters stops being read.
+func TestACompleteBootLogsNoWarning(t *testing.T) {
+	_, p := newWebTier(t)
+	var logged strings.Builder
+	p.log = slog.New(slog.NewTextHandler(&logged, &slog.HandlerOptions{Level: slog.LevelWarn}))
+
+	if err := p.Prime(t.Context()); err != nil {
+		t.Fatalf("priming: %v", err)
+	}
+	if logged.Len() != 0 {
+		t.Errorf("a complete boot warned anyway:\n%s", logged.String())
+	}
+}
