@@ -103,7 +103,7 @@ pre { &:hover { font-family: var(--fontFamilyMono); } }
 @media (width > 1px) { samp { font-family: ui-monospace; } }
 .label { font-family: var(--fontFamilyBody); }
 .reset { font-family: inherit; }
-.figure { font-family: var(--fontFamilyDisplay, var(--fontFamilyBody)); }
+.figure { font-family: var(--fontFamilyHeading, var(--fontFamilyBody)); }
 .stack { font-family: var(--fontFamilyBody, Geist), sans-serif; }'
 plant "$CLEAN" screens/b.tsx 'export const B = () => <span className="t-num t-monochrome">1</span>;
 const sheet = "pre code { font-family: var(--fontFamilyMono); }";'

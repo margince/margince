@@ -134,7 +134,7 @@
   /* The one count in the display face: it is read as a word ("12 days") and
      compared with nothing, rather than lined up with the body's tabular
      figures. */
-  font-family: var(--fontFamilyDisplay);
+  font-family: var(--fontFamilyHeading);
   color: var(--warn);
 }
 .co-spine-gap .co-spine-rail {

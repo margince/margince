@@ -41,7 +41,7 @@
 .lt-title {
   flex: none;
   margin: 0;
-  font-family: var(--fontFamilyDisplay);
+  font-family: var(--fontFamilyHeading);
 }
 
 .lt-views {

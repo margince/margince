@@ -78,7 +78,7 @@ least risky once the tokens hold.
    through one `base.css` rule on `pre`, `code` and `samp`, plus `.code-block`; a
    `<kbd>` is body type. The mock's display face was tried in Step 1 and Outfit
    kept by decision; a family change is four places in one PR. Keep
-   `--fontFamilyDisplay`, `--fontFamilyBody`, `--fontFamilyMono` as the names.
+   `--fontFamilyHeading`, `--fontFamilyBody`, `--fontFamilyMono` as the names.
 6. **Type scale.** Make `base.css`'s `.t-*` classes read `--fs-*` instead of
    their own px (they diverge today). Set `--fs-body` 13.5px, `--lh-normal`
    1.55, `--fs-display` 32px with `--tracking-display` -0.03em. `body` in

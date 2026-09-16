@@ -484,15 +484,15 @@
   /* Type. Every size, leading and paragraph spacing below is rem, on the
      browser's own 1rem = 16px, so a reader who enlarges that moves the whole
      document rather than the parts that were typed in px. `--fontBody` and
-     `--paragraphSpacing` are the pair app.css declares on `body`; a role rule
-     picks one of the other two levels for itself. */
+     `--paragraphSpacing` are the pair app.css declares on `body`; every other
+     level is chosen by the context it is used in. */
 
-  /* Three families (DESIGN.md §4): a display face with character for the one
-   * line a reader identifies a record by, a quiet grotesk for everything read,
-   * and a mono for code — `code`, `pre`, `samp` and `.code-block` (base.css) and
-   * nothing else. Figures stay in the grotesk and align through tabular-nums
+  /* Three families (DESIGN.md §4): a face with character for a heading and for
+   * the one line a reader identifies a record by, a quiet grotesk for
+   * everything read, and a mono for code — `code`, `pre`, `samp` and
+   * `.code-block` (base.css) and nothing else. Figures stay in the grotesk and align through tabular-nums
    * (`.t-num`); an id or a key is read, not compiled, so it is body text too. */
-  --fontFamilyDisplay: "Outfit", system-ui, sans-serif;
+  --fontFamilyHeading: "Outfit", system-ui, sans-serif;
   --fontFamilyBody: "Geist", system-ui, sans-serif;
   --fontFamilyMono: "Geist Mono", ui-monospace, monospace;
 
@@ -502,12 +502,31 @@
   --paragraphSpacingLarge: 1rem;
   /* M — the platform default: every screen, until a role rule says otherwise. */
   --fontBody: 400 0.875rem / 1.25rem var(--fontFamilyBody);
-  /* The gap between two blocks of default prose; the root reads this one. */
+  /* The gap between two blocks of default prose; app.css's paragraph rule
+     reads this one. */
   --paragraphSpacing: 0.75rem;
   /* S — used sparingly: secondary-level content and semantic messaging. */
-  --fontSmall: 400 0.75rem / 1rem var(--fontFamilyBody);
+  --fontBodySmall: 400 0.75rem / 1rem var(--fontFamilyBody);
   /* The gap between two blocks of S prose. */
   --paragraphSpacingSmall: 0.5rem;
+
+  /* Heading sizes, chosen by the CONTEXT a heading sits in. The level an
+     `<h1>`–`<h6>` carries is structure and is chosen separately — README's
+     "Type comes from the tokens" has the pair of rules and why they are two. */
+  /* Brand and marketing content. */
+  --fontHeadingXXLarge: 700 2rem / 2.25rem var(--fontFamilyHeading);
+  /* Brand and marketing, and the largest page title in the product. */
+  --fontHeadingXLarge: 700 1.75rem / 2rem var(--fontFamilyHeading);
+  /* A page title in the product: a view's or a form's. */
+  --fontHeadingLarge: 700 1.5rem / 1.75rem var(--fontFamilyHeading);
+  /* A large component with room — a modal's title, over Body M. */
+  --fontHeadingMedium: 700 1.25rem / 1.5rem var(--fontFamilyHeading);
+  /* A title in a small component where space is tight. */
+  --fontHeadingSmall: 700 1rem / 1.25rem var(--fontFamilyHeading);
+  /* The same, tighter still — a flag's own title. */
+  --fontHeadingXSmall: 700 0.875rem / 1.25rem var(--fontFamilyHeading);
+  /* Sparingly: fine print, over Body S. */
+  --fontHeadingXXSmall: 700 0.75rem / 1rem var(--fontFamilyHeading);
 
   /* Material overlays, NOT part of the §2 Ledger-Green canon and deliberately
    * not pinned by tokens.test.ts's canonical map: a highlight and a scrim are

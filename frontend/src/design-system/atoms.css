@@ -944,7 +944,7 @@
    baseline-aligned with the subtitle beside it. */
 .section-header h1 {
   margin: 0;
-  font-family: var(--fontFamilyDisplay);
+  font-family: var(--fontFamilyHeading);
   color: var(--textPrimary);
 }
 /* A measure, not a width: a description that runs the whole width of a wide
@@ -1851,7 +1851,7 @@
    holds one line. A screen that re-sizes this is the second author of a scale
    this tier owns. */
 .stat-card-value {
-  font-family: var(--fontFamilyDisplay);
+  font-family: var(--fontFamilyHeading);
   font-variant-numeric: tabular-nums;
   color: var(--textPrimary);
   overflow-wrap: anywhere;

@@ -74,7 +74,7 @@
    carries the tag's colour, the way a tag is drawn everywhere else. */
 .tagresult-title {
   margin: 0;
-  font-family: var(--fontFamilyDisplay);
+  font-family: var(--fontFamilyHeading);
   display: flex;
   align-items: center;
   gap: var(--space-2);

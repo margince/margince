@@ -66,8 +66,8 @@ EXIT=0
 
 # A var() reference names no family here — the token resolves in tokens.css —
 # so the whole reference comes out. It is removed INNERMOST FIRST, one layer per
-# pass, because a fallback may itself be a var(): `var(--fontFamilyDisplay,
-# var(--fontFamilyBody))` reduces to `var(--fontFamilyDisplay, )` and only then to nothing.
+# pass, because a fallback may itself be a var(): `var(--fontFamilyHeading,
+# var(--fontFamilyBody))` reduces to `var(--fontFamilyHeading, )` and only then to nothing.
 #
 # What must NOT happen is a var() swallowing its fallback whole: a rule written
 # `var(--fontFamilyBody, "Comic Sans MS")` renders in Comic Sans on any document that

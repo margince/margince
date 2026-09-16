@@ -71,7 +71,7 @@
    items, and comparing it means finding it in the same place every time. */
 .co-work-figure {
   margin: 0;
-  font-family: var(--fontFamilyDisplay);
+  font-family: var(--fontFamilyHeading);
   color: var(--textPrimary);
 }
 

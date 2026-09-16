@@ -564,7 +564,7 @@ a:not([class]):focus-visible {
 .t-display,
 .t-h2,
 .t-h3 {
-  font-family: var(--fontFamilyDisplay);
+  font-family: var(--fontFamilyHeading);
 }
 .t-label,
 .t-caption,

@@ -220,7 +220,7 @@
   padding: 0;
 }
 .auth-card h1 {
-  font-family: var(--fontFamilyDisplay);
+  font-family: var(--fontFamilyHeading);
   color: var(--textPrimary);
 }
 .auth-card .card-sub {
@@ -540,7 +540,7 @@
   /* Tight to the kicker above it: the two are one unit — who is speaking, and
      what they say. */
   margin-top: var(--space-1);
-  font-family: var(--fontFamilyDisplay);
+  font-family: var(--fontFamilyHeading);
   color: var(--textPrimary);
 }
 /* ZERO layout shift while typing. The ghost is the full sentence rendered
@@ -584,7 +584,7 @@
      start of its container. */
   max-width: 30ch;
   margin-inline: auto;
-  font-family: var(--fontFamilyDisplay);
+  font-family: var(--fontFamilyHeading);
   color: var(--textPrimary);
   text-wrap: pretty;
 }

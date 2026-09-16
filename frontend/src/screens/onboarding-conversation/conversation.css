@@ -270,7 +270,7 @@
 .ob-conv-confirm h2 {
   margin: 0;
   color: var(--textPrimary);
-  font-family: var(--fontFamilyDisplay);
+  font-family: var(--fontFamilyHeading);
 }
 
 .ob-conv-confirm-fields {
@@ -510,7 +510,7 @@
 .ob-decision h2 {
   margin: 0;
   color: var(--textPrimary);
-  font-family: var(--fontFamilyDisplay);
+  font-family: var(--fontFamilyHeading);
 }
 
 .ob-decision-options {
@@ -941,7 +941,7 @@
 .ob-voice-building h2 {
   margin: 0;
   color: var(--textPrimary);
-  font-family: var(--fontFamilyDisplay);
+  font-family: var(--fontFamilyHeading);
 }
 
 /* Why the step is worth doing, inside the fold that offers it — the band that
@@ -1459,7 +1459,7 @@
   align-items: baseline;
   justify-content: center;
   color: var(--textOnAccent);
-  font-family: var(--fontFamilyDisplay);
+  font-family: var(--fontFamilyHeading);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1480,7 +1480,7 @@
 .ob-connect h2 {
   margin: 0;
   color: var(--textPrimary);
-  font-family: var(--fontFamilyDisplay);
+  font-family: var(--fontFamilyHeading);
 }
 
 /* The four step-level promises: a real two-column grid on this wide surface,
@@ -1522,7 +1522,7 @@
   gap: var(--space-2);
   margin: 0;
   color: var(--textPrimary);
-  font-family: var(--fontFamilyDisplay);
+  font-family: var(--fontFamilyHeading);
 }
 
 .ob-connect-section-head p {
@@ -1726,7 +1726,7 @@
 .ob-connect-dialog-title {
   margin: 0;
   color: var(--textPrimary);
-  font-family: var(--fontFamilyDisplay);
+  font-family: var(--fontFamilyHeading);
   text-align: center;
 }
 
@@ -2404,7 +2404,7 @@
 .ob-triage-group-head h3 {
   margin: 0;
   color: var(--textPrimary);
-  font-family: var(--fontFamilyDisplay);
+  font-family: var(--fontFamilyHeading);
 }
 
 .ob-triage-group-head span {
@@ -3103,5 +3103,5 @@
 .ob-basis-section h3 {
   margin: 0;
   color: var(--textPrimary);
-  font-family: var(--fontFamilyDisplay);
+  font-family: var(--fontFamilyHeading);
 }

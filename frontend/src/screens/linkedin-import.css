@@ -90,6 +90,6 @@
 
 .li-import-result dd {
   margin: 0;
-  font-family: var(--fontFamilyDisplay, var(--fontFamilyBody));
+  font-family: var(--fontFamilyHeading, var(--fontFamilyBody));
   font-variant-numeric: tabular-nums;
 }

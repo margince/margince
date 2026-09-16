@@ -101,7 +101,7 @@
 
 .rdeck-question {
   color: var(--textPrimary);
-  font-family: var(--fontFamilyDisplay);
+  font-family: var(--fontFamilyHeading);
 }
 
 /* What the field is for, quieter than the evidence below it: the evidence is

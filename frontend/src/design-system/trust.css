@@ -109,7 +109,7 @@ button.evidence-chip:hover {
    in the display face: it is the row's one headline. */
 .staging-card .approval-headline {
   margin-top: var(--space-2);
-  font-family: var(--fontFamilyDisplay);
+  font-family: var(--fontFamilyHeading);
 }
 /* The sentence explaining the headline above it — why this is staged, not what
    it says. Close to what it explains: a full line's air between the two would

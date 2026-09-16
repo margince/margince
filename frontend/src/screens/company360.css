@@ -206,7 +206,7 @@
   margin: 0 0 var(--space-3);
   padding-bottom: var(--space-3);
   border-bottom: 1px solid var(--borderSubtle);
-  font-family: var(--fontFamilyDisplay);
+  font-family: var(--fontFamilyHeading);
   color: var(--textPrimary);
 }
 
@@ -1526,7 +1526,7 @@
    here. A size of its own would be a second answer to the question every panel
    head answers once. */
 .co-360-title .co-360-subject {
-  font-family: var(--fontFamilyDisplay);
+  font-family: var(--fontFamilyHeading);
   color: var(--textPrimary);
 }
 

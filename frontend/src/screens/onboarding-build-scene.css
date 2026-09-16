@@ -146,7 +146,7 @@
      squash, which is the difference between the word standing up and the word
      being scaled. */
   perspective: 480px;
-  font-family: var(--fontFamilyDisplay);
+  font-family: var(--fontFamilyHeading);
   color: var(--textPrimary);
   animation: ob-build-letters-out calc(var(--obBuildMs) * 0.14)
     calc(var(--obBuildMs) * 0.56) ease both;

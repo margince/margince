@@ -338,7 +338,7 @@
 .ob-scan-tally dd {
   order: 1;
   margin: 0;
-  font-family: var(--fontFamilyDisplay);
+  font-family: var(--fontFamilyHeading);
   color: var(--textPrimary);
 }
 /* A drawn separator rather than a character: a middot in a string would be copy

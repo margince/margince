@@ -10,11 +10,12 @@ import type { CSSProperties } from "react";
  * Every size, leading and paragraph spacing is rem, on the browser's own
  * 1rem = 16px, so a reader who enlarges that moves the whole document. The
  * three levels live in `tokens.css` as `font` shorthands — `--fontBodyLarge`,
- * `--fontBody`, `--fontSmall` — each paired with the paragraph spacing that
- * belongs to it, and `app.css` declares the middle pair on `body`. Size,
- * leading, weight, face and neutral ink all arrive from there, so a heading, a
- * label, a field, a code sample and a figure are the same text until a role
- * rule says otherwise — and no role rule exists yet.
+ * `--fontBody`, `--fontBodySmall` — each paired with the paragraph spacing that
+ * belongs to it, and `app.css` declares the middle pair on `body`. Seven
+ * heading tokens sit above them, sized for the CONTEXT a heading appears in —
+ * the `<h1>`–`<h6>` level is a separate decision about structure, which is why
+ * the ladder below is drawn with plain elements. No role rule maps either yet,
+ * so anything not wearing a token here is still the body default.
  *
  * Flip the theme in the toolbar: nothing here changes size, but the ink does.
  */
@@ -75,9 +76,9 @@ const LEVELS: ReadonlyArray<{ token: string; style: TypeLevel }> = [
   },
   { token: "--fontBody", style: { font: "var(--fontBody)" } },
   {
-    token: "--fontSmall",
+    token: "--fontBodySmall",
     style: {
-      font: "var(--fontSmall)",
+      font: "var(--fontBodySmall)",
       "--paragraphSpacing": "var(--paragraphSpacingSmall)",
     },
   },
@@ -107,6 +108,108 @@ export const Root: Story = {
           </div>
         </div>
       ))}
+    </div>
+  ),
+};
+
+const ladder: CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  gap: "var(--space-4)",
+  maxWidth: "640px",
+};
+
+const HEADINGS: ReadonlyArray<{ token: string; context: string }> = [
+  { token: "--fontHeadingXXLarge", context: "brand and marketing" },
+  {
+    token: "--fontHeadingXLarge",
+    context: "brand and marketing, and the largest page title",
+  },
+  {
+    token: "--fontHeadingLarge",
+    context: "a page title — a view's or a form's",
+  },
+  {
+    token: "--fontHeadingMedium",
+    context: "a large component with room, over Body M",
+  },
+  {
+    token: "--fontHeadingSmall",
+    context: "a small component, where space is tight",
+  },
+  {
+    token: "--fontHeadingXSmall",
+    context: "the same, tighter — a flag's title",
+  },
+  {
+    token: "--fontHeadingXXSmall",
+    context: "sparingly: fine print, over Body S",
+  },
+];
+
+/**
+ * The seven heading sizes, largest to smallest, each labelled with the context
+ * it is for. They are drawn as plain `<div>`s on purpose: a heading's SIZE is
+ * chosen by where it sits, its LEVEL by where it belongs in the page's
+ * structure, and a ladder of sizes is not a structure — writing it as `<h1>`
+ * through `<h6>` would put six headings and a skipped level into one page and
+ * teach exactly the habit the rules forbid.
+ */
+export const Headings: Story = {
+  render: () => (
+    <div style={ladder}>
+      {HEADINGS.map((heading) => (
+        <div key={heading.token} style={{ font: `var(${heading.token})` }}>
+          {heading.token} · {heading.context}
+        </div>
+      ))}
+    </div>
+  ),
+};
+
+const pairing: CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  gap: "var(--space-2)",
+};
+
+const smallProse: TypeLevel = {
+  font: "var(--fontBodySmall)",
+  "--paragraphSpacing": "var(--paragraphSpacingSmall)",
+};
+
+/**
+ * A heading and the body it introduces, at the two ends of the ladder: Heading
+ * M over Body M is a modal's title, Heading XXS over Body S is fine print. Each
+ * body block is two paragraphs, so the spacing that belongs to its level shows
+ * between them — the small pair carries its own, because the sibling rule in
+ * `app.css` reads one name and the default is Body M's.
+ */
+export const Pairings: Story = {
+  render: () => (
+    <div style={ladder}>
+      <div style={pairing}>
+        <div style={{ font: "var(--fontHeadingMedium)" }}>
+          Move this deal on?
+        </div>
+        <div style={{ font: "var(--fontBody)" }}>
+          <p>
+            Globex has signed the amended terms, so the deal can leave the
+            proposal stage.
+          </p>
+          <p>Everyone following the account is told when it does.</p>
+        </div>
+      </div>
+      <div style={pairing}>
+        <div style={{ font: "var(--fontHeadingXXSmall)" }}>Retention</div>
+        <div style={smallProse}>
+          <p>
+            An audit entry is kept for seven years and cannot be edited after it
+            is written.
+          </p>
+          <p>Deleting the record does not delete the entry.</p>
+        </div>
+      </div>
     </div>
   ),
 };

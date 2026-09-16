@@ -475,7 +475,7 @@
   white-space: nowrap;
 }
 .rail .ws-logo-product {
-  font-family: var(--fontFamilyDisplay);
+  font-family: var(--fontFamilyHeading);
   color: var(--textPrimary);
 }
 .rail.collapsed .ws-logo {
@@ -957,7 +957,7 @@
 
 .pagetitle h1 {
   margin: 0;
-  font-family: var(--fontFamilyDisplay);
+  font-family: var(--fontFamilyHeading);
   /* This heading names a SECTION, never a record — a record's own surface prints
      its name. Section titles are translated strings, so wrapping here guards
      against a long translation, not against user data. */

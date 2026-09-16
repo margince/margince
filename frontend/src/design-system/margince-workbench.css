@@ -260,7 +260,7 @@
 .mw-identity h1 {
   margin: 2px 0 0;
   color: var(--textPrimary);
-  font-family: var(--fontFamilyDisplay);
+  font-family: var(--fontFamilyHeading);
 }
 
 .mw-identity p {

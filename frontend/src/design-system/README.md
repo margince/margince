@@ -27,18 +27,69 @@ If what you need is genuinely not here, add it **here**, with a story and a
 spec, and it becomes the one spelling. Copy never lives in a primitive: words
 arrive through props, translated by the caller with `t()`.
 
-## Type comes from the root
+## Type comes from the tokens
 
 **One rule sets the type for the whole product.** `body` in `app.css` reads
 `--fontBody` and `html` beside it reads `--textPrimary`, and a reset hands both
 to the elements a browser would otherwise scale itself. The ROOT declares no
-font, so `1rem` stays the browser's 16px for everyone. Sizes, leading and paragraph
-spacing are all rem on the browser's own 1rem = 16px: `--fontBodyLarge` with
-`--paragraphSpacingLarge` for comfortable reading, `--fontBody` with
-`--paragraphSpacing` as the platform default, `--fontSmall` with
-`--paragraphSpacingSmall` used sparingly. So
-everything inherits, and there is no size, leading, weight or neutral ink to pick
-at a call site. `src/mcp-apps/view.css` carries that shape for the standalone views.
+font, so `1rem` stays the browser's own 16px for everyone — a `font` there would
+resolve its own `rem` against the size it was setting and shrink the foundation
+under the whole document. So everything inherits, and there is no size, leading,
+weight or neutral ink to pick at a call site. `src/mcp-apps/view.css` carries
+that shape for the standalone views.
+
+Every type token in `tokens.css` is one `font` shorthand in rem — weight, size,
+leading and face in a single value, so a level cannot be half-worn.
+
+**Body is three levels, each with the paragraph spacing that belongs to it.**
+The gap between two blocks of prose is that spacing and nothing else: one
+sibling rule in `app.css`, at zero specificity, puts `--paragraphSpacing`
+between them. A level that is not the default therefore hands its own spacing
+down beside its `font`, or the prose keeps the default's rhythm.
+
+| Level | Token | Spacing | For |
+|---|---|---|---|
+| L | `--fontBodyLarge` | `--paragraphSpacingLarge` | Comfortable reading: marketing and blog prose. Rare in the product. |
+| M | `--fontBody` | `--paragraphSpacing` | The platform default, and what `body` already wears. |
+| S | `--fontBodySmall` | `--paragraphSpacingSmall` | Sparingly: secondary-level content and semantic messaging. |
+
+**A heading's SIZE comes from its context, not from its level.** Seven tokens,
+all in the heading face at 700:
+
+| Token | For |
+|---|---|
+| `--fontHeadingXXLarge` | Brand and marketing content. |
+| `--fontHeadingXLarge` | Brand and marketing, and the largest page title in the product. |
+| `--fontHeadingLarge` | A page title in the product — a view's or a form's. |
+| `--fontHeadingMedium` | A large component with room, balanced against Body M: a modal's title. |
+| `--fontHeadingSmall` | A title in a small component where space is tight. |
+| `--fontHeadingXSmall` | The same, tighter still — a flag's own title. |
+| `--fontHeadingXXSmall` | Sparingly; pairs with Body S, as fine print does. |
+
+**A heading's LEVEL comes from the structure.** `<h1>`–`<h6>` are how a
+screen-reader user navigates a page and how everyone else sees it group, so they
+run in descending order, there is exactly one `<h1>` — the page title — and a
+level is never skipped (no `<h2>` followed by an `<h4>`). The two decisions are
+independent: an `<h3>` inside a roomy modal wears `--fontHeadingMedium` while an
+`<h2>` on a dense card wears `--fontHeadingXSmall`. Size for the context, level
+for the place in the structure.
+
+A new section gets a heading — the element AND a heading token. Bold body text
+or a size bumped by hand is not a heading: what assistive tech announces is the
+element, so a section introduced that way has no title at all for the reader who
+most needs one.
+
+**Weight says what kind of text it is.** 400 regular for generic paragraphs, so
+they read as prose against a heading and against the text inside components. 500
+medium for text that sits beside a line icon, where the stroke of the glyph and
+the stroke of the letter should match — which is most text inside a component,
+and anything that may end up next to an icon. 700 bold for emphasis or to tell
+one thing from another in a case that earns it, and the heading tokens; used
+anywhere else it stops meaning anything.
+
+Nothing is wired yet: no rule maps `h1`–`h6` to a token, and there are no class
+hooks for these. A caller picks the token its context calls for, and the element
+its structure calls for, until a role rule is written.
 
 The `.t-*` names in `base.css` are ROLE HOOKS, not sizes. An element that plays a
 role wears one; each role's rule is layered on top of the root in its own change,
@@ -52,7 +103,8 @@ instead. `--fontFamilyMono` is the one token that spells it; `design-system/mono
 with `check-font-lock.sh` fails the `t-mono` class, a mono family on any other
 selector, a second token carrying one, or one in an inline style.
 
-`Design System/Type` in Storybook draws the root.
+`Design System/Type` in Storybook draws the body levels, the heading ladder
+and the pairings.
 
 ## Corners come from the ladder, and they are smooth
 

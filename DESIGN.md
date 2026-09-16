@@ -215,20 +215,32 @@ for code alone: a mono face on an amount or a date dressed a business fact as
 machine output and shouted in a dense row, and `tabular-nums` gives a column the
 alignment mono was bought for.
 
-**The stylesheet draws no role scale today.** One `body` rule in `app.css` reads
-`--fontBody` and the `html` rule above it `--textPrimary`; every element
-inherits both, and the root itself declares no font so `1rem` stays 16px; the three rem
-levels behind it — `--fontBodyLarge`, `--fontBody`, `--fontSmall`, each paired
-with its own `--paragraphSpacing*` and all on the browser's 1rem = 16px — are
-what a role rule will pick from; and the `.t-*` names in `base.css` are role hooks whose rules are
-layered on top of that root one at a time, each in its own change and each with
-its own gate. So every size, weight, tracking and neutral ink named anywhere else
-in this document is a TARGET for that rebuild rather than a description of the
-sheet that ships.
+**Size answers the context; level answers the structure.** How big a heading is
+says what it introduces and where — brand and marketing at the top of the
+ladder, a product page's title below that, a component's own title at the
+bottom. Which of `<h1>`–`<h6>` it is written as says where it sits in the page,
+which is how a screen-reader user moves through it: one `<h1>`, descending, no
+level skipped. Neither decision is allowed to settle the other. Body is three
+levels on the same foundation, each carrying the paragraph spacing that
+separates two blocks of its own prose, and weight is meaning rather than
+decoration — 400 is prose, 500 is text that sits beside a line icon and most
+text inside a component, 700 is a heading or an emphasis that has earned it.
+
+Everything is rem on the browser's own 1rem = 16px, so a reader who enlarges
+that moves the product with them.
+
+**Almost none of it is applied yet.** `body` in `app.css` reads `--fontBody`,
+and that is the whole of it: no `h1`–`h6` mapping, no class hooks, and the
+`.t-*` names in `base.css` are role hooks with no rules on them. The tokens and
+the usage rules that go with them live in
+[`frontend/src/design-system/README.md`](frontend/src/design-system/README.md),
+which is what an implementer reads. So every size, weight, tracking and neutral
+ink named anywhere else in this document is a TARGET for that rebuild rather
+than a description of the sheet that ships.
 
 | Role | Family | Where |
 |---|---|---|
-| Display | **Outfit** | A record's name, the Brief greeting, a zone's title, the agent's verdict word, a reading's word and its figure. |
+| Heading | **Outfit** | Every heading, and the one line a record is identified by: its name, the Brief greeting, a zone's title, the agent's verdict word, a reading's word and its figure. |
 | Body and UI | **Geist** | Everything else, prose included. |
 | Figures | **Geist**, tabular (`.t-num`) | Every amount, count, percent, duration and date in a row or a cell. An identifier is plain body type. |
 | Code | **Geist Mono** | `<pre>`, `<code>` and `<samp>` through one rule in `base.css`, and the `.code-block` surface; nothing else. A `<kbd>` is body type. |

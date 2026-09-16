@@ -507,7 +507,7 @@
    (min-width: 0) but not grown: at its natural width a short name keeps the
    standing badge beside it on the same row. */
 .record-head h1 {
-  font-family: var(--fontFamilyDisplay);
+  font-family: var(--fontFamilyHeading);
   color: var(--textPrimary);
   min-width: 0;
   overflow: hidden;
