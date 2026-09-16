@@ -4459,6 +4459,20 @@ export const en = {
     "Drafting your offer has taken unusually long. It may have stopped.",
   "agent.panel.runningNow": "Running now",
 
+  // The four things the agent section says once it has run out of news
+  // (`agentrail-copy.ts`). None of them claims the agent did anything: they are
+  // standing facts about the product, which is what lets them be written here
+  // rather than read from the installation.
+  //
+  // SHORT, and that is a hard constraint rather than a style: the rail clamps
+  // its line to two lines at about 200px (`.arline` in agentrail.css), so a
+  // sentence past roughly fifty characters is a sentence with its end cut off.
+  // Every translation of these is held to the same ceiling.
+  "agent.tip.day": "To-dos, decisions and duplicates live on {name}.",
+  "agent.tip.ask": "Ask me from anywhere with ⌘K.",
+  "agent.tip.recap": "Open me for what I have done today.",
+  "agent.tip.edge": "The screen edge lights while I work.",
+
   "agents.connected": "Connected agents",
   "agents.connectedSub":
     "MCP clients holding their own credential, scoped to what you ticked when you authorized them",
