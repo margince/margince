@@ -209,11 +209,11 @@ it("stands the row in hand's answer apart from its ways in, and folds the put-do
   );
   const lead = inHand(container);
   // The move the product worked out is the row's answer, alone on the
-  // trailing edge in the primary chrome.
+  // trailing edge in the agent's own chrome.
   const draft = lead.getByRole("link", {
     name: en["worklist.verb.draft_reply_now"],
   });
-  expect(draft.className).toContain("btn-primary");
+  expect(draft.className).toContain("btn-ai");
   expect(container.querySelector(".worklist-row-answer")?.contains(draft)).toBe(
     true,
   );

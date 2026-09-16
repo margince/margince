@@ -147,8 +147,10 @@ export function MoveButton({
       }
       return (
         <>
+          {/* The agent's own step, in the agent's own colour: a rule wrote
+              the task and pressing this accepts it. */}
           <Button
-            variant="primary"
+            variant="ai"
             small
             pending={createTask.isPending}
             onClick={() => createTask.mutate(taskBody)}
@@ -176,7 +178,7 @@ export function MoveButton({
       }
       return (
         <>
-          <Button variant="primary" small onClick={() => setBriefOpen(true)}>
+          <Button variant="ai" small onClick={() => setBriefOpen(true)}>
             <Sparkles aria-hidden />
             {t("deal360.openBrief")}
           </Button>

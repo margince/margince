@@ -97,6 +97,11 @@ export function BriefFeed({
         }
         titleAction={
           <span className="brief-focus-actions">
+            {/* The panel offers the agent's verbs — the reply it drafted, the
+                step it prepared — so it wears the badge every panel that
+                offers an AI verb wears: what is OFFERED, beside the tone that
+                says who wrote the body. */}
+            <Badge tone="ai">{t("co.assistant.aiTag")}</Badge>
             {changed && (
               <a className="entity-link" href={changed.href}>
                 <Badge>
