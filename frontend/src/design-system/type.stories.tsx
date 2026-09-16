@@ -7,11 +7,14 @@ import type { CSSProperties } from "react";
 /**
  * Root type: one declaration, and everything under it inherits.
  *
- * `--fs-base`, `--lh-base` and `--fw-base` live in `tokens.css`, and `app.css`'s
- * `html` rule is the only place they are read. Size, leading, weight, face and
- * neutral ink all arrive from there, so a heading, a label, a field, a code
- * sample and a figure are the same text until a role rule says otherwise — and
- * no role rule exists yet. The ramp this page used to draw is gone.
+ * Every size, leading and paragraph spacing is rem, on the browser's own
+ * 1rem = 16px, so a reader who enlarges that moves the whole document. The
+ * three levels live in `tokens.css` as `font` shorthands — `--fontBodyLarge`,
+ * `--fontBody`, `--fontSmall` — each paired with the paragraph spacing that
+ * belongs to it, and `app.css` declares the middle pair on `body`. Size,
+ * leading, weight, face and neutral ink all arrive from there, so a heading, a
+ * label, a field, a code sample and a figure are the same text until a role
+ * rule says otherwise — and no role rule exists yet.
  *
  * Flip the theme in the toolbar: nothing here changes size, but the ink does.
  */
@@ -39,39 +42,71 @@ const key: CSSProperties = {
   flex: "none",
 };
 
+const levels: CSSProperties = {
+  display: "flex",
+  alignItems: "flex-start",
+  gap: "var(--space-8)",
+};
+const levelColumn: CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  gap: "var(--space-2)",
+  maxWidth: "240px",
+};
+
 /**
- * A paragraph, a heading, a label, a code sample and a `.t-num` figure in a
- * plain `<div>`, with no rule styling any of them. Every one reads the root,
- * which is why they all look alike — that sameness IS what this story asserts.
+ * Declared rather than asserted onto `CSSProperties`: React's own type carries
+ * the CSS properties it knows, and a cast to it would say this one is among
+ * them. A level that is not the root's own has to hand its paragraph spacing
+ * down as well, because the sibling rule in `app.css` reads one name.
+ */
+type TypeLevel = CSSProperties &
+  Readonly<{
+    "--paragraphSpacing"?: string;
+  }>;
+
+const LEVELS: ReadonlyArray<{ token: string; style: TypeLevel }> = [
+  {
+    token: "--fontBodyLarge",
+    style: {
+      font: "var(--fontBodyLarge)",
+      "--paragraphSpacing": "var(--paragraphSpacingLarge)",
+    },
+  },
+  { token: "--fontBody", style: { font: "var(--fontBody)" } },
+  {
+    token: "--fontSmall",
+    style: {
+      font: "var(--fontSmall)",
+      "--paragraphSpacing": "var(--paragraphSpacingSmall)",
+    },
+  },
+];
+
+/**
+ * The three levels side by side, each drawn as two paragraphs. No rule here
+ * sets a size: a column wears one `font` shorthand and the gap between its two
+ * paragraphs arrives from the spacing token paired with it, so what separates
+ * prose is the prose's own level rather than a margin chosen at the call site.
  */
 export const Root: Story = {
   render: () => (
-    <div style={column}>
-      <div style={line}>
-        <span style={key}>p</span>
-        <p>
-          Margince keeps the record: what was agreed, who agreed it, and when it
-          changed.
-        </p>
-      </div>
-      <div style={line}>
-        <span style={key}>h2</span>
-        <h2>Globex renewal</h2>
-      </div>
-      <div style={line}>
-        <span style={key}>label · input</span>
-        <label>
-          Close date <input defaultValue="31 Mar 2026" />
-        </label>
-      </div>
-      <div style={line}>
-        <span style={key}>code</span>
-        <code>deals.update</code>
-      </div>
-      <div style={line}>
-        <span style={key}>.t-num</span>
-        <span className="t-num">€1,284,500.00</span>
-      </div>
+    <div style={levels}>
+      {LEVELS.map((level) => (
+        <div key={level.token} style={levelColumn}>
+          <span>{level.token}</span>
+          <div style={level.style}>
+            <p>
+              Margince keeps the record: what was agreed, who agreed it, and
+              when it changed.
+            </p>
+            <p>
+              The gap above this line is the paragraph spacing of the level the
+              column wears.
+            </p>
+          </div>
+        </div>
+      ))}
     </div>
   ),
 };

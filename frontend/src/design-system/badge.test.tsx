@@ -253,7 +253,7 @@ describe("Badge", () => {
           ]),
         ),
       ).toEqual({
-        "font-family": "var(--f-body)",
+        "font-family": "var(--fontFamilyBody)",
         "font-style": "normal",
         "min-block-size": "20px",
       });

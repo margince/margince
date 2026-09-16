@@ -47,7 +47,7 @@
   margin-bottom: var(--space-3);
 }
 .ttl {
-  font-family: var(--f-display);
+  font-family: var(--fontFamilyDisplay);
   color: var(--textPrimary);
   margin-bottom: var(--space-3);
 }
@@ -317,7 +317,7 @@
 }
 .ob-core-kicker,
 .ob-manual-progress {
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
   color: var(--aiText);
 }
 .ob-core-kicker {
@@ -328,7 +328,7 @@
 }
 .ob-core-dialog h1 {
   margin: var(--space-3) 0 0;
-  font-family: var(--f-display);
+  font-family: var(--fontFamilyDisplay);
   color: var(--railIconActive);
 }
 .ob-core-dialog > p {
@@ -360,7 +360,7 @@
   justify-items: center;
   gap: var(--space-1);
   color: var(--railIconHover);
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
 }
 .ob-core-journey i {
   display: grid;
@@ -483,7 +483,7 @@
 .core-findings > h2,
 .live-fact-preview > h2 {
   margin: var(--space-5) var(--space-5) 0;
-  font-family: var(--f-display);
+  font-family: var(--fontFamilyDisplay);
 }
 /* That section already carries the interval to the block above it; the heading
    adding the card's own top step again would open a second gap. */
@@ -500,7 +500,7 @@
 }
 .legal-preview h2 {
   margin: 0;
-  font-family: var(--f-display);
+  font-family: var(--fontFamilyDisplay);
 }
 .legal-preview > p {
   max-width: 620px;
@@ -705,7 +705,7 @@
   border-radius: var(--r-full);
   corner-shape: round;
   background: linear-gradient(145deg, var(--ai), var(--accent));
-  font-family: var(--f-display);
+  font-family: var(--fontFamilyDisplay);
 }
 .mw-message-assistant > div {
   padding: var(--space-3) var(--space-4);
@@ -720,7 +720,7 @@
 }
 .mw-message-assistant h2 {
   color: var(--textPrimary);
-  font-family: var(--f-display);
+  font-family: var(--fontFamilyDisplay);
 }
 .mw-message-assistant h2 + p,
 .mw-message-assistant p + p {
@@ -813,7 +813,7 @@
   align-items: center;
   gap: var(--space-2);
   color: var(--aiText);
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
 }
 .mw-read-activity > p svg {
   width: 14px;
@@ -953,11 +953,11 @@
 }
 .mw-review-heading span {
   color: var(--aiText);
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
 }
 .mw-review-heading h2 {
   margin: var(--space-1) 0 0;
-  font-family: var(--f-display);
+  font-family: var(--fontFamilyDisplay);
 }
 .mw-review-heading p {
   margin: var(--space-1) 0 0;

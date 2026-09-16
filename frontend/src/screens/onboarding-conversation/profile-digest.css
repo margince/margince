@@ -326,7 +326,7 @@
   border: 0;
   background: none;
   cursor: pointer;
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
   text-decoration: underline;
   text-decoration-color: var(--borderStrong);
 }

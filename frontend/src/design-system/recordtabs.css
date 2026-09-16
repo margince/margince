@@ -133,7 +133,7 @@
   border: 0;
   border-block-end: 2px solid transparent;
   background: none;
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
   white-space: nowrap;
   cursor: pointer;
 }

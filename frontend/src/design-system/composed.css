@@ -273,7 +273,7 @@
   cursor: pointer;
   text-align: left;
   width: 100%;
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
 }
 /* The edge firms up under the pointer. A background step would fight the
    staged card's own tint, and this card's whole job is to keep those two
@@ -507,7 +507,7 @@
    (min-width: 0) but not grown: at its natural width a short name keeps the
    standing badge beside it on the same row. */
 .record-head h1 {
-  font-family: var(--f-display);
+  font-family: var(--fontFamilyDisplay);
   color: var(--textPrimary);
   min-width: 0;
   overflow: hidden;

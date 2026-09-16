@@ -473,8 +473,8 @@ describe("panel.css is the only sheet that shapes the head band", () => {
   // would fail a sheet that never touched a panel.
   it("reads a title rule as the title, wherever it hangs", () => {
     const css = `
-      .co-glance-cols .panel > .panel-head .panel-title { font-family: var(--f-body); }
-      .rmap-panel-title { font-family: var(--f-body); }
+      .co-glance-cols .panel > .panel-head .panel-title { font-family: var(--fontFamilyBody); }
+      .rmap-panel-title { font-family: var(--fontFamilyBody); }
       .pe-memory .panel-head .panel-title:hover { color: var(--accent); }
     `;
     expect(bandRules(css)).toEqual([]);

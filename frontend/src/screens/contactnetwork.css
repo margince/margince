@@ -152,11 +152,11 @@
   min-width: 0;
 }
 .pn-reading b {
-  font-family: var(--f-display);
+  font-family: var(--fontFamilyDisplay);
   font-variant-numeric: tabular-nums;
 }
 .pn-reading b small {
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
   margin-left: var(--space-1);
 }
 /* Who sent what: the target's share in full accent, the colleague's in the

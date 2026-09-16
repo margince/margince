@@ -74,7 +74,7 @@
    carries the tag's colour, the way a tag is drawn everywhere else. */
 .tagresult-title {
   margin: 0;
-  font-family: var(--f-display);
+  font-family: var(--fontFamilyDisplay);
   display: flex;
   align-items: center;
   gap: var(--space-2);
@@ -84,5 +84,5 @@
 /* A retired word still has a page — the records carrying it did not lose it —
    so the heading says so rather than looking like any other tag. */
 .tagresult-retired {
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
 }

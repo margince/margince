@@ -78,7 +78,7 @@
    because it is the one sentence about the reader on the page, and the verb
    under it is the page's one filled control (DESIGN.md §6). */
 .co-move-lead .co-move-headline {
-  font-family: var(--f-display);
+  font-family: var(--fontFamilyDisplay);
 }
 /* The lead's verb ends its row like every other verb in the list: one margin
    for everything a reader can press, whichever row they are on. */

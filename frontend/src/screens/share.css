@@ -128,5 +128,5 @@
   width: 100%;
   resize: vertical;
   min-height: 60px;
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
 }

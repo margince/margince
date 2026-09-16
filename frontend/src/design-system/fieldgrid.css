@@ -107,12 +107,13 @@
   row-gap: var(--space-4);
 }
 
-/* The kind-of-fact glyph. Held to the label's line box, so it centres on the
-   first line of a name that wraps rather than on the whole block. */
+/* The kind-of-fact glyph. Held to one line of its own type (`1lh`), so it
+   centres on the first line of a name that wraps rather than on the whole
+   block. */
 .fieldgrid-icon {
   display: inline-flex;
   align-items: center;
-  block-size: calc(var(--fs-base) * var(--lh-base));
+  block-size: 1lh;
 }
 
 .fieldgrid-icon svg {

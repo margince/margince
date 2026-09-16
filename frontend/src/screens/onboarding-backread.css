@@ -56,7 +56,7 @@
 /* The cost of a machine's work reads in the AI family, never the brand accent:
    green means the user acts, indigo means the machine cost something. */
 .ob-backread-cost {
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
   font-variant-numeric: tabular-nums;
   color: var(--aiText);
 }
@@ -75,7 +75,7 @@
 }
 
 .ob-backread-scanned {
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
   font-variant-numeric: tabular-nums;
   color: var(--textPrimary);
 }
@@ -118,13 +118,13 @@
 }
 
 .ob-backread-tally-value {
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
   font-variant-numeric: tabular-nums;
   color: var(--textPrimary);
 }
 
 .ob-backread-tally-label {
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
 }
 
 /* ---- leaving ----------------------------------------------------------- */

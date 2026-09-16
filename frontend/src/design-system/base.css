@@ -40,7 +40,7 @@
 }
 
 .btn {
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
   /* Transparent rather than absent, so the ghost variant RECOLOURS a border
      every variant already reserves space for. When only the ghost declared one,
      border-box added its 2px to that variant alone and every [Cancel][Save] pair
@@ -564,7 +564,7 @@ a:not([class]):focus-visible {
 .t-display,
 .t-h2,
 .t-h3 {
-  font-family: var(--f-display);
+  font-family: var(--fontFamilyDisplay);
 }
 .t-label,
 .t-caption,
@@ -595,10 +595,10 @@ a:not([class]):focus-visible {
 code,
 pre,
 samp {
-  font-family: var(--f-mono);
+  font-family: var(--fontFamilyMono);
 }
 kbd {
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
 }
 
 /* Code / payload preview surface (AI observability: the call-trace panel and
@@ -612,7 +612,7 @@ kbd {
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-sm);
   background: var(--bgCard);
-  font-family: var(--f-mono);
+  font-family: var(--fontFamilyMono);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }

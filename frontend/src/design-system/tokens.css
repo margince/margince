@@ -481,21 +481,33 @@
    * is, and the two went out of step by 60px of viewport width. */
   --stickyBottomInset: var(--space-2);
 
+  /* Type. Every size, leading and paragraph spacing below is rem, on the
+     browser's own 1rem = 16px, so a reader who enlarges that moves the whole
+     document rather than the parts that were typed in px. `--fontBody` and
+     `--paragraphSpacing` are the pair app.css declares on `body`; a role rule
+     picks one of the other two levels for itself. */
+
   /* Three families (DESIGN.md §4): a display face with character for the one
    * line a reader identifies a record by, a quiet grotesk for everything read,
    * and a mono for code — `code`, `pre`, `samp` and `.code-block` (base.css) and
    * nothing else. Figures stay in the grotesk and align through tabular-nums
    * (`.t-num`); an id or a key is read, not compiled, so it is body text too. */
-  --f-display: "Outfit", system-ui, sans-serif;
-  --f-body: "Geist", system-ui, sans-serif;
-  --f-mono: "Geist Mono", ui-monospace, monospace;
+  --fontFamilyDisplay: "Outfit", system-ui, sans-serif;
+  --fontFamilyBody: "Geist", system-ui, sans-serif;
+  --fontFamilyMono: "Geist Mono", ui-monospace, monospace;
 
-  /* The single root type declaration everything inherits from — app.css's `html`
-     rule reads exactly these three and nothing else does. Role sizes are defined
-     later, on top of them. */
-  --fs-base: 13px;
-  --lh-base: 1.4;
-  --fw-base: 400;
+  /* L — comfortable reading: marketing and blog prose, rare in the product. */
+  --fontBodyLarge: 400 1rem / 1.5rem var(--fontFamilyBody);
+  /* The gap between two blocks of L prose. */
+  --paragraphSpacingLarge: 1rem;
+  /* M — the platform default: every screen, until a role rule says otherwise. */
+  --fontBody: 400 0.875rem / 1.25rem var(--fontFamilyBody);
+  /* The gap between two blocks of default prose; the root reads this one. */
+  --paragraphSpacing: 0.75rem;
+  /* S — used sparingly: secondary-level content and semantic messaging. */
+  --fontSmall: 400 0.75rem / 1rem var(--fontFamilyBody);
+  /* The gap between two blocks of S prose. */
+  --paragraphSpacingSmall: 0.5rem;
 
   /* Material overlays, NOT part of the §2 Ledger-Green canon and deliberately
    * not pinned by tokens.test.ts's canonical map: a highlight and a scrim are

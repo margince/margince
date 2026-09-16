@@ -105,7 +105,7 @@
  * message being written and the toolbar under it, with nothing left anywhere to
  * scroll to them. A height shrinks; that is the difference. */
 .richtext-input {
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
   color: var(--textPrimary);
   padding: 9px 11px;
   outline: none;

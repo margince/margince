@@ -47,7 +47,7 @@
 /* The zone's title in the display face: the one word a reader finds a zone
  * by, so it is set as a heading rather than as a label on a card. */
 .panel-head .panel-title {
-  font-family: var(--f-display);
+  font-family: var(--fontFamilyDisplay);
   color: var(--textPrimary);
 }
 

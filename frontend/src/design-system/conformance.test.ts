@@ -251,7 +251,7 @@ describe("design-system conformance gates (B-EP09.1)", scanBudget, () => {
     // The spellings that name nothing come back EMPTY: the allowed token
     // reference, a family built at run time, and the `inherit` the UA reset
     // writes on every control so the root's family reaches it.
-    expect(familiesIn("font-family: var(--f-body);")).toEqual([]);
+    expect(familiesIn("font-family: var(--fontFamilyBody);")).toEqual([]);
     expect(familiesIn("fontFamily: `${chosenFamily}`")).toEqual([]);
     expect(familiesIn("font-family: inherit;")).toEqual([]);
     expect(familiesIn("fontFamily: `inherit`")).toEqual([]);

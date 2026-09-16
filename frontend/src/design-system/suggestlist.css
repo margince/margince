@@ -28,7 +28,7 @@
   gap: var(--space-2);
   padding: 7px 9px; /* ds:ignore the option's own row rhythm, shared with Select's list */
   border-radius: var(--r-sm);
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
   color: var(--textPrimary);
   cursor: pointer;
 }

@@ -197,7 +197,7 @@
 }
 
 .ob-conv-option small {
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
   overflow-wrap: anywhere;
 }
 
@@ -270,7 +270,7 @@
 .ob-conv-confirm h2 {
   margin: 0;
   color: var(--textPrimary);
-  font-family: var(--f-display);
+  font-family: var(--fontFamilyDisplay);
 }
 
 .ob-conv-confirm-fields {
@@ -510,7 +510,7 @@
 .ob-decision h2 {
   margin: 0;
   color: var(--textPrimary);
-  font-family: var(--f-display);
+  font-family: var(--fontFamilyDisplay);
 }
 
 .ob-decision-options {
@@ -580,7 +580,7 @@
   border: 0;
   background: none;
   cursor: pointer;
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
   text-decoration: underline;
   text-decoration-color: var(--borderStrong);
   text-underline-offset: 3px;
@@ -674,7 +674,7 @@
 }
 
 .ob-decision-body small {
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
   overflow-wrap: anywhere;
 }
 
@@ -692,7 +692,7 @@
 
 .ob-decision-proof-head {
   margin: 0;
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
 }
 
 .ob-decision-proof blockquote {
@@ -734,7 +734,7 @@
   flex: none;
   border: 1px solid var(--borderStrong);
   border-radius: var(--r-sm);
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
 }
 
 .ob-decision-acts {
@@ -941,7 +941,7 @@
 .ob-voice-building h2 {
   margin: 0;
   color: var(--textPrimary);
-  font-family: var(--f-display);
+  font-family: var(--fontFamilyDisplay);
 }
 
 /* Why the step is worth doing, inside the fold that offers it — the band that
@@ -998,7 +998,7 @@
   border-radius: var(--r-md);
   background: var(--bgElevated);
   color: var(--textPrimary);
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
   resize: vertical;
 }
 /* Keyboard focus has to be visible on this field as on every other one. The
@@ -1037,7 +1037,7 @@
   justify-content: space-between;
   gap: var(--space-3);
   margin: var(--space-4) 0 var(--space-2);
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
 }
 
 .ob-voice-sources ul {
@@ -1073,7 +1073,7 @@
 }
 
 .ob-voice-source-body small {
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
 }
 
 .ob-voice-source-check {
@@ -1181,7 +1181,7 @@
 }
 
 .ob-voice-speaker-body small {
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
 }
 
 /* The result scene: the sample on the left, the reading on the right — two
@@ -1231,7 +1231,7 @@
   align-items: center;
   gap: var(--space-2);
   margin: 0 0 var(--space-3);
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
 }
 
 .ob-voice-result-label svg {
@@ -1265,7 +1265,7 @@
 }
 
 .ob-voice-sample-field {
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
 }
 
 .ob-voice-sample-body {
@@ -1284,7 +1284,7 @@
 
 .ob-voice-sample-why-tag {
   flex: none;
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
 }
 
 /* The measured dimensions: a readout per axis the build actually scored —
@@ -1299,7 +1299,7 @@
 }
 
 .ob-voice-dims-count {
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
 }
 
 .ob-voice-dims-meta {
@@ -1459,7 +1459,7 @@
   align-items: baseline;
   justify-content: center;
   color: var(--textOnAccent);
-  font-family: var(--f-display);
+  font-family: var(--fontFamilyDisplay);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1480,7 +1480,7 @@
 .ob-connect h2 {
   margin: 0;
   color: var(--textPrimary);
-  font-family: var(--f-display);
+  font-family: var(--fontFamilyDisplay);
 }
 
 /* The four step-level promises: a real two-column grid on this wide surface,
@@ -1522,7 +1522,7 @@
   gap: var(--space-2);
   margin: 0;
   color: var(--textPrimary);
-  font-family: var(--f-display);
+  font-family: var(--fontFamilyDisplay);
 }
 
 .ob-connect-section-head p {
@@ -1599,7 +1599,7 @@
    can fix this is one link away from where it is fixed. */
 .ob-connect-card-setup {
   color: var(--accentText);
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
 }
 
 .ob-connect-card-head {
@@ -1657,12 +1657,12 @@
 }
 
 .ob-connect-card-auth {
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
 }
 
 .ob-connect-card-cta {
   color: var(--accentText);
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
 }
 
 /* ---- the connect dialog: one provider's ask, its own surface ---- */
@@ -1726,7 +1726,7 @@
 .ob-connect-dialog-title {
   margin: 0;
   color: var(--textPrimary);
-  font-family: var(--f-display);
+  font-family: var(--fontFamilyDisplay);
   text-align: center;
 }
 
@@ -1829,7 +1829,7 @@
 .ob-conv-activity > button > b {
   flex: none;
   margin-left: auto;
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1889,7 +1889,7 @@
   margin: 0;
   padding-top: var(--space-3);
   border-top: 1px solid var(--borderSubtle);
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
 }
 
 .ob-triage-readmore {
@@ -1985,14 +1985,14 @@
 }
 
 .ob-company-card-facts dt {
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
 }
 
 .ob-company-card-facts dd {
   margin: 0;
   overflow-wrap: anywhere;
   color: var(--textPrimary);
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
 }
 
 .ob-company-card-facts dd button {
@@ -2052,7 +2052,7 @@
   display: inline-flex;
   align-items: baseline;
   gap: var(--space-1);
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
   font-variant-numeric: tabular-nums;
 }
 /* The one action left on the surface, pinned to its foot: a real <progress>
@@ -2228,7 +2228,7 @@
   border-radius: var(--r-sm);
   background: none;
   cursor: pointer;
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
   text-align: start;
   transition:
     background 0.12s ease,
@@ -2283,7 +2283,7 @@
   display: inline-flex;
   align-items: center;
   flex: none;
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
   font-variant-numeric: tabular-nums;
 }
 
@@ -2305,7 +2305,7 @@
    no pill, no background: borrowing the blocking/advisory badge's shape
    would say a find is an obstacle, which it never is. */
 .ob-triage-nav-quantity {
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
   font-variant-numeric: tabular-nums;
 }
 
@@ -2342,7 +2342,7 @@
   border-radius: var(--r-sm);
   background: none;
   cursor: pointer;
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
   text-align: start;
   transition:
     background 0.12s ease,
@@ -2378,7 +2378,7 @@
      up with the fields it is counting rather than with the section above. */
   padding: var(--space-1) var(--space-3) var(--space-1)
     calc(var(--space-3) + var(--space-5));
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
 }
 
 /* The rows keep the short/prose tiers of the in-thread card; a row's own
@@ -2404,11 +2404,11 @@
 .ob-triage-group-head h3 {
   margin: 0;
   color: var(--textPrimary);
-  font-family: var(--f-display);
+  font-family: var(--fontFamilyDisplay);
 }
 
 .ob-triage-group-head span {
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
   font-variant-numeric: tabular-nums;
 }
 
@@ -2582,7 +2582,7 @@
 }
 
 .ob-triage-omitted .ob-triage-omitted-label {
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
 }
 
 /* Danger red is reserved for the ONE tier that actually stops confirm — the
@@ -2619,7 +2619,7 @@
 
 .ob-triage-solid-divider span {
   flex: none;
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
 }
 
 .ob-triage-solid-divider::after {
@@ -2684,7 +2684,7 @@
 
 .ob-triage-contact-name {
   color: var(--textPrimary);
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
 }
 
 /* The facts section: grouped by type, each group a quiet sub-heading over
@@ -3103,5 +3103,5 @@
 .ob-basis-section h3 {
   margin: 0;
   color: var(--textPrimary);
-  font-family: var(--f-display);
+  font-family: var(--fontFamilyDisplay);
 }

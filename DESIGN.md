@@ -215,9 +215,12 @@ for code alone: a mono face on an amount or a date dressed a business fact as
 machine output and shouted in a dense row, and `tabular-nums` gives a column the
 alignment mono was bought for.
 
-**The stylesheet draws no scale today.** One `html` rule in `app.css` reads
-`--fs-base`, `--lh-base`, `--fw-base` and `--textPrimary`; every element inherits
-all four; and the `.t-*` names in `base.css` are role hooks whose rules are
+**The stylesheet draws no role scale today.** One `body` rule in `app.css` reads
+`--fontBody` and the `html` rule above it `--textPrimary`; every element
+inherits both, and the root itself declares no font so `1rem` stays 16px; the three rem
+levels behind it — `--fontBodyLarge`, `--fontBody`, `--fontSmall`, each paired
+with its own `--paragraphSpacing*` and all on the browser's 1rem = 16px — are
+what a role rule will pick from; and the `.t-*` names in `base.css` are role hooks whose rules are
 layered on top of that root one at a time, each in its own change and each with
 its own gate. So every size, weight, tracking and neutral ink named anywhere else
 in this document is a TARGET for that rebuild rather than a description of the

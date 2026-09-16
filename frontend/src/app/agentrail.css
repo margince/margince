@@ -282,7 +282,7 @@
   align-items: baseline;
   gap: var(--space-1);
   min-width: 0;
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -750,7 +750,7 @@
   display: flex;
   align-items: center;
   gap: 5px; /* ds:ignore pip-to-word optics inside one label */
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
 }
 .arpstate i {
   width: 5px;
@@ -773,7 +773,7 @@
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -984,7 +984,7 @@
   /* The body face with tabular figures: `tabular-nums` lines the digits up
      without a second family, and the body face is narrow enough that the strip
      fits more of the sentence in the same rail. */
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -996,7 +996,7 @@
   gap: var(--space-1) var(--space-3);
   /* Prose, not a payload: this strip is label-and-value pairs with `<b>` and
      `<i>` inside it. Same reason as `.armuted` above. */
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
   font-variant-numeric: tabular-nums;
 }
 .armeta b {

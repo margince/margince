@@ -34,14 +34,14 @@ body {
      so a transparent body would borrow whatever is behind it and disagree with
      the foreground colour set here. */
   background: var(--bgElevated);
-  /* The family in the shorthand is system-ui, and NOT var(--f-body). That token
-     resolves to a web font, and a web font is a network request this document's
-     empty origin allowlist can never admit — it would silently fall back per
-     host instead of per design. A view can wear the product's colour and
-     rhythm; it cannot wear its typeface. */
-  font:
-    var(--fw-base) var(--fs-base) / var(--lh-base) system-ui,
-    sans-serif;
+  /* The size, leading and weight come from the product's own body token; the
+     family is overridden back to system-ui straight after it, because
+     `--fontBody` carries `--fontFamilyBody`, and that resolves to a web font —
+     a network request this document's empty origin allowlist can never admit,
+     so it would silently fall back per host instead of per design. A view can
+     wear the product's colour and rhythm; it cannot wear its typeface. */
+  font: var(--fontBody);
+  font-family: system-ui, sans-serif;
   color: var(--textPrimary);
 }
 

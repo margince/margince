@@ -36,7 +36,7 @@
      face, in its own tone, left of the sentence that says why. A word rather
      than a pill, because a pill reads as a status somebody applied and this
      is the reading itself. */
-  font-family: var(--f-display);
+  font-family: var(--fontFamilyDisplay);
   white-space: nowrap;
 }
 

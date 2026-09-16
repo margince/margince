@@ -27,12 +27,10 @@
   display: flex;
   flex: none;
   align-items: center;
-  /* The glyph centres on the heading's OWN first line, rather than on an offset
-   * typed once and left behind: the box is exactly one line of body text tall,
-   * so the pair stays aligned when the root type moves. A 2px nudge was the
-   * previous answer, and it sat the glyph below the cap it was meant to be
-   * beside. */
-  block-size: calc(var(--fs-base) * var(--lh-base));
+  /* The glyph centres on the heading's OWN first line: `1lh` is one line of the
+   * type this element already inherits, so the pair stays aligned when that
+   * type moves. */
+  block-size: 1lh;
 }
 
 /* Everything between the icon and the dismiss: the words, then the verbs on the

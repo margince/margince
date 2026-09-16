@@ -161,7 +161,7 @@
   gap: 6px;
   /* The face only: this chrome runs on the body font, where the shared
      `.t-eyebrow` class the element carries is agnostic. */
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
 }
 
 /* The hairline that makes five stops one rail. Drawn, not marked up: a
@@ -254,13 +254,13 @@
    respelled it is how five of them came to disagree at 11px and 12px. */
 .mw-identity span {
   display: block;
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
 }
 
 .mw-identity h1 {
   margin: 2px 0 0;
   color: var(--textPrimary);
-  font-family: var(--f-display);
+  font-family: var(--fontFamilyDisplay);
 }
 
 .mw-identity p {
@@ -376,7 +376,7 @@
 .mw-aistat-h,
 .mw-aistat-f {
   margin: 0;
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
 }
 
 /* The popover's subject is the machine, so its header reads the AI family
@@ -418,7 +418,7 @@
   display: block;
   margin-top: 2px;
   color: var(--warnText);
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
 }
 
 /* --- right column: the artifact --------------------------------------- */
@@ -527,7 +527,7 @@
 }
 
 .mw-progress-label {
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -615,7 +615,7 @@
 }
 
 .mw-shell.is-rail .mw-aifooter-label {
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
 }
 
 .mw-shell.is-rail .mw-aistat,
@@ -641,7 +641,7 @@
    line never has to carry them. */
 .mw-shell.is-rail .mw-aifooter-model {
   overflow: hidden;
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -686,7 +686,7 @@
 }
 
 .mw-shell.is-rail .mw-contact-id small {
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

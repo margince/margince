@@ -206,7 +206,7 @@
   margin: 0 0 var(--space-3);
   padding-bottom: var(--space-3);
   border-bottom: 1px solid var(--borderSubtle);
-  font-family: var(--f-display);
+  font-family: var(--fontFamilyDisplay);
   color: var(--textPrimary);
 }
 
@@ -1183,7 +1183,7 @@
 .today-lead-note {
   display: block;
   margin-block-start: var(--space-2);
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
 }
 /* What the day's work could NOT be read from, under whatever rows there are.
    Inset to the panel's own padding and set at meta size: it qualifies the
@@ -1526,7 +1526,7 @@
    here. A size of its own would be a second answer to the question every panel
    head answers once. */
 .co-360-title .co-360-subject {
-  font-family: var(--f-display);
+  font-family: var(--fontFamilyDisplay);
   color: var(--textPrimary);
 }
 

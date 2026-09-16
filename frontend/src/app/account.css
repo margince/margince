@@ -33,7 +33,7 @@
   corner-shape: round;
   background: transparent;
   color: var(--textPrimary);
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
   cursor: pointer;
 }
 .account .user:hover {
@@ -145,7 +145,7 @@
   border: 0;
   border-radius: var(--r-sm);
   background: transparent;
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
   text-align: left;
   text-decoration: none;
   cursor: pointer;

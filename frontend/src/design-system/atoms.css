@@ -20,7 +20,7 @@
   max-inline-size: 100%;
   /* Type is stated, never inherited: a badge in an eyebrow heading or inside a
      code sample must read as the badge beside it everywhere else. */
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
   font-style: normal;
   min-block-size: 20px;
   padding: 0 8px;
@@ -767,7 +767,7 @@
   gap: 2px;
 }
 .segmented button {
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
   border: 0;
   /* Transparent, so an unpressed option is read on the TRACK's --bgChip and
      takes the chip's ink accordingly. The pressed one below lifts onto its own
@@ -819,7 +819,7 @@
  * first. */
 .link-button,
 .btn.btn-link {
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
   color: var(--accentText);
   background: transparent;
   border: 0;
@@ -944,7 +944,7 @@
    baseline-aligned with the subtitle beside it. */
 .section-header h1 {
   margin: 0;
-  font-family: var(--f-display);
+  font-family: var(--fontFamilyDisplay);
   color: var(--textPrimary);
 }
 /* A measure, not a width: a description that runs the whole width of a wide
@@ -1115,7 +1115,7 @@
    the button that submits it are the same box on screen, and before the floor
    existed they computed 40.25px and 38.25px independently. */
 .input {
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
   color: var(--textPrimary);
   background: var(--bgElevated);
   border: 1px solid var(--borderSubtle);
@@ -1417,7 +1417,7 @@
    three that did not (the ask panel, the onboarding company form, the activity
    logger) rendered a short box in a wide field. */
 .textarea {
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
   color: var(--textPrimary);
   background: var(--bgElevated);
   border: 1px solid var(--borderSubtle);
@@ -1851,7 +1851,7 @@
    holds one line. A screen that re-sizes this is the second author of a scale
    this tier owns. */
 .stat-card-value {
-  font-family: var(--f-display);
+  font-family: var(--fontFamilyDisplay);
   font-variant-numeric: tabular-nums;
   color: var(--textPrimary);
   overflow-wrap: anywhere;

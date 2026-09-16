@@ -109,7 +109,7 @@ button.evidence-chip:hover {
    in the display face: it is the row's one headline. */
 .staging-card .approval-headline {
   margin-top: var(--space-2);
-  font-family: var(--f-display);
+  font-family: var(--fontFamilyDisplay);
 }
 /* The sentence explaining the headline above it — why this is staged, not what
    it says. Close to what it explains: a full line's air between the two would
@@ -147,7 +147,7 @@ button.evidence-chip:hover {
 }
 
 .staged-edit {
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
   color: var(--textPrimary);
   background: var(--bgElevated);
   border: 1px solid var(--accent);

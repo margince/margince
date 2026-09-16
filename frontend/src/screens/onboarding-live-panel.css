@@ -35,7 +35,7 @@
   padding: var(--space-3) var(--space-3);
   background: transparent;
   border: 0;
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
   text-align: left;
   color: var(--textPrimary);
   cursor: pointer;
@@ -67,7 +67,7 @@
 .ob-live-card-count {
   flex: 0 1 auto;
   min-width: 0;
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
   font-variant-numeric: tabular-nums;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -76,7 +76,7 @@
 
 .ob-live-card-toggle {
   flex: none;
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
   color: var(--accentText);
 }
 
@@ -118,7 +118,7 @@
 }
 
 .ob-live-coverage-label {
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
 }
 
 /* Four gaps, and only the two faults are tinted. A page that could not be read

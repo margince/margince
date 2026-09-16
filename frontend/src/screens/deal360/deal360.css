@@ -8,7 +8,7 @@
  * else. */
 .d360-pulse {
   margin: var(--space-2) 0 0;
-  font-family: var(--f-display);
+  font-family: var(--fontFamilyDisplay);
   color: var(--textPrimary);
   text-wrap: balance;
 }

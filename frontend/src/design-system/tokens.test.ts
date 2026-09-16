@@ -99,9 +99,9 @@ const canonical: Record<string, string> = {
   "--r-md": "16px",
   "--r-lg": "20px",
   "--r-full": "9999px",
-  "--f-display": '"Outfit",system-ui,sans-serif',
-  "--f-body": '"Geist",system-ui,sans-serif',
-  "--f-mono": '"Geist Mono",ui-monospace,monospace',
+  "--fontFamilyDisplay": '"Outfit",system-ui,sans-serif',
+  "--fontFamilyBody": '"Geist",system-ui,sans-serif',
+  "--fontFamilyMono": '"Geist Mono",ui-monospace,monospace',
 };
 
 function normalize(value: string): string {
@@ -177,10 +177,13 @@ describe("the token block's shape", () => {
       "--space-16",
       "--control-h",
       "--control-h-sm",
-      "--fs-base",
-      "--lh-base",
-      "--fw-base",
-      "--f-body",
+      "--fontBodyLarge",
+      "--paragraphSpacingLarge",
+      "--fontBody",
+      "--paragraphSpacing",
+      "--fontSmall",
+      "--paragraphSpacingSmall",
+      "--fontFamilyBody",
       "--phoneNavClearance",
     ]) {
       expect(light[name], `${name} missing from :root`).toBeTruthy();

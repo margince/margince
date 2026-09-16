@@ -475,7 +475,7 @@
   white-space: nowrap;
 }
 .rail .ws-logo-product {
-  font-family: var(--f-display);
+  font-family: var(--fontFamilyDisplay);
   color: var(--textPrimary);
 }
 .rail.collapsed .ws-logo {
@@ -869,7 +869,7 @@
      two got to disagree; there is one now. */
   background: var(--bgCard);
   color: var(--textPrimary);
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
   text-align: left;
 }
 /* The chevron leads the movement it stands for: it pulls back the way the reader
@@ -957,7 +957,7 @@
 
 .pagetitle h1 {
   margin: 0;
-  font-family: var(--f-display);
+  font-family: var(--fontFamilyDisplay);
   /* This heading names a SECTION, never a record — a record's own surface prints
      its name. Section titles are translated strings, so wrapping here guards
      against a long translation, not against user data. */
@@ -1017,7 +1017,7 @@
   border-radius: var(--r-md);
   background: var(--bgElevated);
   color: var(--textPrimary);
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
   text-align: left;
   cursor: pointer;
 }
@@ -1113,7 +1113,7 @@
   border: 0;
   outline: none;
   background: transparent;
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
   color: var(--textPrimary);
 }
 .palette-list {
@@ -1131,7 +1131,7 @@
   padding: var(--space-2);
   border-radius: var(--r-sm);
   cursor: pointer;
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
   text-align: left;
 }
 .palette-row svg {
@@ -1749,7 +1749,7 @@
   border-radius: var(--r-sm);
   background: var(--bgElevated);
   color: var(--textPrimary);
-  font-family: var(--f-body);
+  font-family: var(--fontFamilyBody);
   /* A hand-rolled field, wearing the floor the design system's own fields wear
      — a reader cannot tell this box apart from theirs, so its depth may not
      disagree with them. */

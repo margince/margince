@@ -29,9 +29,14 @@ arrive through props, translated by the caller with `t()`.
 
 ## Type comes from the root
 
-**One rule sets the type for the whole product.** `html` in `app.css` reads
-`--fs-base`, `--lh-base`, `--fw-base` and `--textPrimary`, and a reset beside it
-hands the same four to the elements a browser would otherwise scale itself. So
+**One rule sets the type for the whole product.** `body` in `app.css` reads
+`--fontBody` and `html` beside it reads `--textPrimary`, and a reset hands both
+to the elements a browser would otherwise scale itself. The ROOT declares no
+font, so `1rem` stays the browser's 16px for everyone. Sizes, leading and paragraph
+spacing are all rem on the browser's own 1rem = 16px: `--fontBodyLarge` with
+`--paragraphSpacingLarge` for comfortable reading, `--fontBody` with
+`--paragraphSpacing` as the platform default, `--fontSmall` with
+`--paragraphSpacingSmall` used sparingly. So
 everything inherits, and there is no size, leading, weight or neutral ink to pick
 at a call site. `src/mcp-apps/view.css` carries that shape for the standalone views.
 
@@ -43,7 +48,7 @@ with its own gate.
 code — `code`, `pre`, `samp`, `.code-block` — through one rule in `base.css` and
 by nothing else: an id, a key, a URL and an amount are read, not run, and a
 figure that must line up wears `.t-num` (`font-variant-numeric: tabular-nums`)
-instead. `--f-mono` is the one token that spells it; `design-system/mono.test.ts`
+instead. `--fontFamilyMono` is the one token that spells it; `design-system/mono.test.ts`
 with `check-font-lock.sh` fails the `t-mono` class, a mono family on any other
 selector, a second token carrying one, or one in an inline style.
 
@@ -518,7 +523,7 @@ the shell script it replaced could not.
 |---|---|
 | `make native-controls` (`src/design-system/native-controls.test.ts`) | `<select>` / `<option>` / `<optgroup>` anywhere under `src/`, and in every extension frontend layer — with **no exemption**, `design-system/select.tsx` included: it contains no native control, so the old shell gate's path exemption covered nothing |
 | `frontend/scripts/check-ds-purity.sh` | A hex literal or `rgb()`/`hsl()`/`oklch()` outside `tokens.css` |
-| `frontend/scripts/check-font-lock.sh` | A fourth type family; and mono outside code — the `t-mono` class anywhere, a `font-family`/`font` naming a mono family on a rule whose selectors do not all have `code`, `pre`, `samp` or `.code-block` as their subject, a custom property carrying one other than `--f-mono` in `tokens.css`, a mono family in a TS string. `check-font-lock.test.sh` plants each shape and each allowed one, and requires the verdict |
+| `frontend/scripts/check-font-lock.sh` | A fourth type family; and mono outside code — the `t-mono` class anywhere, a `font-family`/`font` naming a mono family on a rule whose selectors do not all have `code`, `pre`, `samp` or `.code-block` as their subject, a custom property carrying one other than `--fontFamilyMono` in `tokens.css`, a mono family in a TS string. `check-font-lock.test.sh` plants each shape and each allowed one, and requires the verdict |
 | `design-system/mono.test.ts` | The same mono rule read properly: comments skipped, selectors resolved through nesting and `@media`, `style` and `<style>` in HTML, class names and inline `fontFamily` read from the syntax tree of every TS/TSX file under `src/`, `e2e/`, `.storybook/` and every extension frontend layer |
 | `frontend/scripts/check-icon-glyph.sh` | An emoji glyph in a source string — Lucide only |
 | `frontend/scripts/check-ds-spacing.sh` | New raw-px margin/padding/gap outside this tier (diff-scoped) |
