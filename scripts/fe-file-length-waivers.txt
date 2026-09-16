@@ -92,7 +92,6 @@
 592 frontend/src/screens/rates.tsx
 612 frontend/src/app/account.tsx
 612 frontend/src/design-system/trust.tsx
-613 frontend/src/design-system/select.tsx
 616 frontend/src/screens/logactivity.tsx
 617 frontend/src/screens/dealroomaccess.tsx
 617 frontend/src/screens/taskactions.tsx
