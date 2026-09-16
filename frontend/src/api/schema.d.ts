@@ -46774,6 +46774,17 @@ export interface operations {
             query?: {
                 /** @description Max items in the page. */
                 limit?: components["parameters"]["Limit"];
+                /**
+                 * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
+                 *     effective `sort` of the originating request (field + direction) plus the last row's keyset
+                 *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
+                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     together with a `sort` that differs from the one the cursor was minted under returns
+                 *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
+                 *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
+                 *     remaining pages see, so re-issue the query without the cursor when changing filters.
+                 */
+                cursor?: components["parameters"]["Cursor"];
             };
             header?: never;
             path: {
@@ -46784,7 +46795,11 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Delivery attempts, newest first. */
+            /**
+             * @description Delivery attempts, newest first. `page.next_cursor` continues the walk: the bound
+             *     cuts the OLDEST attempts, which on a failing subscription are the parked ones an
+             *     operator opened this surface to find.
+             */
             200: {
                 headers: {
                     [name: string]: unknown;
