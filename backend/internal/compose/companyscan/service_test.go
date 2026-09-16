@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -127,7 +129,7 @@ func TestTheMergeKeepsOneRowPerSituationAndReportsTheCap(t *testing.T) {
 	rules := []crmcontracts.Company360Suggestion{suggestion("a"), suggestion("b")}
 	read := []crmcontracts.Company360Suggestion{suggestion("b"), suggestion("c"), suggestion("d"), suggestion("e"), suggestion("f")}
 
-	merged, dropped := merge(rules, read)
+	merged, dropped := applyCap(merge(rules, read))
 	if len(merged) != maxAdvice || dropped != 1 {
 		t.Fatalf("merged %d, dropped %d; want %d and 1", len(merged), dropped, maxAdvice)
 	}
@@ -153,5 +155,138 @@ func TestTheScanBelongsToAHumanAndNobodyElse(t *testing.T) {
 	human := principal.WithActor(t.Context(), principal.Principal{Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user})
 	if got, err := svc.caller(human); err != nil || got.UUID != user {
 		t.Errorf("a human: %v, %v; want their own id", got, err)
+	}
+}
+
+// Retraction: a stored finding outlives the record it was written from. The
+// scan runs, the reader archives the email, and the card must go with it —
+// otherwise it quotes a subject the reader can no longer open and offers a
+// "Create draft" the composer refuses.
+
+func activityID(last byte) openapi_types.UUID {
+	var raw [16]byte
+	raw[15] = last
+	return openapi_types.UUID(raw)
+}
+
+func citing(list ...openapi_types.UUID) crmcontracts.Company360Suggestion {
+	return citingAs("fp", list...)
+}
+
+func citingAs(fingerprint string, list ...openapi_types.UUID) crmcontracts.Company360Suggestion {
+	evidence := make([]crmcontracts.CompanyBriefEvidence, 0, len(list))
+	for _, id := range list {
+		evidence = append(evidence, crmcontracts.CompanyBriefEvidence{
+			EntityType: crmcontracts.CompanyBriefEvidenceEntityTypeActivity,
+			EntityId:   id,
+		})
+	}
+	return crmcontracts.Company360Suggestion{Fingerprint: fingerprint, Evidence: evidence}
+}
+
+func standingSet(list ...openapi_types.UUID) map[ids.UUID]bool {
+	out := map[ids.UUID]bool{}
+	for _, id := range list {
+		out[ids.UUID(id)] = true
+	}
+	return out
+}
+
+func TestAFindingWhoseOnlyCitedRecordIsGoneIsRetracted(t *testing.T) {
+	gone := activityID(1)
+	if kept := keepCited([]crmcontracts.Company360Suggestion{citing(gone)}, standingSet()); len(kept) != 0 {
+		t.Errorf("kept %d findings; want the archived one retracted", len(kept))
+	}
+}
+
+func TestAFindingWithOneStandingRecordAmongArchivedOnesStays(t *testing.T) {
+	gone, live := activityID(1), activityID(2)
+	kept := keepCited([]crmcontracts.Company360Suggestion{citing(gone, live)}, standingSet(live))
+	if len(kept) != 1 {
+		t.Errorf("kept %d findings; want the one with evidence left standing", len(kept))
+	}
+}
+
+// A rule that fires on the account's shape rather than on one record has no
+// citation to lose, so nothing about an archived email retracts it.
+func TestAFindingCitingNoActivityIsNeverRetracted(t *testing.T) {
+	shapeRule := crmcontracts.Company360Suggestion{Fingerprint: "no_next_step"}
+	if kept := keepCited([]crmcontracts.Company360Suggestion{shapeRule}, standingSet()); len(kept) != 1 {
+		t.Errorf("kept %d findings; want a rule with no citation untouched", len(kept))
+	}
+}
+
+// The "Create draft" anchor is its own reason. The composer reads it live and
+// refuses an archived one, so a finding still holding other evidence but
+// anchored on a gone record offers a button that cannot work.
+func TestAFindingWhoseDraftAnchorIsGoneIsRetracted(t *testing.T) {
+	gone, live := activityID(1), activityID(2)
+	finding := citing(live)
+	finding.Action = &struct {
+		//nolint:staticcheck // the generated contract's own field names.
+		ActivityId *openapi_types.UUID `json:"activity_id,omitempty"`
+		//nolint:staticcheck // as above.
+		DealId *openapi_types.UUID                         `json:"deal_id,omitempty"`
+		Kind   crmcontracts.Company360SuggestionActionKind `json:"kind"`
+		Task   *crmcontracts.CreateTaskRequest             `json:"task,omitempty"`
+	}{ActivityId: &gone, Kind: crmcontracts.Company360SuggestionActionKindDraftReply}
+
+	if kept := keepCited([]crmcontracts.Company360Suggestion{finding}, standingSet(live)); len(kept) != 0 {
+		t.Errorf("kept %d findings; want the one whose draft anchor is gone retracted", len(kept))
+	}
+}
+
+// Nothing gone means nothing retracted — the ordinary read is untouched.
+func TestNothingIsRetractedWhenEveryCitedRecordStands(t *testing.T) {
+	first, second := activityID(1), activityID(2)
+	findings := []crmcontracts.Company360Suggestion{citing(first), citing(second)}
+	if kept := keepCited(findings, standingSet(first, second)); len(kept) != 2 {
+		t.Errorf("kept %d findings; want both", len(kept))
+	}
+}
+
+// Retraction runs before the cap, so a retracted finding does not hold a slot
+// against a live one and the reported drop count stays the cap's own.
+func TestARetractedFindingDoesNotHoldASlotAgainstALiveOne(t *testing.T) {
+	gone := activityID(99)
+	merged := make([]crmcontracts.Company360Suggestion, 0, maxAdvice+1)
+	merged = append(merged, citing(gone))
+	live := make([]openapi_types.UUID, 0, maxAdvice)
+	for i := range maxAdvice {
+		id := activityID(byte(i))
+		live = append(live, id)
+		merged = append(merged, citing(id))
+	}
+
+	findings, dropped := applyCap(keepCited(merged, standingSet(live...)))
+	if len(findings) != maxAdvice || dropped != 0 {
+		t.Fatalf("findings %d, dropped %d; want %d and 0", len(findings), dropped, maxAdvice)
+	}
+	for _, finding := range findings {
+		if finding.Evidence[0].EntityId == gone {
+			t.Errorf("the retracted finding survived the cap")
+		}
+	}
+}
+
+// Every activity a finding names, including the one only its ACTION names. The
+// anchor is what the "Create draft" button opens, so a probe that asked only
+// about evidence would leave the button unchecked — which is the control the
+// defect was reported through.
+func TestTheCitationCensusReachesTheActionAnchorAndDedupes(t *testing.T) {
+	anchor, shared := activityID(1), activityID(2)
+	withAnchor := citing(shared)
+	withAnchor.Action = &struct {
+		//nolint:staticcheck // the generated contract's own field names.
+		ActivityId *openapi_types.UUID `json:"activity_id,omitempty"`
+		//nolint:staticcheck // as above.
+		DealId *openapi_types.UUID                         `json:"deal_id,omitempty"`
+		Kind   crmcontracts.Company360SuggestionActionKind `json:"kind"`
+		Task   *crmcontracts.CreateTaskRequest             `json:"task,omitempty"`
+	}{ActivityId: &anchor, Kind: crmcontracts.Company360SuggestionActionKindDraftReply}
+
+	cited := citedActivities([]crmcontracts.Company360Suggestion{withAnchor, citing(shared)})
+	if len(cited) != 2 {
+		t.Fatalf("cited = %v; want the anchor and the shared record, each once", cited)
 	}
 }

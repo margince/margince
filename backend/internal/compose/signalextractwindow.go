@@ -111,7 +111,8 @@ func threadWindow(
 		                OR (occurred_at, id) < ($4, $5::uuid))
 		         ORDER BY occurred_at DESC, id DESC
 		         LIMIT $3) tail
-		 ORDER BY occurred_at, id`, extractBodyLimit, key, extractThreadMessages, olderThan, olderThanID)
+		 ORDER BY occurred_at, id`, extractBodyLimit, key, extractThreadMessages,
+		olderThan, olderThanID)
 	if err != nil {
 		return nil, fmt.Errorf("read the conversation: %w", err)
 	}

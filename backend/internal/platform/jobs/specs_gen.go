@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "2eb8b30e38d936643f15f9c8b7804da795d0e6a5ecee996de02d8a34648a18ef"
+const JobContractHash = "a1a0ebcbb9ff1c02a6233dc9ebbfc2983d8a3f67b5dde0426f918a95ec78dcd8"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -551,27 +551,6 @@ var specs = map[string]Spec{
 		OptsOwner: OptsCaller,
 		Cadence:   Cadence{Fixed: 1 * time.Hour},
 	},
-	"overlay_reconcile": {
-		Kind:         "overlay_reconcile",
-		GoType:       "OverlayReconcileArgs",
-		Role:         Worker,
-		Fleet:        true,
-		Queue:        "overlay_reconcile",
-		Timeout:      TimeoutPolicy{Fixed: 20 * time.Minute},
-		OptsOwner:    OptsCaller,
-		Cadence:      Cadence{OperatorField: "OverlayInterval"},
-		Registration: Registration{When: []string{"OverlayVault"}},
-	},
-	"overlay_refetch": {
-		Kind:         "overlay_refetch",
-		GoType:       "OverlayRefetchArgs",
-		Role:         Worker,
-		Queue:        "default",
-		Timeout:      TimeoutPolicy{Fixed: 2 * time.Minute},
-		OptsOwner:    OptsCaller,
-		Registration: Registration{When: []string{"OverlayVault"}},
-		Args:         []ArgField{{Name: "ExternalID"}, {Name: "IncumbentClass", Scalar: true, Reason: "the incumbent's object class (contacts, companies, deals, leads). It is half the coalescing key River dedupes these re-fetches by -- the args ARE that key — so it cannot be resolved at work time; it names a class of record in another system, never a record."}, {Name: "Workspace"}},
-	},
 	"owed_verdict": {
 		Kind:         "owed_verdict",
 		GoType:       "OwedVerdictArgs",
@@ -808,7 +787,6 @@ var queues = map[string]int{
 	"deep_read":         2,
 	"default":           5,
 	"geocode":           1,
-	"overlay_reconcile": 1,
 	"privacy_retention": 2,
 	"rate_refresh":      2,
 	"technical_lookup":  1,

@@ -9,7 +9,6 @@
 # so this file cannot rot into "pages allowed to be long".
 docs/evidence/extension-tier/DESIGN.md
 docs/how-to/add-an-extension.md
-docs/how-to/flip-an-overlay-to-native.md
 docs/principles/one-source-of-truth.md
 docs/reference/agent-tools.md
 docs/reference/configuration.md

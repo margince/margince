@@ -74,9 +74,6 @@
 - name: "area: frontend"
   color: "BFD4F2"
   description: "SPA, design system, screens, Storybook, i18n"
-- name: "area: overlay"
-  color: "BFD4F2"
-  description: "External system-of-record mirror, HubSpot, flip and import"
 - name: "area: platform"
   color: "BFD4F2"
   description: "Database, migrations, events and outbox, config, boot, workers, Docker and deploy"
@@ -141,6 +138,9 @@
 - name: "margince-qc"
   color: "0052CC"
   description: "Found by margince-qc, the UAT acceptance-test repo, while building or running a scenario"
+- name: "schema-review"
+  color: "5319E7"
+  description: "Found by the table-by-table database review; the fix is a migration or a column contract"
 
 # ---------------------------------------------------------------------------
 # GitHub's own defaults, kept because they are what a drive-by contributor and

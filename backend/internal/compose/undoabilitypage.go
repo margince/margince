@@ -239,8 +239,8 @@ func auditSubjectsOf(rows []pageRow) (types []string, subjects []ids.UUID) {
 // advisoryEvaluator is the page's evaluator: every port the WRITE binds, with
 // the ones the page already holds facts for answered from those facts. Derived
 // from the binding evaluator rather than assembled beside it, so a port added
-// to the write is bound here without anyone remembering — which is how the page
-// came to omit ExternallyGoverned and light a restore button the write refuses.
+// to the write is bound here without anyone remembering — which is how a page
+// comes to omit one and light a restore button the write refuses.
 // Held by TestTheAdvisoryPathAnswersFromThePageFacts.
 //
 // The erasure boundary is the one fact a page cannot hold for every row: a

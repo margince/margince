@@ -24,10 +24,10 @@ shared  →  platform  →  modules  →  compose  →  cmd
   `database/storekit` (the one spelling of the write shape), `auth` (the
   one admission point), `events` (outbox relay/subscriber/dedupe),
   `dbmigrate`, `httperr`, `httpserver`.
-- **`internal/modules/`** — the twenty bounded capabilities (identity,
+- **`internal/modules/`** — the nineteen bounded capabilities (identity,
   contacts, deals, activities, approvals, agents, automation, ai, search,
   capture, comms, consent, privacy, collections, signals, customfields,
-  webhooks, overlay, migration; the `de` jurisdiction pack is an
+  webhooks, migration; the `de` jurisdiction pack is an
   extension under `extensions/`, not a module). A
   module package starts flat (store + mapping + transport + provider in
   one package) and earns a subpackage only under the

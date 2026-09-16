@@ -200,8 +200,14 @@ export function contactCreateFields(t: ReturnType<typeof useT>): CreateField[] {
 }
 
 // Creation and Details share the same address types and primary semantics.
+// The pane edits the name the record is KNOWN by, and only that: the split
+// parts are taken at creation for the greeting a mail merge needs, and a pane
+// that listed all three drew the same name three times in a column a reader
+// scans for what differs.
 export function contactEditFields(t: ReturnType<typeof useT>): CreateField[] {
-  return contactCreateFields(t);
+  return contactCreateFields(t).filter(
+    (field) => field.key !== "first_name" && field.key !== "last_name",
+  );
 }
 
 // Compare replace-sets in their request shape; row ids and server metadata

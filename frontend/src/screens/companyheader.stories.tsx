@@ -4,12 +4,14 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent } from "storybook/test";
 import type { components } from "../api/schema";
+import { company360 } from "./company.fixtures";
 import {
   CompanyActionBadges,
-  CompanyIdentityLine,
   CompanyLifecycleControl,
-  CompanyPrimaryActions,
+  CompanyRelationshipBadges,
 } from "./companyheader";
+import { CompanyHeaderActions } from "./companyheaderactions";
+import { CompanyIdentityFacts, CompanySubtitle } from "./companyheaderfacts";
 import {
   installFetchStub,
   jsonResponse,
@@ -17,7 +19,7 @@ import {
   StoryProviders,
 } from "./story-utils";
 
-// The account header's own pieces (RecordView's nameBadge/subtitle/pulse/
+// The account header's own pieces (RecordView's nameBadge/pulse/badges/
 // actions slots in companies.tsx), mounted together rather than through
 // the whole record page: the header does not own a screen of its own, so
 // reaching for it through CompanyScreen would drag in every other tab's reads.
@@ -34,7 +36,7 @@ type View = components["schemas"]["Company360"];
 
 const page = { has_more: false, next_cursor: null };
 
-const company = {
+const company: Company = {
   id: "o-1",
   workspace_id: "w-1",
   display_name: "Brandt Automotive GmbH",
@@ -44,7 +46,15 @@ const company = {
   industry: "Automotive",
   size_band: "51-200",
   description: "Retrofits commercial fleets for zero-emission depots.",
-  domains: [{ domain: "brandt.example", is_primary: true, source: "manual" }],
+  domains: [
+    {
+      id: "dom-1",
+      domain: "brandt.example",
+      is_primary: true,
+      source: "manual",
+      captured_by: "human:u1",
+    },
+  ],
   captured_by: "human:u1",
   source: "manual",
   version: 1,
@@ -53,12 +63,13 @@ const company = {
   // as nothing rather than a legible date.
   created_at: "2026-06-01T08:00:00Z",
   updated_at: "2026-06-01T08:00:00Z",
-} as unknown as Company;
+};
 
 // The "way in" — the contact the relationship actually runs through — plus a
 // last exchange date. Both are withheld together whenever the 360 is still
 // loading, so this is the state a reader sees once it lands.
-const withWayIn = {
+const withWayIn: View = {
+  ...company360,
   as_of: "2026-06-01T09:00:00Z",
   company: company,
   sections_omitted: [],
@@ -71,12 +82,13 @@ const withWayIn = {
   },
   last_inbound_at: "2026-05-28T10:00:00Z",
   last_outbound_at: "2026-05-30T14:00:00Z",
-} as unknown as View;
+};
 
 // No contact has yet earned the "way in" — an account with an owner and a
 // touch history but nobody who carries the relationship. `strength` is
 // present (the 360 always returns it) but empty of a contributor.
-const noWayIn = {
+const noWayIn: View = {
+  ...company360,
   ...withWayIn,
   strength: {
     score: 0,
@@ -85,12 +97,12 @@ const noWayIn = {
     contributor_contact_id: null,
     factors: { recency: 0, frequency: 0, reciprocity: 0, direction: 0 },
   },
-} as unknown as View;
+};
 
-// The roster the owner control reads, and — since the identity line resolves
-// `captured_by` against the same `["users"]` entry — the only place a record's
-// AUTHOR can be named from. Mira owns the account; Sofia wrote the row, and is
-// here so one story can show that second half.
+// The roster the owner control reads, and, since the facts strip's Source
+// fact resolves `captured_by` against the same `["users"]` entry, the only
+// place a record's AUTHOR can be named from. Mira owns the account; Sofia
+// wrote the row, and is here so one story can show that second half.
 const roster = [
   { id: "u-1", display_name: "Mira Voss" },
   { id: "u-2", display_name: "Sofia Meier" },
@@ -120,8 +132,7 @@ function Header({
   return (
     <StoryProviders>
       <div style={{ maxWidth: 640 }}>
-        <CompanyLifecycleControl company={record} />
-        <CompanyIdentityLine company={record} view={view} loading={loading} />
+        <CompanySubtitle company={record} />
         <div
           style={{
             marginTop: "var(--space-2)",
@@ -129,10 +140,23 @@ function Header({
             gap: "var(--space-2)",
           }}
         >
-          <CompanyPrimaryActions
+          <CompanyLifecycleControl company={record} />
+          <CompanyRelationshipBadges company={record} />
+        </div>
+        <CompanyIdentityFacts company={record} view={view} loading={loading} />
+        <div
+          style={{
+            marginTop: "var(--space-2)",
+            display: "flex",
+            gap: "var(--space-2)",
+          }}
+        >
+          <CompanyHeaderActions
             company={record}
             composerOpen={false}
             onComposerOpen={() => {}}
+            drawer={null}
+            onDrawer={() => {}}
           />
           <CompanyActionBadges
             company={record}
@@ -146,7 +170,7 @@ function Header({
   );
 }
 
-// The three stories below all render the quiet line's FALLBACK provenance,
+// The three stories below all render the Source fact's FALLBACK provenance,
 // "typed by a person": the fixture's `captured_by` names `u1`, which is nobody
 // the roster answers with, and an author the roster cannot resolve is not named
 // with the raw uuid. That is the state a record lands in when its author is
@@ -162,10 +186,10 @@ export const Loading: Story = {
 };
 
 // The other half of the provenance tag, and the state the header did not show
-// until the identity line was given the roster: the NAMED author, "typed by
-// Sofia Meier", beside the date the record was created. `captured_by` names a
-// colleague the roster answers with, and one this viewer is not — the tag reads
-// "typed by you" for the reader's own writing.
+// until the facts strip was given the roster: the NAMED author, "typed by
+// Sofia Meier", beside the Created fact. `captured_by` names a colleague the
+// roster answers with, and one this viewer is not, so the tag reads "typed by
+// you" for the reader's own writing.
 export const AuthorNamed: Story = {
   render: () => (
     <Header

@@ -23,12 +23,9 @@ import "./surfacestate.css";
  * one that knows. Rendering the other three as empty states a fact the page
  * does not have — the reader sees "no open deals" and stops looking.
  *
- * The §7 matrix adds four more, each of which would otherwise be drawn as one
+ * The §7 matrix adds three more, each of which would otherwise be drawn as one
  * of the above and lose what makes it different:
  *
- *   unsupported — this MODE cannot serve the section (an overlay-only
- *                 installation and a native composite section). Distinct from
- *                 unavailable: nothing is broken and retrying changes nothing.
  *   failed      — the read failed and can be retried. `onRetry` is what makes
  *                 it a different state from unavailable rather than a
  *                 differently-worded one.
@@ -44,7 +41,6 @@ export type SectionState =
   | "withheld"
   | "unavailable"
   | "loading"
-  | "unsupported"
   | "failed"
   | "stale"
   | "partial";
@@ -100,10 +96,10 @@ export function omitted<Section extends string>(
 /**
  * What sectionState can actually answer.
  *
- * `failed`, `unsupported`, `stale` and `partial` are not derivable from a
- * withholding view and a row count — each needs something only the caller
- * knows: a retry, a mode limitation, an as-of, a remainder. So each is the
- * caller's to pass, and this function never returns one.
+ * `failed`, `stale` and `partial` are not derivable from a withholding view
+ * and a row count — each needs something only the caller knows: a retry, an
+ * as-of, a remainder. So each is the caller's to pass, and this function never
+ * returns one.
  *
  * Stated in the signature rather than left to `SectionState`, because a return
  * type wider than the behaviour pushes callers into handling states that cannot
@@ -152,9 +148,6 @@ export type SectionDetail = {
   // How many rows the caller is NOT seeing. A truncation nobody states reads
   // as the whole list.
   remaining?: number;
-  // Which mode limitation this is, in the caller's words. The generic
-  // sentence is the floor, not the target.
-  unsupportedReason?: string;
   // WHY this section was withheld and what it costs the reader, in the
   // caller's words. The generic "you cannot see this" is true of every
   // withheld section and tells a reader nothing about what is missing from
@@ -255,11 +248,6 @@ export function SurfaceState({
           label={loadingLabel ?? t("state.loading")}
           lines={loadingLines}
         />
-      )}
-      {state === "unsupported" && (
-        <p className="surfacestate-withheld">
-          {detail?.unsupportedReason ?? t("state.unsupported")}
-        </p>
       )}
       {state === "failed" && (
         <div className="surfacestate-failed">

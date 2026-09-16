@@ -33,7 +33,6 @@ var coreFamilyStreams = []string{
 	"gw:events:crm:deal",
 	"gw:events:crm:identity",
 	"gw:events:crm:lead",
-	"gw:events:crm:overlay",
 	"gw:events:crm:voice",
 }
 

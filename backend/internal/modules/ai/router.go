@@ -194,6 +194,12 @@ func (r *Router) serveAttempt(ctx context.Context, lc *logicalCall, task Task, l
 	if req.SecretStripper == nil {
 		req.SecretStripper = r.stripper
 	}
+	// Wrapped HERE, which is the one place a request's stripper is settled —
+	// so what it removed reaches the trace row without four adapters each
+	// having to thread a report back, and a fifth records its strips by
+	// existing. striprecorder.go says why that matters.
+	strips := newStripRecorder(req.SecretStripper)
+	req.SecretStripper = strips
 	key, keyErr := cacheKey(wsID, task, req)
 
 	// Every terminal from here on is traced — the budget-read and cache-key
@@ -205,6 +211,9 @@ func (r *Router) serveAttempt(ctx context.Context, lc *logicalCall, task Task, l
 	start := r.now()
 	trace := r.newAttemptTrace(ctx, task, key, reason, req)
 	defer func() {
+		// BEFORE finalize, which is what buffers the row: a field set after it
+		// would be written to a copy nobody reads.
+		trace.SecretsRemoved, trace.SecretKinds = strips.report()
 		r.finalizeAttempt(ctx, b, lc, &trace, req, resp, err, start)
 	}()
 	if budgetErr != nil {

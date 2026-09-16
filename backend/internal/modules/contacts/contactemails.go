@@ -19,25 +19,17 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/contactaddress"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// ReachableEmailOrder is the order a contact's live addresses are sent in, and
-// the order the ONE address they are reachable at is picked from.
+// ReachableEmailOrder is this module's name for contactaddress.ReachableOrder,
+// kept because compose and four files here already read it under this name.
 //
-// `is_primary DESC` first, then the record's own arrangement. A primary address
-// is the one somebody chose; without one, the first the record lists is the one
-// a reader would have read first anyway.
-//
-// Both the `emails` array and `primary_email` come from this, and so does the
-// expression the contacts list orders by (contact_list.go) — so the address a
-// reader sees, the address a page is arranged by, and the address a merge
-// screen names a contact with are one string rather than three derivations of
-// the same question.
-// Exported because compose reads it too: the account page's contact cards pick
-// an address off the same table, and a second spelling of this ORDER BY is a
-// second answer to which address a contact is known by.
-const ReachableEmailOrder = ` ORDER BY is_primary DESC, position, created_at`
+// The order itself moved to shared/kernel when activities and consent turned
+// out to be asking the same question and unable to reach it: a module never
+// imports a sibling, so each had spelled its own, and the spellings disagreed.
+const ReachableEmailOrder = contactaddress.ReachableOrder
 
 func attachContactEmails(ctx context.Context, tx pgx.Tx, idx map[openapi_types.UUID]*crmcontracts.Contact, contactIDs []ids.UUID) error {
 	rows, err := tx.Query(ctx,

@@ -22,6 +22,10 @@ import (
 
 // customFieldObjectEnums reads every `object` enum the contract declares for a
 // custom field, keyed by where it sits.
+// contractFile is the contract the gates in this package derive their field
+// lists from, read relative to the package directory.
+const contractFile = "../../api/crm.yaml"
+
 func customFieldObjectEnums(t *testing.T) map[string][]string {
 	t.Helper()
 	doc, err := openapi3.NewLoader().LoadFromFile(contractFile)

@@ -118,6 +118,48 @@ function server(
   );
 }
 
+/**
+ * Two pages of the queue, served the way the route does: the second only to a
+ * request carrying the cursor the first handed back.
+ *
+ * A stub that answered both pages to the same request would pass a screen that
+ * never sent the cursor at all — which is exactly the shape of the defect, one
+ * layer up.
+ */
+function pagedServer(first: ConfirmSubmission, second: ConfirmSubmission) {
+  const asked: string[] = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL) => {
+      const request = input instanceof Request ? input : null;
+      const url = new URL(
+        request ? request.url : String(input),
+        "https://test.local",
+      );
+      if (url.pathname.endsWith("/me")) {
+        return json(
+          meFixture({ roles: ["admin"], allow: { contact: ["update"] } }),
+        );
+      }
+      if (url.pathname.endsWith("/confirm-submissions")) {
+        const cursor = url.searchParams.get("cursor");
+        asked.push(cursor ?? "");
+        return cursor === "page-two"
+          ? json({
+              data: [second],
+              page: { next_cursor: null, has_more: false },
+            })
+          : json({
+              data: [first],
+              page: { next_cursor: "page-two", has_more: true },
+            });
+      }
+      return json({});
+    }),
+  );
+  return asked;
+}
+
 describe("the queue of what contacts told us to change", () => {
   beforeEach(() => vi.unstubAllGlobals());
   afterEach(() => {
@@ -233,5 +275,38 @@ describe("the queue of what contacts told us to change", () => {
     expect(
       screen.queryByRole("button", { name: en["privacy.correctionDecide"] }),
     ).not.toBeInTheDocument();
+  });
+
+  // THE TAIL IS REACHABLE. The queue was bounded and silent about it: a
+  // reviewer who worked to the bottom of the list had seen the oldest page and
+  // none of what arrived after, with nothing on screen saying so. What a
+  // reviewer never hears about is a correction a data subject asked for.
+  it("fetches the next page when the reviewer asks for more", async () => {
+    const asked = pagedServer(
+      correction("s-1", "full_name", "Schmidt"),
+      correction("s-2", "title", "Head of Ops"),
+    );
+    render(<ConfirmSubmissionsPanel />);
+
+    expect(await screen.findByText("full_name")).toBeInTheDocument();
+    expect(screen.queryByText("title")).toBeNull();
+
+    await userEvent.click(screen.getByRole("button", { name: /more/i }));
+
+    expect(await screen.findByText("title")).toBeInTheDocument();
+    // Still on screen: a page that replaced the last one would lose the rows
+    // the reviewer is working through.
+    expect(screen.getByText("full_name")).toBeInTheDocument();
+    expect(asked).toEqual(["", "page-two"]);
+  });
+
+  // And a queue that fits on one page offers nothing to press, or the control
+  // tells every reviewer there is more when there never is.
+  it("offers no more to fetch when the queue ends", async () => {
+    server([correction("s-1", "full_name", "Schmidt")], []);
+    render(<ConfirmSubmissionsPanel />);
+
+    expect(await screen.findByText("full_name")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /more/i })).toBeNull();
   });
 });

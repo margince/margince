@@ -23,6 +23,16 @@ import (
 // applies the both-sides-visible rule to the page and the count alike.
 type attentionDuplicates struct{ store *contacts.Store }
 
+// The canonical record-type words the seams in this package compare against,
+// so a rename cannot leave two spellings of one type in the same file.
+const (
+	entityCompany  = "company"
+	entityContact  = "contact"
+	entityLead     = "lead"
+	entityDeal     = "deal"
+	entityActivity = "activity"
+)
+
 func (d attentionDuplicates) OpenCandidates(ctx context.Context, limit int) ([]attention.DuplicatePair, error) {
 	rows, _, err := d.store.ListDedupeCandidates(ctx, contacts.DedupeQueueInput{Limit: limit})
 	if err != nil {
@@ -51,7 +61,7 @@ func (d attentionDuplicates) OpenCandidates(ctx context.Context, limit int) ([]a
 func (d attentionDuplicates) DescribeMany(
 	ctx context.Context, entityType string, rowIDs []ids.UUID,
 ) (map[ids.UUID]attention.RecordFace, error) {
-	if entityType != flipObjectContact && entityType != flipObjectCompany && entityType != flipObjectLead {
+	if entityType != entityContact && entityType != entityCompany && entityType != entityLead {
 		return nil, apperrors.ErrNotFound
 	}
 	described, err := d.store.DescribeForMerge(ctx, entityType, rowIDs)
@@ -79,7 +89,7 @@ func (d attentionDuplicates) DescribeMany(
 func (d attentionDuplicates) DecidableSubset(
 	ctx context.Context, entityType string, rowIDs []ids.UUID,
 ) (map[ids.UUID]bool, error) {
-	if entityType != flipObjectContact && entityType != flipObjectCompany && entityType != flipObjectLead {
+	if entityType != entityContact && entityType != entityCompany && entityType != entityLead {
 		return nil, apperrors.ErrNotFound
 	}
 	return d.store.DecidableForMerge(ctx, entityType, rowIDs)
@@ -107,7 +117,7 @@ func (d attentionDuplicates) SettleablePairs(
 	var companies []ids.UUID
 	for _, pair := range pairs {
 		settleable[pair.ID] = true
-		if pair.EntityType == flipObjectCompany {
+		if pair.EntityType == entityCompany {
 			companies = append(companies, pair.LeftID, pair.RightID)
 		}
 	}
@@ -119,7 +129,7 @@ func (d attentionDuplicates) SettleablePairs(
 		return nil, err
 	}
 	for _, pair := range pairs {
-		if pair.EntityType == flipObjectCompany &&
+		if pair.EntityType == entityCompany &&
 			carrying[pair.LeftID] && carrying[pair.RightID] {
 			settleable[pair.ID] = false
 		}

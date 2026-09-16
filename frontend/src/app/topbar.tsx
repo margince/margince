@@ -14,7 +14,6 @@ import {
 } from "./pagemeta";
 import { paletteHotkeyCaps } from "./palette";
 import { type Route, routeHash } from "./router";
-import { SorModeChip } from "./sormodechip";
 import "./topbar.css";
 
 // The top bar: the one strip that is true of the whole session rather than of
@@ -179,7 +178,6 @@ export function TopBar({
       </div>
       <TopBarSearch onOpenSearch={onOpenSearch} />
       <div className="topbar-trail">
-        <SorModeChip />
         <AccountMenu />
       </div>
     </header>

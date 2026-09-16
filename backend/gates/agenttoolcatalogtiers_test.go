@@ -50,7 +50,7 @@ var catalogRow = regexp.MustCompile("^\\|\\s*`([a-z0-9_]+)`\\s*\\|\\s*([^|]+?)\\
 // that took every matching row read `enrich` as tier "1", which is that table's
 // route count. Rows are therefore read only between this header and the blank
 // line that ends its table.
-const catalogHeader = "| Tool | Tier | Scope | Egress | In overlay mode |"
+const catalogHeader = "| Tool | Tier | Scope | Egress |"
 
 // The marks the page uses, and what each means in the contract's own
 // vocabulary. Spelled here rather than inferred, because the mapping IS the
@@ -169,8 +169,8 @@ func TestTheToolCatalogsTiersAreTheContractsTiers(t *testing.T) {
 //
 // It carried nineteen entries when this gate landed — governed verbs the
 // hand-kept page had never listed — ratcheted rather than swept because filling
-// a row in means writing the verb's overlay-mode behaviour, which is read out
-// of the code per verb rather than guessed at nineteen times. They have since
+// a row in means reading the verb's own behaviour out of the code, one verb at
+// a time, rather than guessing at nineteen of them. They have since
 // been read and written, and the backlog is gone.
 //
 // So a new entry here is not a smaller version of that backlog: it is one verb

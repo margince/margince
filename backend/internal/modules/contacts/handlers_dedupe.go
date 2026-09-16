@@ -48,10 +48,12 @@ func (h Handlers) ListDedupeCandidates(w http.ResponseWriter, r *http.Request, p
 		}
 		resp.Data = append(resp.Data, c)
 	}
+	// ALWAYS, and required on the wire: a continuation a client has to branch
+	// around is one it can forget to read, and a queue that sometimes omits its
+	// page is a queue that sometimes forgets to say it was cut.
+	resp.Page = crmcontracts.PageInfo{HasMore: next != ""}
 	if next != "" {
-		resp.Page = &crmcontracts.PageInfo{HasMore: true, NextCursor: &next}
-	} else {
-		resp.Page = &crmcontracts.PageInfo{HasMore: false}
+		resp.Page.NextCursor = &next
 	}
 	httperr.WriteJSON(w, http.StatusOK, resp)
 }

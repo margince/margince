@@ -9,7 +9,6 @@ package company360
 // transaction and every gate.
 
 import (
-	"context"
 	"net/http"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -18,17 +17,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// OverlayMode answers whether the calling workspace reads from an
-// incumbent mirror instead of this system of record. The composition
-// layer injects the one Dispatcher every other overlay-aware read uses,
-// so a mode flip is observed here at the same moment it is observed there.
-type OverlayMode func(ctx context.Context) (bool, error)
-
 // Handlers shadows the generated GetCompany360 /
 // AcknowledgeCompanyView stubs.
 type Handlers struct {
-	svc     *Service
-	overlay OverlayMode
+	svc *Service
 	// roleLane is the propose-roles model lane, or nil in a process role that
 	// wired none. Held here rather than on the Service because it is the only
 	// part of this composite that calls a model at all: every other section is
@@ -42,8 +34,8 @@ type Handlers struct {
 }
 
 // NewHandlers binds the transport to a ready service.
-func NewHandlers(svc *Service, overlay OverlayMode) Handlers {
-	return Handlers{svc: svc, overlay: overlay}
+func NewHandlers(svc *Service) Handlers {
+	return Handlers{svc: svc}
 }
 
 // WithRoleLane binds the model lane that reads buying roles.
@@ -65,9 +57,6 @@ func (h Handlers) WithIntroLane(lane Completer) Handlers {
 func (h Handlers) DraftIntroRequest(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
 	var body crmcontracts.DraftIntroRequestJSONRequestBody
 	if !httperr.Decode(w, r, &body) {
-		return
-	}
-	if !h.nativeOnly(w, r) {
 		return
 	}
 	req, err := introRequestFrom(body)
@@ -120,9 +109,6 @@ func introRequestFrom(body crmcontracts.DraftIntroRequestJSONRequestBody) (Intro
 
 // ProposeDealRoles implements POST /deals/{id}/role-proposals.
 func (h Handlers) ProposeDealRoles(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	if !h.nativeOnly(w, r) {
-		return
-	}
 	if h.roleLane == nil {
 		httperr.NotImplemented(w, r, "ProposeDealRoles (no model path configured)")
 		return
@@ -137,9 +123,6 @@ func (h Handlers) ProposeDealRoles(w http.ResponseWriter, r *http.Request, id cr
 
 // GetCompany360 implements GET /companies/{id}/360.
 func (h Handlers) GetCompany360(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, params crmcontracts.GetCompany360Params) {
-	if !h.nativeOnly(w, r) {
-		return
-	}
 	var opts AssembleOptions
 	if params.ProjectId != nil {
 		projectID := ids.From[ids.ProjectKind](ids.UUID(*params.ProjectId))
@@ -155,9 +138,6 @@ func (h Handlers) GetCompany360(w http.ResponseWriter, r *http.Request, id crmco
 
 // GetCompanyGraph implements GET /companies/{id}/graph.
 func (h Handlers) GetCompanyGraph(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	if !h.nativeOnly(w, r) {
-		return
-	}
 	graph, err := h.svc.Graph(r.Context(), ids.From[ids.CompanyKind](ids.UUID(id)))
 	if err != nil {
 		httperr.Write(w, r, err)
@@ -168,9 +148,6 @@ func (h Handlers) GetCompanyGraph(w http.ResponseWriter, r *http.Request, id crm
 
 // GetCompanyCoverage implements GET /companies/{id}/coverage.
 func (h Handlers) GetCompanyCoverage(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	if !h.nativeOnly(w, r) {
-		return
-	}
 	coverage, err := h.svc.Coverage(r.Context(), ids.From[ids.CompanyKind](ids.UUID(id)))
 	if err != nil {
 		httperr.Write(w, r, err)
@@ -183,9 +160,6 @@ func (h Handlers) GetCompanyCoverage(w http.ResponseWriter, r *http.Request, id 
 func (h Handlers) ListCompanyContacts(w http.ResponseWriter, r *http.Request, id crmcontracts.Id,
 	params crmcontracts.ListCompanyContactsParams,
 ) {
-	if !h.nativeOnly(w, r) {
-		return
-	}
 	// A value the enum never declared is refused rather than ignored. An
 	// unrecognised status silently matched nothing and answered 200 with an
 	// empty page, which reads as "this account has no such contacts" — the
@@ -223,9 +197,6 @@ func (h Handlers) ListCompanyContacts(w http.ResponseWriter, r *http.Request, id
 
 // AcknowledgeCompanyView implements POST /companies/{id}/view-ack.
 func (h Handlers) AcknowledgeCompanyView(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	if !h.nativeOnly(w, r) {
-		return
-	}
 	ack, err := h.svc.Acknowledge(r.Context(), ids.From[ids.CompanyKind](ids.UUID(id)))
 	if err != nil {
 		httperr.Write(w, r, err)
@@ -237,9 +208,6 @@ func (h Handlers) AcknowledgeCompanyView(w http.ResponseWriter, r *http.Request,
 // DismissCompanySuggestion implements
 // POST /companies/{id}/suggestions/dismiss.
 func (h Handlers) DismissCompanySuggestion(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	if !h.nativeOnly(w, r) {
-		return
-	}
 	var req crmcontracts.DismissCompanySuggestionJSONRequestBody
 	if !httperr.Decode(w, r, &req) {
 		return
@@ -255,25 +223,4 @@ func (h Handlers) DismissCompanySuggestion(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
-}
-
-// nativeOnly refuses an overlay-mode workspace. The mirror holds the
-// incumbent's records, not our relationship edges, tags, approvals or
-// visit marks, so there is no honest 360 to assemble from it — the same
-// refusal entity-scoped activity reads already give, rather than a page
-// that quietly omits most of itself. A mode-resolution failure refuses
-// too: serving native data because the lookup broke is the silent
-// fallback the overlay module exists to prevent.
-func (h Handlers) nativeOnly(w http.ResponseWriter, r *http.Request) bool {
-	overlay, err := h.overlay(r.Context())
-	if err != nil {
-		httperr.Write(w, r, err)
-		return false
-	}
-	if overlay {
-		httperr.Write(w, r, httperr.Validation("id", "unsupported_in_overlay_mode",
-			"the company view is assembled from this system of record; while the workspace reads from the incumbent mirror, open the account in the incumbent's own UI"))
-		return false
-	}
-	return true
 }

@@ -37,6 +37,36 @@ export function focusableWithin(root: HTMLElement): HTMLElement[] {
   );
 }
 
+/**
+ * The dialog's own way OUT, which `Modal` marks so this file can tell it from
+ * the controls the dialog is FOR.
+ */
+const WAY_OUT = "[data-dialog-close]";
+
+/**
+ * Where focus lands when a dialog opens: the first stop that is not the door.
+ *
+ * The door is a tab STOP — the last one — but it is never where a reader is put
+ * down, and the difference is not a nicety. A dialog whose body is prose or an
+ * empty list has exactly one control, the door, and landing on it made the
+ * close control name itself in a tip; the tip then answered the reader's first
+ * Escape and the dialog stayed open. One press doing nothing, in front of a
+ * surface covering the page, is a keyboard trap however briefly it lasts.
+ *
+ * Nothing to land on is an honest answer: the box itself takes focus, which is
+ * what its `tabIndex={-1}` is for, and the reader's first Tab reaches the door
+ * from there.
+ */
+function firstControlIn(dialog: HTMLElement | null): HTMLElement | null {
+  if (dialog === null) {
+    return null;
+  }
+  return (
+    focusableWithin(dialog).find((stop) => stop.closest(WAY_OUT) === null) ??
+    null
+  );
+}
+
 // Keep Tab inside the dialog. `aria-modal` tells a screen reader the rest of
 // the page is inert; it does nothing for the Tab key, so without this a
 // keyboard reader walks straight out of the dialog into the page behind it and
@@ -195,8 +225,11 @@ export function useDialogFocus({
       return;
     }
     const opener = document.activeElement;
-    const stops = container.current ? focusableWithin(container.current) : [];
-    (initialFocus.current?.() ?? stops[0] ?? container.current)?.focus();
+    (
+      initialFocus.current?.() ??
+      firstControlIn(container.current) ??
+      container.current
+    )?.focus();
     return () => {
       // A named target outranks the opener even while the opener is still
       // attached: a caller names one precisely because the mutation this dialog

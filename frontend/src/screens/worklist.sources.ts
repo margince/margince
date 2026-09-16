@@ -23,7 +23,6 @@ const coverageNames = new Map<string, MessageKey>([
   ["failed_approval", "brief.coverage.source.failed_approval"],
   ["dsr", "brief.coverage.source.dsr"],
   ["notice_case", "brief.coverage.source.notice_case"],
-  ["sync_health", "brief.coverage.source.sync_health"],
   ["capture_health", "brief.coverage.source.capture_health"],
   ["ai_work_health", "brief.coverage.source.ai_work_health"],
   ["bounce", "brief.coverage.source.bounce"],

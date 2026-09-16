@@ -34,8 +34,7 @@ import (
 // restoreSeamFor is the executor as the server assembles it, over the test's own
 // pool.
 func restoreSeamFor(e *integration.Env) RestoreSeam {
-	return NewRestoreSeam(e.Pool, NewDispatcher(NewProvider(e.Pool),
-		NewOverlayProvider(e.Pool, failClosedOverlayMeter(), nil), e.Pool),
+	return NewRestoreSeam(e.Pool, NewProvider(e.Pool),
 		deals.NewStore(e.DB(), DealsInstallation()))
 }
 

@@ -314,7 +314,7 @@ function WeeklyBody({
     }
     const delta = now - before;
     return (
-      <span className="brief-weekly-delta t-caption">
+      <span className="t-caption">
         {t("brief.weekly.sincePrior", {
           delta: formatSignedNumber(delta, locale),
           week: formatDate(

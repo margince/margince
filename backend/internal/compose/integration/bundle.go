@@ -13,16 +13,15 @@ import (
 	"testing"
 )
 
-// Readers for the export bundle: a zip of CSVs. Exported because the suites that
-// assert on a bundle's contents sit on both sides of the overlay split — the
-// export suites here, the mirror-flip suite in the overlay package — and both
-// want the same parse rather than two that could disagree about a header row.
+// Readers for the export bundle: a zip of CSVs. Exported so every suite that
+// asserts on a bundle's contents shares one parse, rather than growing a second
+// that could disagree about a header row.
 
 // BundleEntries reads the produced ZIP into name→bytes.
 //
 // A repeated member name is a failure, not a last-one-wins overwrite: zip
 // permits duplicates, and a map would silently keep only the final copy — so a
-// bundle that shipped two conflicting overlay_mirror.csv entries would satisfy
+// bundle that shipped two conflicting entries under one name would satisfy
 // every assertion against whichever came last.
 func BundleEntries(t *testing.T, raw []byte) map[string][]byte {
 	t.Helper()

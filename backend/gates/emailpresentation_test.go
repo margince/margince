@@ -95,6 +95,13 @@ const (
 var emailRenderers = map[string]bool{
 	"design-system/emailentry.tsx":  true,
 	"design-system/emaildetail.tsx": true,
+	// The message a task was read out of, drawn IN the task instead of behind
+	// a second drawer over the first. It is a renderer, not a passthrough: it
+	// shows the subject, the date and the body (through EmailText, the same
+	// body reading EmailDetail mounts), holds EmailDetail's withheld line, and
+	// deliberately carries none of the drawer's verbs — no audience editor, no
+	// filed-record links, no reply.
+	"design-system/sourceemailpanel.tsx": true,
 }
 
 // emailPassthroughs hold an `entry` type without rendering it: they carry the

@@ -5,7 +5,6 @@
 // a test and a story. The connected drawer holds the query and hands the
 // answer here.
 
-import { X } from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { Button } from "../../design-system/atoms";
@@ -93,14 +92,6 @@ export function MeetingBriefView({
       <div className="drawer-head">
         <div className="pe-drawer-title">
           <h2 id={titleId}>{t("contact.meeting.title")}</h2>
-          <Button
-            small
-            iconOnly
-            onClick={onClose}
-            aria-label={t("contact.drawer.close")}
-          >
-            <X aria-hidden="true" />
-          </Button>
         </div>
         <BriefHeader
           brief={brief}

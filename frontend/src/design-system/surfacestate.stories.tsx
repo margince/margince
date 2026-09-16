@@ -40,7 +40,6 @@ const ALL: readonly SectionState[] = [
   "withheld",
   "unavailable",
   "loading",
-  "unsupported",
   "failed",
   "stale",
   "partial",

@@ -14,10 +14,11 @@ import { type SectionState, SurfaceState } from "../design-system/surfacestate";
 import { formatDate, formatNumber } from "../format/format";
 import { webUrl } from "../format/weburl";
 import { useLocale, useT } from "../i18n";
-import { problemCodeOf, throwProblem, useSorMode } from "./common";
+import { problemCodeOf, throwProblem } from "./common";
 import { CompanyDetails } from "./companydetails";
 import { DealsSection } from "./companyraildeals";
 import { CompanyProfileDetails } from "./companyraildetails";
+import { ProjectsSection } from "./companyrailprojects";
 import {
   contactRole,
   contactsSlice,
@@ -25,7 +26,6 @@ import {
   SectionSummary,
   sectionAnswered,
 } from "./companyrailshared";
-import { CompanyTagsSection } from "./companyrailtags";
 import { CounterpartyHoldRow } from "./counterparty-hold";
 import { signalKindLabel, signalTone } from "./record360";
 import { RecordCustomFields } from "./recordcustomfields";
@@ -41,12 +41,14 @@ import "./company360.css";
 // so it takes the wider of the two rail shares (page-zones-rail: 3fr/7fr)
 // rather than the narrower `aside` share a right-hand column would get.
 //
-// Drawn as SIX separate panels, each answering one question about the
-// account — its open deals, its contacts, its facts, its lists and tags — in
-// the order a reader works down the column, rather than the disclosures the
-// rail used to fold into one card: a hairline inside a panel reads as one
-// story about that panel's own subject, and a panel's own edge is what tells
-// a reader they have moved on to a different one.
+// Drawn as separate panels, each answering one question about the account:
+// its details and tags, its registration, its team, its open deals, its
+// projects, its contacts, its hold, in the order a reader works down the
+// column, rather than the disclosures the rail used to fold into one card: a
+// hairline inside a panel reads as one story about that panel's own subject, and a
+// panel's own edge is what tells a reader they have moved on to a different
+// one. Tags file under Details rather than in their own panel: a tag is a
+// fact about the account, on the same card as the rest of them.
 //
 // Health moved to the readings row above the tabs, so it is not repeated
 // here — two copies of the same verdict is a value the reader has to
@@ -68,7 +70,6 @@ export function CompanyRail({
   company,
   view,
   loading,
-  composerOpen,
   onTab,
 }: Readonly<{
   companyId: string;
@@ -85,26 +86,18 @@ export function CompanyRail({
   // every one of them reads the failed state for as long as the read runs,
   // flashing "could not be loaded" on every ordinary page open.
   loading: boolean;
-  // A composer drawer is open in this column. The rail stands down entirely
-  // rather than narrowing: squeezed to a third of its width it is a column of
-  // broken cards, and no mockup draws the two side by side.
-  composerOpen: boolean;
   // Where each panel's header link goes: Deals/Contacts switch the record's own
   // tab strip, Details opens Profile. One callback rather than three, because
   // every use is the same verb aimed at a different tab.
   onTab: (tab: "deals" | "contacts" | "profile") => void;
 }>) {
   const t = useT();
-  const overlay = useSorMode() === "overlay";
   // The same per-row answer the company's other verbs read: an archived
   // company, or one this seat may read but not write, takes no new
   // responsibilities.
   const resolved = view?.company ?? company;
   const canWriteCompany =
     useCanWriteRecord("company", resolved) && !resolved?.archived_at;
-  if (composerOpen) {
-    return null;
-  }
   return (
     // A plain div: the shell's own <aside> is the landmark around this, and a
     // second labelled region inside it would give a reader two names for one
@@ -118,7 +111,7 @@ export function CompanyRail({
             resolved record while the composite read below is still arriving. */}
       {resolved && (
         <>
-          <CompanyDetails company={resolved} overlay={overlay} />
+          <CompanyDetails company={resolved} />
           <RecordCustomFields kind="company" record={resolved} />
         </>
       )}
@@ -151,15 +144,9 @@ export function CompanyRail({
             each shows only the top RAIL_ROW_LIMIT rows — a summary beside a
             tab is not a duplicate of it, a full copy would be. */}
         <DealsSection view={view} loading={loading} onTab={onTab} />
+        <ProjectsSection view={view} loading={loading} onTab={onTab} />
         <ContactsSection view={view} loading={loading} onTab={onTab} />
         <CompanyHoldSection company={resolved} />
-        <Disclosure
-          className="co-sect"
-          open
-          summary={<SectionSummary title={t("tags.panelTitle")} />}
-        >
-          <CompanyTagsSection company={resolved} companyId={companyId} bare />
-        </Disclosure>
       </Panel>
     </div>
   );

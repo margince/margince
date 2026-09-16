@@ -191,7 +191,6 @@ const SEEDED_READS: GrantSpec = {
   // a rep legitimately edits, which is why that page did not follow the other
   // three out of her rail.
   company: ["read", "create", "update"],
-  overlay_connection: ["read"],
   pipeline: ["read"],
   product: ["read"],
   webhook_subscription: ["read"],
@@ -220,7 +219,6 @@ const SEEDED_OPS_READS: GrantSpec = {
   // would then "prove" ops loses a page it does not lose.
   automation: ["read", "create", "update", "delete"],
   installation_settings: ["read", "update"],
-  overlay_connection: ["read", "create", "update", "delete"],
   webhook_subscription: ["read", "create", "update", "delete"],
 };
 
@@ -416,16 +414,12 @@ describe("SettingsScreen page visibility", () => {
     },
   );
 
-  it.each(["webhook_subscription", "overlay_connection"] as const)(
+  it.each(["webhook_subscription"] as const)(
     "opens Integrations for a lone %s write, and not for its read",
     async (object) => {
-      // The installation's outside wiring: every seeded role READS both objects,
+      // The installation's outside wiring: every seeded role READS the object,
       // because whether capture is working shows up on the records they already
-      // open. Connecting a mirror or pointing a webhook somewhere is the work
-      // the page exists for.
-      //
-      // The system-of-record chip asks this same question before it offers a
-      // link, so the two cannot disagree about where that chip goes.
+      // open. Pointing a webhook somewhere is the work the page exists for.
       vi.stubGlobal(
         "fetch",
         settingsNavBackend({

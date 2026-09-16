@@ -163,7 +163,7 @@ func TestDeepReadTeamPageStagesOneThinSiteLeadPerPublishedContact(t *testing.T) 
 	}
 
 	annaSummary, anna, annaRaw := siteLeadProposalRow(t, e, done.ProposalIDs[0])
-	if annaSummary != "Lead from https://acme.example: Anna Muster — Chief Executive Officer" {
+	if annaSummary != "Found on acme.example: Anna Muster — Chief Executive Officer" {
 		t.Fatalf("summary = %q, want the site + name — role spelling", annaSummary)
 	}
 	if anna.Name != "Anna Muster" || anna.Role != "Chief Executive Officer" ||

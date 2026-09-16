@@ -166,12 +166,15 @@ describe("the Brief's dials", () => {
     await waitFor(() =>
       expect(document.querySelector("#brief-weekly")).not.toBeNull(),
     );
-    // `.rail-panel` is what every panel in the rail wears, so this is the rail's
-    // own content rather than one panel's id — a panel that collapses on a
-    // quiet morning is absent for a reason that has nothing to do with the
-    // view, and an id-shaped assertion would pass on that instead. The quiet
-    // LINE goes with them: it is the rail reporting on the rail.
-    expect(document.querySelectorAll(".rail-panel")).toHaveLength(0);
+    // Every panel IN THE RAIL, counted through the rail's own region and the
+    // design system's own panel class, so this is the rail's content rather
+    // than one panel's id — a panel that collapses on a quiet morning is absent
+    // for a reason that has nothing to do with the view, and an id-shaped
+    // assertion would pass on that instead. The quiet LINE goes with them: it
+    // is the rail reporting on the rail.
+    expect(document.querySelectorAll(".page-zones-aside .panel")).toHaveLength(
+      0,
+    );
     expect(document.querySelector("#brief-quiet")).toBeNull();
     // And the TRACK is gone with them. The <aside> element is gated on having
     // content, but the grid template is on the wrapper and driven by `shape` —
@@ -255,7 +258,9 @@ describe("the Brief's dials", () => {
         schedule.querySelectorAll(".rail-schedule-row").length,
       ).toBeGreaterThan(0),
     );
-    expect(document.querySelectorAll(".rail-panel").length).toBeGreaterThan(0);
+    expect(
+      document.querySelectorAll(".page-zones-aside .panel").length,
+    ).toBeGreaterThan(0);
     expect(document.querySelector(".page-zones-aside")).not.toBeNull();
   });
 

@@ -214,7 +214,7 @@ function Briefing({
   };
   // The findings ride the coverage card's own query, so this costs no second
   // request and the two cannot disagree about what is wrong with the deal.
-  const coverage = useDealSignals(dealId, true);
+  const coverage = useDealSignals(dealId);
   const because = card.verdict?.because.sentences ?? [];
   return (
     <>

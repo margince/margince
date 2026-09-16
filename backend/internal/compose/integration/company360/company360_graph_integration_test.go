@@ -21,7 +21,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"slices"
-	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -341,12 +340,10 @@ func TestCompanyGraphHierarchyEdgePointsParentToChild(t *testing.T) {
 }
 
 // The transport is thin, but "thin" is a claim: it has to bind the path id,
-// let the service's gates decide, hand back the assembled body — and a native
-// workspace must reach it rather than meeting the overlay guard.
-func TestCompanyGraphTransportServesANativeWorkspace(t *testing.T) {
+// let the service's gates decide and hand back the assembled body.
+func TestCompanyGraphTransportServesAWorkspace(t *testing.T) {
 	e := integration.Setup(t)
-	handlers := company360svc.NewHandlers(company360Service(e),
-		func(context.Context) (bool, error) { return false, nil })
+	handlers := company360svc.NewHandlers(company360Service(e))
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme", &e.Rep1))
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, graphRepPerms)
 
@@ -380,27 +377,5 @@ func TestCompanyGraphTransportServesANativeWorkspace(t *testing.T) {
 	if body.Nodes == nil || body.Edges == nil || body.GroupsOmitted == nil {
 		t.Errorf("nodes = %v, edges = %v, groups_omitted = %v; all three must be arrays, never null",
 			body.Nodes, body.Edges, body.GroupsOmitted)
-	}
-}
-
-// TestCompanyGraphRefusesAnOverlayWorkspace: the mirror holds the
-// incumbent's records, not our relationship edges, so there is no honest graph
-// to draw from it — one refusal, not a card that quietly omits everything.
-func TestCompanyGraphRefusesAnOverlayWorkspace(t *testing.T) {
-	e := integration.Setup(t)
-	handlers := company360svc.NewHandlers(company360Service(e),
-		func(context.Context) (bool, error) { return true, nil })
-	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme", &e.Rep1))
-
-	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/v1/companies/"+company.String()+"/graph", nil)
-	handlers.GetCompanyGraph(rec,
-		req.WithContext(e.As(e.Rep1, []ids.UUID{e.Team1}, graphRepPerms)), crmcontracts.Id(company.UUID))
-
-	if rec.Code != http.StatusUnprocessableEntity {
-		t.Fatalf("status = %d, want 422; body %s", rec.Code, rec.Body.String())
-	}
-	if body := rec.Body.String(); !strings.Contains(body, "unsupported_in_overlay_mode") {
-		t.Errorf("body %s does not carry the overlay refusal code", body)
 	}
 }

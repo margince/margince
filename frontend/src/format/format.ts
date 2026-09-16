@@ -367,7 +367,7 @@ export function formatDecimal(
 
 // IANA zone names only (AC-DS-TZ4): fixed offsets ("+01:00", "Etc/GMT-1")
 // silently freeze DST rules — reject them loudly at the edge.
-function assertIanaZone(zone: string): void {
+export function assertIanaZone(zone: string): void {
   if (/^[+-]\d{2}:?\d{2}$/.test(zone) || /^(Etc\/)?GMT[+-]?\d*$/i.test(zone)) {
     throw new Error(
       `timezone must be an IANA name, got fixed offset "${zone}"`,
@@ -401,7 +401,7 @@ export function isRenderableZone(zone: string): boolean {
 }
 
 // Calendar dates are not UTC-midnight instants: their day survives every zone.
-function displayDay(value: string, zone: string): Date {
+export function displayDay(value: string, zone: string): Date {
   return new Date(
     /^\d{4}-\d{2}-\d{2}$/.test(value) ? middayInstant(value, zone) : value,
   );

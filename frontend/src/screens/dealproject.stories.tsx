@@ -28,20 +28,30 @@ type Project = components["schemas"]["Project"];
 const project: Project = {
   id: "pr-1",
   name: "Spare parts portal",
-  phase: "planned",
+  phase: "pursuing",
+  source: "manual",
+  captured_by: "human:u-1",
+  created_at: "2026-06-01T08:00:00Z",
+  updated_at: "2026-06-01T08:00:00Z",
   version: 2,
-} as unknown as Project;
+};
 
 function deal(over: Partial<Deal>): Deal {
   return {
     id: "d-1",
     name: "Depot rollout",
     company_id: "o-1",
+    pipeline_id: null,
+    stage_id: null,
     status: "open",
+    source: "manual",
+    captured_by: "human:u-1",
+    created_at: "2026-08-01T00:00:00Z",
+    updated_at: "2026-08-01T00:00:00Z",
     project_id: null,
     version: 3,
     ...over,
-  } as unknown as Deal;
+  };
 }
 
 function Chip({ deal: subject }: Readonly<{ deal: Deal }>) {

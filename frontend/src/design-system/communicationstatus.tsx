@@ -150,13 +150,16 @@ export function CommunicationStatus({
       className={[
         "commstatus",
         `commstatus-${drawn}`,
-        size === 16 ? "commstatus-dense" : "commstatus-prose",
+        // The dense size has a rule; the prose one is the sheet's default and
+        // carried a class that drew nothing, which read as a pair of variants
+        // where there is one variant and a base.
+        ...(size === 16 ? ["commstatus-dense"] : []),
       ].join(" ")}
       onHover
       label={
         <span className="commstatus-face">
           {state === "checking" ? (
-            <BusyMark className="commstatus-busy" />
+            <BusyMark />
           ) : (
             <Glyph size={size} aria-hidden="true" />
           )}

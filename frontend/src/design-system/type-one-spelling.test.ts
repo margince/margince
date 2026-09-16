@@ -280,7 +280,7 @@ const eyebrowBaseline: Record<string, number> = {
   "src/design-system/margince-workbench.css": 3,
   "src/screens/auth.css": 1,
   "src/screens/backfill.css": 1,
-  "src/screens/company360.css": 2,
+  "src/screens/company360.css": 1,
   "src/screens/onboarding-backread.css": 1,
   "src/screens/onboarding-gate.css": 2,
   "src/screens/onboarding-live-panel.css": 2,

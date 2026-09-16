@@ -8,10 +8,10 @@ import {
   type BoardDeal,
   type BoardMoneyColumn,
   PipelineBoard,
-  RecordView,
   type TimelineEntry,
 } from "./composed";
 import { ListSurface } from "./listsurface";
+import { RecordView } from "./recordview";
 import { Select } from "./select";
 
 // RecordView's timeline gained an optional per-row `actions` slot (the Reply /

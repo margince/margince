@@ -755,102 +755,6 @@ describe("CompanyScreen — archive (P-3)", () => {
   });
 });
 
-describe("CompanyScreen — overlay mode write affordances", () => {
-  // The mirror's own write-back seam serves update and archive for an
-  // company (overlay/provider_writes.go SupportsWrite), so both render
-  // here; merge has no incumbent-first projection and stays refused, so it
-  // stays hidden.
-  function meResponse() {
-    return jsonResponse({
-      user: { id: "u1", email: "me@brandt.example", locale: "en-US" },
-      roles: ["admin"],
-      teams: [],
-      authorization: meFixture({
-        allow: { company: ["read", "update", "delete"] },
-      }).authorization,
-      system_of_record: { mode: "overlay" },
-    });
-  }
-
-  it("serves Edit and Archive, hides Merge", async () => {
-    stubFetch(async (url, method) => {
-      if (url.includes("/me")) {
-        return meResponse();
-      }
-      if (url.includes("/activities")) {
-        return jsonResponse({ data: [] });
-      }
-      if (method === "PATCH") {
-        return jsonResponse(company);
-      }
-      return jsonResponse(company);
-    });
-    render(<CompanyScreen id="o-1" />);
-
-    await openRecordMenu("archive-record");
-    expect(screen.getByTestId("archive-record")).toBeTruthy();
-    // Anchor on something only overlay mode produces, so the absence below
-    // is asserted AFTER /me landed. Waiting on the absence alone passes on
-    // the first tick and would still pass if Merge were rendered in overlay.
-    await waitFor(() =>
-      expect(screen.getByText(/not assembled here/)).toBeTruthy(),
-    );
-    expect(screen.queryByTestId("merge-record")).toBeNull();
-  });
-
-  it("Edit's real click path PATCHes and the 360 shows the saved industry", async () => {
-    // Mutable so the refetch after a successful save (useUpdateRecord
-    // invalidates the record query) reflects the write, not a stale echo —
-    // the same "mirror re-read reflects write-back" shape
-    // overlay.Provider.Update gives via mirrorWriteResult.
-    let current = company;
-    stubFetch(async (url, method, request) => {
-      if (url.includes("/me")) {
-        return meResponse();
-      }
-      if (url.includes("/activities")) {
-        return jsonResponse({ data: [] });
-      }
-      if (method === "PATCH") {
-        const body = JSON.parse(await request.text());
-        current = { ...current, ...body };
-        return jsonResponse(current);
-      }
-      return jsonResponse(current);
-    });
-    render(<CompanyScreen id="o-1" />);
-
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Change Industry" }),
-    );
-    const industry = await screen.findByLabelText("Industry");
-    await userEvent.clear(industry);
-    await userEvent.type(industry, "Manufacturing{Enter}");
-
-    expect(await screen.findByText("Manufacturing")).toBeTruthy();
-  });
-
-  it("names the partial write-back in the edit form", async () => {
-    stubFetch(async (url) => {
-      if (url.includes("/me")) {
-        return meResponse();
-      }
-      if (url.includes("/activities")) {
-        return jsonResponse({ data: [] });
-      }
-      return jsonResponse(company);
-    });
-    render(<CompanyScreen id="o-1" />);
-
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Change Industry" }),
-    );
-    expect(
-      screen.getByText(/Only the fields HubSpot accepts are written back/),
-    ).toBeTruthy();
-  });
-});
-
 describe("CompaniesScreen — archived marking (P-3)", () => {
   it("shows an Archived badge on a row with archived_at set", async () => {
     stubFetch(async () =>
@@ -1454,8 +1358,8 @@ describe("CompanyScreen — next-step suggestions", () => {
   });
 
   it("opens the composer on the message a draft-reply action names", async () => {
-    // Through the PAGE: the card only names the action, and the page is
-    // what performs it. A reply composer holds the rail's column while open.
+    // Through the PAGE: the card only names the action, and the page is what
+    // performs it.
     const unanswered = {
       ...stalledSuggestion,
       kind: "no_reply",
@@ -1475,7 +1379,10 @@ describe("CompanyScreen — next-step suggestions", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: "Create draft" }),
     );
-    await waitFor(() => expect(container.querySelector(".co-rail")).toBeNull());
+    // The composer stands OVER the record — the details pane it covers is
+    // still where the reader left it.
+    await screen.findByRole("button", { name: "Cancel" });
+    expect(container.querySelector(".co-rail")).toBeTruthy();
   });
 
   it("goes to the deal an open-deal action names", async () => {
@@ -1647,7 +1554,7 @@ describe("CompanyScreen — Ask Margince", () => {
       }
       return companyBackstop(url);
     });
-    render(<AssistantPanel companyId="o-1" enabled onOpenRecord={() => {}} />);
+    render(<AssistantPanel companyId="o-1" onOpenRecord={() => {}} />);
 
     await waitFor(() =>
       expect(
@@ -1678,7 +1585,7 @@ describe("CompanyScreen — Ask Margince", () => {
       }
       return companyBackstop(url);
     });
-    render(<AssistantPanel companyId="o-1" enabled onOpenRecord={() => {}} />);
+    render(<AssistantPanel companyId="o-1" onOpenRecord={() => {}} />);
 
     await waitFor(() =>
       expect(
@@ -1701,7 +1608,7 @@ describe("CompanyScreen — Ask Margince", () => {
       }
       return companyBackstop(url);
     });
-    render(<AssistantPanel companyId="o-1" enabled onOpenRecord={() => {}} />);
+    render(<AssistantPanel companyId="o-1" onOpenRecord={() => {}} />);
 
     await waitFor(() =>
       expect(
@@ -1762,20 +1669,24 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
     // exercises its own presence.
     const stack = container.querySelector(".co-overview-stack");
     expect(stack).toBeTruthy();
-    expect(stack?.textContent).toContain("Commercial");
     // The money is a TAB, so the overview column must not also carry it: a
-    // figure in two places is one the reader has to reconcile.
+    // figure in two places is one the reader has to reconcile. The contract
+    // and pipeline figures, the account's projects, and Finance all read on
+    // their own tab now. "Commercial" also names a health dimension in the
+    // account brief above the stack, so the panel's own HEADING is what is
+    // checked rather than the word wherever it appears.
+    const headings = within(stack as HTMLElement)
+      .getAllByRole("heading")
+      .map((heading) => heading.textContent);
+    expect(headings).not.toContain("Commercial");
     expect(stack?.textContent).not.toContain("Finance");
     expect(stack?.textContent).not.toContain("Lists & tags");
 
-    // What is in flight is drawn on EVERY account, this one included: "no open
-    // deals" is a fact about the account, and a section that vanished left the
-    // reader to work it out from a hole where a card had been on the last
-    // record they opened. The growth-fit card stands beside it rather than in
-    // its place — whether to sell here at all is a different question from
-    // what is running today.
+    // What is in flight reads on the Deals tab and the rail's own
+    // DealsSection now; this fixture has none, so the fit card takes the
+    // overview's work slot instead: whether to sell here at all is a
+    // different question from what is running today.
     expect(stack?.textContent).toContain("What they are worth to you");
-    expect(stack?.textContent).toContain("No open deals");
 
     // What Margince spotted reads in the WORK column, beside the rest of what
     // wants a decision, rather than in the context column.
@@ -1805,10 +1716,42 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
     );
   });
 
-  // The drawer opens INTO the rail's column. Both composers do — the header's
-  // Write-email and the one anchored on a message — so the rail stands down
-  // for either, and comes back when the drawer closes.
-  it("stands the rail down while a composer holds its column", async () => {
+  // Content-driven cards of unequal height never share a row: a tall needs
+  // list beside a short Ask box left a gap the height of the difference. So
+  // the glance is one column at every width, in the order a rep works it.
+  it("stacks the glance in one column: what needs a contact, the money, what the account is, then the questions", async () => {
+    stubFetch(companyBackstop, { company360 });
+    const { container } = render(<CompanyScreen id="o-1" />);
+    await screen.findByText("Brandt Automotive GmbH");
+
+    const stack = container.querySelector(".co-overview-stack");
+    expect(container.querySelector(".co-glance-cols")).toBeNull();
+    if (!(stack instanceof HTMLElement)) {
+      throw new Error("overview stack did not render");
+    }
+
+    // Each pane's own title, in DOM order.
+    const headings = within(stack)
+      .getAllByRole("heading")
+      .map((heading) => heading.textContent);
+    const needsAt = headings.indexOf("What needs you");
+    const dossierAt = headings.indexOf("What this company is");
+    const askAt = headings.indexOf("Ask about this account");
+    // The fit card takes this account's slot: nothing in this fixture is in
+    // flight, so the question is whether to sell here at all rather than what
+    // is running today.
+    const fitAt = headings.indexOf("What they are worth to you");
+    expect(needsAt).toBeGreaterThanOrEqual(0);
+    expect(dossierAt).toBeGreaterThan(needsAt);
+    expect(askAt).toBeGreaterThan(dossierAt);
+    expect(fitAt).toBeGreaterThan(askAt);
+  });
+
+  // The drawer opens OVER the record rather than into a column of it: it is
+  // portalled above a scrim and takes none of the page's width, so the details
+  // pane under it neither folds away nor comes back — it is exactly where the
+  // reader left it, both while the drawer stands and once it has gone.
+  it("leaves the details pane standing while a composer is open", async () => {
     stubFetch(companyBackstop, { company360 });
     const { container } = render(<CompanyScreen id="o-1" />);
     await screen.findByText("Brandt Automotive GmbH");
@@ -1817,12 +1760,14 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
     );
 
     await userEvent.click(screen.getByRole("button", { name: "Email" }));
-    await waitFor(() => expect(container.querySelector(".co-rail")).toBeNull());
+    await screen.findByRole("button", { name: "Cancel" });
+    expect(container.querySelector(".co-rail")).toBeTruthy();
 
     await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
     await waitFor(() =>
-      expect(container.querySelector(".co-rail")).toBeTruthy(),
+      expect(screen.queryByRole("button", { name: "Cancel" })).toBeNull(),
     );
+    expect(container.querySelector(".co-rail")).toBeTruthy();
   });
 
   // A call or a note often carries no subject. Counting only the subjected

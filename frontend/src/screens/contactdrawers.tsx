@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ExternalLink, X } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
@@ -305,14 +305,6 @@ export function ContactResearchDrawer({
           <h2 id="contact-research-title">
             {t("contact.research.title", { name: contactName })}
           </h2>
-          <Button
-            small
-            iconOnly
-            onClick={onClose}
-            aria-label={t("contact.drawer.close")}
-          >
-            <X aria-hidden="true" />
-          </Button>
         </div>
         <Badge>{t("contact.research.publicOnly")}</Badge>
       </div>

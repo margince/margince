@@ -9,11 +9,9 @@ import (
 	"strings"
 )
 
-// catalog is the enumerable V1 event catalog (events.md §5.1–§5.10, plus
-// the §5.11 signal lifecycle): each type's home stream entity and current
-// payload schema version. §5.10 (overlay mirror) is overlay-mode-only —
-// these types are only ever emitted for an installation with overlay_mode.sor_mode =
-// 'overlay' — and the remaining §5.11 type (forecast.period_closed) rides
+// catalog is the enumerable V1 event catalog (events.md §5.1–§5.11): each
+// type's home stream entity and current payload schema version. The
+// remaining §5.11 type (forecast.period_closed) rides
 // E09 — deferred with its work package.
 //
 // Types whose entity segment is not itself a stream ride their family's
@@ -280,20 +278,6 @@ var catalog = map[string]struct {
 	"voice.build_changed":          {voiceStreamEntity, 1},
 	"voice.version_changed":        {voiceStreamEntity, 1},
 	"voice.draft_outcome_recorded": {voiceStreamEntity, 1},
-
-	// §5.10: the overlay mirror's own stream — emitted only in overlay
-	// mode. mirror.write_rejected is reserved for the branch-2 write
-	// path but registered now so the catalog is complete.
-	"mirror.conflict":        {streamOverlay, 1},
-	"mirror.budget_degraded": {streamOverlay, 1},
-	"mirror.write_rejected":  {streamOverlay, 1},
-	"mirror.deleted":         {streamOverlay, 1},
-
-	// §4.3: the incumbent connection lifecycle — a genuine SoR mutation
-	// (unlike mirror ingest), so it carries the full write shape and
-	// rides the same overlay-mode-only stream as the mirror it gates.
-	"incumbent.connected":    {streamOverlay, 1},
-	"incumbent.disconnected": {streamOverlay, 1},
 
 	// The AI-activity projection feed (ai_task_run). One type with the state
 	// inside, like voice.build_changed: a new state must never need a new type.

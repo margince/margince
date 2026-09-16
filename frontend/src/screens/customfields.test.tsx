@@ -373,7 +373,7 @@ describe("CustomFieldsAdmin", () => {
       expect(screen.getByText("Renewal date")).toBeInTheDocument(),
     );
     expect(container.querySelector(".wrap")).toBeNull();
-    expect(container.querySelector(".cf-screen")).not.toBeNull();
+    expect(container.querySelector(".panel")).not.toBeNull();
     expect(screen.queryByRole("heading", { level: 1 })).toBeNull();
     expect(
       screen.getByRole("heading", { level: 2, name: "Custom fields" }),

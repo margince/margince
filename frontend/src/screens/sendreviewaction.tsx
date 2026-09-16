@@ -78,7 +78,7 @@ export function SendReviewActions({
     );
   }
   return (
-    <div className="compose-review-actions">
+    <div>
       <Button
         variant="ghost"
         onClick={() => ask.mutate({ reviewId: review.reviewId })}

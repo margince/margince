@@ -149,11 +149,7 @@ export function FieldBuilder({
             />
           )}
         </Field>
-        <Field
-          label={t("cf.apiKey")}
-          className="cf-field"
-          hint={t("cf.apiKeyHint")}
-        >
+        <Field label={t("cf.apiKey")} hint={t("cf.apiKeyHint")}>
           {(control) => (
             <TextInput
               {...control}
@@ -183,11 +179,7 @@ export function FieldBuilder({
       </div>
 
       {type === "currency" && (
-        <Field
-          label={t("cf.currencyCode")}
-          className="cf-field"
-          hint={t("cf.currencyHint")}
-        >
+        <Field label={t("cf.currencyCode")} hint={t("cf.currencyHint")}>
           {(control) => (
             <TextInput
               {...control}
@@ -596,10 +588,12 @@ export function CustomFieldsAdmin() {
   const toast = useToast();
   const [renaming, setRenaming] = useState<CustomField | null>(null);
   const [renameLabel, setRenameLabel] = useState("");
-  // The builder is mounted only while its dialog is open, which is what stops a
-  // second Confirm resubmitting the same, now-committed, draft (m6): a
-  // successful create closes the dialog and the form's state goes with it.
+  // The dialog stays MOUNTED so it can animate out, so `addSeq` is what gives
+  // each open a builder of its own: it re-keys the form, which discards a
+  // half-typed label rather than leaving it waiting under an object nobody
+  // re-chose, and stops a second Confirm resubmitting a draft already created.
   const [adding, setAdding] = useState(false);
+  const [addSeq, setAddSeq] = useState(0);
   const renameId = useId();
   const addId = useId();
 
@@ -736,7 +730,6 @@ export function CustomFieldsAdmin() {
 
   return (
     <Panel
-      className="cf-screen"
       title={t("cf.title")}
       // The create verb is the card's, so it stands in the header band. As a
       // trailing row its label ("Add a field to Deal") said the same thing as
@@ -747,7 +740,13 @@ export function CustomFieldsAdmin() {
       // being there.
       titleAction={
         canCreate && (
-          <Button small onClick={() => setAdding(true)}>
+          <Button
+            small
+            onClick={() => {
+              setAddSeq((seq) => seq + 1);
+              setAdding(true);
+            }}
+          >
             {t("cf.builder.open")}
           </Button>
         )
@@ -839,34 +838,29 @@ export function CustomFieldsAdmin() {
         )}
       </PanelBody>
 
-      {/* Mounted only while it is open, so a half-typed label is gone the next
-          time the dialog opens rather than waiting there under an object
-          nobody re-chose.
-
-          `wide` is the variant's stated case: the builder carries the pending
+      {/* `wide` is the variant's stated case: the builder carries the pending
           DDL, and a 440px dialog wraps
           `ALTER company ADD COLUMN cf_contract_end_date (date)` into an
           unreadable stack — the one line a reader is meant to check before
           confirming a live schema change. It also keeps the label and the API
           key derived from it side by side. */}
-      {adding && (
-        <Modal
-          open
-          size="wide"
-          onClose={() => setAdding(false)}
-          labelledBy={addId}
-        >
-          <h2 id={addId} className="t-h2 modal-title">
-            {t("cf.builder.addTo", { object: objectName })}
-          </h2>
-          <FieldBuilder
-            object={object}
-            pending={create.isPending}
-            onSubmit={(draft) => create.mutate(draft)}
-            onCancel={() => setAdding(false)}
-          />
-        </Modal>
-      )}
+      <Modal
+        open={adding}
+        size="wide"
+        onClose={() => setAdding(false)}
+        labelledBy={addId}
+      >
+        <h2 id={addId} className="t-h2 modal-title">
+          {t("cf.builder.addTo", { object: objectName })}
+        </h2>
+        <FieldBuilder
+          key={addSeq}
+          object={object}
+          pending={create.isPending}
+          onSubmit={(draft) => create.mutate(draft)}
+          onCancel={() => setAdding(false)}
+        />
+      </Modal>
 
       <Modal
         open={renaming !== null}

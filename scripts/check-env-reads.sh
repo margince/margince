@@ -12,7 +12,7 @@
 #   - *_test.go         a test may stage its own environment
 #   - //go:build integration
 #                       the real-infra lane's harnesses (apptest, testdb,
-#                       budgettest, the integration harness) read MARGINCE_TEST_*
+#                       redistest, the integration harness) read MARGINCE_TEST_*
 #                       to find the cluster they were pointed at; they ARE the
 #                       composition root of that lane
 #   - platform/config   the seam itself: the ONE os.Getenv the product holds, so

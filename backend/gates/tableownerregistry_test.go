@@ -160,11 +160,16 @@ var tableOwners = map[string]string{
 	// written beside the column it explains, so it belongs to the module that
 	// owns that row.
 	"activity_reply_verdict_history": "internal/modules/activities",
-	"activity_sales_state":           "internal/modules/activities",
-	"activity_reader_state":          "internal/modules/activities",
-	"activity_review_template":       "internal/modules/activities",
-	"activity_review_response":       "internal/modules/activities",
-	"worklist_pin":                   "internal/modules/activities",
+	// Whether our own reply settled the request an inbound message made. It
+	// hangs off `activity` and is written beside the owed verdict it completes,
+	// so it belongs to the module that owns that row — the same ground the
+	// reply-verdict history above stands on.
+	"activity_request_settlement": "internal/modules/activities",
+	"activity_sales_state":        "internal/modules/activities",
+	"activity_reader_state":       "internal/modules/activities",
+	"activity_review_template":    "internal/modules/activities",
+	"activity_review_response":    "internal/modules/activities",
+	"worklist_pin":                "internal/modules/activities",
 	// ACT-DDL-3: who was in the interaction. It belongs beside activity and
 	// activity_link for the same reason they belong together — it is part of
 	// what an activity IS, not a graph artifact derived from one.
@@ -359,21 +364,6 @@ var tableOwners = map[string]string{
 	// user-visible fact and stays owned by activities)
 	"comms_outbound": "internal/modules/comms",
 	"scheduled_send": "internal/modules/activities",
-	// overlay (the HubSpot mirror cluster, ADR-0017 custom namespace —
-	// design.md §4.2)
-	"incumbent_connection":        "internal/modules/overlay",
-	"overlay_mode":                "internal/modules/overlay",
-	"overlay_mirror":              "internal/modules/overlay",
-	"overlay_association":         "internal/modules/overlay",
-	"mirror_user_map":             "internal/modules/overlay",
-	"mirror_user_automap_block":   "internal/modules/overlay",
-	"mirror_visibility":           "internal/modules/overlay",
-	"overlay_write_ledger":        "internal/modules/overlay",
-	"overlay_mirror_halt":         "internal/modules/overlay",
-	"overlay_tombstone":           "internal/modules/overlay",
-	"overlay_backfill_cursor":     "internal/modules/overlay",
-	"overlay_reconcile_watermark": "internal/modules/overlay",
-	"overlay_sync_state":          "internal/modules/overlay",
 	// migration (the shared importer engine's run records, IEM-DDL-1;
 	// native rows land through injected Writers, so the record tables'
 	// owners are untouched)

@@ -68,7 +68,7 @@ function show() {
       }
     >
       <LocaleProvider initial="en">
-        <DossierPanel companyId="o-1" enabled />
+        <DossierPanel companyId="o-1" />
       </LocaleProvider>
     </QueryClientProvider>,
   );
@@ -148,22 +148,5 @@ describe("what this company is", () => {
       await screen.findByText(/This description could not be read/),
     ).toBeTruthy();
     expect(screen.queryByText(/Nothing has been recorded/)).toBeNull();
-  });
-
-  it("is absent, not empty, for a workspace reading from an incumbent", () => {
-    serving(DESCRIBED);
-    const { container } = render(
-      <QueryClientProvider
-        client={
-          new QueryClient({ defaultOptions: { queries: { retry: false } } })
-        }
-      >
-        <LocaleProvider initial="en">
-          <DossierPanel companyId="o-1" enabled={false} />
-        </LocaleProvider>
-      </QueryClientProvider>,
-    );
-
-    expect(container.textContent).toBe("");
   });
 });

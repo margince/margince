@@ -33,10 +33,7 @@ func (s *stubIntroductions) Pending(context.Context, int) ([]PendingIntroduction
 }
 
 func introductionsLaneService(i Introductions) *Service {
-	return NewService(
-		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
-		stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock,
-	).WithIntroductions(i)
+	return NewService(stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock).WithIntroductions(i)
 }
 
 func TestAnIntroductionAskNamesTheContactAndOffersOneVerb(t *testing.T) {

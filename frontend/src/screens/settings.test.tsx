@@ -190,6 +190,34 @@ describe("SettingsScreen RBAC surfaces", () => {
     expect(within(card).getAllByRole("heading", { level: 2 })).toHaveLength(1);
   });
 
+  // THE DRAFT IS DISCARDED ON THE NEXT OPENING, not on the way out.
+  //
+  // The dialog outlives its own close so it can animate out, and a draft
+  // cleared at close snapped the box back to the stored sign-off in front of a
+  // reader still watching the dialog leave. Moving the discard to the opening
+  // keeps that frame honest and has to keep this promise too: a sign-off
+  // half-typed and walked away from is not an edit anybody is coming back to.
+  it("reopens the sign-off dialog on a clean form, not on an abandoned draft", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", settingsBackend());
+    render(<SettingsScreen route={settingsHref("account")} />);
+    await waitFor(() => expect(screen.getByText("ada@acme.test")).toBeTruthy());
+
+    await user.click(screen.getByRole("button", { name: "Edit signature" }));
+    const draft = await screen.findByRole("textbox", { name: "Your sign-off" });
+    await user.type(draft, "half a sign-off nobody meant to keep");
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+
+    await user.click(screen.getByRole("button", { name: "Edit signature" }));
+    const reopened = await screen.findByRole("textbox", {
+      name: "Your sign-off",
+    });
+    if (!(reopened instanceof HTMLTextAreaElement)) {
+      throw new Error("the sign-off box is not a textarea");
+    }
+    expect(reopened.value).not.toContain("nobody meant to keep");
+  });
+
   // A member correcting the name their colleagues see them by. Until this row
   // existed there was no way to: `display_name` was written by the invite and
   // by nothing else, so a name typed wrong stayed wrong on every record that

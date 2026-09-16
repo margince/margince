@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
+import { company360 } from "./company.fixtures";
 import { CompanyLastOffer } from "./companycommercial";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
@@ -74,7 +75,17 @@ function LastOffer({ view }: Readonly<{ view: View }>) {
 
 export const Populated: Story = {
   render: () => (
-    <LastOffer view={{ deals: { data: deals, page } } as unknown as View} />
+    <LastOffer
+      view={{
+        ...company360,
+        deals: {
+          data: deals,
+          page,
+          won_lifetime: { amount_minor: 0, currency: "EUR" },
+          lost_count: 0,
+        },
+      }}
+    />
   ),
 };
 
@@ -90,11 +101,15 @@ export const Truncated: Story = {
         Deals page truncated — the block names no leading deal.
       </p>
       <LastOffer
-        view={
-          {
-            deals: { data: deals, page: { has_more: true } },
-          } as unknown as View
-        }
+        view={{
+          ...company360,
+          deals: {
+            data: deals,
+            page: { has_more: true },
+            won_lifetime: { amount_minor: 0, currency: "EUR" },
+            lost_count: 0,
+          },
+        }}
       />
     </div>
   ),

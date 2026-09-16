@@ -490,8 +490,6 @@ const (
 	ForecastShareIssued                   SubscribableEventType = "forecast.share_issued"
 	ForecastShareRevoked                  SubscribableEventType = "forecast.share_revoked"
 	ForecastSnapshotCreated               SubscribableEventType = "forecast.snapshot_created"
-	IncumbentConnected                    SubscribableEventType = "incumbent.connected"
-	IncumbentDisconnected                 SubscribableEventType = "incumbent.disconnected"
 	IntroRequestClosed                    SubscribableEventType = "intro_request.closed"
 	IntroRequestCompleted                 SubscribableEventType = "intro_request.completed"
 	IntroRequestCreated                   SubscribableEventType = "intro_request.created"
@@ -509,10 +507,6 @@ const (
 	LinkedinAccountChanged                SubscribableEventType = "linkedin_account.changed"
 	LinkedinMatchDecided                  SubscribableEventType = "linkedin_match.decided"
 	LinkedinNetworkImported               SubscribableEventType = "linkedin_network.imported"
-	MirrorBudgetDegraded                  SubscribableEventType = "mirror.budget_degraded"
-	MirrorConflict                        SubscribableEventType = "mirror.conflict"
-	MirrorDeleted                         SubscribableEventType = "mirror.deleted"
-	MirrorWriteRejected                   SubscribableEventType = "mirror.write_rejected"
 	NoticeCreated                         SubscribableEventType = "notice.created"
 	NoticeRead                            SubscribableEventType = "notice.read"
 	OfferAccepted                         SubscribableEventType = "offer.accepted"
@@ -679,10 +673,6 @@ func (e SubscribableEventType) Valid() bool {
 		return true
 	case ForecastSnapshotCreated:
 		return true
-	case IncumbentConnected:
-		return true
-	case IncumbentDisconnected:
-		return true
 	case IntroRequestClosed:
 		return true
 	case IntroRequestCompleted:
@@ -716,14 +706,6 @@ func (e SubscribableEventType) Valid() bool {
 	case LinkedinMatchDecided:
 		return true
 	case LinkedinNetworkImported:
-		return true
-	case MirrorBudgetDegraded:
-		return true
-	case MirrorConflict:
-		return true
-	case MirrorDeleted:
-		return true
-	case MirrorWriteRejected:
 		return true
 	case NoticeCreated:
 		return true
@@ -1618,33 +1600,6 @@ type PublicEventForecastSnapshotCreated struct {
 // PublicEventForecastSnapshotCreatedTrigger Why it was taken. Only `daily` is arbitrated to one per local day.
 type PublicEventForecastSnapshotCreatedTrigger string
 
-// PublicEventIncumbentConnected Payload for incumbent.connected — the installation completed the overlay-mode incumbent-CRM connect flow (overlay/connection.go's insertConnection) and flipped to overlay_mode.sor_mode=overlay in the same transaction. Unlike the mirror.* events above, this event's subject is always the incumbent_connection row itself — a fixed type — so it is emitted via the plain storekit.EmitEvent.
-type PublicEventIncumbentConnected struct {
-	// Incumbent The incumbent CRM system connected (e.g. "hubspot").
-	Incumbent string `json:"incumbent"`
-
-	// Region The incumbent account's data-residency region.
-	Region string `json:"region"`
-
-	// Scopes The least-privilege OAuth scope set granted.
-	Scopes []string `json:"scopes"`
-
-	// Status The connection's status after this change (active).
-	Status string `json:"status"`
-}
-
-// PublicEventIncumbentDisconnected Payload for incumbent.disconnected — a workspace's active incumbent-CRM connection was revoked (overlay/teardown.go's Disconnect); mirror teardown and credential cleanup follow. This event's subject is always the incumbent_connection row itself — a fixed type — so it is emitted via the plain storekit.EmitEvent.
-type PublicEventIncumbentDisconnected struct {
-	// Incumbent The incumbent CRM system disconnected.
-	Incumbent string `json:"incumbent"`
-
-	// Region The incumbent account's data-residency region.
-	Region string `json:"region"`
-
-	// Status The connection's status after this change (revoked).
-	Status string `json:"status"`
-}
-
 // PublicEventIntroRequestClosed Payload for intro_request.closed — the ask ended without a handshake: withdrawn by the requester, or run out of time. `reason` says which, because a rep withdrawing and a queue timing out call for different follow-ups.
 type PublicEventIntroRequestClosed struct {
 	ContactId      openapi_types.UUID                  `json:"contact_id"`
@@ -1809,42 +1764,6 @@ type PublicEventLinkedinNetworkImported struct {
 	Skipped int `json:"skipped"`
 }
 
-// PublicEventMirrorBudgetDegraded Payload for mirror.budget_degraded — a force-fresh read fell back to the mirror because the workspace's shared OVB budget had shed to the "shed" band (overlay/freshness.go's emitBudgetDegraded, OVA-EVT-3). The event names the record the degraded read was about; that record's class is a RUNTIME value (the read's own entity ref), so this is a dynamic-entity event (contract `x-entity-type: dynamic`): the generated EntityType() is unused, and the emit site supplies the real entity type through storekit.EmitEventForEntity.
-type PublicEventMirrorBudgetDegraded struct {
-	// Band The budget band that forced the degrade (currently always "shed").
-	Band string `json:"band"`
-}
-
-// PublicEventMirrorConflict Payload for mirror.conflict — the reconcile poller (overlay/ reconcile.go's emitMirrorConflict) observed the incumbent CRM had moved a record the mirror's own baseline still called current, an overwrite-worthy divergence (OVA-EVT-1). object_class is the RUNTIME canonical class of the record involved (e.g. "contact", "deal") — not a fixed type this schema can name — so this is a dynamic-entity event (contract `x-entity-type: dynamic`): the generated EntityType() is unused, and the emit site supplies the real entity type through storekit.EmitEventForEntity.
-type PublicEventMirrorConflict struct {
-	// ExternalId The record's incumbent-side natural key.
-	ExternalId string `json:"external_id"`
-
-	// IncumbentUpdatedAt The incumbent's reported modification timestamp.
-	IncumbentUpdatedAt time.Time `json:"incumbent_updated_at"`
-
-	// ObjectClass The canonical Margince class of the diverged record.
-	ObjectClass string `json:"object_class"`
-
-	// PriorUpdatedAt The mirror's prior stored baseline timestamp.
-	PriorUpdatedAt time.Time `json:"prior_updated_at"`
-}
-
-// PublicEventMirrorDeleted Payload for mirror.deleted — continuous sync observed the incumbent report a record deleted, and the mirror purged its cached row, association edges, and visibility projection (overlay/mirrordeletion.go). object_class is the RUNTIME canonical class of the purged record, not a fixed type this schema can name, so this is a dynamic-entity event (contract `x-entity-type: dynamic`): the generated EntityType() is unused, and the emit site supplies the real entity type through storekit.EmitEventForEntity.
-type PublicEventMirrorDeleted struct {
-	// DeletedAt When the incumbent reported the deletion.
-	DeletedAt time.Time `json:"deleted_at"`
-
-	// ExternalId The record's incumbent-side natural key.
-	ExternalId string `json:"external_id"`
-
-	// ObjectClass The canonical Margince class of the purged record.
-	ObjectClass string `json:"object_class"`
-}
-
-// PublicEventMirrorWriteRejected Payload for mirror.write_rejected. Never emitted today — reserved for branch 2 (writes to an overlay-mode workspace's incumbent CRM, currently declared unsupported_by_sor); the schema is published so the type is a valid subscription target and the coverage gate can name it explicitly rather than silently omitting it.
-type PublicEventMirrorWriteRejected struct{}
-
 // PublicEventNoticeCreated Payload for notice.created — a durable informational notice was recorded for one contact (notices/store.go's Create). Recording the row IS the delivery on this transport; the entity is the recipient. The content stays on the row: an event fan-out of subject and body would put the same prose on two wires to drift.
 type PublicEventNoticeCreated struct {
 	// Kind The producing flow's own label (automation, lead_sla).
@@ -1950,7 +1869,7 @@ type PublicEventOnboardingStateChanged struct {
 	// Completed Whether the wizard was completed as of this checkpoint.
 	Completed bool `json:"completed"`
 
-	// ConnectSkipped Whether the incumbent-connect step was skipped.
+	// ConnectSkipped Whether the connect step was skipped.
 	ConnectSkipped bool `json:"connect_skipped"`
 
 	// Path The chosen onboarding path.
@@ -2449,7 +2368,7 @@ type PublicEventWeeklyPlanUpdated struct {
 	PlanId        openapi_types.UUID `json:"plan_id"`
 }
 
-// SubscribableEventType The closed set of domain event types a webhook subscription may select — every subscribable event across the deal, offer, pipeline/stage, contact/company, lead, activities, consent/privacy, signals, ai voice, identity, and overlay families. A subscription's event-type filter is validated against this set; an unlisted type cannot be subscribed to.
+// SubscribableEventType The closed set of domain event types a webhook subscription may select — every subscribable event across the deal, offer, pipeline/stage, contact/company, lead, activities, consent/privacy, signals, ai voice and identity families. A subscription's event-type filter is validated against this set; an unlisted type cannot be subscribed to.
 type SubscribableEventType string
 
 // UserReactivatedStatus The status a reactivated member was restored to.
@@ -2700,14 +2619,6 @@ func (PublicEventForecastSnapshotCreated) EventType() string { return "forecast.
 
 func (PublicEventForecastSnapshotCreated) EntityType() string { return "forecast_snapshot" }
 
-func (PublicEventIncumbentConnected) EventType() string { return "incumbent.connected" }
-
-func (PublicEventIncumbentConnected) EntityType() string { return "incumbent_connection" }
-
-func (PublicEventIncumbentDisconnected) EventType() string { return "incumbent.disconnected" }
-
-func (PublicEventIncumbentDisconnected) EntityType() string { return "incumbent_connection" }
-
 func (PublicEventIntroRequestClosed) EventType() string { return "intro_request.closed" }
 
 func (PublicEventIntroRequestClosed) EntityType() string { return "contact" }
@@ -2777,22 +2688,6 @@ func (PublicEventLinkedinMatchDecided) EntityType() string { return "user" }
 func (PublicEventLinkedinNetworkImported) EventType() string { return "linkedin_network.imported" }
 
 func (PublicEventLinkedinNetworkImported) EntityType() string { return "user" }
-
-func (PublicEventMirrorBudgetDegraded) EventType() string { return "mirror.budget_degraded" }
-
-func (PublicEventMirrorBudgetDegraded) EntityType() string { return "dynamic" }
-
-func (PublicEventMirrorConflict) EventType() string { return "mirror.conflict" }
-
-func (PublicEventMirrorConflict) EntityType() string { return "dynamic" }
-
-func (PublicEventMirrorDeleted) EventType() string { return "mirror.deleted" }
-
-func (PublicEventMirrorDeleted) EntityType() string { return "dynamic" }
-
-func (PublicEventMirrorWriteRejected) EventType() string { return "mirror.write_rejected" }
-
-func (PublicEventMirrorWriteRejected) EntityType() string { return "dynamic" }
 
 func (PublicEventNoticeCreated) EventType() string { return "notice.created" }
 
@@ -3031,8 +2926,6 @@ var PublicEventVersions = map[string]int{
 	"forecast.share_issued":                     1,
 	"forecast.share_revoked":                    1,
 	"forecast.snapshot_created":                 1,
-	"incumbent.connected":                       1,
-	"incumbent.disconnected":                    1,
 	"intro_request.closed":                      1,
 	"intro_request.completed":                   1,
 	"intro_request.created":                     1,
@@ -3050,10 +2943,6 @@ var PublicEventVersions = map[string]int{
 	"linkedin_account.changed":                  1,
 	"linkedin_match.decided":                    1,
 	"linkedin_network.imported":                 1,
-	"mirror.budget_degraded":                    1,
-	"mirror.conflict":                           1,
-	"mirror.deleted":                            1,
-	"mirror.write_rejected":                     1,
 	"notice.created":                            1,
 	"notice.read":                               1,
 	"offer.accepted":                            1,

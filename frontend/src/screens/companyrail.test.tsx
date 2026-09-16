@@ -38,7 +38,15 @@ const company = {
   size_band: "51-200" as const,
   linkedin_url: "https://linkedin.com/company/brandt",
   address: { city: "Munich", country: "DE" },
-  domains: [{ domain: "brandt.example", is_primary: true, source: "manual" }],
+  domains: [
+    {
+      id: "dom-1",
+      domain: "brandt.example",
+      is_primary: true,
+      source: "manual",
+      captured_by: "human:u1",
+    },
+  ],
   captured_by: "human:u1",
   source: "manual",
   version: 1,
@@ -53,10 +61,8 @@ const emptyPage = { has_more: false, next_cursor: null };
 // sense wired to the real tab strip it switches.
 const onTab = () => {};
 
-// Built loosely and cast once here, matching company360.test.tsx's own
-// fixture: a hand-typed 360 payload restates the generated schema by hand,
-// and the two would silently drift the moment the contract grows a field
-// this suite never needed.
+// The 360 this suite reads: every section present and empty, so a case names
+// only the one it is about. Typed as the contract declares it, never cast.
 function view(overrides: Record<string, unknown> = {}): Company360 {
   return {
     as_of: "2026-06-01T09:00:00Z",
@@ -69,9 +75,11 @@ function view(overrides: Record<string, unknown> = {}): Company360 {
       won_lifetime: { amount_minor: 0, currency: null },
       lost_count: 0,
     },
+    projects: [],
+    projects_page: emptyPage,
     tags: [],
     ...overrides,
-  } as unknown as Company360;
+  };
 }
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -99,16 +107,15 @@ function render(ui: ReactNode) {
 
 type RailProps = ComponentProps<typeof CompanyRail>;
 
-// Every site below wants the same rail: a writable view, not loading,
-// composer closed, and a no-op tab switch. `overrides` supplies whatever the
-// test is actually varying.
+// Every site below wants the same rail: a writable view, not loading, and a
+// no-op tab switch. `overrides` supplies whatever the test is actually
+// varying.
 function renderRail(overrides: Partial<RailProps> = {}) {
   return render(
     <CompanyRail
       companyId="o-1"
       view={view()}
       loading={false}
-      composerOpen={false}
       onTab={onTab}
       {...overrides}
     />,
@@ -161,12 +168,6 @@ function stub(
 }
 
 describe("CompanyRail", () => {
-  it("renders nothing while the composer holds the column", () => {
-    stub();
-    renderRail({ composerOpen: true });
-    expect(screen.queryByText("Details")).not.toBeInTheDocument();
-  });
-
   it("draws the details grid from the fields the record actually carries", async () => {
     stub();
     renderRail();
@@ -175,9 +176,11 @@ describe("CompanyRail", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("Automotive")).toBeInTheDocument();
     expect(screen.getByText("51-200")).toBeInTheDocument();
-    // Address draws one row per part now rather than one combined "Munich, DE"
-    // summary.
-    expect(screen.getByText("Munich · DE")).toBeInTheDocument();
+    // Address draws as postal lines now, city then country on their own line
+    // (recordfieldvalues.ts's `postalLines`), rather than one combined
+    // "Munich, DE" summary. The default text normalizer collapses that line
+    // break to a single space, so the two parts still read as one match.
+    expect(screen.getByText("Munich DE")).toBeInTheDocument();
     expect(screen.getByText("brandt.example")).toBeInTheDocument();
     // The owner cell resolves through the roster read, same as EntityRef
     // does everywhere else: not shown until the read lands.
@@ -480,7 +483,7 @@ describe("CompanyRail", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: "Change Domains" }),
     );
-    await userEvent.click(screen.getByRole("button", { name: "Remove" }));
+    await userEvent.click(screen.getByRole("button", { name: /^Remove row/ }));
     expect(onSave).not.toHaveBeenCalled();
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
     await waitFor(() => expect(onSave).toHaveBeenCalledWith({ domains: [] }));
@@ -735,7 +738,7 @@ describe("CompanyRail", () => {
     // no compare at all.
     const names = within(dealsPanel)
       .getAllByRole("link")
-      .map((link) => link.textContent);
+      .map((link) => link.querySelector(".record-card-name")?.textContent);
     expect(names).toEqual([
       "Support renewal",
       "Berlin expansion",
@@ -790,7 +793,7 @@ describe("CompanyRail", () => {
     }
     const names = within(dealsPanel)
       .getAllByRole("link")
-      .map((link) => link.textContent);
+      .map((link) => link.querySelector(".record-card-name")?.textContent);
     // The larger EUR figure leads; the unpriced deal ranks after the priced.
     expect(names).toEqual([
       "Fleet renewal",
@@ -988,7 +991,7 @@ describe("CompanyRail", () => {
       }),
     });
     expect(
-      screen.getByText("Nothing open — only closed history."),
+      screen.getByText("Nothing open, only closed history."),
     ).toBeInTheDocument();
     // No first-deal verb here — the account has already had deals, it is
     // between two of them rather than never having started. The way to the
