@@ -159,6 +159,13 @@ func (s *Store) resolveDomainTriageTx(ctx context.Context, tx pgx.Tx, in Resolve
 	if err != nil {
 		return ResolveDomainTriageResult{}, err
 	}
+	if res.CompanyID == nil {
+		// Held for a human: the name this domain resolved to is close to a
+		// company already here, and which of them it belongs to is their call.
+		// Nothing below has a company to wire, and the disposition stays
+		// pending so the question keeps its place in their queue.
+		return ResolveDomainTriageResult{}, nil
+	}
 	if res.EdgesPlanted, err = plantDomainEmployment(ctx, tx, in.Domain, *res.CompanyID); err != nil {
 		return ResolveDomainTriageResult{}, err
 	}

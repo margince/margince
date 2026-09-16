@@ -162,8 +162,8 @@ func RetireIdentities(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID)
 // means each one's content becomes reachable through the other, so a forged
 // identity is a way to reach somebody else's mail.
 //
-//   - The SAME person wrote both rows → bind. Nobody gains access they did not
-//     already have: one human is joining their own record to their own record,
+//   - The SAME seat wrote both rows → bind. Nobody gains access they did not
+//     already have: one colleague is joining their own record to their own record,
 //     which is exactly the import-then-capture case this exists for.
 //   - DIFFERENT principals → refuse. The arrival goes on to create its own row.
 //     A duplicate is a visible, fixable annoyance; a cross-principal bind on a
@@ -171,7 +171,7 @@ func RetireIdentities(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID)
 //
 // Unparseable, absent or non-human on either side is NOT a match. That is the
 // one direction this must not fail in: treating "I cannot tell" as "the same
-// person" would open the case the rule exists to close.
+// seat" would open the case the rule exists to close.
 func BindableTo(ctx context.Context, tx pgx.Tx, incumbent ids.ActivityID) (bool, error) {
 	var capturedBy string
 	err := tx.QueryRow(ctx,
@@ -189,17 +189,17 @@ func BindableTo(ctx context.Context, tx pgx.Tx, incumbent ids.ActivityID) (bool,
 	return sameActingHuman(capturedBy, arriving), nil
 }
 
-// sameActingHuman reports whether two captured_by stamps name one person.
+// sameActingHuman reports whether two captured_by stamps name one seat.
 //
 // The stamps are structured: 'human:<uuid>' for somebody writing directly,
-// 'connector:<provider>:<uuid>' for a mailbox they connected. One person
+// 'connector:<provider>:<uuid>' for a mailbox they connected. One colleague
 // importing their own mail and syncing their own mailbox therefore appears as
 // two different stamps carrying one uuid, which is exactly the pair that may
 // bind.
 //
 // Anything with no uuid — 'system', a malformed stamp, an empty one — matches
 // nothing, including another copy of itself. Two system writes are not "the
-// same person"; they are two writes with no person behind them.
+// same seat"; they are two writes with no colleague behind them.
 func sameActingHuman(left, right string) bool {
 	l, r := actingHumanOf(left), actingHumanOf(right)
 	return l != "" && l == r
@@ -214,7 +214,7 @@ func actingHumanOf(capturedBy string) string {
 	}
 	if _, err := ids.Parse(candidate); err != nil {
 		// Not a uuid: a stamp shape this does not understand names nobody, and
-		// naming nobody must never read as naming the same person.
+		// naming nobody must never read as naming the same seat.
 		return ""
 	}
 	return candidate
@@ -225,7 +225,7 @@ func actingHumanOf(capturedBy string) string {
 //
 // 'human:<uuid>' is somebody writing directly. 'connector:<provider>:<uuid>' is
 // a mailbox they connected, where the provider is not part of who they are —
-// the same person's Gmail and IMAP stamps must name one person.
+// one colleague's Gmail and IMAP stamps must name one seat.
 func trailingIDOf(capturedBy string) (string, bool) {
 	if rest, ok := strings.CutPrefix(capturedBy, "human:"); ok {
 		return strings.TrimSpace(rest), true
@@ -237,7 +237,7 @@ func trailingIDOf(capturedBy string) (string, bool) {
 	idx := strings.LastIndex(rest, ":")
 	if idx < 0 {
 		// 'connector:gmail' with no seat behind it names a provider, not a
-		// person.
+		// colleague.
 		return "", false
 	}
 	return strings.TrimSpace(rest[idx+1:]), true

@@ -5,10 +5,10 @@ package activities
 
 import "testing"
 
-// Whether two rows may be bound into one message turns on whether one person
+// Whether two rows may be bound into one message turns on whether one seat
 // wrote both. A Message-ID is typed by whoever sent the message, so binding on
-// a forged one across two people is a way to reach somebody else's mail.
-func TestOnlyOnePersonsOwnRowsBindTogether(t *testing.T) {
+// a forged one across two seats is a way to reach somebody else's mail.
+func TestOnlyOneSeatsOwnRowsBindTogether(t *testing.T) {
 	const (
 		lars  = "01a0a203-b6ab-70b2-988b-b103e09fb822"
 		other = "01a0a203-b6ab-70b2-988b-b103e09fb823"
@@ -19,21 +19,21 @@ func TestOnlyOnePersonsOwnRowsBindTogether(t *testing.T) {
 		want        bool
 	}{
 		{
-			// The measured case: the same person imported the mail and
+			// The measured case: the same colleague imported the mail and
 			// connected the mailbox, reaching the two doors as two stamps.
-			name:  "one person, through two doors",
+			name:  "one colleague, through two doors",
 			left:  "human:" + lars,
 			right: "connector:gmail:" + lars,
 			want:  true,
 		},
 		{"the same door twice", "human:" + lars, "human:" + lars, true},
-		{"two mailboxes of one person", "connector:gmail:" + lars, "connector:imap:" + lars, true},
+		{"two mailboxes of one colleague", "connector:gmail:" + lars, "connector:imap:" + lars, true},
 
-		{"two different people", "human:" + lars, "human:" + other, false},
-		{"another person's mailbox", "human:" + lars, "connector:gmail:" + other, false},
+		{"two different colleagues", "human:" + lars, "human:" + other, false},
+		{"another colleague's mailbox", "human:" + lars, "connector:gmail:" + other, false},
 
 		// Everything below names nobody, and naming nobody must never read as
-		// naming the same person — that is the direction this must not fail in.
+		// naming the same seat — that is the direction this must not fail in.
 		{"the system, twice", "system", "system", false},
 		{"a system notice", "system:owed_verdict", "system:owed_verdict", false},
 		{"nothing at all", "", "", false},

@@ -40,7 +40,7 @@ func identityOf(in LogActivityInput) (kind, key string) {
 //
 //   - The incumbent is out of this caller's scope → they must not learn it
 //     exists, so nothing is disclosed and their own row is created.
-//   - A different person wrote the incumbent → binding would make one person's
+//   - A different seat wrote the incumbent → binding would make one colleague's
 //     mail reachable through the other's, on the strength of a header the
 //     sender typed. See BindableTo.
 //   - The kinds disagree → a Message-ID on a note and the same one on an email

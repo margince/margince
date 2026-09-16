@@ -25,11 +25,14 @@ import (
 //     of one business resolve to one label (the product brand and the corporate
 //     site, the country domains), and minting a second record for the second
 //     domain is what put one company in a workspace twice.
-//   - A close name, or SEVERAL companies with the same name → nothing is
-//     created and the question is held for a human. "Baqend GmbH" and "Baqend
-//     Inc" score alike and are two different legal entities, and picking among
-//     several exact twins by rank would be choosing by uuid.
-//   - No twin at all → the caller creates, as before.
+//   - SEVERAL companies with the same name → nothing is created and the
+//     question is held for a human, because picking among exact twins by rank
+//     would be choosing by uuid.
+//   - No twin, or a merely CLOSE name → the caller creates, as before, and a
+//     near-match still goes on the review queue. The fuzzy tier scores on
+//     shared words, so two unrelated companies ending in the same nouns reach
+//     it easily; holding on that would strand the contacts of every domain
+//     whose name rhymes with an incumbent's.
 //
 // It reports the adopted company, or that the question was held. Both nil means
 // carry on and create.
@@ -42,9 +45,9 @@ func (s *Store) adoptOrHoldForNameTwin(
 		id, err := s.adoptDomainIntoCompany(ctx, tx, in, twins[0], by)
 		return id, false, err
 	}
-	// Several exact twins, or a near-match the fuzzy tier already flagged.
-	// Either way the machine cannot tell which company this domain belongs to.
-	candidate, ok := heldRival(match, twins)
+	// Several companies carry this exact name, so which one this domain belongs
+	// to is not something the machine can answer.
+	candidate, ok := heldRival(twins)
 	if !ok {
 		return nil, false, nil
 	}
@@ -98,14 +101,20 @@ func exactNameRivals(match CompanyMatch) []CompanyCandidateScore {
 // heldRival names the company a held question should point a human at, and
 // reports whether the question is held at all.
 //
-// Several exact twins are held on the first of them; a fuzzy review with no
-// exact twin is held on its best-scoring rival. Anything else creates.
-func heldRival(match CompanyMatch, twins []CompanyCandidateScore) (CompanyCandidateScore, bool) {
+// ONLY several exact twins hold. That is the case the machine genuinely cannot
+// answer: two companies carry this exact name, and choosing between them by
+// rank would be choosing by uuid.
+//
+// A merely CLOSE name does not hold, and the distinction matters more than it
+// looks. The fuzzy tier scores on shared words, so "New Employer GmbH" and
+// "Incumbent Employer GmbH" reach 0.78 on "Employer GmbH" alone while being
+// two unrelated companies. Holding on that would strand the contacts of every
+// domain whose name happens to rhyme with an incumbent's. Those keep today's
+// behaviour: the company is created and the pair goes on the review queue,
+// where a human sees both records and can merge them.
+func heldRival(twins []CompanyCandidateScore) (CompanyCandidateScore, bool) {
 	if len(twins) > 1 {
 		return twins[0], true
-	}
-	if match.Decision == DecisionFuzzyReview && len(match.Ranked) > 0 {
-		return match.Ranked[0], true
 	}
 	return CompanyCandidateScore{}, false
 }
