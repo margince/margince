@@ -6374,6 +6374,12 @@ export const en = {
   // Labels the password path, not the provider buttons above it: where the
   // installation runs SSO, the form beneath this divider is the fallback door.
   "auth.orDivider": "or",
+  // The card at an installation that closed the password door and whose
+  // provider is not offering the flow yet — the deployment mounted it, the
+  // OAuth app is not stored. It names what is missing without blaming the
+  // reader, who cannot fix either half.
+  "auth.noMethodOffered":
+    "This company signs in through its identity provider, which is not available right now. Ask an administrator to finish setting it up.",
   // §7.1 verbatim. The noun is "company", not "workspace": ADR-0061
   // keeps `workspace` internal and §7.3 removed it from authentication. And the
   // line states that ACCESS is restricted, never that data is safe, encrypted or

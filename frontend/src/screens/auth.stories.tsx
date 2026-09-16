@@ -1,8 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import type { Locale } from "../i18n";
-import { AuthScreen, AvailabilityScreen, ProviderButtons } from "./auth";
+import { AuthScreen, AvailabilityScreen } from "./auth";
 import { AuthExperience } from "./auth-core";
+import { ProviderButtons } from "./auth-providers";
 import {
   installFetchStub,
   jsonResponse,

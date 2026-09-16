@@ -6128,6 +6128,8 @@ export const vi = {
   // Labels the password path, not the provider buttons above it: where the
   // installation runs SSO, the form beneath this divider is the fallback door.
   "auth.orDivider": "hoặc",
+  "auth.noMethodOffered":
+    "Công ty này đăng nhập qua nhà cung cấp danh tính của mình, hiện chưa khả dụng. Hãy đề nghị quản trị viên hoàn tất phần thiết lập.",
   // §7.1 verbatim. The noun is "company", not "workspace": ADR-0061
   // keeps `workspace` internal and §7.3 removed it from authentication. And the
   // line states that ACCESS is restricted, never that data is safe, encrypted or

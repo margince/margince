@@ -613,6 +613,30 @@ runs the background sync.
 | `--graph-watch-interval` / `--graph-watch-renew-within` | — | worker | Graph subscription maintenance scan (`6h`) / renew this far ahead of its deadline (`24h`). Microsoft's ceiling for a `/me/messages` subscription is **4230 minutes** (just under three days) where a Gmail watch lasts seven, so the Gmail defaults do not carry across |
 | `--graph-push-token` | `MARGINCE_GRAPH_PUSH_TOKEN` | api | shared secret on the Graph change-notification URL; enables `POST /webhooks/graph` (empty = route absent). It must be the same token the worker's `--graph-notification-url` carries, and it is the ONLY admission factor — Microsoft signs nothing on a change notification |
 
+### Turning the password method off
+
+An installation that signs its members in through an identity provider closes
+the password door in `margince.yaml`:
+
+```yaml
+auth:
+  password:
+    enabled: false   # default true
+```
+
+With it off, `POST /v1/auth/login` and `POST /v1/auth/forgot-password` answer
+**501** naming the method, `/v1/auth/capabilities` reports `password: false`
+and `password_reset: false`, and the login screen draws the provider buttons
+alone. The **admin-issued** set-password link is deliberately unaffected: it
+provisions a seat rather than offering a way in, and an installation that turns
+the method back on must not have to re-provision everybody first.
+
+**The api refuses to boot with the method off and no federated provider
+mounted** — that deployment has no door at all. Mounted is the bar the check
+uses, which is weaker than "somebody can sign in today": a provider whose OAuth
+app an admin has not stored yet is mounted and offers no button, and the login
+screen says so rather than rendering an empty card.
+
 ## Object storage (api, worker) — attachments and company logos
 
 Env-only, shared by both roles; secrets never appear on the command line
