@@ -171,14 +171,24 @@ function PersonalMorning({
     context?.source === "task" || context?.source === "meeting_outcome";
   return (
     <>
-      {/* The figures FIRST, as one ruled line under the greeting: what the
-          day holds in five readings, then the work — the order every page
-          with figures reads in, and the order the opening sentence promises
-          ("First: … Then 5 more"). A line rather than a plate of tiles,
-          because the readings frame the work and must not stand in front of
-          it. The overview also carries what the read could not see and when
-          it was assembled, because both qualify the figures before they
-          qualify the rows. */}
+      {/* THE WORK, across the whole page: the Focus panel is the one card
+          the morning is for, with the row in hand and the queue beside it,
+          so it takes the page's width rather than sharing it with a rail. */}
+      <BriefFeed
+        day={day}
+        onContext={(item) => setSelected(`${item.source}-${item.id}`)}
+        state={state}
+        changed={changedSinceBrief(day)}
+        refreshFailed={query.isRefetchError}
+        onRetry={() => void query.refetch()}
+      />
+      {/* THE FIGURES UNDER THE WORK: what the day holds in five readings,
+          each a door into its lane. The work comes first because the page is
+          for clearing it — the opening sentence already says what is first
+          and how much follows — and the readings are what a reader turns to
+          once the row in hand is answered. The band also carries what the
+          read could not see and when it was assembled, because both qualify
+          the figures. */}
       {day && (
         <div className="brief-overview">
           <BriefReadingsStrip day={day} />
@@ -203,17 +213,6 @@ function PersonalMorning({
           </p>
         </div>
       )}
-      {/* THE WORK, across the whole page: the Focus panel is the one card
-          the morning is for, with the row in hand and the queue beside it,
-          so it takes the page's width rather than sharing it with a rail. */}
-      <BriefFeed
-        day={day}
-        onContext={(item) => setSelected(`${item.source}-${item.id}`)}
-        state={state}
-        changed={changedSinceBrief(day)}
-        refreshFailed={query.isRefetchError}
-        onRetry={() => void query.refetch()}
-      />
       {/* THE FOLLOW-THROUGH under it, in two columns: what was done for the
           reader and the day's notices on the left, and on the right the
           context the work is read against — the schedule as the day's line,

@@ -4,10 +4,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { expect, userEvent, within } from "storybook/test";
+import { Badge } from "../design-system/atoms";
 import { Panel } from "../design-system/panel";
+import { en } from "../i18n/en";
 import { taskRow, waitingEmailRow } from "./brief.fixtures";
 import { Triage } from "./brief.focus";
-import { installFetchStub, StoryProviders } from "./story-utils";
+import { installFetchStub, meRoute, StoryProviders } from "./story-utils";
 import type { WorklistItem } from "./worklist.queries";
 
 // THE FOCUS PANEL'S INSIDE: the card in hand on the stack of what is still
@@ -16,14 +18,14 @@ import type { WorklistItem } from "./worklist.queries";
 // What to check in each frame:
 //   · the card reads label, work, whose row it is, verbs — the verbs across
 //     its floor, the set-asides leading and the prepared move closing;
-//   · the card fills the panel's height, so the air is inside it rather than
-//     a hole beside the queue;
+//   · the card hugs its own content and sits centred against the column, so a
+//     long queue lengthens the column rather than stretching the card;
 //   · the edges of two more cards show under it, and only as many as there
 //     are rows behind;
 //   · pressing a row in the column puts it in hand, and the card comes up off
 //     the stack (the animation is CSS; a frame catches its end state).
 //
-// Both themes: the stack's edges, the card's ground and the accent band above
+// Both themes: the stack's edges, the card's ground and the indigo band above
 // it are all `color-mix()` over canonical tokens and re-resolve on the flip.
 
 const meta: Meta<typeof Triage> = {
@@ -48,7 +50,12 @@ function aDay(): WorklistItem[] {
 /** The panel around it, so the card is judged in the width it is drawn at. */
 function panel(rows: WorklistItem[], start = 0) {
   return () => {
-    installFetchStub({});
+    // The card's hand-off names the contact a reassignment moves a task away
+    // from, and on the reader's own queue that is whoever `/me` says. Left to
+    // the stub's fallback it answers a list-shaped body, which reads as a
+    // malformed session: every grant fails closed and the frame draws a branch
+    // no story here is named for.
+    installFetchStub({ "GET /me": meRoute({}, { roles: ["rep"] }) });
     return (
       <StoryProviders>
         <Chosen rows={rows} start={start} />
@@ -64,7 +71,15 @@ function Chosen({
   const [at, setAt] = useState(start);
   return (
     <div id="brief-today">
-      <Panel tone="accent" className="brief-focus-panel" title="Focus">
+      {/* The panel's own band, because the card is judged against it: INDIGO,
+          the colour this house gives what an agent proposed, with the tag that
+          says so — the same band and tag the Brief draws around this. */}
+      <Panel
+        tone="ai"
+        className="brief-focus-panel"
+        title={en["brief.feed.title"]}
+        titleAction={<Badge tone="ai">{en["co.assistant.aiTag"]}</Badge>}
+      >
         <Triage
           rows={rows}
           at={at}

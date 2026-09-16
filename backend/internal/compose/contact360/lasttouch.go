@@ -69,7 +69,7 @@ func LastTouchFor(ctx context.Context, tx pgx.Tx, contactIDs []ids.ContactID, op
 		return nil, err
 	}
 	if visible == "" {
-		visible = "true"
+		visible = scopeAll
 	}
 	scope, err := activityDiscoverScope(ctx, arg)
 	if err != nil {

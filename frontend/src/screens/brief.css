@@ -39,20 +39,27 @@
 .brief-rail > * {
   animation: brief-arrive var(--dur-enter) var(--ease-out) both;
 }
-.brief-readings .stat-strip > *:nth-child(2) {
-  animation-delay: calc(var(--dur-tap) * 0.5);
-}
-.brief-readings .stat-strip > *:nth-child(3) {
+/* THE ORDER THE PAGE IS READ IN is the order it arrives in: the work the
+   morning is for, then the day's five readings under it, then the
+   follow-through. A delay keyed to the old order left the readings landing
+   before the panel they now sit beneath. */
+.brief-wrap > #brief-today {
   animation-delay: var(--dur-tap);
 }
+.brief-readings .stat-strip > *:nth-child(1) {
+  animation-delay: var(--dur-move);
+}
+.brief-readings .stat-strip > *:nth-child(2) {
+  animation-delay: calc(var(--dur-move) + var(--dur-tap) * 0.5);
+}
+.brief-readings .stat-strip > *:nth-child(3) {
+  animation-delay: calc(var(--dur-move) + var(--dur-tap));
+}
 .brief-readings .stat-strip > *:nth-child(4) {
-  animation-delay: calc(var(--dur-tap) * 1.5);
+  animation-delay: calc(var(--dur-move) + var(--dur-tap) * 1.5);
 }
 .brief-readings .stat-strip > *:nth-child(5) {
-  animation-delay: calc(var(--dur-tap) * 2);
-}
-.brief-wrap > #brief-today {
-  animation-delay: var(--dur-move);
+  animation-delay: calc(var(--dur-move) + var(--dur-tap) * 2);
 }
 .brief-main > * {
   animation-delay: calc(var(--dur-move) + var(--dur-tap));
@@ -193,11 +200,13 @@
  * readings as the house's reading cards, each a door into its lane with its
  * basis under the figure, the way a record's band draws its readings — with
  * the strip's own footnotes under them. */
+/* The readings band, under the work: its own section's air above it, the
+   same interval every section of this page takes. */
 .brief-overview {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  margin: var(--space-2) 0 0;
+  margin: var(--space-6) 0 0;
 }
 .brief-readings {
   margin: 0;
