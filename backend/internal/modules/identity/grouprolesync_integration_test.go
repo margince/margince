@@ -59,7 +59,7 @@ func roleAssignAuditCount(t *testing.T, conn *pgx.Conn, userID ids.UserID) int {
 
 func TestFederatedSignInGrantsTheMappedRoleOnce(t *testing.T) {
 	svc, conn, userID, email := seedSSOEnv(t, "sso-group-grant")
-	svc.WithGroupRoleMap(func(context.Context) (map[string]string, error) {
+	svc.WithGroupRoleMap(func(context.Context, pgx.Tx) (map[string]string, error) {
 		return map[string]string{"crm-users": "rep"}, nil
 	})
 
@@ -103,7 +103,7 @@ func TestFederatedSignInGrantsTheMappedRoleOnce(t *testing.T) {
 func TestAMemberKeepsARoleWhoseGroupLeftTheMap(t *testing.T) {
 	svc, conn, userID, email := seedSSOEnv(t, "sso-group-keeps")
 	roleMap := map[string]string{"crm-users": "rep"}
-	svc.WithGroupRoleMap(func(context.Context) (map[string]string, error) { return roleMap, nil })
+	svc.WithGroupRoleMap(func(context.Context, pgx.Tx) (map[string]string, error) { return roleMap, nil })
 
 	if _, err := svc.LoginViaFederatedIdentity(groupSyncCtx(), "google", "sub-1", email,
 		[]string{"crm-users"}); err != nil {
@@ -123,7 +123,7 @@ func TestAMemberKeepsARoleWhoseGroupLeftTheMap(t *testing.T) {
 
 func TestAnUnmappedGroupGrantsNothing(t *testing.T) {
 	svc, conn, userID, email := seedSSOEnv(t, "sso-group-unmapped")
-	svc.WithGroupRoleMap(func(context.Context) (map[string]string, error) {
+	svc.WithGroupRoleMap(func(context.Context, pgx.Tx) (map[string]string, error) {
 		return map[string]string{"crm-users": "rep"}, nil
 	})
 
@@ -146,7 +146,7 @@ func TestAnUnmappedGroupGrantsNothing(t *testing.T) {
 // saved — which is why the map is injected raw here.
 func TestAStaleMapEntryIsSkippedAndTheSignInSucceeds(t *testing.T) {
 	svc, conn, userID, email := seedSSOEnv(t, "sso-group-stale")
-	svc.WithGroupRoleMap(func(context.Context) (map[string]string, error) {
+	svc.WithGroupRoleMap(func(context.Context, pgx.Tx) (map[string]string, error) {
 		return map[string]string{"crm-users": "a_role_since_retired"}, nil
 	})
 
@@ -164,7 +164,7 @@ func TestAStaleMapEntryIsSkippedAndTheSignInSucceeds(t *testing.T) {
 // no account exists afterwards.
 func TestGroupsOnANeverInvitedEmailStillRefuse(t *testing.T) {
 	svc, conn, _, _ := seedSSOEnv(t, "sso-group-no-jit")
-	svc.WithGroupRoleMap(func(context.Context) (map[string]string, error) {
+	svc.WithGroupRoleMap(func(context.Context, pgx.Tx) (map[string]string, error) {
 		return map[string]string{"crm-admins": "admin"}, nil
 	})
 
@@ -188,7 +188,7 @@ func TestGroupsOnANeverInvitedEmailStillRefuse(t *testing.T) {
 // nothing for this feature, and even a broken map reader cannot touch it.
 func TestAGrouplessTokenNeverReadsTheMap(t *testing.T) {
 	svc, _, _, email := seedSSOEnv(t, "sso-group-none")
-	svc.WithGroupRoleMap(func(context.Context) (map[string]string, error) {
+	svc.WithGroupRoleMap(func(context.Context, pgx.Tx) (map[string]string, error) {
 		t.Error("the group-role map was read for a token that carried no groups")
 		return map[string]string{}, nil
 	})

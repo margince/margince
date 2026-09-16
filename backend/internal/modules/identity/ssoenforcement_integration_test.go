@@ -7,9 +7,10 @@ package identity
 
 // Enforced-SSO mode: when an installation requires single sign-on, the password
 // path is closed to ordinary members but stays open to admins — the break-glass
-// that keeps a broken IdP from locking out the admins who fix it. A wrong
-// password is still refused first and neutrally, so enforcement never becomes a
-// password oracle.
+// that keeps a broken IdP from locking out the admins who fix it. A CORRECT
+// password is refused with the same ErrBadCredentials a wrong one earns: any
+// distinct answer would only ever reach a caller whose guess was right, making
+// enforcement a password oracle.
 
 import (
 	"context"
@@ -37,9 +38,12 @@ func TestEnforcedSSORefusesANonAdminPasswordLogin(t *testing.T) {
 	e := setupRevocationEnv(t, "sso-enforced")
 	enforceSSO(e)
 
+	// The password is CORRECT — and the refusal must still be the neutral
+	// ErrBadCredentials, indistinguishable from a wrong guess, or enforcement
+	// verifies passwords for whoever probes the login.
 	_, token, err := e.svc.Login(e.wsOnlyCtx(), e.member.Email, memberPassword)
-	if !errors.Is(err, errSSORequired) {
-		t.Fatalf("non-admin under enforced SSO: err=%v, want errSSORequired", err)
+	if !errors.Is(err, ErrBadCredentials) {
+		t.Fatalf("correct password under enforced SSO: err=%v, want the neutral ErrBadCredentials", err)
 	}
 	if token != "" {
 		t.Error("a refused SSO-required login must mint no session token")
@@ -70,7 +74,7 @@ func TestEnforcedSSOStillRefusesAWrongPasswordNeutrally(t *testing.T) {
 	// never reveals that a password was right by answering differently.
 	_, _, err := e.svc.Login(e.wsOnlyCtx(), e.member.Email, "not the password")
 	if !errors.Is(err, ErrBadCredentials) {
-		t.Fatalf("wrong password under enforced SSO: err=%v, want ErrBadCredentials (not sso_required)", err)
+		t.Fatalf("wrong password under enforced SSO: err=%v, want ErrBadCredentials", err)
 	}
 }
 

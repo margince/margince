@@ -67,10 +67,12 @@ type Service struct {
 	// nothing extra per request. See mfachallenge.go.
 	requireMFA func(ctx context.Context) (bool, error)
 	// groupRoleMap answers the admin's group→role grant map for federated
-	// sign-in. Nil when unwired — no grants, the same posture as an empty map —
-	// and it is only ever read when a token actually carried groups, so the
-	// common groupless login costs no extra query. See grouprolesync.go.
-	groupRoleMap func(ctx context.Context) (map[string]string, error)
+	// sign-in, read inside the login's own transaction so the grant commits
+	// against the map as it stands then. Nil when unwired — no grants, the same
+	// posture as an empty map — and it is only ever read when a token actually
+	// carried groups, so the common groupless login costs no extra query. See
+	// grouprolesync.go.
+	groupRoleMap func(ctx context.Context, tx pgx.Tx) (map[string]string, error)
 	// vault seals a member's TOTP secret at rest: the secret must be recoverable
 	// to verify a code (unlike a password, which is only ever compared), so it is
 	// sealed rather than hashed. Nil when unwired, which is what the MFA methods

@@ -113,11 +113,16 @@ func (s *Service) Login(ctx context.Context, email, plaintext string) (Identity,
 // that function over the credential/session/audit spine rather than the policy
 // branches; each gate's own reasoning lives at its return below.
 func (s *Service) enforceSignInPolicy(ctx context.Context, tx pgx.Tx, id Identity, sso bool) error {
-	// Enforced SSO closes the password path to everyone but an admin, and only
-	// AFTER the credential check — so a wrong password is still refused first and
-	// neutrally, never answered differently because the mode is on.
+	// Enforced SSO closes the password path to everyone but an admin — with the
+	// SAME refusal a wrong password earns. This branch runs only after the
+	// credential check has passed, so any distinct answer here would confirm the
+	// password was right: a 403 in place of the 401 turns enforcement into an
+	// oracle that verifies guessed passwords for every non-admin member. The
+	// refused attempt keeps the ordinary failure accounting (audit row, per-IP
+	// and per-account throttles) for the same reason — a different cadence would
+	// be the same oracle by a side door.
 	if sso && !id.hasRole(roleAdmin) {
-		return errSSORequired
+		return ErrBadCredentials
 	}
 	// A member with an active second factor gets no session from the password
 	// alone: the flow stops here and resumes at /auth/mfa. Checked after the SSO

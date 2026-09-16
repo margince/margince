@@ -33,8 +33,10 @@ const roleAuditKey = "roles"
 // WithGroupRoleMap injects the group→role grant map reader, read fresh per
 // federated sign-in so an admin's change takes effect without a restart — the
 // same wiring shape as WithRequireSSO. Unset grants nothing, exactly like an
-// empty map.
-func (s *Service) WithGroupRoleMap(fn func(ctx context.Context) (map[string]string, error)) *Service {
+// empty map. The reader takes the login's own transaction: granting from a map
+// read outside it would let an entry the admin retires mid-login still hand out
+// the role after its removal committed.
+func (s *Service) WithGroupRoleMap(fn func(ctx context.Context, tx pgx.Tx) (map[string]string, error)) *Service {
 	s.groupRoleMap = fn
 	return s
 }
@@ -48,11 +50,11 @@ func (s *Service) WithGroupRoleMap(fn func(ctx context.Context) (map[string]stri
 // "no grants", for the reason enforcedSSO gives: a policy outage is neither on
 // nor off, and signing a member in without a role an admin deliberately mapped
 // would be answering it as off.
-func (s *Service) mappedRoleKeys(ctx context.Context, groups []string) ([]string, error) {
+func (s *Service) mappedRoleKeys(ctx context.Context, tx pgx.Tx, groups []string) ([]string, error) {
 	if len(groups) == 0 || s.groupRoleMap == nil {
 		return nil, nil
 	}
-	roleMap, err := s.groupRoleMap(ctx)
+	roleMap, err := s.groupRoleMap(ctx, tx)
 	if err != nil {
 		return nil, err
 	}

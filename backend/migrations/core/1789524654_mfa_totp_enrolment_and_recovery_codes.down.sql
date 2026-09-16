@@ -1,4 +1,4 @@
--- 1789455760: mfa_totp_enrolment_and_recovery_codes (down).
+-- 1789524654: mfa_totp_enrolment_and_recovery_codes (down).
 --
 -- Bounded, because DROP TABLE takes ACCESS EXCLUSIVE and dropping user_mfa,
 -- whose foreign key references app_user, briefly locks app_user too — a table

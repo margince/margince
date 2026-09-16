@@ -142,13 +142,6 @@ func linkFederatedIdentity(ctx context.Context, tx pgx.Tx, userID ids.UserID, pr
 // (grouprolesync.go) commit in the same transaction as the session, so a
 // member never holds a session that predates the grant their sign-in earned.
 func (s *Service) LoginViaFederatedIdentity(ctx context.Context, provider, subject, email string, groups []string) (string, error) {
-	// Read before the transaction, like the login-path policy reads
-	// (Authenticate's requireMFA): only a token that actually carried groups
-	// pays for it, so the common groupless sign-in reads no settings at all.
-	mappedRoles, err := s.mappedRoleKeys(ctx, groups)
-	if err != nil {
-		return "", err
-	}
 	rawToken, tokenHash, err := mintSessionToken()
 	if err != nil {
 		return "", fmt.Errorf("identity: mint session token: %w", err)
@@ -162,6 +155,15 @@ func (s *Service) LoginViaFederatedIdentity(ctx context.Context, provider, subje
 		wasRelink, linkErr := linkFederatedIdentity(ctx, tx, userID, provider, subject, email)
 		if linkErr != nil {
 			return linkErr
+		}
+		// The map is read HERE, inside the transaction the grant commits in and
+		// only once the member is admitted: a pre-transaction read could grant
+		// from an entry whose removal committed before this login did, and a
+		// refused sign-in never pays for the read at all. Groupless tokens still
+		// read nothing (mappedRoleKeys).
+		mappedRoles, mapErr := s.mappedRoleKeys(ctx, tx, groups)
+		if mapErr != nil {
+			return mapErr
 		}
 		if grantErr := s.grantMappedRoles(ctx, tx, userID, mappedRoles); grantErr != nil {
 			return grantErr

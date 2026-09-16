@@ -260,9 +260,12 @@ paths:
         Baseline interactive sign-in (ADR-0043). On success mints an opaque server-side session
         and sets the `crm_session` cookie (`HttpOnly; Secure; SameSite=Strict; Path=/`). Accepts
         email + password only — no tenant selector (ADR-0061). Failures are neutral (no
-        account enumeration), rate-limited, and verified at full cost either way. The MFA and
-        SSO-enforced challenge states return with their complete flows (ADR-0043 Amendment 2).
-        Every attempt (success/failure/lockout) is audited (`features/04 §7`).
+        account enumeration), rate-limited, and verified at full cost either way. A member with
+        a confirmed second factor gets the 202 challenge below. An installation that enforces
+        SSO (`require_sso`) refuses a non-admin password login with the SAME neutral 401 a wrong
+        password earns — a distinct answer would only ever follow a correct password, verifying
+        guesses — so a client offers single sign-on from `GET /auth/capabilities`, never from
+        this response. Every attempt (success/failure/lockout) is audited (`features/04 §7`).
       requestBody:
         required: true
         content:
@@ -288,20 +291,18 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/MfaChallenge' }
         '401':
-          description: Invalid credentials.
+          description: >-
+            Invalid credentials — or a non-admin password login on an installation that
+            enforces SSO, deliberately indistinguishable from one.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Problem' }
-        '403':
-          description: >-
-            Refused with `code: sso_required` — the credentials were correct, but this
-            installation has closed the password path (`require_sso`) and the account is not an
-            admin. The client sends the caller to single sign-on rather than showing a password
-            error. Admins are exempt (break-glass), so they never see this.
-          content:
-            application/problem+json:
-              schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
+        '429':
+          description: Rate-limited.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Problem' }
 
   /auth/mfa:
     post:
@@ -339,6 +340,11 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
+        '429':
+          description: Rate-limited, per client IP and per account on failures.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Problem' }
 
   /auth/oidc/{provider}/start:
     get:
@@ -369,6 +375,11 @@ paths:
           headers:
             Set-Cookie: { schema: { type: string } }
         '404': { $ref: '#/components/responses/NotFound' }
+        '429':
+          description: Rate-limited per client IP.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Problem' }
 
   /auth/oidc/{provider}/callback:
     get:
@@ -403,6 +414,11 @@ paths:
           headers:
             Set-Cookie: { schema: { type: string } }
         '404': { $ref: '#/components/responses/NotFound' }
+        '429':
+          description: Rate-limited per client IP.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Problem' }
 
   /auth/logout:
     post:
@@ -21069,6 +21085,11 @@ paths:
         '204': { description: 'MFA is off, or was already.' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '422': { $ref: '#/components/responses/ValidationError' }
+        '429':
+          description: Too many wrong codes for this account.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Problem' }
   /me/mfa/totp:
     post:
       tags: [Identity]
@@ -24370,7 +24391,10 @@ components:
       properties:
         code:
           type: string
-          description: A current authenticator code, or an unused recovery code.
+          description: >-
+            A current authenticator code, or an unused recovery code. Verified only when a
+            CONFIRMED factor guards the account; the codeless cases the operation describes
+            (nothing enrolled, or a merely PENDING enrolment) accept it empty.
     RecoveryCodes:
       type: object
       additionalProperties: false

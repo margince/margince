@@ -110,6 +110,41 @@ func TestMFAEndpointsEnrolConfirmAndDisable(t *testing.T) {
 	}
 }
 
+// The contract's codeless cases: with no confirmed factor there is nothing the
+// step-up would prove, so an empty code disables a merely PENDING enrolment and
+// no-ops on an account with nothing enrolled — the code is demanded only where
+// a factor actually guards the account.
+func TestMFADisableNeedsNoCodeWhereNoConfirmedFactorGuards(t *testing.T) {
+	e := setupRevocationEnv(t, "mfa-http-codeless")
+	e.withVault()
+	h := NewHandlers(e.svc)
+	ctx := e.asMember()
+
+	noneRec := httptest.NewRecorder()
+	h.DisableMyMfa(noneRec, jsonRequest(ctx, t, http.MethodDelete, "/v1/me/mfa",
+		crmcontracts.MfaDisableRequest{}))
+	if noneRec.Code != http.StatusNoContent {
+		t.Fatalf("codeless disable with nothing enrolled = %d, want the no-op 204 (body %s)",
+			noneRec.Code, noneRec.Body.String())
+	}
+
+	startRec := httptest.NewRecorder()
+	h.StartMyTotpEnrolment(startRec, httptest.NewRequest(http.MethodPost, "/v1/me/mfa/totp", nil).WithContext(ctx))
+	if startRec.Code != http.StatusOK {
+		t.Fatalf("start enrolment = %d, want 200", startRec.Code)
+	}
+	pendingRec := httptest.NewRecorder()
+	h.DisableMyMfa(pendingRec, jsonRequest(ctx, t, http.MethodDelete, "/v1/me/mfa",
+		crmcontracts.MfaDisableRequest{}))
+	if pendingRec.Code != http.StatusNoContent {
+		t.Fatalf("codeless disable of a pending enrolment = %d, want 204 (body %s)",
+			pendingRec.Code, pendingRec.Body.String())
+	}
+	if mfaStatus(t, h, e).Enrolled {
+		t.Error("the pending enrolment survived a codeless disable")
+	}
+}
+
 // jsonRequest builds a request carrying the marshalled body on the given context.
 func jsonRequest[T any](ctx context.Context, t *testing.T, method, path string, payload T) *http.Request {
 	t.Helper()

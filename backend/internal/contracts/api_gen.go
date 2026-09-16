@@ -31836,7 +31836,7 @@ type MfaChallenge struct {
 
 // MfaDisableRequest The step-up that proves the caller holds the factor being removed, not merely a session that could have been hijacked.
 type MfaDisableRequest struct {
-	// Code A current authenticator code, or an unused recovery code.
+	// Code A current authenticator code, or an unused recovery code. Verified only when a CONFIRMED factor guards the account; the codeless cases the operation describes (nothing enrolled, or a merely PENDING enrolment) accept it empty.
 	Code string `json:"code"`
 }
 

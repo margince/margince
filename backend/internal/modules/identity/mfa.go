@@ -93,8 +93,10 @@ func (s *Service) StartTOTPEnrolment(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("identity: seal totp secret: %w", err)
 	}
 	var superseded string
+	committing := false
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		superseded = ""
+		committing = false
 		prevRef, confirmedAt, _, lockErr := lockEnrolment(ctx, tx, human)
 		switch {
 		case errors.Is(lockErr, errMFANotEnrolled):
@@ -108,19 +110,28 @@ func (s *Service) StartTOTPEnrolment(ctx context.Context) (string, error) {
 		}
 		// last_used_step resets with the secret: a fresh secret opens a fresh
 		// step namespace, and a stale high-water mark would refuse its first code.
-		_, err := tx.Exec(ctx,
+		if _, err := tx.Exec(ctx,
 			`INSERT INTO user_mfa (user_id, secret_ref) VALUES ($1, $2)
 			 ON CONFLICT (user_id) DO UPDATE
 			   SET secret_ref = EXCLUDED.secret_ref, confirmed_at = NULL,
 			       last_used_step = 0, created_at = now()`,
-			human, string(ref))
-		return err
+			human, string(ref)); err != nil {
+			return err
+		}
+		committing = true
+		return nil
 	})
 	if err != nil {
-		// The row never took the fresh ref, so the blob it names is orphaned the
-		// moment this returns; post-commit-style detached delete, because the
-		// refusal (already-enrolled) is the authoritative outcome either way.
-		keyvault.DeleteDetached(ctx, s.vault, slog.Default(), wsID.UUID, ref, "totp-enrolment-refused")
+		if !committing {
+			// The closure failed, so the transaction definitely did not commit
+			// and no row names the fresh ref; the blob is orphaned the moment
+			// this returns. An error raised after the closure SUCCEEDED is a
+			// commit failure, whose outcome is ambiguous — the row may hold the
+			// ref, so destroying the blob then could strip a live enrolment of
+			// its secret, and it is left orphaned (inert, encrypted,
+			// unreferenced) instead — the same posture extsecrets takes.
+			keyvault.DeleteDetached(ctx, s.vault, slog.Default(), wsID.UUID, ref, "totp-enrolment-refused")
+		}
 		return "", err
 	}
 	if superseded != "" {

@@ -87,9 +87,12 @@ export interface paths {
          * @description Baseline interactive sign-in (ADR-0043). On success mints an opaque server-side session
          *     and sets the `crm_session` cookie (`HttpOnly; Secure; SameSite=Strict; Path=/`). Accepts
          *     email + password only — no tenant selector (ADR-0061). Failures are neutral (no
-         *     account enumeration), rate-limited, and verified at full cost either way. The MFA and
-         *     SSO-enforced challenge states return with their complete flows (ADR-0043 Amendment 2).
-         *     Every attempt (success/failure/lockout) is audited (`features/04 §7`).
+         *     account enumeration), rate-limited, and verified at full cost either way. A member with
+         *     a confirmed second factor gets the 202 challenge below. An installation that enforces
+         *     SSO (`require_sso`) refuses a non-admin password login with the SAME neutral 401 a wrong
+         *     password earns — a distinct answer would only ever follow a correct password, verifying
+         *     guesses — so a client offers single sign-on from `GET /auth/capabilities`, never from
+         *     this response. Every attempt (success/failure/lockout) is audited (`features/04 §7`).
          */
         post: operations["login"];
         delete?: never;
@@ -16743,7 +16746,7 @@ export interface components {
         };
         /** @description The step-up that proves the caller holds the factor being removed, not merely a session that could have been hijacked. */
         MfaDisableRequest: {
-            /** @description A current authenticator code, or an unused recovery code. */
+            /** @description A current authenticator code, or an unused recovery code. Verified only when a CONFIRMED factor guards the account; the codeless cases the operation describes (nothing enrolled, or a merely PENDING enrolment) accept it empty. */
             code: string;
         };
         /** @description One-time recovery codes, shown exactly once at confirmation. */
@@ -36838,7 +36841,7 @@ export interface operations {
                     "application/json": components["schemas"]["MfaChallenge"];
                 };
             };
-            /** @description Invalid credentials. */
+            /** @description Invalid credentials — or a non-admin password login on an installation that enforces SSO, deliberately indistinguishable from one. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -36847,16 +36850,16 @@ export interface operations {
                     "application/json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Refused with `code: sso_required` — the credentials were correct, but this installation has closed the password path (`require_sso`) and the account is not an admin. The client sends the caller to single sign-on rather than showing a password error. Admins are exempt (break-glass), so they never see this. */
-            403: {
+            422: components["responses"]["ValidationError"];
+            /** @description Rate-limited. */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["Problem"];
+                    "application/json": components["schemas"]["Problem"];
                 };
             };
-            422: components["responses"]["ValidationError"];
         };
     };
     completeMfaChallenge: {
@@ -36893,6 +36896,15 @@ export interface operations {
                 };
             };
             422: components["responses"]["ValidationError"];
+            /** @description Rate-limited, per client IP and per account on failures. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     startOidcSignIn: {
@@ -36915,6 +36927,15 @@ export interface operations {
                 content?: never;
             };
             404: components["responses"]["NotFound"];
+            /** @description Rate-limited per client IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     oidcSignInCallback: {
@@ -36942,6 +36963,15 @@ export interface operations {
                 content?: never;
             };
             404: components["responses"]["NotFound"];
+            /** @description Rate-limited per client IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     logout: {
@@ -58449,6 +58479,15 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             422: components["responses"]["ValidationError"];
+            /** @description Too many wrong codes for this account. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     startMyTotpEnrolment: {

@@ -12,6 +12,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -111,8 +113,12 @@ func (s *InstallationSettingsStore) MFARequired(ctx context.Context) (bool, erro
 // read that fails propagates rather than reading as empty, because answering a
 // policy outage as "no grants" would silently sign a member in without a role
 // an admin deliberately mapped.
-func (s *InstallationSettingsStore) GroupRoleMap(ctx context.Context) (map[string]string, error) {
-	m, err := settings.Get(s.asInstallation(ctx), s.settings, OidcGroupRoleMap)
+//
+// It reads INSIDE the caller's transaction — the one the grant itself commits
+// in — so the map an admin retires between a pre-transaction read and the
+// commit cannot still hand out the role it no longer holds.
+func (s *InstallationSettingsStore) GroupRoleMap(ctx context.Context, tx pgx.Tx) (map[string]string, error) {
+	m, err := settings.GetTx(s.asInstallation(ctx), tx, OidcGroupRoleMap)
 	if err != nil {
 		return nil, fmt.Errorf("identity: reading the group-role grant map: %w", err)
 	}

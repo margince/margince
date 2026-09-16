@@ -61,13 +61,16 @@ func (h Handlers) GetMyMfa(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// DisableMyMfa implements DELETE /me/mfa. Removing a factor is a step-up
-// operation: the body must carry a current authenticator or recovery code, so a
-// borrowed session cannot strip the account of the factor guarding it. A wrong
-// code is the same neutral 401 a wrong confirmation code earns, and it spends
-// the same per-user failure budget the challenge endpoint meters — the code
-// being guessed at is the same secret, reachable from behind any hijacked
-// session.
+// DisableMyMfa implements DELETE /me/mfa. Removing a CONFIRMED factor is a
+// step-up operation: the body must carry a current authenticator or recovery
+// code, so a borrowed session cannot strip the account of the factor guarding
+// it. A wrong code — the empty one included — is the same neutral 401 a wrong
+// confirmation code earns, and it spends the same per-user failure budget the
+// challenge endpoint meters: the code being guessed at is the same secret,
+// reachable from behind any hijacked session. The code is NOT screened for
+// presence here, because the service verifies it only where a confirmed factor
+// exists — the contract's codeless cases (nothing enrolled, a merely PENDING
+// enrolment) accept it empty, and a handler-side requirement would close them.
 func (h Handlers) DisableMyMfa(w http.ResponseWriter, r *http.Request) {
 	id, ok := identityFrom(r.Context())
 	if !ok {
@@ -76,10 +79,6 @@ func (h Handlers) DisableMyMfa(w http.ResponseWriter, r *http.Request) {
 	}
 	var req crmcontracts.MfaDisableRequest
 	if !httperr.Decode(w, r, &req) {
-		return
-	}
-	if req.Code == "" {
-		httperr.Write(w, r, httperr.Validation("code", "required", "a current authenticator or recovery code is required to disable the factor"))
 		return
 	}
 	if h.mfaFailures.Blocked(id.UserID.String()) {
