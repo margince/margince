@@ -4309,6 +4309,13 @@ export const de = {
     "Das Entwerfen deines Angebots dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen.",
   "agent.panel.runningNow": "Läuft jetzt",
 
+  // Vier Dinge, die der Agentenbereich sagt, wenn es nichts Neues gibt. Kurz
+  // halten: die Zeile im Rail wird nach zwei Zeilen abgeschnitten.
+  "agent.tip.day": "To-dos, Entscheidungen und Dubletten: {name}.",
+  "agent.tip.ask": "Frag mich überall mit ⌘K.",
+  "agent.tip.recap": "Öffne mich für alles, was ich heute getan habe.",
+  "agent.tip.edge": "Der Bildschirmrand leuchtet, während ich arbeite.",
+
   "agents.connected": "Verbundene Agenten",
   "agents.connectedSub":
     "MCP-Clients mit eigenem Credential, mit dem Zugriff, den du bei der Autorisierung angekreuzt hast",
