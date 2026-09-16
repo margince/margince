@@ -29,35 +29,27 @@ function writeRefusal(writer: LeadWriter) {
 }
 
 // The band under the strip: what the lead has to say about itself as a whole —
-// where it stands, a write it refused, the sentence that says it is closed, and
-// the way back out of a disqualification.
+// a write it refused, the sentence that says it is closed, and the way back out
+// of a disqualification. Where the lead STANDS is not here: the ladder is at
+// the foot of the head, under the facts (RecordView's `standing`).
 //
-// The ladder is here rather than above the strip because the strip sits one
-// interval under the identity on every record in this product; a block between
-// the two opens the choice of what to read a block lower on a lead than on the
-// record beside it. The band is already the full-width block outside the tabs,
-// so a reader who has picked a tab has still not walked past where the lead
-// stands.
-//
-// Every lead has a ladder, so the band is always drawn now and the empty-band
-// question is gone: it used to answer `undefined` rather than a fragment that
-// renders nothing, because a fragment is truthy and every live lead paid a step
-// of dead air between its strip and its columns for one.
+// RecordView draws the band's element and its two intervals for anything it is
+// handed, so this answers `undefined` rather than a fragment that renders
+// nothing when there is nothing to say: a fragment is truthy, and every live
+// lead paid a step of dead air between its strip and its columns for one.
 export function leadBand({
-  ladder,
   lead,
   writer,
   reasonId,
   id,
   t,
 }: Readonly<{
-  ladder: ReactNode;
   lead: Lead;
   writer: LeadWriter;
   reasonId: string;
   id: string;
   t: ReturnType<typeof useT>;
-}>): ReactNode {
+}>): ReactNode | undefined {
   // The way back, beside the sentence that says the lead is closed. Offered
   // only on a disqualification a reader may WRITE: the promoted closure is the
   // demote's to reverse, and a reader who cannot change this lead cannot
@@ -66,9 +58,11 @@ export function leadBand({
     Boolean(lead.archived_at) &&
     lead.status === "disqualified" &&
     lead.writable !== false;
+  if (!writeRefusal(writer) && !writer.readOnlyReason && !reopenable) {
+    return undefined;
+  }
   return (
     <>
-      <div className="record-ladder">{ladder}</div>
       {/* The page's one write serves both columns and every tab, so what it
           REFUSES is stated where both are visible. In the ladder panel this
           reached only the Overview tab, and a rail write refused while the

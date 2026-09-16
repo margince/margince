@@ -911,17 +911,28 @@
   margin-bottom: var(--space-5);
 }
 
-/* Where the record stands, in the band under the strip. A plate rather than a
-   run of controls on the page's own ground: the ladder reads as an element
-   inside a card, and the same ladder floating bare on the band's own ground
-   read as chrome nobody had finished. Not `PanelPlate`, which is the recessed
-   plate for what IS and says so — a ladder is the controls that change it. */
-.record-ladder {
+/* Where the record stands, on its own row at the foot of the head — under the
+   facts and the verbs, above the tab strip. `flex-basis: 100%` is what takes
+   that row: the head is a wrapping flex, so a full-basis child wraps to a line
+   of its own rather than competing with the name for width.
+   
+   A plate rather than a run of controls on the head's own ground: the ladder
+   reads as an element inside a card, and the same ladder floating bare read as
+   chrome nobody had finished. Not `PanelPlate`, which is the recessed plate for
+   what IS and says so — a ladder is the controls that change it.
+   
+   No bottom margin: the head's own `margin-bottom` is the one interval between
+   the identity and the strip, and a second one here would widen it. */
+.record-standing {
+  flex-basis: 100%;
+  /* Last in the head whichever head this is. The compact head lifts its facts
+     strip to `order: 1`, so DOM order alone put the ladder ABOVE the facts it
+     stands under. */
+  order: 2;
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  margin-top: var(--space-4);
-  margin-bottom: var(--space-4);
+  margin-top: var(--space-2);
   padding: var(--space-3) var(--padCard);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-lg);

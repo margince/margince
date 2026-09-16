@@ -46,6 +46,7 @@ function RecordHead({
   controls,
   actions,
   actionsAt,
+  standing,
   wide,
   compact = false,
   markShape,
@@ -59,6 +60,14 @@ function RecordHead({
   controls?: ReactNode;
   actions?: ReactNode;
   actionsAt: "none" | "inline" | "controls" | "below";
+  // Where the record STANDS — a deal's stage ladder, a lead's. Its own row at
+  // the foot of the head, under the facts and the verbs. It belongs to the
+  // head rather than between the head and the tab strip, because the strip
+  // sits one interval under the identity on every record in this product: a
+  // block in that gap opens the choice of what to read a block lower here than
+  // on the record beside it. Inside the head, the ladder is part of the
+  // identity it describes and the interval below is unchanged.
+  standing?: ReactNode;
   wide: boolean;
   // One rung under the record scale: the mark at `lg` and the name at the h1
   // rung, for a page whose head shares the fold with the work below it.
@@ -131,6 +140,7 @@ function RecordHead({
       {actionsAt === "inline" && (
         <div className="record-actions record-actions-inline">{actions}</div>
       )}
+      {standing && <div className="record-standing">{standing}</div>}
     </header>
   );
 }
@@ -147,6 +157,7 @@ export function RecordView({
   markShape = "contact",
   actionsInline,
   scale = "record",
+  standing,
   band,
   rail,
   railLabel,
@@ -215,6 +226,8 @@ export function RecordView({
    * ladder answers the question a reader arrives with, and a reader who has
    * already chosen a tab has passed it.
    */
+  // Where the record stands, drawn at the foot of its head — see RecordHead.
+  standing?: ReactNode;
   band?: ReactNode;
   rail?: ReactNode;
   // What the rail and the aside ARE, for a reader navigating by landmark: each
@@ -291,6 +304,7 @@ export function RecordView({
       controls={controls}
       actions={actions}
       actionsAt={actionsAt}
+      standing={standing}
       wide={headerWide}
       compact={scale === "compact"}
       markShape={markShape}
