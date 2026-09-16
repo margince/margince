@@ -56,6 +56,13 @@ func pdfSampleNamed(suffix string) []byte {
 	return []byte(string(pdfSample) + suffix)
 }
 
+// heicCompatibleSample declares HEIF conformance the OTHER legal way: a generic
+// major brand with `mif1` in the compatible-brand list. Real cameras write both
+// shapes, and a reader that saw only the major brand would refuse this one.
+//
+// The box length (0x20 = 32) covers the header plus three compatible brands.
+var heicCompatibleSample = []byte("\x00\x00\x00\x20ftypmp41\x00\x00\x00\x00mp41mif1heic")
+
 // sampleBytesFor is the fixture body for a media type, for a case that loops
 // over several. It FAILS on a type it has no sample for rather than returning
 // something that would be refused: a table-driven test that quietly fed text to

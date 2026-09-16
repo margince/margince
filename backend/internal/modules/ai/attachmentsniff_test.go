@@ -44,6 +44,34 @@ func TestTheStdlibDoesNotNameHEICSoThisPackageReadsTheBrand(t *testing.T) {
 	}
 }
 
+// Conformance is declared in the major brand OR in the compatible list, and a
+// reader that saw only the first would refuse a genuine photograph — sending it
+// back as mislabelled, which is the one outcome worse than not checking.
+func TestAHEIFBrandCountsWhereverTheFileDeclaresIt(t *testing.T) {
+	t.Parallel()
+	for _, c := range []struct {
+		name string
+		body []byte
+		heif bool
+	}{
+		{"declared as the major brand", heicSample, true},
+		{"declared in the compatible list", heicCompatibleSample, true},
+		{"an iso-bmff file declaring neither", []byte("\x00\x00\x00\x18ftypmp42\x00\x00\x00\x00mp42"), false},
+		{"not an iso-bmff file at all", pngSample, false},
+		{"too short to hold a brand", []byte("\x00\x00\x00\x18ftyp"), false},
+		// A length field is a claim like any other: a large one must not walk
+		// the reader past the end of a short buffer.
+		{"a box length longer than the bytes held", []byte("\xff\xff\xff\xffftypmp41\x00\x00\x00\x00mif1"), true},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+			if got := isHEIF(c.body); got != c.heif {
+				t.Fatalf("isHEIF = %v, want %v", got, c.heif)
+			}
+		})
+	}
+}
+
 func TestMislabelledAttachment(t *testing.T) {
 	t.Parallel()
 	svg := []byte(`<?xml version="1.0"?><svg xmlns="http://www.w3.org/2000/svg"></svg>`)

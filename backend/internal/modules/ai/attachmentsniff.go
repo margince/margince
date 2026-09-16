@@ -24,6 +24,7 @@ package ai
 
 import (
 	"bytes"
+	"encoding/binary"
 	"net/http"
 	"strings"
 
@@ -73,12 +74,15 @@ var sniffableKinds = []string{mimeJPEG, mimePNG, mimeGIF, mimeWebP, mimeBMP, mim
 // a permanent exemption.
 var heifBrands = []string{"heic", "heix", "hevc", "hevx", "heim", "heis", "hevm", "hevs", "mif1", "msf1"}
 
-// ftypOffset is where an ISO-BMFF file's box type sits: a four-byte big-endian
-// box length, then the four-character type. The brand follows it.
+// The ISO-BMFF `ftyp` box, by offset: a four-byte big-endian box length, the
+// four-character box type, the four-character MAJOR brand, a four-byte minor
+// version, and then the COMPATIBLE-brand list to the end of the box.
 const (
-	ftypOffset  = 4
-	brandOffset = 8
-	brandEnd    = 12
+	boxLengthEnd    = 4
+	ftypEnd         = 8
+	majorBrandEnd   = 12
+	brandSize       = 4
+	compatibleStart = 16
 )
 
 // mislabelledAttachment reports why an attachment's inline bytes are not the
@@ -121,15 +125,35 @@ func mislabelledAttachment(a model.Attachment) string {
 	}
 }
 
-// isHEIF reports whether the bytes open an ISO-BMFF file with a HEIF brand.
+// isHEIF reports whether the bytes open an ISO-BMFF file declaring a HEIF brand,
+// in the major brand OR in the compatible-brand list.
+//
+// BOTH places, because either is a conformance claim. A file whose major brand
+// is generic and whose compatible list carries `mif1` is a HEIF file, and a
+// reader that looked only at the major brand would refuse it — which for this
+// caller means a genuine photograph never reaching the one vendor that carries
+// the format.
+//
+// The box length bounds the list, and it is clamped to the bytes actually held:
+// a length field is a claim like any other here, and a large one must not walk
+// past the end of a short buffer.
 func isHEIF(body []byte) bool {
-	if len(body) < brandEnd {
+	if len(body) < majorBrandEnd || !bytes.Equal(body[boxLengthEnd:ftypEnd], []byte("ftyp")) {
 		return false
 	}
-	if !bytes.Equal(body[ftypOffset:brandOffset], []byte("ftyp")) {
-		return false
+	if containsFold(heifBrands, string(body[ftypEnd:majorBrandEnd])) {
+		return true
 	}
-	return containsFold(heifBrands, string(body[brandOffset:brandEnd]))
+	end := int(binary.BigEndian.Uint32(body[:boxLengthEnd]))
+	if end > len(body) || end <= 0 {
+		end = len(body)
+	}
+	for at := compatibleStart; at+brandSize <= end; at += brandSize {
+		if containsFold(heifBrands, string(body[at:at+brandSize])) {
+			return true
+		}
+	}
+	return false
 }
 
 // mediaKind is a media type without its parameters, lowercased — what two of
