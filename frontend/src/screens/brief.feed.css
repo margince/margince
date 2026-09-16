@@ -71,7 +71,7 @@
   align-items: center;
   gap: var(--space-2) var(--space-3);
 }
-.brief-triage-reasons {
+.brief-triage-when {
   color: var(--textMeta);
 }
 .brief-triage-position {
@@ -92,15 +92,15 @@
 }
 .brief-triage-lead .worklist-row-acts {
   order: 4;
-  padding-block-start: var(--space-2);
-  border-block-start: 1px solid var(--borderSubtle);
 }
-/* The head says where the row stands and why, in words, and the message's
-   own by-line says again whose it is and when — each already on the card
-   once, so the rank tile, the kind and the by-line draw nothing here. */
+/* The head says where the row stands and why, and the about line says whose
+   message it is, when, and where it sits — each already on the card once, so
+   the rank tile, the kind, the message's by-line and its marks draw nothing
+   here. */
 .brief-triage-lead .worklist-rank,
 .brief-triage-lead .worklist-row-kind,
-.brief-triage-lead .emailentry__lead {
+.brief-triage-lead .emailentry__lead,
+.brief-triage-lead .emailentry__marks {
   display: none;
 }
 
@@ -159,6 +159,11 @@
   gap: var(--space-2) var(--space-3);
   margin: 0;
   color: var(--textMeta);
+}
+/* The inbox reads as a second fact after the name: a dot, then the word. */
+.brief-triage-inbox::before {
+  content: "·";
+  margin-inline-end: var(--space-3);
 }
 .brief-triage-about-fact {
   display: inline-flex;

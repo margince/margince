@@ -11,7 +11,11 @@ import { Eyebrow } from "../design-system/eyebrow";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { Panel, PanelBody } from "../design-system/panel";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
-import { formatDateTime, formatNumber } from "../format/format";
+import {
+  formatDayMonth,
+  formatNumber,
+  formatTimeOfDay,
+} from "../format/format";
 import { viewerZone } from "../format/timezone";
 import {
   type Locale,
@@ -235,21 +239,28 @@ function Triage({
   // card and the queue cannot describe one piece of work two ways. The
   // reader's own pin is the queue's reason and not the focus projection's
   // (`allowPin`).
-  const when =
-    whenText(lead, t, locale, zone, recordZone, new Date()) ??
-    (lead.email_summary
-      ? formatDateTime(lead.email_summary.occurred_at, locale, zone)
-      : null);
+  // The head's facts, off the same helpers the row prints them with, so the
+  // card and the queue cannot describe one piece of work two ways. A message
+  // is dated by when it arrived, day and hour; everything else by its own
+  // clock. The reader's own pin is the queue's reason and not the focus
+  // projection's (`allowPin`).
+  const arrived = lead.email_summary?.occurred_at;
+  const when = arrived
+    ? `${formatDayMonth(arrived, locale, zone)}, ${formatTimeOfDay(arrived, locale, zone)}`
+    : whenText(lead, t, locale, zone, recordZone, new Date());
   const weighed = phrasedReasons(lead, when !== null).filter(
     (reason) => reason.kind !== "pinned",
   );
-  // The label is the reason that carries a FIGURE where one does — "waiting
-  // 13 days" says more on its own than "they wrote last" — else the first.
-  const label = weighed.find((reason) => reason.value) ?? weighed[0];
-  const reasons = [label, ...weighed.filter((reason) => reason !== label)]
-    .filter((reason) => reason !== undefined)
-    .map((reason) => reasonText(reason, t, locale, zone))
-    .filter((reason): reason is string => reason !== null);
+  // The label is the ONE reason that carries a figure where one does —
+  // "Waiting 13 days" says more on its own than "they wrote last" — else the
+  // first weighed; the rest stay on the queue's row, where a reader who wants
+  // the whole case opens the fold. Sentence case, because it is a label and
+  // not a fragment of a line.
+  const strongest = weighed.find((reason) => reason.value) ?? weighed[0];
+  const phrased = strongest ? reasonText(strongest, t, locale, zone) : null;
+  const label = phrased
+    ? phrased.charAt(0).toLocaleUpperCase(locale) + phrased.slice(1)
+    : t(eyebrowKeyFor(lead));
   return (
     <div className="brief-triage">
       {/* THE ROW IN HAND IS A CARD: one thing to answer, drawn whole — its
@@ -260,20 +271,14 @@ function Triage({
           {/* Why it is here, as its label: the strongest reason the ranking
               weighed, in the warn tone on a row the day put first; the kind
               of work where the ranking gave none. Then the rest, quieter. */}
-          <Badge tone={lead.band === "now" ? "warn" : undefined}>
-            {reasons[0] ?? t(eyebrowKeyFor(lead))}
-          </Badge>
-          {(reasons.length > 1 || when) && (
-            <span className="t-caption brief-triage-reasons">
-              {[...reasons.slice(1), ...(when ? [when] : [])].join(" · ")}
-            </span>
-          )}
-          <span className="t-caption t-num brief-triage-position">
+          <Badge tone={lead.band === "now" ? "warn" : undefined}>{label}</Badge>
+          {when && <span className="t-caption brief-triage-when">{when}</span>}
+          <Eyebrow className="t-num brief-triage-position">
             {t("brief.focus.position", {
               at: formatNumber(at + 1, locale),
               count: formatNumber(rows.length, locale),
             })}
-          </span>
+          </Eyebrow>
         </div>
         <AboutLine item={lead} />
         <WorklistRow
@@ -362,6 +367,9 @@ function AboutLine({ item }: Readonly<{ item: WorklistItem }>) {
   const href = contact?.label ? contactHref(contact) : subjectHref(item);
   if (!label || !href) return null;
   const touch = lastTouch(contact?.touch, t, locale, viewerZone());
+  // Where the message sits — the team's inbox, the reader's own — in the
+  // access badge's own words, as one more fact about whose row it is.
+  const inbox = item.email_summary?.display_status;
   return (
     <p className="t-caption brief-triage-about">
       {contact?.label && (
@@ -370,6 +378,9 @@ function AboutLine({ item }: Readonly<{ item: WorklistItem }>) {
       <a className="entity-link" href={href}>
         {label}
       </a>
+      {inbox && (
+        <span className="brief-triage-inbox">{t(`visibility.${inbox}`)}</span>
+      )}
       {touch.map((fact) => (
         <span key={fact.term} className="brief-triage-about-fact">
           <span>{fact.term}</span> <span className="t-num">{fact.value}</span>
