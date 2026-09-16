@@ -260,6 +260,13 @@ deployed `1970.43` worker then refuses to start. Finish the api rollout rather
 than pausing it half-done, and the same for a rollback
 ([#1735](https://github.com/margince/margince/issues/1735)).
 
+A role that refuses **says this itself**, so an operator does not have to arrive
+at this page to learn it: the refusal names both releases, the redeploy, and the
+rollout shape — an api still on the previous release restarting after the new one
+recorded — with restarting the api at the intended release as what restores the
+record. The two causes look identical from a crash-looping worker, and only one
+of them is the deployment's fault.
+
 **An unstamped image disables the guard entirely.** An absent or `dev` release is
 skipped by all three roles — the api records nothing, the worker compares nothing
 and starts, and the SPA reports no release and never blocks. An unstamped api also
