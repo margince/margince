@@ -24722,9 +24722,24 @@ export interface components {
                 entity_id: string;
             }[];
             source: string;
+            /** @description Provenance an importer keeps with the record — the source system's own representation of this activity. Stored verbatim and returned by `getActivity`. It is content: a reader who may not read this activity's subject and body does not receive it either, and the retention and noise-redaction paths destroy it with the rest of the text. */
             raw?: {
                 [key: string]: unknown;
             } | null;
+            /** @description The message's own address headers, for mail this installation never captured. Email only — any other kind returns `422 code: field_not_valid_for_kind` — and `direction` is required alongside it, because the counterparty is derived from the two together: an inbound message is with its sender, an outbound one with the first recipient who is not the sending mailbox. */
+            participants?: {
+                from?: string | null;
+                to?: string[];
+                cc?: string[];
+            } | null;
+            /** @description This message's RFC 5322 Message-ID, angle brackets optional. Email only. It is the identity a later capture of the same message resolves against, so an import that supplies it is recognised rather than duplicated. */
+            rfc_message_id?: string | null;
+            /** @description The conversation this message belongs to. Email only. Defaults to `rfc_message_id` when absent, which files a message under itself — the same root a captured message takes when it starts a thread. */
+            thread_key?: string | null;
+            /** @description The calendar event's iCal UID. Meeting only. A recurring series shares one UID across every occurrence, so this identifies the series and `ical_instance` identifies the occurrence within it; neither alone identifies a meeting. */
+            ical_uid?: string | null;
+            /** @description Which occurrence of `ical_uid` this is — the occurrence's own original start, as the calendar states it. Meeting only. Required whenever `ical_uid` is given, because a series without an occurrence names every meeting in it at once. */
+            ical_instance?: string | null;
         };
         /**
          * @description Who may read an activity's content — see Activity.audience.

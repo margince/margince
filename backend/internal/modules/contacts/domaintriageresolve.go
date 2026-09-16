@@ -216,6 +216,17 @@ func (s *Store) adoptOrCreateTriagedCompany(ctx context.Context, tx pgx.Tx, in R
 	if match.Decision == DecisionExactCollision {
 		return ResolveDomainTriageResult{CompanyID: &match.CompanyID}, nil
 	}
+	// A HUMAN's verdict is never held below. They were asked the question and
+	// answered it; holding their answer leaves the domain unanswerable, because
+	// nothing rearms the cursor and the one caller who could settle it is
+	// refused without being told why — the rule withholdForStaleEvidence states
+	// for the same reason.
+	if in.Source != DomainSourceHuman {
+		adopted, held, err := s.adoptOrHoldForNameTwin(ctx, tx, in, match, displayName, by)
+		if err != nil || held || adopted != nil {
+			return ResolveDomainTriageResult{CompanyID: adopted}, err
+		}
+	}
 
 	companyID, err := createCompany(ctx, tx, match, CompanySpec{
 		DisplayName: displayName,
