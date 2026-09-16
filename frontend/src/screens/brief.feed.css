@@ -85,14 +85,12 @@
 .brief-triage-stack {
   position: relative;
   min-width: 0;
-  /* THE CARD TAKES THE COLUMN. The queue beside it is a list that grows with
-     the day and the card is one thing, so the two are never the same height:
-     pinned to the top the difference read as a hole under the card, centred
-     as a band of nothing above and below. Filling it, the difference becomes
-     the card's own air — the label at its top, the verbs on its floor — which
-     is the composition the reference card has. */
-  align-self: stretch;
-  display: grid;
+  /* THE CARD IS AS TALL AS WHAT IT HOLDS, and CENTRED in what the column has
+     left. Its height is never the queue's: a card stretched to a list grows
+     with the list, and one thing to answer beside a long day would be a card
+     of mostly air. Centred, the difference reads as room around the card
+     rather than as a hole under it. */
+  align-self: center;
 }
 .brief-triage-stack::before,
 .brief-triage-stack::after {
@@ -153,9 +151,6 @@
 .brief-triage-lead {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  /* The label at the top, the verbs on the floor, the work between them: the
-     card's own air rather than a hole beside it. */
-  align-content: space-between;
   /* FOUR EXPLICIT ROWS — the label, the work, whose it is, the verbs —
      because a row a child is placed INTO has to exist in the explicit grid.
      The record's own move card documents the same trap (company360.css). */
