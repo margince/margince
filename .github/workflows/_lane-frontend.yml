@@ -142,6 +142,12 @@ jobs:
         with:
           name: fe-blob-${{ matrix.shard }}
           path: frontend/.vitest-reports/
+          # The directory vitest writes blobs to is a DOT directory, and this
+          # action drops every path with a hidden component unless told
+          # otherwise — silently, as "No files were found", after the file it
+          # was pointed at had already been written. Without this the shards go
+          # green, upload nothing, and the merge is the job that fails.
+          include-hidden-files: true
           if-no-files-found: error
           retention-days: 1
 
