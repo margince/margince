@@ -26,7 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// centrePageBound caps one page of the centre.
+// centrePageBound caps one page of the centre, and is also its default.
 //
 // Not storekit.ClampLimit: its ceiling is the contract's list cap of 200 rows,
 // which sizes a record list somebody exports. The centre is a panel somebody
@@ -69,9 +69,10 @@ func (s *Store) ListFor(ctx context.Context, limit int, cursor string) (CentrePa
 	if err != nil {
 		return CentrePage{}, err
 	}
+	pageSize := boundedPageSize(limit)
 	// One more than the page, so the answer knows whether to mint a token
 	// without a second count over the remainder.
-	args := []any{seat, centrePageLimit(limit) + 1}
+	args := []any{seat, pageSize + 1}
 	keyset := ""
 	if cursor != "" {
 		// A token this package did not mint is the CALLER's mistake, so the
@@ -114,7 +115,7 @@ func (s *Store) ListFor(ctx context.Context, limit int, cursor string) (CentrePa
 		if err != nil {
 			return err
 		}
-		page.Items, page.NextCursor, err = trimToPage(items, centrePageLimit(limit))
+		page.Items, page.NextCursor, err = trimToPage(items, pageSize)
 		return err
 	}); err != nil {
 		return CentrePage{}, fmt.Errorf("notices: listing your notifications: %w", err)
@@ -123,14 +124,23 @@ func (s *Store) ListFor(ctx context.Context, limit int, cursor string) (CentrePa
 }
 
 // MarkAllRead settles every unread notice the calling contact holds and answers
-// how many moved.
+// how many of them the reader could SEE.
 //
-// ONE ledger entry carrying the count, and no announcement. A seat clearing a
-// month of notices is one act by one person, and the per-notice alternative
-// puts a hundred notice.read events on the bus for a single tap — a fan-out
-// every consumer pays for to learn what one number already says. Nothing
-// downstream holds a notice's read state to be corrected either: the badge and
-// the panel are read from the table on the next open.
+// The two numbers differ, and which one leaves this function is the whole point.
+// The statement settles everything, self-made stage moves included: those are
+// hidden from both reads, so leaving them unread would strand rows in the
+// partial unread index that no act of the reader's could ever clear. The ANSWER
+// counts only the lines the centre would have shown them, because its only
+// consumer is reader-facing copy — a number larger than what the reader was
+// shown is a lie to the reader. The ledger entry keeps the true figure.
+//
+// ONE ledger entry, and no announcement. A seat clearing a month of notices is
+// one act by one person, and the per-notice alternative puts a hundred
+// notice.read events on the bus for a single tap — a fan-out every consumer
+// pays for to learn what one number already says. The cost of that ruling is
+// stated where it is ratified (backend/gates/writeshape_test.go): a seat's own
+// webhook subscription hears notice.read for a single settle and nothing for
+// this one, so a subscriber tracking read state has to re-read the lane.
 //
 // Idempotent, like settling one notice twice: a second tap on a lane already
 // clear moves no row and writes no entry for a change nobody made.
@@ -139,39 +149,59 @@ func (s *Store) MarkAllRead(ctx context.Context) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	var settled int
+	var settled, shown int
 	if err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		// Every unread notice this seat holds, including the stage moves they
-		// made themselves: those are hidden from both reads, and leaving them
-		// unread forever would keep a row in the unread index that no act of
-		// the reader's could ever clear.
-		tag, txErr := tx.Exec(ctx, `
+		// RETURNING the visibility predicate rather than counting twice: one
+		// statement settles the rows and says, per row, whether the reader was
+		// ever shown it. A second SELECT under the same predicate would be a
+		// second copy of the question, and at READ COMMITTED it could answer
+		// about a row this statement had just changed.
+		rows, txErr := tx.Query(ctx, `
 			UPDATE notice SET read_at = now()
-			 WHERE recipient_user_id = $1 AND read_at IS NULL`, seat)
+			 WHERE recipient_user_id = $1 AND read_at IS NULL
+			RETURNING `+notTheReadersOwnStageMove, seat)
 		if txErr != nil {
 			return txErr
 		}
-		settled = int(tag.RowsAffected())
+		defer rows.Close()
+		for rows.Next() {
+			var readerWasShownIt bool
+			if err := rows.Scan(&readerWasShownIt); err != nil {
+				return err
+			}
+			settled++
+			if readerWasShownIt {
+				shown++
+			}
+		}
+		if err := rows.Err(); err != nil {
+			return err
+		}
 		if settled == 0 {
 			return nil
 		}
-		// The entity is the seat's LANE, named by the reader who holds it: the
-		// act settled a set of notices and no single one of them, so there is
-		// no row id to name. The count is what tells an operator reading the
-		// ledger how much this one entry covers.
-		_, txErr = storekit.AuditEvent(ctx, tx, "update", "notice", seat,
+		// The entity is the SEAT, the way this module already audits a change
+		// to their notification settings: the act settled a set of notices and
+		// no single one of them, so there is no notice id to name — and naming
+		// the seat's id under entity_type "notice" would leave a ledger reader
+		// resolving a notice that does not exist. What changed is a fact about
+		// the person.
+		//
+		// The count is the rows that MOVED and not the reader-facing figure:
+		// the ledger is what an operator reads to know what the write did.
+		_, txErr = storekit.AuditEvent(ctx, tx, "update", "user", seat,
 			map[string]any{"read_all": true, "count": settled})
 		return txErr
 	}); err != nil {
 		return 0, fmt.Errorf("notices: settling your notifications: %w", err)
 	}
-	return settled, nil
+	return shown, nil
 }
 
-// centrePageLimit bounds what a caller asked for. An absent or nonsense limit
-// is the full page rather than one row: the centre's caller is a panel, and a
-// zero it forgot to fill in means "show me the notifications".
-func centrePageLimit(limit int) int {
+// boundedPageSize is how many lines one call may answer with. An absent or
+// nonsense limit is the full page rather than one row: the centre's caller is a
+// panel, and a zero it forgot to fill in means "show me the notifications".
+func boundedPageSize(limit int) int {
 	if limit < 1 || limit > centrePageBound {
 		return centrePageBound
 	}

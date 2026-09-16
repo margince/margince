@@ -105,6 +105,10 @@ type NewNotice struct {
 // answers the first id and emits nothing, because a second event about a
 // notice that already exists would put the same line on the same Worklist
 // twice by another route.
+//
+// It is CreateTx in a transaction of its own, so the recipient's preference
+// decides here too: a class this seat switched off writes nothing and answers
+// the zero id, and CreateTx states that contract in full.
 func (s *Store) Create(ctx context.Context, in NewNotice) (ids.UUID, error) {
 	var id ids.UUID
 	if err := s.db.Tx(ctx, func(tx pgx.Tx) error {
@@ -278,21 +282,27 @@ func storedNotice(ctx context.Context, tx pgx.Tx, recipient ids.UserID, dedupeKe
 	return stored, nil
 }
 
-// notTheReadersOwnStageMove declines the stage changes a rep made themselves.
+// notTheReadersOwnStageMove is true of a notice the reader was ever shown: it
+// declines the stage changes the recipient made themselves.
 //
-// Delivery declines owner-made stage changes in automation.stageChangeNotify.
-// This SQL mirror also excludes old deliveries before LIMIT, without deleting
-// their history or pretending the recipient acknowledged them.
+// Delivery declines owner-made stage changes in automation.stageChangeNotify,
+// and this is the SQL mirror of that decision. It excludes rather than deletes:
+// the history stays, and nothing pretends the recipient acknowledged it.
 //
-// One spelling, read by both the attention lane and the notification centre: a
-// second copy would make the centre the place a rep's own stage moves reappear
-// the first time either arm of this predicate changed.
+// ONE spelling for every reader of the table — the attention lane's unread
+// query, the notification centre's history and badge, and the count
+// MarkAllRead answers with. Each of those would have to change together, and a
+// second copy would make one of them the place a rep's own stage moves
+// reappear.
+//
+// A boolean expression over `notice` columns only, so it composes into a WHERE
+// arm and into RETURNING alike.
 const notTheReadersOwnStageMove = `NOT coalesce(
-			     kind = 'automation' AND target_type = 'deal'
-			     AND (origin ? 'stage_change' OR starts_with(dedupe_key, 'stage_change_notify:'))
-			     AND origin->>'actor_type' = 'human'
-			     AND lower(origin->>'actor_id') IN
-			       (recipient_user_id::text, 'human:' || recipient_user_id::text), false)`
+	kind = 'automation' AND target_type = 'deal'
+	AND (origin ? 'stage_change' OR starts_with(dedupe_key, 'stage_change_notify:'))
+	AND origin->>'actor_type' = 'human'
+	AND lower(origin->>'actor_id') IN
+	  (recipient_user_id::text, 'human:' || recipient_user_id::text), false)`
 
 // UnreadFor answers the CALLING contact's own unread notices, newest first,
 // bounded. The contact comes from the bound principal and is not a parameter
