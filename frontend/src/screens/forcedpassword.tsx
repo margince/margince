@@ -26,7 +26,7 @@ export function ForcedPasswordChangeScreen({
       <Wordmark alt={t("auth.title")} />
       <section className="auth-card">
         <Heading size="xlarge">{t("forcedPassword.title")}</Heading>
-        <p className="card-sub">{t("forcedPassword.body")}</p>
+        <p>{t("forcedPassword.body")}</p>
       </section>
       <ChangePasswordCard onChanged={onChanged} />
     </AuthExperience>

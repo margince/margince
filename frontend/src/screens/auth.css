@@ -223,7 +223,14 @@
   font-family: var(--fontFamilyHeading);
   color: var(--textPrimary);
 }
-.auth-card .card-sub {
+/* The copy under the card's heading, spaced by the CARD rather than by a class
+   of its own: a head is a title and never a description, so the sentence below
+   one is ordinary body copy, and a named sub slot to hang this on would be the
+   description coming back under another name. A paragraph carrying a class IS a
+   component here — the error line and the provider divider each bring their own
+   spacing — so this asks for the ones that carry none. A heading brings no
+   margin (see Heading), which is why the gap is declared on this side of it. */
+.auth-card > p:not([class]) {
   margin-top: var(--space-2);
   /* Balanced, not merely orphan-free: two lines of roughly equal length under a
      centred heading read as part of the same block; a long line over a short one

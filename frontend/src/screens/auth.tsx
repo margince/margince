@@ -330,7 +330,7 @@ export function AvailabilityScreen({
               : "auth.unavailableTitle",
           )}
         </Heading>
-        <p className="card-sub">
+        <p>
           {t(
             kind === "connection"
               ? "auth.connectionBody"
@@ -696,7 +696,7 @@ function LoginForm({
       <Heading size="xlarge" className="sr-only">
         {t("auth.loginTitle")}
       </Heading>
-      <p className="card-sub sr-only">{t("auth.loginSub")}</p>
+      <p className="sr-only">{t("auth.loginSub")}</p>
       <ProviderButtons
         providers={providers}
         disabled={login.isPending}
@@ -833,7 +833,7 @@ function ForgotForm({
   return (
     <form className="auth-card" onSubmit={submit}>
       <Heading size="xlarge">{t("auth.forgotTitle")}</Heading>
-      <p className="card-sub">{t("auth.forgotSub")}</p>
+      <p>{t("auth.forgotSub")}</p>
       <div className="auth-fields">
         {/* Same icon as the sign-in card's email field. Without it the text
             starts 22px further left than on the screen the user just came from,
@@ -982,7 +982,7 @@ function ResetForm({
   return (
     <form className="auth-card" onSubmit={submit}>
       <Heading size="xlarge">{t("auth.resetTitle")}</Heading>
-      <p className="card-sub">{t("auth.resetSub")}</p>
+      <p>{t("auth.resetSub")}</p>
       <div className="auth-fields">
         <Field
           label={t("auth.newPassword")}
@@ -1060,7 +1060,7 @@ function Notice({
   return (
     <section className="auth-card">
       <Heading size="xlarge">{title}</Heading>
-      <p className="card-sub">{body}</p>
+      <p>{body}</p>
       <div className="auth-actions">
         <Button variant="primary" onClick={onAction}>
           {action}

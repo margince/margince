@@ -222,7 +222,7 @@ export function SetupClaimScreen({
       <Wordmark alt={t("auth.title")} />
       <form className="auth-card" onSubmit={submit}>
         <Heading size="xlarge">{t("setup.title")}</Heading>
-        <p className="card-sub">{t("setup.body")}</p>
+        <p>{t("setup.body")}</p>
         {error && (
           <p className="auth-error" role="alert">
             {error}
@@ -374,7 +374,7 @@ export function SetupClaimScreen({
             )}
           </Field>
         </div>
-        <p className="card-sub">{t("setup.rootWarning")}</p>
+        <p>{t("setup.rootWarning")}</p>
         <div className="auth-actions">
           <Button
             type="submit"

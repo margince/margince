@@ -65,8 +65,8 @@ export function ReleaseSkewScreen({
       <Wordmark alt={t("auth.title")} />
       <section className="auth-card" role="alert">
         <Heading size="xlarge">{t("release.skewTitle")}</Heading>
-        <p className="card-sub">{t("release.skewBody")}</p>
-        <p className="card-sub">{t("release.skewVersions", { app, server })}</p>
+        <p>{t("release.skewBody")}</p>
+        <p>{t("release.skewVersions", { app, server })}</p>
         <div className="auth-actions">
           <Button variant="primary" onClick={() => window.location.reload()}>
             {t("release.skewReload")}
