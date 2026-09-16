@@ -5,6 +5,7 @@
 import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { meFixture } from "../../app/mefixture";
@@ -54,11 +55,15 @@ function json(body: unknown, status = 200) {
   });
 }
 
-function stubFetch(edges: unknown[]) {
+function stubFetch(edges: unknown[], deleted: string[] = []) {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (request: Request) => {
-      const { url } = request;
+      const { url, method } = request;
+      if (method === "DELETE") {
+        deleted.push(url.slice(url.lastIndexOf("/") + 1));
+        return json({}, 204);
+      }
       if (url.endsWith("/v1/me")) {
         return json(
           meFixture({
@@ -88,8 +93,8 @@ const coverage = (seats: DealCoverage["stakeholders"]): DealCoverage => ({
   sections_omitted: [],
 });
 
-function draw(edges: unknown[], view?: DealCoverage) {
-  stubFetch(edges);
+function draw(edges: unknown[], view?: DealCoverage, deleted: string[] = []) {
+  stubFetch(edges, deleted);
   render(
     <QueryClientProvider
       client={
@@ -158,6 +163,65 @@ describe("the deal's committee card", () => {
     expect(uncovered.queryByText(en["coverage.engaged"])).toBeNull();
     // The seat is still a seat: the row and its other facts stand.
     expect(uncovered.getByText("user")).toBeInTheDocument();
+  });
+
+  // Remove is a hard DELETE with no restore path, so the card asks first. The
+  // three cases below are the three answers a reader can give it, and the two
+  // that must send nothing are the point: a seat taken off a deal by a stray
+  // click is a stakeholder the next reader does not know was ever there.
+  it("asks before it takes a seat off the deal, and sends nothing yet", async () => {
+    const deleted: string[] = [];
+    draw(
+      [edge(TALKING, "economic_buyer")],
+      coverage([
+        { contact_id: TALKING, role: "economic_buyer", engaged: true },
+      ]),
+      deleted,
+    );
+
+    await userEvent.click(await screen.findByTestId("remove-relationship"));
+
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
+    expect(deleted).toEqual([]);
+  });
+
+  it("takes the seat off once the reader confirms it", async () => {
+    const deleted: string[] = [];
+    draw(
+      [edge(TALKING, "economic_buyer")],
+      coverage([
+        { contact_id: TALKING, role: "economic_buyer", engaged: true },
+      ]),
+      deleted,
+    );
+
+    await userEvent.click(await screen.findByTestId("remove-relationship"));
+    await userEvent.click(
+      await screen.findByTestId("remove-relationship-confirm"),
+    );
+
+    expect(deleted).toEqual([`rel-${TALKING}`]);
+  });
+
+  it("leaves the seat where it is when the reader backs out", async () => {
+    const deleted: string[] = [];
+    draw(
+      [edge(TALKING, "economic_buyer")],
+      coverage([
+        { contact_id: TALKING, role: "economic_buyer", engaged: true },
+      ]),
+      deleted,
+    );
+
+    await userEvent.click(await screen.findByTestId("remove-relationship"));
+    await userEvent.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: en["create.cancel"],
+      }),
+    );
+
+    expect(deleted).toEqual([]);
+    expect(await screen.findByRole("link", { name: "Mai Trần" })).toBeVisible();
   });
 
   it("says the committee is empty once, not twice", async () => {
