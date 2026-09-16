@@ -76,6 +76,11 @@ func commitmentLister(pool *pgxpool.Pool) agents.CommitmentLister {
 			// The bound cuts before the merge does, so the store has to keep
 			// the promise the ranking is about rather than the oldest ones.
 			MostRecentlySlippedFirst: true,
+			// This sweep answers "are we behind on our promises", and a
+			// reminder the clock minted is nobody's promise. The record
+			// pages' moment cards hold the same line, so the tool and the
+			// screen cannot disagree about what is owed.
+			ExcludeSystemMinted: true,
 		}
 		if in.WithinProjectID != nil {
 			project := ids.From[ids.ProjectKind](*in.WithinProjectID)
@@ -260,6 +265,11 @@ func handoffReader(pool *pgxpool.Pool) agents.HandoffReader {
 		projectType := string(datasource.RecordProject)
 		tasks, truncated, err := taskStore.ListOpenTasks(ctx, activities.ListOpenTasksInput{
 			EntityType: &projectType, EntityID: &projectID, Limit: handoffScanLimit,
+			// A handoff brief tells the successor what was PROMISED and is
+			// still owed, so it means commitment in the promise sense — the
+			// same sense review_commitments above gives the word. The clock's
+			// own reminders stay visible on the project's task list.
+			ExcludeSystemMinted: true,
 		})
 		if err != nil {
 			return agents.HandoffFacts{}, err

@@ -275,7 +275,7 @@ function SearchHit({
           used without opening it. Absent rather than zero when the server sent
           no number: a count it could not take is not a count of none. */}
       {isTag && hit.carried_by != null && (
-        <p className="search-hit-snippet">
+        <p>
           {t("search.tag.carriedBy", {
             count: formatNumber(hit.carried_by, locale),
           })}
@@ -289,9 +289,7 @@ function SearchHit({
           sentence, and the marks are what a reader would have to type to search
           for it. */}
       {hit.snippet && (
-        <p className="search-hit-snippet">
-          {hit.type === "activity" ? `“${hit.snippet}”` : hit.snippet}
-        </p>
+        <p>{hit.type === "activity" ? `“${hit.snippet}”` : hit.snippet}</p>
       )}
     </li>
   );

@@ -116,7 +116,7 @@ export function LicenseHolderCard({
             label={t("license.holder.id")}
             // The support reference, verbatim: somebody reads it aloud or
             // copies it into a ticket.
-            value={<span className="license-id">{holder.id}</span>}
+            value={<span>{holder.id}</span>}
             control={null}
           />
         </SettingList>

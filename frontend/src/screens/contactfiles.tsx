@@ -152,9 +152,7 @@ export function ContactFilesTab({
               title if somebody gave it one, else the filename — a display
               name is what a reader looks for, and the filename is what the
               saved file is called. */}
-            <span className="pe-row-label">
-              {formatDateAbbrev(file.created_at, locale, recordZone)}
-            </span>
+            <span>{formatDateAbbrev(file.created_at, locale, recordZone)}</span>
             <span className="pe-row-value">
               <a
                 className="link-button"

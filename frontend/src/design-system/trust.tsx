@@ -322,7 +322,12 @@ export function ProvenanceTag({
   );
 }
 
-function provenanceLabel(
+/**
+ * The provenance as words alone, for a meta line that names where a value came
+ * from beside other plain words (a fact row's source). The tag above is the
+ * same words on a badge, for a value that stands on its own.
+ */
+export function provenanceLabel(
   provenance: Provenance,
   t: Translator,
   renderUser: ((userId: string) => ReactNode) | undefined,
@@ -540,7 +545,7 @@ export function FieldDiff({
           label={t("history.oldValue")}
         />
       )}
-      <ArrowRight className="field-diff-arrow" aria-hidden size={14} />
+      <ArrowRight aria-hidden size={14} />
       {newValue === null ? (
         <span className="field-diff-empty">{t("history.cleared")}</span>
       ) : (

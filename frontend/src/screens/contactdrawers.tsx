@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ExternalLink, X } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
@@ -181,7 +181,7 @@ function ClaimMapRow({
                 )}
               </Field>
               {!complete && !badUrl && (
-                <p className="pe-claim-incomplete t-caption">
+                <p className="t-caption">
                   {t("contact.research.mapIncomplete")}
                 </p>
               )}
@@ -304,13 +304,6 @@ export function ContactResearchDrawer({
           <Heading size="large" id="contact-research-title">
             {t("contact.research.title", { name: contactName })}
           </Heading>
-          <Button
-            iconOnly
-            onClick={onClose}
-            aria-label={t("contact.drawer.close")}
-          >
-            <X aria-hidden="true" />
-          </Button>
         </div>
         <Badge>{t("contact.research.publicOnly")}</Badge>
       </div>

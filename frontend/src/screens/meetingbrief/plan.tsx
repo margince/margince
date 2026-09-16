@@ -205,7 +205,7 @@ export function Unknowns({ plan }: Readonly<{ plan: MeetingPlan }>) {
     >
       {plan.unknowns.map((unknown) => (
         <PanelRow key={unknown.kind}>
-          <span className="mb-unknown">{unknown.question}</span>
+          <span>{unknown.question}</span>
         </PanelRow>
       ))}
     </Panel>

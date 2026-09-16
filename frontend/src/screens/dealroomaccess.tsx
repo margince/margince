@@ -182,7 +182,7 @@ function ReadingSoFar({ participant }: Readonly<{ participant: Participant }>) {
   }
   const titles = participant.documents_downloaded ?? [];
   return (
-    <p className="t-caption access-row-facts">
+    <p className="t-caption">
       {t("access.downloads", { count: formatNumber(downloads, locale) })}
       {titles.length > 0 ? ` · ${titles.join(", ")}` : ""}
     </p>
@@ -209,12 +209,9 @@ function ParticipantRow({
       <div className="access-row-main">
         <p>
           {participant.full_name}
-          <span className="t-caption access-row-email">
-            {" "}
-            · {participant.email}
-          </span>
+          <span className="t-caption"> · {participant.email}</span>
         </p>
-        <p className="t-caption access-row-facts">
+        <p className="t-caption">
           {t(CAPABILITY_LABELS[participant.capability])}
           {" · "}
           {revoked

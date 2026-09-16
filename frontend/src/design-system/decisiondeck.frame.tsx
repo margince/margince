@@ -132,9 +132,7 @@ export function DeckQueue({
               because it is a quieter SECOND line rather than the sentence
               itself. */}
           <p>{labels.cleared(tally.count)}</p>
-          <p className="t-caption ddeck-cleared-time">
-            {labels.clearedTime(tally.at)}
-          </p>
+          <p className="t-caption">{labels.clearedTime(tally.at)}</p>
         </EmptyState>
       ) : (
         shown

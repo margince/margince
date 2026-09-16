@@ -148,7 +148,7 @@ export function ProfileArticle({
                 <span className="pdigest-source-path t-caption">
                   {referenceAddressOf(cite.url)}
                 </span>
-                <span className="pdigest-source-label">
+                <span>
                   {t(pageKindLabelKey(pageOf(pages, cite.url)?.kind))}
                 </span>
               </li>

@@ -1,0 +1,38 @@
+/* The source email, read inside the task it explains.
+ *
+ * A bordered block on the sunken ground rather than a bare run of paragraphs:
+ * the message is somebody else's words quoted inside the task's own panel, and
+ * without an edge the mail's first line reads as a continuation of the task's
+ * note above it. */
+.sourceemail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-md);
+  background: var(--bgWell);
+}
+
+/* The section's own name, at the weight of a label rather than a heading: it
+ * sits inside a drawer whose h2 is the task, so a loud heading here would
+ * compete with the subject the reader opened. */
+.sourceemail__label {
+  margin: 0;
+  font-weight: var(--fontWeightMedium);
+}
+
+.sourceemail__subject {
+  margin: 0;
+  font-weight: var(--fontWeightMedium);
+  overflow-wrap: anywhere;
+}
+
+.sourceemail__when {
+  margin: 0;
+}
+
+/* The air between the envelope facts and the words themselves. */
+.sourceemail__body {
+  margin-top: var(--space-2);
+}

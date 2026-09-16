@@ -221,7 +221,7 @@ export function CoverageCard({
                   {row.url}
                 </span>
               )}
-              <span className="ob-live-coverage-reason">{row.reason}</span>
+              <span>{row.reason}</span>
             </li>
           ))}
         </ul>

@@ -140,7 +140,7 @@ func (w *briefGenerateWorker) assembleWorkspace(ctx context.Context, wsID ids.UU
 // local day this is, what hour it is there, and which reps still need a run.
 type morningPass struct {
 	// due is false when this tick is not the workspace's morning at all — an
-	// overlay workspace, or an hour before the briefing hour. Nothing follows.
+	// hour before the briefing hour. Nothing follows.
 	due bool
 	// day is the installation's local date, which every run is filed under.
 	day time.Time
@@ -248,12 +248,6 @@ func (w *briefGenerateWorker) assembleFor(ctx context.Context, wsID, userID ids.
 
 // repsDueTheirMorning lists the workspace's active full-seat humans whose local
 // day has reached briefingHour and who hold no run for that day.
-//
-// Refusing an overlay workspace outright rather than returning nobody: the
-// brief ranks native deal rows, which an overlay workspace keeps in the
-// incumbent, so a pass there would assemble an empty queue — and "nothing needs
-// your attention today" and "this cannot be answered here" read identically on
-// the screen while only one of them is true.
 //
 // Agents are excluded: a brief is a colleague's morning, and an agent seat has no
 // morning to prepare. Read seats are excluded because the brief's whole content

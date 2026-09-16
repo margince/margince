@@ -78,6 +78,7 @@ export function VerdictHead({
   tone,
   because,
   restsOn,
+  scale = "record",
 }: Readonly<{
   label: string;
   tone: StandingTone;
@@ -88,10 +89,20 @@ export function VerdictHead({
   // anything a reader could be shown — which is a real state, and different
   // from a call resting on nothing.
   restsOn?: readonly Grounding[];
+  // The word's own size. "record" is the kit's default — the loudest type on
+  // the pane, for a card with no other claim of authorship in its head.
+  // "compact" is the record ladder's own heading size, for a caller whose
+  // head already carries a claim of its own (a "Last update" line, a byline)
+  // and so does not need its verdict shouting a second one. Absent behaves as
+  // "record", so a caller that does not opt in draws byte-identical to
+  // before.
+  scale?: "record" | "compact";
 }>) {
   return (
     <PanelBody>
-      <div className="r360-verdict">
+      <div
+        className={`r360-verdict${scale === "compact" ? " r360-verdict-compact" : ""}`}
+      >
         <span className={`r360-standing r360-standing-${tone}`}>{label}</span>
         {/* Three columns, not a row that wraps: the word, the line that says
             why, and the working at the far end where the head has room for it.
@@ -169,7 +180,7 @@ export function Proof({
         <Caret aria-hidden="true" />
         {label}
         {count ? (
-          <span className="r360-rests-count">
+          <span>
             <span className="t-num">{formatNumber(items.length, locale)}</span>{" "}
             {/* The unit as a word, not a bare figure. "What this rests on 2"
                 asks the reader to guess what was counted; the count is only

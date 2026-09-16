@@ -151,7 +151,7 @@ function PurposeCreateForm({ onDone }: Readonly<{ onDone: () => void }>) {
 
   return (
     <div className="form-stack">
-      <p className="purpose-form-warning">{t("privacy.purposeAppendOnly")}</p>
+      <p>{t("privacy.purposeAppendOnly")}</p>
       <Field label={t("privacy.purposeKey")}>
         {(control) => (
           <TextInput

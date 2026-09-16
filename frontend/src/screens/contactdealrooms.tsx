@@ -103,7 +103,7 @@ function RoomRow({
   const mayManage = useCanWrite("deal_room", "update");
   const [confirming, setConfirming] = useState(false);
   return (
-    <PanelRow className="contact-room-row">
+    <PanelRow>
       <div>
         <p>{room.title}</p>
         <p className="t-caption">{t(STATE_LABELS[room.state])}</p>

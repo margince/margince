@@ -10,13 +10,13 @@ import { usePageAside } from "../app/pageaside";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import { OverflowMenu } from "../design-system/atoms";
-import { RecordView } from "../design-system/composed";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import {
   hasTimelineFilters,
   useRecordTimeline,
   useTimelineFilters,
 } from "../design-system/recordtimeline";
+import { RecordView } from "../design-system/recordview";
 import { SurfaceState, sectionState } from "../design-system/surfacestate";
 import { TimelineFilterBar } from "../design-system/timelinefilterbar";
 import { useLocale, useT } from "../i18n";
@@ -168,30 +168,29 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
       // column the rail's own rhythm, and a wrapper of ours inside it was a
       // second answer to how far apart a record's rail cards sit.
       aside={
-        details.open ? (
-          <>
-            <ProjectCompanies
-              projectId={project.id}
-              companies={project.companies}
-              readOnly={readOnly}
-            />
-            <RecordTeam
-              recordType="project"
-              recordId={project.id}
-              readOnly={readOnly}
-            />
-            <StakeholdersCard
-              view={view}
-              projectId={project.id}
-              readOnly={readOnly}
-            />
-            <ProjectContractsCard view={view} />
-            <ProjectDocumentsCard view={view} />
-            <PhaseHistoryCard view={view} />
-            <CustomFieldsPanel object="project" record={project} />
-          </>
-        ) : undefined
+        <>
+          <ProjectCompanies
+            projectId={project.id}
+            companies={project.companies}
+            readOnly={readOnly}
+          />
+          <RecordTeam
+            recordType="project"
+            recordId={project.id}
+            readOnly={readOnly}
+          />
+          <StakeholdersCard
+            view={view}
+            projectId={project.id}
+            readOnly={readOnly}
+          />
+          <ProjectContractsCard view={view} />
+          <ProjectDocumentsCard view={view} />
+          <PhaseHistoryCard view={view} />
+          <CustomFieldsPanel object="project" record={project} />
+        </>
       }
+      asideOpen={details.open}
       name={project.name}
       subtitle={<ProjectSubtitle view={view} />}
       zone={recordZone}

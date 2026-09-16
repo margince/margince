@@ -182,7 +182,7 @@ function BackfillSetup({
         <Heading size="medium" className="backfill-h">
           <History aria-hidden /> {t("backfill.title")}
         </Heading>
-        <p className="backfill-unsupported">{t("backfill.unsupportedNote")}</p>
+        <p>{t("backfill.unsupportedNote")}</p>
       </div>
     );
   }

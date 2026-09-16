@@ -72,9 +72,7 @@ export function VerdictLine({
           {t(`worklist.verdict.${verdict.standing}` as const)}
         </Badge>
       )}
-      <span className="worklist-row-verdict-source">
-        {t("worklist.verdict.believes")}
-      </span>
+      <span>{t("worklist.verdict.believes")}</span>
       <span className="worklist-row-verdict-line">{verdict.line}</span>
       {asOfText(verdict, t, locale, zone)}
     </p>
@@ -98,7 +96,7 @@ function asOfText(
     return null;
   }
   return (
-    <span className="worklist-row-verdict-when">
+    <span>
       {t("worklist.verdict.asOf", {
         when: formatDateTime(verdict.as_of, locale, zone),
       })}

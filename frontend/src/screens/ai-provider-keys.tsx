@@ -197,7 +197,7 @@ function ProviderKeyRow({
       <div data-testid={`ai-provider-key-${status.provider}`}>
         <div className="ai-provider">
           <span className="ai-provider-who">
-            <span className="ai-provider-vendor">{status.provider}</span>
+            <span>{status.provider}</span>
             {/* The variable is the only thing that says HOW a key reached the
                 vault, and an operator debugging a vendor wants to know whether
                 an export seeded it. Verbatim, because it is a name to be typed

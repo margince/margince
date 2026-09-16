@@ -72,7 +72,7 @@ function InvoiceRow({
             of its own: an unpaid invoice has no date to put there, and a
             column of dashes states nothing the status does not. */}
         {invoice.paid_at && (
-          <span className="fin-cell-paid">
+          <span>
             {" · "}
             {t("finance.paidOn", {
               when: formatDate(invoice.paid_at, locale, recordZone),

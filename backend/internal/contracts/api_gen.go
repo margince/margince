@@ -659,6 +659,7 @@ const (
 	AiActivityKindOwedVerdict                   AiActivityKind = "owed_verdict"
 	AiActivityKindProposeRoles                  AiActivityKind = "propose_roles"
 	AiActivityKindRateExtract                   AiActivityKind = "rate_extract"
+	AiActivityKindRequestSettlement             AiActivityKind = "request_settlement"
 	AiActivityKindSignalExtract                 AiActivityKind = "signal_extract"
 	AiActivityKindSiteExtract                   AiActivityKind = "site_extract"
 	AiActivityKindSiteFactExtract               AiActivityKind = "site_fact_extract"
@@ -715,6 +716,8 @@ func (e AiActivityKind) Valid() bool {
 	case AiActivityKindProposeRoles:
 		return true
 	case AiActivityKindRateExtract:
+		return true
+	case AiActivityKindRequestSettlement:
 		return true
 	case AiActivityKindSignalExtract:
 		return true
@@ -20160,9 +20163,15 @@ type Attention struct {
 	// Absent — not empty — on an installation whose feed does not read meetings.
 	Meetings *[]AttentionItem `json:"meetings,omitempty"`
 
-	// MeetingsUnreported Today's meetings that have already started and whose result nobody has
-	// recorded, longest unanswered first. The counterpart of `meetings`: that lane
-	// is what to prepare for, this is what to close off.
+	// MeetingsUnreported Meetings that have already started and whose result nobody has recorded,
+	// longest unanswered first. The counterpart of `meetings`: that lane is what to
+	// prepare for, this is what to close off.
+	//
+	// It reaches back a FORTNIGHT, where `meetings` is today only. The two bound
+	// differently because they expire differently: preparation stops being possible
+	// once a meeting begins, while an unrecorded outcome stays owed until somebody
+	// records it. Bounded at all so that the first read after a quiet month is a
+	// queue a reader can clear rather than a history of everything never answered.
 	//
 	// A meeting carrying no status at all is here. A captured calendar event
 	// arrives without one, so treating an absent status as settled would empty this
@@ -20333,7 +20342,7 @@ type AttentionCounts struct {
 	// Meetings How many of today's meetings are still ahead — the bounded page, as the other lanes report.
 	Meetings *int `json:"meetings,omitempty"`
 
-	// MeetingsUnreported How many of today's meetings have started with nobody saying how they went — the bounded page, as the other lanes report. Not in `required`: a client reading an installation whose feed does not carry this lane gets no number rather than a zero, which would claim the day is clear.
+	// MeetingsUnreported How many meetings of the last fortnight have started with nobody saying how they went — the bounded page, as the other lanes report. Not in `required`: a client reading an installation whose feed does not carry this lane gets no number rather than a zero, which would claim the day is clear.
 	MeetingsUnreported *int `json:"meetings_unreported,omitempty"`
 	NeedsYou           int  `json:"needs_you"`
 
@@ -28213,7 +28222,7 @@ type DedupeCandidateStatus string
 // DedupeCandidateListResponse defines model for DedupeCandidateListResponse.
 type DedupeCandidateListResponse struct {
 	Data []DedupeCandidate `json:"data"`
-	Page *PageInfo         `json:"page,omitempty"`
+	Page PageInfo          `json:"page"`
 }
 
 // DedupeDispositionRequest defines model for DedupeDispositionRequest.
@@ -37107,12 +37116,12 @@ type Undoability struct {
 	// Detail The fields a refusal names, where naming them is the better explanation — which field was superseded, which one cannot be written back. Never the only thing a reader renders; `reason` is what the product says.
 	Detail *string `json:"detail,omitempty"`
 
-	// Reason Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would have to clear a field the record's own write path cannot clear, so it is refused rather than reporting a success that changed nothing. `edge_relink_unsupported` means the entry REMOVED a link: putting one back is an un-archive, which this path does not perform. The refusal says the link can be made again from the record's own screen, because that is true and actionable. `not_restorable_by_this_path` covers two shapes: a record whose workspace keeps its records in an incumbent system, and EVERY change to a project's company link whatever the verb — that kind takes write authority over the project row and a project must keep at least one company, so a generic reverse would be a side door around both rules. `detail` names the kind in the second case.
+	// Reason Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would have to clear a field the record's own write path cannot clear, so it is refused rather than reporting a success that changed nothing. `edge_relink_unsupported` means the entry REMOVED a link: putting one back is an un-archive, which this path does not perform. The refusal says the link can be made again from the record's own screen, because that is true and actionable. `not_restorable_by_this_path` covers EVERY change to a project's company link whatever the verb — that kind takes write authority over the project row and a project must keep at least one company, so a generic reverse would be a side door around both rules. `detail` names the kind.
 	Reason   *UndoabilityReason `json:"reason,omitempty"`
 	Undoable bool               `json:"undoable"`
 }
 
-// UndoabilityReason Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would have to clear a field the record's own write path cannot clear, so it is refused rather than reporting a success that changed nothing. `edge_relink_unsupported` means the entry REMOVED a link: putting one back is an un-archive, which this path does not perform. The refusal says the link can be made again from the record's own screen, because that is true and actionable. `not_restorable_by_this_path` covers two shapes: a record whose workspace keeps its records in an incumbent system, and EVERY change to a project's company link whatever the verb — that kind takes write authority over the project row and a project must keep at least one company, so a generic reverse would be a side door around both rules. `detail` names the kind in the second case.
+// UndoabilityReason Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would have to clear a field the record's own write path cannot clear, so it is refused rather than reporting a success that changed nothing. `edge_relink_unsupported` means the entry REMOVED a link: putting one back is an un-archive, which this path does not perform. The refusal says the link can be made again from the record's own screen, because that is true and actionable. `not_restorable_by_this_path` covers EVERY change to a project's company link whatever the verb — that kind takes write authority over the project row and a project must keep at least one company, so a generic reverse would be a side door around both rules. `detail` names the kind.
 type UndoabilityReason string
 
 // UpdateAcquisitionSourceRequest Every field optional; an omitted one is left alone.
@@ -41913,6 +41922,9 @@ type ListConfirmSubmissionsParams struct {
 
 	// Limit Max items in the page.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. It encodes all three parts of this queue's order — whether the row is resolved, its `submitted_at`, and its id — because two subjects can send in the same second and an id alone cannot continue an order it is only the tie-break of. Changing `contact_id` or `resolved` mid-walk changes which rows the remaining pages see, so re-issue without the cursor when a filter changes. A token this endpoint did not mint returns `422 code: malformed_cursor`.
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
 }
 
 // ResolveConfirmSubmissionJSONBody defines parameters for ResolveConfirmSubmission.
@@ -45293,6 +45305,16 @@ type UpdateWebhookSubscriptionParams struct {
 type ListWebhookDeliveriesParams struct {
 	// Limit Max items in the page.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
+	// effective `sort` of the originating request (field + direction) plus the last row's keyset
+	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
+	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// together with a `sort` that differs from the one the cursor was minted under returns
+	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
+	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
+	// remaining pages see, so re-issue the query without the cursor when changing filters.
+	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 }
 
 // AskForWeeklyPlanHelpJSONBody defines parameters for AskForWeeklyPlanHelp.
@@ -70762,6 +70784,19 @@ func (siw *ServerInterfaceWrapper) ListConfirmSubmissions(w http.ResponseWriter,
 		return
 	}
 
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListConfirmSubmissions(w, r, params)
 	}))
@@ -88992,6 +89027,19 @@ func (siw *ServerInterfaceWrapper) ListWebhookDeliveries(w http.ResponseWriter, 
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
 		}
 		return
 	}

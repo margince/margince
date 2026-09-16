@@ -1,11 +1,12 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { PageAsideToggle, usePageAside } from "../app/pageaside";
 import { usePageName } from "../app/pagemeta";
 import { useRecordZone } from "../app/recordzone";
+import { scrollPageToTop } from "../app/reveal";
 import { navigate, useRoute } from "../app/router";
 import {
   Avatar,
@@ -16,12 +17,9 @@ import {
   Modal,
   Skeleton,
 } from "../design-system/atoms";
-import {
-  RecordView,
-  type TimelineEntry,
-  type TimelineGroup,
-} from "../design-system/composed";
+import type { TimelineEntry, TimelineGroup } from "../design-system/composed";
 import { Heading } from "../design-system/heading";
+import { IdentityLine } from "../design-system/identityline";
 import type { ListChip } from "../design-system/listsurface";
 import { CellStrip } from "../design-system/listtable";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
@@ -32,9 +30,15 @@ import {
   hasTimelineFilters,
   useRecordTimeline,
 } from "../design-system/recordtimeline";
+import { RecordView } from "../design-system/recordview";
 import { sectionState } from "../design-system/surfacestate";
 import { TimelineFilterBar } from "../design-system/timelinefilterbar";
-import { formatDateTime, formatMoney, formatNumber } from "../format/format";
+import {
+  formatDate,
+  formatDateTime,
+  formatMoney,
+  formatNumber,
+} from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -48,7 +52,7 @@ import {
   throwProblem,
   useViewerId,
 } from "./common";
-import { ContactsChips, MoneyPane, ThreadFold } from "./company/glance";
+import { ThreadFold } from "./company/glance";
 import {
   DealsCard,
   NextSteps,
@@ -83,13 +87,16 @@ import {
 import { GrowthFitPanel } from "./companygrowthfit";
 import {
   CompanyActionBadges,
-  CompanyIdentityLine,
   CompanyLifecycleControl,
-  CompanyPrimaryActions,
   CompanyRelationshipBadges,
   displayHost,
   useCompanyVerbRefusal,
 } from "./companyheader";
+import {
+  type ActivityDrawer,
+  CompanyHeaderActions,
+} from "./companyheaderactions";
+import { CompanyIdentityFacts, CompanySubtitle } from "./companyheaderfacts";
 import {
   LIFECYCLE_LABELS,
   LIFECYCLE_OPTIONS,
@@ -97,6 +104,7 @@ import {
   SIZE_BAND_OPTIONS,
 } from "./companylookups";
 import { CompanyProfileForm } from "./companyprofiletab";
+import { CompanyProjectsPanel } from "./companyprojects";
 import { CompanyRail, SignalsSection } from "./companyrail";
 import { wholeCount } from "./companyrailshared";
 import {
@@ -125,7 +133,8 @@ import {
 import { ContactMeetingBrief } from "./meetingbrief";
 import { useOpenEmail } from "./openemail";
 import { PartnerTab } from "./partners";
-import { RecordSpine } from "./record360";
+import { RecordSpine, WrittenBy } from "./record360";
+import { RecordAccess } from "./recordaccess";
 import {
   ChronologyFilter,
   ChronologyFooter,
@@ -708,7 +717,11 @@ function useCompanyTab(
 function useOpenTaskId(
   recordId: string,
   tab: CompanyTab,
-): [string | null, (next: string | null) => void] {
+): [
+  string | null,
+  (next: string | null) => void,
+  (onTab: CompanyTab, activityId: string) => void,
+] {
   const [openTaskId, setOpenTaskId] = useState<string | null>(null);
   const [openTaskFor, setOpenTaskFor] = useState(recordId);
   const [openTaskOn, setOpenTaskOn] = useState(tab);
@@ -717,7 +730,15 @@ function useOpenTaskId(
     setOpenTaskOn(tab);
     setOpenTaskId(null);
   }
-  return [openTaskId, setOpenTaskId];
+  // Opens a task from OFF the Tasks tab: the reset above fires the moment the
+  // route's own tab changes, which would otherwise wipe this same id back to
+  // null on the very next render. Priming `openTaskOn` to the tab the caller
+  // is about to navigate to keeps the guard's own comparison already true.
+  const openTaskInTab = (nextTab: CompanyTab, activityId: string) => {
+    setOpenTaskOn(nextTab);
+    setOpenTaskId(activityId);
+  };
+  return [openTaskId, setOpenTaskId, openTaskInTab];
 }
 
 // The company 360 badge/action bar. Archived records are read-only: the
@@ -789,17 +810,31 @@ function CompanyRecord({
   // the only way into the pane with it — and one strip on every record page is
   // what lets a reader learn where the switch is once.
   const tabs = (
-    <div className="co-tabs">
+    // A TEST ID rather than a class: the walk from the page's own tab strip to
+    // the switch at its end is what two screen journeys assert, and nothing
+    // draws this wrapper.
+    <div data-testid="co-tabs">
       <RecordTabs
         options={visibleTabs}
         value={tab}
-        onChange={onTab}
+        onChange={(next) => {
+          onTab(next);
+          scrollPageToTop();
+        }}
         counts={companyTabCounts(assembled)}
         // The switch for the account's own details column, at the end of
         // the tab row: it chooses what the page shows beside the work, so it
         // stands with the controls that choose what the work column shows,
         // and never in the head among the record's verbs.
-        trailing={<PageAsideToggle />}
+        trailing={
+          <PageAsideToggle
+            quiet
+            labels={{
+              show: t("record.panel.showDetails"),
+              hide: t("record.panel.hideDetails"),
+            }}
+          />
+        }
         labels={{
           // "360", not the shared "Overview": this tab is the account's
           // one assembled reading, and the card inside it is named the same
@@ -809,7 +844,11 @@ function CompanyRecord({
           // them is this.
           overview: t("tab.overview"),
           contacts: t("tab.contacts"),
-          deals: t("tab.deals"),
+          // Its own key rather than the shared `tab.deals`: the contact page's
+          // Deals tab holds no projects, so renaming the shared label would
+          // rename that tab too. This account's tab is the one that gained a
+          // second body of work.
+          deals: t("co.tab.deals"),
           tasks: t("tab.tasks"),
           timeline: t("tab.timeline"),
           // The tab's own key rather than `finance.title`, which the card
@@ -1104,10 +1143,13 @@ function unreachableAction(kind: never): never {
 // page does not carry a branch per anchor kind in its own JSX.
 function AccountComposer({
   anchor,
+  open,
   companyId,
   onClose,
 }: Readonly<{
   anchor: ComposeAnchor;
+  /** Closed, it stays MOUNTED so the drawer can animate out. */
+  open: boolean;
   companyId: string;
   onClose: () => void;
 }>) {
@@ -1119,7 +1161,7 @@ function AccountComposer({
       entityType="company"
       entityId={companyId}
       kind="email"
-      open
+      open={open}
       onClose={onClose}
     />
   );
@@ -1175,12 +1217,28 @@ function CompanyPage({
   // which anchors on a message or a contact — but the same consequence for the
   // layout, because both open into the rail's column.
   const [writingEmail, setWritingEmail] = useState(false);
+  // The header's Log-activity/Add-task drawer. Lifted here on the same rule as
+  // `writingEmail`: the daily brief's leading card opens the same drawer off
+  // its own verb, so the strip that used to hold this alone can no longer be
+  // the only door into it.
+  const [activityDrawer, setActivityDrawer] = useState<ActivityDrawer>(null);
   const [decisionsOpen, setDecisionsOpen] = useState(false);
   const [auditOpen, setAuditOpen] = useState(false);
   // Which open task the Tasks tab has expanded into its detail modal, keyed
   // by activity id rather than a bare boolean because the row that opened it
   // is also what the modal reads.
-  const [openTaskId, setOpenTaskId] = useOpenTaskId(company.id, tab);
+  const [openTaskId, setOpenTaskId, openTaskInTab] = useOpenTaskId(
+    company.id,
+    tab,
+  );
+  // Opens a task the daily brief named, from off the Tasks tab: the detail
+  // modal only mounts there (CompanyDealsAndTasksTabs), so the card sends the
+  // reader to it with the task already primed to open rather than switching
+  // the tab out from under an id the switch would otherwise wipe.
+  const openTaskFromToday = (activityId: string) => {
+    openTaskInTab("tasks", activityId);
+    onTab("tasks");
+  };
   const receipt = useCitedReceipt();
   // An archived company takes no new activity, so completing or snoozing a
   // task from here would only be refused server-side.
@@ -1191,20 +1249,11 @@ function CompanyPage({
   // 360 renders it, not a `["activities", …]` query of its own), the
   // workspace-wide queue, and the task's own detail.
   const taskUpdate = useTaskUpdate(taskWriteKeys("company", company.id));
-  // Either composer holds the rail's column, and the rail does not care
-  // which. Computed once so both `CompanyRail` and the layout below share
-  // the one decision, rather than the page rendering a rail element that
-  // itself returns null while `RecordView` still reserves the column for it.
-  const composerOpen = Boolean(composing) || writingEmail;
-  // The details pane yields to the composer, which opens as its own drawer
-  // (ComposeModal's `placement="right"` is a portalled overlay): no pane at
-  // all while one is open, so the column is absent for exactly as long as the
-  // drawer holds that space, rather than standing open around nothing.
-  const details = usePageAside(!composerOpen);
-  // The rail, or nothing while a composer holds its column. Both drawers open
-  // into this space, so a rail beside them would be two things in one place —
-  // and absent rather than narrowed, because a rail squeezed to a third of its
-  // width is a column of broken cards.
+  // The pane answers to its own switch and to nothing else. A composer is a
+  // portalled drawer over a scrim, so it takes none of the page's width: an
+  // overlay that folded the column beneath it would animate the record behind
+  // its own backdrop, and leave the reader's pane shut when they closed it.
+  const details = usePageAside();
   const rail = (
     <CompanyRail
       companyId={company.id}
@@ -1215,7 +1264,6 @@ function CompanyPage({
       // undefined `view` alone, and both drawing the loading skeleton is not
       // the same defect as both drawing "could not be loaded".
       loading={loading}
-      composerOpen={composerOpen}
       onTab={onTab}
     />
   );
@@ -1236,170 +1284,183 @@ function CompanyPage({
     filterToChanges();
   };
   return (
-    <RecordView
-      name={company.display_name}
-      avatarSrc={company.logo_url}
-      // The account's standing, read on the name's own line rather than
-      // folded into the meta line below with everything else it carries —
-      // the one value here a reader looks for first.
-      nameBadge={
-        <>
-          <CompanyLifecycleControl company={company} />
-          {/* What the account IS to us, beside where it stands. Both are tags
-              ON the record, so both belong with its name. */}
-          <CompanyRelationshipBadges company={company} />
-        </>
-      }
-      zone={recordZone}
-      // What the account IS, then where it STANDS, both on the identity's own
-      // lines: the meta line (domain, industry, owner, last exchange) and the
-      // standing under it (open pipeline, work in flight, owner).
-      //
-      // The prose description is NOT here. It is the one thing in the header a
-      // reader cannot act on, it is unbounded in length, and on an enriched
-      // account it repeats the industry two lines above it. It reads in the
-      // details grid, where the rest of the account's filed fields are.
-      pulse={
-        <CompanyIdentityLine company={company} view={view} loading={loading} />
-      }
-      // The composer opens from a button rather than standing open above the
-      // page: a whole form in the header's action strip pushed the account's
-      // own story below the fold before a word of it was read.
-      actions={
-        <>
-          {/* One sentence for the whole strip. Both action groups below refuse
+    <div className="record-sheet">
+      <RecordView
+        name={company.display_name}
+        avatarSrc={company.logo_url}
+        // One rung under the record scale: the name is still the largest thing
+        // on the page, but beside a work column that opens on the reader's ask
+        // it no longer needs to be the size of a masthead.
+        scale="compact"
+        // What the account is, and the one way in every reader already knows,
+        // on the name's own line, the contact record's own shape.
+        nameBadge={<CompanySubtitle company={company} />}
+        // The account's standing: what it IS (CompanyRelationshipBadges) and
+        // where it STANDS (the editable lifecycle badge), both tags ON the
+        // record, so both share the pills row under the name.
+        pulse={
+          <IdentityLine separator="space">
+            <CompanyLifecycleControl company={company} />
+            <CompanyRelationshipBadges company={company} />
+            {/* Who may READ the account, on the same row the contact header
+                says it on, with the verb that changes it. */}
+            <RecordAccess key={company.id} kind="company" record={company} />
+          </IdentityLine>
+        }
+        zone={recordZone}
+        // The way in, who holds the account and when its own row was written,
+        // as the facts strip every record page carries under its pulse.
+        //
+        // The prose description is NOT here. It is the one thing in the header a
+        // reader cannot act on, it is unbounded in length, and on an enriched
+        // account it repeats the industry two lines above it. It reads in the
+        // details grid, where the rest of the account's filed fields are.
+        badges={
+          <CompanyIdentityFacts
+            company={company}
+            view={view}
+            loading={loading}
+          />
+        }
+        // The composer opens from a button rather than standing open above the
+        // page: a whole form in the header's action strip pushed the account's
+        // own story below the fold before a word of it was read.
+        actions={
+          <>
+            {/* One sentence for the whole strip. Both action groups below refuse
               for the same reason, so the reason belongs to the page rather than
               to whichever group is drawing — stated in each, an archived
               account said the same thing twice as soon as the menu opened. */}
-          {verbRefusal && <p id={archivedParagraphId}>{verbRefusal}</p>}
-          <CompanyPrimaryActions
-            company={company}
-            composerOpen={writingEmail}
-            onComposerOpen={setWritingEmail}
-            archivedReasonId={archivedReasonId}
-          />
-          {/* Last in the row, after the verbs it holds the remainder of: a
+            {verbRefusal && <p id={archivedParagraphId}>{verbRefusal}</p>}
+            <CompanyHeaderActions
+              company={company}
+              composerOpen={writingEmail}
+              onComposerOpen={setWritingEmail}
+              drawer={activityDrawer}
+              onDrawer={setActivityDrawer}
+              archivedReasonId={archivedReasonId}
+            />
+            {/* Last in the row, after the verbs it holds the remainder of: a
               menu of everything-else read as the first thing to press when it
               led them. */}
-          <CompanyActionBadges
-            company={company}
-            archivedReasonId={archivedReasonId}
-            view={view}
-            onOpenHistory={() => setAuditOpen(true)}
-            onSetUpPartner={() => onTab("partner")}
-            onOpenDecisions={
-              tab === "overview" ? () => setDecisionsOpen(true) : undefined
+            <CompanyActionBadges
+              company={company}
+              archivedReasonId={archivedReasonId}
+              view={view}
+              onOpenHistory={() => setAuditOpen(true)}
+              onSetUpPartner={() => onTab("partner")}
+              onOpenDecisions={
+                tab === "overview" ? () => setDecisionsOpen(true) : undefined
+              }
+            />
+          </>
+        }
+        actionsInline
+        // The account's context, beside the work under the tab row: what is
+        // true of the ACCOUNT does not belong to whichever part of it is open,
+        // so the pane stays put when a tab changes.
+        aside={rail}
+        asideOpen={details.open}
+        // The bar that chooses which part of the account to read, across the
+        // page above the columns: the details pane opens under it, from the
+        // control at its end.
+        tabs={tabs}
+        // A company's mark is its logo, so it is drawn on a square the way a
+        // logo is rather than round the way a face is.
+        markShape="company"
+        // The chronology is the account's story and belongs to the overview.
+        // The Partner tab is a form, so it does not repeat it under itself.
+        {...slots}
+      >
+        <CompanyRecordBody
+          company={company}
+          view={view}
+          refusedReasonId={archivedReasonId}
+          loading={loading}
+          failed={failed}
+          tab={tab}
+          onTab={onTab}
+          t={t}
+          receipt={receipt}
+          composing={composing}
+          onCompose={setComposing}
+          onPerform={(action) => {
+            // Total over the kinds the server can name: a kind this page
+            // cannot perform is a compile error here, never a button that
+            // swallows the click.
+            switch (action.kind) {
+              case "draft_reply":
+                if (action.activity_id) {
+                  setComposing({ kind: "reply", id: action.activity_id });
+                }
+                return;
+              case "open_deal":
+                if (action.deal_id) {
+                  navigate({ screen: "deals", id: action.deal_id });
+                }
+                return;
+              case "add_task":
+                // Never reached: the advice section writes the step itself,
+                // through the same POST /tasks the task form uses, because the
+                // server prepared the body and this page would only be relaying
+                // it. Routing it through a surface here would put a second
+                // author on a sentence a rule already wrote.
+                return;
+              default:
+                unreachableAction(action.kind);
             }
-          />
-        </>
-      }
-      actionsInline
-      // The account's context, beside the work under the tab row: what is
-      // true of the ACCOUNT does not belong to whichever part of it is open,
-      // so the pane stays put when a tab changes.
-      aside={details.open ? rail : undefined}
-      // The bar that chooses which part of the account to read, across the
-      // page above the columns: the details pane opens under it, from the
-      // control at its end.
-      tabs={tabs}
-      // A company's mark is its logo, so it is drawn on a square the way a
-      // logo is rather than round the way a face is.
-      markShape="company"
-      // The chronology is the account's story and belongs to the overview.
-      // The Partner tab is a form, so it does not repeat it under itself.
-      {...slots}
-    >
-      <CompanyRecordBody
-        company={company}
-        view={view}
-        refusedReasonId={archivedReasonId}
-        loading={loading}
-        failed={failed}
-        tab={tab}
-        onTab={onTab}
-        t={t}
-        receipt={receipt}
-        composing={composing}
-        onCompose={setComposing}
-        onPerform={(action) => {
-          // Total over the kinds the server can name: a kind this page
-          // cannot perform is a compile error here, never a button that
-          // swallows the click.
-          switch (action.kind) {
-            case "draft_reply":
-              if (action.activity_id) {
-                setComposing({ kind: "reply", id: action.activity_id });
-              }
-              return;
-            case "open_deal":
-              if (action.deal_id) {
-                navigate({ screen: "deals", id: action.deal_id });
-              }
-              return;
-            case "add_task":
-              // Never reached: the advice section writes the step itself,
-              // through the same POST /tasks the task form uses, because the
-              // server prepared the body and this page would only be relaying
-              // it. Routing it through a surface here would put a second
-              // author on a sentence a rule already wrote.
-              return;
-            default:
-              unreachableAction(action.kind);
-          }
-        }}
-        decisionsOpen={decisionsOpen}
-        onDecisionsOpen={setDecisionsOpen}
-        readOnly={readOnly}
-        openTaskId={openTaskId}
-        onOpenTask={setOpenTaskId}
-        taskUpdate={taskUpdate}
-        onOpenHistory={showChanges}
-      />
-      {/* The email drawer, on the same rule as the audit spine below: it
+          }}
+          decisionsOpen={decisionsOpen}
+          onDecisionsOpen={setDecisionsOpen}
+          readOnly={readOnly}
+          openTaskId={openTaskId}
+          onOpenTask={setOpenTaskId}
+          onOpenTaskFromToday={openTaskFromToday}
+          onLogActivity={() => setActivityDrawer("log")}
+          taskUpdate={taskUpdate}
+          onOpenHistory={showChanges}
+        />
+        {/* The email drawer, on the same rule as the audit spine below: it
           belongs to the RECORD. Mounted in the Timeline tab's own slot it
           unmounted with that tab and left its id behind, so returning to
           Timeline could put it over an already-open dialog. */}
-      <OpenEmailDrawer
-        activityId={openEmail}
-        zone={recordZone}
-        onClose={() => setOpenEmail(null)}
-      />
-      {/* The audit spine, opened from the header's overflow menu. It belongs
+        <OpenEmailDrawer
+          activityId={openEmail}
+          zone={recordZone}
+          onClose={() => setOpenEmail(null)}
+        />
+        {/* The audit spine, opened from the header's overflow menu. It belongs
           to the RECORD, not to a tab, so it opens over whichever tab is up. */}
-      <Modal
-        open={auditOpen}
-        onClose={() => setAuditOpen(false)}
-        labelledBy="co-audit-title"
-        size="wide"
-      >
-        <Heading size="large" id="co-audit-title" className="t-h2 modal-title">
-          {t("record.fullHistory")}
-        </Heading>
-        {/* Mounted only while open: the two history reads behind it are the
+        <Modal
+          open={auditOpen}
+          onClose={() => setAuditOpen(false)}
+          labelledBy="co-audit-title"
+          size="wide"
+        >
+          <Heading
+            size="large"
+            id="co-audit-title"
+            className="t-h2 modal-title"
+          >
+            {t("record.fullHistory")}
+          </Heading>
+          {/* Mounted only while open: the two history reads behind it are the
             page's most expensive, and nobody who never opens the panel should
             pay for them. */}
-        {auditOpen && (
-          <RecordHistoryTab
-            kind="company"
-            id={company.id}
-            restore={{
-              version: company.version,
-              onRestored: () =>
-                invalidateRecord(queryClient, "company", company.id),
-            }}
-          />
-        )}
-        {/* card-actions, not form-actions: what stands above this row is a
-            history timeline, which sets its own top margin to 0 and carries no
-            bottom one — so the form's row, which brings no top margin because a
-            field above it normally does, put Close against the last entry. */}
-        <div className="card-actions">
-          <Button onClick={() => setAuditOpen(false)}>
-            {t("common.close")}
-          </Button>
-        </div>
-      </Modal>
-    </RecordView>
+          {auditOpen && (
+            <RecordHistoryTab
+              kind="company"
+              id={company.id}
+              restore={{
+                version: company.version,
+                onRestored: () =>
+                  invalidateRecord(queryClient, "company", company.id),
+              }}
+            />
+          )}
+        </Modal>
+      </RecordView>
+    </div>
   );
 }
 
@@ -1423,6 +1484,8 @@ function CompanyRecordBody({
   readOnly,
   openTaskId,
   onOpenTask,
+  onOpenTaskFromToday,
+  onLogActivity,
   taskUpdate,
   onOpenHistory,
   refusedReasonId,
@@ -1446,6 +1509,12 @@ function CompanyRecordBody({
   readOnly: boolean;
   openTaskId: string | null;
   onOpenTask: (activityId: string | null) => void;
+  // Opens a task the daily brief named, switching to the Tasks tab first:
+  // distinct from `onOpenTask` above, which the Tasks tab's own rows use once
+  // already there and needs no tab of its own to reach.
+  onOpenTaskFromToday: (activityId: string) => void;
+  // Opens the header's Log-activity drawer, off the daily brief's own verb.
+  onLogActivity: () => void;
   taskUpdate: ReturnType<typeof useTaskUpdate>;
   onOpenHistory: () => void;
   // The page's one sentence about why this account takes no changes, by id,
@@ -1457,6 +1526,14 @@ function CompanyRecordBody({
   // company is read-only for everyone, but a LIVE company somebody else owns is
   // read-only too, and the page had no way to know that until the record
   // started carrying the answer.
+  // The anchor the composer is drawn from, kept after `composing` clears: the
+  // drawer stays mounted so it can animate out, and an anchor dropped at the
+  // moment of closing would empty it in front of the reader. Null only before
+  // the first composer is ever opened, so nothing is mounted until then.
+  const shownAnchor = useRef<ComposeAnchor | null>(null);
+  if (composing !== null) {
+    shownAnchor.current = composing;
+  }
   // The meeting whose brief is open. "Prepare meeting" used to open the
   // composer on the meeting, which is a reply to a room nobody has sat in
   // yet; the brief drawer is what prepares a reader for one.
@@ -1468,6 +1545,9 @@ function CompanyRecordBody({
     view,
     read: useHasSiteRead(company.id),
   });
+  // The account's own names for the records the dossier cites, off the same
+  // 360 the overview's own copy of the card reads.
+  const dossierNames = recordNamesIn(view);
   return (
     <>
       {tab === "partner" && <PartnerTab companyId={company.id} />}
@@ -1488,14 +1568,14 @@ function CompanyRecordBody({
             view={view}
             loading={loading}
             failed={failed}
-            readOnly={readOnly}
-            onAllDeals={() => onTab("deals")}
             onOpenHistory={onOpenHistory}
             onOpenTab={onTab}
             onOpenRecord={receipt.open}
             onOpenEmail={receipt.openEmail}
             offerResearch={offerResearch}
             onOpenTasks={() => onTab("tasks")}
+            onOpenTask={onOpenTaskFromToday}
+            onLogActivity={onLogActivity}
             onPrepareMeeting={setPreparing}
             onDraftTo={(id) => onCompose({ kind: "account", id })}
             onPerform={onPerform}
@@ -1516,6 +1596,7 @@ function CompanyRecordBody({
         tab={tab}
         company={company}
         view={view}
+        loading={loading}
         failed={failed}
         readOnly={readOnly}
         openTaskId={openTaskId}
@@ -1526,9 +1607,10 @@ function CompanyRecordBody({
       {/* The composer, anchored on the message a draft_reply suggestion named.
           It is the same modal the timeline's own Reply opens — the advice
           shortcuts to it rather than inventing a second way to answer. */}
-      {composing && (
+      {shownAnchor.current !== null && (
         <AccountComposer
-          anchor={composing}
+          anchor={shownAnchor.current}
+          open={composing !== null}
           companyId={company.id}
           onClose={() => onCompose(null)}
         />
@@ -1634,6 +1716,9 @@ function CompanyRecordBody({
         offerOnOverview={offerResearch}
         onOpenHistory={onOpenHistory}
         refusedReasonId={refusedReasonId}
+        nameOf={dossierNames}
+        onOpenRecord={receipt.open}
+        onOpenEmail={receipt.openEmail}
       />
     </>
   );
@@ -1696,44 +1781,17 @@ export function offerResearchOnOverview({
   return !read && nothingOnFile(view);
 }
 
-// The create verb the work card carries, only where the reader may actually
-// read the section. Undefined for an archived record, which takes no new work
-// at all, and undefined for a reader whose grant does not reach the deals —
-// a button that can only end in a refusal is worse than no button, and
-// mounting one is a disclosure of its own.
-function workVerbs({
-  view,
-  company,
-  readOnly,
-}: Readonly<{
-  view?: Company360View;
-  company: Company;
-  readOnly: boolean;
-}>): { deal?: ReactNode } | undefined {
-  if (readOnly) {
-    return undefined;
-  }
-  return {
-    deal: !view?.sections_omitted?.includes("deals") ? (
-      <NewDealAction
-        companyId={company.id}
-        companyName={company.display_name}
-      />
-    ) : undefined,
-  };
-}
-
 function CompanyOverviewStack({
   company,
   view,
   loading,
   failed,
-  readOnly,
-  onAllDeals,
   onOpenHistory,
   onOpenRecord,
   onOpenEmail,
   onOpenTasks,
+  onOpenTask,
+  onLogActivity,
   onPrepareMeeting,
   onDraftTo,
   onOpenTab,
@@ -1750,10 +1808,6 @@ function CompanyOverviewStack({
   // The composite read's own pending flag — see CompanyRecordBody's own doc.
   loading: boolean;
   failed: boolean;
-  // An archived company takes no new deal, task or role, so the panels below
-  // show no verb that would only be refused.
-  readOnly: boolean;
-  onAllDeals: () => void;
   onOpenHistory: () => void;
   // Where a cited chip leads. Owned by the page, because the profile tab cites
   // the same records and two owners would mean two receipts open over each
@@ -1764,12 +1818,19 @@ function CompanyOverviewStack({
   // over one page would open over each other.
   onOpenEmail: (activityId: string) => void;
   onOpenTasks: () => void;
+  // The leading card's own fallback verbs, threaded to `useTodayReading`: a
+  // named task's detail modal, and the header's Log-activity drawer.
+  onOpenTask: (activityId: string) => void;
+  onLogActivity: () => void;
   // Opens the meeting brief for the day's meeting — not the composer.
   onPrepareMeeting: (activityId: string) => void;
   onDraftTo: (contactId: string) => void;
   onOpenTab: (tab: CompanyTab) => void;
   onPerform: (action: SuggestionAction) => void;
 }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const recordZone = useRecordZone();
   // The names the reading resolves ids against: the account's own records, and
   // the workspace roster for the colleague who held a meeting. Read here rather
   // than inside the thread, because the roster is a workspace read and the
@@ -1801,6 +1862,8 @@ function CompanyOverviewStack({
     onOpenRecord,
     onOpenEmail,
     onPerform,
+    onOpenTask,
+    onLogActivity,
     scan,
   });
   return (
@@ -1833,6 +1896,31 @@ function CompanyOverviewStack({
       <Company360Call
         reading={reading}
         name={company.display_name}
+        title={t("company.brief.title")}
+        titleAction={
+          view && (
+            <>
+              {/* The reading's own date, and only where the payload carries a
+                  date this can read. A server one release out of step answers
+                  the 360 without `as_of`, and Intl refuses an unparseable
+                  value by throwing, which took the whole record down over a
+                  line that only qualifies the head. */}
+              {!Number.isNaN(Date.parse(view.as_of)) && (
+                <span className="t-caption">
+                  {t("contact.brief.updatedAt", {
+                    when: formatDate(view.as_of, locale, recordZone),
+                  })}
+                </span>
+              )}
+              {/* The 360 call is a composition read off this account's own
+                  records rather than model prose, so its claim of authorship
+                  is the deterministic one — the same distinction the sources
+                  under the dossier and the brief already carry. */}
+              <WrittenBy by="deterministic" />
+            </>
+          )
+        }
+        scale="compact"
         footer={sinceLastVisitFooter(view)}
       >
         <RecordSpine
@@ -1864,74 +1952,54 @@ function CompanyOverviewStack({
           onOpenRecord={onOpenRecord}
         />
       </Company360Call>
-      {/* Two columns under the 360. Left: what needs a contact, then the money.
-          Right: Ask, then what the account is, then who is there. Each is one
-          pane, and the order is the order a rep works them. */}
-      <div className="co-glance-cols">
-        <div className="co-glance-col">
-          <NeedsList reading={reading} onOpenTasks={onOpenTasks} />
-          <MoneyPane
-            companyId={company.id}
-            view={view}
-            loading={loading}
-            readOnly={readOnly}
-            onAllDeals={onAllDeals}
-            onOpenRecord={onOpenRecord}
-            onOpenEmail={onOpenEmail}
-            // The verbs ride with the WORK rather than with the figures:
-            // this is the pane that names every open deal, so it is where a
-            // reader is standing when they notice one is missing. Each is
-            // gated on its own section being READABLE, and the guard is here
-            // rather than inside the verb: NewDealAction reads the pipelines
-            // the moment it mounts, which is itself a disclosure to a reader
-            // who may not see deals.
-            verbs={workVerbs({ view, company, readOnly })}
-          />
-        </div>
-        <div className="co-glance-col">
-          {/* The prepared questions are the ones the 360 answers in prose,
-                and both are written server-side from this reader's own 360
-                and cite records through the same receipt. Beside the reading
-                rather than at the foot of the page, so a reader does not
-                discover at the bottom that they could have asked at the top. */}
-          <div className="co-glance-ask">
-            <AssistantPanel
-              companyId={company.id}
-              onOpenRecord={onOpenRecord}
-              onOpenEmail={onOpenEmail}
-              projects={view?.projects}
-            />
-          </div>
-          {/* The account in prose, beside the reading of it: the 360 answers
-                what to DO, this answers what the account IS, in sentences with
-                their sources under them. */}
-          <DossierPanel
-            companyId={company.id}
-            nameOf={records}
-            onOpenRecord={onOpenRecord}
-            onOpenEmail={onOpenEmail}
-          />
-          {/* Is this an account we should be selling to at all — the
-                question an account with nothing in flight is actually asking.
-                Its own card rather than a section of the money pane: it
-                carries its own attribution and its own reassess verb in a
-                footer band. */}
-          {!hasWorkInFlight(view) && (
-            <GrowthFitPanel
-              companyId={company.id}
-              onOpenRecord={onOpenRecord}
-              onOpenEmail={onOpenEmail}
-            />
-          )}
-          {/* What Margince noticed on this account that nobody asked it to
-                look for — promises made, blockers named, risks read out of
-                meetings, mail and invoices. */}
-          <Panel className="co-signals">
-            <SignalsSection companyId={company.id} />
-          </Panel>
-          <ContactsChips view={view} loading={loading} onOpenTab={onOpenTab} />
-        </div>
+      {/* One column under the 360, full width at every measure: content-driven
+          cards of unequal height never share a row, so a tall needs list and a
+          short Ask box beside it would leave the short one's row half empty.
+          The order is the order a rep works them: what needs a contact, then
+          what the account is, then the questions the 360 already answers. The
+          money and the pipeline read on the Deals tab now, and the rail's own
+          DealsSection stands on every tab: a third copy of them here would be
+          a figure the reader has to reconcile against the other two. */}
+      <NeedsList reading={reading} onOpenTasks={onOpenTasks} />
+      {/* The account in prose, beside the reading of it: the 360 answers what
+          to DO, this answers what the account IS, in sentences with their
+          sources under them. */}
+      <DossierPanel
+        companyId={company.id}
+        nameOf={records}
+        onOpenRecord={onOpenRecord}
+        onOpenEmail={onOpenEmail}
+      />
+      {/* The prepared questions are the ones the 360 answers in prose, and
+          both are written server-side from this reader's own 360 and cite
+          records through the same receipt. Beside the reading rather than at
+          the foot of the page, so a reader does not discover at the bottom
+          that they could have asked at the top. */}
+      <div className="co-glance-ask">
+        <AssistantPanel
+          companyId={company.id}
+          onOpenRecord={onOpenRecord}
+          onOpenEmail={onOpenEmail}
+          projects={view?.projects}
+        />
       </div>
+      {/* Is this an account we should be selling to at all: the question an
+          account with nothing in flight is actually asking. Its own card,
+          carrying its own attribution and its own reassess verb in a footer
+          band. */}
+      {!hasWorkInFlight(view) && (
+        <GrowthFitPanel
+          companyId={company.id}
+          onOpenRecord={onOpenRecord}
+          onOpenEmail={onOpenEmail}
+        />
+      )}
+      {/* What Margince noticed on this account that nobody asked it to look
+          for: promises made, blockers named, risks read out of meetings,
+          mail and invoices. */}
+      <Panel className="co-signals">
+        <SignalsSection companyId={company.id} />
+      </Panel>
     </div>
   );
 }
@@ -1943,6 +2011,7 @@ function CompanyDealsAndTasksTabs({
   tab,
   company,
   view,
+  loading,
   failed,
   readOnly,
   openTaskId,
@@ -1953,6 +2022,9 @@ function CompanyDealsAndTasksTabs({
   tab: CompanyTab;
   company: Company;
   view?: Company360View;
+  // The composite read's own states, which the projects block needs to tell a
+  // wait from a failure.
+  loading: boolean;
   failed: boolean;
   readOnly: boolean;
   openTaskId: string | null;
@@ -1980,16 +2052,31 @@ function CompanyDealsAndTasksTabs({
               In its own Panel: the block renders PanelBody rows, and standing
               bare over the deals card it read as a line that fell out of one.
               The Panel is drawn only when the reader holds the contract grant
-              (the same `contracts` slice the block itself reads), so a reader
-              without it gets no empty card. */}
-          {view?.state_strip?.contracts && (
-            <Panel title={t("co.commercial.title")}>
-              <CompanyContractState view={view} />
-            </Panel>
-          )}
+              (the same `contracts` slice the block itself reads) AND the
+              account has an agreement: a reader without the grant gets no
+              empty card, and neither does an account with nothing on record,
+              whose one-line "no contract" was a card spent on an absence the
+              deals card under it already implies. */}
+          {view?.state_strip?.contracts &&
+            view.state_strip.contracts.active_count > 0 && (
+              <Panel title={t("co.commercial.title")}>
+                <CompanyContractState view={view} />
+              </Panel>
+            )}
           <CompanyDealsTab
             company={company}
             view={view}
+            failed={failed}
+            readOnly={readOnly}
+          />
+          {/* The deliveries this account is part of, as its own block under
+              the pipeline: the tab reads "Deals & projects" because both are
+              the account's work in flight, and a reader who came here for
+              one finds the other without a second tab to try. */}
+          <CompanyProjectsPanel
+            companyId={company.id}
+            view={view}
+            loading={loading}
             failed={failed}
             readOnly={readOnly}
           />
@@ -2175,6 +2262,9 @@ function CompanyProfileTab({
   offerOnOverview,
   onOpenHistory,
   refusedReasonId,
+  nameOf,
+  onOpenRecord,
+  onOpenEmail,
 }: Readonly<{
   active: boolean;
   company: Company;
@@ -2182,6 +2272,11 @@ function CompanyProfileTab({
   onOpenHistory: () => void;
   // See ReferenceDisclosures: the page's one read-only sentence, by id.
   refusedReasonId?: string;
+  // The dossier's own props: the overview's copy and this tab's leading one
+  // read the same names and open through the same receipt.
+  nameOf?: (entityType: string, entityId: string) => string | undefined;
+  onOpenRecord?: (entityType: string, entityId: string) => void;
+  onOpenEmail?: (activityId: string) => void;
 }>) {
   if (!active) {
     return null;
@@ -2192,6 +2287,9 @@ function CompanyProfileTab({
       offerOnOverview={offerOnOverview}
       onOpenHistory={onOpenHistory}
       refusedReasonId={refusedReasonId}
+      nameOf={nameOf}
+      onOpenRecord={onOpenRecord}
+      onOpenEmail={onOpenEmail}
     />
   );
 }
@@ -2201,6 +2299,9 @@ function ReferenceDisclosures({
   offerOnOverview,
   onOpenHistory,
   refusedReasonId,
+  nameOf,
+  onOpenRecord,
+  onOpenEmail,
 }: Readonly<{
   company: Company;
   offerOnOverview: boolean;
@@ -2208,11 +2309,17 @@ function ReferenceDisclosures({
   // The page's one sentence about why this account takes no changes, while
   // it does not: an edge is written through the account's own write gate.
   refusedReasonId?: string;
+  nameOf?: (entityType: string, entityId: string) => string | undefined;
+  onOpenRecord?: (entityType: string, entityId: string) => void;
+  onOpenEmail?: (activityId: string) => void;
 }>): ReactNode {
   return (
     <CompanyProfileForm
       company={company}
       onOpenHistory={onOpenHistory}
+      nameOf={nameOf}
+      onOpenRecord={onOpenRecord}
+      onOpenEmail={onOpenEmail}
       tools={
         <>
           {/* Each of these names itself, so they stand in the profile's own

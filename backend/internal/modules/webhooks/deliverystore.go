@@ -17,6 +17,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// deliveryPageMax and deliveryPageDefault bound one page of the history.
+const (
+	deliveryPageMax     = 200
+	deliveryPageDefault = 50
+)
+
 // The webhook_delivery status vocabulary lives in the table's CHECK and in
 // the SQL below: 'pending' (freshly enqueued) → 'retrying' (failed, with a
 // backoff deadline) → 'dead_lettered' (budget spent), or → 'delivered'.
@@ -51,28 +57,54 @@ func scanDelivery(r pgx.Row) (Delivery, error) {
 	return d, err
 }
 
+// deliveryCursor is where a page of the history stopped: both parts of its
+// order, because the order has two.
+//
+// `created_at` ALONE IS NOT A POSITION. A subscription that fans out on one
+// event writes its attempts in the same instant, and a retry storm makes that
+// ordinary rather than rare — so the id is the tie-break, exactly as the
+// ORDER BY has it. Resuming on the timestamp alone would re-serve or skip every
+// attempt sharing the boundary second.
+type deliveryCursor struct {
+	CreatedAt time.Time `json:"at"`
+	ID        ids.UUID  `json:"id"`
+}
+
 // ListDeliveries returns a subscription's delivery history newest-first —
 // the dead-letter inspection surface (B-E10.13c). Read-gated, and the
-// subscription is existence-hidden if the caller may not see it. It reports
-// hasMore honestly: the dead-letter view must never look complete while
-// older parked deliveries are hidden behind the page limit.
-func (s *Store) ListDeliveries(ctx context.Context, subID ids.UUID, limit int) ([]Delivery, bool, error) {
+// subscription is existence-hidden if the caller may not see it.
+//
+// PAGED, because hasMore alone made the tail unreachable. The view was honest
+// that it had been cut and offered no way to ask for the rest: past the limit,
+// an operator inspecting why a subscription is failing saw the newest attempts
+// and could not reach the parked ones behind them — which are the ones they
+// opened the page for.
+func (s *Store) ListDeliveries(
+	ctx context.Context, subID ids.UUID, limit int, cursor string,
+) ([]Delivery, storekit.Page, error) {
 	if err := auth.Require(ctx, rbacObject, principal.ActionRead); err != nil {
-		return nil, false, err
+		return nil, storekit.Page{}, err
 	}
 	if _, err := s.GetSubscription(ctx, subID); err != nil {
-		return nil, false, err
+		return nil, storekit.Page{}, err
 	}
-	if limit <= 0 || limit > 200 {
-		limit = 50
+	if limit <= 0 || limit > deliveryPageMax {
+		limit = deliveryPageDefault
 	}
 	var out []Delivery
+	var page storekit.Page
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		args := []any{subID}
+		arg := func(v any) int { args = append(args, v); return len(args) }
+		where, err := deliveryPageClause(cursor, arg)
+		if err != nil {
+			return err
+		}
 		// Fetch one past the page so a full page is distinguishable from a
 		// truncated one without a second count query.
 		rows, err := tx.Query(ctx, "SELECT "+deliveryColumns+
-			" FROM webhook_delivery WHERE subscription_id = $1 ORDER BY created_at DESC, id DESC LIMIT $2",
-			subID, limit+1)
+			" FROM webhook_delivery WHERE subscription_id = $1"+where+
+			" ORDER BY created_at DESC, id DESC LIMIT "+storekit.SQLf("$%d", arg(limit+1)), args...)
 		if err != nil {
 			return err
 		}
@@ -84,16 +116,47 @@ func (s *Store) ListDeliveries(ctx context.Context, subID ids.UUID, limit int) (
 			}
 			out = append(out, d)
 		}
-		return rows.Err()
+		if err := rows.Err(); err != nil {
+			return err
+		}
+		if len(out) <= limit {
+			return nil
+		}
+		out = out[:limit]
+		last := out[limit-1]
+		token, err := storekit.EncodeOpaque(deliveryCursor{CreatedAt: last.CreatedAt, ID: last.ID})
+		if err != nil {
+			return err
+		}
+		page = storekit.Page{HasMore: true, NextCursor: token}
+		return nil
 	})
 	if err != nil {
-		return nil, false, err
+		return nil, storekit.Page{}, err
 	}
-	hasMore := len(out) > limit
-	if hasMore {
-		out = out[:limit]
+	return out, page, nil
+}
+
+// deliveryPageClause is the keyset arm, spelled as a row comparison rather than
+// an OR of two: it is the order the index reads, and one fewer place to get a
+// tie-break wrong. `<` because the walk runs newest-first.
+func deliveryPageClause(cursor string, arg func(any) int) (string, error) {
+	if cursor == "" {
+		return "", nil
 	}
-	return out, hasMore, nil
+	after, err := storekit.DecodeOpaque[deliveryCursor](cursor)
+	// BOTH parts, not the id alone. The envelope proves the token is one of
+	// ours, not that it names a position in THIS history: a cursor from any
+	// other paged route spells `id` the same way and decodes cleanly here,
+	// leaving the instant at its zero value — which, on a DESC walk, pages from
+	// before every row and answers an empty page. An operator would read that
+	// as "no more attempts" on the surface they opened precisely because
+	// deliveries were failing.
+	if err != nil || after.CreatedAt.IsZero() || after.ID.IsZero() {
+		return "", &storekit.MalformedCursorError{}
+	}
+	return storekit.SQLf(" AND (created_at, id) < ($%d, $%d)",
+		arg(after.CreatedAt), arg(after.ID)), nil
 }
 
 // getDelivery reads one delivery by id in the caller's workspace.

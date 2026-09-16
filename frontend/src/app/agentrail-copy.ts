@@ -2,6 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { MarginceCoreState } from "../design-system/margince-core";
+import type { MessageKey } from "../i18n/en";
+import type { Screen } from "./router";
 
 /**
  * The agent section's own copy.
@@ -95,21 +97,7 @@ export const RUNNING: ReadonlySet<MarginceCoreState> = new Set([
 ]);
 
 /**
- * What a read in flight is CALLED, keyed by the first segment of its cache key.
- *
- * The line under the orb names one thing at a time (`agentrail-ticker.ts`), and
- * this is the vocabulary it names them in: the words a salesperson uses about
- * their own day, not the words the cache uses about itself. "Reading this
- * company" is a sentence; "fetching company360" is a key.
- *
- * A key with no entry here produces NO LINE. That is the point of a table rather
- * than a fallback that opens up the key: half of what a session fetches is
- * plumbing (the session, the feature flags, the custom-field catalog), and a
- * status line that narrated those would bury the two or three events a reader
- * actually cares about.
- */
-/**
- * The lines the section rotates through while the agent is at rest.
+ * The READINGS the section rotates through while the agent is at rest.
  *
  * All three are the AGENT's own facts, and that is the whole selection rule.
  * This rotation used to carry six, and the other three were about the
@@ -126,7 +114,9 @@ export const RUNNING: ReadonlySet<MarginceCoreState> = new Set([
  *
  * Each entry is a function of what was read, and one that has nothing to report
  * returns null and is skipped, so the rotation is only ever as long as the facts
- * are.
+ * are. `finished` is the one that can contribute SEVERAL lines: a day settles
+ * more than one run, and the newest of them being the only one ever said is what
+ * left this surface announcing one summary from breakfast until the evening.
  */
 export const IDLE_ORDER = [
   "waiting",
@@ -141,6 +131,68 @@ export const IDLE_ORDER = [
 ] as const;
 
 export type IdleKind = (typeof IDLE_ORDER)[number];
+
+/** One thing that is true of the product, and where it is true of. */
+export type Tip = Readonly<{
+  /** The sentence, in the reader's own locale. */
+  key: MessageKey;
+  /**
+   * The destination the sentence's `{name}` slot names, drawn as the way there.
+   * Null for a tip about no place in particular — and a tip is SUPPRESSED on
+   * the screen it names, because telling somebody to go where they already are
+   * is the surface admitting it is not reading the room.
+   */
+  to: Readonly<{ screen: Screen; labelKey: MessageKey }> | null;
+}>;
+
+/**
+ * What the section says between readings, in the order it says them.
+ *
+ * NOT readings, and the distinction is what keeps this list honest. Every line
+ * in `IDLE_ORDER` is something the installation was asked and answered. Every
+ * line here is something that is true of the PRODUCT, whoever is looking and
+ * whenever they look — so none of them claims the agent did anything, and the
+ * rule that this surface never invents activity is untouched.
+ *
+ * They exist because the readings run out, and the rotation was built as though
+ * they would not. An installation with a clean queue, a bound model and a quiet
+ * afternoon has exactly one true reading — "Nothing needs you" — and one that
+ * ran a summary this morning has that summary and nothing else, all day. A line
+ * at the edge of every screen that has said the same sentence since breakfast is
+ * not a status light any more; it is furniture, and a reader stops seeing it
+ * long before they stop believing it.
+ *
+ * ONE of these shows per pass through the readings, and the next pass shows the
+ * next (`agentrail-resting.ts`). That cadence is the point: a tip is the thing
+ * the rail says once it has run out of news, never a sixth voice competing with
+ * the queue a contact has to answer.
+ *
+ * The bar for a line being here is that it is CHECKABLE. Each one is about a
+ * part of the product a reader can go and find, so a tip that stops being true
+ * is a tip somebody notices — which is what stops this list from drifting into
+ * the cheerful nothing the readings are so careful not to be.
+ */
+export const TIPS: readonly Tip[] = [
+  // What Home is FOR, which is the thing a new reader most often has not
+  // worked out: the decisions, the tasks and the duplicate pairs are lanes
+  // inside it rather than three queues to go looking for.
+  {
+    key: "agent.tip.day",
+    to: { screen: "home", labelKey: "nav.brief" },
+  },
+  // The palette is the ask surface, and nothing in the chrome says so: the
+  // hint lives on one screen (`ai.paletteHint`), which is the screen a reader
+  // reaches by already knowing.
+  { key: "agent.tip.ask", to: null },
+  // The panel this block opens. A reader who has never opened it has no idea
+  // the agent keeps a log of its own, and the recap is the answer to the
+  // question the orb raises.
+  { key: "agent.tip.recap", to: null },
+  // The lit margins. Ambient light nobody explained is ambient light somebody
+  // assumes is a fault, and the setting that turns it off is inside the panel
+  // above.
+  { key: "agent.tip.edge", to: null },
+];
 
 /**
  * The named line, per cache key, with `%s` where the record's name goes.
@@ -203,6 +255,20 @@ export const NAMED: Readonly<Record<string, string>> = {
   contactBrief: "Summarising %s",
 };
 
+/**
+ * What a read in flight is CALLED, keyed by the first segment of its cache key.
+ *
+ * The line under the orb names one thing at a time (`agentrail-ticker.ts`), and
+ * this is the vocabulary it names them in: the words a salesperson uses about
+ * their own day, not the words the cache uses about itself. "Reading this
+ * company" is a sentence; "fetching company360" is a key.
+ *
+ * A key with no entry here produces NO LINE. That is the point of a table rather
+ * than a fallback that opens up the key: half of what a session fetches is
+ * plumbing (the session, the feature flags, the custom-field catalog), and a
+ * status line that narrated those would bury the two or three events a reader
+ * actually cares about.
+ */
 export const SAID: Readonly<Record<string, string>> = {
   activities: "Reading the activity trail",
   approvals: "Checking what needs you",

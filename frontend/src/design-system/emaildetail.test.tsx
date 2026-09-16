@@ -14,8 +14,14 @@
 // for the row they opened it from. These are the claims that replaced that.
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
-import type { ReactNode } from "react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import { type ReactNode, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { Button } from "./atoms";
@@ -351,5 +357,86 @@ describe("the drawer's reply", () => {
     );
 
     expect(renderReply).not.toHaveBeenCalled();
+  });
+});
+
+// A REOPEN MUST NOT PAINT THE LAST OPEN'S ANSWER.
+//
+// The drawer stays mounted so it can animate out, so its query keeps an
+// observer and `gcTime: 0` — which evicts only once a query has none — never
+// fires. Without a key of its own per open, the second open renders the first
+// one's presentation while its own request is still out: an authorization
+// result somebody may have narrowed in between, which is somebody's mail shown
+// to a reader who may no longer read it.
+//
+// The second answer is HELD open on purpose. That is the whole window the
+// defect lived in, and a test that let the 403 land first would assert against
+// a drawer that had already been corrected by it.
+function Reopenable() {
+  const [open, setOpen] = useState(true);
+  return (
+    <>
+      <button type="button" onClick={() => setOpen((was) => !was)}>
+        toggle
+      </button>
+      <EmailDetail
+        activityId={ACTIVITY}
+        open={open}
+        onClose={() => setOpen(false)}
+        formatWhen={(iso) => iso}
+      />
+    </>
+  );
+}
+
+describe("reopening the drawer after access was withdrawn", () => {
+  it("shows nothing of the message it showed last, until the new read answers", async () => {
+    let release: (answer: Response) => void = () => undefined;
+    const held = new Promise<Response>((resolve) => {
+      release = resolve;
+    });
+    const answers: Promise<Response>[] = [
+      Promise.resolve(
+        new Response(JSON.stringify(presentation()), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      ),
+      held,
+    ];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        () => answers.shift() ?? Promise.reject(new Error("one read per open")),
+      ),
+    );
+
+    draw(<Reopenable />);
+    await waitFor(() =>
+      expect(screen.getByText("The signed contract")).toBeTruthy(),
+    );
+
+    // Closed, then open again. `EmailDetail` itself never unmounts — only the
+    // dialog inside it does — so the observer, and the answer under it, would
+    // still be there for the second open to draw.
+    const toggle = screen.getByRole("button", { name: "toggle" });
+    fireEvent.click(toggle);
+    fireEvent.click(toggle);
+    await waitFor(() =>
+      expect(screen.queryByText("The signed contract")).toBeNull(),
+    );
+    expect(screen.getByText("Opening the message")).toBeTruthy();
+
+    // And when the answer is a refusal, it stays off the screen.
+    release(
+      new Response(JSON.stringify({ title: "forbidden" }), {
+        status: 403,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    await waitFor(() =>
+      expect(screen.getByText("This section did not load.")).toBeTruthy(),
+    );
+    expect(screen.queryByText("The signed contract")).toBeNull();
   });
 });

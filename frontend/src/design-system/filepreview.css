@@ -19,6 +19,9 @@
   gap: var(--space-3);
   flex: none;
   padding: var(--space-3) var(--space-4);
+  /* Room at the end for the dialog's own close, drawn over this corner: the
+     control plus the inset it sits at, or it lands on Print. */
+  padding-inline-end: calc(var(--controlHeight) + var(--space-4));
   background: var(--bgElevated);
   border-bottom: 1px solid var(--borderSubtle);
 }

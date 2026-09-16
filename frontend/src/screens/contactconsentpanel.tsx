@@ -31,6 +31,11 @@ export function ConsentAndChannels({
   const t = useT();
   const providerLabel = useProviderLabel();
   const [manage, setManage] = useState(false);
+  // Opened once, mounted from then on. The drawer's section reads consent and
+  // the purpose catalogue, so it must not mount with the rail — and it must not
+  // unmount on close either, because the drawer is still on screen while it
+  // leaves and an emptied one is what the reader would watch go.
+  const [everManaged, setEverManaged] = useState(false);
   const titleId = useId();
   const mayWrite = useCanWriteRecord("contact", view.contact);
   const entries = guard?.entries ?? [];
@@ -123,7 +128,13 @@ export function ConsentAndChannels({
           </>
         )}
         <p>{t("consent.permissionScope")}</p>
-        <Button variant="ghost" onClick={() => setManage(true)}>
+        <Button
+          variant="ghost"
+          onClick={() => {
+            setEverManaged(true);
+            setManage(true);
+          }}
+        >
           {t("consent.manage")}
         </Button>
       </PanelBody>
@@ -136,29 +147,26 @@ export function ConsentAndChannels({
           !hasEmail ? t("contact.rail.noEmailAddress") : undefined
         }
       />
-      {manage && (
-        <Modal
-          open
-          onClose={() => setManage(false)}
-          labelledBy={titleId}
-          placement="right"
-        >
-          <div className="pe-drawer-title">
-            <Heading size="large" id={titleId}>
-              {t("consent.manage")}
-            </Heading>
-            <Button variant="ghost" onClick={() => setManage(false)}>
-              {t("common.close")}
-            </Button>
-          </div>
+      <Modal
+        open={manage}
+        onClose={() => setManage(false)}
+        labelledBy={titleId}
+        placement="right"
+      >
+        <div className="pe-drawer-title">
+          <Heading size="large" id={titleId}>
+            {t("consent.manage")}
+          </Heading>
+        </div>
+        {everManaged && (
           <ConsentSection
             contactId={view.contact.id}
             contact={view.contact}
             showConfirm={false}
             titleLevel={3}
           />
-        </Modal>
-      )}
+        )}
+      </Modal>
     </Panel>
   );
 }
@@ -192,13 +200,7 @@ function ConsentRow({
           {icon}
           {label}
         </span>
-        <span
-          className={
-            reachable
-              ? verdictClass(verdict)
-              : "pe-rail-value pe-rail-value-muted"
-          }
-        >
+        <span className={reachable ? verdictClass(verdict) : "pe-rail-value "}>
           {reachable ? consentWord(verdict, t) : unreachableWord}
         </span>
       </div>

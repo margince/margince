@@ -88,6 +88,12 @@ type ListOpenTasksInput struct {
 	// Limit bounds the sweep. A caller passing zero or less gets
 	// openTasksDefaultLimit rather than an unbounded read.
 	Limit int
+	// ExcludeSystemMinted drops the tasks the product wrote for its own
+	// reasons — the clock's check-in and renewal reminders. A caller that
+	// reads the rows as PROMISES sets it, because a reminder the system
+	// minted is nobody's commitment; a caller that lists open work leaves it
+	// false, because the reminder is still real work.
+	ExcludeSystemMinted bool
 	// MostRecentlySlippedFirst orders the overdue promises by the deadline
 	// that passed LAST rather than by the earliest deadline.
 	//
@@ -255,6 +261,9 @@ func openTasksFilter(ctx context.Context, in ListOpenTasksInput, arg func(any) i
 	}
 	if in.AssigneeID != nil {
 		where = append(where, sprintf("a.assignee_id = $%d", arg(*in.AssigneeID)))
+	}
+	if in.ExcludeSystemMinted {
+		where = append(where, NotSystemMinted("a", arg))
 	}
 	if in.WithinProjectID != nil {
 		where = append(where, ActivityWithinProject(arg(*in.WithinProjectID)))

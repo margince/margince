@@ -57,9 +57,7 @@ export function FilterPills<Value extends string>({
         >
           {pill.label}
           {pill.count !== undefined && (
-            <span className="filterpill-count t-num">
-              {formatNumber(pill.count, locale)}
-            </span>
+            <span className="t-num">{formatNumber(pill.count, locale)}</span>
           )}
         </button>
       ))}

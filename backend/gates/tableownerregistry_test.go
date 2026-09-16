@@ -160,11 +160,16 @@ var tableOwners = map[string]string{
 	// written beside the column it explains, so it belongs to the module that
 	// owns that row.
 	"activity_reply_verdict_history": "internal/modules/activities",
-	"activity_sales_state":           "internal/modules/activities",
-	"activity_reader_state":          "internal/modules/activities",
-	"activity_review_template":       "internal/modules/activities",
-	"activity_review_response":       "internal/modules/activities",
-	"worklist_pin":                   "internal/modules/activities",
+	// Whether our own reply settled the request an inbound message made. It
+	// hangs off `activity` and is written beside the owed verdict it completes,
+	// so it belongs to the module that owns that row — the same ground the
+	// reply-verdict history above stands on.
+	"activity_request_settlement": "internal/modules/activities",
+	"activity_sales_state":        "internal/modules/activities",
+	"activity_reader_state":       "internal/modules/activities",
+	"activity_review_template":    "internal/modules/activities",
+	"activity_review_response":    "internal/modules/activities",
+	"worklist_pin":                "internal/modules/activities",
 	// ACT-DDL-3: who was in the interaction. It belongs beside activity and
 	// activity_link for the same reason they belong together — it is part of
 	// what an activity IS, not a graph artifact derived from one.

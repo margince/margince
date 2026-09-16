@@ -22,7 +22,7 @@ import {
   type SuggestionAction,
   SuggestionsSection,
 } from "./company360";
-import { CompanyWorkCard } from "./companywork";
+import { sinceLastVisitFooter } from "./companywork";
 import { SentenceList } from "./record360";
 import { TaskQuickActions, useTaskUpdate } from "./taskactions";
 
@@ -303,8 +303,10 @@ function NextStepsWithVerbs({ three60 }: Readonly<{ three60: Company360 }>) {
   );
 }
 
+// The since-last-visit footer, rendered on its own: the account's own reading
+// carries it now, and this is the sentence, not the reading it once sat on.
 function renderWork(three60: Company360) {
-  render(<CompanyWorkCard view={three60} onOpenRecord={() => {}} />);
+  render(sinceLastVisitFooter(three60) ?? null);
 }
 
 // The lead panel, rendered on its own: it moved out of AccountBrief so the
@@ -433,8 +435,8 @@ describe("company view — withheld sections", () => {
 
     // The standing is the 360's word now, under the readings row: withheld
     // reads as withheld there, on the word and on each dimension.
-    const call = await screen.findByText("Brandt Automotive GmbH · 360");
-    const pane = call.closest(".co-reading-call");
+    const call = await screen.findByText("Account brief");
+    const pane = call.closest(".panel");
     if (!(pane instanceof HTMLElement)) {
       throw new Error("the 360 has no pane");
     }
@@ -456,8 +458,8 @@ describe("company view — withheld sections", () => {
     );
     renderCompany();
 
-    const call = await screen.findByText("Brandt Automotive GmbH · 360");
-    const pane = call.closest(".co-reading-call");
+    const call = await screen.findByText("Account brief");
+    const pane = call.closest(".panel");
     if (!(pane instanceof HTMLElement)) {
       throw new Error("the 360 has no pane");
     }
@@ -605,7 +607,7 @@ describe("company view — the context column belongs to the account, not to a t
 });
 
 describe("company view — what changed since the last visit", () => {
-  it("counts only the dimensions it was allowed to count", async () => {
+  it("counts only the dimensions it was allowed to count", () => {
     const three60 = view({
       since_last_visit: {
         baseline_at: "2026-05-30T09:00:00Z",
@@ -616,14 +618,9 @@ describe("company view — what changed since the last visit", () => {
         pending_proposals: 2,
       },
     });
-    stub(three60);
     renderWork(three60);
 
-    await waitFor(() =>
-      expect(
-        screen.getByText("3 new items since your last visit."),
-      ).toBeTruthy(),
-    );
+    expect(screen.getByText("3 new items since your last visit.")).toBeTruthy();
     // The decision count has ONE display, the header chip, which counts the
     // approvals section. This block used to render its own count off
     // since_last_visit.pending_proposals, and the two disagreed on screen.
@@ -632,7 +629,7 @@ describe("company view — what changed since the last visit", () => {
     expect(screen.queryByText(/moved stage/)).toBeNull();
   });
 
-  it("greets a first visit as a first visit, not as nothing having happened", async () => {
+  it("greets a first visit as a first visit, not as nothing having happened", () => {
     const three60 = view({
       since_last_visit: {
         baseline_at: null,
@@ -641,14 +638,11 @@ describe("company view — what changed since the last visit", () => {
         pending_proposals: 0,
       },
     });
-    stub(three60);
     renderWork(three60);
 
-    await waitFor(() =>
-      expect(
-        screen.getByText("You are opening this account for the first time."),
-      ).toBeTruthy(),
-    );
+    expect(
+      screen.getByText("You are opening this account for the first time."),
+    ).toBeTruthy();
     expect(screen.queryByText("Nothing new since your last visit.")).toBeNull();
   });
 });

@@ -591,9 +591,9 @@ function LaneRow<
               A lane this build does not know gets no gloss rather than an
               invented one. */}
           <span className="ai-lane-name">
-            <span className="ai-lane-id">{name}</span>
+            <span>{name}</span>
             {laneGloss(name, t) && (
-              <span className="ai-lane-gloss t-sub">{laneGloss(name, t)}</span>
+              <span className="t-sub">{laneGloss(name, t)}</span>
             )}
           </span>
           {/* The binding itself, as ONE flex item. Grouped rather than laid
@@ -614,9 +614,7 @@ function LaneRow<
                 protocol, and every broker on it — OpenRouter, Together, a
                 self-hosted gateway — reads identically on this row without the
                 host. Only this adapter has one, so nothing else grows it. */}
-            {binding.base_url ? (
-              <span className="ai-lane-host">{hostOf(binding.base_url)}</span>
-            ) : null}
+            {binding.base_url ? <span>{hostOf(binding.base_url)}</span> : null}
             {unkeyed?.has(binding.provider) && (
               <Badge tone="warn">{t("aiRouting.noKey")}</Badge>
             )}

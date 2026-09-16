@@ -108,6 +108,11 @@ type briefFacts struct {
 	// read needs. False is NOT "this rep's deals have no stakeholders": it
 	// floors the warmth factor for every deal, which reorders the queue.
 	seatsReadable bool
+	// today is the installation-zone calendar day the timing factor measures
+	// "days until expected close" from — the SAME day brief_run.local_day is
+	// stamped in, resolved once in the gather transaction so the score reads the
+	// morning the run belongs to.
+	today time.Time
 }
 
 // gather reads one transaction's worth of ranking facts.
@@ -122,6 +127,13 @@ func (e *BriefEngine) gather(ctx context.Context, now time.Time, userID ids.UUID
 		// The rep's last brief view: the previous run's data cutoff. No
 		// previous run → the overnight window is all-time.
 		lastView, err := briefLastView(ctx, tx, userID)
+		if err != nil {
+			return err
+		}
+
+		// The installation-zone day the timing factor measures against,
+		// resolved in this transaction so it is the same day the run is stamped.
+		out.today, err = localDay(ctx, tx, now)
 		if err != nil {
 			return err
 		}
@@ -188,7 +200,7 @@ func (e *BriefEngine) Rank(ctx context.Context, now time.Time) (BriefRanking, er
 
 	scored := make([]BriefQueueItem, 0, len(order))
 	for _, dealID := range order {
-		item := briefScore(facts[dealID], revenueNorm, now)
+		item := briefScore(facts[dealID], revenueNorm, gathered.today)
 		// Attached AFTER scoring, never inside it. briefScore is a pure
 		// function of the ranking facts and is tested as one; lineage explains
 		// why a deal is in the queue and must not be able to change where it

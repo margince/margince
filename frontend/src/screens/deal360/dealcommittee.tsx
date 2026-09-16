@@ -137,7 +137,7 @@ export function DealCommitteeMap({
                 <span className="dc-seat-name">
                   <SeatContact seat={seat} />
                 </span>
-                <span className="dc-role">{dealRoleLabel(seat.role, t)}</span>
+                <span>{dealRoleLabel(seat.role, t)}</span>
                 <Badge tone={seat.engaged ? "success" : undefined}>
                   {seat.engaged
                     ? t("deal.committee.engaged")

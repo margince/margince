@@ -106,7 +106,7 @@ export function VoiceCorpusIntake({
             )}
             <WhatTeachesTheVoice />
             {first && (
-              <p className="t-caption vdna-floornote">
+              <p className="t-caption">
                 {t("settings.voice.floorNote", {
                   min: formatNumber(VOICE_MIN_WORDS, locale),
                 })}
@@ -128,14 +128,14 @@ export function VoiceCorpusIntake({
 function WhatTeachesTheVoice() {
   const t = useT();
   return (
-    <div className="vdna-works">
+    <div>
       <p className="vdna-label">{t("settings.voice.worksTitle")}</p>
       <ul className="vdna-works-list">
         <li>{t("settings.voice.worksEmails")}</li>
         <li>{t("settings.voice.worksDocs")}</li>
         <li>{t("settings.voice.worksTranscripts")}</li>
       </ul>
-      <p className="vdna-works-not">{t("settings.voice.worksNot")}</p>
+      <p>{t("settings.voice.worksNot")}</p>
     </div>
   );
 }
@@ -250,7 +250,7 @@ function NoticeRow({ notice }: Readonly<{ notice: IntakeNotice }>) {
   const { locale } = useLocale();
   return (
     <li
-      className={`vdna-notice vdna-notice-${notice.tone}`}
+      className={`vdna-notice-${notice.tone}`}
       role={notice.tone === "warn" ? "alert" : undefined}
     >
       {noticeText(t, notice, locale)}

@@ -13,7 +13,7 @@ import { useT } from "../../i18n";
 export function ThreadFailed({ onRetry }: Readonly<{ onRetry: () => void }>) {
   const t = useT();
   return (
-    <PanelBody className="co-thread-failed">
+    <PanelBody>
       <p>{t("co.spine.failed")}</p>
       <Button variant="ghost" onClick={onRetry}>
         {t("common.retry")}

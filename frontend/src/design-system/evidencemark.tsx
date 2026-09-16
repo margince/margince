@@ -4,6 +4,7 @@ import { useT } from "../i18n";
 import { useAnchoredToTrigger } from "./anchored";
 import { Button } from "./atoms";
 import { useHoverIntent } from "./hoverintent";
+import { usePortalPanelFocus } from "./portalfocus";
 import type { ConfidenceLevel, Provenance } from "./trust";
 import { ProvenanceTag } from "./trust";
 import "./evidencemark.css";
@@ -28,12 +29,6 @@ import "./evidencemark.css";
 // overlapping regions — the same behaviour pointer dismissal gives, made
 // true for every input method rather than assumed.
 let closeOpenMark: (() => void) | null = null;
-
-// The first thing in the panel a reader can land on. The same set popover.tsx
-// keeps for its own portalled panel, kept here rather than exported from one —
-// this is a CSS selector, not a shared rule about focus.
-const FOCUSABLE =
-  'a[href], button, input, select, textarea, [tabindex]:not([tabindex="-1"])';
 
 export type EvidenceMarkSource = {
   provenance: Provenance;
@@ -80,19 +75,19 @@ export function EvidenceMark({
     },
     () => setOpen(false),
   );
-  // Moves focus into the panel once it is open, but only when a press opened
-  // it and only when there is a control in it to land on (a receipt with no
-  // "Full history" link has nothing to focus, and a screen reader is already
-  // on the trigger's own accessible name). Portalled to the body, the panel
-  // is no longer the trigger's next DOM sibling, so Tab no longer reaches it
-  // by adjacency the way it did before the portal — this is what restores
-  // that reach.
-  useEffect(() => {
-    if (!open || openedBy === "hover") {
-      return;
-    }
-    panelRef.current?.querySelector<HTMLElement>(FOCUSABLE)?.focus();
-  }, [open, openedBy]);
+  // Focus, shared with the popover's own portalled panel: into the panel when a
+  // press opened it and there is a control to land on (a receipt with no "Full
+  // history" link has nothing to focus, and a screen reader is already on the
+  // trigger's accessible name), back to the trigger if the close dropped it,
+  // and Tab measured from where the trigger sits on the page. Portalled to the
+  // body, the panel is no longer the trigger's next DOM sibling, so none of the
+  // three happens by adjacency any more.
+  const panelFocus = usePortalPanelFocus({
+    open,
+    openedBy,
+    trigger: triggerRef,
+    panel: panelRef,
+  });
   // The receipt is portalled to the body and placed against the trigger's own
   // rectangle (anchored.ts), the same reason the popover is (popover.tsx): a
   // value near the bottom of a `Panel` sits inside `overflow: hidden`, and a
@@ -191,6 +186,7 @@ export function EvidenceMark({
             // panel a reader was moving toward. The same reason popover.tsx's
             // portalled panel carries the same pair.
             {...hover}
+            {...panelFocus}
             style={{
               top: `${at.top}px`,
               left: `${at.left}px`,
@@ -200,9 +196,7 @@ export function EvidenceMark({
             <p className="evmark-row">
               <ProvenanceTag provenance={source.provenance} />
               {source.confidence && (
-                <span className="evmark-confidence">
-                  {t(`confidence.${source.confidence}`)}
-                </span>
+                <span>{t(`confidence.${source.confidence}`)}</span>
               )}
             </p>
             {source.snippet && (

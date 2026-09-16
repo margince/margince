@@ -152,7 +152,7 @@ unless a primitive is added (`variant="agent"` is a prop, not a primitive).
    rows and their order are pinned by `rail.test.tsx` and `ac.spec.ts` and
    do not change.
 3. **Top bar.** 50px stays; glass, hairline under; breadcrumb left, the ⌘K
-   field centred, the SoR-mode chip and the account menu right. **Nothing
+   field centred and the account menu right. **Nothing
    that belongs to a record sits in it.**
 4. **Settings second level.** On a settings route the sidebar itself becomes
    the 210px column that carries the level (`SettingsRail`/`navlevel.tsx`),

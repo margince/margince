@@ -241,7 +241,7 @@ function BackreadSetup({
         problem={previewProblem}
         counting={counting}
       />
-      <p className="ob-backread-note">{t("ob.backread.note")}</p>
+      <p>{t("ob.backread.note")}</p>
       <div className="ob-backread-acts">
         <Button variant="primary" disabled={starting || held} onClick={onStart}>
           {t("ob.backread.start")}
@@ -287,9 +287,7 @@ function BackreadScope({
 
   return (
     <div className="ob-backread-scope" aria-live="polite">
-      {counting && (
-        <p className="ob-backread-counting">{t("ob.backread.estimating")}</p>
-      )}
+      {counting && <p>{t("ob.backread.estimating")}</p>}
       {preview && (
         <p className="ob-backread-estimate">
           {t(
@@ -303,9 +301,7 @@ function BackreadScope({
         </p>
       )}
       {preview?.estimate_quality === "heuristic" && (
-        <p className="ob-backread-qualifier t-caption">
-          {t("ob.backread.estimateHeuristic")}
-        </p>
+        <p className="t-caption">{t("ob.backread.estimateHeuristic")}</p>
       )}
       {cost !== null && (
         <p className="ob-backread-cost">
@@ -470,11 +466,11 @@ function BackreadOutcome({ run }: Readonly<{ run: BackfillStatus }>) {
   const t = useT();
   switch (run.state) {
     case "queued":
-      return <p className="ob-backread-note">{t("ob.backread.queued")}</p>;
+      return <p>{t("ob.backread.queued")}</p>;
     case "running":
-      return <p className="ob-backread-note">{t("ob.backread.runningNote")}</p>;
+      return <p>{t("ob.backread.runningNote")}</p>;
     case "done":
-      return <p className="ob-backread-note">{t("ob.backread.doneNote")}</p>;
+      return <p>{t("ob.backread.doneNote")}</p>;
     case "error":
       return (
         <p className="ob-backread-problem" role="alert">
@@ -491,7 +487,7 @@ function BackreadOutcome({ run }: Readonly<{ run: BackfillStatus }>) {
       // in the inbox, waiting on review, whether or not the run kept going.
       const captured = run.counts?.captured ?? 0;
       return (
-        <p className="ob-backread-note">
+        <p>
           {t(
             captured > 0
               ? "ob.backread.cancelledPartial"

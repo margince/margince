@@ -314,14 +314,13 @@ function TeamRow({
   const count = team.member_count ?? 0;
   return (
     <Disclosure
-      className="users-team"
       summary={
         <span className="users-team-summary">
           <span className="t-body">{team.name}</span>
           {/* The TEAM's own count key, not the roster's: this counts members OF
               a team, while the card above counts users of the installation.
               One key for both made renaming either silently rewrite the other. */}
-          <span className="t-caption users-team-count">
+          <span className="t-caption">
             {plural("users.teamMemberCount", count, {
               count: formatNumber(count, locale),
             })}

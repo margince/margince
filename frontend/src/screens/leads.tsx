@@ -19,7 +19,6 @@ import {
   Textarea,
   TextInput,
 } from "../design-system/atoms";
-import { RecordView } from "../design-system/composed";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { ContactLink } from "../design-system/contactlink";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
@@ -30,6 +29,7 @@ import {
   useRecordTimeline,
   useTimelineFilters,
 } from "../design-system/recordtimeline";
+import { RecordView } from "../design-system/recordview";
 import { Select } from "../design-system/select";
 import { TimelineFilterBar } from "../design-system/timelinefilterbar";
 import { useToast } from "../design-system/toast";
@@ -1732,9 +1732,8 @@ function LeadRecord({ lead, id }: Readonly<{ lead: Lead; id: string }>) {
       // — in the details pane beside the work, so the work column stays the
       // work and the context does not move when the tab does. The same pane,
       // fold and memory of it as every other record page.
-      aside={
-        details.open ? <LeadRail lead={lead} writer={writer} /> : undefined
-      }
+      aside={<LeadRail lead={lead} writer={writer} />}
+      asideOpen={details.open}
       name={leadIdentityName(lead) || t("lead.unnamed")}
       avatarSrc={null}
       // The "Lead" marker rides the identity, not a badge among badges: a

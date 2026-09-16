@@ -2,35 +2,10 @@
  *
  * The overview a rep reads in ten seconds (DESIGN.md §7, "Glance, then
  * depth"): the readings row, the 360 as the first pane at the full measure,
- * then two columns — what needs a contact and the money on the left; Ask,
- * About and Contacts on the right. Two column STACKS rather than one grid, so
- * each column packs its own panes and a tall needs list never opens a gap
- * beside a short one. */
-.co-glance-cols {
-  display: grid;
-  /* 3:2, the mock's split: the left column carries the work, the right the
-     account's own description, and equal halves gave the description more
-     room than it fills. */
-  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
-  gap: var(--space-5);
-  align-items: start;
-}
-.co-glance-col {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-5);
-  min-width: 0;
-}
-/* One column as soon as two would squeeze a list to nothing. Measured against
-   the STACK these columns sit in (company360.css's `.co-overview-stack`), not
-   the window and not the `work` container: `work` is the record's whole
-   region, details column included, so it does not narrow when that column
-   opens — which is the case this fold exists for. */
-@container (max-width: 60rem) {
-  .co-glance-cols {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
+ * then one column: what needs a contact, the money, then the Ask box. One
+ * column at every width, because these are content-driven cards of unequal
+ * height, and a tall needs list beside a short one leaves the short one's row
+ * half empty. */
 
 /* The 360's foot: the row that teases the thread and opens it, with the way to
    the whole history at its end.
@@ -84,13 +59,6 @@
    for everything a reader can press, whichever row they are on. */
 .co-move-lead .co-move-do {
   margin-top: var(--space-3);
-}
-
-/* The remainder line under the cards: how many contacts the glance did not
-   draw. Not a card and not a chip — it names no record, so it reads as the
-   caption it is. */
-.co-contacts-rest {
-  padding-inline-start: var(--space-2);
 }
 
 /* Ask as prepared questions: each one a full-width row rather than a chip in

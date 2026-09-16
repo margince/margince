@@ -19,7 +19,7 @@ import {
 } from "../design-system/atoms";
 import { DateInput, isISODate } from "../design-system/dateinput";
 import { Heading } from "../design-system/heading";
-import { OpenEmailDrawer } from "../design-system/openemaildrawer";
+import { SourceEvidence } from "../design-system/sourceevidence";
 import { calendarDay, dueInstant } from "../format/calendarday";
 import { formatDate, formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
@@ -339,9 +339,6 @@ export function TaskDetailModal({
         <Heading size="large" id={titleId} className="t-h2">
           {task?.subject ?? t("tasks.detail")}
         </Heading>
-        <Button variant="ghost" onClick={onClose}>
-          {t("common.close")}
-        </Button>
       </div>
       <div className="drawer-body">
         {query.isPending && <PendingBody label={t("tasks.detailLoading")} />}
@@ -351,16 +348,6 @@ export function TaskDetailModal({
         {task && (
           <div className="form-stack">
             {task.body && <p className="t-body">{task.body}</p>}
-            {task.source_activity_id && (
-              <div>
-                <Button
-                  variant="ghost"
-                  onClick={() => setOpenSource(task.source_activity_id ?? null)}
-                >
-                  {t("tasks.openSource")}
-                </Button>
-              </div>
-            )}
             <div className="t-caption task-detail-meta">
               {task.due_at ? (
                 <span>
@@ -399,6 +386,15 @@ export function TaskDetailModal({
                 />
               </div>
             )}
+            {/* The evidence LAST, under the verbs. A task's own verbs are what
+                the reader came to press, and a message long enough to scroll
+                would otherwise push them off the panel. */}
+            {task.source_activity_id && (
+              <SourceEvidence
+                activityId={task.source_activity_id}
+                onOpenTranscript={setOpenSource}
+              />
+            )}
           </div>
         )}
       </div>
@@ -412,7 +408,13 @@ export function TaskDetailModal({
   );
 }
 
-/** Resolve the original kind before choosing its reader. */
+/**
+ * The meeting transcript a task was read out of, opened whole.
+ *
+ * Only ever a transcript: `SourceEvidence` above draws an email in place and
+ * routes nothing else here, so this has one kind to render rather than a
+ * branch choosing between two readers.
+ */
 function SourceActivity({
   activityId,
   onClose,
@@ -435,16 +437,13 @@ function SourceActivity({
       return data;
     },
   });
-  const meeting: Activity | undefined = query.data;
-  if (meeting?.kind === "email") {
-    return (
-      <OpenEmailDrawer
-        activityId={activityId}
-        zone={recordZone}
-        onClose={onClose}
-      />
-    );
-  }
+  // The CURRENT read decides what is shown, never the cache alone. A refused
+  // read leaves the last answer in `data`: this reader shares its query key
+  // with `SourceEvidence`, whose observer outlives the drawer, so an eviction
+  // that `gcTime: 0` would otherwise perform does not happen while a task is
+  // open. Rendering `data` beside the error paragraph would then show a
+  // transcript whose access had just been revoked.
+  const meeting: Activity | undefined = query.isError ? undefined : query.data;
   return (
     <Modal open onClose={onClose} labelledBy={titleId}>
       <Heading size="large" id={titleId} className="t-h2 modal-title">

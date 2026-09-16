@@ -323,9 +323,7 @@ function withToday(stops: readonly Stop[], ctx: Ctx): Stop[] {
         <span className="co-spine-now-word">{ctx.t("co.spine.today")}</span>
         {/* Day and month, no year. The marker names TODAY, and the year of
             today is the one date on the axis a reader already knows. */}
-        <span className="co-spine-now-date">
-          {formatDayMonth(ctx.asOf, ctx.locale, ctx.zone)}
-        </span>
+        <span>{formatDayMonth(ctx.asOf, ctx.locale, ctx.zone)}</span>
       </>
     ),
   };

@@ -560,13 +560,13 @@ function ProviderLabel({
   // "Firmen-Login" — showing "Google" there would both break that and put a
   // brand claim on screen that the operator never made.
   if (!brand || !label.toLowerCase().includes(brand.toLowerCase())) {
-    return <span className="auth-social-label">{label}</span>;
+    return <span>{label}</span>;
   }
   return (
     <>
       <span className="sr-only">{label}</span>
-      <span className="auth-social-label" aria-hidden>
-        <span className="auth-social-full">{label}</span>
+      <span aria-hidden>
+        <span>{label}</span>
         <span className="auth-social-brand">{brand}</span>
       </span>
     </>
@@ -1029,7 +1029,7 @@ function ResetForm({
               // "request a new link" here would route into a flow that answers
               // 501, which is the same misleading affordance the capability
               // probe exists to prevent on the login screen.
-              <p className="ae-b">{t("auth.askAdminForNewLink")}</p>
+              <p>{t("auth.askAdminForNewLink")}</p>
             ))}
         </div>
       )}

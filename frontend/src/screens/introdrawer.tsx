@@ -140,7 +140,7 @@ export function IntroDrawer({
         )}
       </Field>
 
-      <label className="pn-check">
+      <label>
         <input
           type="checkbox"
           checked={nameDrop}

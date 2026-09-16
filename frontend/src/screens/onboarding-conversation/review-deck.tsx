@@ -299,7 +299,7 @@ function DeckCardFace({
         <Badge tone={card.required ? "danger" : "default"}>
           {t(card.required ? "ob.deck.needed" : "ob.deck.optional")}
         </Badge>
-        <span className="rdeck-count t-caption">
+        <span className="t-caption">
           {t("ob.deck.counter", {
             n: formatNumber(index + 1, locale),
             m: formatNumber(total, locale),
@@ -340,9 +340,7 @@ function DeckCardFace({
           statement about an empty field and this one may still be filled. */}
         {card.value.trim() === "" ? null : (
           <p className="rdeck-writes">
-            <span className="rdeck-writes-lead">
-              {t("ob.conv.scene.writes")}
-            </span>
+            <span>{t("ob.conv.scene.writes")}</span>
             <code>{card.value}</code>
           </p>
         )}
@@ -391,7 +389,7 @@ function DeckFoot({
         {/* The quiet half of the sentence: the reader did not have to do this,
             and saying so is what makes the short list of cards credible rather
             than suspicious. */}
-        <span className="rdeck-settled t-caption">
+        <span className="t-caption">
           {t("ob.deck.settled", { count: formatNumber(settled, locale) })}
         </span>
       </p>

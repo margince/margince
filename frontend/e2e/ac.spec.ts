@@ -1334,6 +1334,11 @@ test.describe("§3.8: 390px mobile", () => {
     await expect(
       page.getByRole("dialog", { name: "Befehlspalette" }),
     ).toBeVisible();
+    // The sheet ARRIVES — it scales up from 0.96 (atoms.css) — and a row
+    // measured while it is still growing reports the size the box is passing
+    // through rather than the size a thumb meets. 44 × 0.964 is 42.4, which is
+    // what this read before the wait.
+    await settleAnimations(page);
     expect(await pageOverflow(page)).toEqual([]);
     const rows = page.locator(".palette-row");
     await expect(rows.first()).toBeVisible();
@@ -1507,7 +1512,7 @@ test.describe("§3.8: 390px mobile", () => {
     const tall = await page.evaluate(() => {
       return Array.from(document.querySelectorAll(".worklist-list li"))
         .map((row) => {
-          const decides = row.querySelector(".worklist-row-decision") !== null;
+          const decides = row.querySelector("[data-testid='worklist-row-decision']") !== null;
           return {
             height: row.getBoundingClientRect().height,
             ceiling: decides ? 208 : 176,

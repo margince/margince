@@ -2163,7 +2163,7 @@ describe("LeadScreen — owner display + assign to me (P-11)", () => {
     await waitFor(() => expect(screen.getByText("Unassigned")).toBeTruthy());
 
     // Collapse the pane the owner used to live in, then look again.
-    await userEvent.click(screen.getByRole("button", { name: "Details" }));
+    await userEvent.click(screen.getByRole("button", { name: "Hide details" }));
     expect(screen.getByRole("button", { name: "Assign" })).toBeTruthy();
   });
 
@@ -2281,7 +2281,7 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
     const viewControls = new Set([
       "Overview",
       "History",
-      "Details",
+      "Hide details",
       // The trigger discloses; the open above sweeps the verbs behind it.
       "More actions",
       // The day's work opens the task LIST: a door to another screen, which

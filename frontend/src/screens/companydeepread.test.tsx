@@ -63,7 +63,10 @@ const runningRead = {
 
 function stubDeepRead(options: {
   post?: () => Response;
-  report?: () => Response;
+  // Takes the polled path so a suite can tell one read's report apart from
+  // another's — the second-read tests need that to prove the NEW read's own
+  // poll drove an assertion, rather than one already in flight before it.
+  report?: (pathname: string) => Response;
   /**
    * What `/site-reads/latest` answers before anything is started. The default is
    * 404 — this account has never been read — because that is the state the
@@ -89,7 +92,7 @@ function stubDeepRead(options: {
       return (options.latest ?? (() => new Response(null, { status: 404 })))();
     }
     if (pathname.includes("/site-reads/")) {
-      return (options.report ?? (() => jsonResponse(runningRead)))();
+      return (options.report ?? (() => jsonResponse(runningRead)))(pathname);
     }
     return companyBackstop(url);
   });
@@ -377,6 +380,108 @@ describe("company-360 deep read", () => {
       screen.getByRole("button", { name: "Open the Worklist" }),
     );
     expect(window.location.hash).toBe("#/worklist");
+  });
+
+  it("refreshes the facts and technical panels once an in-page read reaches a terminal status", async () => {
+    // Both panels read the SAME query key (`factsKey`, exported from
+    // companyfactspanel.tsx and imported here and by companytechnical.tsx),
+    // so one shared fetch count proves both refresh without a reload.
+    //
+    // Two distinct read ids: `rd-1` is the already-finished read the account
+    // carries on mount (it is what puts the panel on Profile with a "Read the
+    // website again" button, rather than on Overview still pitching the
+    // offer), and `rd-2` is the SECOND read this test starts and watches
+    // live. Keying the report responder on the polled path, rather than a
+    // bare call counter, is what makes rd-2's own running→done transition —
+    // not a leftover poll of rd-1 — the thing this test's assertion depends
+    // on.
+    //
+    // Fake timers run for the whole test, not just the poll advance: the
+    // report query's `refetchInterval` schedules its next poll with
+    // whichever `setTimeout` is live at that moment, so switching clocks
+    // mid-test would leave that poll armed on a clock nothing here advances.
+    let secondReadPollCount = 0;
+    const firstRead = {
+      ...runningRead,
+      status: "done",
+      fact_count: 9,
+      finished_at: "2026-07-17T08:05:00Z",
+    };
+    const { calls } = stubDeepRead({
+      post: () => jsonResponse({ read_id: "rd-2", status: "queued" }, 202),
+      latest: () => jsonResponse(firstRead),
+      report: (pathname) => {
+        if (pathname.endsWith("/site-reads/rd-1")) {
+          return jsonResponse(firstRead);
+        }
+        secondReadPollCount += 1;
+        return secondReadPollCount === 1
+          ? jsonResponse({ ...runningRead, read_id: "rd-2", status: "running" })
+          : jsonResponse({
+              ...runningRead,
+              read_id: "rd-2",
+              status: "done",
+              fact_count: 12,
+              finished_at: "2026-07-17T09:00:00Z",
+            });
+      },
+    });
+    const factsCallCount = () =>
+      calls.filter((call) => call.endsWith("/companies/o-1/facts")).length;
+    const flush = () =>
+      act(async () => {
+        await vi.advanceTimersByTimeAsync(1);
+      });
+    // Ticks the fake clock until `probe` finds something, rather than a fixed
+    // flush count: the query-driven renders this test waits through (the
+    // company load, then the already-terminal rd-1 report resolving and
+    // invalidating facts on mount) settle over a number of microtask turns
+    // that a magic constant would just be guessing at.
+    const flushUntil = async (probe: () => unknown, limit = 40) => {
+      for (let i = 0; i < limit; i += 1) {
+        if (probe()) {
+          return;
+        }
+        await flush();
+      }
+      throw new Error("flushUntil: condition never became true");
+    };
+
+    // ADDRESSED rather than clicked. The tab is read off the URL, and a click
+    // reaches it through a hashchange — an event, not a timer, so nothing this
+    // test can advance delivers it while the fake clock is installed. Clicked
+    // under fake timers the page stayed on Overview, where neither panel this
+    // case is about is even mounted, and the button below was never drawn.
+    window.location.hash = "#/companies/o-1/profile";
+    vi.useFakeTimers();
+    try {
+      render(<CompanyScreen id="o-1" />);
+      await flushUntil(() =>
+        screen.queryByRole("button", { name: "Read the website again" }),
+      );
+      const beforeSecondRead = factsCallCount();
+      expect(beforeSecondRead).toBeGreaterThan(0);
+
+      fireEvent.click(
+        screen.getByRole("button", { name: "Read the website again" }),
+      );
+      await flushUntil(() => secondReadPollCount > 0);
+      // rd-2 is still running: nothing has finished, so nothing should have
+      // told the facts panel to refetch yet.
+      expect(factsCallCount()).toBe(beforeSecondRead);
+
+      // rd-2's 3s poll lands on `done`.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(3000);
+      });
+      await flushUntil(() => factsCallCount() > beforeSecondRead);
+      // Reaching a terminal status invalidates the facts query, and it is
+      // still mounted (the reader stayed on the page), so it refetches on
+      // its own.
+      expect(factsCallCount()).toBeGreaterThan(beforeSecondRead);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("renders the honest 422 detail when the company has no website on file", async () => {

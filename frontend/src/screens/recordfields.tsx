@@ -16,7 +16,8 @@ import type { Route } from "../app/router";
 import { useUnsavedGuard } from "../app/unsaved";
 import { Button } from "../design-system/atoms";
 import { FieldGrid, FieldRow } from "../design-system/fieldgrid";
-import { InlineChoice, InlineText } from "../design-system/inlinechoice";
+import { InlineChoice } from "../design-system/inlinechoice";
+import { InlineText } from "../design-system/inlinetext";
 import { OffsiteLink } from "../design-system/offsitelink";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useT } from "../i18n";
@@ -77,6 +78,9 @@ type Props = {
   readOnlyFields?: Readonly<Record<string, string>>;
   save: RecordFieldSave;
   resolveExisting?: (code: string, id: string) => Route;
+  // Rows the caller adds under the record's own fields, in the same grid:
+  // facts that live on the record but are not fields of it, such as tags.
+  extraRows?: ReactNode;
 };
 
 export function RecordFields(props: Readonly<Props>) {
@@ -97,7 +101,7 @@ export function RecordFields(props: Readonly<Props>) {
   return (
     <Panel title={props.title}>
       <PanelBody>
-        {props.notice && <p className="mute">{props.notice}</p>}
+        {props.notice && <p>{props.notice}</p>}
         <FieldGrid>
           {sections.map((section) => (
             <RecordField
@@ -107,6 +111,7 @@ export function RecordFields(props: Readonly<Props>) {
               fields={section.fields}
             />
           ))}
+          {props.extraRows}
         </FieldGrid>
       </PanelBody>
     </Panel>

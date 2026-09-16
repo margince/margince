@@ -189,7 +189,7 @@ function DigestBody({ digest }: Readonly<{ digest: MorningDigest }>) {
     (c) => c.status != null && isUnhealthy(c.status),
   );
   return (
-    <Panel title={t("brief.panel.overnight")} className="rail-panel">
+    <Panel title={t("brief.panel.overnight")}>
       {projects && <DigestProjectsBlock projects={projects} />}
       {unhealthy.length > 0 && (
         <PanelBody>

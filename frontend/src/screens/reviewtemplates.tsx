@@ -86,7 +86,10 @@ function TemplateRow({ template }: Readonly<{ template: ReviewTemplate }>) {
           <li key={question.key}>
             {question.label}
             {question.required && (
-              <span className="muted"> {t("reviewTemplates.required")}</span>
+              <span className="t-caption">
+                {" "}
+                {t("reviewTemplates.required")}
+              </span>
             )}
           </li>
         ))}

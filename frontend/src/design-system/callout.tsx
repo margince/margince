@@ -6,6 +6,7 @@ import {
   CircleX,
   Info,
   type LucideIcon,
+  Sparkles,
   TriangleAlert,
   X,
 } from "lucide-react";
@@ -24,10 +25,18 @@ import "./callout.css";
 // says something will go wrong if you do nothing; `danger` says something is
 // wrong or is about to be irreversible; `success` confirms an action landed;
 // `info` is the default and carries no urgency at all; `accent` is `info` said
-// emphatically. There is no sixth: a surface reaching for one is reaching for
-// emphasis, which is what the words are for.
+// emphatically; `ai` says a MACHINE produced what the notice is about, the
+// same claim `Panel tone="ai"` makes for a card. There is no seventh: a
+// surface reaching for one is reaching for emphasis, which is what the words
+// are for.
 
-export type CalloutTone = "info" | "accent" | "warn" | "danger" | "success";
+export type CalloutTone =
+  | "info"
+  | "accent"
+  | "warn"
+  | "danger"
+  | "success"
+  | "ai";
 
 /**
  * What the notice IS, which is a different question from how loud it is.
@@ -60,6 +69,9 @@ const TONE_ICONS: Readonly<Record<CalloutTone, LucideIcon>> = {
   warn: TriangleAlert,
   danger: CircleX,
   success: CircleCheck,
+  // The product's one mark for "a machine did this", the same glyph the
+  // provenance tags and the AI badge wear.
+  ai: Sparkles,
 };
 
 /**

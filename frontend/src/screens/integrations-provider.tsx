@@ -236,7 +236,7 @@ function SpendReading({
                   counted them either way would assert something it cannot
                   support. This is the figure a human reconciles against the
                   provider's invoice. */}
-              <td className="provider-held">
+              <td>
                 {month.held_credits > 0
                   ? formatNumber(month.held_credits, locale)
                   : "—"}

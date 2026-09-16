@@ -589,7 +589,7 @@ function SourceRow({
         {!source.included && ` · ${t("settings.voice.excluded")}`}
       </span>
       {armed && drops && (
-        <span className="vdna-banddrop" role="alert">
+        <span role="alert">
           {t("settings.voice.bandDrop", {
             from: bandLabel(t, summary.quality_band),
             to: bandLabel(t, bandAfter),

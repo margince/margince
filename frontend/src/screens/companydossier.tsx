@@ -101,18 +101,20 @@ export function DossierPanel({
       : undefined;
 
   const footer = readable && (
-    <>
-      <WrittenBy by={readable.generated_by} />
-      {readable.needs_refresh && (
-        /* Said out loud BESIDE the content, never instead of it: a stale
-           dossier is more useful than none, and hiding it would leave the
-           reader with nothing rather than with something dated. */
-        <Badge tone="warn">{t("co.dossier.stale")}</Badge>
-      )}
-      <span className="t-caption">
-        {t("co.brief.generatedAt", {
-          when: formatDateTime(readable.generated_at, locale, recordZone),
-        })}
+    <div className="co-brief-foot">
+      <span className="co-brief-meta">
+        <WrittenBy by={readable.generated_by} />
+        {readable.needs_refresh && (
+          /* Said out loud BESIDE the content, never instead of it: a stale
+             dossier is more useful than none, and hiding it would leave the
+             reader with nothing rather than with something dated. */
+          <Badge tone="warn">{t("co.dossier.stale")}</Badge>
+        )}
+        <span className="t-caption">
+          {t("co.brief.generatedAt", {
+            when: formatDateTime(readable.generated_at, locale, recordZone),
+          })}
+        </span>
       </span>
       <Button
         // The writer's own verb, inside a panel already tinted for it: quiet
@@ -125,7 +127,7 @@ export function DossierPanel({
       >
         {t("co.dossier.rewrite")}
       </Button>
-    </>
+    </div>
   );
   return (
     <Panel

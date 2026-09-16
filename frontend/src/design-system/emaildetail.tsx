@@ -2,8 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useQuery } from "@tanstack/react-query";
-import { X } from "lucide-react";
-import { Fragment, type ReactNode, useId } from "react";
+import { Fragment, type ReactNode, useId, useRef } from "react";
 
 import { api } from "../api/client";
 import type { components } from "../api/schema";
@@ -11,7 +10,7 @@ import { ENTITY } from "../app/entity";
 import { routeHash } from "../app/router";
 import { formatBytes, formatNumber } from "../format/format";
 import { translatePlural, useLocale, useT } from "../i18n";
-import { Button, Modal } from "./atoms";
+import { Modal } from "./atoms";
 import { EmailText } from "./emailtext";
 import { FileChip } from "./filechip";
 import { SurfaceState } from "./surfacestate";
@@ -57,6 +56,7 @@ export function emailDetailKey(activityId: string) {
  */
 export function EmailDetail({
   activityId,
+  open = true,
   onClose,
   formatWhen,
   renderAccess,
@@ -64,6 +64,15 @@ export function EmailDetail({
   renderReply,
 }: Readonly<{
   activityId: string;
+  /**
+   * Whether the drawer is showing. It stays MOUNTED when it is not, which is
+   * what lets `Modal` animate it out — and what makes `enabled` below the thing
+   * that asks the server again on the next open.
+   *
+   * Defaults to open: a caller that draws this on its own, a story included, is
+   * drawing an open drawer.
+   */
+  open?: boolean;
   onClose: () => void;
   /** The caller owns the reader's timezone, so it owns the formatting. */
   formatWhen: (iso: string) => string;
@@ -106,20 +115,28 @@ export function EmailDetail({
   // share an id, and a dialog labelled by a duplicate is labelled by whichever
   // one the browser found first.
   const titleId = useId();
+  // A FRESH KEY PER OPEN, which is what makes each open a fresh ask.
+  const opens = useRef(0);
+  const wasOpen = useRef(false);
+  if (open && !wasOpen.current) {
+    opens.current += 1;
+  }
+  wasOpen.current = open;
   const read = useQuery({
-    queryKey: emailDetailKey(activityId),
-    // A message's content is an AUTHORIZATION result, not a value that ages.
-    // The global 30-second staleTime would let a reopen skip the request
-    // entirely, and the default gcTime would let it paint the last open's
-    // subject and body while a refetch ran — both of which show a reader what
-    // they WERE allowed to see rather than what they are, and an audience
-    // narrowed by somebody else cannot invalidate this browser's cache at all.
-    //
-    // So: ask every time, and keep nothing to repaint. leadkeys.ts documents
-    // the same hazard for the promote preview and says plainly that
-    // invalidation does not purge an inactive query's data; the answer there
-    // was to state it, and the answer here has to be stronger, because what
-    // this one would repaint is somebody's mail.
+    queryKey: [...emailDetailKey(activityId), opens.current],
+    // A message's content is an AUTHORIZATION result, not a value that ages,
+    // and an audience somebody else narrowed cannot invalidate this browser's
+    // cache. So: ask every time, and keep nothing to repaint — the three
+    // settings here are one answer, not three. `enabled` keeps a shut drawer
+    // from reading somebody's mail in the background; `staleTime` refuses a
+    // cached answer; `gcTime` drops it. The KEY is what makes those bite now
+    // that the drawer outlives its own close: gcTime evicts only once a query
+    // has no observers, and this one never loses its observer, so without a
+    // segment of its own per open the next open would paint the last one's
+    // answer while its own request was still out. The segment is LAST, so
+    // `emailDetailKey`'s prefix still invalidates it for the audience writes.
+    // leadkeys.ts records the same hazard for the promote preview.
+    enabled: open,
     staleTime: 0,
     gcTime: 0,
     queryFn: async () => {
@@ -145,16 +162,12 @@ export function EmailDetail({
 
   return (
     <Modal
-      open
+      open={open}
       onClose={onClose}
       labelledBy={titleId}
       placement="right"
       size="wide"
     >
-      {/* A visible way out. On a phone the drawer is the whole viewport, so
-          there is no backdrop to tap and usually no Escape key — the trap the
-          Modal builds for keyboard users becomes a trap in the ordinary sense
-          without this. */}
       <div className="emaildetail__head">
         <div className="emaildetail__heading">
           <Heading size="large" id={titleId} className="emaildetail__title">
@@ -173,23 +186,16 @@ export function EmailDetail({
               never one whose access nobody asked about. */}
           {read.data && renderAccess?.(read.data)}
         </div>
-        {/* The verb that ANSWERS the message, beside the one that puts it
-            away. A reader who has just read a mail and wants to reply had to
-            close the drawer, find the row again on the timeline behind it and
-            press Reply there — the message they were answering no longer on
-            screen. It sits with the close button rather than under the body
-            for the reason the date and the access line moved up: a message
-            runs past a screen, and an action found only at the end of one is
-            an action most readers never reach. */}
+        {/* The verb that ANSWERS the message, at the head rather than under
+            the body — for the reason the date and the access line moved up: a
+            message runs past a screen, and an action found only at the end of
+            one is an action most readers never reach. A reader who has just
+            read a mail and wants to reply had to close the drawer, find the row
+            again on the timeline behind it and press Reply there, with the
+            message they were answering no longer on screen. It sits beside the
+            way out, which the dialog itself draws. */}
         <div className="emaildetail__actions">
           {read.data && renderReply?.(read.data)}
-          <Button
-            iconOnly
-            onClick={onClose}
-            aria-label={t("email.detail.close")}
-          >
-            <X aria-hidden="true" />
-          </Button>
         </div>
       </div>
       {read.isPending ? (
@@ -294,7 +300,7 @@ function Attachments({ files }: Readonly<{ files: EmailAttachmentSummary[] }>) {
   }
   return (
     <div className="emaildetail__files">
-      <p className="emaildetail__filesLabel">
+      <p>
         {translatePlural(locale, "email.detail.attachments", files.length, {
           count: formatNumber(files.length, locale),
         })}

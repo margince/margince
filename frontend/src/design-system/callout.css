@@ -139,3 +139,9 @@
 .callout-success {
   --callout-ink: var(--successText);
 }
+
+/* `ai` is the claim that a machine produced what the notice is about: the
+ * indigo the product spends on nothing else. */
+.callout-ai {
+  --callout-ink: var(--aiText);
+}

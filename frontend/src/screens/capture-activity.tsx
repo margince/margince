@@ -297,7 +297,7 @@ function CaptureActivityWindow({ scope }: Readonly<{ scope: Scope }>) {
                   // counter reading 26 would look like the counter was wrong.
                   // Both numbers, so a filtered view can never be read as the
                   // whole window.
-                  <p className="capture-activity__count t-sub">
+                  <p className="t-sub">
                     {t("captureActivity.filtered", {
                       shown: formatNumber(shown.length, locale),
                       total: formatNumber(first.funnel[filter] ?? 0, locale),
@@ -408,7 +408,6 @@ function CaptureFunnel({
         <button
           key={outcome}
           type="button"
-          className="capture-activity__funnel-slot"
           aria-pressed={selected === outcome}
           onClick={() => onSelect(selected === outcome ? null : outcome)}
         >
@@ -447,15 +446,13 @@ function CaptureEntryRow({
         onClick={onOpen}
         aria-label={t("captureActivity.openTrace")}
       >
-        <span className="capture-activity__when t-sub">
+        <span className="t-sub">
           {formatDateTime(entry.occurred_at, locale, zone)}
         </span>
         {/* The provider ID resolved to a name. The contract is explicit that a
             label is never stored — two deploys would disagree about the same
             transport — so it is resolved here, against the registry. */}
-        <span className="capture-activity__connector t-sub">
-          {providerLabel(entry.connector)}
-        </span>
+        <span className="t-sub">{providerLabel(entry.connector)}</span>
         <CaptureEntryOutcome entry={entry} />
         <CaptureEntryContent entry={entry} payloads={payloads} />
         <CaptureEntryResolution entry={entry} />
@@ -490,9 +487,7 @@ function CaptureEntryOutcome({ entry }: Readonly<{ entry: TraceEntry }>) {
           deferral is not waiting for anything — so it is quieter than the
           outcome but never hidden behind an interaction. */}
       {reason ? (
-        <span className="capture-activity__reason t-sub">
-          {t(`captureActivity.reason.${reason}`)}
-        </span>
+        <span className="t-sub">{t(`captureActivity.reason.${reason}`)}</span>
       ) : null}
     </span>
   );
@@ -563,8 +558,6 @@ function CaptureEntryResolution({ entry }: Readonly<{ entry: TraceEntry }>) {
     return null;
   }
   return (
-    <span className="capture-activity__resolution t-sub">
-      {t(`captureActivity.resolution.${status}`)}
-    </span>
+    <span className="t-sub">{t(`captureActivity.resolution.${status}`)}</span>
   );
 }

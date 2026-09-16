@@ -26,6 +26,18 @@
   white-space: pre-wrap;
 }
 
+/* The byline over a comment: it qualifies the words below it, so it steps
+   back from them — and the author's own name steps forward again inside it,
+   because who wrote this is what a reader scans the column for. */
+.thread-author {
+  color: var(--textSecondary);
+}
+
+.thread-author-name {
+  font-weight: var(--fontWeightMedium);
+  color: var(--textPrimary);
+}
+
 .thread-reply,
 .thread-composer {
   display: flex;

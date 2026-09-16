@@ -25,6 +25,7 @@ import { entityTimelineKeys } from "./activitykeys";
 import {
   isConsentNotGranted,
   ProblemError,
+  problemCodeOf,
   problemFieldErrorsOf,
   problemMessageOf,
   throwProblem,
@@ -58,10 +59,7 @@ import {
   SubjectRow,
   TransportRow,
 } from "./composehead";
-import {
-  deadRecipientsAmong,
-  useChannelReachable,
-} from "./composereachability";
+import { deadRecipientsAmong } from "./composereachability";
 import { RELINK_KINDS, type RelinkKind, RelinkModal } from "./composerelink";
 import {
   momentLabel,
@@ -291,7 +289,10 @@ function useReplyRecipient(anchor: string | undefined): {
  * was filed — by capture or by a human relink — is the settled answer, and it
  * outranks anything the deal says.
  */
-function useThreadProject(activityId?: string): {
+function useThreadProject(
+  activityId?: string,
+  enabled = true,
+): {
   activity?: Activity;
   projectId?: string;
   settled: boolean;
@@ -309,7 +310,7 @@ function useThreadProject(activityId?: string): {
       }
       return data;
     },
-    enabled: Boolean(activityId),
+    enabled: enabled && Boolean(activityId),
   });
   return {
     // The anchor itself, not only its filing: the conversation pane needs the
@@ -1224,8 +1225,10 @@ function useProjectFiling(input: {
   projects: readonly PickableProject[];
   subject: string;
   setSubject: (next: string) => void;
+  /** Whether the composer is showing; a shut one reads nothing. */
+  open: boolean;
 }): { projectId: string; setProjectId: (next: string) => void } {
-  const thread = useThreadProject(input.activityId);
+  const thread = useThreadProject(input.activityId, input.open);
   // Empty string is a real answer ("None"), so unanswered is undefined.
   const filingKey = input.activityId ?? "";
   const [picks, setPicks] = useState<Record<string, string>>({});
@@ -1260,7 +1263,7 @@ function useProjectFiling(input: {
     chosen === "" ||
     input.projects.some((project) => project.project_id === chosen);
   const projectId = offered ? chosen : "";
-  const { project } = useProjectRecord(projectId || undefined);
+  const { project } = useProjectRecord(projectId || undefined, input.open);
   const tag = subjectTag(project);
   // Keeping the tag in the subject is a rule about the FIELD, not an action
   // taken once when the picker moves. A subject is replaced wholesale — by a
@@ -1273,8 +1276,13 @@ function useProjectFiling(input: {
   // editing the text, because that state is not one the send could honour.
   const setSubject = input.setSubject;
   const subject = input.subject;
+  const open = input.open;
   const previousTag = useRef("");
   useEffect(() => {
+    // A SHUT composer does not edit its own subject. Its reads are off, so the
+    // project behind the tag reads as absent, and this rule left running would
+    // take the tag off a draft nobody is looking at.
+    if (!open) return;
     const priorTag = previousTag.current;
     previousTag.current = tag;
     const withoutOld = priorTag ? stripSubjectTag(subject, priorTag) : subject;
@@ -1282,10 +1290,11 @@ function useProjectFiling(input: {
     if (wanted !== subject) {
       setSubject(wanted);
     }
-  }, [tag, subject, setSubject]);
+  }, [open, tag, subject, setSubject]);
   return { projectId, setProjectId: setPicked };
 }
 
+export { ChannelReplyAction } from "./compose.reply";
 // Re-exported so the surfaces that import them from here — writeto, recordemail,
 // timelineactions, companyheader, composeattachments — keep one import path.
 // The extraction moved code; it is not an invitation to touch ten call sites.
@@ -1370,7 +1379,8 @@ export function ComposeModal({
 }>) {
   const t = useT();
   const queryClient = useQueryClient();
-  const voiceProfile = useVoiceProfile();
+  // A shut composer asks for nothing it does not share with the page behind it.
+  const voiceProfile = useVoiceProfile(open);
   const subjectId = useId();
   const bodyId = useId();
   // WHICH WAY THIS IS GOING, when the record offers more than one. The caller's
@@ -1425,7 +1435,7 @@ export function ComposeModal({
     }));
   };
   // Warn about carriage bounds before staging can refuse the message.
-  const carriageBlocks = useCarriageBlocks(channel?.id, files, body);
+  const carriageBlocks = useCarriageBlocks(channel?.id, files, body, open);
   const [intent, setIntent] = useState(askedIntent ?? "");
   // Keyed on what the CALLER asked for, so a second moment action opening the
   // same composer replaces the first one's reason instead of leaving the reader
@@ -1584,7 +1594,7 @@ export function ComposeModal({
         : [...current, threadRecipient];
     });
   }, [threadRecipient, answering]);
-  const viewerId = useViewerId();
+  const viewerId = useViewerId(open);
   // What the conversation's rows are CALLED. An activity link carries ids, and
   // "Sent to 8f21c4…" is not a reader telling you who was on a message. Two
   // sources, because a thread has two sides: colleagues come from the workspace
@@ -1621,7 +1631,7 @@ export function ComposeModal({
     replyMailboxes.includes(viewerId);
   const answeringColleaguesMail =
     colleagueMailboxes.length > 0 && !ownMailboxTookIt;
-  const anchorRead = useThreadProject(answering);
+  const anchorRead = useThreadProject(answering, open);
   const anchorActivity = anchorRead.activity;
   const conversation = useThreadMessages(open ? anchorActivity : undefined);
   // An anchor named but not yet read. The pane holds its place on this, so
@@ -1742,8 +1752,8 @@ export function ComposeModal({
     : ((account.recipientId || undefined) ??
       (entityType === "contact" ? entityId : undefined));
   const contact = useContact360(
-    recipientContact as string,
-    recipientContact != null,
+    recipientContact ?? "",
+    open && recipientContact != null,
   );
   const anchorProject = useAnchorProject(entityType, entityId);
   // The project a message written from a PROJECT page is about: itself. Read as
@@ -1751,6 +1761,7 @@ export function ComposeModal({
   // composer invented could disagree with the page behind the drawer.
   const ownProject = useProjectRecord(
     entityType === "project" ? entityId : undefined,
+    open,
   );
   // The account this message is around, whichever record it was started from: a
   // company IS one, a deal names one, a project names one. Its 360 answers two
@@ -1786,6 +1797,7 @@ export function ComposeModal({
     projects: reachableProjects,
     subject,
     setSubject,
+    open,
   });
 
   // An emptied body no longer holds the served draft, so everything that
@@ -2186,10 +2198,24 @@ export function ComposeModal({
       (Boolean(answering) &&
         (!anchorActivity || anchorActivity.content_state === "withheld")) ||
       (groundable && !account.recipientId),
+    // A 404 from the draft endpoint, ON A REPLY, is the anchor being gone
+    // rather than a drafting failure: GET /activities/{id} still answers 200
+    // for an archived row, so anchorRead succeeds and this is the first place
+    // the reader learns of it. Without its own sentence the server's bare
+    // "not found" prints above the To field, naming neither the message nor
+    // what to do next.
+    //
+    // Gated on `answering`, because the same mutation drafts for a contact,
+    // company or lead with no anchor at all, and those 404 when the RECORD is
+    // gone. Telling a rep composing a fresh message that there is nothing to
+    // reply to would name the wrong record and advise what they are already
+    // doing.
     error: anchorRead.failed
       ? t("compose.threadFailed")
       : draft.isError
-        ? problemMessageOf(draft.error, t)
+        ? answering && problemCodeOf(draft.error) === "not_found"
+          ? t("compose.anchorGone")
+          : problemMessageOf(draft.error, t)
         : null,
   };
   // The account-started path's two additions to the mail's head — who this is
@@ -2638,95 +2664,6 @@ export function ComposeModal({
           </div>
         </div>
       </ConfirmModal>
-    </>
-  );
-}
-
-// The reply affordance for ONE captured conversation, on its own so the two
-// surfaces that offer it cannot come to offer different things.
-//
-// It exists as a separate export because the conversation-memory card wants
-// exactly this and nothing else: Relink below is a raw-ledger act — "this
-// activity is filed against the wrong record" — and a summary card is not where
-// a reader re-files anything.
-//
-// The gate is the same one TimelineActions applies, and that sameness is the
-// point of the extraction rather than a happy accident: a `message` row is
-// withheld when the contact behind it cannot be reached on the transport that
-// carried it, and a rep offered a reply on one surface and refused it on the
-// other would have no way to tell which answer was true.
-export function ChannelReplyAction({
-  activityId,
-  kind,
-  channelProvider,
-  entityType,
-  entityId,
-  contactId,
-  contentWithheld,
-  onSent,
-}: Readonly<{
-  activityId: string;
-  kind: Activity["kind"];
-  channelProvider?: string;
-  entityType: RelinkKind;
-  entityId: string;
-  contactId?: string;
-  // Told when the message actually went, for a caller whose own view the send
-  // changes. ComposeModal invalidates the RECORD timelines it knows about; a
-  // surface listing the unanswered — the worklist's waiting lane — is not one
-  // of them, so without this its row keeps saying nobody has replied and keeps
-  // offering to reply again.
-  onSent?: () => void;
-  // The row's content is not this reader's to see. The verb still works —
-  // writing to the contact is not reading their mail — but it is not a REPLY,
-  // and calling it one claims access to the message being answered.
-  contentWithheld?: boolean;
-}>) {
-  const t = useT();
-  const [reply, setReply] = useState(false);
-  const reachable = useChannelReachable(
-    kind === "message",
-    contactId,
-    channelProvider,
-  );
-  if (!reachable) {
-    return null;
-  }
-  return (
-    <>
-      <Button onClick={() => setReply(true)}>
-        {contentWithheld ? t("compose.writeEmail") : t("compose.reply")}
-      </Button>
-      {reply && (
-        <ComposeModal
-          // No anchor when the content is withheld, which is what makes the
-          // dialog match the button. `Write email` is an ACCOUNT-STARTED send
-          // — ComposeModal's own word for one with no prior message to anchor
-          // to — and handing it the withheld activity made it behave like a
-          // reply that could not read what it was replying to: `THIS
-          // CONVERSATION` re-rendered the row the reader had just been told
-          // was not theirs, above a To field useReplyRecipient could resolve
-          // nobody into.
-          activityId={contentWithheld ? undefined : activityId}
-          entityType={entityType}
-          entityId={entityId}
-          contactId={contactId}
-          // `email`, not the withheld row's own kind. ComposeModal reads
-          // `message` as a CHANNEL reply and posts to send-message, which
-          // needs the conversation it answers — and the anchor is exactly
-          // what is withheld here. Passing the original kind left the
-          // button's own Send throwing "a channel reply needs the
-          // conversation it answers": the dialog opened and could not send.
-          //
-          // Email is not a fallback, it is what the button says. `Write
-          // email` is an account-started send, the same shape the composer
-          // uses when there is no prior message at all.
-          kind={contentWithheld ? "email" : kind}
-          open={reply}
-          onClose={() => setReply(false)}
-          onSent={onSent}
-        />
-      )}
     </>
   );
 }

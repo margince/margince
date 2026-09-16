@@ -4,10 +4,8 @@ import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import { Avatar, Badge, Button, Checkbox } from "../design-system/atoms";
-import { EmailReference } from "../design-system/emailreference";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import {
-  formatDate,
   formatDayMonth,
   formatMoneyCompact,
   formatNumber,
@@ -16,143 +14,12 @@ import { daysPast } from "../format/lateness";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useViewerId } from "./common";
-import { interactionGlyph, useInteractionLabel } from "./interactionchrome";
-import { SentenceList, WrittenBy } from "./record360";
 
 // The overview's four cards (concept §5.6–5.9). Each one is a read of what the
 // 360 already assembled — none of them fetches, so a card can never show a
 // record the page beside it is withholding.
 
 type Contact360 = components["schemas"]["Contact360"];
-type ContactBrief = components["schemas"]["ContactBrief"];
-type Activity = components["schemas"]["Activity"];
-type BriefEvidence = components["schemas"]["CompanyBriefEvidence"];
-
-// --- Relationship brief (§5.6) ---------------------------------------------
-
-export function ContactBriefCard({
-  brief,
-  loading,
-  failed = false,
-  onRetry,
-  view,
-  onOpenEmail,
-}: Readonly<{
-  brief: ContactBrief | undefined;
-  loading: boolean;
-  failed?: boolean;
-  onRetry?: () => void;
-  view: Contact360;
-  /**
-   * Opens a cited message in the record's email drawer. The page owns the
-   * drawer, so it owns the opener; a card that mounted its own would put a
-   * second one behind the first.
-   */
-  onOpenEmail?: (activityId: string) => void;
-}>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const recordZone = useRecordZone();
-  // Resolved from the timeline the page already read rather than fetched: a
-  // chip can never name a record the page beside it is withholding.
-  const citedActivities = new Map(
-    (view.activities?.data ?? []).map((row) => [row.id, row]),
-  );
-  const written = brief && brief.sentences.length > 0;
-  if (!loading && !written && !failed) {
-    return (
-      <Panel title={t("contact.overview.about")}>
-        <PanelBody>
-          <p className="pe-prose t-body">
-            {[
-              view.contact.full_name,
-              view.contact.title,
-              view.contact.employer?.company_name,
-              view.contact.address?.city,
-            ]
-              .filter(Boolean)
-              .join(" · ")}
-          </p>
-          <p className="t-sub">{t("contact.overview.profileOnly")}</p>
-        </PanelBody>
-      </Panel>
-    );
-  }
-  return (
-    <Panel
-      title={t("contact.brief.title")}
-      // A machine's reading in EVERY state it can be in, so the tint rides the
-      // panel; which writer answered is sourcing, and sits in the foot band.
-      tone="ai"
-      titleAction={<Badge tone="ai">{t("co.assistant.aiTag")}</Badge>}
-      footer={
-        written ? (
-          <>
-            <WrittenBy by={brief.generated_by} />
-            <span className="t-caption">
-              {t("co.brief.generatedAt", {
-                when: formatDate(brief.generated_at, locale, recordZone),
-              })}
-            </span>
-          </>
-        ) : undefined
-      }
-    >
-      <PanelBody>
-        {loading && (
-          <p className="pe-prose t-body">{t("contact.brief.reading")}</p>
-        )}
-        {failed && (
-          <p role="alert">
-            {t("contact.overview.briefFailed")}{" "}
-            <Button variant="ghost" onClick={onRetry}>
-              {t("common.retry")}
-            </Button>
-          </p>
-        )}
-        {written && (
-          <>
-            {/* Judgement first: what the brief ADDS to the cards above it is
-                what the agent makes of them. The sources are drawn below BY
-                TRANSPORT rather than as citation chips, because a chip cannot
-                know whether a cited conversation was mail or a chat message,
-                and this card's reader has been told wrong before. */}
-            <SentenceList
-              sentences={brief.sentences}
-              leadWithJudgement
-              citations="none"
-            />
-            <div className="pe-chiprow">
-              {/* One chip per distinct source, not per citation: several
-                  sentences routinely cite the same thread, and rendering the
-                  chip once per mention would repeat it and collide on its key. */}
-              {[
-                ...new Map(
-                  brief.sentences.flatMap((sentence) =>
-                    sentence.evidence.map(
-                      (cited) =>
-                        [
-                          `${cited.entity_type}-${cited.entity_id}`,
-                          cited,
-                        ] as const,
-                    ),
-                  ),
-                ).entries(),
-              ].map(([key, cited]) => (
-                <SourceChip
-                  key={key}
-                  cited={cited}
-                  activity={citedActivities.get(cited.entity_id)}
-                  onOpenEmail={onOpenEmail}
-                />
-              ))}
-            </div>
-          </>
-        )}
-      </PanelBody>
-    </Panel>
-  );
-}
 
 // The band's commercial block: the same "does this card have anything to
 // show" test ContactCommercialCard makes, so the band and the panel below it
@@ -166,69 +33,6 @@ export function hasCommercial(view: Contact360): boolean {
     commercial.deal != null ||
     commercial.role != null ||
     commercial.committee.length > 0
-  );
-}
-
-// One cited source, named for what it is.
-//
-// A citation carries a RECORD TYPE and an id, never a transport — so an
-// activity citation says nothing at all about how the conversation was
-// carried, and calling every one of them a mail thread told the reader of a
-// contact with no email address that they had been mailed. The activity the
-// page ALREADY read is the resolver: it carries the kind, and for a message
-// the provider the directory names. A citation whose activity is not on this
-// page is named for the one thing it certainly is — a conversation — rather
-// than for a transport nobody checked.
-function SourceChip({
-  cited,
-  activity,
-  onOpenEmail,
-}: Readonly<{
-  cited: BriefEvidence;
-  activity: Activity | undefined;
-  onOpenEmail?: (activityId: string) => void;
-}>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const recordZone = useRecordZone();
-  const interactionLabel = useInteractionLabel();
-  if (cited.entity_type === "activity") {
-    // A cited EMAIL is named by its subject and openable, like every other
-    // citation of a message in the product. A chip reading "Email" tells a
-    // reader which transport carried the sentence and nothing about which
-    // message — and the one they want is the one the sentence rests on.
-    //
-    // `email_summary` is the server's own answer to "is this an email", set
-    // only for kind=email, so nothing here decides it from the kind string. A
-    // withheld message carries the summary with its subject nulled, and the
-    // reference draws the withheld wording and opens nothing.
-    const summary = activity?.email_summary;
-    if (summary) {
-      return (
-        <EmailReference
-          subject={summary.subject}
-          occurredAt={formatDate(summary.occurred_at, locale, recordZone)}
-          withheld={summary.display_status === "withheld"}
-          onOpen={
-            onOpenEmail ? () => onOpenEmail(summary.activity_id) : undefined
-          }
-        />
-      );
-    }
-    return (
-      <Badge icon={interactionGlyph(activity?.kind)}>
-        {activity
-          ? interactionLabel(activity.kind, activity.channel_provider)
-          : t("contact.brief.sourceActivity")}
-      </Badge>
-    );
-  }
-  return (
-    <Badge icon={FileText}>
-      {cited.entity_type === "deal"
-        ? t("contact.brief.sourceDeal")
-        : cited.entity_type}
-    </Badge>
   );
 }
 
@@ -257,7 +61,7 @@ export function ContactMattersCard({
         );
         return (
           <PanelRow className="pe-row" key={row.kind}>
-            <span className="pe-row-label">{t(row.labelKey)}</span>
+            <span>{t(row.labelKey)}</span>
             <span className="pe-row-value">
               {match ? match.body : <Absent />}
             </span>
@@ -285,9 +89,7 @@ export function hasMatters(view: Contact360): boolean {
 // says so, rather than disappearing and leaving the card looking complete.
 function Absent(): ReactNode {
   const t = useT();
-  return (
-    <span className="pe-rail-value-muted">{t("contact.matters.absent")}</span>
-  );
+  return <span>{t("contact.matters.absent")}</span>;
 }
 
 // --- Open deal and buying role (§5.8) --------------------------------------
@@ -420,12 +222,10 @@ export function hasOpenCommitments(view: Contact360): boolean {
 // The task list arrives ordered by urgency (the next-steps read), and that
 // order is kept.
 //
-// WIDER than contactowed.owedPromises, deliberately, and not a second spelling
-// of it. This list is what the record has open in both directions — it carries
+// This list is what the record has open in BOTH directions: it carries
 // `commitment_theirs` and an `open_question` too, and keeps a done loop so the
-// card can strike it through. The counter next to it measures only what WE owe
-// and only while it is unfinished, which is the server's own owedPromises
-// rule. Two questions, two answers.
+// card can strike it through. A count of what we owe would be a narrower
+// question (ours, and only while unfinished); this list answers the wider one.
 function openLoops(
   view: Contact360,
   viewerId: string | undefined,

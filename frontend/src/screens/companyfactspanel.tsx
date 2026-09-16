@@ -6,21 +6,15 @@ import { Check, Pencil, Plus, X } from "lucide-react";
 import { type ReactNode, useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { ifMatch, requireVersion } from "../api/version";
-import { useRecordZone } from "../app/recordzone";
-import { Badge, Button, TextInput } from "../design-system/atoms";
-import { ConfirmModal } from "../design-system/confirmmodal";
-import { EvidenceMark } from "../design-system/evidencemark";
+import { Button, TextInput } from "../design-system/atoms";
 import { IconAction } from "../design-system/iconaction";
-import { Panel, PanelBody } from "../design-system/panel";
+import { Panel, PanelBody, PanelGroupHead } from "../design-system/panel";
 import { Select, type SelectOption } from "../design-system/select";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, QueryStates, throwProblem } from "./common";
+import { FactRow } from "./companyfactrow";
 import { isTechnicalFact } from "./companytechnical";
-import { derivedSource } from "./evidencesource";
-import { EvidenceVerdict, factClaim } from "./evidenceverdict";
 import {
   type FactGroup,
   factCategoryLabelKey,
@@ -33,16 +27,6 @@ import { SurfaceState } from "../design-system/surfacestate";
 type CompanyFact = components["schemas"]["CompanyFact"];
 type FactCategory = CompanyFact["category"];
 type FactField = CompanyFact["field"];
-
-type FactSuspectReason = NonNullable<CompanyFact["suspect_reason"]>;
-
-const FACT_SUSPECT_LABELS: Record<FactSuspectReason, MessageKey> = {
-  phone_shaped_location: "co.factSuspect.phoneShapedLocation",
-  not_a_phone: "co.factSuspect.notAPhone",
-  not_a_year: "co.factSuspect.notAYear",
-  not_an_email: "co.factSuspect.notAnEmail",
-  not_a_size: "co.factSuspect.notASize",
-};
 
 // What a contact may state, category by category. Taken from the contract's own
 // enum rather than respelled, so a field added upstream appears here and a
@@ -152,16 +136,18 @@ export function CompanyFactsPanel({
         </Button>
       }
     >
-      <PanelBody>
-        {adding && (
+      {adding && (
+        <PanelBody>
           <AddFactForm
             companyId={companyId}
             canEdit={canEdit}
             onDone={() => setAdding(false)}
           />
-        )}
-        <QueryStates query={factsQuery} pendingLabel={t("co.facts.title")}>
-          {facts.length === 0 ? (
+        </PanelBody>
+      )}
+      <QueryStates query={factsQuery} pendingLabel={t("co.facts.title")}>
+        {facts.length === 0 ? (
+          <PanelBody>
             <SurfaceState
               state="empty"
               emptyLabel={t("co.facts.empty")}
@@ -169,19 +155,19 @@ export function CompanyFactsPanel({
             >
               {null}
             </SurfaceState>
-          ) : (
-            listFacts(facts, t, locale).map((group) => (
-              <FactCategoryBlock
-                key={group.category}
-                companyId={companyId}
-                group={group}
-                canEdit={canEdit}
-                onOpenHistory={onOpenHistory}
-              />
-            ))
-          )}
-        </QueryStates>
-      </PanelBody>
+          </PanelBody>
+        ) : (
+          listFacts(facts, t, locale).map((group) => (
+            <FactCategoryBlock
+              key={group.category}
+              companyId={companyId}
+              group={group}
+              canEdit={canEdit}
+              onOpenHistory={onOpenHistory}
+            />
+          ))
+        )}
+      </QueryStates>
     </Panel>
   );
 }
@@ -205,156 +191,41 @@ function FactCategoryBlock({
   const shown =
     expanded || !capped ? group.facts : group.facts.slice(0, FACT_PREVIEW);
   return (
-    <div className="co-facts-group">
-      <div className="t-label co-facts-heading">
-        {t(factCategoryLabelKey(group.category))}
-      </div>
-      {shown.map((fact) => (
+    <>
+      <PanelGroupHead
+        title={t(factCategoryLabelKey(group.category))}
+        level="h3"
+      />
+      {shown.map((fact, index) => (
         <FactRow
           key={`${fact.field}:${fact.value_key}`}
           companyId={companyId}
           fact={fact}
+          // A run of facts under one field shares the field's name once: the
+          // first of the run prints it, and the rows that follow print only
+          // what changed, which is the value. A reader scanning four
+          // Locations is not asked to read the word "Location" four times.
+          label={
+            index === 0 || shown[index - 1].field !== fact.field
+              ? t(factFieldLabelKey(fact.field))
+              : undefined
+          }
           canEdit={canEdit}
           onOpenHistory={onOpenHistory}
         />
       ))}
       {hidden > 0 && (
-        <Button onClick={() => setExpanded(!expanded)}>
-          {expanded
-            ? t("co.facts.showLess")
-            : t("co.facts.showAll", {
-                count: formatNumber(group.facts.length, locale),
-              })}
-        </Button>
+        <PanelBody>
+          <Button onClick={() => setExpanded(!expanded)}>
+            {expanded
+              ? t("co.facts.showLess")
+              : t("co.facts.showAll", {
+                  count: formatNumber(group.facts.length, locale),
+                })}
+          </Button>
+        </PanelBody>
       )}
-    </div>
-  );
-}
-
-function FactRow({
-  companyId,
-  fact,
-  canEdit,
-  onOpenHistory,
-}: Readonly<{
-  companyId: string;
-  fact: CompanyFact;
-  canEdit: boolean;
-  onOpenHistory?: () => void;
-}>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const recordZone = useRecordZone();
-  const [removing, setRemoving] = useState(false);
-  return (
-    <div className="co-field">
-      <span className="t-label">{t(factFieldLabelKey(fact.field))}</span>
-      <div className="co-fact-line">
-        <EvidenceMark
-          value={fact.value}
-          source={derivedSource(fact, locale, recordZone)}
-          onOpenHistory={onOpenHistory}
-        />
-        {/* The value contradicts its own field — a phone number filed as a
-            location, a register number filed as a headcount. The fact is still
-            shown with its evidence: hiding it would be a worse answer than
-            flagging it, and the reader is the one who can tell. */}
-        {fact.suspect_reason && (
-          <span className="co-fact-suspect">
-            <Badge tone="warn">
-              {t(FACT_SUSPECT_LABELS[fact.suspect_reason])}
-            </Badge>
-          </span>
-        )}
-        <EvidenceVerdict
-          companyId={companyId}
-          claim={factClaim(companyId, fact)}
-          canEdit={canEdit}
-        />
-        {/* Removal is the verb correction cannot spell. A correction says "this
-            value is wrong"; this says "this is not a fact about this company",
-            which is the honest answer to a customer who left or a phone number
-            read off the wrong page. */}
-        {canEdit && (
-          <IconAction
-            label={t("co.facts.remove", {
-              value: fact.value,
-            })}
-            icon={<X aria-hidden />}
-            onClick={() => setRemoving(true)}
-          />
-        )}
-      </div>
-      {removing && (
-        <RemoveFactConfirm
-          companyId={companyId}
-          fact={fact}
-          canEdit={canEdit}
-          onClose={() => setRemoving(false)}
-        />
-      )}
-    </div>
-  );
-}
-
-function RemoveFactConfirm({
-  companyId,
-  fact,
-  canEdit,
-  onClose,
-}: Readonly<{
-  companyId: string;
-  fact: CompanyFact;
-  // Re-read at CONFIRM time, not only at open time. A grant can be withdrawn
-  // while this dialog stands, and a confirm that fired on the answer from
-  // thirty seconds ago is a write the reader is no longer allowed to make.
-  canEdit: boolean;
-  onClose: () => void;
-}>) {
-  const t = useT();
-  const queryClient = useQueryClient();
-  const remove = useMutation({
-    // The fact travels as a variable rather than through this closure: the
-    // click belongs to the committed render, so what it passes cannot be older
-    // than the row that carried it.
-    mutationFn: async (doomed: CompanyFact) => {
-      const { error } = await api.DELETE("/companies/{id}/facts/{factKey}", {
-        params: {
-          path: {
-            id: companyId,
-            factKey: `${doomed.field}:${doomed.value_key}`,
-          },
-          ...ifMatch(requireVersion(doomed.version)),
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-    },
-    onSuccess: async () => {
-      await settleFacts(queryClient, companyId);
-      onClose();
-    },
-  });
-  return (
-    <ConfirmModal
-      open
-      onClose={onClose}
-      title={t("co.facts.removeTitle")}
-      confirmLabel={t("co.facts.removeConfirm")}
-      confirmVariant="danger"
-      pending={remove.isPending}
-      error={remove.error ? problemMessageOf(remove.error, t) : undefined}
-      confirmReason={canEdit ? undefined : t("record.notYoursToChange")}
-      onConfirm={() => remove.mutate(fact)}
-    >
-      <p>
-        {t("co.facts.removeAsk", {
-          field: t(factFieldLabelKey(fact.field)),
-          value: fact.value,
-        })}
-      </p>
-    </ConfirmModal>
+    </>
   );
 }
 
@@ -463,8 +334,9 @@ function refusal(
 // Everything that describes this account's facts, refreshed together. The keys
 // are the ones the CONSUMERS register: React Query matches segments exactly, so
 // a near-miss spelling invalidates nothing and the page goes on showing the row
-// a reader just removed.
-async function settleFacts(
+// a reader just removed. Exported for companyfactrow.tsx's own removal
+// mutation, which settles the same set.
+export async function settleFacts(
   queryClient: ReturnType<typeof useQueryClient>,
   companyId: string,
 ) {

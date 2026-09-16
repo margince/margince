@@ -240,7 +240,7 @@ export function VatMark({
             — so a mark that showed only a verdict could sit beside a number
             nobody ever consulted. */}
         {answer !== null && sameNumber(answer.vat_number, stated) === false && (
-          <p className="vatmark-stale">{t("co.vat.numberMoved")}</p>
+          <p>{t("co.vat.numberMoved")}</p>
         )}
       </div>
     </Popover>

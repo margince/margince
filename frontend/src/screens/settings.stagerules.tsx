@@ -119,7 +119,7 @@ export function StageRulesCard({
             {problemMessageOf(save.error, t)}
           </Callout>
         )}
-        <ul className="u-list-reset">
+        <ul>
           {transitions.map((row) => (
             <TransitionRule
               key={keyOf(row.from_stage_id, row.to_stage_id)}

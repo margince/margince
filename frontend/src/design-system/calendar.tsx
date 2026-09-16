@@ -104,11 +104,7 @@ export function Calendar({
           // The weekday initials are a legend, not days: they carry no date
           // and announce as nothing, so the row under them reads as seven
           // dates rather than as fourteen things.
-          <span
-            key={`weekday-${day.getDay()}`}
-            className="calendar-weekday"
-            aria-hidden="true"
-          >
+          <span key={`weekday-${day.getDay()}`} aria-hidden="true">
             {weekdayInitial(day, locale)}
           </span>
         ))}
@@ -145,7 +141,7 @@ function CalendarDay({
 }>) {
   const classes = [
     "calendar-day",
-    inMonth ? "" : "calendar-day-outside",
+    inMonth ? "" : "",
     isToday ? "calendar-day-today" : "",
   ]
     .filter(Boolean)

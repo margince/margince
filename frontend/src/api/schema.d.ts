@@ -10211,6 +10211,12 @@ export interface paths {
          *
          *     Unresolved first by default, oldest first within that: a correction somebody sent three
          *     weeks ago is the one still waiting.
+         *
+         *     The queue is PAGED, and every page says whether there is another. A `limit` with no
+         *     continuation made every submission past the ceiling unreachable through this route at
+         *     all — and the ones that fell off the end were the newest, with the screen giving no sign
+         *     a tail existed. The resolved archive was truncated the same way, permanently. Walk
+         *     `page.next_cursor` until `has_more` is false.
          */
         get: operations["listConfirmSubmissions"];
         put?: never;
@@ -17756,7 +17762,7 @@ export interface components {
         };
         DedupeCandidateListResponse: {
             data: components["schemas"]["DedupeCandidate"][];
-            page?: components["schemas"]["PageInfo"];
+            page: components["schemas"]["PageInfo"];
         };
         DedupeDispositionRequest: {
             /** @enum {string} */
@@ -28791,7 +28797,7 @@ export interface components {
         Undoability: {
             undoable: boolean;
             /**
-             * @description Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would have to clear a field the record's own write path cannot clear, so it is refused rather than reporting a success that changed nothing. `edge_relink_unsupported` means the entry REMOVED a link: putting one back is an un-archive, which this path does not perform. The refusal says the link can be made again from the record's own screen, because that is true and actionable. `not_restorable_by_this_path` covers two shapes: a record whose workspace keeps its records in an incumbent system, and EVERY change to a project's company link whatever the verb — that kind takes write authority over the project row and a project must keep at least one company, so a generic reverse would be a side door around both rules. `detail` names the kind in the second case.
+             * @description Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would have to clear a field the record's own write path cannot clear, so it is refused rather than reporting a success that changed nothing. `edge_relink_unsupported` means the entry REMOVED a link: putting one back is an un-archive, which this path does not perform. The refusal says the link can be made again from the record's own screen, because that is true and actionable. `not_restorable_by_this_path` covers EVERY change to a project's company link whatever the verb — that kind takes write authority over the project row and a project must keep at least one company, so a generic reverse would be a side door around both rules. `detail` names the kind.
              * @enum {string|null}
              */
             reason?: "no_before_image" | "not_a_replayable_verb" | "unsupported_record_type" | "superseded" | "behind_erasure_boundary" | "already_undone" | "not_restorable_by_this_path" | "record_archived" | "null_unwritable_by_module" | "not_writable_by_caller" | "edge_relink_unsupported" | null;
@@ -29072,7 +29078,7 @@ export interface components {
          *     edits one.
          * @enum {string}
          */
-        AiActivityKind: "morning_brief" | "overnight_at_risk_sweep" | "document_extract" | "site_read" | "brief_ranking" | "capture_classify" | "capture_confidentiality_verdict" | "capture_counterparty_verdict" | "cert_judge" | "cold_start" | "deal_health" | "draft_reply" | "enrich" | "growth_fit" | "nl_search" | "offer_draft" | "rate_extract" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "stage_evidence_extract" | "summarize" | "transcript" | "transcript_propose" | "voice_build" | "corpus_ask" | "weekly_review" | "weekly_learnings" | "propose_roles" | "owed_verdict" | "account_scan";
+        AiActivityKind: "morning_brief" | "overnight_at_risk_sweep" | "document_extract" | "site_read" | "brief_ranking" | "capture_classify" | "capture_confidentiality_verdict" | "capture_counterparty_verdict" | "cert_judge" | "cold_start" | "deal_health" | "draft_reply" | "enrich" | "growth_fit" | "nl_search" | "offer_draft" | "rate_extract" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "stage_evidence_extract" | "summarize" | "transcript" | "transcript_propose" | "voice_build" | "corpus_ask" | "weekly_review" | "weekly_learnings" | "propose_roles" | "owed_verdict" | "request_settlement" | "account_scan";
         AiActivityItem: {
             /** Format: uuid */
             id: string;
@@ -33653,9 +33659,15 @@ export interface components {
              */
             meetings?: components["schemas"]["AttentionItem"][];
             /**
-             * @description Today's meetings that have already started and whose result nobody has
-             *     recorded, longest unanswered first. The counterpart of `meetings`: that lane
-             *     is what to prepare for, this is what to close off.
+             * @description Meetings that have already started and whose result nobody has recorded,
+             *     longest unanswered first. The counterpart of `meetings`: that lane is what to
+             *     prepare for, this is what to close off.
+             *
+             *     It reaches back a FORTNIGHT, where `meetings` is today only. The two bound
+             *     differently because they expire differently: preparation stops being possible
+             *     once a meeting begins, while an unrecorded outcome stays owed until somebody
+             *     records it. Bounded at all so that the first read after a quiet month is a
+             *     queue a reader can clear rather than a history of everything never answered.
              *
              *     A meeting carrying no status at all is here. A captured calendar event
              *     arrives without one, so treating an absent status as settled would empty this
@@ -33923,7 +33935,7 @@ export interface components {
             duplicates_open?: number;
             /** @description How many of today's meetings are still ahead — the bounded page, as the other lanes report. */
             meetings?: number;
-            /** @description How many of today's meetings have started with nobody saying how they went — the bounded page, as the other lanes report. Not in `required`: a client reading an installation whose feed does not carry this lane gets no number rather than a zero, which would claim the day is clear. */
+            /** @description How many meetings of the last fortnight have started with nobody saying how they went — the bounded page, as the other lanes report. Not in `required`: a client reading an installation whose feed does not carry this lane gets no number rather than a zero, which would claim the day is clear. */
             meetings_unreported?: number;
             /** @description How many at-risk deals this lane is CARRYING, the bounded page rather than every deal at risk — the same bound the other lanes report under. */
             at_risk?: number;
@@ -46762,6 +46774,17 @@ export interface operations {
             query?: {
                 /** @description Max items in the page. */
                 limit?: components["parameters"]["Limit"];
+                /**
+                 * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
+                 *     effective `sort` of the originating request (field + direction) plus the last row's keyset
+                 *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
+                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     together with a `sort` that differs from the one the cursor was minted under returns
+                 *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
+                 *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
+                 *     remaining pages see, so re-issue the query without the cursor when changing filters.
+                 */
+                cursor?: components["parameters"]["Cursor"];
             };
             header?: never;
             path: {
@@ -46772,7 +46795,11 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Delivery attempts, newest first. */
+            /**
+             * @description Delivery attempts, newest first. `page.next_cursor` continues the walk: the bound
+             *     cuts the OLDEST attempts, which on a failing subscription are the parked ones an
+             *     operator opened this surface to find.
+             */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -51306,6 +51333,8 @@ export interface operations {
                 resolved?: boolean;
                 /** @description Max items in the page. */
                 limit?: components["parameters"]["Limit"];
+                /** @description Opaque keyset cursor from a prior response's `page.next_cursor`. It encodes all three parts of this queue's order — whether the row is resolved, its `submitted_at`, and its id — because two subjects can send in the same second and an id alone cannot continue an order it is only the tie-break of. Changing `contact_id` or `resolved` mid-walk changes which rows the remaining pages see, so re-issue without the cursor when a filter changes. A token this endpoint did not mint returns `422 code: malformed_cursor`. */
+                cursor?: string;
             };
             header?: never;
             path?: never;
@@ -51313,12 +51342,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /**
-             * @description The submissions, bounded by the limit. NO CURSOR: this is a queue somebody works
-             *     through rather than an archive to page, and a cursor the handler did not read would
-             *     answer a wider page than the one that was asked for. When the queue grows past one
-             *     screen, the paging lands with the reader that needs it.
-             */
+            /** @description A page of submissions. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -51326,6 +51350,7 @@ export interface operations {
                 content: {
                     "application/json": {
                         data: components["schemas"]["ConfirmSubmission"][];
+                        page: components["schemas"]["PageInfo"];
                     };
                 };
             };

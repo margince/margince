@@ -141,9 +141,9 @@ func (leadStatusLadder) IdempotencyKey(ev workflow.Event) string {
 // A note a HUMAN typed into the composer is contact too: it is how a rep
 // records "I wrote to them" when the mail itself was not captured, and
 // refusing the step would leave a worked lead reading as untouched. The
-// source=manual guard keeps every import out — a flip-cutover note arrives
-// stamped with the OPERATOR's human identity (compose/flipwriters.go), and
-// replaying history must not walk today's ladder. A note never reaches
+// source=manual guard keeps every import out — an imported note arrives
+// stamped with the OPERATOR's human identity, and replaying history must not
+// walk today's ladder. A note never reaches
 // engagement: writing about a lead is not the lead writing back.
 func ladderStepFor(t leadResponseTouch) (LeadStatus, bool) {
 	switch {

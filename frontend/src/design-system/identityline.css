@@ -17,6 +17,14 @@
   min-width: 0;
 }
 
+/* A fact that qualifies the record rather than being a way to act on it — who
+   owns it, what buying role a contact holds. It sits in the same line as the
+   handles beside it but does not compete with them for the eye: the secondary
+   ink is the whole of the difference, because the line is one size. */
+.identity-fact-quiet {
+  color: var(--textSecondary);
+}
+
 .identity-line {
   display: flex;
   flex-wrap: wrap;

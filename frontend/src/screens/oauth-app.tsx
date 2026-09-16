@@ -184,7 +184,7 @@ export function RedirectUris({
     return null;
   }
   return (
-    <div className="stack-sm">
+    <div>
       <p className="t-label">{t("oauthApp.redirectTitle")}</p>
       <p className="t-caption">{sub}</p>
       <SettingList>

@@ -256,9 +256,7 @@ function PageRows({ pages }: Readonly<{ pages: readonly SettingsPage[] }>) {
           }}
         >
           <span className="settings-home-rowhead">
-            <span className="settings-home-rowname">
-              {t(`settings.tab.${page.id}`)}
-            </span>
+            <span>{t(`settings.tab.${page.id}`)}</span>
             <Badge>{t(`settings.scope.${page.scope}`)}</Badge>
           </span>
           <span className="t-caption">{t(`settings.page.${page.id}.sub`)}</span>

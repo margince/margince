@@ -211,7 +211,7 @@ export function RecordTeamAssign({
             disabled={write.isPending || options.length === 0}
           />
         </div>
-        <p className="t-caption mute">{t("assignments.noAccessNote")}</p>
+        <p className="t-caption">{t("assignments.noAccessNote")}</p>
         {write.isError && (
           <p role="alert">{problemMessageOf(write.error, t)}</p>
         )}

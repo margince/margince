@@ -1,4 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { Button } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { ContactResearchDrawer } from "./contactdrawers";
 import "./contact360.css";
@@ -54,10 +56,26 @@ const readyRun = {
   ],
 };
 
+// The record the drawer opens OVER, drawn behind it. Two things ride on it:
+// `placement="right"` exists so the record stays legible beside the drawer, and
+// a story with nothing behind shows the one thing the placement is for as an
+// empty canvas — and the drawer PORTALS out of the story root, so without a
+// stage the root is empty and fe-uat reads the render as a failure.
+function ContactBehind() {
+  return (
+    <div className="wrap">
+      <Heading size="xlarge">Dana Buyer</Heading>
+      <p className="t-body">Head of Procurement · Brandt Automotive GmbH</p>
+      <Button variant="ghost">Deep research</Button>
+    </div>
+  );
+}
+
 function drawer() {
   return (
     <StoryProviders>
       <ToastProvider>
+        <ContactBehind />
         <ContactResearchDrawer
           contactId="p-1"
           contactName="Dana Buyer"

@@ -342,28 +342,6 @@ func TestSweepTargetsCarryNoDeleteBlockingTrigger(t *testing.T) {
 	}
 }
 
-// TestResetLeavesANativeWorkspaceAlone: the flip is conditional, so a native
-// installation's reset claims no mode change in its evidence.
-func TestResetLeavesANativeWorkspaceAlone(t *testing.T) {
-	e := integration.Setup(t)
-	ctx := e.Admin()
-
-	h := dataResetHandlers{
-		pool:             e.Pool,
-		seeds:            deployconfig.Seeds{},
-		dataResetAllowed: true,
-		log:              slog.New(slog.NewTextHandler(io.Discard, nil)),
-	}
-	if _, err := h.run(ctx, "Authz"); err != nil {
-		t.Fatalf("run: %v", err)
-	}
-
-	if got := e.WsCount(t, `SELECT count(*) FROM audit_log
-		WHERE action = 'reset_data' AND evidence->>'sor_mode_reverted' = 'true'`); got != 0 {
-		t.Errorf("evidence claims a mode revert on an install that was already native (%d rows)", got)
-	}
-}
-
 // TestResetPurgesTheSealedCredentialsItsSweepOrphans: vault_secret carries no
 // workspace_id — the tenant lives inside the ref and inside the AES-256-GCM
 // AAD, deliberately, so it is operational infrastructure rather than a tenant

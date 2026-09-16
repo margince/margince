@@ -222,8 +222,12 @@ export function EmailEntry({
 }: Readonly<{
   /** The server's own row model. Nothing here is derived in the browser. */
   summary: EmailSummary;
-  /** Formatted by the caller, which owns the reader's timezone. */
-  timestamp: string;
+  /**
+   * Formatted by the caller, which owns the reader's timezone. Absent where
+   * the host already prints the time in a column of its own (the memory
+   * card), so one row never carries the same figure twice.
+   */
+  timestamp?: string;
 }> &
   Readonly<
     /**
@@ -253,7 +257,7 @@ export function EmailEntry({
             told what happened without being told what kind of thing it was. */}
         <span className="sr-only">{t("timeline.kind.email")}</span>
         <span className="emailentry__who">{row.who}</span>
-        <span className="emailentry__when">{timestamp}</span>
+        {timestamp && <span className="emailentry__when">{timestamp}</span>}
       </span>
       <span className="emailentry__subject">{row.subject}</span>
       {/* No preview on a withheld row, and none invented when the message has
@@ -268,7 +272,7 @@ export function EmailEntry({
             vocabulary contains every value of it, so the row prints the state
             it was sent and never re-derives one. */}
         <VisibilityBadge state={summary.display_status} />
-        {row.move && <span className="emailentry__move">{t(row.move)}</span>}
+        {row.move && <span>{t(row.move)}</span>}
         {row.attachments > 0 && (
           <span
             className="emailentry__files"

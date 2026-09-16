@@ -296,6 +296,13 @@ func anonymizeContactRecord(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 		err = deleteReplyVerdictHistoryFor(ctx, tx, id)
 	}
 	if err == nil {
+		// And what we concluded our own replies DID about what they asked. The
+		// same argument one line up: the words survive an anonymize, so a
+		// settlement saying we still owe somebody something would go on
+		// naming an obligation to a record that no longer names them.
+		err = deleteRequestSettlementsFor(ctx, tx, id, subjectEmails)
+	}
+	if err == nil {
 		err = deleteSubjectHandoffs(ctx, tx, id)
 	}
 	if err == nil {

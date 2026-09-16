@@ -403,9 +403,9 @@ export function CommercialPanel({
                 className="co-rowlink co-commercial-name"
                 onClick={() => navigate({ screen: "deals", id: deal.deal_id })}
               >
-                <span className="co-commercial-title">{deal.name}</span>
+                <span>{deal.name}</span>
                 {deal.expected_close_date && (
-                  <span className="co-commercial-sub t-sub">
+                  <span className="t-sub">
                     {t("commercial.closes", {
                       when: formatDate(
                         deal.expected_close_date,
@@ -702,13 +702,15 @@ export function AskSection({
           one, and the reader has no way to tell which question they are
           looking at the answer to. */}
       {readable && !ask.isPending && (
-        <>
+        /* The answer as its own plate rather than as three loose paragraphs
+            under the buttons: a reply belongs in a shape that says where it
+            starts and where it ends, and on the panel's tinted ground the
+            white card is what makes the prose the thing being read. */
+        <div className="co-ask-answer">
           {/* The question is repeated above its answer: three buttons and one
               answer block leaves the reader guessing which they pressed once
               they have scrolled, and the wrong pairing is worse than none. */}
-          <p className="co-ask-asked t-caption">
-            {t(`co.ask.q.${readable.question}`)}
-          </p>
+          <p className="co-ask-asked">{t(`co.ask.q.${readable.question}`)}</p>
           {readable.sentences.length === 0 ? (
             // An empty answer is a real outcome, not a failure: the question's
             // records are not ones this reader can see, so there is nothing to
@@ -720,9 +722,13 @@ export function AskSection({
               sentences={readable.sentences}
               onOpenRecord={onOpenRecord}
               onOpenEmail={onOpenEmail}
+              // Gathered under the prose, not trailing each clause: an answer
+              // is one reply to one question, and a chip after every sentence
+              // breaks the reply into a list of filed facts.
+              citations="collected"
             />
           )}
-          <p className="co-row-meta t-caption">
+          <p className="co-ask-foot co-row-meta t-caption">
             <WrittenBy by={readable.generated_by} />
             <span>
               {t("co.brief.generatedAt", {
@@ -730,7 +736,7 @@ export function AskSection({
               })}
             </span>
           </p>
-        </>
+        </div>
       )}
     </section>
   );

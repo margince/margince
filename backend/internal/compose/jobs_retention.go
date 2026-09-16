@@ -5,8 +5,8 @@ package compose
 
 // River wiring for the idempotency-retention pass: a dispatcher over EVERY
 // workspace and a worker that purges one. It sits beside the other per-concern
-// job files (jobs_capture.go, jobs_deals.go, jobs_overlay.go) rather than in
-// jobs.go, which owns the runner's assembly.
+// job files (jobs_capture.go, jobs_deals.go) rather than in jobs.go, which owns
+// the runner's assembly.
 
 import (
 	"context"

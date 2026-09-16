@@ -88,7 +88,7 @@ export function BillingContactsPanel({
           <p role="alert">{problemMessageOf(actions.remove.error, t)}</p>
         )}
         {contacts.length === 0 ? (
-          <p className="muted">{t("billing.none")}</p>
+          <p className="t-caption">{t("billing.none")}</p>
         ) : (
           <ul className="billing-list">
             {contacts.map((c) => (
@@ -142,7 +142,7 @@ function BillingContactRow({
   return (
     <li className="billing-row">
       <div className="billing-who">
-        <span className="billing-name">{contact.full_name}</span>
+        <span>{contact.full_name}</span>
         <Badge>{t(ROLE_LABEL[contact.role])}</Badge>
         {canWrite && (
           <span className="billing-verbs">
@@ -175,7 +175,7 @@ function BillingContactRow({
           {contact.email}
         </a>
       ) : (
-        <span className="billing-email muted">{t("billing.noEmail")}</span>
+        <span className="billing-email t-caption">{t("billing.noEmail")}</span>
       )}
     </li>
   );

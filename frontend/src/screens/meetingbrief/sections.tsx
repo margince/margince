@@ -65,7 +65,7 @@ export function GlanceLine({
     return null;
   }
   return (
-    <section className="mb-glance">
+    <section>
       <SentenceList
         sentences={header.sentences}
         onOpenRecord={onOpenRecord}

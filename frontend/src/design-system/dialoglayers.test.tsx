@@ -3,7 +3,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
-import { Modal } from "./atoms";
+import { Button, Modal } from "./atoms";
 import { Heading } from "./heading";
 import { Popover } from "./popover";
 
@@ -16,11 +16,9 @@ function Layers({ close }: Readonly<{ close: () => void }>) {
       <Heading size="large" id="composer-title">
         Composer
       </Heading>
-      <button type="button" onClick={() => setReading(true)}>
-        Read email
-      </button>
+      <Button onClick={() => setReading(true)}>Read email</Button>
       <Popover label="Preview">The whole message.</Popover>
-      <button type="button">Send</button>
+      <Button>Send</Button>
       <Modal
         open={reading}
         onClose={() => setReading(false)}
@@ -29,9 +27,7 @@ function Layers({ close }: Readonly<{ close: () => void }>) {
         <Heading size="large" id="reader-title">
           Email reader
         </Heading>
-        <button type="button" onClick={() => setReading(false)}>
-          Close reader
-        </button>
+        <Button onClick={() => setReading(false)}>Close reader</Button>
         <a href="#attachment">Attachment</a>
       </Modal>
     </Modal>
@@ -50,6 +46,13 @@ it("traps Tab in the reader and lets Escape close only the reader", async () => 
   expect(document.activeElement).toBe(
     screen.getByRole("link", { name: "Attachment" }),
   );
+  // Every dialog draws its own way out as its last stop, and the composer
+  // underneath draws one too — so the stop Tab finds here has to be the
+  // READER's, not the one on the layer below it.
+  await user.tab();
+  const reader = screen.getByRole("dialog", { name: "Email reader" });
+  expect(document.activeElement?.getAttribute("aria-label")).toBe("Close");
+  expect(reader.contains(document.activeElement)).toBe(true);
   await user.tab();
   expect(document.activeElement).toBe(
     screen.getByRole("button", { name: "Close reader" }),

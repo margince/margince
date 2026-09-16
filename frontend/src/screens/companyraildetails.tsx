@@ -12,7 +12,7 @@ import { useRecordZone } from "../app/recordzone";
 import { useUnsavedGuard } from "../app/unsaved";
 import { EvidenceMark } from "../design-system/evidencemark";
 import { FieldGrid, FieldRow } from "../design-system/fieldgrid";
-import { InlineText } from "../design-system/inlinechoice";
+import { InlineText } from "../design-system/inlinetext";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { throwProblem } from "./common";

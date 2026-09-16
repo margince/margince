@@ -77,15 +77,11 @@ export function PreferenceRow({
         <p className="t-caption" data-testid={`wording-${purpose.key}`}>
           {wording}
         </p>
-        <p className="t-caption pref-state">{t(stateLineKey(purpose, on))}</p>
-        {purpose.locked && (
-          <p className="pref-locked-why">{t("prefs.lockedWhy")}</p>
-        )}
-        {grantRefused && (
-          <p className="pref-locked-why">{t("prefs.cannotGrantWhy")}</p>
-        )}
+        <p className="t-caption">{t(stateLineKey(purpose, on))}</p>
+        {purpose.locked && <p>{t("prefs.lockedWhy")}</p>}
+        {grantRefused && <p>{t("prefs.cannotGrantWhy")}</p>}
         {needsConfirmation && !grantRefused && (
-          <p className="pref-locked-why">{t("prefs.confirmationNeededWhy")}</p>
+          <p>{t("prefs.confirmationNeededWhy")}</p>
         )}
       </div>
       {/* A Checkbox, not a Switch, and the difference is not cosmetic: a

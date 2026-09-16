@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { Download, Printer, X } from "lucide-react";
+import { Download, Printer } from "lucide-react";
 import type { ReactNode, RefObject } from "react";
 import {
   createContext,
@@ -167,11 +167,6 @@ function FilePreviewDialog({
                   onClick={() => printing(frame.current)}
                 />
               )}
-              <IconAction
-                label={t("filePreview.close")}
-                icon={<X aria-hidden="true" />}
-                onClick={onClose}
-              />
             </div>
           </div>
           <div className="file-preview-stage">

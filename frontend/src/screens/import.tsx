@@ -133,7 +133,7 @@ export function ImportCard() {
           <Heading size="large" id={headingId} className="t-h2 modal-title">
             {t("import.title")}
           </Heading>
-          <ImportWizard flow={flow} onClose={() => setOpen(false)} />
+          <ImportWizard flow={flow} />
         </Modal>
       </PanelBody>
     </Panel>
@@ -149,10 +149,8 @@ export function ImportCard() {
 // would forget an interrupted import the moment the dialog closed.
 function ImportWizard({
   flow,
-  onClose,
 }: Readonly<{
   flow: ReturnType<typeof useImportFlow>;
-  onClose: () => void;
 }>) {
   const t = useT();
   const fileInput = useRef<HTMLInputElement>(null);
@@ -284,10 +282,6 @@ function ImportWizard({
           contextTagID={flow.contextTagID}
         />
       ) : null}
-
-      {/* Closing puts the act down; it does not abandon it. The flow outlives
-          the dialog, so a reader who steps away comes back to the same step. */}
-      <Button onClick={onClose}>{t("common.close")}</Button>
     </div>
   );
 }
@@ -525,7 +519,7 @@ function UndoOutcome({ undo }: Readonly<{ undo: ImportReport["undo"] }>) {
   const plural = usePlural();
   const { locale } = useLocale();
   return (
-    <div className="import__undoOutcome">
+    <div>
       <Callout tone="success" kind="outcome" title={t("import.undone")} />
       {undo ? (
         <>

@@ -135,7 +135,7 @@ export function CounterpartyHoldRow({
 
   if (held) {
     return (
-      <div className="pe-rail-hold">
+      <div>
         <p>
           {held.kind === "domain"
             ? t("hold.heldByDomain", { domain: held.value })
@@ -157,7 +157,7 @@ export function CounterpartyHoldRow({
   }
 
   return (
-    <div className="pe-rail-hold">
+    <div>
       <p>{t("hold.notHeld")}</p>
       <div className="card-actions">
         <Button variant="ghost" onClick={() => setAsking("address")}>

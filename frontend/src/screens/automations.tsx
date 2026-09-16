@@ -6,22 +6,19 @@ import { useCan, useCanWrite } from "../app/capability";
 import {
   Badge,
   Button,
-  Checkbox,
   EmptyState,
   Modal,
   OverflowMenu,
-  TextInput,
 } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
-import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
-import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
 import { AutonomyDot } from "../design-system/trust";
 import { useT } from "../i18n";
 import { AutomationInspectors } from "./automationdetail";
-import { DateFieldSelect } from "./automations.datefield";
+import { AutomationForm } from "./automations.form";
+import { scalarText } from "./automations.params";
 import {
   problemMessageOf,
   QueryGate,
@@ -40,281 +37,15 @@ import "./automations.css";
 // agent-authored instance is indistinguishable from a catalog-authored one.
 
 type CatalogEntry = components["schemas"]["AutomationCatalogEntry"];
+// A template staged for the create dialog. It OUTLIVES the close — hence `open`
+// as a field, and `seq`, which re-keys the form so every open re-seeds it.
+type StagedTemplate = { entry: CatalogEntry; seq: number; open: boolean };
+// The one spelling of putting either dialog away, so the places that do it
+// cannot come to disagree about what closing leaves behind.
+function shut<T extends { open: boolean }>(prior: T | null): T | null {
+  return prior === null ? null : { ...prior, open: false };
+}
 type Automation = components["schemas"]["Automation"];
-
-export type ParamField = {
-  key: string;
-  kind: "integer" | "string" | "boolean" | "date_field" | "enum";
-  min?: number;
-  max?: number;
-  initial: string;
-  // Set only for kind "enum" — the schema's own closed value list (e.g.
-  // renewal_reminder's object property), rendered as a picker instead of
-  // a free-text box so a typo can't silently name a value the backend
-  // would refuse.
-  options?: string[];
-};
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-// Catalog defaults and stored params are JSON scalars; anything non-scalar
-// has no honest single-line rendering, so it collapses to empty.
-function scalarText(value: unknown): string {
-  if (value === undefined || value === null || typeof value === "object") {
-    return "";
-  }
-  return String(value);
-}
-
-function paramKind(type: unknown): ParamField["kind"] | null {
-  if (type === "integer" || type === "number") {
-    return "integer";
-  }
-  if (type === "boolean") {
-    return "boolean";
-  }
-  if (type === "string") {
-    return "string";
-  }
-  return null;
-}
-
-// enumOptions reads a schema property's own closed value list, when it
-// has one — a string-typed "enum" array is the schema's way of saying
-// "pick one of these", which renders as a picker rather than free text
-// so a typo can't silently name a value the backend would refuse.
-function enumOptions(raw: Record<string, unknown>): string[] | undefined {
-  if (!Array.isArray(raw.enum)) {
-    return undefined;
-  }
-  const values = raw.enum.filter((v): v is string => typeof v === "string");
-  return values.length > 0 ? values : undefined;
-}
-
-// The ONLY source of editable parameters: the catalog entry's JSON schema.
-export function paramFields(schema: Record<string, unknown>): ParamField[] {
-  const properties = isRecord(schema.properties) ? schema.properties : {};
-  // renewal_reminder's date_field names a workspace's own cf_* column, not a
-  // fixed value — but nothing in the JSON schema type system marks a string
-  // as "this is a column reference". The schema DOES say which object owns
-  // it (its sibling `object` property), and only a schema declaring BOTH has
-  // enough context to resolve a column list, so that pairing — not the bare
-  // key name, which some future automation could reuse for something
-  // unrelated — is what selects the picker over a free-text box.
-  const isDateFieldPicker =
-    "object" in properties && "date_field" in properties;
-  return Object.entries(properties).flatMap(([key, raw]) => {
-    if (!isRecord(raw)) {
-      return [];
-    }
-    const options = enumOptions(raw);
-    const kind: ParamField["kind"] | null =
-      key === "date_field" && isDateFieldPicker
-        ? "date_field"
-        : options
-          ? "enum"
-          : paramKind(raw.type);
-    if (kind === null) {
-      return [];
-    }
-    return [
-      {
-        key,
-        kind,
-        min: typeof raw.minimum === "number" ? raw.minimum : undefined,
-        max: typeof raw.maximum === "number" ? raw.maximum : undefined,
-        initial: scalarText(raw.default),
-        options,
-      },
-    ];
-  });
-}
-
-function paramsFromValues(
-  fields: ParamField[],
-  values: Record<string, string>,
-): Record<string, unknown> {
-  return Object.fromEntries(
-    fields.map((field) => {
-      const value = values[field.key] ?? field.initial;
-      if (field.kind === "integer") {
-        return [field.key, Number(value)];
-      }
-      if (field.kind === "boolean") {
-        return [field.key, value === "true"];
-      }
-      return [field.key, value];
-    }),
-  );
-}
-
-// One schema-derived param's control, lifted out of AutomationForm so that
-// function stays a shape a reader can hold at once as this grows a third
-// input kind. A Checkbox carries its own label (the design system's own
-// Checkbox/Switch split: this STATES an intent the Save button below then
-// submits, so the field's usual heading span would just repeat it) — every
-// other kind keeps the heading span the rest of the form uses.
-function ParamFieldControl({
-  field,
-  formId,
-  value,
-  object,
-  onChange,
-}: Readonly<{
-  field: ParamField;
-  formId: string;
-  value: string;
-  object: string;
-  onChange: (value: string) => void;
-}>) {
-  if (field.kind === "boolean") {
-    return (
-      <div className="field">
-        <Checkbox
-          label={field.key}
-          checked={value === "true"}
-          onChange={(event) =>
-            onChange(event.target.checked ? "true" : "false")
-          }
-        />
-      </div>
-    );
-  }
-  return (
-    <div className="field">
-      <span className="t-label" id={`${formId}-${field.key}`}>
-        {field.key}
-      </span>
-      {field.kind === "date_field" ? (
-        <DateFieldSelect
-          object={object}
-          value={value}
-          onChange={onChange}
-          labelId={`${formId}-${field.key}`}
-        />
-      ) : field.kind === "enum" ? (
-        <Select
-          aria-labelledby={`${formId}-${field.key}`}
-          options={(field.options ?? []).map((v) => ({ value: v, label: v }))}
-          value={value}
-          onChange={onChange}
-        />
-      ) : (
-        <TextInput
-          type={field.kind === "integer" ? "number" : "text"}
-          aria-labelledby={`${formId}-${field.key}`}
-          min={field.min}
-          max={field.max}
-          required
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-        />
-      )}
-    </div>
-  );
-}
-
-// Pick-a-template + fill-parameters (B-E15.7b1). Also serves the edit flow:
-// initial values arrive from the instance instead of the schema defaults.
-//
-// It is the BODY of a dialog in both cases, never a panel that unfolds under a
-// row: a name plus every parameter the schema declares is a form submitted
-// together, and the settings page keeps a row an ANSWER by putting the form
-// behind the verb. So it draws the dialog's own heading — the caller owns the
-// id, since `Modal` needs it before this renders.
-function AutomationForm({
-  entry,
-  titleId,
-  initialName,
-  initialParams,
-  submitLabel,
-  pending,
-  onSubmit,
-  onCancel,
-}: Readonly<{
-  entry: CatalogEntry;
-  /** The id `Modal`'s `labelledBy` points at; this form's heading carries it. */
-  titleId: string;
-  initialName: string;
-  initialParams?: Automation["params"];
-  submitLabel: string;
-  pending: boolean;
-  onSubmit: (name: string, params: Record<string, unknown>) => void;
-  onCancel: () => void;
-}>) {
-  const t = useT();
-  const formId = useId();
-  const fields = paramFields(entry.params_schema);
-  const [name, setName] = useState(initialName);
-  const [values, setValues] = useState<Record<string, string>>(() =>
-    Object.fromEntries(
-      fields.map((field) => {
-        const configured = initialParams?.[field.key];
-        return [
-          field.key,
-          configured === undefined ? field.initial : scalarText(configured),
-        ];
-      }),
-    ),
-  );
-
-  return (
-    <form
-      className="form-stack"
-      onSubmit={(event) => {
-        event.preventDefault();
-        onSubmit(name.trim() || entry.name, paramsFromValues(fields, values));
-      }}
-    >
-      {/* The dialog covers the row that would otherwise have said which
-          automation is open, so the heading says it instead. */}
-      <Heading size="large" className="t-h3 modal-title" id={titleId}>
-        {initialName}
-      </Heading>
-      <p className="t-caption">
-        {entry.trigger} {"->"} {entry.action}
-      </p>
-      <div className="field">
-        <span className="t-label" id={`${formId}-name`}>
-          {t("auto.name")}
-        </span>
-        <TextInput
-          aria-labelledby={`${formId}-name`}
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-        />
-      </div>
-      {fields.map((field) => (
-        <ParamFieldControl
-          key={field.key}
-          field={field}
-          formId={formId}
-          value={values[field.key] ?? field.initial}
-          object={values.object ?? ""}
-          onChange={(next) =>
-            setValues((current) => ({ ...current, [field.key]: next }))
-          }
-        />
-      ))}
-      <div className="form-actions">
-        {/* Cancel first, submit last: the house submit row reads left to right
-            towards the primary action. Save STARTED the write, so it goes busy
-            and keeps the focus the reader is standing on; Cancel started
-            nothing and is simply not available while the write is out, since
-            backing out of something already on its way to the server would say
-            it was stopped. */}
-        <Button disabled={pending} onClick={onCancel}>
-          {t("deals.cancel")}
-        </Button>
-        <Button type="submit" variant="primary" pending={pending}>
-          {submitLabel}
-        </Button>
-      </div>
-    </form>
-  );
-}
 
 // One instance row, rendered from the Automation wire schema alone — no
 // origin field exists on the wire, so authorship cannot change the render.
@@ -518,6 +249,7 @@ function AutomationStatus({
 function AutomationEditor({
   automation,
   entry,
+  open,
   pending,
   refusal,
   onSubmit,
@@ -525,6 +257,8 @@ function AutomationEditor({
 }: Readonly<{
   automation: Automation;
   entry: CatalogEntry;
+  /** Closed, it stays MOUNTED so the dialog can animate out. */
+  open: boolean;
   pending: boolean;
   /** The server's own words for a refused save, or null while there is none. */
   refusal: string | null;
@@ -534,7 +268,7 @@ function AutomationEditor({
   const t = useT();
   const titleId = useId();
   return (
-    <Modal open onClose={onClose} labelledBy={titleId}>
+    <Modal open={open} onClose={onClose} labelledBy={titleId}>
       <AutomationForm
         entry={entry}
         titleId={titleId}
@@ -569,12 +303,17 @@ export function AutomationRow({
 }>) {
   const t = useT();
   const queryClient = useQueryClient();
-  const [editing, setEditing] = useState(false);
+  // The edit dialog outlives its close the way the create dialog does, and
+  // `seq` keys the form so each open re-seeds it from the automation as it now
+  // stands rather than reviving a draft typed before somebody else changed it.
+  const [editing, setEditing] = useState<{ open: boolean; seq: number } | null>(
+    null,
+  );
   // An open edit form whose grant was revoked would keep offering Save, and
   // every submission would be a guaranteed 403. Close it with the permission.
   useEffect(() => {
     if (!canEdit) {
-      setEditing(false);
+      setEditing(shut);
     }
   }, [canEdit]);
   // Two independent panels (run history + dry-run preview): each mounts lazily
@@ -597,7 +336,7 @@ export function AutomationRow({
       return data;
     },
     onSuccess: () => {
-      setEditing(false);
+      setEditing(shut);
       queryClient.invalidateQueries({ queryKey: ["automations"] });
     },
   });
@@ -614,7 +353,7 @@ export function AutomationRow({
   const hasVerbs = (canEdit && entry !== undefined) || canViewRuns || canDelete;
 
   return (
-    <li className="auto-row" data-automation={automation.id}>
+    <li data-automation={automation.id}>
       <div className="auto-row-head">
         {entry?.tier && (
           <AutonomyDot
@@ -650,7 +389,18 @@ export function AutomationRow({
         {hasVerbs && (
           <OverflowMenu label={t("auto.rowActions", { name: automation.name })}>
             {canEdit && entry && (
-              <Button onClick={() => setEditing(true)}>
+              <Button
+                onClick={() => {
+                  // Only a refused SAVE is stale on reopen. A refused FLIP is
+                  // the row's own report and the only one it gets, so opening
+                  // the editor must not clear it.
+                  if (refused === "definition") patch.reset();
+                  setEditing((was) => ({
+                    open: true,
+                    seq: (was?.seq ?? 0) + 1,
+                  }));
+                }}
+              >
                 {t("trust.edit")}
               </Button>
             )}
@@ -672,13 +422,12 @@ export function AutomationRow({
         previewOpen={previewOpen}
         canConfigure={canViewRuns}
       />
-      {/* Mounted only while open, so each open re-seeds the fields from the
-          automation as it now stands instead of reviving a draft typed before
-          somebody else changed it. */}
-      {editing && entry && (
+      {editing !== null && entry && (
         <AutomationEditor
+          key={editing.seq}
           automation={automation}
           entry={entry}
+          open={editing.open}
           pending={writeInFlight === "definition"}
           refusal={refused === "definition" ? refusal : null}
           onSubmit={(name, params) =>
@@ -688,7 +437,7 @@ export function AutomationRow({
               body: { name, params },
             })
           }
-          onClose={() => setEditing(false)}
+          onClose={() => setEditing(shut)}
         />
       )}
       {/* A refused flip moves nothing on screen — so this line is the only
@@ -712,7 +461,7 @@ export function AutomationsAdmin() {
   const t = useT();
   const queryClient = useQueryClient();
   const createTitleId = useId();
-  const [template, setTemplate] = useState<CatalogEntry | null>(null);
+  const [staged, setStaged] = useState<StagedTemplate | null>(null);
   // Grants come from the session (/v1/me); until they arrive every predicate
   // is false, so the section shows no mutation affordance until one is confirmed.
   const me = useMe();
@@ -720,11 +469,11 @@ export function AutomationsAdmin() {
   const canCreate = useCanWrite("automation", "create");
   const canEdit = useCanWrite("automation", "update");
   const canDelete = useCanWrite("automation", "delete");
-  // The create form is staged in `template`; it must not survive the grant that
-  // opened it, or Create becomes a button that can only 403.
+  // The create form must not survive the grant that opened it, or Create
+  // becomes a button that can only 403.
   useEffect(() => {
     if (!canCreate) {
-      setTemplate(null);
+      setStaged(shut);
     }
   }, [canCreate]);
 
@@ -774,10 +523,19 @@ export function AutomationsAdmin() {
       return data;
     },
     onSuccess: () => {
-      setTemplate(null);
+      setStaged(shut);
       queryClient.invalidateQueries({ queryKey: ["automations"] });
     },
   });
+
+  // Reset on OPEN, not on close: the dialog outlives its own close, so a reader
+  // can still read why the save was refused while it leaves — and the next
+  // opening must not arrive with that refusal already printed under it. `seq`
+  // re-seeds the form; nothing re-seeds the mutation.
+  const stage = (entry: CatalogEntry) => {
+    create.reset();
+    setStaged((prior) => ({ entry, seq: (prior?.seq ?? 0) + 1, open: true }));
+  };
 
   const entryFor = (key: string): CatalogEntry | undefined =>
     catalog.data?.data.find((entry) => entry.key === key);
@@ -819,7 +577,7 @@ export function AutomationsAdmin() {
             <StarterLibraryRow
               catalog={catalog}
               canCreate={canCreate}
-              onUse={setTemplate}
+              onUse={stage}
             />
           </SettingList>
         </div>
@@ -831,37 +589,35 @@ export function AutomationsAdmin() {
           </p>
         )}
         {/* Name and parameters are one form submitted together, so they live
-            behind the library's verb rather than unfolding under it. Mounted
-            only while a template is staged, which is what re-seeds the fields
-            from that template's own defaults on every open. */}
-        {template && (
-          <Modal
-            open
-            onClose={() => setTemplate(null)}
-            labelledBy={createTitleId}
-          >
+            behind the library's verb rather than unfolding under it. */}
+        <Modal
+          open={staged?.open === true}
+          onClose={() => setStaged(shut)}
+          labelledBy={createTitleId}
+        >
+          {staged && (
             <AutomationForm
-              key={template.key}
-              entry={template}
+              key={staged.seq}
+              entry={staged.entry}
               titleId={createTitleId}
-              initialName={template.name}
+              initialName={staged.entry.name}
               submitLabel={t("auto.create")}
               pending={create.isPending}
               onSubmit={(name, params) =>
-                create.mutate({ key: template.key, name, params })
+                create.mutate({ key: staged.entry.key, name, params })
               }
-              onCancel={() => setTemplate(null)}
+              onCancel={() => setStaged(shut)}
             />
-            {/* The refusal stays where the reader is: the dialog is still open
-                over the card, so a line underneath it would report the failure
-                behind the thing covering it. */}
-            {create.isError && (
-              <p className="auto-error" role="alert">
-                {problemMessageOf(create.error, t)}
-              </p>
-            )}
-          </Modal>
-        )}
+          )}
+          {/* The refusal stays where the reader is: the dialog is still open
+              over the card, so a line underneath it would report the failure
+              behind the thing covering it. */}
+          {create.isError && (
+            <p className="auto-error" role="alert">
+              {problemMessageOf(create.error, t)}
+            </p>
+          )}
+        </Modal>
       </PanelBody>
     </Panel>
   );

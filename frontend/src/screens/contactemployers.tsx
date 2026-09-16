@@ -2,21 +2,17 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { ifMatch } from "../api/version";
 import { useCanWriteRecord } from "../app/capability";
-import { useRecordZone } from "../app/recordzone";
-import { navigate } from "../app/router";
-import { Button, OverflowMenu } from "../design-system/atoms";
+import { Button } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
-import { InlineText } from "../design-system/inlinechoice";
 import { Panel, PanelBody } from "../design-system/panel";
 import type { RecordPickerCandidate } from "../design-system/recordpicker";
 import { SurfaceState } from "../design-system/surfacestate";
 import { stable } from "../format/collate";
-import { formatDateAbbrev } from "../format/format";
-import { type Locale, useLocale, useT } from "../i18n";
+import { useT } from "../i18n";
 import { AddEmploymentModal } from "./addemploymentmodal";
 import { problemMessageOf, throwProblem } from "./common";
+import { EmploymentRow } from "./contactemploymentrow";
 import {
   bodyState,
   type Contact360,
@@ -27,11 +23,11 @@ import { stillHeld, today } from "./employmentcurrency";
 import { EmploymentEdit } from "./employmentedit";
 import { ImportedEmploymentHistory } from "./employmentimport";
 import { useEmploymentPages } from "./employmentpages";
-import { sameEditValue, saveIndependentEdit } from "./independentedit";
+import { patchEmployment } from "./employmentpatch";
 
 // --- Employers ---------------------------------------------------------
 
-type Employment = components["schemas"]["Contact360Employment"];
+export type Employment = components["schemas"]["Contact360Employment"];
 type CreateRelationshipRequest =
   components["schemas"]["CreateRelationshipRequest"];
 type UpdateRelationshipRequest =
@@ -50,77 +46,6 @@ export async function searchCompanyCandidates(
     id: company.id,
     name: company.display_name,
   }));
-}
-
-// Re-read through the scoped list endpoint when a concurrent edit requires a
-// comparison; the relationship contract has no single-record GET.
-export async function patchEmployment(
-  employment: Employment,
-  contactId: string,
-  body: UpdateRelationshipRequest,
-  t: ReturnType<typeof useT>,
-): Promise<void> {
-  const read = async () => {
-    const { data, error } = await api.GET("/relationships", {
-      params: {
-        query: {
-          contact_id: contactId,
-          company_id: employment.company_id,
-          kind: "employment",
-          limit: 200,
-        },
-      },
-    });
-    if (error) throwProblem(error);
-    const row = data.data.find((row) => row.id === employment.relationship_id);
-    if (!row)
-      throwProblem({ detail: t("contact.rail.employmentVersionUnresolved") });
-    return row;
-  };
-  const original = {
-    ...employment,
-    id: employment.relationship_id,
-    started_at: employment.started_at?.slice(0, 10),
-    ended_at: employment.ended_at?.slice(0, 10),
-  };
-  // Older snapshots may lack a version. Compare visible fields before using
-  // their fresh version; never pin an unseen change as the user's baseline.
-  if (original.version === undefined) {
-    const fresh = await read();
-    for (const key of [
-      "role",
-      "started_at",
-      "ended_at",
-      "employment_status",
-    ] as const) {
-      if (!sameEditValue(original[key], fresh[key]))
-        throwProblem({ code: "version_skew" });
-    }
-    original.version = fresh.version;
-  }
-  await saveIndependentEdit({
-    opened: { id: original.id, original },
-    patch: body,
-    groups: [
-      ["started_at", "started_precision", "clear_started_at"],
-      [
-        "ended_at",
-        "ended_precision",
-        "clear_ended_at",
-        "employment_status",
-        "is_current_primary",
-      ],
-    ],
-    read,
-    write: async (patch, version) => {
-      const { data, error } = await api.PATCH("/relationships/{id}", {
-        params: { path: { id: original.id }, ...ifMatch(version) },
-        body: patch,
-      });
-      if (error) throwProblem(error);
-      return data;
-    },
-  });
 }
 
 // Refresh the record, paginated roles and brief together after any employment
@@ -205,7 +130,15 @@ export function Employers({ view }: Readonly<{ view: Contact360 }>) {
     ).values(),
   ];
   const [adding, setAdding] = useState(false);
-  const [editing, setEditing] = useState<Employment | null>(null);
+  // The row being edited, kept after the dialog closes so it still has an
+  // employment to draw while it animates out. `editingOpen` is what is open,
+  // and `seq` rides in the key below so every press opens a dialog seeded
+  // afresh from the row — the reset the old unmount gave for free.
+  const [editing, setEditing] = useState<Readonly<{
+    row: Employment;
+    seq: number;
+  }> | null>(null);
+  const [editingOpen, setEditingOpen] = useState(false);
   const [removing, setRemoving] = useState<Employment | null>(null);
   const primaryCompany = allEmployments.find(
     (e) => e.is_current_primary && stillHeld(e),
@@ -268,11 +201,31 @@ export function Employers({ view }: Readonly<{ view: Contact360 }>) {
                 employments[index - 1]?.company_id !== employment.company_id
               }
               employment={employment}
+              // The title the contact's own record carries stands in for a
+              // role not yet written on the current employment: the same fact
+              // the header shows under the name, offered here where a reader
+              // can confirm it as the role at THIS company. `stillHeld`
+              // rather than the raw `is_current_primary` flag, so this
+              // matches exactly the row the "current" badge below marks:
+              // a former job whose flag was never cleared gets neither, and
+              // only the primary one: the title is contact-wide, and offered
+              // on every live row it would be saved to each of them.
+              fallbackRole={
+                stillHeld(employment) && employment.is_current_primary
+                  ? (contact.title ?? undefined)
+                  : undefined
+              }
               canEdit={canEdit}
               readOnlyReason={readOnlyReason}
               actions={actions}
               onRemove={() => setRemoving(employment)}
-              onEdit={() => setEditing(employment)}
+              onEdit={() => {
+                setEditing((prior) => ({
+                  row: employment,
+                  seq: (prior?.seq ?? 0) + 1,
+                }));
+                setEditingOpen(true);
+              }}
             />
           ))}
         </SurfaceState>
@@ -295,12 +248,16 @@ export function Employers({ view }: Readonly<{ view: Contact360 }>) {
             canEdit={canEdit}
           />
         )}
-        {editing && (
+        {/* The guard falls only before the first row is ever edited: `editing`
+            outlives the close, so from then on the dialog stays mounted and
+            leaves with the employment it was opened on still drawn. */}
+        {editing !== null && (
           <EmploymentEdit
-            key={contact.id + editing.relationship_id}
-            employment={editing}
+            key={`${contact.id}:${editing.row.relationship_id}:${editing.seq}`}
+            employment={editing.row}
+            open={editingOpen}
             contactId={contact.id}
-            onClose={() => setEditing(null)}
+            onClose={() => setEditingOpen(false)}
             onSaved={actions.invalidate}
           />
         )}
@@ -347,148 +304,4 @@ export function Employers({ view }: Readonly<{ view: Contact360 }>) {
       </PanelBody>
     </Panel>
   );
-}
-
-// One employment edge: the company it names, the role at that company (inline-
-// editable — this is the ONE place a per-company title is corrected;
-// `contact.title` is a different field, edited in Details above), the dates,
-// and the row's own verbs folded behind an OverflowMenu — this row already
-// carries a focusable inline-edit control, so the verbs stay out of the way
-// until the row is hovered or that control (or the trigger itself) has
-// focus, the same reveal the company page's task rows use for theirs.
-function EmploymentRow({
-  employment,
-  canEdit,
-  readOnlyReason,
-  actions,
-  onRemove,
-  onEdit,
-  showCompany = true,
-}: Readonly<{
-  employment: Employment;
-  showCompany?: boolean;
-  canEdit: boolean;
-  readOnlyReason: string | undefined;
-  actions: EmploymentActions;
-  onRemove: () => void;
-  onEdit: () => void;
-}>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const zone = useRecordZone();
-  const detail = employmentDetail(employment, t, locale, zone);
-  const ending =
-    actions.end.isPending &&
-    actions.end.variables?.relationship_id === employment.relationship_id;
-  // A settled mutation is no longer pending. Match errors by relationship
-  // so only the failed row keeps its message after the mutation settles.
-  const endFailed =
-    actions.end.isError &&
-    actions.end.variables?.relationship_id === employment.relationship_id;
-  return (
-    <div className="pe-employment">
-      <span className="pe-employment-body">
-        <span className="pe-employment-company">
-          {showCompany &&
-            (employment.company_name ? (
-              <button
-                type="button"
-                className="pe-meta-link"
-                onClick={() =>
-                  navigate({
-                    screen: "companies",
-                    id: employment.company_id,
-                  })
-                }
-              >
-                {employment.company_name}
-              </button>
-            ) : (
-              <span className="inlinetext">{t("field.unset")}</span>
-            ))}
-          {stillHeld(employment) && (
-            <span className="pe-rail-value-good">{t("rel.current")}</span>
-          )}
-          {!stillHeld(employment) && (
-            <span className="t-caption">
-              {t(
-                employment.employment_status === "unknown"
-                  ? "employment.status.unknown"
-                  : "employment.status.former",
-              )}
-            </span>
-          )}
-        </span>
-        <span className="pe-employment-role">
-          <InlineText
-            label={t("rel.role")}
-            value={employment.role ?? ""}
-            placeholder={t("field.addTitle")}
-            canEdit={canEdit}
-            readOnlyReason={readOnlyReason}
-            onSave={(next) =>
-              actions.update.mutateAsync({
-                employment,
-                body: { role: next || null },
-              })
-            }
-          />
-        </span>
-        {detail && (
-          <span className="pe-colleague-proof t-caption">{detail}</span>
-        )}
-      </span>
-      {canEdit && (
-        <span className="pe-employment-actions">
-          <OverflowMenu label={t("record.moreActions")}>
-            <Button onClick={onEdit}>{t("employment.edit")}</Button>
-            {stillHeld(employment) && (
-              <Button
-                disabled={ending}
-                onClick={() => actions.end.mutate(employment)}
-              >
-                {t("contact.rail.markEnded")}
-              </Button>
-            )}
-            <Button variant="danger" onClick={onRemove}>
-              {t("rel.remove")}
-            </Button>
-          </OverflowMenu>
-        </span>
-      )}
-      {endFailed && (
-        <p className="pe-colleague-proof" role="alert">
-          {problemMessageOf(actions.end.error, t)}
-        </p>
-      )}
-    </div>
-  );
-}
-function employmentDetail(
-  employment: Employment,
-  t: ReturnType<typeof useT>,
-  locale: Locale,
-  zone: string,
-): string {
-  // Career dates keep the year and the precision actually recorded.
-  const start = employment.started_at
-    ? employment.started_precision === "month"
-      ? employment.started_at.slice(0, 7)
-      : formatDateAbbrev(employment.started_at.slice(0, 10), locale, zone)
-    : undefined;
-  const end = employment.ended_at
-    ? employment.ended_precision === "month"
-      ? employment.ended_at.slice(0, 7)
-      : formatDateAbbrev(employment.ended_at.slice(0, 10), locale, zone)
-    : undefined;
-  if (start && end) {
-    return `${start} – ${end}`;
-  }
-  if (end) {
-    return t("rel.endedOn", { when: end });
-  }
-  if (start) {
-    return `${start} – ${t(stillHeld(employment) ? "employment.status.current" : employment.employment_status === "unknown" ? "employment.status.unknown" : "employment.status.former")}`;
-  }
-  return "";
 }

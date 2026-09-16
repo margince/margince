@@ -179,7 +179,7 @@ export function CompanyStep({
               human needs unless they want to change it. */}
           <summary>
             <span className="t-eyebrow">{t("ob.factsTitle")}</span>
-            <span className="facts-count">
+            <span>
               {t("ob.factsSelected", {
                 selected: formatNumber(selectedFactKeys.length, locale),
                 total: formatNumber(read.facts.length, locale),

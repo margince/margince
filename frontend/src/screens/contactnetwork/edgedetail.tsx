@@ -71,7 +71,7 @@ export function EdgeDetail({
               : undefined;
         const receipts = edge.receipts ?? [];
         return (
-          <div key={`${edge.from}->${edge.to}`} className="pn-edge-facts">
+          <div key={`${edge.from}->${edge.to}`}>
             <p className="pn-band">
               <Badge>{t(`contact.bandBadge.${edge.strength_bucket}`)}</Badge>
               {withWhom && <span>{withWhom}</span>}

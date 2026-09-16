@@ -177,7 +177,7 @@ function ImportReport({ report }: Readonly<{ report: VCardReport }>) {
         const outcome = OUTCOMES[card.outcome];
         return (
           <li key={card.index}>
-            <span className="vcard-import-name">{card.full_name}</span>
+            <span>{card.full_name}</span>
             <span
               className={
                 outcome?.tone === "warn" ? "vcard-import-warn" : "t-sub"

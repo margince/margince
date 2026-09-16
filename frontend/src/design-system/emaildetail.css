@@ -62,12 +62,14 @@
      margin on the type would have sat between the subject and its badges
      instead of under both. */
   margin-bottom: var(--space-3);
+  /* Room at the end for the dialog's own close, which is drawn over this
+     corner. Without it the reply verb sits under the glyph. */
+  padding-inline-end: calc(var(--controlHeight) + var(--space-4));
 }
 
-/* Answer the message, or put it away — the two verbs of the header, on one
-   line at its far end. It does not shrink: the subject beside it wraps, and a
-   Reply that gave up its width to a long one would ellipsize into a verb
-   nobody can read. */
+/* Answer the message — the header's verb, at its far end. It does not shrink:
+   the subject beside it wraps, and a Reply that gave up its width to a long one
+   would ellipsize into a verb nobody can read. */
 .emaildetail__actions {
   display: flex;
   align-items: center;
@@ -75,8 +77,8 @@
   flex-shrink: 0;
 }
 
-/* The subject with its access line under it, as one block beside the close
-   button. Stacked rather than inline: a subject runs to a line and a half on a
+/* The subject with its access line under it, as one block beside the header's
+   verbs. Stacked rather than inline: a subject runs to a line and a half on a
    narrow drawer, and a mark sharing that line would sit wherever it happened
    to end. */
 .emaildetail__heading {

@@ -65,7 +65,11 @@ export function EnrichedFields({
           }}
         >
           {fields.map((field) => (
-            <li key={field.field}>
+            // The claim's own key, falling back to the field name: two claims
+            // on one field are two rows, and the key must not move when a
+            // field is re-captured under an open editor, or the editor
+            // remounts and loses what it opened on.
+            <li key={field.claim_key ?? field.field}>
               <EnrichedField
                 contactId={contactId}
                 field={field}
@@ -161,73 +165,96 @@ function EnrichedField({
     },
   });
 
+  // Two columns: what was read on the left, the verdict on the right. Verbs
+  // under every row pushed six rows a button apart and left the column's
+  // right half empty; opposite the claim they judge, they sit where the lead
+  // card above keeps its verbs.
   return (
-    <div>
-      <div
-        style={{
-          display: "flex",
-          gap: "var(--space-2)",
-          alignItems: "baseline",
-          flexWrap: "wrap",
-        }}
-      >
-        <strong>{t(`contact.enriched.field.${field.field}`)}</strong>
-        {editing ? (
-          // This field sits beside its label on one line rather than filling a
-          // form column, so it keeps its intrinsic width instead of the atom's.
-          <TextInput
-            style={{ width: "auto" }}
-            aria-label={t(`contact.enriched.field.${field.field}`)}
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-          />
-        ) : (
-          <span>{field.value}</span>
-        )}
-        {field.verdict === "corrected" && (
-          <Badge>{t("contact.enriched.correctedByYou")}</Badge>
-        )}
-        {field.verdict === "confirmed" && (
-          <Badge>{t("contact.enriched.confirmed")}</Badge>
-        )}
-      </div>
+    <div
+      style={{
+        display: "flex",
+        gap: "var(--space-4)",
+        alignItems: "flex-start",
+      }}
+    >
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div
+          style={{
+            display: "flex",
+            gap: "var(--space-2)",
+            alignItems: "baseline",
+            flexWrap: "wrap",
+          }}
+        >
+          {/* Semibold, the heading weight, not the element's own bold: six of
+            these labels down one card at 700 outweighed the panel's title. */}
+          <strong>{t(`contact.enriched.field.${field.field}`)}</strong>
+          {editing ? (
+            // This field sits beside its label on one line rather than filling a
+            // form column, so it keeps its intrinsic width instead of the atom's.
+            <TextInput
+              style={{ width: "auto" }}
+              aria-label={t(`contact.enriched.field.${field.field}`)}
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+            />
+          ) : (
+            <span>{field.value}</span>
+          )}
+          {field.verdict === "corrected" && (
+            <Badge>{t("contact.enriched.correctedByYou")}</Badge>
+          )}
+          {field.verdict === "confirmed" && (
+            <Badge>{t("contact.enriched.confirmed")}</Badge>
+          )}
+        </div>
 
-      {/* The evidence stays visible after a correction, not instead of it:
+        {/* The evidence stays visible after a correction, not instead of it:
           what the machine read is the reason the correction was needed. */}
-      <p style={{ margin: "var(--space-1) 0 0" }}>
-        {t("contact.enriched.readFrom", {
-          source: field.source,
-          // The record's zone: when the machine read this is a fact about the
-          // record, and the correction beside it is judged against that day.
-          when: formatDate(field.captured_at, locale, recordZone),
-        })}{" "}
-        — “{field.evidence_snippet}”
-      </p>
+        <p className="t-sub" style={{ margin: "var(--space-1) 0 0" }}>
+          {t("contact.enriched.readFrom", {
+            source: field.source,
+            // The record's zone: when the machine read this is a fact about the
+            // record, and the correction beside it is judged against that day.
+            when: formatDate(field.captured_at, locale, recordZone),
+          })}{" "}
+          — “{field.evidence_snippet}”
+        </p>
 
-      {/* What this value replaced. The replacement is otherwise silent: the
+        {/* What this value replaced. The replacement is otherwise silent: the
           contact stated something newer and the record simply changed, and a
           reader who remembers typing the old value needs to see where it went
           rather than doubt what they typed. */}
-      {field.superseded_value && (
-        <p style={{ margin: "var(--space-1) 0 0" }}>
-          {t("contact.enriched.replaced", { was: field.superseded_value })}{" "}
-          {mayCorrect && (
-            <Button
-              pending={restore.isPending}
-              onClick={() => restore.mutate()}
-            >
-              {t("contact.enriched.undo")}
-            </Button>
-          )}
-        </p>
-      )}
+        {field.superseded_value && (
+          <p className="t-sub" style={{ margin: "var(--space-1) 0 0" }}>
+            {t("contact.enriched.replaced", { was: field.superseded_value })}{" "}
+            {mayCorrect && (
+              <Button
+                pending={restore.isPending}
+                onClick={() => restore.mutate()}
+              >
+                {t("contact.enriched.undo")}
+              </Button>
+            )}
+          </p>
+        )}
 
+        {record.isError && (
+          <p
+            role="alert"
+            style={{ margin: "var(--space-2) 0 0", color: "var(--dangerText)" }}
+          >
+            {problemMessageOf(record.error, t)}
+          </p>
+        )}
+      </div>
       {mayCorrect && (
         <div
           style={{
             display: "flex",
             gap: "var(--gapActions)",
-            marginTop: "var(--space-2)",
+            alignItems: "center",
+            flex: "none",
           }}
         >
           {editing ? (
@@ -259,6 +286,10 @@ function EnrichedField({
                   reloads text the reader abandoned — and saving it would
                   overwrite the correction they just made with the one they
                   threw away. */}
+              {/* Edit first, as the quieter verb: the reader who disagrees
+                  reaches for it once in six rows. Confirm closes the row,
+                  filled, because confirming is what most rows get and the
+                  filled control is the one the eye lands on. */}
               <Button
                 onClick={() => {
                   setDraft(field.value);
@@ -269,15 +300,16 @@ function EnrichedField({
                   setEditing(true);
                 }}
               >
-                {t("contact.enriched.correct")}
+                {t("record.edit")}
               </Button>
               {/* Confirm is offered while nobody has ruled on the claim. A
-                  field a human already corrected has been ruled on — theirs is
-                  the value on display — so a second verdict on it would ask
+                  field a human already corrected has been ruled on, theirs is
+                  the value on display, so a second verdict on it would ask
                   them to confirm a machine reading the page no longer shows,
                   and `suppressed` is a decision to stop being asked at all. */}
               {!field.verdict && (
                 <Button
+                  variant="primary"
                   disabled={record.isPending}
                   onClick={() => record.mutate({ verdict: "confirmed" })}
                 >
@@ -287,14 +319,6 @@ function EnrichedField({
             </>
           )}
         </div>
-      )}
-      {record.isError && (
-        <p
-          role="alert"
-          style={{ margin: "var(--space-2) 0 0", color: "var(--dangerText)" }}
-        >
-          {problemMessageOf(record.error, t)}
-        </p>
       )}
     </div>
   );

@@ -91,8 +91,80 @@ test("a task nobody read out of a meeting offers no way back", async () => {
   expect(screen.queryByRole("button", { name: "Open original" })).toBeNull();
 });
 
-test("an email request opens the canonical message reader", async () => {
+test("a transcript refused on reopen is not painted from the cache", async () => {
   const user = userEvent.setup();
+  // The kind lookup and the reader share one query key, and the lookup's
+  // observer outlives the drawer — so `gcTime: 0` cannot evict between the
+  // first read and the second, and the refused reopen has a cached transcript
+  // sitting in `data`. Rendering that beside the error is what this holds.
+  let refused = false;
+  installFetchStub({
+    "GET /activities/task-1": () =>
+      jsonResponse({
+        id: "task-1",
+        kind: "task",
+        subject: "Create a comparison sheet with two products",
+        occurred_at: "2026-09-08T09:00:00Z",
+        is_done: false,
+        source_activity_id: "meeting-9",
+      }),
+    "GET /activities/meeting-9": () =>
+      refused
+        ? jsonResponse({ title: "Not found", status: 404 }, 404)
+        : jsonResponse({
+            id: "meeting-9",
+            kind: "meeting",
+            subject: "Akeneo — Vergleichsblatt",
+            body: "Lena: Ich mache ein Vergleichsblatt mit zwei Produkten.",
+            occurred_at: "2026-09-08T08:00:00Z",
+            version: 1,
+          }),
+  });
+  openTask();
+
+  await user.click(
+    await screen.findByRole("button", { name: "Open original" }),
+  );
+  await screen.findByText(/Vergleichsblatt mit zwei Produkten/);
+
+  // Access goes away, and the reader is opened again. Escape rather than the
+  // close control: the task drawer and the transcript reader are both dialogs
+  // and both draw a "Close", so naming one finds two.
+  refused = true;
+  await user.keyboard("{Escape}");
+  await user.click(
+    await screen.findByRole("button", { name: "Open original" }),
+  );
+
+  // The words are gone, not merely accompanied by an error.
+  await waitFor(() => {
+    expect(screen.queryByText(/Vergleichsblatt mit zwei Produkten/)).toBeNull();
+  });
+});
+
+test("a source that cannot be read says so instead of disappearing", async () => {
+  installFetchStub({
+    "GET /activities/task-1": () =>
+      jsonResponse({
+        id: "task-1",
+        kind: "task",
+        subject: "Create a comparison sheet with two products",
+        occurred_at: "2026-09-08T09:00:00Z",
+        is_done: false,
+        source_activity_id: "meeting-9",
+      }),
+    // The kind lookup fails, so nothing downstream knows which reader to be.
+    "GET /activities/meeting-9": () =>
+      jsonResponse({ title: "Server error", status: 500 }, 500),
+  });
+  openTask();
+
+  // A retry, rather than a panel that silently removed the evidence: the email
+  // panel's own failure arm cannot speak here, because it never mounts.
+  expect(await screen.findByRole("button", { name: "Try again" })).toBeTruthy();
+});
+
+test("an email request is read in the task, with no click to open it", async () => {
   installFetchStub({
     "GET /activities/task-1": () =>
       jsonResponse({
@@ -145,9 +217,23 @@ test("an email request opens the canonical message reader", async () => {
       }),
   });
   openTask();
-  await user.click(
-    await screen.findByRole("button", { name: "Open original" }),
-  );
+
+  // The message itself, with nothing pressed. It used to sit behind "Open
+  // original", which put a second drawer over the task and cost a click to see
+  // the one fact the task rests on.
   expect(await screen.findByText("Please send the report.")).toBeTruthy();
+  // The presentation's body, never the raw activity's — that endpoint is the
+  // normalised read, and the plain activity carries an unparsed copy.
   expect(screen.queryByText("Unparsed body must not be displayed")).toBeNull();
+  // And no button, because there is nothing left for one to open.
+  expect(screen.queryByRole("button", { name: "Open original" })).toBeNull();
+
+  // WHERE it sits is the requirement, not merely that it is present: the
+  // message reads under the task's own verbs, so a mail long enough to scroll
+  // cannot push the Done button and the date picker off the panel.
+  const moveTo = screen.getByText("Move to");
+  const message = screen.getByText("Please send the report.");
+  expect(
+    moveTo.compareDocumentPosition(message) & Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
 });

@@ -148,7 +148,7 @@ export function PairDecision({ item }: Readonly<{ item: WorklistItem }>) {
           // A list ITEM, so the two stay one list of two: the card is the
           // chrome and the `<ul>` is still what says there are two of them.
           <Card as="li" inset key={side.id} className="worklist-pair-card">
-            <span className="worklist-pair-name">{side.label}</span>
+            <span>{side.label}</span>
             {side.detail && <span className="t-caption">{side.detail}</span>}
             {/* The reader's best single signal for which side is the real
                 one, where the record type carries such a count. */}

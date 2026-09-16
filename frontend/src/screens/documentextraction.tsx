@@ -376,7 +376,7 @@ function ExtractionBody({
           count: formatNumber(extraction.fields.length, locale),
         })}
       </p>
-      <ul className="extraction-fields">
+      <ul>
         {extraction.fields.map((field) => (
           <GroundedField
             key={field.field}
@@ -444,7 +444,7 @@ function GroundedField({
     ? formatMoney(Number(field.value), currency, locale)
     : field.value;
   return (
-    <li className="extraction-field">
+    <li>
       <span>{label ? t(label) : field.field}</span>
       {draft === undefined ? (
         <EvidenceMark
@@ -497,7 +497,7 @@ function OmittedList({
     return null;
   }
   return (
-    <ul className="extraction-omitted">
+    <ul>
       {omitted.map((field) => {
         const label = FIELD_LABELS[field.field];
         return (

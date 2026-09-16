@@ -75,7 +75,7 @@ function PipelineRung({ rung }: Readonly<{ rung: Rung }>) {
       <span className="pipeline-ladder__mark" aria-hidden="true" />
       <div className="pipeline-ladder__body">
         <p className="pipeline-ladder__head">
-          <span className="pipeline-ladder__stage">{stageName(rung, t)}</span>
+          <span>{stageName(rung, t)}</span>
           <Badge tone={STATUS_TONE[rung.status]}>
             {t(`pipeline.status.${rung.status}`)}
           </Badge>
@@ -99,11 +99,7 @@ function SubjectNote({ rung }: Readonly<{ rung: Rung }>) {
   if (rung.subject_kind === "message") {
     return null;
   }
-  return (
-    <span className="pipeline-ladder__subject">
-      {t(`pipeline.subject.${rung.subject_kind}`)}
-    </span>
-  );
+  return <span>{t(`pipeline.subject.${rung.subject_kind}`)}</span>;
 }
 
 function RungReason({ rung }: Readonly<{ rung: Rung }>) {

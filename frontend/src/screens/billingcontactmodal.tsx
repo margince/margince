@@ -129,7 +129,7 @@ export function BillingContactModal({
             />
           )}
         </Field>
-        <p className="t-caption mute">{t("billing.roleNote")}</p>
+        <p className="t-caption">{t("billing.roleNote")}</p>
         {write.isError && (
           <p role="alert">{problemMessageOf(write.error, t)}</p>
         )}

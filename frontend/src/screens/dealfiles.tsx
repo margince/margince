@@ -150,7 +150,7 @@ function FileRow({
         >
           {file.title || file.filename}
         </a>
-        <p className="t-caption deal-file-origin">
+        <p className="t-caption">
           {doc.origin
             ? t("files.origin", {
                 who: doc.origin.counterparty_email ?? t("files.originUnknown"),

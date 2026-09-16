@@ -333,11 +333,23 @@
   overflow-wrap: anywhere;
 }
 
+/* The focus-context drawer's head, which carries a heading AND a way back to
+   the queue behind it — the one head here that has two things to divide. The
+   queue drawer's own head does NOT use it: that one holds a title and nothing
+   else, so it takes the shared band's spacing and adds nothing. */
 .brief-queue-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
+}
+
+/* The queue is EMBEDDED here, so it must not also pay the page gutter: the
+   drawer body already spaces its content, and the worklist's own page wrapper
+   on top of it made this the one drawer whose content sat twice as far in as
+   every other drawer's. */
+.brief-queue-body > .wrap {
+  padding: 0;
 }
 
 /* Queue rows respond to the drawer's width, not the viewport behind it. */

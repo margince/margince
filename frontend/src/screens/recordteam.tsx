@@ -1,5 +1,7 @@
+import { X } from "lucide-react";
 import { useState } from "react";
 import { Button } from "../design-system/atoms";
+import { IconAction } from "../design-system/iconaction";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
 import { useT } from "../i18n";
@@ -77,7 +79,6 @@ export function RecordTeam({
   const body = (
     <>
       <PanelBody>
-        <p className="t-caption mute">{t("assignments.noAccessNote")}</p>
         {/* A refused end is the one failure here a reader must not have to
             infer. The button re-enables when the request settles either way,
             so without this a responsibility that is still standing looks
@@ -96,24 +97,31 @@ export function RecordTeam({
             {null}
           </SurfaceState>
         ) : (
-          <ul className="firmo assignments">
-            {rows.map((row) => (
-              <AssignmentRow
-                key={row.id}
-                row={row}
-                canWrite={canWrite}
-                busy={archive.isPending}
-                onChange={() => setEditing(row)}
-                onRemove={() => archive.mutate(row.id)}
-              />
-            ))}
-          </ul>
+          <>
+            {/* Said only once there is a row to misread as access: an empty
+                record has no role for a reader to mistake for a door, so the
+                detail below already covers it and this line would just repeat
+                it. */}
+            <p className="t-caption">{t("assignments.noAccessNote")}</p>
+            <ul className="firmo assignments">
+              {rows.map((row) => (
+                <AssignmentRow
+                  key={row.id}
+                  row={row}
+                  canWrite={canWrite}
+                  busy={archive.isPending}
+                  onChange={() => setEditing(row)}
+                  onRemove={() => archive.mutate(row.id)}
+                />
+              ))}
+            </ul>
+          </>
         )}
+        {/* Under the rows in the bare shape too, where the panel's own verb
+            band would have put it: on the body's own left edge, the same x
+            the Active deals section's own verb sits on. */}
+        {bare && assign && <div className="card-actions">{assign}</div>}
       </PanelBody>
-      {/* Under the rows in the bare shape too, where the panel's own verb band
-          would have put it: the rail's other slices end in their verb the same
-          way, at the same size. */}
-      {bare && assign && <div className="card-actions">{assign}</div>}
       {modal}
     </>
   );
@@ -148,8 +156,9 @@ function AssignmentRow({
   const t = useT();
   return (
     <li>
-      {/* The role over the name it belongs to. Wrapped so the verbs below sit
-          beside the PAIR rather than becoming a third column of it. */}
+      {/* The role over the name it belongs to. Wrapped so a long team name
+          wraps within the pair rather than pushing the verbs below off the
+          row's own column. */}
       <span className="assignrow-pair">
         <span className="t-eyebrow">
           {row.role_label ?? row.role_key}
@@ -167,7 +176,9 @@ function AssignmentRow({
         <span className="assignrow-verbs">
           {/* Named with the row's subject, because a list of responsibilities
               draws one of these per row and "Change" alone tells a reader on a
-              screen reader nothing about which one they are on. */}
+              screen reader nothing about which one they are on. Small: the
+              rail is narrow enough that a full-size pair pushed the role and
+              name onto two wrapped lines each. */}
           <Button
             variant="ghost"
             onClick={onChange}
@@ -176,14 +187,16 @@ function AssignmentRow({
           >
             {t("assignments.change")}
           </Button>
-          <Button
-            variant="ghost"
-            onClick={onRemove}
+          {/* Squared, like the fact rows' own removal verb: the X glyph is
+              already the word "remove" to a reader who has met it once, and
+              the row still owes the same named refusal a full-word button
+              would. */}
+          <IconAction
+            label={t("assignments.removeOne", { who: row.subject_name })}
+            icon={<X aria-hidden />}
             disabled={busy}
-            aria-label={t("assignments.removeOne", { who: row.subject_name })}
-          >
-            {t("assignments.remove")}
-          </Button>
+            onClick={onRemove}
+          />
         </span>
       )}
     </li>

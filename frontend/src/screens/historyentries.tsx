@@ -116,9 +116,7 @@ function EntryFieldDetail({
     <ul className="entry-fields">
       {changes.map((change) => (
         <li key={change.field} className="entry-field">
-          <span className="entry-field-name">
-            {historyFieldLabel(change.field, t)}
-          </span>
+          <span>{historyFieldLabel(change.field, t)}</span>
           <HistoryFieldDiff
             field={change.field}
             oldValue={change.oldValue}
@@ -261,7 +259,7 @@ function UndoButton({
       >
         {t(label)}
       </Button>
-      {refused && <span className="entry-undo-refusal">{refused}</span>}
+      {refused && <span>{refused}</span>}
       <ConfirmModal
         open={confirming}
         onClose={() => setConfirming(false)}
@@ -284,9 +282,7 @@ function UndoButton({
         <ul className="entry-fields">
           {changes.map((change) => (
             <li key={change.field} className="entry-field">
-              <span className="entry-field-name">
-                {historyFieldLabel(change.field, t)}
-              </span>
+              <span>{historyFieldLabel(change.field, t)}</span>
               <span>
                 {historyValue(change.field, change.oldValue, {
                   currency,
@@ -350,7 +346,7 @@ function HistoryEntryRow({
             // sentence above was fixed to avoid.
             renderUser={() => entry.actor_name}
           />
-          {note && <span className="entry-note t-caption">{note}</span>}
+          {note && <span className="t-caption">{note}</span>}
         </span>
         {edge ? (
           <HistoryEdgeDetail edge={edge} />

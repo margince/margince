@@ -5,10 +5,26 @@
 
    The work column is the one that grows, so the rails keep a fixed share and
    the layout folds to one column before either becomes unreadably narrow. */
+
+/* The details pane's track width, as a REGISTERED length. Declared rather than
+   plain, because an unregistered custom property is a token string to the
+   animation engine: it would flip at the halfway point instead of
+   interpolating. The same declaration, for the same reason, as `--railW` in
+   app/shell.css — the sidebar is the other page column that arrives and
+   leaves, and each file registers the width its own column travels. */
+@property --asideW {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
 .page-zones {
   display: grid;
   gap: var(--gapCards);
   align-items: start;
+  /* The pane's open width, spelled ONCE: it is both the track the pane holds
+     and the width its cards keep while that track is travelling. */
+  --asideOpenW: 360px;
+  --asideW: var(--asideOpenW);
 }
 /* The story always gets the largest share, whichever rails exist — and it is
    FIRST in the DOM (pagezones.tsx), so this template is what draws the left
@@ -17,7 +33,7 @@
    an `order` is exactly what makes reading order and visual order disagree
    (WCAG 2.2 §1.3.2). Nothing in this file may use one. */
 .page-zones-both {
-  grid-template-columns: minmax(0, 3fr) minmax(0, 5fr) 360px;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 5fr) var(--asideW);
   grid-template-areas: "rail main aside";
 }
 .page-zones-rail {
@@ -31,8 +47,56 @@
    were paid for, and "Freight forwarding" broke across three lines. The work
    column takes the rest. */
 .page-zones-aside {
-  grid-template-columns: minmax(0, 1fr) 360px;
+  grid-template-columns: minmax(0, 1fr) var(--asideW);
   grid-template-areas: "main aside";
+}
+/* Folded away: the SAME template with the pane's track at zero, never a
+   different named template — two templates do not interpolate, so the column
+   would jump where it has to travel. The work column takes the gutter back as
+   the track goes, because a gutter measured against a column that is no longer
+   there is a 16px band standing between the work and the page's right edge. */
+.page-zones[data-aside="closed"] {
+  --asideW: 0px;
+}
+.page-zones[data-aside="closed"] > .page-zones-main {
+  margin-inline-end: calc(-1 * var(--gapCards));
+}
+/* Armed one frame after mount (pagezones.tsx), which is what keeps a page that
+   LOADS with its pane open — or with it folded — from animating into the state
+   it opened in. Nothing else in this file moves.
+
+   `--dur-move` says why it is 200ms: the details toggle is a repeated,
+   short-distance desktop interaction, the same profile the sidebar collapse
+   times at the same duration. */
+.page-zones[data-motion="armed"] {
+  transition: --asideW var(--dur-move) var(--ease-out);
+}
+.page-zones[data-motion="armed"] > .page-zones-main {
+  transition: margin-inline-end var(--dur-move) var(--ease-out);
+}
+/* Arriving is nothing this file spells. The pane is a fresh element every time
+   it opens, so it is an arriving BLOCK, and the page it opens on already says
+   what one of those does — the 8px rise and the fade of `.arrive-stack`
+   (design-system/enter.css), which the record page marks its zones grid with.
+   A second arrival here would play over the top of that one.
+
+   Leaving has no such owner: the pane drifts toward the edge it is folding
+   into over the same duration the track takes, so the two read as one movement
+   rather than as a column closing on content that stayed put.
+
+   A TRANSITION rather than a keyframe, and the case that separates them is the
+   reader who changes their mind half way through. A transition reverses from
+   wherever it has reached; a keyframe is simply dropped when the state leaves
+   it, and the pane then came back from a third of the way out at nothing — a
+   360px column opening on empty page. */
+.page-zones[data-motion="armed"] > .page-zones-aside-column {
+  transition:
+    opacity var(--dur-move) var(--ease-out),
+    transform var(--dur-move) var(--ease-out);
+}
+.page-zones > .page-zones-aside-column[data-state="closing"] {
+  opacity: 0;
+  transform: translateX(var(--space-2));
 }
 .page-zones > .page-zones-main {
   grid-area: main;
@@ -50,6 +114,20 @@
    here, so the rule cannot go short when a column is added. */
 .page-zones > * {
   min-width: 0;
+}
+/* Beside the work rather than under it, the pane is a fixed track, so its cards
+   keep the OPEN width while that track travels and the column clips them: a
+   card that re-wraps a dozen times on its way out reads as a smear rather than
+   as a column leaving. The clip costs the pane nothing at rest — its width and
+   its cards' width are the same number — and every layer it opens (a select, a
+   popover, a tooltip) is portalled to the body. */
+@media (min-width: 1201px) {
+  .page-zones > .page-zones-aside-column {
+    overflow: hidden;
+  }
+  .page-zones > .page-zones-aside-column > * {
+    width: var(--asideOpenW);
+  }
 }
 @media (max-width: 1200px) {
   .page-zones {
@@ -80,9 +158,29 @@
   .page-zones-aside {
     grid-template-columns: minmax(0, 1fr);
   }
+  /* Folded, the pane is a ROW under the work column rather than a track beside
+     it: there is no width for it to travel and no gutter to hand back, so a
+     closed pane is simply absent — which is what this fold did before the pane
+     could travel at all. */
+  .page-zones[data-aside="closed"] > .page-zones-aside-column {
+    display: none;
+  }
+  .page-zones[data-aside="closed"] > .page-zones-main {
+    margin-inline-end: 0;
+  }
 }
 @media (max-width: 720px) {
   .page-zones {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+/* Reduce means reduce: the pane arrives and leaves at once, and the presence
+   holding it mounted finds no animation to wait for, so it goes in the same
+   frame the reader closed it. */
+@media (prefers-reduced-motion: reduce) {
+  .page-zones[data-motion="armed"],
+  .page-zones[data-motion="armed"] > .page-zones-main,
+  .page-zones[data-motion="armed"] > .page-zones-aside-column {
+    transition: none;
   }
 }

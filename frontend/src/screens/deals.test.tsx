@@ -1147,13 +1147,14 @@ describe("DealsScreen", () => {
     );
 
     expect(totalsAsked).toBe(false);
-    // Once per stage column, exactly. Each one owes the reader a reason where
-    // its figure would be, and "more than zero" would pass with one column
-    // explaining itself while the rest drew blanks.
+    // Once per stage column that holds a deal, exactly — here only s1. A
+    // column with cards owes the reader a reason where its figure would be; an
+    // empty column has no sum to refuse, and a board of empty columns each
+    // repeating the sentence read as a board of errors.
     expect(
       screen.getAllByText("Loaded only — filter to My deals for the total")
         .length,
-    ).toBe(stages.length);
+    ).toBe(1);
   });
 
   // A tag filter withholds totals too — the report has no tag field and sending
@@ -1167,9 +1168,10 @@ describe("DealsScreen", () => {
       expect(screen.getAllByText("Fleet retrofit")[0]).toBeTruthy(),
     );
 
+    // Only the column holding a deal (s1) says so — empty columns stay quiet.
     expect(
       screen.getAllByText("Loaded only — no total while a tag filters").length,
-    ).toBe(stages.length);
+    ).toBe(1);
     expect(
       screen.queryByText("Loaded only — filter to My deals for the total"),
     ).toBeNull();

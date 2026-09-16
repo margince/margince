@@ -589,7 +589,7 @@ describe("what the ranked queue tells a reader", () => {
         created_at: "2026-08-31T08:00:00Z",
       },
     );
-    const { container } = renderWorklist();
+    renderWorklist();
 
     await screen.findByText(/Send the follow-up/);
     // A queue that can rank a decision and not answer it sends the reader to a
@@ -601,9 +601,7 @@ describe("what the ranked queue tells a reader", () => {
     // ceiling and pushed the page's first action off a phone screen. So the row
     // offers the verb and the drawer holds the card, and this asserts both
     // halves — a row that opened nothing would pass on the button alone.
-    await waitFor(() => {
-      expect(container.querySelector(".worklist-row-decision")).toBeTruthy();
-    });
+    await screen.findByRole("button", { name: "Decide" });
     // Not answerable until the reader asks: the queue draws no Accept.
     expect(screen.queryByRole("button", { name: "Approve email" })).toBeNull();
     await userEvent.click(
@@ -996,15 +994,18 @@ describe("the address opens a queue", () => {
 // click does not do… the label moves back when it lands". This is the assertion
 // that the two halves stay together — mutate either and one of these fails.
 describe("the draft_reply verb says what the click does", () => {
-  function replyRow(subjectType: string, id: string): WorklistItem {
+  function replyRow(
+    subjectType: NonNullable<WorklistItem["subject"]>["type"],
+    id: string,
+  ): WorklistItem {
     return row({
       id: `m-${id}`,
-      source: "waiting_customer",
+      source: "customer_waiting",
       category: "customer_waiting",
       title: "Aster Handel",
       subject: { type: subjectType, id },
       move: { action: "draft_reply", activity_id: "a-1" },
-    } as unknown as Partial<WorklistItem>);
+    });
   }
 
   it("names the ACT where the address opens the composer", async () => {

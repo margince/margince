@@ -65,7 +65,7 @@ export function SchedulePanel({
   );
   return (
     <section id="brief-schedule">
-      <Panel title={t("brief.panel.schedule")} className="rail-panel">
+      <Panel title={t("brief.panel.schedule")}>
         {/* The rows are `PanelRow`s and carry the panel's own gutter, so they
             sit in the Panel directly — inside a `PanelBody` they would be
             padded twice and read as an indented block against every other

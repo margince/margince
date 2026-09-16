@@ -240,7 +240,7 @@ function RunProgress({
   return (
     <>
       {staleForMs !== null && (
-        <p className="t-caption backfill-stale">
+        <p className="t-caption">
           {t("backfill.staleUpdated", {
             duration: formatDuration(staleForMs, locale),
           })}

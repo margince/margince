@@ -320,7 +320,7 @@ function FieldRow({
                     since a proposal field carries a single evidence pair, but
                     said as a count rather than assumed. */}
                 {row.evidence !== null && (
-                  <span className="ob-triage-source t-caption">
+                  <span className="t-caption">
                     {/* A row carries at most one evidence record, so this
                         count is the literal one — a single digit no locale
                         groups or punctuates differently. */}

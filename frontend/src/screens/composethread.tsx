@@ -405,7 +405,7 @@ export function ConversationChoices({
                     <span className="compose-choice-subject">
                       {conversation.subject}
                     </span>
-                    <span className="compose-choice-meta t-caption">
+                    <span className="t-caption">
                       {[
                         conversation.counterparts,
                         formatDate(conversation.atIso, locale, zone),

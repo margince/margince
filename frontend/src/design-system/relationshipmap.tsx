@@ -377,7 +377,7 @@ function Node({
       )}
       {node.engagementLabel && (
         <text
-          className={`rmap-pill rmap-pill-${node.engagement ?? "untried"}`}
+          className={`rmap-pill-${node.engagement ?? "untried"}`}
           x={placed.x + 12}
           y={placed.y + 54}
         >

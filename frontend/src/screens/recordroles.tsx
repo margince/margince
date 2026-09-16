@@ -147,7 +147,7 @@ function RecordRoleRow({
       </Field>
       {/* Where the role may be held, and by whom. Read-only, because narrowing
           either set is refused while a live assignment depends on it. */}
-      <span className="t-caption mute">
+      <span className="t-caption">
         {role.record_types.join(", ")} · {role.assignee_kinds.join(", ")}
       </span>
       <span className="lead-vocab-flags">

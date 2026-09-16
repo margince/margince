@@ -39,3 +39,29 @@ func TestHumanUserIDReadsAContactAndOnlyAContact(t *testing.T) {
 		})
 	}
 }
+
+func TestSystemMintedIDMatchesTheNamespaceAndNothingBesideIt(t *testing.T) {
+	cases := []struct {
+		name string
+		id   string
+		want bool
+	}{
+		{"the bus's bare id", "system", true},
+		{"a job's namespaced id", "system:time-scan", true},
+		// A prefix without the ':' separator is a different word, not a
+		// namespace member: a connector or workspace named "systematic"
+		// must not have its rows read as the product's own.
+		{"a word that merely starts with system", "systematic", false},
+		{"a human", "human:2b0d7b3d-0000-7000-8000-000000000000", false},
+		{"an agent", "agent:deepread", false},
+		{"a connector", "connector:gmail", false},
+		{"an empty id", "", false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := SystemMintedID(tc.id); got != tc.want {
+				t.Fatalf("SystemMintedID(%q) = %t, want %t", tc.id, got, tc.want)
+			}
+		})
+	}
+}

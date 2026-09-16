@@ -64,7 +64,7 @@ export function AddTagDialog({
   return (
     <Modal open onClose={onClose} labelledBy={titleID}>
       <div className="tagpicker">
-        <Heading size="large" id={titleID} className="tagpicker-title">
+        <Heading size="large" id={titleID}>
           {t("tags.add")}
         </Heading>
         <SearchField

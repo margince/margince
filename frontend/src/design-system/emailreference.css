@@ -65,8 +65,11 @@
   cursor: pointer;
 }
 
+/* The accent's TEXT ink, the one every other pressable word on a page wears:
+ * the fill token is a second green a reader cannot tell from the first, and
+ * two greens for one kind of thing read as two kinds. */
 .emailref--open .emailref__subject {
-  color: var(--accent);
+  color: var(--accentText);
 }
 
 .emailref--open:hover .emailref__subject {

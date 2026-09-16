@@ -680,9 +680,9 @@ function LinkedinCard({
         onOpen={() => setOpen(true)}
       />
 
-      {status === "pending" && open && (
+      {status === "pending" && (
         <ConnectDialog
-          open
+          open={open}
           // X, Escape, and backdrop all resolve to this ONE handler, so
           // guarding it here is the one place that keeps every dismissal
           // route from racing the save: a successful PUT landing after the

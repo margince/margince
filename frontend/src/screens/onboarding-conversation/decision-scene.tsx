@@ -164,9 +164,7 @@ function CandidateCard({
           // strings on a record every later screen quotes, so the string itself
           // is shown, verbatim, before the answer is given.
           <span className="ob-decision-writes">
-            <span className="ob-decision-writes-lead">
-              {t("ob.conv.scene.writes")}
-            </span>
+            <span>{t("ob.conv.scene.writes")}</span>
             <code>{writes}</code>
           </span>
         )}

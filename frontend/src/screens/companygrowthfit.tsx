@@ -214,7 +214,7 @@ function GrowthFitVerdict({ fit }: Readonly<{ fit: GrowthFit }>) {
           <Badge tone={BAND_TONES[fit.band]}>{t(BAND_LABELS[fit.band])}</Badge>{" "}
           {/* Both counts, always. A proportion without its denominator is not a
               completeness figure. */}
-          <span className="co-growth-fit-completeness">
+          <span>
             {t("co.growthFit.completeness", {
               present: formatNumber(present, locale),
               expected: formatNumber(expected, locale),
@@ -362,7 +362,7 @@ function GrowthFitReasons({
       )}
       {missing && missing.length > 0 && (
         <GrowthFitRow label="co.growthFit.missing">
-          <p className="co-growth-fit-missing">{missing.join(", ")}</p>
+          <p>{missing.join(", ")}</p>
         </GrowthFitRow>
       )}
     </>

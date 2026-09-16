@@ -9,6 +9,7 @@ import { ifMatch, requireVersion } from "../api/version";
 import { useCanWrite } from "../app/capability";
 import type { EntityKind } from "../app/entity";
 import { isOption } from "../app/options";
+import { SEARCH_HIT_KIND_KEY } from "../app/searchkinds";
 import {
   Badge,
   Button,
@@ -448,26 +449,12 @@ export function AddRelationshipAction({
               )}
             </Field>
           )}
-          <Field label={t("rel.role")}>
-            {(control) => (
-              <TextInput
-                {...control}
-                value={role}
-                onChange={(event) => setRole(event.target.value)}
-              />
-            )}
-          </Field>
-          <Field label={t("rel.startedAt")}>
-            {(control) => (
-              <TextInput
-                {...control}
-                type="date"
-                value={startedAt}
-                onChange={(event) => setStartedAt(event.target.value)}
-              />
-            )}
-          </Field>
-          <p>{t("rel.pickCounterparty")}</p>
+          {/* The counterparty comes before Role and Started: a reader picks
+              WHAT they are linking to before describing the edge, and the
+              caption names the kind being searched rather than a generic
+              "other side", reusing the same singular each search result
+              screen already carries for its own kind. */}
+          <p className="t-caption">{t(SEARCH_HIT_KIND_KEY[entity])}</p>
           <SearchField
             placeholder={t("merge.searchPlaceholder")}
             aria-label={t("merge.searchPlaceholder")}
@@ -495,6 +482,25 @@ export function AddRelationshipAction({
               </li>
             ))}
           </ul>
+          <Field label={t("rel.role")}>
+            {(control) => (
+              <TextInput
+                {...control}
+                value={role}
+                onChange={(event) => setRole(event.target.value)}
+              />
+            )}
+          </Field>
+          <Field label={t("rel.startedAt")}>
+            {(control) => (
+              <TextInput
+                {...control}
+                type="date"
+                value={startedAt}
+                onChange={(event) => setStartedAt(event.target.value)}
+              />
+            )}
+          </Field>
           {target && (
             <p style={{ marginBottom: "var(--space-1)" }}>
               {t("rel.addConfirm", {

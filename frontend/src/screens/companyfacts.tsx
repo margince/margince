@@ -83,14 +83,14 @@ function Pipeline({ view }: Readonly<{ view?: Company360 }>) {
   const t = useT();
   const { locale } = useLocale();
   if (!view) {
-    return <span className="co-facts-quiet">{t("co.facts.reading")}</span>;
+    return <span>{t("co.facts.reading")}</span>;
   }
   const commercial = view.state_strip?.commercial;
   if (!commercial) {
-    return <span className="co-facts-quiet">{t("state.withheld")}</span>;
+    return <span>{t("state.withheld")}</span>;
   }
   if (commercial.open_count === 0) {
-    return <span className="co-facts-quiet">{t("co.facts.noDeals")}</span>;
+    return <span>{t("co.facts.noDeals")}</span>;
   }
   return <span>{pricedTotal(commercial, locale, t)}</span>;
 }
@@ -117,17 +117,17 @@ function InFlight({ view }: Readonly<{ view?: Company360 }>) {
   const plural = usePlural();
   const { locale } = useLocale();
   if (!view) {
-    return <span className="co-facts-quiet">{t("co.facts.reading")}</span>;
+    return <span>{t("co.facts.reading")}</span>;
   }
   if (!view.deals || !view.projects) {
-    return <span className="co-facts-quiet">{t("state.withheld")}</span>;
+    return <span>{t("state.withheld")}</span>;
   }
   const deals = view.deals.data.length;
   const projects = view.projects.filter(
     (project) => project.phase !== "closed",
   ).length;
   if (deals === 0 && projects === 0) {
-    return <span className="co-facts-quiet">{t("co.facts.nothing")}</span>;
+    return <span>{t("co.facts.nothing")}</span>;
   }
   // Each half carries its own plural. One shared "{deals} deals · {projects}
   // projects" printed "1 projects" on any account with a single project, and

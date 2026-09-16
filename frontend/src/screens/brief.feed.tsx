@@ -168,7 +168,14 @@ function AgendaRows({
     <li key={`${item.source}-${item.id}`}>
       <Panel
         footer={
-          focus && onContext && (hasPane(item) || item.source === "task") ? (
+          // A meeting earns the door too. Its subject is the ACTIVITY rather
+          // than a contact, so `hasPane` answers no for it — and the card stood
+          // with three verbs and no way through to the meeting they were about.
+          focus &&
+          onContext &&
+          (hasPane(item) ||
+            item.source === "task" ||
+            item.source === "meeting_outcome") ? (
             <Button variant="ghost" onClick={() => onContext(item)}>
               {t("brief.focus.context")}
             </Button>

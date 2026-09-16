@@ -1,11 +1,11 @@
 {
   "totals": {
-    "sites": 45,
-    "sites_best_current": 42,
+    "sites": 46,
+    "sites_best_current": 41,
     "sites_best_partial": 0,
-    "sites_best_stale": 3,
-    "sites_absent": 0,
-    "scenarios": 163,
+    "sites_best_stale": 4,
+    "sites_absent": 1,
+    "scenarios": 167,
     "records": 76,
     "bindings": 10
   },
@@ -17,9 +17,9 @@
         "env": "eu_hosted"
       },
       "sites": 39,
-      "sites_current": 35,
+      "sites_current": 34,
       "sites_partial": 0,
-      "sites_stale": 4,
+      "sites_stale": 5,
       "runs": 444,
       "passed": 387,
       "reliability": 0.8716216216216216,
@@ -177,9 +177,9 @@
         "env": "eu_hosted"
       },
       "sites": 38,
-      "sites_current": 35,
+      "sites_current": 34,
       "sites_partial": 0,
-      "sites_stale": 3,
+      "sites_stale": 4,
       "runs": 435,
       "passed": 322,
       "reliability": 0.7402298850574712,
@@ -3583,6 +3583,38 @@
       ]
     },
     {
+      "task": "request_settlement",
+      "site": "request_settle",
+      "key": "request_settlement/request_settle",
+      "scope": "single_call",
+      "missing_context_scopes": [],
+      "best_state": "absent",
+      "recommended": null,
+      "scenarios": [
+        {
+          "name": "a_reply_that_says_nothing_either_way_is_answered_unsure",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/request_settlement/unsure_when_the_words_do_not_say_01.yaml"
+        },
+        {
+          "name": "an_answer_settles_a_request_and_an_acknowledgement_does_not",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/request_settlement/answered_and_acknowledged_01.yaml"
+        },
+        {
+          "name": "answering_one_of_two_asks_leaves_the_other_owed",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/request_settlement/partial_answer_and_reask_01.yaml"
+        },
+        {
+          "name": "declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague",
+          "expects": "accepted",
+          "file": "backend/internal/compose/aicert/corpus/request_settlement/declined_and_handed_on_01.yaml"
+        }
+      ],
+      "records": []
+    },
+    {
       "task": "signal_extract",
       "site": "thread_events",
       "key": "signal_extract/thread_events",
@@ -4396,17 +4428,8 @@
       "missing_context_scopes": [
         "identity"
       ],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "gemini",
-          "model": "gemini-3.1-flash-lite",
-          "env": "eu_hosted"
-        },
-        "band": "not_supported",
-        "reliability": 0.6666666666666666,
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
         {
           "name": "contact_brief_reads_what_was_said",
@@ -4426,9 +4449,9 @@
             "model": "gemini-3.1-flash-lite",
             "env": "eu_hosted"
           },
-          "state": "current",
+          "state": "stale",
           "band": "not_supported",
-          "scenarios_measured": 2,
+          "scenarios_measured": 0,
           "scenarios_total": 2,
           "runs": 6,
           "passed": 4,
@@ -4441,7 +4464,17 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and the grader): contact_brief_reads_what_was_said, contact_brief_stays_silent_about_what_the_reader_may_not_see",
+          "stale_cause": {
+            "prompt_changed": [
+              "contact_brief_reads_what_was_said",
+              "contact_brief_stays_silent_about_what_the_reader_may_not_see"
+            ],
+            "grader_changed": [
+              "contact_brief_reads_what_was_said",
+              "contact_brief_stays_silent_about_what_the_reader_may_not_see"
+            ]
+          }
         },
         {
           "binding": {
@@ -4449,9 +4482,9 @@
             "model": "openai/gpt-oss-120b",
             "env": "eu_hosted"
           },
-          "state": "current",
+          "state": "stale",
           "band": "not_supported",
-          "scenarios_measured": 2,
+          "scenarios_measured": 0,
           "scenarios_total": 2,
           "runs": 6,
           "passed": 1,
@@ -4464,7 +4497,17 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and the grader): contact_brief_reads_what_was_said, contact_brief_stays_silent_about_what_the_reader_may_not_see",
+          "stale_cause": {
+            "prompt_changed": [
+              "contact_brief_reads_what_was_said",
+              "contact_brief_stays_silent_about_what_the_reader_may_not_see"
+            ],
+            "grader_changed": [
+              "contact_brief_reads_what_was_said",
+              "contact_brief_stays_silent_about_what_the_reader_may_not_see"
+            ]
+          }
         }
       ]
     },

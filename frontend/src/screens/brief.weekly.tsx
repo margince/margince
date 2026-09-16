@@ -95,7 +95,7 @@ export function WeeklySection() {
                 {/* When it was written, which is what makes the badge a fact
                     rather than a decoration — a reader can tell a week closed
                     an hour ago from one closed on Monday. */}
-                <span className="t-caption brief-weekly-written">
+                <span className="t-caption">
                   {t("brief.weekly.written", {
                     at: formatDateTime(
                       review.data.generated_at,
@@ -303,7 +303,7 @@ function WeeklyBody({
     }
     const delta = now - before;
     return (
-      <span className="brief-weekly-delta t-caption">
+      <span className="t-caption">
         {t("brief.weekly.sincePrior", {
           delta: formatSignedNumber(delta, locale),
           week: formatDate(
@@ -430,7 +430,7 @@ function WeeklyBody({
                 >
                   {deal.label}
                 </a>
-                <span className="brief-weekly-deal-outcome t-caption">
+                <span className="t-caption">
                   {outcomeWord(t, deal.outcome)}
                   {deal.to_stage_label ? ` · ${deal.to_stage_label}` : ""}
                 </span>

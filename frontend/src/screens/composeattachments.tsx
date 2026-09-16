@@ -337,8 +337,9 @@ export function useCarriageBlocks(
   provider: string | undefined,
   files: readonly ChosenFile[],
   body: string,
+  enabled = true,
 ): CarriageViolation[] {
-  const carriageFor = useProviderCarriage();
+  const carriageFor = useProviderCarriage(enabled);
   const carriage = provider ? carriageFor(provider) : undefined;
   return carriage ? carriageViolations(carriage, files, body) : [];
 }

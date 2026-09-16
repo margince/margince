@@ -4,8 +4,8 @@
 package compose
 
 // What a data reset does to Postgres: which tables it sweeps, the order it
-// discovers at runtime, the outbox drain, the overlay-mode revert, and the
-// cf_* column drop that runs on the owner pool afterwards. datareset.go holds
+// discovers at runtime, the outbox drain, and the cf_* column drop that runs
+// on the owner pool afterwards. datareset.go holds
 // the transport and the orchestration that calls these; datareset_runtime.go
 // holds the non-Postgres surfaces.
 

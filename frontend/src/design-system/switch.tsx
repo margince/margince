@@ -172,7 +172,7 @@ export function Switch({
         {/* The track's knob. Decorative: the state is already on aria-checked,
             and announcing it twice is how a reader hears "on on". */}
         <span className="switchknob" aria-hidden="true" />
-        <span className={labelHidden ? "sr-only" : "switchlabel"}>{label}</span>
+        <span className={labelHidden ? "sr-only" : ""}>{label}</span>
         {/* After the label rather than over the knob: the knob is the only
             thing showing which way the setting is currently set, and covering
             it during the write hides the state the reader is changing FROM. */}

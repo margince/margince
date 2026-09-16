@@ -72,7 +72,7 @@ function CommentRow({
   const { locale } = useLocale();
   const buyer = comment.author.side === "buyer";
   return (
-    <li className={buyer ? "thread-buyer" : "thread-seller"}>
+    <li>
       <Avatar name={comment.author.name} size="xs" />
       <div className="thread-comment">
         <span className="t-caption thread-author">

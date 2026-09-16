@@ -1,10 +1,14 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { useState } from "react";
 
-import { api } from "../api/client";
+import { api, FIRST_PAGE } from "../api/client";
 import type { components } from "../api/schema";
 import { useCanWrite } from "../app/capability";
 import { Button, EmptyState, Textarea } from "../design-system/atoms";
@@ -12,7 +16,7 @@ import { Panel, PanelBody } from "../design-system/panel";
 import { formatDate } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
-import { problemMessageOf, throwProblem } from "./common";
+import { LoadMoreButton, problemMessageOf, throwProblem } from "./common";
 
 type ConfirmSubmission = components["schemas"]["ConfirmSubmission"];
 
@@ -50,17 +54,25 @@ export function ConfirmSubmissionsPanel() {
   const [note, setNote] = useState("");
   const [failure, setFailure] = useState("");
 
-  const query = useQuery({
+  // PAGED, because the queue is as long as the subjects make it. A limit with
+  // no continuation answered the first page and said nothing about the rest, so
+  // a reviewer who worked to the bottom of the list had seen the oldest fifty
+  // and none of what arrived after — and the screen gave no sign a tail
+  // existed. The screen is what a reviewer actually works, so the fix has to
+  // reach here and not only the wire.
+  const query = useInfiniteQuery({
     queryKey: ["confirm-submissions"],
-    queryFn: async () => {
+    initialPageParam: FIRST_PAGE,
+    queryFn: async ({ pageParam }) => {
       const { data, error } = await api.GET("/confirm-submissions", {
-        params: { query: { resolved: false } },
+        params: { query: { resolved: false, cursor: pageParam ?? undefined } },
       });
       if (error) {
         throwProblem(error);
       }
       return data;
     },
+    getNextPageParam: (last) => last.page.next_cursor ?? null,
   });
 
   const resolve = useMutation({
@@ -102,7 +114,7 @@ export function ConfirmSubmissionsPanel() {
   });
 
   const tz = viewerZone();
-  const rows = query.data?.data ?? [];
+  const rows = query.data?.pages.flatMap((page) => page.data) ?? [];
   return (
     <Panel title={t("privacy.corrections")}>
       <PanelBody>
@@ -125,7 +137,7 @@ export function ConfirmSubmissionsPanel() {
             {t("privacy.correctionsEmptySub")}
           </EmptyState>
         ) : (
-          <ul className="correction-list">
+          <ul>
             {rows.map((row) => (
               <CorrectionRow
                 key={row.id}
@@ -147,6 +159,7 @@ export function ConfirmSubmissionsPanel() {
                 }
               />
             ))}
+            <LoadMoreButton query={query} />
           </ul>
         )}
       </PanelBody>
@@ -187,24 +200,20 @@ function CorrectionRow({
 }>) {
   const t = useT();
   return (
-    <li className="correction-row">
-      <div className="correction-what">
+    <li>
+      <div>
         {/* WHO, first. This queue spans every contact, and two of them
             proposing the same title on the same day are indistinguishable
             without it — while accepting either changes a different record. */}
-        <span className="correction-who">
-          {row.contact_name ?? t("privacy.correctionUnnamed")}
-        </span>
-        <span className="correction-field">
-          {row.field ?? t("privacy.correctionRemoval")}
-        </span>
+        <span>{row.contact_name ?? t("privacy.correctionUnnamed")}</span>
+        <span>{row.field ?? t("privacy.correctionRemoval")}</span>
         {/* The subject's own words. A correction shown without them is a
             decision nobody can make. */}
         {/* BOTH HALVES. A correction is only reviewable as a comparison —
             "she says Schmidt, we hold Schmitt" is the decision, and the
             proposal alone is not. */}
         {row.proposed_value ? (
-          <span className="correction-value">
+          <span>
             {/* Not a catalog key: an arrow between two values carries no
                 words to translate, and three identical entries read as a
                 translation nobody did. */}
@@ -214,14 +223,12 @@ function CorrectionRow({
           </span>
         ) : null}
       </div>
-      <span className="correction-when">
-        {formatDate(row.submitted_at, locale, tz)}
-      </span>
+      <span>{formatDate(row.submitted_at, locale, tz)}</span>
       {canDecide && !deciding ? (
         <Button onClick={onOpen}>{t("privacy.correctionDecide")}</Button>
       ) : null}
       {deciding ? (
-        <div className="correction-decide">
+        <div>
           <Textarea
             value={note}
             onChange={(e) => onNote(e.target.value)}
