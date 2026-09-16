@@ -2997,19 +2997,30 @@ function DealOverviewPane({
 // the reader's: a line always reserved would read as a record with something
 // to say about itself and nothing said.
 function dealBand({
+  cockpit,
   reason,
   reasonId,
 }: Readonly<{
+  // Where the deal stands, which the band carries on EVERY deal: the band is
+  // the full-width block between the tab strip and the columns, so the ladder
+  // is outside whichever tab is open and a reader who has already picked one
+  // has not walked past the answer. It does not go above the strip — the strip
+  // sits one interval under the identity on every record in this product, and
+  // a block between them opens the choice of what to read a block lower here
+  // than on the record beside it.
+  cockpit: ReactNode;
   reason: string | undefined;
   reasonId: string;
-}>): ReactNode | undefined {
-  if (reason === undefined) {
-    return undefined;
-  }
+}>): ReactNode {
   return (
-    <p id={reasonId} className="t-caption">
-      {reason}
-    </p>
+    <>
+      <div className="record-ladder">{cockpit}</div>
+      {reason !== undefined && (
+        <p id={reasonId} className="t-caption">
+          {reason}
+        </p>
+      )}
+    </>
   );
 }
 
@@ -3241,32 +3252,28 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                     refusedReasonId={refusedReasonId}
                   />
                 }
-                // Where the deal stands, above the choice of what to read
-                // about it: a reader arrives asking which stage this is in,
-                // and one who has already picked a tab has walked past the
-                // answer.
-                standing={
-                  <DealCockpit
-                    deal={deal}
-                    stages={stages}
-                    advancing={advance.isPending}
-                    // A deal that takes no changes — archived, or not this
-                    // caller's to write — is not moved through the
-                    // pipeline: a control that can only fail is worse than
-                    // none. A CLOSED deal is refused here too, but for a
-                    // different reason: reopening is its own deliberate
-                    // action, with a dialog that says the close date and
-                    // the frozen rate are being cleared. A stepper button
-                    // that reopened silently would be a second, quieter
-                    // door to the same write.
-                    advanceRefused={readOnly || deal.status !== "open"}
-                    refusedReasonId={refusedReasonId}
-                    onAdvance={onAdvance}
-                  />
-                }
-                // The sentence naming why this deal takes no changes, while
-                // it does not.
+                // The band: where the deal stands, and the sentence naming
+                // why it takes no changes while it does not.
                 band={dealBand({
+                  cockpit: (
+                    <DealCockpit
+                      deal={deal}
+                      stages={stages}
+                      advancing={advance.isPending}
+                      // A deal that takes no changes — archived, or not this
+                      // caller's to write — is not moved through the
+                      // pipeline: a control that can only fail is worse than
+                      // none. A CLOSED deal is refused here too, but for a
+                      // different reason: reopening is its own deliberate
+                      // action, with a dialog that says the close date and
+                      // the frozen rate are being cleared. A stepper button
+                      // that reopened silently would be a second, quieter
+                      // door to the same write.
+                      advanceRefused={readOnly || deal.status !== "open"}
+                      refusedReasonId={refusedReasonId}
+                      onAdvance={onAdvance}
+                    />
+                  ),
                   reason: readOnlyReason,
                   reasonId: readOnlyReasonId,
                 })}

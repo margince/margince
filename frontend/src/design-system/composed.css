@@ -911,11 +911,12 @@
   margin-bottom: var(--space-5);
 }
 
-/* Where the record stands, between its verbs and the choice of what to read
-   about it. A plate rather than a run of controls on the page's own ground:
-   the lead's ladder reads as an element inside a card, and the same ladder
-   floating bare above a deal's tabs read as chrome nobody had finished. */
-.record-standing {
+/* Where the record stands, in the band under the strip. A plate rather than a
+   run of controls on the page's own ground: the ladder reads as an element
+   inside a card, and the same ladder floating bare on the band's own ground
+   read as chrome nobody had finished. Not `PanelPlate`, which is the recessed
+   plate for what IS and says so — a ladder is the controls that change it. */
+.record-ladder {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);

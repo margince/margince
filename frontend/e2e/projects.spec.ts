@@ -95,8 +95,29 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
 
   // 3. Log something on the deal, then win it. The note is filed under the
   // deal, not the project — the project timeline picks it up in step 5.
-  await page.getByLabel(/^Betreff/).fill("Kickoff mit Brandt IT");
-  await page.getByRole("button", { name: "Erfassen" }).click();
+  //
+  // Through the head's own verb: the deal page carries no standing log form,
+  // because a form open on every read asks for a note nobody came to write.
+  await page
+    .getByRole("button", { name: "Aktivität erfassen", exact: true })
+    .click();
+  // Inside the dialog, and exactly: the head's own verb is still on the page
+  // behind it, and "Erfassen" matches "Aktivität erfassen" as a substring.
+  const logDialog = page.getByRole("dialog");
+  await logDialog.getByLabel(/^Betreff/).fill("Kickoff mit Brandt IT");
+  await logDialog
+    .getByRole("button", { name: "Erfassen", exact: true })
+    .click();
+  // The deal's chronology is its own tab now, not a block under the overview:
+  // what was said about the deal and what was changed on it are one order of
+  // events, read in one place. Every arrival at the deal opens on the overview,
+  // so each read of the chronology asks for the tab first.
+  const openDealHistory = () =>
+    page
+      .getByTestId("record-tabs")
+      .getByRole("button", { name: "Verlauf", exact: true })
+      .click();
+  await openDealHistory();
   const timeline = page.getByRole("region", { name: "Verlauf" });
   await expect(timeline.getByText("Kickoff mit Brandt IT")).toBeVisible();
 
@@ -143,6 +164,7 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
   // 5. The timeline accumulates what is filed under the project: relink the
   // deal's note to the project and it appears here with the coverage count.
   await page.goto("/#/deals/d-fleet");
+  await openDealHistory();
   await timeline.getByRole("button", { name: "Neu verknüpfen" }).click();
   await dialog
     .getByRole("searchbox", {

@@ -1467,26 +1467,32 @@ function LeadRecord({ lead, id }: Readonly<{ lead: Lead; id: string }>) {
         // honest default for a prospect: a lead carries no workspace location of
         // its own to prefer over where the reader is.
         zone={viewerZone()}
-        // Where the lead stands, above the choice of what to read about it,
-        // the way a deal's own ladder stands over its tabs: one shape for the
-        // question both records are asked first.
-        standing={
-          <LeadStepper
-            lead={lead}
-            pending={writer.patch.isPending}
-            readOnlyReason={writer.readOnlyReason}
-            onStep={(status) => {
-              // Same one-write-at-a-time rule as the inline rows: a status
-              // sent while another save is in flight races it for If-Match.
-              if (!writer.patch.isPending && !writer.readOnly) {
-                writer.save({ status });
-              }
-            }}
-            onQualify={() => setDialog("qualify")}
-            onDisqualify={() => setDialog("disqualify")}
-          />
-        }
-        band={leadBand({ lead, writer, reasonId: terminalReasonId, id, t })}
+        // The band: where the lead stands, and what it has to say about
+        // itself as a whole — the same shape the deal's own band takes, for
+        // the question both records are asked first.
+        band={leadBand({
+          ladder: (
+            <LeadStepper
+              lead={lead}
+              pending={writer.patch.isPending}
+              readOnlyReason={writer.readOnlyReason}
+              onStep={(status) => {
+                // Same one-write-at-a-time rule as the inline rows: a status
+                // sent while another save is in flight races it for If-Match.
+                if (!writer.patch.isPending && !writer.readOnly) {
+                  writer.save({ status });
+                }
+              }}
+              onQualify={() => setDialog("qualify")}
+              onDisqualify={() => setDialog("disqualify")}
+            />
+          ),
+          lead,
+          writer,
+          reasonId: terminalReasonId,
+          id,
+          t,
+        })}
         // The same strip every record in the product carries: a place a reader
         // navigates, drawn as a rule with the open body underlined, rather than
         // a pill that offers a setting.
