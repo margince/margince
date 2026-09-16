@@ -44,6 +44,9 @@ describe("the type scale and the control geometry", () => {
       "--controlPaddingX",
       "--controlGap",
       "--controlIcon",
+      "--inputHeight",
+      "--inputPaddingX",
+      "--inputPaddingY",
     ]) {
       expect(light[name], `${name} missing from :root`).toBeTruthy();
     }
@@ -61,6 +64,12 @@ describe("the type scale and the control geometry", () => {
       "--controlPaddingX": "var(--space-3)",
       "--controlGap": "6px",
       "--controlIcon": "16px",
+      // A text input is the one control that is not --controlHeight tall, and
+      // its height is arithmetic rather than taste: 20px of line, 8px of
+      // padding top and bottom, 1px of edge on each side.
+      "--inputHeight": "40px",
+      "--inputPaddingX": "6px",
+      "--inputPaddingY": "var(--space-2)",
     };
     for (const [name, value] of Object.entries(want)) {
       expect(normalize(light[name] ?? ""), name).toBe(normalize(value));
@@ -73,6 +82,36 @@ describe("the type scale and the control geometry", () => {
   // whole sheet rather than on :root, so the touch arm cannot bring it back.
   it("carries no second control height", () => {
     expect(tokensCss).not.toMatch(/--control-h\b/);
+  });
+
+  // 32px under a finger as much as under a mouse. The height used to rise to 44
+  // for a coarse pointer, which made the one control size two again — one per
+  // input device — and left every surface owing the same question a second
+  // answer. Asserted on the sheet, because the arm that did it was a media
+  // query and a :root list cannot see one.
+  it("raises the control height for no input device", () => {
+    expect(tokensCss).not.toMatch(/pointer:\s*coarse/);
+  });
+
+  // The input's parts have to FIT the height it declares. Asserted as the
+  // inequality rather than as a sum, because the sum is not what breaks: a
+  // padding raised past the height is an input that clips the text being typed
+  // into it, and that holds whatever slack the height was given. (It has 2px
+  // today — 20px of line, 2x8 of padding and 2x1 of edge is 38 in a 40px box.)
+  it("fits the input's parts inside its height", () => {
+    // One level of var() is resolved, because the padding names a rung of the
+    // spacing scale rather than restating its value — which is the point of it.
+    const px = (name: string): number => {
+      const value = light[name] ?? "";
+      const alias = /^var\((--[\w-]+)\)$/.exec(value.trim());
+      return alias ? px(alias[1]) : Number.parseInt(value, 10);
+    };
+    const line = 20;
+    const edges = 2;
+    expect(px("--inputPaddingY")).toBe(8);
+    expect(line + 2 * px("--inputPaddingY") + edges).toBeLessThanOrEqual(
+      px("--inputHeight"),
+    );
   });
 
   // Every size in the type scale reads a weight token. A spelled 400 or 700

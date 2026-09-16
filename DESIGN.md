@@ -159,6 +159,16 @@ action, `--ai*` (indigo) is agent provenance, `--success` / `--warn` /
 with `--ai`, `--aiLight`, `--aiMed` and `--aiText`. What changes is the ground,
 which is lit, and the surface, which is one translucent pane per zone.
 
+**The neutral ink is TWO tokens, not the four-rung ladder below.**
+`--textPrimary` is the ink that carries — names, headings, body — at `#15201b`
+in light and `#fff` in dark; `--textSecondary` is the one that supports, at
+`lch(40% 1 282)` in light and `lch(63.304% 1.425 272)` in dark, and a
+placeholder is the first thing wearing it. The `--ink` / `--ink2` / `--ink3` /
+`--ink4` row in the table below is what those two replace: four rungs is a
+question ("how quiet is this?") answered four ways, and every pair the product
+actually draws is measured against every ground it lands on in
+`tokens.test.ts`, which four unmeasured greys never were.
+
 The tables below are the design TARGET, and they name some rungs the tree does
 not carry yet — `--ink4`, `--aiBg`, `--aiLine`, `--ok`, `--bad`. Read a name that
 does not appear in `frontend/src` as a value still to be introduced, not as one

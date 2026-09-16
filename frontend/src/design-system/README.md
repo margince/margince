@@ -120,6 +120,14 @@ instead. `--fontFamilyMono` is the one token that spells it; `design-system/mono
 with `check-font-lock.sh` fails the `t-mono` class, a mono family on any other
 selector, a second token carrying one, or one in an inline style.
 
+**Two neutral inks, and only two.** `--textPrimary` carries — a heading, a
+record's name, body prose — and `--textSecondary` supports, a placeholder
+first, with each further role decided at the element rather than granted in
+advance. Dark lifts both: `--textPrimary` goes to `#fff` and `--textSecondary`
+to `lch(63.304% 1.425 272)` off the light `lch(40% 1 282)`. Anything quieter
+than the second is not a third neutral — it is the same ink at a size or a
+weight that says so.
+
 `Design System/Type` in Storybook draws the body levels, the heading ladder
 and the pairings.
 

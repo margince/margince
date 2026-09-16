@@ -249,8 +249,9 @@ export const TheLineInDark: Story = {
  *
  * The one frame drawn INSIDE the row's own box, because the target floor is the
  * ROW's rule rather than the line's: without that box the verbs would be drawn
- * here at the 36px a coarse pointer gets them to, which is not what a reader
- * meets. At this width the box costs nothing — the row is a wrapping flex line
+ * here at the plain --controlHeight every control in the product wears, which
+ * is not what a reader meets — the row raises its own targets, and it is the
+ * only thing that does now that a control is one size under any pointer. At this width the box costs nothing — the row is a wrapping flex line
  * and the verbs take all of it — while above it the row's kind column would
  * stand empty beside them, which is why the other three frames go without.
  */

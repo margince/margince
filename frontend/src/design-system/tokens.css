@@ -124,6 +124,12 @@
 
   /* Headings, and a record's name where that name IS the title. */
   --textPrimary: #15201b;
+  /* The one SECONDARY neutral, for text that supports rather than carries: a
+     placeholder is the first of them, and each further role is decided at the
+     element rather than granted here in advance. One token and not a family —
+     "quieter than the body" is a single question, and the two greys this tree
+     grew for it were the same answer typed twice. */
+  --textSecondary: lch(40% 1 282);
   --textOnAccent: #fff;
   /* The ink for a control filled with --accent SPECIFICALLY (a primary
    * button, a filled step numeral) — split from --textOnAccent because dark
@@ -387,8 +393,10 @@
      [Cancel][Save] pair was therefore never the same height, and a button beside
      a field never sat on the field's own line. The height is a floor rather than
      a fixed value, so a control whose label wraps grows instead of clipping —
-     nothing here assumes a one-line label. 32px still clears the 24px AA target
-     of WCAG 2.5.8 with room (the touch arm below raises it to 44).
+     nothing here assumes a one-line label. 32px is the height at every input,
+     a finger's included: it clears WCAG 2.5.8's 24px target with room, and a
+     control that changed size under a touchscreen was one more thing that had
+     to be remembered on every surface and was not.
 
      There is no small rung any more. It existed for dense rows and for icon
      affordances, and a second height is a second answer to "how tall is a
@@ -410,6 +418,32 @@
   /* The line icon a control carries. Sized by the control rather than at the
      call site, because lucide's own default is 24px. */
   --controlIcon: 16px;
+
+  /* A TEXT INPUT is taller than a button, and that is the one place the two
+     part company: a button is a verb you hit, an input is a place you put
+     something, and the room inside it is what says so. Stated as three tokens
+     rather than one height so a field that has to grow (a textarea, a token
+     input) keeps the same insets while its line count changes.
+
+     The parts are --fontBody's 20px line, --inputPaddingY above and below, and
+     a 1px edge on each side: 38px. The height is 40, and the 2px is CHOSEN —
+     breathing room above what the parts sum to, so a descender, a taller
+     script, or a browser rounding the line box a hair upward has somewhere to
+     go instead of pressing on the edge. A height equal to the sum is an input
+     that looks correct in the one font it was measured in.
+
+     So the height is a floor rather than a total, and type-tokens.test.ts holds
+     the parts INSIDE it rather than equal to it: what breaks something is
+     padding taller than the height, which clips the text being typed, and that
+     stays true whatever the margin is set to.
+
+     Everything else stays on --controlHeight, the select's TRIGGER included: a
+     trigger is a button that opens a list, not a place to type, and a select
+     standing 8px taller than the button beside it is the misalignment the one
+     control size was bought to end. */
+  --inputHeight: 40px;
+  --inputPaddingX: 6px;
+  --inputPaddingY: var(--space-2);
 
   /* The height of a panel's header band, and it is a token for the same reason
      --controlHeight is one: every panel on every screen draws the SAME band,
@@ -770,7 +804,8 @@
   --mono5Fill: rgba(251, 113, 133, 0.18);
   --mono5Text: #fda4af;
 
-  --textPrimary: #e8eeeb;
+  --textPrimary: #fff;
+  --textSecondary: lch(63.304% 1.425 272);
 
   --borderSubtle: #22352e;
   --borderStrong: #31463d;
@@ -895,7 +930,8 @@
     --mono5Fill: rgba(251, 113, 133, 0.18);
     --mono5Text: #fda4af;
 
-    --textPrimary: #e8eeeb;
+    --textPrimary: #fff;
+    --textSecondary: lch(63.304% 1.425 272);
 
     --borderSubtle: #22352e;
     --borderStrong: #31463d;
@@ -926,30 +962,6 @@
     --tagViolet: #a78bfa;
     --tagLime: #a3e635;
     --tagOrange: #fb923c;
-  }
-}
-
-/* A finger is not a pointer, and a 32px control under one is a control you
- * miss. The height floor rises wherever the primary input is coarse — a phone,
- * a tablet, a touchscreen laptop — which is where SC 2.5.5's 44×44 was actually
- * aimed; AA's own SC 2.5.8 asks 24×24, and 32px clears that on a mouse with
- * room to spare.
- *
- * Raised on the TOKEN, so the button, the field, the select's trigger and the
- * password reveal all grow together instead of one surface remembering and the
- * next forgetting. The sign-in screens used to hold their own 46px for exactly
- * this reason, and they were the only fields in the product that did — every
- * other form followed the token on a phone as much as on a desk.
- *
- * `pointer: coarse` rather than a width breakpoint, because the question is
- * what is touching the screen, not how wide it is. AFTER both palettes on
- * purpose: neither themes it, and a media query opened INSIDE :root ends that
- * block early and strands every token below it — which is exactly how this
- * rule got written the first time, and what the shape test now refuses.
- */
-@media (pointer: coarse) {
-  :root {
-    --controlHeight: 44px;
   }
 }
 

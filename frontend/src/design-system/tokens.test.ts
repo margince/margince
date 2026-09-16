@@ -2,7 +2,13 @@ import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { normalize, parseBlock, tokenDecls, tokensCss } from "./tokens-testing";
+import {
+  lchToHex,
+  normalize,
+  parseBlock,
+  tokenDecls,
+  tokensCss,
+} from "./tokens-testing";
 
 // Pins the light-mode token layer to the canonical Ledger-Green values from the
 // spec's design/mockups/app.css :root (design-language §2, ADR-0040). A value
@@ -32,6 +38,11 @@ const here = dirname(fileURLToPath(import.meta.url));
 // of measured inks that the tree has outgrown is a gate reporting PASS over a
 // case it never looked at.
 const chipInks: readonly string[] = [
+  // --textSecondary is deliberately absent: no rule in the tree paints --bgChip
+  // under it today, and the call-site scan at the foot of this file is what
+  // makes that a fact rather than a hope — the day one does, that scan fails
+  // until this list grows, and growing it re-arms the dark pair it would then
+  // have to clear (4.40:1 over --bgCard, 4.09:1 over --bgHover).
   "--textPrimary",
   "--tealText",
   "--accentText",
@@ -49,6 +60,7 @@ const canonical: Record<string, string> = {
   "--accentLight": "rgba(11,122,83,.09)",
   "--accentMed": "rgba(11,122,83,.17)",
   "--textPrimary": "#15201B",
+  "--textSecondary": "lch(40% 1 282)",
   "--textOnAccent": "#fff",
   "--borderSubtle": "#E3EAE6",
   "--borderStrong": "#D1D8D4",
@@ -207,6 +219,12 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
     // composite tests below exist.
     function channels(value: string): [number, number, number, number] {
       const v = value.trim();
+      // An authored lch() is converted rather than skipped: a colour a sweep
+      // cannot read is a colour no sweep has measured, and a neutral the whole
+      // product reads is the worst one to leave out.
+      if (v.startsWith("lch(")) {
+        return channels(lchToHex(v));
+      }
       if (v.startsWith("#")) {
         const h = v.slice(1);
         const full =
@@ -511,6 +529,7 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
       // own size and not at the prose floor.
       const prose = [
         "--textPrimary",
+        "--textSecondary",
         "--accentText",
         "--tealText",
         "--successText",
@@ -706,6 +725,16 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
       expect(normalize(dark["--bgPage"])).toBe("#0c1311");
       expect(normalize(dark["--bgSidebar"])).toBe("#030504");
       expect(normalize(dark["--bgSidebarHover"])).toBe("#0a100e");
+    });
+
+    // The two neutrals, pinned in dark because dark is where they diverge most
+    // from the light values and where the sweeps read them against near-black.
+    it("pins both neutral inks", () => {
+      const dark = parseBlock(tokenDecls, '[data-theme="dark"]');
+      expect(normalize(dark["--textPrimary"])).toBe("#fff");
+      expect(normalize(dark["--textSecondary"])).toBe(
+        normalize("lch(63.304% 1.425 272)"),
+      );
     });
 
     it("keeps the rail on the shared ink-green field (§2b: the rail is not themed)", () => {
