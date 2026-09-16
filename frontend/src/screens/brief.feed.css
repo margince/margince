@@ -49,28 +49,6 @@
   }
 }
 
-/* THE SECTION'S OWN HEAD, in the accent. `tone="accent"` tints the band at
-   the wash every accent panel wears; this is the ONE lead on the page — the
-   day's work is what the page is for and everything under it reports — so its
-   band is the accent itself, with the ink that pairs with it. Colour only:
-   the band's height, padding and alignment stay the design system's, which is
-   what keeps this panel the same shape as the ones under it. */
-.brief-focus-panel > .panel-head {
-  background: var(--accent);
-}
-.brief-focus-panel > .panel-head .panel-title,
-.brief-focus-panel > .panel-head .panel-head-sub {
-  color: var(--textOnAccentControl);
-}
-/* The way out, on the band's own ground: the control's ink and its hairline
-   are the band's ink, so it reads as a way out of an accent band rather than
-   as a white chip dropped on one. */
-.brief-focus-panel > .panel-head .brief-focus-open {
-  background: none;
-  border-color: currentcolor;
-  color: var(--textOnAccentControl);
-}
-
 /* ── The stack under it ───────────────────────────────────────────────────
  * The work still behind the card, as the EDGES of two more cards peeking out
  * below it: the day has more in it, said by the shape of the thing being
@@ -151,12 +129,17 @@
 .brief-triage-lead {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  /* FOUR EXPLICIT ROWS — the label, the work, whose it is, the verbs —
-     because a row a child is placed INTO has to exist in the explicit grid.
-     The record's own move card documents the same trap (company360.css). */
-  grid-template-rows: auto auto auto auto;
+  /* FIVE EXPLICIT ROWS — the label, the name, whose it is, the words, the
+     verbs — because a row a child is placed INTO has to exist in the explicit
+     grid. The record's own move card documents the same trap
+     (company360.css). A row with no words leaves the fourth empty, and an
+     empty auto row takes no height. */
+  grid-template-rows: auto auto auto auto auto;
   align-items: center;
-  gap: var(--space-3) var(--space-4);
+  /* The card is the page's one thing to answer and is read rather than
+     scanned, so its blocks stand apart: the name, the by-line, the words and
+     the verbs each get their own air. */
+  gap: var(--space-4);
   min-width: 0;
 }
 /* THE LABEL ROW, over the work and across the card: why the row is here,
@@ -183,9 +166,24 @@
 .brief-triage-lead .worklist-row::before {
   content: none;
 }
-/* The left column reads label, work, whose it is — in that order whatever
-   order the row hands its parts over in. */
+/* THE CARD READS LABEL, NAME, WHOSE IT IS, THE WORDS, THE VERBS — the order
+   a reader needs them in, which is not the order the row hands its parts over
+   in. A waiting message is drawn by the canonical email row, so its NAME and
+   its WORDS arrive inside one element with nothing between them; laid open
+   (`display: contents`) the two take rows of their own and the by-line stands
+   between them, where the reference composition puts it. Only a row that HAS
+   that reading is opened — every other row's text block is one cell, and its
+   parts stacked into a single row would draw on top of one another. */
 .brief-triage-lead .worklist-row-text {
+  grid-column: 1;
+  grid-row: 2;
+}
+.brief-triage-lead .worklist-row-text:has(.emailentry),
+.brief-triage-lead .emailentry {
+  display: contents;
+}
+.brief-triage-lead .emailentry__subject,
+.brief-triage-lead .worklist-row-title {
   grid-column: 1;
   grid-row: 2;
 }
@@ -193,14 +191,18 @@
   grid-column: 1;
   grid-row: 3;
 }
+.brief-triage-lead .emailentry__preview {
+  grid-column: 1;
+  grid-row: 4;
+}
 /* THE VERBS ACROSS THE CARD'S FLOOR, every option in the open: the set-asides
    on the leading edge, the answer on the trailing one. A column of them beside
    the work read as a toolbar and left the card's own words a strip; across the
    floor they are one line a reader finishes the card on. */
 .brief-triage-lead .worklist-row-acts {
   grid-column: 1 / -1;
-  grid-row: 4;
-  padding-block-start: var(--space-1);
+  grid-row: 5;
+  padding-block-start: var(--space-2);
 }
 /* The head says where the row stands and why, and the about line says whose
    message it is, when, and where it sits — each already on the card once, so

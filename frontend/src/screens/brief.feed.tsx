@@ -65,15 +65,12 @@ export function BriefFeed({
   return (
     <section id="brief-today">
       <Panel
-        // THE LEAD PANEL: the one card on the page that asks for a move
-        // rather than reporting state, so it wears the accent's band and
-        // edge. Nothing else on the Brief may — a second tinted panel is two
-        // leads, which is none.
-        tone="accent"
-        // The page's one lead, and the only panel that says so in the accent
-        // at a weight a reader sees across the page: the day's work is what
-        // this page is for, and the sections under it report.
-        className="brief-focus-panel"
+        // INDIGO, the same band a record's own "what needs you today" pane
+        // wears: these rows are the agent's reading of the day — what it
+        // ranked and what it prepared — and indigo is the one claim the
+        // product makes about who did that. The accent would say "the page's
+        // lead", which is true and already said by where the panel sits.
+        tone="ai"
         title={t(
           day?.scope === "team" ? "brief.feed.teamTitle" : "brief.feed.title",
         )}
@@ -90,12 +87,7 @@ export function BriefFeed({
                 step it prepared — so it wears the badge every panel that
                 offers an AI verb wears: what is OFFERED, beside the tone that
                 says who wrote the body. */}
-            {/* Solid, not the tint: this band is the accent itself, and a tinted
-              pill over it composites to the band's own hue — the one claim on
-              the page about who did the ranking, unreadable. */}
-            <Badge variant="primary" tone="ai">
-              {t("co.assistant.aiTag")}
-            </Badge>
+            <Badge tone="ai">{t("co.assistant.aiTag")}</Badge>
             {changed && (
               <a className="entity-link" href={changed.href}>
                 <Badge>
