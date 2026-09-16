@@ -20,6 +20,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/modelreply"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -401,15 +402,11 @@ type modelStep struct {
 }
 
 func parseStep(text string) (modelStep, error) {
-	cleaned := strings.TrimSpace(text)
-	// Models under JSON-only instructions still fence habitually; strip
-	// a well-formed fence rather than failing the step over formatting.
-	if after, found := strings.CutPrefix(cleaned, "```json"); found {
-		cleaned = after
-	} else if after, found := strings.CutPrefix(cleaned, "```"); found {
-		cleaned = after
-	}
-	cleaned = strings.TrimSuffix(strings.TrimSpace(cleaned), "```")
+	// Models under JSON-only instructions still wrap habitually — a fence, a
+	// tag, a sentence either side. kernel/modelreply is the one reduction that
+	// reads past all of it, and the trim this used to hand-roll reached only a
+	// fence at the very edges of the reply.
+	cleaned := modelreply.Unfence(text)
 
 	var step modelStep
 	dec := json.NewDecoder(strings.NewReader(cleaned))

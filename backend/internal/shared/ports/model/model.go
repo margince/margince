@@ -281,6 +281,15 @@ type Response struct {
 	FinishReason string
 }
 
+// FinishReasonLength is the normalized stop reason for a completion cut off at
+// the output ceiling: the call succeeded and the body is half-written.
+//
+// Named because the distinction it carries is load-bearing and was being made
+// with a bare string nowhere: a caller comparing against its own spelling of
+// "length" is a caller that silently stops making the distinction the day a
+// normalization changes.
+const FinishReasonLength = "length"
+
 // TokenStream delivers incremental completion tokens; Close releases the
 // underlying connection.
 type TokenStream interface {

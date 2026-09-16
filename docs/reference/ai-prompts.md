@@ -466,6 +466,28 @@ Available tools:
 
 </details>
 
+<details><summary>answer shape (enforced at generation)</summary>
+
+```json
+{
+  "additionalProperties": false,
+  "properties": {
+    "args": {
+      "type": "object"
+    },
+    "final": {
+      "type": "object"
+    },
+    "tool": {
+      "type": "string"
+    }
+  },
+  "type": "object"
+}
+```
+
+</details>
+
 ### `brief_ranking` / `rank`
 
 `system 593 B (~148 tok)` — rules 593 B · boundary 0 B · after boundary 0 B · **cacheable 100%**

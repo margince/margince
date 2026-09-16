@@ -47,6 +47,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/proposeroles"
 	"github.com/margince/margince/backend/internal/compose/weekly/learnings"
 	"github.com/margince/margince/backend/internal/compose/weekly/narrative"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // replyParser is one site's reading of a model reply, reduced to what this gate
@@ -59,14 +60,16 @@ type replyParser struct {
 	// site names the invocation site an operator would see fail, not the Go
 	// function, because that is what a reader has to go and look at.
 	site string
-	// pkgFunc is the parser this row drives, spelled as the census reports it so
-	// the two halves cannot disagree about which function is covered.
+	// pkgFunc is the parser this row drives, spelled as the census reports it.
+	// The two halves agreeing about which function is covered is held by
+	// TestTheCensusSeesEveryKnownModelReplyParser, not by matching spellings
+	// here.
 	pkgFunc string
 	read    func(reply string) string
 }
 
-// errText is the shared reduction every row below uses, so one invariant is
-// spelled once rather than six times in five packages.
+// errText reduces a parser's outcome to what this gate compares. Shared by
+// every row so the rows differ only in which parser they drive.
 func errText(err error) string {
 	if err == nil {
 		return ""
@@ -74,13 +77,22 @@ func errText(err error) string {
 	return err.Error()
 }
 
-// modelReplyParsers is every parser that reads a model's JSON reply at a
-// shipped site.
+// modelReplyParsers are the model-reply parsers this gate can drive directly.
+//
+// NOT the whole set, and the difference matters: runner.parseStep is unexported
+// in another package, so nothing here can call it. The complete set is the
+// census's business, and it covers what this table cannot.
 //
 // The replies are minimal and deliberately NOT grounded in any Input: this gate
 // is about the fence and nothing else, so each row is driven with a zero Input
 // and both calls are refused for the same grounding reason. What may not differ
 // is that reason.
+//
+// The agent loop's runner.parseStep is absent from this table and NOT from the
+// census: it is unexported in another package, so nothing here can call it. Its
+// behaviour half is TestAStepSurvivesTheManners, beside the parser. Said out
+// loud because "not in the table" is otherwise indistinguishable from "not
+// covered", which is the reading that lets a site go unchecked.
 func modelReplyParsers() []replyParser {
 	return []replyParser{
 		{
@@ -187,9 +199,14 @@ func modelReplyUnmarshalSites(t *testing.T) map[string]bool {
 	t.Helper()
 	fset := token.NewFileSet()
 	sites := map[string]bool{}
+	// internal/, not internal/compose. The first version of this census walked
+	// compose alone and so never saw the agent loop's own step parser, which
+	// lives in a module — the walk-root blind spot this file warned about, found
+	// by widening it rather than by reasoning about it.
+	//
 	// Relative to backend/, not to this package: gates_test.go's TestMain chdirs
 	// one level up so every gate reads the tree from the same place.
-	root := "internal/compose"
+	root := "internal"
 	if err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -215,7 +232,7 @@ func modelReplyUnmarshalSites(t *testing.T) map[string]bool {
 			}
 			ast.Inspect(fn.Body, func(n ast.Node) bool {
 				call, isCall := n.(*ast.CallExpr)
-				if !isCall || !isJSONUnmarshal(call) || len(call.Args) == 0 {
+				if !isCall || !decodesJSON(call) {
 					return true
 				}
 				// EVERY unmarshal in the body, not only one whose argument
@@ -262,14 +279,25 @@ func replyParamOf(fn *ast.FuncDecl) (string, bool) {
 	return "", false
 }
 
-// isJSONUnmarshal reports whether call is json.Unmarshal.
-func isJSONUnmarshal(call *ast.CallExpr) bool {
+// decodesJSON reports whether call decodes JSON, in either spelling the tree
+// uses: json.Unmarshal(...) and json.NewDecoder(...).Decode(...).
+//
+// BOTH, because matching only the first is the second blind spot this census
+// had. parseStep decodes with a Decoder so it can set DisallowUnknownFields, and
+// an Unmarshal-only scan walked straight past the parser whose breakage started
+// all of this — reporting a clean tree while the site sat in it.
+func decodesJSON(call *ast.CallExpr) bool {
 	sel, isSel := call.Fun.(*ast.SelectorExpr)
-	if !isSel || sel.Sel.Name != "Unmarshal" {
+	if !isSel {
 		return false
 	}
-	pkg, isIdent := sel.X.(*ast.Ident)
-	return isIdent && pkg.Name == "json"
+	if sel.Sel.Name == "Unmarshal" {
+		pkg, isIdent := sel.X.(*ast.Ident)
+		return isIdent && pkg.Name == "json"
+	}
+	// A Decode call's receiver is the decoder, and what matters is that the
+	// decoder was built here — json.NewDecoder(...) somewhere in the chain.
+	return sel.Sel.Name == "Decode" && expressionMentions(sel.X, "NewDecoder")
 }
 
 // expressionMentions reports whether ident appears anywhere inside expr — the reply
@@ -285,6 +313,24 @@ func expressionMentions(expr ast.Expr, ident string) bool {
 	return found
 }
 
+// notAModelReply names a site the census matches that does not read a model
+// reply at all, with the reason it does not.
+//
+// gatekit.Waive rather than a bare map: it holds every entry to a reason, and
+// AssertAllMatched reports one that has stopped matching — so a waiver cannot
+// outlive its subject and quietly widen into a hole. A hand-rolled map plus a
+// staleness test of my own was a second implementation of this package, which
+// is the duplication the census itself is about.
+//
+// The census matches on parameter NAME, and `content` is the vocabulary an
+// upload uses as readily as a completion does. That is the whole cost of a
+// name-based scan, paid here in one line rather than by narrowing the scan and
+// missing a real site.
+var notAModelReply = gatekit.Waive(map[string]string{
+	"ai.decodeTranscriptItems": "reads the transcript an OPERATOR uploaded to the voice corpus, not a completion — " +
+		"its `content` is a form field, and there is no model whose manners could have wrapped it",
+})
+
 // The census half: no model-reply parser reads its reply without reducing it.
 //
 // Held by: TestNoModelReplyParserSkipsTheFenceReduction (backend/gates/modelreplyfence_test.go) — this test.
@@ -292,10 +338,22 @@ func TestNoModelReplyParserSkipsTheFenceReduction(t *testing.T) {
 	t.Parallel()
 	var unreduced []string
 	for name, skipsUnfence := range modelReplyUnmarshalSites(t) {
-		if skipsUnfence {
-			unreduced = append(unreduced, name)
+		// The offence is decided FIRST and the waiver asked about it second.
+		// Asked as a pre-filter this would discard the entry's site whatever it
+		// did, including a real regression introduced there later — gatekit's
+		// Waived says so outright, and TestEveryWaiverIsAskedAboutAnOffenderNotACandidate
+		// holds the rest of the tree to it.
+		if !skipsUnfence {
+			continue
 		}
+		if notAModelReply.Waived(t, name) {
+			continue
+		}
+		unreduced = append(unreduced, name)
 	}
+	// A waiver describing a site that no longer offends, or no longer exists, is
+	// reported here rather than left to widen.
+	notAModelReply.AssertAllMatched(t)
 	slices.Sort(unreduced)
 	if len(unreduced) > 0 {
 		t.Errorf("%d model-reply parser(s) json.Unmarshal their reply without ai.Unfence: %s\n"+
@@ -334,7 +392,7 @@ func TestTheCensusSeesEveryKnownModelReplyParser(t *testing.T) {
 	// Said out loud so the number is not mistaken for a ceiling: the tree has
 	// more correct parsers than the table has broken ones, and the census should
 	// be seeing those too.
-	t.Logf("census sees %d model-reply parser(s) across internal/compose", len(seen))
+	t.Logf("census sees %d model-reply parser(s) across internal/", len(seen))
 	if testing.Verbose() {
 		names := make([]string, 0, len(seen))
 		for name := range seen {
