@@ -5,6 +5,7 @@ import type { LucideIcon } from "lucide-react";
 import {
   Activity,
   BadgeCheck,
+  Bell,
   Blocks,
   BookOpen,
   Building2,
@@ -36,6 +37,7 @@ export const PAGE_ICONS: Readonly<Record<SettingsPageId, LucideIcon>> = {
   account: UserRound,
   voice: Mic,
   agents: KeyRound,
+  notifications: Bell,
   connections: Plug,
   "capture-activity": Activity,
   company: Building2,
