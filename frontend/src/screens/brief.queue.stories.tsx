@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useEffect } from "react";
-import { expect, userEvent, waitFor, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
 import { announceAddressChanged } from "../app/router";
 import { en } from "../i18n/en";
 import {
@@ -92,17 +92,22 @@ export const Phone: Story = { tags: ["uat-phone"] };
 
 /**
  * A FULL DAY read by a lead, which is the state every part of the head has
- * something to do in: both dials are offered, the readings carry figures, and
- * the queue is long enough to page.
+ * something to do in: both dials are offered and the queue is long enough to
+ * page.
  *
  * What to check, because each was a defect in the drawer and in no other
  * frame:
  *   · the day's figures, the scope switch and the Viewing picker stand on ONE
  *     line — the picker's own label used to push it under the switch and leave
  *     a band of empty ground beside the figures;
- *   · the four readings stay ONE row. They are four, and the strip's fold
- *     ladder was written for a row of six, so it folded them to three and let
- *     the fourth span the rest;
+ *   · the head is followed by the QUEUE and nothing else. The readings the
+ *     page behind this drawer already carries were drawn here too, folded
+ *     behind a disclosure — the same figures twice on one screen, with a rule
+ *     and a word of chrome between the head and the work;
+ *   · a rule falls between EVERY pair of rows, the seam between the banded
+ *     run and the unbanded tail included. They are separate lists, so the
+ *     tail's first row used to keep the reset a panel's first row gets;
+ *   · every row carries its verbs, in the card's order;
  *   · pressing a row opens NO column beside the queue. The row already names
  *     the contact and both moments, and a drawer has no third of its width to
  *     spend saying it again.
@@ -114,22 +119,6 @@ export const AFullDay: Story = {
   // play reports a missing control rather than a missing portal.
   play: async () => {
     const drawer = within(document.body);
-    // The readings open folded in the drawer — the work comes first — so the
-    // frame opens them to show the row this story is about. The trigger is the
-    // disclosure's own `<summary>`, which carries no button role to query by.
-    // WAITED FOR, not read once: the drawer fetches its day before it draws
-    // anything, so a synchronous query runs against an empty dialog and reports
-    // a missing control rather than one that has not arrived.
-    const summary = await waitFor(() => {
-      const found = [...document.querySelectorAll(".disclosure-summary")].find(
-        (node) => node.textContent?.includes(en["brief.readings.summary"]),
-      );
-      if (!found) {
-        throw new Error("the drawer has not drawn its readings disclosure");
-      }
-      return found as HTMLElement;
-    });
-    await userEvent.click(summary);
     await userEvent.click(
       (await drawer.findAllByRole("button", { name: /Meet next Tues/ }))[0],
     );
@@ -142,19 +131,48 @@ export const AFullDay: Story = {
   },
 };
 
-/** The same day in dark, where the head's band and the readings re-derive. */
+/** The same day in dark, where the head's band and the rows re-derive. */
 export const AFullDayInDark: Story = {
   ...AFullDay,
   globals: { theme: "dark" },
 };
 
-/** A lead's day: every scope on offer, four readings with figures, and enough
- *  rows that the queue is a list rather than a single entry. */
+/** A lead's day: every scope on offer and enough rows that the queue is a list
+ *  rather than a single entry.
+ *
+ * Every row carries the SUBJECT, the set-asides and the prepared move the
+ * server really sends, because those are what a row's verbs are drawn from: a
+ * fixture with `actions: ["open"]` and no subject routes that verb nowhere, so
+ * the row comes out with the pin and nothing else — a frame of the queue with
+ * no way to work it, which is not a state the product has. */
 function aLeadsDay(): Worklist {
+  const meeting = {
+    ...meetingRow("m1", false),
+    subject: {
+      type: "contact" as const,
+      id: "contact-weber",
+      label: "Nils Weber",
+    },
+    // The brief opens on the CONTACT's record and names the meeting, so the
+    // move needs both ids — `briefHref` draws nothing without them.
+    with_contact: "contact-weber",
+    move: { action: "open_meeting_brief" as const, activity_id: "m1" },
+    dispositions: ["snooze" as const],
+  };
+  const lead = {
+    ...leadRow("l1"),
+    subject: {
+      type: "lead" as const,
+      id: "lead-weber",
+      label: "Weber GmbH",
+    },
+    move: { action: "draft_email" as const },
+    dispositions: ["snooze" as const, "not_sales" as const],
+  };
   const queue = [
     waitingEmailRow(),
-    meetingRow("m1", false),
-    leadRow("l1"),
+    meeting,
+    lead,
     taskRow("t1", "Send the promised rollout comparison"),
     taskRow("t2", "Prepare the revised comparison sheet"),
   ];

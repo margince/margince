@@ -64,6 +64,19 @@
   content: "";
 }
 
+/* AND ACROSS THE SEAM BETWEEN TWO LISTS. The banded runs and the unbanded tail
+   are separate `<ol>`s, so `li + li` cannot reach between them: the tail's
+   first row is its list's first child and kept the reset `PanelRow` applies to
+   a panel's first row. Two rows then abutted with nothing between them while
+   every other pair on the page carried a rule.
+   Only where a BAND precedes it, which is the whole distinction. A band that
+   follows a band needs no rule — its heading is the break — and a tail that
+   opens the panel is genuinely its first row, where panel.css says no rule
+   belongs. */
+.worklist-queue-band + .worklist-list > li:first-child > .worklist-row::before {
+  content: "";
+}
+
 /* A CARD WITH ROOM PUTS THE VERBS BESIDE THE WORK.
    Under it, they left the card's right-hand half empty — measured at 812px of
    nothing on a 1358px card, which is what a full-bleed row with all its ink on

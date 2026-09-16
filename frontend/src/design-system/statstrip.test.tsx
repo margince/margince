@@ -87,37 +87,14 @@ describe("StatStrip stretches its last slot over the rest of the row", () => {
     // Four over three is the reported case: the fourth slot sat alone under a
     // stub of rule. It now takes the whole row.
     expect(strip.style.getPropertyValue("--stat-strip-tail-3")).toBe("3");
-    // Four over six, four over four and four over two are all even.
+    // Four over four and four over two are even.
     expect(strip.style.getPropertyValue("--stat-strip-tail-6")).toBe("1");
-    expect(strip.style.getPropertyValue("--stat-strip-tail-4")).toBe("1");
     expect(strip.style.getPropertyValue("--stat-strip-tail-2")).toBe("1");
-  });
-
-  // The rung that lets four readings stay one row in a drawer. Without it the
-  // ladder went from six straight to three, and four slots in a 60rem column
-  // folded to three-and-a-spanning-fourth at a width where all four cleared
-  // the sheet's own floor.
-  it("caps each rung at the slots it actually drew", () => {
-    render(<Strip count={4} />);
-    const strip = screen.getByTestId("strip");
-    expect(strip.style.getPropertyValue("--stat-strip-slots-4")).toBe("4");
-    expect(strip.style.getPropertyValue("--stat-strip-slots-3")).toBe("3");
-    expect(strip.style.getPropertyValue("--stat-strip-slots-2")).toBe("2");
-
-    cleanup();
-    render(<Strip count={2} />);
-    // A two-slot strip folds to two at every rung rather than inventing a
-    // third and fourth empty column.
-    const small = screen.getByTestId("strip");
-    expect(small.style.getPropertyValue("--stat-strip-slots-4")).toBe("2");
-    expect(small.style.getPropertyValue("--stat-strip-slots-3")).toBe("2");
   });
 
   it("stretches a five-slot strip, which has no divisor to fold to", () => {
     render(<Strip count={5} />);
     const strip = screen.getByTestId("strip");
-    // Five over four leaves the fifth alone with three columns spare.
-    expect(strip.style.getPropertyValue("--stat-strip-tail-4")).toBe("4");
     // The project readings. Five over three leaves the fifth slot beside the
     // fourth with one column spare; five over two leaves it alone with one.
     expect(strip.style.getPropertyValue("--stat-strip-tail-3")).toBe("2");

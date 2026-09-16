@@ -23,32 +23,19 @@
 
 /* `1fr` rather than a min width: slots at a readable minimum wrap to two rows
    on a laptop, and a readings row that wraps stops being one comparison.
-   Below the width where the full row is legible it folds to four, then three,
-   then two — a deliberate fold rather than an accidental one.
+   Below the width where the full row is legible it folds to three and then to
+   two — a deliberate fold rather than an accidental one.
 
-   The fold reads `--stat-strip-slots-4`/`-3`/`-2` rather than a literal 4/3/2:
-   those are the actual slot count capped by the component, which already knows
-   how many it drew. `repeat()` takes only an integer, so the cap has to arrive
-   pre-computed: a strip with fewer slots than a breakpoint's column count folds
-   to its own slot count instead of a template with an empty cell.
+   The fold reads `--stat-strip-slots-3`/`-2` rather than a literal 3/2: those
+   are the actual slot count capped by the component, which already knows how
+   many it drew. `repeat()` takes only an integer, so the cap has to arrive
+   pre-computed: a strip with fewer slots than a breakpoint's column count
+   folds to its own slot count instead of a template with an empty cell.
 
-   THE FLOOR IS PER SLOT — about 200px, which is what a figure and its clause
-   need before the clause wraps to three lines — so each rung is the ROW width
-   at which THAT many slots stop clearing it, gaps taken out: six at 66rem, four
-   at 52rem, three at 40rem. The widths are the row's own, never the window's.
-
-   One ladder for every count, and that is the fix the drawer needed: with the
-   ladder written for a row of six, four readings in a 60rem drawer folded to
-   three and the fourth spanned the rest — 350px slots and a ragged tail, at a
-   width where four cleared 195px each and read as one row. */
+   The widths are the ROW's own, not the window's: 66rem is where six slots
+   stop clearing 200px each, which is the width a figure and its clause need
+   before the clause starts wrapping to three lines. */
 @container (max-width: 66rem) {
-  .stat-strip {
-    grid-template-columns: repeat(var(--stat-strip-slots-4, 4), 1fr);
-    --stat-strip-tail: var(--stat-strip-tail-4, 1);
-  }
-}
-
-@container (max-width: 52rem) {
   .stat-strip {
     grid-template-columns: repeat(var(--stat-strip-slots-3, 3), 1fr);
     --stat-strip-tail: var(--stat-strip-tail-3, 1);

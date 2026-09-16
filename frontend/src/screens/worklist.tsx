@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { Badge, Button, Disclosure } from "../design-system/atoms";
+import { Badge, Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { PageZones } from "../design-system/pagezones";
@@ -386,14 +386,14 @@ function WorklistBody({
           verb landed 972px down an 844px screen — a rep opened their morning
           and had to scroll before they could do anything. The stylesheet moves
           this below the queue under 720px, in PAINT only — worklist.layout.ts
-          holds why the document order does not follow it. */}
-          {embedded ? (
-            <Disclosure summary={t("brief.readings.summary")}>
-              <WorklistReadings day={day} onLane={onFilter} />
-            </Disclosure>
-          ) : (
-            <WorklistReadings day={day} onLane={onFilter} />
-          )}
+          holds why the document order does not follow it.
+
+          NOT IN THE DRAWER. The drawer is opened from a page that already
+          carries these five readings under its own work, so a second set of
+          them is the same figures said twice on one screen — and folded away
+          behind a disclosure they were a rule and a word of chrome standing
+          between the head and the queue the drawer exists to show. */}
+          {!embedded && <WorklistReadings day={day} onLane={onFilter} />}
           {/* THE REASON A LEAD OPENED SOMEBODY ELSE'S DAY, at the head of that day
           in every state — below it the block moved as its own form opened, and
           a lead read three panels of somebody else's morning before the way to
