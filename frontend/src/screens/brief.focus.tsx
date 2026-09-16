@@ -19,12 +19,12 @@ import {
 import { viewerZone } from "../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../i18n";
 import {
+  itemTitle,
   phrasedReasons,
   reasonText,
   subjectHref,
   whenText,
 } from "./worklist.copy";
-import { nextUpLine } from "./worklist.emailtitle";
 import { eyebrowKeyFor } from "./worklist.eyebrow";
 import { hasPane, lastTouch } from "./worklist.pane";
 import type { WorklistItem } from "./worklist.queries";
@@ -180,7 +180,7 @@ export function Triage({
                   </span>
                   <span className="brief-focus-item-text">
                     <span className="t-body brief-focus-item-title">
-                      {nextUpLine(item, t, locale)}
+                      {itemTitle(item, t, locale)}
                     </span>
                     {line && (
                       <span className="t-caption brief-focus-item-line">

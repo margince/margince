@@ -317,3 +317,31 @@ it("names a task's contact in the ranked column", () => {
   });
   expect(within(row).getByText(/Sonya Beck/)).toBeTruthy();
 });
+
+// A WAITING ROW IS STILL NAMED BY ITS SUBJECT, from the row's own `title`.
+//
+// The server puts a waiting message's subject there (classify.go), so the
+// column reads it like every other row rather than off `email_summary` — which
+// is what kept the ranked list from drawing a part of a message outside the
+// canonical row. The claim used to live in a helper's docblock with nothing
+// holding it; this is what holds it.
+it("names a waiting row by its subject", () => {
+  stubApi({});
+  const { container } = render(
+    <BriefFeed
+      day={readingsDay({}, [taskRow("t", "Call Weber"), waitingEmailRow()])}
+      onContext={() => undefined}
+      state="ready"
+      changed={undefined}
+      refreshFailed={false}
+      onRetry={() => undefined}
+    />,
+  );
+
+  const column = container.querySelector(".brief-triage-queue");
+  if (!(column instanceof HTMLElement)) throw new Error("no ranked column");
+  expect(
+    within(column).getByRole("button", { name: /Meet next Tues\?/ }),
+    "the column stopped naming a waiting row by the subject it is known by",
+  ).toBeTruthy();
+});
