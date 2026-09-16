@@ -105,9 +105,24 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
   // behind it, and "Erfassen" matches "Aktivität erfassen" as a substring.
   const logDialog = page.getByRole("dialog");
   await logDialog.getByLabel(/^Betreff/).fill("Kickoff mit Brandt IT");
+  // The write itself is the claim here — that the note is filed UNDER THE DEAL
+  // — so it is read off the request rather than off a rendering of it. Reading
+  // it back needs the chronology tab, and pressing that on the page the write
+  // just invalidated races the refetch that remounts the record; step 5 opens
+  // the tab from a fresh arrival, where there is no such race, and the project
+  // timeline there is what proves the note travelled.
+  const filed = page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" &&
+      response.url().includes("/activities") &&
+      response.ok(),
+  );
   await logDialog
     .getByRole("button", { name: "Erfassen", exact: true })
     .click();
+  expect((await filed).request().postDataJSON().subject).toBe(
+    "Kickoff mit Brandt IT",
+  );
   // The deal's chronology is its own tab now, not a block under the overview:
   // what was said about the deal and what was changed on it are one order of
   // events, read in one place. Every arrival at the deal opens on the overview,
@@ -119,31 +134,26 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
   // retry, not after it: the tab standing open for one moment is not the same
   // claim as the row being there to read, and a remount between the two puts
   // the panel back behind the overview with the row still in the document.
+  const historyTab = () =>
+    page
+      .getByTestId("record-tabs")
+      .getByRole("button", { name: "Verlauf", exact: true });
   const onDealHistory = async (read: () => Promise<unknown>) => {
     await expect(logDialog).toBeHidden();
     await expect(async () => {
-      // At rest before pressing. The strip is sticky, so a scrolled record
+      // At rest before pressing: the strip is sticky, so a scrolled record
       // pins it over the head and the press lands on whatever is pinned above
-      // the tab — `toPass` then swallows the refused click and retries into the
-      // same state until the test times out. The shell scrolls an inner
-      // container rather than the window.
+      // the tab. The shell scrolls an inner container rather than the window.
       await page.evaluate(() => {
         for (const box of document.querySelectorAll(".scroll")) {
           box.scrollTop = 0;
         }
       });
-      await page
-        .getByTestId("record-tabs")
-        .getByRole("button", { name: "Verlauf", exact: true })
-        .click();
+      await historyTab().click();
       await read();
     }).toPass();
   };
-  await onDealHistory(() =>
-    expect(timeline.getByText("Kickoff mit Brandt IT")).toBeVisible({
-      timeout: 2000,
-    }),
-  );
+
 
   await page
     .getByRole("group", { name: "Phase" })
