@@ -172,9 +172,18 @@ export function MomentRow({
         </span>
         <span className="co-move-ask co-move-headline">{moment.headline}</span>
         <span className="co-move-reason t-sub">{moment.why_now}</span>
+        {/* Only evidence that QUOTES something opens here. A claim carries the
+            sentence the promise was made in, which a doubting reader wants; a
+            task's evidence is its own subject, and a disclosure that opens on
+            the headline restated is a box that answers nothing. */}
         <Proof
           label={t("record.restsOn")}
-          items={momentGrounding(moment.evidence, t, locale, recordZone)}
+          items={momentGrounding(
+            moment.evidence.filter((item) => item.snippet),
+            t,
+            locale,
+            recordZone,
+          )}
           count
         />
         {target && onOpenRecord && (
