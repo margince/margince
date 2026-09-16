@@ -36,15 +36,23 @@ package contactaddress
 // an address up meant it. Then `created_at`, so two addresses a caller never
 // arranged still come back in the order they arrived.
 //
-// AND `id` LAST, WHICH IS WHAT MAKES IT TOTAL. Nothing constrains the first
-// three to be unique: contact_email's only unique indexes are on the address
-// itself and on one primary per (contact_id, email_type), so two live rows can
-// tie on all three — and every reader of this appends LIMIT 1, which then picks
-// whichever the planner reached first. Two surfaces asking the same question in
-// the same transaction could disagree, which is the whole defect this constant
-// exists to end rather than to relocate.
+// AND THE ADDRESS ITSELF LAST, WHICH IS WHAT MAKES IT TOTAL. Nothing
+// constrains the first three to be unique — a contact created with two
+// addresses and no explicit positions has two rows at position 0, sharing the
+// transaction's `now()` — and every reader appends LIMIT 1, so the planner
+// picked whichever it reached first. Two surfaces asking the same question
+// could disagree, which is the defect this constant exists to end rather than
+// to relocate.
+//
+// `email` and not `id`, and the difference is not cosmetic. uq_contact_email_dedupe
+// is UNIQUE on the address among LIVE rows, and every caller filters archived
+// ones — so the address is guaranteed distinct across the candidate set, by an
+// index rather than by luck. A uuid tie-break only looks total: v7 ids are
+// monotonic where they are generated in sequence and not where they are not, so
+// the same two rows sort one way on a laptop and the other way on CI. That was
+// not a hypothetical; it is how this line got written.
 //
 // Held by: TestOneAnswerToWhichAddressAContactIsKnownBy
 // (backend/gates/reachableaddress_test.go) — a statement that picks an address
 // off contact_email and does not use this is a second answer, and fails there.
-const ReachableOrder = ` ORDER BY is_primary DESC, position, created_at, id`
+const ReachableOrder = ` ORDER BY is_primary DESC, position, created_at, email`
