@@ -26,7 +26,9 @@ import (
 )
 
 // rung answers one registered stage.
-func (a *Assembler) rung(reg trace.Registration, v view, facts *activities.PipelineFacts) Rung {
+func (a *Assembler) rung(
+	reg trace.Registration, v view, facts *activities.PipelineFacts, reading *ThreadReading,
+) Rung {
 	stored, owned := v.stored, v.owned
 	out := Rung{
 		Stage:       reg.Stage,
@@ -54,6 +56,8 @@ func (a *Assembler) rung(reg trace.Registration, v view, facts *activities.Pipel
 		return verdictRung(out, v)
 	case trace.StageAttentionLabel:
 		return attentionLabelRung(out, v, facts)
+	case trace.StageMaterialEvents:
+		return materialEventsRung(out, v, facts, reading)
 	}
 	// A registered stage with no branch here. TestEveryAnsweringStageHasABranch
 	// walks the registry and fails on exactly this, so it is unreachable — but
@@ -218,6 +222,85 @@ func attentionLabelRung(out Rung, v view, facts *activities.PipelineFacts) Rung 
 	}
 	out.Status = trace.StatusSkipped
 	return out
+}
+
+// materialEventsRung answers the per-CONVERSATION reading.
+//
+// Every refusal below is an arm of the extractor's own offer, asked through
+// ThreadReader rather than re-spelled here — so a member reading "this
+// conversation reaches two accounts" is reading the same sentence the pass
+// acted on. The order is the order a reader needs: what happened first, then
+// why it did not.
+func materialEventsRung(out Rung, v view, facts *activities.PipelineFacts, reading *ThreadReading) Rung {
+	if v.activityHidden {
+		return unavailable(out)
+	}
+	if facts == nil {
+		// No activity: there was no conversation for the extractor to read.
+		out.Status = trace.StatusNotApplicable
+		return out
+	}
+	if facts.ThreadKey == "" {
+		// The extractor's unit of work is a thread settled for a window, and a
+		// transport with no thread key has no such unit (#1433). Not a gap
+		// report: it is the whole answer for that transport class.
+		out.Status, out.Reason = trace.StatusSkipped, trace.ReasonTransportNotRead
+		return out
+	}
+	if reading == nil {
+		// No extractor composed, so no pass has an answer to report. The
+		// activity exists and the stage is real; what is missing is the reader.
+		out.Status = trace.StatusUnknown
+		return out
+	}
+	if !reading.Known {
+		// The thread key is on the message, and the extractor sees no
+		// conversation there: every message on it archived, or none captured by
+		// a connector. Either way the reading had nothing to read.
+		out.Status, out.Reason = trace.StatusSkipped, trace.ReasonArchived
+		return out
+	}
+	if reading.Cited {
+		out.Status, out.Reason = trace.StatusDone, trace.ReasonEventsRaised
+		return out
+	}
+	if refusal, refused := threadRefusal(*reading); refused {
+		out.Status, out.Reason = trace.StatusSkipped, refusal
+		return out
+	}
+	if reading.Scanned && !reading.HasMoved {
+		// Read, and it yielded nothing about this message. A stage that ran and
+		// concluded is done, and "nothing material" is a conclusion.
+		out.Status, out.Reason = trace.StatusDone, trace.ReasonNothingMaterial
+		return out
+	}
+	out.Status, out.Reason = trace.StatusPending, trace.ReasonAwaitingScan
+	return out
+}
+
+// threadRefusal names the first arm of the offer this conversation fails, and
+// whether it fails one at all.
+//
+// FIRST rather than all of them, because a rung carries one reason and a member
+// asking why their conversation was not read is owed the one that decides it.
+// The order is the order the arms decide in: what the conversation IS, then
+// what has happened to it.
+func threadRefusal(reading ThreadReading) (trace.Reason, bool) {
+	switch {
+	case !reading.ReachesOneAccount:
+		return trace.ReasonNoSingleAccount, true
+	case !reading.IsOneBodyOfWork:
+		return trace.ReasonTwoBodiesOfWork, true
+	case !reading.IsFullyOpen:
+		return trace.ReasonThreadNotAllOpen, true
+	case !reading.HasANamedReader:
+		return trace.ReasonNoNamedReader, true
+	case !reading.HasSettled:
+		return trace.ReasonThreadStillMoving, true
+	case reading.IsParked:
+		return trace.ReasonReadingParked, true
+	}
+	return "", false
 }
 
 // notApplicableOrUnknown is the distinction the retention window forces.

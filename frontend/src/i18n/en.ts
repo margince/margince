@@ -7283,6 +7283,26 @@ export const en = {
     "this sender was suppressed, so no record was made",
   "pipeline.reason.no_open_question":
     "there was no open question about this sender",
+  "pipeline.reason.thread_not_captured":
+    "no captured conversation remains on this thread, so there was nothing to read",
+  "pipeline.reason.events_raised":
+    "this conversation was read, and what it said was filed on the account",
+  "pipeline.reason.nothing_material":
+    "this conversation was read, and it said nothing worth filing",
+  "pipeline.reason.thread_still_moving":
+    "this conversation is still moving; it is read once it has been quiet for a while",
+  "pipeline.reason.awaiting_scan":
+    "this conversation is due to be read and has not been reached yet",
+  "pipeline.reason.reading_parked":
+    "reading this conversation was refused several times, so it is paused until it changes or the pause expires",
+  "pipeline.reason.no_single_account":
+    "this conversation does not reach exactly one account, so its findings would have nowhere certain to go",
+  "pipeline.reason.two_bodies_of_work":
+    "this conversation spans two projects, so its findings would be wrong for one of them",
+  "pipeline.reason.thread_not_all_open":
+    "a message on this conversation is withheld from some of its readers, so a summary of the whole would be a partial account presented as a complete one",
+  "pipeline.reason.no_named_reader":
+    "this conversation has no reader a finding could answer to",
   "pipeline.reason.transport_not_read":
     "this step reads email only, and the message arrived over another transport",
   "pipeline.reason.sender_undecided":

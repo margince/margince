@@ -7130,6 +7130,26 @@ export const de = {
     "dieser Absender wurde unterdrückt, deshalb wurde kein Eintrag angelegt",
   "pipeline.reason.no_open_question":
     "zu diesem Absender gab es keine offene Frage",
+  "pipeline.reason.thread_not_captured":
+    "auf diesem Verlauf ist keine erfasste Konversation mehr vorhanden, es gab also nichts zu lesen",
+  "pipeline.reason.events_raised":
+    "diese Konversation wurde gelesen, und was darin stand, wurde beim Kunden abgelegt",
+  "pipeline.reason.nothing_material":
+    "diese Konversation wurde gelesen und enthielt nichts Ablagewürdiges",
+  "pipeline.reason.thread_still_moving":
+    "diese Konversation ist noch in Bewegung; sie wird gelesen, sobald sie eine Weile ruhig war",
+  "pipeline.reason.awaiting_scan":
+    "diese Konversation ist zum Lesen fällig und wurde noch nicht erreicht",
+  "pipeline.reason.reading_parked":
+    "das Lesen dieser Konversation wurde mehrfach abgelehnt und pausiert, bis sie sich ändert oder die Pause abläuft",
+  "pipeline.reason.no_single_account":
+    "diese Konversation erreicht nicht genau einen Kunden, ihre Erkenntnisse hätten also keinen eindeutigen Ort",
+  "pipeline.reason.two_bodies_of_work":
+    "diese Konversation umfasst zwei Projekte, ihre Erkenntnisse wären für eines davon falsch",
+  "pipeline.reason.thread_not_all_open":
+    "eine Nachricht dieser Konversation ist einem Teil ihrer Leser vorenthalten; eine Zusammenfassung des Ganzen wäre ein Teilbericht, der als vollständig erscheint",
+  "pipeline.reason.no_named_reader":
+    "diese Konversation hat keinen Leser, dem eine Erkenntnis zuzuordnen wäre",
   "pipeline.reason.transport_not_read":
     "dieser Schritt liest nur E-Mail, und die Nachricht kam über einen anderen Kanal",
   "pipeline.reason.sender_undecided":
