@@ -55,3 +55,14 @@ func TestReadSeatMayEnrolAMandatedFactor(t *testing.T) {
 		t.Error("a read seat cannot enrol a factor the installation requires of it")
 	}
 }
+
+func TestReadSeatMayDisableItsOwnFactor(t *testing.T) {
+	// The mirror of enrolment: a read seat that can enrol a factor must be able
+	// to remove it. Enrol-only would strand a read seat that lost its
+	// authenticator — DELETE blocked by the tier ceiling, re-enrol refused
+	// because a confirmed factor already exists — with no self-service recovery
+	// once its recovery codes run out.
+	if !readSeatMayMutate(httptest.NewRequest(http.MethodDelete, "/v1/me/mfa", nil)) {
+		t.Error("a read seat cannot disable the factor it enrolled — enrol-only is a lockout")
+	}
+}

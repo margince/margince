@@ -141,28 +141,38 @@ func (h Handlers) serveAsOptionalHuman(ctx context.Context, w http.ResponseWrite
 		httperr.Write(w, r, err)
 		return
 	}
-	// The forced rotation binds here too. This door is a GET, so the seat
-	// ceiling has no bearing on it, but arming a consent nonce for an account
-	// still on an operator's password would start a grant that the POST
-	// decision then refuses — a dead end at the approve click, on behalf of a
-	// credential its holder never chose. Falling through as "not signed in"
-	// would be worse: it sends them to a login they can complete and land back
-	// here from, forever.
+	// Both login confinements bind at this door too, and for the same reason:
+	// arming a consent nonce for an account the POST decision will then refuse is
+	// a dead end at the approve click — whether the account is still on an
+	// operator's password or owes a second factor it has not set up. Falling
+	// through as "not signed in" would be worse: it sends them to a login they can
+	// complete and land right back here from, forever. This door is a GET, so the
+	// seat ceiling has no bearing on it, and neither confinement's escape route
+	// (own-credential, MFA enrolment) is ever the consent entry, so no route
+	// exception is needed here — unlike serveAsHuman above.
 	if id.MustChangePassword {
 		httperr.Write(w, r, forcedRotationRefusal())
+		return
+	}
+	if id.MustEnrolMFA {
+		httperr.Write(w, r, mfaEnrolmentRequiredRefusal())
 		return
 	}
 	next.ServeHTTP(w, r.WithContext(withHumanPrincipal(ctx, id)))
 }
 
 // readSeatMayMutate reports the mutations a read seat is allowed despite the
-// tier ceiling: replacing its own password, and ending one of its own sessions.
-// Both are credential self-management scoped to the caller by the store, not
-// authority over any record — so a read seat may sign a compromised device out.
-// Kept separate from the must-change-password gate's isOwnCredentialRequest,
-// which stays confined to the one route that replaces the credential.
+// tier ceiling: replacing its own password, ending one of its own sessions, and
+// enrolling or disabling its own second factor. Each is credential
+// self-management scoped to the caller by the store, not authority over any
+// record — so a read seat may sign a compromised device out, and may remove the
+// factor it enrolled rather than being enrol-only and locked out once its
+// recovery codes are spent. Kept separate from the must-change-password gate's
+// isOwnCredentialRequest, which stays confined to the one route that replaces
+// the credential.
 func readSeatMayMutate(r *http.Request) bool {
-	return isOwnCredentialRequest(r) || isOwnSessionRevoke(r) || isMFAEnrolRequest(r)
+	return isOwnCredentialRequest(r) || isOwnSessionRevoke(r) ||
+		isMFAEnrolRequest(r) || isOwnMFADisable(r)
 }
 
 // isMutating is the transport-level write test the agent and read-seat

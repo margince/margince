@@ -37,6 +37,17 @@ func isMFAEnrolRequest(r *http.Request) bool {
 	return false
 }
 
+// isOwnMFADisable reports the caller removing their OWN second factor —
+// DELETE /me/mfa. A read seat may reach it for the same reason it may change its
+// own password or revoke its own session: managing its own credentials is not
+// authority over any record. Deliberately distinct from isMFAEnrolRequest —
+// disabling is NOT an escape from enrolment confinement (a required factor must
+// not be removable from inside it), only the self-management mutation the seat
+// ceiling should permit once a factor is confirmed and the confinement is gone.
+func isOwnMFADisable(r *http.Request) bool {
+	return r.Method == http.MethodDelete && r.URL.Path == mfaStatusPath
+}
+
 // mfaEnrolmentRequiredRefusal is the answer every admission door gives a member
 // the installation requires a factor from until they enrol one. One spelling,
 // like forcedRotationRefusal, so a client branches on a single code.
