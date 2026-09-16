@@ -16,6 +16,7 @@ import (
 	"log/slog"
 	"net/http"
 	"reflect"
+	"sort"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -702,8 +703,15 @@ func TestAShutdownIsNotReportedAsAFailure(t *testing.T) {
 // Counts alone were what it carried, and "held 1, catalog 2" leaves a reader to
 // work out which host will fail from per-view lines a log search has to find.
 func TestTheBootWarningNamesTheMissingViewsAndTheRestart(t *testing.T) {
+	// EVERY view refused, and the whole rendered list asserted. One refusal
+	// would pass a line that named the first view it happened to see and
+	// dropped the rest, and it would pass an unsorted one — so two boots of the
+	// same broken deployment could log different lines and read as different
+	// faults.
 	tier, p := newWebTier(t)
-	tier.answer(RelationshipMapURI, broken(http.StatusNotFound))
+	for _, v := range catalog {
+		tier.answer(v.uri, broken(http.StatusNotFound))
+	}
 	var logged strings.Builder
 	p.log = slog.New(slog.NewTextHandler(&logged, &slog.HandlerOptions{Level: slog.LevelWarn}))
 
@@ -715,14 +723,40 @@ func TestTheBootWarningNamesTheMissingViewsAndTheRestart(t *testing.T) {
 	// a uri each, so reading the whole buffer would let this test pass on a
 	// summary that named nothing — which is the state it exists to refuse.
 	line := summaryLine(t, logged.String())
+	// The expectation is built from the CATALOG rather than written out: a view
+	// added tomorrow belongs in this line, and a test naming today's set would
+	// go on passing while the newest view went missing unannounced.
+	want := make([]string, 0, len(catalog))
+	for _, v := range catalog {
+		want = append(want, v.uri)
+	}
+	sort.Strings(want)
+	if rendered := "[" + strings.Join(want, " ") + "]"; !strings.Contains(line, rendered) {
+		t.Errorf("the warning's missing list is not %s:\n%s", rendered, line)
+	}
+	if !strings.Contains(line, "restart") {
+		t.Errorf("the warning does not say what to do about it:\n%s", line)
+	}
+}
+
+// And it names only what is missing. A line that listed every view whatever
+// happened would be a shorter way of saying nothing.
+func TestTheBootWarningDoesNotNameAViewItIsServing(t *testing.T) {
+	tier, p := newWebTier(t)
+	tier.answer(RelationshipMapURI, broken(http.StatusNotFound))
+	var logged strings.Builder
+	p.log = slog.New(slog.NewTextHandler(&logged, &slog.HandlerOptions{Level: slog.LevelWarn}))
+
+	if err := p.Prime(t.Context()); err != nil {
+		t.Fatalf("priming: %v", err)
+	}
+
+	line := summaryLine(t, logged.String())
 	if !strings.Contains(line, RelationshipMapURI) {
 		t.Errorf("the warning does not name the view that is missing:\n%s", line)
 	}
 	if strings.Contains(line, AccountBriefURI) {
 		t.Errorf("the warning names a view that IS served, so a reader cannot tell which to chase:\n%s", line)
-	}
-	if !strings.Contains(line, "restart") {
-		t.Errorf("the warning does not say what to do about it:\n%s", line)
 	}
 }
 
