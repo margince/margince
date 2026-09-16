@@ -19,6 +19,39 @@ type View = components["schemas"]["Company360"];
 const page = { has_more: false, next_cursor: null };
 const AS_OF = "2026-08-25T09:00:00Z";
 
+type Logged = NonNullable<View["activities"]>["data"][number];
+
+// THE AUDIT FIELDS EVERY ACTIVITY ROW CARRIES ON THE WIRE, written once.
+//
+// They are identical in all eleven rows below and say nothing about the shape
+// any one story exists to show, so spelling them per row buried the two or
+// three fields that actually differ — which is the only thing a reader of a
+// story is looking for.
+const logged = (
+  one: Omit<
+    Logged,
+    "is_done" | "source" | "captured_by" | "created_at" | "updated_at"
+  >,
+): Logged => ({
+  ...one,
+  is_done: true,
+  source: "manual",
+  captured_by: "human:u-1",
+  created_at: "2026-08-18T09:00:00Z",
+  updated_at: "2026-08-18T09:00:00Z",
+});
+
+// One summary for the long-subject rows: they differ in the subject line and
+// in nothing else, and the summary is not what that story is about.
+const teamThread = {
+  activity_id: "m-invoice",
+  display_status: "team",
+  occurred_at: "2026-08-18T09:00:00Z",
+  attachment_count: 0,
+  move: "none",
+  version: 1,
+} satisfies Logged["email_summary"];
+
 const base: View = {
   ...company360,
   as_of: AS_OF,
@@ -34,19 +67,14 @@ const base: View = {
   sections_omitted: [],
   activities: {
     data: [
-      {
+      logged({
         id: "a-1",
         kind: "meeting",
         direction: "outbound",
         subject: "Erstgespräch Matthias Ortner — Plaud-Transkript",
         occurred_at: "2026-08-18T09:00:00Z",
         links: [],
-        is_done: true,
-        source: "manual",
-        captured_by: "human:u-1",
-        created_at: "2026-08-18T09:00:00Z",
-        updated_at: "2026-08-18T09:00:00Z",
-      },
+      }),
     ],
     page,
   },
@@ -157,7 +185,7 @@ const withHistory: View = {
   ...goneQuiet,
   activities: {
     data: [
-      {
+      logged({
         id: "m-6",
         kind: "email",
         direction: "outbound",
@@ -165,13 +193,8 @@ const withHistory: View = {
         occurred_at: "2026-08-18T09:00:00Z",
         thread_key: "t-invoice",
         links: [],
-        is_done: true,
-        source: "manual",
-        captured_by: "human:u-1",
-        created_at: "2026-08-18T09:00:00Z",
-        updated_at: "2026-08-18T09:00:00Z",
-      },
-      {
+      }),
+      logged({
         id: "m-5",
         kind: "email",
         direction: "inbound",
@@ -179,13 +202,8 @@ const withHistory: View = {
         occurred_at: "2026-08-16T09:00:00Z",
         thread_key: "t-invoice",
         links: [],
-        is_done: true,
-        source: "manual",
-        captured_by: "human:u-1",
-        created_at: "2026-08-18T09:00:00Z",
-        updated_at: "2026-08-18T09:00:00Z",
-      },
-      {
+      }),
+      logged({
         id: "m-4",
         kind: "meeting",
         direction: "outbound",
@@ -193,13 +211,8 @@ const withHistory: View = {
         occurred_at: "2026-07-26T09:00:00Z",
         thread_key: "t-kickoff",
         links: [],
-        is_done: true,
-        source: "manual",
-        captured_by: "human:u-1",
-        created_at: "2026-08-18T09:00:00Z",
-        updated_at: "2026-08-18T09:00:00Z",
-      },
-      {
+      }),
+      logged({
         id: "m-3",
         kind: "email",
         direction: "inbound",
@@ -207,13 +220,8 @@ const withHistory: View = {
         occurred_at: "2026-07-21T09:00:00Z",
         thread_key: "t-kickoff",
         links: [],
-        is_done: true,
-        source: "manual",
-        captured_by: "human:u-1",
-        created_at: "2026-08-18T09:00:00Z",
-        updated_at: "2026-08-18T09:00:00Z",
-      },
-      {
+      }),
+      logged({
         id: "m-2",
         kind: "email",
         direction: "outbound",
@@ -221,13 +229,8 @@ const withHistory: View = {
         occurred_at: "2026-06-30T09:00:00Z",
         thread_key: "t-quote",
         links: [],
-        is_done: true,
-        source: "manual",
-        captured_by: "human:u-1",
-        created_at: "2026-08-18T09:00:00Z",
-        updated_at: "2026-08-18T09:00:00Z",
-      },
-      {
+      }),
+      logged({
         id: "m-1",
         kind: "email",
         direction: "outbound",
@@ -235,12 +238,7 @@ const withHistory: View = {
         occurred_at: "2026-06-02T09:00:00Z",
         thread_key: "t-intro",
         links: [],
-        is_done: true,
-        source: "manual",
-        captured_by: "human:u-1",
-        created_at: "2026-08-18T09:00:00Z",
-        updated_at: "2026-08-18T09:00:00Z",
-      },
+      }),
     ],
     page,
   },
@@ -259,7 +257,7 @@ const longSubjects: View = {
   ...goneQuiet,
   activities: {
     data: [
-      {
+      logged({
         id: "m-3",
         kind: "email",
         direction: "inbound",
@@ -267,65 +265,29 @@ const longSubjects: View = {
           "Apartment Management Services — Invoice for June, July and August 2026",
         occurred_at: "2026-08-18T09:00:00Z",
         thread_key: "t-invoice",
-        email_summary: {
-          activity_id: "m-invoice",
-          display_status: "team",
-          occurred_at: "2026-08-18T09:00:00Z",
-          attachment_count: 0,
-          move: "none",
-          version: 1,
-        },
+        email_summary: teamThread,
         links: [],
-        is_done: true,
-        source: "manual",
-        captured_by: "human:u-1",
-        created_at: "2026-08-18T09:00:00Z",
-        updated_at: "2026-08-18T09:00:00Z",
-      },
-      {
+      }),
+      logged({
         id: "m-2",
         kind: "email",
         direction: "inbound",
         subject: "YoSC-eSNpTHBr7_A0H0t_p16FBCWDD5389B22k64593Hmlet",
         occurred_at: "2026-08-14T09:00:00Z",
         thread_key: "t-receipt",
-        email_summary: {
-          activity_id: "m-invoice",
-          display_status: "team",
-          occurred_at: "2026-08-18T09:00:00Z",
-          attachment_count: 0,
-          move: "none",
-          version: 1,
-        },
+        email_summary: teamThread,
         links: [],
-        is_done: true,
-        source: "manual",
-        captured_by: "human:u-1",
-        created_at: "2026-08-18T09:00:00Z",
-        updated_at: "2026-08-18T09:00:00Z",
-      },
-      {
+      }),
+      logged({
         id: "m-1",
         kind: "email",
         direction: "inbound",
         subject: "Receipt for Lars Jankowsky (Re:Fly)",
         occurred_at: "2026-08-06T09:00:00Z",
         thread_key: "t-fly",
-        email_summary: {
-          activity_id: "m-invoice",
-          display_status: "team",
-          occurred_at: "2026-08-18T09:00:00Z",
-          attachment_count: 0,
-          move: "none",
-          version: 1,
-        },
+        email_summary: teamThread,
         links: [],
-        is_done: true,
-        source: "manual",
-        captured_by: "human:u-1",
-        created_at: "2026-08-18T09:00:00Z",
-        updated_at: "2026-08-18T09:00:00Z",
-      },
+      }),
     ],
     page: { has_more: true, next_cursor: null },
   },
