@@ -263,16 +263,9 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 	if origin == "" {
 		origin = OriginHuman
 	}
-	// An importer states the message's addresses; who it was WITH follows from
-	// those and the direction, and needs the acting side's own address to tell
-	// a recipient from ourselves. A caller that set the column outright is
-	// obeyed — capture's own writes arrive that way.
-	counterparty := in.CounterpartyEmail
-	if counterparty == "" {
-		counterparty, err = deriveImportedCounterparty(ctx, tx, in)
-		if err != nil {
-			return crmcontracts.Activity{}, false, err
-		}
+	counterparty, err := counterpartyFor(ctx, tx, in)
+	if err != nil {
+		return crmcontracts.Activity{}, false, err
 	}
 	_, err = tx.Exec(ctx,
 		`INSERT INTO activity (id, kind, channel_provider, subject, body, occurred_at, direction, meeting_status,
@@ -316,21 +309,8 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 	if err := stampLoggedParticipants(ctx, tx, id, in.Kind, in.Direction, in.Links); err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
-	// The headers an importer stated, for the addresses that resolved to no
-	// contact above. Both sets belong on the row: one names who this workspace
-	// knows, the other names everyone the message was actually addressed to.
-	if err := stampSuppliedEmailParticipants(ctx, tx, id, in); err != nil {
+	if err := recordImportedProvenance(ctx, tx, id, in, by); err != nil {
 		return crmcontracts.Activity{}, false, err
-	}
-	// Claim the message's own identity, so the other door recognises this row
-	// instead of filing the same message again. The claim is in THIS
-	// transaction: two arrivals racing on one Message-ID both reach here, the
-	// primary key lets one through, and the loser is told rather than left to
-	// create a second row.
-	if kind, key := identityOf(in); key != "" {
-		if err := ClaimIdentity(ctx, tx, id, kind, key, by); err != nil {
-			return crmcontracts.Activity{}, false, err
-		}
 	}
 
 	if err := recordInitialActivity(ctx, tx, id, in); err != nil {

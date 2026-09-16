@@ -75,6 +75,27 @@ func boundToKnownMessage(ctx context.Context, tx pgx.Tx, in LogActivityInput) (c
 	return out, true, nil
 }
 
+// recordImportedProvenance writes what an importer stated about a message it
+// handed over: who was on it, and which message it is.
+//
+// The address rows sit beside the contact-link rows the caller already stamped.
+// Both belong: one names who this workspace knows, the other names everyone the
+// message was actually addressed to.
+//
+// The identity claim is in THIS transaction on purpose. Two arrivals racing on
+// one Message-ID both reach here, the primary key lets one through, and the
+// loser is told rather than left to file a second copy of the same message.
+func recordImportedProvenance(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in LogActivityInput, by string) error {
+	if err := stampSuppliedEmailParticipants(ctx, tx, id, in); err != nil {
+		return err
+	}
+	kind, key := identityOf(in)
+	if key == "" {
+		return nil
+	}
+	return ClaimIdentity(ctx, tx, id, kind, key, by)
+}
+
 // sameKindAs reports whether the incumbent is the same sort of thing as the
 // arrival. A Message-ID on a note and the same one on an email are not one
 // message, whatever the header says.

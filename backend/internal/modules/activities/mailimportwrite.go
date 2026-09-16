@@ -14,6 +14,19 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// counterpartyFor answers who a message being logged was with.
+//
+// A caller that set the column outright is obeyed — capture's own writes arrive
+// that way, having derived it from the message they hold. An importer states
+// the addresses instead, and who the message was WITH follows from those and
+// its direction.
+func counterpartyFor(ctx context.Context, tx pgx.Tx, in LogActivityInput) (string, error) {
+	if in.CounterpartyEmail != "" {
+		return in.CounterpartyEmail, nil
+	}
+	return deriveImportedCounterparty(ctx, tx, in)
+}
+
 // deriveImportedCounterparty answers who an imported message was with.
 //
 // It runs under the write rather than in the mapping because the answer needs
