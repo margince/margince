@@ -44386,9 +44386,15 @@ components:
           type: array
           items: { $ref: '#/components/schemas/AttentionItem' }
           description: |
-            Today's meetings that have already started and whose result nobody has
-            recorded, longest unanswered first. The counterpart of `meetings`: that lane
-            is what to prepare for, this is what to close off.
+            Meetings that have already started and whose result nobody has recorded,
+            longest unanswered first. The counterpart of `meetings`: that lane is what to
+            prepare for, this is what to close off.
+
+            It reaches back a FORTNIGHT, where `meetings` is today only. The two bound
+            differently because they expire differently: preparation stops being possible
+            once a meeting begins, while an unrecorded outcome stays owed until somebody
+            records it. Bounded at all so that the first read after a quiet month is a
+            queue a reader can clear rather than a history of everything never answered.
 
             A meeting carrying no status at all is here. A captured calendar event
             arrives without one, so treating an absent status as settled would empty this
@@ -44685,10 +44691,10 @@ components:
           type: integer
           minimum: 0
           description: >-
-            How many of today's meetings have started with nobody saying how they went —
-            the bounded page, as the other lanes report. Not in `required`: a client
-            reading an installation whose feed does not carry this lane gets no number
-            rather than a zero, which would claim the day is clear.
+            How many meetings of the last fortnight have started with nobody saying how
+            they went — the bounded page, as the other lanes report. Not in `required`: a
+            client reading an installation whose feed does not carry this lane gets no
+            number rather than a zero, which would claim the day is clear.
         at_risk:
           type: integer
           minimum: 0

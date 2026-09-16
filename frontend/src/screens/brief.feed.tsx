@@ -190,8 +190,15 @@ function AgendaRows({
   // pane inside a pane), and the footer band each card paid for one ghost
   // button was more chrome than content.
   const draw = (item: WorklistItem, at: number) => {
+    // A meeting earns the door too. Its subject is the ACTIVITY rather than
+    // a contact, so `hasPane` answers no for it — and the row would stand
+    // with three verbs and no way through to the meeting they are about.
     const context =
-      focus && onContext && (hasPane(item) || item.source === "task");
+      focus &&
+      onContext &&
+      (hasPane(item) ||
+        item.source === "task" ||
+        item.source === "meeting_outcome");
     // THE LEAD IS DRAWN WHOLE. The first row is where the day starts, so it
     // takes the row's full density — its rank, its reasons, what doing
     // nothing costs — under a kicker that says so; every row after it is one

@@ -159,8 +159,13 @@ func foldFixtureMessages(
 		byLabel[message.Label] = id
 		at := now.AddDate(0, 0, -message.DaysAgo)
 		folded := contactbrief.ActIn{
-			ID: id, Kind: fixtureKindEmail, Direction: message.Direction,
-			At: at.UTC().Format(time.RFC3339), Withheld: message.Withheld,
+			ID: id, Kind: fixtureKindEmail,
+			// The fixture speaks in directions because that is what a corpus
+			// author knows about a message; the fold turns it into the speaker
+			// the prompt reads, through the site's own function rather than a
+			// second mapping that could disagree with it.
+			Speaker: contactbrief.SpeakerFor(crmcontracts.ActivityDirection(message.Direction)),
+			At:      at.UTC().Format(time.RFC3339), Withheld: message.Withheld,
 		}
 		if !message.Withheld {
 			folded.Subject, folded.Preview, folded.Move = message.Subject, message.Preview, message.Move
