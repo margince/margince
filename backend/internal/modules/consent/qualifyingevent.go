@@ -75,6 +75,12 @@ var handRecordedKinds = map[string]bool{
 // word is what stops the two answers drifting apart.
 const KindMeeting = "meeting"
 
+// KindInquiry is the event a subject writes by ASKING — a public booking form,
+// and the other doors ADR-0098 D2 names beside it. Exported because the door
+// that takes the inquiry is not this module, and the word has to be the same on
+// both sides of that edge.
+const KindInquiry = "inquiry"
+
 // noteMaxRunes bounds what the evidence may be. A sentence saying where a card
 // changed hands is the whole need; a page of prose in this column is somebody
 // using it as a notes field, and the record has one of those.
@@ -97,6 +103,46 @@ type RecordQualifyingEventInput struct {
 	Kind       string
 	Note       string
 	OccurredAt time.Time
+}
+
+// RecordInquiry records that this contact asked for a meeting themselves.
+//
+// No principal gate, and that is the point of it: the caller is the PUBLIC
+// booking door, which has no session at all. What bounds it is the fact it
+// records — the door has just committed a meeting this contact booked, and the
+// row cites that meeting. It asserts nothing a seat could not see for itself on
+// the record.
+//
+// It is `captured` rather than `human`: nobody typed this claim, the door that
+// took the booking wrote it. The hand-recorded verbs beside it stay what
+// they are — a named human asserting something with no other evidence — and
+// keep their RequireHuman.
+func (s *Store) RecordInquiry(
+	ctx context.Context, contactID ids.ContactID, activityID ids.UUID,
+) error {
+	by, err := storekit.CapturedBy(ctx)
+	if err != nil {
+		return err
+	}
+	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+		return RecordSubjectInquiry(ctx, tx, contactID.String(), QualifyingEvent{
+			Kind: KindInquiry,
+			// WHEN THEY ASKED, which is now — not when the meeting they booked
+			// is scheduled for. A booking is routinely made for a date weeks
+			// out, and the verdict reads the most recent event against a reply
+			// window: an inquiry dated forward would hold the contact qualified
+			// from a moment that has not happened yet. The hand-recorded verb
+			// below refuses a future date for the same reason and says so.
+			//
+			// Taken here rather than from the caller because the caller is
+			// observing a fact rather than asserting one: the door knows a
+			// booking just arrived, and the moment it arrived is this store's
+			// to stamp.
+			OccurredAt:       s.now(),
+			SourceEntityType: entityActivity,
+			SourceEntityID:   activityID.String(),
+		}, by)
+	})
 }
 
 // RecordQualifyingEvent writes the exchange and returns it as it now stands.
