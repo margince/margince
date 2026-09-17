@@ -200,6 +200,14 @@ func (e *SearchEnv) AsTeamRep(user, team ids.UUID) context.Context {
 // rides this fixture deletes, and a grant no caller needs would quietly turn any
 // future erasure test from a proof into a pass. A suite that does need delete
 // should say so by asking for it, not inherit it from a fixture named "full".
+//
+// It acts as Rep1, a seat this harness actually seeded, and the readers beside
+// it may mint a uuid because nothing they do is stored against it. A WRITING
+// principal cannot: rows carry the acting seat — a meeting's host, an
+// assignee — and those columns are foreign keys into app_user. A fixture
+// inventing a seat writes a caller no session could produce, and the writes
+// that reach those columns fail on a constraint that has nothing to do with
+// what the suite is proving.
 func (e *SearchEnv) AsFullUser() context.Context {
 	grants := map[string]principal.ObjectGrant{}
 	for _, object := range searchObjects {
@@ -208,7 +216,7 @@ func (e *SearchEnv) AsFullUser() context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalHuman, ID: "human:" + ids.NewV7().String(), UserID: ids.NewV7(),
+		Type: principal.PrincipalHuman, ID: "human:" + e.Rep1.String(), UserID: e.Rep1,
 		Permissions: principal.Permissions{Objects: grants, RowScope: principal.RowScopeAll},
 	})
 }

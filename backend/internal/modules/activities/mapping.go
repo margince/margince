@@ -319,6 +319,22 @@ func optionalFieldsFrom(req crmcontracts.CreateActivityRequest, in *LogActivityI
 		m := string(*req.MeetingStatus)
 		in.MeetingStatus = &m
 	}
+	// Only a meeting has a host to name. A caller who sends one on a mail or a
+	// task is refused rather than having it dropped: the field they meant to set
+	// is the wrong one for what they are logging, and silently ignoring it leaves
+	// them believing an attribution that was never written.
+	//
+	// Saying nothing means "I held it": the store fills in the acting human for
+	// a meeting with no host named. There is deliberately no way to say "a
+	// meeting nobody here hosted" on the create wire — that state exists on the
+	// row for imports whose calendar named no owner, and a human logging a
+	// meeting they were at is the case this path serves.
+	if req.HostUserId != nil {
+		if in.Kind != string(crmcontracts.ActivityKindMeeting) {
+			return &KindFieldError{Field: "host_user_id", Only: "a meeting"}
+		}
+		in.HostUserID = idArg[ids.UserKind](req.HostUserId)
+	}
 	if req.Links != nil {
 		for _, link := range *req.Links {
 			in.Links = append(in.Links, ActivityLinkInput{

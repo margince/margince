@@ -34318,6 +34318,19 @@ components:
         due_at: { type: [string, 'null'], format: date-time }
         remind_at: { type: [string, 'null'], format: date-time, description: Task only. }
         assignee_id: { type: [string, 'null'], format: uuid }
+        host_user_id:
+          type: string
+          format: uuid
+          description: >-
+            Meeting only: the member of this company who HELD it, which is not the same
+            question as who typed it up. Omit it for a meeting you held yourself and the
+            server fills in the caller; name a colleague when you are minuting theirs, so
+            it counts into their week rather than yours. A label and never an authority —
+            what a caller may read is decided before this field is filled in.
+
+            Not nullable: omitting it is how you say nothing, and the server answers that
+            with the caller. A meeting nobody here hosted is a state imports reach, not
+            one a human logging their own day can assert.
         duration_seconds: { type: [integer, 'null'] }
         direction: { type: [string, 'null'], enum: [null, inbound, outbound] }
         meeting_status: { type: [string, 'null'], enum: [null, booked, held, no_show, canceled] }
