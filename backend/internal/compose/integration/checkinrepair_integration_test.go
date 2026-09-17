@@ -99,8 +99,10 @@ func provenanceOf(t *testing.T, owner *pgx.Conn, id ids.UUID) (string, string) {
 	return *system, *sourceID
 }
 
-const noActivitySubject = "Check in — no activity since 2026-09-05"
-const cadenceSubject = "Time for a check-in — last touched 2026-09-05"
+const (
+	noActivitySubject = "Check in — no activity since 2026-09-05"
+	cadenceSubject    = "Time for a check-in — last touched 2026-09-05"
+)
 
 // Three reminders on one record, written as the anchor moved, collapse to the
 // newest — the one naming the date a rep would recognise.
@@ -214,10 +216,10 @@ func TestTheRepairIsANoOpTheSecondTime(t *testing.T) {
 	}
 }
 
-// A task a PERSON wrote is not this repair's to touch, however much its subject
+// A task a HUMAN wrote is not this repair's to touch, however much its subject
 // looks like a reminder's. source is client-writable, so the pair with
 // captured_by is the only thing that marks the engine's own output.
-func TestTheRepairLeavesAPersonsTaskAlone(t *testing.T) {
+func TestTheRepairLeavesAHumansTaskAlone(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)
 	company := e.SeedCompany(t, "Hand-written Account", nil)
@@ -230,6 +232,6 @@ func TestTheRepairLeavesAPersonsTaskAlone(t *testing.T) {
 		t.Errorf("a task captured by a human was archived by the engine's own repair")
 	}
 	if system, _ := provenanceOf(t, owner, planted); system != "" {
-		t.Errorf("source_system = %q, want empty — a person's task takes no engine identity", system)
+		t.Errorf("source_system = %q, want empty — a human's task takes no engine identity", system)
 	}
 }
