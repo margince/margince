@@ -1185,8 +1185,13 @@ test("AC-book-public (B-EP09.14): consent gates booking and the policy passes th
   const body = request.postDataJSON();
   // the wording the visitor SAW is byte-for-byte what was submitted
   expect(body.consent.wording).toBe(shownWording);
-  expect(body.consent.purpose_id).toBeTruthy();
   expect(body.consent.policy_version).toBeTruthy();
+  // And NO purpose id. Purpose ids are per-installation uuids minted at seed
+  // time with no anonymous read of them, so anything an anonymous page put here
+  // would be a value it was never given — which is what a stand-in id did, on
+  // every installation, until the door learned to resolve its own lane. The
+  // page names the wording it showed and nothing the server already knows.
+  expect(body.consent.purpose_id).toBeUndefined();
   // Exact: this build transmits nothing, so the card confirms the slot and
   // promises nothing beyond it. A substring is satisfied by a longer sentence
   // that does promise something, which is the claim this copy had removed.
@@ -1508,7 +1513,8 @@ test.describe("§3.8: 390px mobile", () => {
     const tall = await page.evaluate(() => {
       return Array.from(document.querySelectorAll(".worklist-list li"))
         .map((row) => {
-          const decides = row.querySelector("[data-testid='worklist-row-decision']") !== null;
+          const decides =
+            row.querySelector("[data-testid='worklist-row-decision']") !== null;
           return {
             height: row.getBoundingClientRect().height,
             ceiling: decides ? 208 : 176,

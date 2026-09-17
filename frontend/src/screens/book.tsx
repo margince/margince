@@ -31,12 +31,12 @@ import { problemMessageOf, QueryGate, throwProblem } from "./common";
 
 const DURATIONS = ["15", "30", "60"] as const;
 
-// The public page's consent policy. The contract exposes no anonymous
-// purpose read, so the published host page embeds its purpose + policy
-// version at publish time — these are that embedded config's dev-default
-// stand-ins, passed through verbatim, never recomputed at submit.
+// The public page's consent policy — the version of the wording shown, and
+// nothing else. No purpose id: ids are per-installation uuids minted at seed
+// time and the contract exposes no anonymous read of them, so anything this
+// page could put there would be a value it was never given. The door admits
+// exactly one purpose, and the server resolves that lane's own id.
 export const PUBLIC_BOOKING_CONSENT = {
-  purpose_id: "00000000-0000-4000-8000-00000000b001",
   policy_version: "2026-07",
 } as const;
 

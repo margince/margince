@@ -21733,10 +21733,31 @@ type CaptureConsent struct {
 	} `json:"marketing,omitempty"`
 
 	// PolicyVersion Version id of the consent wording shown to the subject.
-	PolicyVersion string             `json:"policy_version"`
-	PurposeId     openapi_types.UUID `json:"purpose_id"`
+	PolicyVersion string `json:"policy_version"`
+
+	// PurposeId The purpose the grant lands on. OMIT IT on a surface that is confined to one purpose
+	// — the booking doors are, to the `transactional` lane — and the server resolves that
+	// lane's own id for this installation.
+	//
+	// Omitting it is the right answer for a published page, not a shortcut. Purpose ids are
+	// per-installation uuids minted at seed time and there is no anonymous read of them, so
+	// an anonymous form that names one is naming a value it was never given. Sending an id
+	// is for a caller that read the catalog; it is still admitted only if it IS the lane the
+	// surface is confined to.
+	PurposeId *openapi_types.UUID `json:"purpose_id,omitempty"`
 
 	// Wording The exact wording shown, stored with the consent event for demonstrability.
+	//
+	// Optional in this schema and MANDATORY on both booking doors, which refuse a grant
+	// that cannot say what the subject read — before a contact row exists, because the
+	// door is anonymous and a refusal further in would grow the contact table one rejected
+	// request at a time. Omitting it is a 422 naming this field. It is not marked required
+	// here because tightening a shipped request field is the breaking change the contract
+	// gate refuses; the obligation lives in the doors, and it is stated here so a caller
+	// reading the schema is not surprised by it.
+	//
+	// Unlike `purpose_id`, this is something only the surface knows: the server cannot
+	// resolve what a page put in front of somebody.
 	Wording *string `json:"wording,omitempty"`
 }
 
