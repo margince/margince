@@ -94,8 +94,12 @@ type facts struct {
 	// moreTasks says the open-task read was cut at its window, so the count
 	// is a floor rather than the number.
 	moreTasks bool
-	room      *crmcontracts.DealRoom
-	threads   []crmcontracts.DealRoomThread
+	// nextMeeting is the soonest thing booked with the deal, asked of the
+	// database rather than taken off the timeline page: nil means nothing is
+	// booked at all, which the timeline could only ever suggest.
+	nextMeeting *activities.BookedMeeting
+	room        *crmcontracts.DealRoom
+	threads     []crmcontracts.DealRoomThread
 	// seats are the contacts on the deal with their roles. Empty when nobody is
 	// named AND when the reader may not read the stakeholder edge — the card
 	// cannot tell those apart and says nothing about seats in either case,
@@ -359,13 +363,34 @@ func (s *Service) gather(ctx context.Context, dealID ids.DealID) (facts, error) 
 		return facts{}, fmt.Errorf("deal status: reading outstanding requests: %w", err)
 	}
 	f.requests = requests
+	// System-minted work is excluded because the card reads an open task as the
+	// next step somebody AGREED. A forecast-assurance review or a check-in
+	// reminder is the product filing work about the deal, and reading one as an
+	// agreed step let housekeeping outrank the advice this card exists to give:
+	// a deal three weeks silent was told to go tick off a forecast input. The
+	// exclusion is the module's own SQL predicate, so the answer is
+	// authoritative rather than a page filtered after it was read.
 	open, more, err := s.activities.ListOpenTasks(ctx, activities.ListOpenTasksInput{
 		EntityType: &entityType, EntityID: &dealID.UUID, Limit: timelineWindow,
+		ExcludeSystemMinted: true,
 	})
 	if err != nil {
 		return facts{}, fmt.Errorf("deal status: reading the deal's open tasks: %w", err)
 	}
 	f.openTasks, f.moreTasks = open, more
+	// Asked of the database rather than read off the timeline page above: that
+	// page holds 25 rows newest-first, so a busy deal hides its own booked
+	// meeting behind newer notes, and the card would tell a rep to arrange what
+	// they have already arranged.
+	meeting, booked, err := s.activities.NextBookedMeeting(ctx, activities.NextBookedMeetingInput{
+		EntityType: entityType, EntityID: dealID.UUID, After: f.now,
+	})
+	if err != nil {
+		return facts{}, fmt.Errorf("deal status: reading the deal's next booked meeting: %w", err)
+	}
+	if booked {
+		f.nextMeeting = &meeting
+	}
 	if err := s.gatherRoom(ctx, dealID, &f); err != nil {
 		return facts{}, err
 	}

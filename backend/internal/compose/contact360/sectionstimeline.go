@@ -120,12 +120,17 @@ func (s *Service) activitiesSection(ctx context.Context, tx pgx.Tx, contactID id
 
 // nextStepsSection is the open work filed against this contact: tasks not
 // yet done. A task with no due date still counts — it is owed either way.
+//
+// System-minted work stays IN the list: a check-in reminder is real open work
+// and a reader looking at their task list wants to see it. What it must not do
+// is decide the moment above the list — see byUrgencyHumanFirst for why the
+// order carries that difference rather than a second query.
 func (s *Service) nextStepsSection(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, opts AssembleOptions, out *crmcontracts.Contact360) error {
 	if err := requireRead(ctx, "activity"); err != nil {
 		return err
 	}
 	rows, hasMore, err := s.readActivities(ctx, tx, contactID, opts,
-		`AND a.kind = 'task' AND coalesce(a.is_done, false) = false`, byUrgency)
+		`AND a.kind = 'task' AND coalesce(a.is_done, false) = false`, byUrgencyHumanFirst)
 	if err != nil {
 		return err
 	}
@@ -157,6 +162,32 @@ const (
 	byRecency sectionOrder = "a.occurred_at DESC, a.id DESC"
 	byUrgency sectionOrder = "a.due_at ASC NULLS LAST, a.occurred_at ASC, a.id ASC"
 )
+
+// byUrgencyHumanFirst is byUrgency with work a colleague filed ahead of work
+// the product minted for itself.
+//
+// The order is load-bearing, not cosmetic. The moment above the list asks "has
+// anybody agreed a next step with this contact", and it may only read the page
+// it was given — one capped page, sectionCap rows. Under plain urgency, a
+// contact with a page of check-in reminders due sooner than their one real
+// promise hides that promise on page two, and the moment reports a missing next
+// step that is not missing. An absence read off a capped page is sound only if
+// what it looks for sorts to the front, so the colleague-filed rows sort to the
+// front and the reminders keep their urgency order behind them.
+//
+// The predicate is activities.SystemMintedExpr — the same captured_by namespace
+// test principal.SystemMintedID spells in Go, so this order and the filter the
+// rung applies stay one answer.
+//
+// Held by: TestASystemMintedTaskDoesNotCountAsTheNextStep
+// (internal/compose/contact360/momentnextstep_test.go)
+//
+// A var rather than a const only because it is built from that shared
+// expression: spelling the namespace inline to keep it constant is exactly the
+// second copy the helper exists to prevent.
+var byUrgencyHumanFirst = sectionOrder(
+	"(CASE WHEN " + activities.SystemMintedExpr("a") + " THEN 1 ELSE 0 END) ASC, " +
+		"a.due_at ASC NULLS LAST, a.occurred_at ASC, a.id ASC")
 
 // sectionPage is the section's edge in the activities list's own cursor
 // vocabulary, so the record page continues from this page's last row rather
