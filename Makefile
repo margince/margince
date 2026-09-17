@@ -1071,13 +1071,18 @@ test-review-coverage:
 test-laneorder:
 	@./scripts/test-laneorder.sh
 
-## check-image-pins — every `uses:` in .github/workflows/ AND every container
-## `image:` (workflow service containers + docker-compose.dev.yml) is
-## pinned to an immutable ref (supply-chain: a floating vN/main tag or image
-## tag lets a compromised artifact ride into CI unreviewed). Lives at the root
-## because the workflows do; also a CI step, so a pin can't regress.
+## check-image-pins — every `uses:` in .github/workflows/, every container
+## `image:` (workflow service containers + docker-compose.dev.yml) AND every
+## Dockerfile base `FROM` is pinned to an immutable ref (supply-chain: a
+## floating vN/main tag or image tag lets a compromised artifact ride into CI
+## — or into a release image — unreviewed). Lives at the root because the
+## workflows and the Dockerfile do; also a CI step, so a pin can't regress.
 check-image-pins:
 	@./scripts/check-image-pins.sh
+## check-image-pins.test.sh runs beside it because the newest half of the gate
+## reads Dockerfiles, and a scan that stopped recognising a `FROM` line reports
+## the same "image pins OK" as a fully pinned tree.
+	@bash ./scripts/check-image-pins.test.sh
 
 ## check-host-ports — every host port published by docker-compose.dev.yml
 ## sits BELOW the ephemeral floor (32768). A published port inside the kernel's
