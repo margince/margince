@@ -33,6 +33,7 @@ import { EditAction } from "./edit";
 import { useOpenEmail } from "./openemail";
 import { useProjectVerbRefusal } from "./project360.refusal";
 import { ProjectCompanies } from "./projectcompanies";
+import { ProjectIdentityFacts } from "./projectheaderfacts";
 import { ProjectHealth } from "./projecthealth";
 import type { ProjectHealthAssessment } from "./projecthealth.queries";
 import { ProjectHealthModal } from "./projecthealthmodal";
@@ -61,7 +62,6 @@ import {
   ProjectDocumentsCard,
   StakeholdersCard,
 } from "./projectsections";
-import { ProjectSubtitle } from "./projectsubtitle";
 import { ProjectTabs } from "./projecttabs";
 import {
   ChronologyFilter,
@@ -116,6 +116,7 @@ export function ProjectScreen({ id }: Readonly<{ id: string }>) {
 
 function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
   const recordZone = useRecordZone();
+  const { locale } = useLocale();
   const details = usePageAside();
   const project = view.project;
   const readOnlyReasonId = useId();
@@ -153,157 +154,163 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
   // Read here and handed down: the schema request then runs BESIDE the
   // project's rather than after it.
   const cf = useObjectCustomFields("project");
+  // Sheet, rung and facts are one change, argued in projectheaderfacts.tsx.
   return (
-    <RecordView
-      // WHO is on this work comes first, then the paperwork. The column used
-      // to open with the phase history — a log of moves the stepper above
-      // already shows the current state of — so a reader scanning for "whose
-      // project is this" read a changelog first. The three record-keeping
-      // cards below answer questions a reader comes looking for on purpose;
-      // the two above answer the one they arrive with.
-      //
-      // The details pane beside the work: the same pane, fold and memory of
-      // it as every other record page.
-      // The cards stand straight in the pane: `RecordView` gives the aside
-      // column the rail's own rhythm, and a wrapper of ours inside it was a
-      // second answer to how far apart a record's rail cards sit.
-      aside={
-        <>
-          <ProjectCompanies
+    <div className="record-sheet">
+      <RecordView
+        // WHO is on this work comes first, then the paperwork. The column used
+        // to open with the phase history — a log of moves the stepper above
+        // already shows the current state of — so a reader scanning for "whose
+        // project is this" read a changelog first. The three record-keeping
+        // cards below answer questions a reader comes looking for on purpose;
+        // the two above answer the one they arrive with.
+        //
+        // The details pane beside the work: the same pane, fold and memory of
+        // it as every other record page.
+        // The cards stand straight in the pane: `RecordView` gives the aside
+        // column the rail's own rhythm, and a wrapper of ours inside it was a
+        // second answer to how far apart a record's rail cards sit.
+        aside={
+          <>
+            <ProjectCompanies
+              projectId={project.id}
+              companies={project.companies}
+              readOnly={readOnly}
+            />
+            <RecordTeam
+              recordType="project"
+              recordId={project.id}
+              readOnly={readOnly}
+            />
+            <StakeholdersCard
+              view={view}
+              projectId={project.id}
+              readOnly={readOnly}
+            />
+            <ProjectContractsCard view={view} />
+            <ProjectDocumentsCard view={view} />
+            <PhaseHistoryCard view={view} />
+            <CustomFieldsPanel object="project" record={project} />
+          </>
+        }
+        asideOpen={details.open}
+        name={project.name}
+        scale="compact"
+        badges={<ProjectIdentityFacts view={view} locale={locale} />}
+        zone={recordZone}
+        // The phase and the key read beside the name, not at the far end of
+        // the header among the verbs: both are tags ON the record — where it
+        // stands and what a human calls it in a subject line — and a reader
+        // looking at the name was finding them across the page, above the
+        // buttons that act on it.
+        nameBadge={
+          <>
+            <PhaseBadge phase={project.phase} />
+            {project.key && <ProjectKeyChip projectKey={project.key} />}
+          </>
+        }
+        actions={
+          <ProjectActions
+            project={project}
+            refusedReasonId={readOnly ? readOnlyReasonId : undefined}
+            cf={cf}
+          />
+        }
+        // In the header row, where a reader looks for a record's verbs — as the
+        // company, contact and lead pages already put them. Without it the row
+        // fell to the full-width strip UNDER the header, so the one record page
+        // with no primary action was also the one whose verbs were somewhere
+        // else.
+        actionsInline
+        // Where the project stands, at the foot of its head — the same row a
+        // deal's stage ladder and a lead's stepper stand in. It is the question a
+        // reader arrives with, so it is answered before the body rather than as
+        // the first card inside it.
+        standing={
+          <PhaseStepper
+            phase={project.phase}
+            refusedReasonId={readOnly ? readOnlyReasonId : undefined}
+            pending={false}
+            onMove={setMoveTo}
+          />
+        }
+        tabs={<ProjectTabs />}
+        band={
+          // ONE sentence and nothing else: why this record takes no changes, so
+          // every control it refuses points at it. Absent while the project is
+          // writable, where a reserved gap reads as a record with nothing said.
+          readOnlyReason ? (
+            <p id={readOnlyReasonId} className="t-caption">
+              {readOnlyReason}
+            </p>
+          ) : undefined
+        }
+        {...chronology}
+        timelineAnchorId={PROJECT_ACTIVITY_ANCHOR}
+      >
+        {/* The record's work column, at the record's own step. The readings open
+            it: they are read as cards and so stand BESIDE the details pane, as on
+            every other record, rather than in a band across both columns that the
+            pane would reflow. The phase is not one of them — it says where the
+            whole project stands, so it rides the head (`standing` above), which
+            is full width already and above the pane. */}
+        <div className="record-stack">
+          <RollupsStrip view={view} />
+          <ProjectHealth
             projectId={project.id}
-            companies={project.companies}
             readOnly={readOnly}
+            onRecord={() => setHealthEdit("new")}
+            onCorrect={setHealthEdit}
           />
-          <RecordTeam
-            recordType="project"
-            recordId={project.id}
-            readOnly={readOnly}
-          />
-          <StakeholdersCard
-            view={view}
-            projectId={project.id}
-            readOnly={readOnly}
-          />
-          <ProjectContractsCard view={view} />
-          <ProjectDocumentsCard view={view} />
-          <PhaseHistoryCard view={view} />
-          <CustomFieldsPanel object="project" record={project} />
-        </>
-      }
-      asideOpen={details.open}
-      name={project.name}
-      subtitle={<ProjectSubtitle view={view} />}
-      zone={recordZone}
-      // The phase and the key read beside the name, not at the far end of
-      // the header among the verbs: both are tags ON the record — where it
-      // stands and what a human calls it in a subject line — and a reader
-      // looking at the name was finding them across the page, above the
-      // buttons that act on it.
-      nameBadge={
-        <>
-          <PhaseBadge phase={project.phase} />
-          {project.key && <ProjectKeyChip projectKey={project.key} />}
-        </>
-      }
-      actions={
-        <ProjectActions
-          project={project}
-          refusedReasonId={readOnly ? readOnlyReasonId : undefined}
-          cf={cf}
-        />
-      }
-      // In the header row, where a reader looks for a record's verbs — as the
-      // company, contact and lead pages already put them. Without it the row
-      // fell to the full-width strip UNDER the header, so the one record page
-      // with no primary action was also the one whose verbs were somewhere
-      // else.
-      actionsInline
-      // Where the project stands, at the foot of its head — the same row a
-      // deal's stage ladder and a lead's stepper stand in. It is the question a
-      // reader arrives with, so it is answered before the body rather than as
-      // the first card inside it.
-      standing={
-        <PhaseStepper
-          phase={project.phase}
-          refusedReasonId={readOnly ? readOnlyReasonId : undefined}
-          pending={false}
-          onMove={setMoveTo}
-        />
-      }
-      tabs={<ProjectTabs />}
-      band={
-        // ONE sentence and nothing else: why this record takes no changes, so
-        // every control it refuses points at it. Absent while the project is
-        // writable, where a reserved gap reads as a record with nothing said.
-        readOnlyReason ? (
-          <p id={readOnlyReasonId} className="t-caption">
-            {readOnlyReason}
-          </p>
-        ) : undefined
-      }
-      {...chronology}
-      timelineAnchorId={PROJECT_ACTIVITY_ANCHOR}
-    >
-      {/* The record's work column, at the record's own step. The readings open
-          it: they are read as cards and so stand BESIDE the details pane, as on
-          every other record, rather than in a band across both columns that the
-          pane would reflow. The phase is not one of them — it says where the
-          whole project stands, so it rides the head (`standing` above), which
-          is full width already and above the pane. */}
-      <div className="record-stack">
-        <RollupsStrip view={view} />
-        <ProjectHealth
+          <div id={PROJECT_DEALS_ANCHOR}>
+            <ProjectDealsCard
+              view={view}
+              actions={
+                // New Deal from HERE binds the deal to this project, and binding is
+                // held to project WRITE authority rather than deal permission
+                // alone: winning the deal later advances the project's phase
+                // without re-checking, so `EnsureAttachable` proves the authority
+                // at the moment of attaching. A caller who may read this project
+                // but not write it can still work deals — just not born into it.
+                !readOnly &&
+                project.company_id && (
+                  <NewDealAction
+                    companyId={project.company_id}
+                    companyName={project.name}
+                    projectId={project.id}
+                  />
+                )
+              }
+            />
+          </div>
+          <div id={PROJECT_COMMITMENTS_ANCHOR}>
+            <CommitmentsCard view={view} onOpenTask={setOpenTask} />
+          </div>
+        </div>
+        <AdvanceProjectModal
           projectId={project.id}
-          readOnly={readOnly}
-          onRecord={() => setHealthEdit("new")}
-          onCorrect={setHealthEdit}
+          version={project.version}
+          to={moveTo}
+          onClose={() => setMoveTo(null)}
         />
-        <div id={PROJECT_DEALS_ANCHOR}>
-          <ProjectDealsCard
-            view={view}
-            actions={
-              // New Deal from HERE binds the deal to this project, and binding is
-              // held to project WRITE authority rather than deal permission
-              // alone: winning the deal later advances the project's phase
-              // without re-checking, so `EnsureAttachable` proves the authority
-              // at the moment of attaching. A caller who may read this project
-              // but not write it can still work deals — just not born into it.
-              !readOnly &&
-              project.company_id && (
-                <NewDealAction
-                  companyId={project.company_id}
-                  companyName={project.name}
-                  projectId={project.id}
-                />
-              )
-            }
+        <ProjectHealthModal
+          open={healthEdit !== null}
+          onClose={() => setHealthEdit(null)}
+          projectId={project.id}
+          correcting={
+            healthEdit && healthEdit !== "new" ? healthEdit : undefined
+          }
+        />
+        {openTask && (
+          <TaskDetailModal
+            activityId={openTask}
+            readOnly={!canUpdateTask}
+            onClose={() => setOpenTask(null)}
+            update={taskUpdate}
           />
-        </div>
-        <div id={PROJECT_COMMITMENTS_ANCHOR}>
-          <CommitmentsCard view={view} onOpenTask={setOpenTask} />
-        </div>
-      </div>
-      <AdvanceProjectModal
-        projectId={project.id}
-        version={project.version}
-        to={moveTo}
-        onClose={() => setMoveTo(null)}
-      />
-      <ProjectHealthModal
-        open={healthEdit !== null}
-        onClose={() => setHealthEdit(null)}
-        projectId={project.id}
-        correcting={healthEdit && healthEdit !== "new" ? healthEdit : undefined}
-      />
-      {openTask && (
-        <TaskDetailModal
-          activityId={openTask}
-          readOnly={!canUpdateTask}
-          onClose={() => setOpenTask(null)}
-          update={taskUpdate}
-        />
-      )}
-    </RecordView>
+        )}
+      </RecordView>
+    </div>
   );
 }
 

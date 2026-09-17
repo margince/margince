@@ -17,13 +17,9 @@ import { Popover } from "../../design-system/popover";
 import { FieldGuard } from "../../design-system/rbac";
 import { Fact, RecordFacts } from "../../design-system/recordfacts";
 import { ProvenanceTag } from "../../design-system/trust";
-import {
-  calendarDaysBetween,
-  formatDayMonth,
-  formatMoney,
-  formatNumber,
-} from "../../format/format";
-import { type Locale, useT } from "../../i18n";
+import { calendarDaysUntil } from "../../format/daysuntil";
+import { formatDayMonth, formatMoney, formatNumber } from "../../format/format";
+import { type Locale, translatePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { provenanceOf, useViewerId } from "../common";
 import {
@@ -261,16 +257,19 @@ function CloseReading({
       <span className="deal-fact-unset">{t("deal.strip.close.none")}</span>
     );
   }
-  const days = calendarDaysBetween(
-    new Date(),
-    new Date(deal.expected_close_date),
-  );
+  // Counted in the record's zone, the one `formatDayMonth` draws the date in
+  // just below, so the date and the count beside it cannot name different days.
+  // Through the reader's own plural rule, so a deal closing tomorrow does not
+  // read "in 1 days".
+  const days = calendarDaysUntil(deal.expected_close_date, zone);
   const parts: string[] = [
     days < 0
-      ? t("deal.strip.close.overdue", {
-          days: formatNumber(Math.abs(days), locale),
+      ? translatePlural(locale, "deal.strip.close.overdue", -days, {
+          days: formatNumber(-days, locale),
         })
-      : t("deal.strip.close.inDays", { days: formatNumber(days, locale) }),
+      : translatePlural(locale, "deal.strip.close.inDays", days, {
+          days: formatNumber(days, locale),
+        }),
   ];
   if (deal.close_date_provisional) {
     parts.push(t("deal.strip.close.provisional"));
