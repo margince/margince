@@ -208,7 +208,8 @@ breached. A hard bounce stops even those.
 A rep can also record the opposite of a stop: `communication_override` is a standing, per-category
 statement that a machine-level refusal for lack of evidence may be overruled for one contact. It
 reaches only a non-absolute machine reading — a subject-decided refusal still wins — and it is
-revocable only by a caller whose authority outranks the level it was recorded at. See
+revocable only by a caller whose authority may revoke the level it was recorded at: above it, or
+an admin taking back another admin's, which is the one square a stop's stricter rule refuses. See
 [privacy-and-consent.md](privacy-and-consent.md) for the full model.
 
 ### The three destinations one message offers

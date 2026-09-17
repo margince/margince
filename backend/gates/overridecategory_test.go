@@ -95,3 +95,67 @@ func TestOverrideCategoryVocabularyAgreesWithItsCheckConstraint(t *testing.T) {
 			extra)
 	}
 }
+
+// allowContactCategoryEnum captures the enum body of the allowContact request
+// body's `category`. Named by the operationId's own path so a reader can find
+// the block it reads; a pattern matching nothing fails below rather than
+// passing on an empty corpus.
+var allowContactCategoryEnum = regexp.MustCompile(
+	`(?s)/contacts/\{id\}/consent/allow:.*?operationId: allowContact.*?category:\s*\n(?:\s*#[^\n]*\n)*\s*type: string\n(?:\s*#[^\n]*\n)*\s*enum: \[(.*?)\]`)
+
+// enumMember matches one bare YAML flow-sequence member.
+var enumMember = regexp.MustCompile(`[a-z_]+`)
+
+// TestTheAllowDoorOffersExactlyTheCategoriesItAccepts holds the WIRE enum
+// against KnownForOverride, the rule admitAllow actually applies. The two are
+// different questions from the CHECK constraint above: storage must admit every
+// category a carried row can carry forward, while the door — and so the contract
+// a client generates its picker from — admits only those a vouch could ever
+// apply to. An enum wider than the door hands every client five options that
+// answer 422; one narrower silently hides a category a rep may legitimately
+// vouch for.
+func TestTheAllowDoorOffersExactlyTheCategoriesItAccepts(t *testing.T) {
+	t.Parallel()
+
+	path := filepath.Join("api", "crm.yaml")
+	spec, err := os.ReadFile(path) // #nosec G304 -- a fixed contract path under the trusted api tree
+	if err != nil {
+		t.Fatalf("reading %s: %v", path, err)
+	}
+
+	body := allowContactCategoryEnum.FindStringSubmatch(string(spec))
+	if body == nil {
+		// A moved or re-shaped block is not a reason to pass: this gate's whole
+		// job is to notice the two vocabularies parting company.
+		t.Fatalf("no allowContact category enum found in %s: the block this gate holds against "+
+			"KnownForOverride has moved or been re-spelled", path)
+	}
+
+	inSpec := map[string]bool{}
+	for _, m := range enumMember.FindAllString(body[1], -1) {
+		inSpec[m] = true
+	}
+	if len(inSpec) == 0 {
+		t.Fatal("the allowContact category enum parsed to no values — the gate is reading the wrong text")
+	}
+
+	accepted := map[string]bool{}
+	for _, c := range commsauthz.Categories() {
+		if c.KnownForOverride() {
+			accepted[string(c)] = true
+		}
+	}
+	if len(accepted) == 0 {
+		t.Fatal("KnownForOverride accepted no category at all — the door, not the contract, is broken")
+	}
+
+	for _, missing := range difference(accepted, inSpec) {
+		t.Errorf("category %q is accepted by the Allow door but absent from the allowContact enum: "+
+			"a client generating its picker from the contract can never offer a vouch the server would take",
+			missing)
+	}
+	for _, extra := range difference(inSpec, accepted) {
+		t.Errorf("category %q is offered by the allowContact enum but refused by KnownForOverride: "+
+			"every client showing it hands a rep an option that answers 422", extra)
+	}
+}

@@ -49,17 +49,19 @@ func (e *resolveEnv) seedOverride(t *testing.T, category string, revoked bool) i
 	return id
 }
 
-// seedOverrideAt records one live override at a named level and recorded_at, so
-// a test can pit authority against recency directly — seedOverride's user-level,
-// now() default cannot.
-func (e *resolveEnv) seedOverrideAt(t *testing.T, category, level string, recordedAt time.Time) ids.UUID {
+// seedMarketingOverrideAt records one live marketing override at a named level
+// and recorded_at, so a test can pit authority against recency directly —
+// seedOverride's user-level, now() default cannot. Marketing because that is the
+// category the ordering tests resolve to; seedOverride takes the category for
+// the cases that vary it.
+func (e *resolveEnv) seedMarketingOverrideAt(t *testing.T, level string, recordedAt time.Time) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
 	if _, err := e.owner.Exec(context.Background(), `
 		INSERT INTO communication_override
 		    (id, contact_id, category, reason, decided_by_level, captured_by, recorded_at)
-		VALUES ($1, $2, $3, 'seeded for the ordering test', $4, 'human:x', $5)`,
-		id, e.contact, category, level, recordedAt); err != nil {
+		VALUES ($1, $2, 'marketing', 'seeded for the ordering test', $3, 'human:x', $4)`,
+		id, e.contact, level, recordedAt); err != nil {
 		t.Fatalf("seeding a %s-level override: %v", level, err)
 	}
 	return id
@@ -75,8 +77,8 @@ func TestTheStrongestOverrideWinsEvenWhenAWeakerOneIsNewer(t *testing.T) {
 	e.seedPurpose(t, "newsletter", "marketing")
 	req := commsauthz.Request{LegacyPurposeKey: "newsletter"}
 
-	admin := e.seedOverrideAt(t, "marketing", "admin", time.Now().Add(-time.Hour))
-	e.seedOverrideAt(t, "marketing", "user", time.Now())
+	admin := e.seedMarketingOverrideAt(t, "admin", time.Now().Add(-time.Hour))
+	e.seedMarketingOverrideAt(t, "user", time.Now())
 
 	got := e.decide(t, req)
 	if got.Verdict != commsauthz.VerdictAllow {
@@ -98,8 +100,8 @@ func TestAStrongerSurvivorIsNotDisplacedByAWeakerCarry(t *testing.T) {
 	e.seedPurpose(t, "newsletter", "marketing")
 	req := commsauthz.Request{LegacyPurposeKey: "newsletter"}
 
-	e.seedOverrideAt(t, "marketing", "user", time.Now().Add(-time.Hour))
-	admin := e.seedOverrideAt(t, "marketing", "admin", time.Now())
+	e.seedMarketingOverrideAt(t, "user", time.Now().Add(-time.Hour))
+	admin := e.seedMarketingOverrideAt(t, "admin", time.Now())
 
 	got := e.decide(t, req)
 	if got.OverrideID != admin {

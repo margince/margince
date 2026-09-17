@@ -6,11 +6,11 @@ package consent
 // The read half of a rep's override: a standing row that outranks the
 // machine's own reading for one subject and one category, and nothing else.
 //
-// The write door does not exist yet — communication_override is seeded
-// directly by whatever writes it, and this file only answers "is there a live
-// one that applies here". decideOne (authorizetransmit.go) is the only caller,
-// and it asks ONLY when the decision is already known to be CanBeOverruled —
-// a machine-level, non-absolute refusal — so this never has to re-derive that.
+// The write door is Store.Allow (override.go); this file only answers "is there
+// a live one that applies here". decideOne (authorizetransmit.go) is the only
+// caller, and it asks ONLY when the decision is already known to be
+// CanBeOverruledByCategory — a machine-level, non-absolute refusal that resolved
+// to a category — so this never has to re-derive that.
 
 import (
 	"context"

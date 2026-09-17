@@ -2638,9 +2638,20 @@ components:
         rep reviewing the contact reads, not to every subscriber the event
         reaches.
       required:
+        - override_id
         - category
         - decided_by_level
       properties:
+        override_id:
+          type: string
+          format: uuid
+          description: >-
+            Which row was recorded. It is the handle the revoke door takes
+            (POST /contacts/{id}/consent/allow/{overrideId}/revoke), and a
+            contact can hold several live vouches at once — one per category,
+            and after a merge more than one for a single category — so a
+            consumer with no id cannot say which of them any later
+            consent.override_lifted describes.
         category:
           type: string
           description: >-

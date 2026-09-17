@@ -1149,6 +1149,11 @@ export interface components {
          *     It names WHAT category was vouched for and at WHICH authority, never the reason the rep gave: that explanation belongs to the audit trail a rep reviewing the contact reads, not to every subscriber the event reaches.
          */
         PublicEventConsentOverrideRecorded: {
+            /**
+             * Format: uuid
+             * @description Which row was recorded. It is the handle the revoke door takes (POST /contacts/{id}/consent/allow/{overrideId}/revoke), and a contact can hold several live vouches at once — one per category, and after a merge more than one for a single category — so a consumer with no id cannot say which of them any later consent.override_lifted describes.
+             */
+            override_id: string;
             /** @description Which category of send this vouch covers. The engine resolves every send to exactly one category, and the override applies to that one only. */
             category: string;
             /** @description Whose decision it is (user | admin) — always the recording seat's own authority, never a value the request body could name. */

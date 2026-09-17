@@ -281,9 +281,13 @@ func (h Handlers) AllowContact(w http.ResponseWriter, r *http.Request, id crmcon
 		httperr.Write(w, r, err)
 		return
 	}
-	// 204: the row is the whole result, matching SuppressContact — a caller
-	// reads the standing override back from the contact's own consent view,
-	// not from the write door.
+	// 204: the row is the whole result, matching SuppressContact. The id a
+	// caller needs for the revoke door reaches them on consent.override_recorded
+	// rather than in this response, which is the one place a standing override
+	// is currently readable back — there is no list endpoint for
+	// communication_override, exactly as there is none for
+	// communication_suppression. Said here rather than left to be discovered: a
+	// door whose handle is only on an event is a door a UI cannot offer yet.
 	w.WriteHeader(http.StatusNoContent)
 }
 

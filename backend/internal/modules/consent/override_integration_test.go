@@ -14,9 +14,11 @@ package consent
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"testing"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -450,5 +452,62 @@ func TestRevokeRequiresAReason(t *testing.T) {
 	}
 	if !overrideStillLive(t, e, row) {
 		t.Error("a refused reason revoked the row anyway")
+	}
+}
+
+// lastRecordedOverridePayload decodes the consent.override_recorded envelope the
+// write just staged. Read from the outbox rather than returned by the store,
+// because the row a consumer will actually receive is the thing under test —
+// the same reason lastLiftPayload reads it there.
+func lastRecordedOverridePayload(
+	t *testing.T, e *channelConsentEnv,
+) crmcontracts.PublicEventConsentOverrideRecorded {
+	t.Helper()
+	var raw []byte
+	if err := e.owner.QueryRow(context.Background(), `
+		SELECT envelope->'payload' FROM event_outbox
+		 WHERE envelope->>'type' = 'consent.override_recorded'
+		 ORDER BY created_at DESC, id DESC
+		 LIMIT 1`).Scan(&raw); err != nil {
+		t.Fatalf("reading the staged override event: %v", err)
+	}
+	var payload crmcontracts.PublicEventConsentOverrideRecorded
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		t.Fatalf("decoding the override payload: %v", err)
+	}
+	return payload
+}
+
+// TestTheRecordedEventNamesTheRowItWrote is why the id is on the payload at all.
+//
+// The write door answers 204 with no body and there is no endpoint that lists a
+// contact's standing overrides, so this event is the ONLY place a caller ever
+// learns the id the revoke door takes in its path. An event naming the category
+// but not the row leaves a rep able to record a vouch and unable to take it
+// back — and, after a merge has left two live rows for one category, unable to
+// tell which of them any later consent.override_lifted described.
+func TestTheRecordedEventNamesTheRowItWrote(t *testing.T) {
+	e := setupChannelConsent(t)
+
+	if err := e.store.Allow(e.ctx, AllowInput{
+		ContactID: e.contact, Category: "marketing", Reason: "they asked us at the trade fair",
+	}); err != nil {
+		t.Fatalf("recording the override: %v", err)
+	}
+
+	var written ids.UUID
+	if err := e.owner.QueryRow(context.Background(), `
+		SELECT id FROM communication_override
+		 WHERE contact_id = $1 AND revoked_at IS NULL`, e.contact).Scan(&written); err != nil {
+		t.Fatalf("reading back the override id: %v", err)
+	}
+
+	payload := lastRecordedOverridePayload(t, e)
+	if ids.UUID(payload.OverrideId) != written {
+		t.Errorf("the event named override %s, want the row that was written, %s",
+			ids.UUID(payload.OverrideId), written)
+	}
+	if payload.Category != "marketing" {
+		t.Errorf("the event named category %q, want marketing", payload.Category)
 	}
 }

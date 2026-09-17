@@ -52593,11 +52593,13 @@ export interface operations {
                 "application/json": {
                     /**
                      * @description Which category of send this vouch covers. The engine resolves every send to
-                     *     exactly one of these, and the override applies to that one category only — a
-                     *     vouch for `marketing` says nothing about `customer_service`.
+                     *     exactly one category, and the override applies to that one only — a vouch for
+                     *     `marketing` says nothing about `customer_service`. The five categories that
+                     *     serve the subject are absent on purpose: they are never refused for lack of
+                     *     evidence, so a vouch for one would be a row nothing could ever read.
                      * @enum {string}
                      */
-                    category: "reply_to_inbound" | "requested_followup" | "precontract_quote" | "active_deal_followup" | "customer_service" | "account_notice" | "contract_notice" | "invoice_or_payment" | "security_notice" | "privacy_notice" | "record_confirmation" | "consent_confirmation" | "optout_confirmation" | "marketing";
+                    category: "reply_to_inbound" | "requested_followup" | "precontract_quote" | "active_deal_followup" | "customer_service" | "account_notice" | "contract_notice" | "invoice_or_payment" | "marketing";
                     /**
                      * @description Why the rep is vouching for this send, in their own words. Required: unlike a
                      *     suppression, which may only relay what the subject said, this write is the

@@ -143,11 +143,21 @@ type Decision struct {
 	// visible in the row rather than only in a metric.
 	LegacyVerdict string
 	// OverrideID names the communication_override that flipped a machine
-	// refusal to allow, or the zero UUID when none did. It rides the in-memory
-	// decision so the gate can report which override applied; it is not itself
-	// persisted. The durable trail lives elsewhere — reason_code
-	// 'allowed_by_override' on communication_decision, and the vouching seat and
-	// level in audit_log from the Allow write, which survives erasure.
+	// refusal to allow, or the zero UUID when none did.
+	//
+	// IN-MEMORY ONLY, and no production reader consumes it today: the durable
+	// trail is reason_code 'allowed_by_override' on communication_decision plus
+	// the vouching seat and level in audit_log from the Allow write, which
+	// survives erasure. What earns the field its place is that it is the only
+	// observable of WHICH row answered, and a subject can hold several live
+	// vouches for one category after a merge — so the tests pinning
+	// liveOverride's strongest-by-authority ordering assert on this and nothing
+	// else could. A recency-ordered read passed every other assertion.
+	//
+	// The day an operator needs that answer off a stored row rather than a
+	// decision in flight, this becomes a communication_decision column; until
+	// then it is deliberately not one, because a column nothing reads is a
+	// column the next author takes for a specification.
 	OverrideID ids.UUID
 }
 

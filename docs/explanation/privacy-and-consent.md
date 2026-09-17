@@ -52,8 +52,11 @@ The engine answers the second. It resolves a **category** from what the send act
   refusal are unreachable through this door regardless of who is vouching — a subject stop still
   wins. The reason is required — unlike a suppression, which may relay a bare phone call, an
   override is the rep's own judgement call and the record must say why. It is revocable
-  (`consent.RevokeOverride`) only by a caller whose authority level `CanOverrule` the level it was
-  recorded at, the same rule `lift.go` applies to a suppression, and it survives a merge onto the
+  (`consent.RevokeOverride`) only by a caller whose authority level `CanRevoke` the level it was
+  recorded at — `CanOverrule` plus one square, because admin is the top human authority and an
+  admin-recorded vouch would otherwise have no seat able to take it back; `lift.go` keeps the
+  stricter `CanOverrule` for a stop, where erring toward not-sending is the safe direction. It
+  survives a merge onto the
   surviving contact (`consent.CarryOverridesTx`) with its original `decided_by_level` and reason
   intact, so a merge cannot launder a vouch down to a lower authority. It is carried with the rest
   of a contact's consent record through Art. 17 erasure and Art. 15 subject access

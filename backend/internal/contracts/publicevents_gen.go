@@ -1108,6 +1108,9 @@ type PublicEventConsentOverrideRecorded struct {
 
 	// DecidedByLevel Whose decision it is (user | admin) — always the recording seat's own authority, never a value the request body could name.
 	DecidedByLevel string `json:"decided_by_level"`
+
+	// OverrideId Which row was recorded. It is the handle the revoke door takes (POST /contacts/{id}/consent/allow/{overrideId}/revoke), and a contact can hold several live vouches at once — one per category, and after a merge more than one for a single category — so a consumer with no id cannot say which of them any later consent.override_lifted describes.
+	OverrideId openapi_types.UUID `json:"override_id"`
 }
 
 // PublicEventConsentSuppressed Payload for consent.suppressed — somebody recorded that we may not write to a subject (consent/suppress.go's Suppress). Its own event rather than a consent.changed, because a suppression is not the absence of consent: it outranks a grant, it does not expire on its own, and a later re-grant must not silently erase it. A consumer that folded the two would resume mail the subject asked us to stop.

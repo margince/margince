@@ -15857,16 +15857,27 @@ paths:
               properties:
                 category:
                   type: string
+                  # NINE, not the engine's fourteen: the five that serve the subject
+                  # (security_notice, privacy_notice, record_confirmation,
+                  # consent_confirmation, optout_confirmation) pass even a hard
+                  # suppression and are never refused for lack of evidence, so a vouch
+                  # for one could never apply. The door refuses them
+                  # (commsauthz.Category.KnownForOverride); offering them here would
+                  # give a client a picker where five entries answer 422. The STORED
+                  # vocabulary stays all fourteen, because a row already written carries
+                  # its category forward. Held by
+                  # backend/gates/overridecategory_test.go.
                   enum: [
                     reply_to_inbound, requested_followup, precontract_quote, active_deal_followup,
                     customer_service, account_notice, contract_notice, invoice_or_payment,
-                    security_notice, privacy_notice, record_confirmation, consent_confirmation,
-                    optout_confirmation, marketing
+                    marketing
                   ]
                   description: |
                     Which category of send this vouch covers. The engine resolves every send to
-                    exactly one of these, and the override applies to that one category only — a
-                    vouch for `marketing` says nothing about `customer_service`.
+                    exactly one category, and the override applies to that one only — a vouch for
+                    `marketing` says nothing about `customer_service`. The five categories that
+                    serve the subject are absent on purpose: they are never refused for lack of
+                    evidence, so a vouch for one would be a row nothing could ever read.
                 reason:
                   type: string
                   minLength: 1

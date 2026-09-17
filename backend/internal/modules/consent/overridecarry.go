@@ -40,6 +40,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
@@ -59,6 +60,14 @@ import (
 // authority regardless of recency. Revoking the strongest simply falls back to
 // the next vouch, which is still a vouch. So the honest record is both rows, and
 // the read — not a destructive write at merge time — decides which one speaks.
+//
+// WHICH ONLY HOLDS BECAUSE BOTH ROWS ARE NAMEABLE. Each carried row ships its
+// own consent.override_recorded carrying the NEW row's id
+// (auditAndEmitCarriedOverrides below), exactly as the write door does, so a
+// revoker who takes back the strongest can see what is left rather than
+// discovering it from a send that went out anyway. If that id ever comes off the
+// event, this argument goes with it and the carry owes a revoke of the weaker
+// row instead.
 //
 // THE AUTHORITY — AND THE REASON — TRAVEL. RevokeOverride only lets a caller
 // take back a row their own level may revoke, and a rep's never reaches a level
@@ -104,8 +113,11 @@ func (s *Store) CarryOverridesTx(ctx context.Context, tx pgx.Tx, from, to commsa
 }
 
 // carriedOverride is one row the carry moved, read back off RETURNING so each
-// can ship its own event.
+// can ship its own event. The id is the NEW row's, not the source's: the event
+// names the vouch now standing on the survivor, which is the one a revoke door
+// would be given.
 type carriedOverride struct {
+	id       ids.UUID
 	category string
 	level    string
 }
@@ -140,7 +152,7 @@ func insertCarriedOverrides(
 		 ORDER BY live.category,
 		          coalesce(array_position($6::text[], live.decided_by_level), array_length($6::text[], 1) + 1) DESC,
 		          live.recorded_at DESC
-		RETURNING category, decided_by_level`,
+		RETURNING id, category, decided_by_level`,
 		zeroAsNull(from.ContactID.UUID), zeroAsNull(from.LeadID.UUID),
 		zeroAsNull(to.ContactID.UUID), zeroAsNull(to.LeadID.UUID), by, authorityLadder())
 	if err != nil {
@@ -150,7 +162,7 @@ func insertCarriedOverrides(
 	var moved []carriedOverride
 	for rows.Next() {
 		var c carriedOverride
-		if err := rows.Scan(&c.category, &c.level); err != nil {
+		if err := rows.Scan(&c.id, &c.category, &c.level); err != nil {
 			return nil, fmt.Errorf("consent: reading the carried overrides: %w", err)
 		}
 		moved = append(moved, c)
@@ -183,7 +195,7 @@ func auditAndEmitCarriedOverrides(ctx context.Context, tx pgx.Tx, to commsauthz.
 	}
 	for _, c := range moved {
 		if err := storekit.EmitEvent(ctx, tx, auditID, entityID,
-			overrideRecordedPayload(c.category, commsauthz.AuthorityLevel(c.level))); err != nil {
+			overrideRecordedPayload(c.id, c.category, commsauthz.AuthorityLevel(c.level))); err != nil {
 			return err
 		}
 	}

@@ -185,14 +185,22 @@ func (s *Store) allowAdmittedTx(
 	// hand. The reason stays OFF the payload, as suppress.go keeps it off
 	// theirs: it is the rep's own explanation to whoever reviews this
 	// contact's history, not something every subscriber needs to receive.
-	return storekit.EmitEvent(ctx, tx, auditID, sub.id, overrideRecordedPayload(in.Category, level))
+	return storekit.EmitEvent(ctx, tx, auditID, sub.id,
+		overrideRecordedPayload(overrideID, in.Category, level))
 }
 
-// overrideRecordedPayload names what was vouched for and at which authority.
+// overrideRecordedPayload names WHICH row was written, what was vouched for and
+// at which authority.
+//
+// The id is on the payload because it is the only place a caller ever learns it:
+// the door answers 204 with no body, and the revoke door takes that id in its
+// path. Without it a rep could record a vouch and never be able to take it back.
+// The reason stays off, as suppress.go keeps it off theirs.
 func overrideRecordedPayload(
-	category string, level commsauthz.AuthorityLevel,
+	id ids.UUID, category string, level commsauthz.AuthorityLevel,
 ) crmcontracts.PublicEventConsentOverrideRecorded {
 	return crmcontracts.PublicEventConsentOverrideRecorded{
+		OverrideId:     openapi_types.UUID(id),
 		Category:       category,
 		DecidedByLevel: string(level),
 	}
@@ -328,7 +336,7 @@ func (s *Store) revokeOverrideAdmittedTx(
 
 // overrideLiftedPayload names which override was revoked, at which authority it
 // was recorded, and at whose it was taken back. It carries BOTH levels so a
-// subscriber can see the revoker was allowed to overrule the recorder without
+// subscriber can see the revoker was allowed to take the recorder's row back without
 // joining a row that no longer says so — the same pairing
 // suppressionLiftedPayload keeps. It still carries neither the category the
 // override covered nor the reason either party gave: a consumer wanting the

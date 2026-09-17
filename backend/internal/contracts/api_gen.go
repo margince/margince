@@ -17019,20 +17019,15 @@ func (e ListContactsParamsTagMode) Valid() bool {
 
 // Defines values for AllowContactJSONBodyCategory.
 const (
-	AllowContactJSONBodyCategoryAccountNotice       AllowContactJSONBodyCategory = "account_notice"
-	AllowContactJSONBodyCategoryActiveDealFollowup  AllowContactJSONBodyCategory = "active_deal_followup"
-	AllowContactJSONBodyCategoryConsentConfirmation AllowContactJSONBodyCategory = "consent_confirmation"
-	AllowContactJSONBodyCategoryContractNotice      AllowContactJSONBodyCategory = "contract_notice"
-	AllowContactJSONBodyCategoryCustomerService     AllowContactJSONBodyCategory = "customer_service"
-	AllowContactJSONBodyCategoryInvoiceOrPayment    AllowContactJSONBodyCategory = "invoice_or_payment"
-	AllowContactJSONBodyCategoryMarketing           AllowContactJSONBodyCategory = "marketing"
-	AllowContactJSONBodyCategoryOptoutConfirmation  AllowContactJSONBodyCategory = "optout_confirmation"
-	AllowContactJSONBodyCategoryPrecontractQuote    AllowContactJSONBodyCategory = "precontract_quote"
-	AllowContactJSONBodyCategoryPrivacyNotice       AllowContactJSONBodyCategory = "privacy_notice"
-	AllowContactJSONBodyCategoryRecordConfirmation  AllowContactJSONBodyCategory = "record_confirmation"
-	AllowContactJSONBodyCategoryReplyToInbound      AllowContactJSONBodyCategory = "reply_to_inbound"
-	AllowContactJSONBodyCategoryRequestedFollowup   AllowContactJSONBodyCategory = "requested_followup"
-	AllowContactJSONBodyCategorySecurityNotice      AllowContactJSONBodyCategory = "security_notice"
+	AllowContactJSONBodyCategoryAccountNotice      AllowContactJSONBodyCategory = "account_notice"
+	AllowContactJSONBodyCategoryActiveDealFollowup AllowContactJSONBodyCategory = "active_deal_followup"
+	AllowContactJSONBodyCategoryContractNotice     AllowContactJSONBodyCategory = "contract_notice"
+	AllowContactJSONBodyCategoryCustomerService    AllowContactJSONBodyCategory = "customer_service"
+	AllowContactJSONBodyCategoryInvoiceOrPayment   AllowContactJSONBodyCategory = "invoice_or_payment"
+	AllowContactJSONBodyCategoryMarketing          AllowContactJSONBodyCategory = "marketing"
+	AllowContactJSONBodyCategoryPrecontractQuote   AllowContactJSONBodyCategory = "precontract_quote"
+	AllowContactJSONBodyCategoryReplyToInbound     AllowContactJSONBodyCategory = "reply_to_inbound"
+	AllowContactJSONBodyCategoryRequestedFollowup  AllowContactJSONBodyCategory = "requested_followup"
 )
 
 // Valid indicates whether the value is a known member of the AllowContactJSONBodyCategory enum.
@@ -17042,8 +17037,6 @@ func (e AllowContactJSONBodyCategory) Valid() bool {
 		return true
 	case AllowContactJSONBodyCategoryActiveDealFollowup:
 		return true
-	case AllowContactJSONBodyCategoryConsentConfirmation:
-		return true
 	case AllowContactJSONBodyCategoryContractNotice:
 		return true
 	case AllowContactJSONBodyCategoryCustomerService:
@@ -17052,19 +17045,11 @@ func (e AllowContactJSONBodyCategory) Valid() bool {
 		return true
 	case AllowContactJSONBodyCategoryMarketing:
 		return true
-	case AllowContactJSONBodyCategoryOptoutConfirmation:
-		return true
 	case AllowContactJSONBodyCategoryPrecontractQuote:
-		return true
-	case AllowContactJSONBodyCategoryPrivacyNotice:
-		return true
-	case AllowContactJSONBodyCategoryRecordConfirmation:
 		return true
 	case AllowContactJSONBodyCategoryReplyToInbound:
 		return true
 	case AllowContactJSONBodyCategoryRequestedFollowup:
-		return true
-	case AllowContactJSONBodyCategorySecurityNotice:
 		return true
 	default:
 		return false
@@ -42242,8 +42227,10 @@ type RecordConsentParams struct {
 // AllowContactJSONBody defines parameters for AllowContact.
 type AllowContactJSONBody struct {
 	// Category Which category of send this vouch covers. The engine resolves every send to
-	// exactly one of these, and the override applies to that one category only — a
-	// vouch for `marketing` says nothing about `customer_service`.
+	// exactly one category, and the override applies to that one only — a vouch for
+	// `marketing` says nothing about `customer_service`. The five categories that
+	// serve the subject are absent on purpose: they are never refused for lack of
+	// evidence, so a vouch for one would be a row nothing could ever read.
 	Category AllowContactJSONBodyCategory `json:"category"`
 
 	// Reason Why the rep is vouching for this send, in their own words. Required: unlike a
