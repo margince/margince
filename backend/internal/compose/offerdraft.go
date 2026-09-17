@@ -182,9 +182,14 @@ func (d offerDrafter) DraftOfferLines(ctx context.Context, offerID ids.OfferID) 
 		return DraftResult{}, err
 	}
 	dealID := ids.From[ids.DealKind](ids.UUID(before.DealId))
-	if _, err := d.deals.GetDeal(ctx, dealID, storekit.LiveOnly); err != nil {
+	deal, err := d.deals.GetDeal(ctx, dealID, storekit.LiveOnly)
+	if err != nil {
 		return DraftResult{}, err
 	}
+	// The deal the offer is for. The request carries that deal's own context —
+	// what the buyer asked for, in their words — so an erasure reaching a
+	// contact on this deal reaches these payloads through the deal it names.
+	ctx = ai.WithSubject(ctx, dealID.Ref(), deal.Name)
 
 	dealContext, err := d.gatherDealContext(ctx, dealID)
 	if err != nil {

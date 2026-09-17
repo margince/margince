@@ -28,6 +28,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
+	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -263,6 +264,13 @@ func (w *siteDeepReadWorker) reclaimAfter() time.Duration {
 
 func (w *siteDeepReadWorker) run(ctx context.Context, args SiteDeepReadArgs) error {
 	ctx = deepReadWorkerCtx(ctx, args)
+	// The company whose site is being read, declared ONCE for the whole run.
+	// Every model call under it — the seed triage, the page facts, the profile
+	// — is about that company, and binding it here rather than at each of the
+	// three is what stops a lane added later inheriting nothing. No label: the
+	// job payload carries an id and the worker never loads the name, and a
+	// query for one would spend a round trip on a word the rail can do without.
+	ctx = ai.WithSubject(ctx, ids.From[ids.CompanyKind](args.CompanyID).Ref(), "")
 
 	claim, err := w.contacts.BeginSiteRead(ctx, args.SiteReadID, w.reclaimAfter())
 	if err != nil {

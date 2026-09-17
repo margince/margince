@@ -29,6 +29,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/proposeroles"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -118,7 +119,12 @@ func (s *Service) IntroRequestDraft(
 	if err != nil {
 		return crmcontracts.CompanyEmailDraft{}, err
 	}
-	return writeIntroRequest(ctx, lane, facts), nil
+	// The contact being introduced TO. The draft's whole material is what this
+	// product knows about them — their title, the account, how warm the
+	// colleague's relationship with them is — so an erasure reaching that
+	// contact must reach this call's payloads.
+	return writeIntroRequest(ai.WithSubject(ctx, req.ContactID.Ref(), facts.contact),
+		lane, facts), nil
 }
 
 // introFactsFor assembles the draft's material under the caller's own scope.

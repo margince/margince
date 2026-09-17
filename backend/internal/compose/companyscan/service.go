@@ -256,7 +256,11 @@ func (s *Service) Run(ctx context.Context, scanID ids.UUID, companyID ids.Compan
 		return s.fail(ctx, h, "The account could not be read. Try again later.")
 	}
 	lang := identity.BaseLanguageForPrompt(ctx, s.pool)
-	findings, by, err := Read(ctx, s.lane, companyID, in, lang)
+	// The account being scanned, so an erasure that reaches this company
+	// reaches the payloads of the call that read it — the messages quoted in
+	// the request are that account's correspondence.
+	findings, by, err := Read(ai.WithSubject(ctx, companyID.Ref(), in.Account.Name),
+		s.lane, companyID, in, lang)
 	var deferral *ai.BudgetDeferralError
 	if errors.As(err, &deferral) {
 		if deferErr := s.deferBudget(ctx, h, deferral.NextAttemptAt); deferErr != nil {
