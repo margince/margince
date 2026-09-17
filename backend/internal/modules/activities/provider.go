@@ -17,6 +17,8 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -113,6 +115,29 @@ func (p *Provider) ArchiveAt(ctx context.Context, in datasource.ArchiveInput) (d
 	return ref(datasource.EntityActivity, v.Id), nil
 }
 
+// logInputForPrincipal maps a create wire, admitting the engine's own reserved
+// reminder identity and nothing else.
+//
+// This seam carries two kinds of caller. A human's tool call arrives here just
+// as an HTTP create does, so the reserved namespace has to hold: a caller able
+// to spell a reminder's source_system could plant a row under its key and have
+// the scan read it back as already asked, and the reminder would never be
+// written. The automation engine arrives here too, through applyCreate, and it
+// must stamp exactly those names — the reminder's natural key IS its identity.
+//
+// The principal is what separates them, not the field: PrincipalSystem is set
+// by the runtime and never by a request body, so it cannot be spelled by a
+// caller the way a source_system can. Only the reminder identities are
+// admitted, never the importer's mirror: namespace, which has its own writer.
+func logInputForPrincipal(ctx context.Context, req crmcontracts.CreateActivityRequest) (LogActivityInput, error) {
+	actor, ok := principal.Actor(ctx)
+	engine := ok && actor.Type == principal.PrincipalSystem
+	if engine && req.SourceSystem != nil && provenance.EngineReminderSource(*req.SourceSystem) {
+		return logActivityInputAllowingReminderIdentity(req)
+	}
+	return LogActivityInputFrom(req)
+}
+
 func (p *Provider) Create(ctx context.Context, in datasource.CreateInput) (datasource.EntityRef, error) {
 	if in.EntityType != datasource.EntityActivity {
 		return datasource.EntityRef{}, &datasource.UnsupportedEntityError{Type: string(in.EntityType)}
@@ -126,7 +151,7 @@ func (p *Provider) Create(ctx context.Context, in datasource.CreateInput) (datas
 		return datasource.EntityRef{}, err
 	}
 	req.Source = in.Source
-	mapped, err := LogActivityInputFrom(req)
+	mapped, err := logInputForPrincipal(ctx, req)
 	if err != nil {
 		return datasource.EntityRef{}, err
 	}

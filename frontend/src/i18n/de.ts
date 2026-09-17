@@ -2600,8 +2600,9 @@ export const de = {
   "deal.forecast.pipeline": "Pipeline",
   "deal.forecast.omitted": "nicht in der Prognose",
   "deal.pulse.yourMove": "Sie sind am Zug.",
-  "deal.pulse.theirMove": "Die andere Seite ist am Zug.",
-  "deal.pulse.theirMoveWhy": "Hier wartet niemand auf eine Antwort.",
+  "deal.pulse.nothingFlagged": "Es wartet keine Antwort auf dich.",
+  "deal.pulse.nothingFlaggedWhy":
+    "Zu diesem Deal ist keine eingehende Nachricht als offen markiert.",
   "deal.pulse.wroteOn": "Zuletzt geschrieben am {date} — vor {days} Tagen.",
   "deal.pulse.wroteUnknown":
     "Sie haben geschrieben und niemand hat geantwortet.",

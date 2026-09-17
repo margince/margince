@@ -189,7 +189,7 @@ type EntityAnchor struct {
 // doesn't. Compose's adapter sources LastTouchBefore from the activities
 // module's own tables (activities.Store.LastTouchBefore).
 type ActivityScan interface {
-	LastTouchBefore(ctx context.Context, cutoff time.Time, limit int) ([]EntityAnchor, error)
+	LastTouchBefore(ctx context.Context, cutoff time.Time, limit int, reminder string) ([]EntityAnchor, error)
 }
 
 // DateFieldAnchor is one DateFieldScan candidate: an entity whose

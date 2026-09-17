@@ -31,6 +31,7 @@ var tableOwners = map[string]string{
 	// The columns a role reads as withheld; written by administration, read
 	// by the grant loader into the principal.
 	"field_mask":               "internal/modules/identity",
+	"maskable_field":           "internal/modules/identity",
 	"record_grant":             "internal/modules/identity",
 	"oauth_client":             "internal/modules/identity",
 	"oauth_authorization_code": "internal/modules/identity",

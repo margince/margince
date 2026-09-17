@@ -2578,8 +2578,9 @@ export const vi = {
   "deal.forecast.pipeline": "pipeline",
   "deal.forecast.omitted": "không tính vào dự báo",
   "deal.pulse.yourMove": "Đến lượt bạn.",
-  "deal.pulse.theirMove": "Đến lượt họ.",
-  "deal.pulse.theirMoveWhy": "Không ai ở đây đang chờ câu trả lời.",
+  "deal.pulse.nothingFlagged": "Không có phản hồi nào đang chờ bạn.",
+  "deal.pulse.nothingFlaggedWhy":
+    "Không có thư đến nào của giao dịch này được đánh dấu cần trả lời.",
   "deal.pulse.wroteOn": "Họ viết lần cuối ngày {date} — {days} ngày trước.",
   "deal.pulse.wroteUnknown": "Họ đã viết và chưa ai trả lời.",
   "acqSources.title": "Nguồn tiếp cận",

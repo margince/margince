@@ -100,11 +100,14 @@ func (s *Store) ListLeads(ctx context.Context, in ListLeadsInput) ([]crmcontract
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}
+	// One instant for this read: the sla_state filter is built once for the
+	// page and once for the total, and they must judge the same leads overdue.
+	ctx = withPinnedSLANow(ctx, leadSLAClock().UTC())
 	return listPage(ctx, s, in.Sort, in.Limit, listPageSpec[crmcontracts.Lead]{
 		entity:  leadEntity,
 		columns: leadColumns,
 		fields:  leadListFields,
-		filters: func(active []fieldcatalog.Column, sorted *storekit.ListSort, arg func(any) int) ([]string, error) {
+		filters: func(ctx context.Context, active []fieldcatalog.Column, sorted *storekit.ListSort, arg func(any) int) ([]string, error) {
 			where, err := listFilters{
 				IncludeArchived: in.IncludeArchived,
 				CapturedByKind:  in.CapturedByKind,
@@ -116,7 +119,7 @@ func (s *Store) ListLeads(ctx context.Context, in ListLeadsInput) ([]crmcontract
 				Query:           nil,
 				Cursor:          in.Cursor,
 				nameColumn:      leadNameColumn,
-			}.clauses(active, sorted, arg)
+			}.clauses(ctx, active, sorted, arg)
 			if err != nil {
 				return nil, err
 			}
@@ -137,7 +140,7 @@ func (s *Store) ListLeads(ctx context.Context, in ListLeadsInput) ([]crmcontract
 				where = append(where, leadSourceClause(*in.Source, arg))
 			}
 			if in.SLAState != nil {
-				where = append(where, slaStateClause(policy, *in.SLAState, arg))
+				where = append(where, slaStateClause(ctx, policy, *in.SLAState, arg))
 			}
 			return where, nil
 		},

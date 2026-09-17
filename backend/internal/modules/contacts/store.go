@@ -154,6 +154,25 @@ func (s *Store) tx(ctx context.Context, fn func(pgx.Tx) error) error {
 	return s.db.Tx(ctx, fn)
 }
 
+// txSnapshot is tx for a read whose answer is COMPOSED from more than one
+// statement — here, a list page and the total that labels it.
+//
+// READ COMMITTED takes a fresh snapshot per statement, so sharing a
+// transaction is not sharing an instant: a concurrent insert or delete landing
+// between the page and its count produces a pair that never existed together,
+// and the visible form of that is a total of 0 printed over rows the same
+// response returned. REPEATABLE READ takes ONE snapshot at the first statement,
+// which is what makes "the count and the page describe one moment" true rather
+// than intended.
+//
+// At BEGIN through TxIsolated rather than as a statement inside the closure:
+// Postgres refuses the level once a query has taken a snapshot, and Tx runs one
+// of its own on a bounded handle. Read-only work at this level cannot
+// serialize-fail, so it costs a list read nothing but the guarantee.
+func (s *Store) txSnapshot(ctx context.Context, fn func(pgx.Tx) error) error {
+	return s.db.TxIsolated(ctx, pgx.RepeatableRead, fn)
+}
+
 // scopeAllRows is the row-scope predicate for an actor bounded by nothing.
 // ScopeClauseFor yields the EMPTY clause for them, which is not valid SQL on
 // its own, so every caller that embeds a scope in a larger WHERE needs this

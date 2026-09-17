@@ -182,8 +182,8 @@ func (s *Store) ListCompanies(ctx context.Context, in ListCompaniesInput) ([]crm
 		entity:  companyEntity,
 		columns: companyColumns,
 		fields:  companyListFields,
-		filters: func(active []fieldcatalog.Column, sorted *storekit.ListSort, arg func(any) int) ([]string, error) {
-			where, err := shared.clauses(active, sorted, arg)
+		filters: func(ctx context.Context, active []fieldcatalog.Column, sorted *storekit.ListSort, arg func(any) int) ([]string, error) {
+			where, err := shared.clauses(ctx, active, sorted, arg)
 			if err != nil {
 				return nil, err
 			}

@@ -47,7 +47,7 @@ func anonymizeLeadTwins(ctx context.Context, tx pgx.Tx, contactID ids.ContactID,
 		WITH wiped AS (
 		  UPDATE lead SET full_name = 'Anonymized Lead', email = NULL, title = NULL,
 		    company_name = NULL, candidate_company_key = NULL, raw = NULL, linkedin_url = NULL,
-		    disqualify_note = NULL, score_override_reason = NULL,
+		    disqualify_note = NULL, score_override_reason = NULL, source_author_name = NULL,
 		    archived_at = coalesce(archived_at, now())%s
 		  WHERE promoted_contact_id = $1
 		     OR id IN (SELECT converted_from_lead_id FROM contact WHERE id = $1 AND converted_from_lead_id IS NOT NULL)

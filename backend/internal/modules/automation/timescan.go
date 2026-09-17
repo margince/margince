@@ -226,7 +226,7 @@ func scanInstanceCandidates(
 		return err
 	}
 	cutoff := now.AddDate(0, 0, -days)
-	candidates, err := scan.LastTouchBefore(ctx, cutoff, clockScanBatchLimit)
+	candidates, err := scan.LastTouchBefore(ctx, cutoff, clockScanBatchLimit, h.Spec().Name)
 	if err != nil {
 		return fmt.Errorf("scanning stale entities: %w", err)
 	}

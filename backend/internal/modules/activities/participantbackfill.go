@@ -98,6 +98,21 @@ func (s *Store) BackfillParticipantsBatch(ctx context.Context, limit int) (int, 
 // One statement, not a read-then-write loop: the attribution is a join, and
 // pulling rows into Go to insert them one at a time would only add a window in
 // which capture writes the same participant concurrently.
+//
+// CLASS 3 is an exclusion rather than a fourth derivation arm. A row whose
+// source author is on record has already been attributed from the system it
+// came from, by a pass that read that system's own headers. Zero participants
+// is that pass's honest answer when the source named no parties — an imported
+// note nobody was copied on — and this one must not read the silence as "not
+// yet reached" and fill it with a guess.
+//
+// The guess would be wrong in the one way that matters here: class 1 derives
+// our side from captured_by, which on an imported row names whoever RAN the
+// import rather than whoever wrote the message. Without the exclusion a single
+// import is handed back to that one colleague on the next tick of the job,
+// every time, and the interaction edges the repair had just corrected are
+// rebuilt against them. The repair would appear to work and then silently come
+// undone.
 func backfillParticipants(ctx context.Context, tx pgx.Tx, limit int) (int, error) {
 	tag, err := tx.Exec(ctx, `
 		WITH candidate AS (
@@ -137,6 +152,10 @@ func backfillParticipants(ctx context.Context, tx pgx.Tx, limit int) (int, error
 		       AND a.kind IN (`+relstrength.ParticipantKindSQLList()+`)
 		       AND NOT EXISTS (
 		           SELECT 1 FROM activity_participant p WHERE p.activity_id = a.id)
+		       -- Class 3 (see the doc comment): a row already attributed from
+		       -- its own source is finished, and its silence is an answer.
+		       AND a.source_author_id IS NULL
+		       AND a.source_author_name IS NULL
 		     ORDER BY a.id
 		     LIMIT $1
 		)

@@ -8,11 +8,22 @@ import "testing"
 // Whether two rows may be bound into one message turns on whether one seat
 // wrote both. A Message-ID is typed by whoever sent the message, so binding on
 // a forged one across two seats is a way to reach somebody else's mail.
+//
+// The comparison is over the SEAT each stamp names, because the two doors spell
+// one colleague differently: `human:<uuid>` when they log a message themselves,
+// `connector:gmail:<uuid>` when their mailbox syncs it. Reading the seat out of
+// the stamp is what lets those two meet.
 func TestOnlyOneSeatsOwnRowsBindTogether(t *testing.T) {
 	const (
 		lars  = "01a0a203-b6ab-70b2-988b-b103e09fb822"
 		other = "01a0a203-b6ab-70b2-988b-b103e09fb823"
 	)
+	// A stamp names a seat only when actingHumanOf can read one out of it, and
+	// two stamps bind only when they name the SAME non-empty seat.
+	bind := func(left, right string) bool {
+		l, r := actingHumanOf(left), actingHumanOf(right)
+		return l != "" && l == r
+	}
 	for _, tc := range []struct {
 		name        string
 		left, right string
@@ -42,10 +53,29 @@ func TestOnlyOneSeatsOwnRowsBindTogether(t *testing.T) {
 		{"a connector naming no one", "connector:gmail", "connector:gmail", false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			if got := sameActingHuman(tc.left, tc.right); got != tc.want {
-				t.Fatalf("sameActingHuman(%q, %q) = %v, want %v", tc.left, tc.right, got, tc.want)
+			if got := bind(tc.left, tc.right); got != tc.want {
+				t.Fatalf("binding %q to %q = %v, want %v", tc.left, tc.right, got, tc.want)
 			}
 		})
+	}
+}
+
+// The seat a connector stamp names is the MAILBOX OWNER, not the connector.
+//
+// This is the case the whole rule turned on and the one that was wrong: the
+// stamp a capture writes is `connector:gmail:<uuid>`, while the principal's own
+// ID is the bare `connector:gmail`. Comparing those two shapes never matches, so
+// a seat never matched itself and one colleague's import-then-mailbox pair
+// stayed two rows — silently, looking exactly like the cross-seat refusal
+// working correctly.
+func TestAConnectorStampNamesTheMailboxOwner(t *testing.T) {
+	const seat = "01a0a203-b6ab-70b2-988b-b103e09fb822"
+	if got := actingHumanOf("connector:gmail:" + seat); got != seat {
+		t.Fatalf("actingHumanOf read %q out of a connector stamp, want the mailbox owner %q", got, seat)
+	}
+	// The bare principal ID carries no seat, and must not be mistaken for one.
+	if got := actingHumanOf("connector:gmail"); got != "" {
+		t.Fatalf("a connector naming no seat read as %q, want nobody", got)
 	}
 }
 

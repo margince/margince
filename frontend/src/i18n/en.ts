@@ -2675,8 +2675,9 @@ export const en = {
   "deal.forecast.pipeline": "pipeline",
   "deal.forecast.omitted": "left out of the forecast",
   "deal.pulse.yourMove": "It's your move.",
-  "deal.pulse.theirMove": "Their move.",
-  "deal.pulse.theirMoveWhy": "Nobody here is owed an answer.",
+  "deal.pulse.nothingFlagged": "No reply is waiting on you.",
+  "deal.pulse.nothingFlaggedWhy":
+    "No inbound message on this deal is flagged for an answer.",
   "deal.pulse.wroteOn": "They wrote last on {date} — {days} days ago.",
   "deal.pulse.wroteUnknown": "They wrote and nobody has answered.",
   "acqSources.title": "Acquisition sources",

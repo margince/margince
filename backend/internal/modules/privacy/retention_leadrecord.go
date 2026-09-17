@@ -40,7 +40,8 @@ func (*RetentionService) anonymizeLead(ctx context.Context, tx pgx.Tx, id ids.UU
 	if _, err := tx.Exec(ctx, `
 		UPDATE lead SET full_name = 'Anonymized Lead', email = NULL, title = NULL,
 		  company_name = NULL, candidate_company_key = NULL, raw = NULL, linkedin_url = NULL,
-		  disqualify_note = NULL, score_override_reason = NULL, archived_at = coalesce(archived_at, now())
+		  disqualify_note = NULL, score_override_reason = NULL, source_author_name = NULL,
+		  archived_at = coalesce(archived_at, now())
 		WHERE id = $1`, id); err != nil {
 		return err
 	}

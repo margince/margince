@@ -14,6 +14,12 @@ import (
 type Page struct {
 	NextCursor string
 	HasMore    bool
+	// Total is how many rows match, ignoring the cursor and the page size,
+	// for the reads that count. Nil means this read did not count — never
+	// that it counted zero, which is why it is a pointer: a plain 0 would
+	// make "we do not know" and "there is nothing" the same wire value, and
+	// a list that stopped counting would report itself empty.
+	Total *int
 }
 
 // Cursor is the opaque keyset token: the last row's (created_at, id)
