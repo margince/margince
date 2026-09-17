@@ -100,7 +100,7 @@ func TestTheMeetingPlanRecognisesWhatTheAccountAskedFor(t *testing.T) {
 	// slots on the newsletters.
 	cited := map[ids.UUID]bool{}
 	var titles []string
-	for _, moment := range plan.AccountArc {
+	for _, moment := range plan.CompanyArc {
 		titles = append(titles, moment.Title)
 		for _, evidence := range moment.Summary.Evidence {
 			cited[ids.UUID(evidence.EntityId)] = true
@@ -146,14 +146,14 @@ func TestTheArcReadsPastTheNewestPage(t *testing.T) {
 	seatInRoom(t, owner, e.WS, meeting, attendee)
 
 	plan := planFor(t, ctx, e, meeting)
-	for _, moment := range plan.AccountArc {
+	for _, moment := range plan.CompanyArc {
 		for _, evidence := range moment.Summary.Evidence {
 			if ids.UUID(evidence.EntityId) == old {
 				return
 			}
 		}
 	}
-	t.Errorf("the arc never reached the six-month-old decision; %d moments", len(plan.AccountArc))
+	t.Errorf("the arc never reached the six-month-old decision; %d moments", len(plan.CompanyArc))
 }
 
 // A conversation this caller may not read must not reach them through the arc,
@@ -187,7 +187,7 @@ func TestTheArcNamesNoConversationTheCallerMayNotRead(t *testing.T) {
 	if brief.Plan == nil {
 		t.Fatal("no plan")
 	}
-	for _, moment := range brief.Plan.AccountArc {
+	for _, moment := range brief.Plan.CompanyArc {
 		if strings.Contains(moment.Title, "Private negotiation") {
 			t.Errorf("a narrowed conversation named itself in the arc: %q", moment.Title)
 		}

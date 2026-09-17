@@ -5450,62 +5450,6 @@
               "plan": {
                 "type": "object",
                 "properties": {
-                  "account_arc": {
-                    "type": "array",
-                    "items": {
-                      "type": "object",
-                      "properties": {
-                        "from": {
-                          "type": "string"
-                        },
-                        "summary": {
-                          "type": "object",
-                          "properties": {
-                            "evidence": {
-                              "type": "array",
-                              "items": {
-                                "type": "object",
-                                "properties": {
-                                  "record_id": {
-                                    "type": "string",
-                                    "format": "uuid"
-                                  },
-                                  "record_type": {
-                                    "type": "string"
-                                  }
-                                },
-                                "required": [
-                                  "record_id",
-                                  "record_type"
-                                ]
-                              }
-                            },
-                            "nature": {
-                              "type": "string"
-                            },
-                            "text": {
-                              "type": "string"
-                            }
-                          },
-                          "required": [
-                            "evidence",
-                            "text"
-                          ]
-                        },
-                        "title": {
-                          "type": "string"
-                        },
-                        "to": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "from",
-                        "summary",
-                        "to"
-                      ]
-                    }
-                  },
                   "advance": {
                     "type": "object",
                     "properties": {
@@ -5617,6 +5561,62 @@
                       "fallback",
                       "minimum"
                     ]
+                  },
+                  "company_arc": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "from": {
+                          "type": "string"
+                        },
+                        "summary": {
+                          "type": "object",
+                          "properties": {
+                            "evidence": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "record_id": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  "record_type": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "record_id",
+                                  "record_type"
+                                ]
+                              }
+                            },
+                            "nature": {
+                              "type": "string"
+                            },
+                            "text": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "evidence",
+                            "text"
+                          ]
+                        },
+                        "title": {
+                          "type": "string"
+                        },
+                        "to": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "from",
+                        "summary",
+                        "to"
+                      ]
+                    }
                   },
                   "likely_asks": {
                     "type": "array",

@@ -31710,11 +31710,11 @@ type MeetingBriefSectionKind string
 // Assessments and recommendations cite records the caller can open, or they are dropped
 // whole — the same grounding rule every sentence in `sections` runs.
 type MeetingPlan struct {
-	// AccountArc The moments that change TODAY's conversation, oldest first, built from the whole history this caller may read rather than from the newest page of it.
-	AccountArc []MeetingPlanArcMoment `json:"account_arc"`
-
 	// Advance How to close: the least that still counts, the most worth aiming at, and what to fall back to. A meeting that ends with none of the three ended with nothing.
 	Advance MeetingPlanAdvance `json:"advance"`
+
+	// CompanyArc The moments that change TODAY's conversation, oldest first, built from the whole history this caller may read rather than from the newest page of it.
+	CompanyArc []MeetingPlanArcMoment `json:"company_arc"`
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
 	// lane. `deterministic` — the structured fallback, used when no lane is configured

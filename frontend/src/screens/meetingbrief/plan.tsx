@@ -102,7 +102,7 @@ export function ObjectivePanel({
 }
 
 // The moments that still bear on today, oldest first.
-export function AccountArc({
+export function CompanyArc({
   plan,
   onOpenRecord,
   onOpenEmail,
@@ -114,7 +114,7 @@ export function AccountArc({
   formatDay: (utcIso: string) => string;
 }>) {
   const t = useT();
-  if (plan.account_arc.length === 0) {
+  if (plan.company_arc.length === 0) {
     return null;
   }
   return (
@@ -123,7 +123,7 @@ export function AccountArc({
       titleLevel={3}
       tone={plan.generated_by === "model" ? "ai" : undefined}
     >
-      {plan.account_arc.map((moment) => (
+      {plan.company_arc.map((moment) => (
         <PanelRow key={`${moment.from}-${moment.title}`}>
           <div className="mb-arc-row">
             <time className="t-caption" dateTime={moment.from}>
