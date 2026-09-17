@@ -20288,7 +20288,7 @@ paths:
             endpoint did not mint returns `422 code: malformed_cursor`.
       responses:
         '200':
-          description: One window of the caller's notifications, with their whole unread count beside it.
+          description: One window of the caller's notifications, with the centre's whole unread count beside it.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/NotificationPage' }
@@ -26377,9 +26377,13 @@ components:
         unread_count:
           type: integer
           description: |
-            How many notices the reader has not settled — their WHOLE unread set and not this
-            page's share of it, because a badge that fell as somebody scrolled would be counting
+            How many unsettled notices this centre holds for the reader — all of them and not
+            this page's share, because a badge that fell as somebody scrolled would be counting
             the wrong thing.
+
+            It counts what the centre SHOWS, so the reader's own stage moves are outside it the
+            same way they are outside `items`. A badge numbering lines the panel then does not
+            list is a badge nobody can clear.
     Problem:
       type: object
       description: RFC 7807 problem+json with a stable machine `code` and structured `details`.

@@ -32329,9 +32329,13 @@ type NotificationPage struct {
 	// client walking until the cursor disappears would never stop.
 	NextCursor *string `json:"next_cursor,omitempty"`
 
-	// UnreadCount How many notices the reader has not settled — their WHOLE unread set and not this
-	// page's share of it, because a badge that fell as somebody scrolled would be counting
+	// UnreadCount How many unsettled notices this centre holds for the reader — all of them and not
+	// this page's share, because a badge that fell as somebody scrolled would be counting
 	// the wrong thing.
+	//
+	// It counts what the centre SHOWS, so the reader's own stage moves are outside it the
+	// same way they are outside `items`. A badge numbering lines the panel then does not
+	// list is a badge nobody can clear.
 	UnreadCount int `json:"unread_count"`
 }
 
