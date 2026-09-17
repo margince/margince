@@ -247,6 +247,19 @@ var retired = gatekit.Waive(map[string]string{
 		"naming the word the rule retires",
 
 	"backend/gates/contactvocabulary_test.go": "this file names the word in order to refuse it",
+
+	// Surfe serves POST /v2/people/enrich and reads its subjects from a
+	// `people` array. That is the VENDOR's noun for its own API, and this
+	// rule does not reach across the wire. Waived here rather than renamed,
+	// because renaming it once already shipped: the adapter began calling a
+	// path Surfe does not serve, every run answered 404, and the connection
+	// sat in provider_error until somebody read a staging log.
+	"backend/internal/modules/integrations/surfe/enrich.go": "the vendor's own path and array " +
+		"name, which this tree does not get to rename — surfe/testdata/vendor-wire.json is the " +
+		"recording that holds them",
+	"backend/internal/modules/integrations/surfe/surfe_test.go":      "the same vendor names, asserted",
+	"backend/internal/modules/integrations/surfe/vendorwire_test.go": "the same, plus the reason",
+	"backend/internal/modules/integrations/surfe/testdata":           "the recording itself: the vendor's bytes",
 })
 
 // beyondTheExemptions is the part of a line this census still judges: what is
