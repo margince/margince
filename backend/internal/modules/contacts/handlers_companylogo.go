@@ -26,10 +26,25 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// logoCacheControl is the private, short-lived cache every logo response
-// carries — 200 and 304 alike, so a client revalidating gets the same
-// freshness window as one that fetched fresh bytes.
-const logoCacheControl = "private, max-age=300"
+// logoCacheControl is the cache every logo response carries — 200 and 304
+// alike, so a client revalidating gets the same freshness window as one that
+// fetched fresh bytes.
+//
+// `immutable` because the URL already NAMES these bytes: LogoURL bakes a digest
+// of the object key into its query token, the key is minted fresh per upload,
+// and a replacement therefore takes a different URL. There is no version of
+// this URL that can go stale, so a browser has nothing to revalidate — which is
+// the whole cost on a list. Twenty-five rows are twenty-five image URLs, a
+// browser runs about six at a time against one host, and past a five-minute
+// window every one of them became a 304 round trip the reader waits through.
+// Now a second visit to the list, and the return from any record on it, fetches
+// none of them.
+//
+// Bounded at a day rather than the conventional year: `private` already keeps
+// this in one reader's own browser, but a logo they were shown before their
+// access was withdrawn should not be renderable from that cache indefinitely.
+// A day costs nothing — every repeat within a working session is already free.
+const logoCacheControl = "private, max-age=86400, immutable"
 
 // logoWriteBackTimeout bounds the write-back below, the same shape
 // ai.flushDetached gives its own post-response write: generous for one small
