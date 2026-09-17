@@ -94,8 +94,9 @@ const digestRunField = "digest_run"
 // over this table's own columns — composes into the WHERE arm under the names it
 // was written with.
 //
-// The statement and its arguments are built together, each placeholder answered
-// by the position the value actually took, so the two cannot come apart.
+// The statement and its arguments are built together, each placeholder written
+// from the position the value actually took — which is why this is a function
+// and not the constant it used to be.
 func digestCandidateQuery(day time.Time, only *ids.UUID) (string, []any) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }

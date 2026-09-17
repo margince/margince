@@ -68,7 +68,7 @@ func setupNoticeMail(t *testing.T) *noticeMailEnv {
 // from.
 func (e *noticeMailEnv) pendingNotice(t *testing.T) ids.UUID {
 	t.Helper()
-	e.grantRole(t, e.e.AdminUser, dealDeciderGrants)
+	e.grantRole(t, e.e.AdminUser)
 	_, env := e.stageCorrection(t)
 	e.deliver(t, env)
 	rows := e.delivered(t)
@@ -345,7 +345,7 @@ func TestTheNotificationMailCarriesNoLineTheNoticeForged(t *testing.T) {
 // the race window's guard.
 func TestOnlyAnEmailSeatsNoticeStagesAMailJob(t *testing.T) {
 	e := setupNoticeMail(t)
-	e.grantRole(t, e.e.AdminUser, dealDeciderGrants)
+	e.grantRole(t, e.e.AdminUser)
 
 	_, env := e.stageCorrection(t)
 	e.deliver(t, env)
@@ -390,7 +390,7 @@ func TestOnlyAnEmailSeatsNoticeStagesAMailJob(t *testing.T) {
 
 func TestASeatReadingTheirQueueOnScreenStagesNoMailJob(t *testing.T) {
 	e := setupNoticeMail(t)
-	e.grantRole(t, e.e.AdminUser, dealDeciderGrants)
+	e.grantRole(t, e.e.AdminUser)
 	seatCtx := e.e.As(e.e.AdminUser, nil, integration.AdminPerms)
 	if _, err := notices.NewStore(e.db).SaveNotificationPreference(
 		seatCtx, notices.ClassApprovalPending, notices.DeliveryInApp); err != nil {

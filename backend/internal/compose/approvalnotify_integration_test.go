@@ -123,31 +123,36 @@ func (a approvalNotifyEnv) seedDeal(t *testing.T) ids.UUID {
 	}
 	pipelineID := ids.From[ids.PipelineKind](ids.UUID(pipeline.Id))
 	stage, err := a.e.Deals.CreateStage(ctx, deals.CreateStageInput{
-		PipelineID: pipelineID, Name: "Qualified", Position: 1, Semantic: "open"})
+		PipelineID: pipelineID, Name: "Qualified", Position: 1, Semantic: "open",
+	})
 	if err != nil {
 		t.Fatalf("seeding the stage: %v", err)
 	}
 	owner := ids.From[ids.UserKind](a.e.AdminUser)
 	deal, err := a.e.Deals.CreateDeal(ctx, deals.CreateDealInput{
 		Name: "Fleet renewal", PipelineID: pipelineID,
-		StageID: ids.From[ids.StageKind](ids.UUID(stage.Id)), OwnerID: &owner, Source: "manual"})
+		StageID: ids.From[ids.StageKind](ids.UUID(stage.Id)), OwnerID: &owner, Source: "manual",
+	})
 	if err != nil {
 		t.Fatalf("seeding the deal: %v", err)
 	}
 	return ids.UUID(deal.Id)
 }
 
-// grantRole gives one seat REAL stored grants. The consumer resolves every
-// seat's authority from role_assignment through EffectiveAuthority, so a seat
-// with no role resolves to no grants — and a suite that forgot this would watch
-// the admit case fail in exactly the shape a working refusal has.
-func (a approvalNotifyEnv) grantRole(t *testing.T, user ids.UUID, permissions string) {
+// grantRole gives one seat REAL stored grants: the deal-decider set, which it
+// reaches for itself rather than taking as an argument. A case free to choose
+// its own grants is a case whose refusal no longer means what the other cases'
+// refusals mean. The consumer resolves every seat's authority from role_assignment
+// through EffectiveAuthority, so a seat with no role resolves to no grants —
+// and a suite that forgot this would watch the admit case fail in exactly the
+// shape a working refusal has.
+func (a approvalNotifyEnv) grantRole(t *testing.T, user ids.UUID) {
 	t.Helper()
 	// The whole id, not a prefix: these seats are minted as UUIDv7 in one
 	// breath, so any prefix short enough to read is the same for all of them.
 	key := "notifydecider-" + user.String()
 	a.e.WsExec(t, `INSERT INTO role (key, name, permissions) VALUES ($1, 'Notify decider', $2::jsonb)`,
-		key, permissions)
+		key, dealDeciderGrants)
 	a.e.WsExec(t, `INSERT INTO role_assignment (role_id, user_id)
 		SELECT r.id, $1 FROM role r WHERE r.key = $2`, user, key)
 }
@@ -178,7 +183,7 @@ func (a approvalNotifyEnv) stageCorrection(t *testing.T) (ids.ApprovalID, kevent
 	if err != nil {
 		t.Fatalf("marshalling the proposal: %v", err)
 	}
-	return a.stage(t, a.proposerCtx(ids.Nil), approvals.StageInput{
+	return a.stage(a.proposerCtx(ids.Nil), t, approvals.StageInput{
 		Kind:           deals.CloseDateCorrectionKind,
 		ProposedChange: proposal,
 		DiffHash:       "h-" + a.deal.String(),
@@ -188,7 +193,7 @@ func (a approvalNotifyEnv) stageCorrection(t *testing.T) (ids.ApprovalID, kevent
 	})
 }
 
-func (a approvalNotifyEnv) stage(t *testing.T, ctx context.Context, in approvals.StageInput) (ids.ApprovalID, kevents.Envelope) {
+func (a approvalNotifyEnv) stage(ctx context.Context, t *testing.T, in approvals.StageInput) (ids.ApprovalID, kevents.Envelope) {
 	t.Helper()
 	id, err := a.svc.Stage(ctx, in)
 	if err != nil {
@@ -261,11 +266,11 @@ func (a approvalNotifyEnv) delivered(t *testing.T) []deliveredNotice {
 
 func TestApprovalNotifyReachesTheSeatsThatCouldDecideAndNobodyElse(t *testing.T) {
 	a := newApprovalNotifyEnv(t)
-	a.grantRole(t, a.e.AdminUser, dealDeciderGrants)
+	a.grantRole(t, a.e.AdminUser)
 	// The deactivated manager holds the SAME grants as the admin, so the only
 	// thing keeping them off the fan-out is the roster's liveness filter. A
 	// fixture that left them ungranted would pass with no filter at all.
-	a.grantRole(t, a.e.Rep3, dealDeciderGrants)
+	a.grantRole(t, a.e.Rep3)
 	a.e.WsExec(t, `UPDATE app_user SET status = 'deactivated' WHERE id = $1`, a.e.Rep3)
 
 	approvalID, env := a.stageCorrection(t)
@@ -303,7 +308,7 @@ func TestApprovalNotifyReachesTheSeatsThatCouldDecideAndNobodyElse(t *testing.T)
 
 func TestApprovalNotifySaysNothingAboutAnApprovalThatStoppedBeingPending(t *testing.T) {
 	a := newApprovalNotifyEnv(t)
-	a.grantRole(t, a.e.AdminUser, dealDeciderGrants)
+	a.grantRole(t, a.e.AdminUser)
 	approvalID, env := a.stageCorrection(t)
 
 	// Withdrawal writes the terminal status and NO event, so the envelope in
@@ -332,10 +337,10 @@ func TestApprovalNotifySaysNothingAboutAnApprovalThatStoppedBeingPending(t *test
 
 func TestApprovalNotifyWritesNothingForASeatWhoSwitchedApprovalsOff(t *testing.T) {
 	a := newApprovalNotifyEnv(t)
-	a.grantRole(t, a.e.AdminUser, dealDeciderGrants)
+	a.grantRole(t, a.e.AdminUser)
 	// A second decider who changed nothing, so the silence below is the
 	// preference and not the fan-out failing to reach anybody at all.
-	a.grantRole(t, a.e.Rep2, dealDeciderGrants)
+	a.grantRole(t, a.e.Rep2)
 	// Through the seat's own writer, not an INSERT: the row a hand-written
 	// fixture produces is one the product may never write.
 	seatCtx := a.e.As(a.e.AdminUser, nil, integration.AdminPerms)
@@ -357,9 +362,9 @@ func TestApprovalNotifyOnASelfOnlyKindReachesOnlyTheSeatItWasStagedFor(t *testin
 	// A step-up needs no object grant at all — the lender is the whole of its
 	// authority — so the admin here is the widest seat in the workspace and
 	// still must not hear about it.
-	a.grantRole(t, a.e.AdminUser, dealDeciderGrants)
+	a.grantRole(t, a.e.AdminUser)
 
-	_, env := a.stage(t, a.proposerCtx(a.e.Rep1), approvals.StageInput{
+	_, env := a.stage(a.proposerCtx(a.e.Rep1), t, approvals.StageInput{
 		Kind:           approvals.KindVolumeRelease,
 		ProposedChange: json.RawMessage(`{"passport_label":"Nightly research"}`),
 		DiffHash:       "h-stepup-" + a.e.Rep1.String(),

@@ -86,11 +86,11 @@ type ApprovalNotify struct {
 
 // NewApprovalNotify builds the consumer over the installation's handle.
 //
-// A nil mail queue is the lane with no immediate email leg: every notice is
-// still written and every reader still sees it on their Worklist, and nothing
-// leaves the product. That is the honest posture for a role that cannot stage a
-// job rather than a boot error, and it is the same shape a nil relay takes one
-// layer on.
+// The mail queue is required. The worker resolves its insert-only client before
+// any lane starts and fails the boot if it cannot, so a consumer without one is
+// not a deployment somebody can assemble — and the posture it would need is
+// already held a layer on, where a role with no RELAY finishes the job and says
+// so. Two places deciding that a message is not leaving is one place too many.
 func NewApprovalNotify(pool *pgxpool.Pool, db *database.DB, mail noticeMailQueue) *ApprovalNotify {
 	return &ApprovalNotify{
 		db:        db,
@@ -255,9 +255,6 @@ func (a *ApprovalNotify) announceToSeat(
 func (a *ApprovalNotify) stageMail(
 	ctx context.Context, tx pgx.Tx, wsID, seat ids.UUID, noticeID ids.UUID,
 ) error {
-	if a.mail == nil {
-		return nil
-	}
 	delivery, err := notices.DeliveryFor(ctx, tx, ids.From[ids.UserKind](seat), notices.ClassApprovalPending)
 	if err != nil {
 		return err
