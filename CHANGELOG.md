@@ -34,6 +34,14 @@ when it has content.
   that counter, so it was served as a constant zero to every client polling an
   import. The column stays; the wire field is gone.
 
+### Changed
+
+- **`/metrics` on the api is closed by default.** It requires `--metrics-token`
+  as a Bearer credential. A deployment whose scraper discovers its targets by
+  annotation and cannot carry one sets `--metrics-access=open`, where the port is
+  already contained. An installation that scraped the api's `/metrics` without a
+  token must set one of the two on upgrade, or its scrapes answer 401.
+
 ### Fixed
 
 - **The MCP connector's OAuth discovery documents name the configured public
