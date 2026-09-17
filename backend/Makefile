@@ -104,7 +104,7 @@ UNCACHED_TEST_PKGS := ./gates ./internal/modules/ai/
 
 .DEFAULT_GOAL := help
 
-.PHONY: perfdoc help check build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe test-db-up test-it test-integration-serial lint arch-lint vet gen gen-workflow mcp-apps-vocab drift composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down run psql redis-cli tidy dev infra-down infra-logs infra-reset clean vuln tools tools-go hooks
+.PHONY: perfdoc help check build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-integration-serial lint arch-lint vet gen gen-workflow mcp-apps-vocab drift composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down run psql redis-cli tidy dev infra-down infra-logs infra-reset clean vuln tools tools-go hooks
 
 help: ## List targets with their descriptions (the default goal)
 	@grep -hE '^[a-zA-Z][a-zA-Z0-9_-]*:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-18s %s\n", $$1, $$2}'
@@ -361,6 +361,23 @@ e2e-ai-report: ## Print the certification readiness report — every shipped sit
 ai-probe: composition ## Probe one AI task site against real input (free except `run`, which calls a model). BYOK key auto-loaded from .env.local. ARGS='list' | ARGS='scaffold <task>/<variant>' | ARGS='fetch <url>' | ARGS='run --site <task>/<variant> --fixture f.json --model provider:model'
 	$(LOAD_ENV_LOCAL) $(GOWORK_COMPOSED) $(GO) run ./cmd/worker aitask $(ARGS) \
 	  --corpus $(CURDIR)/internal/compose/aicert/corpus --work-dir $(CURDIR)/../.tmp/aitask
+
+# ai-eval answers the question ai-probe cannot: not "how does the model handle
+# these passages" but "which passages does retrieval hand it in the first place".
+# It ranks the handbook this binary ships — the production chunker at its real
+# width, a real embed lane, and the same floor and limit the SQL path uses — and
+# writes the fixture `ai-probe ARGS='run …'` then grades. That pairing is the
+# point: a scenario whose passages were typed by hand grades the model on input
+# production never sends.
+#
+# It needs a model because ranking a question against a corpus embedded by a
+# different binding measures nothing; it needs no database, because the corpus is
+# in the binary. Vectors are cached under .tmp/aitask by content hash, so the
+# second run over an unchanged handbook embeds the question and nothing else.
+ai-eval: composition ## Rank the shipped handbook for one question and capture what a corpus_ask run would be handed (embeds; cached after the first run). Q='how can I create a project' MODEL=provider:model PAGE=records.md ARGS='--floor 0.3'
+	$(LOAD_ENV_LOCAL) $(GOWORK_COMPOSED) $(GO) run ./cmd/worker aitask retrieve \
+	  --question '$(Q)' --model '$(MODEL)' $(if $(PAGE),--page '$(PAGE)',) $(ARGS) \
+	  --work-dir $(CURDIR)/../.tmp/aitask
 
 # Composed for the same reason as migrate: build_template shells out to
 # cmd/migrate, and a template built from the vanilla stub carries no

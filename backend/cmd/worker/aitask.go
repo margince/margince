@@ -15,11 +15,15 @@ package main
 //
 // It knows exactly one thing about any site — fixture JSON in, Trace out — so a
 // site added to the census is probeable here with no change to this file.
+//
+// NOTHING IN THIS TOOL OPENS A DATABASE, which is what makes it runnable against
+// a bare checkout. The `retrieve` verb comes closest — it ranks the handbook
+// this binary ships against a live embed lane — and it lives in
+// aitaskretrieve.go rather than here because it is the one verb that knows what
+// a corpus_ask fixture is made of, which is exactly what this file does not.
 
 import (
 	"context"
-	"errors"
-	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -32,7 +36,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/aicert"
 	"github.com/margince/margince/backend/internal/compose/aitasks"
 	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/platform/cliflags"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/platform/webread"
 )
@@ -54,150 +57,46 @@ const maxArtifactSlug = 200
 
 // The verbs. Each is a different question, which is why they are separate
 // rather than flags on one: list asks what exists, scaffold asks what a
-// fixture looks like, fetch produces input, run spends money.
+// fixture looks like, fetch and retrieve each produce input, and run spends the
+// most. aitaskhelp.go carries what each
+// one is for, and is the list a reader and the dispatch both read.
 const (
 	verbList     = "list"
 	verbScaffold = "scaffold"
 	verbFetch    = "fetch"
 	verbRun      = "run"
+	verbRetrieve = "retrieve"
+	verbHelp     = "help"
 )
 
-type aiTaskFlags struct {
-	verb string
-	// arg is the verb's positional: the site for scaffold, the URL for fetch.
-	arg string
-
-	site         string
-	scenarioPath string
-	fixturePath  string
-	expectPath   string
-
-	modelSpec string
-	fakeBrain bool
-
-	jsonPath  string
-	dumpDir   string
-	corpusDir string
-	workDir   string
-	outPath   string
-
-	logLevel  string
-	logFormat string
-}
-
-func parseAITaskFlags(args []string) (aiTaskFlags, error) {
-	if len(args) == 0 {
-		return aiTaskFlags{}, fmt.Errorf("aitask needs a verb: %s, %s, %s or %s",
-			verbList, verbScaffold, verbFetch, verbRun)
-	}
-	cfg := aiTaskFlags{verb: args[0]}
-	switch cfg.verb {
-	case verbList, verbScaffold, verbFetch, verbRun:
-	default:
-		return aiTaskFlags{}, fmt.Errorf("aitask: unknown verb %q — want %s, %s, %s or %s",
-			cfg.verb, verbList, verbScaffold, verbFetch, verbRun)
-	}
-
-	fs := flag.NewFlagSet("worker aitask "+cfg.verb, flag.ContinueOnError)
-	var env cliflags.Env
-	fs.StringVar(&cfg.site, "site", "", "invocation site as <task>/<variant> (e.g. rate_extract/pricing)")
-	fs.StringVar(&cfg.scenarioPath, "scenario", "", "scenario file in the corpus format, carrying both fixture and expectation")
-	fs.StringVar(&cfg.fixturePath, "fixture", "", "fixture JSON file; needs --site, and --expect for sites that validate one")
-	fs.StringVar(&cfg.expectPath, "expect", "", "expected-answer JSON file, the half --fixture does not carry")
-	fs.StringVar(&cfg.modelSpec, "model", "", "direct model override, provider:model (e.g. anthropic:claude-sonnet-4-6)")
-	fs.BoolVar(&cfg.fakeBrain, "ai-fake", false, "offline fake model: drives the seam without spending anything")
-	fs.StringVar(&cfg.jsonPath, "json", "", "write the machine-readable probe result here ('-' = stdout)")
-	fs.StringVar(&cfg.dumpDir, "dump-request", "", "directory to write each post-stripper request into")
-	fs.StringVar(&cfg.corpusDir, "corpus", corpusDirDefault, "corpus directory, read by list and scaffold")
-	env.String(fs, &cfg.workDir, "work-dir", "MARGINCE_AITASK_DIR", workDirDefault,
-		"gitignored directory probe artifacts are written to; they carry whatever the probed source carried")
-	fs.StringVar(&cfg.outPath, "out", "", "write this verb's artifact here instead of the work directory ('-' = stdout)")
-	env.String(fs, &cfg.logLevel, "log-level", "MARGINCE_LOG_LEVEL", "info", "log level: debug|info|warn|error")
-	env.String(fs, &cfg.logFormat, "log-format", "MARGINCE_LOG_FORMAT", "text", "log format: text|json")
-
-	// stdlib flag stops at the first positional; re-parsing the remainder lets
-	// the positional and the flags interleave, as siteread's seeds do.
-	rest := args[1:]
-	var positionals []string
-	for {
-		if err := fs.Parse(rest); err != nil {
-			return aiTaskFlags{}, err
-		}
-		rest = fs.Args()
-		if len(rest) == 0 {
-			break
-		}
-		positionals = append(positionals, rest[0])
-		rest = rest[1:]
-	}
-	if len(positionals) > 1 {
-		return aiTaskFlags{}, fmt.Errorf("aitask %s takes one positional, got %d: %s",
-			cfg.verb, len(positionals), strings.Join(positionals, " "))
-	}
-	if len(positionals) == 1 {
-		cfg.arg = positionals[0]
-	}
-
-	if err := cfg.validate(); err != nil {
-		return aiTaskFlags{}, err
-	}
-	return cfg, nil
-}
-
-// validate refuses the combinations that could only fail later, and names the
-// flag that would fix each — a probe that dies after a paid call on something
-// knowable up front has spent money to say nothing.
-func (c aiTaskFlags) validate() error {
-	switch c.verb {
-	case verbScaffold:
-		if c.arg == "" && c.site == "" {
-			return errors.New("aitask scaffold needs a site: <task>/<variant>, e.g. rate_extract/pricing")
-		}
-	case verbFetch:
-		if c.arg == "" {
-			return errors.New("aitask fetch needs a url")
-		}
-	case verbRun:
-		switch {
-		case c.scenarioPath == "" && c.fixturePath == "":
-			return errors.New("aitask run needs --scenario or --fixture")
-		case c.scenarioPath != "" && c.fixturePath != "":
-			return errors.New("aitask run takes --scenario or --fixture, not both — they disagree about what is being probed")
-		case c.fixturePath != "" && c.siteRef() == "":
-			return errors.New("aitask run --fixture needs --site: a fixture names no site, and only the site says which code probes it")
-		case c.scenarioPath != "" && c.expectPath != "":
-			// A scenario carries its own expectation. Taking --expect too would
-			// silently grade against one of them, and the expectation decides
-			// the verdict.
-			return errors.New("aitask run takes --expect with --fixture, not with --scenario: a scenario already carries its expectation")
-		}
-	}
-	return nil
-}
-
-// artifactOut is where this verb's artifact goes: the operator's --out when
-// they named one, otherwise the gitignored work directory under the given name.
-func (c aiTaskFlags) artifactOut(name string) string {
-	if c.outPath != "" {
-		return c.outPath
-	}
-	return artifactPath(c.workDir, name)
-}
-
-// siteRef is the site the run is bound to, from either spelling.
-func (c aiTaskFlags) siteRef() string {
-	if c.site != "" {
-		return c.site
-	}
-	return c.arg
-}
+// probeFlagVerbs are the verbs that share the flag set below. retrieve parses
+// with its own (aitaskretrieve.go) and help parses none, so neither is here.
+var probeFlagVerbs = []string{verbList, verbScaffold, verbFetch, verbRun}
 
 // runAITaskProbe is the subcommand entry point, dispatched from run() before
-// the worker flags — which would otherwise demand a DSN this never uses.
+// the worker flags — which would otherwise demand a DSN only `retrieve` uses.
+//
+// A verb nobody serves prints the whole tree and THEN refuses. Both halves
+// matter: an operator who mistyped needs the list more than the sentence, and
+// the non-zero exit is what stops a script from reading a typo as work done.
 func runAITaskProbe(ctx context.Context, args []string, stdout io.Writer) error {
+	verb := ""
+	if len(args) > 0 {
+		verb = args[0]
+	}
+	switch {
+	case verb == "":
+		return writeAITaskOverview(stdout)
+	case verb == verbHelp:
+		return runAITaskHelp(stdout, args[1:])
+	case !knownAITaskVerb(verb):
+		return unknownAITaskVerb(stdout, verb)
+	case verb == verbRetrieve:
+		return helpOnRequest(stdout, verb, runAITaskRetrieve(ctx, args[1:], stdout))
+	}
 	cfg, err := parseAITaskFlags(args)
 	if err != nil {
-		return err
+		return helpOnRequest(stdout, verb, err)
 	}
 	if _, err := httpserver.InstallProcessLogger(stdout, cfg.logLevel, cfg.logFormat); err != nil {
 		return err
