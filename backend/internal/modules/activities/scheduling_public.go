@@ -163,7 +163,7 @@ type ConsentCapturer interface {
 	// nobody can look up is an assertion, and the meeting they booked is the
 	// thing that happened. Called only from the PUBLIC door, since a rep
 	// booking on somebody's behalf is not that somebody initiating contact.
-	RecordBookingInquiry(ctx context.Context, contactID, activityID ids.UUID, at time.Time) error
+	RecordBookingInquiry(ctx context.Context, contactID, activityID ids.UUID) error
 }
 
 // MarketingOutcome says what became of a booking form's newsletter tick.
@@ -333,9 +333,7 @@ func (h Handlers) BookPublicMeeting(w http.ResponseWriter, r *http.Request, host
 	// model is deliberately on. So it is reported rather than fatal — and
 	// reported, not swallowed: an installation whose bookings stop producing a
 	// basis needs to see that in its log rather than in a rep's surprise.
-	if err := h.publicConsent.RecordBookingInquiry(
-		r.Context(), contactID, ids.UUID(booked.Id), req.Start,
-	); err != nil {
+	if err := h.publicConsent.RecordBookingInquiry(r.Context(), contactID, ids.UUID(booked.Id)); err != nil {
 		slog.WarnContext(r.Context(), "booking: the inquiry that authorises answering this booker was not recorded",
 			"contact_id", contactID, "activity_id", booked.Id, "err", err)
 	}

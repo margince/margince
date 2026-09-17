@@ -118,7 +118,7 @@ type RecordQualifyingEventInput struct {
 // they are — a named human asserting something with no other evidence — and
 // keep their RequireHuman.
 func (s *Store) RecordInquiry(
-	ctx context.Context, contactID ids.ContactID, activityID ids.UUID, at time.Time,
+	ctx context.Context, contactID ids.ContactID, activityID ids.UUID,
 ) error {
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
@@ -126,8 +126,19 @@ func (s *Store) RecordInquiry(
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
 		return RecordSubjectInquiry(ctx, tx, contactID.String(), QualifyingEvent{
-			Kind:             KindInquiry,
-			OccurredAt:       at,
+			Kind: KindInquiry,
+			// WHEN THEY ASKED, which is now — not when the meeting they booked
+			// is scheduled for. A booking is routinely made for a date weeks
+			// out, and the verdict reads the most recent event against a reply
+			// window: an inquiry dated forward would hold the contact qualified
+			// from a moment that has not happened yet. The hand-recorded verb
+			// below refuses a future date for the same reason and says so.
+			//
+			// Taken here rather than from the caller because the caller is
+			// observing a fact rather than asserting one: the door knows a
+			// booking just arrived, and the moment it arrived is this store's
+			// to stamp.
+			OccurredAt:       s.now(),
 			SourceEntityType: entityActivity,
 			SourceEntityID:   activityID.String(),
 		}, by)

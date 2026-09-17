@@ -12,7 +12,6 @@ package compose
 import (
 	"context"
 	"errors"
-	"time"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/consent"
@@ -150,10 +149,8 @@ func (a bookingConsentAdapter) CaptureBookingConsent(ctx context.Context, contac
 // Its own transaction. The booking is already committed by the time this runs —
 // it has to be, since the row cites the meeting as its evidence — so there is no
 // transaction left to join, and nothing here may take the meeting back.
-func (a bookingConsentAdapter) RecordBookingInquiry(
-	ctx context.Context, contactID, activityID ids.UUID, at time.Time,
-) error {
-	return a.store.RecordInquiry(ctx, ids.From[ids.ContactKind](contactID), activityID, at)
+func (a bookingConsentAdapter) RecordBookingInquiry(ctx context.Context, contactID, activityID ids.UUID) error {
+	return a.store.RecordInquiry(ctx, ids.From[ids.ContactKind](contactID), activityID)
 }
 
 // askMarketing mails the confirmation link an affirmative tick earns, and it

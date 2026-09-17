@@ -208,12 +208,27 @@ func TestAPublicBookingRecordsTheInquiryThatAuthorisesAnsweringIt(t *testing.T) 
 	// The row, and what it cites. A basis nobody can look up is an assertion,
 	// so the assertion here is that it names the meeting they booked.
 	var kind, source, sourceType, sourceID string
+	var occurredAt time.Time
 	if err := e.Owner.QueryRow(context.Background(), `
-		SELECT q.kind, q.source, q.source_entity_type, q.source_entity_id::text
+		SELECT q.kind, q.source, q.source_entity_type, q.source_entity_id::text, q.occurred_at
 		  FROM consent_qualifying_event q
 		  JOIN contact_email m ON m.contact_id = q.contact_id
-		 WHERE m.email = 'ines@visitor.example'`).Scan(&kind, &source, &sourceType, &sourceID); err != nil {
+		 WHERE m.email = 'ines@visitor.example'`).Scan(
+		&kind, &source, &sourceType, &sourceID, &occurredAt); err != nil {
 		t.Fatalf("no qualifying event was recorded for a contact who booked a meeting: %v", err)
+	}
+	// WHEN THEY ASKED, not when the meeting is. The verdict reads the most
+	// recent event against a reply window, so an inquiry dated forward would
+	// hold this contact qualified from a moment that has not happened yet — and
+	// the slot booked above is days out.
+	//
+	// "Not in the future" rather than "equals now": the store stamps its own
+	// clock and this reads the row back, so the two are a request apart. A
+	// forward-dated event is wrong by hours or days and this catches it; a few
+	// milliseconds of skew is not a thing to fail a test over.
+	if occurredAt.After(time.Now()) {
+		t.Errorf("the inquiry is dated %s, which is in the future — the event is them asking, and "+
+			"they asked now (the meeting they booked starts %s)", occurredAt, start)
 	}
 	if kind != "inquiry" {
 		t.Errorf("the booking recorded a %q event, want inquiry — they asked for this meeting", kind)
