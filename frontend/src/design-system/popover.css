@@ -44,7 +44,12 @@
 /* Fixed, because it is placed against the trigger's viewport rectangle
    (anchored.ts). Narrow on purpose: what goes in here is read once, and a wide
    panel over the page reads as a second card rather than as an aside to the
-   one underneath. */
+   one underneath.
+   NOT the menu anatomy (design-system/listtable.css, .lt-menu), and this is the
+   line between the two: a menu is a list of things to choose and its inset is a
+   row's, an aside is PROSE and its inset is a reading's. The one place a
+   popover does hold verbs — the compose send menu — hands them over as `Button`
+   atoms, which already stand --controlHeight tall. */
 .popover-panel {
   position: fixed;
   /* Above the modal (atoms.css: scrim 50, dialog 60), not below it like the

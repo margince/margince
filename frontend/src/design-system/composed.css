@@ -129,8 +129,14 @@
   top: 0;
   z-index: 1;
   display: flex;
-  align-items: baseline;
-  gap: 6px;
+  /* CENTRED, not on a baseline: the count is a CHIP now rather than a bare
+     figure, and a box has no baseline worth sharing with the word beside it. */
+  align-items: center;
+  /* The name and its count are ONE thing — a stage and how much is in it — so
+     they stand together at the head's start with the scale's own 8 between
+     them. The probability is the other fact on this line and rides the
+     trailing edge (below), which is why this gap never measures it. */
+  gap: var(--space-2);
   padding: var(--space-3) calc(var(--space-3) + 4px) 4px;
   margin-inline: calc(-1 * var(--space-3));
   /* The column's own ground, or the cards slide visibly behind a transparent
@@ -139,25 +145,35 @@
 }
 .board-col-head .stage {
   color: var(--textPrimary);
-  flex: 1;
+  /* The medium weight every label inside a component wears: this is the name of
+     the pile a card belongs to, and it leads the line it shares. */
+  font-weight: var(--fontWeightMedium);
   /* A STAGE NAME IS DATA of unbounded length, and it shares this line with the
      count. Without `min-width: 0` a flex item cannot shrink below its longest
      word, so a name longer than the stage is wide overflowed the head — and
-     the column clips, so the count at the end of the line was what got cut.
-     The NAME is what gives way. */
+     the column clips, so the count beside it was what got cut. The NAME is
+     what gives way; it takes no `flex: 1`, because growing it would push the
+     count away from the word it counts. */
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-/* HOW MUCH IS IN THE STAGE, and it never truncates: it is the figure a reader
-   compares across the board, three characters wide against a name that can be
-   any length. `flex: none` is what keeps the name's ellipsis from eating it. */
+/* HOW MUCH IS IN THE STAGE, in the product's one count chip (`OptionCount`,
+   atoms.css) — the same figure a tab strip draws beside a tab's name. This
+   wrapper exists to hold `aria-hidden` (the chip speaks, and the column
+   already announces "12 deals" below), so it hugs the chip and never
+   truncates: `flex: none` is what keeps the name's ellipsis from eating it. */
 .board-col-head .board-col-count {
+  display: flex;
   flex: none;
-  color: var(--textPrimary);
 }
+/* THE STAGE'S ODDS, and they read at the far edge: a percentage is a property
+   of the column rather than of the name, and against the name it read as part
+   of it. `auto` rather than a spacer, so the head stays three nodes. */
 .board-col-head .prob {
+  flex: none;
+  margin-inline-start: auto;
   font-variant-numeric: tabular-nums;
 }
 /* Two lines rather than three figures fighting for one: a stage column is
@@ -208,6 +224,11 @@
 .board-col-refusal {
   white-space: normal;
   overflow-wrap: break-word;
+  /* SECONDARY, and the small rung: it stands where a money figure stands, and
+     in the primary ink at body size it read as the total rather than as the
+     note explaining why there is none. */
+  color: var(--textSecondary);
+  font: var(--fontBodySmall);
 }
 
 /* A phone SWIPES between stages rather than showing them all at once. One stage

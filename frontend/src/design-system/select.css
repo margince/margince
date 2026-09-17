@@ -83,18 +83,27 @@
   border: 1px solid var(--borderStrong);
   border-radius: var(--r-sm);
   box-shadow: var(--shadow-pop);
-  padding: var(--space-1);
+  /* The MENU ANATOMY's inset (listtable.css, .lt-menu): one option list is one
+     surface, whichever control opened it. Its floor and its ceiling are the two
+     parts this list does NOT share — both arrive as inline styles measured
+     against the trigger and the viewport, above — and menu-anatomy.test.ts
+     carries that exception with its reason. */
+  padding: var(--controlGap);
 }
 .select-list {
   display: flex;
   flex-direction: column;
 }
+/* ONE ENTRY, at the anatomy's own height: the inset above and below a
+   --fontBody line is what makes every option row in the product
+   --controlHeight tall. The inline inset stays optical — a list's words stand
+   a hair further in than the 8 the block axis spends. */
 .select-option {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
-  padding: 7px 9px;
+  padding: var(--controlGap) 9px;
   border-radius: var(--r-sm);
   font-family: var(--fontFamilyBody);
   color: var(--textPrimary);

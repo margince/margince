@@ -15,7 +15,11 @@
   border: 1px solid var(--borderStrong);
   border-radius: var(--r-sm);
   box-shadow: var(--shadow-pop);
-  padding: var(--space-1);
+  /* The MENU ANATOMY's inset (listtable.css, .lt-menu). Its floor and ceiling
+     are the parts this list does not share: the width is the TEXT BOX's, so a
+     suggestion lines up with the characters it would replace, and the height is
+     the room anchoredpopup.ts measured — both arrive as inline styles. */
+  padding: var(--controlGap);
 }
 .suggest-list {
   display: flex;
@@ -26,7 +30,9 @@
   align-items: baseline;
   justify-content: space-between;
   gap: var(--space-2);
-  padding: 7px 9px; /* ds:ignore the option's own row rhythm, shared with Select's list */
+  /* The anatomy's row: --controlGap above and below a --fontBody line is the
+     32px every option row in the product stands at. */
+  padding: var(--controlGap) 9px; /* ds:ignore the inline inset is the option row's own optics, shared with Select's list */
   border-radius: var(--r-sm);
   font-family: var(--fontFamilyBody);
   color: var(--textPrimary);

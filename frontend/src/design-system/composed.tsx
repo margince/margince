@@ -21,7 +21,7 @@ import {
 } from "../format/format";
 import { type Locale, translatePlural, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { Avatar, Badge, Button } from "./atoms";
+import { Avatar, Badge, Button, OptionCount } from "./atoms";
 import { type BoardDealMail, DealCard } from "./dealcard";
 import { EmailEntry, EmailWords } from "./emailentry";
 import { Eyebrow } from "./eyebrow";
@@ -328,15 +328,20 @@ function BoardLayout<Record extends BoardRecord>({
                 three open stages focusable to no effect. */}
             <div className="board-col-head" {...foldProps(column)}>
               <span className="stage">{column.label}</span>
-              {/* TWO SPANS, not one composed string. The name is data of
+              {/* ITS OWN NODE, not one composed string. The name is data of
                   unbounded length and truncates; the count is three characters
                   and must not. Written as "{label}: {count}" into the truncating
                   span, a long stage name ellipsised the figure away — which is
                   the one thing this head was rearranged to keep on screen.
-                  Hidden from a screen reader, which is told "12 deals" below
-                  with the unit this bare figure leaves out. */}
+                  `OptionCount` is the product's one count chip, so the figure
+                  beside a stage is drawn exactly as the figure beside a tab.
+                  The WRAPPER is what carries `aria-hidden`: the chip speaks its
+                  own figure, and this column already tells a screen reader "12
+                  deals" below, with the unit a bare figure leaves out — so the
+                  whole chip, separator included, stays out of the accessible
+                  tree rather than announcing the number twice. */}
               <span className="board-col-count" aria-hidden="true">
-                {formatNumber(column.count ?? column.deals.length, locale)}
+                <OptionCount count={column.count ?? column.deals.length} />
               </span>
               {money && (
                 <span className="prob">

@@ -331,22 +331,29 @@
   align-items: center;
 }
 
+/* THE MENU ANATOMY, and every option list in the product wears it: this one,
+ * the Select's popup, the suggestion list, the overflow panel, the account
+ * menu. The numbers live in tokens.css — `--menuMinInlineSize`,
+ * `--menuMaxBlockSize` and `--controlGap` for the inset — because a surface
+ * that spells its own is a second answer to how wide a menu is, and the five
+ * had five. `menu-anatomy.test.ts` is what holds them to it.
+ *
+ * A fieldset carries its own margin, which is reset before the look applies;
+ * the min-inline-size the UA gives it is replaced by the anatomy's own floor
+ * rather than zeroed. */
 .lt-menu {
-  /* A fieldset carries its own margin and a min-inline-size that would fight
-   * the popup's own width — both reset before its look applies. */
   margin: 0;
-  min-inline-size: 0;
   position: absolute;
   top: calc(100% + var(--space-1));
   left: 0;
   z-index: 20;
   display: none;
-  min-width: 180px;
+  min-inline-size: var(--menuMinInlineSize, 250px);
   /* A workspace has more companies than fit on a screen, so the menu scrolls
    * rather than running off the bottom of the page. */
-  max-height: 300px;
+  max-block-size: var(--menuMaxBlockSize, 400px);
   overflow-y: auto;
-  padding: var(--space-1);
+  padding: var(--controlGap);
   background: var(--bgElevated);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-sm);
@@ -360,8 +367,12 @@
   display: block;
 }
 
+/* WHAT THIS MENU IS ASKING, above its options. The anatomy's own inset down the
+   block axis, and the weight every label inside a component wears — a head that
+   reads at the same weight as the rows below it is not a head. */
 .lt-mhead {
-  padding: var(--space-1) var(--space-2);
+  padding: var(--controlGap) var(--space-2);
+  font-weight: var(--fontWeightMedium);
 }
 
 /* The attribute search, at the top of the Filter button's first step. Full
@@ -394,12 +405,16 @@
   border-color: var(--accent);
 }
 
+/* ONE ENTRY, and it stands --controlHeight tall like every other option row in
+   the product: the anatomy's inset above and below a --fontBody line is
+   6 + 20 + 6. Written as the inset rather than as a height, because a label
+   that wraps has to grow rather than clip. */
 .lt-mi {
   display: flex;
   align-items: center;
   gap: var(--space-2);
   width: 100%;
-  padding: var(--space-1) var(--space-2);
+  padding: var(--controlGap) var(--space-2);
   border: 0;
   background: transparent;
   border-radius: var(--r-sm);
