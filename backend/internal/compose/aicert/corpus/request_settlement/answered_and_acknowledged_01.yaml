@@ -37,7 +37,17 @@ expect:
   answer:
     - verdict: settled
     - verdict: still_owed
-      remaining_names: angebot
+      # "quote", not "angebot". The thread is German and the thing owed is an
+      # Angebot, but `remaining` is not a quotation from their message: the
+      # site's prompt calls it "what WE still owe, in a few plain words from our
+      # own seat" and offers "Send the quote" as its worked example, and this
+      # lane pins the installation language to English so a record stays
+      # comparable between installations. Testing for the German noun failed a
+      # model that answered with the prompt's own example phrase.
+      #
+      # What the check is for is that the phrase NAMES the thing rather than
+      # restating their message, which is what the rubric below asks for.
+      remaining_names: angebot|offer|quote
   rubric: >
     The first conversation is settled. They proposed a time and offered to move
     it; the reply agrees to the date in four words. Nothing is left for our side

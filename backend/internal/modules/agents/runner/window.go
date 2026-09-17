@@ -4,7 +4,6 @@
 package runner
 
 import (
-	"encoding/json"
 	"fmt"
 	"regexp"
 	"sort"
@@ -226,34 +225,6 @@ func (w *window) asRequest(remainingOutputTokens, promptWindow int) model.Reques
 		ResponseSchema: stepSchema,
 	}
 }
-
-// stepSchema is the step protocol as a JSON Schema, so a provider with
-// schema-constrained decoding enforces the shape at GENERATION rather than
-// leaving parseStep to refuse it afterwards.
-//
-// This matters where a reduction of the reply cannot help. A model answering in
-// its own tool-call channel emits that channel's syntax as literal text, and it
-// is not JSON to recover — `{q: "Anna Weber"}` has unquoted keys — so the only
-// place the wrong shape can be prevented is before it is generated.
-//
-// It constrains the KEY SET and the types, and deliberately not the
-// exactly-one-of rule. Expressing that needs oneOf/not, which the strict
-// structured-output modes handle unevenly and may refuse the whole request over;
-// a rejected request is a worse failure than the one this prevents. The XOR is a
-// domain rule parseStep owns, and states with a better error than a schema could.
-//
-// additionalProperties is false to mirror parseStep's DisallowUnknownFields. A
-// schema open where the parser is closed would let constrained decoding produce
-// a step that then gets refused, which is this bug wearing the opposite face.
-//
-// Held by: TestTheStepSchemaAdmitsExactlyWhatTheStepParserAccepts (internal/modules/agents/runner/stepschema_test.go)
-var stepSchema = json.RawMessage(`{` +
-	`"type":"object",` +
-	`"properties":{` +
-	`"tool":{"type":"string"},` +
-	`"args":{"type":"object"},` +
-	`"final":{"type":"object"}},` +
-	`"additionalProperties":false}`)
 
 const elisionMarker = "[earlier observations elided to fit the context window]"
 

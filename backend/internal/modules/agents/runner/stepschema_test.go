@@ -145,3 +145,43 @@ func TestAReplyWithNoStepInItIsStillRefused(t *testing.T) {
 		}
 	}
 }
+
+// args and final carry keys the schema cannot know, so neither may be closed.
+//
+// A closed object with no properties — {"type":"object","additionalProperties":
+// false} — forbids EVERY key inside it. A provider enforcing that would refuse
+// {"tool":"read_record","args":{"record_id":"x"}}, which is the shape the loop
+// exists to produce.
+//
+// Nothing else here could catch it: parseStep reads both fields as
+// json.RawMessage and never checks them against the schema, so the Go tests
+// pass while the request forbids the answer. This asserts the schema's own
+// shape instead, which is the only place the mistake is visible without a live
+// provider.
+func TestTheStepSchemaLetsArgsAndFinalCarryKeys(t *testing.T) {
+	win := newWindow(Job{Goal: "prep the meeting", TriggerRef: triggerRef}, nil, nil)
+
+	var declared struct {
+		Properties map[string]struct {
+			Type                 string         `json:"type"`
+			AdditionalProperties *bool          `json:"additionalProperties"` //nolint:tagliatelle // JSON Schema's own key spelling
+			Properties           map[string]any `json:"properties"`
+		} `json:"properties"`
+	}
+	if err := json.Unmarshal(win.asRequest(1000, MinimumPromptWindow).ResponseSchema, &declared); err != nil {
+		t.Fatalf("the ResponseSchema is not an object schema: %v", err)
+	}
+
+	for _, field := range []string{"args", "final"} {
+		node, named := declared.Properties[field]
+		if !named {
+			t.Fatalf("the step schema does not name %q", field)
+		}
+		closed := node.AdditionalProperties != nil && !*node.AdditionalProperties
+		if closed && len(node.Properties) == 0 {
+			t.Errorf("%q is a closed object with no properties, so the schema forbids every key "+
+				"inside it — a provider enforcing this would refuse the tool arguments the loop "+
+				"has to send", field)
+		}
+	}
+}
