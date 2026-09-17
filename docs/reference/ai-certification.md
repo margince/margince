@@ -29,7 +29,7 @@ How to certify a model: [certify-an-ai-model.md](../how-to/certify-an-ai-model.m
 | … best state `partial` | 0 |
 | … best state `stale` | 4 |
 | … `absent` on every binding | 1 |
-| Scenarios in the corpus | 167 |
+| Scenarios in the corpus | 168 |
 | Committed records | 76 |
 | Bindings measured | 10 |
 
@@ -113,7 +113,7 @@ Which model to run each site on, and what that choice rests on.
 | [`enrich/signature`](#enrichsignature) | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `certified` | 1.00 | `current` | 1 | 3 |
 | [`growth_fit/growth_fit`](#growth_fitgrowth_fit) | `gemini · gemini-3.1-flash-lite · eu_hosted` | `supported_degraded` | 0.67 | `current` | 1 | 2 |
 | [`offer_draft/draft`](#offer_draftdraft) | `gemini · gemini-3.1-flash-lite · eu_hosted` | `not_supported` | 0.80 | `current` | 5 | 3 |
-| [`owed_verdict/owed`](#owed_verdictowed) | - | - | - | `stale` | 3 | 2 |
+| [`owed_verdict/owed`](#owed_verdictowed) | - | - | - | `stale` | 4 | 2 |
 | [`propose_roles/committee`](#propose_rolescommittee) | `gemini · gemini-3.1-flash-lite · eu_hosted` | `certified` | 1.00 | `current` | 3 | 2 |
 | [`rate_extract/fx`](#rate_extractfx) | `openai_compatible · mistralai/mistral-large-2512 · eu_hosted` | `certified` | 1.00 | `current` | 2 | 4 |
 | [`rate_extract/pricing`](#rate_extractpricing) | `openai_compatible · mistralai/mistral-large-2512 · eu_hosted` | `certified` | 1.00 | `current` | 1 | 4 |
@@ -783,11 +783,12 @@ Records (3):
 
 Scope a run of it can claim: `single_call`.
 
-Scenarios (3):
+Scenarios (4):
 
 | Scenario | Expects | Case |
 |---|---|---|
 | `a_direct_question_asks_us_and_a_report_does_not` | `accepted` | [basic_01.yaml](../../backend/internal/compose/aicert/corpus/owed_verdict/basic_01.yaml) |
+| `a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not` | `accepted` | [proposed_time_01.yaml](../../backend/internal/compose/aicert/corpus/owed_verdict/proposed_time_01.yaml) |
 | `an_invitation_asks_nothing_a_calendar_reply_cannot_settle` | `accepted` | [invitation_01.yaml](../../backend/internal/compose/aicert/corpus/owed_verdict/invitation_01.yaml) |
 | `the_recipient_line_separates_a_request_from_a_copy` | `accepted` | [envelope_decides_01.yaml](../../backend/internal/compose/aicert/corpus/owed_verdict/envelope_decides_01.yaml) |
 
@@ -795,8 +796,8 @@ Records (2):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · eu_hosted` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 1247ms | 1598ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `stale` | 0/3 | `not_supported` | 9 | 6 | 0.67 | 899ms | 1964ms | 6 | 3 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · eu_hosted` | `stale` | 0/4 | `certified` | 9 | 9 | 1.00 | 1247ms | 1598ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · eu_hosted` | `stale` | 0/4 | `not_supported` | 9 | 6 | 0.67 | 899ms | 1964ms | 6 | 3 | 0 | 0 |
 
 ### `propose_roles`
 

@@ -424,7 +424,10 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	// activity's own visibility (the link walk), so a participant row never
 	// discloses an activity its reader could not already open.
 	"activity_participant.activity_id": "child row: written only beside the activity itself, inside the transaction that mints it",
-	"activity_participant.contact_id":  "server-derived: the counterparty the ensure chokepoint resolved, or a link the activities store already gated",
+	// The external identities one message answers to, and the row a second
+	// provider's copy of it resolves to.
+	"activity_identity.activity_id":   "gated: the WRITE is a child row, claimed only beside the activity it names inside the transaction that mints it, on an id the store generated rather than one a caller supplied. The READ is where disclosure would live — resolving an identity tells a caller which activity already holds their message — and it goes through readActivity, whose own row-scope gate answers ErrNotFound for a row outside the caller's scope; that miss falls through to an ordinary create, so an out-of-scope incumbent is never named. ON DELETE CASCADE, plus an explicit purge on the erasure path, because erasure archives rather than deletes and an identity outliving its content would resolve a later arrival onto an emptied row",
+	"activity_participant.contact_id": "server-derived: the counterparty the ensure chokepoint resolved, or a link the activities store already gated",
 	// The named audience of a limited activity. Written only by the audience
 	// endpoint, which has put the activity through the content gate first.
 	"activity_audience_member.activity_id":       "child row: written only by the audience endpoint, beside the audience column it qualifies, after auth.EnsureActivityContentVisible",

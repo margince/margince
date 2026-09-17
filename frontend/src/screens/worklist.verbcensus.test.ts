@@ -64,8 +64,9 @@ const ANSWERED_BY = {
   // Answering the buyer opens the composer over the row, through the same
   // ChannelReplyAction the 360 timelines mount. Routing it would send the
   // reader to the record to press reply there, which is the hand-off the queue
-  // exists to remove.
-  reply: { how: "inline", file: "worklist.row.tsx" },
+  // exists to remove — and the prepared move is this same control rather than
+  // a second one beside it, which is why both live in worklist.reply.tsx.
+  reply: { how: "inline", file: "worklist.reply.tsx" },
   // Answering an undecided domain acts in place, because the answer IS the
   // whole act: keeping it creates the company, discarding it writes this
   // reader's own capture exclusion. Routing either would send the reader to a

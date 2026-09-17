@@ -165,11 +165,16 @@ var tableOwners = map[string]string{
 	// so it belongs to the module that owns that row — the same ground the
 	// reply-verdict history above stands on.
 	"activity_request_settlement": "internal/modules/activities",
-	"activity_sales_state":        "internal/modules/activities",
-	"activity_reader_state":       "internal/modules/activities",
-	"activity_review_template":    "internal/modules/activities",
-	"activity_review_response":    "internal/modules/activities",
-	"worklist_pin":                "internal/modules/activities",
+	// The external identities one message answers to — its RFC Message-ID, its
+	// calendar occurrence. It hangs off `activity` and decides which row a
+	// second provider's copy of a message resolves to, so it belongs to the
+	// module that owns that row.
+	"activity_identity":        "internal/modules/activities",
+	"activity_sales_state":     "internal/modules/activities",
+	"activity_reader_state":    "internal/modules/activities",
+	"activity_review_template": "internal/modules/activities",
+	"activity_review_response": "internal/modules/activities",
+	"worklist_pin":             "internal/modules/activities",
 	// ACT-DDL-3: who was in the interaction. It belongs beside activity and
 	// activity_link for the same reason they belong together — it is part of
 	// what an activity IS, not a graph artifact derived from one.

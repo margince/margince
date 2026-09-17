@@ -200,7 +200,7 @@ func TestInboundMountsExactPatternsAndShadowsNothing(t *testing.T) {
 	p := &inboundProbe{outcome: extension.InboundAccepted}
 	mux := http.NewServeMux()
 	reached := ""
-	for _, path := range []string{"/webhooks/gmail", "/webhooks/hubspot"} {
+	for _, path := range []string{"/webhooks/gmail", "/webhooks/graph"} {
 		mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
 			reached = r.URL.Path
 			w.WriteHeader(http.StatusOK)
@@ -211,7 +211,7 @@ func TestInboundMountsExactPatternsAndShadowsNothing(t *testing.T) {
 		func(context.Context) (ids.WorkspaceID, error) { return ws, nil },
 		extensionRuntimeBinding{}, quietLog())
 
-	for _, path := range []string{"/webhooks/gmail", "/webhooks/hubspot"} {
+	for _, path := range []string{"/webhooks/gmail", "/webhooks/graph"} {
 		reached = ""
 		if got := serve(mux, httptest.NewRequest(http.MethodPost, path, nil)).Code; got != http.StatusOK {
 			t.Errorf("%s answered %d — the extension mount shadowed it", path, got)

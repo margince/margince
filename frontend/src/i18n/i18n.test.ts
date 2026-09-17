@@ -253,6 +253,9 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "search.kind.deal",
   "search.kind.lead",
   "search.kind.tag",
+  // The lead rail's own deal card title, the same singular loanword as
+  // search.kind.deal above it.
+  "lead.rail.deal.title",
 
   // "Cc" is the mail header itself, which vi writes as the Latin abbreviation
   // exactly as en does. Translating it would name a field no mail client

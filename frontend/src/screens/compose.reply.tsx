@@ -1,3 +1,4 @@
+import { Sparkles } from "lucide-react";
 import { useState } from "react";
 import type { components } from "../api/schema";
 import { Button } from "../design-system/atoms";
@@ -29,6 +30,7 @@ export function ChannelReplyAction({
   entityId,
   contactId,
   contentWithheld,
+  prepared,
   onSent,
 }: Readonly<{
   activityId: string;
@@ -47,6 +49,19 @@ export function ChannelReplyAction({
   // writing to the contact is not reading their mail — but it is not a REPLY,
   // and calling it one claims access to the message being answered.
   contentWithheld?: boolean;
+  /**
+   * This reply is the move a rule PREPARED, so the button wears the agent's
+   * own face and mark and the drawer opens already steered.
+   *
+   * INDIGO is the claim, and it is true here: something worked out that this
+   * message wants answering and what the answer should be about. `label` is
+   * the caller's because the word belongs to the surface that ranked the row,
+   * and `intent` seeds the steer field the drafter reads.
+   *
+   * Absent on the timelines, which mount the plain reply: nothing proposed
+   * those, a reader simply opened a conversation and chose to answer it.
+   */
+  prepared?: { label: string; intent: string };
 }>) {
   const t = useT();
   // `null` until the verb is first pressed; the drawer stays mounted from then
@@ -65,15 +80,23 @@ export function ChannelReplyAction({
   if (!reachable) {
     return null;
   }
+  // WITHHELD CONTENT IS NOT A PREPARED REPLY. `Write email` is an
+  // account-started send with no prior message to answer, so a mark claiming a
+  // rule read this thread and worked out an answer would claim exactly the
+  // access the row has just been refused.
+  const proposed = contentWithheld ? undefined : prepared;
   return (
     <>
       <Button
         small
+        variant={proposed ? "ai" : undefined}
         onClick={() =>
           setReply((prior) => ({ seq: (prior?.seq ?? 0) + 1, open: true }))
         }
       >
-        {contentWithheld ? t("compose.writeEmail") : t("compose.reply")}
+        {proposed && <Sparkles aria-hidden="true" />}
+        {proposed?.label ??
+          (contentWithheld ? t("compose.writeEmail") : t("compose.reply"))}
       </Button>
       {reply !== null && (
         <ComposeModal
@@ -101,6 +124,11 @@ export function ChannelReplyAction({
           // email` is an account-started send, the same shape the composer
           // uses when there is no prior message at all.
           kind={contentWithheld ? "email" : kind}
+          // WHY THIS ONE IS BEING ANSWERED, where the caller knows. The drawer
+          // reads the thread for itself; what it cannot read is the judgement
+          // that put this message in front of a rep, and that judgement is what
+          // the steer field is for.
+          intent={proposed?.intent}
           open={reply.open}
           onClose={() => setReply({ ...reply, open: false })}
           onSent={onSent}

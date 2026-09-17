@@ -17,6 +17,7 @@ public.activity.activity_message_has_provider CHECK (((kind = 'message'::text) =
 public.activity.activity_no_company_meeting_on_rekind CREATE TRIGGER activity_no_company_meeting_on_rekind BEFORE UPDATE OF kind ON public.activity FOR EACH ROW EXECUTE FUNCTION activity_refuses_becoming_a_company_meeting()
 public.activity.activity_origin_check CHECK ((origin = ANY (ARRAY['human'::text, 'agent'::text, 'system_remediation'::text, 'system_notice'::text])))
 public.activity.activity_owed_verdict_check CHECK (((owed_verdict IS NULL) OR (owed_verdict = ANY (ARRAY['asks_us'::text, 'informs_us'::text]))))
+public.activity.activity_owed_verdict_ruleset_shape CHECK (((owed_verdict_ruleset IS NULL) OR (owed_verdict IS NOT NULL)))
 public.activity.activity_owed_verdict_stamped CHECK (((owed_verdict IS NULL) = (owed_verdict_at IS NULL)))
 public.activity.activity_pkey PRIMARY KEY (id)
 public.activity.activity_project_last_activity CREATE TRIGGER activity_project_last_activity AFTER UPDATE OF occurred_at, archived_at, audience, origin ON public.activity FOR EACH ROW WHEN (((old.occurred_at IS DISTINCT FROM new.occurred_at) OR (old.archived_at IS DISTINCT FROM new.archived_at) OR (old.audience IS DISTINCT FROM new.audience) OR (old.origin IS DISTINCT FROM new.origin))) EXECUTE FUNCTION trg_activity_project_last_activity()
@@ -60,6 +61,7 @@ public.activity.occurred_at timestamp with time zone NOT NULL gen=- def=now()
 public.activity.origin text NOT NULL gen=- def='human'::text
 public.activity.owed_verdict text gen=- def=-
 public.activity.owed_verdict_at timestamp with time zone gen=- def=-
+public.activity.owed_verdict_ruleset text gen=- def=-
 public.activity.raw jsonb gen=- def=-
 public.activity.redacted_fields text[] NOT NULL gen=- def='{}'::text[]
 public.activity.remind_at timestamp with time zone gen=- def=-
@@ -91,6 +93,17 @@ public.activity_audience_member.created_by text NOT NULL gen=- def=-
 public.activity_audience_member.subject_id uuid NOT NULL gen=- def=-
 public.activity_audience_member.subject_type text NOT NULL gen=- def=-
 public.activity_audience_member_pkey CREATE UNIQUE INDEX activity_audience_member_pkey ON public.activity_audience_member USING btree (activity_id, subject_type, subject_id)
+public.activity_identity acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.activity_identity.activity_id uuid NOT NULL gen=- def=-
+public.activity_identity.activity_identity_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
+public.activity_identity.activity_identity_kind_check CHECK ((identity_kind = ANY (ARRAY['mail'::text, 'meeting'::text])))
+public.activity_identity.activity_identity_pkey PRIMARY KEY (identity_kind, identity_key)
+public.activity_identity.attested_by text NOT NULL gen=- def=-
+public.activity_identity.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.activity_identity.identity_key text NOT NULL gen=- def=-
+public.activity_identity.identity_kind text NOT NULL gen=- def=-
+public.activity_identity_activity_idx CREATE INDEX activity_identity_activity_idx ON public.activity_identity USING btree (activity_id)
+public.activity_identity_pkey CREATE UNIQUE INDEX activity_identity_pkey ON public.activity_identity USING btree (identity_kind, identity_key)
 public.activity_kind acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.activity_kind.activity_kind_pkey PRIMARY KEY (kind)
 public.activity_kind.kind text NOT NULL gen=- def=-
@@ -613,6 +626,7 @@ public.ai_call.ai_call_kind_check CHECK ((kind = ANY (ARRAY['completion'::text, 
 public.ai_call.ai_call_pkey PRIMARY KEY (id)
 public.ai_call.ai_call_secrets_removed_check CHECK ((secrets_removed >= 0))
 public.ai_call.ai_call_source_check CHECK ((served_identity_source = ANY (ARRAY['response'::text, 'echo'::text, 'configured'::text])))
+public.ai_call.ai_call_subject_shape CHECK (((subject_type IS NULL) = (subject_id IS NULL)))
 public.ai_call.attempt integer NOT NULL gen=- def=1
 public.ai_call.attempt_reason text NOT NULL gen=- def=''::text
 public.ai_call.cache_hit boolean NOT NULL gen=- def=false
@@ -643,6 +657,8 @@ public.ai_call.secrets_removed bigint NOT NULL gen=- def=0
 public.ai_call.served_identity_source text NOT NULL gen=- def='configured'::text
 public.ai_call.served_model text NOT NULL gen=- def=''::text
 public.ai_call.served_provider text NOT NULL gen=- def=''::text
+public.ai_call.subject_id uuid gen=- def=-
+public.ai_call.subject_type text gen=- def=-
 public.ai_call.task text NOT NULL gen=- def=-
 public.ai_call.tier text NOT NULL gen=- def=''::text
 public.ai_call.tokens_in bigint NOT NULL gen=- def=0
@@ -670,6 +686,7 @@ public.ai_call_payload_call CREATE INDEX ai_call_payload_call ON public.ai_call_
 public.ai_call_payload_pkey CREATE UNIQUE INDEX ai_call_payload_pkey ON public.ai_call_payload USING btree (id)
 public.ai_call_payload_ws_time CREATE INDEX ai_call_payload_ws_time ON public.ai_call_payload USING btree (occurred_at)
 public.ai_call_pkey CREATE UNIQUE INDEX ai_call_pkey ON public.ai_call USING btree (id)
+public.ai_call_subject_idx CREATE INDEX ai_call_subject_idx ON public.ai_call USING btree (subject_type, subject_id) WHERE (subject_id IS NOT NULL)
 public.ai_call_terminal_trace_idx CREATE INDEX ai_call_terminal_trace_idx ON public.ai_call USING btree (occurred_at DESC, id DESC) WHERE is_terminal
 public.ai_call_ws_corr CREATE INDEX ai_call_ws_corr ON public.ai_call USING btree (correlation_id)
 public.ai_call_ws_run CREATE INDEX ai_call_ws_run ON public.ai_call USING btree (agent_run_id)
@@ -2073,7 +2090,7 @@ public.company_domain_disposition.company_domain_disposition_admission_source_ch
 public.company_domain_disposition.company_domain_disposition_company_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
 public.company_domain_disposition.company_domain_disposition_domain_check CHECK (((domain = lower(domain)) AND (domain <> ''::text)))
 public.company_domain_disposition.company_domain_disposition_owner_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE SET NULL (owner_id)
-public.company_domain_disposition.company_domain_disposition_pending_reason_check CHECK (((pending_reason IS NULL) OR (pending_reason = ANY (ARRAY['unevidenced'::text, 'stale_evidence'::text]))))
+public.company_domain_disposition.company_domain_disposition_pending_reason_check CHECK (((pending_reason IS NULL) OR (pending_reason = ANY (ARRAY['unevidenced'::text, 'stale_evidence'::text, 'near_duplicate'::text]))))
 public.company_domain_disposition.company_domain_disposition_pending_reason_shape CHECK (((pending_reason IS NULL) OR ((status = 'pending'::text) AND (admission IS DISTINCT FROM 'suppressed'::text))))
 public.company_domain_disposition.company_domain_disposition_pkey PRIMARY KEY (id)
 public.company_domain_disposition.company_domain_disposition_settled_shape CHECK ((((status = 'pending'::text) AND (source IS NULL)) OR ((status = 'company'::text) AND (source IS NOT NULL) AND (company_id IS NOT NULL)) OR ((status = ANY (ARRAY['personal'::text, 'provider'::text, 'no_site'::text])) AND (source IS NOT NULL))))
@@ -3797,6 +3814,7 @@ public.idx_activity_direction CREATE INDEX idx_activity_direction ON public.acti
 public.idx_activity_kind CREATE INDEX idx_activity_kind ON public.activity USING btree (kind, occurred_at DESC) WHERE (archived_at IS NULL)
 public.idx_activity_labeled CREATE INDEX idx_activity_labeled ON public.activity USING btree (capture_labeled_at) WHERE (capture_labeled_at IS NOT NULL)
 public.idx_activity_meeting_host CREATE INDEX idx_activity_meeting_host ON public.activity USING btree (host_user_id, occurred_at) WHERE ((kind = 'meeting'::text) AND (archived_at IS NULL))
+public.idx_activity_owed_ruleset CREATE INDEX idx_activity_owed_ruleset ON public.activity USING btree (owed_verdict_ruleset, occurred_at) WHERE ((owed_verdict IS NOT NULL) AND (direction = 'inbound'::text) AND (kind = ANY (ARRAY['email'::text, 'message'::text])) AND (archived_at IS NULL) AND (audience = 'workspace'::text) AND (restricted_at IS NULL))
 public.idx_activity_reminders CREATE INDEX idx_activity_reminders ON public.activity USING btree (remind_at) WHERE ((kind = 'task'::text) AND (remind_at IS NOT NULL) AND (is_done = false) AND (archived_at IS NULL))
 public.idx_activity_reply_verdict_history_activity CREATE INDEX idx_activity_reply_verdict_history_activity ON public.activity_reply_verdict_history USING btree (activity_id, decided_at DESC)
 public.idx_activity_restricted_until CREATE INDEX idx_activity_restricted_until ON public.activity USING btree (restricted_until) WHERE (restricted_at IS NOT NULL)
@@ -4078,7 +4096,7 @@ public.import_run.connector text NOT NULL gen=- def=-
 public.import_run.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.import_run.error text gen=- def=-
 public.import_run.id uuid NOT NULL gen=- def=uuidv7()
-public.import_run.import_run_connector_check CHECK ((connector = ANY (ARRAY['csv'::text, 'hubspot'::text, 'salesforce'::text])))
+public.import_run.import_run_connector_check CHECK ((connector = ANY (ARRAY['csv'::text, 'salesforce'::text])))
 public.import_run.import_run_pkey PRIMARY KEY (id)
 public.import_run.import_run_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'validating'::text, 'awaiting_approval'::text, 'running'::text, 'complete'::text, 'failed'::text, 'undoing'::text, 'undone'::text])))
 public.import_run.mapping jsonb NOT NULL gen=- def='{}'::jsonb

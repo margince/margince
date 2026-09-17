@@ -67,7 +67,7 @@ func TestIsFirstResponseActivity(t *testing.T) {
 		"agent cold outbound":             {leadResponseTouch{direction: "outbound", capturedBy: "agent:sdr"}, false},
 		"inbound is the lead's, not ours": {leadResponseTouch{direction: "inbound", capturedBy: "human:u1"}, false},
 		"a rep's composer note":           {leadResponseTouch{kind: "note", source: "manual", capturedBy: "human:u1"}, true},
-		"an imported note":                {leadResponseTouch{kind: "note", source: "flip:hubspot:a1", capturedBy: "human:op"}, false},
+		"an imported note":                {leadResponseTouch{kind: "note", source: "mirror:legacy_crm:a1", capturedBy: "human:op"}, false},
 		"an agent's note":                 {leadResponseTouch{kind: "note", source: "manual", capturedBy: "agent:sdr"}, false},
 	}
 	for name, tc := range cases {

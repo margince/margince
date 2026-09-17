@@ -200,7 +200,7 @@ func (s *Service) dealRolesSection(ctx context.Context, tx pgx.Tx, contactID ids
 		return err
 	}
 	if dealScope == "" {
-		dealScope = "true"
+		dealScope = scopeAll
 	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT r.id, r.deal_id, r.role, d.name, s.name

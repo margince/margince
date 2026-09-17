@@ -64,6 +64,9 @@ var scopeSpellingTable = map[string]scopeSpelling{
 	"EnsureWritableLive": {argument: 2},
 	"HoldWritableLive":   {argument: 2},
 	"EnsureLinkTarget":   {argument: 2},
+	// The attach direction's probe opens with EnsureLinkTarget and narrows the
+	// share arm, so it bounds a reference at least as tightly.
+	"EnsureAttachTarget": {argument: 2},
 	"VisibleTo":          {argument: 2},
 	// The link target's table is the caller's to name in its own allowlist;
 	// this clause renders over the alias it is given.

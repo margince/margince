@@ -100,6 +100,10 @@ export const vi = {
   "home.change.stageUnknown": "Giai đoạn không rõ",
   "home.change.unidentified": "Không rõ",
   "home.change.by": "Người thực hiện: {actor}",
+  "brief.focus.inQueue": "Trong hàng đợi",
+  "brief.focus.position": "{at} / {count}",
+  "worklist.bandCount_one": "{count} mục",
+  "worklist.bandCount_other": "{count} mục",
   "brief.focus.context": "Mở ngữ cảnh",
   "brief.focus.back": "Quay lại ưu tiên",
   "brief.queue.back": "Quay lại danh sách",
@@ -198,8 +202,8 @@ export const vi = {
   "brief.feed.incomplete":
     "Chưa tải được mục nào. Không thể kiểm tra một phần công việc.",
   "brief.feed.fullWorklist": "Mở danh sách công việc đầy đủ",
-  "brief.feed.visible_one": "{count} thẻ ưu tiên",
-  "brief.feed.visible_other": "{count} thẻ ưu tiên",
+  "brief.feed.visible_one": "{count} ưu tiên trong tiêu điểm",
+  "brief.feed.visible_other": "{count} ưu tiên trong tiêu điểm",
   "brief.week.workRecorded": "Có công việc hoàn thành trong tuần.",
   "brief.week.leads": "Đã phân công {count} khách hàng tiềm năng.",
   "brief.week.responses":
@@ -1051,6 +1055,7 @@ export const vi = {
     "Khi tìm kiếm, những cuộc trò chuyện bạn không được mở nội dung sẽ không xuất hiện.",
   "tab.contacts": "Liên hệ",
   "tab.deals": "Deals",
+  "tab.dealsProjects": "Deal & dự án",
   "tab.tasks": "Công việc",
   "tab.timeline": "Lịch sử",
   "tab.finance": "Tài chính",
@@ -1276,6 +1281,10 @@ export const vi = {
   "finance.unmapped":
     "Đã kết nối, nhưng công ty này chưa được khớp với khách hàng nào trong hệ thống kế toán",
   "finance.netInvoiced": "Đã xuất hóa đơn ròng · 12 tháng",
+  "finance.coveragePeriod":
+    "Các số liệu này gồm hóa đơn phát hành {from} – {to}.",
+  "finance.overdueRelationshipEnded":
+    "Không hiển thị: quan hệ này đã kết thúc, nên một khoản quá hạn sẽ bị hiểu là khoản cần đi thu.",
   "finance.overdue": "Quá hạn",
   "finance.behaviour": "Hành vi thanh toán",
   "finance.behaviourShape":
@@ -1655,8 +1664,6 @@ export const vi = {
   "co.rail.contacts.inTouch": "Đã liên hệ với họ",
   "co.rail.projects.title": "Dự án",
   "co.rail.projects.empty": "Chưa có dự án.",
-
-  "co.tab.deals": "Deal & dự án",
 
   "co.commercial.title": "Thương mại",
   "co.commercial.lostFigure": "Deal đã thua",
@@ -2267,6 +2274,7 @@ export const vi = {
   "lead.bulkOutcomeNotFound": "không còn trong danh sách của bạn",
   "lead.bulkSelectRow": "Chọn {name}",
   "lead.unnamed": "Khách hàng tiềm năng chưa có tên",
+  "lead.timeline.empty": "Chưa ghi nhận gì trên khách hàng tiềm năng này.",
   "lead.sla.breached": "Quá hạn",
   "lead.sla.atRisk": "Sắp đến hạn",
   "lead.sla.withinTarget": "Đúng hạn",
@@ -2283,6 +2291,13 @@ export const vi = {
   "lead.ladder.title":
     "Kh\u00e1ch h\u00e0ng ti\u1ec1m n\u0103ng n\u00e0y \u0111ang \u1edf \u0111\u00e2u",
   "lead.detailsUnset": "Chưa đặt",
+  "lead.rail.deal.title": "Deal",
+  "lead.rail.deal.empty":
+    "Chưa có deal. Khi thẩm định lead này, bạn có thể mở một deal.",
+  "lead.rail.project.title": "Dự án",
+  "lead.rail.project.empty": "Chưa có dự án.",
+  "lead.rail.project.attach": "Gắn dự án",
+  "lead.rail.project.change": "Đổi dự án",
   "lead.terminalReadOnly":
     "Khách hàng tiềm năng này đã đóng và không nhận thay đổi.",
   "lead.notYoursToChange":
@@ -5537,6 +5552,7 @@ export const vi = {
   "blockedDomains.source.human": "Một con người",
   "blockedDomains.source.unevidenced": "Trang web không nêu tên công ty nào",
   "blockedDomains.source.staleEvidence": "Thư ủng hộ điều đó đã quá cũ",
+  "blockedDomains.source.nearDuplicate": "Đã có một công ty trùng tên ở đây",
   "blockedDomains.rowAdmit": "Cho tên miền này vào",
   "blockedDomains.rowRefuse": "Từ chối tên miền này",
   "blockedDomains.rowReopen": "Hỏi lại",
@@ -6112,6 +6128,8 @@ export const vi = {
   // Labels the password path, not the provider buttons above it: where the
   // installation runs SSO, the form beneath this divider is the fallback door.
   "auth.orDivider": "hoặc",
+  "auth.noMethodOffered":
+    "Công ty này đăng nhập qua nhà cung cấp danh tính của mình, hiện chưa khả dụng. Hãy đề nghị quản trị viên hoàn tất phần thiết lập.",
   // §7.1 verbatim. The noun is "company", not "workspace": ADR-0061
   // keeps `workspace` internal and §7.3 removed it from authentication. And the
   // line states that ACCESS is restricted, never that data is safe, encrypted or
@@ -7036,6 +7054,26 @@ export const vi = {
     "người gửi này bị chặn nên không tạo bản ghi",
   "pipeline.reason.no_open_question":
     "không có câu hỏi nào đang mở về người gửi này",
+  "pipeline.reason.thread_not_captured":
+    "không còn cuộc hội thoại nào được thu thập trên chuỗi này, nên không có gì để đọc",
+  "pipeline.reason.events_raised":
+    "cuộc hội thoại này đã được đọc, và các sự kiện rút ra từ nó đã được ghi vào tài khoản",
+  "pipeline.reason.nothing_material":
+    "cuộc hội thoại này đã được đọc và không có gì đáng lưu",
+  "pipeline.reason.thread_still_moving":
+    "cuộc hội thoại này vẫn đang tiếp diễn; nó được đọc sau khi đã yên lặng một thời gian",
+  "pipeline.reason.awaiting_scan":
+    "cuộc hội thoại này đến hạn được đọc nhưng chưa được xử lý",
+  "pipeline.reason.reading_parked":
+    "việc đọc cuộc hội thoại này đã bị từ chối nhiều lần nên tạm dừng cho đến khi nó thay đổi hoặc hết thời gian tạm dừng",
+  "pipeline.reason.no_single_account":
+    "cuộc hội thoại này không dẫn tới đúng một tài khoản, nên các phát hiện sẽ không có nơi xác định để lưu",
+  "pipeline.reason.two_bodies_of_work":
+    "cuộc hội thoại này trải trên hai dự án, nên các phát hiện sẽ sai với một trong hai",
+  "pipeline.reason.thread_not_all_open":
+    "một tin nhắn trong cuộc hội thoại này bị giới hạn với một phần đối tượng xem; bản tóm tắt toàn bộ sẽ là bản kể thiếu được trình bày như đầy đủ",
+  "pipeline.reason.no_named_reader":
+    "cuộc hội thoại này không xác định được đối tượng đọc nào để một phát hiện thuộc về",
   "pipeline.reason.transport_not_read":
     "bước này chỉ đọc email, còn tin nhắn đến qua kênh khác",
   "pipeline.reason.sender_undecided":
@@ -9737,6 +9775,7 @@ export const vi = {
   "contact.readings.title": "Vị thế của liên hệ này",
   "deal360.brief": "Deal này là gì",
   "deal.strip.lastTouch": "Lần chạm cuối",
+  "lead.brief.title": "Tóm tắt lead",
   "lead.standing.qualified": "Đã đủ điều kiện",
   "lead.standing.qualifiedOn":
     "Đủ điều kiện ngày {at}. Khách hàng tiềm năng này giờ là liên hệ trong CRM.",
@@ -9772,6 +9811,8 @@ export const vi = {
   "lead.today.answer": "Trả lời {name}",
   "lead.today.answerMeta": "Còn nợ phản hồi đầu tiên",
   "lead.today.nextTask": "Việc tiếp theo",
+  "lead.today.reply": "Trả lời",
+  "lead.today.openTasks": "Mở công việc",
   "lead.readings.answered": "Đã trả lời",
   "lead.standing.dueBy": "Chưa ai trả lời. Phản hồi đầu tiên hạn đến {at}.",
   "lead.standing.overdueSince":

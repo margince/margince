@@ -168,7 +168,9 @@ func (s *Store) sendSnapshots(ctx context.Context, tx pgx.Tx, baseCurrency strin
 	}
 	// The currency is the caller's resolved base, not a second read: the
 	// snapshot must record the basis this offer was actually priced in.
-	name, err := s.installation.Name(ctx, tx)
+	// The same resolver the render takes, so what a customer saw on the draft
+	// is what the snapshot freezes as having been sent.
+	name, err := s.issuerName(ctx, tx)
 	if err != nil {
 		return nil, nil, fmt.Errorf("snapshot issuer name: %w", err)
 	}

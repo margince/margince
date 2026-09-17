@@ -189,7 +189,8 @@ func (e *sendOutcomeEnv) seedDraft(t *testing.T, opts draftOptions) draftFixture
 
 	callCtx := principal.WithCorrelationID(
 		principal.WithActor(principal.WithWorkspaceID(ctx, workspace), actor),
-		ids.NewV7())
+		ids.NewV7(),
+	)
 	return draftFixture{workspace: workspace, profile: profile, signal: signal, draftRef: draftRef, actor: actor, ctx: callCtx}
 }
 
@@ -261,7 +262,8 @@ func (e *sendOutcomeEnv) readSignal(t *testing.T, id ids.UUID) signalRow {
 		       qualifies_as_source, retention_until, version, updated_at
 		FROM voice_learning_signal WHERE id = $1`, id).Scan(
 		&row.outcome, &row.similarity, &row.finalText, &row.finalCapturedBy,
-		&row.qualifiesAsSource, &row.retentionUntil, &row.version, &row.updatedAt); err != nil {
+		&row.qualifiesAsSource, &row.retentionUntil, &row.version, &row.updatedAt,
+	); err != nil {
 		t.Fatal(err)
 	}
 	return row

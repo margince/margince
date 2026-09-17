@@ -613,6 +613,30 @@ runs the background sync.
 | `--graph-watch-interval` / `--graph-watch-renew-within` | — | worker | Graph subscription maintenance scan (`6h`) / renew this far ahead of its deadline (`24h`). Microsoft's ceiling for a `/me/messages` subscription is **4230 minutes** (just under three days) where a Gmail watch lasts seven, so the Gmail defaults do not carry across |
 | `--graph-push-token` | `MARGINCE_GRAPH_PUSH_TOKEN` | api | shared secret on the Graph change-notification URL; enables `POST /webhooks/graph` (empty = route absent). It must be the same token the worker's `--graph-notification-url` carries, and it is the ONLY admission factor — Microsoft signs nothing on a change notification |
 
+### Turning the password method off
+
+An installation that signs its members in through an identity provider closes
+the password door in `margince.yaml`:
+
+```yaml
+auth:
+  password:
+    enabled: false   # default true
+```
+
+With it off, `POST /v1/auth/login` and `POST /v1/auth/forgot-password` answer
+**501** naming the method, `/v1/auth/capabilities` reports `password: false`
+and `password_reset: false`, and the login screen draws the provider buttons
+alone. The **admin-issued** set-password link is deliberately unaffected: it
+provisions a seat rather than offering a way in, and an installation that turns
+the method back on must not have to re-provision everybody first.
+
+**The api refuses to boot with the method off and no federated provider
+mounted** — that deployment has no door at all. Mounted is the bar the check
+uses, which is weaker than "somebody can sign in today": a provider whose OAuth
+app an admin has not stored yet is mounted and offers no button, and the login
+screen says so rather than rendering an empty card.
+
 ## Object storage (api, worker) — attachments and company logos
 
 Env-only, shared by both roles; secrets never appear on the command line
@@ -1327,15 +1351,26 @@ takes inline bytes or an `http(s)` URL it fetches itself.
 knowing before you enable an attachment lane, because both run the other way
 from what a reader tends to assume:
 
-- **Which lane a file takes was decided at ingress, and carriage is not a content
-  check.** The AI lane reads the content type the file is stored with and adds no
-  second authority of its own. What that type means depends on how the file
-  arrived: a **captured** attachment carries the type *sniffed from its bytes*,
-  with a disagreeing sender claim recorded rather than obeyed — so an external
-  counterparty influences the lane only through the bytes they actually sent — while
-  a file **uploaded through the API** carries its uploader's declared type,
-  unsniffed. Either way `image/*` matches by prefix, and `input: [image]` says
-  what Margince will *carry*; it never says what the bytes *are*.
+- **Which lane a file takes was decided at ingress; carriage checks the KIND and
+  not the content.** The AI lane reads the content type the file is stored with
+  and adds no second authority for anything else. What that type means depends on
+  how the file arrived: a **captured** attachment carries the type *sniffed from
+  its bytes*, with a disagreeing sender claim recorded rather than obeyed — so an
+  external counterparty influences the lane only through the bytes they actually
+  sent — while a file **uploaded through the API** carries its uploader's declared
+  type, unsniffed.
+
+  Before the bytes become a wire part, that type has to hold up: a file claiming
+  a kind whose signature is unambiguous — PNG, JPEG, GIF, WebP, BMP, PDF, HEIC,
+  HEIF — must carry it, and a file claiming any other image type is refused when
+  its bytes are **text**. `image/svg+xml` is refused outright on every wire,
+  however its bytes look: it matches `image/*` by prefix on a binding that
+  declares one, and no vision model decodes it as an image. A refusal here is its own fault, not a
+  carriage limit: retrying on another binding would read the same bytes the same
+  way. What it does **not** do is decide anything else — the stored type stays the
+  authority for every other reader, a kind whose bytes carry no signature this
+  build can name goes through unchecked, and `input: [image]` still says what
+  Margince will *carry* rather than what a picture contains.
 - **The secret stripper does not reach inside an attachment.** It runs over the
   outbound payload — the right place, and unbypassable — but an attachment rides
   that payload **base64-encoded**, and the rules match a secret's literal text. A

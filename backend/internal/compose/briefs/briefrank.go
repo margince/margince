@@ -7,9 +7,9 @@
 // relationship warmth (contacts §4), and the overnight activity signal
 // (activities) rank into the persisted run the home surface reads.
 // The deterministic ranker (this file) implements formulas-and-rules
-// §10/§10.1; the pure fold it feeds is briefscore.go, the persisted
-// read model briefstore.go, the advisory model re-order briefl2.go,
-// and the contract transport briefhandlers.go. The composite is the
+// §10/§10.1 over the rows briefreads.go gathers; the pure fold it feeds
+// is briefscore.go, the persisted read model briefstore.go, the advisory
+// model re-order briefl2.go, and the contract transport briefhandlers.go. The composite is the
 // fallback rank when the L2 layer is unavailable and the evidence basis
 // every ranked item exposes (B-E05.12).
 package briefs
@@ -17,9 +17,7 @@ package briefs
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log/slog"
-	"math"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -243,20 +241,6 @@ func (e *BriefEngine) Rank(ctx context.Context, now time.Time) (BriefRanking, er
 	}, nil
 }
 
-// briefUser resolves the human the brief belongs to. The brief is a
-// personal lens — a principal without a user identity (the system actor)
-// has no "my morning" to rank.
-func briefUser(ctx context.Context) (ids.UUID, error) {
-	p, ok := principal.Actor(ctx)
-	if !ok {
-		return ids.Nil, errors.New("brief: no actor bound to context")
-	}
-	if p.UserID.IsZero() {
-		return ids.Nil, apperrors.ErrPermissionDenied
-	}
-	return p.UserID, nil
-}
-
 // briefLastView reads the previous run's data cutoff for this user; nil
 // when the user never had a brief.
 func briefLastView(ctx context.Context, tx pgx.Tx, userID ids.UUID) (*time.Time, error) {
@@ -275,215 +259,16 @@ func briefLastView(ctx context.Context, tx pgx.Tx, userID ids.UUID) (*time.Time,
 	return lastView, nil
 }
 
-// briefRevenueNorm computes REVENUE_NORM: the workspace P90 base deal
-// value over live deals with an evidencable amount, or the fixed
-// fallback below ten deals of history.
-//
-// The basis is a bind parameter, and the workspace join that used to supply it
-// is gone with it: it earned its place only by carrying base_currency, which
-// is now one installation-wide value rather than a column on a joinable row.
-func briefRevenueNorm(ctx context.Context, tx pgx.Tx, now time.Time, base string) (int64, error) {
-	var valued int
-	var p90 *float64
-	err := tx.QueryRow(ctx, fmt.Sprintf(`
-		WITH sized AS (
-			SELECT %s AS base_value
-			FROM deal d
-			WHERE d.archived_at IS NULL
-		)
-		SELECT count(*), percentile_cont(%v) WITHIN GROUP (ORDER BY base_value::double precision)
-		FROM sized WHERE base_value IS NOT NULL`,
-		briefBaseValueSQL("$1", "$2", "d"), briefRevenueNormPercentile), now.UTC(), base).Scan(&valued, &p90)
-	if err != nil {
-		return 0, err
+// briefUser resolves the human the brief belongs to. The brief is a
+// personal lens — a principal without a user identity (the system actor)
+// has no "my morning" to rank.
+func briefUser(ctx context.Context) (ids.UUID, error) {
+	p, ok := principal.Actor(ctx)
+	if !ok {
+		return ids.Nil, errors.New("brief: no actor bound to context")
 	}
-	if valued < briefRevenueNormMinDeals || p90 == nil || *p90 <= 0 {
-		return briefRevenueNormFallbackMinor, nil
+	if p.UserID.IsZero() {
+		return ids.Nil, apperrors.ErrPermissionDenied
 	}
-	return int64(math.Round(*p90)), nil
-}
-
-// briefCandidates gathers the open, row-scoped candidate deals, minus
-// the ones this user acted on or dismissed with no linked activity since
-// the mark (B-E05.13: a dismissed deal reappears only when it materially
-// changed; an unchanged one stays out — across ALL previous runs, not
-// just the last). A snoozed item suppresses its deal on time alone
-// (A77/AC-home-6): out while snoozed_until lies ahead, back once it
-// passes — no material change required.
-func briefCandidates(ctx context.Context, tx pgx.Tx, userID ids.UUID, now time.Time,
-	base string, facts map[ids.UUID]briefDealFacts, order *[]ids.UUID,
-) error {
-	var args []any
-	arg := func(v any) int { args = append(args, v); return len(args) }
-	asOfPos := arg(now.UTC())
-	userPos := arg(userID)
-	basePos := arg(base)
-
-	scope, err := auth.ScopeClauseFor(ctx, "deal", "d", arg)
-	if err != nil {
-		return err
-	}
-	// Only an activity the rep may read can bring a dismissed deal back —
-	// the lineage line then names it, and the two must agree.
-	readable, err := briefActivityClause(ctx, "a", arg)
-	if err != nil {
-		return err
-	}
-	q := fmt.Sprintf(`
-		SELECT d.id, s.win_probability, %s, d.expected_close_date
-		FROM deal d
-		JOIN stage s ON s.id = d.stage_id
-		WHERE d.archived_at IS NULL AND d.status = 'open'
-		  AND NOT EXISTS (
-			SELECT 1 FROM brief_item bi
-			JOIN brief_run br ON br.id = bi.brief_run_id
-			WHERE br.user_id = $%d AND bi.deal_id = d.id AND bi.state <> 'new'
-			  AND CASE WHEN bi.state = 'snoozed'
-			      -- Still suppressed while the snooze holds. A time snooze
-			      -- holds until its moment; the other two hold until the
-			      -- shared predicate says the world moved.
-			      THEN CASE WHEN bi.reopen_on = 'time'
-			           THEN bi.snoozed_until > $%d
-			           ELSE NOT %s END
-			      ELSE NOT EXISTS (
-				SELECT 1 FROM activity a
-				JOIN activity_link l ON l.activity_id = a.id AND l.deal_id = d.id
-				WHERE a.archived_at IS NULL AND a.occurred_at > bi.state_at
-				  -- Not after this instant. A future-dated activity has not
-				  -- happened, so treating it as "the deal moved" brings a
-				  -- dismissed deal back for something still to come — and the
-				  -- lineage read bounds itself the same way, so an unbounded
-				  -- one here would return deals whose card can say nothing.
-				  AND a.occurred_at <= $%d
-				  AND %s) END)`,
-		briefBaseValueSQL(fmt.Sprintf("$%d", asOfPos), fmt.Sprintf("$%d", basePos), "d"), userPos, asOfPos,
-		briefSnoozeLiftedSQL("d.id", "bi.reopen_on", "bi.reopen_ref", "bi.state_at", fmt.Sprintf("$%d", asOfPos)),
-		asOfPos, readable)
-	if scope != "" {
-		q += " AND " + scope
-	}
-	// RESPONSIBILITY, not merely visibility — and it belongs HERE rather than
-	// after the ranking, which is the whole defect.
-	//
-	// A deal is workspace-readable in this product: auth.ScopeClauseFor renders
-	// no predicate for a rep on `deal`, so every seat that may read one may read
-	// them all. The overnight queue then takes the top seven by score and the
-	// worklist narrows to "mine" afterwards — so a rep whose colleagues carry
-	// larger deals watched all seven slots fill with deals that were never
-	// theirs to act on, and their own work never entered the ranking at all.
-	// One observed morning selected six colleague deals out of seven.
-	//
-	// Applied before the cap, the ranking competes among the deals this contact
-	// can actually move. Access to a colleague's deal is not responsibility for
-	// it; the team view is where breadth belongs.
-	q += fmt.Sprintf(`
-		  AND (d.owner_id = $%d
-		       OR EXISTS (
-			SELECT 1 FROM activity a
-			JOIN activity_link l ON l.activity_id = a.id AND l.deal_id = d.id
-			WHERE a.kind = 'task' AND NOT a.is_done
-			  AND a.archived_at IS NULL AND a.assignee_id = $%d))`, userPos, userPos)
-	q += " ORDER BY d.id"
-
-	rows, err := tx.Query(ctx, q, args...)
-	if err != nil {
-		return err
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var f briefDealFacts
-		if err := rows.Scan(&f.dealID, &f.winProbability, &f.baseValueMinor, &f.expectedClose); err != nil {
-			return err
-		}
-		facts[f.dealID] = f
-		*order = append(*order, f.dealID)
-	}
-	return rows.Err()
-}
-
-// briefEvidenceRows gathers each candidate's overnight activities (the
-// momentum evidence) and stakeholder contacts, after the candidate rows
-// are drained (one connection, one active query).
-//
-// It reports whether the seat evidence was READABLE, because that is not the
-// same as a deal having no stakeholders. A refused caller gets a floored warmth
-// factor on every deal, which reorders the queue; the caller has to be told, or
-// they read an order that is wrong rather than one that is short.
-func briefEvidenceRows(
-	ctx context.Context, tx pgx.Tx, lastView *time.Time, asOf time.Time,
-	facts map[ids.UUID]briefDealFacts, order []ids.UUID, stakeholders map[ids.UUID][]ids.UUID,
-) (seatsReadable bool, err error) {
-	// The seat edge's admission is resolved ONCE, ahead of the loop: it is a
-	// property of the caller, not of the deal being read, and asking per deal
-	// would put a grant lookup inside a per-row loop for an answer that cannot
-	// change. A refused caller runs no stakeholder query at all.
-	edgeArgs, edgeBound, mayReadSeats, err := seatEvidenceBound(ctx)
-	if err != nil {
-		return false, err
-	}
-	// One statement for every deal, rendered once: the activity clause is a
-	// property of the caller, like the seat edge above. The deal's slot is
-	// registered first and rebound per deal, so the clause's own parameters
-	// keep the positions it rendered against.
-	var args []any
-	arg := func(v any) int { args = append(args, v); return len(args) }
-	dealPos, sincePos, asOfPos, capPos := arg(ids.Nil), arg(lastView), arg(asOf.UTC()), arg(briefOvernightEvidenceCap)
-	readable, err := briefActivityClause(ctx, "a", arg)
-	if err != nil {
-		return false, err
-	}
-	overnightSQL := fmt.Sprintf(`
-		SELECT a.id FROM activity a
-		JOIN activity_link l ON l.activity_id = a.id AND l.deal_id = $%[1]d
-		WHERE a.archived_at IS NULL
-		  AND ($%[2]d::timestamptz IS NULL OR a.occurred_at > $%[2]d)
-		  -- Bounded at the cutoff, the way the dismissal filter above is: a
-		  -- future-dated row has not happened, so counting it as overnight
-		  -- movement claims the deal moved for something still to come.
-		  AND a.occurred_at <= $%[3]d
-		  AND %[5]s
-		ORDER BY a.occurred_at DESC, a.id DESC
-		LIMIT $%[4]d`, dealPos, sincePos, asOfPos, capPos, readable)
-	for _, dealID := range order {
-		f := facts[dealID]
-		args[dealPos-1] = dealID
-		overnight, err := collectIDList(tx.Query(ctx, overnightSQL, args...))
-		if err != nil {
-			return false, err
-		}
-		f.overnightActivityIDs = overnight
-		facts[dealID] = f
-
-		if !mayReadSeats {
-			continue
-		}
-		contacts, err := collectIDList(tx.Query(ctx, fmt.Sprintf(`
-			SELECT r.contact_id FROM relationship r
-			WHERE r.kind = 'deal_stakeholder' AND r.deal_id = $1 AND r.archived_at IS NULL
-			  AND (%s)
-			ORDER BY r.contact_id`, edgeBound), append([]any{dealID}, edgeArgs...)...))
-		if err != nil {
-			return false, err
-		}
-		stakeholders[dealID] = contacts
-	}
-	return mayReadSeats, nil
-}
-
-// collectIDList drains a single-uuid-column result set (the compose
-// spelling of the modules' collectIDs helpers).
-func collectIDList(rows pgx.Rows, err error) ([]ids.UUID, error) {
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var out []ids.UUID
-	for rows.Next() {
-		var id ids.UUID
-		if err := rows.Scan(&id); err != nil {
-			return nil, err
-		}
-		out = append(out, id)
-	}
-	return out, rows.Err()
+	return p.UserID, nil
 }

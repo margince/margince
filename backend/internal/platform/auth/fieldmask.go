@@ -213,19 +213,39 @@ func MaskedColumnSQL(ctx context.Context, object, field, alias, column string, a
 	if alias != "" {
 		qualified = alias + "." + column
 	}
+	return MaskedExpressionSQL(ctx, object, field, alias, qualified, arg)
+}
+
+// MaskedExpressionSQL is MaskedColumnSQL over a value the caller has already
+// rendered — a fold, a conversion, a CASE of its own — rather than over a
+// column this function can qualify for them.
+//
+// The alias still names the row, because the mask's own predicate is about the
+// ROW and not about the expression: write authority is decided by the deal's
+// owner and team, whatever arithmetic the projection does to its money. So the
+// two arguments answer different questions, and a caller with a rendered
+// expression has no column for the first one.
+//
+// The deal's base-currency value is the case it was written for: the fold lives
+// in a builder shared by several statements, the money inside it is a mask's
+// subject, and a caller composing the builder has nothing for MaskedColumnSQL
+// to qualify. Splitting here rather than inlining the CASE at that call site
+// keeps ONE spelling of the masked rendering — the sibling that copied it would
+// have been the second writer of the untyped-NULL reasoning below.
+func MaskedExpressionSQL(ctx context.Context, object, field, alias, expr string, arg func(any) int) (string, error) {
 	clause, masked, err := MaskExcludedClause(ctx, object, field, alias, arg)
 	if err != nil {
 		return "", err
 	}
 	if !masked {
-		return qualified, nil
+		return expr, nil
 	}
 	// One rendering for both masked cases, including the always-masked one
 	// where the clause is FALSE. A bare NULL would be untyped and Postgres
 	// refuses to infer a type for one in a UNION leg or an aggregate; the CASE
 	// takes its type from the THEN branch whether or not that branch can ever
 	// be reached, so the column types the expression without being read.
-	return "CASE WHEN " + clause + " THEN " + qualified + " ELSE NULL END", nil
+	return "CASE WHEN " + clause + " THEN " + expr + " ELSE NULL END", nil
 }
 
 // MaskExcludedClause renders the predicate for the rows on which the caller
