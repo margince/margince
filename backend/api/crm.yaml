@@ -15892,7 +15892,16 @@ paths:
                     suppression, which may only relay what the subject said, this write is the
                     rep's own judgement call and the record must say why it was made.
       responses:
-        '204': { description: Recorded. }
+        # 201 WITH THE ID, not the 204 suppressContact answers. The revoke door
+        # takes this id in its path and no endpoint lists a contact's standing
+        # vouches, so a door that answered 204 would leave every caller without
+        # an outbound-webhook subscription unable to ever take the vouch back.
+        # The event carries it too, for consumers rather than for the caller.
+        '201':
+          description: Recorded. The body names the row, which is what the revoke door takes.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RecordedOverride' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -43557,6 +43566,24 @@ components:
           items: { type: string }
         on_behalf_of: { type: string, format: uuid, description: The human whose RBAC bounds every call this passport makes. }
         expires_at:   { type: string, format: date-time }
+
+    RecordedOverride:
+      type: object
+      description: >-
+        The row allowContact just wrote. It carries the id and nothing else: the
+        category and reason are what the caller sent, and the authority is their
+        own session's, so a body echoing them would only restate the request.
+        The id is the part the caller could not have known, and the part
+        POST /contacts/{id}/consent/allow/{overrideId}/revoke needs.
+      required: [override_id]
+      properties:
+        override_id:
+          type: string
+          format: uuid
+          description: >-
+            The standing override that now stands. A contact can hold several at
+            once — one per category, and more than one for a single category
+            after a merge — so this names which of them this call created.
 
     ConsentRequest:
       type: object

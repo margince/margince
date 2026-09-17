@@ -32813,6 +32813,14 @@ export interface components {
             /** Format: date-time */
             expires_at: string;
         };
+        /** @description The row allowContact just wrote. It carries the id and nothing else: the category and reason are what the caller sent, and the authority is their own session's, so a body echoing them would only restate the request. The id is the part the caller could not have known, and the part POST /contacts/{id}/consent/allow/{overrideId}/revoke needs. */
+        RecordedOverride: {
+            /**
+             * Format: uuid
+             * @description The standing override that now stands. A contact can hold several at once — one per category, and more than one for a single category after a merge — so this names which of them this call created.
+             */
+            override_id: string;
+        };
         /**
          * @description What the consent screen renders. The client name is resolved from the database, never
          *     from the request URL, so no caller can put words on a consent screen. `scopes` is the
@@ -52689,12 +52697,14 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Recorded. */
-            204: {
+            /** @description Recorded. The body names the row, which is what the revoke door takes. */
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["RecordedOverride"];
+                };
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];

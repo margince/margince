@@ -66,20 +66,30 @@ type AllowInput struct {
 const auditFieldOverrideCategory = "override_category"
 
 // Allow records a standing vouch that a machine-level refusal for one
-// category may be overruled for this contact.
+// category may be overruled for this contact, and returns the row it wrote.
 //
 // The verb is deliberately narrow: it writes one row, at the caller's own
 // authority level, for the one category it names. It grants no consent and
 // creates no lawful basis — decideOne (authorizetransmit.go) reads it, and
 // reads it only when the decision it is weighing is already CanBeOverruled.
-func (s *Store) Allow(ctx context.Context, in AllowInput) error {
+//
+// IT RETURNS THE ID, unlike Suppress, and the asymmetry is deliberate:
+// RevokeOverride takes that id in its path and nothing lists a contact's
+// standing vouches, so a door that returned nothing would leave the caller
+// unable to ever take back what they just recorded.
+func (s *Store) Allow(ctx context.Context, in AllowInput) (ids.UUID, error) {
 	sub, level, err := admitAllow(ctx, in)
 	if err != nil {
-		return err
+		return ids.UUID{}, err
 	}
-	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		return s.allowAdmittedTx(ctx, tx, in, sub, level)
-	})
+	var overrideID ids.UUID
+	if err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		overrideID, err = s.allowAdmittedTx(ctx, tx, in, sub, level)
+		return err
+	}); err != nil {
+		return ids.UUID{}, err
+	}
+	return overrideID, nil
 }
 
 // admitAllow settles everything decidable before a connection is taken: the
@@ -117,10 +127,11 @@ func admitAllow(ctx context.Context, in AllowInput) (subject, commsauthz.Authori
 	return sub, authorityOf(ctx), nil
 }
 
-// allowAdmittedTx writes the row, its audit entry and its event together.
+// allowAdmittedTx writes the row, its audit entry and its event together, and
+// names the row it wrote.
 func (s *Store) allowAdmittedTx(
 	ctx context.Context, tx pgx.Tx, in AllowInput, sub subject, level commsauthz.AuthorityLevel,
-) error {
+) (ids.UUID, error) {
 	// SERIALISED WITH EVERY OTHER WRITER OF THIS SUBJECT'S STOPS AND
 	// OVERRIDES. lockSubjectSuppressions is reused rather than a dedicated
 	// lock: its key is hashtextextended over the SUBJECT's uuid alone, naming
@@ -133,7 +144,7 @@ func (s *Store) allowAdmittedTx(
 	// lock, and taking them the other way round inverts the order between the
 	// two transactions and deadlocks.
 	if err := lockSubjectSuppressions(ctx, tx, sub.id); err != nil {
-		return err
+		return ids.UUID{}, err
 	}
 	// auth.EnsureWritable: row scope, capture privacy and write authority
 	// together, the same probe suppressAdmittedTx runs. Not EnsureWritableLive
@@ -141,7 +152,7 @@ func (s *Store) allowAdmittedTx(
 	// reason a suppression does: it is a fact about a decision made, not a
 	// live-only convenience.
 	if err := auth.EnsureWritable(ctx, tx, sub.entityType, sub.id); err != nil {
-		return err
+		return ids.UUID{}, err
 	}
 	// SETTLED AGAINST A MERGE, after EnsureWritable and for the reason
 	// suppressAdmittedTx settles it there: no reader of communication_override
@@ -149,12 +160,12 @@ func (s *Store) allowAdmittedTx(
 	// record no send evaluates.
 	subjectID, err := survivingSubject(ctx, tx, sub.id)
 	if err != nil {
-		return err
+		return ids.UUID{}, err
 	}
 	sub.id = subjectID
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
-		return err
+		return ids.UUID{}, err
 	}
 
 	// ON CONFLICT DO NOTHING would be wrong here too: a second vouch is a
@@ -168,7 +179,7 @@ func (s *Store) allowAdmittedTx(
 		VALUES ($1, $2, $3, $4, $5)
 		RETURNING id`,
 		sub.id, in.Category, in.Reason, string(level), by).Scan(&overrideID); err != nil {
-		return fmt.Errorf("consent: recording the override: %w", err)
+		return ids.UUID{}, fmt.Errorf("consent: recording the override: %w", err)
 	}
 
 	// "update" on the contact, matching suppressAdmittedTx: a human changing
@@ -177,7 +188,7 @@ func (s *Store) allowAdmittedTx(
 	auditID, err := storekit.AuditEvent(ctx, tx, "update", sub.entityType, sub.id,
 		map[string]any{auditFieldOverrideCategory: in.Category, auditFieldDecidedByLevel: string(level)})
 	if err != nil {
-		return err
+		return ids.UUID{}, err
 	}
 	// EmitEvent: the payload declares a STATIC entity, this door writes about
 	// a contact and only a contact, so the fan-out gate resolves delivery
@@ -185,8 +196,11 @@ func (s *Store) allowAdmittedTx(
 	// hand. The reason stays OFF the payload, as suppress.go keeps it off
 	// theirs: it is the rep's own explanation to whoever reviews this
 	// contact's history, not something every subscriber needs to receive.
-	return storekit.EmitEvent(ctx, tx, auditID, sub.id,
-		overrideRecordedPayload(overrideID, in.Category, level))
+	if err := storekit.EmitEvent(ctx, tx, auditID, sub.id,
+		overrideRecordedPayload(overrideID, in.Category, level)); err != nil {
+		return ids.UUID{}, err
+	}
+	return overrideID, nil
 }
 
 // overrideRecordedPayload names WHICH row was written, what was vouched for and

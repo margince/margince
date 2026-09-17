@@ -207,9 +207,13 @@ breached. A hard bounce stops even those.
 
 A rep can also record the opposite of a stop: `communication_override` is a standing, per-category
 statement that a machine-level refusal for lack of evidence may be overruled for one contact. It
-reaches only a non-absolute machine reading — a subject-decided refusal still wins — and it is
-revocable only by a caller whose authority may revoke the level it was recorded at: above it, or
-an admin taking back another admin's, which is the one square a stop's stricter rule refuses. See
+reaches only a non-absolute machine reading — a subject-decided refusal still wins — and, because a
+vouch names ONE category, only a reading that RESOLVED one: an `unknown_purpose` refusal is
+non-absolute and still unreachable, because the request named a key the engine does not know and so
+resolved no category for a vouch to have named. Resending with a recognised purpose is the remedy
+there. It is revocable only by a caller whose authority may revoke the level it was recorded at:
+above it, or an admin taking back another admin's, which is the one square a stop's stricter rule
+refuses. See
 [privacy-and-consent.md](privacy-and-consent.md) for the full model.
 
 ### The three destinations one message offers

@@ -73,7 +73,7 @@ func TestAllowRecordsAUserLevelOverride(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := e.store.Allow(boundedRepCtx(e.ws, e.user), AllowInput{
+	if _, err := e.store.Allow(boundedRepCtx(e.ws, e.user), AllowInput{
 		ContactID: own, Category: "marketing", Reason: "the lead confirmed by phone",
 	}); err != nil {
 		t.Fatalf("recording the override: %v", err)
@@ -98,7 +98,7 @@ func TestAllowRecordsAUserLevelOverride(t *testing.T) {
 func TestAllowRecordsAnAdminLevelOverride(t *testing.T) {
 	e := setupChannelConsent(t)
 
-	if err := e.store.Allow(e.ctx, AllowInput{
+	if _, err := e.store.Allow(e.ctx, AllowInput{
 		ContactID: e.contact, Category: "customer_service", Reason: "confirmed with the account holder",
 	}); err != nil {
 		t.Fatalf("recording the override: %v", err)
@@ -118,7 +118,7 @@ func TestAllowRecordsAnAdminLevelOverride(t *testing.T) {
 func TestAllowTakesLevelFromThePrincipalNotTheBody(t *testing.T) {
 	e := setupChannelConsent(t)
 
-	if err := e.store.Allow(opsCtx(e.ws, e.user), AllowInput{
+	if _, err := e.store.Allow(opsCtx(e.ws, e.user), AllowInput{
 		ContactID: e.contact, Category: "marketing", Reason: "ops confirmed with the account holder",
 	}); err != nil {
 		t.Fatalf("recording the override: %v", err)
@@ -136,7 +136,7 @@ func TestAllowTakesLevelFromThePrincipalNotTheBody(t *testing.T) {
 func TestAllowRequiresAReason(t *testing.T) {
 	e := setupChannelConsent(t)
 
-	err := e.store.Allow(e.ctx, AllowInput{ContactID: e.contact, Category: "marketing"})
+	_, err := e.store.Allow(e.ctx, AllowInput{ContactID: e.contact, Category: "marketing"})
 	var invalid *ValidationError
 	if !errors.As(err, &invalid) {
 		t.Fatalf("an empty reason was refused with %v, want a validation error", err)
@@ -161,7 +161,7 @@ func TestAllowRequiresAReason(t *testing.T) {
 func TestAllowRejectsAnUnknownCategory(t *testing.T) {
 	e := setupChannelConsent(t)
 
-	err := e.store.Allow(e.ctx, AllowInput{ContactID: e.contact, Category: "nope", Reason: "a reason"})
+	_, err := e.store.Allow(e.ctx, AllowInput{ContactID: e.contact, Category: "nope", Reason: "a reason"})
 	var invalid *ValidationError
 	if !errors.As(err, &invalid) {
 		t.Fatalf("an unknown category was refused with %v, want a validation error", err)
@@ -188,7 +188,7 @@ func TestAllowRejectsAnUnknownCategory(t *testing.T) {
 func TestAllowRejectsASubjectServingCategory(t *testing.T) {
 	e := setupChannelConsent(t)
 
-	err := e.store.Allow(e.ctx, AllowInput{ContactID: e.contact, Category: "security_notice", Reason: "a reason"})
+	_, err := e.store.Allow(e.ctx, AllowInput{ContactID: e.contact, Category: "security_notice", Reason: "a reason"})
 	var invalid *ValidationError
 	if !errors.As(err, &invalid) {
 		t.Fatalf("a subject-serving category was refused with %v, want a validation error", err)
@@ -238,7 +238,7 @@ func TestAllowThenTheSendGoesThrough(t *testing.T) {
 			RowScope: principal.RowScopeAll,
 		},
 	})
-	if err := e.store.Allow(writerCtx, AllowInput{
+	if _, err := e.store.Allow(writerCtx, AllowInput{
 		ContactID: e.contact, Category: "marketing", Reason: "the buyer confirmed by phone",
 	}); err != nil {
 		t.Fatalf("recording the override: %v", err)
@@ -282,7 +282,7 @@ func TestAdminRevokesAUserOverride(t *testing.T) {
 	req := commsauthz.Request{LegacyPurposeKey: "newsletter"}
 
 	repCtx := writerCtxAt(e.ws, e.user, "rep")
-	if err := e.store.Allow(repCtx, AllowInput{
+	if _, err := e.store.Allow(repCtx, AllowInput{
 		ContactID: e.contact, Category: "marketing", Reason: "the buyer confirmed by phone",
 	}); err != nil {
 		t.Fatalf("recording the override: %v", err)
@@ -478,20 +478,27 @@ func lastRecordedOverridePayload(
 	return payload
 }
 
-// TestTheRecordedEventNamesTheRowItWrote is why the id is on the payload at all.
+// TestTheDoorAndItsEventNameTheRowThatWasWritten is why the id is returned and
+// on the payload at all.
 //
-// The write door answers 204 with no body and there is no endpoint that lists a
-// contact's standing overrides, so this event is the ONLY place a caller ever
-// learns the id the revoke door takes in its path. An event naming the category
-// but not the row leaves a rep able to record a vouch and unable to take it
-// back — and, after a merge has left two live rows for one category, unable to
-// tell which of them any later consent.override_lifted described.
-func TestTheRecordedEventNamesTheRowItWrote(t *testing.T) {
+// No endpoint lists a contact's standing overrides, so these two are the ONLY
+// places the id the revoke door takes in its path is ever disclosed: the answer
+// to the caller who recorded it, and the event to a consumer holding a
+// subscription. Either one naming the category but not the row leaves a rep able
+// to record a vouch and unable to take it back — and, after a merge has left two
+// live rows for one category, unable to tell which of them any later
+// consent.override_lifted described.
+//
+// Both are asserted against the row actually in the table, so a door returning a
+// plausible id that is not the one it wrote fails here rather than at a revoke
+// weeks later.
+func TestTheDoorAndItsEventNameTheRowThatWasWritten(t *testing.T) {
 	e := setupChannelConsent(t)
 
-	if err := e.store.Allow(e.ctx, AllowInput{
+	returned, err := e.store.Allow(e.ctx, AllowInput{
 		ContactID: e.contact, Category: "marketing", Reason: "they asked us at the trade fair",
-	}); err != nil {
+	})
+	if err != nil {
 		t.Fatalf("recording the override: %v", err)
 	}
 
@@ -501,6 +508,9 @@ func TestTheRecordedEventNamesTheRowItWrote(t *testing.T) {
 		 WHERE contact_id = $1 AND revoked_at IS NULL`, e.contact).Scan(&written); err != nil {
 		t.Fatalf("reading back the override id: %v", err)
 	}
+	if returned != written {
+		t.Errorf("the door returned override %s, want the row it wrote, %s", returned, written)
+	}
 
 	payload := lastRecordedOverridePayload(t, e)
 	if ids.UUID(payload.OverrideId) != written {
@@ -509,5 +519,29 @@ func TestTheRecordedEventNamesTheRowItWrote(t *testing.T) {
 	}
 	if payload.Category != "marketing" {
 		t.Errorf("the event named category %q, want marketing", payload.Category)
+	}
+}
+
+// TestTheReturnedIdIsWhatTheRevokeDoorTakes closes the loop the two disclosures
+// exist for: the id the door hands back is accepted by RevokeOverride with no
+// other lookup in between. Asserted rather than assumed, because "an id was
+// returned" and "that id revokes the vouch" are different claims, and only the
+// second is the reason the response body exists.
+func TestTheReturnedIdIsWhatTheRevokeDoorTakes(t *testing.T) {
+	e := setupChannelConsent(t)
+
+	recorded, err := e.store.Allow(e.ctx, AllowInput{
+		ContactID: e.contact, Category: "marketing", Reason: "they asked us at the trade fair",
+	})
+	if err != nil {
+		t.Fatalf("recording the override: %v", err)
+	}
+	if err := e.store.RevokeOverride(e.ctx, RevokeOverrideInput{
+		ContactID: e.contact, OverrideID: recorded, Reason: "the buyer changed their mind",
+	}); err != nil {
+		t.Fatalf("revoking the override the door just named: %v", err)
+	}
+	if overrideStillLive(t, e, recorded) {
+		t.Error("the override the door named is still live after it was revoked")
 	}
 }

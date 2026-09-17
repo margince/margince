@@ -47,10 +47,13 @@ The engine answers the second. It resolves a **category** from what the send act
   consent.** `communication_override` (`consent.Allow`) records a standing, per-category statement
   that a machine-level refusal may be overruled for one contact — the category the engine resolved
   the send to, and only that category; a vouch for `marketing` says nothing about
-  `customer_service`. It flips nothing absolute: `Decision.CanBeOverruled` only asks the question
-  for a non-absolute machine reading, so the nine `absoluteDenials` above and any subject-decided
-  refusal are unreachable through this door regardless of who is vouching — a subject stop still
-  wins. The reason is required — unlike a suppression, which may relay a bare phone call, an
+  `customer_service`. It flips nothing absolute: `Decision.CanBeOverruledByCategory` only asks the
+  question for a non-absolute machine reading that RESOLVED A CATEGORY, so the nine
+  `absoluteDenials` above and any subject-decided refusal are unreachable through this door
+  regardless of who is vouching — a subject stop still wins. An `unknown_purpose` refusal is
+  unreachable too, for a different reason: it is non-absolute, but the request named a purpose key
+  the engine does not know, so it resolved no category and a per-category vouch has nothing to
+  answer. Resending with a recognised purpose is the remedy there, not a vouch. The reason is required — unlike a suppression, which may relay a bare phone call, an
   override is the rep's own judgement call and the record must say why. It is revocable
   (`consent.RevokeOverride`) only by a caller whose authority level `CanRevoke` the level it was
   recorded at — `CanOverrule` plus one square, because admin is the top human authority and an

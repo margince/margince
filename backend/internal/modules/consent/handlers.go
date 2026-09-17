@@ -273,22 +273,23 @@ func (h Handlers) AllowContact(w http.ResponseWriter, r *http.Request, id crmcon
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	if err := h.store.Allow(r.Context(), AllowInput{
+	overrideID, err := h.store.Allow(r.Context(), AllowInput{
 		ContactID: ids.From[ids.ContactKind](ids.UUID(id)),
 		Category:  string(req.Category),
 		Reason:    req.Reason,
-	}); err != nil {
+	})
+	if err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
-	// 204: the row is the whole result, matching SuppressContact. The id a
-	// caller needs for the revoke door reaches them on consent.override_recorded
-	// rather than in this response, which is the one place a standing override
-	// is currently readable back — there is no list endpoint for
-	// communication_override, exactly as there is none for
-	// communication_suppression. Said here rather than left to be discovered: a
-	// door whose handle is only on an event is a door a UI cannot offer yet.
-	w.WriteHeader(http.StatusNoContent)
+	// 201 WITH THE ID, where SuppressContact answers 204. The revoke door takes
+	// this id in its path and nothing lists a contact's standing vouches, so a
+	// caller handed nothing here could never take back what they just recorded.
+	// consent.override_recorded carries it as well, but an event reaches a
+	// consumer holding a subscription — not the caller who made this request.
+	httperr.WriteJSON(w, http.StatusCreated, crmcontracts.RecordedOverride{
+		OverrideId: openapi_types.UUID(overrideID),
+	})
 }
 
 // LiftSuppression serves POST /contacts/{id}/consent/suppress/{suppressionId}/lift:
