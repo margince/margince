@@ -73,7 +73,7 @@ function CommentRow({
   const buyer = comment.author.side === "buyer";
   return (
     <li>
-      <Avatar name={comment.author.name} size="xs" />
+      <Avatar name={comment.author.name} />
       <div className="thread-comment">
         <span className="t-caption thread-author">
           <span className="thread-author-name">{comment.author.name}</span>

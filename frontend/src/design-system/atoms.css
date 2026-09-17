@@ -235,6 +235,13 @@
   align-items: center;
   justify-content: center;
   flex: none;
+  /* The monogram is two letters standing in for a record, not prose, so it
+     takes the heading face at its smallest rung — declared HERE rather than per
+     rung, because a chip that changed its type with its diameter would tell a
+     reader the same two letters were two different kinds of thing. Inheriting
+     was not neutral either: the initials wore whatever the row around them was
+     set in, so the same contact was one size in a list and another in a card. */
+  font: var(--fontHeadingXXSmall);
 }
 
 /* A company's mark is a rounded square, not a circle. A logo is drawn on
@@ -244,13 +251,11 @@
   border-radius: var(--r-sm);
 }
 
-/* The dense rung: a list table that has chosen to pack its rows. */
-.avatar-xs {
-  width: 20px;
-  height: 20px;
-}
-/* The default: every list row, every name a chip sits beside, the account
-   block in the rail. */
+/* The smallest rung, and the default: every list row, every name a chip sits
+   beside, the account block in the rail. A dense list table draws its chips
+   smaller still, and does it from its own sheet — see `.lt-table.dense .avatar`
+   in listtable.css — because density is the table's decision and not a rung of
+   this scale. */
 .avatar-sm {
   width: 28px;
   height: 28px;

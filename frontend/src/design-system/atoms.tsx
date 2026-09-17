@@ -474,12 +474,12 @@ export function Avatar({
   // is never a broken image or an empty slot.
   src?: string | null;
   /**
-   * The four sizes this chip is drawn at, which used to be four numbers in
-   * four different stylesheets for a prop that admitted two: `xs` in a dense
-   * table, `sm` in every list row and beside every name, `md` on a record
-   * header, `lg` on a wide one.
+   * The four sizes — `sm` every list row, `md` a record header, `lg` a wide
+   * one, `xl` a record page's own mark — after four numbers in four
+   * stylesheets for a prop that admitted two. `sm` is the FLOOR: a dense table
+   * brings its chips down from its own sheet, density being its decision.
    */
-  size?: "xs" | "sm" | "md" | "lg" | "xl";
+  size?: "sm" | "md" | "lg" | "xl";
   /**
    * What KIND of thing this chip stands for, which decides its shape.
    *

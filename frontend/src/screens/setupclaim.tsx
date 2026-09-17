@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Button, Field, TextInput } from "../design-system/atoms";
-import { Heading } from "../design-system/heading";
 import { usePasswordReveal } from "../design-system/passwordreveal";
 import { Select } from "../design-system/select";
 import { viewerZone } from "../format/timezone";
@@ -12,7 +11,7 @@ import {
   useT,
 } from "../i18n";
 import { usePageTitle, Wordmark } from "./auth";
-import { AuthExperience } from "./auth-core";
+import { AuthCardTitle, AuthExperience } from "./auth-core";
 import { isTooShort } from "./passwordrule";
 import "./auth.css";
 
@@ -221,7 +220,7 @@ export function SetupClaimScreen({
     <AuthExperience phase="unavailable">
       <Wordmark alt={t("auth.title")} />
       <form className="auth-card" onSubmit={submit}>
-        <Heading size="xlarge">{t("setup.title")}</Heading>
+        <AuthCardTitle>{t("setup.title")}</AuthCardTitle>
         <p>{t("setup.body")}</p>
         {error && (
           <p className="auth-error" role="alert">

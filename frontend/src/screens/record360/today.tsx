@@ -293,7 +293,7 @@ export function TodoRow({
 }>) {
   return (
     <PanelRow className="co-todo">
-      {who && <Avatar name={who} size="xs" />}
+      {who && <Avatar name={who} />}
       <span className="co-todo-body">
         <span className="co-todo-title">{title}</span>
         {meta && <span className="t-caption">{meta}</span>}

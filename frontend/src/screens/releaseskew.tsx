@@ -1,10 +1,9 @@
 import { useAuthCapabilities } from "../app/capabilities";
 import { releaseSkew } from "../app/release";
 import { Button } from "../design-system/atoms";
-import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
 import { usePageTitle, Wordmark } from "./auth";
-import { AuthExperience } from "./auth-core";
+import { AuthCardTitle, AuthExperience } from "./auth-core";
 
 /**
  * The gate that stops this bundle rendering against an api from another release.
@@ -64,7 +63,7 @@ export function ReleaseSkewScreen({
     <AuthExperience phase="unavailable">
       <Wordmark alt={t("auth.title")} />
       <section className="auth-card" role="alert">
-        <Heading size="xlarge">{t("release.skewTitle")}</Heading>
+        <AuthCardTitle>{t("release.skewTitle")}</AuthCardTitle>
         <p>{t("release.skewBody")}</p>
         <p>{t("release.skewVersions", { app, server })}</p>
         <div className="auth-actions">

@@ -408,12 +408,18 @@ p.settings-panel-sub {
 .settings-home-row:hover {
   background: var(--bgHover);
 }
-/* The name and its scope badge on one line, baseline-aligned so the badge sits
-   with the word rather than centred on a taller box. `flex-wrap` so a long page
-   name in a narrow column drops the badge rather than squeezing the name. */
+/* The name and its scope badge on one line, with the row's whole width between
+   them: the badge answers "whose setting is this" for every row in the group, so
+   it belongs at the trailing edge where the answers line up in one column rather
+   than trailing each name at whatever width that name happens to be. Centred
+   rather than baseline-aligned — out at the edge the badge is a pill beside a
+   word rather than a word beside a word, and a baseline hangs its chrome below
+   the line. `flex-wrap` so a long page name in a narrow column drops the badge
+   rather than squeezing the name. */
 .settings-home-rowhead {
   display: flex;
-  align-items: baseline;
+  align-items: center;
+  justify-content: space-between;
   gap: var(--space-2);
   flex-wrap: wrap;
   min-width: 0;

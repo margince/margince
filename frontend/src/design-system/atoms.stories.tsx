@@ -344,10 +344,10 @@ export const Avatars: Story = {
       <div style={stack}>
         <span className="t-label">The four sizes</span>
         <div style={row}>
-          <Avatar name="Alice Müller" size="xs" />
           <Avatar name="Alice Müller" size="sm" />
           <Avatar name="Alice Müller" size="md" />
           <Avatar name="Alice Müller" size="lg" />
+          <Avatar name="Alice Müller" size="xl" />
         </div>
       </div>
       <div style={stack}>

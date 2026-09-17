@@ -1337,12 +1337,13 @@
 }
 /* The mark for a message that is not their word — ours, or one the reader
    may not open — drawn at the same size as the face beside their word, so
-   the column of marks stays one column. */
+   the column of marks stays one column. That face is `Avatar`'s `sm` rung, and
+   this number is the one that has to move when it does. */
 .tl-msg-mark {
   display: grid;
   place-items: center;
-  width: 20px;
-  height: 20px;
+  width: 28px;
+  height: 28px;
   border-radius: var(--r-full);
   corner-shape: round;
   background: var(--bgElevated);

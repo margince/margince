@@ -171,7 +171,7 @@ function RecentRow({
     : t("co.recent.re");
   return (
     <li className="co-recent-row">
-      <Avatar name={title} identity={activity.id} size="xs" />
+      <Avatar name={title} identity={activity.id} />
       <span className="co-recent-body">
         {/* A retained email is the canonical row here as everywhere: it already
             says which way it went, who was at the other end and who may read

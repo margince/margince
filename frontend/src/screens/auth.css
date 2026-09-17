@@ -539,15 +539,18 @@
 .auth-purpose {
   animation-delay: 110ms;
 }
-/* (b) the greeting, in the first contact: the system saying its own name. Not a
-   heading — the h1 belongs to the task (§6.4), and this is a paragraph however
-   large it is set. */
+/* (b) the greeting, in the first contact: the system saying its own name, and
+   the page's h1 — the subject of this surface is the system introducing itself,
+   and the form under it is a section of that. Its type is the heading token the
+   component carries, so nothing here sets a face or a size; what is left is the
+   positioning the typed layers need and the ink. */
 .auth-statement {
   position: relative;
-  /* Tight to the kicker above it: the two are one unit — who is speaking, and
-     what they say. */
-  margin-top: var(--space-1);
-  font-family: var(--fontFamilyHeading);
+  /* No margin of its own: a heading's surrounding space belongs to the passage
+     it opens, and `.heading` zeroes it at the same specificity this rule has —
+     so a margin here is settled by whichever sheet the bundler emitted last.
+     The 4px that used to sit above it held it against a kicker this region no
+     longer carries. */
   color: var(--textPrimary);
 }
 /* ZERO layout shift while typing. The ghost is the full sentence rendered
@@ -593,7 +596,11 @@
   margin-inline: auto;
   font-family: var(--fontFamilyHeading);
   color: var(--textPrimary);
-  text-wrap: pretty;
+  /* `balance`, not `pretty`: this is a short centred line under a centred
+     greeting, so what matters is that its two or three lines come out near the
+     same length rather than that its LAST line avoids a runt. Ragged halves
+     under a centred heading read as a mistake in the layout. */
+  text-wrap: balance;
 }
 /* ===== the wordmark ===================================================== */
 /* The ONE thing that is placed against the page rather than inside the column:

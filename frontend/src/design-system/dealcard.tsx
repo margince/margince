@@ -118,7 +118,7 @@ function DealOwner({ name }: Readonly<{ name: string }>) {
       ref={tip.ref}
       {...tip.trigger}
     >
-      <Avatar name={name} size="xs" />
+      <Avatar name={name} />
       {tip.tip}
     </span>
   );

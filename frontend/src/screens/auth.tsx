@@ -18,7 +18,6 @@ import {
 import wordmarkDark from "../assets/wordmark-dark.png";
 import wordmarkWhite from "../assets/wordmark-white.png";
 import { Button, Field, TextInput } from "../design-system/atoms";
-import { Heading } from "../design-system/heading";
 import { usePasswordReveal } from "../design-system/passwordreveal";
 import {
   ProviderMark,
@@ -26,7 +25,7 @@ import {
 } from "../design-system/provider-mark";
 import { LOCALES, localeNameKey, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { AuthExperience, type AuthPhase } from "./auth-core";
+import { AuthCardTitle, AuthExperience, type AuthPhase } from "./auth-core";
 import { problemMessageOf, throwProblem } from "./common";
 import { isTooShort, MIN_PASSWORD } from "./passwordrule";
 import "./auth.css";
@@ -323,13 +322,13 @@ export function AvailabilityScreen({
     <AuthExperience phase="unavailable">
       <Wordmark alt={t("auth.title")} />
       <section className="auth-card" role="alert">
-        <Heading size="xlarge">
+        <AuthCardTitle>
           {t(
             kind === "connection"
               ? "auth.connectionTitle"
               : "auth.unavailableTitle",
           )}
-        </Heading>
+        </AuthCardTitle>
         <p>
           {t(
             kind === "connection"
@@ -687,15 +686,13 @@ function LoginForm({
 
   return (
     <form className="auth-card" onSubmit={submit}>
-      {/* The page says its name once. The greeting above IS this page's
-          heading, so the form's own title and sub-line would repeat it in a
+      {/* The page says its name once. The greeting beside this form IS the
+          page's h1, so the form's own title and sub-line would repeat it in a
           larger voice than the sentence they follow. Both stay in the
           accessibility tree, where a form still wants its name, and leave the
-          composition. The other views keep theirs: nothing above a password
-          reset form says what it is. */}
-      <Heading size="xlarge" className="sr-only">
-        {t("auth.loginTitle")}
-      </Heading>
+          composition. The other views keep theirs visible: nothing above a
+          password reset form says what it is. */}
+      <AuthCardTitle className="sr-only">{t("auth.loginTitle")}</AuthCardTitle>
       <p className="sr-only">{t("auth.loginSub")}</p>
       <ProviderButtons
         providers={providers}
@@ -832,7 +829,7 @@ function ForgotForm({
 
   return (
     <form className="auth-card" onSubmit={submit}>
-      <Heading size="xlarge">{t("auth.forgotTitle")}</Heading>
+      <AuthCardTitle>{t("auth.forgotTitle")}</AuthCardTitle>
       <p>{t("auth.forgotSub")}</p>
       <div className="auth-fields">
         {/* Same icon as the sign-in card's email field. Without it the text
@@ -981,7 +978,7 @@ function ResetForm({
 
   return (
     <form className="auth-card" onSubmit={submit}>
-      <Heading size="xlarge">{t("auth.resetTitle")}</Heading>
+      <AuthCardTitle>{t("auth.resetTitle")}</AuthCardTitle>
       <p>{t("auth.resetSub")}</p>
       <div className="auth-fields">
         <Field
@@ -1059,7 +1056,7 @@ function Notice({
 }>) {
   return (
     <section className="auth-card">
-      <Heading size="xlarge">{title}</Heading>
+      <AuthCardTitle>{title}</AuthCardTitle>
       <p>{body}</p>
       <div className="auth-actions">
         <Button variant="primary" onClick={onAction}>

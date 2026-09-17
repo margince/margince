@@ -1075,7 +1075,7 @@ function MessageMark({ entry }: Readonly<{ entry: TimelineEntry }>) {
   // the phrase the lead line shows, whose monogram would be nobody's.
   const [face] = otherSideNames(entry);
   if (entry.direction === "inbound" && face) {
-    return <Avatar name={face} size="xs" />;
+    return <Avatar name={face} />;
   }
   const Icon =
     entry.direction === "outbound" ? Send : TIMELINE_ICON[entry.kind];
