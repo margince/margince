@@ -159,19 +159,9 @@ func scanPartnerPage(row pgx.Row, sorted *storekit.ListSort) (partnerRow, ids.UU
 	if sorted.CursorKeySuffix() != "" {
 		dest = append(dest, &key)
 	}
-	out, err := scanPartner(trailingColumns{row: row, dest: dest})
+	out, err := scanPartner(storekit.TrailingColumns{Row: row, Dest: dest})
 	return out, id, key, err
 }
-
-// trailingColumns scans the columns a paged SELECT appends after the published
-// ones, so the row scanner every other caller uses does not have to know they
-// are there.
-type trailingColumns struct {
-	row  pgx.Row
-	dest []any
-}
-
-func (t trailingColumns) Scan(dest ...any) error { return t.row.Scan(append(dest, t.dest...)...) }
 
 // partnerListWhere builds the WHERE fragments for the partner list: the
 // role/cert-status filters, the keyset cursor, and the company's own row scope

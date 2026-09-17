@@ -22,7 +22,11 @@ import (
 type ListActivitiesInput struct {
 	Cursor *string
 	Limit  *int
-	Kind   *string
+	// Sort is the caller's order, validated against activitySortFields. Nil
+	// means the order the rest of this narrowing implies: newest-first for a
+	// timeline, nearest-deadline-first for the task queue.
+	Sort *string
+	Kind *string
 	// ChannelProvider narrows to messages carried by ONE transport. Since the
 	// kind stopped naming the transport (ADR-0107/A158) this is the only way to
 	// ask the question `kind=telegram` used to answer, and it is a separate dial
