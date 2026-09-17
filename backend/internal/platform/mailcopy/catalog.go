@@ -296,10 +296,17 @@ func notificationLines(line writeLine) {
 // and a product that says "du" every morning and "Sie" in the daily summary of
 // the same morning is two voices in one mailbox.
 func digestLines(line writeLine) {
+	// NO TIME OF DAY in the subject, and the lane is why. The pass runs hourly
+	// from the local morning and the claim is per (person, day), so what it
+	// promises is one message a day — not one that leaves in the morning. A
+	// colleague holding nothing when the morning opened takes no claim then, so
+	// their first unread of the afternoon sends their batch on the next tick.
+	// "This morning" is true of most sends and false of those, and a subject
+	// line is the one part of a message a reader checks against the clock.
 	line(func(c *Copy) *string { return &c.DigestSubject },
-		"Your worklist this morning",
-		"Deine Arbeitsliste heute Morgen",
-		"Danh sách công việc của bạn sáng nay")
+		"What is waiting on your worklist",
+		"Das wartet auf deiner Arbeitsliste",
+		"Những việc đang chờ trong danh sách công việc của bạn")
 	// STILL WAITING, not "since yesterday", and the window is why. The pass
 	// reaches back two local-day labels and skips nothing a reader has left
 	// unread, so a notice nobody has opened is quoted again tomorrow — a
