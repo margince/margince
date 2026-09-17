@@ -43,10 +43,7 @@ import (
 // principal and a fresh correlation id, because boot IS the originating
 // operation here and the audit rows want something to trace to.
 func publishConsentWording(ctx context.Context, pool *pgxpool.Pool, wsID ids.UUID) error {
-	bootCtx := principal.WithActor(principal.WithWorkspaceID(ctx, wsID), principal.Principal{
-		Type: principal.PrincipalSystem, ID: systemActor,
-	})
-	bootCtx = principal.WithCorrelationID(bootCtx, ids.NewV7())
+	bootCtx := principal.SystemActing(principal.WithWorkspaceID(ctx, wsID), systemActor)
 	return InstallationDB(pool).Tx(bootCtx, func(tx pgx.Tx) error {
 		now := time.Now()
 		if err := consent.PublishControllerTemplatesTx(bootCtx, tx, now); err != nil {

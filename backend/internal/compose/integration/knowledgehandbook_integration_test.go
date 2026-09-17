@@ -32,10 +32,7 @@ import (
 // rather than to a contact.
 func handbookBootCtx(ws ids.UUID) context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), ws)
-	ctx = principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalSystem, ID: "system:handbook-corpus",
-	})
-	return principal.WithCorrelationID(ctx, ids.NewV7())
+	return principal.SystemActing(ctx, "system:handbook-corpus")
 }
 
 // noSerialize stands in for the advisory lock the composition layer supplies.

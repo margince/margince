@@ -29,7 +29,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/platform/jobs"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -77,10 +76,7 @@ func (w *introExpiryWorker) Work(ctx context.Context, _ *river.Job[IntroExpiryAr
 	// both need a principal — but nobody decided any of this, so binding a
 	// human would put their name on a refusal they never made. The correlation
 	// id groups one tick's expiries as the single pass they are.
-	passCtx = principal.WithActor(passCtx, principal.Principal{
-		Type: principal.PrincipalSystem, ID: introductions.ExpiryActor,
-	})
-	passCtx = principal.WithCorrelationID(passCtx, ids.NewV7())
+	passCtx = principal.SystemActing(passCtx, introductions.ExpiryActor)
 
 	store := introductions.NewStore(InstallationDB(w.pool), time.Now)
 	expired, err := store.ExpireDue(passCtx)

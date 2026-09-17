@@ -34,7 +34,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/settings"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/schema"
@@ -155,10 +154,7 @@ func (e *CaptureEnricher) RunWorkspace(ctx context.Context) (filled bool, err er
 	defer release()
 	// The store's apply writes audit + outbox rows, so the pass binds
 	// the system actor and an operation scope like every worker job.
-	wsCtx := principal.WithCorrelationID(principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalSystem,
-		ID:   "agent:enrich",
-	}), ids.NewV7())
+	wsCtx := principal.SystemActing(ctx, "agent:enrich")
 	// The workspace default, for every mailbox that never made its own choice.
 	// Read once per pass rather than per candidate: it is one row, and a value
 	// that changed mid-pass would sort one night's candidates by two different
