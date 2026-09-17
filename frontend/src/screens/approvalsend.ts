@@ -144,7 +144,7 @@ export function stagedSendOf(approval: Approval): StagedSend | undefined {
     }
     // An agent's account-started mail: no anchor, so the records it would be
     // filed under are the question's other half.
-    case "send_account_email": {
+    case "send_company_email": {
       const links = linksOf(change.links);
       if (links === undefined || links.length === 0) {
         return undefined;

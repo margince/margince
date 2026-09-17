@@ -174,7 +174,7 @@ func coldStartOptions(modelPath *compose.ModelPath, routingVersion string) []com
 		compose.WithColdStart(fetch, modelPath.ColdStart),
 		compose.WithScrape(fetch, modelPath.ColdStart),
 		compose.WithBrief(modelPath.BriefRanking),
-		compose.WithAccountBrief(modelPath.Summarize, routingVersion),
+		compose.WithCompanyBrief(modelPath.Summarize, routingVersion),
 		compose.WithCompanyDossier(modelPath.Summarize, routingVersion),
 		compose.WithGrowthFit(modelPath.GrowthFit, routingVersion),
 		compose.WithReplyDraft(modelPath.DraftReply),

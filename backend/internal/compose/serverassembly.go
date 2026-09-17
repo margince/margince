@@ -295,7 +295,7 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 	// /companies/{id} returns for the same record.
 	// The brief reads THROUGH the 360 service, so it inherits every gate the
 	// page itself applies and can only describe what this caller may see.
-	// The model lane is nil here: WithAccountBrief binds the api role's
+	// The model lane is nil here: WithCompanyBrief binds the api role's
 	// summarize lane, and without it the brief serves its deterministic
 	// floor.
 	s.contactsStore = contacts.NewStore(InstallationDB(pool)).WithFieldCatalog(customfields.NewService(pool, nil))

@@ -20,7 +20,7 @@ import (
 )
 
 func TestEveryRequiredBodyIDIsNamedWhenAbsent(t *testing.T) {
-	_, err := requestFrom(crmcontracts.DraftAccountEmailJSONRequestBody{})
+	_, err := requestFrom(crmcontracts.DraftCompanyEmailJSONRequestBody{})
 	if err == nil {
 		t.Fatal("an omitted contact_id was accepted; the zero UUID would reach the contact lookup")
 	}
@@ -34,7 +34,7 @@ func TestAPresentButZeroDealIDIsRefusedWhileAnAbsentOneIsFine(t *testing.T) {
 	contact := openapi_types.UUID(ids.NewV7())
 	zero := openapi_types.UUID(ids.UUID{})
 
-	_, err := requestFrom(crmcontracts.DraftAccountEmailJSONRequestBody{
+	_, err := requestFrom(crmcontracts.DraftCompanyEmailJSONRequestBody{
 		ContactId: contact, DealId: &zero,
 	})
 	if err == nil {
@@ -42,7 +42,7 @@ func TestAPresentButZeroDealIDIsRefusedWhileAnAbsentOneIsFine(t *testing.T) {
 	}
 	assertNamesField(t, err, "deal_id")
 
-	req, err := requestFrom(crmcontracts.DraftAccountEmailJSONRequestBody{ContactId: contact})
+	req, err := requestFrom(crmcontracts.DraftCompanyEmailJSONRequestBody{ContactId: contact})
 	if err != nil {
 		t.Fatalf("an absent deal_id must be accepted as the whole account: %v", err)
 	}

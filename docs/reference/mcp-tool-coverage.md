@@ -410,7 +410,7 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 
 | Tool | Tokens | Graded by | Permitted in | Attached to |
 |---|---:|---|---|---|
-| `send_account_email` | 823 | — | — | — |
+| `send_company_email` | 823 | — | — | — |
 | `send_email` | 754 | `agent_loop` | — | — |
 | `send_message` | 603 | — | — | — |
 | `list_records` | 541 | — | `case10_finish_the_import`, `case21_what_are_we_closing`, `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case41_close_the_project`, `case7_ask_for_a_number`, `case9_filed_in_the_wrong_place` | `morning_brief`, `overnight_at_risk_sweep` |
@@ -433,7 +433,7 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 | `draft_follow_ups_for` | 274 | — | — | — |
 | `prepare_handoff` | 267 | `agent_loop` | `case41_close_the_project` | — |
 | `describe_query_vocabulary` | 266 | — | `case4_use_the_moment` | — |
-| `account_coverage` | 246 | `agent_loop` | `case5_before_the_meeting` | — |
+| `company_coverage` | 246 | `agent_loop` | `case5_before_the_meeting` | — |
 | `describe_report_blocks` | 245 | — | `case20_put_it_in_the_board_pack` | — |
 | `decide_approval_bundle` | 236 | — | — | — |
 | `create_task` | 221 | `deal_health` | `case42_can_i_answer_on_whatsapp` | — |

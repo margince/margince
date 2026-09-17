@@ -1679,7 +1679,7 @@ export const en = {
   "approval.kind.relink_thread": "Refile a conversation",
   "approval.kind.relink_activities": "Refile several activities",
   "approval.kind.scheduled_send_held": "Release a stopped message",
-  "approval.kind.send_account_email": "Send an email to an account",
+  "approval.kind.send_company_email": "Send an email to an account",
   "approval.kind.send_message": "Send a message",
   // What a staged proposal's own fields are CALLED. Without these a card falls
   // back to the payload's JSON keys, and a business question reads as a

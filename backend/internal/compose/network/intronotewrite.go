@@ -46,7 +46,7 @@ type introNote struct {
 // and generated_by says which one wrote it.
 func writeIntroNote(
 	ctx context.Context, lane Completer, facts noteFacts,
-) crmcontracts.AccountEmailDraft {
+) crmcontracts.CompanyEmailDraft {
 	floor := noteFloor(facts)
 	if lane == nil {
 		return wireIntroNote(floor, crmcontracts.WrittenByDeterministic, facts)
@@ -298,9 +298,9 @@ func noteRelationship(wording noteWording, facts noteFacts) string {
 // rather than by two callers who might disagree.
 func wireIntroNote(
 	note introNote, by crmcontracts.WrittenBy, facts noteFacts,
-) crmcontracts.AccountEmailDraft {
+) crmcontracts.CompanyEmailDraft {
 	aiWritten := by == crmcontracts.WrittenByModel
-	out := crmcontracts.AccountEmailDraft{
+	out := crmcontracts.CompanyEmailDraft{
 		Subject: note.subject,
 		Body:    note.body,
 		// No `to`. The colleague forwards this from their own mail client, and

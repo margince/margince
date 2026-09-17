@@ -35,7 +35,7 @@ own **inline copy** of the query (`deals/health.go`) instead of calling the help
 because the window and the two-way test match, not because they share a definition — so a change to one
 has to be made to the other by hand.
 
-The agent surface asks the same questions through the same seams: `who_knows`, `account_coverage`,
+The agent surface asks the same questions through the same seams: `who_knows`, `company_coverage`,
 `intro_path_to` and `at_risk_relationships` are all 🟢 read tools bound to `ScopeRead`, and they reach
 records only through the row-scoped reads the HTTP surface uses — so a governed tool can never see
 further than the human driving it ([agent-surface.md](agent-surface.md)).
@@ -288,7 +288,7 @@ that says it was withheld leaves a client unable to say whether the list is comp
 That channel is why the gate could be taken at all. Without it a restricted caller sees an empty
 `risks` array, which every surface renders as *"Nothing flagged — this deal passes every coverage
 check"*: a **wrong verdict on deal risk**, which is worse than the pair it stopped disclosing. The
-same obligation reaches the agent surface — `account_coverage` raises a `section_withheld` warning,
+same obligation reaches the agent surface — `company_coverage` raises a `section_withheld` warning,
 and the at-risk sweep sets `coverage_withheld` on a report whose absences would otherwise read as
 clean deals.
 
@@ -416,7 +416,7 @@ see [authorization.md](authorization.md) and [privacy-and-consent.md](privacy-an
 | The network/coverage HTTP surface | `internal/compose/network/handlers.go` |
 | Engaged stakeholders — coverage's definition | `internal/modules/deals/engagement.go` |
 | The same question, health's own inline copy | `internal/modules/deals/health.go` (`healthActivityEvidence`) |
-| Agent-tool seams (`who_knows`, `account_coverage`, `intro_path_to`, `at_risk_relationships`) | `internal/compose/networkseams.go`, `introseams.go`; `internal/modules/agents/tools_network.go` |
+| Agent-tool seams (`who_knows`, `company_coverage`, `intro_path_to`, `at_risk_relationships`) | `internal/compose/networkseams.go`, `introseams.go`; `internal/modules/agents/tools_network.go` |
 | Erasure of participants, ghosts and edges (one transaction) | `internal/modules/privacy/erasure_graph.go`, `retention_graph.go` |
 | Deactivation deleting a departing member's network | `internal/modules/identity/users.go` |
 | Cross-store ratifications for every table above | `backend/gates/tableownership_test.go` |

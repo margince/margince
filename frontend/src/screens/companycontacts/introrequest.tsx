@@ -15,7 +15,7 @@ import { problemMessageOf, throwProblem } from "../common";
 // product, and the reader sends this under their own name from their own mail
 // client.
 
-type Draft = components["schemas"]["AccountEmailDraft"];
+type Draft = components["schemas"]["CompanyEmailDraft"];
 
 export type IntroTarget = Readonly<{
   contactId: string;

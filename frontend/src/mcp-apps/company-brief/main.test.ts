@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 
 import { describe, expect, it } from "vitest";
-import { accountBriefFixture } from "./fixture";
+import { companyBriefFixture } from "./fixture";
 import { render } from "./main";
 
 function root(): HTMLElement {
@@ -18,7 +18,7 @@ function texts(el: HTMLElement, selector: string): (string | null)[] {
 describe("the account brief renders what it was given", () => {
   it("renders one row per queue item, in the order given", () => {
     const el = root();
-    render(el, accountBriefFixture.data, []);
+    render(el, companyBriefFixture.data, []);
     expect(texts(el, ".name")).toEqual([
       "8f14e45f-ceea-467a-9a1a-2e9b0e4c3d21",
       "c9f0f895-fb98-4b1b-9a5b-1d3f2e6a7c04",
@@ -31,7 +31,7 @@ describe("the account brief renders what it was given", () => {
     // and was not shown. A view that printed only the rows would be presenting
     // a shortlist as the whole field.
     const el = root();
-    render(el, accountBriefFixture.data, []);
+    render(el, companyBriefFixture.data, []);
     expect(el.querySelector(".meta")?.textContent).toContain(
       "2 of 7 candidates",
     );
@@ -114,7 +114,7 @@ describe("the account brief renders what it was given", () => {
 
   it("replaces the previous answer when a second result arrives", () => {
     const el = root();
-    render(el, accountBriefFixture.data, []);
+    render(el, companyBriefFixture.data, []);
     render(el, { items: [], candidate_count: 0 }, []);
     expect(el.querySelectorAll(".row")).toHaveLength(0);
   });

@@ -265,13 +265,13 @@ func (c DraftContext) language() textlang.Lang {
 	return draftfloor.DefaultLang
 }
 
-// SendAccountEmail starts a NEW conversation from a record rather than
+// SendCompanyEmail starts a NEW conversation from a record rather than
 // answering one. It differs from SendEmail in exactly two places — the origin
 // it builds and the links that origin carries — and shares the send itself,
 // so the consent gate, deliverability and the staging transaction cannot
 // drift between the two surfaces (ADR-0087 §1).
-func (h Handlers) SendAccountEmail(w http.ResponseWriter, r *http.Request, _ crmcontracts.SendAccountEmailParams) {
-	var req crmcontracts.SendAccountEmailRequest
+func (h Handlers) SendCompanyEmail(w http.ResponseWriter, r *http.Request, _ crmcontracts.SendCompanyEmailParams) {
+	var req crmcontracts.SendCompanyEmailRequest
 	if !httperr.Decode(w, r, &req) {
 		return
 	}

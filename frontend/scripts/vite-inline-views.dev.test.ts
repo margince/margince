@@ -28,7 +28,7 @@ afterAll(async () => {
 });
 
 it("serves a document the admission check would accept", async () => {
-  const res = await fetch("http://localhost:5199/mcp-apps/account-brief.html");
+  const res = await fetch("http://localhost:5199/mcp-apps/company-brief.html");
   expect(res.status).toBe(200);
   expect(res.headers.get("content-type")).toMatch(/text\/html/);
   const doc = await res.text();
