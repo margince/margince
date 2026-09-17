@@ -273,6 +273,12 @@ const A_DAYS_WORK = [
   settled(190, { kind: "morning_brief" }),
 ];
 
+/** The one gesture every panel story starts with. */
+const openThePanel: NonNullable<Story["play"]> = async ({ canvasElement }) => {
+  const canvas = within(canvasElement);
+  await userEvent.click(await canvas.findByRole("button", { name: /expand/i }));
+};
+
 const meta: Meta<typeof AgentRail> = {
   title: "Shell/Agent rail",
   component: AgentRail,
@@ -472,12 +478,62 @@ export const LeveledRail: Story = {
  */
 export const PanelOpen: Story = {
   render: story({ ...HEALTHY, approvals: 3, recent: A_DAYS_WORK }),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(
-      await canvas.findByRole("button", { name: /expand/i }),
-    );
-  },
+  play: openThePanel,
+};
+
+/**
+ * The same panel in dark, which is where its hierarchy is hardest to hold.
+ *
+ * Everything on it that is not body text is a derived value — the head's wash
+ * is a `color-mix` of the state's tone into the elevated ground, the terms are
+ * `--textSecondary`, the recap's marks are the state families — and each of
+ * those is mixed differently in the two themes. A head that separates from the
+ * body on light can read as one flat block here.
+ */
+export const PanelOpenDark: Story = {
+  globals: { theme: "dark" },
+  render: story({ ...HEALTHY, approvals: 3, recent: A_DAYS_WORK }),
+  play: openThePanel,
+};
+
+/**
+ * Everything the panel can report at once, which is the case its structure is
+ * for: an installation on the development path, a mailbox it cannot reach, no
+ * licence, a month with a figure on it, and a day's work behind it.
+ *
+ * Both faults are badges above the facts, the facts are terms and values, and
+ * the month's figure is said once, in the head.
+ */
+export const PanelStanding: Story = {
+  render: story(
+    {
+      ...HEALTHY,
+      aiState: "development",
+      connectorStatus: "reauth_required",
+      licenseState: "absent",
+      approvals: 3,
+      running: [occurrence({})],
+      recent: A_DAYS_WORK,
+      pricedMinor: 1_240,
+    },
+    "expanded",
+    SPEND_READER,
+  ),
+  play: openThePanel,
+};
+
+/**
+ * The phone arm: the panel rises out of the bar's centre cell with a notch
+ * pointing back at the orb, and the whole report has 390px to stand in.
+ *
+ * `uat-phone` is what makes that true in the catalog — the gate drives the
+ * browser to 390px rather than asking the manager for a viewport it never
+ * applies (shell.stories.tsx says why).
+ */
+export const PanelOpenPhone: Story = {
+  tags: ["uat-phone"],
+  render: story({ ...HEALTHY, approvals: 3, recent: A_DAYS_WORK }),
+  play: openThePanel,
 };
 
 /**

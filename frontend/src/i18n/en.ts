@@ -4413,6 +4413,17 @@ export const en = {
     "Drafting your offer has taken unusually long. It may have stopped.",
   "agent.panel.runningNow": "Running now",
 
+  // THE STATE IN A WORD, in the panel's head under the agent's name. The Core's
+  // own vocabulary is five machine words and the head used to print whichever
+  // one it was in, so a panel opened on a broken installation said "error" at a
+  // reader in the product's voice. The sentence beside these says WHAT is
+  // happening; these say what the agent IS.
+  "agent.state.idle": "Idle",
+  "agent.state.ingest": "Reading",
+  "agent.state.working": "Working",
+  "agent.state.warning": "Needs a look",
+  "agent.state.error": "Not running",
+
   // The four things the agent section says once it has run out of news
   // (`agentrail-copy.ts`). None of them claims the agent did anything: they are
   // standing facts about the product, which is what lets them be written here

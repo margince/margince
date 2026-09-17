@@ -4272,6 +4272,11 @@ export const de = {
   "agent.activity.offerDraft.stalled":
     "Das Entwerfen deines Angebots dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen.",
   "agent.panel.runningNow": "Läuft jetzt",
+  "agent.state.idle": "Im Leerlauf",
+  "agent.state.ingest": "Liest ein",
+  "agent.state.working": "Arbeitet",
+  "agent.state.warning": "Braucht Aufmerksamkeit",
+  "agent.state.error": "Läuft nicht",
 
   // Vier Dinge, die der Agentenbereich sagt, wenn es nichts Neues gibt. Kurz
   // halten: die Zeile im Rail wird nach zwei Zeilen abgeschnitten.

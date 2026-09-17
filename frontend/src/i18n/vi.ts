@@ -4210,6 +4210,11 @@ export const vi = {
   "agent.activity.offerDraft.stalled":
     "Việc soạn báo giá của bạn kéo dài bất thường. Có thể nó đã dừng.",
   "agent.panel.runningNow": "Đang chạy",
+  "agent.state.idle": "Đang rảnh",
+  "agent.state.ingest": "Đang tiếp nhận",
+  "agent.state.working": "Đang làm việc",
+  "agent.state.warning": "Cần xem lại",
+  "agent.state.error": "Không chạy",
 
   // Bốn câu phần agent nói khi không còn tin gì mới. Giữ ngắn: dòng
   // trên rail bị cắt sau hai dòng.
