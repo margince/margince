@@ -344,7 +344,7 @@ function ImportOutcome({
 
   return (
     <div className="import__outcome">
-      <Heading size="medium" className="import__outcomeTitle">
+      <Heading size="small" as="h3" className="import__outcomeTitle">
         {committed ? t("import.outcomeTitle") : t("import.previewTitle")}
       </Heading>
       {/* What the approver is about to apply. The mapping step is off screen by

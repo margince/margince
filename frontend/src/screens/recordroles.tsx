@@ -202,7 +202,7 @@ function AddRecordRoleDialog({
         )}
       </Field>
       <fieldset className="field-multiselect" disabled={pending}>
-        <legend className="t-label">{t("recordRoles.recordTypes")}</legend>
+        <legend className="t-name">{t("recordRoles.recordTypes")}</legend>
         {(["company", "deal", "project"] as const).map((kind) => (
           <Checkbox
             key={kind}
@@ -219,7 +219,7 @@ function AddRecordRoleDialog({
         ))}
       </fieldset>
       <fieldset className="field-multiselect" disabled={pending}>
-        <legend className="t-label">{t("recordRoles.assigneeKinds")}</legend>
+        <legend className="t-name">{t("recordRoles.assigneeKinds")}</legend>
         {(["user", "team"] as const).map((kind) => (
           <Checkbox
             key={kind}

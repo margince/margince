@@ -578,6 +578,16 @@ a:not([class]):focus-visible {
   font: var(--fontBodySmall);
   font-weight: var(--fontWeightMedium);
 }
+/* The name of a GROUP rather than of a control — a settings row, a fieldset's
+   legend, anything a reader takes as the small heading over the thing under it.
+   The same medium that makes `.t-label` read as a name, at the size of what it
+   heads: a row's name dropped a rung read as fine print over a full-size value,
+   which is the one thing a heading may not do. It is a separate hook rather
+   than a change to the one above, because a field's label really is a rung
+   quieter than its input and has to stay there. */
+.t-name {
+  font-weight: var(--fontWeightMedium);
+}
 /* The supporting line: a provenance note, the basis under a figure, the address
    under a name. Body S in the meta ink, and the two travel together — the size
    alone in the carrying ink reads as text somebody shrank, and the ink alone at

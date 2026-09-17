@@ -18,7 +18,10 @@
   align-items: flex-start;
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--paneEdge);
+  /* The tone's own edge. `--callout-ink` is set by the tone class below, so one
+   * declaration gives every tone its border and an untoned callout keeps the
+   * pane's: a second rule per tone would be seven copies of one idea. */
+  border: 1px solid var(--callout-ink, var(--paneEdge));
   border-radius: var(--r-md);
   background: var(--pane);
 }
@@ -52,16 +55,23 @@
   }
 }
 
+/* The words as a COLUMN — title over body — inside the row that puts them
+ * beside the verbs. Not redundant with `.callout-body`: that one is the row
+ * (and the column below 640px), this one is what keeps the title and its prose
+ * stacked and absorbing the free width while the verbs stay their own size. */
 .callout-copy {
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-1);
   min-inline-size: 0;
 }
 
 .callout-title {
   margin: 0;
+  /* It is the notice's heading without being a heading element: the weight is
+   * what separates it from the prose under it, in the tone's own ink. */
+  font-weight: var(--fontWeightMedium);
 }
 
 /* A callout's body is prose the caller supplies, so the paragraph reset lives
@@ -108,11 +118,11 @@
   flex: none;
 }
 
-/* Tone reaches TWO things and nothing else: the glyph and the heading, in ONE
- * ink, because they are one claim read twice — a shape for the reader who does
- * not read colour and a colour for the one who is scanning. A single custom
- * property, so the pair cannot be given two different values by two rules that
- * later move apart. */
+/* Tone reaches the glyph, the heading and the card's own edge, in ONE ink: they
+ * are one claim read three times — a shape for the reader who does not read
+ * colour, a colour for the one who is scanning, and an edge that says how far
+ * the claim reaches. A single custom property, so the three cannot be given
+ * different values by rules that later move apart. */
 .callout-icon,
 .callout-title {
   color: var(--callout-ink);

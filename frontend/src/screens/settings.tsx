@@ -1307,9 +1307,7 @@ function PassportCard() {
               className="field-multiselect"
               aria-describedby={mintScopeHintId}
             >
-              <legend className="t-label">
-                {t("settings.passportScopes")}
-              </legend>
+              <legend className="t-name">{t("settings.passportScopes")}</legend>
               <p id={mintScopeHintId} className="t-caption">
                 {t("settings.passportScopesHint")}
               </p>

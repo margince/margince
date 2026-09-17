@@ -203,7 +203,7 @@ function WorkingHoursForm({
         </Field>
       </div>
       <fieldset className="form-stack">
-        <legend>{t("workingHours.days")}</legend>
+        <legend className="t-name">{t("workingHours.days")}</legend>
         {WEEK.map((day) => (
           <Checkbox
             key={day}

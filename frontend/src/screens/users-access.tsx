@@ -441,7 +441,9 @@ function TeamMembers({
               <EmptyState>{t("users.teamNobodyToAdd")}</EmptyState>
             ) : (
               <fieldset className="users-team-members">
-                <legend>{t("users.teamMembersLabel")}</legend>
+                <legend className="t-name">
+                  {t("users.teamMembersLabel")}
+                </legend>
                 {contacts.map((contact) => (
                   <Checkbox
                     key={contact.id}

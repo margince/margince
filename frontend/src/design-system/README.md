@@ -115,6 +115,11 @@ line is Body S in `--textSecondary`, size and ink together, because either one
 alone reads as a mistake rather than as a caption. `t-label` is the second: a
 control's NAME is Body S at `--fontWeightMedium`, so the name sits a rung under
 the value it introduces and still reads as a name rather than as fine print.
+`t-name` is the third and the one beside it: the name of a GROUP — a settings
+row, a fieldset's legend — takes the same medium at the size of what it heads,
+because a heading dropped a rung over a full-size value reads as fine print. The
+two are separate hooks for that one difference: a field's label really is
+quieter than its input, and a row's name is not quieter than its row.
 `.t-danger` is declared after
 the roles for that reason — it weighs what a role weighs, so worn over one it has
 to be the later rule to win.

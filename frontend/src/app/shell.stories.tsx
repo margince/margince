@@ -16,10 +16,11 @@ import {
   UsersRound,
   Wrench,
 } from "lucide-react";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useRef, useState } from "react";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { Card } from "../design-system/atoms";
+import { en } from "../i18n/en";
 import { SETTINGS_PAGES } from "../screens/settingscatalog";
 import { SettingsSearchBox } from "../screens/settingssearchbox";
 import {
@@ -35,6 +36,11 @@ import { CommandPalette, useBuiltinCommands } from "./palette";
 import type { Route } from "./router";
 import { PageTitle, Shell, WorkspaceRail } from "./shell";
 import { TopBar } from "./topbar";
+// The settings stack's own sheet. A screen sheet loads with its screen, and the
+// settings frame below stands the stack under the shell WITHOUT that screen —
+// so without this the frame would draw an uncapped column and quietly
+// misrepresent the one thing it exists to show.
+import "../screens/settings.css";
 
 // fullscreen: the shell sizes itself to the viewport, so Storybook's default
 // canvas padding would clip the sidebar foot and misrepresent the layout — and
@@ -139,7 +145,25 @@ function usePaletteSeam() {
   return { openSearch: () => setOpen(true), palette };
 }
 
-function ShellExample({ children }: Readonly<{ children: ReactNode }>) {
+function ShellExample({
+  at = "#/",
+  children,
+}: Readonly<{
+  // The address this frame stands on. Stated on every frame rather than left to
+  // whatever the last one visited: the catalog keeps one iframe across a walk
+  // between stories, so a frame that named a route used to rename the page in
+  // every frame opened after it. `#/` is the product's own first destination.
+  at?: string;
+  children: ReactNode;
+}>) {
+  // Where the frame OPENS, once, and not where it is held: the rail's rows are
+  // real links, so a frame that restated its address on every render would drag
+  // a reader back the instant they used the navigation it is a picture of.
+  const opened = useRef(false);
+  if (!opened.current) {
+    opened.current = true;
+    globalThis.location.hash = at;
+  }
   const { openSearch, palette } = usePaletteSeam();
   return (
     <>
@@ -160,6 +184,63 @@ export const Default: Story = {
           <ShellExample>
             <div className="wrap">
               <Card as="div">Content</Card>
+            </div>
+          </ShellExample>
+        </SeedInstallation>
+      </StoryProviders>
+    );
+  },
+};
+
+/**
+ * A named page on the capped reading column: the heading starts and ends
+ * exactly where the card under it does.
+ *
+ * The head used to run the full width of the window while the column was
+ * capped, so on a wide display the page's name began a hand's width to the left
+ * of its own content. One measure now caps both (shell.css, --pageMeasure), and
+ * this frame is where a change to either is visible: put a ruler on the left
+ * edge of the title and the left edge of the card.
+ */
+export const PageHeadOnItsColumn: Story = {
+  name: "a named page — head on the column",
+  render: () => {
+    stubSession();
+    return (
+      <StoryProviders>
+        <SeedInstallation>
+          <ShellExample at="#/filters">
+            <div className="wrap">
+              <Card as="div">Content</Card>
+            </div>
+          </ShellExample>
+        </SeedInstallation>
+      </StoryProviders>
+    );
+  },
+};
+
+/**
+ * The same rule where the page's column is NARROWER than the page: a settings
+ * entry, whose body is the settings stack.
+ *
+ * The head follows the stack rather than the page, because what a heading has
+ * to line up with is the content it names. Both read one token
+ * (--settingsColumn), so the two cannot be given different numbers — which is
+ * what `pagecolumn.test.ts` holds and what this frame shows.
+ */
+export const SettingsHeadOnItsColumn: Story = {
+  name: "a settings entry — head on the stack's measure",
+  render: () => {
+    stubSession();
+    return (
+      <StoryProviders>
+        <SeedInstallation>
+          <ShellExample at="#/settings/account">
+            <div className="wrap">
+              <div className="settings-stack">
+                <Card as="div">Content</Card>
+              </div>
             </div>
           </ShellExample>
         </SeedInstallation>
@@ -855,8 +936,10 @@ export const PhoneAgentPanel: Story = {
   tags: ["uat-phone"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
+    // Named from the catalogue, not written out: the orb's name is a message
+    // key now, and a literal here went stale the day the copy moved.
     await userEvent.click(
-      canvas.getByRole("button", { name: "Expand the agent panel" }),
+      canvas.getByRole("button", { name: en["agent.rail.open"] }),
     );
   },
   render: () => {

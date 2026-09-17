@@ -205,7 +205,7 @@ export function InviteUserForm({
           team edits only its own records, and the preview below says so
           before the invite goes out. */}
       <fieldset className="users-invite-teams">
-        <legend>{t("users.teamsLabel")}</legend>
+        <legend className="t-name">{t("users.teamsLabel")}</legend>
         {(teams.data ?? []).flatMap((entry) =>
           "name" in entry ? (
             <Checkbox

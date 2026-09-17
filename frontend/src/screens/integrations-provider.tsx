@@ -155,7 +155,7 @@ function ProviderConnectionRow({
           <span className="provider-mark">
             <ProviderMark providerKey={connection.provider} />
           </span>
-          <Heading size="medium" className="provider-name">
+          <Heading size="small" as="h3" className="provider-name">
             {connection.provider}
           </Heading>
           <Badge tone={connectionTone(connection.status)}>

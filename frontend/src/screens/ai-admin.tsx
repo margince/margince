@@ -135,7 +135,9 @@ function BudgetPreview({
   const canDiagnose = useCan("ai_diagnostics", "read");
   return (
     <>
-      <Heading size="medium">{t("aiAdmin.preview")}</Heading>
+      <Heading size="small" as="h3">
+        {t("aiAdmin.preview")}
+      </Heading>
       <BudgetReading budget={preview.proposed} />
       <p>{t("aiAdmin.previewHint")}</p>
       {canDiagnose && <DeferredWork rows={preview.deferred_work} />}
