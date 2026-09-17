@@ -1877,7 +1877,10 @@
      navigation are unreachable, and only on the layout where the record page
      is longest. */
   z-index: 35;
-  min-width: 180px;
+  /* The menu anatomy's floor (tokens.css; the note on `.lt-menu` in
+     listtable.css is where it is spelled out), not a width of this panel's own:
+     a menu that states its own is the second answer this token replaced. */
+  min-inline-size: var(--menuMinInlineSize, 250px);
   /* On a 390px screen, or at high zoom, a menu that only states a minimum
      grows the page instead of itself: the panel goes off the right edge and
      takes its actions with it. The desktop ceiling is the OTHER half of the
@@ -1896,9 +1899,11 @@
   /* The panel's own chrome is the Select listbox's, declaration for
      declaration (select.css, .select-popup). Two popovers a reader opens from
      the same header, drawn with different padding, borders and radii, read as
-     two different products; a menu and a dropdown are one family, and the
-     family is defined once — there. Change one of these, change both. */
-  padding: var(--space-1);
+     two different products; a menu and a dropdown are one family — and both of
+     them now read the family's anatomy from tokens.css rather than from each
+     other, which is what keeps a change to one from needing a change to the
+     other. */
+  padding: var(--controlGap);
   border: 1px solid var(--borderStrong);
   border-radius: var(--r-sm);
   background: var(--bgElevated);
@@ -1934,7 +1939,11 @@
   justify-content: flex-start;
   text-align: start;
   gap: var(--space-2);
-  padding: 7px 9px;
+  /* The anatomy's block inset, less the one pixel the row does not have to
+     spend: a `Button` carries a transparent 1px border inside its own box, so
+     6px above a line in a menu that draws no border is 5px here, and the row
+     lands on the same --controlHeight as every other option row. */
+  padding: calc(var(--controlGap) - 1px) 9px;
   min-block-size: 0;
   min-inline-size: 0;
   border-color: transparent;

@@ -244,10 +244,10 @@
  * 700px is THE SHELL'S PHONE BREAKPOINT (app/shell.css, topbar.css,
  * agentrail.css): it is the width at which the sidebar leaves the layout row
  * altogether and becomes a fixed bottom bar, so it is also the width at which
- * the board is handed the whole window. At 720 the swipe shape switched on
- * while the rail was still a 224px column beside it — a 720px desktop window
- * got mandatory snap and a stage that jumped 240 → 328px next to a full
- * sidebar. The swipe and the phone chrome change on one line. */
+ * the board is handed the whole window. The swipe and the phone chrome change
+ * on ONE line, and it has to be that line: anywhere above it the rail is still
+ * a column standing beside the board, and a window with a sidebar in it is not
+ * a place for mandatory snap and a stage sized for a thumb. */
 @media (max-width: 700px) {
   .board {
     --board-col-w: calc(80% - var(--space-4));

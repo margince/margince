@@ -459,6 +459,27 @@
      it take the pointer rungs. */
   --panel-head-h: 56px;
 
+  /* A MENU'S FLOOR AND CEILING, and they are tokens because one option list is
+     one surface: a menu, a dropdown, a suggestion list and an overflow panel
+     are the same object to a reader, and the product drew five of them with
+     five widths and five insets. 250px is where a two-word label and the figure
+     beside it stop deciding how wide the surface is — below it the list is
+     sized by whichever row happens to be longest, which is why one menu stood
+     at 180 and its neighbour at 236. 400px is where a list stops being
+     scannable: past it a reader is reading rather than choosing, so the surface
+     scrolls instead of growing.
+
+     The INSET is --controlGap rather than a third number: 6 above a --fontBody
+     line and 6 below is the --controlHeight every other control stands at, so a
+     row in a menu is the same height as the control that opened it.
+
+     A surface ANCHORED to its trigger takes neither — its width is the box it
+     drops from and its ceiling is the room measured to the viewport — and says
+     so in menu-anatomy.test.ts, which holds this anatomy over every one of
+     them. */
+  --menuMinInlineSize: 250px;
+  --menuMaxBlockSize: 400px;
+
   /* Vertical-rhythm scale — the 4/8/12/16/24 rungs the screens were already
    * reaching for ad-hoc (inconsistently spelled 10/12/14/16 before this).
    * Layout rhythm, not part of the §2 Ledger-Green colour identity; a

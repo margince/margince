@@ -50,6 +50,12 @@
 }
 
 .lt-vtab {
+  /* A tab is a control in the header's row of controls, so it stands at the one
+     control height. The flex box is what centres the name in it: `.lt-views` is
+     a row, so a bare button blockifies and hangs its label at the top. */
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--controlHeight);
   /* A saved view's name is what a reader identifies it by, so the tab keeps its
      width: squeezed by the header's other content it lost the end of every
      name, and two views truncated to the same prefix are one tab drawn twice. */
@@ -913,8 +919,14 @@
 }
 
 .lt-pager button {
-  min-width: 26px;
-  height: 26px;
+  /* A page step is a control, so it takes the control height in both axes —
+     square until a three-digit page number widens it. It had a rung of its own
+     at 26, which is the drift `controlheight.test.ts` exists to stop. */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-inline-size: var(--controlHeight);
+  min-block-size: var(--controlHeight);
   padding: 0 var(--space-2);
   border: 0;
   background: none;

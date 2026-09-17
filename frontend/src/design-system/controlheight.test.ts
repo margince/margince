@@ -299,7 +299,6 @@ const ACCEPTED = new Map<string, string>([
     "the same, with a floor under the percentage: the pill is 32 OUTSIDE its " +
       "border, so a segment claiming the control height would push it to 34",
   ],
-  [".lt-pager button", "the table pager's steps, still on a rung of their own"],
 ]);
 
 describe("one control height", () => {

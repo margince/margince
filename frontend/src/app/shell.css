@@ -1794,7 +1794,10 @@
   right: 0;
   display: flex;
   flex-direction: column;
-  padding: var(--space-1);
+  /* The menu anatomy's INSET (tokens.css), which every option list spends on
+     itself. Not its floor: this list is pinned to the search box it drops from,
+     so its width is that box's and never its own. */
+  padding: var(--controlGap);
   border: 1px solid var(--borderStrong);
   border-radius: var(--r-sm);
   background: var(--bgElevated);
@@ -1807,7 +1810,10 @@
 .settingssearch-hit {
   display: flex;
   flex-direction: column;
-  padding: var(--space-1) var(--space-2);
+  /* The anatomy's block inset, so a hit here is the row a menu draws; the
+     inline inset is the list's own, since a hit carries two lines rather than
+     one and an optical menu inset would crowd the second. */
+  padding: var(--controlGap) var(--space-2);
   border-radius: var(--r-sm);
   color: var(--textPrimary);
   text-decoration: none;

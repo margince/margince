@@ -133,11 +133,6 @@ const SURFACES: readonly Surface[] = [
     floor: null,
     ceiling:
       "the component caps the height to the room on the side it opened toward, inline",
-    awaitingPatch: {
-      reason: "atoms.css",
-      surfacePadding: "var(--space-1)",
-      rowPadding: "7px 9px",
-    },
   },
   {
     selector: ".settingssearch-list",
@@ -146,11 +141,6 @@ const SURFACES: readonly Surface[] = [
     floor:
       "pinned to the search box it drops from (left: 0; right: 0), so it has no width of its own",
     ceiling: "60vh, because it drops inside the rail rather than over the page",
-    awaitingPatch: {
-      reason: "shell.css",
-      surfacePadding: "var(--space-1)",
-      rowPadding: "var(--space-1) var(--space-2)",
-    },
   },
 ];
 
@@ -231,6 +221,28 @@ function blockInset(rule: CssRule): string | undefined {
   return parts[0];
 }
 
+/**
+ * The block inset a row spends: the anatomy's inset, less any border the row
+ * KEEPS.
+ *
+ * What the anatomy fixes is the row's height — 6 above a --fontBody line and 6
+ * below is the --controlHeight every control in the product stands at — and a
+ * box's height is its padding plus its line plus its border. So a row that
+ * removes its border (`border: 0`) or never had one spends the inset whole,
+ * and a row that only RECOLOURS one spends a pixel less: the overflow panel's
+ * rows are `Button`s, and the atom reserves a transparent 1px inside its own
+ * box so that a ghost and a primary in a row are the same height.
+ *
+ * Read from the rule rather than listed per surface, because a list would be
+ * this file holding a second copy of which rows are drawn from a control.
+ */
+function expectedInset(rule: CssRule): string {
+  const recolours =
+    declaredValue(rule, "border-color") !== undefined &&
+    declaredValue(rule, "border") === undefined;
+  return recolours ? `calc(${INSET} - 1px)` : INSET;
+}
+
 describe("one menu anatomy", () => {
   describe.each(
     SURFACES.filter((surface) => surface.awaitingPatch === undefined),
@@ -262,7 +274,8 @@ describe("one menu anatomy", () => {
     });
 
     it.each(surface.rows)("%s is one --controlHeight tall", (row) => {
-      expect(blockInset(ruleFor(surface.sheet, row))).toBe(INSET);
+      const rowRule = ruleFor(surface.sheet, row);
+      expect(blockInset(rowRule)).toBe(expectedInset(rowRule));
     });
 
     if (surface.head) {
