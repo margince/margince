@@ -8769,6 +8769,7 @@ export const en = {
   // one first — a contact can work at more than one company at once.
   "contact.rail.employmentTitle": "Companies",
   "contact.rail.noEmployment": "No employment on record.",
+  "contact.rail.noPrimaryEmployer": "No primary employer — choose one.",
   "contact.rail.addEmployment": "Add company",
   "contact.employer.contacts_one": "{count} contact",
   "contact.employer.contacts_other": "{count} contacts",
