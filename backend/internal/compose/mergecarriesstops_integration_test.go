@@ -477,7 +477,7 @@ func TestAMergeCarriesTheRetiringContactsOverride(t *testing.T) {
 		t.Fatalf("verdict = allow before any override reached the survivor — the fixture proves nothing")
 	}
 
-	if err := consentStore.Allow(admin, consent.AllowInput{
+	if _, err := consentStore.Allow(admin, consent.AllowInput{
 		ContactID: ids.From[ids.ContactKind](vouched),
 		Category:  "marketing",
 		Reason:    "confirmed the opt-in on a call before the records were merged",
@@ -538,7 +538,7 @@ func TestACarryDoesNotDuplicateAnOverrideTheSurvivorAlreadyHolds(t *testing.T) {
 	survivor := e.SeedContact(t, "Duplicate Override Survivor", nil)
 
 	for _, id := range []ids.UUID{retiring, survivor} {
-		if err := consentStore.Allow(admin, consent.AllowInput{
+		if _, err := consentStore.Allow(admin, consent.AllowInput{
 			ContactID: ids.From[ids.ContactKind](id),
 			Category:  "marketing",
 			Reason:    "confirmed the opt-in on a call",
@@ -568,7 +568,7 @@ func TestAnUnwiredMergeRefusesOnlyWhenAnOverrideWouldBeLost(t *testing.T) {
 
 	vouched := e.SeedContact(t, "Unwired Override Source", nil)
 	survivor := e.SeedContact(t, "Unwired Override Survivor", nil)
-	if err := consentStore.Allow(admin, consent.AllowInput{
+	if _, err := consentStore.Allow(admin, consent.AllowInput{
 		ContactID: ids.From[ids.ContactKind](vouched),
 		Category:  "marketing",
 		Reason:    "confirmed the opt-in on a call",
