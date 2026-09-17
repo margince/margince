@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "ef4e6882fa8c2200a4dc3870b81229a090630aebb0405e2fc07ae4c756c6e6ca"
+const JobContractHash = "8f0c0bec6113786b160b743580ac731cae1d268b87c8c6c90c7b38de29fdfa1e"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -551,6 +551,16 @@ var specs = map[string]Spec{
 		OptsOwner: OptsCaller,
 		Cadence:   Cadence{Fixed: 1 * time.Hour},
 	},
+	"notification_digest": {
+		Kind:      "notification_digest",
+		GoType:    "NotificationDigestArgs",
+		Role:      Worker,
+		Fleet:     true,
+		Queue:     "default",
+		Timeout:   TimeoutPolicy{Fixed: 10 * time.Minute},
+		OptsOwner: OptsCaller,
+		Cadence:   Cadence{Fixed: 1 * time.Hour},
+	},
 	"notification_email": {
 		Kind:      "notification_email",
 		GoType:    "SendNotificationEmailArgs",
@@ -558,7 +568,6 @@ var specs = map[string]Spec{
 		Queue:     "default",
 		Timeout:   TimeoutPolicy{Fixed: 2 * time.Minute},
 		OptsOwner: OptsCaller,
-		Fault:     FaultPolicy{NilAfterLogging: "there is no durable retry here BY DESIGN, and the failure is durable instead: the notice's email_attempted_at claim is spent before the relay is dialled and is never released, and a refusal writes its cause into notice.email_error beside it. SMTP returns no receipt, so a retried attempt could not tell a refused message from a delivered one and would risk telling a colleague twice that the same decision is waiting. The green River row means 'this notice's one attempt is concluded'; the row says how it went."},
 		Args:      []ArgField{{Name: "NoticeID"}, {Name: "Workspace"}},
 	},
 	"overlay_reconcile": {

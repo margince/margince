@@ -182,28 +182,13 @@ func (w *briefGenerateWorker) mailTheMorning(
 	return nil
 }
 
-// repContext binds one rep's own authority, which every read and write on their
-// behalf runs under.
-//
-// A fresh correlation id per rep, so one morning's work for one colleague is one
-// recoverable trace in the audit spine rather than a fleet pass nobody can take
-// apart.
+// repContext binds one rep's own authority, through the spelling the digest
+// pass shares (seatcontext.go): both are a system process about to read one
+// colleague's records on their behalf.
 func (w *briefGenerateWorker) repContext(
 	ctx context.Context, wsID, userID ids.UUID,
 ) (context.Context, error) {
-	rbac, seat, err := w.users.EffectiveAuthority(ctx, wsID, userID)
-	if err != nil {
-		return nil, fmt.Errorf("resolving the rep's authority: %w", err)
-	}
-	repCtx := principal.WithActor(ctx, principal.Principal{
-		Type:        principal.PrincipalHuman,
-		ID:          "human:" + userID.String(),
-		UserID:      userID,
-		SeatType:    seat,
-		TeamIDs:     rbac.TeamIDs,
-		Permissions: rbac.Permissions,
-	})
-	return principal.WithCorrelationID(repCtx, ids.NewV7()), nil
+	return seatContext(ctx, w.users, wsID, userID)
 }
 
 // assembleFor snapshots one rep's run under that rep's OWN authority.
@@ -211,10 +196,7 @@ func (w *briefGenerateWorker) repContext(
 // The principal is the whole security argument for this job: the run is
 // assembled by a system process but it must contain exactly what the rep
 // herself could see, so every read inside SnapshotRun resolves through her
-// grants, her teams and her seat. EffectiveAuthority reads the grants and the
-// seat as one snapshot — composed from separate reads they can describe an
-// authority she never held, permissions from before a role change with a seat
-// from after.
+// grants, her teams and her seat.
 //
 // The MAIL is not here. It is a pass of its own over whatever is still unmailed
 // once the whole workspace is assembled — mailTheMorning says why, and the short
@@ -291,6 +273,10 @@ func (w *briefGenerateWorker) morningPassFor(ctx context.Context, wsID ids.UUID,
 // repsWithoutARunFor is the candidate query: every seat that should have a
 // brief for this local day and does not yet.
 //
+// The roster half is morningSeatSQL, which the digest pass serves too: a seat
+// one morning message reaches and the other skips is a difference nobody
+// decided.
+//
 // The anti-join is an optimisation of the morning, not the correctness of it —
 // uq_brief_run_user_day is what makes a second run impossible, and a rep who
 // gains a run between this read and the snapshot simply joins it.
@@ -298,9 +284,7 @@ func repsWithoutARunFor(ctx context.Context, tx pgx.Tx, day time.Time) ([]ids.UU
 	rows, err := tx.Query(ctx, `
 		SELECT u.id
 		FROM app_user u
-		WHERE `+identity.LiveMemberSQL("u")+`
-		  AND u.is_agent = false
-		  AND u.seat_type = 'full'
+		WHERE `+morningSeatSQL+`
 		  AND NOT EXISTS (
 			SELECT 1 FROM brief_run br
 			WHERE br.user_id = u.id AND br.local_day = $1)

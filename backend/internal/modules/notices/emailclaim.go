@@ -30,13 +30,15 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// maxEmailErrorRunes bounds the stored cause.
+// maxMailErrorRunes bounds the stored cause, matching the CHECK on both
+// columns that hold one: notice.email_error here, and
+// notification_digest_run.mail_error beside it.
 //
 // A driver's error text is unbounded, and a row the product cannot render helps
 // nobody — the point of storing the cause is that a colleague asking "where is
 // the mail about my approval" gets an answer from the row rather than from a
 // log nobody kept.
-const maxEmailErrorRunes = 500
+const maxMailErrorRunes = 500
 
 // EmailAttempt is one claimed send: the notice to render, and the seat it is
 // addressed to.
@@ -121,7 +123,7 @@ func (s *Store) ClaimEmailAttempt(ctx context.Context, id ids.UUID) (EmailAttemp
 // reads to find out why a message did not arrive would bury the relay failures
 // that column exists for.
 func (s *Store) EmailFailed(ctx context.Context, id ids.UUID, cause string) error {
-	cause = truncate(cause, maxEmailErrorRunes)
+	cause = truncate(cause, maxMailErrorRunes)
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
 		// Predicated on the claim, which is what the table's own CHECK says
 		// too: a cause beside no attempt describes a send that never happened.

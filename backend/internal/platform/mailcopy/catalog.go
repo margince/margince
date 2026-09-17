@@ -38,6 +38,7 @@ func buildCatalog() map[Language]Copy {
 	weeklyLines(line)
 	morningLines(line)
 	notificationLines(line)
+	digestLines(line)
 	confirmLines(line)
 
 	return map[Language]Copy{English: *en, German: *de, Vietnamese: *vi}
@@ -280,6 +281,37 @@ func notificationLines(line writeLine) {
 		"Open your worklist",
 		"Arbeitsliste öffnen",
 		"Mở danh sách công việc")
+}
+
+// digestLines is the once-a-day batch: what reached a colleague's worklist
+// while they were not looking at it.
+//
+// It names the QUEUE and not the product's own machinery. "Here is what reached
+// your worklist" is a sentence about the reader's work; "your notification
+// digest is ready" describes the envelope, which is the wording every product
+// reaches for and nobody reads twice.
+//
+// The German is INFORMAL, like the brief and the immediate notice above and
+// unlike the confirm sections below: this goes to a colleague who works here,
+// and a product that says "du" every morning and "Sie" in the daily summary of
+// the same morning is two voices in one mailbox.
+func digestLines(line writeLine) {
+	line(func(c *Copy) *string { return &c.DigestSubject },
+		"Your worklist this morning",
+		"Deine Arbeitsliste heute Morgen",
+		"Danh sách công việc của bạn sáng nay")
+	line(func(c *Copy) *string { return &c.DigestIntro },
+		"Here is what reached your worklist since yesterday.",
+		"Das ist seit gestern auf deiner Arbeitsliste eingegangen.",
+		"Đây là những gì đã đến danh sách công việc của bạn kể từ hôm qua.")
+	line(func(c *Copy) *string { return &c.DigestAndMore },
+		"…and %d more",
+		"…und %d weitere",
+		"…và %d mục khác")
+	line(func(c *Copy) *string { return &c.DigestOpen },
+		"Open your worklist:",
+		"Arbeitsliste öffnen:",
+		"Mở danh sách công việc:")
 }
 
 // confirmLines is the copy for messages addressed to a contact the installation

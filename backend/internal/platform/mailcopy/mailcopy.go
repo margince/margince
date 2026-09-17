@@ -298,6 +298,23 @@ type Copy struct {
 	NotificationSubject string
 	NotificationIntro   string
 	NotificationOpen    string
+
+	// The morning notification digest: the same queue as the line above, for a
+	// colleague who asked to hear about a class once a day rather than each time
+	// it moves.
+	//
+	// DigestSubject is a NAME the count follows in brackets, not a prefix a
+	// record's title completes: a batch is about five things, and putting one of
+	// them in the subject would make the message look like it is about that one.
+	//
+	// DigestAndMore is the "%d more" tail, and it counts everything the body did
+	// not print — the lines that did not fit and the ones the reader's own scope
+	// withheld, together. Two numbers there would tell a reader that a record
+	// they may not see exists.
+	DigestSubject string
+	DigestIntro   string
+	DigestAndMore string
+	DigestOpen    string
 }
 
 // OneLine collapses any run of line breaks and other control separators into
