@@ -7,11 +7,12 @@
 // contract mapping + transport handlers + the activities slice of the
 // datasource provider, flat per ADR-0054 §3.
 //
-// Tables owned: activity, activity_link, activity_audience_member,
-// activity_meeting_history, activity_retention_evidence, transcript_read,
-// attachment_extraction, deal_document_hide, activity_sales_state,
-// activity_reader_state, worklist_pin, activity_review_template,
-// activity_review_response, activity_request_settlement, activity_identity.
+// Tables owned: activity, activity_link, activity_participant,
+// activity_audience_member, activity_meeting_history,
+// activity_retention_evidence, transcript_read, attachment_extraction,
+// deal_document_hide, activity_sales_state, activity_reader_state,
+// worklist_pin, activity_review_template, activity_review_response,
+// activity_request_settlement, activity_identity.
 //
 // The two review tables are here rather than in deals because a review is
 // something somebody WROTE, and this module is where the product keeps those:
