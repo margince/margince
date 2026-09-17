@@ -86,13 +86,10 @@ func (e *Eraser) purgeContentDerivedFrom(ctx context.Context, tx pgx.Tx, id ids.
 		return err
 	}
 	// The external identities this message answered to — its Message-ID, its
-	// calendar occurrence. Erasure ARCHIVES the activity rather than deleting
-	// it, so the foreign key's cascade never fires and the claim would outlive
-	// the content it points at: a later arrival of the same message would
-	// resolve onto the emptied row and bind to it, which both answers wrongly
-	// and discloses that the message was erased.
-	if _, err := tx.Exec(ctx, `
-		DELETE FROM activity_identity WHERE activity_id = $1`, id); err != nil {
+	// calendar occurrence — through the helper the Art. 17 cascade also calls,
+	// because an identity retired by one act and not the other is how this
+	// table went missing from the subject's erasure in the first place.
+	if err := retireActivityIdentities(ctx, tx, []ids.UUID{id}); err != nil {
 		return err
 	}
 	if err := purgeTranscriptReadings(ctx, tx, []ids.UUID{id}); err != nil {

@@ -253,8 +253,9 @@ func subjectIdentifiers(ctx context.Context, tx pgx.Tx, contactID ids.ContactID)
 }
 
 // purgeRedactedActivityTraces finishes off the activities the timeline redaction
-// just emptied: their vectors, their own audit spines, the proposals read out of
-// them, and the transmitted copy in the send log.
+// just emptied: their vectors, their own audit spines, the external identities
+// they answered to, the proposals read out of them, and the transmitted copy in
+// the send log.
 func purgeRedactedActivityTraces(ctx context.Context, tx pgx.Tx, activities []ids.UUID, reason string, payloads PayloadPurger) error {
 	// The vectors go with the text they were built from. purgeDerivedTraces
 	// reaches embeddings through activity_link, which by construction cannot
@@ -269,6 +270,13 @@ func purgeRedactedActivityTraces(ctx context.Context, tx pgx.Tx, activities []id
 		}
 	}
 	if err := tombstoneCollateralScrubs(ctx, tx, "activity", activities, reason, causeContactErasure); err != nil {
+		return err
+	}
+	// The external identities of the rows just emptied, through the same helper
+	// the per-activity arm calls. Archived is not deleted, so without this the
+	// message goes on answering to its Message-ID: a durable record that it was
+	// here, and a claim no later arrival can ever take back.
+	if err := retireActivityIdentities(ctx, tx, activities); err != nil {
 		return err
 	}
 	// The readings of those rows, which describe a body that is now gone. The

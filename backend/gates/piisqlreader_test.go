@@ -138,6 +138,11 @@ var erasureCascadeFiles = []string{
 	// Same Art. 17 transaction; its own file because it belongs to neither
 	// destructive engine and both reach it.
 	"internal/modules/privacy/erasure_approvals.go",
+	// Which external message each erased activity WAS — its Message-ID, its
+	// calendar occurrence. Same Art. 17 transaction; its own file because both
+	// destructive engines call the one helper, and a list that named neither
+	// engine's file would leave the table reading as covered by nobody.
+	"internal/modules/privacy/erasureidentities.go",
 	// The readings of the transcripts the timeline scrub just emptied — same
 	// transaction, its own file for the same both-engines reason.
 	"internal/modules/privacy/transcriptreadings.go",
