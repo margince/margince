@@ -28,8 +28,12 @@ import (
 // count. Threading a flag through would mean editing every closure to forward
 // it: three chances to forward it wrong today, and a fourth the next record
 // list forgets, with the failure being a total that silently counts the wrong
-// set. The count pass is the only writer and clauses is the only reader, both
-// in this file.
+// set.
+//
+// Held by: TestAListTotalDoesNotShrinkAsTheReaderPagesForward
+// (backend/internal/modules/contacts/listtotal_integration_test.go), which
+// pages forward and fails if the count inherited the cursor — the one thing
+// this mark exists to prevent.
 type countPassKey struct{}
 
 // countingSet reports whether ctx is the count pass rather than the page read.
@@ -52,26 +56,38 @@ type countQuery struct {
 // request once the cursor is set aside.
 //
 // It re-runs the spec's OWN filters closure against a fresh argument counter
-// rather than reusing the page's clauses, which is what keeps the two honest
-// with each other: the count cannot drift from the page by forgetting a filter,
-// because the same code assembles both. The sort is re-parsed for the same
-// reason — a reference sort binds parameters, and the placeholder numbers must
-// match this statement's own argument slice rather than the page's.
+// rather than reusing the page's clauses, so the count is assembled by the same
+// code as the page and a filter cannot reach one without reaching the other.
+//
+// The page's already-parsed sort is passed in rather than re-parsed. A
+// reference sort (employer name, say) renders an expression that BINDS
+// parameters, and re-parsing here would register them on this statement's
+// argument slice while nothing in a COUNT's WHERE ever uses them — Postgres
+// then refuses the statement outright, because a bind with no placeholder has
+// no type to infer ("could not determine data type of parameter $1"). The
+// count needs the sort only to satisfy the filters signature: the one clause
+// that reads it is the keyset cursor, which the count pass drops.
+//
+// Held by: TestTheContactsListSortsByTheEmployerItDraws and
+// TestAnUnreadableEmployerOrdersTheContactsListByNothing
+// (backend/internal/compose/integration/listreferencesorts_integration_test.go),
+// which sort by a drawn column and fail on the orphaned bind.
+//
+// Held by: TestAListTotalCountsTheFilteredSet and
+// TestAListTotalCountsOnlyTheRowsTheReaderMaySee
+// (backend/internal/modules/contacts/listtotal_integration_test.go): one fails
+// if the request's filters stop reaching the count, the other if the row scope
+// does.
 func countWhere[T any](
 	ctx context.Context,
 	spec listPageSpec[T],
 	active []fieldcatalog.Column,
-	sortSpec *string,
+	sorted *storekit.ListSort,
 ) (countQuery, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 
 	counting := forCountPass(ctx)
-	sorted, err := storekit.ParseListSort(counting, sortSpec, storekit.SortVocabulary(spec.fields, active), arg)
-	if err != nil {
-		return countQuery{}, err
-	}
-
 	where := []string{whereAlways}
 	// The caller's row scope, asked again on this statement's own counter. A
 	// count that skipped it would say how many rows EXIST rather than how many

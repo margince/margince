@@ -102,14 +102,16 @@ func listPage[T any](ctx context.Context, s *Store, sortSpec *string, limitIn *i
 	// filter added to one is a filter added to both — with only the keyset
 	// cursor withheld, because a count of the rows after the cursor would
 	// shrink as the reader pages and report the list emptying under them.
-	total, err := countWhere(ctx, spec, active, sortSpec)
+	total, err := countWhere(ctx, spec, active, sorted)
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}
 
 	var recs []T
 	var page storekit.Page
-	err = s.tx(ctx, func(tx pgx.Tx) error {
+	// txSnapshot, not tx: the page and its total are two statements whose
+	// answers are shown as one, so they have to see one snapshot.
+	err = s.txSnapshot(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx,
 			`SELECT `+spec.columns+storekit.SelectSuffix(active)+sorted.CursorKeySuffix()+
 				` FROM `+spec.entity+` WHERE `+strings.Join(where, " AND ")+

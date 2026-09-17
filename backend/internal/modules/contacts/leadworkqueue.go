@@ -94,15 +94,21 @@ func (s *Store) listLeadWorkQueue(ctx context.Context, in ListLeadsInput) ([]crm
 		cursor = &decoded
 		asOf = decoded.AsOf
 	}
-	rank := leadQueueRank(policy, arg, asOf)
-	// The count is taken HERE, before the keyset clause below narrows the
-	// WHERE to "after the row the reader stopped on". Same scope, same
-	// filters, no cursor — so the queue's total holds still as the reader
-	// pages instead of counting down to the last page's length.
+	// The count is taken HERE: after the scope and the filters have bound
+	// their arguments, and BEFORE either the rank expression or the keyset
+	// clause binds any of its own.
+	//
+	// Both of those would otherwise leave the count holding arguments its own
+	// statement has no placeholder for — the rank's SLA thresholds are read by
+	// the ORDER BY, the cursor's tuple by a WHERE this statement does not
+	// have — and pgx refuses the whole read rather than ignoring the extras
+	// ("expected 1 arguments, got 5"). Dropping the cursor is also what keeps
+	// the total describing the whole queue rather than its unread tail.
 	total := countQuery{
 		sql:  `SELECT count(*) FROM lead WHERE ` + strings.Join(where, " AND "),
 		args: append([]any(nil), *args...),
 	}
+	rank := leadQueueRank(policy, arg, asOf)
 	if cursor != nil {
 		where = append(where, storekit.SQLf("("+rank+", -score, created_at, id) > ($%d, $%d, $%d, $%d)",
 			arg(cursor.Rank), arg(-cursor.Score), arg(cursor.CreatedAt), arg(cursor.ID)))
@@ -155,7 +161,7 @@ func leadQueueWhere(ctx context.Context, in ListLeadsInput, active []fieldcatalo
 		where = append(where, leadSourceClause(*in.Source, arg))
 	}
 	if in.SLAState != nil {
-		where = append(where, slaStateClause(policy, *in.SLAState, arg))
+		where = append(where, slaStateClause(ctx, policy, *in.SLAState, arg))
 	}
 	return where, &args, arg, nil
 }
@@ -190,7 +196,9 @@ func (s *Store) readLeadQueuePage(ctx context.Context, query string, args []any,
 	var leads []crmcontracts.Lead
 	var ranks []int
 	var matching int
-	err := s.tx(ctx, func(tx pgx.Tx) error {
+	// One snapshot for the page and the count beside it, as the record lists
+	// take: see Store.txSnapshot.
+	err := s.txSnapshot(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, query, args...)
 		if err != nil {
 			return err
