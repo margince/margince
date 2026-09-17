@@ -63,20 +63,37 @@ func TestRefuseNamesTheFieldAndLetsOrdinaryValuesThrough(t *testing.T) {
 
 // The refusal has to name every identity it refuses, or a caller reads a
 // message listing two names, picks the third, and is refused again with the
-// same sentence. The message is derived from the reserved set for that reason,
-// so this fails if a fourth identity is added without the text following it.
+// same sentence.
+//
+// The corpus is DERIVED, not a list repeated here: a hard-coded three would go
+// on passing when a fourth identity is added and the message does not follow
+// it, which is the one failure this test exists to catch. ReservedSourceSystem
+// is the only authority on membership, so the candidates are probed against it
+// rather than against a copy of the set.
 func TestTheRefusalNamesEveryReservedIdentity(t *testing.T) {
 	message := (&provenance.ReservedError{
-		Field: "source_system", Value: provenance.NoActivityReminderSource,
+		Field: "source_system", Value: "ordinary_value",
 	}).Error()
-	for _, reserved := range []string{
+	// Every exact identity the package exports. A name that is reserved but
+	// unnamed by the refusal fails here; a name that is not reserved is
+	// skipped, so adding an exported constant cannot break this test falsely.
+	for _, candidate := range []string{
 		provenance.EmailRequestSource,
 		provenance.NoActivityReminderSource,
 		provenance.CheckInCadenceSource,
 	} {
-		if !strings.Contains(message, reserved) {
-			t.Errorf("refusal %q does not name the reserved identity %q", message, reserved)
+		if !provenance.ReservedSourceSystem(candidate) {
+			continue
 		}
+		if !strings.Contains(message, candidate) {
+			t.Errorf("refusal %q does not name the reserved identity %q", message, candidate)
+		}
+	}
+	// And the message must be built from the set rather than hand-written: a
+	// literal listing survives any single name being dropped from the set,
+	// which is exactly the drift the derivation prevents.
+	if strings.Contains(message, provenance.NoActivityReminderSource) != provenance.ReservedSourceSystem(provenance.NoActivityReminderSource) {
+		t.Errorf("refusal text and reserved set disagree about %q", provenance.NoActivityReminderSource)
 	}
 }
 

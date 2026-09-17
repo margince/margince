@@ -58,6 +58,18 @@ func ReservedSourceSystem(sourceSystem string) bool {
 	return internalSourceSystems[sourceSystem] || strings.HasPrefix(sourceSystem, ReservedSourceSystemPrefix)
 }
 
+// EngineReminderSource reports whether a source system is one the automation
+// engine stamps on its own quiet-account reminders.
+//
+// It exists so the ONE caller allowed to write these names — the engine, acting
+// under the system principal — can be told apart from every other caller
+// without that caller restating which names those are. It is deliberately
+// narrower than ReservedSourceSystem: the importer's namespace has its own
+// writer and is never admitted here.
+func EngineReminderSource(sourceSystem string) bool {
+	return sourceSystem == NoActivityReminderSource || sourceSystem == CheckInCadenceSource
+}
+
 // internalSourceSystemList names the reserved identities for a refusal, sorted
 // so the message is stable. Derived from the map rather than written out again:
 // a fourth identity must not be addable without the refusal naming it.

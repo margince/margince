@@ -201,6 +201,22 @@ func meetingStatusArg(status *crmcontracts.UpdateActivityRequestMeetingStatus) *
 // a second mapping written beside this one would be a second set of rules
 // about the reserved import namespace, and the two would drift.
 func LogActivityInputFrom(req crmcontracts.CreateActivityRequest) (LogActivityInput, error) {
+	return logActivityInput(req, false)
+}
+
+// logActivityInputAllowingReminderIdentity is LogActivityInputFrom for the
+// automation engine's own reminder write, which must stamp an identity no
+// client may spell. provider.go's logInputForPrincipal decides who reaches it,
+// on the principal rather than on anything in the request.
+//
+// One body behind both, because the guard is the only difference: a second
+// mapping beside this one would be a second set of rules about the reserved
+// namespace, and the two would drift.
+func logActivityInputAllowingReminderIdentity(req crmcontracts.CreateActivityRequest) (LogActivityInput, error) {
+	return logActivityInput(req, true)
+}
+
+func logActivityInput(req crmcontracts.CreateActivityRequest, engineReminder bool) (LogActivityInput, error) {
 	if req.Kind == "" {
 		return LogActivityInput{}, &RequiredFieldError{Field: "kind"}
 	}
@@ -210,8 +226,12 @@ func LogActivityInputFrom(req crmcontracts.CreateActivityRequest) (LogActivityIn
 	// under an incumbent record id and have a later import hand it back
 	// as already existing (provenance.ReservedSourceSystemPrefix).
 	if req.SourceSystem != nil {
-		if err := provenance.Refuse("source_system", *req.SourceSystem); err != nil {
-			return LogActivityInput{}, err
+		// The engine's own reminder identity is admitted here and nowhere
+		// else: the importer's namespace stays refused even for it.
+		if !(engineReminder && provenance.EngineReminderSource(*req.SourceSystem)) {
+			if err := provenance.Refuse("source_system", *req.SourceSystem); err != nil {
+				return LogActivityInput{}, err
+			}
 		}
 		if *req.SourceSystem == connector.EmailSourceSystem {
 			return LogActivityInput{}, &ReservedMailIdentityError{}
