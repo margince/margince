@@ -156,17 +156,19 @@ func (s *Store) SaveNotificationPreference(ctx context.Context, class, delivery 
 	var chosen map[string]string
 	if err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		// FIRST, because everything below depends on one answer to "what has
-		// this seat decided about this class". READ COMMITTED gives each
-		// statement its own view, so two tabs saving the same class both read
-		// "nothing decided here", both pass the no-op skip, and the second's
-		// write lands with a before-image naming a null the first had already
-		// filled — two ledger entries and two announcements for one net change,
-		// and a ledger that cannot say what the change was from.
+		// this seat decided". READ COMMITTED gives each statement its own view,
+		// so two tabs saving the same class both read "nothing decided here",
+		// both pass the no-op skip, and the second's write lands with a
+		// before-image naming a null the first had already filled — two ledger
+		// entries and two announcements for one net change, and a ledger that
+		// cannot say what the change was from. Two tabs saving DIFFERENT
+		// classes race over the answer instead: each is handed the whole set as
+		// it stood before the other committed.
 		//
 		// The write identity rather than SELECT … FOR UPDATE: a FIRST save has
 		// no row to lock, and that is precisely the racing case.
 		if err := storekit.LockWriteIdentity(ctx, tx, "notification_preference",
-			preferenceIdentity(human, class)); err != nil {
+			preferenceIdentity(human)); err != nil {
 			return err
 		}
 		var txErr error
@@ -245,14 +247,20 @@ func DeliveryFor(ctx context.Context, tx pgx.Tx, recipient ids.UserID, class str
 	return delivery, nil
 }
 
-// preferenceIdentity names the logical record a save decides about: one seat's
-// choice for ONE class.
+// preferenceIdentity names what a save decides about: one seat's settings.
 //
-// Per class rather than per seat, so two tabs changing different classes do not
-// wait on each other — they decide about different rows and read each other's
-// nothing.
-func preferenceIdentity(human ids.UUID, class string) string {
-	return human.String() + ":" + class
+// PER SEAT AND NOT PER CLASS, because a save does not read or answer one class
+// — chosenBy reads the seat's whole set and the caller is handed all of it
+// back. Keyed per class, two tabs changing different classes take different
+// locks, each reads a set without the other's commit in it, and each is
+// answered a set that is already stale; the screen replaces everything it holds
+// from that answer, so one tab ends up showing a value the database does not
+// have. Serialising a seat's own two saves costs a settings screen nothing.
+//
+// The class is still what the audit images and the announcement name — that is
+// the record that moved, and it is unchanged by which lock got taken.
+func preferenceIdentity(human ids.UUID) string {
+	return human.String()
 }
 
 // actingSeat is the acting human, named by the act for the refusal message.

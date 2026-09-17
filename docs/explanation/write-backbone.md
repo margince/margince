@@ -218,11 +218,11 @@ already committed:
 
 ## 5. The consumer side — groups & dedupe
 
-`internal/platform/events/subscriber.go` + `dedupe.go`. The catalog declares seventeen consumer
+`internal/platform/events/subscriber.go` + `dedupe.go`. The catalog declares eighteen consumer
 groups; each sees every event once and scales horizontally inside the group. Because Redis groups
 partition only by stream, the workspace and actor filters run in-process.
 
-**What each group does — and which are live.** Thirteen are wired to a subscriber today; the other four
+**What each group does — and which are live.** Fourteen are wired to a subscriber today; the other four
 are catalog-declared placeholders with no consumer yet (honest status — the streams carry events, but
 nothing reads these groups). `TestEveryDeclaredConsumerGroupIsSubscribedSomewhere` in
 `backend/gates/consumerlanes_test.go` holds the split: a new group with neither a lane nor a place in the

@@ -4521,7 +4521,7 @@ export const vi = {
     "Đồng nghiệp cần quyết định của bạn để công việc của họ tiếp tục được.",
   "notifications.class.automation.label": "Tự động hoá đã chạy",
   "notifications.class.automation.help":
-    "Một quy tắc của công ty này đã chạy, hoặc đã không chạy được.",
+    "Một quy tắc của tổ chức này đã chạy, hoặc đã không chạy được.",
   "notifications.class.lead_sla.label": "Lead đã quá hạn",
   "notifications.class.lead_sla.help":
     "Một lead chưa ai trả lời trong khoảng thời gian nhóm bạn đã thống nhất.",
