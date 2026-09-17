@@ -68,6 +68,7 @@ describe("the scope each page declares", () => {
     account: "self",
     voice: "self",
     agents: "self",
+    notifications: "self",
 
     // Pages whose cards genuinely split across two scopes. `integrations`
     // is one: PATCH /integrations/settings is "the installation's
@@ -190,6 +191,7 @@ describe("what each page lets a reader change", () => {
     // The reader's own rows, with no grant between them and the control.
     account: "always",
     agents: "always",
+    notifications: "always",
     connections: "always",
     "capture-activity": "always",
     // Under the reader's own heading and still a grant: voice-dna.tsx asks the
@@ -366,6 +368,7 @@ describe("who may open what", () => {
       "account",
       "voice",
       "agents",
+      "notifications",
       "connections",
       "capture-activity",
     ]);
@@ -914,12 +917,13 @@ describe("what the rail carries and what it leaves behind", () => {
   it("gives a rep the pages they work in, and only those", () => {
     const reach = settingsReach(seededRep);
     expect(reach.acts.map((page) => page.id)).toEqual([
-      // Their own five, minus Voice — a rep holds voice_profile create and
+      // Their own six, minus Voice — a rep holds voice_profile create and
       // update, so Voice IS theirs; it is here for that reason and not because
       // the page sits under their own heading.
       "account",
       "voice",
       "agents",
+      "notifications",
       "connections",
       "capture-activity",
       // The company profile the AI reads: a rep holds `company` create and

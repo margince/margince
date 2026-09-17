@@ -6,6 +6,7 @@ import { AccountMenu } from "./account";
 import { SCREEN_ENTITY } from "./entity";
 import { EXTENSION_SCREEN, findExtension } from "./extensions";
 import { entryLabel, NAV, type NavSection } from "./nav";
+import { NotificationBell } from "./notificationbell";
 import {
   OFF_RAIL_TITLE_KEYS,
   resolveTitle,
@@ -180,6 +181,11 @@ export function TopBar({
       <TopBarSearch onOpenSearch={onOpenSearch} />
       <div className="topbar-trail">
         <SorModeChip />
+        {/* Before the account chip, which is the strip's last word: the bell is
+            something waiting FOR the reader, and the chip is who the reader is.
+            Reading right to left, identity is the anchor and everything that
+            wants their attention stacks up before it. */}
+        <NotificationBell />
         <AccountMenu />
       </div>
     </header>

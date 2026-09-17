@@ -233,6 +233,9 @@ const SEEDED_READ_PAGES = pagesNamed(
   "account",
   "voice",
   "agents",
+  // No grant between this reader and the page: both of its endpoints read and
+  // write the calling seat's own rows, so it opens for every fixture here.
+  "notifications",
   "connections",
   "capture-activity",
   // `company` is NOT here: its requirement ANDs the company write with the
@@ -259,6 +262,7 @@ const SEEDED_OPS_PAGES = pagesNamed(
   "account",
   "voice",
   "agents",
+  "notifications",
   "connections",
   "capture-activity",
   "company",
