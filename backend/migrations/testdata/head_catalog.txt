@@ -5799,6 +5799,12 @@ public.stage_progression_policy.version bigint NOT NULL gen=- def=1
 public.stage_progression_policy.window_days integer NOT NULL gen=- def=30
 public.stage_progression_policy_pkey CREATE UNIQUE INDEX stage_progression_policy_pkey ON public.stage_progression_policy USING btree (id)
 public.stage_progression_policy_transition_key CREATE UNIQUE INDEX stage_progression_policy_transition_key ON public.stage_progression_policy USING btree (pipeline_id, from_stage_id, to_stage_id)
+public.stored_object_intent acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.stored_object_intent.recorded_at timestamp with time zone NOT NULL gen=- def=now()
+public.stored_object_intent.storage_key text NOT NULL gen=- def=-
+public.stored_object_intent.stored_object_intent_pkey PRIMARY KEY (storage_key)
+public.stored_object_intent_pkey CREATE UNIQUE INDEX stored_object_intent_pkey ON public.stored_object_intent USING btree (storage_key)
+public.stored_object_intent_recorded_idx CREATE INDEX stored_object_intent_recorded_idx ON public.stored_object_intent USING btree (recorded_at)
 public.suggestion_dismissal acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.suggestion_dismissal.company_id uuid NOT NULL gen=- def=-
 public.suggestion_dismissal.fingerprint text NOT NULL gen=- def=-
