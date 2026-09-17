@@ -259,38 +259,8 @@ func logActivityInput(req crmcontracts.CreateActivityRequest, engineReminder boo
 		Source:       req.Source,
 		AssigneeID:   idArg[ids.UserKind](req.AssigneeId),
 	}
-	if req.RequestActivityId != nil {
-		if string(req.Kind) != string(crmcontracts.ActivityKindTask) {
-			return LogActivityInput{}, &RequestAcceptanceFieldError{Field: "request_activity_id", Message: "Only a task can accept a request."}
-		}
-		id := ids.UUID(*req.RequestActivityId)
-		in.RequestActivityID = &id
-	}
-	// The caller states the transport; nothing infers it. The predecessor of this
-	// read the provider back out of the kind, which was only ever a translation of
-	// an input shape that could not say what it meant — and since ADR-0107/A158 the
-	// kind does not name a transport at all.
-	if req.ChannelProvider != nil {
-		in.ChannelProvider = *req.ChannelProvider
-	}
-	if req.Direction != nil {
-		d := string(*req.Direction)
-		in.Direction = &d
-	}
-	if req.MeetingStatus != nil {
-		if in.Kind != string(crmcontracts.ActivityKindMeeting) {
-			return LogActivityInput{}, &MeetingStatusKindError{Kind: in.Kind}
-		}
-		m := string(*req.MeetingStatus)
-		in.MeetingStatus = &m
-	}
-	if req.Links != nil {
-		for _, link := range *req.Links {
-			in.Links = append(in.Links, ActivityLinkInput{
-				EntityType: string(link.EntityType),
-				EntityID:   ids.UUID(link.EntityId),
-			})
-		}
+	if err := optionalFieldsFrom(req, &in); err != nil {
+		return LogActivityInput{}, err
 	}
 	if err := refuseKindProviderMismatch(in.Kind, in.ChannelProvider); err != nil {
 		return LogActivityInput{}, err
@@ -313,6 +283,51 @@ func logActivityInput(req crmcontracts.CreateActivityRequest, engineReminder boo
 		return LogActivityInput{}, err
 	}
 	return in, nil
+}
+
+// optionalFieldsFrom carries the create wire's optional fields onto the input,
+// with the two kind rules that only apply when their field is present: a
+// request acceptance belongs to a task, a meeting status to a meeting.
+//
+// Apart from logActivityInput because they are one group — every branch here is
+// "the caller said nothing, so leave it alone" — and holding them beside the
+// required fields put more of one function in a reader's head than the mapping
+// itself needed.
+func optionalFieldsFrom(req crmcontracts.CreateActivityRequest, in *LogActivityInput) error {
+	if req.RequestActivityId != nil {
+		if string(req.Kind) != string(crmcontracts.ActivityKindTask) {
+			return &RequestAcceptanceFieldError{Field: "request_activity_id", Message: "Only a task can accept a request."}
+		}
+		id := ids.UUID(*req.RequestActivityId)
+		in.RequestActivityID = &id
+	}
+	// The caller states the transport; nothing infers it. The predecessor of this
+	// read the provider back out of the kind, which was only ever a translation of
+	// an input shape that could not say what it meant — and since ADR-0107/A158 the
+	// kind does not name a transport at all.
+	if req.ChannelProvider != nil {
+		in.ChannelProvider = *req.ChannelProvider
+	}
+	if req.Direction != nil {
+		d := string(*req.Direction)
+		in.Direction = &d
+	}
+	if req.MeetingStatus != nil {
+		if in.Kind != string(crmcontracts.ActivityKindMeeting) {
+			return &MeetingStatusKindError{Kind: in.Kind}
+		}
+		m := string(*req.MeetingStatus)
+		in.MeetingStatus = &m
+	}
+	if req.Links != nil {
+		for _, link := range *req.Links {
+			in.Links = append(in.Links, ActivityLinkInput{
+				EntityType: string(link.EntityType),
+				EntityID:   ids.UUID(link.EntityId),
+			})
+		}
+	}
+	return nil
 }
 
 // importedProvenanceFrom takes what an importer keeps with a record it carried
