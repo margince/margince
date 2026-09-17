@@ -59,10 +59,19 @@ const digestQuoteCap = 5
 // digestLines is what one morning may say: the subjects the recipient may still
 // be shown, and how many notices are waiting in total.
 //
-// TOTAL AND NOT "withheld", deliberately. The tail says how many more are
-// waiting, and a reader must not be able to tell a line that was withheld from
-// one that simply did not fit — the arithmetic would name the existence of a
-// record the re-scope just decided they may not see.
+// TOTAL AND NOT "quotable", deliberately: the tail counts everything still
+// waiting, the lines this reader's own scope withheld included.
+//
+// WHAT THAT DISCLOSES, stated plainly rather than waved at. Above the cap the
+// count cannot be told from overflow. At or below it, it can — two lines and
+// "and 1 more" out of three could only have withheld one — and that is
+// accepted rather than hidden, because the notice is the READER'S OWN and
+// their notification centre already counts it for them: the number says
+// nothing the app does not. What the re-scope withholds is the SUBJECT, since
+// a subject quotes the record it is about and ownership of that record moves
+// after the line is written. So the message names what it may and counts what
+// it may not, which is the one arrangement that neither quotes a record this
+// seat cannot open nor under-reports their own morning.
 type digestLines struct {
 	quotable []string
 	total    int

@@ -283,13 +283,13 @@ func notificationLines(line writeLine) {
 		"Mở danh sách công việc")
 }
 
-// digestLines is the once-a-day batch: what reached a colleague's worklist
-// while they were not looking at it.
+// digestLines is the once-a-day batch: what is waiting on a colleague's
+// worklist that they have not opened yet.
 //
-// It names the QUEUE and not the product's own machinery. "Here is what reached
-// your worklist" is a sentence about the reader's work; "your notification
-// digest is ready" describes the envelope, which is the wording every product
-// reaches for and nobody reads twice.
+// It names the QUEUE and not the product's own machinery. "Here is what is
+// still waiting on your worklist" is a sentence about the reader's work; "your
+// notification digest is ready" describes the envelope, which is the wording
+// every product reaches for and nobody reads twice.
 //
 // The German is INFORMAL, like the brief and the immediate notice above and
 // unlike the confirm sections below: this goes to a colleague who works here,
@@ -300,10 +300,16 @@ func digestLines(line writeLine) {
 		"Your worklist this morning",
 		"Deine Arbeitsliste heute Morgen",
 		"Danh sách công việc của bạn sáng nay")
+	// STILL WAITING, not "since yesterday", and the window is why. The pass
+	// reaches back two local-day labels and skips nothing a reader has left
+	// unread, so a notice nobody has opened is quoted again tomorrow — a
+	// sentence naming a boundary would be false on the second morning and
+	// falser on the third. What is true every morning is that these are
+	// waiting.
 	line(func(c *Copy) *string { return &c.DigestIntro },
-		"Here is what reached your worklist since yesterday.",
-		"Das ist seit gestern auf deiner Arbeitsliste eingegangen.",
-		"Đây là những gì đã đến danh sách công việc của bạn kể từ hôm qua.")
+		"Here is what is still waiting on your worklist.",
+		"Das wartet noch auf deiner Arbeitsliste.",
+		"Đây là những gì vẫn đang chờ trong danh sách công việc của bạn.")
 	line(func(c *Copy) *string { return &c.DigestAndMore },
 		"…and %d more",
 		"…und %d weitere",

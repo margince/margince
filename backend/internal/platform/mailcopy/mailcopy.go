@@ -309,8 +309,14 @@ type Copy struct {
 	//
 	// DigestAndMore is the "%d more" tail, and it counts everything the body did
 	// not print — the lines that did not fit and the ones the reader's own scope
-	// withheld, together. Two numbers there would tell a reader that a record
-	// they may not see exists.
+	// withheld, together.
+	//
+	// ONE number rather than two, and what that buys is not secrecy: see
+	// digestLines in compose/notificationdigestrender.go for what the count does
+	// and does not disclose. It is that a second number would be a second thing
+	// to keep true, and it would tell this reader only which of their OWN
+	// waiting notices had its subject withheld — a set their notification centre
+	// already shows them in full.
 	DigestSubject string
 	DigestIntro   string
 	DigestAndMore string

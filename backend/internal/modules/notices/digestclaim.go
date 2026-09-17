@@ -40,7 +40,14 @@ import (
 )
 
 // digestWindowSQL is how much of a seat's queue one morning considers: still
-// unread, and recorded no earlier than $2.
+// unread, and recorded no earlier than the bound the caller binds at boundAt.
+//
+// THE PLACEHOLDER IS READ OFF THE ARGUMENT LIST, not written into the text.
+// Two statements compose this fragment and they do not carry the same other
+// parameters, so a fragment naming a fixed $N is correct only for as long as
+// both of them happen to bind the bound in that position — and the day one
+// grows a parameter ahead of it, the window silently starts comparing
+// created_at against whatever that new argument is.
 //
 // The self-made stage moves come out through notTheReadersOwnStageMove, which
 // every reader of this table composes, so a morning does not tell a rep about
@@ -49,9 +56,11 @@ import (
 // There is no upper bound. The read itself is the far edge — a notice recorded
 // after this statement belongs to the next morning, which is the one whose
 // window will reach it.
-const digestWindowSQL = `notice.read_at IS NULL
-	   AND notice.created_at >= $2
-	   AND ` + notTheReadersOwnStageMove
+func digestWindowSQL(boundAt int) string {
+	return fmt.Sprintf(`notice.read_at IS NULL
+	   AND notice.created_at >= $%d
+	   AND `, boundAt) + notTheReadersOwnStageMove
+}
 
 // digestReachDays is how far back a morning's window opens, counted in the
 // local-day labels LocalDayAt produces.
@@ -84,16 +93,26 @@ const digestRunField = "digest_run"
 // `notice` is unaliased so that notTheReadersOwnStageMove — a boolean expression
 // over this table's own columns — composes into the WHERE arm under the names it
 // was written with.
-const digestCandidateQuery = `
+//
+// The statement and its arguments are built together, each placeholder answered
+// by the position the value actually took, so the two cannot come apart.
+func digestCandidateQuery(day time.Time, only *ids.UUID) (string, []any) {
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	claimedFor := arg(day)
+	window := digestWindowSQL(arg(digestReach(day)))
+	seat := arg(only)
+	return fmt.Sprintf(`
 	SELECT notice.recipient_user_id, notice.kind
 	  FROM notice
-	 WHERE ` + digestWindowSQL + `
-	   AND ($3::uuid IS NULL OR notice.recipient_user_id = $3)
+	 WHERE %[1]s
+	   AND ($%[2]d::uuid IS NULL OR notice.recipient_user_id = $%[2]d)
 	   AND NOT EXISTS (
 	       SELECT 1 FROM notification_digest_run r
-	        WHERE r.user_id = notice.recipient_user_id AND r.digest_date = $1)
+	        WHERE r.user_id = notice.recipient_user_id AND r.digest_date = $%[3]d)
 	 GROUP BY notice.recipient_user_id, notice.kind
-	 ORDER BY notice.recipient_user_id, notice.kind`
+	 ORDER BY notice.recipient_user_id, notice.kind`, window, seat, claimedFor), args
+}
 
 // waitingSeat is one recipient and the kinds of notice waiting on them.
 type waitingSeat struct {
@@ -269,7 +288,8 @@ func waitingSeats(ctx context.Context, tx pgx.Tx, day time.Time, only *ids.UserI
 	if only != nil {
 		seat = &only.UUID
 	}
-	rows, err := tx.Query(ctx, digestCandidateQuery, day, digestReach(day), seat)
+	query, args := digestCandidateQuery(day, seat)
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("listing the recipients with notices waiting: %w", err)
 	}
@@ -298,13 +318,17 @@ func waitingSeats(ctx context.Context, tx pgx.Tx, day time.Time, only *ids.UserI
 // handful and says how many more are waiting, and "how many more" has to be all
 // of them.
 func unreadInWindow(ctx context.Context, tx pgx.Tx, user ids.UserID, day time.Time) ([]Notice, error) {
-	rows, err := tx.Query(ctx, `
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	recipient := arg(user)
+	window := digestWindowSQL(arg(digestReach(day)))
+	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT notice.id, notice.kind, notice.subject, notice.body,
 		       notice.target_type, notice.target_id, notice.created_at, notice.origin
 		  FROM notice
-		 WHERE notice.recipient_user_id = $1
-		   AND `+digestWindowSQL+`
-		 ORDER BY notice.created_at DESC, notice.id DESC`, user, digestReach(day))
+		 WHERE notice.recipient_user_id = $%d
+		   AND %s
+		 ORDER BY notice.created_at DESC, notice.id DESC`, recipient, window), args...)
 	if err != nil {
 		return nil, fmt.Errorf("listing the morning's unread notices: %w", err)
 	}

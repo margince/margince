@@ -508,8 +508,15 @@ func TestTheDigestCarriesNoLineANoticeForged(t *testing.T) {
 	if got := d.relay.count(); got != 1 {
 		t.Fatalf("the morning sent %d message(s), want one", got)
 	}
-	if subject := d.relay.subjects[0]; strings.ContainsAny(subject, "\r\n") {
-		t.Errorf("the subject carries a line break: %q", subject)
+	// THE SUBJECT CARRIES NO NOTICE TEXT AT ALL, which is the assertion worth
+	// making here — a line-break check over it could not fail, because
+	// digestSubject is built from catalog copy and a count and has nothing
+	// record-derived to flatten. What it CAN say is that the batch's header
+	// stays a header: the moment somebody puts the first line in it to make the
+	// message friendlier, the header becomes a quotation nothing re-scoped.
+	if subject := d.relay.subjects[0]; strings.Contains(subject, "Quota reached") ||
+		strings.Contains(subject, "finance@margince.test") {
+		t.Errorf("the subject quotes a notice rather than counting them: %q", subject)
 	}
 	if body := d.relay.bodies[0]; strings.Contains(body, "\nFrom: finance@margince.test") {
 		t.Errorf("a notice wrote a line of its own into the message:\n%s", body)

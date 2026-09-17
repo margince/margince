@@ -290,11 +290,13 @@ func storedNotice(ctx context.Context, tx pgx.Tx, recipient ids.UserID, dedupeKe
 // and this is the SQL mirror of that decision. It excludes rather than deletes:
 // the history stays, and nothing pretends the recipient acknowledged it.
 //
-// ONE spelling for every reader of the table — the attention lane's unread
-// query, the notification centre's history and badge, and the count
-// MarkAllRead answers with. Each of those would have to change together, and a
-// second copy would make one of them the place a rep's own stage moves
-// reappear.
+// A CONSTANT because every reader of the table composes this same one — the
+// attention lane's unread query, the notification centre's history and badge,
+// the count MarkAllRead answers with, and the morning's window — so the rule
+// moves in one edit rather than five. Nothing stops a later query from
+// spelling its own instead; what a new reader should take from this is that
+// the fragment exists and is meant to be composed, not that the compiler will
+// notice if it is not.
 //
 // A boolean expression over `notice` columns only, so it composes into a WHERE
 // arm and into RETURNING alike.

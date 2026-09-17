@@ -183,7 +183,7 @@ func (w *briefGenerateWorker) mailTheMorning(
 }
 
 // repContext binds one rep's own authority, through the spelling the digest
-// pass shares (seatcontext.go): both are a system process about to read one
+// pass shares (morningseats.go): both are a system process about to read one
 // colleague's records on their behalf.
 func (w *briefGenerateWorker) repContext(
 	ctx context.Context, wsID, userID ids.UUID,
