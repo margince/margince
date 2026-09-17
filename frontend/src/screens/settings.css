@@ -14,29 +14,28 @@
    The gap is the same --space-4 the shell's rule gives, so a settings page and any
    other page space alike.
 
-   ONE measure for every settings page, and it is 720px. A settings page is a
-   column of decisions read top to bottom, and the row language puts the naming on
-   the left and the answer on the right — at 1100px that pair is separated by half
-   a screen of nothing, which is the width doing the opposite of what the layout
-   is for. 720 keeps a label and its answer in one glance and holds the
-   description to a readable line.
+   ONE measure for every settings page, and it is --settingsColumn. A settings
+   page is a column of decisions read top to bottom, and the row language puts
+   the naming on the left and the answer on the right — at the page's own
+   --pageColumn that pair is separated by half a wide screen of nothing, which is
+   the width doing the opposite of what the layout is for.
 
    It is the PAGE's width and not the entry's, which is the part that was wrong
    before: this sheet once carried a measure with an exemption for the two
    table-carrying pages, so a reader navigating between entries watched the page
-   change size. Every entry gets the same 720, tables included — a table wider
-   than that scrolls inside its own box (`.table-scroll`), which is a property of
-   the table rather than a knob the page has to answer for.
+   change size. Every entry gets the same measure, tables included — a table
+   wider than that scrolls inside its own box (`.table-scroll`), which is a
+   property of the table rather than a knob the page has to answer for.
 
-   Centred in the wrap, and the heading above it deliberately is NOT: the page
-   title sits where every other route in the product puts it, so moving between
-   settings and anywhere else does not move the name of the page. Only this
-   column takes the narrower measure. */
+   Centred in the wrap, and the page's NAME is centred on the same measure: the
+   shell reads this very token to cap the head above this stack (app/shell.css,
+   --pageMeasure), so the title starts where the first card starts. The token is
+   why they cannot drift — the number is not written down twice. */
 .settings-stack {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  max-width: 720px;
+  max-width: var(--settingsColumn);
   margin-inline: auto;
 }
 

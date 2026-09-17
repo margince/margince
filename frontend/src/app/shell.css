@@ -242,19 +242,43 @@
      what is left. */
   flex: none;
 }
-/* Every page that keeps the reading column, and the ONE place the measure is
-   applied — see --pageColumn, `GRIDDED_SCREENS` and `GRIDDED_RECORD_SCREENS`.
-   A record is in this rule like any other capped page: it carries more parts
-   than a settings page does, which changes what stands inside the column and
-   not how wide the column is.
+/* THE PAGE'S MEASURE: what this page's content is allowed to be, published on
+   the column so the page's NAME and the page's body can only read one number.
+   Which pages have one at all is `GRIDDED_SCREENS` and `GRIDDED_RECORD_SCREENS`
+   in app/nav.ts; a record is in it like any other capped page, since carrying
+   more parts changes what stands inside the column and not how wide it is. */
+.main-gridded {
+  --pageMeasure: var(--pageColumn);
+}
+/* Except where the page's body is the settings stack, which takes a narrower
+   measure than the page's — so there the page's measure IS that stack's, read
+   from the one token both sheets read (--settingsColumn, screens/settings.css).
+   Plus the gutter on each side, because that is padding these boxes carry and
+   the stack inside them does not.
+
+   Keyed on the stack BEING there rather than on the route, so the head aligns
+   with the column actually under it: a settings arm that draws no stack — the
+   boundary plate — keeps the page measure on both and is aligned anyway. */
+.main-gridded:has(.settings-stack) {
+  --pageMeasure: calc(var(--settingsColumn) + 2 * var(--pageGutter));
+}
+/* The ONE place that measure is applied, and both the head and the body are in
+   it: a page whose name starts a hand's width to the left of the first card
+   under it is the page disagreeing with itself about where it begins, and the
+   only way for the two to be given different measures is for somebody to give
+   the head a rule of its own. There is nothing to keep in step here.
+
+   The head used to be full width, on the argument that it is the window's
+   chrome while the column is the document. It is not: it stands INSIDE the
+   scroller and scrolls away with the page, so it belongs to the document and
+   aligns with what it names.
+
    Centred in the page: the column is the thing being read, so it sits in the
-   middle of the space it is given rather than hugging one edge of it. The page
-   head above stays full width and is therefore wider than it on a big display —
-   deliberately, since the head is the window's chrome and the column is the
-   document. */
-.main-gridded .wrap {
-  max-width: var(--pageColumn);
-  margin: 0 auto;
+   middle of the space it is given rather than hugging one edge of it. */
+.main-gridded .wrap,
+.main-gridded .pagetitle {
+  max-width: var(--pageMeasure);
+  margin-inline: auto;
 }
 /* The rail-less surfaces — sign-in, onboarding, a public booking page. These
    render no page head to align with, and they are a single centred column on
@@ -415,17 +439,22 @@
   /* A breath between the head and the first destination: with the marker on the
      head's last line the row under it read as one more item in its stack. */
   margin-block-end: var(--space-5);
-  /* No inline margin. The panel's own padding (`.rail.expanded, .rail.collapsed`
-     above) already stands every child --space-2 in from the edge, the rows
-     included; a margin here would ADD to it and indent the mark from the
-     destinations it heads — and collapsed, where the padding leaves a 40px
-     column, would take the mark's own box away. One rule owns that inset. */
+  /* The rows' own inset, matched. The panel's padding stands every child
+     --space-2 in from the edge, and then every ROW adds --space-2 of its own
+     (`.rail .navitem`, `.rail .navheading`) — so the head alone sat 8px out
+     from the column of words it heads. This is that second inset, on the one
+     child that had no reason to be exempt from it. Collapsed it is taken back
+     below: 56px less the panel's padding is a 40px column, and 8px off each
+     side of that is the mark's own box. */
+  margin-inline: var(--space-2);
 }
 /* Collapsed the head is the mark and the marker under it, and neither has a
    text column to stand on: at 56px the axis is the column's own centre, which is
    the axis every row glyph below them stands on too. */
 .rail.collapsed .railhead {
   align-items: center;
+  /* The expanded head's second inset would eat the 40px the mark stands in. */
+  margin-inline: 0;
 }
 /* brand block */
 .rail .ws {
@@ -650,6 +679,12 @@
    space, not by a rule: a label and a divider do the same job, and stacking
    both says it twice. */
 .rail .navheading {
+  /* The rows' own height, so a group label sits on the same 32px rhythm as the
+     destinations under it rather than on whatever its line box happens to be.
+     Flex for the one reason a label needs it: the words centre in that box. */
+  display: flex;
+  align-items: center;
+  height: 32px; /* ds:ignore the destination row's height, spelled in `.rail .navitem` */
   color: var(--textSecondary);
   padding: 0 var(--space-2);
   /* It is a label, not a place to go. Sitting in a column of links it inherited
@@ -931,7 +966,13 @@
 /* ===== the page's own name =====
  * Inside the scroller, on the content column's gutter, above the screen's own
  * block: the heading belongs to the document and scrolls with it. The top bar
- * above says where you are and stays; this says what this page is. */
+ * above says where you are and stays; this says what this page is.
+ *
+ * On the same gutter AND, where the page has a measure, in the same box: the
+ * cap is applied to this element and to `.wrap` by one declaration above
+ * (--pageMeasure), so the name starts and ends exactly where the content under
+ * it does at every width. An uncapped page needs nothing more than the gutter,
+ * because there the content is the full column too. */
 .pagetitle {
   display: flex;
   align-items: flex-start;
@@ -1656,11 +1697,11 @@
 }
 
 /* A list screen is one full-height surface: the page itself does not scroll,
- * the table's own body does. It keeps the same reading column (--pageColumn) and
- * the same page gutter as every other screen — it used to opt out of the cap,
- * which read as "a list uses the width it is given" until a 4K window gave it
- * 3000px and a six-column table stretched across a metre of desk with the eye
- * losing the row between name and status.
+ * the table's own body does. This rule gives it the height and the same page
+ * gutter as every other screen; whether it is also CAPPED is the column policy's
+ * answer and not this rule's — a list is scanned across, so most of them are not
+ * (`GRIDDED_SCREENS` in app/nav.ts names the one that is, and there the rule
+ * above caps this wrap at --pageMeasure like any other page).
  *
  * Keyed off the wrap CARRYING a surface, not on it being the only child. An
  * `:only-child` rule states that the layout depends on the surface having no

@@ -7,6 +7,7 @@ import { api } from "../api/client";
 import { usePageName } from "../app/pagemeta";
 import { useRecordZone } from "../app/recordzone";
 import { Badge, EmptyState } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { Chip } from "../design-system/readings";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -216,6 +217,16 @@ export function ProjectsScreen() {
   if (firstRun) {
     return (
       <div className="wrap">
+        {/* The page's own name, at the size and the level the populated arm
+            prints it at inside the table's header. The shell prints none on
+            this screen — Projects heads itself (SELF_HEADED_SCREENS), which the
+            table's `title` below honours — so without this the plate REPLACED
+            the page's name instead of standing under it and the route carried
+            no h1 at all. A first run is exactly when a reader most needs to be
+            told where they are. */}
+        <Heading size="xlarge" className="projects-title t-display">
+          {pageName}
+        </Heading>
         <EmptyState title={t("project.emptyTitle")} action={createAction}>
           <p>{t("project.emptyBody")}</p>
           <p>{t("project.emptyKey")}</p>

@@ -485,6 +485,23 @@
   --menuMinInlineSize: 250px;
   --menuMaxBlockSize: 400px;
 
+  /* THE SETTINGS MEASURE. A settings page is a column of decisions read top to
+     bottom, and the row language puts the naming on the left and the answer on
+     the right — at the page's own --pageColumn that pair is separated by half a
+     wide screen of nothing. 720 keeps a label and its answer in one glance and
+     holds a description to a readable line.
+
+     A token rather than a number in one sheet, because TWO sheets read it: the
+     stack takes it as its width (screens/settings.css) and the shell takes it
+     as the width of the page's NAME above that stack (app/shell.css). A name
+     that began anywhere but where its page begins is the page disagreeing with
+     itself, and two spellings of one measure is how that happens.
+
+     Here rather than beside --pageColumn on `.app`, because the stack is also
+     drawn outside the shell — a settings card's own story renders one — and a
+     measure that resolved to nothing there would silently uncap it. */
+  --settingsColumn: 720px;
+
   /* Vertical-rhythm scale — the 4/8/12/16/24 rungs the screens were already
    * reaching for ad-hoc (inconsistently spelled 10/12/14/16 before this).
    * Layout rhythm, not part of the §2 Ledger-Green colour identity; a
