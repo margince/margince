@@ -44,6 +44,10 @@ when it has content.
 
 ### Fixed
 
+- **A failed-login lock no longer keeps out a browser that has signed in
+  before.** Signing in sets a `crm_device` cookie; while an account is locked, a
+  browser presenting it for that account is let in with the correct password.
+  Every other sign-in attempt is refused exactly as before.
 - **The MCP connector's OAuth discovery documents name the configured public
   origin.** Their issuer and endpoint URLs, and the pointer the transport's 401
   carries, are built from `--public-base-url` rather than from the request, and

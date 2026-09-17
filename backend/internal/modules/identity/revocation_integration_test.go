@@ -165,7 +165,7 @@ func setupRevocationEnv(t *testing.T, slug string) *revocationEnv {
 	svc := NewServiceFor(database.BindTo(pool, wsID))
 	// Login resolves the admin's full Identity (roles, permissions) the
 	// way the HTTP surface would.
-	admin, _, err := svc.Login(principal.WithWorkspaceID(ctx, wsID.UUID), adminEmail, bootstrapPassword)
+	admin, _, err := svc.Login(principal.WithWorkspaceID(ctx, wsID.UUID), adminEmail, bootstrapPassword, noDevice)
 	if err != nil {
 		t.Fatalf("admin login: %v", err)
 	}
@@ -238,7 +238,7 @@ func TestDeactivateUserRevokesSessionsAndPassportsAndEmits(t *testing.T) {
 	e := setupRevocationEnv(t, "revoke-cascade")
 	ctx := principal.WithWorkspaceID(context.Background(), e.admin.WorkspaceID.UUID)
 
-	_, sessionToken, err := e.svc.Login(ctx, e.member.Email, memberPassword)
+	_, login, err := e.svc.Login(ctx, e.member.Email, memberPassword, noDevice)
 	if err != nil {
 		t.Fatalf("member login: %v", err)
 	}
@@ -257,7 +257,7 @@ func TestDeactivateUserRevokesSessionsAndPassportsAndEmits(t *testing.T) {
 		t.Fatalf("deactivate: %v", err)
 	}
 
-	if _, err := e.svc.Authenticate(ctx, sessionToken); !errors.Is(err, apperrors.ErrNotFound) {
+	if _, err := e.svc.Authenticate(ctx, login.Token); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("deactivated user's session authenticates: err = %v, want not-found", err)
 	}
 	if _, err := e.svc.AuthenticateAgent(ctx, issued.Token); !errors.Is(err, apperrors.ErrNotFound) {
@@ -414,13 +414,13 @@ func TestLoginLockoutEndToEnd(t *testing.T) {
 	e.svc.now = func() time.Time { return time.Now().Add(offset) }
 
 	for attempt := 1; attempt < lockoutThreshold; attempt++ {
-		if _, _, err := e.svc.Login(ctx, e.member.Email, "wrong password"); !errors.Is(err, ErrBadCredentials) {
+		if _, _, err := e.svc.Login(ctx, e.member.Email, "wrong password", noDevice); !errors.Is(err, ErrBadCredentials) {
 			t.Fatalf("failure %d: err = %v, want bad credentials", attempt, err)
 		}
 	}
 	// Below the threshold the correct password still works — and resets
 	// the streak, so the count restarts from zero.
-	if _, _, err := e.svc.Login(ctx, e.member.Email, memberPassword); err != nil {
+	if _, _, err := e.svc.Login(ctx, e.member.Email, memberPassword, noDevice); err != nil {
 		t.Fatalf("login below threshold: %v", err)
 	}
 	var count int
@@ -435,7 +435,7 @@ func TestLoginLockoutEndToEnd(t *testing.T) {
 	}
 
 	for attempt := 1; attempt <= lockoutThreshold; attempt++ {
-		if _, _, err := e.svc.Login(ctx, e.member.Email, "wrong password"); !errors.Is(err, ErrBadCredentials) {
+		if _, _, err := e.svc.Login(ctx, e.member.Email, "wrong password", noDevice); !errors.Is(err, ErrBadCredentials) {
 			t.Fatalf("failure %d: err = %v, want bad credentials", attempt, err)
 		}
 	}
@@ -443,7 +443,7 @@ func TestLoginLockoutEndToEnd(t *testing.T) {
 	// INDISTINGUISHABLY from bad credentials (F-005). A distinct 403
 	// "account locked" before verification was an account-existence oracle;
 	// a locked real account must read exactly like an unknown email.
-	if _, _, err := e.svc.Login(ctx, e.member.Email, memberPassword); !errors.Is(err, ErrBadCredentials) {
+	if _, _, err := e.svc.Login(ctx, e.member.Email, memberPassword, noDevice); !errors.Is(err, ErrBadCredentials) {
 		t.Fatalf("locked account: err = %v, want bad credentials (indistinguishable from an unknown email)", err)
 	}
 	var outcome string
@@ -460,8 +460,71 @@ func TestLoginLockoutEndToEnd(t *testing.T) {
 	// After the RC-17 duration the lock has expired and the correct
 	// password opens a session again.
 	offset = lockoutDuration + time.Minute
-	if _, _, err := e.svc.Login(ctx, e.member.Email, memberPassword); err != nil {
+	if _, _, err := e.svc.Login(ctx, e.member.Email, memberPassword, noDevice); err != nil {
 		t.Fatalf("login after lock expiry: %v", err)
+	}
+}
+
+// A §27 lock tripped by somebody else must not keep the owner out: a browser
+// that signed in to the account before presents the device proof that login
+// issued, and is judged on its password as though no lock were set. Every
+// other caller is refused exactly as TestLoginLockoutEndToEnd pins, and a
+// wrong password from the owner's browser still counts.
+func TestALockedAccountStillAdmitsTheBrowserThatSignedInBefore(t *testing.T) {
+	e := setupRevocationEnv(t, "lockout-device")
+	ctx := principal.WithWorkspaceID(context.Background(), e.admin.WorkspaceID.UUID)
+	var offset time.Duration
+	e.svc.now = func() time.Time { return time.Now().Add(offset) }
+
+	_, earlier, err := e.svc.Login(ctx, e.member.Email, memberPassword, noDevice)
+	if err != nil {
+		t.Fatalf("the owner's earlier login: %v", err)
+	}
+	if earlier.DeviceProof == "" {
+		t.Fatal("a successful login issued no device proof")
+	}
+
+	// Somebody else, holding no proof, trips the lock.
+	for attempt := 1; attempt <= lockoutThreshold; attempt++ {
+		if _, _, err := e.svc.Login(ctx, e.member.Email, "wrong password", noDevice); !errors.Is(err, ErrBadCredentials) {
+			t.Fatalf("failure %d: err = %v, want bad credentials", attempt, err)
+		}
+	}
+	// The negative control: without the proof, the correct password is still
+	// refused, indistinguishably.
+	if _, _, err := e.svc.Login(ctx, e.member.Email, memberPassword, noDevice); !errors.Is(err, ErrBadCredentials) {
+		t.Fatalf("locked account, no proof: err = %v, want bad credentials", err)
+	}
+	// Another account's proof vouches for nothing here.
+	_, adminLogin, err := e.svc.Login(ctx, e.admin.Email, bootstrapPassword, noDevice)
+	if err != nil {
+		t.Fatalf("admin login: %v", err)
+	}
+	if _, _, err := e.svc.Login(ctx, e.member.Email, memberPassword, adminLogin.DeviceProof); !errors.Is(err, ErrBadCredentials) {
+		t.Fatalf("locked account, another account's proof: err = %v, want bad credentials", err)
+	}
+	// The owner's browser mistyping is refused and does not open the lock.
+	if _, _, err := e.svc.Login(ctx, e.member.Email, "still wrong", earlier.DeviceProof); !errors.Is(err, ErrBadCredentials) {
+		t.Fatalf("locked account, proof with a wrong password: err = %v, want bad credentials", err)
+	}
+
+	offset = time.Minute
+	id, later, err := e.svc.Login(ctx, e.member.Email, memberPassword, earlier.DeviceProof)
+	if err != nil {
+		t.Fatalf("locked account, the owner's own proof and password: %v, want a session", err)
+	}
+	if id.UserID != e.member.UserID || later.Token == "" || later.DeviceProof == "" {
+		t.Fatalf("login = %+v / %+v, want the member's session and a fresh proof", id, later)
+	}
+	var count int
+	var lockedUntil *time.Time
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT failed_login_count, locked_until FROM app_user WHERE id = $1`,
+		e.member.UserID).Scan(&count, &lockedUntil); err != nil {
+		t.Fatal(err)
+	}
+	if count != 0 || lockedUntil != nil {
+		t.Errorf("the owner's login left the streak at count=%d locked_until=%v, want it reset", count, lockedUntil)
 	}
 }
 
@@ -477,7 +540,7 @@ func TestNonActiveStatusesCannotLogIn(t *testing.T) {
 			}
 			// The correct password is refused indistinguishably from a bad
 			// one — a non-active account must not even disclose it exists.
-			if _, _, err := e.svc.Login(ctx, e.member.Email, memberPassword); !errors.Is(err, ErrBadCredentials) {
+			if _, _, err := e.svc.Login(ctx, e.member.Email, memberPassword, noDevice); !errors.Is(err, ErrBadCredentials) {
 				t.Errorf("%s user logged in: err = %v, want bad credentials", status, err)
 			}
 		})
@@ -487,7 +550,7 @@ func TestNonActiveStatusesCannotLogIn(t *testing.T) {
 		`UPDATE app_user SET status = 'active' WHERE id = $1`, e.member.UserID); err != nil {
 		t.Fatal(err)
 	}
-	if _, _, err := e.svc.Login(ctx, e.member.Email, memberPassword); err != nil {
+	if _, _, err := e.svc.Login(ctx, e.member.Email, memberPassword, noDevice); err != nil {
 		t.Fatalf("reactivated user cannot log in: %v", err)
 	}
 }
@@ -508,7 +571,7 @@ func TestNoSeededRoleWithholdsAColumn(t *testing.T) {
 		if err := e.svc.ChangeUserRole(e.wsCtx(e.admin), e.admin, e.member.UserID, role); err != nil {
 			t.Fatal(err)
 		}
-		seat, _, err := e.svc.Login(ctx, e.member.Email, memberPassword)
+		seat, _, err := e.svc.Login(ctx, e.member.Email, memberPassword, noDevice)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -540,7 +603,7 @@ func TestNoSeededRoleWithholdsAColumn(t *testing.T) {
 	if err := e.svc.ChangeUserRole(e.wsCtx(e.admin), e.admin, e.member.UserID, "rep"); err != nil {
 		t.Fatal(err)
 	}
-	masked, _, err := e.svc.Login(ctx, e.member.Email, memberPassword)
+	masked, _, err := e.svc.Login(ctx, e.member.Email, memberPassword, noDevice)
 	if err != nil {
 		t.Fatal(err)
 	}

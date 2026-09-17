@@ -85,7 +85,9 @@ export interface paths {
         /**
          * Authenticate with email + password and open a session.
          * @description Baseline interactive sign-in (ADR-0043). On success mints an opaque server-side session
-         *     and sets the `crm_session` cookie (`HttpOnly; Secure; SameSite=Strict; Path=/`). Accepts
+         *     and sets the `crm_session` cookie (`HttpOnly; Secure; SameSite=Strict; Path=/`), plus a
+         *     `crm_device` cookie (same attributes, 90-day `Max-Age`) whose proof lets this browser
+         *     sign in to the same account while a failed-login lock someone else tripped is in force. Accepts
          *     email + password only — no tenant selector (ADR-0061). Failures are neutral (no
          *     account enumeration), rate-limited, and verified at full cost either way. The MFA and
          *     SSO-enforced challenge states return with their complete flows (ADR-0043 Amendment 2).
@@ -36804,10 +36806,10 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Authenticated; session cookie set. */
+            /** @description Authenticated; session and device cookies set. */
             200: {
                 headers: {
-                    /** @description crm_session=<token>; HttpOnly; Secure; SameSite=Strict; Path=/ */
+                    /** @description crm_session=<token>; HttpOnly; Secure; SameSite=Strict; Path=/ — and crm_device=<proof>; Max-Age=7776000; HttpOnly; Secure; SameSite=Strict; Path=/ */
                     "Set-Cookie"?: string;
                     [name: string]: unknown;
                 };

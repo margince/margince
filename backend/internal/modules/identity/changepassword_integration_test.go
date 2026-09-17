@@ -48,7 +48,7 @@ func adminCtx(t *testing.T, e *revocationEnv) context.Context {
 
 func loginCtx(t *testing.T, e *revocationEnv, email, pw string) context.Context {
 	t.Helper()
-	id, _, err := e.svc.Login(e.wsOnlyCtx(), email, pw)
+	id, _, err := e.svc.Login(e.wsOnlyCtx(), email, pw, noDevice)
 	if err != nil {
 		t.Fatalf("login as %s: %v", email, err)
 	}
@@ -64,10 +64,10 @@ func TestChangePasswordRotatesTheCredential(t *testing.T) {
 	}
 	// The new one works and the old one does not — a rotation that leaves the
 	// old password live has rotated nothing.
-	if _, _, err := e.svc.Login(e.wsOnlyCtx(), e.member.Email, newMemberPassword); err != nil {
+	if _, _, err := e.svc.Login(e.wsOnlyCtx(), e.member.Email, newMemberPassword, noDevice); err != nil {
 		t.Fatalf("login with the new password: %v", err)
 	}
-	if _, _, err := e.svc.Login(e.wsOnlyCtx(), e.member.Email, memberPassword); err == nil {
+	if _, _, err := e.svc.Login(e.wsOnlyCtx(), e.member.Email, memberPassword, noDevice); err == nil {
 		t.Fatal("the old password still logs in after the change")
 	}
 }
@@ -82,7 +82,7 @@ func TestChangePasswordNeedsTheCurrentPasswordNotJustASession(t *testing.T) {
 	}
 	// And nothing moved: a session alone must not be able to set a password,
 	// or a stolen laptop becomes a permanent takeover.
-	if _, _, err := e.svc.Login(e.wsOnlyCtx(), e.member.Email, memberPassword); err != nil {
+	if _, _, err := e.svc.Login(e.wsOnlyCtx(), e.member.Email, memberPassword, noDevice); err != nil {
 		t.Fatalf("the original password stopped working after a refused change: %v", err)
 	}
 }
@@ -107,7 +107,7 @@ func TestChangePasswordHoldsTheLengthFloor(t *testing.T) {
 	if !errors.As(err, &parseErr) || parseErr.Field != "new_password" || parseErr.Code != "length" {
 		t.Fatalf("a four-rune password gave %v, want a new_password/length refusal — sixteen bytes must not clear a twelve-CHARACTER floor", err)
 	}
-	if _, _, err := e.svc.Login(e.wsOnlyCtx(), e.member.Email, memberPassword); err != nil {
+	if _, _, err := e.svc.Login(e.wsOnlyCtx(), e.member.Email, memberPassword, noDevice); err != nil {
 		t.Fatalf("the original password stopped working after a refused change: %v", err)
 	}
 }
@@ -117,18 +117,18 @@ func TestChangePasswordEndsEveryPriorSessionAndIssuesAFreshOne(t *testing.T) {
 	wsCtx := e.wsOnlyCtx()
 
 	// Two live sessions: the one making the call, and one standing elsewhere.
-	id, callerToken, err := e.svc.Login(wsCtx, e.member.Email, memberPassword)
+	id, callerLogin, err := e.svc.Login(wsCtx, e.member.Email, memberPassword, noDevice)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, otherToken, err := e.svc.Login(wsCtx, e.member.Email, memberPassword)
+	_, otherLogin, err := e.svc.Login(wsCtx, e.member.Email, memberPassword, noDevice)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Both must work first: without this, a change that revoked nothing would
 	// still satisfy the assertions below.
-	for name, token := range map[string]string{"caller": callerToken, "other": otherToken} {
+	for name, token := range map[string]string{"caller": callerLogin.Token, "other": otherLogin.Token} {
 		if _, err := e.svc.Authenticate(wsCtx, token); err != nil {
 			t.Fatalf("the %s session did not authenticate before the change: %v", name, err)
 		}
@@ -140,7 +140,7 @@ func TestChangePasswordEndsEveryPriorSessionAndIssuesAFreshOne(t *testing.T) {
 	}
 	// Both, not just the other one. A carve-out for "this browser" is a
 	// carve-out for whoever is sitting at it.
-	for name, token := range map[string]string{"caller": callerToken, "other": otherToken} {
+	for name, token := range map[string]string{"caller": callerLogin.Token, "other": otherLogin.Token} {
 		if _, err := e.svc.Authenticate(wsCtx, token); !errors.Is(err, apperrors.ErrNotFound) {
 			t.Errorf("the %s session survived the password change (err = %v)", name, err)
 		}
@@ -439,7 +439,7 @@ func TestAForcedAccountReachesNothingButTheChangeRoute(t *testing.T) {
 	// this drives the shipped combination end to end: bootstrap, sign in, and
 	// find every door shut but one.
 	e := setupRevocationEnv(t, "forced-gate")
-	_, sessionToken, err := e.svc.Login(e.wsOnlyCtx(), e.admin.Email, bootstrapPassword)
+	_, login, err := e.svc.Login(e.wsOnlyCtx(), e.admin.Email, bootstrapPassword, noDevice)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -458,7 +458,7 @@ func TestAForcedAccountReachesNothingButTheChangeRoute(t *testing.T) {
 			reached = false
 			rec := httptest.NewRecorder()
 			req := httptest.NewRequest(tc.method, tc.path, nil).WithContext(e.wsOnlyCtx())
-			req.AddCookie(&http.Cookie{Name: SessionCookieName, Value: sessionToken})
+			req.AddCookie(&http.Cookie{Name: SessionCookieName, Value: login.Token})
 			h.Middleware(next).ServeHTTP(rec, req)
 			if reached {
 				t.Fatalf("%s reached the handler while the account owed a password change", tc.name)
@@ -484,7 +484,7 @@ func TestAForcedAccountReachesNothingButTheChangeRoute(t *testing.T) {
 	reached = false
 	consent := httptest.NewRecorder()
 	consentReq := httptest.NewRequest(http.MethodGet, authorizePath, nil).WithContext(e.wsOnlyCtx())
-	consentReq.AddCookie(&http.Cookie{Name: SessionCookieName, Value: sessionToken})
+	consentReq.AddCookie(&http.Cookie{Name: SessionCookieName, Value: login.Token})
 	h.Middleware(next).ServeHTTP(consent, consentReq)
 	if reached {
 		t.Error("the consent entry admitted an account that owed a password change")
@@ -497,7 +497,7 @@ func TestAForcedAccountReachesNothingButTheChangeRoute(t *testing.T) {
 	reached = false
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/v1/auth/change-password", nil).WithContext(e.wsOnlyCtx())
-	req.AddCookie(&http.Cookie{Name: SessionCookieName, Value: sessionToken})
+	req.AddCookie(&http.Cookie{Name: SessionCookieName, Value: login.Token})
 	h.Middleware(next).ServeHTTP(rec, req)
 	if !reached {
 		t.Errorf("the change-password route was refused too, so the requirement can never be satisfied: %d %s", rec.Code, rec.Body)
@@ -536,7 +536,7 @@ func TestAnOperatorResetHoldsTheSameLengthFloorAsEveryOtherRoute(t *testing.T) {
 		t.Fatalf("an eleven-character password gave %v, want a length refusal", err)
 	}
 	// And the account is untouched: a refused reset must not have written.
-	if _, _, loginErr := e.svc.Login(e.wsOnlyCtx(), e.member.Email, memberPassword); loginErr != nil {
+	if _, _, loginErr := e.svc.Login(e.wsOnlyCtx(), e.member.Email, memberPassword, noDevice); loginErr != nil {
 		t.Errorf("the original password stopped working after a refused reset: %v", loginErr)
 	}
 }

@@ -174,7 +174,7 @@ func TestNoSetPasswordLinkCanBeIssuedForAnAgentIdentity(t *testing.T) {
 
 	// The admin's real Identity, resolved the way the HTTP surface resolves it:
 	// the refusal has to hold for a caller who passes every other gate.
-	admin, _, err := svc.Login(wsCtx, "admin@"+slug+".test", agentSeatAdminPassword)
+	admin, _, err := svc.Login(wsCtx, "admin@"+slug+".test", agentSeatAdminPassword, noDevice)
 	if err != nil {
 		t.Fatalf("admin login: %v", err)
 	}
