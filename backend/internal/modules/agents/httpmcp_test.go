@@ -94,18 +94,32 @@ func TestUnverifiableCredentialAnswers503RatherThanChallenging(t *testing.T) {
 // proves the handler forwards whatever challenge func it is given.
 func TestResourceMetadataChallengeIsAbsoluteAndScopeBearing(t *testing.T) {
 	r := httptest.NewRequest(http.MethodPost, "https://crm.example.com/mcp", nil)
-	// httptest.NewRequest never populates r.TLS, so RequestOrigin needs the
-	// forwarded-proto signal a fronting proxy supplies in production to
-	// resolve this as https rather than its http default.
-	r.Header.Set("X-Forwarded-Proto", "https")
 
-	got := ResourceMetadataChallenge(r)
+	got := ResourceMetadataChallenge("https://crm.example.com")(r)
 
 	if !strings.Contains(got, `resource_metadata="https://crm.example.com/.well-known/oauth-protected-resource"`) {
-		t.Errorf("challenge %q must carry an absolute resource_metadata URL on the request's own origin", got)
+		t.Errorf("challenge %q must carry an absolute resource_metadata URL on the configured origin", got)
 	}
 	if !strings.Contains(got, `scope="read draft"`) {
 		t.Errorf("challenge %q must carry the conservative scope hint", got)
+	}
+}
+
+// The pointer names where a client goes next to learn whom to trust, so a
+// request cannot move it: neither the Host it was addressed to nor the
+// forwarded headers a proxy passes on may appear in it.
+func TestResourceMetadataChallengeIgnoresTheRequestsClaimedHost(t *testing.T) {
+	r := httptest.NewRequest(http.MethodPost, "https://elsewhere.example/mcp", nil)
+	r.Header.Set("X-Forwarded-Host", "elsewhere.example")
+	r.Header.Set("X-Forwarded-Proto", "http")
+
+	got := ResourceMetadataChallenge("https://crm.example.com")(r)
+
+	if !strings.Contains(got, `resource_metadata="https://crm.example.com/.well-known/oauth-protected-resource"`) {
+		t.Errorf("challenge %q must point at the configured origin whatever the request claims", got)
+	}
+	if strings.Contains(got, "elsewhere.example") {
+		t.Errorf("challenge %q carries a host the request supplied", got)
 	}
 }
 

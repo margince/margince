@@ -324,22 +324,3 @@ func TestMCPEdgePreservesResponseControllerCapabilities(t *testing.T) {
 		t.Errorf("Flush through the edge: %v", flushErr)
 	}
 }
-
-// TestMCPOriginAllowlistComesFromTheConfiguredResource: the guard compares
-// scheme+host, so the "/mcp" path the resource document carries must be
-// stripped — otherwise every browser Origin mismatches.
-func TestMCPOriginAllowlistComesFromTheConfiguredResource(t *testing.T) {
-	for _, tc := range []struct {
-		resource, want string
-	}{
-		{"https://crm.example.com/mcp", "https://crm.example.com"},
-		{"http://127.0.0.1:8080/mcp", "http://127.0.0.1:8080"},
-		{"https://crm.example.com", "https://crm.example.com"},
-		{"", ""},
-		{"not-a-url", ""},
-	} {
-		if got := mcpOriginOf(tc.resource); got != tc.want {
-			t.Errorf("mcpOriginOf(%q) = %q, want %q", tc.resource, got, tc.want)
-		}
-	}
-}

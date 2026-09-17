@@ -447,7 +447,6 @@ internal/modules/identity/nonproduction.go#method Handlers.WithDataResetAvailabl
 internal/modules/identity/oauth_audience.go#func audienceMatches
 internal/modules/identity/oauth_consentnonce.go#func setConsentCookie
 internal/modules/identity/oauth_consentscreen.go#func redirectToConsentScreen
-internal/modules/identity/oauth_discovery.go#func requestIssuer
 internal/modules/identity/oauth_grant.go#func oauthPassportLabel
 internal/modules/identity/oauth_redirect.go#var responseParams
 internal/modules/identity/oauth_refresh.go#var errRefreshRejected

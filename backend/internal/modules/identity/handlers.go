@@ -278,7 +278,7 @@ func (h Handlers) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, token, err := h.svc.Login(r.Context(), string(req.Email), req.Password)
+	id, session, err := h.svc.Login(r.Context(), string(req.Email), req.Password, presentedDeviceProof(r))
 	if err != nil {
 		if errors.Is(err, ErrBadCredentials) {
 			h.loginFailures.Record(accountKey)
@@ -289,7 +289,8 @@ func (h Handlers) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	setSessionCookie(w, token)
+	setSessionCookie(w, session.Token)
+	setDeviceCookie(w, session.DeviceProof)
 	httperr.WriteJSON(w, http.StatusOK, h.meResponse(r.Context(), id))
 }
 
@@ -330,6 +331,26 @@ func setSessionCookie(w http.ResponseWriter, token string) {
 		Name: SessionCookieName, Value: token,
 		Path: "/", HttpOnly: true, Secure: true, SameSite: http.SameSiteStrictMode,
 	})
+}
+
+// setDeviceCookie keeps the device proof across browser restarts and logouts —
+// outliving the session is its purpose. It carries the session cookie's
+// attributes, so no script reads it and no cross-site request sends it.
+func setDeviceCookie(w http.ResponseWriter, proof string) {
+	http.SetCookie(w, &http.Cookie{
+		Name: DeviceCookieName, Value: proof, MaxAge: int(deviceProofTTL / time.Second),
+		Path: "/", HttpOnly: true, Secure: true, SameSite: http.SameSiteStrictMode,
+	})
+}
+
+// presentedDeviceProof is the proof the browser sent, or empty when it sent
+// none — which the lock judges exactly like a proof that does not vouch.
+func presentedDeviceProof(r *http.Request) string {
+	cookie, err := r.Cookie(DeviceCookieName)
+	if err != nil {
+		return ""
+	}
+	return cookie.Value
 }
 
 func clearSessionCookie(w http.ResponseWriter) {

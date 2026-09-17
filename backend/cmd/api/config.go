@@ -52,6 +52,7 @@ type apiConfig struct {
 	connectorStateKey     string
 	webhookKey            string
 	metricsToken          string
+	metricsAccess         string
 	vatCheckBaseURL       string
 	geocodeBaseURL        string
 	oauthAccessTokenTTL   time.Duration
@@ -115,7 +116,8 @@ func apiFlagSet() (*flag.FlagSet, *cliflags.Env, *apiConfig, error) {
 	env.String(fs, &cfg.apiBaseURL, "api-base-url", "MARGINCE_API_BASE_URL", "", "the api's externally-reachable base for the OAuth callback redirect_uri; defaults to --public-base-url (same-origin deployments), set only when the api is on a different origin than the SPA (e.g. dev)")
 	env.String(fs, &cfg.connectorStateKey, "connector-state-key", "MARGINCE_CONNECTOR_STATE_KEY", "", "HMAC key (>=32 bytes) signing the OAuth connect `state`; required for the Gmail and Graph connect flows")
 	env.String(fs, &cfg.webhookKey, "webhook-key", "MARGINCE_WEBHOOK_KEY", "", "base64 32-byte key sealing outbound-webhook signing secrets; enables the mutating /webhook-subscriptions surface, and (with --inline-relay) the cg:webhooks delivery consumer. Empty = those paths answer 503 and no inline delivery runs. Re-attempting a parked delivery is the worker role's River job, never this one's.")
-	env.String(fs, &cfg.metricsToken, "metrics-token", "MARGINCE_METRICS_TOKEN", "", "shared secret /metrics requires as a Bearer credential. Empty (the default) serves the exposition unauthenticated, which is what a scraper that discovers its targets by annotation needs — it has nowhere to carry one. Set it when the port is not already contained by a private listener, a NetworkPolicy or an ingress allow-list, because the exposition is fleet-wide and carries workspace ids")
+	env.String(fs, &cfg.metricsToken, "metrics-token", "MARGINCE_METRICS_TOKEN", "", "shared secret /metrics requires as a Bearer credential. Empty (the default) configures none, and /metrics then refuses every scrape unless --metrics-access=open")
+	env.String(fs, &cfg.metricsAccess, "metrics-access", "MARGINCE_METRICS_ACCESS", metricsAccessToken, "who /metrics serves: token (the default) requires --metrics-token as a Bearer credential and refuses every scrape without one; open serves anyone who reaches the port, for a scraper that discovers its targets by annotation and cannot carry a credential. Choose open only where a private listener, a NetworkPolicy or an ingress that does not route /metrics already contains the port — the exposition names every route and carries workspace ids")
 	env.String(fs, &cfg.vatCheckBaseURL, "vat-check-base-url", "MARGINCE_VAT_CHECK_BASE_URL", "", "same variable the worker reads to reach VIES; read here only to decide whether this role queues a consultation at all. Set on both roles together, or a stated VAT number goes unverified and /vat-check answers 404")
 	env.String(fs, &cfg.geocodeBaseURL, "geocode-base-url", "MARGINCE_GEOCODE_BASE_URL", "", "same variable the worker reads to reach Nominatim; read here only to decide whether this role queues a coordinate lookup at all. Set on both roles together, or every address write queues a lookup no worker can answer and the row lands as a geocode failure naming the wrong cause")
 	// A malformed TTL is CARRIED rather than returned, so it can be reported
@@ -188,6 +190,7 @@ func parseAPIFlags(args []string) (apiConfig, error) {
 	// --microsoft-signin-tenant accepts several directories and falls back to
 	// this flag, so an operator configuring multi-directory sign-in has a
 	// reason to reach for the more prominent variable and break capture with it.
+	faults = append(faults, metricsAccessFaults(cfg.metricsAccess, cfg.metricsToken)...)
 	if strings.Contains(cfg.graphTenant, ",") {
 		faults = append(faults, "--graph-tenant takes ONE authority (a directory id, or common) and got a list: "+
 			cfg.graphTenant+" — several directories is a SIGN-IN posture, so put them in --microsoft-signin-tenant")
@@ -200,6 +203,31 @@ func parseAPIFlags(args []string) (apiConfig, error) {
 			strings.Join(faults, "\n  - "))
 	}
 	return *cfg, nil
+}
+
+// The two postures --metrics-access names.
+const (
+	metricsAccessToken = "token"
+	metricsAccessOpen  = "open"
+)
+
+// metricsAccessFaults refuses a /metrics posture the api could only guess at: a
+// value that names neither posture, or an open endpoint that was also given a
+// token. The second is not harmless redundancy — the token would authenticate
+// nothing, and an operator who set one believes the endpoint is closed.
+func metricsAccessFaults(access, token string) []string {
+	switch access {
+	case metricsAccessToken:
+		return nil
+	case metricsAccessOpen:
+		if token != "" {
+			return []string{"--metrics-access=open serves /metrics to anyone, so the --metrics-token also set would " +
+				"authenticate nothing: unset the token to open the endpoint, or drop --metrics-access=open to require it"}
+		}
+		return nil
+	default:
+		return []string{fmt.Sprintf("--metrics-access %q is not a posture: token (the default) or open", access)}
+	}
 }
 
 // envDuration reads a duration from the environment as the default for its

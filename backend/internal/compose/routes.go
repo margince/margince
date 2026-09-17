@@ -172,7 +172,7 @@ func operationalMux(srv Server, pool *pgxpool.Pool, log *slog.Logger, identitySv
 	setupLimit := newSetupLimiter()
 	mux.HandleFunc("GET /setup/status", setupStatus(identitySvc, setupLimit))
 	mux.HandleFunc("POST /setup/claim", setupClaim(identitySvc, pool, srv.bootstrapSeeds, setupLimit, log))
-	mux.HandleFunc("/metrics", gateMetrics(srv.metricsToken, httpserver.Metrics(httpserver.MetricsInput{
+	mux.HandleFunc("/metrics", gateMetrics(srv.metricsToken, srv.metricsOpen, httpserver.Metrics(httpserver.MetricsInput{
 		Pool:      pool,
 		Backlog:   func(ctx context.Context) (int64, error) { return events.OutboxBacklog(ctx, pool) },
 		Published: events.PublishedTotal,
@@ -288,45 +288,46 @@ func mountProviderPushWebhooks(mux *http.ServeMux, srv Server, log *slog.Logger)
 	}
 }
 
-// gateMetrics serves the metrics exposition, behind a bearer credential when
-// the deployment configured one and openly when it did not.
+// gateMetrics serves the metrics exposition to a scrape presenting the
+// configured bearer credential, to anyone when the deployment explicitly opened
+// it, and to nobody otherwise.
 //
-// OPEN IS THE DEFAULT, and the token is the single knob that changes it —
-// there is deliberately no second variable declaring a mode. An endpoint
-// whose only purpose is to be scraped is reached, overwhelmingly, by a
-// Prometheus that discovers its targets by annotation: it reads a target's
-// address and metrics path off the Kubernetes API and has nowhere to carry a
-// credential. Requiring one by default left that deployment — the ordinary
-// one — with no working configuration at all, and the ways around it (a
-// header-injecting proxy beside every pod, a hand-edited scrape job in a
-// shared cluster's config) are more moving parts guarding a port that a
-// private listener, a NetworkPolicy or an ingress allow-list already guards,
-// and guards for every role at once rather than this one endpoint. It is also
-// the posture cmd/worker's own /metrics has always taken behind
-// --observe-addr, so the two roles now agree.
+// CLOSED IS THE DEFAULT. This listener is the one /v1 is served on, which is
+// the one an ingress routes to the internet, and the exposition is fleet-wide:
+// every route pattern the api serves, pool and outbox gauges, job-runtime
+// telemetry labelled by workspace id, the declared-catalogue info metric. A
+// default that served it openly made every installation that forgot a setting
+// disclose all of that to whoever reached the port, which is the ordinary
+// deployment rather than the careless one.
 //
-// What that costs is worth stating plainly, because it is the reason the token
-// still exists: this exposition is fleet-wide and carries workspace ids and a
-// declared-catalogue info metric, so a deployment whose network boundary does
-// NOT contain the port is disclosing tenant shape to anything that reaches it.
-// Such a deployment sets --metrics-token, and cmd/api logs the open posture at
-// boot so it is visible without reading this file.
+// Two settings open it, and they answer different deployments:
 //
-// A configured token is checked as a bearer credential in constant time, the
-// same comparison the connector-state CSRF nonce uses (connectors_csrf.go), so
-// a scrape's authorization header cannot be timed byte-by-byte against the
-// configured value. The credential is read through httpserver.BearerToken —
-// the one reading of an Authorization header this process uses everywhere else
-// — rather than a second parse that could drift from it and accept or refuse a
-// scheme spelling the rest of the surface disagrees on.
-func gateMetrics(token string, next http.HandlerFunc) http.HandlerFunc {
+//   - --metrics-token: a scraper that can carry a credential presents it as a
+//     bearer. Checked in constant time, the same comparison the connector-state
+//     CSRF nonce uses (connectors_csrf.go), so a scrape's authorization header
+//     cannot be timed byte-by-byte against the configured value, and read
+//     through httpserver.BearerToken — the one reading of an Authorization
+//     header this process uses — rather than a second parse that could drift.
+//   - --metrics-access=open: a Prometheus that discovers its targets by
+//     annotation reads a target's address and path off the Kubernetes API and
+//     has nowhere to carry a credential. Where the port is already contained —
+//     a private listener, a NetworkPolicy, an ingress that does not route
+//     /metrics — the operator says so explicitly, and cmd/api logs the open
+//     posture at boot. That is cmd/worker's posture behind --observe-addr,
+//     which is a listener nothing routes to by default.
+//
+// With neither, the refusal is the same 401 a wrong token gets. It must be an
+// explicit branch rather than the comparison: an empty configured token and an
+// absent header compare EQUAL in constant time, which would serve the exposition
+// to every caller who presents nothing.
+func gateMetrics(token string, open bool, next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if token == "" {
+		if open {
 			next(w, r)
 			return
 		}
 		presented := httpserver.BearerToken(r.Header.Get("Authorization"))
-		if subtle.ConstantTimeCompare([]byte(presented), []byte(token)) != 1 {
+		if token == "" || subtle.ConstantTimeCompare([]byte(presented), []byte(token)) != 1 {
 			w.Header().Set("WWW-Authenticate", `Bearer realm="metrics"`)
 			httperr.Unauthorized(w, r, "invalid or missing metrics token")
 			return
@@ -336,12 +337,23 @@ func gateMetrics(token string, next http.HandlerFunc) http.HandlerFunc {
 }
 
 // WithMetricsToken sets the shared secret /metrics requires. Called
-// unconditionally at boot; an empty string is the default and serves the
-// exposition unauthenticated — see gateMetrics for why that direction is the
-// default and what a deployment gives up by taking it.
+// unconditionally at boot; an empty string configures no credential, which
+// leaves the exposition refusing every scrape unless WithOpenMetrics opened it
+// — see gateMetrics.
 func WithMetricsToken(token string) Option {
 	return func(s *Server, _ *pgxpool.Pool) {
 		s.metricsToken = token
+	}
+}
+
+// WithOpenMetrics serves /metrics to any caller that reaches the port, for the
+// deployment whose network boundary already contains it and whose scraper
+// cannot carry a credential. cmd/api applies it only for an explicit
+// --metrics-access=open, and refuses to boot with a token as well, because the
+// two settings describe contradictory postures.
+func WithOpenMetrics() Option {
+	return func(s *Server, _ *pgxpool.Pool) {
+		s.metricsOpen = true
 	}
 }
 
