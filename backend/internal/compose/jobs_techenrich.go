@@ -15,6 +15,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"time"
 
@@ -107,16 +108,20 @@ func technicalBackfillOpts() *river.InsertOpts {
 
 // addTechnicalEnrichJobs registers both kinds and returns the sweep's schedule.
 //
-// A deployment with no enricher registers NOTHING for the sweep: queueing rows
-// nobody can work is worse than leaving the technical picture unread, which is
-// an honest state. The per-company kind still registers so a request against
-// such a deployment fails visibly rather than queuing forever.
+// The two take OPPOSITE postures on the same absent enricher, which is why
+// api/jobs.yaml declares the posture per kind and this reads it there rather
+// than deciding again. The sweep registers nothing: it exists to nominate
+// companies, and nominating them where nothing can answer is worse than
+// leaving the technical picture unread. The per-company kind registers anyway,
+// so a rep's request reaches a worker that can say what is wrong instead of
+// being refused at insert with a message about River's worker bundle.
 func addTechnicalEnrichJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig) []*river.PeriodicJob {
+	// A nil enricher rides into the worker, which answers for it; see Work.
+	addDeclaredWorker[TechnicalEnrichCompanyArgs](reg,
+		&technicalEnrichWorker{pool: pool, enricher: cfg.TechnicalEnricher})
 	if cfg.TechnicalEnricher == nil {
 		return nil
 	}
-	worker := &technicalEnrichWorker{pool: pool, enricher: cfg.TechnicalEnricher}
-	addDeclaredWorker[TechnicalEnrichCompanyArgs](reg, worker)
 	addDeclaredWorker[TechnicalEnrichBackfillArgs](reg, &technicalBackfillWorker{pool: pool})
 	return periodicFor(cfg, TechnicalEnrichBackfillArgs{})
 }
@@ -163,6 +168,10 @@ func (w *technicalEnrichWorker) Work(ctx context.Context, job *river.Job[Technic
 		return nil
 	}
 
+	if w.enricher == nil {
+		return jobs.FaultContext(ctx, w.recordNoEnricher(ctx, wsCtx, store, companyID))
+	}
+
 	read, outcomes := w.enricher.Read(wsCtx, companyID, domain)
 	if err := store.ApplyTechnicalEnrichment(wsCtx, read, technicalChangeRecorder()); err != nil {
 		return jobs.FaultContext(ctx, err)
@@ -171,6 +180,30 @@ func (w *technicalEnrichWorker) Work(ctx context.Context, job *river.Job[Technic
 		return jobs.FaultContext(ctx, err)
 	}
 	return nil
+}
+
+// recordNoEnricher answers a lookup this deployment cannot perform.
+//
+// The kind stays registered where no enricher is configured (api/jobs.yaml
+// declares `absent: registers_anyway`), so this is where that configuration is
+// reported — as the ledger the status poll already reads, rather than as a
+// River-internals refusal in a log nobody is watching. Every lane not
+// completed, which means the record keeps whatever the lanes last wrote and
+// earns the failed-lane backoff, so a permanently unconfigured deployment is
+// not asked the same question on every site read.
+//
+// No enrichment is applied: an empty read reconciles nothing, and writing one
+// would be this worker claiming it looked.
+func (w *technicalEnrichWorker) recordNoEnricher(
+	ctx, wsCtx context.Context, store *contacts.Store, companyID ids.CompanyID,
+) error {
+	absent := errors.New("this deployment configures no technical enricher, so nothing read this company")
+	outcomes := make([]laneOutcome, 0, len(enricherLanes))
+	for _, lane := range enricherLanes {
+		outcomes = append(outcomes, laneOutcome{Lane: lane, Err: absent})
+	}
+	return w.recordOutcomes(ctx, wsCtx, store, companyID,
+		contacts.TechnicalEnrichment{CompanyID: companyID, ObservedAt: time.Now().UTC()}, outcomes)
 }
 
 // recordOutcomes writes each lane's verdict to the ledger.
