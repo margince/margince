@@ -31,6 +31,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/notices"
+	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -165,6 +166,33 @@ func TestWithNoPublicOriginTheNotificationMailCarriesNoLink(t *testing.T) {
 	}
 	if body := e.relay.bodies[0]; strings.Contains(body, "/#/") || strings.Contains(body, "http") {
 		t.Errorf("the message carries a link built on an empty origin:\n%s", body)
+	}
+}
+
+// A worker composed with no relay spends nothing.
+//
+// The leg is off BY OMISSION rather than by a flag, and that property is worth
+// a case of its own: the guard sits above the claim, so an installation that
+// arms its relay tomorrow still reaches tomorrow's decisions. What it does not
+// do is rescue this one — the job finishes, and the notice waits on the
+// Worklist like every other notice — which is why the branch says so at Warn
+// and api/jobs.yaml waives it by name.
+func TestAWorkerWithNoRelaySpendsNoClaim(t *testing.T) {
+	e := setupNoticeMail(t)
+	notice := e.pendingNotice(t)
+	e.worker.mail = NotificationMailConfig{}
+
+	e.work(t, notice)
+
+	if got := e.relay.count(); got != 0 {
+		t.Fatalf("a worker with no relay reached one anyway: %v", e.relay.sends)
+	}
+	stamp, cause := e.emailState(t, notice)
+	if stamp != nil {
+		t.Error("a worker with no relay burned the notice's attempt, so arming mail later would never reach it")
+	}
+	if cause != nil {
+		t.Errorf("an unconfigured role recorded a failure on somebody's notice: %q", *cause)
 	}
 }
 
@@ -327,11 +355,36 @@ func TestOnlyAnEmailSeatsNoticeStagesAMailJob(t *testing.T) {
 		t.Fatalf("one seat wants this by mail; %d job(s) were staged: %+v", len(staged), staged)
 	}
 	rows := e.delivered(t)
-	if staged[0].NoticeID != rows[0].id.String() {
-		t.Errorf("the staged job names %q rather than the notice that was written (%s)", staged[0].NoticeID, rows[0].id)
+	if staged[0].args.NoticeID != rows[0].id.String() {
+		t.Errorf("the staged job names %q rather than the notice that was written (%s)", staged[0].args.NoticeID, rows[0].id)
 	}
-	if staged[0].Workspace != e.e.WS {
-		t.Errorf("the staged job carries workspace %s, not this installation's %s", staged[0].Workspace, e.e.WS)
+	if staged[0].args.Workspace != e.e.WS {
+		t.Errorf("the staged job carries workspace %s, not this installation's %s", staged[0].args.Workspace, e.e.WS)
+	}
+
+	// THE OPTIONS ARE THE LADDER, and this kind's only copy of it. api/jobs.yaml
+	// declares notification_email opts_owner: caller, which means the contract
+	// publishes no attempt cap and nothing but this enqueue applies one — so an
+	// InsertOpts that lost its MaxAttempts would silently put the job on River's
+	// own 25-rung default, and an empty Queue would put it on whatever River
+	// defaults to rather than where the declaration says these rows land.
+	opts := staged[0].opts
+	if opts == nil {
+		t.Fatal("the mail job was staged with no insert options: River's defaults would decide its queue and its ladder, and the declaration would describe neither")
+	}
+	if opts.MaxAttempts != notificationMailJobAttempts {
+		t.Errorf("the staged job rides %d attempt(s), want the ladder the enqueue owns (%d)",
+			opts.MaxAttempts, notificationMailJobAttempts)
+	}
+	// Read off the contract rather than restated: for a caller-owned kind the
+	// declared queue is otherwise only documentation, and this is what makes it
+	// true of the rows that actually land.
+	spec, declared := jobs.SpecFor(SendNotificationEmailArgs{}.Kind())
+	if !declared {
+		t.Fatal("api/jobs.yaml declares no notification_email, so this assertion has nothing to hold the enqueue against")
+	}
+	if opts.Queue != spec.Queue {
+		t.Errorf("the staged job lands on queue %q, and api/jobs.yaml declares %q", opts.Queue, spec.Queue)
 	}
 }
 

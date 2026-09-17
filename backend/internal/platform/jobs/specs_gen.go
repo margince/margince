@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "8f0c0bec6113786b160b743580ac731cae1d268b87c8c6c90c7b38de29fdfa1e"
+const JobContractHash = "d7c54eb10a16d867d642cf4f1ce83b705e91c627dd721242e154db5d8466a030"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -568,6 +568,7 @@ var specs = map[string]Spec{
 		Queue:     "default",
 		Timeout:   TimeoutPolicy{Fixed: 2 * time.Minute},
 		OptsOwner: OptsCaller,
+		Fault:     FaultPolicy{NilAfterLogging: "ONE branch, and it is a mis-wired ROLE rather than a failed send: a worker composed with no operator relay says so at Warn, claims nothing, and returns nil. No durable retry stands behind that, and none is wanted — each role reads its own config, so returning a failure would have an installation that deliberately runs no operator mail discard a row per decision, and would leave a relay-less replica bouncing rows rather than sending them. What makes the green row honest is that the thing the product promises still happened: the notice is on the recipient's Worklist, which is where every notice is, and this message is only a nudge toward it. The log is how an operator tells one unconfigured worker from a quiet week.\nIt waives THAT branch and no other. The failures above the claim are returned and River retries them, and the ones below it are recorded rather than logged away — a refusal writes its cause into notice.email_error beside a claim that is never released. That is where the durability lives, and it is deliberate: SMTP returns no receipt, so a retried attempt could not tell a refused message from a delivered one and would risk telling a colleague twice that the same decision is waiting. The green River row means 'this notice's one attempt is concluded'; the row says how it went."},
 		Args:      []ArgField{{Name: "NoticeID"}, {Name: "Workspace"}},
 	},
 	"overlay_reconcile": {

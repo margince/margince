@@ -132,9 +132,15 @@ const notificationMailActor = "system:notification-mail"
 // Every other mail lane is a pass this role also schedules, so a role with no
 // relay can simply not wire it. This one is staged by the approval-notify
 // consumer, which has no view of any role's relay — so a worker gated on the
-// config would leave those rows queued behind a job nobody works. Registered,
-// a role without a relay finishes them as the no-op they are, and the claim is
-// left for a role that can send.
+// config would leave those rows queued behind a job nobody works.
+//
+// WHAT A RELAY-LESS ROLE THEN DOES IS FINISH THE JOB, and the message is not
+// sent by anybody: River hands each row to one worker, and a completed row is
+// not offered again. The fallback is the one the config field states — the
+// decision is on the reader's Worklist either way — and it is stated here
+// rather than left to be inferred, because each role reads its own config, so
+// one unconfigured worker beside an armed one is a deployment somebody can
+// actually assemble. Work says so at Warn when it happens.
 func addNotificationMailJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig, log *slog.Logger) {
 	addDeclaredWorker[SendNotificationEmailArgs](reg, newNotificationMailWorker(pool, cfg.NotificationMail, log))
 }
@@ -156,9 +162,15 @@ func (w *notificationMailWorker) Work(ctx context.Context, job *river.Job[SendNo
 		return jobs.FaultContext(ctx, err)
 	}
 	if w.mail.Mailer == nil {
-		// No relay configured. NOT a claim and not an error: an installation
-		// that configures mail tomorrow should still reach tomorrow's notices,
-		// and a claim spent here would be an attempt nobody ever made.
+		// No relay on THIS role, and the job ends here: nothing is claimed, so
+		// the row keeps its unspent attempt, but River does not offer a
+		// completed job again and no other role will send it. Said out loud
+		// because it is invisible otherwise — an installation that configured
+		// no operator mail sees one line per decision and knows why, and an
+		// operator who armed one worker and not its neighbour learns it from
+		// this rather than from a colleague asking where the mail went.
+		w.log.WarnContext(wsCtx, "a decision was not mailed: this worker has no operator relay configured",
+			"notice", noticeID)
 		return nil
 	}
 	sysCtx := principal.WithCorrelationID(wsCtx, ids.NewV7())

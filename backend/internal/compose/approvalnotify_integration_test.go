@@ -71,17 +71,28 @@ func newApprovalNotifyEnv(t *testing.T) approvalNotifyEnv {
 	return a
 }
 
+// stagedMailJob is one enqueue as the lane made it.
+//
+// BOTH HALVES, and the options are the half that has to be here: this kind is
+// opts_owner: caller, so the call site is the only place its queue and its
+// attempt ladder are written down. A double that took the options and dropped
+// them would leave that number asserted by nothing at all.
+type stagedMailJob struct {
+	args SendNotificationEmailArgs
+	opts *river.InsertOpts
+}
+
 // recordingNoticeMailQueue stands in for River's insert. The durable queue is a
 // true boundary, which is what makes a fake the right shape here: what this
-// suite asserts is WHICH notices get a mail job staged, and River's own insert
-// is proven by the kinds the census walks.
+// suite asserts is WHICH notices get a mail job staged and under what options,
+// and River's own insert is proven by the kinds the census walks.
 type recordingNoticeMailQueue struct {
 	mu   sync.Mutex
-	jobs []SendNotificationEmailArgs
+	jobs []stagedMailJob
 }
 
 func (q *recordingNoticeMailQueue) EnqueueTx(
-	_ context.Context, _ pgx.Tx, args river.JobArgs, _ *river.InsertOpts,
+	_ context.Context, _ pgx.Tx, args river.JobArgs, opts *river.InsertOpts,
 ) error {
 	staged, mine := args.(SendNotificationEmailArgs)
 	if !mine {
@@ -89,11 +100,11 @@ func (q *recordingNoticeMailQueue) EnqueueTx(
 	}
 	q.mu.Lock()
 	defer q.mu.Unlock()
-	q.jobs = append(q.jobs, staged)
+	q.jobs = append(q.jobs, stagedMailJob{args: staged, opts: opts})
 	return nil
 }
 
-func (q *recordingNoticeMailQueue) staged() []SendNotificationEmailArgs {
+func (q *recordingNoticeMailQueue) staged() []stagedMailJob {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 	return slices.Clone(q.jobs)
