@@ -45,19 +45,29 @@ func aiTaskVerbs() []aiTaskVerb {
 		}
 	}
 	return []aiTaskVerb{
-		{verbList, "name every invocation site this build ships, and whether the corpus already carries a scenario for it",
-			"list", probeFlags(verbList)},
-		{verbScaffold, "print a runnable starter scenario for one site, copied from the corpus — how a fixture's shape is discovered",
-			"scaffold <task>/<variant>", probeFlags(verbScaffold)},
-		{verbFetch, "fetch a URL through the production reader and keep the reduced text an extraction site is handed",
-			"fetch <url>", probeFlags(verbFetch)},
-		{verbRetrieve, "rank the shipped handbook for one question, with the production chunker and a real embed lane, and capture what a run would be handed",
+		{
+			verbList, "name every invocation site this build ships, and whether the corpus already carries a scenario for it",
+			"list", probeFlags(verbList),
+		},
+		{
+			verbScaffold, "print a runnable starter scenario for one site, copied from the corpus — how a fixture's shape is discovered",
+			"scaffold <task>/<variant>", probeFlags(verbScaffold),
+		},
+		{
+			verbFetch, "fetch a URL through the production reader and keep the reduced text an extraction site is handed",
+			"fetch <url>", probeFlags(verbFetch),
+		},
+		{
+			verbRetrieve, "rank the shipped handbook for one question, with the production chunker and a real embed lane, and capture what a run would be handed",
 			`retrieve --question "..." --model <provider:model> [--page records.md]`, func() *flag.FlagSet {
 				fs, _, _ := aiTaskRetrieveFlagSet()
 				return fs
-			}},
-		{verbRun, "drive one site's certification case over input you supply — the only verb that calls a model",
-			"run --site <task>/<variant> --fixture <file> --expect <file> --model <provider:model>", probeFlags(verbRun)},
+			},
+		},
+		{
+			verbRun, "drive one site's certification case over input you supply — the only verb that calls a model",
+			"run --site <task>/<variant> --fixture <file> --expect <file> --model <provider:model>", probeFlags(verbRun),
+		},
 		{verbHelp, "print this, or one verb's own flags", "help [verb]", nil},
 	}
 }

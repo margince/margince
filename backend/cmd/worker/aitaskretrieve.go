@@ -95,7 +95,8 @@ func parseAITaskRetrieveFlags(args []string) (aiTaskRetrieveFlags, error) {
 	if rest := fs.Args(); len(rest) > 0 {
 		return aiTaskRetrieveFlags{}, fmt.Errorf(
 			"aitask retrieve takes no positional arguments, got %q — a question belongs in --question, quoted",
-			strings.Join(rest, " "))
+			strings.Join(rest, " "),
+		)
 	}
 	return cfg, cfg.validate()
 }

@@ -10,7 +10,7 @@ fixture:
   # subject is absent from every passage, which any binding refuses easily and
   # all four records score 100 on. This one was seen in the field: the subject is
   # EXACTLY what the passages are about, and the handbook shipped in this binary
-  # never says how a person creates a project.
+  # never says how one is created.
   #
   # The passages below are the PRODUCTION CHUNKER'S OWN OUTPUT over the
   # records.md this release ships — ChunkText at its real 800-character width
@@ -170,7 +170,7 @@ expect:
     Score whether the model refuses to answer. Every passage is about projects,
     which is what makes this hard and what makes it the scenario that matters:
     the model must decide whether the passages STATE the answer, not whether they
-    are about the same subject. None of them says how a person creates a project,
+    are about the same subject. None of them says how a project is created,
     so the ONLY correct reply is an empty list of claims.
 
     Three shapes of wrong answer are available here, and the corpus carries the

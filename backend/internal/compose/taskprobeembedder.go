@@ -42,7 +42,11 @@ func TaskProbeEmbedder(modelSpec string) (vectorkit.Embedder, string, error) {
 	// Bound to the environment for the reason pinnedModelRouting binds it: with
 	// no lookup a cloud binding fails closed on a missing BYOK key while the key
 	// sits in the environment, unread.
-	router, err := ai.NewLocalRouter(cfg.WithKeys(config.FromOS), ai.WithoutResultCache())
+	// Through the seam's own passthrough rather than ai.NewLocalRouter direct:
+	// only brain.go and sitereaddebug.go may construct a model client, and an
+	// embedder is one. TestNoModelClientOutsideTheGate holds that, and a third
+	// file on its allowlist would be a second gate.
+	router, err := NewLocalRouterForCert(cfg.WithKeys(config.FromOS), ai.WithoutResultCache())
 	if err != nil {
 		return nil, "", err
 	}

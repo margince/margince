@@ -290,7 +290,11 @@ func TestTheReportNamesEveryPassageAndWhereItCameFrom(t *testing.T) {
 	}
 	// One passage, one row: a passage spanning several lines must not break the
 	// table it is being read in.
-	if lines := strings.Count(strings.TrimSpace(report[strings.Index(report, "LABEL"):]), "\n"); lines != 1 {
+	header := strings.Index(report, "LABEL")
+	if header < 0 {
+		t.Fatalf("the report has no table header:\n%s", report)
+	}
+	if lines := strings.Count(strings.TrimSpace(report[header:]), "\n"); lines != 1 {
 		t.Errorf("the table is %d rows for one passage:\n%s", lines+1, report)
 	}
 }

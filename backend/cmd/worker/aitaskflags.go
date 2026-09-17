@@ -158,9 +158,9 @@ func (c aiTaskFlags) artifactOut(name string) string {
 	return artifactOutOr(c.outPath, c.workDir, name)
 }
 
-// artifactOutOr is that decision itself, spelled once: `retrieve` parses with
-// its own flags and owes the same answer, and two spellings of "--out wins,
-// otherwise the work directory" is two places to change it.
+// artifactOutOr answers "--out wins, otherwise the work directory". Both flag
+// sets reach it — `retrieve` parses with its own and owes the same answer — so
+// neither restates the rule and they cannot come to disagree about it.
 func artifactOutOr(outPath, workDir, name string) string {
 	if outPath != "" {
 		return outPath
