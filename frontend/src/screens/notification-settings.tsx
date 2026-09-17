@@ -127,11 +127,23 @@ function DeliveryChoices({
           />
         ))}
       </SettingList>
+      {/* THE CALLOUT NAMES THE ROW IT IS ABOUT. Six rows share one error
+          surface, and it sits under all of them, so an unnamed failure leaves
+          the reader checking each dropdown to find which one did not take.
+          The class comes from the failed write's own variable rather than from
+          a render — it is the same value that went on the wire, so the sentence
+          cannot name a different row from the one the server refused. */}
       {save.isError && (
         <Callout
           tone="danger"
           kind="outcome"
-          title={t("notifications.saveFailed")}
+          title={
+            save.variables === undefined
+              ? t("notifications.saveFailed")
+              : t("notifications.saveFailedFor", {
+                  setting: t(CLASS_COPY[save.variables.class].label),
+                })
+          }
         >
           {problemMessageOf(save.error, t)}
         </Callout>

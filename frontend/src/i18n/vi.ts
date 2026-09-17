@@ -4648,6 +4648,8 @@ export const vi = {
   "notifications.centre": "Thông báo",
   "notifications.markAllRead": "Đánh dấu tất cả đã đọc",
   "notifications.markRead": "Đánh dấu đã đọc",
+  "notifications.markAllFailed": "Chưa đánh dấu được thông báo nào là đã đọc",
+  "notifications.markReadFailed": "Chưa đánh dấu được thông báo đó là đã đọc",
   "notifications.new": "Mới",
   "notifications.byAgent": "Do tác nhân tạo",
   "notifications.empty":
@@ -4656,6 +4658,7 @@ export const vi = {
   "notifications.sub":
     "Mọi thông báo đều được giữ trong trung tâm thông báo của bạn, bất kể bạn chọn gì ở đây. Lựa chọn này quyết định điều gì xảy ra thêm khi một thông báo đến.",
   "notifications.saveFailed": "Lựa chọn đó chưa được lưu",
+  "notifications.saveFailedFor": "Chưa lưu được “{setting}”",
   "notifications.class.approval_pending.label": "Phê duyệt đang chờ bạn",
   "notifications.class.approval_pending.help":
     "Đồng nghiệp cần quyết định của bạn để công việc của họ tiếp tục được.",

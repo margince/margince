@@ -106,6 +106,45 @@ function backendFor(notices: Notice[]) {
   return { fetchMock, calls: () => calls };
 }
 
+// A backend that answers the centre normally and REFUSES one of the two settle
+// verbs. `which` names the verb so each arm is tested for itself: the two write
+// through different mutations, and a surface that reported one and swallowed
+// the other would pass a test that only pressed the loud one.
+function refusingBackend(which: "read-all" | "one") {
+  const refused = which === "read-all" ? "/notices/read-all" : "/read";
+  const fetchMock = vi.fn(
+    async (input: RequestInfo | URL, init?: RequestInit) => {
+      const req =
+        input instanceof Request ? input : new Request(String(input), init);
+      if (req.url.endsWith("/v1/me")) {
+        return jsonResponse(meFixture({}));
+      }
+      if (req.method === "POST" && req.url.includes(refused)) {
+        return jsonResponse(
+          {
+            type: "about:blank",
+            title: "Internal Server Error",
+            status: 500,
+            code: "internal_error",
+            detail: "the notice store is unavailable",
+          },
+          500,
+        );
+      }
+      return jsonResponse({
+        items: [
+          notice("n1", "A lead is past its deadline"),
+          notice("n2", "An automation could not run", {
+            created_at: "2026-09-14T09:00:00Z",
+          }),
+        ],
+        unread_count: 2,
+      });
+    },
+  );
+  return { fetchMock };
+}
+
 const render = (ui: ReactNode, locale: Locale = "en") => {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -357,6 +396,51 @@ describe("NotificationBell", () => {
     ).toBeNull();
   });
 
+  // A REFUSED SETTLE LEAVES THE SAME RENDERING AS A CLICK THAT DID NOTHING:
+  // the mark stops turning and the badge does not move. Without a word on
+  // screen the reader cannot tell a failure from a miss, and has no reason to
+  // try again.
+  it("says why when the bulk settle is refused", async () => {
+    vi.stubGlobal("fetch", refusingBackend("read-all").fetchMock);
+    const user = userEvent.setup();
+    render(<NotificationBell />);
+
+    await user.click(await screen.findByRole("button", { name: /waiting/i }));
+    await user.click(
+      await screen.findByRole("button", { name: /mark all read/i }),
+    );
+
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("the notice store is unavailable");
+    // And the count does not pretend the settle landed.
+    expect(
+      screen.getByRole("button", { name: /waiting/i }).textContent,
+    ).toContain("2");
+  });
+
+  it("says why when one notice will not settle", async () => {
+    vi.stubGlobal("fetch", refusingBackend("one").fetchMock);
+    const user = userEvent.setup();
+    render(<NotificationBell />);
+
+    await user.click(await screen.findByRole("button", { name: /waiting/i }));
+    const items = await screen.findAllByRole("listitem");
+    await user.click(
+      within(items[0] as HTMLElement).getByRole("button", {
+        name: /mark read/i,
+      }),
+    );
+
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("the notice store is unavailable");
+    // The row stays unsettled, so the verb is still there to press again.
+    expect(
+      within(screen.getAllByRole("listitem")[0] as HTMLElement).getByText(
+        "New",
+      ),
+    ).not.toBeNull();
+  });
+
   it("says so when nothing has been raised at all", async () => {
     vi.stubGlobal("fetch", backendFor([]).fetchMock);
     const user = userEvent.setup();
@@ -369,15 +453,26 @@ describe("NotificationBell", () => {
     expect(await screen.findByText(/Nothing has come in/i)).not.toBeNull();
   });
 
-  it("reads the centre in the reader's own language", async () => {
+  // TWO notices, not one. German agrees a verb with its count, so a bell name
+  // built on "wartet" reads correctly at one and wrongly at every other number
+  // — and a single-notice fixture is exactly the one case that cannot see it.
+  it("reads the centre in the reader's own language, at a plural count", async () => {
     vi.stubGlobal(
       "fetch",
-      backendFor([notice("n1", "A lead is past its deadline")]).fetchMock,
+      backendFor([
+        notice("n1", "A lead is past its deadline"),
+        notice("n2", "An automation could not run", {
+          created_at: "2026-09-14T09:00:00Z",
+        }),
+      ]).fetchMock,
     );
     const user = userEvent.setup();
     render(<NotificationBell />, "de");
 
-    await user.click(await screen.findByRole("button", { name: /wartet/i }));
+    const bell = await screen.findByRole("button", {
+      name: "Meldungen, 2 offen",
+    });
+    await user.click(bell);
 
     expect(
       await screen.findByRole("button", {

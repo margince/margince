@@ -4722,10 +4722,17 @@ export const de = {
   "notice.dueAt": "Fällig am {date}",
   "notice.overdue": "Überfällig",
   "notifications.bell": "Meldungen",
-  "notifications.bellWaiting": "Meldungen, {count} wartet",
+  // "offen" rather than a verb: German agrees its verb with the count, so any
+  // wording built on "wartet"/"warten" is wrong at one of the two numbers, and
+  // a count interpolated into a sentence cannot pick. An adjective agrees with
+  // nothing and is right at every count.
+  "notifications.bellWaiting": "Meldungen, {count} offen",
   "notifications.centre": "Meldungen",
   "notifications.markAllRead": "Alle als gelesen markieren",
   "notifications.markRead": "Als gelesen markieren",
+  "notifications.markAllFailed": "Es wurde nichts als gelesen markiert",
+  "notifications.markReadFailed":
+    "Diese Meldung wurde nicht als gelesen markiert",
   "notifications.new": "Neu",
   "notifications.byAgent": "Von einem Agenten",
   "notifications.empty":
@@ -4734,6 +4741,7 @@ export const de = {
   "notifications.sub":
     "Jede Meldung bleibt in Ihrem Meldungszentrum, was Sie hier auch wählen. Dies entscheidet, was außerdem geschieht, wenn eine eintrifft.",
   "notifications.saveFailed": "Diese Wahl wurde nicht gespeichert",
+  "notifications.saveFailedFor": "„{setting}“ wurde nicht gespeichert",
   "notifications.class.approval_pending.label": "Freigaben, die auf Sie warten",
   "notifications.class.approval_pending.help":
     "Jemand braucht Ihre Entscheidung, damit seine Arbeit weitergehen kann.",

@@ -224,6 +224,10 @@ describe("NotificationSettingsCard", () => {
 
     const alert = await screen.findByRole("alert");
     expect(alert.textContent).toContain("coaching cannot be switched off");
+    // AND IT NAMES THE ROW. Six dropdowns share this one surface and it sits
+    // under all of them, so a failure that named none would leave the reader
+    // checking each in turn to find which did not take.
+    expect(alert.textContent).toContain("Automations that ran");
     // And the control does not pretend the choice landed.
     expect(
       screen.getByRole("combobox", { name: /Automations that ran/i })

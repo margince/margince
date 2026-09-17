@@ -4848,6 +4848,8 @@ export const en = {
   "notifications.centre": "Notifications",
   "notifications.markAllRead": "Mark all read",
   "notifications.markRead": "Mark read",
+  "notifications.markAllFailed": "Nothing was marked read",
+  "notifications.markReadFailed": "That notice was not marked read",
   "notifications.new": "New",
   "notifications.byAgent": "By an agent",
   "notifications.empty":
@@ -4856,6 +4858,7 @@ export const en = {
   "notifications.sub":
     "Every notice is kept in your notification centre whatever you choose here. This decides what else happens when one lands.",
   "notifications.saveFailed": "That choice was not saved",
+  "notifications.saveFailedFor": "“{setting}” was not saved",
   "notifications.class.approval_pending.label": "Approvals waiting on you",
   "notifications.class.approval_pending.help":
     "Somebody needs your decision before their work can go on.",

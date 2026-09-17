@@ -5,10 +5,15 @@ import { Bell } from "lucide-react";
 import { useCallback, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Badge, Button, EmptyState } from "../design-system/atoms";
+import { Callout } from "../design-system/callout";
 import { Panel, PanelBody } from "../design-system/panel";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { LoadMoreButton, QueryStates } from "../screens/common";
+import {
+  LoadMoreButton,
+  problemMessageOf,
+  QueryStates,
+} from "../screens/common";
 import {
   NOTIFICATIONS_KEY,
   type NotificationItem,
@@ -85,7 +90,16 @@ export function NotificationBell() {
               })
             : t("notifications.bell")
         }
-        aria-haspopup="dialog"
+        // NO `aria-haspopup`, which is deliberate and follows the agent rail
+        // rather than the account menu. `aria-haspopup` names WHAT opens, and
+        // the two house popovers answer it differently for a reason: the
+        // account menu declares "menu" because it renders a real menu of
+        // menuitems, and the rail's portalled panel declares nothing because it
+        // renders a region. This is the rail's shape — a panel of prose, links
+        // and verbs — and it does not manage focus the way a dialog must, so
+        // claiming "dialog" would swap one false announcement for another.
+        // `aria-expanded` and `aria-controls` say the true thing: this button
+        // expands that region.
         aria-expanded={open}
         aria-controls={open ? panelId : undefined}
         onClick={() => setOpen((current) => !current)}
@@ -121,6 +135,12 @@ function NotificationCentre({
 }: Readonly<{ query: ReturnType<typeof useNotifications> }>) {
   const t = useT();
   const settleAll = useMarkAllNoticesRead();
+  // ONE hook for every row rather than one per row, because one hook is what
+  // lets one error surface speak for whichever row failed. The row still sends
+  // its OWN id as the variable, and `settle.variables` is what that id comes
+  // back as — so the pending mark stays on the button that was pressed instead
+  // of spreading to all of them.
+  const settle = useNoticeRead([NOTIFICATIONS_KEY, worklistKey]);
   const rows = query.data?.pages.flatMap((page) => page.items) ?? [];
   return (
     <Panel
@@ -139,6 +159,36 @@ function NotificationCentre({
       }
     >
       <PanelBody>
+        {/* A REFUSED SETTLE HAS TO BE SAID. Both verbs here leave the same
+            rendering behind when they fail as a click that did nothing would —
+            the mark stops turning, the badge does not move — so without this
+            the reader is left to guess whether they missed the button.
+
+            A Callout rather than the toast the Worklist's own acknowledge
+            raises, because this surface is portalled and dismissible: a toast
+            fires at the app's toast root, outside the panel, and would still be
+            standing after an outside click had taken away the row it is about.
+            The Callout sits where the reader is already looking and leaves with
+            the panel. It is also what the preferences page in this feature
+            does, so one feature has one way of reporting a refused write. */}
+        {settleAll.isError && (
+          <Callout
+            tone="danger"
+            kind="outcome"
+            title={t("notifications.markAllFailed")}
+          >
+            {problemMessageOf(settleAll.error, t)}
+          </Callout>
+        )}
+        {settle.isError && (
+          <Callout
+            tone="danger"
+            kind="outcome"
+            title={t("notifications.markReadFailed")}
+          >
+            {problemMessageOf(settle.error, t)}
+          </Callout>
+        )}
         <QueryStates query={query} pendingLabel={t("notifications.centre")}>
           {rows.length === 0 ? (
             <EmptyState>{t("notifications.empty")}</EmptyState>
@@ -146,7 +196,14 @@ function NotificationCentre({
             <>
               <ul className="notifbell-list">
                 {rows.map((notice) => (
-                  <NoticeRow key={notice.id} notice={notice} />
+                  <NoticeRow
+                    key={notice.id}
+                    notice={notice}
+                    onSettle={settle.mutate}
+                    settling={
+                      settle.isPending && settle.variables === notice.id
+                    }
+                  />
                 ))}
               </ul>
               <LoadMoreButton query={query} />
@@ -170,11 +227,17 @@ function agentAuthored(notice: NotificationItem): boolean {
   return notice.origin?.actor_type === "agent";
 }
 
-function NoticeRow({ notice }: Readonly<{ notice: NotificationItem }>) {
+function NoticeRow({
+  notice,
+  onSettle,
+  settling,
+}: Readonly<{
+  notice: NotificationItem;
+  onSettle: (id: string) => void;
+  /** Whether the write in flight is THIS row's, rather than any row's. */
+  settling: boolean;
+}>) {
   const t = useT();
-  // The centre and the Worklist's lane count the same rows, so settling one
-  // here has to reach both or the two doors disagree about what is left.
-  const settle = useNoticeRead([NOTIFICATIONS_KEY, worklistKey]);
   const route = recordRoute(notice.target?.type, notice.target?.id);
   const settled = notice.read_at !== undefined;
   return (
@@ -204,11 +267,7 @@ function NoticeRow({ notice }: Readonly<{ notice: NotificationItem }>) {
           notice settled by a visit they had not made yet. */}
       {!settled && (
         <div className="notifrow-verb">
-          <Button
-            small
-            pending={settle.isPending}
-            onClick={() => settle.mutate(notice.id)}
-          >
+          <Button small pending={settling} onClick={() => onSettle(notice.id)}>
             {t("notifications.markRead")}
           </Button>
         </div>
