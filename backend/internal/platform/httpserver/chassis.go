@@ -11,6 +11,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"net/url"
 	"runtime/debug"
 	"strings"
 	"time"
@@ -112,51 +113,23 @@ func SecureHeaders(next http.Handler) http.Handler {
 	})
 }
 
-// RequestOrigin reconstructs the externally visible scheme+host — the
-// origin a client outside the fronting proxy actually sees. TLS
-// terminates ahead of the chassis in production, so the forwarded proto
-// wins when present. Consumers: the OAuth discovery documents (RFC 8414 /
-// RFC 9728) and the 401 challenge's resource_metadata pointer, both of
-// which must name an origin the client can dereference, not the internal
-// one the process is bound to.
-func RequestOrigin(r *http.Request) string {
-	const (
-		secure   = "https"
-		insecure = "http"
-	)
-	// Only the two legitimate values are honored; anything else in the
-	// forwarded header is attacker noise. Host itself must be sanitized
-	// by the fronting proxy — the metadata documents say so.
-	scheme := secure
-	switch forwardedProto(r) {
-	case secure:
-	case insecure:
-		scheme = insecure
-	default:
-		if r.TLS == nil {
-			scheme = insecure
-		}
-	}
-	return scheme + "://" + r.Host
-}
-
-// forwardedProto reads the scheme the OUTERMOST proxy saw out of
-// X-Forwarded-Proto. Each hop APPENDS to the header, so a chain arrives as
-// "https, http": the client-facing scheme is the FIRST element, and every
-// later one describes an internal hop.
+// ConfiguredOrigin reduces a configured public URL to the scheme+host a client
+// outside the fronting proxy dereferences. Consumers: the OAuth discovery
+// documents (RFC 8414 / RFC 9728), the 401 challenge's resource_metadata
+// pointer and the connector's Origin allowlist — every place this process tells
+// a client where it lives.
 //
-// Taking the whole value would match neither case arm above and fall through
-// to r.TLS, which is nil behind a terminating proxy — so a two-hop deployment
-// would advertise an http:// origin in the OAuth discovery documents and in
-// the protected-resource URL, which is the one thing they exist to state
-// correctly. The value is also trimmed and lowercased because the header is a
-// token, not a literal.
-func forwardedProto(r *http.Request) string {
-	proto := r.Header.Get("X-Forwarded-Proto")
-	if comma := strings.IndexByte(proto, ','); comma >= 0 {
-		proto = proto[:comma]
+// It reads CONFIGURATION, never the request. An origin rebuilt from Host or a
+// forwarded header is whatever the sender (or a proxy passing their header on)
+// chose, and these documents name the endpoints a client hands its
+// authorization code and PKCE verifier to. An unparseable value answers the
+// empty string, which each consumer treats as "nothing to advertise".
+func ConfiguredOrigin(raw string) string {
+	u, err := url.Parse(raw)
+	if err != nil || u.Scheme == "" || u.Host == "" {
+		return ""
 	}
-	return strings.ToLower(strings.TrimSpace(proto))
+	return u.Scheme + "://" + u.Host
 }
 
 // BearerToken reads the credential out of an Authorization header value, and

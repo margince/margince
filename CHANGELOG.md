@@ -36,6 +36,11 @@ when it has content.
 
 ### Fixed
 
+- **The MCP connector's OAuth discovery documents name the configured public
+  origin.** Their issuer and endpoint URLs, and the pointer the transport's 401
+  carries, are built from `--public-base-url` rather than from the request, and
+  are sent `Cache-Control: no-store`. With no public base URL configured they
+  answer 404, as they do with the connector off.
 - The exchange-rate refresh accepts a rate from the page it reads only as a plain
   decimal — digits and one decimal point, within bounded widths — and drops any
   other form before parsing it, the shape the currency sheet itself accepts.

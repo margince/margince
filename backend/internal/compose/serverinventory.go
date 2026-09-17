@@ -218,8 +218,9 @@ type Server struct {
 	appViews *apps.Provider
 
 	// mcpAllowedOrigin is the scheme+host the connector's Origin guard
-	// admits — derived by WithMCPResource from the configured
-	// --public-base-url, never from a request header a caller controls.
+	// admits and its 401 challenge points at — derived by WithMCPResource
+	// from the configured --public-base-url, never from a request header a
+	// caller controls.
 	mcpAllowedOrigin string
 
 	// metricsToken gates /metrics, injected by WithMetricsToken from the
