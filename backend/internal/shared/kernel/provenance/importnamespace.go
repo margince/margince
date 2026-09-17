@@ -3,7 +3,10 @@
 
 package provenance
 
-import "strings"
+import (
+	"sort"
+	"strings"
+)
 
 // ReservedSourceSystemPrefix namespaces a source_system only an IMPORT
 // may write.
@@ -23,10 +26,48 @@ const ReservedSourceSystemPrefix = "mirror:"
 // Their source identity links task state to the original email obligation.
 const EmailRequestSource = "email_request"
 
+// NoActivityReminderSource and CheckInCadenceSource name the quiet-account
+// reminders the automation engine mints, and they are reserved for the same
+// reason EmailRequestSource is: the activity store keys its idempotent replay
+// on (source_system, source_id) and tests nothing else about the row it finds
+// — not the source, not captured_by, not the kind. A caller able to spell one
+// of these could plant a row under a reminder's key and have the scan read it
+// back as already asked, so the reminder is never written and the silence
+// looks like success.
+//
+// renewal_reminder is deliberately absent: it carries no natural key, because
+// its due date stays on the anchor rather than a fixed horizon.
+const (
+	NoActivityReminderSource = "no_activity_reminder"
+	CheckInCadenceSource     = "check_in_cadence"
+)
+
+// internalSourceSystems are the exact identities only an internal writer may
+// spell. Exact names rather than a second prefix: these are already written
+// into rows, and renaming them to fit a namespace would strand every row that
+// carries the old spelling.
+var internalSourceSystems = map[string]bool{
+	EmailRequestSource:       true,
+	NoActivityReminderSource: true,
+	CheckInCadenceSource:     true,
+}
+
 // ReservedSourceSystem reports whether a client-supplied source system
 // trespasses on the importer's namespace.
 func ReservedSourceSystem(sourceSystem string) bool {
-	return sourceSystem == EmailRequestSource || strings.HasPrefix(sourceSystem, ReservedSourceSystemPrefix)
+	return internalSourceSystems[sourceSystem] || strings.HasPrefix(sourceSystem, ReservedSourceSystemPrefix)
+}
+
+// internalSourceSystemList names the reserved identities for a refusal, sorted
+// so the message is stable. Derived from the map rather than written out again:
+// a fourth identity must not be addable without the refusal naming it.
+func internalSourceSystemList() string {
+	names := make([]string, 0, len(internalSourceSystems))
+	for name := range internalSourceSystems {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return strings.Join(names, ", ")
 }
 
 // ReservedError refuses a client write into the importer's namespace,
@@ -37,7 +78,7 @@ func ReservedSourceSystem(sourceSystem string) bool {
 type ReservedError struct{ Field, Value string }
 
 func (e *ReservedError) Error() string {
-	return e.Field + " " + e.Value + " is reserved for internal writes; omit it or choose ordinary provenance outside the " + ReservedSourceSystemPrefix + " namespace and " + EmailRequestSource
+	return e.Field + " " + e.Value + " is reserved for internal writes; omit it or choose ordinary provenance outside the " + ReservedSourceSystemPrefix + " namespace and " + internalSourceSystemList()
 }
 
 // FieldFault states the refusal as caller-fixable, which is how it
