@@ -44,11 +44,14 @@ import (
 // row is not a reason to fail a crawl that already succeeded — the scheduled
 // sweep comes back round for the same company either way.
 //
-// Two ways it correctly does nothing. A read that resolved no company has
-// no company to look up: the domain-triage lane runs before an account exists,
-// and reading a site to decide whether to CREATE a company cannot enrich one.
-// And a deployment whose worker role registered no enricher rejects the kind at
-// insert, which is the honest answer rather than a row nothing will ever work.
+// One way it correctly does nothing: a read that resolved no company has no
+// company to look up, because the domain-triage lane runs before an account
+// exists, and reading a site to decide whether to CREATE a company cannot
+// enrich one.
+//
+// A deployment that configures no enricher is NOT that case. The kind stays
+// registered there (api/jobs.yaml declares `absent: registers_anyway`), so the
+// row is queued and the worker records what it could not read.
 func (w *siteDeepReadWorker) askWhatTheCompanyRuns(ctx context.Context, claim contacts.SiteReadClaim) {
 	if claim.CompanyID == nil {
 		return

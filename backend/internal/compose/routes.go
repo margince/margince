@@ -163,16 +163,8 @@ func operationalMux(srv Server, pool *pgxpool.Pool, log *slog.Logger, identitySv
 	// configures one.
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", httpserver.Healthz)
-	// What is NOT checked here, said at the line where it would go: whether the
-	// composed units' MIGRATIONS were applied. A composed binary against a
-	// not-yet-migrated database becomes ready and publishes routes and jobs that
-	// fail with undefined-table errors — the ordinary rolling-deploy window.
-	// AssertRuntimeRole beside it is the pattern such a check would follow; the
-	// reason it is not here is that the runtime role holds no grant on the
-	// schema_migrations_ext_* tables, so adding the check means widening what
-	// margince_app may read. Tracked as issue #658.
 	mux.HandleFunc("/readyz", httpserver.Readyz(srv.aiStateOrDefault(), srv.readyzEmbedState(), srv.readinessChecks(pool.Ping,
-		func(ctx context.Context) error { return AssertRuntimeRole(ctx, pool) })...))
+		func(ctx context.Context) error { return AssertRuntimeRole(ctx, pool) }, SchemaAtHead(pool))...))
 	// The claim surface, beside the probes rather than under /v1: the session
 	// middleware fronting /v1 resolves the singleton company first and
 	// answers 503 when there is none, so an endpoint that exists to run when no

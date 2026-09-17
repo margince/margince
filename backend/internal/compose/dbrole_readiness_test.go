@@ -11,7 +11,7 @@ func TestReadinessChecksAlwaysIncludeTheRuntimeRole(t *testing.T) {
 	// never opt out of the probe by omitting an option.
 	srv := &Server{}
 
-	checks := srv.readinessChecks(okPing, okPing)
+	checks := srv.readinessChecks(okPing, okPing, okPing)
 
 	if !hasCheck(checks, "runtime-role") {
 		t.Fatal("readiness checks omit the runtime-role probe")

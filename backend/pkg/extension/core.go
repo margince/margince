@@ -88,5 +88,14 @@ var (
 	ErrConflict = errors.New("extension: the record changed under this write")
 
 	// ErrInvalid is a request the contract does not admit.
+	//
+	// VALIDATE BEFORE THE DRIVER SEES IT. This is the one refusal the core
+	// cannot make on a unit's behalf: a malformed argument handed straight to
+	// Tx.Exec — an id that is not a UUID, a number where a timestamp belongs —
+	// comes back as a database driver's parse error, which is indistinguishable
+	// from a real database fault at the seam. The caller is then told the server
+	// broke, and an agent is told to retry a call that can only fail again. A
+	// unit that checks its own arguments and answers this instead is the only
+	// thing that makes that case read correctly.
 	ErrInvalid = errors.New("extension: the request is malformed")
 )

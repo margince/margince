@@ -209,6 +209,11 @@ func workerReadyChecks(pool *pgxpool.Pool, rdb *redis.Client, boot *bootGate) []
 		// attributes are cluster state a grant can change under a running
 		// replica without restarting it.
 		{Name: "runtime-role", Check: func(ctx context.Context) error { return compose.AssertRuntimeRole(ctx, pool) }},
+		// The same probe the api mounts. A worker is the half of the ticket
+		// with no request to fail: its dispatcher ticks on a cadence and a
+		// missing table is a recurring job fault nobody is waiting on, so an
+		// unready replica is the only thing that says so.
+		{Name: "schema-migrations", Check: compose.SchemaAtHead(pool)},
 		{Name: "redis", Check: func(ctx context.Context) error { return rdb.Ping(ctx).Err() }},
 	}
 }

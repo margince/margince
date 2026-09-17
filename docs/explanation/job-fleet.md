@@ -109,7 +109,8 @@ posture, never a licence:
   picked-up row fails with an actionable message instead of rotting queued. The **same** dependency
   takes different postures on different kinds — `Embedder` registers nothing for the embed drift
   sweep and anyway for a reindex — which is why the posture is per kind and never per field. A
-  posture declared with no condition to be absent from fails generation.
+  posture declared with no condition to be absent from fails generation, and the census holds the
+  wiring to what each kind declares by withholding one dependency at a time (§8).
 - **`fault: {nil_after_logging: …}`** — this worker logs a failure and returns `nil`, and the text is
   the durable retry policy that makes a green River row honest (the connector sidecar's
   `next_sync_at`, a build row's own `deferred` state). Omitted, the worker must return what went
@@ -468,6 +469,15 @@ single end: the union stops an undeclared kind compiling, `MustBeTotal` refuses 
 anyway, `Govern` makes the declared timeout the one River applies — none of them can see a kind that
 was declared and never wired.
 
+It reads a **maximally-configured** role, which is the only way to see the contract's full extent and
+is exactly why it needs a second pass for the registration postures: with every dependency supplied,
+the question `absent:` answers never comes up. `jobcensusposture.go` withholds one declared
+dependency at a time, rebuilds the wiring, and holds what got registered to what `registers()` says
+should have. Both directions are findings — a kind declaring *registers anyway* that no guard
+registers is a row refused at insert with a message about River's worker bundle, and a kind declaring
+*registers nothing* that a guard registers anyway is a worker waiting for rows the schedule half will
+never enqueue.
+
 ---
 
 ## Rules of thumb
@@ -503,7 +513,7 @@ was declared and never wired.
 | The ONE fleet enumeration + the three fan-out helpers | `internal/compose/dispatch.go` |
 | Workspace binding | `internal/compose/workspacejob.go` |
 | Schedule resolution from the declared cadence | `internal/compose/jobschedule.go` |
-| The census (contract ⟷ wiring, both directions) | `internal/compose/jobcensus.go`, `jobcensusconfig.go` |
+| The census (contract ⟷ wiring, both directions) | `internal/compose/jobcensus.go`, `jobcensusconfig.go`, `jobcensusposture.go` |
 | Per-concern workers and args types | `internal/compose/jobs_*.go` |
 | The fitness gates | `backend/job*_test.go` |
 

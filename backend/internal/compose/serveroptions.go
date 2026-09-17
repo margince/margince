@@ -337,7 +337,8 @@ func WithRetrievalEmbedder(embedder search.Embedder) Option {
 }
 
 // readinessChecks assembles the /readyz dependency probes for this role.
-// Postgres and the runtime role it connects as are always probed; the bus,
+// Postgres, the runtime role it connects as and the schema it was built
+// against are always probed; the bus,
 // the object store, the secret vault, and the schema pool are probed only
 // when this role wired them, so a split deployment answers ready on exactly
 // what it depends on. A wedged dependency must fail readiness — a probe is
@@ -346,7 +347,7 @@ func WithRetrievalEmbedder(embedder search.Embedder) Option {
 // runtimeRole takes the same shape as pgPing rather than a pool, because the
 // two unit-testable states here are the answers, not the connections: both
 // arrive as the caller's readings of the one pool routes.go serves from.
-func (s *Server) readinessChecks(pgPing, runtimeRole func(context.Context) error) []httpserver.ReadyCheck {
+func (s *Server) readinessChecks(pgPing, runtimeRole, schema func(context.Context) error) []httpserver.ReadyCheck {
 	checks := []httpserver.ReadyCheck{
 		{Name: "postgres", Check: pgPing},
 		// Boot already refused a pool holding an exemption; this reports the
@@ -354,6 +355,11 @@ func (s *Server) readinessChecks(pgPing, runtimeRole func(context.Context) error
 		// attributes are cluster state a grant can change under a running
 		// replica without restarting it.
 		{Name: "runtime-role", Check: runtimeRole},
+		// Re-read on every scrape rather than settled at boot: the ordinary
+		// deployment order starts the new binary and applies the migrations
+		// after it, so the first scrapes are meant to fail and a later one to
+		// pass — without a restart. schemareadiness.go carries the rest.
+		{Name: "schema-migrations", Check: schema},
 	}
 	if s.busReady != nil {
 		checks = append(checks, httpserver.ReadyCheck{Name: "redis", Check: s.busReady})

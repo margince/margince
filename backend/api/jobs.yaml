@@ -676,7 +676,7 @@ kinds:
     queue: default
     timeout: 5m
     opts_owner: caller
-    registration: {when: [SendRegistry], absent: registers_nothing}
+    registration: {when: [SendRegistry, SendDelivery], absent: registers_nothing}
     args:
       Workspace: id
       ScheduledSendID: id
