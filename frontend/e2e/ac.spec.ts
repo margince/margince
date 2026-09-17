@@ -1183,8 +1183,13 @@ test("AC-book-public (B-EP09.14): consent gates booking and the policy passes th
   const body = request.postDataJSON();
   // the wording the visitor SAW is byte-for-byte what was submitted
   expect(body.consent.wording).toBe(shownWording);
-  expect(body.consent.purpose_id).toBeTruthy();
   expect(body.consent.policy_version).toBeTruthy();
+  // And NO purpose id. Purpose ids are per-installation uuids minted at seed
+  // time with no anonymous read of them, so anything an anonymous page put here
+  // would be a value it was never given — which is what a stand-in id did, on
+  // every installation, until the door learned to resolve its own lane. The
+  // page names the wording it showed and nothing the server already knows.
+  expect(body.consent.purpose_id).toBeUndefined();
   // Exact: this build transmits nothing, so the card confirms the slot and
   // promises nothing beyond it. A substring is satisfied by a longer sentence
   // that does promise something, which is the claim this copy had removed.
@@ -1715,8 +1720,9 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe), the agent's panel at 390px in dark"
  * So the undecided findings are PRINTED, with axe's own reason attached, on a
  * line a human reading the run can see. That is a real gap and it is stated as
  * one: an incomplete `color-contrast` is a colour nobody has verified, and the
- * only thing standing behind those today is the token law in tokens.css — meta
- * text takes `--textMeta`, and `--textTertiary` is for marks.
+ * only thing standing behind those today is the token law in tokens.css — there
+ * are two neutral inks, `--textPrimary` and `--textSecondary`, and nothing
+ * quieter than the second.
  */
 // What a colour-contrast check carries when it could MEASURE the pair. Axe
 // types `data` as unknown and fills it per check, so a rule that is not
@@ -1828,8 +1834,8 @@ async function expectNoAaViolations(page: Page, screen: string) {
     const painted = await page.evaluate(() => ({
       dataTheme: document.documentElement.getAttribute("data-theme"),
       prefersDark: window.matchMedia("(prefers-color-scheme: dark)").matches,
-      textMeta: getComputedStyle(document.documentElement)
-        .getPropertyValue("--textMeta")
+      textSecondary: getComputedStyle(document.documentElement)
+        .getPropertyValue("--textSecondary")
         .trim(),
       bgPage: getComputedStyle(document.documentElement)
         .getPropertyValue("--bgPage")

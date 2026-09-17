@@ -66,6 +66,7 @@ type Assembler struct {
 	traces     *capture.TraceStore
 	activities *activities.Store
 	threads    ThreadReader
+	domains    DomainTriageReader
 	payloads   bool
 }
 

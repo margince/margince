@@ -13,7 +13,7 @@ var draftEmailCopy = toolCopy{
 	Limits: "It writes the message and stops: nothing is sent. With no drafting model configured " +
 		"the text is a short deterministic note rather than a composed one.",
 	Instead: "draft_follow_ups_for drafts across a set of slipping deals at once; send_email " +
-		"sends a reply, send_account_email a first message.",
+		"sends a reply, send_company_email a first message.",
 	Retain: "Keep what comes back — subject, body, and the activity_id or links echoed with it; " +
 		"the send takes them. Re-writing the text in between means a human approves one " +
 		"message and another goes out.",
@@ -46,7 +46,7 @@ var sendEmailCopy = toolCopy{
 		"approval.",
 }
 
-var sendAccountEmailCopy = toolCopy{
+var sendCompanyEmailCopy = toolCopy{
 	Purpose: "Put a mail on the wire to a real recipient, from this workspace, starting a new " +
 		"conversation rather than answering one, and file it on the records it is about.",
 	Limits: "Sends EXACTLY the subject and body given; composes nothing. Needs at least one link " +

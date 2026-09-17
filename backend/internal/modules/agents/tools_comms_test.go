@@ -37,7 +37,7 @@ func (c *recordingComms) DraftEmail(context.Context, ids.UUID, string) (string, 
 	return "", "", nil
 }
 
-func (c *recordingComms) DraftAccountEmail(_ context.Context, links []RecordLink, _ string) (string, string, error) {
+func (c *recordingComms) DraftCompanyEmail(_ context.Context, links []RecordLink, _ string) (string, string, error) {
 	c.accountDrafted = links
 	return "Following up", "As discussed.", nil
 }
@@ -46,7 +46,7 @@ func (c *recordingComms) SendEmail(context.Context, ids.UUID, SendEmailArgs) (Se
 	return SendEmailResult{}, nil
 }
 
-func (c *recordingComms) SendAccountEmail(_ context.Context, links []RecordLink, _ SendEmailArgs) (SendEmailResult, error) {
+func (c *recordingComms) SendCompanyEmail(_ context.Context, links []RecordLink, _ SendEmailArgs) (SendEmailResult, error) {
 	c.accountSent = links
 	return SendEmailResult{ActivityID: ids.New[ids.ActivityKind]().UUID, Status: "accepted"}, nil
 }
@@ -538,7 +538,7 @@ func TestDraftEmailComposesAFirstMessageFromLinksAlone(t *testing.T) {
 	if got.Subject == "" || got.Body == "" {
 		t.Errorf("draft = %+v, want a subject and a body", got)
 	}
-	// The links are echoed because send_account_email takes them: a caller
+	// The links are echoed because send_company_email takes them: a caller
 	// re-deriving them can file the conversation under the wrong record.
 	if len(got.Links) != 1 || got.Links[0].EntityID != company {
 		t.Errorf("draft echoed links %+v, want the company it was given", got.Links)
@@ -591,7 +591,7 @@ func TestDraftingAFirstMessageRefusesALinkTheCallerCannotRead(t *testing.T) {
 }
 
 // The cap the follow-on send enforces is enforced here too, so a draft cannot
-// succeed with a link set send_account_email would refuse.
+// succeed with a link set send_company_email would refuse.
 func TestDraftingAFirstMessageAppliesTheSendsLinkCap(t *testing.T) {
 	links := make([]string, 0, maxRecordLinks+1)
 	for range maxRecordLinks + 1 {

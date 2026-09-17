@@ -39,7 +39,7 @@ type introDraft struct {
 // one wrote it.
 func writeIntroRequest(
 	ctx context.Context, lane Completer, facts introFacts,
-) crmcontracts.AccountEmailDraft {
+) crmcontracts.CompanyEmailDraft {
 	floor := introFloor(facts)
 	if lane == nil {
 		return wireIntroRequest(floor, crmcontracts.WrittenByDeterministic, facts)

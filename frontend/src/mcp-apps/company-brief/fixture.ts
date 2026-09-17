@@ -12,7 +12,7 @@ import type { Envelope } from "../types";
  * So a member added here that the tool does not answer is a finding, and a
  * member the tool REQUIRES and this omits is one too.
  */
-export const accountBriefFixture: Envelope = {
+export const companyBriefFixture: Envelope = {
   data: {
     brief_id: "3f2504e0-4f89-41d3-9a0c-0305e82c3301",
     generated_at: "2026-08-10T06:15:00Z",

@@ -1591,7 +1591,7 @@ export const de = {
   "approval.kind.relink_thread": "Konversation neu zuordnen",
   "approval.kind.relink_activities": "Mehrere Aktivitäten neu zuordnen",
   "approval.kind.scheduled_send_held": "Gestoppte Nachricht freigeben",
-  "approval.kind.send_account_email": "E-Mail an ein Unternehmen senden",
+  "approval.kind.send_company_email": "E-Mail an ein Unternehmen senden",
   "approval.kind.send_message": "Nachricht senden",
   "approval.field.basis": "Warum",
   "approval.field.step": "Der Schritt",
@@ -2583,8 +2583,10 @@ export const de = {
   "deal.committee.engagement": "Beteiligung",
   "deal.strip.close": "Der Abschluss",
   "deal.strip.close.none": "Kein Datum",
-  "deal.strip.close.inDays": "in {days} Tagen",
-  "deal.strip.close.overdue": "{days} Tage über dem Datum",
+  "deal.strip.close.inDays_one": "in {days} Tag",
+  "deal.strip.close.inDays_other": "in {days} Tagen",
+  "deal.strip.close.overdue_one": "{days} Tag über dem Datum",
+  "deal.strip.close.overdue_other": "{days} Tage über dem Datum",
   "deal.strip.close.provisional": "vorläufig, von niemandem bestätigt",
   "deal.strip.close.waiting": "wir sollen bis {date} warten",
   "deal.forecast.commit": "zugesagt",
@@ -7162,6 +7164,26 @@ export const de = {
     "diese Konversation umfasst zwei Projekte, ihre Erkenntnisse wären für eines davon falsch",
   "pipeline.reason.thread_not_all_open":
     "eine Nachricht dieser Konversation ist einem Teil ihrer Leser vorenthalten; eine Zusammenfassung des Ganzen wäre ein Teilbericht, der als vollständig erscheint",
+  "pipeline.reason.answered_on_the_company":
+    "Dieser Schritt fragt nach der Domain des Absenders und nicht nach einer einzelnen Nachricht, also wird er einmal beim Unternehmen beantwortet statt bei jeder Nachricht von dort wiederholt.",
+  "pipeline.reason.company_warranted":
+    "Diese Domain rechtfertigt einen Unternehmensdatensatz, und dies ist er",
+  "pipeline.reason.no_site_identified":
+    "Auf der Website dieser Domain war kein Unternehmen zu erkennen, also wurde stattdessen der Name des Absenders verwendet",
+  "pipeline.reason.triage_queued":
+    "Diese Domain wartet darauf, geprüft zu werden",
+  "pipeline.reason.triage_unevidenced":
+    "Von dieser Domain wurde noch nichts gesehen, das ein Unternehmen belegen würde",
+  "pipeline.reason.triage_stale_evidence":
+    "Was von dieser Domain gesehen wurde, ist zu alt für eine Entscheidung",
+  "pipeline.reason.triage_near_duplicate":
+    "Diese Domain ähnelt einer bereits erfassten und wird zurückgehalten statt doppelt angelegt",
+  "companyTriage.title": "Woher dieses Unternehmen stammt",
+  "companyTriage.sub":
+    "Die geprüften Mail-Domains und was jede Prüfung ergeben hat.",
+  "companyTriage.empty":
+    "Keine Mail-Domain wurde in dieses Unternehmen eingeordnet — es wurde von Hand erfasst oder von anderswo übernommen.",
+  "companyTriage.checkedAt": "geprüft {when}",
   "pipeline.reason.no_named_reader":
     "diese Konversation hat keinen Leser, dem eine Erkenntnis zuzuordnen wäre",
   "pipeline.reason.transport_not_read":
@@ -7181,8 +7203,6 @@ export const de = {
   "pipeline.reason.would_restore_erased":
     "dies auszuweisen würde Daten wiederherstellen, die eine Löschung entfernt hat",
   "pipeline.reason.no_writer_yet": "diesen Schritt gibt es noch nicht",
-  "pipeline.reason.not_reported_yet":
-    "dieser Schritt läuft, wird hier aber noch nicht ausgewiesen",
   "settings.tab.maintenance": "Wartung",
   "settings.tab.license": "Lizenz",
   "license.card.title": "Lizenz und Sitzplätze",
@@ -8584,6 +8604,8 @@ export const de = {
     "Die aktuelle Version dieser Zeile konnte nicht zum Speichern zurückgelesen werden. Lade neu und versuche es erneut.",
   "contact.rail.employmentTitle": "Unternehmen",
   "contact.rail.noEmployment": "Keine Beschäftigung erfasst.",
+  "contact.rail.noPrimaryEmployer":
+    "Kein Hauptarbeitgeber — bitte einen wählen.",
   "contact.rail.addEmployment": "Unternehmen hinzufügen",
   "contact.employer.contacts_one": "{count} Kontakt",
   "contact.employer.contacts_other": "{count} Kontakte",
@@ -9224,7 +9246,10 @@ export const de = {
   "project.assignOwnerDone": "{name} zugewiesen",
   "project.description": "Beschreibung",
   "project.targetEnd": "Geplantes Ende",
-  "project.targetEndShort": "Ziel {date}",
+  "project.targetEnd.inDays_one": "in {days} Tag",
+  "project.targetEnd.inDays_other": "in {days} Tagen",
+  "project.targetEnd.overdue_one": "{days} Tag über dem Termin",
+  "project.targetEnd.overdue_other": "{days} Tage über dem Termin",
   "project.new": "Neues Projekt",
   "project.edit": "Projekt bearbeiten",
   "project.archive": "Projekt archivieren",

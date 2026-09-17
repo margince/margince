@@ -309,7 +309,7 @@ function renderWork(three60: Company360) {
   render(sinceLastVisitFooter(three60) ?? null);
 }
 
-// The lead panel, rendered on its own: it moved out of AccountBrief so the
+// The lead panel, rendered on its own: it moved out of CompanyBrief so the
 // stack could tint and box it separately, and the advice it carries is
 // exercised through it directly now.
 function renderSuggestions(

@@ -329,7 +329,7 @@ func handoffDeals(ctx context.Context, store *deals.Store, projectID ids.UUID) (
 // handoffStakeholders reads the contacts attached to the project, through the
 // generic relationship list so the edge's own visibility rules apply.
 //
-// A seat is an id and a role, with no name — the same shape account_coverage
+// A seat is an id and a role, with no name — the same shape company_coverage
 // answers a deal's stakeholder seats in. Naming them would need a gated
 // contact read per seat, and the caller already has read_record for the one
 // they want to reach; the field a handover is judged on is the role, and that

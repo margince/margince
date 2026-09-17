@@ -50,7 +50,7 @@
       "percent_of_ceiling": 7,
       "headroom_tokens": 20670,
       "dangling_cross_references": [
-        "at_risk_relationships → account_coverage",
+        "at_risk_relationships → company_coverage",
         "at_risk_relationships → intro_path_to",
         "at_risk_relationships → who_knows",
         "catch_me_up_on → prep_for_meeting",
@@ -75,7 +75,7 @@
       "tokens": 1010
     },
     {
-      "name": "send_account_email",
+      "name": "send_company_email",
       "tokens": 823
     },
     {
@@ -239,7 +239,7 @@
       "tokens": 266
     },
     {
-      "name": "account_coverage",
+      "name": "company_coverage",
       "tokens": 246
     },
     {
@@ -405,7 +405,7 @@
       "scenarios_naming_it_as_the_wrong_reach": 3
     },
     {
-      "name": "account_coverage",
+      "name": "company_coverage",
       "scenarios_naming_it_as_the_wrong_reach": 2
     },
     {

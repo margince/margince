@@ -48,8 +48,17 @@ export function renderedInside(root: string): Map<string, Set<string>[]> {
       // inside it are the element's.
       const own = classNamesOfElement(node);
       if (own.length > 0) {
+        // One Set per ELEMENT, appended in place under each host. Rebuilding
+        // the host's array per element made the walk quadratic in how many
+        // things a popular class contains — reading this tree cost ten seconds
+        // a call, past the timeout of the check that asks for it. Shared
+        // safely because nothing downstream writes to these sets; landsOn and
+        // overriddenInside only ask what an element carries.
+        const element = new Set(own);
         for (const host of hosts) {
-          inside.set(host, [...(inside.get(host) ?? []), new Set(own)]);
+          const below = inside.get(host);
+          if (below === undefined) inside.set(host, [element]);
+          else below.push(element);
         }
       }
       const below = own.length > 0 ? [...hosts, ...own] : hosts;

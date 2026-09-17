@@ -81,6 +81,10 @@ function page(view: unknown) {
 export const Page: Story = {
   render: page(
     project360({
+      // A target end, so the head's facts strip pictures the cell that reads
+      // it. The fixture's project carries none, which is the strip's OTHER
+      // state and the one PageWithheld and PageClosed below still draw.
+      project: project({ target_end_date: "2026-11-30" }),
       deals: {
         data: [
           {

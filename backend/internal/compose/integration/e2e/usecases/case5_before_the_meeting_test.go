@@ -225,7 +225,7 @@ func TestCase5EveryStakeholderIsNamedNotJustIdentified(t *testing.T) {
 	s := boot(t, scopesRead)
 	f := s.seedMeetingAccount(t)
 
-	got := s.MCP.CallOK(t, "account_coverage", map[string]any{"deal_id": f.deal.String()})
+	got := s.MCP.CallOK(t, "company_coverage", map[string]any{"deal_id": f.deal.String()})
 	var answer agents.DealCoverageAnswer
 	got.JSON(t, &answer)
 
@@ -283,7 +283,7 @@ func TestCase5AFindingNamesTheContactsItIsAbout(t *testing.T) {
 	s := boot(t, scopesRead)
 	f := s.seedMeetingAccount(t)
 
-	got := s.MCP.CallOK(t, "account_coverage", map[string]any{"deal_id": f.deal.String()})
+	got := s.MCP.CallOK(t, "company_coverage", map[string]any{"deal_id": f.deal.String()})
 	var answer agents.DealCoverageAnswer
 	got.JSON(t, &answer)
 
@@ -327,7 +327,7 @@ func TestCase5AColdAccountReportsHowManyDays(t *testing.T) {
 	s := boot(t, scopesRead)
 	f := s.seedColdAccount(t)
 
-	got := s.MCP.CallOK(t, "account_coverage", map[string]any{"deal_id": f.deal.String()})
+	got := s.MCP.CallOK(t, "company_coverage", map[string]any{"deal_id": f.deal.String()})
 	var answer agents.DealCoverageAnswer
 	got.JSON(t, &answer)
 

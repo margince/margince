@@ -403,12 +403,12 @@ type Server struct {
 	retrievalEmbedder search.Embedder
 	// companyBriefSvc writes both of the company view's grounded-prose surfaces:
 	// the standing account brief and the prepared "Ask Margince" questions.
-	// WithAccountBrief rebinds its model lane at boot, so the api role writes
+	// WithCompanyBrief rebinds its model lane at boot, so the api role writes
 	// with a model and every other role serves the same deterministic floor.
 	// (WithBrief is a different option — the Morning Brief's L2 ranker.)
 	companyBriefSvc *companybrief.Service
 	// company360Svc is the composite read the brief is assembled from, held so
-	// WithAccountBrief can rebuild the brief service over the SAME gated
+	// WithCompanyBrief can rebuild the brief service over the SAME gated
 	// read rather than a second one that might drift from it.
 	company360Svc *company360.Service
 	// contactsStore is shared by the 360 and the account brief: the brief reads

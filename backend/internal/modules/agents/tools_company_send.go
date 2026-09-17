@@ -3,7 +3,7 @@
 
 package agents
 
-// send_account_email — the account-started twin of send_email (ADR-0087 §6).
+// send_company_email — the account-started twin of send_email (ADR-0087 §6).
 // Its own file because the ORIGIN is what separates it from the mail verbs next
 // door: this one starts a conversation and names the records it belongs to,
 // where they answer one that already exists.
@@ -23,26 +23,26 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
-// sendAccountEmailTool carries a record reader like its reply twin, but reads
+// sendCompanyEmailTool carries a record reader like its reply twin, but reads
 // something else with it: the twin reads its ANCHOR, and this has none.
-type sendAccountEmailTool struct {
+type sendCompanyEmailTool struct {
 	comms Comms
 	p     datasource.SystemOfRecordProvider
 }
 
-// SendAccountEmailArgs is one account-started send: the reply's arguments,
+// SendCompanyEmailArgs is one account-started send: the reply's arguments,
 // minus the anchor, plus the records the new conversation is filed under.
-type SendAccountEmailArgs struct {
+type SendCompanyEmailArgs struct {
 	SendEmailArgs
 	Links []RecordLink `json:"links"`
 }
 
-func (t sendAccountEmailTool) Spec() mcp.ToolSpec {
+func (t sendCompanyEmailTool) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
-		Name: "send_account_email", Title: "Start an email conversation from a record", Version: toolVersionV1,
-		Description:   sendAccountEmailCopy.render(),
+		Name: "send_company_email", Title: "Start an email conversation from a record", Version: toolVersionV1,
+		Description:   sendCompanyEmailCopy.render(),
 		RequiredScope: principal.ScopeSend, Tier: mcp.TierAutoExecute, Egress: true,
-		OpenAPIOp: "sendAccountEmail",
+		OpenAPIOp: "sendCompanyEmail",
 		InputSchema: schema(`{"type":"object","required":["to","subject","body","links"],"properties":{
 			"to":{"type":"array","items":{"type":"string","format":"email"},"minItems":1},
 			"cc":{"type":"array","items":{"type":"string","format":"email"}},
@@ -67,12 +67,12 @@ func (t sendAccountEmailTool) Spec() mcp.ToolSpec {
 // the same operation — including the CREATE shape this stages, target type
 // `activity` with no id and no pin, which the REST door used to reach by a
 // different route entirely (its route carries no `{id}` for the walk to read).
-func (t sendAccountEmailTool) StageInfo(ctx context.Context, in json.RawMessage) (StageInfo, error) {
-	var args SendAccountEmailArgs
+func (t sendCompanyEmailTool) StageInfo(ctx context.Context, in json.RawMessage) (StageInfo, error) {
+	var args SendCompanyEmailArgs
 	if err := decodeArgs(in, &args); err != nil {
 		return StageInfo{}, err
 	}
-	return StageSubject(ctx, NewSendAccountEmailCall(t.p, SendAccountEmailCommand{
+	return StageSubject(ctx, NewSendCompanyEmailCall(t.p, SendCompanyEmailCommand{
 		To:      args.To,
 		Cc:      args.Cc,
 		Subject: args.Subject,
@@ -89,25 +89,25 @@ func (t sendAccountEmailTool) StageInfo(ctx context.Context, in json.RawMessage)
 // calls the SAME two functions the resolver's Guards calls rather than
 // restating either, so the approved retry cannot be admitted by a rule the
 // staging never applied.
-func readAccountSendArgs(in json.RawMessage) (SendAccountEmailArgs, []RecordLink, error) {
-	var args SendAccountEmailArgs
+func readAccountSendArgs(in json.RawMessage) (SendCompanyEmailArgs, []RecordLink, error) {
+	var args SendCompanyEmailArgs
 	if err := decodeArgs(in, &args); err != nil {
-		return SendAccountEmailArgs{}, nil, err
+		return SendCompanyEmailArgs{}, nil, err
 	}
 	if err := requireAddressee(args.To); err != nil {
-		return SendAccountEmailArgs{}, nil, err
+		return SendCompanyEmailArgs{}, nil, err
 	}
 	if err := requireAccountSendLinks(args.Links); err != nil {
-		return SendAccountEmailArgs{}, nil, err
+		return SendCompanyEmailArgs{}, nil, err
 	}
 	links, err := uniqueRecordLinks(args.Links)
 	if err != nil {
-		return SendAccountEmailArgs{}, nil, err
+		return SendCompanyEmailArgs{}, nil, err
 	}
 	return args, links, nil
 }
 
-func (t sendAccountEmailTool) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
+func (t sendCompanyEmailTool) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
 	args, links, err := readAccountSendArgs(in)
 	if err != nil {
 		return nil, err
@@ -130,5 +130,5 @@ func (t sendAccountEmailTool) Handle(ctx context.Context, in json.RawMessage) (j
 	for _, link := range links {
 		noteEvidence(ctx, datasource.EntityType(link.EntityType), link.EntityID)
 	}
-	return marshalResult(t.comms.SendAccountEmail(ctx, links, args.SendEmailArgs))
+	return marshalResult(t.comms.SendCompanyEmail(ctx, links, args.SendEmailArgs))
 }

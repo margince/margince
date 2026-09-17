@@ -165,7 +165,7 @@ func (a *accountSendEnv) pendingApprovals(t *testing.T) int {
 	var n int
 	if err := apptest.InWorkspace(a.AppEnv, t, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
-			`SELECT count(*) FROM approval WHERE kind = 'send_account_email'`).Scan(&n)
+			`SELECT count(*) FROM approval WHERE kind = 'send_company_email'`).Scan(&n)
 	}); err != nil {
 		t.Fatalf("counting staged approvals: %v", err)
 	}
@@ -221,7 +221,7 @@ func TestTheMCPDoorStagesTheSameShapeAsTheRESTDoor(t *testing.T) {
 // tier floor, against real Postgres.
 //
 // This test used to drive the REST door, because the contract declared
-// sendAccountEmail confirm-first and every agent call staged. ADR-0055 made the
+// sendCompanyEmail confirm-first and every agent call staged. ADR-0055 made the
 // verb execute directly, and the REST door reads its tier from the generated
 // policy table — so there is no longer a way for a test to floor that door
 // without editing the contract, which is what an INSTALLATION does rather than
@@ -330,7 +330,7 @@ func TestAFlooredAccountSendStagesAndOnlyLeavesOnceApproved(t *testing.T) {
 	}
 }
 
-// flooredAccountSendInvoker calls send_account_email through a registry with a
+// flooredAccountSendInvoker calls send_company_email through a registry with a
 // tier floor on it — the composition an installation gets when it declares the
 // verb confirm-first.
 func (a *accountSendEnv) flooredAccountSendInvoker(t *testing.T, agentToken string) func(string) (string, error) {
@@ -346,7 +346,7 @@ func (a *accountSendEnv) flooredAccountSendInvoker(t *testing.T, agentToken stri
 	// After construction, for the reason composedRegistryFlooring states: the
 	// composition appends its own contract floor to any option it is passed.
 	agents.WithTierFloor(func(tool, _ string) (mcp.RiskTier, bool) {
-		if tool != "send_account_email" {
+		if tool != "send_company_email" {
 			return mcp.TierAutoExecute, false
 		}
 		return mcp.TierConfirmationRequired, true
@@ -364,7 +364,7 @@ func (a *accountSendEnv) flooredAccountSendInvoker(t *testing.T, agentToken stri
 			t.Fatal(err)
 		}
 		ctx = principal.WithCorrelationID(principal.WithActor(ctx, agent.Principal()), ids.NewV7())
-		out, invokeErr := registry.Invoke(ctx, "send_account_email", json.RawMessage(args))
+		out, invokeErr := registry.Invoke(ctx, "send_company_email", json.RawMessage(args))
 		return string(out), invokeErr
 	}
 }
@@ -385,8 +385,8 @@ func (a *accountSendEnv) inboxShows(t *testing.T, approvalID string) bool {
 	}
 	for _, row := range page.Data {
 		if row.ID == approvalID {
-			if row.Kind != "send_account_email" {
-				t.Errorf("inbox row kind = %q, want send_account_email", row.Kind)
+			if row.Kind != "send_company_email" {
+				t.Errorf("inbox row kind = %q, want send_company_email", row.Kind)
 			}
 			return true
 		}
@@ -413,9 +413,9 @@ func (a *accountSendEnv) accountSendStageInfo(t *testing.T, token string, args j
 	}
 	ctx = principal.WithCorrelationID(principal.WithActor(ctx, agent.Principal()), ids.NewV7())
 
-	stager, ok := registry.StagerFor("send_account_email")
+	stager, ok := registry.StagerFor("send_company_email")
 	if !ok {
-		t.Fatal("send_account_email describes no staging; a floored installation could not confirm it")
+		t.Fatal("send_company_email describes no staging; a floored installation could not confirm it")
 	}
 	info, err := stager.StageInfo(ctx, args)
 	if err != nil {

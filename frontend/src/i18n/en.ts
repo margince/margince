@@ -1668,7 +1668,7 @@ export const en = {
   "approval.kind.relink_thread": "Refile a conversation",
   "approval.kind.relink_activities": "Refile several activities",
   "approval.kind.scheduled_send_held": "Release a stopped message",
-  "approval.kind.send_account_email": "Send an email to an account",
+  "approval.kind.send_company_email": "Send an email to an account",
   "approval.kind.send_message": "Send a message",
   // What a staged proposal's own fields are CALLED. Without these a card falls
   // back to the payload's JSON keys, and a business question reads as a
@@ -2660,8 +2660,10 @@ export const en = {
   "deal.committee.engagement": "Engagement",
   "deal.strip.close": "The close",
   "deal.strip.close.none": "No date",
-  "deal.strip.close.inDays": "in {days} days",
-  "deal.strip.close.overdue": "{days} days past the date",
+  "deal.strip.close.inDays_one": "in {days} day",
+  "deal.strip.close.inDays_other": "in {days} days",
+  "deal.strip.close.overdue_one": "{days} day past the date",
+  "deal.strip.close.overdue_other": "{days} days past the date",
   "deal.strip.close.provisional": "provisional, not confirmed by a human",
   "deal.strip.close.waiting": "they asked us to wait until {date}",
   "deal.forecast.commit": "commit",
@@ -7359,6 +7361,25 @@ export const en = {
     "this conversation spans two projects, so its findings would be wrong for one of them",
   "pipeline.reason.thread_not_all_open":
     "a message on this conversation is withheld from some of its readers, so a summary of the whole would be a partial account presented as a complete one",
+  "pipeline.reason.answered_on_the_company":
+    "this step asks about the sender's domain rather than about one message, so it is answered once on the company rather than repeated on every message from it",
+  "pipeline.reason.company_warranted":
+    "this domain was judged to warrant a company record, and this is it",
+  "pipeline.reason.no_site_identified":
+    "nothing on this domain's site identified a company, so the sender's own name was used instead",
+  "pipeline.reason.triage_queued": "this domain is waiting to be looked at",
+  "pipeline.reason.triage_unevidenced":
+    "nothing has been seen from this domain yet that would evidence a company",
+  "pipeline.reason.triage_stale_evidence":
+    "what was seen from this domain is too old to decide on",
+  "pipeline.reason.triage_near_duplicate":
+    "this domain looks like one already recorded, so it is held rather than duplicated",
+  "companyTriage.title": "Where this company came from",
+  "companyTriage.sub":
+    "The mail domains that were checked, and what each check concluded.",
+  "companyTriage.empty":
+    "No mail domain was checked into this company — it was recorded by hand or brought in from elsewhere.",
+  "companyTriage.checkedAt": "checked {when}",
   "pipeline.reason.no_named_reader":
     "this conversation has no reader a finding could answer to",
   "pipeline.reason.transport_not_read":
@@ -7378,8 +7399,6 @@ export const en = {
   "pipeline.reason.would_restore_erased":
     "reporting this would restore data an erasure removed",
   "pipeline.reason.no_writer_yet": "this step does not exist yet",
-  "pipeline.reason.not_reported_yet":
-    "this step runs, but is not reported here yet",
   "settings.tab.maintenance": "Maintenance",
   "settings.tab.license": "License",
   "license.card.title": "License and seats",
@@ -8765,6 +8784,7 @@ export const en = {
   // one first — a contact can work at more than one company at once.
   "contact.rail.employmentTitle": "Companies",
   "contact.rail.noEmployment": "No employment on record.",
+  "contact.rail.noPrimaryEmployer": "No primary employer — choose one.",
   "contact.rail.addEmployment": "Add company",
   "contact.employer.contacts_one": "{count} contact",
   "contact.employer.contacts_other": "{count} contacts",
@@ -9436,7 +9456,10 @@ export const en = {
   "project.assignOwnerDone": "Assigned to {name}",
   "project.description": "Description",
   "project.targetEnd": "Target end date",
-  "project.targetEndShort": "target {date}",
+  "project.targetEnd.inDays_one": "in {days} day",
+  "project.targetEnd.inDays_other": "in {days} days",
+  "project.targetEnd.overdue_one": "{days} day past the date",
+  "project.targetEnd.overdue_other": "{days} days past the date",
   "project.new": "New project",
   "project.edit": "Edit project",
   "project.archive": "Archive project",

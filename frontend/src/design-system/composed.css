@@ -962,6 +962,12 @@
   flex-direction: column;
   gap: 0;
   margin-top: 0;
+  /* The rows measure THE LIST, not the window: the same chronology is drawn in
+     a record's work column with the details pane open, in a full-width tab and
+     in a drawer, which are three widths on one screen — and only some of those
+     put a card around it, so the card cannot be what answers. */
+  container-type: inline-size;
+  container-name: chronology;
 }
 
 /* An expanded conversation's members are a list INSIDE a row, not a second
@@ -990,6 +996,28 @@
 }
 .timeline li:last-child {
   border-block-end: 0;
+}
+
+/* THE VERBS TAKE THEIR OWN LINE BEFORE THE ENTRY GIVES UP ITS WIDTH.
+   The trailing track is `auto`, so it is sized to its content and wins over the
+   `minmax(0, 1fr)` beside it — and there is ONE button size in this product, so
+   a row offering three verbs asks for more than a narrowed column can give.
+   What that cost was not a cramped row but an invisible one: the track resolved
+   to zero and the headline a reader came for was drawn at no width at all, on a
+   row still measuring its full height. Under the width where both fit, the
+   verbs drop below the entry — pinned to the entry's own column, so they keep
+   the gutter and the rail rather than sliding under the date. */
+@container chronology (max-width: 38rem) {
+  .timeline li {
+    grid-template-columns: 76px 20px minmax(0, 1fr);
+  }
+  .timeline .tl-actions {
+    grid-column: 3;
+    margin-left: 0;
+    padding-top: 0;
+    padding-bottom: var(--space-3);
+    flex-wrap: wrap;
+  }
 }
 
 /* A record's CHANGE history carries its date inside the body, under the

@@ -38,20 +38,20 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// accountCoverageFor runs the reader as one caller.
-func accountCoverageFor(
+// companyCoverageFor runs the reader as one caller.
+func companyCoverageFor(
 	t *testing.T, e *Env, perms principal.Permissions, companyID ids.UUID,
-) network.AccountCoverage {
+) network.CompanyCoverage {
 	t.Helper()
 	ctx := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS),
 		principal.Principal{
 			Type: principal.PrincipalHuman, ID: "human:reader",
 			UserID: ids.NewV7(), Permissions: perms,
 		})
-	var out network.AccountCoverage
+	var out network.CompanyCoverage
 	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error
-		out, err = network.AccountCoverageFor(ctx, tx, companyID)
+		out, err = network.CompanyCoverageFor(ctx, tx, companyID)
 		return err
 	}); err != nil {
 		t.Fatalf("reading account coverage: %v", err)
@@ -136,7 +136,7 @@ func TestAnAccountWithHiddenContactsIsUnknownRatherThanSingleThreaded(t *testing
 	}
 
 	perms := coverageReaderPerms(true)
-	got := accountCoverageFor(t, e, perms, companyID.UUID)
+	got := companyCoverageFor(t, e, perms, companyID.UUID)
 
 	if len(got.VisibleStakeholders) != 1 {
 		t.Fatalf("the reader sees %d stakeholders, want 1 — the fixture needs exactly one visible "+
@@ -174,7 +174,7 @@ func TestAnAccountWithOneVisibleContactAndNothingHiddenIsSingleThreaded(t *testi
 	only := e.SeedContact(t, "The Only Contact", nil)
 	seatOn(t, e, ids.From[ids.ContactKind](only), ids.From[ids.DealKind](ids.UUID(deal.Id)))
 
-	got := accountCoverageFor(t, e, coverageReaderPerms(true), companyID.UUID)
+	got := companyCoverageFor(t, e, coverageReaderPerms(true), companyID.UUID)
 	if got.CoverageIncomplete {
 		t.Fatal("coverage reads as incomplete; this fixture hides nothing, so the finding below " +
 			"would be reported for the wrong reason")
@@ -200,7 +200,7 @@ func TestAnAccountWithNoRecordedContactsSaysSo(t *testing.T) {
 		t.Fatalf("creating the deal: %v", err)
 	}
 
-	got := accountCoverageFor(t, e, coverageReaderPerms(true), companyID.UUID)
+	got := companyCoverageFor(t, e, coverageReaderPerms(true), companyID.UUID)
 	if got.Threading != network.ThreadingNoContacts {
 		t.Errorf("threading = %q, want %q — an account nobody has recorded a contact on is not "+
 			"an account resting on one relationship", got.Threading, network.ThreadingNoContacts)
@@ -239,7 +239,7 @@ func TestEnoughVisibleContactsIsMultiThreadedEvenWithSomethingHidden(t *testing.
 	}
 	seatHidden(t, OwnerConn(t), hidden, dealID.UUID, "buyer")
 
-	got := accountCoverageFor(t, e, coverageReaderPerms(true), companyID.UUID)
+	got := companyCoverageFor(t, e, coverageReaderPerms(true), companyID.UUID)
 	if got.Threading != network.ThreadingMultiple {
 		t.Errorf("threading = %q, want %q — two visible contacts already answer the question, and "+
 			"a hidden third can only widen the account", got.Threading, network.ThreadingMultiple)
@@ -269,7 +269,7 @@ func TestOneContactOnThreeDealsIsOneRelationship(t *testing.T) {
 		seatOn(t, e, only, ids.From[ids.DealKind](ids.UUID(deal.Id)))
 	}
 
-	got := accountCoverageFor(t, e, coverageReaderPerms(true), companyID.UUID)
+	got := companyCoverageFor(t, e, coverageReaderPerms(true), companyID.UUID)
 	if len(got.VisibleStakeholders) != 1 {
 		t.Fatalf("counted %d stakeholders, want 1 — one contact on three deals is one relationship",
 			len(got.VisibleStakeholders))
@@ -308,7 +308,7 @@ func TestAProjectStakeholderCountsTowardTheAccount(t *testing.T) {
 		}
 	}
 
-	got := accountCoverageFor(t, e, coverageReaderPerms(true), companyID.UUID)
+	got := companyCoverageFor(t, e, coverageReaderPerms(true), companyID.UUID)
 	if len(got.VisibleStakeholders) != 2 {
 		t.Fatalf("counted %d stakeholders, want 2 — a contact known through delivery is still a "+
 			"contact at this account", len(got.VisibleStakeholders))
@@ -334,7 +334,7 @@ func TestAnAccountTheReaderCannotOpenIsRefused(t *testing.T) {
 	// one must learn nothing from the answer.
 	absent := ids.NewV7()
 	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
-		_, err := network.AccountCoverageFor(ctx, tx, absent)
+		_, err := network.CompanyCoverageFor(ctx, tx, absent)
 		return err
 	})
 	if !errors.Is(err, apperrors.ErrNotFound) {
@@ -360,14 +360,14 @@ func TestAccountCoverageIsNamedRatherThanEmptyWithoutTheEdgeGrant(t *testing.T) 
 	p := e.SeedContact(t, "Real Contact", nil)
 	seatOn(t, e, ids.From[ids.ContactKind](p), ids.From[ids.DealKind](ids.UUID(deal.Id)))
 
-	granted := accountCoverageFor(t, e, coverageReaderPerms(true), companyID.UUID)
+	granted := companyCoverageFor(t, e, coverageReaderPerms(true), companyID.UUID)
 	if len(granted.SectionsOmitted) != 0 || len(granted.VisibleStakeholders) != 1 {
 		t.Fatalf("the granted caller sees %d stakeholders and is told %v was omitted; the fixture "+
 			"then proves nothing about the withheld one",
 			len(granted.VisibleStakeholders), granted.SectionsOmitted)
 	}
 
-	withheld := accountCoverageFor(t, e, coverageReaderPerms(false), companyID.UUID)
+	withheld := companyCoverageFor(t, e, coverageReaderPerms(false), companyID.UUID)
 	if len(withheld.SectionsOmitted) == 0 {
 		t.Error("the withheld caller is told nothing was omitted; an empty account with nothing " +
 			"naming it renders as an account nobody has contacts on")

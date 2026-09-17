@@ -135,7 +135,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `worklistbounds_test.go` | H2 | The worklist reports a source as possibly having more work behind it when its lane came back exactly at its bound. |
 | `worklistverdictstandings_test.go` | H2 | The queue's verdict standings ARE the deal card's, and this derives them from the card rather than keeping a second list of them. |
 
-## Census (157)
+## Census (158)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -228,6 +228,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `maillanguagereader_test.go` | H2 | One reader of the installation's base language. |
 | `makefilepaths_test.go` | H1 | Every config file the Makefiles name is a config file that exists. |
 | `maskedamountreaders_test.go` | H2 | dealAmountColumn is a deal's money however a statement names it. |
+| `maskedamountroots_test.go` | H2 | What the deal-amount census's ROOTS are worth. |
 | `mcpfaultcoverage_test.go` | H2 | A module's typed refusal must be legible on EVERY surface that can reach it, not just the one it was written for. |
 | `meetinghistorywriters_test.go` | H2 | Every statement that writes activity.meeting\_status also records the transition. |
 | `messagingruleapplied_test.go` | H2 | Every obligation a messaging pack declares is one the engine applies, or one this file records as not yet applied and says why. |
@@ -352,7 +353,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `writeauthority_test.go` | H2 | The read/write asymmetry of a manual record grant, as a fitness function: a path that CHANGES a shareable record probes for write authority, not for visibility. |
 | `writeliveness_test.go` | H2 | The LIVENESS obligation as a fitness function: a write that targets one standing row of a table which can be archived either REFUSES an archived row, DECLARES that it deliberately reaches one, or is ratified with a reason. |
 
-## Prohibition (67)
+## Prohibition (68)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -364,6 +365,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `bindableidentityonce_test.go` | H2 | Who may bind an arrival to the activity already holding its identity is decided in ONE place: activities.ResolveBindableIdentity. |
 | `calendarday_test.go` | H2 | A calendar day is one derivation, and this is the census that keeps it one. |
 | `capabilitypathlog_test.go` | H2 | A request path reaches a log line through capabilitypath.Redact, never raw. |
+| `catalogvocabulary_test.go` | H2 | The tool catalog calls the record a COMPANY, and this is what stops the other word coming back to it. |
 | `commentnamedtests_test.go` | H1 | A test named in a comment exists. |
 | `companyvocabulary_test.go` | H1 | The record type is called company, and this is what stops the other word coming back. |
 | `connectoractor_test.go` | H1 | A connector's actor id is DERIVED from the work, never written down. |

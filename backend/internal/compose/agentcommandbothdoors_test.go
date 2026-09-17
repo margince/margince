@@ -285,7 +285,7 @@ var bothDoorsFixtures = map[string]bothDoorsFixture{
 				`"consent_purpose":"support"}`
 		},
 	},
-	"sendAccountEmail": {
+	"sendCompanyEmail": {
 		rest: func(primary, _ ids.UUID) (*http.Request, []byte) {
 			return doorRequest(http.MethodPost, "/v1/emails", ids.UUID{},
 				`{"to":["buyer@example.test"],"cc":["cfo@example.test"],"subject":"Introduction",`+
@@ -582,7 +582,7 @@ func (bothDoorsComms) DraftEmail(context.Context, ids.UUID, string) (string, str
 	return "", "", errBothDoorsExecuted
 }
 
-func (bothDoorsComms) DraftAccountEmail(context.Context, []agents.RecordLink, string) (string, string, error) {
+func (bothDoorsComms) DraftCompanyEmail(context.Context, []agents.RecordLink, string) (string, string, error) {
 	return "", "", errBothDoorsExecuted
 }
 
@@ -590,7 +590,7 @@ func (bothDoorsComms) SendEmail(context.Context, ids.UUID, agents.SendEmailArgs)
 	return agents.SendEmailResult{}, errBothDoorsExecuted
 }
 
-func (bothDoorsComms) SendAccountEmail(context.Context, []agents.RecordLink, agents.SendEmailArgs) (agents.SendEmailResult, error) {
+func (bothDoorsComms) SendCompanyEmail(context.Context, []agents.RecordLink, agents.SendEmailArgs) (agents.SendEmailResult, error) {
 	return agents.SendEmailResult{}, errBothDoorsExecuted
 }
 

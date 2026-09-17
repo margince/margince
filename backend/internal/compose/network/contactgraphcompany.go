@@ -63,7 +63,7 @@ func (h Reads) addAccountGroup(
 	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
 		return 0, err
 	}
-	contacts, total, err := readAccountContacts(ctx, tx, contactID)
+	contacts, total, err := readCompanyContacts(ctx, tx, contactID)
 	if err != nil {
 		return 0, err
 	}
@@ -78,7 +78,7 @@ func (h Reads) addAccountGroup(
 	return dropped, h.addAccountEdges(ctx, tx, contacts, now, out)
 }
 
-// readAccountContacts finds the other current employees of this contact's
+// readCompanyContacts finds the other current employees of this contact's
 // employer, row-scoped in the query itself.
 //
 // The employer is whichever company the contact currently works for, and
@@ -89,7 +89,7 @@ func (h Reads) addAccountGroup(
 // It returns the capped slice AND the full membership count, because the two
 // answer different questions: the slice is what the graph draws, and the count
 // is what the reader is told they are not seeing.
-func readAccountContacts(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) ([]accountContact, int, error) {
+func readCompanyContacts(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) ([]accountContact, int, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	contactPos := arg(contactID)

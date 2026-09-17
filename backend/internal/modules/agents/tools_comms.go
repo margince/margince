@@ -27,23 +27,23 @@ import (
 // paths; compose implements it over the one store both transports use.
 type Comms interface {
 	DraftEmail(ctx context.Context, anchor ids.UUID, intent string) (subject, body string, err error)
-	// DraftAccountEmail composes the FIRST message to a record, where
+	// DraftCompanyEmail composes the FIRST message to a record, where
 	// DraftEmail can only continue a thread that already exists. It takes the
 	// records the conversation would be filed under instead of an anchor —
-	// the same shape SendAccountEmail takes, for the same reason: there is no
+	// the same shape SendCompanyEmail takes, for the same reason: there is no
 	// prior message, and the product refuses to fabricate a placeholder
 	// activity to obtain one (ADR-0087).
 	//
 	// Without it there is no way to draft the follow-up after a first meeting,
 	// which is the case the web app's own "Draft a follow-up" button serves;
 	// an assistant asked for one had to fall back on a note nobody can send.
-	DraftAccountEmail(ctx context.Context, links []RecordLink, intent string) (subject, body string, err error)
+	DraftCompanyEmail(ctx context.Context, links []RecordLink, intent string) (subject, body string, err error)
 	SendEmail(ctx context.Context, anchor ids.UUID, in SendEmailArgs) (SendEmailResult, error)
-	// SendAccountEmail starts a NEW conversation instead of continuing one
+	// SendCompanyEmail starts a NEW conversation instead of continuing one
 	// (ADR-0087). It takes no anchor — there is no prior message, and the
 	// product refuses to fabricate a placeholder activity to obtain one — so
 	// the records the message is filed under are named instead of inherited.
-	SendAccountEmail(ctx context.Context, links []RecordLink, in SendEmailArgs) (SendEmailResult, error)
+	SendCompanyEmail(ctx context.Context, links []RecordLink, in SendEmailArgs) (SendEmailResult, error)
 	// SendMessage replies on a captured channel conversation. It takes no
 	// addressee: the recipient is the contact the anchor conversation is with,
 	// resolved server-side, so a reply can only reach the human who opened it.
@@ -154,7 +154,7 @@ func RegisterCommsTools(r *Registry, comms Comms, p datasource.SystemOfRecordPro
 	}
 	r.Register(draftEmailTool{comms: comms, p: p})
 	r.Register(sendEmailTool{comms: comms, p: p})
-	r.Register(sendAccountEmailTool{comms: comms, p: p})
+	r.Register(sendCompanyEmailTool{comms: comms, p: p})
 	r.Register(sendMessageTool{comms: comms, p: p})
 	r.Register(checkAvailability{comms: comms})
 	r.Register(bookMeetingTool{comms: comms, p: p})
@@ -212,7 +212,7 @@ func (t draftEmailTool) Handle(ctx context.Context, in json.RawMessage) (json.Ra
 			return nil, &BadArgsError{Cause: errors.New(
 				"give activity_id to reply to a thread, or links to open a new conversation")}
 		}
-		// The same cap and de-duplication send_account_email applies, so a
+		// The same cap and de-duplication send_company_email applies, so a
 		// draft cannot succeed with a link set the advertised follow-on send
 		// would refuse.
 		links, err := uniqueRecordLinks(args.Links)
@@ -229,7 +229,7 @@ func (t draftEmailTool) Handle(ctx context.Context, in json.RawMessage) (json.Ra
 		if _, err := readStageableLinks(ctx, t.p, links); err != nil {
 			return nil, err
 		}
-		subject, body, err := t.comms.DraftAccountEmail(ctx, links, args.Intent)
+		subject, body, err := t.comms.DraftCompanyEmail(ctx, links, args.Intent)
 		if err != nil {
 			return nil, err
 		}

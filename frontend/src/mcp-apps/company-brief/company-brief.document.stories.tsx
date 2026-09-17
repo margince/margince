@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { builtDocument, DocumentHost } from "../story-hosts";
-import { accountBriefFixture } from "./fixture";
+import { companyBriefFixture } from "./fixture";
 
 // import.meta.glob, NOT a static `?raw` import. A static import of an absent
 // file is a module-resolution error: Storybook would fail to BUILD when the
@@ -18,8 +18,8 @@ const meta: Meta<typeof DocumentHost> = {
   title: "MCP Apps/Account brief (document)",
   component: DocumentHost,
   args: {
-    html: builtDocument(built, "account-brief"),
-    answer: accountBriefFixture,
+    html: builtDocument(built, "company-brief"),
+    answer: companyBriefFixture,
     title: "Morning brief",
   },
 };

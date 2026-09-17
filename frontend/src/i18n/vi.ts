@@ -1585,7 +1585,7 @@ export const vi = {
   "approval.kind.relink_thread": "Gán lại một cuộc trò chuyện",
   "approval.kind.relink_activities": "Gán lại nhiều hoạt động",
   "approval.kind.scheduled_send_held": "Phát hành tin nhắn đã dừng",
-  "approval.kind.send_account_email": "Gửi email cho một công ty",
+  "approval.kind.send_company_email": "Gửi email cho một công ty",
   "approval.kind.send_message": "Gửi một tin nhắn",
   "approval.field.basis": "Vì sao",
   "approval.field.step": "Bước cần làm",
@@ -2562,8 +2562,10 @@ export const vi = {
   "deal.committee.engagement": "Mức độ tương tác",
   "deal.strip.close": "Ngày chốt",
   "deal.strip.close.none": "Chưa có ngày",
-  "deal.strip.close.inDays": "trong {days} ngày",
-  "deal.strip.close.overdue": "quá hạn {days} ngày",
+  "deal.strip.close.inDays_one": "trong {days} ngày",
+  "deal.strip.close.inDays_other": "trong {days} ngày",
+  "deal.strip.close.overdue_one": "quá hạn {days} ngày",
+  "deal.strip.close.overdue_other": "quá hạn {days} ngày",
   "deal.strip.close.provisional": "tạm tính, chưa ai xác nhận",
   "deal.strip.close.waiting": "họ đề nghị chờ đến {date}",
   "deal.forecast.commit": "cam kết",
@@ -7072,6 +7074,25 @@ export const vi = {
     "cuộc hội thoại này trải trên hai dự án, nên các phát hiện sẽ sai với một trong hai",
   "pipeline.reason.thread_not_all_open":
     "một tin nhắn trong cuộc hội thoại này bị giới hạn với một phần đối tượng xem; bản tóm tắt toàn bộ sẽ là bản kể thiếu được trình bày như đầy đủ",
+  "pipeline.reason.answered_on_the_company":
+    "Bước này hỏi về tên miền của bên gửi chứ không phải về một thư cụ thể, nên nó được trả lời một lần ở công ty thay vì lặp lại trên mọi thư đến từ đó.",
+  "pipeline.reason.company_warranted":
+    "tên miền này được xét là xứng đáng có một hồ sơ công ty, và đây chính là nó",
+  "pipeline.reason.no_site_identified":
+    "không có gì trên trang web của tên miền này xác định được một công ty, nên tên của chính bên gửi đã được dùng thay thế",
+  "pipeline.reason.triage_queued": "tên miền này đang chờ được xem xét",
+  "pipeline.reason.triage_unevidenced":
+    "chưa thấy gì từ tên miền này đủ để chứng minh có một công ty",
+  "pipeline.reason.triage_stale_evidence":
+    "những gì đã thấy từ tên miền này quá cũ để quyết định",
+  "pipeline.reason.triage_near_duplicate":
+    "tên miền này trông giống một tên miền đã ghi nhận, nên được giữ lại thay vì tạo trùng",
+  "companyTriage.title": "Công ty này đến từ đâu",
+  "companyTriage.sub":
+    "Các tên miền thư đã được kiểm tra, và kết luận của từng lần kiểm tra.",
+  "companyTriage.empty":
+    "Không có tên miền thư nào được xếp vào công ty này — nó được nhập tay hoặc mang vào từ nơi khác.",
+  "companyTriage.checkedAt": "đã kiểm tra {when}",
   "pipeline.reason.no_named_reader":
     "cuộc hội thoại này không xác định được đối tượng đọc nào để một phát hiện thuộc về",
   "pipeline.reason.transport_not_read":
@@ -7091,8 +7112,6 @@ export const vi = {
   "pipeline.reason.would_restore_erased":
     "báo cáo điều này sẽ khôi phục dữ liệu mà một yêu cầu xóa đã gỡ bỏ",
   "pipeline.reason.no_writer_yet": "bước này chưa tồn tại",
-  "pipeline.reason.not_reported_yet":
-    "bước này có chạy, nhưng chưa được báo cáo ở đây",
   "settings.tab.maintenance": "Bảo trì",
   "settings.tab.license": "Giấy phép",
   "license.card.title": "Giấy phép và chỗ ngồi",
@@ -8460,6 +8479,8 @@ export const vi = {
     "Không đọc lại được phiên bản hiện tại của dòng này để lưu. Hãy tải lại và thử lại.",
   "contact.rail.employmentTitle": "Công ty",
   "contact.rail.noEmployment": "Chưa ghi nhận nơi làm việc.",
+  "contact.rail.noPrimaryEmployer":
+    "Chưa có nơi làm việc chính — hãy chọn một.",
   "contact.rail.addEmployment": "Thêm công ty",
   "contact.employer.contacts_one": "{count} liên hệ",
   "contact.employer.contacts_other": "{count} liên hệ",
@@ -9093,7 +9114,10 @@ export const vi = {
   "project.assignOwnerDone": "Đã giao cho {name}",
   "project.description": "Mô tả",
   "project.targetEnd": "Ngày kết thúc dự kiến",
-  "project.targetEndShort": "mục tiêu {date}",
+  "project.targetEnd.inDays_one": "trong {days} ngày",
+  "project.targetEnd.inDays_other": "trong {days} ngày",
+  "project.targetEnd.overdue_one": "quá hạn {days} ngày",
+  "project.targetEnd.overdue_other": "quá hạn {days} ngày",
   "project.new": "Dự án mới",
   "project.edit": "Sửa dự án",
   "project.archive": "Lưu trữ dự án",

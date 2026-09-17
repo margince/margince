@@ -231,7 +231,7 @@ var unrunnableCalls = map[string]unrunnableCall{
 				`{"to":[],"subject":"Q3","body":"hi","consent_purpose":"sales"}`)
 		},
 	},
-	"sendAccountEmail": {
+	"sendCompanyEmail": {
 		refusal: refusedArgument("to", "the send reaches nobody"),
 		build: func() (*http.Request, []byte) {
 			body := []byte(`{"to":[],"subject":"Q3","body":"hi","consent_purpose":"sales",` +

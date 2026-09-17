@@ -2402,7 +2402,7 @@ export interface paths {
          *     Human-only: drafting spends the workspace's model budget on prose for a contact to
          *     send under their own name.
          */
-        post: operations["draftAccountEmail"];
+        post: operations["draftCompanyEmail"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2751,6 +2751,47 @@ export interface paths {
          *     elsewhere; this endpoint only reads what the last sync brought back.
          */
         get: operations["getCompanyFinanceSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/companies/{id}/capture-triage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Which mail domains were triaged into this company, and what each concluded.
+         * @description The company-keyed door onto the capture pipeline's one domain-subject stage
+         *     (`company_triage`). The other two doors — `readActivityPipelineTrace` and
+         *     `readCaptureTracePipeline` — are message-keyed, and this stage does not fit either: its
+         *     subject is a DOMAIN, and a domain is triaged once for every message that ever arrives
+         *     from it. A per-message rung would answer "done" for the message that prompted the triage
+         *     and for the hundredth one after it alike, which reads as that message having been the
+         *     cause. So the message ladder names where the answer lives (`answered_on_the_company`)
+         *     and this is the answer.
+         *
+         *
+         *     One entry per domain the ledger resolved into this company, each carrying a rung in the
+         *     same vocabulary the message ladder uses — status, reason class, reason text — so a
+         *     client renders both from one catalog. A company nobody triaged into (typed in by hand,
+         *     or imported) answers an empty list: that is not a gap, and the surface says so rather
+         *     than reporting one.
+         *
+         *
+         *     Gated by the COMPANY's own row scope: a company outside the caller's scope is
+         *     existence-hidden exactly as `getCompany` hides it, never answered with an empty list.
+         */
+        get: operations["getCompanyCaptureTriage"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4481,7 +4522,7 @@ export interface paths {
          *
          *     Governed identically to the reply, with no new authority (ADR-0087 §6): it runs
          *     directly on the passport holder's own authority (ADR-0055). Under a tier floor on
-         *     `send_account_email` it stages instead, and what is staged is a CREATE — this send
+         *     `send_company_email` it stages instead, and what is staged is a CREATE — this send
          *     answers no message, so there is no anchor to name and no version to pin — released
          *     by a human holding `activity.create`, the grant `send_email` already asks of its
          *     approver. Whichever door
@@ -4489,7 +4530,7 @@ export interface paths {
          *     sent; over MCP that probe also runs at staging, so an agent naming a record it cannot
          *     see is refused before a human is asked about it at all.
          */
-        post: operations["sendAccountEmail"];
+        post: operations["sendCompanyEmail"];
         delete?: never;
         options?: never;
         head?: never;
@@ -16379,6 +16420,19 @@ export interface components {
              */
             renewal_due: boolean;
         };
+        /** @description Which mail domains were triaged into one company, and what each concluded. The company-keyed door onto the pipeline's one domain-subject stage — see `getCompanyCaptureTriage` for why that stage is not on the per-message ladder. */
+        CompanyCaptureTriage: {
+            /** Format: uuid */
+            company_id: string;
+            /** @description One entry per domain the ledger resolved into this company, ordered by domain so two reads of an unchanged company render identically. Empty for a company nobody triaged into, which is an answer rather than a gap. */
+            domains: components["schemas"]["CompanyTriagedDomain"][];
+        };
+        CompanyTriagedDomain: {
+            /** @description The mail domain, lower-cased as the ledger stores it. */
+            domain: string;
+            /** @description The triage answer in the ladder's own vocabulary, so a client renders this and the per-message rungs from one catalog rather than two that drift. */
+            rung: components["schemas"]["PipelineStageRung"];
+        };
         /** @description One message's journey through the ingress pipeline, as a member reads it. Assembled from two sources: rows capture stored, and live state the pipeline's own modules already keep. Nothing here is a copy of a durable record — a copy would be a second source that can disagree with the first. */
         PipelineTrace: {
             /**
@@ -24940,6 +24994,12 @@ export interface components {
             remind_at?: string | null;
             /** Format: uuid */
             assignee_id?: string | null;
+            /**
+             * Format: uuid
+             * @description Meeting only: the member of this company who HELD it, which is not the same question as who typed it up. Omit it for a meeting you held yourself and the server fills in the caller; name a colleague when you are minuting theirs, so it counts into their week rather than yours. A label and never an authority — what a caller may read is decided before this field is filled in.
+             *     Not nullable: omitting it is how you say nothing, and the server answers that with the caller. A meeting nobody here hosted is a state imports reach, not one a human logging their own day can assert.
+             */
+            host_user_id?: string;
             duration_seconds?: number | null;
             /** @enum {string|null} */
             direction?: null | "inbound" | "outbound";
@@ -25352,7 +25412,7 @@ export interface components {
          *     needs to see what the draft is standing on, and `generated_by`, because the
          *     deterministic floor is a real outcome here rather than an error.
          */
-        AccountEmailDraft: {
+        CompanyEmailDraft: {
             subject: string;
             /** @description Plain text, end to end. There is no rich-text storage format, no paste sanitiser and no HTML+text send pair, so a formatted draft would be a wire change rather than a toolbar. */
             body: string;
@@ -25878,7 +25938,7 @@ export interface components {
          * @description One account-started send. It is SendEmailRequest plus the `links` an anchor would
          *     otherwise have supplied — the records this new conversation belongs to.
          */
-        SendAccountEmailRequest: {
+        SendCompanyEmailRequest: {
             subject: string;
             /** @description The (possibly edited) final body that is sent. */
             body: string;
@@ -31401,11 +31461,35 @@ export interface components {
          *     wording/version shown, so the resulting grant is demonstrable (Art 7(1)).
          */
         CaptureConsent: {
-            /** Format: uuid */
-            purpose_id: string;
+            /**
+             * Format: uuid
+             * @description The purpose the grant lands on. OMIT IT on a surface that is confined to one purpose
+             *     — the booking doors are, to the `transactional` lane — and the server resolves that
+             *     lane's own id for this installation.
+             *
+             *     Omitting it is the right answer for a published page, not a shortcut. Purpose ids are
+             *     per-installation uuids minted at seed time and there is no anonymous read of them, so
+             *     an anonymous form that names one is naming a value it was never given. Sending an id
+             *     is for a caller that read the catalog; it is still admitted only if it IS the lane the
+             *     surface is confined to.
+             */
+            purpose_id?: string;
             /** @description Version id of the consent wording shown to the subject. */
             policy_version: string;
-            /** @description The exact wording shown, stored with the consent event for demonstrability. */
+            /**
+             * @description The exact wording shown, stored with the consent event for demonstrability.
+             *
+             *     Optional in this schema and MANDATORY on both booking doors, which refuse a grant
+             *     that cannot say what the subject read — before a contact row exists, because the
+             *     door is anonymous and a refusal further in would grow the contact table one rejected
+             *     request at a time. Omitting it is a 422 naming this field. It is not marked required
+             *     here because tightening a shipped request field is the breaking change the contract
+             *     gate refuses; the obligation lives in the doors, and it is stated here so a caller
+             *     reading the schema is not surprised by it.
+             *
+             *     Unlike `purpose_id`, this is something only the surface knows: the server cannot
+             *     resolve what a page put in front of somebody.
+             */
             wording?: string | null;
             /**
              * @description An affirmative marketing tick the subject made on the same form. It does NOT record a
@@ -37953,7 +38037,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AccountEmailDraft"];
+                    "application/json": components["schemas"]["CompanyEmailDraft"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -38175,7 +38259,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AccountEmailDraft"];
+                    "application/json": components["schemas"]["CompanyEmailDraft"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -39438,7 +39522,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AccountEmailDraft"];
+                    "application/json": components["schemas"]["CompanyEmailDraft"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -39889,7 +39973,7 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
-    draftAccountEmail: {
+    draftCompanyEmail: {
         parameters: {
             query?: never;
             header?: never;
@@ -39929,7 +40013,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AccountEmailDraft"];
+                    "application/json": components["schemas"]["CompanyEmailDraft"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -40342,6 +40426,41 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    getCompanyCaptureTriage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The domains triaged into this company (empty array when none were). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyCaptureTriage"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description This deployment composed no domain triage, so there is no company check to read. An empty list would say the domains were never triaged, which a composition gap cannot support. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     listCompanyFacts: {
@@ -43505,7 +43624,7 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
-    sendAccountEmail: {
+    sendCompanyEmail: {
         parameters: {
             query?: never;
             header?: {
@@ -43542,7 +43661,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["SendAccountEmailRequest"];
+                "application/json": components["schemas"]["SendCompanyEmailRequest"];
             };
         };
         responses: {
@@ -43924,7 +44043,7 @@ export interface operations {
                     /**
                      * @description Entities to associate the resulting meeting activity with. At least one is
                      *     required: a meeting belonging to no record appears on no timeline and is one
-                     *     nobody will find again, which is the same reason `SendAccountEmailRequest`
+                     *     nobody will find again, which is the same reason `SendCompanyEmailRequest`
                      *     carries the bound. Each one is row-scope probed and written as its own row,
                      *     so the list is bounded at 25 — the same bound the `book_meeting` tool applies
                      *     before it stages.
@@ -45613,7 +45732,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AccountEmailDraft"];
+                    "application/json": components["schemas"]["CompanyEmailDraft"];
                 };
             };
             401: components["responses"]["Unauthorized"];

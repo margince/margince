@@ -45,8 +45,8 @@ import (
 // sweep proves every named URI is published, but a shared constant means there
 // is nothing for it to catch.
 const (
-	// AccountBriefURI renders read_brief's queue.
-	AccountBriefURI = "ui://margince/account-brief.html"
+	// CompanyBriefURI renders read_brief's queue.
+	CompanyBriefURI = "ui://margince/company-brief.html"
 	// RelationshipMapURI renders who_knows's colleagues.
 	RelationshipMapURI = "ui://margince/relationship-map.html"
 	// CommitmentsURI renders review_commitments's open promises.
@@ -88,8 +88,8 @@ type view struct {
 // is derived from the URI rather than listed beside it.
 var catalog = []view{
 	{
-		uri:  AccountBriefURI,
-		name: "account_brief_view",
+		uri:  CompanyBriefURI,
+		name: "company_brief_view",
 		// A title a human reads in a host's own UI chrome, so it says what the
 		// panel shows rather than naming the tool behind it.
 		title:       "Morning brief",

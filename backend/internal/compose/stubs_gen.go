@@ -691,6 +691,10 @@ func (stubs) RegenerateCompanyBrief(w nethttp.ResponseWriter, r *nethttp.Request
 	httperr.NotImplemented(w, r, "RegenerateCompanyBrief")
 }
 
+func (stubs) GetCompanyCaptureTriage(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "GetCompanyCaptureTriage")
+}
+
 func (stubs) ListCompanyContacts(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.ListCompanyContactsParams) {
 	httperr.NotImplemented(w, r, "ListCompanyContacts")
 }
@@ -719,8 +723,8 @@ func (stubs) RefreshCompanyDossier(w nethttp.ResponseWriter, r *nethttp.Request,
 	httperr.NotImplemented(w, r, "RefreshCompanyDossier")
 }
 
-func (stubs) DraftAccountEmail(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
-	httperr.NotImplemented(w, r, "DraftAccountEmail")
+func (stubs) DraftCompanyEmail(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "DraftCompanyEmail")
 }
 
 func (stubs) ScrapeCompany(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
@@ -1387,8 +1391,8 @@ func (stubs) GetMorningDigest(w nethttp.ResponseWriter, r *nethttp.Request, para
 	httperr.NotImplemented(w, r, "GetMorningDigest")
 }
 
-func (stubs) SendAccountEmail(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.SendAccountEmailParams) {
-	httperr.NotImplemented(w, r, "SendAccountEmail")
+func (stubs) SendCompanyEmail(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.SendCompanyEmailParams) {
+	httperr.NotImplemented(w, r, "SendCompanyEmail")
 }
 
 func (stubs) PreviewAccountSendAuthorization(w nethttp.ResponseWriter, r *nethttp.Request) {

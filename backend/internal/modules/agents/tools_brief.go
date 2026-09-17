@@ -211,7 +211,7 @@ func (t readBrief) Spec() mcp.ToolSpec {
 		// queue, and the factor decomposition each item ranked on. It exists
 		// because five factors per item is a table rather than a sentence — not
 		// because anything here is reachable only through it.
-		UI: &mcp.ToolUI{ResourceURI: apps.AccountBriefURI},
+		UI: &mcp.ToolUI{ResourceURI: apps.CompanyBriefURI},
 	}
 }
 

@@ -12247,45 +12247,6 @@ func (e SearchResultType) Valid() bool {
 	}
 }
 
-// Defines values for SendAccountEmailRequestCommunicationContext.
-const (
-	SendAccountEmailRequestCommunicationContextAccountNotice      SendAccountEmailRequestCommunicationContext = "account_notice"
-	SendAccountEmailRequestCommunicationContextActiveDealFollowup SendAccountEmailRequestCommunicationContext = "active_deal_followup"
-	SendAccountEmailRequestCommunicationContextContractNotice     SendAccountEmailRequestCommunicationContext = "contract_notice"
-	SendAccountEmailRequestCommunicationContextCustomerService    SendAccountEmailRequestCommunicationContext = "customer_service"
-	SendAccountEmailRequestCommunicationContextInvoiceOrPayment   SendAccountEmailRequestCommunicationContext = "invoice_or_payment"
-	SendAccountEmailRequestCommunicationContextMarketing          SendAccountEmailRequestCommunicationContext = "marketing"
-	SendAccountEmailRequestCommunicationContextPrecontractQuote   SendAccountEmailRequestCommunicationContext = "precontract_quote"
-	SendAccountEmailRequestCommunicationContextReplyToInbound     SendAccountEmailRequestCommunicationContext = "reply_to_inbound"
-	SendAccountEmailRequestCommunicationContextRequestedFollowup  SendAccountEmailRequestCommunicationContext = "requested_followup"
-)
-
-// Valid indicates whether the value is a known member of the SendAccountEmailRequestCommunicationContext enum.
-func (e SendAccountEmailRequestCommunicationContext) Valid() bool {
-	switch e {
-	case SendAccountEmailRequestCommunicationContextAccountNotice:
-		return true
-	case SendAccountEmailRequestCommunicationContextActiveDealFollowup:
-		return true
-	case SendAccountEmailRequestCommunicationContextContractNotice:
-		return true
-	case SendAccountEmailRequestCommunicationContextCustomerService:
-		return true
-	case SendAccountEmailRequestCommunicationContextInvoiceOrPayment:
-		return true
-	case SendAccountEmailRequestCommunicationContextMarketing:
-		return true
-	case SendAccountEmailRequestCommunicationContextPrecontractQuote:
-		return true
-	case SendAccountEmailRequestCommunicationContextReplyToInbound:
-		return true
-	case SendAccountEmailRequestCommunicationContextRequestedFollowup:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for SendAuthorizationPreviewRecipientDecidedBy.
 const (
 	SendAuthorizationPreviewRecipientDecidedByAdmin   SendAuthorizationPreviewRecipientDecidedBy = "admin"
@@ -12346,6 +12307,45 @@ func (e SendAuthorizationPreviewRecipientVerdict) Valid() bool {
 	case SendAuthorizationPreviewRecipientVerdictDeny:
 		return true
 	case SendAuthorizationPreviewRecipientVerdictReview:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SendCompanyEmailRequestCommunicationContext.
+const (
+	SendCompanyEmailRequestCommunicationContextAccountNotice      SendCompanyEmailRequestCommunicationContext = "account_notice"
+	SendCompanyEmailRequestCommunicationContextActiveDealFollowup SendCompanyEmailRequestCommunicationContext = "active_deal_followup"
+	SendCompanyEmailRequestCommunicationContextContractNotice     SendCompanyEmailRequestCommunicationContext = "contract_notice"
+	SendCompanyEmailRequestCommunicationContextCustomerService    SendCompanyEmailRequestCommunicationContext = "customer_service"
+	SendCompanyEmailRequestCommunicationContextInvoiceOrPayment   SendCompanyEmailRequestCommunicationContext = "invoice_or_payment"
+	SendCompanyEmailRequestCommunicationContextMarketing          SendCompanyEmailRequestCommunicationContext = "marketing"
+	SendCompanyEmailRequestCommunicationContextPrecontractQuote   SendCompanyEmailRequestCommunicationContext = "precontract_quote"
+	SendCompanyEmailRequestCommunicationContextReplyToInbound     SendCompanyEmailRequestCommunicationContext = "reply_to_inbound"
+	SendCompanyEmailRequestCommunicationContextRequestedFollowup  SendCompanyEmailRequestCommunicationContext = "requested_followup"
+)
+
+// Valid indicates whether the value is a known member of the SendCompanyEmailRequestCommunicationContext enum.
+func (e SendCompanyEmailRequestCommunicationContext) Valid() bool {
+	switch e {
+	case SendCompanyEmailRequestCommunicationContextAccountNotice:
+		return true
+	case SendCompanyEmailRequestCommunicationContextActiveDealFollowup:
+		return true
+	case SendCompanyEmailRequestCommunicationContextContractNotice:
+		return true
+	case SendCompanyEmailRequestCommunicationContextCustomerService:
+		return true
+	case SendCompanyEmailRequestCommunicationContextInvoiceOrPayment:
+		return true
+	case SendCompanyEmailRequestCommunicationContextMarketing:
+		return true
+	case SendCompanyEmailRequestCommunicationContextPrecontractQuote:
+		return true
+	case SendCompanyEmailRequestCommunicationContextReplyToInbound:
+		return true
+	case SendCompanyEmailRequestCommunicationContextRequestedFollowup:
 		return true
 	default:
 		return false
@@ -18407,61 +18407,6 @@ type AccountDraftReason struct {
 // recently said. `dossier` — what the company is, from its own recorded facts.
 type AccountDraftReasonKind string
 
-// AccountEmailDraft A draft written from an account's records, and what it was written from
-// (ADR-0087). Never sent by drafting; send via `POST /emails`.
-//
-// It is `EmailDraft` plus the two things an account-started draft owes that a reply
-// does not: `reasoning`, because a rep who did not choose the message it answers
-// needs to see what the draft is standing on, and `generated_by`, because the
-// deterministic floor is a real outcome here rather than an error.
-type AccountEmailDraft struct {
-	// AiDisclosure The machine-readable Art. 50 disclosure line; non-null iff ai_generated=true.
-	AiDisclosure *string `json:"ai_disclosure,omitempty"`
-
-	// AiGenerated Art. 50 AI-assisted disclosure: true when a model produced this draft. Stamped on the drafting call, never persisted.
-	AiGenerated *bool `json:"ai_generated,omitempty"`
-
-	// Body Plain text, end to end. There is no rich-text storage format, no paste sanitiser and no HTML+text send pair, so a formatted draft would be a wire change rather than a toolbar.
-	Body string `json:"body"`
-
-	// DraftRef Opaque reference identifying this served draft. Null here: recording a draft for voice learning is a WRITE, and this operation performs none.
-	DraftRef *string `json:"draft_ref,omitempty"`
-
-	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
-	GeneratedBy WrittenBy `json:"generated_by"`
-
-	// Reasoning What the draft was written from, as separate claims rather than a sentence in
-	// the body. A SIBLING of the body on purpose (DRAFT-AC-N-4): a body that
-	// explains itself is a body the rep has to edit before sending, and the two
-	// surfaces the composer draws from this — the "Based on" line and the "Why this
-	// draft?" chips — need the parts, not the prose.
-	//
-	// Empty when the account gave the draft nothing to stand on beyond the
-	// recipient. An honest empty list, never an invented reason.
-	Reasoning []AccountDraftReason `json:"reasoning"`
-
-	// Scope What a read narrowed to one project reports about the narrowing, so a surface can
-	// say "Scoped to KEY · N of M activities" from the server's own count rather than
-	// guessing. Present only when the request named a `project_id`.
-	//
-	// `in_scope` counts the activities the scoped read could see — filed under this
-	// project or under none — and `total` the same anchor's activities unscoped, both
-	// under the caller's own row scope. Both are ABSENT, not zero, when the caller holds
-	// no activity grant: the project is still named, the count is not invented.
-	Scope   *ProjectScope          `json:"scope,omitempty"`
-	Subject string                 `json:"subject"`
-	To      *[]openapi_types.Email `json:"to,omitempty"`
-
-	// VoiceDegraded True when the sender's voice could not even be looked up, so this draft may be missing a voice its sender built. Distinct from voice_profile_version being null, which also covers the ordinary no-profile case. A client should say so: the sender cannot detect a missing voice by reading the text. Absent reads as false.
-	VoiceDegraded *bool `json:"voice_degraded,omitempty"`
-
-	// VoiceProfileVersion The Voice DNA profile version that styled this draft; null when no ready profile shaped it.
-	VoiceProfileVersion *int `json:"voice_profile_version,omitempty"`
-}
-
 // AcquisitionSource One administered business channel a deal can be attributed to.
 type AcquisitionSource struct {
 	// Active False is retired: still readable and still filterable on deals that carry it, but refused for a new assignment.
@@ -21733,10 +21678,31 @@ type CaptureConsent struct {
 	} `json:"marketing,omitempty"`
 
 	// PolicyVersion Version id of the consent wording shown to the subject.
-	PolicyVersion string             `json:"policy_version"`
-	PurposeId     openapi_types.UUID `json:"purpose_id"`
+	PolicyVersion string `json:"policy_version"`
+
+	// PurposeId The purpose the grant lands on. OMIT IT on a surface that is confined to one purpose
+	// — the booking doors are, to the `transactional` lane — and the server resolves that
+	// lane's own id for this installation.
+	//
+	// Omitting it is the right answer for a published page, not a shortcut. Purpose ids are
+	// per-installation uuids minted at seed time and there is no anonymous read of them, so
+	// an anonymous form that names one is naming a value it was never given. Sending an id
+	// is for a caller that read the catalog; it is still admitted only if it IS the lane the
+	// surface is confined to.
+	PurposeId *openapi_types.UUID `json:"purpose_id,omitempty"`
 
 	// Wording The exact wording shown, stored with the consent event for demonstrability.
+	//
+	// Optional in this schema and MANDATORY on both booking doors, which refuse a grant
+	// that cannot say what the subject read — before a contact row exists, because the
+	// door is anonymous and a refusal further in would grow the contact table one rejected
+	// request at a time. Omitting it is a 422 naming this field. It is not marked required
+	// here because tightening a shipped request field is the breaking change the contract
+	// gate refuses; the obligation lives in the doors, and it is stated here so a caller
+	// reading the schema is not surprised by it.
+	//
+	// Unlike `purpose_id`, this is something only the surface knows: the server cannot
+	// resolve what a page put in front of somebody.
 	Wording *string `json:"wording,omitempty"`
 }
 
@@ -23507,6 +23473,14 @@ type CompanyBriefSentence struct {
 // record the reader can open and pretending otherwise would invent a citation.
 type CompanyBriefSentenceNature string
 
+// CompanyCaptureTriage Which mail domains were triaged into one company, and what each concluded. The company-keyed door onto the pipeline's one domain-subject stage — see `getCompanyCaptureTriage` for why that stage is not on the per-message ladder.
+type CompanyCaptureTriage struct {
+	CompanyId openapi_types.UUID `json:"company_id"`
+
+	// Domains One entry per domain the ledger resolved into this company, ordered by domain so two reads of an unchanged company render identically. Empty for a company nobody triaged into, which is an answer rather than a gap.
+	Domains []CompanyTriagedDomain `json:"domains"`
+}
+
 // CompanyContact defines model for CompanyContact.
 type CompanyContact struct {
 	ContactId openapi_types.UUID `json:"contact_id"`
@@ -23852,6 +23826,61 @@ type CompanyDossierSection struct {
 // `differentiation` — what they claim sets them apart.
 // `firmographics` — size, age, registration and the like.
 type CompanyDossierSectionKind string
+
+// CompanyEmailDraft A draft written from an account's records, and what it was written from
+// (ADR-0087). Never sent by drafting; send via `POST /emails`.
+//
+// It is `EmailDraft` plus the two things an account-started draft owes that a reply
+// does not: `reasoning`, because a rep who did not choose the message it answers
+// needs to see what the draft is standing on, and `generated_by`, because the
+// deterministic floor is a real outcome here rather than an error.
+type CompanyEmailDraft struct {
+	// AiDisclosure The machine-readable Art. 50 disclosure line; non-null iff ai_generated=true.
+	AiDisclosure *string `json:"ai_disclosure,omitempty"`
+
+	// AiGenerated Art. 50 AI-assisted disclosure: true when a model produced this draft. Stamped on the drafting call, never persisted.
+	AiGenerated *bool `json:"ai_generated,omitempty"`
+
+	// Body Plain text, end to end. There is no rich-text storage format, no paste sanitiser and no HTML+text send pair, so a formatted draft would be a wire change rather than a toolbar.
+	Body string `json:"body"`
+
+	// DraftRef Opaque reference identifying this served draft. Null here: recording a draft for voice learning is a WRITE, and this operation performs none.
+	DraftRef *string `json:"draft_ref,omitempty"`
+
+	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
+	// lane. `deterministic` — the structured fallback, used when no lane is configured
+	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
+	// reader deciding how much to trust a sentence needs to know which wrote it.
+	GeneratedBy WrittenBy `json:"generated_by"`
+
+	// Reasoning What the draft was written from, as separate claims rather than a sentence in
+	// the body. A SIBLING of the body on purpose (DRAFT-AC-N-4): a body that
+	// explains itself is a body the rep has to edit before sending, and the two
+	// surfaces the composer draws from this — the "Based on" line and the "Why this
+	// draft?" chips — need the parts, not the prose.
+	//
+	// Empty when the account gave the draft nothing to stand on beyond the
+	// recipient. An honest empty list, never an invented reason.
+	Reasoning []AccountDraftReason `json:"reasoning"`
+
+	// Scope What a read narrowed to one project reports about the narrowing, so a surface can
+	// say "Scoped to KEY · N of M activities" from the server's own count rather than
+	// guessing. Present only when the request named a `project_id`.
+	//
+	// `in_scope` counts the activities the scoped read could see — filed under this
+	// project or under none — and `total` the same anchor's activities unscoped, both
+	// under the caller's own row scope. Both are ABSENT, not zero, when the caller holds
+	// no activity grant: the project is still named, the count is not invented.
+	Scope   *ProjectScope          `json:"scope,omitempty"`
+	Subject string                 `json:"subject"`
+	To      *[]openapi_types.Email `json:"to,omitempty"`
+
+	// VoiceDegraded True when the sender's voice could not even be looked up, so this draft may be missing a voice its sender built. Distinct from voice_profile_version being null, which also covers the ordinary no-profile case. A client should say so: the sender cannot detect a missing voice by reading the text. Absent reads as false.
+	VoiceDegraded *bool `json:"voice_degraded,omitempty"`
+
+	// VoiceProfileVersion The Voice DNA profile version that styled this draft; null when no ready profile shaped it.
+	VoiceProfileVersion *int `json:"voice_profile_version,omitempty"`
+}
 
 // CompanyFact defines model for CompanyFact.
 type CompanyFact struct {
@@ -24805,6 +24834,13 @@ type CompanyStrength struct {
 
 // CompanyStrengthBucket Coarse band derived from score for display — the same vocabulary every strength band on the wire uses.
 type CompanyStrengthBucket string
+
+// CompanyTriagedDomain defines model for CompanyTriagedDomain.
+type CompanyTriagedDomain struct {
+	// Domain The mail domain, lower-cased as the ledger stores it.
+	Domain string            `json:"domain"`
+	Rung   PipelineStageRung `json:"rung"`
+}
 
 // CompanyVatCheck One company's current VAT standing, and the evidence for it. The row keeps only the
 // CURRENT consultation; what a re-check overwrote lives in the audit trail.
@@ -26639,6 +26675,10 @@ type CreateActivityRequest struct {
 	Direction       *CreateActivityRequestDirection `json:"direction,omitempty"`
 	DueAt           *time.Time                      `json:"due_at,omitempty"`
 	DurationSeconds *int                            `json:"duration_seconds,omitempty"`
+
+	// HostUserId Meeting only: the member of this company who HELD it, which is not the same question as who typed it up. Omit it for a meeting you held yourself and the server fills in the caller; name a colleague when you are minuting theirs, so it counts into their week rather than yours. A label and never an authority — what a caller may read is decided before this field is filled in.
+	// Not nullable: omitting it is how you say nothing, and the server answers that with the caller. A meeting nobody here hosted is a state imports reach, not one a human logging their own day can assert.
+	HostUserId *openapi_types.UUID `json:"host_user_id,omitempty"`
 
 	// IcalInstance Which occurrence of `ical_uid` this is — the occurrence's own original start, as the calendar states it. Meeting only. Required whenever `ical_uid` is given, because a series without an occurrence names every meeting in it at once.
 	IcalInstance *string `json:"ical_instance,omitempty"`
@@ -35389,157 +35429,6 @@ type SeatUsage struct {
 	SeatsUsed int `json:"seats_used"`
 }
 
-// SendAccountEmailRequest One account-started send. It is SendEmailRequest plus the `links` an anchor would
-// otherwise have supplied — the records this new conversation belongs to.
-type SendAccountEmailRequest struct {
-	// AttachmentIds Files already in the record library to send with this message, named by id
-	// — never uploaded here. Each is snapshotted at staging (ADR-0086 §4) so
-	// archiving or superseding one later cannot rewrite what the timeline says a
-	// sent message carried.
-	//
-	// A message is transmitted with ALL its files or not at all. A connector whose
-	// provider cannot carry them parks the delivery rather than sending the text
-	// alone, and a file the scanner has since quarantined — or one the sender has
-	// since lost the right to read — parks it too: a recipient seeing fewer files
-	// than the record claims is a wrong record nobody is told about.
-	//
-	// Repeated ids are collapsed — attaching one file twice is not something a message
-	// can mean — and naming more distinct files than `maxItems` is refused with
-	// 422 `too_many_attachments`.
-	//
-	// A file with NO CONTENT is refused with 422 `empty_attachment`, naming the file.
-	// It is a separate code from the size one on purpose: an empty file is not a file
-	// that is too big, and a client that reported it as a limit would send somebody
-	// off to shrink something already as small as it can be. Nothing anywhere can send
-	// it, so it is refused here rather than by whichever transport happens to carry
-	// the message — an upload is refused for the same reason, so a file that reaches
-	// this field with no bytes was captured that way from an inbound message.
-	AttachmentIds *[]openapi_types.UUID `json:"attachment_ids,omitempty"`
-
-	// Bcc Blind copies. They receive the message and are therefore owed consent
-	// exactly as To and Cc are — the gate answers on every addressee, however
-	// they were addressed — and they are absent from the headers the recipients
-	// see, which is the whole of what "blind" means.
-	//
-	// A message with a tokenized unsubscribe link may still have only ONE
-	// addressee in total: that token is a bearer credential over one contact's
-	// consent record, so a bcc'd copy of a marketing send is refused 422
-	// `shared_unsubscribe_token` rather than handing a stranger somebody else's
-	// preference link.
-	Bcc *[]openapi_types.Email `json:"bcc,omitempty"`
-
-	// Body The (possibly edited) final body that is sent.
-	Body string                 `json:"body"`
-	Cc   *[]openapi_types.Email `json:"cc,omitempty"`
-
-	// CommunicationContext What kind of communication this is. The caller CLAIMS a category; the engine
-	// resolves the one the evidence actually supports and records both, so a claim
-	// that the evidence does not carry is visible rather than silently honoured.
-	//
-	// Omit it and the engine resolves the category from the send's origin — a reply
-	// to an inbound message is a reply whether or not anybody said so. Omitting is
-	// therefore honest and is the ordinary case for a reply; naming one matters when
-	// there is no anchor to derive from.
-	//
-	// Five categories are absent from this list on purpose — `security_notice`,
-	// `privacy_notice`, `optout_confirmation`, `consent_confirmation` and
-	// `record_confirmation`. They serve the recipient, which is why a hard
-	// suppression does not stop them, and they are reserved for the installation's
-	// own controller mail behind a registered template. A caller that could claim
-	// one could dress marketing as a security warning and reach somebody who has
-	// objected, so naming one here is refused (422 `invalid`).
-	CommunicationContext *SendAccountEmailRequestCommunicationContext `json:"communication_context,omitempty"`
-
-	// ConsentPurpose DEPRECATED, and no longer required. The engine resolves what a message is from
-	// the record — the thread it answers, the deal or invoice it names, the evidence
-	// supplied in `evidence` — and a purpose key is not that. Send
-	// `communication_context` instead.
-	//
-	// A key that is still supplied is recorded as the caller's claim and is consulted
-	// only where the record supports no category on its own. An unknown or archived
-	// key authorizes nothing.
-	ConsentPurpose *string `json:"consent_purpose,omitempty"`
-
-	// DraftRef Opaque reference returned by the drafting operation, exactly as on `send_email`.
-	// Omit for independently composed mail.
-	DraftRef *string `json:"draft_ref,omitempty"`
-
-	// Evidence Records the caller names in support of this send. Checked, never trusted.
-	Evidence *CommunicationEvidence `json:"evidence,omitempty"`
-
-	// HtmlBody The same message as markup, or omitted for a plain-text send. It never
-	// REPLACES `body`: a message carrying both goes out as multipart/alternative
-	// with the plain part first, so a client that cannot render HTML still
-	// receives the words. The sender's signature and the unsubscribe footer are
-	// appended to BOTH parts by the server, in each part's own syntax.
-	HtmlBody *string `json:"html_body,omitempty"`
-
-	// Links The records this conversation is filed under — the company it was started from, and
-	// optionally the contact and deal it concerns. At least one is required: a message
-	// belonging to no record is one nobody will find again, which is the gap this
-	// operation exists to close. Each target is row-scope probed, so an id the caller
-	// cannot see is refused 404 — and each probe is its own query, so the list is bounded
-	// at 25 (a message about more records than that is about none of them).
-	Links []ActivityLinkInput `json:"links"`
-
-	// MarketingPurpose For a marketing send, the consent purpose key naming the topic it is for.
-	// Marketing consent is purpose-specific: a grant for one topic authorizes that
-	// topic and no other.
-	MarketingPurpose *string `json:"marketing_purpose,omitempty"`
-
-	// OperatorReason What a human typed when a first message was genuinely ambiguous. It is
-	// RECORDED on the decision and grants nothing — a sentence a sender wrote about
-	// their own send is not evidence about the recipient. It exists so a later
-	// reader can see what the sender believed, not so the engine can be talked into
-	// an allow.
-	OperatorReason *string `json:"operator_reason,omitempty"`
-
-	// ScheduledAt Send this message at this instant instead of now (ADR-0104). Absolute
-	// and unambiguous; `scheduled_tz` records the zone the human picked it in.
-	//
-	// A scheduled message writes NO activity and NO delivery row until it fires —
-	// the timeline stays silent about a message nobody has sent. The response is
-	// 201 with the ScheduledSend rather than 202 with an activity.
-	//
-	// Every gate runs TWICE: now, so a bad recipient or a withheld consent refuses
-	// while the sender is still at the keyboard, and again when it fires, against
-	// the state that exists then. A message whose consent was withdrawn, whose
-	// sender lost their seat, or whose attachment was archived in between is HELD
-	// for a human rather than sent stale.
-	//
-	// An instant already past sends immediately. Further ahead than 90 days is
-	// refused 422.
-	ScheduledAt *time.Time `json:"scheduled_at,omitempty"`
-
-	// ScheduledTz The IANA zone name (e.g. `Europe/Berlin`) the human chose `scheduled_at` in.
-	// Required with `scheduled_at`. A zone NAME, never a numeric offset, which
-	// would freeze the DST rules of the day it was written (AC-DS-TZ4).
-	ScheduledTz *string `json:"scheduled_tz,omitempty"`
-	Subject     string  `json:"subject"`
-
-	// To At least one addressee. A send whose To: line is empty is refused 422 before
-	// anything is staged — `cc` alone does not make a message addressed to anyone.
-	To []openapi_types.Email `json:"to"`
-}
-
-// SendAccountEmailRequestCommunicationContext What kind of communication this is. The caller CLAIMS a category; the engine
-// resolves the one the evidence actually supports and records both, so a claim
-// that the evidence does not carry is visible rather than silently honoured.
-//
-// Omit it and the engine resolves the category from the send's origin — a reply
-// to an inbound message is a reply whether or not anybody said so. Omitting is
-// therefore honest and is the ordinary case for a reply; naming one matters when
-// there is no anchor to derive from.
-//
-// Five categories are absent from this list on purpose — `security_notice`,
-// `privacy_notice`, `optout_confirmation`, `consent_confirmation` and
-// `record_confirmation`. They serve the recipient, which is why a hard
-// suppression does not stop them, and they are reserved for the installation's
-// own controller mail behind a registered template. A caller that could claim
-// one could dress marketing as a security warning and reach somebody who has
-// objected, so naming one here is refused (422 `invalid`).
-type SendAccountEmailRequestCommunicationContext string
-
 // SendAuthorizationPreview What the engine would decide, per recipient, for a message nobody has sent.
 //
 // ADVISORY AND NOT A PROMISE. The send re-asks at staging, and a withdrawal, an
@@ -35630,6 +35519,157 @@ type SendAuthorizationPreviewRecipientMode string
 // SendAuthorizationPreviewRecipientVerdict `allow` would send. `deny` would refuse. `review` is not a soft allow — it means
 // the record does not carry this message on its own and names what is missing.
 type SendAuthorizationPreviewRecipientVerdict string
+
+// SendCompanyEmailRequest One account-started send. It is SendEmailRequest plus the `links` an anchor would
+// otherwise have supplied — the records this new conversation belongs to.
+type SendCompanyEmailRequest struct {
+	// AttachmentIds Files already in the record library to send with this message, named by id
+	// — never uploaded here. Each is snapshotted at staging (ADR-0086 §4) so
+	// archiving or superseding one later cannot rewrite what the timeline says a
+	// sent message carried.
+	//
+	// A message is transmitted with ALL its files or not at all. A connector whose
+	// provider cannot carry them parks the delivery rather than sending the text
+	// alone, and a file the scanner has since quarantined — or one the sender has
+	// since lost the right to read — parks it too: a recipient seeing fewer files
+	// than the record claims is a wrong record nobody is told about.
+	//
+	// Repeated ids are collapsed — attaching one file twice is not something a message
+	// can mean — and naming more distinct files than `maxItems` is refused with
+	// 422 `too_many_attachments`.
+	//
+	// A file with NO CONTENT is refused with 422 `empty_attachment`, naming the file.
+	// It is a separate code from the size one on purpose: an empty file is not a file
+	// that is too big, and a client that reported it as a limit would send somebody
+	// off to shrink something already as small as it can be. Nothing anywhere can send
+	// it, so it is refused here rather than by whichever transport happens to carry
+	// the message — an upload is refused for the same reason, so a file that reaches
+	// this field with no bytes was captured that way from an inbound message.
+	AttachmentIds *[]openapi_types.UUID `json:"attachment_ids,omitempty"`
+
+	// Bcc Blind copies. They receive the message and are therefore owed consent
+	// exactly as To and Cc are — the gate answers on every addressee, however
+	// they were addressed — and they are absent from the headers the recipients
+	// see, which is the whole of what "blind" means.
+	//
+	// A message with a tokenized unsubscribe link may still have only ONE
+	// addressee in total: that token is a bearer credential over one contact's
+	// consent record, so a bcc'd copy of a marketing send is refused 422
+	// `shared_unsubscribe_token` rather than handing a stranger somebody else's
+	// preference link.
+	Bcc *[]openapi_types.Email `json:"bcc,omitempty"`
+
+	// Body The (possibly edited) final body that is sent.
+	Body string                 `json:"body"`
+	Cc   *[]openapi_types.Email `json:"cc,omitempty"`
+
+	// CommunicationContext What kind of communication this is. The caller CLAIMS a category; the engine
+	// resolves the one the evidence actually supports and records both, so a claim
+	// that the evidence does not carry is visible rather than silently honoured.
+	//
+	// Omit it and the engine resolves the category from the send's origin — a reply
+	// to an inbound message is a reply whether or not anybody said so. Omitting is
+	// therefore honest and is the ordinary case for a reply; naming one matters when
+	// there is no anchor to derive from.
+	//
+	// Five categories are absent from this list on purpose — `security_notice`,
+	// `privacy_notice`, `optout_confirmation`, `consent_confirmation` and
+	// `record_confirmation`. They serve the recipient, which is why a hard
+	// suppression does not stop them, and they are reserved for the installation's
+	// own controller mail behind a registered template. A caller that could claim
+	// one could dress marketing as a security warning and reach somebody who has
+	// objected, so naming one here is refused (422 `invalid`).
+	CommunicationContext *SendCompanyEmailRequestCommunicationContext `json:"communication_context,omitempty"`
+
+	// ConsentPurpose DEPRECATED, and no longer required. The engine resolves what a message is from
+	// the record — the thread it answers, the deal or invoice it names, the evidence
+	// supplied in `evidence` — and a purpose key is not that. Send
+	// `communication_context` instead.
+	//
+	// A key that is still supplied is recorded as the caller's claim and is consulted
+	// only where the record supports no category on its own. An unknown or archived
+	// key authorizes nothing.
+	ConsentPurpose *string `json:"consent_purpose,omitempty"`
+
+	// DraftRef Opaque reference returned by the drafting operation, exactly as on `send_email`.
+	// Omit for independently composed mail.
+	DraftRef *string `json:"draft_ref,omitempty"`
+
+	// Evidence Records the caller names in support of this send. Checked, never trusted.
+	Evidence *CommunicationEvidence `json:"evidence,omitempty"`
+
+	// HtmlBody The same message as markup, or omitted for a plain-text send. It never
+	// REPLACES `body`: a message carrying both goes out as multipart/alternative
+	// with the plain part first, so a client that cannot render HTML still
+	// receives the words. The sender's signature and the unsubscribe footer are
+	// appended to BOTH parts by the server, in each part's own syntax.
+	HtmlBody *string `json:"html_body,omitempty"`
+
+	// Links The records this conversation is filed under — the company it was started from, and
+	// optionally the contact and deal it concerns. At least one is required: a message
+	// belonging to no record is one nobody will find again, which is the gap this
+	// operation exists to close. Each target is row-scope probed, so an id the caller
+	// cannot see is refused 404 — and each probe is its own query, so the list is bounded
+	// at 25 (a message about more records than that is about none of them).
+	Links []ActivityLinkInput `json:"links"`
+
+	// MarketingPurpose For a marketing send, the consent purpose key naming the topic it is for.
+	// Marketing consent is purpose-specific: a grant for one topic authorizes that
+	// topic and no other.
+	MarketingPurpose *string `json:"marketing_purpose,omitempty"`
+
+	// OperatorReason What a human typed when a first message was genuinely ambiguous. It is
+	// RECORDED on the decision and grants nothing — a sentence a sender wrote about
+	// their own send is not evidence about the recipient. It exists so a later
+	// reader can see what the sender believed, not so the engine can be talked into
+	// an allow.
+	OperatorReason *string `json:"operator_reason,omitempty"`
+
+	// ScheduledAt Send this message at this instant instead of now (ADR-0104). Absolute
+	// and unambiguous; `scheduled_tz` records the zone the human picked it in.
+	//
+	// A scheduled message writes NO activity and NO delivery row until it fires —
+	// the timeline stays silent about a message nobody has sent. The response is
+	// 201 with the ScheduledSend rather than 202 with an activity.
+	//
+	// Every gate runs TWICE: now, so a bad recipient or a withheld consent refuses
+	// while the sender is still at the keyboard, and again when it fires, against
+	// the state that exists then. A message whose consent was withdrawn, whose
+	// sender lost their seat, or whose attachment was archived in between is HELD
+	// for a human rather than sent stale.
+	//
+	// An instant already past sends immediately. Further ahead than 90 days is
+	// refused 422.
+	ScheduledAt *time.Time `json:"scheduled_at,omitempty"`
+
+	// ScheduledTz The IANA zone name (e.g. `Europe/Berlin`) the human chose `scheduled_at` in.
+	// Required with `scheduled_at`. A zone NAME, never a numeric offset, which
+	// would freeze the DST rules of the day it was written (AC-DS-TZ4).
+	ScheduledTz *string `json:"scheduled_tz,omitempty"`
+	Subject     string  `json:"subject"`
+
+	// To At least one addressee. A send whose To: line is empty is refused 422 before
+	// anything is staged — `cc` alone does not make a message addressed to anyone.
+	To []openapi_types.Email `json:"to"`
+}
+
+// SendCompanyEmailRequestCommunicationContext What kind of communication this is. The caller CLAIMS a category; the engine
+// resolves the one the evidence actually supports and records both, so a claim
+// that the evidence does not carry is visible rather than silently honoured.
+//
+// Omit it and the engine resolves the category from the send's origin — a reply
+// to an inbound message is a reply whether or not anybody said so. Omitting is
+// therefore honest and is the ordinary case for a reply; naming one matters when
+// there is no anchor to derive from.
+//
+// Five categories are absent from this list on purpose — `security_notice`,
+// `privacy_notice`, `optout_confirmation`, `consent_confirmation` and
+// `record_confirmation`. They serve the recipient, which is why a hard
+// suppression does not stop them, and they are reserved for the installation's
+// own controller mail behind a registered template. A caller that could claim
+// one could dress marketing as a security warning and reach somebody who has
+// objected, so naming one here is refused (422 `invalid`).
+type SendCompanyEmailRequestCommunicationContext string
 
 // SendEmailRequest defines model for SendEmailRequest.
 type SendEmailRequest struct {
@@ -41372,7 +41412,7 @@ type BookMeetingJSONBody struct {
 
 	// Links Entities to associate the resulting meeting activity with. At least one is
 	// required: a meeting belonging to no record appears on no timeline and is one
-	// nobody will find again, which is the same reason `SendAccountEmailRequest`
+	// nobody will find again, which is the same reason `SendCompanyEmailRequest`
 	// carries the bound. Each one is row-scope probed and written as its own row,
 	// so the list is bounded at 25 — the same bound the `book_meeting` tool applies
 	// before it stages.
@@ -41837,8 +41877,8 @@ type ListCompanyDocumentsParamsCategory string
 // ListCompanyDocumentsParamsDocState defines parameters for ListCompanyDocuments.
 type ListCompanyDocumentsParamsDocState string
 
-// DraftAccountEmailJSONBody defines parameters for DraftAccountEmail.
-type DraftAccountEmailJSONBody struct {
+// DraftCompanyEmailJSONBody defines parameters for DraftCompanyEmail.
+type DraftCompanyEmailJSONBody struct {
 	// ContactId Who the draft is addressed to. Required: a draft with no recipient has no relationship to ground itself in, and the one thing this endpoint adds over an empty compose box is that it knows who it is writing to. Must be a contact the caller can see on this account.
 	ContactId openapi_types.UUID `json:"contact_id"`
 
@@ -43288,8 +43328,8 @@ type GetMorningDigestParams struct {
 	Date *openapi_types.Date `form:"date,omitempty" json:"date,omitempty"`
 }
 
-// SendAccountEmailParams defines parameters for SendAccountEmail.
-type SendAccountEmailParams struct {
+// SendCompanyEmailParams defines parameters for SendCompanyEmail.
+type SendCompanyEmailParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
@@ -46067,8 +46107,8 @@ type AskAboutCompanyJSONRequestBody AskAboutCompanyJSONBody
 // DeepReadCompanyJSONRequestBody defines body for DeepReadCompany for application/json ContentType.
 type DeepReadCompanyJSONRequestBody = EnrichCompanyRequest
 
-// DraftAccountEmailJSONRequestBody defines body for DraftAccountEmail for application/json ContentType.
-type DraftAccountEmailJSONRequestBody DraftAccountEmailJSONBody
+// DraftCompanyEmailJSONRequestBody defines body for DraftCompanyEmail for application/json ContentType.
+type DraftCompanyEmailJSONRequestBody DraftCompanyEmailJSONBody
 
 // ScrapeCompanyJSONRequestBody defines body for ScrapeCompany for application/json ContentType.
 type ScrapeCompanyJSONRequestBody = EnrichCompanyRequest
@@ -46274,8 +46314,8 @@ type CreateDealOutcomeReviewJSONRequestBody = CreateOutcomeReviewRequest
 // DisposeDedupeCandidateJSONRequestBody defines body for DisposeDedupeCandidate for application/json ContentType.
 type DisposeDedupeCandidateJSONRequestBody = DedupeDispositionRequest
 
-// SendAccountEmailJSONRequestBody defines body for SendAccountEmail for application/json ContentType.
-type SendAccountEmailJSONRequestBody = SendAccountEmailRequest
+// SendCompanyEmailJSONRequestBody defines body for SendCompanyEmail for application/json ContentType.
+type SendCompanyEmailJSONRequestBody = SendCompanyEmailRequest
 
 // PreviewAccountSendAuthorizationJSONRequestBody defines body for PreviewAccountSendAuthorization for application/json ContentType.
 type PreviewAccountSendAuthorizationJSONRequestBody = PreviewAccountSendRequest
@@ -56869,6 +56909,9 @@ type ServerInterface interface {
 	// Regenerate this account's brief, ignoring the cached one.
 	// (POST /companies/{id}/brief)
 	RegenerateCompanyBrief(w http.ResponseWriter, r *http.Request, id Id, params RegenerateCompanyBriefParams)
+	// Which mail domains were triaged into this company, and what each concluded.
+	// (GET /companies/{id}/capture-triage)
+	GetCompanyCaptureTriage(w http.ResponseWriter, r *http.Request, id Id)
 	// The account's contacts, ranked by who is worth writing to next, filtered and paged over the WHOLE account.
 	// (GET /companies/{id}/contacts)
 	ListCompanyContacts(w http.ResponseWriter, r *http.Request, id Id, params ListCompanyContactsParams)
@@ -56892,7 +56935,7 @@ type ServerInterface interface {
 	RefreshCompanyDossier(w http.ResponseWriter, r *http.Request, id Id)
 	// Draft an email to this account, grounded in its records.
 	// (POST /companies/{id}/draft-email)
-	DraftAccountEmail(w http.ResponseWriter, r *http.Request, id Id)
+	DraftCompanyEmail(w http.ResponseWriter, r *http.Request, id Id)
 	// Enrich this company from its website (evidence-or-omit) — a staged 🟡 proposal.
 	// (POST /companies/{id}/enrich)
 	ScrapeCompany(w http.ResponseWriter, r *http.Request, id Id)
@@ -57393,7 +57436,7 @@ type ServerInterface interface {
 	GetMorningDigest(w http.ResponseWriter, r *http.Request, params GetMorningDigestParams)
 	// Start a new email conversation from a record — runs directly, consent-gated.
 	// (POST /emails)
-	SendAccountEmail(w http.ResponseWriter, r *http.Request, params SendAccountEmailParams)
+	SendCompanyEmail(w http.ResponseWriter, r *http.Request, params SendCompanyEmailParams)
 	// Would this account-started message be allowed, and on what ground.
 	// (POST /emails:preview)
 	PreviewAccountSendAuthorization(w http.ResponseWriter, r *http.Request)
@@ -59347,6 +59390,12 @@ func (_ Unimplemented) RegenerateCompanyBrief(w http.ResponseWriter, r *http.Req
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Which mail domains were triaged into this company, and what each concluded.
+// (GET /companies/{id}/capture-triage)
+func (_ Unimplemented) GetCompanyCaptureTriage(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // The account's contacts, ranked by who is worth writing to next, filtered and paged over the WHOLE account.
 // (GET /companies/{id}/contacts)
 func (_ Unimplemented) ListCompanyContacts(w http.ResponseWriter, r *http.Request, id Id, params ListCompanyContactsParams) {
@@ -59391,7 +59440,7 @@ func (_ Unimplemented) RefreshCompanyDossier(w http.ResponseWriter, r *http.Requ
 
 // Draft an email to this account, grounded in its records.
 // (POST /companies/{id}/draft-email)
-func (_ Unimplemented) DraftAccountEmail(w http.ResponseWriter, r *http.Request, id Id) {
+func (_ Unimplemented) DraftCompanyEmail(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -60393,7 +60442,7 @@ func (_ Unimplemented) GetMorningDigest(w http.ResponseWriter, r *http.Request, 
 
 // Start a new email conversation from a record — runs directly, consent-gated.
 // (POST /emails)
-func (_ Unimplemented) SendAccountEmail(w http.ResponseWriter, r *http.Request, params SendAccountEmailParams) {
+func (_ Unimplemented) SendCompanyEmail(w http.ResponseWriter, r *http.Request, params SendCompanyEmailParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -68588,6 +68637,38 @@ func (siw *ServerInterfaceWrapper) RegenerateCompanyBrief(w http.ResponseWriter,
 	handler.ServeHTTP(w, r)
 }
 
+// GetCompanyCaptureTriage operation middleware
+func (siw *ServerInterfaceWrapper) GetCompanyCaptureTriage(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetCompanyCaptureTriage(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListCompanyContacts operation middleware
 func (siw *ServerInterfaceWrapper) ListCompanyContacts(w http.ResponseWriter, r *http.Request) {
 
@@ -69022,8 +69103,8 @@ func (siw *ServerInterfaceWrapper) RefreshCompanyDossier(w http.ResponseWriter, 
 	handler.ServeHTTP(w, r)
 }
 
-// DraftAccountEmail operation middleware
-func (siw *ServerInterfaceWrapper) DraftAccountEmail(w http.ResponseWriter, r *http.Request) {
+// DraftCompanyEmail operation middleware
+func (siw *ServerInterfaceWrapper) DraftCompanyEmail(w http.ResponseWriter, r *http.Request) {
 
 	var err error
 	_ = err
@@ -69044,7 +69125,7 @@ func (siw *ServerInterfaceWrapper) DraftAccountEmail(w http.ResponseWriter, r *h
 	r = r.WithContext(ctx)
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.DraftAccountEmail(w, r, id)
+		siw.Handler.DraftCompanyEmail(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -76871,8 +76952,8 @@ func (siw *ServerInterfaceWrapper) GetMorningDigest(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
-// SendAccountEmail operation middleware
-func (siw *ServerInterfaceWrapper) SendAccountEmail(w http.ResponseWriter, r *http.Request) {
+// SendCompanyEmail operation middleware
+func (siw *ServerInterfaceWrapper) SendCompanyEmail(w http.ResponseWriter, r *http.Request) {
 
 	var err error
 	_ = err
@@ -76886,7 +76967,7 @@ func (siw *ServerInterfaceWrapper) SendAccountEmail(w http.ResponseWriter, r *ht
 	r = r.WithContext(ctx)
 
 	// Parameter object where we will unmarshal all parameters from the context
-	var params SendAccountEmailParams
+	var params SendCompanyEmailParams
 
 	headers := r.Header
 
@@ -76929,7 +77010,7 @@ func (siw *ServerInterfaceWrapper) SendAccountEmail(w http.ResponseWriter, r *ht
 	}
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.SendAccountEmail(w, r, params)
+		siw.Handler.SendCompanyEmail(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -90843,6 +90924,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/companies/{id}/brief", wrapper.RegenerateCompanyBrief)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/companies/{id}/capture-triage", wrapper.GetCompanyCaptureTriage)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/companies/{id}/contacts", wrapper.ListCompanyContacts)
 	})
 	r.Group(func(r chi.Router) {
@@ -90864,7 +90948,7 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/companies/{id}/dossier", wrapper.RefreshCompanyDossier)
 	})
 	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/companies/{id}/draft-email", wrapper.DraftAccountEmail)
+		r.Post(options.BaseURL+"/companies/{id}/draft-email", wrapper.DraftCompanyEmail)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/companies/{id}/enrich", wrapper.ScrapeCompany)
@@ -91365,7 +91449,7 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/digest", wrapper.GetMorningDigest)
 	})
 	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/emails", wrapper.SendAccountEmail)
+		r.Post(options.BaseURL+"/emails", wrapper.SendCompanyEmail)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/emails:preview", wrapper.PreviewAccountSendAuthorization)

@@ -39,9 +39,9 @@ Counted per record — one (task, binding) pair — over the 14 stale record(s) 
 
 | What moved | Records | What it means |
 |---|---:|---|
-| the case | 6 | Somebody rewrote the test. Re-certify: the old number measured a different question. |
+| the case | 8 | Somebody rewrote the test. Re-certify: the old number measured a different question. |
 | **the prompt this build sends** | 13 | The product changed. The band describes the NEW prompt, so a drop is the cost of that change and not the model. |
-| the grader | 9 | The judge's own request moved. A band can shift with neither the test nor the product touched. |
+| the grader | 11 | The judge's own request moved. A band can shift with neither the test nor the product touched. |
 
 A site's *best* state is the strongest state any of its bindings reached. A
 site `current` on one model and `stale` on three is counted once, as
@@ -185,9 +185,9 @@ model, real network).
 
 | Site | Binding | Why it is stale |
 |---|---|---|
-| `agent_loop/loop` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 24 scenarios it scored have changed since (the prompt this build sends): a_description_is_not_a_name, a_draft_precedes_a_send, a_goal_no_tool_can_serve_ends_the_turn, a_name_alone_is_still_a_search, a_promise_is_not_a_slipping_deal, a_stepless_deal_is_a_slipping_deal and 18 more |
+| `agent_loop/loop` | `gemini · gemini-3.1-flash-lite · eu_hosted` | 24 scenarios it scored have changed since (the case and the prompt this build sends and the grader): a_description_is_not_a_name, a_draft_precedes_a_send, a_goal_no_tool_can_serve_ends_the_turn, a_name_alone_is_still_a_search, a_promise_is_not_a_slipping_deal, a_stepless_deal_is_a_slipping_deal and 18 more |
 | `agent_loop/loop` | `openai_compatible · mistralai/ministral-14b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
-| `agent_loop/loop` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 24 scenarios it scored have changed since (the prompt this build sends): a_description_is_not_a_name, a_draft_precedes_a_send, a_goal_no_tool_can_serve_ends_the_turn, a_name_alone_is_still_a_search, a_promise_is_not_a_slipping_deal, a_stepless_deal_is_a_slipping_deal and 18 more |
+| `agent_loop/loop` | `openai_compatible · openai/gpt-oss-120b · eu_hosted` | 24 scenarios it scored have changed since (the case and the prompt this build sends and the grader): a_description_is_not_a_name, a_draft_precedes_a_send, a_goal_no_tool_can_serve_ends_the_turn, a_name_alone_is_still_a_search, a_promise_is_not_a_slipping_deal, a_stepless_deal_is_a_slipping_deal and 18 more |
 | `brief_ranking/rank` | `openai_compatible · mistralai/mistral-large-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
 | `brief_ranking/rank` | `openai_compatible · z-ai/glm-5.2 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
 | `capture_classify/classify` | `openai_compatible · mistralai/ministral-8b-2512 · cloud_frontier` | predates per-scenario stamps: only its task stamp can be compared, and that has moved |
