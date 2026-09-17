@@ -55,8 +55,8 @@ const (
 	ThreadingNoContacts ThreadingVerdict = "no_observed_contacts"
 )
 
-// AccountCoverage is one company's relationship breadth.
-type AccountCoverage struct {
+// CompanyCoverage is one company's relationship breadth.
+type CompanyCoverage struct {
 	CompanyID ids.UUID
 	// Stakeholders the reader may open, deduplicated across every deal and
 	// project of this account. A contact on three deals is one relationship.
@@ -79,14 +79,14 @@ type AccountCoverage struct {
 	SectionsOmitted []string
 }
 
-// AccountCoverageFor assembles one account's relationship breadth.
+// CompanyCoverageFor assembles one account's relationship breadth.
 //
 // The edge admission comes FIRST, and a denial becomes a named omission rather
 // than an empty answer — the same shape CoverageFor uses, and for the same
 // reason: every stakeholder is an edge, so a caller without the grant would
 // otherwise be served zero contacts and told the account is uncovered.
-func AccountCoverageFor(ctx context.Context, tx pgx.Tx, companyID ids.UUID) (AccountCoverage, error) {
-	out := AccountCoverage{CompanyID: companyID}
+func CompanyCoverageFor(ctx context.Context, tx pgx.Tx, companyID ids.UUID) (CompanyCoverage, error) {
+	out := CompanyCoverage{CompanyID: companyID}
 	// The ACCOUNT first, before anything is read about it.
 	//
 	// Without this the function answers about any company id a caller can
@@ -116,7 +116,7 @@ func AccountCoverageFor(ctx context.Context, tx pgx.Tx, companyID ids.UUID) (Acc
 	if err != nil {
 		return out, err
 	}
-	total, err := countAccountStakeholders(ctx, tx, companyID)
+	total, err := countCompanyStakeholders(ctx, tx, companyID)
 	if err != nil {
 		return out, err
 	}
@@ -162,7 +162,7 @@ func visibleAccountStakeholders(ctx context.Context, tx pgx.Tx, companyID ids.UU
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	companyPos := arg(companyID)
-	edge, err := accountStakeholderEdge(ctx, companyPos, arg)
+	edge, err := companyStakeholderEdge(ctx, companyPos, arg)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -218,7 +218,7 @@ func visibleAccountStakeholders(ctx context.Context, tx pgx.Tx, companyID ids.UU
 	return contacts, roles, rows.Err()
 }
 
-// countAccountStakeholders counts every distinct contact seated on this account,
+// countCompanyStakeholders counts every distinct contact seated on this account,
 // WITHOUT the contact row scope.
 //
 // It is the one read here that omits it, and that omission is the whole point.
@@ -228,17 +228,17 @@ func visibleAccountStakeholders(ctx context.Context, tx pgx.Tx, companyID ids.UU
 // time. An account would then read as single-threaded because its contacts
 // belong to somebody else's mailbox.
 //
-// The reader is still gated: AccountCoverageFor takes the edge admission before
+// The reader is still gated: CompanyCoverageFor takes the edge admission before
 // this runs, and the account is named by a deal or project the caller reached
 // through their own read. What is deliberately not applied is the contact
 // predicate, and the answer is a COUNT — no id, no name, no role. What a caller
 // learns is that their own view is incomplete, which is what stops the verdict
 // being wrong about the customer.
-func countAccountStakeholders(ctx context.Context, tx pgx.Tx, companyID ids.UUID) (int, error) {
+func countCompanyStakeholders(ctx context.Context, tx pgx.Tx, companyID ids.UUID) (int, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	companyPos := arg(companyID)
-	edge, err := accountStakeholderEdge(ctx, companyPos, arg)
+	edge, err := companyStakeholderEdge(ctx, companyPos, arg)
 	if err != nil {
 		return 0, err
 	}
@@ -254,13 +254,13 @@ func countAccountStakeholders(ctx context.Context, tx pgx.Tx, companyID ids.UUID
 	return total, nil
 }
 
-// accountStakeholderEdge is the predicate selecting every stakeholder edge of
+// companyStakeholderEdge is the predicate selecting every stakeholder edge of
 // one account: a seat on one of its deals, or on one of its projects.
 //
 // Both statements above render this same predicate, because the visible set and
 // the total have to cover the SAME population: any difference between them
 // lands in the withheld count and reads as hidden contacts who are not there.
-func accountStakeholderEdge(ctx context.Context, companyPos int, arg func(any) int) (string, error) {
+func companyStakeholderEdge(ctx context.Context, companyPos int, arg func(any) int) (string, error) {
 	// The deal and project the seat hangs off, under the caller's own scope for
 	// each. Both statements carry this, so the ONLY difference between the
 	// visible set and the total is the contact — which is what makes their

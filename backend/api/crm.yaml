@@ -1520,7 +1520,7 @@ paths:
           description: The draft, and what it was written from.
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/AccountEmailDraft' }
+              schema: { $ref: '#/components/schemas/CompanyEmailDraft' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -1836,7 +1836,7 @@ paths:
           description: The note, and what it was written from.
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/AccountEmailDraft' }
+              schema: { $ref: '#/components/schemas/CompanyEmailDraft' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -2978,7 +2978,7 @@ paths:
           description: The draft, and what it was written from.
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/AccountEmailDraft' }
+              schema: { $ref: '#/components/schemas/CompanyEmailDraft' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -3575,7 +3575,7 @@ paths:
       - $ref: '#/components/parameters/Id'
     post:
       tags: [Companies, AI]
-      operationId: draftAccountEmail
+      operationId: draftCompanyEmail
       x-waits-on-model: always
       x-agent-access: human-only
       security: [{ cookieAuth: [] }]
@@ -3655,7 +3655,7 @@ paths:
           description: The draft, and what it was written from.
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/AccountEmailDraft' }
+              schema: { $ref: '#/components/schemas/CompanyEmailDraft' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -6615,7 +6615,7 @@ paths:
   /emails:
     post:
       tags: [Activities, AI]
-      operationId: sendAccountEmail
+      operationId: sendCompanyEmail
       summary: Start a new email conversation from a record — runs directly, consent-gated.
       description: |
         The account-started twin of `send_email` (ADR-0087). "Write email" from a company,
@@ -6640,14 +6640,14 @@ paths:
 
         Governed identically to the reply, with no new authority (ADR-0087 §6): it runs
         directly on the passport holder's own authority (ADR-0055). Under a tier floor on
-        `send_account_email` it stages instead, and what is staged is a CREATE — this send
+        `send_company_email` it stages instead, and what is staged is a CREATE — this send
         answers no message, so there is no anchor to name and no version to pin — released
         by a human holding `activity.create`, the grant `send_email` already asks of its
         approver. Whichever door
         the call arrives at, every entry in `links` is row-scope probed before the message is
         sent; over MCP that probe also runs at staging, so an agent naming a record it cannot
         see is refused before a human is asked about it at all.
-      x-mcp-tool: { verb: send_account_email, record_type: activity, tier: auto_execute, scope: send }
+      x-mcp-tool: { verb: send_company_email, record_type: activity, tier: auto_execute, scope: send }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/ApprovalToken'
@@ -6655,7 +6655,7 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/SendAccountEmailRequest' }
+            schema: { $ref: '#/components/schemas/SendCompanyEmailRequest' }
       responses:
         '202':
           description: Accepted for send (queued); the resulting outbound activity is logged.
@@ -6938,7 +6938,7 @@ paths:
                   description: |
                     Entities to associate the resulting meeting activity with. At least one is
                     required: a meeting belonging to no record appears on no timeline and is one
-                    nobody will find again, which is the same reason `SendAccountEmailRequest`
+                    nobody will find again, which is the same reason `SendCompanyEmailRequest`
                     carries the bound. Each one is row-scope probed and written as its own row,
                     so the list is bounded at 25 — the same bound the `book_meeting` tool applies
                     before it stages.
@@ -8373,7 +8373,7 @@ paths:
           description: The draft, and what it was written from.
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/AccountEmailDraft' }
+              schema: { $ref: '#/components/schemas/CompanyEmailDraft' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -34816,7 +34816,7 @@ components:
             thread whose every participant is a colleague — which the reader fills in
             themselves.
 
-    AccountEmailDraft:
+    CompanyEmailDraft:
       type: object
       description: |
         A draft written from an account's records, and what it was written from
@@ -35410,7 +35410,7 @@ components:
             liftability itself would be a second copy of that rule. The copy that stopped
             matching would offer a rep a button that cannot lawfully be pressed.
 
-    SendAccountEmailRequest:
+    SendCompanyEmailRequest:
       type: object
       required: [subject, body, to, links]
       description: |

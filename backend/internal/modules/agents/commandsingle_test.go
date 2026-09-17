@@ -206,14 +206,14 @@ func TestTheSinglePurposeGuardsRefuseWhatExecutionWouldRefuse(t *testing.T) {
 		},
 		{
 			"an account-started send with no addressee",
-			NewSendAccountEmailCall(oneRecord(datasource.EntityCompany, other, `{}`, 1),
-				SendAccountEmailCommand{Links: []RecordLink{link}}),
+			NewSendCompanyEmailCall(oneRecord(datasource.EntityCompany, other, `{}`, 1),
+				SendCompanyEmailCommand{Links: []RecordLink{link}}),
 			"`to`",
 		},
 		{
 			"an account-started send filed under nothing",
-			NewSendAccountEmailCall(oneRecord(datasource.EntityCompany, other, `{}`, 1),
-				SendAccountEmailCommand{To: []string{"a@example.test"}}),
+			NewSendCompanyEmailCall(oneRecord(datasource.EntityCompany, other, `{}`, 1),
+				SendCompanyEmailCommand{To: []string{"a@example.test"}}),
 			"`links`",
 		},
 		{

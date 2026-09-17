@@ -2402,7 +2402,7 @@ export interface paths {
          *     Human-only: drafting spends the workspace's model budget on prose for a contact to
          *     send under their own name.
          */
-        post: operations["draftAccountEmail"];
+        post: operations["draftCompanyEmail"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4481,7 +4481,7 @@ export interface paths {
          *
          *     Governed identically to the reply, with no new authority (ADR-0087 §6): it runs
          *     directly on the passport holder's own authority (ADR-0055). Under a tier floor on
-         *     `send_account_email` it stages instead, and what is staged is a CREATE — this send
+         *     `send_company_email` it stages instead, and what is staged is a CREATE — this send
          *     answers no message, so there is no anchor to name and no version to pin — released
          *     by a human holding `activity.create`, the grant `send_email` already asks of its
          *     approver. Whichever door
@@ -4489,7 +4489,7 @@ export interface paths {
          *     sent; over MCP that probe also runs at staging, so an agent naming a record it cannot
          *     see is refused before a human is asked about it at all.
          */
-        post: operations["sendAccountEmail"];
+        post: operations["sendCompanyEmail"];
         delete?: never;
         options?: never;
         head?: never;
@@ -25352,7 +25352,7 @@ export interface components {
          *     needs to see what the draft is standing on, and `generated_by`, because the
          *     deterministic floor is a real outcome here rather than an error.
          */
-        AccountEmailDraft: {
+        CompanyEmailDraft: {
             subject: string;
             /** @description Plain text, end to end. There is no rich-text storage format, no paste sanitiser and no HTML+text send pair, so a formatted draft would be a wire change rather than a toolbar. */
             body: string;
@@ -25878,7 +25878,7 @@ export interface components {
          * @description One account-started send. It is SendEmailRequest plus the `links` an anchor would
          *     otherwise have supplied — the records this new conversation belongs to.
          */
-        SendAccountEmailRequest: {
+        SendCompanyEmailRequest: {
             subject: string;
             /** @description The (possibly edited) final body that is sent. */
             body: string;
@@ -37953,7 +37953,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AccountEmailDraft"];
+                    "application/json": components["schemas"]["CompanyEmailDraft"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -38175,7 +38175,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AccountEmailDraft"];
+                    "application/json": components["schemas"]["CompanyEmailDraft"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -39438,7 +39438,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AccountEmailDraft"];
+                    "application/json": components["schemas"]["CompanyEmailDraft"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -39889,7 +39889,7 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
-    draftAccountEmail: {
+    draftCompanyEmail: {
         parameters: {
             query?: never;
             header?: never;
@@ -39929,7 +39929,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AccountEmailDraft"];
+                    "application/json": components["schemas"]["CompanyEmailDraft"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -43505,7 +43505,7 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
-    sendAccountEmail: {
+    sendCompanyEmail: {
         parameters: {
             query?: never;
             header?: {
@@ -43542,7 +43542,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["SendAccountEmailRequest"];
+                "application/json": components["schemas"]["SendCompanyEmailRequest"];
             };
         };
         responses: {
@@ -43924,7 +43924,7 @@ export interface operations {
                     /**
                      * @description Entities to associate the resulting meeting activity with. At least one is
                      *     required: a meeting belonging to no record appears on no timeline and is one
-                     *     nobody will find again, which is the same reason `SendAccountEmailRequest`
+                     *     nobody will find again, which is the same reason `SendCompanyEmailRequest`
                      *     carries the bound. Each one is row-scope probed and written as its own row,
                      *     so the list is bounded at 25 — the same bound the `book_meeting` tool applies
                      *     before it stages.
@@ -45613,7 +45613,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AccountEmailDraft"];
+                    "application/json": components["schemas"]["CompanyEmailDraft"];
                 };
             };
             401: components["responses"]["Unauthorized"];

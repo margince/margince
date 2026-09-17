@@ -449,8 +449,13 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "24 scenarios it scored have changed since (the prompt this build sends): a_description_is_not_a_name, a_draft_precedes_a_send, a_goal_no_tool_can_serve_ends_the_turn, a_name_alone_is_still_a_search, a_promise_is_not_a_slipping_deal, a_stepless_deal_is_a_slipping_deal and 18 more",
+          "stale_reason": "24 scenarios it scored have changed since (the case and the prompt this build sends and the grader): a_description_is_not_a_name, a_draft_precedes_a_send, a_goal_no_tool_can_serve_ends_the_turn, a_name_alone_is_still_a_search, a_promise_is_not_a_slipping_deal, a_stepless_deal_is_a_slipping_deal and 18 more",
           "stale_cause": {
+            "case_changed": [
+              "a_thin_relationship_is_not_a_slipping_deal",
+              "a_warm_path_is_not_a_search",
+              "coverage_names_the_gap"
+            ],
             "prompt_changed": [
               "a_description_is_not_a_name",
               "a_draft_precedes_a_send",
@@ -476,6 +481,11 @@
               "the_record_is_found_before_it_is_changed",
               "the_stage_id_comes_from_the_pipeline",
               "who_knows_needs_the_contact"
+            ],
+            "grader_changed": [
+              "a_thin_relationship_is_not_a_slipping_deal",
+              "a_warm_path_is_not_a_search",
+              "coverage_names_the_gap"
             ]
           }
         },
@@ -523,8 +533,13 @@
             "invalid": 7,
             "abstained": 0
           },
-          "stale_reason": "24 scenarios it scored have changed since (the prompt this build sends): a_description_is_not_a_name, a_draft_precedes_a_send, a_goal_no_tool_can_serve_ends_the_turn, a_name_alone_is_still_a_search, a_promise_is_not_a_slipping_deal, a_stepless_deal_is_a_slipping_deal and 18 more",
+          "stale_reason": "24 scenarios it scored have changed since (the case and the prompt this build sends and the grader): a_description_is_not_a_name, a_draft_precedes_a_send, a_goal_no_tool_can_serve_ends_the_turn, a_name_alone_is_still_a_search, a_promise_is_not_a_slipping_deal, a_stepless_deal_is_a_slipping_deal and 18 more",
           "stale_cause": {
+            "case_changed": [
+              "a_thin_relationship_is_not_a_slipping_deal",
+              "a_warm_path_is_not_a_search",
+              "coverage_names_the_gap"
+            ],
             "prompt_changed": [
               "a_description_is_not_a_name",
               "a_draft_precedes_a_send",
@@ -550,6 +565,11 @@
               "the_record_is_found_before_it_is_changed",
               "the_stage_id_comes_from_the_pipeline",
               "who_knows_needs_the_contact"
+            ],
+            "grader_changed": [
+              "a_thin_relationship_is_not_a_slipping_deal",
+              "a_warm_path_is_not_a_search",
+              "coverage_names_the_gap"
             ]
           }
         }

@@ -1596,7 +1596,7 @@ export const vi = {
   "approval.kind.relink_thread": "Gán lại một cuộc trò chuyện",
   "approval.kind.relink_activities": "Gán lại nhiều hoạt động",
   "approval.kind.scheduled_send_held": "Phát hành tin nhắn đã dừng",
-  "approval.kind.send_account_email": "Gửi email cho một công ty",
+  "approval.kind.send_company_email": "Gửi email cho một công ty",
   "approval.kind.send_message": "Gửi một tin nhắn",
   "approval.field.basis": "Vì sao",
   "approval.field.step": "Bước cần làm",

@@ -47,7 +47,7 @@ func TestEachDraftingToolNamesTheOneThatAnswersDifferently(t *testing.T) {
 		},
 		{
 			file:     "backend/internal/modules/agents/tools_slipping.go",
-			mustName: "DraftAccountEmail",
+			mustName: "DraftCompanyEmail",
 			why: "the tool that does NOT persist. Without the pointer, a reader finding this one " +
 				"alone reads the timeline write as what drafting means everywhere",
 		},

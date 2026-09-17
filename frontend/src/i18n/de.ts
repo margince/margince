@@ -1603,7 +1603,7 @@ export const de = {
   "approval.kind.relink_thread": "Konversation neu zuordnen",
   "approval.kind.relink_activities": "Mehrere Aktivitäten neu zuordnen",
   "approval.kind.scheduled_send_held": "Gestoppte Nachricht freigeben",
-  "approval.kind.send_account_email": "E-Mail an ein Unternehmen senden",
+  "approval.kind.send_company_email": "E-Mail an ein Unternehmen senden",
   "approval.kind.send_message": "Nachricht senden",
   "approval.field.basis": "Warum",
   "approval.field.step": "Der Schritt",

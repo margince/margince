@@ -14,12 +14,12 @@ fixture:
 expect:
   outcome: accepted
   answer:
-    step: account_coverage
+    step: company_coverage
     args:
       deal_id: 0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e11
   rubric: >
     Single-threaded is a coverage question about one deal's stakeholders, and
-    account_coverage is the tool that answers it. Score high only if the turn
+    company_coverage is the tool that answers it. Score high only if the turn
     calls it on the deal the grounding identifies. intro_path_to finds a way in
     to an account nobody knows, which is the opposite situation; catch_me_up_on
     would narrate the deal without ever saying who is missing from it.

@@ -142,7 +142,7 @@ var composedIntents = map[string]bool{
 	"catch_me_up_on":           true,
 	"prep_for_meeting":         true,
 	"who_knows":                true,
-	"account_coverage":         true,
+	"company_coverage":         true,
 	"intro_path_to":            true,
 	"at_risk_relationships":    true,
 	"whats_slipping_this_week": true,

@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { ViewHost } from "../story-hosts";
-import { accountBriefFixture } from "./fixture";
+import { companyBriefFixture } from "./fixture";
 import { render } from "./main";
 
 const meta: Meta<typeof ViewHost> = {
@@ -12,7 +12,7 @@ export default meta;
 
 type Story = StoryObj<typeof ViewHost>;
 
-export const Populated: Story = { args: { data: accountBriefFixture.data } };
+export const Populated: Story = { args: { data: companyBriefFixture.data } };
 
 /** An empty queue is an ANSWER, not a failure, and the view has to say so. */
 export const Empty: Story = {
@@ -22,7 +22,7 @@ export const Empty: Story = {
 /** candidate_count above the queue length is what the ranking left out. */
 export const MoreCandidatesThanQueued: Story = {
   args: {
-    data: { ...(accountBriefFixture.data as object), candidate_count: 40 },
+    data: { ...(companyBriefFixture.data as object), candidate_count: 40 },
   },
 };
 

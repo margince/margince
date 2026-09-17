@@ -39,7 +39,7 @@ func companyLink(id ids.UUID) string {
 // the reply, with no new authority. "Identically" is four properties, and each
 // one is a way the twin could have been governed more loosely by accident.
 func TestTheAccountStartedSendGovernsAsTheReplyDoes(t *testing.T) {
-	spec, reply := sendAccountEmailTool{}.Spec(), sendEmailTool{}.Spec()
+	spec, reply := sendCompanyEmailTool{}.Spec(), sendEmailTool{}.Spec()
 
 	if spec.RequiredScope != reply.RequiredScope {
 		t.Errorf("RequiredScope = %q, want the reply's %q", spec.RequiredScope, reply.RequiredScope)
@@ -54,8 +54,8 @@ func TestTheAccountStartedSendGovernsAsTheReplyDoes(t *testing.T) {
 	if !spec.Egress {
 		t.Error("Egress = false; the message leaves the workspace")
 	}
-	if spec.OpenAPIOp != "sendAccountEmail" {
-		t.Errorf("OpenAPIOp = %q, want %q", spec.OpenAPIOp, "sendAccountEmail")
+	if spec.OpenAPIOp != "sendCompanyEmail" {
+		t.Errorf("OpenAPIOp = %q, want %q", spec.OpenAPIOp, "sendCompanyEmail")
 	}
 }
 
@@ -70,7 +70,7 @@ func TestTheAccountStartedSendStagesACreate(t *testing.T) {
 	company := ids.NewV7()
 	p := &multiLinkProvider{}
 
-	info, err := sendAccountEmailTool{comms: &recordingComms{}, p: p}.
+	info, err := sendCompanyEmailTool{comms: &recordingComms{}, p: p}.
 		StageInfo(context.Background(), accountSendArgs(companyLink(company)))
 	if err != nil {
 		t.Fatalf("StageInfo: %v", err)
@@ -95,7 +95,7 @@ func TestTheAccountStartedSendStagesACreate(t *testing.T) {
 // The inbox row is the whole of what a human reads before releasing a send, so
 // an addressee missing from it is a recipient nobody agreed to.
 func TestTheAccountStartedSendSummaryNamesEveryArgumentItReleases(t *testing.T) {
-	got := describeAccountSend(SendAccountEmailCommand{
+	got := describeAccountSend(SendCompanyEmailCommand{
 		To: []string{"buyer@example.test"}, Cc: []string{"rival@example.test"}, Subject: "Q3 pricing",
 	}, []RecordLink{{EntityType: "company", EntityID: ids.NewV7()}})
 
@@ -130,7 +130,7 @@ func TestAnUnsendableAccountStartedCallIsRefusedAtBothDoors(t *testing.T) {
 		},
 	} {
 		comms := &recordingComms{}
-		tool := sendAccountEmailTool{comms: comms, p: &multiLinkProvider{}}
+		tool := sendCompanyEmailTool{comms: comms, p: &multiLinkProvider{}}
 		doors := map[string]func(json.RawMessage) error{
 			"staging": func(in json.RawMessage) error {
 				_, err := tool.StageInfo(context.Background(), in)
@@ -168,7 +168,7 @@ func TestAnUnsendableAccountStartedCallIsRefusedAtBothDoors(t *testing.T) {
 // So this asks the machinery directly rather than through Invoke, which no
 // longer stages: the call must yield a subject an inbox can render.
 func TestAnAccountStartedSendCanStillDescribeItsStaging(t *testing.T) {
-	tool := sendAccountEmailTool{comms: &recordingComms{}, p: &multiLinkProvider{}}
+	tool := sendCompanyEmailTool{comms: &recordingComms{}, p: &multiLinkProvider{}}
 
 	info, err := tool.StageInfo(sendCtx(), accountSendArgs(companyLink(ids.NewV7())))
 	if err != nil {
@@ -202,7 +202,7 @@ func TestAnAccountStartedSendRefusesALinkTheCallerCannotSee(t *testing.T) {
 	registry := NewRegistry(approvals, auth.NewGate(fullSeatAuthority{}))
 	RegisterCommsTools(registry, &recordingComms{}, unreadableProvider{})
 
-	_, err := registry.Invoke(sendCtx(), "send_account_email", accountSendArgs(companyLink(ids.NewV7())))
+	_, err := registry.Invoke(sendCtx(), "send_company_email", accountSendArgs(companyLink(ids.NewV7())))
 
 	if !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("Invoke err = %v, want the row-scope answer — a record the caller cannot read is not a "+
@@ -216,7 +216,7 @@ func TestAnAccountStartedSendRefusesALinkTheCallerCannotSee(t *testing.T) {
 // Malformed arguments are refused before anything is staged, at both doors —
 // there is no call here to put in front of a human.
 func TestAnAccountStartedSendRefusesUnreadableArguments(t *testing.T) {
-	tool := sendAccountEmailTool{comms: &recordingComms{}, p: &multiLinkProvider{}}
+	tool := sendCompanyEmailTool{comms: &recordingComms{}, p: &multiLinkProvider{}}
 	const notAnObject = `["send","this"]`
 
 	if _, err := tool.StageInfo(context.Background(), json.RawMessage(notAnObject)); err == nil {
@@ -234,7 +234,7 @@ func TestTheAccountStartedSendRefusesAMirroredLinkBehindALocalOne(t *testing.T) 
 	local, mirrored := ids.NewV7(), ids.NewV7()
 	p := &multiLinkProvider{heldElsewhere: map[ids.UUID]bool{mirrored: true}}
 
-	_, err := sendAccountEmailTool{comms: &recordingComms{}, p: p}.StageInfo(context.Background(),
+	_, err := sendCompanyEmailTool{comms: &recordingComms{}, p: p}.StageInfo(context.Background(),
 		accountSendArgs(fmt.Sprintf(`{"entity_type":"deal","entity_id":%q},%s`, local, companyLink(mirrored))))
 
 	if !errors.Is(err, apperrors.ErrUnsupportedBySoR) {
@@ -257,7 +257,7 @@ func TestAnAccountStartedSendIsBoundedAndDeduplicatedBeforeItReadsAnything(t *te
 		}
 		p := &multiLinkProvider{}
 
-		_, err := sendAccountEmailTool{comms: &recordingComms{}, p: p}.
+		_, err := sendCompanyEmailTool{comms: &recordingComms{}, p: p}.
 			StageInfo(context.Background(), accountSendArgs(strings.Join(links, ",")))
 
 		var bad *BadArgsError
@@ -277,7 +277,7 @@ func TestAnAccountStartedSendIsBoundedAndDeduplicatedBeforeItReadsAnything(t *te
 		}
 		p := &multiLinkProvider{}
 
-		info, err := sendAccountEmailTool{comms: &recordingComms{}, p: p}.
+		info, err := sendCompanyEmailTool{comms: &recordingComms{}, p: p}.
 			StageInfo(context.Background(), accountSendArgs(strings.Join(repeated, ",")))
 		if err != nil {
 			t.Fatalf("StageInfo: %v", err)
@@ -296,7 +296,7 @@ func TestAnAccountStartedSendIsBoundedAndDeduplicatedBeforeItReadsAnything(t *te
 func TestAnApprovedAccountStartedSendReachesTheSeam(t *testing.T) {
 	company := ids.NewV7()
 	comms := &recordingComms{}
-	tool := sendAccountEmailTool{comms: comms, p: &multiLinkProvider{}}
+	tool := sendCompanyEmailTool{comms: comms, p: &multiLinkProvider{}}
 
 	out, err := tool.Handle(withApprovalRedeemed(sendCtx(), 0, false),
 		accountSendArgs(companyLink(company)+","+companyLink(company)))

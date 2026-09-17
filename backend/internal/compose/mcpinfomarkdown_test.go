@@ -218,7 +218,7 @@ func writeMCPInfoTools(page *strings.Builder, tools []mcpToolEntry) {
 
 // viewNameOf turns a view's URI into the heading its section is published
 // under, so the index can link a tool straight to the document that renders it.
-// ui://margince/account-brief.html is the account_brief_view section.
+// ui://margince/company-brief.html is the company_brief_view section.
 func viewNameOf(uri string) string {
 	file := uri[strings.LastIndexByte(uri, '/')+1:]
 	return strings.ReplaceAll(strings.TrimSuffix(file, ".html"), "-", "_") + "_view"

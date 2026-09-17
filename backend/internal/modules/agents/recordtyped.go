@@ -95,7 +95,7 @@ func (advanceProjectPhase) RecordTypeOf(json.RawMessage) string  { return typePr
 func (commitImport) RecordTypeOf(json.RawMessage) string         { return typeImportRun }
 func (sendEmailTool) RecordTypeOf(json.RawMessage) string        { return typeActivity }
 func (sendMessageTool) RecordTypeOf(json.RawMessage) string      { return typeActivity }
-func (sendAccountEmailTool) RecordTypeOf(json.RawMessage) string { return typeActivity }
+func (sendCompanyEmailTool) RecordTypeOf(json.RawMessage) string { return typeActivity }
 func (bookMeetingTool) RecordTypeOf(json.RawMessage) string      { return typeActivity }
 
 func (promoteLead) ServesRecordType(recordType string) bool     { return recordType == typeLead }
@@ -110,7 +110,7 @@ func (advanceProjectPhase) ServesRecordType(recordType string) bool {
 	return recordType == typeProject
 }
 
-func (sendAccountEmailTool) ServesRecordType(recordType string) bool {
+func (sendCompanyEmailTool) ServesRecordType(recordType string) bool {
 	return recordType == typeActivity
 }
 

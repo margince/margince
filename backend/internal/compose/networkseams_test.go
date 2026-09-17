@@ -43,7 +43,7 @@ func TestAnUncoveredDealAnswersEmptyArraysNotNulls(t *testing.T) {
 // The tool's whole question is which named human is missing from a deal. A seat
 // reading "economic_buyer, engaged: false" against a bare uuid has not answered
 // it — a rep cannot act on an id, and a model cannot put one in a sentence.
-// Found reviewing case 5 on real data, where account_coverage reported a
+// Found reviewing case 5 on real data, where company_coverage reported a
 // disengaged economic buyer and never said Athina Kanioura.
 func TestAStakeholderSeatCarriesTheirName(t *testing.T) {
 	athina, jim := ids.NewV7(), ids.NewV7()
@@ -161,7 +161,7 @@ func TestAFindingWithNoReadableNamesOmitsThem(t *testing.T) {
 // twenty-five gated contact reads. Codex pointed out the ids can be collected
 // across every finding and resolved once — so the cost was never per deal, and
 // the inconsistency was real: the SAME CoverageRisk shape carried names under
-// account_coverage and bare ids here, which a model reads as "withheld" rather
+// company_coverage and bare ids here, which a model reads as "withheld" rather
 // than "not looked up".
 func TestTheSweepNamesEveryFindingInOneRead(t *testing.T) {
 	jim, athina := ids.NewV7(), ids.NewV7()

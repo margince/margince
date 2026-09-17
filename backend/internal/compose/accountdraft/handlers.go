@@ -15,7 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// Handlers shadows the generated DraftAccountEmail stub.
+// Handlers shadows the generated DraftCompanyEmail stub.
 type Handlers struct {
 	svc *Service
 }
@@ -26,9 +26,9 @@ func NewHandlers(svc *Service) Handlers {
 	return Handlers{svc: svc}
 }
 
-// DraftAccountEmail implements POST /companies/{id}/draft-email.
-func (h Handlers) DraftAccountEmail(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	var body crmcontracts.DraftAccountEmailJSONRequestBody
+// DraftCompanyEmail implements POST /companies/{id}/draft-email.
+func (h Handlers) DraftCompanyEmail(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	var body crmcontracts.DraftCompanyEmailJSONRequestBody
 	if !httperr.Decode(w, r, &body) {
 		return
 	}
@@ -52,7 +52,7 @@ func (h Handlers) DraftAccountEmail(w http.ResponseWriter, r *http.Request, id c
 // An absent key decodes to the zero UUID with no error, so without this the
 // caller would be told that a record they never named is not a contact on this
 // account — a refusal about a record they cannot connect to anything they did.
-func requestFrom(body crmcontracts.DraftAccountEmailJSONRequestBody) (Request, error) {
+func requestFrom(body crmcontracts.DraftCompanyEmailJSONRequestBody) (Request, error) {
 	if err := httperr.RequireBodyID("contact_id", ids.UUID(body.ContactId)); err != nil {
 		return Request{}, err
 	}

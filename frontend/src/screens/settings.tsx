@@ -1633,7 +1633,7 @@ type AgentTool = components["schemas"]["AgentTool"];
 // right.
 //
 // The name and its written title used to share the label's line, so each row
-// read as a pair of unrelated strings — "account_coverage  Relationship coverage
+// read as a pair of unrelated strings — "company_coverage  Relationship coverage
 // on a deal" — beside cards whose rows are a label with a description beneath.
 // The title is a statement ABOUT the tool, so it goes where this page puts those.
 //
