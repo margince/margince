@@ -43,6 +43,10 @@ func runCheckInRepair(t *testing.T, owner *pgx.Conn) {
 	if err != nil {
 		t.Fatalf("opening the repair transaction: %v", err)
 	}
+	// The rollback covers the failure paths above; after the commit below it
+	// returns pgx.ErrTxClosed every time, which is the SUCCESSFUL case rather
+	// than a fault to report.
+	//craft:ignore swallowed-errors a rollback on an already-committed transaction always errors, and that is the success path
 	defer func() { _ = tx.Rollback(ctx) }()
 	if _, err := tx.Exec(ctx, string(sql)); err != nil {
 		t.Fatalf("applying the repair: %v", err)
