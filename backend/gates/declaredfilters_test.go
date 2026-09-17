@@ -93,12 +93,16 @@ const (
 // state after a retirement is that the parameter is gone, not that it is
 // declared and excused.
 //
-// `Sort` stays scoped out for now, and only because honouring it is a per-store
-// change rather than a contract edit: three operations declare it unread, and
-// each needs its store to take a sort vocabulary and a keyset cursor that
-// carries the sort key. Issue #827 holds that half; this line is what will be
-// deleted when it lands.
-var unjudgedParameterTypes = map[string]bool{"Sort": true}
+// `Sort` is not here either, and the empty map is the state that says so: every
+// operation declaring a sort now honours it. It was the last of the three page
+// dials to be scoped out, because honouring one is a per-store change rather
+// than a contract edit — a sort vocabulary the store publishes, and a keyset
+// cursor carrying the field it was minted for.
+//
+// The map stays rather than the check losing its type dimension: it is where a
+// future component-typed parameter is scoped out, with the reason, and an empty
+// one is the honest reading of the tree today.
+var unjudgedParameterTypes = map[string]bool{}
 
 // declaredFilter is one narrowing query parameter of one operation: the Go
 // field a handler reads, and the name a caller types.
@@ -193,11 +197,11 @@ func TestTheDeclaredFilterCensusReadsTheGeneratedShape(t *testing.T) {
 	for _, filter := range contacts {
 		wire = append(wire, filter.wire)
 	}
-	// The contact list declares exactly these. cursor and limit ARE among them —
-	// the gate judges a page dial the same way it judges a filter — and `sort`
-	// is not, because it is the one type still scoped out.
+	// The contact list declares exactly these. All three page dials are among
+	// them — the gate judges a dial the same way it judges a filter, and none
+	// of the three is scoped out any more.
 	want := "ai_written,captured_by_kind,company_id,cursor,include_archived,limit,owner_id," +
-		"owner_team_id,q,tag_id,tag_mode,unassigned"
+		"owner_team_id,q,sort,tag_id,tag_mode,unassigned"
 	if got := strings.Join(wire, ","); got != want {
 		t.Errorf("listContacts's narrowing parameters = %q, want %q", got, want)
 	}

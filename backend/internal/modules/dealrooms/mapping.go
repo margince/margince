@@ -164,6 +164,7 @@ func listInput(params crmcontracts.ListDealRoomsParams) ListRoomsInput {
 	in := ListRoomsInput{
 		Limit:  limitArg(params.Limit),
 		Cursor: cursorArg(params.Cursor),
+		Sort:   params.Sort,
 	}
 	if params.IncludeArchived != nil {
 		in.IncludeArchived = bool(*params.IncludeArchived)

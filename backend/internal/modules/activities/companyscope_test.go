@@ -54,25 +54,20 @@ func teamScopedCtx() context.Context {
 
 // filterFor builds the timeline filter for one entity type, failing the test
 // on any error.
-func filterFor(ctx context.Context, t *testing.T, entityType string) (join string, where string, args []any) {
+func filterFor(ctx context.Context, t *testing.T, entityType string) (where string, args []any) {
 	t.Helper()
 	entity := ids.NewV7()
-	joined, terms, _, args, err := listActivitiesFilter(ctx, ListActivitiesInput{
+	terms, _, _, args, err := listActivitiesFilter(ctx, ListActivitiesInput{
 		EntityType: &entityType, EntityID: &entity,
 	})
 	if err != nil {
 		t.Fatalf("building the %s filter: %v", entityType, err)
 	}
-	return joined, strings.Join(terms, " AND "), args
+	return strings.Join(terms, " AND "), args
 }
 
 func TestCompanyFilterWalksTheAccountsFourArms(t *testing.T) {
-	join, where, args := filterFor(unscopedCtx(), t, "company")
-
-	if join != "" {
-		t.Errorf("company filter joined %q; a join multiplies an activity "+
-			"reachable through two links into two rows and breaks the keyset cursor", join)
-	}
+	where, args := filterFor(unscopedCtx(), t, "company")
 	if !strings.Contains(where, "EXISTS (") {
 		t.Fatalf("company filter is not an EXISTS: %s", where)
 	}
@@ -133,9 +128,12 @@ func TestEveryOtherEntityTypeKeepsItsFlatLinkJoin(t *testing.T) {
 		"lead":    "al.lead_id",
 		"project": "al.project_id",
 	} {
-		join, where, args := filterFor(unscopedCtx(), t, entityType)
-		if join != " JOIN activity_link al ON al.activity_id = a.id" {
-			t.Errorf("%s filter join = %q, want the flat activity_link join", entityType, join)
+		where, args := filterFor(unscopedCtx(), t, entityType)
+		// An EXISTS rather than a join, like the account arm: a join puts
+		// activity_link's own created_at and id in the FROM list, where the
+		// keyset tuple this page orders by cannot name its columns.
+		if !strings.Contains(where, "EXISTS (SELECT 1 FROM activity_link al") {
+			t.Errorf("%s filter is not an EXISTS over activity_link: %s", entityType, where)
 		}
 		if !strings.Contains(where, "al.entity_type = $1") {
 			t.Errorf("%s filter does not pin the link's entity_type: %s", entityType, where)
@@ -155,7 +153,7 @@ func TestEveryOtherEntityTypeKeepsItsFlatLinkJoin(t *testing.T) {
 // The account walk widens WHICH activities belong to the account. It must not
 // widen WHO may read one, so the row-scope clause is still composed next to it.
 func TestTheAccountWalkStillCarriesTheRowScope(t *testing.T) {
-	_, where, _ := filterFor(teamScopedCtx(), t, "company")
+	where, _ := filterFor(teamScopedCtx(), t, "company")
 	// bool_or is the row-scope walk's own token: it is how the any-link
 	// rule and the link-less-note rule are spelled in one pass, and the
 	// account walk below never emits it.
