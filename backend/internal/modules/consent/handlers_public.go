@@ -212,38 +212,18 @@ var errNoConsentSubject = errors.New("consent: this link names no contact")
 //
 // It answers the SAME body a contact's press answers, so the mailbox provider
 // posting this cannot tell the two subjects apart and does not learn which it
-// got. ONE placeholder when this press moved something, because one press
-// stops one thing — a broad suppression for an all-marketing link, one
-// subscription for a named-purpose one — and EMPTY when it moved nothing,
-// which is the replay answer a contact's press already gives.
-//
-// It used to answer an empty list unconditionally, which said the press had
-// stopped nothing. For the all-marketing press that was a false statement
-// about a row the store had just written; for a lead's named-purpose press it
-// was a true statement about a stop the store declined to record, reported as
-// success. Both are fixed, and both subjects now answer the one question the
-// screen asks the body: did this press change anything.
+// got. The list is empty because a stop is one row rather than a set of
+// purposes — there are no names to count here, and the page says the recipient
+// is unsubscribed either way.
 func (h Handlers) stopForCredential(w http.ResponseWriter, r *http.Request, token string) {
 	// The TOKEN, not the ref the caller already resolved: the store re-resolves
 	// inside the transaction that writes, so an erasure committing in between
 	// is decisive rather than raced. See StopForCredential.
-	stopped, err := h.store.StopForCredential(r.Context(), token)
-	if err != nil {
+	if err := h.store.StopForCredential(r.Context(), token); err != nil {
 		writeConsentErr(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK,
-		map[string]any{"unsubscribed": answeredKeys(stoppedKeys(stopped), true)})
-}
-
-// stoppedKeys is the one-or-nothing outcome list a credential press withdrew,
-// in the shape answeredKeys anonymizes — so the placeholder is minted in one
-// place for both subjects rather than spelled again here.
-func stoppedKeys(stopped bool) []string {
-	if !stopped {
-		return []string{}
-	}
-	return []string{withdrawalStoppedPlaceholder}
+	httperr.WriteJSON(w, http.StatusOK, map[string]any{"unsubscribed": []string{}})
 }
 
 // maxPreferenceChoices bounds a single granular save. The consent purpose
