@@ -1,0 +1,60 @@
+{
+  "recorded_from": [
+    "https://developers.surfe.com/public-015-create-people-bulk-enrichment",
+    "https://developers.surfe.com/public-016-get-bulk-enrichment"
+  ],
+  "recorded_on": "2026-09-17",
+  "why": "These are the VENDOR'S names, not this repository's. They are kept as data rather than as Go string literals so that a rename sweeping the tree cannot rewrite them and the assertions about them in the same pass, which is how the adapter came to call a path Surfe does not serve while every test agreed with it.",
+  "start": {
+    "method": "POST",
+    "path": "/v2/people/enrich",
+    "request_subjects_field": "people",
+    "response": {
+      "enrichmentID": "1ef1e28f-41b2-6b4c-a4fa-0a4f06c1cb0d",
+      "enrichmentCallbackURL": "",
+      "message": "Enrichment started"
+    }
+  },
+  "credits": {
+    "method": "GET",
+    "path": "/v1/credits",
+    "response": {
+      "message": "Credits retrieved successfully",
+      "totalEmail": 219,
+      "totalMobile": 24,
+      "totalSearch": 100
+    }
+  },
+  "get": {
+    "method": "GET",
+    "path": "/v2/people/enrich/{id}",
+    "response": {
+      "enrichmentID": "1ef1e28f-41b2-6b4c-a4fa-0a4f06c1cb0d",
+      "percentCompleted": 100,
+      "status": "COMPLETED",
+      "people": [
+        {
+          "status": "COMPLETED",
+          "externalID": "corr-1",
+          "firstName": "Anna",
+          "lastName": "Muster",
+          "emails": [{ "email": "anna.muster@example.com", "validationStatus": "VALID" }],
+          "mobilePhones": [{ "mobilePhone": "+4915112345678", "confidenceScore": 0.9 }],
+          "linkedInUrl": "https://www.linkedin.com/in/annamuster",
+          "jobTitle": "Head of Sales",
+          "companyName": "Example GmbH",
+          "companyDomain": "example.com",
+          "location": "Berlin, Germany",
+          "jobHistory": [
+            {
+              "companyName": "Example GmbH",
+              "jobTitle": "Head of Sales",
+              "startDate": "2023-04",
+              "endDate": ""
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
