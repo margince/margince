@@ -14,8 +14,8 @@ import { useT } from "../../i18n";
 import { CoachPanel, MeetingPaths } from "./coaching";
 import { BriefHeader, type MeetingFacts, type PreparedFor } from "./header";
 import {
-  AccountArc,
   AdvancePanel,
+  CompanyArc,
   LikelyAsks,
   ObjectivePanel,
   Scenarios,
@@ -157,7 +157,7 @@ export function MeetingBriefView({
                       onOpenEmail={onOpenEmail}
                     />
                     <Scenarios plan={brief.plan} />
-                    <AccountArc
+                    <CompanyArc
                       plan={brief.plan}
                       onOpenRecord={onOpenRecord}
                       onOpenEmail={onOpenEmail}

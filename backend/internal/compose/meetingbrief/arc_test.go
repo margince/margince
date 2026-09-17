@@ -148,7 +148,7 @@ func TestTheArcReadsInDateOrder(t *testing.T) {
 // A conversation this caller may not read says nothing and must not date the
 // arc either. The arc's own `omitted` line tells the reader "the account arc
 // is built from the rest"; a withheld conversation's own instant reaching
-// plan.account_arc[].to (or its count) makes that sentence false, and handed
+// plan.company_arc[].to (or its count) makes that sentence false, and handed
 // the reader the withheld message's date by subtraction.
 func TestAWithheldConversationNamesNothing(t *testing.T) {
 	in := fullInput()

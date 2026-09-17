@@ -7958,62 +7958,6 @@ Get ready for a specific meeting: given the meeting, the same written brief a hu
             },
             "plan": {
               "properties": {
-                "account_arc": {
-                  "items": {
-                    "properties": {
-                      "from": {
-                        "type": "string"
-                      },
-                      "summary": {
-                        "properties": {
-                          "evidence": {
-                            "items": {
-                              "properties": {
-                                "record_id": {
-                                  "format": "uuid",
-                                  "type": "string"
-                                },
-                                "record_type": {
-                                  "type": "string"
-                                }
-                              },
-                              "required": [
-                                "record_id",
-                                "record_type"
-                              ],
-                              "type": "object"
-                            },
-                            "type": "array"
-                          },
-                          "nature": {
-                            "type": "string"
-                          },
-                          "text": {
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "evidence",
-                          "text"
-                        ],
-                        "type": "object"
-                      },
-                      "title": {
-                        "type": "string"
-                      },
-                      "to": {
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "from",
-                      "summary",
-                      "to"
-                    ],
-                    "type": "object"
-                  },
-                  "type": "array"
-                },
                 "advance": {
                   "properties": {
                     "best": {
@@ -8125,6 +8069,62 @@ Get ready for a specific meeting: given the meeting, the same written brief a hu
                     "minimum"
                   ],
                   "type": "object"
+                },
+                "company_arc": {
+                  "items": {
+                    "properties": {
+                      "from": {
+                        "type": "string"
+                      },
+                      "summary": {
+                        "properties": {
+                          "evidence": {
+                            "items": {
+                              "properties": {
+                                "record_id": {
+                                  "format": "uuid",
+                                  "type": "string"
+                                },
+                                "record_type": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "record_id",
+                                "record_type"
+                              ],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "nature": {
+                            "type": "string"
+                          },
+                          "text": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "evidence",
+                          "text"
+                        ],
+                        "type": "object"
+                      },
+                      "title": {
+                        "type": "string"
+                      },
+                      "to": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "from",
+                      "summary",
+                      "to"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
                 },
                 "likely_asks": {
                   "items": {

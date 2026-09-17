@@ -188,7 +188,7 @@ export const briefWithPlan: MeetingBrief = {
     likely_asks: [],
     questions: [],
     scenarios: [],
-    account_arc: [
+    company_arc: [
       {
         from: "2026-04-02T09:00:00Z",
         to: "2026-04-19T09:00:00Z",

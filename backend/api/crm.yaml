@@ -30254,7 +30254,7 @@ components:
         whole — the same grounding rule every sentence in `sections` runs.
       required:
         [generated_by, readiness, meeting_type, likely_asks, questions, scenarios,
-         account_arc, advance, unknowns]
+         company_arc, advance, unknowns]
       properties:
         generated_by:
           $ref: '#/components/schemas/WrittenBy'
@@ -30283,7 +30283,7 @@ components:
           type: array
           maxItems: 3
           items: { $ref: '#/components/schemas/MeetingPlanScenario' }
-        account_arc:
+        company_arc:
           type: array
           maxItems: 5
           description: >-

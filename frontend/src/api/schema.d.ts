@@ -21569,7 +21569,7 @@ export interface components {
             questions: components["schemas"]["MeetingPlanQuestion"][];
             scenarios: components["schemas"]["MeetingPlanScenario"][];
             /** @description The moments that change TODAY's conversation, oldest first, built from the whole history this caller may read rather than from the newest page of it. */
-            account_arc: components["schemas"]["MeetingPlanArcMoment"][];
+            company_arc: components["schemas"]["MeetingPlanArcMoment"][];
             advance: components["schemas"]["MeetingPlanAdvance"];
             /** @description What the record does not say, each with the question that would close it. Derived from absence, so an empty list means the record answered everything this plan asks of it — not that nobody looked. */
             unknowns: components["schemas"]["MeetingPlanUnknown"][];
