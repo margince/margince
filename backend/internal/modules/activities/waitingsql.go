@@ -139,7 +139,15 @@ const waitingRepliesSQL = `
 	          FILTER (WHERE ownerContact.owner_id IS NOT NULL))[1],
 	         (array_agg(ownerCompany.owner_id ORDER BY ownerCompany.id::text)
 	          FILTER (WHERE ownerCompany.owner_id IS NOT NULL))[1],
-	         '00000000-0000-0000-0000-000000000000'::uuid)
+	         '00000000-0000-0000-0000-000000000000'::uuid),
+	       -- Whether this message belongs to a conversation at all.
+	       --
+	       -- Two of the three things a rep may do with a waiting row are keyed
+	       -- on the thread: dismissing it workspace-wide judges the THREAD, and
+	       -- snoozing until a reply wakes on a later message with the same
+	       -- thread_key. A row without one can do neither, so the caller must
+	       -- know before it offers them.
+	       a.thread_key IS NOT NULL AND a.thread_key <> ''
 	  FROM activity a
 	  LEFT JOIN activity_link wl ON wl.activity_id = a.id AND (%[3]s)
 	  -- Who wrote. The sender participant is where capture records the address,
