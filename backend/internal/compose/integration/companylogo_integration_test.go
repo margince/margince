@@ -863,3 +863,93 @@ func TestCompanyLogoIs404WithoutOneAnd501WithoutAnObjectStore(t *testing.T) {
 		t.Fatalf("GET logo with no object store = %d, want 501", rec.Code)
 	}
 }
+
+// The LIST carries every row's logo url, which is what stops a page of
+// twenty-five companies from having to go and ask for twenty-five of them.
+//
+// It always has: the list selects the same columns as the single read and scans
+// them with the same scanner, so the url is filled in by the same line. That is
+// exactly why this is worth pinning — the list and the read share a scanner
+// today and a change that gave the list a narrower column set would take the
+// url away with nothing failing, and the screen would silently be back to a
+// monogram per row.
+func TestTheCompaniesListCarriesEachRowsLogoURL(t *testing.T) {
+	e := Setup(t)
+	blob := blobstore.NewMemory()
+	ctx := e.Admin()
+	companyID := seedLoggedCompany(ctx, t, e, blob, logoPNG(t))
+
+	page, _, err := e.Contacts.ListCompanies(ctx, contacts.ListCompaniesInput{})
+	if err != nil {
+		t.Fatalf("list companies: %v", err)
+	}
+	var listed *crmcontracts.Company
+	for i := range page {
+		if ids.UUID(page[i].Id) == companyID.UUID {
+			listed = &page[i]
+		}
+	}
+	if listed == nil {
+		t.Fatalf("the seeded company is not on the list of %d", len(page))
+	}
+	read, err := e.Contacts.GetCompany(ctx, companyID, storekit.LiveOnly)
+	if err != nil {
+		t.Fatalf("read the company: %v", err)
+	}
+	if read.LogoUrl == nil {
+		t.Fatal("the single read carries no logo url, so this comparison proves nothing")
+	}
+	if listed.LogoUrl == nil || *listed.LogoUrl != *read.LogoUrl {
+		t.Fatalf("the listed logo url is %v, the record's is %q — a list row that carries none "+
+			"draws a monogram for a company that has a mark", listed.LogoUrl, *read.LogoUrl)
+	}
+}
+
+// A logo URL names its own bytes, so the response says there is nothing to come
+// back for.
+//
+// The url carries a digest of the object key, the key is minted fresh per
+// upload, and a replacement therefore takes a DIFFERENT url — there is no
+// version of this one that can go stale. Without `immutable` a browser
+// revalidates on the freshness window's expiry, and a list is where that costs:
+// twenty-five rows are twenty-five urls, a browser runs about six at a time
+// against one host, and each of those becomes a round trip the reader waits
+// through for a picture it already has.
+//
+// Asserted on the 304 as well as the 200, because a client that revalidates
+// once must not be left with a weaker promise than one that fetched fresh —
+// that is how the next visit becomes another round trip.
+func TestALogoResponseSaysItsBytesWillNeverChange(t *testing.T) {
+	e := Setup(t)
+	blob := blobstore.NewMemory()
+	handlers := contacts.NewHandlers(e.DB()).WithBlobstore(blob)
+	ctx := e.Admin()
+	companyID := seedLoggedCompany(ctx, t, e, blob, logoPNG(t))
+	url := "/v1/companies/" + companyID.String() + "/logo"
+
+	fresh := httptest.NewRecorder()
+	handlers.GetCompanyLogo(fresh, httptest.NewRequest(http.MethodGet, url, nil).WithContext(ctx), crmcontracts.Id(companyID.UUID))
+	if fresh.Code != http.StatusOK {
+		t.Fatalf("GET logo = %d, want 200: %s", fresh.Code, fresh.Body.String())
+	}
+	revalidated := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, url, nil).WithContext(ctx)
+	req.Header.Set("If-None-Match", fresh.Header().Get("ETag"))
+	handlers.GetCompanyLogo(revalidated, req, crmcontracts.Id(companyID.UUID))
+	if revalidated.Code != http.StatusNotModified {
+		t.Fatalf("GET with a matching If-None-Match = %d, want 304", revalidated.Code)
+	}
+
+	for name, rec := range map[string]*httptest.ResponseRecorder{"200": fresh, "304": revalidated} {
+		cache := rec.Header().Get("Cache-Control")
+		if !strings.Contains(cache, "immutable") {
+			t.Errorf("the %s response caches as %q — without immutable every row on a list "+
+				"revalidates, which is the whole cost of drawing one", name, cache)
+		}
+		// Private, because the mark is only served to a caller who may see the
+		// company: a shared cache would hand it to one who may not.
+		if !strings.Contains(cache, "private") {
+			t.Errorf("the %s response caches as %q, which lets a shared cache hold it", name, cache)
+		}
+	}
+}
