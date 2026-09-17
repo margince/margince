@@ -16,6 +16,12 @@ package integration
 //
 // So the assertion is the CONSEQUENCE and not the row count: after the
 // erasure, the same Message-ID is claimable again.
+//
+// And the floor-shielded sibling is the other half of the same boundary. The
+// retire list is the activities the cascade REDACTED, never every activity it
+// touched — a Handelsbrief the statutory floor held keeps its content, so
+// releasing its key would send the next arrival of a message that is still
+// standing to a second row beside the first.
 
 import (
 	"context"
@@ -35,6 +41,10 @@ import (
 // arrival tries to claim back.
 const erasedMessageID = "released-by-erasure@example.test"
 
+// shieldedMessageID is the identity of the Handelsbrief the statutory floor
+// holds back from the same erasure. Its content survives, so its claim must.
+const shieldedMessageID = "held-by-the-floor@example.test"
+
 func TestErasingAContactReleasesItsMessagesIdentities(t *testing.T) {
 	e := Setup(t)
 	admin := e.Admin()
@@ -45,12 +55,12 @@ func TestErasingAContactReleasesItsMessagesIdentities(t *testing.T) {
 	// claimed the way capture and import claim it. No deal or project link and
 	// no retention_class, so the commercial-correspondence floor does not
 	// shield the row from the redaction this test is about.
-	subjectMail := "a-subject@example.test"
+	counterparty := "a-counterparty@example.test"
 	sent, _, err := e.Activities.LogActivity(admin, activities.LogActivityInput{
 		Kind:         string(crmcontracts.ActivityKindEmail),
 		Source:       "manual",
 		EmailFrom:    subjectEmail,
-		EmailTo:      []string{subjectMail},
+		EmailTo:      []string{counterparty},
 		RFCMessageID: erasedMessageID,
 		Links: []activities.ActivityLinkInput{
 			{EntityType: "contact", EntityID: contactID},
@@ -63,6 +73,8 @@ func TestErasingAContactReleasesItsMessagesIdentities(t *testing.T) {
 	if holder := identityHolder(t, e, erasedMessageID); holder != sentID {
 		t.Fatalf("the mail did not claim its own Message-ID: holder %v, message %v", holder, sentID)
 	}
+
+	shieldedID := seedShieldedHandelsbrief(t, e, contactID)
 
 	if err := privacy.NewEraser(e.DB()).EraseContact(admin, contactID, "art-17"); err != nil {
 		t.Fatalf("erasing the subject: %v", err)
@@ -92,6 +104,67 @@ func TestErasingAContactReleasesItsMessagesIdentities(t *testing.T) {
 		t.Errorf("the later arrival could not claim %q — the erased message is still squatting the key, so every copy from here on is a duplicate that can never dedupe",
 			erasedMessageID)
 	}
+
+	// The other half of the boundary. The same cascade reached the shielded
+	// sibling and HELD it — restricted rather than emptied — which is what
+	// keeps the identity assertion after it from passing on a row the cascade
+	// never saw.
+	if !restrictedByTheFloor(t, e, shieldedID) {
+		t.Fatalf("the Handelsbrief was not held by the floor, so a surviving identity on it would prove nothing")
+	}
+	// A row that kept its content keeps the identity that names it: the retire
+	// list is the REDACTED activities, never every activity the cascade
+	// touched. Releasing this key would send the next arrival of a message
+	// that is still standing to a second row beside the first.
+	if holder := identityHolder(t, e, shieldedMessageID); holder != shieldedID {
+		t.Errorf("the shielded Handelsbrief stopped answering to %q (holder %v) while its content still stands",
+			shieldedMessageID, holder)
+	}
+}
+
+// seedShieldedHandelsbrief files a second mail on the subject's timeline that
+// the statutory correspondence floor shields, and hands back its id.
+//
+// External mail on a won deal and recent, which is what handelsbriefShielded
+// asks for. The activity itself goes through the real writer so it claims its
+// Message-ID exactly as capture and import do; the qualifying deal is seeded
+// the way the floor fixtures in this package seed one.
+func seedShieldedHandelsbrief(t *testing.T, e *Env, contactID ids.UUID) ids.UUID {
+	t.Helper()
+	held, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
+		Kind:         string(crmcontracts.ActivityKindEmail),
+		Source:       "manual",
+		EmailFrom:    subjectEmail,
+		EmailTo:      []string{"buyer@example.test"},
+		RFCMessageID: shieldedMessageID,
+		Links: []activities.ActivityLinkInput{
+			{EntityType: "contact", EntityID: contactID},
+		},
+	})
+	if err != nil {
+		t.Fatalf("filing the shielded Handelsbrief: %v", err)
+	}
+	heldID := ids.UUID(held.Id)
+	e.SeedWonDealLinkedTo(t, heldID)
+	if holder := identityHolder(t, e, shieldedMessageID); holder != heldID {
+		t.Fatalf("the Handelsbrief did not claim its own Message-ID: holder %v, message %v", holder, heldID)
+	}
+	return heldID
+}
+
+// restrictedByTheFloor reports whether the erasure held an activity under the
+// statutory floor rather than emptying it.
+func restrictedByTheFloor(t *testing.T, e *Env, activityID ids.UUID) bool {
+	t.Helper()
+	var restricted bool
+	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT restricted_at IS NOT NULL FROM activity WHERE id = $1`, activityID).Scan(&restricted)
+	})
+	if err != nil {
+		t.Fatalf("reading whether activity %v was held: %v", activityID, err)
+	}
+	return restricted
 }
 
 // identityHolder answers which activity holds a mail identity, or the zero id

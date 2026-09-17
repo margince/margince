@@ -12,6 +12,13 @@ package privacy
 // its own list of derived rows and that list went short by exactly this table,
 // which is what a second list does.
 //
+// Here rather than in the table's owner, and that is the architecture rather
+// than a preference: a module never imports a sibling, so privacy cannot call
+// into activities and the statement has to stand somewhere on this side of the
+// line. It is therefore ratified cross-store SQL, declared as such in the table
+// ownership waivers — which is also why activities must not grow a second
+// spelling of it for nobody to call.
+//
 // Its own file rather than a helper beside either caller, and the reason is the
 // census. erasureCascadeFiles (backend/gates/piisqlreader_test.go) names the
 // FILES the PII censuses parse, so a scrub that lives in a named file stays

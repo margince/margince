@@ -133,11 +133,12 @@ var piiTables = map[string]piiHandling{
 	// the content because erasure ARCHIVES the activity rather than deleting
 	// it, so the foreign key's cascade never fires.
 	//
-	// sarRead is false for the reason the embedding entry in this map is: an
-	// identity key is a dedupe arbiter rather than something a subject can read.
-	// The messages themselves are already exported in full, so handing back
-	// their transport identifiers adds nothing to the package and puts a header a
-	// third party typed into it.
+	// No SAR path reads it today, which is what sarRead false records — the
+	// absence of a requirement, not a prohibition, the same standing embedding
+	// and capture_trace have. Adding one would buy the subject nothing: an
+	// identity key is a dedupe arbiter rather than something a subject can read,
+	// and the messages themselves are already exported in full, so their
+	// transport identifiers disclose no holding the package does not.
 	"activity_identity": {erasureWrite: true, sarRead: false},
 	// LinkedIn ghosts (CG-DDL-2) hold a third party's name, employer and
 	// sometimes address, imported from a colleague's export without that

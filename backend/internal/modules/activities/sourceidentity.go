@@ -105,27 +105,6 @@ func ClaimIdentity(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, ki
 	return found && holder == activityID, nil
 }
 
-// IdentitiesOf lists every external identity an activity answers to, so a merge
-// can carry them and an erasure can retire them.
-func IdentitiesOf(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID) ([]string, error) {
-	rows, err := tx.Query(ctx,
-		`SELECT identity_kind || ':' || identity_key FROM activity_identity
-		  WHERE activity_id = $1 ORDER BY identity_kind, identity_key`, activityID)
-	if err != nil {
-		return nil, fmt.Errorf("activities: listing a message's identities: %w", err)
-	}
-	defer rows.Close()
-	var out []string
-	for rows.Next() {
-		var name string
-		if err := rows.Scan(&name); err != nil {
-			return nil, fmt.Errorf("activities: listing a message's identities: %w", err)
-		}
-		out = append(out, name)
-	}
-	return out, rows.Err()
-}
-
 // TransferIdentities moves every identity from one activity to another.
 //
 // Merging two rows leaves the loser archived with its own key released. Its
@@ -140,21 +119,6 @@ func TransferIdentities(ctx context.Context, tx pgx.Tx, from, to ids.ActivityID)
 		`UPDATE activity_identity SET activity_id = $2 WHERE activity_id = $1`,
 		from, to); err != nil {
 		return fmt.Errorf("activities: carrying a merged message's identities: %w", err)
-	}
-	return nil
-}
-
-// RetireIdentities drops an activity's identities.
-//
-// Erasure ARCHIVES a row rather than deleting it, so the foreign key's cascade
-// never fires. Without this an erased message keeps answering to its
-// Message-ID: a later arrival resolves onto a row whose content is gone and
-// binds to it, which is both a wrong answer and a way to notice that the
-// message was erased.
-func RetireIdentities(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID) error {
-	if _, err := tx.Exec(ctx,
-		`DELETE FROM activity_identity WHERE activity_id = $1`, activityID); err != nil {
-		return fmt.Errorf("activities: retiring an erased message's identities: %w", err)
 	}
 	return nil
 }
