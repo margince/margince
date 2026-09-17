@@ -340,6 +340,20 @@ describe("the close date says how much it is worth believing", () => {
     expect(screen.queryByText(/provisional/)).toBeNull();
   });
 
+  it("counts the days a deal is already past, in the reader's own plural", () => {
+    // The arm nothing read back: a date behind us. "1 days past the date" is
+    // the wording a catalogue that spells the plural once produces on the one
+    // day a rep is most likely to be looking.
+    show(
+      <DealIdentityFacts
+        deal={{ expected_close_date: "2026-08-23" }}
+        stages={stages}
+        locale="en"
+      />,
+    );
+    expect(screen.getByText("1 day past the date")).toBeInTheDocument();
+  });
+
   // The cell stays where a date is missing: when a deal lands is a question
   // the reader came with, and a cell that disappears answers it with silence.
   it("keeps the cell and says so when nobody has set a date", () => {

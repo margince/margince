@@ -25,12 +25,9 @@ import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
 import { Fact, RecordFacts } from "../design-system/recordfacts";
 import { sectionState } from "../design-system/surfacestate";
-import {
-  calendarDaysBetween,
-  formatDate,
-  formatNumber,
-} from "../format/format";
-import { type Locale, useT } from "../i18n";
+import { calendarDaysUntil } from "../format/daysuntil";
+import { formatDate, formatNumber } from "../format/format";
+import { type Locale, translatePlural, useT } from "../i18n";
 import { EntityRef, OwnerName } from "./entityref";
 
 type Project360 = components["schemas"]["Project360"];
@@ -41,23 +38,31 @@ type Project360 = components["schemas"]["Project360"];
  * The count is in whole CALENDAR days, the same reckoning the deal's close
  * uses: "in 3 days" has to mean the third morning from this one, not 72 hours,
  * or a project due on Friday reads as Thursday to anyone working an evening.
+ * It is counted in the RECORD's zone, the one the date beside it is drawn in,
+ * so the two halves of this line cannot name different days.
+ *
+ * The count picks the wording through the reader's own plural rule rather than
+ * through a comparison with one: a project due tomorrow read "in 1 days", and
+ * the fix that only works for English is a fourth catalogue away from being
+ * wrong again.
  */
 function TargetEndReading({
   date,
   locale,
   zone,
 }: Readonly<{ date: string; locale: Locale; zone: string }>) {
-  const t = useT();
-  const days = calendarDaysBetween(new Date(), new Date(date));
+  const days = calendarDaysUntil(date, zone);
   return (
     <span>
       {formatDate(date, locale, zone)}
       {" · "}
       {days < 0
-        ? t("project.targetEnd.overdue", {
-            days: formatNumber(Math.abs(days), locale),
+        ? translatePlural(locale, "project.targetEnd.overdue", -days, {
+            days: formatNumber(-days, locale),
           })
-        : t("project.targetEnd.inDays", { days: formatNumber(days, locale) })}
+        : translatePlural(locale, "project.targetEnd.inDays", days, {
+            days: formatNumber(days, locale),
+          })}
     </span>
   );
 }
