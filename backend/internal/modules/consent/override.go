@@ -322,16 +322,51 @@ func (s *Store) revokeOverrideAdmittedTx(
 			"this override was recorded at a level you may not revoke: %w", apperrors.ErrPermissionDenied)
 	}
 
-	if _, err = tx.Exec(ctx, `
-		UPDATE communication_override
-		   SET revoked_at = now()
-		 WHERE id = $1 AND revoked_at IS NULL`, in.OverrideID); err != nil {
+	// THE WHOLE CHAIN, not only the row the caller named.
+	//
+	// A merge does not move a vouch — it COPIES it onto the survivor under a new
+	// id, links the copy back with carried_from and leaves the original live as
+	// evidence about the record whose rep made it (overridecarry.go). The caller
+	// holds the id the door gave them, which after a merge is the original. A
+	// revoke that took back only that row would answer 204 while the survivor's
+	// copy went on allowing the send — the same vouch, still standing, under an
+	// id its author was never told about.
+	//
+	// The stop direction survives the identical shape because it fails SAFE: a
+	// stale lift leaves the survivor suppressed. This one fails OPEN, which is
+	// why the walk lives here and not in lift.go.
+	//
+	// Every copy carries the original's authority verbatim, so the one CanRevoke
+	// check above answers for the whole chain; a merge cannot introduce a
+	// descendant recorded at a level the caller could not have revoked. Held by
+	// TestRevokingAPreMergeOverrideHandleStopsTheSendOnTheSurvivor.
+	var revoked int64
+	if err = tx.QueryRow(ctx, `
+		WITH RECURSIVE chain AS (
+		    SELECT id FROM communication_override WHERE id = $1
+		  UNION ALL
+		    SELECT carried.id
+		      FROM communication_override carried
+		      JOIN chain ON carried.carried_from = chain.id
+		),
+		taken_back AS (
+		  UPDATE communication_override
+		     SET revoked_at = now()
+		   WHERE id IN (SELECT id FROM chain) AND revoked_at IS NULL
+		  RETURNING 1
+		)
+		SELECT count(*) FROM taken_back`, in.OverrideID).Scan(&revoked); err != nil {
 		return fmt.Errorf("consent: revoking the override: %w", err)
 	}
 
 	auditID, err := storekit.AuditEvent(ctx, tx, "update", sub.entityType, sub.id,
 		map[string]any{
-			"revoked_override":  in.OverrideID.String(),
+			"revoked_override": in.OverrideID.String(),
+			// How many rows this actually took back: one for a vouch that never
+			// travelled, more when a merge had copied it onto a survivor. An
+			// audit saying "one" over a two-row revoke would understate what the
+			// caller's single click did.
+			"revoked_rows":      revoked,
 			"recorded_at_level": decided,
 			"revoked_by_level":  string(level),
 			"revoked_by":        by,

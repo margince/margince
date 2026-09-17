@@ -524,11 +524,17 @@ func TestAMergeCarriesTheRetiringContactsOverride(t *testing.T) {
 	}
 }
 
-// A SURVIVOR ALREADY HOLDING A LIVE OVERRIDE FOR A CATEGORY MUST NOT GAIN A
-// SECOND ONE. Mirrors TestACarryDoesNotDuplicateAStopTheSurvivorAlreadyHolds:
-// two live rows for one category would leave two reps' reasons on file for a
-// decision that only ever has one live answer.
-func TestACarryDoesNotDuplicateAnOverrideTheSurvivorAlreadyHolds(t *testing.T) {
+// A SURVIVOR ALREADY HOLDING AN EQUALLY STRONG OVERRIDE FOR A CATEGORY MUST NOT
+// GAIN A SECOND ONE. Both rows here are recorded by the same admin, so this
+// pins the EQUAL-authority case and nothing wider: the carry's NOT EXISTS
+// compares authority, and a source row STRONGER than the survivor's is carried
+// on purpose, leaving two live rows — see overridecarry.go on why that is the
+// honest record for a vouch and TestAStrongerSurvivorIsNotDisplacedByAWeakerCarry
+// for the read that decides between them.
+//
+// Mirrors TestACarryDoesNotDuplicateAStopTheSurvivorAlreadyHolds, which is the
+// same shape one tier down.
+func TestACarryDoesNotDuplicateAnEquallyStrongOverrideTheSurvivorHolds(t *testing.T) {
 	e := integration.Setup(t)
 	admin := e.Admin()
 	consentStore := consent.NewStore(e.DB())
@@ -589,5 +595,66 @@ func TestAnUnwiredMergeRefusesOnlyWhenAnOverrideWouldBeLost(t *testing.T) {
 	// back rather than half-applying it.
 	if got := liveOverrideCount(t, e, vouched); got != 1 {
 		t.Errorf("the refused merge left %d override(s) on the source, want its own intact", got)
+	}
+}
+
+// REVOKING BY A PRE-MERGE HANDLE MUST STOP THE SEND, and this is the one place
+// the override direction cannot borrow the stop's answer.
+//
+// A carry copies the vouch onto the survivor under a NEW id and leaves the
+// source row live as evidence. A caller who recorded the vouch before the merge
+// holds the SOURCE id — the only one the door ever gave them — and a revoke that
+// took back only that row would answer 204 while the survivor's copy kept
+// allowing the send.
+//
+// The stop direction survives the same shape because it fails safe: a stale lift
+// leaves the survivor still suppressed. A stale revoke fails OPEN, which is why
+// this is asserted on the send itself rather than on a row count.
+func TestRevokingAPreMergeOverrideHandleStopsTheSendOnTheSurvivor(t *testing.T) {
+	e := integration.Setup(t)
+	admin := e.Admin()
+	consentStore := consent.NewStore(e.DB())
+	contactsStore := contacts.NewStore(e.DB()).WithStopCarrier(consentStore)
+	consentGate := consent.NewGate(consentStore)
+
+	vouched := e.SeedContact(t, "Pre-merge Revoke Source", nil)
+	survivor := e.SeedContact(t, "Pre-merge Revoke Survivor", nil)
+
+	const address = "premerge-revoke@buyer.test"
+	addContactEmail(t, e, survivor, address)
+	seedMarketingPurpose(t, e, "override-carry-newsletter")
+
+	recorded, err := consentStore.Allow(admin, consent.AllowInput{
+		ContactID: ids.From[ids.ContactKind](vouched),
+		Category:  "marketing",
+		Reason:    "confirmed the opt-in on a call before the records were merged",
+	})
+	if err != nil {
+		t.Fatalf("recording the override: %v", err)
+	}
+
+	if _, err := contactsStore.MergeContact(admin,
+		ids.From[ids.ContactKind](vouched), ids.From[ids.ContactKind](survivor)); err != nil {
+		t.Fatalf("merging: %v", err)
+	}
+	if got := previewMarketing(admin, t, consentGate, address); got.Verdict != commsauthz.VerdictAllow {
+		t.Fatalf("verdict = %q (%s) after the merge, want allow — the fixture proves nothing unless "+
+			"the carried vouch is actually allowing the send", got.Verdict, got.ReasonCode)
+	}
+
+	// THE PRE-MERGE HANDLE, which is the only id this caller was ever given.
+	if err := consentStore.RevokeOverride(admin, consent.RevokeOverrideInput{
+		ContactID:  ids.From[ids.ContactKind](vouched),
+		OverrideID: recorded,
+		Reason:     "the buyer withdrew what they said on the call",
+	}); err != nil {
+		t.Fatalf("revoking by the pre-merge handle: %v", err)
+	}
+
+	after := previewMarketing(admin, t, consentGate, address)
+	if after.Verdict == commsauthz.VerdictAllow {
+		t.Errorf("verdict = allow (%s) after the vouch was revoked: the revoke took back the source "+
+			"row and left the survivor's carried copy standing, so mail still goes out on a vouch "+
+			"somebody took back", after.ReasonCode)
 	}
 }

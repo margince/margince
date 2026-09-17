@@ -49,7 +49,7 @@ The engine answers the second. It resolves a **category** from what the send act
   the send to, and only that category; a vouch for `marketing` says nothing about
   `customer_service`. It flips nothing absolute: `Decision.CanBeOverruledByCategory` only asks the
   question for a non-absolute machine reading that RESOLVED A CATEGORY, so the nine
-  `absoluteDenials` above and any subject-decided refusal are unreachable through this door
+  `absoluteDenials` below and any subject-decided refusal are unreachable through this door
   regardless of who is vouching — a subject stop still wins. An `unknown_purpose` refusal is
   unreachable too, for a different reason: it is non-absolute, but the request named a purpose key
   the engine does not know, so it resolved no category and a per-category vouch has nothing to
@@ -61,9 +61,11 @@ The engine answers the second. It resolves a **category** from what the send act
   stricter `CanOverrule` for a stop, where erring toward not-sending is the safe direction. It
   survives a merge onto the
   surviving contact (`consent.CarryOverridesTx`) with its original `decided_by_level` and reason
-  intact, so a merge cannot launder a vouch down to a lower authority. It is carried with the rest
-  of a contact's consent record through Art. 17 erasure and Art. 15 subject access
-  (`privacy.AssembleSAR`'s `communication_overrides`).
+  intact, so a merge cannot launder a vouch down to a lower authority. Art. 17 erasure and the retention
+  sweep DELETE it outright, with the rest of the contact's consent record — a standing "write to
+  them anyway" must not outlive the person it was about — while Art. 15 subject access EXPORTS it
+  (`privacy.AssembleSAR`'s `communication_overrides`), because somebody asking what is held about
+  them is owed the record that a human decided to write to them, and why.
 - **A restriction is not total, and that is deliberate.** Three categories still reach a restricted
   subject through a registered template — `security_notice`, `privacy_notice` and
   `optout_confirmation` — because a contact is not better off for being unable to hear that their
@@ -346,7 +348,7 @@ have with a supervisory authority, and destruction is irreversible.
 | The authorization engine | `internal/modules/consent/authorize*.go` (`AuthorizeStagingTx`, `AuthorizeTransmit`) |
 | The shared vocabulary | `internal/shared/ports/commsauthz/` (category, basis, phase, verdict, mode) |
 | Per-recipient decisions | `communication_decision`, `communication_basis`, `communication_suppression` |
-| Standing rep overrides | `internal/modules/consent/override.go`, `overridecarry.go` (`Allow`, `RevokeOverride`, `CarryOverridesTx`, `communication_override`) |
+| Standing rep overrides | `internal/modules/consent/override.go` and `internal/modules/consent/overridecarry.go` (`Allow`, `RevokeOverride`, `CarryOverridesTx`, `communication_override`); the merge reaches the carry through `internal/modules/contacts/overridecarry.go`, which owns the port and not the table |
 | Consent state + proof log | `internal/modules/consent/` (`consent_purpose`, `contact_consent`, `consent_event`) |
 | Art. 17 erasure | `internal/modules/privacy/eraser.go` (`NewEraser`, `EraseContact`) |
 | Art. 15 SAR | `internal/modules/privacy/sar.go` (`AssembleSAR`) |
