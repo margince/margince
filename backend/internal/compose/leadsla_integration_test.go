@@ -13,6 +13,7 @@ package compose
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"testing"
 	"time"
 
@@ -214,10 +215,16 @@ func failNoticeWrites(t *testing.T, owner *pgx.Conn) {
 
 // TestLeadSLAEscalationWritesBothHalvesOrNeither holds the pair.
 //
-// The automation engine claims a run BEFORE Apply, so a refused notice is never
-// redelivered: a task that survives it is a breach a rep is asked to work with
-// nothing on their Worklist saying why, and no second delivery will ever supply
-// the missing line. Either the breach is recorded whole or it is not recorded.
+// The automation engine claims its run BEFORE Apply, so nothing redelivers a
+// refused notice on its own: a task that survives it is a breach a rep is asked
+// to work with nothing on their Worklist saying why, and only an operator
+// noticing the failed run would ever supply the missing line. Either the breach
+// is recorded whole or it is not recorded.
+//
+// ONE DIRECTION, and the reverse is not a missing case: the task is written
+// first and the closure returns on its error, so the notice half is never
+// reached when the task fails. A test for "the task failed, so no notice" would
+// assert the absence of a write that no code path attempts.
 func TestLeadSLAEscalationWritesBothHalvesOrNeither(t *testing.T) {
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
@@ -229,8 +236,18 @@ func TestLeadSLAEscalationWritesBothHalvesOrNeither(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := h.Apply(ctx, ev, eff, nil); err == nil {
+	_, applyErr := h.Apply(ctx, ev, eff, nil)
+	if applyErr == nil {
 		t.Fatal("apply reported success while the notice write was refused")
+	}
+	// THE NOTICE LEG, named. Two empty tables and any error at all is also what
+	// this case would look like if the TASK half started failing for some
+	// unrelated reason — a new constraint, an authorization change — and it
+	// would go on reporting PASS while the atomicity it exists for stopped
+	// being exercised at all.
+	if !strings.Contains(applyErr.Error(), noticeLegWrap) {
+		t.Fatalf("apply failed with %q, want the notice leg (%q) — this case only proves atomicity when the half it broke is the half that failed",
+			applyErr, noticeLegWrap)
 	}
 
 	if tasks, _ := openTasksOnLead(t, owner, lead); tasks != 0 {

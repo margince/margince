@@ -42,6 +42,14 @@ const leadSLATaskSource = "lead_sla"
 // activityKindTask is the activity kind the escalation writes.
 const activityKindTask = "task"
 
+// noticeLegWrap names the notice half in the error it reports.
+//
+// A CONSTANT because the atomicity case reads it: that case breaks the notice
+// leg on purpose and has to know the failure it saw was the one it caused, and
+// a test carrying its own copy of this string would keep passing — on the task
+// leg's failure, proving nothing — the day the wording here changed.
+const noticeLegWrap = "recording the notice"
+
 // leadSLAEscalation is the §18.2 escalation: on lead.sla_breached, one
 // kind=task activity linked to the lead, due now, assigned to the
 // escalation target the event names (the owner today), titled after the
@@ -110,19 +118,26 @@ func (w leadSLAEscalation) Apply(ctx context.Context, ev workflow.Event, eff wor
 		in.AssigneeID = &target
 	}
 	// ONE TRANSACTION, because the task and the notice are one escalation. The
-	// engine claims a run BEFORE Apply, so a half that fails is never
-	// redelivered: a task committed beside a lost notice asks a rep to work a
-	// breach with nothing on their Worklist saying why, and nothing will ever
-	// supply the missing line. Either the breach is recorded whole or it is not
-	// recorded, and a run that answers an error is a breach still unescalated.
+	// engine claims its run BEFORE Apply, so nothing redelivers a half that
+	// fails: a task committed beside a lost notice asks a rep to work a breach
+	// with nothing on their Worklist saying why, and no later delivery supplies
+	// the missing line. Either the breach is recorded whole or it is not
+	// recorded, and a run that answers an error is a breach still unescalated
+	// — visible as such, and re-drivable by an operator.
 	//
-	// Both halves carry the breach's natural key — the task's
+	// A RE-DRIVE IS SAFE, which is the other half of why this shape works. Both
+	// halves carry the breach's natural key — the task's
 	// (source_system, source_id) and the notice's dedupe key are the same
-	// string — so the at-least-once bus redelivering one event lands one task
-	// and one line rather than a second copy of either.
+	// string — so running Apply again over a breach already escalated rewrites
+	// nothing and adds nothing, whether the second run comes from the
+	// at-least-once bus or from an operator re-driving a failed one.
+	//
+	// The outer wrap is for the transaction itself — a begin, an acquire or a
+	// commit failing belongs to neither leg, and would otherwise reach the run
+	// ledger saying nothing about which automation produced it.
 	if err := w.db.Tx(ctx, func(tx pgx.Tx) error {
 		if _, _, err := w.activities.LogActivityTx(ctx, tx, in); err != nil {
-			return fmt.Errorf("log sla escalation task: %w", err)
+			return fmt.Errorf("logging the task: %w", err)
 		}
 		// A breach with no named target still writes its task; there is nobody
 		// to address the notice to, and inventing one would misdeliver it.
@@ -136,11 +151,11 @@ func (w leadSLAEscalation) Apply(ctx context.Context, ev workflow.Event, eff wor
 			Body:      "A lead's first response is overdue; its escalation task is on your list.",
 			DedupeKey: leadSLATaskSource + ":" + sourceID,
 		}); err != nil {
-			return fmt.Errorf("record sla escalation notice: %w", err)
+			return fmt.Errorf(noticeLegWrap+": %w", err)
 		}
 		return nil
 	}); err != nil {
-		return workflow.RunResult{}, err
+		return workflow.RunResult{}, fmt.Errorf("lead sla escalation: %w", err)
 	}
 	return workflow.RunResult{Applied: eff.Actions}, nil
 }
