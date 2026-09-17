@@ -45,6 +45,14 @@ const here = dirname(fileURLToPath(import.meta.url));
 // sweep over the real routes in `e2e/ac.spec.ts` is what covers that shape, and
 // it is the gate that found this one.
 describe("the chip fill's call sites", () => {
+  // Both scans read the whole of src/, and reading it is what this file costs:
+  // parsing every component to see who renders inside whom takes seconds, so
+  // each check below asks for the answer rather than going and getting it
+  // again. The tree does not change while the file runs.
+  const sources = join(here, "..");
+  const allRules = rules(sources);
+  const inside = renderedInside(sources);
+
   // WCAG 1.4.3 exempts an inactive control, which is the whole point of the
   // dimmed tone a disabled segment takes; --textTertiary is out of the contrast
   // corpus above for the same reason and in the same words.
@@ -63,7 +71,6 @@ describe("the chip fill's call sites", () => {
   // the emptiness guard catches a TOTAL failure and nothing narrower. This is
   // the case the issue was filed about, asked directly.
   it("finds the remove control inside the token that grounds it", () => {
-    const inside = renderedInside(join(here, ".."));
     const belowToken = inside.get("token") ?? [];
     expect(
       belowToken.some((element) => element.has("token-remove")),
@@ -80,13 +87,11 @@ describe("the chip fill's call sites", () => {
   });
 
   it("draws on --bgChip only in inks the contrast gate measures", () => {
-    const all = rules(join(here, ".."));
-    const chips = all.filter(({ body }) =>
+    const chips = allRules.filter(({ body }) =>
       /background(?:-color)?:[^;]*var\(--bgChip\)/.test(body),
     );
     // A scan that matched nothing would report PASS on an empty corpus.
     expect(chips.length).toBeGreaterThan(0);
-    const inside = renderedInside(join(here, ".."));
     // An empty containment map is the way this check fails SHORT: every
     // descendant reached by its own class drops out of the subtree, and the
     // scan reports a clean tree because it stopped looking rather than because
@@ -105,7 +110,7 @@ describe("the chip fill's call sites", () => {
       // names no token class and which TokenInput nonetheless renders inside
       // one.
       const below = [...wanted].flatMap((name) => inside.get(name) ?? []);
-      const subtree = all.filter((rule) => {
+      const subtree = allRules.filter((rule) => {
         if (rule === chip) return false;
         if (
           compounds(rule.selector).some((part) =>
@@ -124,7 +129,7 @@ describe("the chip fill's call sites", () => {
         // `.filterpill[aria-pressed="true"] .filterpill-count`. The generic
         // rule beneath it is what the element is drawn in ELSEWHERE, and
         // reporting that is reporting a colour no reader sees on a chip.
-        if (rule !== chip && overriddenInside(all, chip, rule, inside))
+        if (rule !== chip && overriddenInside(allRules, chip, rule, inside))
           continue;
         for (const ink of inks(rule.body)) {
           if (chipInks.includes(ink)) continue;
@@ -147,12 +152,10 @@ describe("the chip fill's call sites", () => {
   // its host by construction, so a chip on a chip is never what was meant; the
   // state that wants to look pressed takes a ground from the ladder instead.
   it("never paints --bgChip inside something already painted in it", () => {
-    const all = rules(join(here, ".."));
-    const chips = all.filter(({ body }) =>
+    const chips = allRules.filter(({ body }) =>
       /background(?:-color)?:[^;]*var\(--bgChip\)/.test(body),
     );
     expect(chips.length).toBeGreaterThan(0);
-    const inside = renderedInside(join(here, ".."));
     expect(inside.size).toBeGreaterThan(0);
     const offenders: string[] = [];
     for (const chip of chips) {
