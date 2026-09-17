@@ -331,6 +331,10 @@ BEGIN
     -- and keep the data.
     IF NEW.body IS NOT NULL OR NEW.raw IS NOT NULL
        OR NEW.counterparty_email IS NOT NULL
+       -- The byline a record was imported with names a human exactly as the
+       -- body does. Cleared outright by every writer, so null is the test —
+       -- unlike the subject below, which has a tombstone to be replaced by.
+       OR NEW.source_author_name IS NOT NULL
        -- The subject must not survive AS IT WAS. It may go null or be replaced
        -- by the erasure's tombstone name — erasuretimeline.go writes the
        -- placeholder rather than a null, so demanding null here would refuse
@@ -340,7 +344,7 @@ BEGIN
        -- second copy of a Go constant, drifting the first time somebody edits
        -- one of them.
        OR (OLD.subject IS NOT NULL AND NEW.subject IS NOT DISTINCT FROM OLD.subject) THEN
-      RAISE EXCEPTION 'activity % may only leave restriction by being erased: clear body, raw and counterparty_email, and replace the subject, in the same statement', OLD.id
+      RAISE EXCEPTION 'activity % may only leave restriction by being erased: clear body, raw, counterparty_email and source_author_name, and replace the subject, in the same statement', OLD.id
         USING ERRCODE = 'check_violation',
               CONSTRAINT = 'activity_restriction_lift_erases';
     END IF;
