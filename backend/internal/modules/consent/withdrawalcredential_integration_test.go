@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -823,5 +824,60 @@ func TestAWithdrawalRefNamingNobodyIsRefused(t *testing.T) {
 
 	if !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("a ref naming neither a lead nor an address answered %v, want not-found", err)
+	}
+}
+
+// THE ONE-CLICK PRESS REACHES THE STOP, and answers what the page can read.
+//
+// A withdrawal link minted for a bare address has no per-purpose state behind
+// it, so OneClickUnsubscribe routes to the stop rather than to the withdrawal.
+// The body is an EMPTY list: a stop is one row rather than a set of purposes,
+// and there are no names to count — the page says the recipient is
+// unsubscribed either way.
+func TestTheOneClickPressOnACredentialRecordsTheStop(t *testing.T) {
+	e := setupChannelConsent(t)
+	address := "one-click-" + e.ws.String() + "@example.test"
+	token := mintWithdrawal(t, e, WithdrawalMintInput{
+		Address: address,
+		Scope:   WithdrawalScopeAllMarketing,
+	})
+
+	answered := pressUnsubscribe(t, e, token, nil, "List-Unsubscribe=One-Click")
+
+	if len(answered) != 0 {
+		t.Errorf("the press answered %v, want [] — a stop names no purposes", answered)
+	}
+	var live int
+	if err := e.owner.QueryRow(context.Background(), `
+		SELECT count(*) FROM communication_suppression
+		 WHERE lower(address) = $1 AND revoked_at IS NULL`, address).Scan(&live); err != nil {
+		t.Fatalf("reading the stop the press recorded: %v", err)
+	}
+	if live != 1 {
+		t.Errorf("the press left %d live stop(s) for %s, want 1 — it answered 200 either way", live, address)
+	}
+}
+
+// A CONTACT'S LINK IS NOT THIS DOOR.
+//
+// A contact holds contact_consent rows, so their press withdraws purposes;
+// recording an address stop for them instead would put a row no seat may ever
+// lift where a per-purpose withdrawal belonged. The refusal is what keeps a
+// caller assembling a ref by hand from reaching through.
+func TestAContactsCredentialIsRefusedByTheAddressStop(t *testing.T) {
+	e := setupChannelConsent(t)
+
+	err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
+		return e.store.StopForCredentialTx(e.ctx, tx, WithdrawalRef{
+			ContactID: e.contact,
+			Scope:     WithdrawalScopeAllMarketing,
+		})
+	})
+
+	if err == nil {
+		t.Fatal("a contact's ref recorded an address stop; their purposes are the thing to withdraw")
+	}
+	if !strings.Contains(err.Error(), "withdraws their purposes") {
+		t.Errorf("refused with %v, which does not say what to do instead", err)
 	}
 }
