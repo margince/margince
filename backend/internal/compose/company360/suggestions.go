@@ -360,7 +360,7 @@ func stalledDealSuggestions(stalled []stalledDeal) []crmcontracts.Company360Sugg
 func lifecycleConflict(
 	companyID ids.CompanyID, in suggestionInputs,
 ) *crmcontracts.Company360Suggestion {
-	if !in.contractEnded || !liveLifecycles[in.lifecycle] {
+	if !in.contractEnded || !liveStatuses[in.status] {
 		return nil
 	}
 	// The record cited is the account, because the contract's citable kinds
@@ -380,11 +380,11 @@ func lifecycleConflict(
 		Kind: suggestConflict,
 		Reason: fmt.Sprintf(
 			"Their correspondence says the contract ended, but this account is still filed as %s.",
-			in.lifecycle),
+			in.status),
 		// Keyed on the STAGE as well as the account, so correcting the stage
 		// retires this rather than leaving a dismissal in force over a record
 		// that has since been fixed.
-		Fingerprint: fingerprint(string(suggestConflict), in.lifecycle, evidence),
+		Fingerprint: fingerprint(string(suggestConflict), in.status, evidence),
 		Evidence:    evidence,
 		// The conflict is named, not resolved — which of the two is wrong is the
 		// reader's judgment, so the title asks rather than instructs.
@@ -392,7 +392,7 @@ func lifecycleConflict(
 	}
 }
 
-// liveLifecycles are the stages a contract_ended signal contradicts. A stage
+// liveStatuses are the stages a contract_ended signal contradicts. A stage
 // that already reads as over — former_customer, disqualified — is not in
 // conflict with the mail that says so; it is the mail's conclusion.
-var liveLifecycles = map[string]bool{"prospect": true, "opportunity": true, "customer": true}
+var liveStatuses = map[string]bool{"prospect": true, "opportunity": true, "customer": true}

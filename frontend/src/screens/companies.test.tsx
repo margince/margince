@@ -154,7 +154,7 @@ describe("CompaniesScreen — what an account is to us", () => {
         data: [
           {
             ...company,
-            lifecycle: "prospect",
+            status: "prospect",
             relationship_types: ["partner", "supplier"],
           },
         ],
@@ -294,7 +294,7 @@ describe("CompaniesScreen — list dials reach the server (P-14)", () => {
     );
   });
 
-  it("narrows to one lifecycle stage through the server", async () => {
+  it("narrows to one status stage through the server", async () => {
     const user = userEvent.setup();
     const { urls } = stubFetch(async () => emptyPage());
     render(<CompaniesScreen />);
@@ -303,7 +303,7 @@ describe("CompaniesScreen — list dials reach the server (P-14)", () => {
     await user.click(screen.getByRole("button", { name: "Customers" }));
 
     await waitFor(() =>
-      expect(urls.some((url) => url.includes("lifecycle=customer"))).toBe(true),
+      expect(urls.some((url) => url.includes("status=customer"))).toBe(true),
     );
   });
 
@@ -449,7 +449,7 @@ describe("CompanyScreen — edit with If-Match (P-1)", () => {
     let patchBody: unknown = null;
     const partner = {
       ...company,
-      lifecycle: "customer",
+      status: "customer",
       relationship_types: ["partner", "supplier"],
     };
     stubFetch(async (url, method, request) => {

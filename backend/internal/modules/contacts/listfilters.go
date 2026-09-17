@@ -38,7 +38,6 @@ import (
 // constants they happen to match today.
 const (
 	filterOwnerID          = "owner_id"
-	filterLifecycle        = "lifecycle"
 	filterRelationshipType = "relationship_type"
 	filterStatus           = "status"
 	filterTag              = "tag_id"
@@ -58,9 +57,9 @@ var contactListFilters = storekit.FilterSet[ListContactsInput]{
 }
 
 var companyListFilters = storekit.FilterSet[ListCompaniesInput]{
-	filterDomain:    storekit.FilterWord(func(in *ListCompaniesInput, v *string) { in.Domain = v }),
-	filterLifecycle: storekit.FilterWord(func(in *ListCompaniesInput, v *string) { in.Lifecycle = v }),
-	filterOwnerID:   storekit.FilterID(func(in *ListCompaniesInput, id *ids.UserID) { in.OwnerID = id }),
+	filterDomain:  storekit.FilterWord(func(in *ListCompaniesInput, v *string) { in.Domain = v }),
+	filterStatus:  storekit.FilterWord(func(in *ListCompaniesInput, v *string) { in.Status = v }),
+	filterOwnerID: storekit.FilterID(func(in *ListCompaniesInput, id *ids.UserID) { in.OwnerID = id }),
 	filterRelationshipType: storekit.FilterWord(
 		func(in *ListCompaniesInput, v *string) { in.RelationshipType = v }),
 	filterTag: storekit.FilterIDList[ids.TagKind](func(in *ListCompaniesInput, v []ids.UUID) { in.TagIDs = v }),

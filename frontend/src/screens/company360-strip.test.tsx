@@ -104,7 +104,7 @@ async function readings() {
 }
 
 const prospect: StateStripSection = {
-  account: { lifecycle: "prospect", relationship_types: [] },
+  account: { status: "prospect", relationship_types: [] },
   commercial: {
     open_count: 1,
     stalled_count: 0,
@@ -118,7 +118,7 @@ const prospect: StateStripSection = {
 
 const customer: StateStripSection = {
   ...prospect,
-  account: { lifecycle: "customer", relationship_types: ["customer"] },
+  account: { status: "customer", relationship_types: ["customer"] },
 };
 
 describe("the company readings row is the shared strip, not a copy of it", () => {
@@ -136,7 +136,7 @@ describe("the company readings row is the shared strip, not a copy of it", () =>
   });
 
   // Four on every account: the verdict card, the pipeline card, the money
-  // card and the relationship card, none of them conditional on the lifecycle.
+  // card and the relationship card, none of them conditional on the status.
   it("carries five doors for a prospect and five for a customer", async () => {
     stubFinance(NO_CONNECTION);
     renderStrip(view({ state_strip: prospect }));
@@ -148,7 +148,7 @@ describe("the company readings row is the shared strip, not a copy of it", () =>
   });
 
   // The money card is on every account now, not only a customer's — what
-  // changes with the lifecycle is what it has to say: a prospect has never
+  // changes with the status is what it has to say: a prospect has never
   // been billed, and a customer gets the real reading (or the reason there is
   // none).
   it("reads a money figure only once the account is a customer", async () => {
@@ -175,7 +175,7 @@ describe("a slot with no reading says which absence it is", () => {
   // An account nobody has worked: the deal grant is held, so the readings are
   // facts about the ACCOUNT rather than about the reader.
   const bare: StateStripSection = {
-    account: { lifecycle: "prospect", relationship_types: [] },
+    account: { status: "prospect", relationship_types: [] },
     commercial: {
       open_count: 0,
       stalled_count: 0,
@@ -222,7 +222,7 @@ describe("a slot with no reading says which absence it is", () => {
     renderStrip(
       view({
         state_strip: {
-          account: { lifecycle: "prospect", relationship_types: [] },
+          account: { status: "prospect", relationship_types: [] },
           commercial: null,
         },
         sections_omitted: ["health"],

@@ -32,7 +32,7 @@ const company = {
   workspace_id: "w",
   display_name: "Brandt Automotive GmbH",
   legal_name: "Brandt Automotive GmbH",
-  lifecycle: "customer" as const,
+  status: "customer" as const,
   owner_id: "u-1",
   industry: "Automotive",
   size_band: "51-200" as const,
@@ -361,7 +361,7 @@ describe("CompanyRail", () => {
     expect(screen.getByRole("combobox")).toBeInTheDocument();
   });
 
-  it("edits lifecycle in the grid through the header's own control", async () => {
+  it("edits status in the grid through the header's own control", async () => {
     // Only the rail renders in this suite — the header's copy of this same
     // control (and the "one implementation, two mount points" claim that
     // depends on both being on screen at once) is company360.test.tsx's own
@@ -388,13 +388,13 @@ describe("CompanyRail", () => {
     });
     renderRail();
     await userEvent.click(
-      await screen.findByRole("button", { name: "Change Account lifecycle" }),
+      await screen.findByRole("button", { name: "Change Account status" }),
     );
     // The fixture is already "customer" — picking a DIFFERENT value, or the
     // no-op guard skips the write entirely.
     await userEvent.click(screen.getByRole("option", { name: "Prospect" }));
     await waitFor(() =>
-      expect(patchBody).toMatchObject({ lifecycle: "prospect" }),
+      expect(patchBody).toMatchObject({ status: "prospect" }),
     );
   });
 

@@ -34,7 +34,7 @@ func seedAccountAtStage(t *testing.T, e *integration.Env, stage string) ids.UUID
 	company := ids.NewV7()
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
-			INSERT INTO company (id, display_name, lifecycle, source, captured_by)
+			INSERT INTO company (id, display_name, status, source, captured_by)
 			VALUES ($1, 'ScaleCommerce', $2, 'gmail:seed', 'connector:gmail')`, company, stage)
 		return err
 	}); err != nil {
@@ -98,7 +98,7 @@ func accountStage(t *testing.T, e *integration.Env, company ids.UUID) string {
 	var stage string
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
-			`SELECT lifecycle FROM company WHERE id = $1`, company).Scan(&stage)
+			`SELECT status FROM company WHERE id = $1`, company).Scan(&stage)
 	}); err != nil {
 		t.Fatalf("reading the account's stage: %v", err)
 	}
@@ -219,7 +219,7 @@ func TestAnAcceptOverACorrectedRecordIsRefused(t *testing.T) {
 	// Someone reads the same mail and files the account as disqualified.
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
-			`UPDATE company SET lifecycle = 'disqualified' WHERE id = $1`, company)
+			`UPDATE company SET status = 'disqualified' WHERE id = $1`, company)
 		return err
 	}); err != nil {
 		t.Fatal(err)
@@ -280,7 +280,7 @@ func TestAcceptingSettlesEveryOpenContradictionOnTheAccount(t *testing.T) {
 	}
 }
 
-// teamScopedDecider is a rep who may decide a lifecycle offer — the two
+// teamScopedDecider is a rep who may decide a stage offer — the two
 // grants the kind requires — but whose row scope is their TEAM, not the
 // workspace. Every fixture above decides as an admin, which is RowScopeAll and
 // therefore cannot show what the scope bound does.
@@ -308,7 +308,7 @@ var teamScopedDecider = principal.Permissions{
 func TestAcceptingSettlesOnlyTheContradictionsTheDeciderCanSee(t *testing.T) {
 	e := integration.Setup(t)
 	company := seedAccountAtStage(t, e, "customer")
-	// Accepting the offer writes the account's lifecycle, and an unowned row
+	// Accepting the offer writes the account's status, and an unowned row
 	// is writable by nobody below row_scope=all until claimed — so the
 	// team-scoped decider must own the account they are deciding on.
 	e.WsExec(t, "UPDATE company SET owner_id = $1 WHERE id = $2", e.Rep1, company)

@@ -40,13 +40,13 @@ type financeEnv struct {
 	external string
 }
 
-// setLifecycle moves the fixture account's relationship state, which is the one
+// setStatus moves the fixture account's relationship state, which is the one
 // input the card reads about the account itself.
 //
 // Its own owner connection rather than the store's pool: the app role cannot
 // write a company, and the point of the fixture is to move the account'"'"'s state
 // out from under a card that has already been read once.
-func (e *financeEnv) setLifecycle(t *testing.T, state string) {
+func (e *financeEnv) setStatus(t *testing.T, state string) {
 	t.Helper()
 	owner, err := pgx.Connect(e.ctx, os.Getenv("MARGINCE_TEST_DSN"))
 	if err != nil {
@@ -58,7 +58,7 @@ func (e *financeEnv) setLifecycle(t *testing.T, state string) {
 		}
 	})
 	if _, err := owner.Exec(e.ctx,
-		`UPDATE company SET lifecycle = $2 WHERE id = $1`, e.company, state); err != nil {
+		`UPDATE company SET status = $2 WHERE id = $1`, e.company, state); err != nil {
 		t.Fatalf("moving the account to %s: %v", state, err)
 	}
 }
@@ -99,7 +99,7 @@ func setupFinance(t *testing.T) *financeEnv {
 		t.Fatal(err)
 	}
 	if _, err := owner.Exec(ctx,
-		`INSERT INTO company (id, display_name, lifecycle, source, captured_by)
+		`INSERT INTO company (id, display_name, status, source, captured_by)
 		 VALUES ($1, 'Ledger GmbH', 'customer', 'manual', 'human:test')`,
 		e.company); err != nil {
 		t.Fatal(err)
@@ -940,7 +940,7 @@ func TestAFormerCustomersCardKeepsItsHistoryAndWithholdsItsOverdue(t *testing.T)
 		t.Fatal("the card names no coverage period, so it cannot say which period its figures describe")
 	}
 
-	e.setLifecycle(t, "former_customer")
+	e.setStatus(t, "former_customer")
 
 	ended := e.summaryAtEpoch(t, e.company)
 	if ended.Overdue != nil {

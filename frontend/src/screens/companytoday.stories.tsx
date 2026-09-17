@@ -49,7 +49,7 @@ const company: Company = {
 // `View["state_strip"]` — optional on the contract — and the spread then makes
 // `account` optional in a place the type requires it.
 const strip: NonNullable<View["state_strip"]> = {
-  account: { lifecycle: "customer", relationship_types: ["customer"] },
+  account: { status: "customer", relationship_types: ["customer"] },
   engagement: {
     state: "waiting_on_us",
     last_inbound_at: "2026-07-11T09:00:00Z",

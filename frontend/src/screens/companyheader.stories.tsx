@@ -7,8 +7,8 @@ import type { components } from "../api/schema";
 import { company360 } from "./company.fixtures";
 import {
   CompanyActionBadges,
-  CompanyLifecycleControl,
   CompanyRelationshipBadges,
+  CompanyStatusControl,
 } from "./companyheader";
 import { CompanyHeaderActions } from "./companyheaderactions";
 import { CompanyIdentityFacts, CompanySubtitle } from "./companyheaderfacts";
@@ -41,7 +41,7 @@ const company: Company = {
   workspace_id: "w-1",
   display_name: "Brandt Automotive GmbH",
   legal_name: "Brandt Automotive GmbH",
-  lifecycle: "customer",
+  status: "customer",
   owner_id: "u-1",
   industry: "Automotive",
   size_band: "51-200",
@@ -140,7 +140,7 @@ function Header({
             gap: "var(--space-2)",
           }}
         >
-          <CompanyLifecycleControl company={record} />
+          <CompanyStatusControl company={record} />
           <CompanyRelationshipBadges company={record} />
         </div>
         <CompanyIdentityFacts company={record} view={view} loading={loading} />
@@ -199,10 +199,10 @@ export const AuthorNamed: Story = {
   ),
 };
 
-// The ordinary shape of a customer: `customer` in the lifecycle AND in the
+// The ordinary shape of a customer: `customer` in the status AND in the
 // relationship types, plus a second relationship that is separately true. The
-// header says "Customer" ONCE — the editable lifecycle badge beside the name —
-// and draws "Partner" beside it. The relationship whose word the lifecycle is
+// header says "Customer" ONCE — the editable status badge beside the name —
+// and draws "Partner" beside it. The relationship whose word the status is
 // already printing does not draw again; the one it is not still does, because an
 // account can be a partner and a customer and hiding the second would make a
 // true reading look untrue.

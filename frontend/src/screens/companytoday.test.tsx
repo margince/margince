@@ -245,7 +245,7 @@ describe("the day's call, and which record it is read from", () => {
     show({
       ...BASE,
       state_strip: {
-        account: { lifecycle: "customer", relationship_types: [] },
+        account: { status: "customer", relationship_types: [] },
         engagement: {
           state: "waiting_on_them",
           last_inbound_at: null,
@@ -264,7 +264,7 @@ describe("the day's call, and which record it is read from", () => {
     show({
       ...BASE,
       state_strip: {
-        account: { lifecycle: "customer", relationship_types: [] },
+        account: { status: "customer", relationship_types: [] },
         engagement: {
           state: "waiting_on_us",
           last_inbound_at: "2026-08-05T09:00:00Z",

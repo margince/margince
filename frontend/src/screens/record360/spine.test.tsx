@@ -207,7 +207,7 @@ describe("what the thread says is coming", () => {
         last_outbound_at: SPOKE,
         health: { last_meeting_at: SPOKE },
         state_strip: {
-          account: { lifecycle: "opportunity", relationship_types: [] },
+          account: { status: "opportunity", relationship_types: [] },
           commercial: {
             open_count: 1,
             stalled_count: 0,

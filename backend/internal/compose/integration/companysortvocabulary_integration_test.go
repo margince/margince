@@ -48,7 +48,7 @@ func companyIDsIn(ctx context.Context, t *testing.T, e *Env, spec string) []ids.
 }
 
 // The two plain columns the vocabulary simply did not name.
-func TestTheAccountsListSortsByTheDescriptionAndLifecycleItDraws(t *testing.T) {
+func TestTheAccountsListSortsByTheDescriptionAndStatusItDraws(t *testing.T) {
 	e := Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, AccountRepPerms)
 
@@ -60,13 +60,13 @@ func TestTheAccountsListSortsByTheDescriptionAndLifecycleItDraws(t *testing.T) {
 	alma := seedAccount(t, e, contacts.CreateCompanyInput{
 		DisplayName: "Alma Werke", Description: strPtr("Zero interest so far"),
 	})
-	setLifecycle(t, e, zeta, "customer")
-	setLifecycle(t, e, alma, "target")
+	setStatus(t, e, zeta, "customer")
+	setStatus(t, e, alma, "target")
 
 	assertIDOrder(t, companyIDsIn(ctx, t, e, "description"), []ids.UUID{zeta, alma},
 		"description ascending")
-	assertIDOrder(t, companyIDsIn(ctx, t, e, "lifecycle"), []ids.UUID{zeta, alma},
-		"lifecycle ascending — customer before target")
+	assertIDOrder(t, companyIDsIn(ctx, t, e, "status"), []ids.UUID{zeta, alma},
+		"status ascending — customer before target")
 }
 
 // The Website header orders by the HOST it prints, off the primary domain row
@@ -190,12 +190,12 @@ func seedAccount(t *testing.T, e *Env, in contacts.CreateCompanyInput) ids.UUID 
 	return ids.UUID(company.Id)
 }
 
-// setLifecycle moves an account's stage through the real update path, so the
+// setStatus moves an account's stage through the real update path, so the
 // column the sort reads holds a value a writer really put there.
-func setLifecycle(t *testing.T, e *Env, company ids.UUID, to string) {
+func setStatus(t *testing.T, e *Env, company ids.UUID, to string) {
 	t.Helper()
 	if _, err := e.Contacts.UpdateCompany(e.Admin(), ids.From[ids.CompanyKind](company),
-		contacts.UpdateCompanyInput{Lifecycle: &to}); err != nil {
-		t.Fatalf("setting the lifecycle to %q: %v", to, err)
+		contacts.UpdateCompanyInput{Status: &to}); err != nil {
+		t.Fatalf("setting the status to %q: %v", to, err)
 	}
 }

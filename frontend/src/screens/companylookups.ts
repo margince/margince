@@ -12,27 +12,27 @@ import type { Grounding } from "./record360";
 // other rather than each keeping its own copy that can drift.
 
 type Company = components["schemas"]["Company"];
-type Lifecycle = NonNullable<Company["lifecycle"]>;
+type Status = NonNullable<Company["status"]>;
 
 // Where the account stands with us (PO-DDL-4, ADR-0079/A124), in the words a
 // reader sees rather than the wire enum.
-export const LIFECYCLE_LABELS: Record<Lifecycle, MessageKey> = {
-  unknown: "company.lifecycle.unknown",
-  target: "company.lifecycle.target",
-  prospect: "company.lifecycle.prospect",
-  opportunity: "company.lifecycle.opportunity",
-  customer: "company.lifecycle.customer",
-  former_customer: "company.lifecycle.former_customer",
-  disqualified: "company.lifecycle.disqualified",
+export const STATUS_LABELS: Record<Status, MessageKey> = {
+  unknown: "company.status.unknown",
+  target: "company.status.target",
+  prospect: "company.status.prospect",
+  opportunity: "company.status.opportunity",
+  customer: "company.status.customer",
+  former_customer: "company.status.former_customer",
+  disqualified: "company.status.disqualified",
 };
 
 // Kept in wire order so a picker built off it reads as a progression rather
-// than an alphabet. Shared for the same reason LIFECYCLE_LABELS is: the list
+// than an alphabet. Shared for the same reason STATUS_LABELS is: the list
 // and the labels are the two halves of one enum, and companies.tsx and
 // the rail's own Details grid (companyraildetails.tsx) both build a
-// lifecycle picker off it — two copies means the two screens can offer
+// status picker off it — two copies means the two screens can offer
 // different choices for the same field.
-export const LIFECYCLE_OPTIONS = [
+export const STATUS_OPTIONS = [
   "unknown",
   "target",
   "prospect",
@@ -49,7 +49,7 @@ export type RelationshipType = NonNullable<
   Company["relationship_types"]
 >[number];
 
-// Beside LIFECYCLE_LABELS because the header draws both vocabularies on one
+// Beside STATUS_LABELS because the header draws both vocabularies on one
 // line and they OVERLAP: `customer` is a member of each. Two modules cannot
 // notice that; one can, which is what relationshipBadges below does.
 export const RELATIONSHIP_TYPE_LABELS: Record<RelationshipType, MessageKey> = {
@@ -63,12 +63,12 @@ export const RELATIONSHIP_TYPE_LABELS: Record<RelationshipType, MessageKey> = {
 };
 
 /**
- * The relationship types worth drawing beside the account's lifecycle: every
- * one whose label the lifecycle badge is not already printing.
+ * The relationship types worth drawing beside the account's status: every
+ * one whose label the status badge is not already printing.
  *
  * An account can be a partner AND a customer, so dropping the second reading
  * would make a true thing look untrue — the two are kept. What is dropped is
- * the same WORD twice: an account whose lifecycle is `customer` and whose
+ * the same WORD twice: an account whose status is `customer` and whose
  * relationship types include `customer` is the ordinary shape of a customer,
  * and the header used to render "Customer" beside "Customer" from two fields
  * that happened to agree, reading as a second reading confirming the first.
@@ -79,19 +79,19 @@ export const RELATIONSHIP_TYPE_LABELS: Record<RelationshipType, MessageKey> = {
  * with nothing in the type system to catch it.
  */
 export function relationshipBadges(
-  company: Pick<Company, "lifecycle" | "relationship_types">,
+  company: Pick<Company, "status" | "relationship_types">,
   t: (key: MessageKey) => string,
 ): RelationshipType[] {
-  const standing = t(LIFECYCLE_LABELS[company.lifecycle ?? "unknown"]);
+  const standing = t(STATUS_LABELS[company.status ?? "unknown"]);
   return (company.relationship_types ?? []).filter(
     (relType) =>
       t(RELATIONSHIP_TYPE_LABELS[relType]) !== standing &&
-      !spokenFor(relType, company.lifecycle),
+      !spokenFor(relType, company.status),
   );
 }
 
 /**
- * Whether the lifecycle already says what this type says, in its own tense.
+ * Whether the status already says what this type says, in its own tense.
  *
  * The label comparison above catches the word repeated exactly. It cannot
  * catch the tense: an account that has stopped buying is a FORMER customer and
@@ -101,23 +101,22 @@ export function relationshipBadges(
  */
 function spokenFor(
   relType: RelationshipType,
-  lifecycle: Company["lifecycle"],
+  status: Company["status"],
 ): boolean {
-  return lifecycle
-    ? (LIFECYCLE_SPEAKS_FOR[relType]?.includes(lifecycle) ?? false)
+  return status
+    ? (STATUS_SPEAKS_FOR[relType]?.includes(status) ?? false)
     : false;
 }
 
-// The types a lifecycle speaks for, in any of its tenses. By KEY rather than by
+// The types a status speaks for, in any of its tenses. By KEY rather than by
 // label, because the two words differ on purpose and only the enum says they
 // are the same relationship.
-const LIFECYCLE_SPEAKS_FOR: Partial<
-  Record<RelationshipType, readonly string[]>
-> = {
-  customer: ["customer", "former_customer"],
-};
+const STATUS_SPEAKS_FOR: Partial<Record<RelationshipType, readonly string[]>> =
+  {
+    customer: ["customer", "former_customer"],
+  };
 
-// The seven wire size bands, same sharing reason as LIFECYCLE_OPTIONS above.
+// The seven wire size bands, same sharing reason as STATUS_OPTIONS above.
 export const SIZE_BAND_OPTIONS = [
   "1-10",
   "11-50",

@@ -93,7 +93,7 @@ func TestGhostedThreadIsRaisedOnceAndSurvivesARepeatPass(t *testing.T) {
 	// An account worth chasing: without this the rule stays quiet, because an
 	// unanswered fortnight on an account nobody works is not an observation
 	// about a relationship.
-	e.WsExec(t, `UPDATE company SET lifecycle = 'opportunity' WHERE id = $1`, company)
+	e.WsExec(t, `UPDATE company SET status = 'opportunity' WHERE id = $1`, company)
 	mailViaEmployee(t, e, company, "Update zu Margince", "outbound", now.AddDate(0, 0, -20))
 
 	if written := ghostedScan(t, e, now); written != 1 {
@@ -117,7 +117,7 @@ func TestADismissedGhostedSignalDoesNotComeBack(t *testing.T) {
 	now := time.Now().UTC()
 
 	company := e.SeedCompany(t, "Dismissed Co", &e.Rep1)
-	e.WsExec(t, `UPDATE company SET lifecycle = 'customer' WHERE id = $1`, company)
+	e.WsExec(t, `UPDATE company SET status = 'customer' WHERE id = $1`, company)
 	mailViaEmployee(t, e, company, "Following up", "outbound", now.AddDate(0, 0, -30))
 	ghostedScan(t, e, now)
 
@@ -141,13 +141,13 @@ func TestGhostedStaysQuietWhenTheyWroteLastOrNobodyIsWorkingTheAccount(t *testin
 	// different contact, so the account looked unanswered and the rule fired on
 	// a relationship that was in fact alive.
 	answered := e.SeedCompany(t, "They Replied", &e.Rep1)
-	e.WsExec(t, `UPDATE company SET lifecycle = 'opportunity' WHERE id = $1`, answered)
+	e.WsExec(t, `UPDATE company SET status = 'opportunity' WHERE id = $1`, answered)
 	mailViaEmployee(t, e, answered, "Proposal", "outbound", now.AddDate(0, 0, -30))
 	mailViaEmployee(t, e, answered, "Re: Proposal", "inbound", now.AddDate(0, 0, -20))
 
-	// Nobody is working this one: no open deal, and a lifecycle that is not live.
+	// Nobody is working this one: no open deal, and a status that is not live.
 	idle := e.SeedCompany(t, "Nobody's Account", &e.Rep1)
-	e.WsExec(t, `UPDATE company SET lifecycle = 'disqualified' WHERE id = $1`, idle)
+	e.WsExec(t, `UPDATE company SET status = 'disqualified' WHERE id = $1`, idle)
 	mailViaEmployee(t, e, idle, "Last try", "outbound", now.AddDate(0, 0, -60))
 
 	if written := ghostedScan(t, e, now); written != 0 {

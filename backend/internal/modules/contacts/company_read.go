@@ -146,7 +146,7 @@ func scanCompany(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 	var o crmcontracts.Company
 	var id ids.UUID
 	var ownerID, parentID, mergedInto *ids.UUID
-	var lifecycle string
+	var status string
 	var addr crmcontracts.Address
 	var logoObjectKey *string
 	var linkedinURL *string
@@ -156,7 +156,7 @@ func scanCompany(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 	dests := []any{
 		&id, &o.DisplayName, &o.LegalName, &o.Description, &o.Industry, &o.SizeBand, &ownerID, &visibility,
 		&addr.Line1, &addr.Line2, &addr.City, &addr.Region, &addr.PostalCode, &addr.Country,
-		&lifecycle, &parentID, &mergedInto, &logoObjectKey, &linkedinURL, &o.Source, &o.CapturedBy,
+		&status, &parentID, &mergedInto, &logoObjectKey, &linkedinURL, &o.Source, &o.CapturedBy,
 		&version, &o.CreatedAt, &o.UpdatedAt, &o.ArchivedAt, &o.IsAnchor,
 		&o.LastActivityAt,
 	}
@@ -175,8 +175,8 @@ func scanCompany(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 	}
 	o.ParentCompanyId = uuidPtr(parentID)
 	o.MergedIntoId = uuidPtr(mergedInto)
-	lc := crmcontracts.CompanyLifecycle(lifecycle)
-	o.Lifecycle = &lc
+	lc := crmcontracts.CompanyStatus(status)
+	o.Status = &lc
 	o.LogoUrl = LogoURL(id, logoObjectKey, LogoWide)
 	o.LinkedinUrl = linkedinURL
 	if a := addressOrNil(addr); a != nil {

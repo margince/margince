@@ -48,11 +48,11 @@ type ListCompaniesInput struct {
 	OwnerTeamID *ids.TeamID
 	Unassigned  *bool
 	// Two questions, asked separately because one value could not answer both:
-	// Lifecycle is where the account stands with us and holds one value at a
+	// Status is where the account stands with us and holds one value at a
 	// time, while RelationshipType is what the company IS to us and holds
 	// several — a partner is routinely a customer as well. They replaced a
 	// single classification field, now retired.
-	Lifecycle        *string
+	Status           *string
 	RelationshipType *string
 	// Industry is free text on the record; SizeBand is the contract's enum.
 	Industry *string
@@ -84,11 +84,11 @@ var companyListFields = map[string]storekit.SortField{
 	ownerIDColumn:      storekit.Column(storekit.KindUUID),
 	lastActivityColumn: storekit.Column(storekit.KindTimestamp),
 	columnDescription:  storekit.Column(fieldcatalog.TypeText),
-	// classification is retired and the column the list draws is lifecycle, so
-	// this is the one the header offers. By the stored value, which groups the
-	// seven states together; the funnel's own order is a question of its own
-	// and the deals list answers `status` the same way today.
-	filterLifecycle: storekit.Column(fieldcatalog.TypeText),
+	// The funnel position sorts by the stored value, which groups the seven
+	// states together, rather than by the funnel's own order: that order is a
+	// question of its own, and the deals list answers `status` the same way
+	// today.
+	filterStatus: storekit.Column(fieldcatalog.TypeText),
 	// The three the list draws and does not store (company_sorts.go).
 	"website_url":     {Kind: fieldcatalog.TypeText, Expr: orderByPrimaryDomain},
 	"contact_count":   {Kind: fieldcatalog.TypeNumber, Expr: orderByContactCount},
@@ -202,12 +202,12 @@ func (s *Store) ListCompanies(ctx context.Context, in ListCompaniesInput) ([]crm
 			// was never one the contract accepts. Validated HERE, inside the
 			// store, so it lands after listPage's auth.Require rather than
 			// before it.
-			if in.Lifecycle != nil {
-				if !crmcontracts.ListCompaniesParamsLifecycle(*in.Lifecycle).Valid() {
-					return nil, httperr.Validation("lifecycle", "not_a_known_value",
+			if in.Status != nil {
+				if !crmcontracts.ListCompaniesParamsStatus(*in.Status).Valid() {
+					return nil, httperr.Validation(filterStatus, "not_a_known_value",
 						"filter by one of the account stages the contract defines, or leave the parameter off")
 				}
-				where = append(where, storekit.SQLf("lifecycle = $%d", arg(*in.Lifecycle)))
+				where = append(where, storekit.SQLf("status = $%d", arg(*in.Status)))
 			}
 			if in.Industry != nil {
 				// Free text on the record, so matched as written rather than
@@ -216,7 +216,7 @@ func (s *Store) ListCompanies(ctx context.Context, in ListCompaniesInput) ([]crm
 			}
 			if in.SizeBand != nil {
 				// Checked against the generated enum for the same reason
-				// lifecycle is: an unknown band would answer an empty page,
+				// status is: an unknown band would answer an empty page,
 				// and empty reads as "no accounts that size" rather than as
 				// "that is not a size".
 				if !crmcontracts.ListCompaniesParamsSizeBand(*in.SizeBand).Valid() {

@@ -1098,12 +1098,10 @@ describe("two chips on one list", () => {
         fetchPage={fetchPage}
         chips={[
           {
-            key: "lifecycle",
-            label: "company.lifecycle",
-            allLabel: "company.filterLifecycleAll",
-            options: [
-              { value: "customer", label: "company.lifecycle.customer" },
-            ],
+            key: "status",
+            label: "company.status",
+            allLabel: "company.filterStatusAll",
+            options: [{ value: "customer", label: "company.status.customer" }],
           },
         ]}
         dataChips={[
@@ -1127,15 +1125,13 @@ describe("two chips on one list", () => {
 
     // Now narrow by something else. Clearing every composite parameter on the
     // surface — rather than only the chip being changed — would drop the owner
-    // answer here, so picking a lifecycle would silently widen the list back to
+    // answer here, so picking a status would silently widen the list back to
     // every owner while the owner chip still showed "Unassigned".
-    await user.click(screen.getByRole("button", { name: "Account lifecycle" }));
+    await user.click(screen.getByRole("button", { name: "Account status" }));
     await user.click(screen.getByRole("button", { name: "Customer" }));
 
     await waitFor(() =>
-      expect(fetchPage.mock.calls.at(-1)?.[0].filters.lifecycle).toBe(
-        "customer",
-      ),
+      expect(fetchPage.mock.calls.at(-1)?.[0].filters.status).toBe("customer"),
     );
     expect(fetchPage.mock.calls.at(-1)?.[0].filters.unassigned).toBe("true");
   });

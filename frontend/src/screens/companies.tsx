@@ -86,8 +86,8 @@ import {
 import { GrowthFitPanel } from "./companygrowthfit";
 import {
   CompanyActionBadges,
-  CompanyLifecycleControl,
   CompanyRelationshipBadges,
+  CompanyStatusControl,
   displayHost,
   useCompanyVerbRefusal,
 } from "./companyheader";
@@ -97,10 +97,10 @@ import {
 } from "./companyheaderactions";
 import { CompanyIdentityFacts, CompanySubtitle } from "./companyheaderfacts";
 import {
-  LIFECYCLE_LABELS,
-  LIFECYCLE_OPTIONS,
   RELATIONSHIP_TYPE_LABELS,
   SIZE_BAND_OPTIONS,
+  STATUS_LABELS,
+  STATUS_OPTIONS,
 } from "./companylookups";
 import { CompanyProfileForm } from "./companyprofiletab";
 import { CompanyProjectsPanel } from "./companyprojects";
@@ -179,18 +179,18 @@ type Company = components["schemas"]["Company"];
 // Where the account stands with us (ADR-0079), in the words a reader
 // sees. Lives in companylookups.ts, the leaf both this screen and the rail
 // import, so the two cannot drift onto two different label sets for the same
-// enum. Re-exported: every existing caller of `LIFECYCLE_LABELS` from this
+// enum. Re-exported: every existing caller of `STATUS_LABELS` from this
 // module still resolves, and this file still reads it below as its own.
 // What it is TO US, multi-valued (ADR-0079). Moved beside
-// LIFECYCLE_LABELS in companylookups.ts because the two vocabularies OVERLAP —
+// STATUS_LABELS in companylookups.ts because the two vocabularies OVERLAP —
 // `customer` is a member of both — and only a module holding both can tell
 // that the header is about to print one word twice. Re-exported for the same
-// reason LIFECYCLE_LABELS is: every existing caller still resolves.
-export { LIFECYCLE_LABELS, LIFECYCLE_OPTIONS, RELATIONSHIP_TYPE_LABELS };
+// reason STATUS_LABELS is: every existing caller still resolves.
+export { RELATIONSHIP_TYPE_LABELS, STATUS_LABELS, STATUS_OPTIONS };
 
 type Company360View = components["schemas"]["Company360"];
 
-// Lives in companylookups.ts, same reason as LIFECYCLE_LABELS above: the
+// Lives in companylookups.ts, same reason as STATUS_LABELS above: the
 // rail's Details grid (companyraildetails.tsx) builds a size-band picker off
 // the same seven wire bands, and a second copy here is the value neither
 // screen's TypeScript catches drifting. Re-exported for the same reason too:
@@ -362,14 +362,14 @@ export function CompaniesScreen() {
           },
           {
             key: "class",
-            header: t("company.lifecycle"),
-            sort: "lifecycle",
+            header: t("company.status"),
+            sort: "status",
             // classification is retired and no longer written by anything,
             // so a column reading it would show whatever it happened to
             // hold when the split shipped, forever.
             cell: (company: Company) =>
-              company.lifecycle && company.lifecycle !== "unknown" ? (
-                <Badge>{t(LIFECYCLE_LABELS[company.lifecycle])}</Badge>
+              company.status && company.status !== "unknown" ? (
+                <Badge>{t(STATUS_LABELS[company.status])}</Badge>
               ) : null,
           },
           {
@@ -404,12 +404,12 @@ export function CompaniesScreen() {
         dataChips={[...ownerChips, ...sizeChip, ...tagChips]}
         chips={[
           {
-            key: "lifecycle",
-            label: "company.lifecycle",
-            allLabel: "company.filterLifecycleAll",
-            options: LIFECYCLE_OPTIONS.filter(
-              (value) => value !== "unknown",
-            ).map((value) => ({ value, label: LIFECYCLE_LABELS[value] })),
+            key: "status",
+            label: "company.status",
+            allLabel: "company.filterStatusAll",
+            options: STATUS_OPTIONS.filter((value) => value !== "unknown").map(
+              (value) => ({ value, label: STATUS_LABELS[value] }),
+            ),
           },
           {
             key: "relationship_type",
@@ -427,12 +427,12 @@ export function CompaniesScreen() {
           {
             label: "list.viewCustomers",
             sort: "display_name",
-            filters: { lifecycle: "customer" },
+            filters: { status: "customer" },
           },
           {
             label: "list.viewProspects",
             sort: "display_name",
-            filters: { lifecycle: "prospect" },
+            filters: { status: "prospect" },
           },
         ]}
       />
@@ -664,7 +664,7 @@ function companyTabsFor(
   // Finance is absent exactly where its card is absent, on FIN-AC-3's own list
   // — an account nobody has ever invoiced has no money to report, and a tab
   // that opens onto nothing is worse than one that is not there.
-  if (!hasFinance(company.lifecycle) && tab !== "finance") {
+  if (!hasFinance(company.status) && tab !== "finance") {
     drop.add("finance");
   }
   return drop.size === 0
@@ -852,7 +852,7 @@ function CompanyRecord({
           tasks: t("tab.tasks"),
           timeline: t("tab.timeline"),
           // The tab's own key rather than `finance.title`, which the card
-          // inside varies by lifecycle ("Finance (historical)"). A tab label
+          // inside varies by status ("Finance (historical)"). A tab label
           // names a place and does not qualify it; sharing one key would tie
           // the strip to a title that changes under it.
           finance: t("tab.finance"),
@@ -1296,11 +1296,11 @@ function CompanyPage({
         // on the name's own line, the contact record's own shape.
         nameBadge={<CompanySubtitle company={company} />}
         // The account's standing: what it IS (CompanyRelationshipBadges) and
-        // where it STANDS (the editable lifecycle badge), both tags ON the
+        // where it STANDS (the editable status badge), both tags ON the
         // record, so both share the pills row under the name.
         pulse={
           <IdentityLine separator="space">
-            <CompanyLifecycleControl company={company} />
+            <CompanyStatusControl company={company} />
             <CompanyRelationshipBadges company={company} />
             {/* Who may READ the account, on the same row the contact header
                 says it on, with the verb that changes it. */}
@@ -1657,14 +1657,14 @@ function CompanyRecordBody({
       {/* The money gets the whole column: what is overdue, what has been
           invoiced over the year, and how this account pays are three readings
           a rep opens the page WITH a question about, rather than meets on the
-          way past the day's brief. The card keeps its own lifecycle-varying
+          way past the day's brief. The card keeps its own status-varying
           title inside the tab — a former customer's figures still read under
           "Finance (historical)", which is the one thing the tab strip above
           cannot say, because a tab label names a place, not its qualifier. */}
       {tab === "finance" && (
         <CompanyFinanceCard
           companyId={company.id}
-          lifecycle={company.lifecycle}
+          status={company.status}
           readOnly={readOnly}
         />
       )}

@@ -345,8 +345,8 @@ func (a *assembly) suggestionInputsOnce() (suggestionInputs, error) {
 			// The stage and the name come off the company row this
 			// assembly already read, so the page adds no query for either.
 			heading := companyHeading{name: a.out.Company.DisplayName}
-			if lc := a.out.Company.Lifecycle; lc != nil {
-				heading.lifecycle = string(*lc)
+			if lc := a.out.Company.Status; lc != nil {
+				heading.status = string(*lc)
 			}
 			var base string
 			if base, a.adviceErr = a.installationBaseCurrency(); a.adviceErr != nil {

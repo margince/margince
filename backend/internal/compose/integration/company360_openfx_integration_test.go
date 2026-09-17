@@ -53,7 +53,7 @@ func TestAnOpenDealInAnotherCurrencyIsPricedAtTheLatestRate(t *testing.T) {
 	e := Setup(t)
 	st := seedOpenFXPipeline(t, e)
 	company := ids.NewV7()
-	e.WsExec(t, `INSERT INTO company (id, display_name, lifecycle, source, captured_by)
+	e.WsExec(t, `INSERT INTO company (id, display_name, status, source, captured_by)
 		VALUES ($1, 'Mixed Pipeline GmbH', 'customer', 'manual', 'human:test')`, company)
 
 	// One deal in the base currency and one in USD, with a rate loaded for the
@@ -98,7 +98,7 @@ func TestAnOpenDealInACurrencyWithNoRateStaysCountedAndUnpriced(t *testing.T) {
 	e := Setup(t)
 	st := seedOpenFXPipeline(t, e)
 	company := ids.NewV7()
-	e.WsExec(t, `INSERT INTO company (id, display_name, lifecycle, source, captured_by)
+	e.WsExec(t, `INSERT INTO company (id, display_name, status, source, captured_by)
 		VALUES ($1, 'Unrated Pipeline GmbH', 'customer', 'manual', 'human:test')`, company)
 
 	// No fx_rate row for JPY at all. Inventing a rate — or treating the
@@ -131,7 +131,7 @@ func TestTheLatestRateOnOrBeforeTheAsOfDayIsTheOneUsed(t *testing.T) {
 	e := Setup(t)
 	st := seedOpenFXPipeline(t, e)
 	company := ids.NewV7()
-	e.WsExec(t, `INSERT INTO company (id, display_name, lifecycle, source, captured_by)
+	e.WsExec(t, `INSERT INTO company (id, display_name, status, source, captured_by)
 		VALUES ($1, 'Rate Ladder GmbH', 'customer', 'manual', 'human:test')`, company)
 	seedOpenFXDeal(t, e, st, company, 20_000, "USD")
 
@@ -173,7 +173,7 @@ func TestAStaleRateDateOnAnOpenDealDoesNotBecomeTheAsOf(t *testing.T) {
 	e := Setup(t)
 	st := seedOpenFXPipeline(t, e)
 	company := ids.NewV7()
-	e.WsExec(t, `INSERT INTO company (id, display_name, lifecycle, source, captured_by)
+	e.WsExec(t, `INSERT INTO company (id, display_name, status, source, captured_by)
 		VALUES ($1, 'Stale Date GmbH', 'customer', 'manual', 'human:test')`, company)
 
 	// An open deal may carry fx_rate_date with no fx_rate_to_base beside it —

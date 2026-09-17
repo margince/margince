@@ -3277,39 +3277,6 @@ func (e CommunicationReviewState) Valid() bool {
 	}
 }
 
-// Defines values for CompanyLifecycle.
-const (
-	CompanyLifecycleCustomer       CompanyLifecycle = "customer"
-	CompanyLifecycleDisqualified   CompanyLifecycle = "disqualified"
-	CompanyLifecycleFormerCustomer CompanyLifecycle = "former_customer"
-	CompanyLifecycleOpportunity    CompanyLifecycle = "opportunity"
-	CompanyLifecycleProspect       CompanyLifecycle = "prospect"
-	CompanyLifecycleTarget         CompanyLifecycle = "target"
-	CompanyLifecycleUnknown        CompanyLifecycle = "unknown"
-)
-
-// Valid indicates whether the value is a known member of the CompanyLifecycle enum.
-func (e CompanyLifecycle) Valid() bool {
-	switch e {
-	case CompanyLifecycleCustomer:
-		return true
-	case CompanyLifecycleDisqualified:
-		return true
-	case CompanyLifecycleFormerCustomer:
-		return true
-	case CompanyLifecycleOpportunity:
-		return true
-	case CompanyLifecycleProspect:
-		return true
-	case CompanyLifecycleTarget:
-		return true
-	case CompanyLifecycleUnknown:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for CompanyRelationshipTypes.
 const (
 	CompanyRelationshipTypesCompetitor       CompanyRelationshipTypes = "competitor"
@@ -3370,6 +3337,39 @@ func (e CompanySizeBand) Valid() bool {
 	case CompanySizeBandN5011000:
 		return true
 	case CompanySizeBandN51200:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CompanyStatus.
+const (
+	CompanyStatusCustomer       CompanyStatus = "customer"
+	CompanyStatusDisqualified   CompanyStatus = "disqualified"
+	CompanyStatusFormerCustomer CompanyStatus = "former_customer"
+	CompanyStatusOpportunity    CompanyStatus = "opportunity"
+	CompanyStatusProspect       CompanyStatus = "prospect"
+	CompanyStatusTarget         CompanyStatus = "target"
+	CompanyStatusUnknown        CompanyStatus = "unknown"
+)
+
+// Valid indicates whether the value is a known member of the CompanyStatus enum.
+func (e CompanyStatus) Valid() bool {
+	switch e {
+	case CompanyStatusCustomer:
+		return true
+	case CompanyStatusDisqualified:
+		return true
+	case CompanyStatusFormerCustomer:
+		return true
+	case CompanyStatusOpportunity:
+		return true
+	case CompanyStatusProspect:
+		return true
+	case CompanyStatusTarget:
+		return true
+	case CompanyStatusUnknown:
 		return true
 	default:
 		return false
@@ -3559,39 +3559,6 @@ func (e Company360RouteStrengthBucket) Valid() bool {
 	}
 }
 
-// Defines values for Company360StateStripAccountLifecycle.
-const (
-	Company360StateStripAccountLifecycleCustomer       Company360StateStripAccountLifecycle = "customer"
-	Company360StateStripAccountLifecycleDisqualified   Company360StateStripAccountLifecycle = "disqualified"
-	Company360StateStripAccountLifecycleFormerCustomer Company360StateStripAccountLifecycle = "former_customer"
-	Company360StateStripAccountLifecycleOpportunity    Company360StateStripAccountLifecycle = "opportunity"
-	Company360StateStripAccountLifecycleProspect       Company360StateStripAccountLifecycle = "prospect"
-	Company360StateStripAccountLifecycleTarget         Company360StateStripAccountLifecycle = "target"
-	Company360StateStripAccountLifecycleUnknown        Company360StateStripAccountLifecycle = "unknown"
-)
-
-// Valid indicates whether the value is a known member of the Company360StateStripAccountLifecycle enum.
-func (e Company360StateStripAccountLifecycle) Valid() bool {
-	switch e {
-	case Company360StateStripAccountLifecycleCustomer:
-		return true
-	case Company360StateStripAccountLifecycleDisqualified:
-		return true
-	case Company360StateStripAccountLifecycleFormerCustomer:
-		return true
-	case Company360StateStripAccountLifecycleOpportunity:
-		return true
-	case Company360StateStripAccountLifecycleProspect:
-		return true
-	case Company360StateStripAccountLifecycleTarget:
-		return true
-	case Company360StateStripAccountLifecycleUnknown:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for Company360StateStripAccountRelationshipTypes.
 const (
 	Company360StateStripAccountRelationshipTypesCompetitor       Company360StateStripAccountRelationshipTypes = "competitor"
@@ -3619,6 +3586,39 @@ func (e Company360StateStripAccountRelationshipTypes) Valid() bool {
 	case Company360StateStripAccountRelationshipTypesPortfolioCompany:
 		return true
 	case Company360StateStripAccountRelationshipTypesSupplier:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for Company360StateStripAccountStatus.
+const (
+	Company360StateStripAccountStatusCustomer       Company360StateStripAccountStatus = "customer"
+	Company360StateStripAccountStatusDisqualified   Company360StateStripAccountStatus = "disqualified"
+	Company360StateStripAccountStatusFormerCustomer Company360StateStripAccountStatus = "former_customer"
+	Company360StateStripAccountStatusOpportunity    Company360StateStripAccountStatus = "opportunity"
+	Company360StateStripAccountStatusProspect       Company360StateStripAccountStatus = "prospect"
+	Company360StateStripAccountStatusTarget         Company360StateStripAccountStatus = "target"
+	Company360StateStripAccountStatusUnknown        Company360StateStripAccountStatus = "unknown"
+)
+
+// Valid indicates whether the value is a known member of the Company360StateStripAccountStatus enum.
+func (e Company360StateStripAccountStatus) Valid() bool {
+	switch e {
+	case Company360StateStripAccountStatusCustomer:
+		return true
+	case Company360StateStripAccountStatusDisqualified:
+		return true
+	case Company360StateStripAccountStatusFormerCustomer:
+		return true
+	case Company360StateStripAccountStatusOpportunity:
+		return true
+	case Company360StateStripAccountStatusProspect:
+		return true
+	case Company360StateStripAccountStatusTarget:
+		return true
+	case Company360StateStripAccountStatusUnknown:
 		return true
 	default:
 		return false
@@ -13690,39 +13690,6 @@ func (e UpdateAutomationRequestStatus) Valid() bool {
 	}
 }
 
-// Defines values for UpdateCompanyRequestLifecycle.
-const (
-	UpdateCompanyRequestLifecycleCustomer       UpdateCompanyRequestLifecycle = "customer"
-	UpdateCompanyRequestLifecycleDisqualified   UpdateCompanyRequestLifecycle = "disqualified"
-	UpdateCompanyRequestLifecycleFormerCustomer UpdateCompanyRequestLifecycle = "former_customer"
-	UpdateCompanyRequestLifecycleOpportunity    UpdateCompanyRequestLifecycle = "opportunity"
-	UpdateCompanyRequestLifecycleProspect       UpdateCompanyRequestLifecycle = "prospect"
-	UpdateCompanyRequestLifecycleTarget         UpdateCompanyRequestLifecycle = "target"
-	UpdateCompanyRequestLifecycleUnknown        UpdateCompanyRequestLifecycle = "unknown"
-)
-
-// Valid indicates whether the value is a known member of the UpdateCompanyRequestLifecycle enum.
-func (e UpdateCompanyRequestLifecycle) Valid() bool {
-	switch e {
-	case UpdateCompanyRequestLifecycleCustomer:
-		return true
-	case UpdateCompanyRequestLifecycleDisqualified:
-		return true
-	case UpdateCompanyRequestLifecycleFormerCustomer:
-		return true
-	case UpdateCompanyRequestLifecycleOpportunity:
-		return true
-	case UpdateCompanyRequestLifecycleProspect:
-		return true
-	case UpdateCompanyRequestLifecycleTarget:
-		return true
-	case UpdateCompanyRequestLifecycleUnknown:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for UpdateCompanyRequestRelationshipTypes.
 const (
 	UpdateCompanyRequestRelationshipTypesCompetitor       UpdateCompanyRequestRelationshipTypes = "competitor"
@@ -13783,6 +13750,39 @@ func (e UpdateCompanyRequestSizeBand) Valid() bool {
 	case UpdateCompanyRequestSizeBandN5011000:
 		return true
 	case UpdateCompanyRequestSizeBandN51200:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UpdateCompanyRequestStatus.
+const (
+	UpdateCompanyRequestStatusCustomer       UpdateCompanyRequestStatus = "customer"
+	UpdateCompanyRequestStatusDisqualified   UpdateCompanyRequestStatus = "disqualified"
+	UpdateCompanyRequestStatusFormerCustomer UpdateCompanyRequestStatus = "former_customer"
+	UpdateCompanyRequestStatusOpportunity    UpdateCompanyRequestStatus = "opportunity"
+	UpdateCompanyRequestStatusProspect       UpdateCompanyRequestStatus = "prospect"
+	UpdateCompanyRequestStatusTarget         UpdateCompanyRequestStatus = "target"
+	UpdateCompanyRequestStatusUnknown        UpdateCompanyRequestStatus = "unknown"
+)
+
+// Valid indicates whether the value is a known member of the UpdateCompanyRequestStatus enum.
+func (e UpdateCompanyRequestStatus) Valid() bool {
+	switch e {
+	case UpdateCompanyRequestStatusCustomer:
+		return true
+	case UpdateCompanyRequestStatusDisqualified:
+		return true
+	case UpdateCompanyRequestStatusFormerCustomer:
+		return true
+	case UpdateCompanyRequestStatusOpportunity:
+		return true
+	case UpdateCompanyRequestStatusProspect:
+		return true
+	case UpdateCompanyRequestStatusTarget:
+		return true
+	case UpdateCompanyRequestStatusUnknown:
 		return true
 	default:
 		return false
@@ -16738,33 +16738,33 @@ func (e ListCompaniesParamsCapturedByKind) Valid() bool {
 	}
 }
 
-// Defines values for ListCompaniesParamsLifecycle.
+// Defines values for ListCompaniesParamsStatus.
 const (
-	ListCompaniesParamsLifecycleCustomer       ListCompaniesParamsLifecycle = "customer"
-	ListCompaniesParamsLifecycleDisqualified   ListCompaniesParamsLifecycle = "disqualified"
-	ListCompaniesParamsLifecycleFormerCustomer ListCompaniesParamsLifecycle = "former_customer"
-	ListCompaniesParamsLifecycleOpportunity    ListCompaniesParamsLifecycle = "opportunity"
-	ListCompaniesParamsLifecycleProspect       ListCompaniesParamsLifecycle = "prospect"
-	ListCompaniesParamsLifecycleTarget         ListCompaniesParamsLifecycle = "target"
-	ListCompaniesParamsLifecycleUnknown        ListCompaniesParamsLifecycle = "unknown"
+	ListCompaniesParamsStatusCustomer       ListCompaniesParamsStatus = "customer"
+	ListCompaniesParamsStatusDisqualified   ListCompaniesParamsStatus = "disqualified"
+	ListCompaniesParamsStatusFormerCustomer ListCompaniesParamsStatus = "former_customer"
+	ListCompaniesParamsStatusOpportunity    ListCompaniesParamsStatus = "opportunity"
+	ListCompaniesParamsStatusProspect       ListCompaniesParamsStatus = "prospect"
+	ListCompaniesParamsStatusTarget         ListCompaniesParamsStatus = "target"
+	ListCompaniesParamsStatusUnknown        ListCompaniesParamsStatus = "unknown"
 )
 
-// Valid indicates whether the value is a known member of the ListCompaniesParamsLifecycle enum.
-func (e ListCompaniesParamsLifecycle) Valid() bool {
+// Valid indicates whether the value is a known member of the ListCompaniesParamsStatus enum.
+func (e ListCompaniesParamsStatus) Valid() bool {
 	switch e {
-	case ListCompaniesParamsLifecycleCustomer:
+	case ListCompaniesParamsStatusCustomer:
 		return true
-	case ListCompaniesParamsLifecycleDisqualified:
+	case ListCompaniesParamsStatusDisqualified:
 		return true
-	case ListCompaniesParamsLifecycleFormerCustomer:
+	case ListCompaniesParamsStatusFormerCustomer:
 		return true
-	case ListCompaniesParamsLifecycleOpportunity:
+	case ListCompaniesParamsStatusOpportunity:
 		return true
-	case ListCompaniesParamsLifecycleProspect:
+	case ListCompaniesParamsStatusProspect:
 		return true
-	case ListCompaniesParamsLifecycleTarget:
+	case ListCompaniesParamsStatusTarget:
 		return true
-	case ListCompaniesParamsLifecycleUnknown:
+	case ListCompaniesParamsStatusUnknown:
 		return true
 	default:
 		return false
@@ -22582,9 +22582,6 @@ type Company struct {
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
 	LegalName      *string    `json:"legal_name,omitempty"`
 
-	// Lifecycle WHERE THE ACCOUNT STANDS with us (PO-DDL-4, ADR-0079). Single-valued: an account is at one point in a sales motion at a time. `unknown` is the default and means it — the retired `classification` defaulted to `prospect` and, having no writer, rendered that default on every unassessed account as though someone had judged it.
-	Lifecycle *CompanyLifecycle `json:"lifecycle,omitempty"`
-
 	// LinkedinUrl Canonical LinkedIn company URL (PO-DDL-N-2, ADR-0085). A validated column rather than a governed custom field, because it bears identity semantics — matching, dedupe, enrichment — a custom field cannot express. Unique among live rows.
 	LinkedinUrl *string `json:"linkedin_url,omitempty"`
 
@@ -22620,6 +22617,9 @@ type Company struct {
 	SizeBand          *CompanySizeBand            `json:"size_band,omitempty"`
 	Source            string                      `json:"source"`
 
+	// Status WHERE THE ACCOUNT STANDS with us (PO-DDL-4, ADR-0079). Single-valued: an account is at one point in a sales motion at a time. `unknown` is the default and means it — the retired `classification` defaulted to `prospect` and, having no writer, rendered that default on every unassessed account as though someone had judged it.
+	Status *CompanyStatus `json:"status,omitempty"`
+
 	// Strength Deterministic company-level relationship-strength roll-up (features/07 §4). Read-only derived view; NULL until capture has interactions.
 	Strength  *RelationshipStrength `json:"strength,omitempty"`
 	Tags      *[]RowTag             `json:"tags,omitempty"`
@@ -22642,14 +22642,14 @@ type Company struct {
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
-// CompanyLifecycle WHERE THE ACCOUNT STANDS with us (PO-DDL-4, ADR-0079). Single-valued: an account is at one point in a sales motion at a time. `unknown` is the default and means it — the retired `classification` defaulted to `prospect` and, having no writer, rendered that default on every unassessed account as though someone had judged it.
-type CompanyLifecycle string
-
 // CompanyRelationshipTypes defines model for Company.RelationshipTypes.
 type CompanyRelationshipTypes string
 
 // CompanySizeBand defines model for Company.SizeBand.
 type CompanySizeBand string
+
+// CompanyStatus WHERE THE ACCOUNT STANDS with us (PO-DDL-4, ADR-0079). Single-valued: an account is at one point in a sales motion at a time. `unknown` is the default and means it — the retired `classification` defaulted to `prospect` and, having no writer, rendered that default on every unassessed account as though someone had judged it.
+type CompanyStatus string
 
 // CompanyVisibility Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the workspace through a sender verdict, or through `visibility` on `PATCH /companies/{id}`, which moves it BOTH ways for anybody the write gate admits. Read-only HERE, on the read schema, the same as the contact column beside it: the update request carries the writable copy.
 type CompanyVisibility string
@@ -23058,8 +23058,8 @@ type Company360SinceLastVisit struct {
 // would be a conclusion the page has no basis for — and it is the one a rep would act on.
 type Company360StateStrip struct {
 	Account struct {
-		Lifecycle         Company360StateStripAccountLifecycle           `json:"lifecycle"`
 		RelationshipTypes []Company360StateStripAccountRelationshipTypes `json:"relationship_types"`
+		Status            Company360StateStripAccountStatus              `json:"status"`
 	} `json:"account"`
 
 	// Commercial Null when the caller has no deal grant.
@@ -23132,11 +23132,11 @@ type Company360StateStrip struct {
 	} `json:"signal,omitempty"`
 }
 
-// Company360StateStripAccountLifecycle defines model for Company360StateStrip.Account.Lifecycle.
-type Company360StateStripAccountLifecycle string
-
 // Company360StateStripAccountRelationshipTypes defines model for Company360StateStrip.Account.RelationshipTypes.
 type Company360StateStripAccountRelationshipTypes string
+
+// Company360StateStripAccountStatus defines model for Company360StateStrip.Account.Status.
+type Company360StateStripAccountStatus string
 
 // Company360StateStripEngagementState PO-F-4, evaluated in the order the spec fixes so the states stay mutually exclusive. `waiting_on_them` shares its threshold and its inputs with the `no_reply` suggestion by construction, so the strip and the nudge below it cannot disagree about whether an account is waiting.
 type Company360StateStripEngagementState string
@@ -23909,7 +23909,7 @@ type CompanyFinanceSummary struct {
 	OpenBalance *Money `json:"open_balance,omitempty"`
 
 	// Overdue The share of the open balance already past its due date.
-	// ABSENT on an account whose relationship has ended (`lifecycle: former_customer`), and a client should expect the null. An overdue figure reads as an outstanding collection, and a rep acting on the most natural reading makes a collection call about a relationship that finished — a customer-facing mistake rather than a display nit. The figure it would carry is one nobody can state a window for, which is the same "cannot be honestly computed" this schema already answers with absence rather than zero.
+	// ABSENT on an account whose relationship has ended (`status: former_customer`), and a client should expect the null. An overdue figure reads as an outstanding collection, and a rep acting on the most natural reading makes a collection call about a relationship that finished — a customer-facing mistake rather than a display nit. The figure it would carry is one nobody can state a window for, which is the same "cannot be honestly computed" this schema already answers with absence rather than zero.
 	// `open_balance` is unaffected: what is still open is a fact about the ledger whatever the relationship is now, and it carries no call to action.
 	Overdue *Money `json:"overdue,omitempty"`
 
@@ -37449,9 +37449,6 @@ type UpdateCompanyRequest struct {
 	Industry  *string               `json:"industry,omitempty"`
 	LegalName *string               `json:"legal_name,omitempty"`
 
-	// Lifecycle Where the account stands with us (ADR-0079). Absent = untouched.
-	Lifecycle *UpdateCompanyRequestLifecycle `json:"lifecycle,omitempty"`
-
 	// LinkedinUrl Canonical LinkedIn company URL. Null clears it. website_url is derived and refused here.
 	LinkedinUrl     *string             `json:"linkedin_url,omitempty"`
 	OwnerId         *openapi_types.UUID `json:"owner_id,omitempty"`
@@ -37460,6 +37457,9 @@ type UpdateCompanyRequest struct {
 	// RelationshipTypes Replace-set of what the company is to us (add new, archive removed), the same shape as `domains`. Absent = untouched; an empty array clears every type. Removing `partner` while the company still has a `partner` extension row is refused with 422 — the invariant binds both ways, and an invariant nothing enforces is a comment.
 	RelationshipTypes *[]UpdateCompanyRequestRelationshipTypes `json:"relationship_types,omitempty"`
 	SizeBand          *UpdateCompanyRequestSizeBand            `json:"size_band,omitempty"`
+
+	// Status Where the account stands with us (ADR-0079). Absent = untouched.
+	Status *UpdateCompanyRequestStatus `json:"status,omitempty"`
 
 	// Visibility Who may see this company: `workspace` for everyone holding the read grant, `owner` for
 	// the seat named by `owner_id` alone. Absent = untouched.
@@ -37484,14 +37484,14 @@ type UpdateCompanyRequest struct {
 	AdditionalProperties map[string]interface{}          `json:"-"`
 }
 
-// UpdateCompanyRequestLifecycle Where the account stands with us (ADR-0079). Absent = untouched.
-type UpdateCompanyRequestLifecycle string
-
 // UpdateCompanyRequestRelationshipTypes defines model for UpdateCompanyRequest.RelationshipTypes.
 type UpdateCompanyRequestRelationshipTypes string
 
 // UpdateCompanyRequestSizeBand defines model for UpdateCompanyRequest.SizeBand.
 type UpdateCompanyRequestSizeBand string
+
+// UpdateCompanyRequestStatus Where the account stands with us (ADR-0079). Absent = untouched.
+type UpdateCompanyRequestStatus string
 
 // UpdateCompanyRequestVisibility Who may see this company: `workspace` for everyone holding the read grant, `owner` for
 // the seat named by `owner_id` alone. Absent = untouched.
@@ -41521,8 +41521,8 @@ type ListCompaniesParams struct {
 	// Domain Lookup by normalized domain (the employer-inference index).
 	Domain *string `form:"domain,omitempty" json:"domain,omitempty"`
 
-	// Lifecycle Where the account stands with us (DM-VOCAB-2, ADR-0079).
-	Lifecycle *ListCompaniesParamsLifecycle `form:"lifecycle,omitempty" json:"lifecycle,omitempty"`
+	// Status Where the account stands with us (DM-VOCAB-2, ADR-0079).
+	Status *ListCompaniesParamsStatus `form:"status,omitempty" json:"status,omitempty"`
 
 	// RelationshipType Accounts carrying this relationship type. Multi-valued per account, so this selects accounts that are AT LEAST this — a partner that is also a customer matches both.
 	RelationshipType *ListCompaniesParamsRelationshipType `form:"relationship_type,omitempty" json:"relationship_type,omitempty"`
@@ -41563,8 +41563,8 @@ type ListCompaniesParams struct {
 // ListCompaniesParamsCapturedByKind defines parameters for ListCompanies.
 type ListCompaniesParamsCapturedByKind string
 
-// ListCompaniesParamsLifecycle defines parameters for ListCompanies.
-type ListCompaniesParamsLifecycle string
+// ListCompaniesParamsStatus defines parameters for ListCompanies.
+type ListCompaniesParamsStatus string
 
 // ListCompaniesParamsRelationshipType defines parameters for ListCompanies.
 type ListCompaniesParamsRelationshipType string
@@ -46991,14 +46991,6 @@ func (a *Company) UnmarshalJSON(b []byte) error {
 		delete(object, "legal_name")
 	}
 
-	if raw, found := object["lifecycle"]; found {
-		err = json.Unmarshal(raw, &a.Lifecycle)
-		if err != nil {
-			return fmt.Errorf("error reading 'lifecycle': %w", err)
-		}
-		delete(object, "lifecycle")
-	}
-
 	if raw, found := object["linkedin_url"]; found {
 		err = json.Unmarshal(raw, &a.LinkedinUrl)
 		if err != nil {
@@ -47085,6 +47077,14 @@ func (a *Company) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'source': %w", err)
 		}
 		delete(object, "source")
+	}
+
+	if raw, found := object["status"]; found {
+		err = json.Unmarshal(raw, &a.Status)
+		if err != nil {
+			return fmt.Errorf("error reading 'status': %w", err)
+		}
+		delete(object, "status")
 	}
 
 	if raw, found := object["strength"]; found {
@@ -47252,13 +47252,6 @@ func (a Company) MarshalJSON() ([]byte, error) {
 		}
 	}
 
-	if a.Lifecycle != nil {
-		object["lifecycle"], err = json.Marshal(a.Lifecycle)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling 'lifecycle': %w", err)
-		}
-	}
-
 	if a.LinkedinUrl != nil {
 		object["linkedin_url"], err = json.Marshal(a.LinkedinUrl)
 		if err != nil {
@@ -47332,6 +47325,13 @@ func (a Company) MarshalJSON() ([]byte, error) {
 	object["source"], err = json.Marshal(a.Source)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'source': %w", err)
+	}
+
+	if a.Status != nil {
+		object["status"], err = json.Marshal(a.Status)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'status': %w", err)
+		}
 	}
 
 	if a.Strength != nil {
@@ -54006,14 +54006,6 @@ func (a *UpdateCompanyRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "legal_name")
 	}
 
-	if raw, found := object["lifecycle"]; found {
-		err = json.Unmarshal(raw, &a.Lifecycle)
-		if err != nil {
-			return fmt.Errorf("error reading 'lifecycle': %w", err)
-		}
-		delete(object, "lifecycle")
-	}
-
 	if raw, found := object["linkedin_url"]; found {
 		err = json.Unmarshal(raw, &a.LinkedinUrl)
 		if err != nil {
@@ -54052,6 +54044,14 @@ func (a *UpdateCompanyRequest) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'size_band': %w", err)
 		}
 		delete(object, "size_band")
+	}
+
+	if raw, found := object["status"]; found {
+		err = json.Unmarshal(raw, &a.Status)
+		if err != nil {
+			return fmt.Errorf("error reading 'status': %w", err)
+		}
+		delete(object, "status")
 	}
 
 	if raw, found := object["visibility"]; found {
@@ -54123,13 +54123,6 @@ func (a UpdateCompanyRequest) MarshalJSON() ([]byte, error) {
 		}
 	}
 
-	if a.Lifecycle != nil {
-		object["lifecycle"], err = json.Marshal(a.Lifecycle)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling 'lifecycle': %w", err)
-		}
-	}
-
 	if a.LinkedinUrl != nil {
 		object["linkedin_url"], err = json.Marshal(a.LinkedinUrl)
 		if err != nil {
@@ -54162,6 +54155,13 @@ func (a UpdateCompanyRequest) MarshalJSON() ([]byte, error) {
 		object["size_band"], err = json.Marshal(a.SizeBand)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'size_band': %w", err)
+		}
+	}
+
+	if a.Status != nil {
+		object["status"], err = json.Marshal(a.Status)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'status': %w", err)
 		}
 	}
 
@@ -67954,15 +67954,15 @@ func (siw *ServerInterfaceWrapper) ListCompanies(w http.ResponseWriter, r *http.
 		return
 	}
 
-	// ------------- Optional query parameter "lifecycle" -------------
+	// ------------- Optional query parameter "status" -------------
 
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "lifecycle", r.URL.Query(), &params.Lifecycle, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "status", r.URL.Query(), &params.Status, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
 	if err != nil {
 		var requiredError *runtime.RequiredParameterError
 		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "lifecycle"})
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "status"})
 		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "lifecycle", Err: err})
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "status", Err: err})
 		}
 		return
 	}

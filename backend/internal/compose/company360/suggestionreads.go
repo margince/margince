@@ -188,9 +188,9 @@ type suggestionInputs struct {
 
 	newest    lastMessage
 	hasNewest bool
-	// lifecycle is the stage the record claims. It comes from the company
+	// status is the stage the record claims. It comes from the company
 	// row the assembly already holds, not from a read of its own.
-	lifecycle string
+	status string
 	// companyName is the account as its record names it, and it is only ever read
 	// by the step a suggestion PREPARES: a task lands in a queue where this
 	// page is not on screen, so "Agree the next step" alone would name nothing
@@ -267,7 +267,7 @@ func gatherSuggestionInputs(
 	in.contractEnded = facts.ContractEnded
 	in.contractEndedSaid = facts.ContractEndedSaid
 	in.contractEndedAt = facts.ContractEndedAt
-	in.lifecycle = heading.lifecycle
+	in.status = heading.status
 	in.companyName = heading.name
 	return in, nil
 }
@@ -276,8 +276,8 @@ func gatherSuggestionInputs(
 // stage it claims, and the name it goes by. Together because both callers need
 // both and a second read for the name would be a second instant.
 type companyHeading struct {
-	lifecycle string
-	name      string
+	status string
+	name   string
 }
 
 // readCompanyHeading takes it from the company row, for the caller
@@ -287,16 +287,16 @@ type companyHeading struct {
 func readCompanyHeading(
 	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID,
 ) (companyHeading, error) {
-	var lifecycle *string
+	var status *string
 	var name string
 	if err := tx.QueryRow(ctx,
-		`SELECT lifecycle, display_name FROM company WHERE id = $1`, companyID,
-	).Scan(&lifecycle, &name); err != nil {
+		`SELECT status, display_name FROM company WHERE id = $1`, companyID,
+	).Scan(&status, &name); err != nil {
 		return companyHeading{}, fmt.Errorf("read the account's stage and name: %w", err)
 	}
 	out := companyHeading{name: name}
-	if lifecycle != nil {
-		out.lifecycle = *lifecycle
+	if status != nil {
+		out.status = *status
 	}
 	return out, nil
 }

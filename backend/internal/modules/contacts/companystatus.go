@@ -31,17 +31,17 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// SetCompanyLifecycleTx moves the account's stage inside the caller's
+// SetCompanyStatusTx moves the account's stage inside the caller's
 // transaction, and reports whether it wrote.
 //
 // A false is not a failure. It means the record left the stage the proposal
 // was made against — someone corrected it by hand, or a second proposal landed
 // first — and in that case the human's own edit stands and the approval is
 // simply spent. Guessing which of the two was right is not this writer's call.
-func (s *Store) SetCompanyLifecycleTx(
+func (s *Store) SetCompanyStatusTx(
 	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, from, to string,
 ) (bool, error) {
-	if err := checkLifecycle(to); err != nil {
+	if err := checkStatus(to); err != nil {
 		return false, err
 	}
 	// The approval executor that drives this is a system principal, for whom the
@@ -56,7 +56,7 @@ func (s *Store) SetCompanyLifecycleTx(
 	// commits first is read by the other, so the comparison below cannot be
 	// decided against a stage that has already been replaced.
 	err := tx.QueryRow(ctx, `
-		SELECT lifecycle FROM company
+		SELECT status FROM company
 		 WHERE id = $1 AND archived_at IS NULL
 		 FOR UPDATE`, companyID).Scan(&current)
 	if err != nil {
@@ -69,8 +69,8 @@ func (s *Store) SetCompanyLifecycleTx(
 		return false, nil
 	}
 	tag, err := tx.Exec(ctx, `
-		UPDATE company SET lifecycle = $2
-		 WHERE id = $1 AND lifecycle = $3`, companyID, to, from)
+		UPDATE company SET status = $2
+		 WHERE id = $1 AND status = $3`, companyID, to, from)
 	if err != nil {
 		return false, fmt.Errorf("contacts: moving the account's stage: %w", err)
 	}
@@ -81,8 +81,8 @@ func (s *Store) SetCompanyLifecycleTx(
 		return false, nil
 	}
 
-	before := map[string]any{"lifecycle": from}
-	after := map[string]any{"lifecycle": to, auditKeySource: "signal"}
+	before := map[string]any{filterStatus: from}
+	after := map[string]any{filterStatus: to, auditKeySource: "signal"}
 	auditID, err := storekit.Audit(ctx, tx, actionUpdate, "company", companyID.UUID, before, after)
 	if err != nil {
 		return false, fmt.Errorf("contacts: auditing the stage change: %w", err)

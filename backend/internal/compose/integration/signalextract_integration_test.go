@@ -458,7 +458,7 @@ func TestTheTwoProducersBothReachTheSameAccount(t *testing.T) {
 	// An outbound tail nobody answered, old enough for the deterministic rule.
 	seedThread(t, e, company, "thread-chase", "Following up", "Any thoughts on the proposal?",
 		"outbound", extractClock.AddDate(0, 0, -30))
-	e.WsExec(t, `UPDATE company SET lifecycle = 'customer' WHERE id = $1`, company)
+	e.WsExec(t, `UPDATE company SET status = 'customer' WHERE id = $1`, company)
 
 	brain := &scriptedBrain{reply: `{"events": []}`}
 	if raised := extractPass(t, e, brain); raised != 0 {

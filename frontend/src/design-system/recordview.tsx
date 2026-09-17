@@ -181,7 +181,7 @@ export function RecordView({
   // every record type that has no image at all.
   avatarSrc?: string | null;
   // The record's standing, read on the SAME line as its name rather than as
-  // one more fact under it — the company page's editable lifecycle badge.
+  // one more fact under it — the company page's editable status badge.
   // Absent on every record that has no such single, always-shown value.
   nameBadge?: ReactNode;
   // A string for the records whose subtitle IS one line of joined facts, or a
@@ -196,7 +196,7 @@ export function RecordView({
   // through the body.
   actions?: ReactNode;
   // The record's standing — the values a reader changes in place rather than
-  // acts on: lifecycle, owner. Passing it moves the action row up beside them,
+  // acts on: status, owner. Passing it moves the action row up beside them,
   // which is the company page's layout; a record that passes none keeps the
   // action row under the header.
   controls?: ReactNode;

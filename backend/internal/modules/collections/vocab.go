@@ -99,6 +99,10 @@ const ownerTeamIDField = "owner_team_id"
 // distinct from domainField below, the leaf it names.
 const domainFilterField = "domain"
 
+// statusField names the funnel-position leaf, shared by every engine below
+// that carries a `status` column of its own.
+const statusField = "status"
+
 // ownerTeamField selects the records owned by any member of one team: the same
 // rows the `owner_team_id` list parameter answers, reached the way a link leaf
 // can express.
@@ -197,7 +201,7 @@ func customerField(
 // offering — `exists: false` is how a filter asks for empty — so the sets below
 // carry no null and the gate compares against the document minus it.
 var (
-	lifecycleValues = []string{
+	companyStatusValues = []string{
 		"unknown", "target", "prospect", "opportunity",
 		"customer", "former_customer", "disqualified",
 	}
@@ -253,7 +257,7 @@ var segmentEngines = map[string]storekit.Query{
 			ownerTeamIDField:    ownerTeamField,
 			"industry":          {Expr: "t.industry", Type: storekit.FieldText},
 			"size_band":         {Expr: "t.size_band", Type: storekit.FieldPicklist, Options: sizeBandValues},
-			"lifecycle":         {Expr: "t.lifecycle", Type: storekit.FieldPicklist, Options: lifecycleValues},
+			statusField:         {Expr: "t.status", Type: storekit.FieldPicklist, Options: companyStatusValues},
 			"relationship_type": relationshipTypeField,
 			domainFilterField:   domainField,
 			tagFilterField:      tagLinkFor(typeCompany),
@@ -278,7 +282,7 @@ var segmentEngines = map[string]storekit.Query{
 			"company_id":         {Expr: "t.company_id", Type: storekit.FieldID, References: storekit.RefCompany},
 			"partner_company_id": {Expr: "t.partner_company_id", Type: storekit.FieldID, References: storekit.RefCompany},
 			"project_id":         {Expr: "t.project_id", Type: storekit.FieldID, References: storekit.RefProject},
-			"status":             {Expr: "t.status", Type: storekit.FieldPicklist, Options: dealStatusValues},
+			statusField:          {Expr: "t.status", Type: storekit.FieldPicklist, Options: dealStatusValues},
 			"forecast_category":  {Expr: "t.forecast_category", Type: storekit.FieldPicklist, Options: forecastValues},
 			tagFilterField:       tagLinkFor("deal"),
 			// The customer's own attributes, so "the pipeline for manufacturing"
@@ -291,14 +295,14 @@ var segmentEngines = map[string]storekit.Query{
 			// nothing left for a company_industry-shaped alias to reach.
 			"company_industry":  customerField("industry", storekit.FieldText),
 			"company_size_band": customerField("size_band", storekit.FieldPicklist, sizeBandValues...),
-			"company_lifecycle": customerField("lifecycle", storekit.FieldPicklist, lifecycleValues...),
+			"company_status":    customerField(statusField, storekit.FieldPicklist, companyStatusValues...),
 		},
 	},
 	"lead": {
 		Table:     "lead",
 		BaseWhere: whereArchivedNull,
 		Fields: map[string]storekit.Field{
-			"status":                {Expr: "t.status", Type: storekit.FieldPicklist, Options: leadStatusValues},
+			statusField:             {Expr: "t.status", Type: storekit.FieldPicklist, Options: leadStatusValues},
 			ownerIDField:            {Expr: colOwnerID, Type: storekit.FieldID, References: storekit.RefAppUser},
 			ownerTeamIDField:        ownerTeamField,
 			"candidate_company_key": {Expr: "t.candidate_company_key", Type: storekit.FieldText},

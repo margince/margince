@@ -58,7 +58,7 @@ func (s *Store) SummaryFor(
 		if err := auth.EnsureVisible(ctx, tx, "company", companyID.UUID); err != nil {
 			return err
 		}
-		lifecycle, err := companyLifecycle(ctx, tx, companyID)
+		status, err := companyStatus(ctx, tx, companyID)
 		if err != nil {
 			return err
 		}
@@ -100,7 +100,7 @@ func (s *Store) SummaryFor(
 			// label of the whole one. The state is the answer until it does.
 			return nil
 		}
-		return s.fillFigures(ctx, tx, companyID, conn, lifecycle, &out)
+		return s.fillFigures(ctx, tx, companyID, conn, status, &out)
 	})
 	if err != nil {
 		return crmcontracts.CompanyFinanceSummary{}, err
@@ -163,32 +163,32 @@ func companyIsLinked(
 	return exists, nil
 }
 
-// lifecycleFormerCustomer is the one lifecycle value this card reads: the
+// statusFormerCustomer is the one status value this card reads: the
 // relationship has ENDED, which is what makes a collection figure a call to
 // action about a customer who is not one.
-const lifecycleFormerCustomer = "former_customer"
+const statusFormerCustomer = "former_customer"
 
-// companyLifecycle answers where the account stands, and answers the id that
+// companyStatus answers where the account stands, and answers the id that
 // names nobody with the same 404 a hidden account gets. Existence-hiding cuts
 // both ways: a caller must not be able to tell "no such account" from "not
 // yours".
 //
 // One read rather than two. The existence probe was already here; the
-// lifecycle rides it because the figures below need to know whether the
+// status rides it because the figures below need to know whether the
 // relationship is live, and a second statement asking the same row the same
 // question is a second chance for the two to disagree.
-func companyLifecycle(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) (string, error) {
-	var lifecycle string
+func companyStatus(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) (string, error) {
+	var status string
 	err := tx.QueryRow(ctx, `
-		SELECT lifecycle FROM company WHERE id = $1 AND archived_at IS NULL`,
-		companyID).Scan(&lifecycle)
+		SELECT status FROM company WHERE id = $1 AND archived_at IS NULL`,
+		companyID).Scan(&status)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return "", apperrors.ErrNotFound
 	}
 	if err != nil {
 		return "", fmt.Errorf("read the account: %w", err)
 	}
-	return lifecycle, nil
+	return status, nil
 }
 
 // connectionState reads the connection's own health into the card's
@@ -219,7 +219,7 @@ func connectionState(conn connection, now time.Time) crmcontracts.FinanceSummary
 // conversion rate withholds the whole total rather than reporting the sum of
 // the rows that happened to convert.
 func (s *Store) fillFigures(
-	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, conn connection, lifecycle string,
+	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, conn connection, status string,
 	out *crmcontracts.CompanyFinanceSummary,
 ) error {
 	invoices, err := readInvoices(ctx, tx, companyID, conn.id)
@@ -275,7 +275,7 @@ func (s *Store) fillFigures(
 		// figure nobody can state a window for, which is the same "cannot be
 		// honestly computed" this card already answers with absence rather than
 		// a zero.
-		if lifecycle != lifecycleFormerCustomer {
+		if status != statusFormerCustomer {
 			out.Overdue = money(open.OverdueMinorBase, currency)
 		}
 	}

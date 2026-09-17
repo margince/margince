@@ -47,7 +47,7 @@ var captureShapeClock = time.Date(2026, 6, 1, 12, 0, 0, 0, time.UTC)
 func seedAccountAsCaptureWould(t *testing.T, e *Env) ids.UUID {
 	t.Helper()
 	company := e.SeedCompany(t, "Capture Shape Co", &e.Rep1)
-	e.WsExec(t, `UPDATE company SET lifecycle = 'opportunity' WHERE id = $1`, company)
+	e.WsExec(t, `UPDATE company SET status = 'opportunity' WHERE id = $1`, company)
 	contact := employeeOf(t, e, company, "Ada at Capture Shape Co")
 	// Old enough for the ghosted rule's fortnight and settled for the
 	// extractor's six hours, so one fixture serves every producer.
@@ -151,7 +151,7 @@ func TestAModelReadOfPrivateMailIsPrivateEvenOnASharedAccount(t *testing.T) {
 	e := Setup(t)
 	company := e.SeedCompany(t, "Promoted Co", &e.Rep1)
 	// The account is the workspace's; the contact is not yet.
-	e.WsExec(t, `UPDATE company SET visibility = 'workspace', lifecycle = 'opportunity'
+	e.WsExec(t, `UPDATE company SET visibility = 'workspace', status = 'opportunity'
 		 WHERE id = $1`, company)
 	contact := employeeOf(t, e, company, "Ada Unpromoted")
 	e.WsExec(t, `UPDATE contact SET visibility = 'owner', owner_id = $2 WHERE id = $1`,
@@ -255,7 +255,7 @@ func TestAnAccountPrivateToNobodyInParticularCannotBeBuilt(t *testing.T) {
 	company := e.SeedCompany(t, "Unattributable Co", &e.Rep1)
 
 	err := e.WsExecErr(t, `UPDATE company SET visibility = 'owner', owner_id = NULL,
-		 lifecycle = 'opportunity' WHERE id = $1`, company)
+		 status = 'opportunity' WHERE id = $1`, company)
 	if err == nil {
 		t.Fatal("an owner-private account with no owner was accepted — a finding on it would have " +
 			"no owner to answer to, and a finding with no owner is a SHARED finding, which is the " +
@@ -276,7 +276,7 @@ func TestAPrivateAccountSuppliesTheReaderItsOwnMailAnswersTo(t *testing.T) {
 	e := Setup(t)
 	company := e.SeedCompany(t, "Private Co", &e.Rep1)
 	e.WsExec(t, `UPDATE company SET visibility = 'owner', owner_id = $2,
-		 lifecycle = 'opportunity' WHERE id = $1`, company, e.Rep1)
+		 status = 'opportunity' WHERE id = $1`, company, e.Rep1)
 	notice := seedUnlinkedMessage(t, e, "thread-private-account", "Renewal for 2027",
 		"We have decided not to renew.", "inbound", captureShapeClock.Add(-48*time.Hour))
 	e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, company_id)

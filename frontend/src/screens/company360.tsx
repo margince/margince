@@ -809,7 +809,7 @@ const WITHHELD_READING: MessageKey = "record.notShown";
 // A reading nobody has judged. It is NOT the withheld word — "you may not see
 // this" and "there is no verdict yet" are opposite facts about who is missing
 // what, and a slot that confuses them sends the reader to ask for an access
-// grant that would show them nothing. Its own key rather than the lifecycle
+// grant that would show them nothing. Its own key rather than the status
 // label it happens to match today: a rename of one must not silently move the
 // other.
 const UNASSESSED_READING: MessageKey = "co.strip.notAssessed";
@@ -875,7 +875,7 @@ export function StateStrip({
   // they pay us, and on time?" is not the question their page is opened with,
   // and leading with a money reading on an account that has stopped buying
   // reads as though the relationship were still running.
-  const customer = strip.account.lifecycle === "customer";
+  const customer = strip.account.status === "customer";
   // The contract pairs an absent optional section with its name in
   // `sections_omitted` (Company360), so the reason `health` did not arrive
   // is readable rather than guessable — and guessing is how a grant boundary

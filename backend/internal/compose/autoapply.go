@@ -242,7 +242,7 @@ func (a autoApplier) ownerOf(ctx context.Context, entityType string, entityID id
 //
 // What it does NOT bound is every write that follows. Two of the three
 // eligible effects deliberately swap in a system principal before writing —
-// a company rename and a lifecycle move stamp their own machine provenance — so
+// a company rename and a status move stamp their own machine provenance — so
 // the honest statement is that the DECISION is gated by the owner's authority
 // and the effect then runs exactly as it does after a human's click. That is
 // the same bound a contact gets, which is the point: this path is not a wider

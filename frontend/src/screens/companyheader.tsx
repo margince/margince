@@ -15,7 +15,7 @@ import { useT } from "../i18n";
 import { ArchiveAction } from "./archive";
 import { useClaimRecord } from "./claimrecord";
 import { throwProblem, useViewerId } from "./common";
-import { LIFECYCLE_LABELS, LIFECYCLE_OPTIONS } from "./companies";
+import { STATUS_LABELS, STATUS_OPTIONS } from "./companies";
 import { DecisionsChip } from "./companyapprovals";
 import { patchCompanyField, searchCompanyTargets } from "./companyform";
 import { RELATIONSHIP_TYPE_LABELS, relationshipBadges } from "./companylookups";
@@ -24,7 +24,7 @@ import { rosterMissLabel, useRoster, useRosterPartial } from "./entityref";
 import { MergeAction } from "./merge";
 import { ShareAction } from "./share";
 
-// The account header's editable pieces: lifecycle and owner, the two values a
+// The account header's editable pieces: status and owner, the two values a
 // rep changes in place (InlineChoice) rather than through an edit modal, plus
 // what the account IS (CompanyRelationshipBadges) and the record's own menu
 // (CompanyActionBadges). The subtitle and facts strip live in
@@ -37,12 +37,12 @@ import { ShareAction } from "./share";
 
 type Company = components["schemas"]["Company"];
 type Company360View = components["schemas"]["Company360"];
-type Lifecycle = NonNullable<Company["lifecycle"]>;
+type Status = NonNullable<Company["status"]>;
 type UpdateCompanyRequest = components["schemas"]["UpdateCompanyRequest"];
 
 // patchCompanyField sends one field through the ordinary company PATCH,
 // with the record's own version as If-Match. The inline controls share it so a
-// lifecycle change and an owner change cannot end up with different conflict,
+// status change and an owner change cannot end up with different conflict,
 // refusal or invalidation behaviour.
 //
 // It throws on failure rather than swallowing: InlineChoice renders what is
@@ -131,11 +131,11 @@ export function useCompanyReadOnlyReason(company: Company): string | undefined {
 // Exported for its two mount points: the header passes it into RecordView's
 // `nameBadge` slot, where the record's standing belongs on the name's own
 // line, and the rail's Details grid mounts the SAME control rather than a
-// second InlineChoice with its own PATCH. One implementation of how lifecycle
+// second InlineChoice with its own PATCH. One implementation of how status
 // is written, two places it is drawn, so the two cannot disagree about what
 // they last wrote. `hideLabel` is unconditional: both callers name the field
 // themselves, the badge beside the name and the grid's own label column.
-export function CompanyLifecycleControl({
+export function CompanyStatusControl({
   company,
 }: Readonly<{ company: Company }>) {
   const t = useT();
@@ -147,17 +147,17 @@ export function CompanyLifecycleControl({
   const patch = useCompanyFieldPatch(company);
   return (
     <InlineChoice
-      label={t("company.lifecycle")}
+      label={t("company.status")}
       // The badge already reads as the account's standing beside its name —
-      // a "Lifecycle: " prefix in front of it would be the one value on the
+      // a "Status: " prefix in front of it would be the one value on the
       // line saying its own name twice. `label` still drives the accessible
       // name (aria-label, sr-only form label), so a screen reader hears
-      // "Lifecycle" regardless.
+      // "Status" regardless.
       hideLabel
-      value={company.lifecycle ?? "unknown"}
-      options={LIFECYCLE_OPTIONS.map((value) => ({
+      value={company.status ?? "unknown"}
+      options={STATUS_OPTIONS.map((value) => ({
         value,
-        label: t(LIFECYCLE_LABELS[value]),
+        label: t(STATUS_LABELS[value]),
       }))}
       canEdit={canUpdate && !readOnlyReason}
       readOnlyReason={readOnlyReason}
@@ -165,11 +165,11 @@ export function CompanyLifecycleControl({
       // looks for first. Tinted rather than filled: it marks the one value
       // here a reader can set, without reading as the page's primary action.
       render={(value) => (
-        <Badge tone="accent">{t(LIFECYCLE_LABELS[value as Lifecycle])}</Badge>
+        <Badge tone="accent">{t(STATUS_LABELS[value as Status])}</Badge>
       )}
       onSave={(next) =>
         patch({
-          lifecycle: next as NonNullable<UpdateCompanyRequest["lifecycle"]>,
+          status: next as NonNullable<UpdateCompanyRequest["status"]>,
         })
       }
     />
@@ -308,11 +308,11 @@ export function useCompanyVerbRefusal(company: Company): string | undefined {
   });
 }
 
-// Which relationship types the LIFECYCLE already speaks for.
+// Which relationship types the STATUS already speaks for.
 //
 // The two fields answer different questions — what a company IS to us, and
 // where it STANDS with us — but they overlap on one word. An account whose
-// lifecycle is `former_customer` still carries the `customer` relationship
+// status is `former_customer` still carries the `customer` relationship
 // type, because that is what it was; printing both put "Former customer" and
 // "Customer" side by side on one header, which is not two facts but one fact
 // and its own contradiction.
@@ -328,7 +328,7 @@ export function useCompanyVerbRefusal(company: Company): string | undefined {
  * the verbs — set among the buttons it read as a control that does nothing,
  * and it was the one thing in that row a reader could not press.
  *
- * A type the lifecycle beside it already speaks for is dropped by
+ * A type the status beside it already speaks for is dropped by
  * `relationshipBadges`, so the header states a relationship once and in its
  * current tense.
  */

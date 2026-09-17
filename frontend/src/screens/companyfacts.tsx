@@ -15,7 +15,7 @@
 // would be worse than a label; the company's owner control already writes, so
 // moving it rather than copying it is what keeps one implementation.
 //
-// Lifecycle is deliberately absent. It stays in the record's name badge, where
+// Status is deliberately absent. It stays in the record's name badge, where
 // it is edited; a read-only copy of a value beside its live editor is two
 // answers to one question, and the two disagree the moment somebody types.
 

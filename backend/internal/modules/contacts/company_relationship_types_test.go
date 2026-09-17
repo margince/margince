@@ -18,7 +18,7 @@ func TestEnumRefusalsCarryTheVocabulary(t *testing.T) {
 		err   error
 		valid map[string]bool
 	}{
-		{"lifecycle", checkLifecycle("Customer"), validLifecycles},
+		{"status", checkStatus("Customer"), validStatuses},
 		{"size_band", checkSizeBand("banana"), validSizeBands},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -46,9 +46,9 @@ func TestEveryValueTheVocabularyNamesIsAccepted(t *testing.T) {
 			t.Errorf("size_band %q is in the vocabulary and was refused: %v", value, err)
 		}
 	}
-	for value := range validLifecycles {
-		if err := checkLifecycle(value); err != nil {
-			t.Errorf("lifecycle %q is in the vocabulary and was refused: %v", value, err)
+	for value := range validStatuses {
+		if err := checkStatus(value); err != nil {
+			t.Errorf("status %q is in the vocabulary and was refused: %v", value, err)
 		}
 	}
 }

@@ -27,7 +27,7 @@ func TestEveryDeclaredContactsFilterNarrowsSomething(t *testing.T) {
 		"owner_id": owner, "tag_id": ids.NewV7().String(), "tag_mode": "all",
 	})
 	assertEveryFilterNarrows(t, "company", companyListFilters, map[string]string{
-		"domain": "kaercher-technik.example", "lifecycle": "customer", "owner_id": owner,
+		"domain": "kaercher-technik.example", "status": "customer", "owner_id": owner,
 		"relationship_type": "partner", "tag_id": ids.NewV7().String(), "tag_mode": "none",
 	})
 	assertEveryFilterNarrows(t, "lead", leadListFilters, map[string]string{
@@ -50,7 +50,7 @@ func TestEachEntityIsOfferedItsOwnVocabulary(t *testing.T) {
 		want   []string
 	}{
 		{datasource.EntityContact, []string{"owner_id", "tag_id", "tag_mode"}},
-		{datasource.EntityCompany, []string{"domain", "lifecycle", "owner_id", "relationship_type", "tag_id", "tag_mode"}},
+		{datasource.EntityCompany, []string{"domain", "owner_id", "relationship_type", "status", "tag_id", "tag_mode"}},
 		{datasource.EntityLead, []string{"min_score", "owner_id", "status"}},
 	} {
 		if got := p.ListFilters(tc.entity); !slices.Equal(got, tc.want) {

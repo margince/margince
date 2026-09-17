@@ -143,7 +143,7 @@ func TestTheTeamLeafJoinsMembershipOnTheOwnerColumn(t *testing.T) {
 // and selects nothing. The list parameter for the same fact 422s a typo instead,
 // and that divergence is deliberate rather than overlooked: the engine holds no
 // per-field enum, and every picklist leaf here behaves this way — status,
-// lifecycle, size_band, forecast_category, phase and the custom ones alike.
+// size_band, forecast_category, phase and the custom ones alike.
 //
 // Gated rather than explained, because a comment claiming it cannot notice the
 // day someone adds validation to one leaf and leaves the rest.

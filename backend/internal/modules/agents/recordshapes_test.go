@@ -120,12 +120,12 @@ func TestRenderedShapesCarryTheItemShapesThatWereGuessedWrong(t *testing.T) {
 
 // A closed vocabulary is the half reflection cannot reach: Go renders these as a
 // named string type whose values live in constants, so a description built by
-// reflection calls `lifecycle` a string and a caller sends "Customer".
+// reflection calls `status` a string and a caller sends "Customer".
 func TestRenderedShapesCarryEnumValues(t *testing.T) {
 	for _, tc := range []struct {
 		name, rendered, want string
 	}{
-		{"a company's lifecycle", updateRecordShapes["company"], `lifecycle?: "unknown"|"target"|"prospect"`},
+		{"a company's status", updateRecordShapes["company"], `status?: "unknown"|"target"|"prospect"`},
 		{"an activity's kind", createRecordShapes["activity"], `kind: "email"|"call"|"meeting"|"note"|"task"`},
 		{"a relationship's kind", createRecordShapes["relationship"], `kind: "employment"|"deal_stakeholder"`},
 		{"a deal's status", updateRecordShapes["deal"], `status?: "open"|"won"|"lost"`},
