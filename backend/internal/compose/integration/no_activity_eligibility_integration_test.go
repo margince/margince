@@ -314,6 +314,22 @@ func linkQuietTouch(t *testing.T, owner *pgx.Conn, ws ids.UUID, entityType strin
 	linkTouch(t, owner, ws, seedQuietTouch(t, owner, ws), entityType, entity)
 }
 
+// linkFreshTouch attaches a RECENT genuine touch, so the entity's anchor is
+// inside the staleness threshold and it is not a candidate. The counterpart to
+// linkQuietTouch, for a fixture that needs one record quiet beside another that
+// is being worked.
+func linkFreshTouch(t *testing.T, owner *pgx.Conn, ws ids.UUID, entityType string, entity ids.UUID) {
+	t.Helper()
+	id := ids.NewV7()
+	if _, err := owner.Exec(context.Background(),
+		`INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
+		 VALUES ($1, 'email', 'Worked yesterday', now() - interval '1 day', 'manual', 'human:x')`,
+		id); err != nil {
+		t.Fatalf("seeding the fresh touch: %v", err)
+	}
+	linkTouch(t, owner, ws, id, entityType, entity)
+}
+
 // linkTouch attaches an activity to any of the record types the candidate
 // query knows — the harness's own LinkActivity only spans contact and deal.
 func linkTouch(t *testing.T, owner *pgx.Conn, ws, activity ids.UUID, entityType string, entity ids.UUID) {
@@ -585,5 +601,46 @@ func TestAStakeholderEmployedElsewhereKeepsTheirOwnCheckIn(t *testing.T) {
 
 	if got := taskCountOn(t, e, "contact", advisor); got != 1 {
 		t.Errorf("reminder tasks on a stakeholder employed elsewhere = %d, want exactly 1 — no account's anchor covers them", got)
+	}
+}
+
+// The collapse must not SILENCE a record nobody else speaks for.
+//
+// A stakeholder employed by a live account whose own touches are stale, while
+// the ACCOUNT has been worked recently: the contact folds into an account that
+// is not itself quiet, so the account is never drawn. If the contact is dropped
+// too, one real silence is reported by nobody — the collapse would have turned
+// five reminders into none, which is the worse bug.
+func TestAQuietStakeholderAtABusyAccountIsStillAskedAbout(t *testing.T) {
+	e := Setup(t)
+	owner := OwnerConn(t)
+	pipeline, open, _ := DealFixture(t, e)
+
+	company := e.SeedCompany(t, "Busy But Neglecting", nil)
+	deal := e.SeedDeal(t, "Busy Account Deal", pipeline, open, nil)
+	attachDealToCompany(t, owner, deal, company)
+	stakeholder := e.SeedContact(t, "Forgotten Champion", nil)
+	seedStakeholderSeat(t, owner, stakeholder, deal)
+	seedEmployment(t, owner, stakeholder, company)
+	for _, row := range []struct {
+		table string
+		id    ids.UUID
+	}{{"company", company}, {"deal", deal}, {"contact", stakeholder}} {
+		backdateCreatedAt(t, owner, row.table, row.id, longEstablished)
+	}
+	// The contact has gone quiet. The account has NOT — a fresh touch on the
+	// company keeps its own anchor recent, so it is not a candidate.
+	linkQuietTouch(t, owner, e.WS, "contact", stakeholder)
+	linkFreshTouch(t, owner, e.WS, "company", company)
+	seedNoActivityReminder(t, owner, e.WS)
+
+	runEligibilityScan(t, e)
+
+	onContact := taskCountOn(t, e, "contact", stakeholder)
+	onCompany := taskCountOn(t, e, "company", company)
+	if onContact+onCompany == 0 {
+		t.Errorf("a quiet stakeholder at a busy account got no reminder anywhere "+
+			"(contact=%d, company=%d) — the collapse folded them into an account that is never drawn",
+			onContact, onCompany)
 	}
 }

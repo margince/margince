@@ -89,6 +89,11 @@ func lastTouchCandidateQuery() string {
 				SELECT entity_type, entity_id, last_touch FROM direct
 				UNION ALL
 				SELECT entity_type, entity_id, last_touch FROM accounts
+			), absorbing_accounts AS (
+				SELECT la.id
+				FROM live_accounts la
+				JOIN accounts a ON a.entity_id = la.id
+				WHERE a.last_touch < $2
 			)
 			SELECT q.entity_type, q.entity_id, q.last_touch
 			FROM quiet q
@@ -100,7 +105,7 @@ func lastTouchCandidateQuery() string {
 			           AND d.created_at < $2)
 			       AND NOT EXISTS (
 			         SELECT 1 FROM deal d
-			         JOIN live_accounts la ON la.id = d.company_id
+			         JOIN absorbing_accounts aa ON aa.id = d.company_id
 			         WHERE d.id = q.entity_id))
 			   OR (q.entity_type = '%[3]s' AND EXISTS (
 			         SELECT 1 FROM live_accounts la WHERE la.id = q.entity_id))
@@ -132,10 +137,16 @@ func lastTouchCandidateQuery() string {
 }
 
 // contactCollapsesIntoAccount is the contact arm's collapse test: a stakeholder
-// currently employed by a live account is ALREADY covered by that account's own
-// reminder, because CompanyReachSet folds a contact's touches into their
-// employer (companyscope.go's companyArms). Reminding them separately asks one
-// rep about one silence twice.
+// currently employed by an ABSORBING account is already covered by that
+// account's own reminder, because CompanyReachSet folds a contact's touches
+// into their employer (companyscope.go's companyArms). Reminding them
+// separately asks one rep about one silence twice.
+//
+// Absorbing, not merely live: an account only absorbs a record when it is
+// ITSELF being drawn. A contact who has gone quiet while their employer is
+// worked regularly folds into an account no reminder is ever written for, and
+// the silence would be reported by nobody — five reminders turned into none,
+// which is worse than the duplication this collapse exists to end.
 //
 // Employment, not the stakeholder seat: the seat is what makes the contact a
 // candidate at all, while employment is what makes the account's anchor include
@@ -148,7 +159,7 @@ func lastTouchCandidateQuery() string {
 // as an employment arm that skips the helper.
 func contactCollapsesIntoAccount() string {
 	return `SELECT 1 FROM relationship e
-		         JOIN live_accounts la ON la.id = e.company_id
+		         JOIN absorbing_accounts aa ON aa.id = e.company_id
 		         WHERE e.contact_id = q.entity_id
 		           AND e.kind = 'employment'
 		           AND ` + employment.IsCurrentSQL("e.ended_at") + `
