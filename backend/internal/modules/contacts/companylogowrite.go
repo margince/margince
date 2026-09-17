@@ -45,13 +45,13 @@ package contacts
 // them Postgres has no side of the CASE from which to infer a type.
 const companyLogoWrite = `UPDATE company SET
 		logo_object_key      = CASE WHEN $4::boolean THEN $2::text ELSE logo_object_key END,
-		logo_origin          = CASE WHEN $4::boolean THEN $3::text ELSE logo_origin END,
+		logo_source          = CASE WHEN $4::boolean THEN $3::text ELSE logo_source END,
 		logo_icon_object_key = CASE WHEN $4::boolean THEN logo_icon_object_key ELSE $2::text END,
-		logo_icon_origin     = CASE WHEN $4::boolean THEN logo_icon_origin ELSE $3::text END
+		logo_icon_source     = CASE WHEN $4::boolean THEN logo_icon_source ELSE $3::text END
 	WHERE id = $1 AND archived_at IS NULL
 	RETURNING (SELECT CASE WHEN $4::boolean THEN o.logo_object_key ELSE o.logo_icon_object_key END
 	             FROM company o WHERE o.id = $1),
-	          (SELECT CASE WHEN $4::boolean THEN o.logo_origin ELSE o.logo_icon_origin END
+	          (SELECT CASE WHEN $4::boolean THEN o.logo_source ELSE o.logo_icon_source END
 	             FROM company o WHERE o.id = $1)`
 
 // companyLogoKeyRead answers where one slot's bytes live, taking the slot the same

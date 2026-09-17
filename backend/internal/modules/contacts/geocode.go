@@ -302,7 +302,7 @@ func (s *Store) recordGeocodeAfter(
 		if _, err := tx.Exec(ctx, `
 			UPDATE company
 			   SET geocode_lat = $2, geocode_lon = $3, geocode_status = $4,
-			       geocode_provider = $5, geocode_input_hash = $6, geocoded_at = now()
+			       geocode_source = $5, geocode_input_hash = $6, geocoded_at = now()
 			 WHERE id = $1`,
 			companyID, lat, lon, status, provider, inputHash); err != nil {
 			return fmt.Errorf("recording the geocode: %w", err)

@@ -136,7 +136,7 @@ func (q *queryEnv) seedLocatedCompany(t *testing.T, name string, lat, lon float6
 	t.Helper()
 	return q.SeedID(t, `INSERT INTO company
 		(id, owner_id, display_name, address_line1, address_city,
-		 geocode_lat, geocode_lon, geocode_status, geocode_provider, geocode_input_hash,
+		 geocode_lat, geocode_lon, geocode_status, geocode_source, geocode_input_hash,
 		 source, captured_by)
 		VALUES ($1, $2, $3, 'Teststrasse 1', 'Teststadt', $4, $5, 'ok', 'test', 'seeded', 'manual', 'human:x')`,
 		q.Rep1, name, lat, lon)
@@ -473,7 +473,7 @@ func TestQueryPlanARadiusNoteFollowsWhatTheCallerCanRead(t *testing.T) {
 	// Rep1's, which capture privacy keeps from every other seat.
 	q.SeedID(t, `INSERT INTO company
 		(id, owner_id, display_name, visibility, address_line1, address_city,
-		 geocode_lat, geocode_lon, geocode_status, geocode_provider, geocode_input_hash,
+		 geocode_lat, geocode_lon, geocode_status, geocode_source, geocode_input_hash,
 		 source, captured_by)
 		VALUES ($1, $2, 'Radius Privat GmbH', 'owner', 'Teststrasse 1', 'Teststadt',
 		        48.7758, 9.1829, 'ok', 'test', 'seeded', 'manual', 'human:x')`, q.Rep1)

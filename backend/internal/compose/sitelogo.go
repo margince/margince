@@ -124,7 +124,7 @@ type resolvedLogo struct {
 	// PNG is the normalized square; nil means nothing usable resolved.
 	PNG []byte
 	// SourceURL is the asset the bytes came from — the logo's provenance,
-	// stored as company.logo_origin.
+	// stored as company.logo_source.
 	SourceURL string
 	// SourceWidth and SourceHeight are the source's own dimensions, for the
 	// debug report: they explain the ranking decision that the outcome names.
