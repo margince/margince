@@ -19,6 +19,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/privacy"
@@ -487,5 +488,59 @@ func TestEraseContactHonoursCommercialCorrespondenceFloor(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+// An erased subject's messages stop answering to their Message-IDs.
+//
+// Erasure ARCHIVES an activity rather than deleting it, so activity_identity's
+// foreign key never cascades. The activity-content arm has always retired these
+// and the Art. 17 cascade never did — so a subject's Message-IDs survived the
+// erasure that emptied their correspondence, a durable record that a message
+// with that id was here.
+//
+// The identity is claimed through the real claimer, because what is being
+// tested is that the cascade reaches what capture actually writes. A row the
+// test inserted itself would prove only that a DELETE matches an INSERT.
+func TestErasureRetiresTheSubjectsMessageIdentities(t *testing.T) {
+	e := Setup(t)
+	contactID := seedSubject(t, e)
+	admin := e.Admin()
+
+	const messageID = "selma-thread-1@example.test"
+	var activityID ids.ActivityID
+	if err := database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
+		if err := tx.QueryRow(context.Background(), `
+			SELECT l.activity_id FROM activity_link l WHERE l.contact_id = $1 LIMIT 1`,
+			contactID).Scan(&activityID); err != nil {
+			return err
+		}
+		claimed, err := activities.ClaimIdentity(context.Background(), tx, activityID,
+			"mail", messageID, "connector:test")
+		if err != nil {
+			return err
+		}
+		if !claimed {
+			t.Fatal("the seeded message could not claim its own Message-ID, so this proves nothing")
+		}
+		return nil
+	}); err != nil {
+		t.Fatalf("claiming the subject's message identity: %v", err)
+	}
+
+	if err := privacy.NewEraser(e.DB()).EraseContact(admin, contactID, "art-17"); err != nil {
+		t.Fatal(err)
+	}
+
+	var left int
+	if err := database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT count(*) FROM activity_identity WHERE activity_id = $1`, activityID).Scan(&left)
+	}); err != nil {
+		t.Fatalf("reading the identities back: %v", err)
+	}
+	if left != 0 {
+		t.Errorf("%d identity row(s) survived the erasure, each a durable record that a message "+
+			"with that Message-ID was here", left)
 	}
 }
