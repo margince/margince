@@ -19,6 +19,7 @@ package compose
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -30,9 +31,11 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/dealrooms"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // newDealStatusService builds the deal's status card service.
@@ -78,10 +81,15 @@ func dealSeatReader(pool *pgxpool.Pool) dealstatus.SeatReader {
 			if err != nil {
 				return err
 			}
+			attachable, err := seatsThisReaderMayFileAgainst(ctx, tx, coverage)
+			if err != nil {
+				return err
+			}
 			seats = make([]dealstatus.Seat, 0, len(coverage.Stakeholders))
 			for _, s := range coverage.Stakeholders {
 				seats = append(seats, dealstatus.Seat{
 					Role: s.Role, Name: names[s.ContactID], Engaged: s.Engaged,
+					ContactID: s.ContactID, Attachable: attachable[s.ContactID],
 				})
 			}
 			return nil
@@ -91,6 +99,83 @@ func dealSeatReader(pool *pgxpool.Pool) dealstatus.SeatReader {
 		}
 		return seats, nil
 	}
+}
+
+// seatsThisReaderMayFileAgainst answers, for every seated contact at once,
+// whether this reader may attach work to them.
+//
+// READING A CONTACT IS NOT PERMISSION TO FILE AGAINST THEM. A share marked
+// read-only shows somebody a contact and does not let them add to that
+// contact's record, and activity_link's own writer enforces exactly that
+// (auth.EnsureAttachTarget). A card that offered a task linked to such a
+// contact would render a button that fails only once it is pressed, which
+// reads to whoever pressed it as the product being broken rather than as
+// a permission they do not have. So the card asks first and offers the advice
+// without the link where the answer is no.
+//
+// It renders the attach predicate rather than calling EnsureAttachTarget per
+// seat: that probe takes a FOR SHARE lock for the writers it is built for, and
+// a card read has nothing to lock against. An unbounded reader gets an empty
+// clause, which means every seat is attachable — the same shortcut every other
+// scope caller takes.
+func seatsThisReaderMayFileAgainst(
+	ctx context.Context, tx pgx.Tx, coverage network.DealCoverage,
+) (map[ids.UUID]bool, error) {
+	attachable := map[ids.UUID]bool{}
+	if len(coverage.Stakeholders) == 0 {
+		return attachable, nil
+	}
+	// The object grant, asked before any contact row is touched. A seat this
+	// reader may not read is one they certainly may not file against, and
+	// answering "none attachable" is the same posture seatNamesForCard takes
+	// when it may not name them: the card says less rather than failing.
+	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
+		if errors.Is(err, apperrors.ErrPermissionDenied) {
+			return attachable, nil
+		}
+		return nil, err
+	}
+	seated := make([]ids.UUID, 0, len(coverage.Stakeholders))
+	for _, s := range coverage.Stakeholders {
+		seated = append(seated, s.ContactID)
+	}
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	seatedPos := arg(seated)
+	clause, err := auth.AttachClauseFor(ctx, "contact", "c", arg)
+	if err != nil {
+		// A reader RBAC cannot judge gets no links rather than an error: the
+		// card still has advice to give, and the only thing withheld is a
+		// convenience the reader may not have been entitled to anyway.
+		if errors.Is(err, apperrors.ErrPermissionDenied) {
+			return attachable, nil
+		}
+		return nil, err
+	}
+	if clause == "" {
+		for _, id := range seated {
+			attachable[id] = true
+		}
+		return attachable, nil
+	}
+	rows, err := tx.Query(ctx, fmt.Sprintf(
+		`SELECT c.id FROM contact c WHERE c.id = ANY($%d) AND c.archived_at IS NULL AND %s`,
+		seatedPos, clause), args...)
+	if err != nil {
+		return nil, fmt.Errorf("read which seated contacts accept filed work: %w", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id ids.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("scan a seated contact that accepts filed work: %w", err)
+		}
+		attachable[id] = true
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("read which seated contacts accept filed work: %w", err)
+	}
+	return attachable, nil
 }
 
 // seatNamesForCard names the seats, or names none of them.

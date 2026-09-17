@@ -137,9 +137,14 @@ describe("the sentence says whose move it is", () => {
     expect(screen.getByText(/nobody has answered/)).toBeInTheDocument();
   });
 
-  it("says it is their move when nobody here is owed an answer", () => {
+  it("says nothing is flagged, and never that the buyer owes us", () => {
+    // An empty reply_to means no INBOUND message is waiting for an answer. It
+    // does not mean the buyer is the one who owes something, and the sentence
+    // must not say so — that claim told a rep to sit and wait on a deal where
+    // nobody was going to write.
     show(<DealPulse card={card({ reply_to: null })} timeline={[]} />);
-    expect(screen.getByText(/Their move/)).toBeInTheDocument();
+    expect(screen.getByText(/No reply is waiting on you/)).toBeInTheDocument();
+    expect(screen.queryByText(/Their move/)).not.toBeInTheDocument();
   });
 
   it("renders nothing at all while the card is loading", () => {
