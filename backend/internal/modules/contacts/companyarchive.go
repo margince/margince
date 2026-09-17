@@ -165,7 +165,7 @@ func archiveCompanyTx(
 
 const companyColumns = `id, display_name, legal_name, description, industry, size_band, owner_id, visibility,
 	address_line1, address_line2, address_city, address_region, address_postal_code, address_country,
-	lifecycle, relevance, parent_company_id, merged_into_id, logo_object_key, linkedin_url, source, captured_by,
+	lifecycle, parent_company_id, merged_into_id, logo_object_key, linkedin_url, source, captured_by,
 	version, created_at, updated_at, archived_at, is_anchor, last_activity_at`
 
 // readCompany resolves one company row; active names the

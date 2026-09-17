@@ -185,15 +185,6 @@ func TestEveryCorePicklistOffersItsValues(t *testing.T) {
 	seen := 0
 	for resource, engine := range segmentEngines {
 		for name, field := range engine.Fields {
-			// The retired field is the one picklist that must NOT offer values: no
-			// surface may offer it for a new clause at all, so offering its values
-			// would contradict retiredCoreFields.
-			if retiredCoreFields[resource][name] {
-				if len(field.Options) > 0 {
-					t.Errorf("%s.%s is retired and still offers values", resource, name)
-				}
-				continue
-			}
 			if field.Type == storekit.FieldPicklist {
 				seen++
 				if len(field.Options) == 0 {

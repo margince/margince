@@ -1973,9 +1973,7 @@ public.company.address_postal_code text gen=- def=-
 public.company.address_region text gen=- def=-
 public.company.archived_at timestamp with time zone gen=- def=-
 public.company.captured_by text NOT NULL gen=- def=-
-public.company.classification text NOT NULL gen=- def='prospect'::text
 public.company.company_anchor_is_permanent CHECK (((NOT is_anchor) OR ((archived_at IS NULL) AND (merged_into_id IS NULL))))
-public.company.company_classification_check CHECK ((classification = ANY (ARRAY['prospect'::text, 'customer'::text, 'agency'::text, 'reseller'::text, 'tech_vendor'::text, 'platform'::text, 'partner'::text, 'competitor'::text, 'other'::text])))
 public.company.company_delete_clears_deal_partner CREATE TRIGGER company_delete_clears_deal_partner BEFORE DELETE ON public.company FOR EACH ROW EXECUTE FUNCTION deal_clear_partner_attribution_on_company_delete()
 public.company.company_description_length CHECK (((description IS NULL) OR (length(description) <= 500)))
 public.company.company_geocode_resolved_has_a_point CHECK (((geocode_status IS DISTINCT FROM 'ok'::text) OR ((geocode_lat IS NOT NULL) AND (geocode_lon IS NOT NULL) AND ((geocode_lat >= ('-90'::integer)::double precision) AND (geocode_lat <= (90)::double precision)) AND ((geocode_lon >= ('-180'::integer)::double precision) AND (geocode_lon <= (180)::double precision)))))
@@ -1990,7 +1988,6 @@ public.company.company_owner_private_names_its_owner CHECK (((visibility <> 'own
 public.company.company_parent_company_id_fkey FOREIGN KEY (parent_company_id) REFERENCES company(id) ON DELETE SET NULL (parent_company_id)
 public.company.company_pkey PRIMARY KEY (id)
 public.company.company_refuse_anchor_retirement CREATE TRIGGER company_refuse_anchor_retirement BEFORE INSERT OR UPDATE OF merged_into_id, is_anchor ON public.company FOR EACH ROW EXECUTE FUNCTION company_refuse_anchor_retirement()
-public.company.company_relevance_check CHECK (((relevance IS NULL) OR ((relevance >= 0) AND (relevance <= 100))))
 public.company.company_size_band_check CHECK (((size_band IS NULL) OR (size_band = ANY (ARRAY['1-10'::text, '11-50'::text, '51-200'::text, '201-500'::text, '501-1000'::text, '1001-5000'::text, '5000+'::text]))))
 public.company.company_source_author_id_fkey FOREIGN KEY (source_author_id) REFERENCES app_user(id) ON DELETE SET NULL
 public.company.company_visibility_check CHECK ((visibility = ANY (ARRAY['workspace'::text, 'owner'::text])))
@@ -2021,7 +2018,6 @@ public.company.owner_id uuid gen=- def=-
 public.company.parent_company_id uuid gen=- def=-
 public.company.quarantined_at timestamp with time zone gen=- def=-
 public.company.raw jsonb gen=- def=-
-public.company.relevance smallint gen=- def=-
 public.company.search_tsv tsvector gen=s def=(((setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(display_name, ''::text))), 'A'::"char") || setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(display_name, ''::text))), 'A'::"char")) || setweight(to_tsvector('simple'::regconfig, f_unaccent(((COALESCE(legal_name, ''::text) || ' '::text) || COALESCE(industry, ''::text)))), 'B'::"char")) || setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(((COALESCE(legal_name, ''::text) || ' '::text) || COALESCE(industry, ''::text)))), 'B'::"char"))
 public.company.size_band text gen=- def=-
 public.company.source text NOT NULL gen=- def=-
@@ -3879,7 +3875,6 @@ public.idx_capture_watch_renew CREATE INDEX idx_capture_watch_renew ON public.ca
 public.idx_commission_deal CREATE INDEX idx_commission_deal ON public.commission_entry USING btree (deal_id)
 public.idx_commission_partner CREATE INDEX idx_commission_partner ON public.commission_entry USING btree (partner_company_id, status)
 public.idx_comms_outbound_parked CREATE INDEX idx_comms_outbound_parked ON public.comms_outbound USING btree (user_id, parked_at DESC) WHERE (parked_at IS NOT NULL)
-public.idx_company_class CREATE INDEX idx_company_class ON public.company USING btree (classification) WHERE (archived_at IS NULL)
 public.idx_company_created_keyset CREATE INDEX idx_company_created_keyset ON public.company USING btree (created_at DESC, id DESC) WHERE (archived_at IS NULL)
 public.idx_company_domain_company CREATE INDEX idx_company_domain_company ON public.company_domain USING btree (company_id) WHERE (archived_at IS NULL)
 public.idx_company_domain_disposition_due CREATE INDEX idx_company_domain_disposition_due ON public.company_domain_disposition USING btree (next_attempt_at) WHERE (next_attempt_at IS NOT NULL)
