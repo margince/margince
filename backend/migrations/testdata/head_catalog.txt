@@ -3492,6 +3492,7 @@ public.field_mask.condition text NOT NULL gen=- def=-
 public.field_mask.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.field_mask.field text NOT NULL gen=- def=-
 public.field_mask.field_mask_condition_check CHECK ((condition = ANY (ARRAY['always'::text, 'outside_write_authority'::text])))
+public.field_mask.field_mask_maskable_fkey FOREIGN KEY (object, field) REFERENCES maskable_field(object, field)
 public.field_mask.field_mask_pkey PRIMARY KEY (id)
 public.field_mask.field_mask_role_key_object_field_key UNIQUE (role_key, object, field)
 public.field_mask.id uuid NOT NULL gen=- def=uuidv7()
@@ -4467,6 +4468,11 @@ public.list_member.list_member_unique UNIQUE (list_id, entity_type, entity_id)
 public.list_member_pkey CREATE UNIQUE INDEX list_member_pkey ON public.list_member USING btree (id)
 public.list_member_unique CREATE UNIQUE INDEX list_member_unique ON public.list_member USING btree (list_id, entity_type, entity_id)
 public.list_pkey CREATE UNIQUE INDEX list_pkey ON public.list USING btree (id)
+public.maskable_field acl=margince_owner=arwdDxt/margince_owner,margince_app=r/margince_owner rls=false force=false
+public.maskable_field.field text NOT NULL gen=- def=-
+public.maskable_field.maskable_field_pkey PRIMARY KEY (object, field)
+public.maskable_field.object text NOT NULL gen=- def=-
+public.maskable_field_pkey CREATE UNIQUE INDEX maskable_field_pkey ON public.maskable_field USING btree (object, field)
 public.move_last_activity(tbl regclass, rid uuid) secdef=false cfg=- acl=- 
 DECLARE
   v timestamptz;
