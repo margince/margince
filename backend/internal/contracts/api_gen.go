@@ -13054,6 +13054,42 @@ func (e SiteReadStartedStatus) Valid() bool {
 	}
 }
 
+// Defines values for SourceAttributionRowObjectType.
+const (
+	SourceAttributionRowObjectTypeActivity SourceAttributionRowObjectType = "activity"
+)
+
+// Valid indicates whether the value is a known member of the SourceAttributionRowObjectType enum.
+func (e SourceAttributionRowObjectType) Valid() bool {
+	switch e {
+	case SourceAttributionRowObjectTypeActivity:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SourceAttributionRowResultOutcome.
+const (
+	SourceAttributionRowResultOutcomeApplied   SourceAttributionRowResultOutcome = "applied"
+	SourceAttributionRowResultOutcomeSkipped   SourceAttributionRowResultOutcome = "skipped"
+	SourceAttributionRowResultOutcomeUnchanged SourceAttributionRowResultOutcome = "unchanged"
+)
+
+// Valid indicates whether the value is a known member of the SourceAttributionRowResultOutcome enum.
+func (e SourceAttributionRowResultOutcome) Valid() bool {
+	switch e {
+	case SourceAttributionRowResultOutcomeApplied:
+		return true
+	case SourceAttributionRowResultOutcomeSkipped:
+		return true
+	case SourceAttributionRowResultOutcomeUnchanged:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for StageSemantic.
 const (
 	StageSemanticLost StageSemantic = "lost"
@@ -18443,7 +18479,12 @@ type Activity struct {
 
 	// AudienceReason Why `audience` is what it is, for a captured message whose audience the system derived rather than a human set: `posture` (a mailbox asked for it), `workspace_floor` (the workspace turned mail sharing off), `no_record` (the message is filed under no record), `pending_verdict` (nothing has judged the message yet), `manual` (a human said so). Null on a row nothing derived. WITHHELD with the content — the reason describes what the message is about, so a colleague who may not read a held message does not learn why it is held either; it is absent whenever `content_state` is `withheld`.
 	AudienceReason *string `json:"audience_reason,omitempty"`
-	Body           *string `json:"body,omitempty"`
+
+	// Author Who wrote this where it came FROM, present only on a record imported from another system and only once the author repair has reached it. Null on everything else, which is most rows: a message captured from a mailbox or typed here has no author but the one `captured_by` already names.
+	// WITHHELD WITH THE CONTENT. It is absent whenever `content_state` is `withheld`, alongside the subject and the body — a free-text name that arrived with imported text is content about a human, which is why the Art. 17 redaction clears it with the words rather than keeping it as a marker. A reader who may not read a held message does not learn who wrote it either.
+	// It does not replace `captured_by`, and a reader needs both. `captured_by` is who recorded the row in THIS installation — the authenticated principal, server-stamped, the value every trust decision reads. `author` is who wrote it years earlier in the system it was migrated out of. On an imported row those are different colleagues, and showing only the first is how a migration comes to claim one colleague wrote a decade of everybody else's correspondence.
+	Author *SourceAuthor `json:"author,omitempty"`
+	Body   *string       `json:"body,omitempty"`
 
 	// BulkMailAttested This message carried an RFC 2369 List-Unsubscribe header, so the SENDER declared it bulk. Per message, never per sender: the same address sends a newsletter and a reply, and treating the sender as bulk would bury the reply.
 	BulkMailAttested *bool `json:"bulk_mail_attested,omitempty"`
@@ -20735,6 +20776,9 @@ type AttentionSubject struct {
 
 // AttentionSubjectType defines model for AttentionSubject.Type.
 type AttentionSubjectType string
+
+// AttributionRebuildResult Deliberately empty of counts. The edge table belongs to the search module and the composition layer does not read it, so a number here would be a second reader of somebody else's table, kept in step by hand, answering a question nobody asked. The status says the fold ran.
+type AttributionRebuildResult = map[string]interface{}
 
 // AudienceMember One user or team admitted to a message besides its participants. The same shape the
 // audience write takes and the presentation reads back, so an editor that renders the
@@ -36317,6 +36361,104 @@ type SiteReadStarted struct {
 // SiteReadStartedStatus The joined dossier state when a read is already in flight.
 type SiteReadStartedStatus string
 
+// SourceAttributionRequest One batch of author attributions. Every row names a record that already
+// exists here; nothing is created.
+type SourceAttributionRequest struct {
+	// BatchRef Names this RUN, for an operator reading the ledger months later
+	// ("hubspot-mirror-2026-09-17"). Not an id and not a foreign key: the
+	// repair keeps its history in `audit_log` with everything else.
+	//
+	// A LABEL, NOT A SENTENCE. Letters, digits, dot, underscore, colon
+	// and hyphen carry a date and a source system; the pattern keeps the
+	// column tidy and keeps a paragraph out of it.
+	//
+	// It does NOT make the label safe, and nothing here pretends
+	// otherwise: `alice-smith` satisfies the pattern and names a human.
+	// The label is free text an operator types, so it is cleared on any
+	// record whose content the Art. 17 erasure destroys, exactly as the
+	// author's name and its digest are. What survives an erasure is the
+	// ledger row and its revision, which is what stops a later run
+	// re-attributing the erased record.
+	BatchRef string `json:"batch_ref"`
+
+	// Rows Bounded at five hundred because each row is its own transaction and a batch is the unit an interrupted run resumes at. A larger batch buys nothing and takes longer to redo.
+	Rows []SourceAttributionRow `json:"rows"`
+}
+
+// SourceAttributionResult defines model for SourceAttributionResult.
+type SourceAttributionResult struct {
+	// Applied Records whose attribution this call wrote.
+	Applied int `json:"applied"`
+
+	// Rows One entry per row sent, in the order they were sent.
+	Rows []SourceAttributionRowResult `json:"rows"`
+
+	// Skipped Records not written; each carries its reason below.
+	Skipped int `json:"skipped"`
+
+	// Unchanged Records already carrying this answer, or a newer one.
+	Unchanged int `json:"unchanged"`
+}
+
+// SourceAttributionRow defines model for SourceAttributionRow.
+type SourceAttributionRow struct {
+	// ObjectId The record's id in THIS installation, not in the system it came from.
+	ObjectId openapi_types.UUID `json:"object_id"`
+
+	// ObjectType Activities only, for now. The record tables carry the same column pair, but each lives behind its own module with its own write conventions and its own erasure obligations — so they arrive as their own change rather than as four more arms of this one. The enum is where that boundary is stated, so a caller sending a contact is refused rather than silently skipped.
+	ObjectType SourceAttributionRowObjectType `json:"object_type"`
+
+	// SourceAuthorId The member who wrote it, when the author holds a seat here.
+	SourceAuthorId *openapi_types.UUID `json:"source_author_id,omitempty"`
+
+	// SourceAuthorName The author's name as the source system spelled it, for somebody who never held a seat here. At least one of this and `source_author_id` must be given; sending neither is how a caller would silently clear an attribution, so it is refused.
+	SourceAuthorName *string `json:"source_author_name,omitempty"`
+
+	// SourceRevision A counter the caller raises whenever it changes its mind about a record. A row whose stored revision is greater than or equal to this answers `unchanged` and is not written, so a delayed retry of an old batch cannot overwrite a correction that landed after it.
+	SourceRevision int64 `json:"source_revision"`
+}
+
+// SourceAttributionRowObjectType Activities only, for now. The record tables carry the same column pair, but each lives behind its own module with its own write conventions and its own erasure obligations — so they arrive as their own change rather than as four more arms of this one. The enum is where that boundary is stated, so a caller sending a contact is refused rather than silently skipped.
+type SourceAttributionRowObjectType string
+
+// SourceAttributionRowResult defines model for SourceAttributionRowResult.
+type SourceAttributionRowResult struct {
+	ObjectId   openapi_types.UUID                `json:"object_id"`
+	ObjectType string                            `json:"object_type"`
+	Outcome    SourceAttributionRowResultOutcome `json:"outcome"`
+
+	// Reason Why a row was skipped, in words an operator can act on — the record is not here, it is archived, it came from no source system, or the author names a seat this installation does not have. Null on the other two outcomes.
+	Reason *string `json:"reason,omitempty"`
+}
+
+// SourceAttributionRowResultOutcome defines model for SourceAttributionRowResult.Outcome.
+type SourceAttributionRowResultOutcome string
+
+// SourceAuthor Who wrote a record in the system it was imported from, when that is not
+// whoever recorded it here.
+//
+// TWO WAYS TO NAME ONE AUTHOR, and a reader must handle both. An author who
+// holds a seat in this installation is named by `user_id`, so the display
+// name follows them when they change it and still resolves after they
+// leave — the read joins the member directory without a liveness filter,
+// because who wrote something in August is a fact about August. An author
+// who never worked here has no seat to point at, so the source system's own
+// spelling of their name is all there is, and `user_id` is null.
+//
+// `display_name` is therefore always present and is what a surface renders;
+// `user_id` is the extra fact that makes them clickable when they are one
+// of us.
+type SourceAuthor struct {
+	// DisplayName What to show. The member's current display name when `user_id` is set, else the name the source system carried.
+	DisplayName string `json:"display_name"`
+
+	// UserId The member this author is, when they hold a seat here. Null for an author who never did.
+	UserId *openapi_types.UUID `json:"user_id,omitempty"`
+
+	// Via Which system the record came from (`hubspot`), so a surface can say where the attribution comes from rather than presenting it as something typed here. Null when the origin was not recorded.
+	Via *string `json:"via,omitempty"`
+}
+
 // Stage A pipeline stage. Mirrors the `stage` table.
 type Stage struct {
 	ArchivedAt *time.Time         `json:"archived_at,omitempty"`
@@ -46299,6 +46441,9 @@ type CreateRecordRoleJSONRequestBody = CreateRecordRoleRequest
 
 // UpdateRecordRoleJSONRequestBody defines body for UpdateRecordRole for application/json ContentType.
 type UpdateRecordRoleJSONRequestBody = UpdateRecordRoleRequest
+
+// RepairSourceAttributionJSONRequestBody defines body for RepairSourceAttribution for application/json ContentType.
+type RepairSourceAttributionJSONRequestBody = SourceAttributionRequest
 
 // CreateRecordAssignmentJSONRequestBody defines body for CreateRecordAssignment for application/json ContentType.
 type CreateRecordAssignmentJSONRequestBody = CreateRecordAssignmentRequest
@@ -57726,6 +57871,12 @@ type ServerInterface interface {
 	// Relabel, reorder, re-scope or retire a responsibility role.
 	// (PATCH /record-roles/{id})
 	UpdateRecordRole(w http.ResponseWriter, r *http.Request, id Id, params UpdateRecordRoleParams)
+	// Record who authored imported records in the system they came from.
+	// (POST /records/attribution)
+	RepairSourceAttribution(w http.ResponseWriter, r *http.Request)
+	// Re-derive the interaction graph after a run of attribution repairs.
+	// (POST /records/attribution/rebuild)
+	RebuildAttributionGraph(w http.ResponseWriter, r *http.Request)
 	// The tags on one record, and who put them there.
 	// (GET /records/{entity_type}/{entity_id}/tags)
 	GetRecordTags(w http.ResponseWriter, r *http.Request, entityType string, entityId openapi_types.UUID)
@@ -61275,6 +61426,18 @@ func (_ Unimplemented) CreateRecordRole(w http.ResponseWriter, r *http.Request, 
 // Relabel, reorder, re-scope or retire a responsibility role.
 // (PATCH /record-roles/{id})
 func (_ Unimplemented) UpdateRecordRole(w http.ResponseWriter, r *http.Request, id Id, params UpdateRecordRoleParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Record who authored imported records in the system they came from.
+// (POST /records/attribution)
+func (_ Unimplemented) RepairSourceAttribution(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Re-derive the interaction graph after a run of attribution repairs.
+// (POST /records/attribution/rebuild)
+func (_ Unimplemented) RebuildAttributionGraph(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -84157,6 +84320,46 @@ func (siw *ServerInterfaceWrapper) UpdateRecordRole(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
+// RepairSourceAttribution operation middleware
+func (siw *ServerInterfaceWrapper) RepairSourceAttribution(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RepairSourceAttribution(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RebuildAttributionGraph operation middleware
+func (siw *ServerInterfaceWrapper) RebuildAttributionGraph(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RebuildAttributionGraph(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetRecordTags operation middleware
 func (siw *ServerInterfaceWrapper) GetRecordTags(w http.ResponseWriter, r *http.Request) {
 
@@ -91611,6 +91814,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/record-roles/{id}", wrapper.UpdateRecordRole)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/records/attribution", wrapper.RepairSourceAttribution)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/records/attribution/rebuild", wrapper.RebuildAttributionGraph)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/records/{entity_type}/{entity_id}/tags", wrapper.GetRecordTags)

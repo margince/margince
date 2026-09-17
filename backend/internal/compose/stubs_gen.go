@@ -2135,6 +2135,14 @@ func (stubs) UpdateRecordRole(w nethttp.ResponseWriter, r *nethttp.Request, id c
 	httperr.NotImplemented(w, r, "UpdateRecordRole")
 }
 
+func (stubs) RepairSourceAttribution(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "RepairSourceAttribution")
+}
+
+func (stubs) RebuildAttributionGraph(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "RebuildAttributionGraph")
+}
+
 func (stubs) GetRecordTags(w nethttp.ResponseWriter, r *nethttp.Request, entityType string, entityId openapi_types.UUID) {
 	httperr.NotImplemented(w, r, "GetRecordTags")
 }

@@ -252,74 +252,23 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, contactID ids.C
 		       a.occurred_at, a.due_at, a.is_done, a.assignee_id, a.source, a.captured_by, a.created_at,
 		       a.thread_key, a.bulk_mail_attested, a.audience, a.audience_reason,
 		       a.source_system, a.version, (%s) AS content_available,
+		       %s,
 		       EXISTS (SELECT 1 FROM activity_link fl
 		                WHERE fl.activity_id = a.id AND fl.contact_id = $%d) AS filed_here
 		FROM activity a
 		WHERE a.archived_at IS NULL AND %s AND (%s)%s %s
 		ORDER BY %s
 		LIMIT %d`,
-		contentArm, contactPos, fmt.Sprintf(contactReachesActivity, bind(contactPos)), scope, projectScope(opts, arg), extra, order, sectionCap+1), args...)
+		contentArm, sourceAuthorColumns, contactPos, fmt.Sprintf(contactReachesActivity, bind(contactPos)), scope, projectScope(opts, arg), extra, order, sectionCap+1), args...)
 	if err != nil {
 		return nil, false, err
 	}
 	defer rows.Close()
 	out := make([]crmcontracts.Activity, 0, sectionCap)
 	for rows.Next() {
-		var a crmcontracts.Activity
-		var id ids.UUID
-		var audience string
-		var version int64
-		var contentAvailable, bulkMailAttested, filedHere bool
-		var threadKey, audienceReason *string
-		if err := rows.Scan(&id, &a.Kind, &a.ChannelProvider, &a.Subject, &a.Body,
-			&a.Direction, &a.OccurredAt, &a.DueAt, &a.IsDone, &a.AssigneeId, &a.Source, &a.CapturedBy,
-			&a.CreatedAt, &threadKey, &bulkMailAttested, &audience, &audienceReason,
-			&a.SourceSystem, &version, &contentAvailable, &filedHere); err != nil {
+		a, err := scanTimelineRow(rows, contactID)
+		if err != nil {
 			return nil, false, err
-		}
-		a.Id = openapi_types.UUID(id)
-		aud := crmcontracts.ActivityAudience(audience)
-		a.Audience = &aud
-		a.Version = &version
-		// The thread key and the bulk attestation are what lets the record
-		// page fold this page into conversations the way the list's page
-		// folds; the key identifies the message at the provider, so it is
-		// withheld with the content, exactly as the list's scan withholds it.
-		a.BulkMailAttested = &bulkMailAttested
-		a.ThreadKey = threadKey
-		// Why the row is held travels with the row. The record page seeds its
-		// timeline from this read, so a reason dropped here is a reason the
-		// timeline never has — and the timeline is where an owner decides
-		// whether to share the thread.
-		a.AudienceReason = audienceReason
-		state := crmcontracts.ActivityContentStateAvailable
-		if !contentAvailable {
-			state = crmcontracts.ActivityContentStateWithheld
-			// The reason describes what the message is about, so it is
-			// withheld with the content: a colleague who may not read a held
-			// message does not learn why it is held either.
-			a.Subject, a.Body, a.ThreadKey, a.AudienceReason = nil, nil, nil, nil
-		}
-		a.ContentState = &state
-		// Composed from the shared helper rather than spelled again here. The
-		// contract says an email row carries a summary exactly when kind=email,
-		// and this hand-written twin of the projection is the one read that
-		// could make that false — a contact page whose mail rows came back
-		// summary-less would render every one of them degraded while the same
-		// rows off /activities rendered whole. Set AFTER the withholding above,
-		// so a withheld row's summary is the withheld one.
-		a.EmailSummary = activities.RowEmailSummary(a)
-		// Links say how the message is FILED, and a row can reach this page
-		// without being filed here: a contact who was CC'd or who attended is on
-		// the message through their participant row, while the filing belongs to
-		// whoever capture named as its counterparty. Asserting a link for those
-		// would describe a row activity_link does not hold — and a client acting
-		// on it, to unfile the message, would act on nothing.
-		if filedHere {
-			a.Links = &[]crmcontracts.ActivityLink{{
-				EntityType: crmcontracts.ActivityLinkEntityTypeContact,
-				EntityId:   openapi_types.UUID(contactID.UUID),
-			}}
 		}
 		out = append(out, a)
 	}

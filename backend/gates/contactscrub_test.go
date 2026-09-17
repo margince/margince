@@ -56,6 +56,7 @@ const (
 // What this list buys is that the divergence is now WRITTEN DOWN, per table,
 // and that a NEW one fails. #2205 carries the rulings.
 var clearedOnlyByTheEraser = gatekit.Waive(map[string]string{
+	"source_attribution_repair":   "the author repair's ledger carries the byline of whoever wrote an imported activity, and it is cleared wherever an activity's content is erased. The contact/anonymize action never reaches an activity at all — it strips the contact row and the satellites naming the subject — so it meets no ledger row either. The same absence the `activity` entry below records, one table further out: an act that never asked the question, rather than a subject's data surviving one that did.",
 	"erasure_suppression":         "THE difference the two acts are meant to have. An erased subject's identifiers are hashed onto the suppression list so a later capture cannot re-create them; an anonymized subject may lawfully return, so writing one would refuse a contact the product is allowed to know again.",
 	"activity_retention_evidence": "records WHY the statutory correspondence floor held a row back from an erasure. The anonymize applies no floor, so it holds nothing back and has nothing to record — an absence produced by the floor difference, not data surviving.",
 	"activity":                    "the subject's own words in an activity's content survive an anonymize; the eraser redacts them under the statutory correspondence floor. Anonymize applies no floor at all, so it is not that it keeps less — it never asked.",

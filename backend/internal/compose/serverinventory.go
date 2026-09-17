@@ -120,6 +120,7 @@ type Server struct {
 	captureCounterpartyHoldHandlers
 	claimHandlers
 	importHandlers
+	attributionHandlers
 	channelHandlers
 	traceHandlers
 	pipelineTraceHandlers
