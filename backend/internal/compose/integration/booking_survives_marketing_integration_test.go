@@ -176,3 +176,61 @@ func TestTheMarketingOutcomeAgreesWithWhatWasActuallyStaged(t *testing.T) {
 			answer.Marketing, delivered, want)
 	}
 }
+
+// THEY ASKED. A booking is the subject initiating correspondence — ADR-0098 D2
+// lists a form, a booking and a call together — and until the door wrote it
+// down, nothing on the record said so.
+//
+// It could not be derived later either, which is what makes the writer
+// necessary rather than tidy: an inquiry leaves no inbound MESSAGE on the
+// timeline, so the send path's derivation has nothing to read. A rep answering
+// somebody who booked a meeting with them was refused as writing to a stranger.
+func TestAPublicBookingRecordsTheInquiryThatAuthorisesAnsweringIt(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	base := "/v1/public/booking/" + bookingSlug(t, e)
+	transactional := seededTransactionalPurposeID(t, e)
+	monday := nextMonday()
+	start := monday.Add(9 * time.Hour)
+
+	body := AnyMap{
+		"start": start, "end": start.Add(30 * time.Minute),
+		"booker": AnyMap{"name": "Ines Inquirer", "email": "ines@visitor.example"},
+		"consent": AnyMap{
+			"purpose_id": transactional, "policy_version": "pp-2026-01",
+			"wording": "You agree we may contact you about this meeting.",
+		},
+	}
+	if status := publicCall(t, e, "POST", base, body, nil, nil); status != http.StatusCreated {
+		t.Fatalf("booking → %d, want 201", status)
+	}
+
+	// The row, and what it cites. A basis nobody can look up is an assertion,
+	// so the assertion here is that it names the meeting they booked.
+	var kind, source, sourceType, sourceID string
+	if err := e.Owner.QueryRow(context.Background(), `
+		SELECT q.kind, q.source, q.source_entity_type, q.source_entity_id::text
+		  FROM consent_qualifying_event q
+		  JOIN contact_email m ON m.contact_id = q.contact_id
+		 WHERE m.email = 'ines@visitor.example'`).Scan(&kind, &source, &sourceType, &sourceID); err != nil {
+		t.Fatalf("no qualifying event was recorded for a contact who booked a meeting: %v", err)
+	}
+	if kind != "inquiry" {
+		t.Errorf("the booking recorded a %q event, want inquiry — they asked for this meeting", kind)
+	}
+	if source != "captured" {
+		t.Errorf("the event says source=%q; nobody derived this and no human typed it — the door "+
+			"that took the booking wrote it", source)
+	}
+	if sourceType != "activity" {
+		t.Errorf("the event cites a %q, want the meeting activity it is evidence of", sourceType)
+	}
+	var bookedID string
+	if err := e.Owner.QueryRow(context.Background(),
+		`SELECT id::text FROM activity WHERE kind = 'meeting'`).Scan(&bookedID); err != nil {
+		t.Fatal(err)
+	}
+	if sourceID != bookedID {
+		t.Errorf("the event cites activity %s and the meeting booked is %s", sourceID, bookedID)
+	}
+}

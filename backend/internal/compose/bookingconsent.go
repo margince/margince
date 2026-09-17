@@ -12,6 +12,7 @@ package compose
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/consent"
@@ -136,6 +137,23 @@ func (a bookingConsentAdapter) CaptureBookingConsent(ctx context.Context, contac
 	}
 	outcome, err := a.askMarketing(ctx, contactID, c.Marketing)
 	return outcome, err
+}
+
+// RecordBookingInquiry stamps the qualifying event a public booking IS: the
+// subject asked for a meeting, which ADR-0098 D2 counts as them initiating
+// correspondence exactly as an inbound message does.
+//
+// The cross-module edge, here for the reason every other one in this file is:
+// `activities` owns the booking door and `consent` owns the basis, and neither
+// imports the other.
+//
+// Its own transaction. The booking is already committed by the time this runs —
+// it has to be, since the row cites the meeting as its evidence — so there is no
+// transaction left to join, and nothing here may take the meeting back.
+func (a bookingConsentAdapter) RecordBookingInquiry(
+	ctx context.Context, contactID, activityID ids.UUID, at time.Time,
+) error {
+	return a.store.RecordInquiry(ctx, ids.From[ids.ContactKind](contactID), activityID, at)
 }
 
 // askMarketing mails the confirmation link an affirmative tick earns, and it
