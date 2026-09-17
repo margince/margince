@@ -26,7 +26,7 @@ it("shows one daily agenda, without duplicate tasks, risks or an empty approvals
       jsonResponse(readingsDay({}, [taskRow("t", "Follow up with Weber")])),
   });
   const { container } = render(<BriefScreen />);
-  await screen.findByText("Follow up with Weber");
+  await screen.findAllByText("Follow up with Weber");
   expect(container.querySelectorAll(".worklist-row-title")).toHaveLength(1);
   expect(container.querySelector("#brief-tasks")).toBeNull();
   expect(container.querySelector("#brief-decisions")).toBeNull();
@@ -46,9 +46,9 @@ it("continues the full queue in a Brief drawer without losing the first page or 
       ),
   });
   render(<BriefScreen />);
-  await screen.findByText("Call Weber");
+  await screen.findAllByText("Call Weber");
   await userEvent.click(
-    screen.getByRole("button", { name: en["brief.queue.title"] }),
+    screen.getByRole("button", { name: new RegExp(en["brief.queue.show"]) }),
   );
   await userEvent.click(
     await screen.findByRole("button", { name: en["worklist.more"] }),

@@ -1794,11 +1794,28 @@
   color: var(--textPrimary);
   font-family: var(--f-body);
   font-size: var(--fs-body);
+  /* A hand-rolled field, wearing the floor the design system's own fields wear
+     — a reader cannot tell this box apart from theirs, so its depth may not
+     disagree with them. */
+  box-shadow: var(--shadow-well);
+  /* Named, never `all`: the shadow is the one thing this box changes about
+     itself, and `transition: <time>` alone would put its height and padding on
+     a timer too. */
+  transition: box-shadow var(--dur-state) var(--ease-out);
+}
+
+/* The floor comes up to meet the pointer, as it does on every other field. */
+.settingssearch input:hover:not(:disabled, [aria-disabled="true"]),
+.settingssearch input:active:not(:disabled, [aria-disabled="true"]) {
+  box-shadow: none;
 }
 
 .settingssearch input:focus-visible {
   outline: var(--focus-ring);
   outline-offset: 1px;
+  /* The ring is drawn outside the box and does not stand in for the floor the
+     way a glow does, so the floor goes rather than sitting under it. */
+  box-shadow: none;
 }
 
 /* Over the rows rather than pushing them down: a rail that grew by four rows

@@ -64,8 +64,15 @@ const ANSWERED_BY = {
   // Answering the buyer opens the composer over the row, through the same
   // ChannelReplyAction the 360 timelines mount. Routing it would send the
   // reader to the record to press reply there, which is the hand-off the queue
-  // exists to remove.
-  reply: { how: "inline", file: "worklist.row.tsx" },
+  // exists to remove — and the prepared move is this same control rather than
+  // a second one beside it, which is why both live in worklist.reply.tsx.
+  reply: { how: "inline", file: "worklist.reply.tsx" },
+  // Answering an undecided domain acts in place, because the answer IS the
+  // whole act: keeping it creates the company, discarding it writes this
+  // reader's own capture exclusion. Routing either would send the reader to a
+  // settings screen to retype a domain the row is already holding.
+  keep: { how: "inline", file: "worklist.domainquestion.tsx" },
+  discard: { how: "inline", file: "worklist.domainquestion.tsx" },
   // Putting an overnight correction back acts in place, on the receipt that
   // reported it. It is the one verb this queue draws OUTSIDE the row: the
   // handled panel is where a change nobody was asked about is told, so it is

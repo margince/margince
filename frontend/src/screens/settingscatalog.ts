@@ -570,25 +570,23 @@ export const SETTINGS_PAGES = [
     group: "data",
     // Mixed, and the provider card is why: `PATCH /integrations/settings` is
     // "the installation's provider-lookup posture" in its own contract summary,
-    // while webhooks, the overlay mapping and the workspace extension units
-    // stay inside one workspace. One badge cannot name both.
+    // while webhooks and the workspace extension units stay inside one
+    // workspace. One badge cannot name both.
     scope: "mixed",
-    // The writes, not the reads: every seeded role reads both objects, because
+    // The writes, not the reads: every seeded role reads the object, because
     // "is capture working?" is everyone's question and the answer shows up on
-    // the records they already open. Connecting an overlay or pointing a
-    // webhook somewhere is admin and ops work.
+    // the records they already open. Pointing a webhook somewhere is admin and
+    // ops work.
     requires: anyOf(
-      writes("overlay_connection"),
       writes("webhook_subscription"),
       // A composed workspace-scoped unit puts its settings on this page and
       // nowhere else, so the page has to open for it even when the reader holds
       // none of the grants above.
       composedUnits("workspace"),
     ),
-    // Provider, webhooks and the overlay pair, each with its own object.
-    // Every verb the four cards offer, delete included: WebhooksCard archives a
-    // subscription and OverlayCard disconnects a mirror, and both are acting on
-    // the page as much as creating one is.
+    // Provider and webhooks, each with its own object. Every verb the cards
+    // offer, delete included: WebhooksCard archives a subscription, which is
+    // acting on the page as much as creating one is.
     //
     // The composed-unit arm is not a grant and carries no seat: ExtensionUnitsCard
     // renders an Open link for every composed workspace unit unconditionally, so
@@ -600,8 +598,6 @@ export const SETTINGS_PAGES = [
         destroys("integrations"),
         writes("webhook_subscription"),
         destroys("webhook_subscription"),
-        writes("overlay_connection"),
-        destroys("overlay_connection"),
       ),
       composedUnits("workspace"),
     ),

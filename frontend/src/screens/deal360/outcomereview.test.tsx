@@ -225,3 +225,32 @@ it("shows a review the reader just wrote, without a reload", async () => {
 
   expect(await screen.findByText("Price.")).toBeTruthy();
 });
+
+it("renders the selected choices from the frozen review", async () => {
+  stubFetch([
+    {
+      ...REVIEW,
+      questions: [
+        {
+          key: "reasons",
+          label: "Reasons",
+          type: "multiselect",
+          required: false,
+          options: ["Fit, scope", "Trust"],
+        },
+      ],
+      answers: {},
+      choice_answers: { reasons: ["Fit, scope", "Trust"] },
+    },
+  ]);
+  render(
+    <OutcomeReviewPanel
+      dealId="d-1"
+      status="won"
+      closingOccurrenceId={CLOSING}
+    />,
+  );
+  expect((await screen.findByText("Fit, scope, Trust")).textContent).toBe(
+    "Fit, scope, Trust",
+  );
+});

@@ -197,12 +197,13 @@ type graphContactEdge struct {
 	role      *string
 }
 
-// graphDeal is one open deal of the account, with the figure it is ordered by.
+// graphDeal is one open deal of the account. The size it is ordered by stays
+// in SQL: the card draws a name and a stage, and a figure read into Go here
+// would be one the mask has no say over.
 type graphDeal struct {
-	dealID      ids.UUID
-	name        string
-	stageName   *string
-	amountMinor *int64
+	dealID    ids.UUID
+	name      string
+	stageName *string
 }
 
 // graphSeat is one stakeholder seat: a contact on one of the account's deals.

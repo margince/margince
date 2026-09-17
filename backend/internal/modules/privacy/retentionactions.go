@@ -49,6 +49,7 @@ var retentionActions = map[string]retentionExecutor{
 	"activity/erase":        (*RetentionService).eraseActivityContent,
 	"deal/archive":          (*RetentionService).archiveDeal,
 	"ai_call_payload/erase": (*RetentionService).erasePayload,
+	"raw_capture/erase":     (*RetentionService).eraseRawCapture,
 	"lead/anonymize":        (*RetentionService).anonymizeLead,
 	"contact/anonymize":     (*RetentionService).anonymizeContact,
 }
@@ -68,16 +69,6 @@ func (s *RetentionService) archiveActivity(ctx context.Context, tx pgx.Tx, id id
 
 func (*RetentionService) archiveDeal(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 	_, err := tx.Exec(ctx, `UPDATE deal SET archived_at = now() WHERE id = $1`, id)
-	return err
-}
-
-// erasePayload deletes the row outright rather than scrubbing it in place —
-// unlike activity/erase there is no metadata half of this record left to keep:
-// ai_call_payload IS the special-category-adjacent content, and ai_call (the
-// metadata row it FK-cascades from) survives untouched. The retention audit entry
-// carries no payload bytes, only policy metadata.
-func (*RetentionService) erasePayload(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
-	_, err := tx.Exec(ctx, `DELETE FROM ai_call_payload WHERE id = $1`, id)
 	return err
 }
 
@@ -172,7 +163,8 @@ func (s *RetentionService) eraseActivityContent(ctx context.Context, tx pgx.Tx, 
 		// language goes with the text: it was read from the body this statement
 		// is emptying, so keeping it would answer one question about content
 		// that no longer exists.
-		`UPDATE activity SET body = NULL, raw = NULL, subject = $2, language = NULL, archived_at = coalesce(archived_at, now()) WHERE id = $1`,
+		// source_author_name goes with it, for the reason erasuretimeline.go gives.
+		`UPDATE activity SET body = NULL, raw = NULL, subject = $2, language = NULL, source_author_name = NULL, archived_at = coalesce(archived_at, now()) WHERE id = $1`,
 		id, erasedActivitySubject)
 	if err == nil {
 		// Everything the text left behind — the verbatim provider original, the
@@ -248,6 +240,7 @@ func anonymizeContactRecord(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 		  title = NULL, raw = NULL, photo_object_key = NULL, photo_origin = NULL,
 		  address_line1 = NULL, address_line2 = NULL, address_city = NULL,
 		  address_region = NULL, address_postal_code = NULL, address_country = NULL,
+		  source_author_name = NULL,
 		  archived_at = coalesce(archived_at, now())%s
 		WHERE id = $1`, nullColumnAssignments(contactCustom)), id, erasedName)
 	if err == nil {
@@ -303,6 +296,13 @@ func anonymizeContactRecord(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 	// a live conclusion about somebody the row no longer names.
 	if err == nil {
 		err = deleteReplyVerdictHistoryFor(ctx, tx, id)
+	}
+	if err == nil {
+		// And what we concluded our own replies DID about what they asked. The
+		// same argument one line up: the words survive an anonymize, so a
+		// settlement saying we still owe somebody something would go on
+		// naming an obligation to a record that no longer names them.
+		err = deleteRequestSettlementsFor(ctx, tx, id, subjectEmails)
 	}
 	if err == nil {
 		err = deleteSubjectHandoffs(ctx, tx, id)

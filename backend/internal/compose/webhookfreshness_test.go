@@ -16,7 +16,7 @@ func quietLog() *slog.Logger {
 }
 
 // The two receivers that bound freshness — the extension inbound edge, which
-// parses epoch seconds, and the HubSpot receiver, which parses milliseconds —
+// parses epoch seconds, and a receiver whose provider stamps milliseconds —
 // share this comparison and nothing else. Held here because a one-directional
 // mistake in either copy is invisible from the other: a bound that admitted
 // what it should refuse looks, from inside each caller, exactly like a bound

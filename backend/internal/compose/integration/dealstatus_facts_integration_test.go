@@ -64,7 +64,7 @@ func TestFactsOnlyRefreshNeverCallsTheModelEvenWhenTheRequestChanges(t *testing.
 		t.Fatal(err)
 	}
 	id := ids.UUID(source.Id)
-	if _, err := store.SetOwedVerdict(ctx, id, activities.OwedVerdictAsksUs); err != nil {
+	if _, err := store.SetOwedVerdict(ctx, id, activities.OwedVerdictAsksUs, "prompts-test", time.Now()); err != nil {
 		t.Fatal(err)
 	}
 	card, err := service.ReadFacts(ctx, ids.From[ids.DealKind](dealID))

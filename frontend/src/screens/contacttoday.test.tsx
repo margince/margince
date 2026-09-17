@@ -106,14 +106,16 @@ describe("the day's work on a contact", () => {
     expect(screen.queryByText("Nothing needs you today")).toBeNull();
   });
 
-  // Dropped only where it would contradict. With nothing else in the list the
-  // quiet card IS the answer, and it keeps the verb the ladder named on it.
-  it("shows a compact coverage sentence without presenting absence as a suggestion", () => {
+  // Dropped only where it would contradict. With nothing else in the list a
+  // quiet record already said so in the brief, so the panel renders nothing
+  // rather than presenting the absence of work as a suggestion of its own.
+  it("renders nothing for a quiet record rather than presenting absence as a suggestion", () => {
     show(VIEW, QUIET);
 
-    expect(screen.getByText(QUIET.why_now)).toBeTruthy();
+    expect(screen.queryByText(QUIET.why_now)).toBeNull();
     expect(screen.queryByText("Margince suggests")).toBeNull();
     expect(screen.queryByRole("button")).toBeNull();
+    expect(document.body.textContent).toBe("");
   });
 });
 

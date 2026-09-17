@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useId, useRef, useState } from "react";
 import { useRecordZone } from "../app/recordzone";
 import { Badge, Button, Modal } from "../design-system/atoms";
@@ -9,15 +8,13 @@ import { PanelRow } from "../design-system/panel";
 import { useToast } from "../design-system/toast";
 import { formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
-import { translatePlural, useLocale, useT } from "../i18n";
+import { useLocale, useT } from "../i18n";
 import { ApprovalRow } from "./approvalrow";
 import { useMe } from "./common";
-import { ChannelReplyAction, RELINK_KINDS, type RelinkKind } from "./compose";
 import { hasMoveControl, MoveButton } from "./movebutton";
 import {
   useAutomationRetry,
   useClaimSettle,
-  useMeetingOutcome,
   useNoticeRead,
   useTaskUpdate,
 } from "./taskactions";
@@ -40,10 +37,13 @@ import {
   whenText,
 } from "./worklist.copy";
 import { PutDownByThumb } from "./worklist.dispositions";
+import { DomainQuestionAnswer } from "./worklist.domainquestion";
 import { WaitingEmailLine } from "./worklist.emailtitle";
 import { conditionOf, eyebrowKeyFor, kindClass } from "./worklist.eyebrow";
 import { leadFactsText } from "./worklist.leadfacts";
+import { MeetingOutcome } from "./worklist.meetingoutcome";
 import { PairDecision } from "./worklist.pair";
+import { lastTouch } from "./worklist.pane";
 import { PlanWorkActions } from "./worklist.plan";
 import {
   useApproval,
@@ -52,9 +52,16 @@ import {
   worklistKey,
 } from "./worklist.queries";
 import { noticeDetail, readerTask } from "./worklist.reader";
+import { replyTarget, WaitingReply } from "./worklist.reply";
+import {
+  aboutRecord,
+  REASONS_BEFORE_THE_FOLD,
+  RowCaptions,
+  shapedReadings,
+  touchOf,
+} from "./worklist.row.captions";
 import { CompactRowLine, type RowReadings } from "./worklist.row.compact";
 import { RowActs } from "./worklist.rowverbs";
-import { syncHealthDetail } from "./worklist.synchealth";
 import { VerdictLine } from "./worklist.verdict";
 import "./worklist.row.css";
 
@@ -99,8 +106,21 @@ export function WorklistRow({
   onSelect,
   onReview,
   onOpenEmail,
+  context,
+  acts,
+  framed = false,
 }: Readonly<{
   item: WorklistItem;
+  /** The way into what this row is ABOUT, drawn among its verbs. The Brief
+   *  has no pane beside its list, so its focus rows open a drawer instead. */
+  context?: ReactNode;
+  /** How the verbs stand: one flow (the queue's), or the triage ORDER a row
+   *  being answered reads in — worklist.rowverbs.tsx says what divides. */
+  acts?: "triage";
+  /** A CARD around this row says whose it is, why it is here and where it
+   *  stands, so the row withholds those captions and the verb that only
+   *  reaches its record. The Brief's card is the only frame there is. */
+  framed?: boolean;
   // Whose queue this row is on, empty for the reader's own. It names the
   // contact a reassignment moves work AWAY from, which on the reader's own
   // queue is the reader — ReassignControl resolves that rather than this
@@ -147,13 +167,8 @@ export function WorklistRow({
   // began in four minutes or in fifty, and a task said "Overdue" without saying
   // by how long — on the two rows whose whole claim is a moment.
   const when = whenText(item, t, locale, zone, recordZone, new Date());
-  // The supporting line. Every source but one sends a sentence already;
-  // sync_health sends its condition's facts in its own vocabulary, so its line
-  // is written from `kind` and `detail` together.
-  const detail =
-    item.source === "sync_health"
-      ? syncHealthDetail(item.kind, item.detail, t)
-      : noticeDetail(item, viewer, t);
+  // The supporting line, which every source sends as a sentence already.
+  const detail = noticeDetail(item, viewer, t);
   // The badged reasons are drawn as badges above and left out here, so one
   // meeting does not report the same finding twice in two registers. The when
   // line takes `due_today` the same way when it is drawn: the moment names the
@@ -179,6 +194,16 @@ export function WorklistRow({
   // rather than as a flag, so the row cannot be drawn without one — a caller
   // with no drawer keeps the title instead of losing the row's name with it.
   const emailOpener = item.email_summary != null ? onOpenEmail : undefined;
+  // WHICH RECORD THE ROW IS ABOUT, linked, on the one row that does not link
+  // it: a waiting message names its sender as text, where every other title
+  // names and links its record (`itemTitle`, `rowHref`). A FRAMED row names it
+  // under the row itself (brief.focus.tsx) and withholds this — the frame, not
+  // the verb order, because the drawer takes that order with no card around
+  // its rows and this line is the only place those facts are said there.
+  const about = framed
+    ? undefined
+    : aboutRecord(item, emailOpener !== undefined);
+  const touch = lastTouch(touchOf(item, framed), t, locale, zone);
   // Whether the day put a state on this row — overdue, or a meeting with
   // nothing prepared. They ride on the title line, which is why it is drawn on
   // a row that has no title of its own to draw.
@@ -193,7 +218,7 @@ export function WorklistRow({
   // holds the disposition write for the verbs and the swipe.
   const brief = useBriefAnswer(item);
   const answer = rowAnswer(item, brief);
-  const readings: RowReadings = {
+  const readings: RowReadings = shapedReadings(framed, {
     item,
     title,
     href,
@@ -206,7 +231,9 @@ export function WorklistRow({
     detail,
     sample,
     zone,
-  };
+    about,
+    touch,
+  });
   const named = conditionOf(item);
   return (
     <PanelRow
@@ -297,6 +324,9 @@ export function WorklistRow({
           primary={answer.primary}
           equals={answer.equals}
           onReview={onReview}
+          context={context}
+          shape={acts}
+          framed={framed}
         />
         {/* An answer that is not a VERB: a duplicate pair, whose two buttons
             each name the record they keep and cannot leave the list that names
@@ -376,13 +406,7 @@ function RowText({
           writing sentences get to say them: which mailbox stopped, why a
           message bounced, why a send was held, what an AI task was about,
           which rule failed and how. That is the decisive line on most of these
-          rows, and a reader was reading around it.
-
-          `sync_health` sends its facts in the producer's own vocabulary —
-          `shed`, `rate_limited`, `deals, contacts` — so its line is WRITTEN
-          from that pair rather than drawn, by worklist.synchealth.ts. A value
-          that build does not recognise draws nothing, which is what this row
-          did for every sync value before. */}
+          rows, and a reader was reading around it. */}
       {detail && <p className="t-caption worklist-row-detail">{detail}</p>}
       {sample.length > 0 && (
         // A group nobody can see into is a group nobody trusts, and an
@@ -395,6 +419,8 @@ function RowText({
             states why the label says which. */}
       <VerdictLine verdict={item.verdict} zone={zone} />
       <RowCaptions
+        about={readings.about}
+        touch={readings.touch}
         when={when}
         facts={facts}
         said={said}
@@ -471,14 +497,33 @@ const ANSWER_BY_SOURCE: Partial<
     verb: "retry",
     draw: (item) => ({ primary: <AutomationRetry id={item.id} /> }),
   },
-  // THREE verbs of equal weight, so the row has no primary. Held, no-show and
-  // cancelled are equally likely records of what already happened, and leading
-  // the row with one of them would read as the product's expectation about a
-  // meeting it knows nothing about.
+  // Keyed on `keep`, which is the server's signal that this row may be
+  // answered at all; the control then asks the row again for each button, so a
+  // seat offered only one of the two draws only that one. The same one-entry
+  // shape meeting_outcome uses — one entry per source, not one per button.
+  domain_question: {
+    verb: "keep",
+    draw: (item) => ({ equals: <DomainQuestionAnswer item={item} /> }),
+  },
+  // TWO verbs of equal weight, so the row has no primary. Cancelling and saying
+  // what came of it are equally likely answers about a meeting the product
+  // knows nothing about, and leading the row with either would read as an
+  // expectation it has not got.
   meeting_outcome: {
     verb: "decide",
     draw: (item) => ({
-      equals: <MeetingOutcome id={item.id} version={item.version} />,
+      equals: (
+        <MeetingOutcome
+          id={item.id}
+          version={item.version}
+          // The row's own title field, not `itemTitle`: that one takes a
+          // translator and a locale to name the rows that have no title of
+          // their own, and this lane always has one — the meeting's subject,
+          // written by whoever booked it. The dialog falls back to its own
+          // heading when a row arrives without one.
+          title={item.title}
+        />
+      ),
     }),
   },
   conversation_claim: {
@@ -525,7 +570,7 @@ function rowAnswer(item: WorklistItem, brief: BriefAnswer): RowPlacement {
   // travels with it.
   const replyTo = replyTarget(item);
   if (replyTo) {
-    return { primary: <WaitingReply id={item.id} to={replyTo} /> };
+    return { primary: <WaitingReply item={item} to={replyTo} /> };
   }
   // A brief item's three verbs, RANKED the way the row ranks them: acting on
   // the day's pick is what the reader came for, and setting it aside or
@@ -622,156 +667,6 @@ function NudgeDismiss({ contactId }: Readonly<{ contactId: string }>) {
 }
 
 /**
- * How many reasons a row says before the rest go behind a tap.
- *
- * A COUNT, because the ceiling has to survive the vocabulary growing. Saying
- * only what a row contains today puts it back over the limit the next time
- * somebody adds a reason, and that contact has no way to know they did.
- *
- * Three because three still fit on ONE line at 390px. Measured 2026-09-05:
- * two reasons and three are both 19px; the fourth wraps to 37px and the sixth
- * to 56px. So the fold costs a reader nothing until the line would have taken
- * a second line anyway.
- */
-const REASONS_BEFORE_THE_FOLD = 3;
-
-/**
- * Why this row is here — the first few said outright, the rest a tap away.
- *
- * NOTHING IS DISCARDED, which is the whole shape of this. A cap that dropped
- * the overflow was tried and abandoned (it dropped the wrong ones: `pinned`,
- * `expected_revenue` and an absorbed deal's grounds are all appended LAST
- * because they are applied late, so a head-of-list cut takes exactly the facts
- * that decided where the row sits). The reasons arrive "in the order they were
- * weighed", so the first ones are the strongest and the fold falls in the
- * right place by construction — but the rest stay reachable rather than being
- * silenced.
- *
- * The same shape the deal status card uses: first line out, remainder behind a
- * disclosure. One answer to "too many reasons", not a second one written here.
- *
- * The summary NAMES THE COUNT rather than saying "more". A reader deciding
- * whether to spend a tap wants to know if it is one more fact or four.
- *
- * WHY THIS ROW BEAT THE ONE BELOW IT is folded here too, and that is the whole
- * of where it lives now. It is one sentence of the same subject — why this row
- * is where it is — and it was drawn as a permanent third caption line under
- * every row on the page, which is a full line of height spent on a comparison
- * nobody reads until they disagree with the order. Behind this press it is one
- * tap away from the reader who does. It goes LAST and never into the summary:
- * the reasons are fragments of a dozen characters and this is a full sentence
- * with two timestamps in it, so on the line it would take the second line the
- * fold exists to save. The count covers it, because the count is what a reader
- * spends the tap on — one that named only the reasons would promise less than
- * the fold holds.
- */
-function RowWhyHere({
-  said,
-  folded,
-  above,
-}: Readonly<{
-  said: readonly string[];
-  folded: readonly string[];
-  above: string | null;
-}>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const behind = folded.length + (above ? 1 : 0);
-  if (behind === 0) {
-    return said.length === 0 ? null : (
-      <p className="t-caption worklist-row-because">{said.join(" · ")}</p>
-    );
-  }
-  return (
-    <details className="worklist-row-because-fold">
-      <summary className="t-caption worklist-row-because">
-        {said.length === 0 ? (
-          // Nothing is said on the line, so there is no "more" to count from
-          // and the fold names itself instead — in the words the product
-          // already has for this question.
-          <span className="worklist-row-because-more">
-            {t("worklist.verdict.rule")}
-          </span>
-        ) : (
-          <>
-            {said.join(" · ")}{" "}
-            <span className="worklist-row-because-more">
-              {translatePlural(locale, "worklist.because.more", behind, {
-                // The reader's own notation, not String(): a count drawn for a
-                // contact goes through the formatter like every other magnitude,
-                // and jsx-magnitude.test.ts holds that for the whole tree.
-                count: formatNumber(behind, locale),
-              })}
-            </span>
-          </>
-        )}
-      </summary>
-      {folded.length > 0 && (
-        <p className="t-caption worklist-row-because">{folded.join(" · ")}</p>
-      )}
-      {above && <p className="t-caption worklist-row-above">{above}</p>}
-    </details>
-  );
-}
-
-/**
- * Everything the row says about itself under the title, in the order a reader
- * needs it.
- *
- * When it happens, what it is worth, why it is ranked where it is, and what
- * doing nothing costs. Each is absent when the server sent nothing for it — a
- * caption drawn empty is a line of furniture the reader has to look past on
- * every row.
- *
- * TWO LINES AND NOT FIVE. The row printed the moment, the figures, the reasons,
- * the consequence and the comparison as five stacked captions, which is five
- * lines of 12px grey under every title on the page — and a reader scanning a
- * queue reads the first of them and skips the rest. The facts that are
- * FRAGMENTS ("due 15:00", "€40k", "waiting 4 days · nobody owns it") now read
- * as one dot-separated line at every width, in the same order and still as
- * separate elements, so a screen reader still meets three facts and only the
- * line breaks between them go. What keeps a line of its own is the sentence a
- * reader is meant to stop at: what it costs to do nothing.
- *
- * Together in one component because they are one idea — the row's own account
- * of itself — and because the row's function had reached the complexity the
- * linter allows, which is a fair reading of how much a contact can hold at once.
- */
-function RowCaptions({
-  when,
-  facts,
-  said,
-  folded,
-  consequence,
-  above,
-}: Readonly<{
-  when: string | null;
-  facts: string | null;
-  said: readonly string[];
-  folded: readonly string[];
-  consequence: string | null;
-  above: string | null;
-}>) {
-  return (
-    <>
-      {/* When it starts, or when it is due, FIRST — it is the fact the reasons
-          beside it are about: "starting shortly" explains a rank, and this says
-          what time. */}
-      <div className="worklist-row-facts-line">
-        {when && <p className="t-caption worklist-row-when">{when}</p>}
-        {facts && <p className="t-caption worklist-row-facts">{facts}</p>}
-        <RowWhyHere said={said} folded={folded} above={above} />
-      </div>
-      {/* What it costs to do nothing. The question a queue exists to answer,
-          and the one the lane feed had no field for. */}
-      {consequence && (
-        <p className="t-caption worklist-row-consequence">{consequence}</p>
-      )}
-    </>
-  );
-}
-
-/**
  * The rank, and the way INTO the pane where there is one.
  *
  * A button on the rank rather than the whole row being pressable: the row
@@ -864,7 +759,9 @@ function RowDecision({ item }: Readonly<{ item: WorklistItem }>) {
   const approval = useApproval(item.id, open);
   const usable = approval.data?.kind ? approval.data : undefined;
   return (
-    <div className="worklist-row-decision">
+    // A TEST ID rather than a class: which rows offer a decision is what a
+    // screen journey counts, and nothing draws this wrapper.
+    <div data-testid="worklist-row-decision">
       <Button
         ref={opener}
         variant="primary"
@@ -1064,101 +961,12 @@ function refusalMessage(
   }
 }
 
-// How a meeting went, recorded from the row that asked.
-//
-// Three buttons rather than one primary and a menu: the answers are equally
-// likely and equally short, and hiding two of three behind a chevron would make
-// the common case a second click. None is emerald — an outcome is a record of
-// what already happened, not the day's next move, and the queue's one filled
-// primary belongs to the selected row's own action.
-//
-// The row leaves the queue on success because the lane asks only for meetings
-// with no outcome. That is also why there is no undo offered here: a corrected
-// outcome is a second answer to the same question, given on the meeting itself
-// where the history of both is visible, rather than a toast that disappears.
-function MeetingOutcome({
-  id,
-  version,
-}: Readonly<{ id: string; version: number | undefined }>) {
-  const t = useT();
-  const toast = useToast();
-  const record = useMeetingOutcome([worklistKey]);
-  const answer = (status: "held" | "no_show" | "canceled") => () =>
-    record.mutate(
-      { id, version, status },
-      {
-        onSuccess: () => toast.show(t("worklist.verb.meetingOutcomeRecorded")),
-        // A refused write leaves the row exactly as it was, which renders
-        // identically to a click that did nothing.
-        onError: () =>
-          toast.show(t("worklist.verb.meetingOutcomeFailed"), { mark: false }),
-      },
-    );
-  return (
-    <>
-      <Button small pending={record.isPending} onClick={answer("held")}>
-        {t("worklist.verb.meetingHeld")}
-      </Button>
-      <Button small pending={record.isPending} onClick={answer("no_show")}>
-        {t("worklist.verb.meetingNoShow")}
-      </Button>
-      <Button small pending={record.isPending} onClick={answer("canceled")}>
-        {t("worklist.verb.meetingCanceled")}
-      </Button>
-    </>
-  );
-}
-
-// The record a reply would be filed against, or nothing.
-//
-// Both halves must hold. The verb says the server judged this wait answerable —
-// it is mail, not a channel message the mail composer would answer in the wrong
-// place. The subject says WHICH record the sent message links to, and its type
-// has to be one the composer can file against: the row's own vocabulary is
-// wider than RELINK_KINDS, so an `activity` subject would type-check as a
-// string and fail at the composer.
-function replyTarget(
-  item: WorklistItem,
-): { type: RelinkKind; id: string } | undefined {
-  if (!item.actions.includes("reply") || !item.subject) {
-    return undefined;
-  }
-  const type = item.subject.type;
-  if (!RELINK_KINDS.includes(type as RelinkKind)) {
-    return undefined;
-  }
-  return { type: type as RelinkKind, id: item.subject.id };
-}
-
-// Answering the buyer, over the row that named the wait.
-//
-// Its own component so it can hold the hook that refreshes the queue. The
-// composer invalidates the RECORD timelines it knows about, and the worklist is
-// not one of them — nor does the queue poll — so without the callback the row
-// keeps saying nobody has replied, and keeps offering to reply again, over a
-// message the reader has already answered.
-function WaitingReply({
-  id,
-  to,
-}: Readonly<{ id: string; to: { type: RelinkKind; id: string } }>) {
-  const queryClient = useQueryClient();
-  return (
-    <ChannelReplyAction
-      activityId={id}
-      kind="email"
-      entityType={to.type}
-      entityId={to.id}
-      // `worklistKey`, not `[worklistKey]`. The key IS the segment array, so
-      // wrapping it once more asks for a query whose first segment is itself
-      // an array — which nothing in the cache is, so the invalidation matched
-      // nothing and the row a rep had just answered stayed in the waiting
-      // lane until they reloaded the page.
-      onSent={() =>
-        void queryClient.invalidateQueries({ queryKey: worklistKey })
-      }
-    />
-  );
-}
+// How a meeting went is recorded by `MeetingOutcome` in
+// worklist.meetingoutcome.tsx: "Cancelled" writes that one word from the card,
+// and "Update" opens the composer bound to this meeting, where the outcome is
+// typed. It lives in its own file because the dialog it carries reads the
+// meeting and patches it — a form, a query and a mutation, which is a screen's
+// worth of code rather than one of this file's row verbs.
 
 // Saying a promise was kept, from the row that keeps asking for it.
 //

@@ -57,13 +57,13 @@ const RISK_LABELS: Record<DealCoverageRisk["kind"], MessageKey> = {
  * report a clean bill of health from a check that never ran. The hook says
  * which of the two happened and lets the caller decide what to draw.
  */
-export function useDealSignals(dealId: string, enabled: boolean) {
+export function useDealSignals(dealId: string) {
   const t = useT();
   const { locale } = useLocale();
   // The shared read, not a second useQuery over the same key. Three surfaces
   // ask this question and they agreed by luck while each spelled its own; see
   // deal360/usedealcoverage.tsx.
-  const { coverage, withheld, ready } = useDealCoverage(dealId, enabled);
+  const { coverage, withheld, ready } = useDealCoverage(dealId);
   const signals: Signal[] = withheld
     ? []
     : (coverage?.risks ?? []).map((risk) => ({

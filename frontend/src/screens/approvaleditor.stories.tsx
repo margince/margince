@@ -33,7 +33,7 @@ export default meta;
 type Story = StoryObj;
 type Approval = components["schemas"]["Approval"];
 
-const detail = {
+const detail: Approval = {
   id: "ap-1",
   kind: "held_draft",
   status: "pending",
@@ -49,7 +49,7 @@ const detail = {
   target_version: 3,
   created_at: "2026-08-20T09:00:00Z",
   expires_at: "2026-08-21T09:00:00Z",
-} as unknown as Approval;
+};
 
 export const DetailModal: Story = {
   render: () => {

@@ -65,6 +65,42 @@ const systemCapturedBy = "system"
 // no caller can reach this pattern by writing one.
 const systemCapturedByPattern = systemCapturedBy + ":%"
 
+// NotSystemMinted renders "this row was not written by the product itself"
+// for one activity alias: captured_by is neither the bare system id nor any
+// job's namespaced form. It is the SQL twin of principal.SystemMintedID —
+// one namespace, two languages — spelled from the same pair of constants the
+// follow-up resolvers build their inclusion predicate from.
+//
+// A surface that ATTRIBUTES a task — "you promised", "a commitment is owed"
+// — excludes these rows with it; a surface that merely lists open work keeps
+// them, because a reminder is real work even though it is nobody's promise.
+//
+// The two values bind through the caller's own arg closure, the shape every
+// fragment helper in this module has; only the alias is formatted in, and it
+// is a compile-time literal at every call site, never input.
+func NotSystemMinted(alias string, arg func(any) int) string {
+	return fmt.Sprintf("NOT (%[1]s.captured_by = $%[2]d OR %[1]s.captured_by LIKE $%[3]d)",
+		alias, arg(systemCapturedBy), arg(systemCapturedByPattern))
+}
+
+// SystemMintedExpr is the same namespace test as a bare expression, for the
+// places a statement cannot bind a parameter — an ORDER BY, or a CASE inside
+// one.
+//
+// It is the positive form: true exactly where NotSystemMinted is false. Both
+// read the two constants above, so the three spellings of this one namespace
+// (here, the bound fragment, and principal.SystemMintedID in Go) move together
+// or not at all.
+//
+// The values are formatted in as SQL literals rather than bound, which is safe
+// for the same reason the pattern match itself is: both are compile-time
+// constants of this package, never input, and captured_by is server-stamped
+// from the authenticated principal.
+func SystemMintedExpr(alias string) string {
+	return fmt.Sprintf("(%[1]s.captured_by = '%[2]s' OR %[1]s.captured_by LIKE '%[3]s')",
+		alias, systemCapturedBy, systemCapturedByPattern)
+}
+
 // FollowUpWorkflows returns the system handlers that complete open system
 // follow-up tasks when the follow-up demonstrably happened: a real
 // activity lands on the lead, or the lead leaves the open pool (promoted

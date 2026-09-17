@@ -147,7 +147,8 @@ func TestOpenAIWireListsAndCarriesNoLane(t *testing.T) {
 }
 
 func TestBrokerListKeepsItsLabelAndDropsItsPrices(t *testing.T) {
-	lister := listerFor(t,
+	lister := listerFor(
+		t,
 		ProviderConfig{Provider: providerOpenAICompatible},
 		"/v1/models",
 		map[string]any{"data": []map[string]any{{

@@ -173,9 +173,19 @@ export type HoverIntent = Readonly<{
 export function useHoverIntent(
   onOpen: () => void,
   onClose: () => void,
+  {
+    ownsState = false,
+  }: Readonly<{
+    // Whether `onClose` reaches state nobody else writes. A tooltip's open
+    // flag is its own, so its close must always land, even after a neighbour
+    // became the open one; a popover whose triggers share one "which is
+    // open" value keeps the default, where a superseded close is dropped so
+    // it cannot blank what the neighbour just opened.
+    ownsState?: boolean;
+  }> = {},
 ): HoverIntent {
-  const acts = useRef({ onOpen, onClose });
-  acts.current = { onOpen, onClose };
+  const acts = useRef({ onOpen, onClose, ownsState });
+  acts.current = { onOpen, onClose, ownsState };
   // Timer handles as whatever the host hands back. A browser returns a number
   // and Node's typings return a Timeout, and this file is typechecked under
   // both — a hard `number` here compiles in one lane and fails in the other.
@@ -214,6 +224,8 @@ export function useHoverIntent(
       // this instance no longer speaks for what the reader is looking at.
       if (activeOwner === timers.current) {
         activeOwner = undefined;
+        acts.current.onClose();
+      } else if (acts.current.ownsState) {
         acts.current.onClose();
       }
     }

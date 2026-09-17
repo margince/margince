@@ -34,6 +34,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
@@ -43,7 +44,11 @@ import (
 // under — CatalogEntry.Key must equal the backing handler's Spec().Name,
 // one vocabulary across the catalog, the engine, and run records
 // (automations_catalog.go's CatalogEntry doc).
-const noActivityReminderName = "no_activity_reminder"
+// It is also the reminder's reserved provenance identity, and the two are ONE
+// name deliberately: the task this starter mints carries this string as its
+// source_system, and a second spelling would let the catalog key and the
+// reserved identity drift until the engine stamps a name a client may write.
+const noActivityReminderName = provenance.NoActivityReminderSource
 
 // noActivityScheduleMarker is Trigger.Schedule's value. RegisterWorkflow
 // (engine.go) only requires Schedule to be non-empty — that non-empty-
@@ -215,7 +220,7 @@ func (w noActivityReminder) Plan(ctx context.Context, ev workflow.Event) (workfl
 		return workflow.Effect{}, err
 	}
 	subject := fmt.Sprintf("Check in — no activity since %s", anchor.Format(time.DateOnly))
-	return anchorReminderTaskEffect(ctx, w.ex, ev, subject)
+	return anchorReminderTaskEffect(ctx, w.ex, ev, subject, w)
 }
 
 func (w noActivityReminder) Apply(ctx context.Context, _ workflow.Event, eff workflow.Effect, _ *workflow.ApprovalToken) (workflow.RunResult, error) {
@@ -231,8 +236,10 @@ func (noActivityReminder) IdempotencyKey(ev workflow.Event) string {
 	return anchorIdempotencyKey(noActivityReminderName, ev.Entity, anchor, err)
 }
 
-// checkInCadenceName is the catalog key Task 6 seeds this starter under.
-const checkInCadenceName = "check_in_cadence"
+// checkInCadenceName is the catalog key Task 6 seeds this starter under, and
+// the reminder's reserved provenance identity — one name, for the reason
+// noActivityReminderName gives.
+const checkInCadenceName = provenance.CheckInCadenceSource
 
 // checkInCadenceScheduleMarker is Trigger.Schedule's value, documenting
 // intent only — see noActivityScheduleMarker's doc for why it is never
@@ -302,7 +309,7 @@ func (w checkInCadence) Plan(ctx context.Context, ev workflow.Event) (workflow.E
 		return workflow.Effect{}, err
 	}
 	subject := fmt.Sprintf("Time for a check-in — last touched %s", anchor.Format(time.DateOnly))
-	return anchorReminderTaskEffect(ctx, w.ex, ev, subject)
+	return anchorReminderTaskEffect(ctx, w.ex, ev, subject, w)
 }
 
 func (w checkInCadence) Apply(ctx context.Context, _ workflow.Event, eff workflow.Effect, _ *workflow.ApprovalToken) (workflow.RunResult, error) {
@@ -443,7 +450,10 @@ func (w renewalReminder) Plan(ctx context.Context, ev workflow.Event) (workflow.
 		return workflow.Effect{}, err
 	}
 	subject := fmt.Sprintf("Renewal coming up — %s", anchor.Format(time.DateOnly))
-	return anchorReminderTaskEffect(ctx, w.ex, ev, subject)
+	// Due AT the firing, not three days out like the quiet-account reminders:
+	// the renewal this warns about can be today, so a horizon would file the
+	// task after the date it exists to get ahead of.
+	return ownedTaskEffectNoKey(ctx, w.ex, ev, subject, ev.OccurredAt)
 }
 
 func (w renewalReminder) Apply(ctx context.Context, _ workflow.Event, eff workflow.Effect, _ *workflow.ApprovalToken) (workflow.RunResult, error) {

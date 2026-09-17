@@ -66,6 +66,13 @@ type Handlers struct {
 	loginPerIP    *ratelimit.Limiter // 30/min per client IP
 	resetPerEmail *ratelimit.Limiter // 3/hour per (email, IP)
 	resetPerIP    *ratelimit.Limiter // 30/hour per client IP
+	// passwordLoginDisabled is the deployment's `auth.password.enabled=false`
+	// — an installation that signs its members in through an identity provider
+	// and wants the password door shut. Negative so the zero value offers the
+	// method: passwordmethod.go carries why, and both surfaces that must agree
+	// about it read passwordLoginOffered rather than this field.
+	passwordLoginDisabled bool
+
 	// changeFailures caps wrong-current-password attempts per account.
 	// /auth/change-password verifies the SAME secret the login path does, so
 	// leaving it uncapped would put an unthrottled guessing oracle behind any
@@ -85,15 +92,6 @@ type Handlers struct {
 	// at full rate.
 	passwordLinkPerActor  *ratelimit.Limiter // 20/hour per admin
 	passwordLinkPerTarget *ratelimit.Limiter // 5/hour per member
-
-	// sorMode answers whether the caller's workspace reads from an
-	// incumbent overlay mirror, so /me can tell the client its
-	// system-of-record mode (the client gates its list UI on it — an
-	// overlay mirror cannot serve sort/filter dials). Injected by the
-	// composition root (the datasource dispatch owns mode resolution;
-	// identity never imports the overlay module). Nil ⟹ always native,
-	// the correct default for any role that wired no overlay dispatch.
-	sorMode func(context.Context) (overlay bool, err error)
 
 	// nonProduction reports the deployment posture (MARGINCE_ENV) on /me's
 	// deprecated non_production field. Injected by the composition root from
@@ -211,14 +209,6 @@ func (h Handlers) WithPasswordReset(m mailer.Mailer) Handlers {
 	return h
 }
 
-// WithSorMode injects the workspace system-of-record mode resolver the
-// composition root builds over the datasource dispatch. Without it /me
-// reports native (the correct answer for any role with no overlay wiring).
-func (h Handlers) WithSorMode(resolve func(context.Context) (bool, error)) Handlers {
-	h.sorMode = resolve
-	return h
-}
-
 // WithMCPResource injects the canonical MCP resource URL the RFC 9728
 // protected-resource document advertises. The composition root computes
 // it from --public-base-url, never from a request, so the audience the
@@ -260,25 +250,18 @@ func (h Handlers) accessTokenTTL() *time.Duration {
 	return &ttl
 }
 
-// resolveSorMode names the caller's workspace system-of-record mode for
-// the /me response. A nil resolver (no overlay wiring) is native; a
-// resolver error degrades to native rather than failing /me — the 422
-// read-subset guard still refuses any dial the mirror cannot serve, so a
-// momentary mis-report costs an unsorted list, never a wrong answer.
-func (h Handlers) resolveSorMode(ctx context.Context) crmcontracts.MeResponseSystemOfRecordMode {
-	if h.sorMode == nil {
-		return crmcontracts.MeResponseSystemOfRecordModeNative
-	}
-	overlay, err := h.sorMode(ctx)
-	if err != nil || !overlay {
-		return crmcontracts.MeResponseSystemOfRecordModeNative
-	}
-	return crmcontracts.MeResponseSystemOfRecordModeOverlay
-}
-
 // Login implements (POST /auth/login). The route is public; the singleton
 // company is bound by the middleware (installation.go).
 func (h Handlers) Login(w http.ResponseWriter, r *http.Request) {
+	// Before the body is read, and before any budget is spent: a deployment
+	// that closed the password door owes every caller the same answer whatever
+	// they posted, and a refusal that ran the throttle first would let an
+	// installation with no password method still be pushed into rate-limiting
+	// the address it is not authenticating.
+	if !h.passwordLoginOffered() {
+		httperr.NotImplementedBecause(w, r, passwordMethodOff)
+		return
+	}
 	var req crmcontracts.LoginRequest
 	if !httperr.Decode(w, r, &req) {
 		return
@@ -307,7 +290,7 @@ func (h Handlers) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	setSessionCookie(w, token)
-	httperr.WriteJSON(w, http.StatusOK, h.meResponse(id, h.resolveSorMode(r.Context())))
+	httperr.WriteJSON(w, http.StatusOK, h.meResponse(r.Context(), id))
 }
 
 // Logout implements (POST /auth/logout): revoke + clear, idempotent, 204.
@@ -339,7 +322,7 @@ func (h Handlers) GetCurrentPrincipal(w http.ResponseWriter, r *http.Request) {
 	// else's capabilities, and a stored copy would survive the role change that
 	// revoked them.
 	w.Header().Set("Cache-Control", "private, no-store")
-	httperr.WriteJSON(w, http.StatusOK, h.meResponse(id, h.resolveSorMode(r.Context())))
+	httperr.WriteJSON(w, http.StatusOK, h.meResponse(r.Context(), id))
 }
 
 func setSessionCookie(w http.ResponseWriter, token string) {

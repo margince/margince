@@ -251,12 +251,7 @@ function rail(view: View) {
   return (
     <StoryProviders>
       <div style={{ maxWidth: 320 }}>
-        <ContactRail
-          view={view}
-          guard={guard}
-          firstName="Dana"
-          onExplain={() => {}}
-        />
+        <ContactRail view={view} guard={guard} />
       </div>
     </StoryProviders>
   );

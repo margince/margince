@@ -63,7 +63,7 @@ test.describe("Network tab — page shape", () => {
 
   test("draws the map and no ego ring", async ({ page }) => {
     await expect(
-      page.locator(".rmap, .relationship-map").first(),
+      page.locator(".rmap").first(),
     ).toBeVisible();
     // The retired drawing. Its classes surviving would mean the old component
     // is still mounted somewhere on this page.
@@ -144,7 +144,7 @@ test.describe("Network tab — visual weight", () => {
     const strip = await page.locator(".stat-strip").first().boundingBox();
     const lead = await page.locator(".panel-accent").first().boundingBox();
     const map = await page
-      .locator(".rmap, .relationship-map")
+      .locator(".rmap")
       .first()
       .boundingBox();
     expect(strip).not.toBeNull();

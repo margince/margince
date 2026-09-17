@@ -348,10 +348,9 @@ func sendStore(pool *pgxpool.Pool, send SendPath) *activities.Store {
 // than an omission: only DraftEmail is reachable through automation.Comms, so
 // that surface has no send to configure.
 func newCommsAdapter(
-	pool *pgxpool.Pool, drafter activities.EmailDrafter, send SendPath, sor externalSoR,
+	pool *pgxpool.Pool, drafter activities.EmailDrafter, send SendPath,
 ) commsAdapter {
 	return commsAdapter{
-		externalSoR:   sor,
 		store:         sendStore(pool, send),
 		gate:          consentGateFor(pool),
 		draft:         drafter,

@@ -55,6 +55,15 @@ decision rather than an omission.
   are the German ones in [compliance/de/](compliance/de/); a translation of a
   legal document is not the document.
 
+### Incident reporting — our duty, not the customer's
+
+What we do when a weakness in Margince is being exploited in the wild: who
+files, to whom, and against which clocks. Written before it is needed, because
+a 24-hour deadline is not a thing to work out under pressure.
+
+- [compliance/cra/README.md](compliance/cra/README.md) — the runbook, the three
+  filled report skeletons and the tabletop walk (CRA Article 14).
+
 ### Principles — how this codebase decides things
 
 - [principles/README.md](principles/README.md) — the index. Each page carries the statement, the method for checking the tree still holds it, and what it explicitly does not ask for.
@@ -87,8 +96,6 @@ decision rather than an omission.
 - [connect-telegram.md](how-to/connect-telegram.md) — bind a workspace-level Telegram bot for pull ingress and governed replies.
 - [import-your-linkedin-network.md](how-to/import-your-linkedin-network.md) — import your own `Connections.csv` as graph substrate, and read the reach it buys.
 - [import-a-company-spreadsheet.md](how-to/import-a-company-spreadsheet.md) — bring a CSV of companies in: the column mapping, what the preview counts, and how a row names the company it corrects.
-- [connect-a-hubspot-overlay.md](how-to/connect-a-hubspot-overlay.md) — connect a workspace to a HubSpot portal in overlay (read + continuous sync) mode.
-- [flip-an-overlay-to-native.md](how-to/flip-an-overlay-to-native.md) — the one-way overlay→native cutover: preflight, seal, the typed confirmation, and what recovery actually means.
 - [connect-a-cloud-model-provider.md](how-to/connect-a-cloud-model-provider.md) — bind the AI lanes to a BYOK cloud key (Anthropic / OpenAI / Gemini / any OpenAI-compatible vendor).
 - [certify-an-ai-model.md](how-to/certify-an-ai-model.md) — certify a model against a task's fixture corpus and benchmark a candidate swap (`make e2e-ai`).
 - [re-certify-the-whole-corpus.md](how-to/re-certify-the-whole-corpus.md) — the sweep loop after a tree-wide change stales every record: run both preset bindings, tell a moved question from a model regression before calling anything a drop, fix or flag, re-run one task, regenerate both generated pages.
@@ -101,7 +108,6 @@ decision rather than an omission.
 - [set-up-projects.md](how-to/set-up-projects.md) — who can create, edit, archive and share a project; key conventions; when to create one (deal creation vs close-won); the fixed phase and stakeholder vocabularies; no code.
 - [run-a-project.md](how-to/run-a-project.md) — the project page section by section, phase moves, and every rule by which an email finds its project — including what filing does to retention; no code.
 - [debug-an-ai-task.md](how-to/debug-an-ai-task.md) — run ONE production AI invocation site against input you supply (`make ai-probe`), and read every boundary between that input and the verdict as numbers.
-- [test-overlay-locally.md](how-to/test-overlay-locally.md) — validate the overlay end to end against the real HubSpot API, using an isolated developer test account and a committed fixture seed.
 - [build-the-desktop-app.md](how-to/build-the-desktop-app.md) — build the self-contained folder that runs the whole stack with no Docker, on macOS (`make desktop`) or Windows (`make desktop-win`), then run, configure and update an installation.
 - [cut-a-release.md](how-to/cut-a-release.md) — push a `v*` tag and get a GitHub release with both desktop bundles attached: what the tag's shelf decides, what a failed or re-run lane leaves behind, and why this is not the constellation dist release.
 
@@ -109,7 +115,7 @@ decision rather than an omission.
 - [modules.md](reference/modules.md) — the modules: what each owns, its tables, its HTTP surface.
 - [brief-priorities.md](reference/brief-priorities.md) — how morning priorities, scoped risk and weekly coverage are derived.
 - [meeting-brief.md](reference/meeting-brief.md) — the pre-meeting brief and its preparation plan: the three invariants, what a caller is and is not shown, how a year of history becomes five moments, and why the plan and the sections have separate writers.
-- [agent-tools.md](reference/agent-tools.md) — the governed tool catalog: every registered tool, its tier, the passport scope it spends, egress, and overlay-mode behaviour.
+- [agent-tools.md](reference/agent-tools.md) — the governed tool catalog: every registered tool, its tier, the passport scope it spends, and its egress.
 - [mcp-info.md](reference/mcp-info.md) — the served MCP surface exactly as a client receives it, with `mcp-info.json` beside it as the same surface byte for byte. Generated from the running registry, never hand-edited; the generator fails the build when the committed copy and the served surface disagree. The largest page here by an order of magnitude — a lookup table, not something to read through.
 - [ai-prompts.md](reference/ai-prompts.md) — **generated**: every instruction this build sends a model, read off real requests, with how many untrusted spans each call carried.
 - [agent-tool-budget.md](reference/agent-tool-budget.md) — what each agent's tool menu costs in prompt tokens, agent by agent, against the published ceiling. Generated with its `.json` sibling, never hand-edited.
@@ -191,7 +197,6 @@ budget rather than keeping its own list of which pages are generated.
 
 **Modes and extension**
 
-- [overlay-augmentation.md](explanation/overlay-augmentation.md) — the two SoR modes, the frozen seam + inner incumbent seam, the mirror-as-cache, fail-closed visibility, and teardown for the HubSpot overlay (branch 1: read + continuous sync).
 - [extensibility.md](explanation/extensibility.md) — the stable extension tier: the inert compile-time declaration, the marker-allowlisted surface, the composition build, the `GOWORK` binding that decides which composition module the compiler links, boot reconciliation, and the fitness functions that hold the boundary.
 
 **Building and merging**

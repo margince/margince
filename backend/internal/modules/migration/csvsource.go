@@ -33,7 +33,9 @@ const (
 	ObjectCompany = "company"
 	ObjectContact = "contact"
 	// ConnectorCSV is the direct migrate-in connector this source serves
-	// (UC-E11-03). Its sibling constants name the flip's own sources.
+	// (UC-E11-03). The column's CHECK also admits salesforce — the DDL is the
+	// chapter's pinned arrival shape — but it gets its Go constant when that
+	// connector lands, not before.
 	ConnectorCSV = "csv"
 )
 

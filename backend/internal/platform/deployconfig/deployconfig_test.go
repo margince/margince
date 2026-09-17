@@ -92,13 +92,7 @@ func TestParseValidatesFailClosed(t *testing.T) {
 		"purpose without label":   "version: 1\nseeds: { consent_purposes: [ { key: marketing_email } ] }\n",
 		"email without smtp":      "version: 1\nemail: { enabled: true, from_address: a@b.co }\n",
 		"smtp port out of range":  "version: 1\nemail: { enabled: true, from_address: a@b.co, smtp: { host: h, port: 70000 } }\n",
-		"password auth disabled":  "version: 1\nauth: { password: { enabled: false } }\n",
 		"unknown context rollout": "version: 1\ncompany_context: { rollout: everything }\n",
-		"ovb cap at ceiling":      "version: 1\noverlay_budget: { hubspot: { search: { ceiling: 4, cap: 4 }, rest: { ceiling: 100000, cap: 90000 } } }\n",
-		"ovb cap above ceiling":   "version: 1\noverlay_budget: { hubspot: { search: { ceiling: 5, cap: 4 }, rest: { ceiling: 100000, cap: 100001 } } }\n",
-		"ovb zero cap":            "version: 1\noverlay_budget: { hubspot: { search: { ceiling: 5, cap: 0 }, rest: { ceiling: 100000, cap: 90000 } } }\n",
-		"ovb warn not below shed": "version: 1\noverlay_budget: { hubspot: { search: { ceiling: 5, cap: 4 }, rest: { ceiling: 100000, cap: 90000 }, warn_fraction: 0.95, shed_fraction: 0.90 } }\n",
-		"ovb shed above one":      "version: 1\noverlay_budget: { hubspot: { search: { ceiling: 5, cap: 4 }, rest: { ceiling: 100000, cap: 90000 }, warn_fraction: 0.7, shed_fraction: 1.5 } }\n",
 	}
 	for name, doc := range cases {
 		if _, err := Parse([]byte(doc)); err == nil {
@@ -107,31 +101,17 @@ func TestParseValidatesFailClosed(t *testing.T) {
 	}
 }
 
-func TestEffectiveOverlayBudgetFillsDefaultsAndMerges(t *testing.T) {
-	// No block → the built-in HubSpot default with spec warn/shed fractions.
-	def, err := Parse([]byte("version: 1\n"))
+// A deployment may close the password door. This file cannot check that
+// something else opens one — which providers are mounted is decided by the
+// credentials and URLs the composition root composes, not by this document —
+// so it parses, and cmd/api refuses the combination that leaves no way in.
+func TestPasswordAuthMayBeTurnedOff(t *testing.T) {
+	cfg, err := Parse([]byte("version: 1\nauth: { password: { enabled: false } }\n"))
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
-	hs := def.EffectiveOverlayBudget()["hubspot"]
-	if hs.Search.Cap != 4 || hs.REST.Cap != 90000 {
-		t.Fatalf("default hubspot caps = search %d / rest %d, want 4 / 90000", hs.Search.Cap, hs.REST.Cap)
-	}
-	if hs.WarnFraction != 0.70 || hs.ShedFraction != 0.90 {
-		t.Fatalf("default hubspot fractions = %g / %g, want 0.70 / 0.90", hs.WarnFraction, hs.ShedFraction)
-	}
-
-	// An operator override with fractions left unset gets the spec defaults.
-	over, err := Parse([]byte("version: 1\noverlay_budget: { hubspot: { search: { ceiling: 10, cap: 8 }, rest: { ceiling: 200000, cap: 150000 } } }\n"))
-	if err != nil {
-		t.Fatalf("parse override: %v", err)
-	}
-	got := over.EffectiveOverlayBudget()["hubspot"]
-	if got.Search.Cap != 8 || got.REST.Cap != 150000 {
-		t.Fatalf("override caps = search %d / rest %d, want 8 / 150000", got.Search.Cap, got.REST.Cap)
-	}
-	if got.WarnFraction != 0.70 || got.ShedFraction != 0.90 {
-		t.Fatalf("override fractions defaulted = %g / %g, want 0.70 / 0.90", got.WarnFraction, got.ShedFraction)
+	if cfg.Auth.PasswordEnabled() {
+		t.Fatal("auth.password.enabled=false parsed as enabled — the switch would be inert")
 	}
 }
 

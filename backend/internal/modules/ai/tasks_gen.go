@@ -42,6 +42,8 @@ const (
 	TaskProposeRoles Task = "propose_roles"
 	// TaskRateExtract is extract per-model AI pricing (per-MTok buckets) from a fetched pricing page, evidence-gated; feeds the model-cost refresh proposal producer. Two sites — the pricing-page pass and the FX pass — a distinction the build has carried unnamed (two prompt builders, two byte-pin tests, three corpus scenarios) since it was written.
 	TaskRateExtract Task = "rate_extract"
+	// TaskRequestSettlement is Whether OUR OWN reply settled the request an inbound message made — settled, still_owed or unsure. owed_verdict answers a question about one message from that message alone, so a request answered within the hour still reads as owed a week later; this is the second question, asked of the THREAD, and only askable once the workspace has written back. The candidates are requests carrying a later outbound message on the same thread, so a conversation nobody has answered is never judged here and costs nothing. A REPLY IS EVIDENCE AND NOT AN ANSWER: 'thanks, I will check' is a reply that discharges nothing, which is exactly why this is a model reading of what our words did rather than a SQL test for whether words exist. A settled verdict completes the reminder the owed pass filed, through the ordinary activity writer, so it carries the audit row and the event a human ticking the box carries; still_owed may sharpen a MACHINE-FILED, undated reminder to name what is actually outstanding, and never touches a task a human accepted, dated or reopened. Below the confidence floor the verdict is unsure, which is a real answer: the request stays owed exactly as it was before this pass existed, and the watermark advances so the same thread is not re-asked until somebody writes again. No cost_unit, for owed_verdict's reason: the candidates are live requests rather than mailbox history, so the pass deliberately does not run at backfill.
+	TaskRequestSettlement Task = "request_settlement"
 	// TaskSignalExtract is SIG-F-3: read the material events out of a settled thread — contract_ended, new_opportunity, commitment_made — each citing the message it came from. Floor 0.7; below it the event is dropped, never guessed. An event is an OBSERVATION and is written directly; what follows from one is a structural claim and stages for a human.
 	TaskSignalExtract Task = "signal_extract"
 	// TaskSiteExtract is premium-only BY CONTRACT: the no-guess gate demands verbatim quotes cheap tiers paraphrase; no fallback rung. Its response schema is built PER CALL (the citation enum is that call's passage ids), which is why ADR-0074 leaves answer schemas in code.
@@ -92,6 +94,7 @@ var taskDisplayNames = map[Task]string{
 	TaskOwedVerdict:                   "Unanswered-message triage",
 	TaskProposeRoles:                  "Buying-role reading",
 	TaskRateExtract:                   "Model pricing extraction",
+	TaskRequestSettlement:             "Did our reply settle it",
 	TaskSignalExtract:                 "Signal extraction",
 	TaskSiteExtract:                   "Website deep read",
 	TaskSiteFactExtract:               "Website fact extraction",
@@ -135,7 +138,7 @@ const (
 // TaskContractHash is the sha256 of api/ai-tasks.yaml at generation
 // time: a build fingerprint the cert runner can compare against a
 // freshly hashed contract file to catch a stale generated table.
-const TaskContractHash = "a6386334f71499f7221fbc6ee68e54330009744d2d7170ec09874940afac44c9"
+const TaskContractHash = "90cf0ad89c92097c4dbd8885c0e979b7207f6fd8197eaf951701d9c9bb2ebebc"
 
 // AllTasks returns every contract task, sorted — the completeness
 // check a certification run walks to prove it covers every routed
@@ -161,6 +164,7 @@ func AllTasks() []Task {
 		TaskOwedVerdict,
 		TaskProposeRoles,
 		TaskRateExtract,
+		TaskRequestSettlement,
 		TaskSignalExtract,
 		TaskSiteExtract,
 		TaskSiteFactExtract,
@@ -197,6 +201,7 @@ var taskLadders = map[Task][]Tier{
 	TaskOwedVerdict:                   {TierLocalSmall, TierCheapCloud},
 	TaskProposeRoles:                  {TierCheapCloud, TierPremium},
 	TaskRateExtract:                   {TierPremium, TierCheapCloud},
+	TaskRequestSettlement:             {TierLocalSmall, TierCheapCloud},
 	TaskSignalExtract:                 {TierCheapCloud, TierPremium},
 	TaskSiteExtract:                   {TierPremium},
 	TaskSiteFactExtract:               {TierCheapCloud, TierPremium},
@@ -242,6 +247,7 @@ var taskExecutionModes = map[Task]ExecutionMode{
 	TaskOwedVerdict:                   ExecutionModeBackground,
 	TaskProposeRoles:                  ExecutionModeInteractive,
 	TaskRateExtract:                   ExecutionModeBackground,
+	TaskRequestSettlement:             ExecutionModeBackground,
 	TaskSignalExtract:                 ExecutionModeBackground,
 	TaskSiteExtract:                   ExecutionModeBackground,
 	TaskSiteFactExtract:               ExecutionModeBackground,
@@ -294,6 +300,7 @@ var taskStatus = map[Task]string{
 	TaskOwedVerdict:                   "shipped",
 	TaskProposeRoles:                  "shipped",
 	TaskRateExtract:                   "shipped",
+	TaskRequestSettlement:             "shipped",
 	TaskSignalExtract:                 "shipped",
 	TaskSiteExtract:                   "shipped",
 	TaskSiteFactExtract:               "shipped",
@@ -390,6 +397,9 @@ var taskSites = map[Task][]Site{
 		{Name: "pricing", Kind: "one_shot"},
 		{Name: "fx", Kind: "one_shot"},
 	},
+	TaskRequestSettlement: {
+		{Name: "request_settle", Kind: "one_shot"},
+	},
 	TaskSignalExtract: {
 		{Name: "thread_events", Kind: "one_shot"},
 	},
@@ -467,6 +477,7 @@ var noPayloadTasks = map[Task]bool{
 	TaskCaptureCounterpartyVerdict:    true,
 	TaskDocumentExtract:               true,
 	TaskOwedVerdict:                   true,
+	TaskRequestSettlement:             true,
 	TaskSignalExtract:                 true,
 	TaskStageEvidenceExtract:          true,
 }
@@ -505,6 +516,7 @@ var taskCompanyContext = map[Task]CompanyContextPolicy{
 	TaskOwedVerdict:                   {TokenBudget: 0, Conditional: false},
 	TaskProposeRoles:                  {TokenBudget: 0, Conditional: false},
 	TaskRateExtract:                   {TokenBudget: 0, Conditional: false},
+	TaskRequestSettlement:             {TokenBudget: 0, Conditional: false},
 	TaskSignalExtract:                 {TokenBudget: 0, Conditional: false},
 	TaskSiteExtract:                   {TokenBudget: 0, Conditional: false},
 	TaskSiteFactExtract:               {TokenBudget: 0, Conditional: false},

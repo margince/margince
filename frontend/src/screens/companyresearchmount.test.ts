@@ -23,7 +23,7 @@ function view(over: Partial<Company360View> = {}): Company360View {
   } as Company360View;
 }
 
-const bare = { overlay: false, view: view(), read: false };
+const bare = { view: view(), read: false };
 
 describe("offerResearchOnOverview", () => {
   it("leads the column on an untouched account nobody has researched", () => {
@@ -45,10 +45,6 @@ describe("offerResearchOnOverview", () => {
         view: view({ contacts: { data: [{}] } } as Partial<Company360View>),
       }),
     ).toBe(false);
-  });
-
-  it("never leads in overlay, where the research verb does not exist", () => {
-    expect(offerResearchOnOverview({ ...bare, overlay: true })).toBe(false);
   });
 
   it("treats a section withheld from this reader as not empty", () => {

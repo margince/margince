@@ -442,3 +442,25 @@ func TestTheDecisionCountLeavesOutWhatThisReaderCannotSettle(t *testing.T) {
 		t.Errorf("counted %d decisions, want the one this reader can actually take", got.Review)
 	}
 }
+
+// And a decision whose only verb is the DISMISSAL is still this reader's.
+//
+// The count asks for a verb rather than for a settling one, and this is the
+// case that separates the two: a duplicate pair of companies each carrying live
+// projects can never be merged by anybody, and a reader who may write both can
+// still clear it as a false positive. Counting only the mergeable rows would
+// leave the headline short by exactly the pairs nobody else is going to answer.
+func TestTheDecisionCountKeepsAPairOnlyTheDismissalCanSettle(t *testing.T) {
+	day := crmcontracts.Attention{
+		AsOf: rankInstant,
+		NeedsYou: []crmcontracts.AttentionItem{
+			item("blocked", "dedupe_candidate", withKind("company"), dismissable()),
+		},
+	}
+
+	got := readingsOf(classifyDay(day, rankInstant, dayMoney{}), nil, nil)
+
+	if got.Review != 1 {
+		t.Errorf("counted %d decisions over a pair this reader is the one to clear", got.Review)
+	}
+}

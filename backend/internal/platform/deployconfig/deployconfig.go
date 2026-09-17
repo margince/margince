@@ -39,7 +39,6 @@ type Config struct {
 	MCP            MCP             `yaml:"mcp"`
 	Capture        Capture         `yaml:"capture"`
 	CompanyContext CompanyContext  `yaml:"company_context"`
-	OverlayBudget  OverlayBudget   `yaml:"overlay_budget"`
 	Operations     Operations      `yaml:"operations"`
 	Uploads        Uploads         `yaml:"uploads"`
 }
@@ -252,10 +251,14 @@ type ConsentPurpose struct {
 	DoubleOptIn bool   `yaml:"double_opt_in"`
 }
 
-// Auth selects the enabled authentication methods. Password login
-// defaults to enabled; OIDC arrives with its complete flow (ADR-0061 §6)
-// and has no configuration surface until then — strict decoding makes a
-// premature `oidc:` block a boot error rather than a silent no-op.
+// Auth selects the enabled authentication methods. Password login defaults to
+// enabled, and an installation that puts an identity provider in front of
+// Margince turns it off here.
+//
+// Federated sign-in has no block of its own: which providers a deployment
+// mounts is decided by the credentials and URLs it composes, not by this file,
+// and strict decoding makes a premature `oidc:` block a boot error rather than
+// a silent no-op.
 type Auth struct {
 	Password PasswordAuth `yaml:"password"`
 }
@@ -366,12 +369,6 @@ func (c Config) validate() error {
 			return err
 		}
 	}
-	if !c.Auth.PasswordEnabled() {
-		// Fail closed (A107 §14): password login is the only implemented
-		// method — disabling it would brick every human sign-in. The
-		// switch becomes meaningful when OIDC ships its complete flow.
-		return errors.New("deployconfig: auth.password.enabled=false would disable the only implemented login method — refused until another method (OIDC) exists")
-	}
 	if err := c.Seeds.validate(); err != nil {
 		return err
 	}
@@ -379,11 +376,6 @@ func (c Config) validate() error {
 	case CompanyContextOff, CompanyContextRead, CompanyContextTasks, CompanyContextOnboarding:
 	default:
 		return fmt.Errorf("deployconfig: company_context.rollout %q is not off, read, tasks, or onboarding", c.CompanyContext.Rollout)
-	}
-	for name, ib := range c.OverlayBudget {
-		if err := ib.validate(name); err != nil {
-			return err
-		}
 	}
 	if err := c.Uploads.validate(); err != nil {
 		return err

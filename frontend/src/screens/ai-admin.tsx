@@ -13,6 +13,7 @@ import {
   Button,
   DataTable,
   Disclosure,
+  EmptyState,
   Field,
   TextInput,
 } from "../design-system/atoms";
@@ -306,13 +307,30 @@ function BudgetBody({
   );
 }
 
+// The "AI by activity" section, withheld: `/ai/status` requires BOTH
+// `ai_diagnostics:read` and `ai_budget:read` server-side (crm.yaml: "Read AI
+// administration status"), so there is no partial payload for a reader
+// missing either. Shared by every screen that opens this section — the
+// routing tab and the usage tab both do — so the withheld state is spelled
+// once rather than drifting between two silent `return null`s.
+export function AiFeaturesWithheldPanel() {
+  const t = useT();
+  return (
+    <Panel title={t("aiAdmin.features")}>
+      <PanelBody>
+        <EmptyState>{t("aiAdmin.featuresWithheld")}</EmptyState>
+      </PanelBody>
+    </Panel>
+  );
+}
+
 export function AiFeaturesCard() {
   const t = useT();
   const canSee = useCan("ai_diagnostics", "read");
   const canBudget = useCan("ai_budget", "read");
   const canRoute = useCan("ai_routing", "read");
   const query = useAiStatus(canSee && canBudget);
-  if (!canSee || !canBudget) return null;
+  if (!canSee || !canBudget) return <AiFeaturesWithheldPanel />;
   return (
     <Panel title={t("aiAdmin.features")}>
       <PanelBody>

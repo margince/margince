@@ -191,8 +191,8 @@ func TestE2ECertify(t *testing.T) {
 		t.Fatal("the run produced no records — check MARGINCE_AICERT_TASK against the corpus")
 	}
 	for _, r := range records {
-		t.Logf("%s: %s (reliability=%.2f score_p50=%d self_judged=%v)",
-			r.Task, r.Verdict, r.Reliability, r.ScoreP50, r.SelfJudged)
+		t.Logf("%s: %s (reliability=%.2f judge_score_p50=%d self_judged=%v)",
+			r.Task, r.Verdict, r.Reliability, r.JudgeScoreP50, r.SelfJudged)
 	}
 }
 

@@ -29,12 +29,12 @@ and owes the reader the same shape as the record beside it.
 
 `moment.tsx` is THE MOMENT: the server picks one from a fixed ladder, and this
 holds everything a page needs to render it — the word for the rule
-(`MOMENT_RULE_LABEL`), the colour it carries (`standingTone`), what it rests on
-(`momentGrounding`), whether it belongs in the day's work at all
-(`momentIsARow`) and the row the account brief draws it as (`MomentRow`). It
-was on the contact page, with the account brief importing the vocabulary
-across — which is the shape this kit exists to end, and the tell was that every
-type in it (`Grounding`, `StandingTone`) was already the kit's own.
+(`MOMENT_RULE_LABEL`), the colour it carries (`standingTone`), whether it
+belongs in the day's work at all (`momentIsARow`) and the row the account
+brief draws it as (`MomentRow`), which draws what it rests on with
+`momentevidence.tsx`'s `MomentEvidence`. It was on the contact page, with the
+account brief importing the vocabulary across, which is the shape this kit
+exists to end, and the tell was that `StandingTone` was already the kit's own.
 
 ## What belongs here
 
@@ -65,7 +65,6 @@ its own.
 No module here imports a screen stylesheet. `shells.tsx` used to, because
 `SectionCard` rendered `.co-card` and that rule lives in `company360.css` —
 that coupling is gone with the component, whose call sites moved to `RailPanel`
-and which nothing drew afterwards. `RailPanel` and `OverlayFallback` are in
-`src/design-system/` now, where `frontend/AGENTS.md` says a primitive another
-screen imports belongs. `verdict.tsx` carries no such import either; its classes
+and which nothing drew afterwards. `RailPanel` is in `src/design-system/` now,
+where `frontend/AGENTS.md` says a primitive another screen imports belongs. `verdict.tsx` carries no such import either; its classes
 are the kit's own and live in `record360.css`.

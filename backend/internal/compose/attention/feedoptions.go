@@ -44,6 +44,17 @@ func (s *Service) WithIntroductions(i Introductions) *Service {
 	return s
 }
 
+// WithDomainQuestions binds the reader's own undecided domains — an option for
+// the reason WithWaiting is one.
+//
+// Unbound, the lane is ABSENT rather than empty: an installation whose feed
+// does not read the triage ledger has no such questions to show, which is a
+// different fact from a reader having answered all of theirs.
+func (s *Service) WithDomainQuestions(d DomainQuestions) *Service {
+	s.domainQuestions = d
+	return s
+}
+
 // WithMachineSender binds the rule that tells a sending system from a contact.
 func (s *Service) WithMachineSender(is MachineSender) *Service {
 	s.machine = is
@@ -57,6 +68,17 @@ func (s *Service) WithMachineSender(is MachineSender) *Service {
 // before this seam existed — a smaller card, never a wrong one.
 func (s *Service) WithDealFacts(f DealFacts) *Service {
 	s.dealFacts = f
+	return s
+}
+
+// WithContactTouch binds the reader that puts, on every row naming a contact,
+// when they last wrote to us and when we last wrote to them. An option for the
+// reason WithDealFacts is one.
+//
+// Unbound, a row names its contact and says nothing about the silence — what
+// every row did before this seam, and never a wrong date.
+func (s *Service) WithContactTouch(r ContactTouch) *Service {
+	s.contactTouch = r
 	return s
 }
 

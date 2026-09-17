@@ -211,11 +211,16 @@ func newestEvidenceFor(ctx context.Context, tx pgx.Tx, domain string, activityID
 	// message and withhold a company the recent mail had earned.
 	//
 	// The dot is part of the suffix so `notacme.test` cannot match `acme.test`.
-	// A FUTURE date is not evidence. The header's date is the sender's to type,
+	// A FORGED date is not evidence. The header's date is the sender's to type,
 	// so one message claiming to be from 2040 would otherwise become the newest
 	// evidence on the domain and wave every later question through — and the
 	// exclusion belongs here, at the write, because once a forged value is
-	// stored as last_evidence_at no reader can tell it from a real one.
+	// stored as last_evidence_at no reader can tell it from a real one. The
+	// horizon carries mailClockSkewAllowance because forgery is what it is for
+	// and a fast clock is not forgery: a sender a few seconds ahead of this
+	// server would otherwise be read as the future and dropped, which ages the
+	// domain and withholds the company that mail had just earned — the same
+	// direction the subdomain match above exists to avoid.
 	// A row under a statutory hold is out of every ordinary read path, and here
 	// the exclusion is also the SAFE direction: dropping a held message can only
 	// make the domain's evidence look older, which withholds a company rather
@@ -228,15 +233,30 @@ func newestEvidenceFor(ctx context.Context, tx pgx.Tx, domain string, activityID
 		  FROM activity a
 		  LEFT JOIN activity_participant ap ON ap.activity_id = a.id
 		 WHERE a.restricted_at IS NULL AND a.archived_at IS NULL
-		   AND a.occurred_at <= now()
+		   AND a.occurred_at <= now() + $3::interval
 		   AND (lower(split_part(ap.address, '@', 2)) = $1
 		    OR lower(split_part(ap.address, '@', 2)) LIKE '%.' || $1
-		    OR a.id = $2)`, domain, activityID).Scan(&occurred)
+		    OR a.id = $2)`, domain, activityID, mailClockSkewAllowance).Scan(&occurred)
 	if err != nil {
 		return nil
 	}
 	return occurred
 }
+
+// mailClockSkewAllowance is how far ahead of this server a mail header may be
+// dated and still count as evidence about its domain.
+//
+// Minutes rather than zero because the two ends of this comparison are two
+// clocks: the timestamp is whatever wrote the message, the horizon is this
+// database's now(), and nothing keeps them in step. At zero the guard fired on
+// the difference between them rather than on anything a sender had claimed.
+// Minutes are far below the forged date this guard is for and far above what two
+// working clocks disagree by.
+//
+// consent holds an allowance of its own and this is deliberately not a reuse of
+// it: that one bounds what a CALLER may assert over the API, this one bounds what
+// a mail header may claim. A module never imports a sibling in any case.
+const mailClockSkewAllowance = "5 minutes"
 
 // recordEvidenceAgeTx dates a domain's newest mail, on EVERY message rather than
 // only on the ones that reopen something.

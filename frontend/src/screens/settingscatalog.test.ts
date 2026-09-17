@@ -72,9 +72,9 @@ describe("the scope each page declares", () => {
 
     // Pages whose cards genuinely split across two scopes. `integrations`
     // is one: PATCH /integrations/settings is "the installation's
-    // provider-lookup posture" by its own contract summary, while webhooks,
-    // the overlay mapping and the workspace extension units on the same page
-    // stay inside one workspace.
+    // provider-lookup posture" by its own contract summary, while webhooks
+    // and the workspace extension units on the same page stay inside one
+    // workspace.
     integrations: "mixed",
 
     // Personal pages carrying one shared surface each. A badge reading "Only
@@ -157,8 +157,8 @@ describe("what each page lets a reader change", () => {
   //
   // The census renders the WHOLE expression, not the object names in it. An
   // earlier version flattened to names and every one of these passed it: Import
-  // asking create-OR-update where its card needs both, the missing delete verbs
-  // on webhooks and overlays, Authentication missing the OAuth cards' own grant,
+  // asking create-OR-update where its card needs both, the missing delete verb
+  // on webhooks, Authentication missing the OAuth cards' own grant,
   // and the absent seat ceiling. Verbs, AND-versus-OR and the ceiling are
   // exactly where the defects were, so they are exactly what it has to compare.
   function render(expression: CapabilityExpression): string {
@@ -237,10 +237,10 @@ describe("what each page lets a reader change", () => {
 
     capture:
       "all(full-seat, any(any(capture_settings:update), any(company:update)))",
-    // Delete included on both, and the composed-unit arm outside the ceiling:
+    // Delete included, and the composed-unit arm outside the ceiling:
     // ExtensionUnitsCard's Open link asks for no grant at all.
     integrations:
-      "any(all(full-seat, any(any(integrations:update, integrations:create), integrations:delete, any(webhook_subscription:update, webhook_subscription:create), webhook_subscription:delete, any(overlay_connection:update, overlay_connection:create), overlay_connection:delete)), units:workspace)",
+      "any(all(full-seat, any(any(integrations:update, integrations:create), integrations:delete, any(webhook_subscription:update, webhook_subscription:create), webhook_subscription:delete)), units:workspace)",
     knowledge: "all(full-seat, any(any(knowledge_corpus:create)))",
     // BOTH verbs: ImportCard's own gate is `mayCreate && mayAdvance`.
     import:
@@ -468,7 +468,7 @@ describe("who may open what", () => {
   // nothing.
   it.each([
     ["company", "installation_settings"],
-    ["integrations", "overlay_connection"],
+    ["integrations", "webhook_subscription"],
     ["automations", "automation"],
   ] as const)(
     "withholds %s from a rep who only reads %s, and opens it to its writer",
@@ -826,7 +826,7 @@ describe("requirements that are not permissions — the composed units", () => {
   it("does not open integrations on a grant nobody in the old predicate had", () => {
     // `integrations.read` is held by every seeded role including read_only, so
     // admitting it would put the page in front of everyone. The old predicate
-    // asked for overlay, webhook or a composed unit, and this keeps to that.
+    // asked for a webhook write or a composed unit, and this keeps to that.
     expect(
       visibleSettingsPages(
         meFixture({ roles: ["rep"], allow: { integrations: ["read"] } }),
@@ -840,18 +840,9 @@ describe("requirements that are not permissions — the composed units", () => {
     // a misspelling here a compile error rather than a silently denied grant.
     //
     // The read is the same everyone-holds-it grant as `integrations` above —
-    // every seeded role reads both, because "is capture working?" shows up on
-    // the records they already open. Connecting an overlay is admin and ops work.
-    expect(
-      visibleSettingsPages(
-        meFixture({ allow: { overlay_connection: ["read"] } }),
-      ).some((p) => p.id === "integrations"),
-    ).toBe(false);
-    expect(
-      visibleSettingsPages(
-        meFixture({ allow: { overlay_connection: ["read", "update"] } }),
-      ).some((p) => p.id === "integrations"),
-    ).toBe(true);
+    // every seeded role reads it, because "is capture working?" shows up on the
+    // records they already open. Pointing a webhook somewhere is admin and ops
+    // work.
     expect(
       visibleSettingsPages(
         meFixture({ allow: { webhook_subscription: ["read"] } }),
@@ -898,7 +889,6 @@ describe("what the rail carries and what it leaves behind", () => {
       offer: ["create", "read", "update"],
       offer_template: ["create", "read", "update"],
       company: ["create", "read", "update"],
-      overlay_connection: ["read"],
       partner: ["read"],
       contact: ["create", "read", "update"],
       pipeline: ["read"],

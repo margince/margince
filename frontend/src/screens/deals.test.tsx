@@ -1147,13 +1147,14 @@ describe("DealsScreen", () => {
     );
 
     expect(totalsAsked).toBe(false);
-    // Once per stage column, exactly. Each one owes the reader a reason where
-    // its figure would be, and "more than zero" would pass with one column
-    // explaining itself while the rest drew blanks.
+    // Once per stage column that holds a deal, exactly — here only s1. A
+    // column with cards owes the reader a reason where its figure would be; an
+    // empty column has no sum to refuse, and a board of empty columns each
+    // repeating the sentence read as a board of errors.
     expect(
       screen.getAllByText("Loaded only — filter to My deals for the total")
         .length,
-    ).toBe(stages.length);
+    ).toBe(1);
   });
 
   // A tag filter withholds totals too — the report has no tag field and sending
@@ -1167,9 +1168,10 @@ describe("DealsScreen", () => {
       expect(screen.getAllByText("Fleet retrofit")[0]).toBeTruthy(),
     );
 
+    // Only the column holding a deal (s1) says so — empty columns stay quiet.
     expect(
       screen.getAllByText("Loaded only — no total while a tag filters").length,
-    ).toBe(stages.length);
+    ).toBe(1);
     expect(
       screen.queryByText("Loaded only — filter to My deals for the total"),
     ).toBeNull();
@@ -1527,103 +1529,6 @@ describe("DealsScreen", () => {
       expect(screen.getByText("Moved to Proposal")).toBeTruthy(),
     );
   });
-
-  it("overlay mode paginates the flat mirror table through the keyset cursor", async () => {
-    const dealsCalls: string[] = [];
-    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
-      const url = String(input instanceof Request ? input.url : input);
-      if (url.includes("/me")) {
-        return jsonResponse({
-          user: {
-            id: "u-me",
-            email: "me@acme.test",
-            display_name: "Me",
-            timezone: "UTC",
-            status: "active",
-            is_agent: false,
-          },
-          roles: ["admin"],
-          teams: [],
-          authorization: meFixture({ allow: REP_GRANTS }).authorization,
-          system_of_record: { mode: "overlay" },
-        });
-      }
-      if (url.includes("/deals")) {
-        dealsCalls.push(url);
-        if (new URL(url, "http://t").searchParams.get("cursor")) {
-          return jsonResponse({
-            data: [deal({ id: "d2", name: "Second page deal" })],
-            page: { next_cursor: null, has_more: false },
-          });
-        }
-        return jsonResponse({
-          data: [deal({ id: "d1", name: "First page deal" })],
-          page: { next_cursor: "cursor-2", has_more: true },
-        });
-      }
-      // pipelines / agent-tools / companies / context — all empty here.
-      return jsonResponse({ data: [], page: { next_cursor: null } });
-    });
-    vi.stubGlobal("fetch", fetchMock);
-    render(<DealsScreen />);
-
-    // Page one renders in the forced flat table, with the Load-more affordance.
-    expect(await screen.findByText("First page deal")).toBeTruthy();
-    const loadMore = await screen.findByRole("button", { name: /load more/i });
-
-    // Loading the next page appends it and carries the cursor from page one.
-    await userEvent.click(loadMore);
-    expect(await screen.findByText("Second page deal")).toBeTruthy();
-    expect(screen.getByText("First page deal")).toBeTruthy();
-    expect(dealsCalls.some((u) => u.includes("cursor=cursor-2"))).toBe(true);
-  });
-
-  it("overlay mode keeps the loaded rows when a Load-more page fails", async () => {
-    const dealsCalls: string[] = [];
-    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
-      const url = String(input instanceof Request ? input.url : input);
-      if (url.includes("/me")) {
-        return jsonResponse({
-          user: {
-            id: "u-me",
-            email: "me@acme.test",
-            display_name: "Me",
-            timezone: "UTC",
-            status: "active",
-            is_agent: false,
-          },
-          roles: ["admin"],
-          teams: [],
-          authorization: meFixture({ allow: REP_GRANTS }).authorization,
-          system_of_record: { mode: "overlay" },
-        });
-      }
-      if (url.includes("/deals")) {
-        dealsCalls.push(url);
-        if (new URL(url, "http://t").searchParams.get("cursor")) {
-          return jsonResponse({ title: "boom" }, 500); // the next page fails
-        }
-        return jsonResponse({
-          data: [deal({ id: "d1", name: "First page deal" })],
-          page: { next_cursor: "cursor-2", has_more: true },
-        });
-      }
-      return jsonResponse({ data: [], page: { next_cursor: null } });
-    });
-    vi.stubGlobal("fetch", fetchMock);
-    render(<DealsScreen />);
-
-    expect(await screen.findByText("First page deal")).toBeTruthy();
-    await userEvent.click(
-      await screen.findByRole("button", { name: /load more/i }),
-    );
-    // The next page errored, but the already-loaded page-one rows must
-    // survive — a transient later-page failure never discards usable results.
-    await waitFor(() =>
-      expect(dealsCalls.some((u) => u.includes("cursor=cursor-2"))).toBe(true),
-    );
-    expect(screen.getByText("First page deal")).toBeTruthy();
-  });
 });
 
 describe("DealsScreen filters", () => {
@@ -1784,7 +1689,7 @@ async function openEditForm(user: UserEvent | typeof userEvent = userEvent) {
   );
 }
 
-describe("DealScreen — edit, archive, FX line (A3)", () => {
+describe("DealScreen — edit, archive (A3)", () => {
   beforeEach(() => localStorage.setItem("margince.workspaceSlug", "acme"));
 
   it("edit prefills and PATCHes with If-Match", async () => {
@@ -1914,10 +1819,12 @@ describe("DealScreen — edit, archive, FX line (A3)", () => {
     expect("partner_attribution" in body).toBe(false);
   });
 
-  // The facts run together without a separator: three adjacent spans in a
-  // plain text line rendered "€48,000.00Acme Corpvia Northgate", which is why
-  // the partner looked missing on screen while every assertion about it passed.
-  it("separates the subtitle's facts so they do not run together", async () => {
+  // The facts used to run together without a separator on the identity line:
+  // three adjacent spans in a plain text row rendered "€48,000.00Acme Corpvia
+  // Northgate", which is why the partner looked missing on screen while every
+  // assertion about it passed. Each is its own cell in the facts strip now, so
+  // two facts cannot share a text node no matter what either one contains.
+  it("keeps each fact in its own cell rather than running them together", async () => {
     const d = deal({
       id: "x",
       amount_minor: 4_800_000,
@@ -1942,10 +1849,12 @@ describe("DealScreen — edit, archive, FX line (A3)", () => {
 
     render(<DealScreen id="x" />);
     await screen.findByRole("link", { name: "Northgate" });
-    const line = document.querySelector(".identity-line")?.textContent ?? "";
+    const cells = [...document.querySelectorAll(".record-facts .record-fact")];
+    const texts = cells.map((cell) => cell.textContent);
 
-    expect(line).toContain("·");
-    expect(line).not.toContain("€48,000.00Acme");
+    expect(texts.some((text) => text?.includes("€48,000.00"))).toBe(true);
+    expect(texts.some((text) => text?.includes("Acme Corp"))).toBe(true);
+    expect(texts.every((text) => !text?.includes("€48,000.00Acme"))).toBe(true);
   });
 
   // Sourced and influenced are paid differently, so the line has to say which.
@@ -1969,19 +1878,6 @@ describe("DealScreen — edit, archive, FX line (A3)", () => {
 
     expect(await screen.findByText("helped by")).toBeTruthy();
     expect(screen.queryByText("via")).toBeNull();
-  });
-
-  it("shows the FX base line only when fx_rate_to_base is set", async () => {
-    const d = deal({
-      id: "x",
-      amount_minor: 100_000,
-      currency: "USD",
-      fx_rate_to_base: "0.92",
-      fx_rate_date: "2026-07-01",
-    });
-    vi.stubGlobal("fetch", stubBackend([d], { single: d }));
-    render(<DealScreen id="x" />);
-    await waitFor(() => expect(screen.getByText(/rate 0.92/)).toBeTruthy());
   });
 
   it("archive confirms then DELETEs", async () => {
@@ -2302,113 +2198,6 @@ describe("DealScreen — a live deal that is not the viewer's to change", () => 
   });
 });
 
-describe("DealScreen — overlay mode write affordances", () => {
-  beforeEach(() => localStorage.setItem("margince.workspaceSlug", "acme"));
-
-  function overlayBackend(
-    d: Deal,
-    opts: {
-      onPatch?: (body: unknown) => void;
-      onDelete?: () => void;
-    } = {},
-  ) {
-    // Mutable so a refetch after a successful PATCH (useUpdateRecord
-    // invalidates the record query) sees the write applied — the same
-    // "mirror re-read reflects the write-back" shape the real overlay
-    // Provider.Update gives (mirrorWriteResult), not a stale echo.
-    let current = d;
-    return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-      const request = input instanceof Request ? input : null;
-      const url = String(request ? request.url : input);
-      const method = request ? request.method : (init?.method ?? "GET");
-      if (url.includes("/me")) {
-        return jsonResponse({
-          user: {
-            id: "u-me",
-            email: "me@acme.test",
-            display_name: "Me",
-            timezone: "UTC",
-            status: "active",
-            is_agent: false,
-          },
-          roles: ["admin"],
-          teams: [],
-          authorization: meFixture({ allow: REP_GRANTS }).authorization,
-          system_of_record: { mode: "overlay" },
-        });
-      }
-      if (method === "PATCH") {
-        const body = request
-          ? await request.json()
-          : JSON.parse(String(init?.body));
-        opts.onPatch?.(body);
-        current = { ...current, ...(body as Partial<Deal>) };
-        return jsonResponse(current);
-      }
-      if (method === "DELETE") {
-        opts.onDelete?.();
-        return jsonResponse(current);
-      }
-      if (url.includes("/deals/")) {
-        return jsonResponse(current);
-      }
-      return jsonResponse({ data: [], page: { next_cursor: null } });
-    });
-  }
-
-  it("serves Edit and Archive — the mirror write-back seam accepts both", async () => {
-    const d = deal({ id: "x", version: 3 });
-    vi.stubGlobal("fetch", overlayBackend(d));
-    render(<DealScreen id="x" />);
-    await openHeaderMenu();
-    expect(screen.queryByTestId("edit-record")).toBeNull();
-    expect(screen.getByTestId("archive-record")).toBeTruthy();
-    // The mirror owns the deal's mail, so the header offers no Email verb.
-    expect(screen.queryByRole("button", { name: "Email" })).toBeNull();
-  });
-
-  it("Edit's real click path PATCHes and the 360 renders the updated value", async () => {
-    const patches: unknown[] = [];
-    const d = deal({ id: "x", version: 3 });
-    vi.stubGlobal(
-      "fetch",
-      overlayBackend(d, { onPatch: (body) => patches.push(body) }),
-    );
-    render(<DealScreen id="x" />);
-    await openEditForm();
-    const nameInput = screen.getByRole("textbox", { name: "Deal name" });
-    await userEvent.clear(nameInput);
-    await userEvent.type(nameInput, "Fleet retrofit — expanded scope{Enter}");
-    await waitFor(() => expect(patches).toHaveLength(1));
-    expect(
-      await screen.findByRole("heading", {
-        name: "Fleet retrofit — expanded scope",
-        level: 1,
-      }),
-    ).toBeTruthy();
-  });
-
-  it("Edit's overlay notice names the partial write-back honestly", async () => {
-    const d = deal({ id: "x" });
-    vi.stubGlobal("fetch", overlayBackend(d));
-    render(<DealScreen id="x" />);
-    await openEditForm();
-    expect(
-      screen.getByText(/Only the fields HubSpot accepts are written back/),
-    ).toBeTruthy();
-  });
-
-  it("keeps Reopen and Share hidden even for a won deal", async () => {
-    const d = deal({ id: "x", status: "won", stage_id: "s3" });
-    vi.stubGlobal("fetch", overlayBackend(d));
-    render(<DealScreen id="x" />);
-    await openHeaderMenu();
-    await screen.findByTestId("archive-record");
-    expect(screen.queryByTestId("reopen-open")).toBeNull();
-    expect(screen.queryByTestId("share-record")).toBeNull();
-  });
-});
-
 describe("DealScreen reopen", () => {
   beforeEach(() => localStorage.setItem("margince.workspaceSlug", "acme"));
 
@@ -2508,7 +2297,7 @@ describe("DealScreen pending approvals", () => {
 });
 
 describe("DealScreen — History tab", () => {
-  it("shows a History tab that lists record changes", async () => {
+  it("shows record changes on the Changes cut of the chronology", async () => {
     vi.stubGlobal("fetch", stubDealBackend(deal({}), []));
     render(<DealScreen id="d1" />);
 
@@ -2516,6 +2305,7 @@ describe("DealScreen — History tab", () => {
       expect(screen.getByRole("button", { name: /history/i })).toBeTruthy(),
     );
     await userEvent.click(screen.getByRole("button", { name: /history/i }));
+    await userEvent.click(screen.getByRole("button", { name: "Changes" }));
 
     await waitFor(() =>
       expect(screen.getByText("Deal amount changed")).toBeTruthy(),

@@ -43,11 +43,60 @@ var promptVersion = ai.PromptDigest(func(fence promptfence.Fence) string {
 	return statusSystemFor(fence, string(textlang.English))
 })
 
+// moveKey is the move as the cache reads it: the verb, the sentence, and the
+// records the verb would act on.
+//
+// THE OPERAND IS PART OF THE KEY, not decoration on it. The digest over this
+// input decides whether a stored card still stands, and a move's prose can stay
+// word-for-word identical while the record it points at changes — swap the
+// champion for another contact who shares a display name and "Book a meeting
+// with Alex Weber" is still true, still the advice, and now files the task onto
+// somebody else. Without the ids here, the cache serves the old link under the
+// new sentence and nothing ever notices.
+//
+// It is rendered rather than hashed so the prompt keeps reading a sentence: the
+// model is shown the verb and the reason it always was, with the operand
+// appended in a form it can ignore.
+func moveKey(move crmcontracts.DealStatusCardMove) string {
+	key := move.Action + ": " + move.Reason
+	if id, ok := operandActivity(move); ok {
+		key += " [activity:" + id.String() + "]"
+	}
+	for _, id := range NamedContacts(move) {
+		key += " [contact:" + id.String() + "]"
+	}
+	return key
+}
+
+// operandActivity is NamedActivity over a move that has NOT been through JSON.
+//
+// NamedActivity reads the stored shape, where every id is a string, and the
+// queue keeps a copy of it that a gate holds to the same answer. This runs on
+// the move decideMove just built, whose ids are still typed, so it cannot use
+// that reader without changing a wire contract two packages agree on.
+func operandActivity(move crmcontracts.DealStatusCardMove) (ids.UUID, bool) {
+	if id, ok := NamedActivity(move); ok {
+		return id, true
+	}
+	args := move.Arguments
+	if args == nil {
+		return ids.UUID{}, false
+	}
+	raw, present := (*args)["request_activity_id"]
+	if !present {
+		raw, present = (*args)["activity_id"]
+	}
+	if !present {
+		return ids.UUID{}, false
+	}
+	return linkID(raw)
+}
+
 // project renders the gathered facts into the prompt's shape. Only what the
 // caller may read reaches it: the facts were gathered under their row scope,
 // and a withheld row gives up its words here.
 func project(f facts, move crmcontracts.DealStatusCardMove) StatusInput {
-	in := StatusInput{Deal: dealIn(f.deal), RecommendedMove: move.Action + ": " + move.Reason}
+	in := StatusInput{Deal: dealIn(f.deal), RecommendedMove: moveKey(move)}
 	in.Health = healthIn(f.health)
 	for _, a := range f.timeline {
 		if len(in.Timeline) == maxTimelineRows {

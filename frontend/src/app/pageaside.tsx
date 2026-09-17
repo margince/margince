@@ -11,7 +11,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { Button } from "../design-system/atoms";
+import { Button, OptionCount } from "../design-system/atoms";
 import { useT } from "../i18n";
 import { useHasUnsavedChanges } from "./unsaved";
 
@@ -48,17 +48,16 @@ const PageAsideContext = createContext<PageAsideState | null>(null);
 const COLLAPSE_KEY = "margince.pageAside.collapsed";
 
 function readCollapsed(): boolean {
-  // Closed until asked: the details pane is where a reader goes for the
-  // attributes and the short lists, not what they open a record to see, so a
-  // reader who has never chosen finds it folded. A private window, cleared
-  // site data, or a browser refusing storage all throw here rather than
-  // returning null. None of them is a reason to fail to render a record, so
-  // the answer is the default and the reader simply does not get their
-  // remembered choice.
+  // Open until folded: the pane holds the record's own facts, and a reader
+  // who has never chosen came for the whole record. Only a remembered fold
+  // closes it. A private window, cleared site data, or a browser refusing
+  // storage all throw here rather than returning null. None of them is a
+  // reason to fail to render a record, so the answer is the default and the
+  // reader simply does not get their remembered choice.
   try {
-    return window.localStorage.getItem(COLLAPSE_KEY) !== "0";
+    return window.localStorage.getItem(COLLAPSE_KEY) === "1";
   } catch {
-    return true;
+    return false;
   }
 }
 
@@ -153,17 +152,19 @@ export function useDetailsFieldTarget(field: string) {
  * pane is open — the one answer a screen needs to decide whether to hand
  * `RecordView` its aside.
  *
- * `available` is whether the screen has a pane to offer right now: a record
- * whose composer has taken the column's place passes false, and the switch
- * goes with the pane rather than standing beside a drawer it cannot open.
+ * Claiming it is mounting: a screen has a pane to offer for as long as it is
+ * on the page, and nothing else takes the pane away from it. An overlay does
+ * not — a drawer is portalled over a scrim and takes none of the page's
+ * width, so folding the column beneath one would animate the record behind
+ * its own backdrop and leave the pane shut once it closed.
  */
-export function usePageAside(available = true): { open: boolean } {
+export function usePageAside(): { open: boolean } {
   const { filled, setFilled, collapsed } = usePageAsideState();
   useEffect(() => {
-    setFilled(available);
+    setFilled(true);
     return () => setFilled(false);
-  }, [available, setFilled]);
-  return { open: filled && available && !collapsed };
+  }, [setFilled]);
+  return { open: filled && !collapsed };
 }
 
 /**
@@ -180,11 +181,30 @@ export function usePageAside(available = true): { open: boolean } {
  * supplies a pane.
  */
 export function PageAsideToggle({
-  label,
+  labels,
+  quiet = false,
+  prominent = false,
   controlled,
 }: Readonly<{
-  label?: string;
-  controlled?: { open: boolean; label: string; onToggle: () => void };
+  // What the switch says in each state, naming what the pane holds. The
+  // default is the record's details pane; a page whose pane holds more names
+  // it in both verbs.
+  labels?: PaneWords;
+  // Drawn as a link in the row rather than as a boxed control: for a strip
+  // whose other end is a row of tabs, a box there reads as one more verb.
+  quiet?: boolean;
+  // Drawn as the page's PRIMARY control: for the one page whose pane is the
+  // whole queue behind the day, where the switch is the main way on and not a
+  // detail fold beside a row of tabs.
+  prominent?: boolean;
+  controlled?: {
+    open: boolean;
+    labels: PaneWords;
+    onToggle: () => void;
+    // How much is behind the pane, beside the verb — the queue's own total,
+    // so a reader knows what the switch opens before pressing it.
+    count?: number;
+  };
 }> = {}) {
   const t = useT();
   const dirty = useHasUnsavedChanges("details");
@@ -192,24 +212,38 @@ export function PageAsideToggle({
   if (!filled && !controlled) {
     return null;
   }
-  // Named, not a bare glyph: this control ends a row of words and a lone
-  // square at the end of a tab strip reads as chrome rather than as the way to
-  // the record's own details. It names the REGION it governs — the panel icon
-  // and "Details" together — and `aria-pressed` carries which way it is set,
-  // because folded away and standing open look identical otherwise.
+  // Named for what pressing it DOES, not a bare glyph: this control ends a
+  // row of words, and a lone square at the end of a tab strip reads as chrome
+  // rather than as the way to the record's own details. "Show details" while
+  // folded and "Hide details" while open, because the two states look
+  // identical from the button alone; `aria-pressed` carries the same answer
+  // to a screen reader.
+  const open = controlled?.open ?? !collapsed;
+  const words = controlled?.labels ??
+    labels ?? {
+      show: t("record.panel.showDetails"),
+      hide: t("record.panel.hideDetails"),
+    };
   return (
     <Button
       className="record-details-toggle"
-      reason={
-        (controlled?.open ?? !collapsed) && dirty
-          ? t("record.finishFieldEdit")
-          : undefined
-      }
-      aria-pressed={controlled?.open ?? !collapsed}
+      variant={quiet ? "link" : prominent ? "primary" : undefined}
+      reason={open && dirty ? t("record.finishFieldEdit") : undefined}
+      aria-pressed={open}
       onClick={controlled?.onToggle ?? toggle}
     >
       <PanelRight aria-hidden="true" />
-      {controlled?.label ?? label ?? t("record.panel.details")}
+      {open ? words.hide : words.show}
+      {controlled?.count !== undefined && (
+        <OptionCount
+          count={controlled.count}
+          className="record-details-toggle-count"
+        />
+      )}
     </Button>
   );
 }
+
+/** The two things the switch can say: the verb that opens the pane and the
+ *  verb that folds it, each naming what the pane holds. */
+export type PaneWords = Readonly<{ show: string; hide: string }>;

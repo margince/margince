@@ -458,8 +458,8 @@ func (p *Provider) StageSemantic(ctx context.Context, stageID ids.UUID) (semanti
 // PromoteLead is the features/01 §6.4 graduation — a cross-module
 // orchestration verb of the frozen v1 seam (interfaces.md §3), owned by
 // the contacts module's transaction and dispatched here.
-func (p *Provider) PromoteLead(ctx context.Context, id ids.UUID, trigger string, evidenceNote *string) (datasource.EntityRef, bool, error) {
-	return p.contacts.PromoteLead(ctx, id, trigger, evidenceNote)
+func (p *Provider) PromoteLead(ctx context.Context, id ids.UUID, trigger string, evidenceNote *string, ifVersion *int64) (datasource.EntityRef, bool, error) {
+	return p.contacts.PromoteLead(ctx, id, trigger, evidenceNote, ifVersion)
 }
 
 // Freshness in SoR-mode is trivially authoritative: there is no mirror

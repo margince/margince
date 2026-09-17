@@ -55,7 +55,7 @@ function view(overrides: Partial<Company360> = {}): Company360 {
       },
     },
     ...overrides,
-  } as unknown as Company360;
+  };
 }
 
 // The owner control reads the roster through react-query, so the box needs a
@@ -158,16 +158,34 @@ describe("what the in-flight count says", () => {
         company={company}
         view={view({
           deals: {
-            data: [{ deal_id: "d-1" }, { deal_id: "d-2" }],
+            data: [
+              {
+                deal_id: "d-1",
+                name: "Depot rollout",
+                status: "open",
+                stalled: false,
+              },
+              {
+                deal_id: "d-2",
+                name: "Spare parts",
+                status: "open",
+                stalled: false,
+              },
+            ],
             page,
             won_lifetime: { amount_minor: 0, currency: "EUR" },
             lost_count: 0,
           },
           projects: [
-            { project_id: "p-1", name: "Rollout", phase: "delivering" },
-            { project_id: "p-2", name: "Done", phase: "closed" },
+            {
+              project_id: "p-1",
+              name: "Rollout",
+              phase: "delivering",
+              quiet: false,
+            },
+            { project_id: "p-2", name: "Done", phase: "closed", quiet: false },
           ],
-        } as unknown as Partial<Company360>)}
+        })}
       />,
     );
 
@@ -187,7 +205,7 @@ describe("what the in-flight count says", () => {
         view={view({
           projects: undefined,
           sections_omitted: ["projects"],
-        } as unknown as Partial<Company360>)}
+        })}
       />,
     );
 
@@ -220,12 +238,19 @@ describe("what the in-flight count says", () => {
         company={company}
         view={view({
           deals: {
-            data: [{ deal_id: "d-1" }],
+            data: [
+              {
+                deal_id: "d-1",
+                name: "Depot rollout",
+                status: "open",
+                stalled: false,
+              },
+            ],
             page: { has_more: true, next_cursor: "c" },
             won_lifetime: { amount_minor: 0, currency: "EUR" },
             lost_count: 0,
           },
-        } as unknown as Partial<Company360>)}
+        })}
       />,
     );
 

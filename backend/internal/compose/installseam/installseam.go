@@ -23,9 +23,13 @@ import (
 // Deals is the installation seam the deals module reads through.
 func Deals() deals.Installation {
 	return deals.Installation{
-		Name:         identity.NameOf,
-		BaseCurrency: identity.BaseCurrencyOf,
-		Timezone:     identity.TimezoneOf,
+		Name: identity.NameOf,
+		// contacts owns `company` and its provenance sidecar, so the "has a
+		// human confirmed what this installation is called" read lives there
+		// and the edge is injected here.
+		IssuerLegalName: contacts.ConfirmedIssuerLegalName,
+		BaseCurrency:    identity.BaseCurrencyOf,
+		Timezone:        identity.TimezoneOf,
 		// activities owns `activity`, so the stamp's write lives there and the
 		// edge is injected here (ADR-0054).
 		StampCorrespondence: activities.StampCorrespondenceForDeal,

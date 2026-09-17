@@ -190,7 +190,7 @@ function Reading({
       <span className="worklist-hidden-count">
         {t("worklist.hidden.count", { count: formatNumber(count, locale) })}
       </span>
-      <span className="worklist-hidden-label">{label}</span>
+      <span>{label}</span>
       <span className="t-caption worklist-hidden-detail">{detail}</span>
     </li>
   );

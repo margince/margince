@@ -16,13 +16,7 @@ import { leadIdentityName } from "../format/leadname";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useAssignableUserOptions } from "./assigneepicker";
-import {
-  ProblemError,
-  QueryGate,
-  throwProblem,
-  useMe,
-  useSorMode,
-} from "./common";
+import { ProblemError, QueryGate, throwProblem, useMe } from "./common";
 import { CreateAction, type CreateField } from "./create";
 import { useObjectCustomFields } from "./customfields.form";
 import { LeadBulkBar } from "./leadbulk";
@@ -89,6 +83,7 @@ async function fetchLeadsPage(
     page: {
       next_cursor: data.page.next_cursor ?? null,
       has_more: data.page.has_more,
+      total: data.page.total,
     },
   };
 }
@@ -245,7 +240,6 @@ function LeadsWorkbench({
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
-  const overlay = useSorMode() === "overlay";
   const leadSettings = useLeadSettings();
   const slaOn = leadSettings.data?.first_response_enabled === true;
   // Bulk selection, by lead id; cleared after any bulk run, since the rows
@@ -276,8 +270,6 @@ function LeadsWorkbench({
   // an invisible selection nobody can clear.
   const selectedRows = state.rows.filter((lead) => selected.has(lead.id));
   const liveSelection = new Set(selectedRows.map((lead) => lead.id));
-  // The board writes status, which the mirror refuses (a lead's lifecycle is
-  // not a field write-back), so overlay gets the table and no toggle.
   // The board/table choice is a dial like the filters beside it, so it lives in
   // the address: a reader can link to the board, and it survives a reload. It
   // is the screen's OWN name rather than a wire one, because which of the two
@@ -330,7 +322,7 @@ function LeadsWorkbench({
         // took the filter bar with it, leaving the reader looking at a
         // narrowed answer with no way to see or change what narrowed it.
         body={
-          view === "board" && !overlay ? (
+          view === "board" ? (
             <LeadBoard
               rows={state.rows}
               onMoved={() => state.refetch()}
@@ -339,7 +331,7 @@ function LeadsWorkbench({
             />
           ) : undefined
         }
-        bodyOwnsPaging={view === "board" && !overlay}
+        bodyOwnsPaging={view === "board"}
         state={state}
         unit="unit.leads"
         action={
@@ -625,20 +617,16 @@ function LeadsWorkbench({
           <>
             {/* Board or table is how the SAME rows are drawn, so it belongs
                 with the drawing dials rather than above the surface — the
-                slot the deals screen's pipeline picker already uses. The
-                mirror refuses the board's status write, so overlay gets the
-                table and no toggle. */}
-            {!overlay && (
-              <SegmentedControl
-                options={["table", "board"] as const}
-                value={view}
-                onChange={setView}
-                labels={{
-                  table: t("deals.viewTable"),
-                  board: t("deals.viewBoard"),
-                }}
-              />
-            )}
+                slot the deals screen's pipeline picker already uses. */}
+            <SegmentedControl
+              options={["table", "board"] as const}
+              value={view}
+              onChange={setView}
+              labels={{
+                table: t("deals.viewTable"),
+                board: t("deals.viewBoard"),
+              }}
+            />
             <SaveViewAction resource="leads" query={state.query} />
           </>
         }

@@ -140,3 +140,74 @@ func TestASecondKindOfWorkIsNotBuriedUnderALaneMonopoly(t *testing.T) {
 			"exists so a reader meets their day rather than one lane of it", position+1)
 	}
 }
+
+// A source whose own band draws BELOW keep_momentum is demoted, never promoted.
+//
+// Crowding used to answer keep_momentum for every crowded row, which was a
+// demotion while the only crowded rows were waiting customers. Once the rule
+// widened onto the source every row carries, the same answer moved a crowded
+// decision UP: `review` draws last, so past the eighth pending decision the
+// extra ones sorted above the first eight and the reader met the newest first.
+// The eight that had waited longest — and, carrying their expiry as a
+// deadline, expire soonest — went to the bottom of the queue.
+func TestCrowdingNeverPromotesASourceThatBandsBelowTheDemotion(t *testing.T) {
+	const staged = crowdLead + 4
+	decisions := laneOf("approval", staged)
+
+	out := pageOfDay(crmcontracts.Attention{AsOf: rankInstant, NeedsYou: decisions})
+
+	bands := bandsBySource(t, out, "approval")
+	if bands[bandReview] != staged {
+		t.Fatalf("%d of %d staged decisions kept the review heading: crowding moved the rest "+
+			"to a band that draws ABOVE their own: %v", bands[bandReview], staged, bands)
+	}
+}
+
+// And the ordering that heading decides: the lead group still leads.
+//
+// The band sorts above crowding, so the promotion turned up as the reader's
+// actual complaint — the oldest decisions last. This is that page, asserted as
+// positions rather than as headings, because a band that was right and an order
+// that was wrong would be the same defect wearing a fix's clothes.
+func TestTheDecisionsThatHaveWaitedLongestStillLeadTheQueue(t *testing.T) {
+	const staged = crowdLead + 4
+	decisions := laneOf("approval", staged)
+
+	out := pageOfDay(crmcontracts.Attention{AsOf: rankInstant, NeedsYou: decisions})
+
+	order := make([]string, 0, staged)
+	for _, row := range out.Queue {
+		if row.Source == "approval" {
+			order = append(order, row.Id)
+		}
+	}
+	if len(order) != staged {
+		t.Fatalf("the page carried %d of %d staged decisions", len(order), staged)
+	}
+	// laneOf staggers the lane so row 0 is the one that has waited longest.
+	for i := range crowdLead {
+		want := decisions[i].Id
+		if order[i] != want {
+			t.Errorf("position %d holds %s, and %s has waited longer — the reader meets "+
+				"the newest decisions first and the oldest behind the rest",
+				i+1, order[i], want)
+		}
+	}
+}
+
+// The rule itself, asked of every band the page draws: crowding moves a row
+// DOWN or leaves it where it is, and never up.
+//
+// Derived from the draw order rather than from the two bands that showed the
+// defect, so a band added below the demotion inherits the rule by existing —
+// which is how this one arrived: `review` was appended to the order after
+// crowding had widened off the single lane it was written for.
+func TestCrowdingNeverMovesARowUpThePage(t *testing.T) {
+	for _, band := range bandOrder {
+		if got := crowdedBelow(band); bandRank(got) < bandRank(band) {
+			t.Errorf("a crowded %q row is drawn under %q, which is further up the page — "+
+				"crowding is the anti-monopoly rule, and promoting is the one thing it may not do",
+				band, got)
+		}
+	}
+}

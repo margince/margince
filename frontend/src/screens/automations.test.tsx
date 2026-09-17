@@ -15,7 +15,8 @@ import type { components } from "../api/schema";
 import { type GrantSpec, meFixture } from "../app/mefixture";
 import { pickOption } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
-import { AutomationRow, AutomationsAdmin, paramFields } from "./automations";
+import { AutomationRow, AutomationsAdmin } from "./automations";
+import { paramFields } from "./automations.params";
 
 // B-EP09.15 acceptance: the editor is catalog-driven end to end — the
 // anti-DSL guard (no free-form rule body, no user-defined trigger; form
@@ -747,13 +748,11 @@ describe("AutomationRow — Runs/Preview toggles", () => {
   });
 });
 
-// GH-706: renewal_reminder's real catalog schema (automations_catalog.go's
-// renewalReminderSchema) — days_before stays the one integer param; object
-// and date_field name the workspace's own cf_* column to watch; recurs_yearly
-// opts a stored value into yearly re-arming. This is the boolean case and
-// the date_field picker, proven against the CLOSED catalog-driven renderer
-// (paramKind/paramFields/paramsFromValues) rather than a renewal_reminder
-// special case in the component.
+// renewal_reminder's real catalog schema — days_before stays the one integer
+// param; object and date_field name the workspace's own cf_* column to watch;
+// recurs_yearly opts a stored value into yearly re-arming. This is the boolean
+// case and the date_field picker, proven against the CLOSED reader in
+// automations.params.ts rather than a special case in the component.
 type CustomField = components["schemas"]["CustomField"];
 
 const renewalReminderSchema = {

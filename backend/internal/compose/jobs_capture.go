@@ -112,9 +112,17 @@ func addCapturePipelineJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerC
 	}
 
 	// Existing request verdicts remain actionable when no model is configured.
+	//
+	// The settler rides the same worker rather than a job of its own: it asks
+	// the second half of one question, over candidates the first half produced,
+	// and a separate hourly job would read the same rows minutes apart and
+	// judge a request the owed pass had not yet recognised. Nil without a model
+	// configured for it, and then the pass does what it did before — recognise
+	// requests and settle none.
 	addDeclaredWorker[OwedVerdictArgs](reg, &owedVerdictWorker{
 		pool:       pool,
 		classifier: NewOwedClassifier(pool, cfg.OwedBrain, nil, log),
+		settler:    NewRequestSettler(pool, cfg.SettlementBrain, nil, log),
 	})
 
 	if cfg.EnrichBrain != nil {

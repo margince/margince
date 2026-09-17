@@ -2,18 +2,18 @@ import { Landmark } from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
-import { Badge, Button } from "../design-system/atoms";
+import { Button } from "../design-system/atoms";
 import { Eyebrow } from "../design-system/eyebrow";
 import { Panel, PanelBody } from "../design-system/panel";
-import { Meter, Sparkline } from "../design-system/readings";
+import { Sparkline } from "../design-system/readings";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
-import { formatDate, formatMoney, formatNumber } from "../format/format";
+import { formatDate, formatMoney } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { BillingContactsPanel } from "./billingcontacts";
 import { problemCodeOf, useFinanceSummary } from "./common";
-import { medianDaysLabel } from "./company360";
 import { RecentInvoices } from "./financeinvoices";
+import { OverdueLead } from "./financeoverdue";
 // The row and card shapes this file draws — co-rowlink, co-row-meta, co-card —
 // are defined in company360.css. Imported HERE rather than left to the caller:
 // it works today only because the company record page pulls that stylesheet in
@@ -256,8 +256,42 @@ function FinanceBody({ summary }: Readonly<{ summary: FinanceSummary }>) {
           <PaymentBehaviour summary={summary} />
         </div>
       </div>
+      <CoveragePeriod summary={summary} />
       <RecentInvoices summary={summary} />
     </>
+  );
+}
+
+// WHAT PERIOD these figures are drawn from, which is a different question from
+// when we last looked.
+//
+// `last_synced_at` is already on the panel and answers the second. Without the
+// first, a card can say its numbers are fresh without saying that the account
+// it describes stopped buying two years ago — which is the reading FIN-AC-3
+// asks for on a former customer's section, and which no field carried.
+//
+// The trailing figure's own label is NOT derived from this. `net_invoiced` is a
+// true rolling 365-day fold, so "12 months" is what it is over whatever the
+// coverage says, and on an account that stopped buying it honestly reads €0.
+// What the coverage names is the mirror — and with it the lifetime figure,
+// which has no window of its own.
+//
+// Absent when the mirror holds no invoice: a period minted from nothing would
+// name a window nothing is in.
+function CoveragePeriod({ summary }: Readonly<{ summary: FinanceSummary }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const recordZone = useRecordZone();
+  if (!summary.coverage_start || !summary.coverage_end) {
+    return null;
+  }
+  return (
+    <p className="fin-coverage t-caption">
+      {t("finance.coveragePeriod", {
+        from: formatDate(summary.coverage_start, locale, recordZone),
+        to: formatDate(summary.coverage_end, locale, recordZone),
+      })}
+    </p>
   );
 }
 
@@ -269,7 +303,7 @@ function FinanceBody({ summary }: Readonly<{ summary: FinanceSummary }>) {
 // server saying it could not compute one, so it must not become a zero: this
 // card's whole rule is that "€0 open" and "we do not know" are different
 // claims about a customer.
-function amountOf(
+export function amountOf(
   money: components["schemas"]["Money"] | undefined,
   locale: ReturnType<typeof useLocale>["locale"],
 ): string | undefined {
@@ -281,144 +315,32 @@ function amountOf(
 
 // One reading. An absent value renders as a dash with its label intact, so the
 // reader sees WHICH figure is missing rather than a shorter row.
-function FinanceFigure({
+export function FinanceFigure({
   label,
   value,
   hero,
-}: Readonly<{ label: string; value?: string; hero?: boolean }>) {
+  absentNote,
+}: Readonly<{
+  label: string;
+  value?: string;
+  hero?: boolean;
+  absentNote?: string;
+}>) {
   return (
     <div className="fin-figure">
       <Eyebrow>{label}</Eyebrow>
       <span className={hero ? "fin-amount fin-amount-hero" : "fin-amount"}>
         {value ?? "—"}
       </span>
-    </div>
-  );
-}
-
-// Overdue money, at the size of the decision it asks for, with everything the
-// panel knows about WHY it is that size underneath: what share of the open
-// balance it is, how late this customer usually pays, and the two halves of
-// the open balance drawn against each other.
-//
-// The hero figure is drawn whatever the rest of the panel can say. The
-// sentence and the bar under it each appear only when their own inputs
-// arrived, so a customer with no settled invoices gets the figure and nothing
-// invented beneath it.
-function OverdueLead({ summary }: Readonly<{ summary: FinanceSummary }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const split = openSplitOf(summary);
-  return (
-    <div className="fin-lead">
-      <FinanceFigure
-        label={t("finance.overdue")}
-        value={amountOf(summary.overdue, locale)}
-        hero
-      />
-      <FinanceLede summary={summary} split={split} />
-      {split && (
-        <>
-          <Meter
-            value={split.overdue}
-            max={split.open}
-            label={t("finance.overdueShareLabel")}
-            tone="danger"
-            restTone="accent"
-          />
-          {/* The bar's two colours, named. Without this the reader is left to
-              infer which half is which from the tones alone, and the tones are
-              what a reader who cannot distinguish them needs the words for. */}
-          <p className="fin-legend">
-            <Badge tone="danger">
-              {t("finance.legendOverdue", {
-                amount: formatMoney(split.overdue, split.currency, locale),
-              })}
-            </Badge>
-            <Badge tone="accent">
-              {t("finance.legendOpen", {
-                amount: formatMoney(split.open, split.currency, locale),
-              })}
-            </Badge>
-          </p>
-        </>
+      {/* Only beside an absent figure, and only when the caller knows WHY.
+          A dash with no note still reads as "could not compute", which is the
+          honest default; a note beside a figure that is present would be
+          explaining something the reader can see. */}
+      {value === undefined && absentNote && (
+        <span className="t-caption">{absentNote}</span>
       )}
     </div>
   );
-}
-
-// What the overdue figure MEANS, in whichever clauses the data supports: its
-// share of the open balance, and how late this customer settles.
-//
-// Each clause is a sentence and is terminated here rather than in the catalog,
-// because `medianDaysLabel` is also read on its own elsewhere on the record,
-// where a trailing full stop mid-line would be wrong. One terminator, spelled
-// once, so the two clauses cannot end differently from each other.
-function FinanceLede({
-  summary,
-  split,
-}: Readonly<{ summary: FinanceSummary; split: OpenSplit | null }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const clauses: string[] = [];
-  if (split) {
-    clauses.push(
-      t("finance.shareOfOpen", {
-        percent: formatNumber(
-          Math.round((split.overdue / split.open) * 100),
-          locale,
-        ),
-      }),
-    );
-  }
-  if (summary.median_days_after_due != null) {
-    clauses.push(medianDaysLabel(summary.median_days_after_due, locale, t));
-  }
-  if (clauses.length === 0) {
-    return null;
-  }
-  return (
-    <p className="fin-lede">{clauses.map((one) => `${one}.`).join(" ")}</p>
-  );
-}
-
-// The open balance as its two halves in ONE currency: what is overdue, and
-// the whole it is part of.
-//
-// Null unless the halves make a proportion at all. Different currencies is a
-// proportion of nothing. Nothing open would put a full bar over "€0 open",
-// which reads as an account entirely in arrears rather than one that owes us
-// nothing. And overdue ABOVE open is not a share that has run high, it is two
-// figures that contradict each other: the mirror says money is late that it
-// also says is not outstanding.
-//
-// The third case is refused rather than clamped because clamping picks a
-// winner between two figures the panel cannot choose between, and picks it
-// silently — a bar pinned at 100% beside a sentence reading "115% of
-// everything open" is the same disagreement with a coat of paint. The overdue
-// figure above still draws: it is what the mirror reported, and it is the one
-// number a reader can act on. What refuses is only the claim about a
-// relationship between the two.
-type OpenSplit = { overdue: number; open: number; currency: string };
-
-function openSplitOf(summary: FinanceSummary): OpenSplit | null {
-  const open = summary.open_balance;
-  const overdue = summary.overdue;
-  if (
-    open?.amount_minor == null ||
-    !open.currency ||
-    overdue?.amount_minor == null ||
-    open.currency !== overdue.currency ||
-    open.amount_minor <= 0 ||
-    overdue.amount_minor > open.amount_minor
-  ) {
-    return null;
-  }
-  return {
-    overdue: overdue.amount_minor,
-    open: open.amount_minor,
-    currency: open.currency,
-  };
 }
 
 // How they pay, as the shape of it: days late per settled invoice, oldest

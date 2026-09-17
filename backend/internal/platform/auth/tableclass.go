@@ -117,5 +117,5 @@ func OwnerScopeClauseFor(ctx context.Context, table, alias string, arg func(any)
 	if p.Type == principal.PrincipalSystem || (Unbounded(p) && !ownerPrivateTables[table]) {
 		return "", nil
 	}
-	return predicateFor(p, table, arg, withCapturePrivacy, asOwnerScoped)(alias), nil
+	return predicateFor(p, table, arg, withCapturePrivacy, asOwnerScoped, anyShare)(alias), nil
 }

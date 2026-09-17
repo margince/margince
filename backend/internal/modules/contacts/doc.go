@@ -46,7 +46,18 @@
 // Merge and promotion additionally relink rows in deal, activity_link,
 // list_member, taggable, consent_event and provider_run inside their
 // single transaction — the ratified cross-aggregate ownership call of the
-// primary aggregate; nothing else in this module WRITES a sibling table.
+// primary aggregate.
+// The COMPANY merge relinks further still (mergerelink_company.go), for the
+// same reason and under the same ratification: every table carrying a
+// company_id names a record the merge is retiring, so a row left behind points
+// at something no read returns. That reaches money (contract, finance_invoice,
+// finance_payment, finance_customer_link), responsibility (record_assignment),
+// the per-reader rows (company_brief, company_dossier, company_growth_fit,
+// company_scan, suggestion_dismissal) and the resolution caches (signal,
+// signal_resolution, signal_thread_scan, offer, commission_entry). Which
+// tables those ARE is not this comment's to keep current: the company-merge
+// coverage gate enumerates every foreign key pointing at company and fails on
+// one the merge neither moves nor declares out of scope.
 // The provider_run relink is the merge's alone: it decides which of two
 // colliding LIVE runs keeps the one-live-run index, which is knowable
 // only where both records' run states are visible at once.

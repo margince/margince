@@ -176,3 +176,68 @@ func assertConsentedBookingLandsGrantWithProof(t *testing.T, e *apptest.AppEnv, 
 		t.Fatalf("proof event lost the passthrough: version=%q text=%q", policyVersion, policyText)
 	}
 }
+
+// THE SAME RULE ON THE OTHER DOOR. A rep's booking carries the same optional
+// newsletter tick, through the same adapter, and a question that may not be
+// asked must not cost this meeting either.
+//
+// The contact has withdrawn the purpose, so the mint refuses — rightly: nobody
+// but the subject restarts a conversation the subject ended. What must not
+// follow is a 422 that takes the booking with it. The authenticated response is
+// the booked activity itself and carries no marketing field, so the facts to
+// hold are the ones the database can state: the meeting landed, no confirmation
+// token was minted, and the withdrawal is exactly where it was.
+func TestARepsBookingSurvivesANewsletterTickForAWithdrawnContact(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	transactional := seededTransactionalPurposeID(t, e)
+	marketing := seededMarketingPurposeID(t, e)
+
+	var contact struct {
+		ID string `json:"id"`
+	}
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
+		"full_name": "Wilma Withdrawn",
+		"emails":    []AnyMap{{"email": "wilma@corp.example", "email_type": "work", "is_primary": true}},
+	}, nil, &contact); status != http.StatusCreated {
+		t.Fatalf("create contact → %d", status)
+	}
+	if status := e.Call(t, "POST", "/v1/contacts/"+contact.ID+"/consent",
+		AnyMap{"purpose_id": marketing, "new_state": "withdrawn"}, nil, nil); status != http.StatusOK {
+		t.Fatalf("withdrawing the purpose → %d", status)
+	}
+
+	tuesday := time.Date(2026, 7, 14, 10, 0, 0, 0, time.UTC)
+	if status := e.Call(t, "POST", "/v1/bookings", bookingAt(tuesday.Add(3*time.Hour), contact.ID, AnyMap{
+		"consent": AnyMap{
+			"purpose_id": transactional, "policy_version": "pp-2026-01",
+			"wording": "You agree we may contact you about this meeting.",
+			"marketing": AnyMap{
+				"purpose_id": marketing, "policy_version": "mk-2026-01",
+				"wording": "Send me your newsletter.",
+			},
+		},
+	}), nil, nil); status != http.StatusCreated {
+		t.Fatalf("a rep's booking with a tick for a withdrawn contact → %d, want 201", status)
+	}
+
+	var meetings, tokens int
+	var state string
+	if err := e.Owner.QueryRow(context.Background(), `
+		SELECT (SELECT count(*) FROM activity WHERE kind = 'meeting'),
+		       (SELECT count(*) FROM confirm_token WHERE contact_id = $1 AND purpose_id = $2),
+		       (SELECT state FROM contact_consent WHERE contact_id = $1 AND purpose_id = $2)`,
+		contact.ID, marketing).Scan(&meetings, &tokens, &state); err != nil {
+		t.Fatal(err)
+	}
+	if meetings != 1 {
+		t.Errorf("%d meeting(s) booked, want 1 — the rep's booking died with a question that was "+
+			"never going to be asked", meetings)
+	}
+	if tokens != 0 {
+		t.Errorf("%d confirmation token(s) minted for a withdrawn contact, want 0", tokens)
+	}
+	if state != "withdrawn" {
+		t.Errorf("the marketing purpose reads %q after the booking, want withdrawn", state)
+	}
+}

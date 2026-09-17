@@ -52,6 +52,11 @@ package compose
 // the record, the roles that disagree with it refuse, so no mixed set serves.
 // Closing either bound is a design change rather than a fix — a monotonic record
 // would cost rollback — so both are tracked rather than worked around here.
+//
+// The second bound costs DIAGNOSIS rather than correctness, and that part is not
+// left to be rediscovered: refuseMixedRelease names the backwards move as one of
+// the two shapes that produce a refusal, so an operator whose deploy was clean is
+// not sent to audit it.
 
 import (
 	"context"
@@ -252,9 +257,26 @@ func AssertInstallationRelease(ctx context.Context, pool *pgxpool.Pool, log *slo
 // a different release than the role was built from, or nil when there is nothing
 // to refuse.
 //
-// The message gives both release versions and the one action that corrects it. It
-// names no internals: an operator reading a role's log needs the two versions and
-// what to do, and needs nothing about the ledger the answer came from.
+// THE MESSAGE IS THE DELIVERABLE, and it has to end the investigation rather than
+// start one. What an operator sees is a crash-looping role beside an api serving
+// happily, and there are TWO ways to arrive there — the message used to state
+// only the first as though it were the only one:
+//
+//   - The deployment genuinely supplied two releases. Redeploy at one.
+//   - The deployment supplied ONE release, and the installation's record moved
+//     backwards underneath it. The record is last writer wins (see the file
+//     comment), so an api replica from the previous release restarting after the
+//     new one recorded puts the older release back — and every correctly deployed
+//     role then refuses exactly like this. An operator who knows their deploy was
+//     clean and reads a message blaming the deploy has been sent to look at the
+//     one thing that is right.
+//
+// The second is why the refusal names the api's restart as a shape rather than
+// leaving it to be rediscovered: the bound is deliberate and tracked, and what it
+// costs is diagnosis, so the diagnosis is what this pays back.
+//
+// It names no internals: an operator reading a role's log needs the two versions
+// and what to do, and needs nothing about the ledger the answer came from.
 //
 // IT NAMES NO DEPLOYMENT MECHANISM EITHER. Container images and a registry are
 // how the release reaches most installations, but they are not the only way — this
@@ -269,10 +291,17 @@ func refuseMixedRelease(mine, installation string) error {
 	}
 	return fmt.Errorf(
 		"this role is release %q but this installation runs release %q: "+
-			"the deployment supplied two different releases. "+
-			"Deploy every role (api, web, worker) at one release and restart; "+
-			"this role will not run half of one release beside half of another",
-		mine, installation)
+			"every role has to be at one release, and this one will not run half of "+
+			"one release beside half of another. "+
+			"Deploy every role (api, web, worker) at one release and restart. "+
+			"If the set WAS deployed at one release, the other shape that produces "+
+			"this is a rollout: the installation's release is whichever one its api "+
+			"recorded LAST, so an api still on the previous release restarting after "+
+			"the new one recorded puts the older release back on the record, and every "+
+			"correctly deployed role then refuses exactly like this. Restarting the "+
+			"api at the intended release restores the record",
+		mine, installation,
+	)
 }
 
 // lastObservedRelease reads the release THIS installation's api recorded most

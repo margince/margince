@@ -163,14 +163,6 @@ queues:
       ai_capture because that queue's passes are background sweeps nobody is
       waiting on: sharing would let a fanned-out capture run put an interactive
       reading behind it.
-  overlay_reconcile:
-    max_workers: 1
-    reason: >-
-      Overlay reconcile is SERIAL by design. overlaybudget.ConsumeSearch counts
-      but does not pace, and its keys are per workspace, so it cannot bound a
-      provider-level burst: a concurrent fan-out could exceed the incumbent's
-      per-second Search limit. Each workspace still gets its own job row, which
-      is the observability this phase is after; per-workspace PARALLELISM is not.
   webhook_retry:
     max_workers: 3
     reason: >-
@@ -1194,48 +1186,6 @@ kinds:
       Daily, after the enrich pass has had a night to collect the signatures
       this one weighs.
 
-
-  overlay_reconcile:
-    role: worker
-    fleet: true
-    go_type: OverlayReconcileArgs
-    queue: overlay_reconcile
-    timeout: 20m
-    opts_owner: caller
-    cadence: {operator: OverlayInterval}
-    registration: {when: [OverlayVault], absent: registers_nothing}
-    reason: >-
-      The unit is what a child row STANDS FOR, and this one stands for a
-      workspace: the due-scan issues one query per overlay-mode tenant and so
-      yields at most one entry each, and the child carries a workspace id and
-      nothing else. The two genuinely per-connection kinds (capture_sync,
-      telegram_poll) both carry a ConnectionID; this one re-reads the
-      connection at work time on purpose, so a tenant that changed between the
-      scan and the sweep is swept under its CURRENT identity.
-
-
-  overlay_refetch:
-    role: worker
-    go_type: OverlayRefetchArgs
-    queue: default
-    timeout: 2m
-    opts_owner: caller
-    registration: {when: [OverlayVault], absent: registers_nothing}
-    args:
-      Workspace: id
-      IncumbentClass:
-        scalar: true
-        reason: >-
-          the incumbent's object class (contacts, companies, deals, leads).
-          It is half the coalescing key River dedupes these re-fetches by --
-          the args ARE that key — so it cannot be resolved at work time; it
-          names a class of record in another system, never a record.
-      ExternalID: id
-    reason: >-
-      One record read from the incumbent and one ingest — the smallest outbound
-      unit in the overlay lane. A signal is an optimization and the poller heals
-      whatever it misses, so a slow one is dropped rather than waited on.
-
   link_reconcile:
     role: worker
     fleet: true
@@ -1287,7 +1237,7 @@ kinds:
     queue: privacy_retention
     timeout:
       derived: privacyRetentionPassTimeout
-      value: 5h38m20s
+      value: 6h11m40s
       reason: >-
         privacy.MaxPassDuration is the pass's own ceiling — its stage count
         times its batch bound times its per-record allowance — and the margin

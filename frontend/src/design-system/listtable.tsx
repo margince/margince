@@ -448,10 +448,10 @@ export function ListTable<Row>({
   scopeKey = "",
   action,
   caption,
-  note,
   footer,
   hasMore = false,
   onLoadMore,
+  total: serverTotal,
   perPage: controlledPerPage,
   onPerPage,
   page: controlledPage,
@@ -523,16 +523,14 @@ export function ListTable<Row>({
    * a reader who owns nothing is the case this was written for and is a
    * narrowed list, so a note shown only over the unnarrowed one never appeared.
    * A caller whose note would blame the data source for what the reader's own
-   * dial did passes none — the overlay owner hint goes quiet under a live
-   * search for exactly that reason.
+   * dial did passes none.
    */
   emptyNote?: ReactNode;
   /** Omit for a list whose GET has no `q` param; the box is then not rendered. */
   search?: { value: string; onChange: (next: string) => void };
   /**
-   * Omit when the data source refuses to sort. The overlay mirror 422s the
-   * dial, so its screens pass nothing and the headers render inert — the
-   * table never offers a control the server would reject.
+   * Omit when the data source refuses to sort: the headers then render inert,
+   * so the table never offers a control the server would reject.
    */
   sort?: SortControl;
   chips?: readonly ListChip[];
@@ -572,18 +570,21 @@ export function ListTable<Row>({
    * and repeating it here would title the surface twice.
    */
   caption?: ReactNode;
-  /** Says why the dials are missing, when they are. */
-  note?: ReactNode;
   /** An aggregate row under the table, e.g. a count and a total value. */
   footer?: ReactNode;
   /**
    * Whether the server holds rows beyond the ones passed in. Paging is a keyset
-   * cursor, so there is no total and no way to jump to an arbitrary page: the
-   * pager walks the pages it has, and stepping past the last one fetches the
-   * next cursor page rather than pretending a page count it cannot know.
+   * cursor, so there is no jumping to an arbitrary page: the pager walks the
+   * pages it has, and stepping past the last one fetches the next cursor page.
    */
   hasMore?: boolean;
   onLoadMore?: () => void;
+  /**
+   * How many rows match on the server, when it counts them — the difference
+   * between "1-25 of 8,372" and "1-25 of 200 loaded so far". Undefined means
+   * it does not count, NOT zero, so the line falls back to the rows in hand.
+   */
+  total?: number;
   /**
    * Rows per RENDERED page. The caller fetches a whole multiple of it, so the
    * table divides the rows it holds on boundaries the fetch already respects.
@@ -1022,8 +1023,10 @@ export function ListTable<Row>({
                 unit={unit}
                 first={from + 1}
                 last={from + pageRows.length}
-                total={rows.length}
-                more={hasMore}
+                total={serverTotal ?? rows.length}
+                // "Loaded so far" is the caveat for a number the client
+                // counted itself; an exact total needs none.
+                more={hasMore && serverTotal === undefined}
                 narrowed={narrowed}
                 sortedBy={sorted?.header}
               />
@@ -1031,7 +1034,6 @@ export function ListTable<Row>({
       }
       action={action}
       caption={caption}
-      note={note}
       search={search}
       sort={sort}
       sortOptions={sortOptions}
@@ -1250,10 +1252,8 @@ export function ListTable<Row>({
                         was written for never appeared at all: a "Mine" view
                         for a reader who owns nothing is a NARROWED list. A
                         caller whose note would blame the data source for what
-                        the reader's own dial did passes none — the overlay
-                        owner hint goes quiet under a live search for exactly
-                        that reason. The generic line stays above it either
-                        way: "clear filters" undoes every narrowing, and a
+                        the reader's own dial did passes none. The generic line
+                        stays above it either way: "clear filters" undoes every narrowing, and a
                         screen's own way back usually undoes one. */}
                     {emptyNote && (
                       <p

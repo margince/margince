@@ -122,6 +122,11 @@ func redactSubjectTimeline(ctx context.Context, tx pgx.Tx, contactID ids.Contact
 		  -- being emptied here, so it is a fact about erased text rather than
 		  -- about the row.
 		  language = NULL,
+		  -- The byline an import carried in from the system this row came from:
+		  -- a human's name in free text, written by neither party to the
+		  -- exchange. It is content about somebody rather than the record of
+		  -- who the exchange was with, so it goes with the words.
+		  source_author_name = NULL,
 		  source_id = CASE WHEN a.source_system || ':' || split_part(coalesce(a.thread_key, ''), ':', 3) = ANY($6)
 		                   THEN NULL ELSE a.source_id END,
 		  thread_key = CASE WHEN a.source_system || ':' || split_part(coalesce(a.thread_key, ''), ':', 3) = ANY($6)
@@ -164,6 +169,11 @@ func redactSubjectTimeline(ctx context.Context, tx pgx.Tx, contactID ids.Contact
 	if err := deleteReplyVerdictHistoryFor(ctx, tx, contactID); err != nil {
 		return nil, err
 	}
+	// And what we concluded our own replies did about what they asked, which is
+	// the same kind of claim over the same emptied words.
+	if err := deleteRequestSettlementsFor(ctx, tx, contactID, emails); err != nil {
+		return nil, err
+	}
 	// And the handoffs naming them, for the same reason and on the same act.
 	if err := deleteSubjectHandoffs(ctx, tx, contactID); err != nil {
 		return nil, err
@@ -187,7 +197,7 @@ var subjectActivityEmbeddingsDelete = `
 // (erasure_channels.go, kept apart for file length). Embeddings of
 // activities on the subject's timeline embed text ABOUT them; the vector
 // store must not keep what a similarity probe could partially reconstruct.
-func purgeDerivedTraces(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, displayName string, emails []string, identities []channelIdentity) (rawPurged, aiPayloadsPurged int64, err error) {
+func purgeDerivedTraces(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, displayName string, emails []string, identities []channelIdentity, erased erasedCitations) (rawPurged, aiPayloadsPurged int64, err error) {
 	for _, email := range emails {
 		tag, execErr := tx.Exec(ctx,
 			`DELETE FROM raw_capture WHERE payload::text ILIKE '%' || $1 || '%' ESCAPE '\'`,
@@ -238,20 +248,44 @@ func purgeDerivedTraces(ctx context.Context, tx pgx.Tx, contactID ids.ContactID,
 	if _, err := tx.Exec(ctx, subjectActivityEmbeddingsDelete, contactID); err != nil {
 		return 0, 0, err
 	}
-	// Captured AI payloads (Layer 3) are purged by the same identifier
-	// match as raw_capture's email lane: any opt-in request/response body
-	// whose content names one of the subject's addresses goes, and its
-	// ai_call metadata row survives (the FK is ON DELETE CASCADE from
-	// ai_call, never the reverse). This reaches ONLY payloads whose text
-	// mentions the subject — a call that never named them keeps no PII and
-	// ages out anyway via the 365d ai_call_payload retention erase; there is
-	// no subject FK to scope by, so a content match is the reachable
-	// boundary, crude on purpose (over-deleting captured content is
-	// recoverable, under-deleting PII is a violation).
+	// Captured AI payloads (Layer 3) go two ways, and the first is the one
+	// that reaches a transcript.
+	//
+	// BY CITATION: a call that said what record it was about names it on
+	// ai_call, so every payload of a call made about this contact — or about an
+	// activity or lead this erasure just wiped with them — is deleted whatever
+	// its text says.
+	// That is the difference between destroying what mentioned their address
+	// and destroying what was about them, and it is the only lane that reaches
+	// a meeting transcript, which names its speakers rather than addressing
+	// them and may never spell an address at all.
+	//
+	// BY CONTENT, unchanged: any opt-in body naming one of the subject's
+	// addresses. The citation does NOT replace it and is not the boundary — a
+	// call whose input spans several records names none, by design, and is
+	// reached by this match or not at all. The residual is exactly what it was
+	// for every task that names no record.
+	//
+	// Either way the ai_call metadata row survives (the FK is ON DELETE CASCADE
+	// from ai_call, never the reverse), and both are crude on purpose:
+	// over-deleting captured telemetry is recoverable, under-deleting personal
+	// data is a violation.
 	//
 	// No channel-identity lane here, unlike raw_capture above — see
 	// purgeChannelRawCapture's comment (erasure_channels.go) for why
 	// ai_call_payload cannot safely take the same match.
+	citedTag, err := tx.Exec(ctx, `
+		DELETE FROM ai_call_payload p
+		 USING ai_call c
+		 WHERE p.ai_call_id = c.id
+		   AND ((c.subject_type = 'contact' AND c.subject_id = $1)
+		     OR (c.subject_type = 'activity' AND c.subject_id = ANY($2))
+		     OR (c.subject_type = 'lead' AND c.subject_id = ANY($3)))`,
+		contactID, erased.activities, erased.leads)
+	if err != nil {
+		return 0, 0, err
+	}
+	aiPayloadsPurged += citedTag.RowsAffected()
 	for _, email := range emails {
 		tag, execErr := tx.Exec(ctx, `
 			DELETE FROM ai_call_payload
@@ -272,6 +306,15 @@ func purgeDerivedTraces(ctx context.Context, tx pgx.Tx, contactID ids.ContactID,
 		}
 	}
 	return rawPurged, aiPayloadsPurged, nil
+}
+
+// erasedCitations are the OTHER records this erasure destroyed alongside the
+// contact, named so a model call that cited one of them is purged with it. A
+// draft written for a lead and a reading of a meeting hold the subject's words
+// as surely as a call that named the contact.
+type erasedCitations struct {
+	activities []ids.UUID
+	leads      []ids.UUID
 }
 
 // deleteSubjectHandoffs drops every SDR handoff naming the subject, and with it
@@ -336,6 +379,40 @@ func deleteReplyVerdictHistoryFor[ID ids.UUID | ids.ContactID](ctx context.Conte
 		WHERE activity_id IN (SELECT l.activity_id FROM activity_link l WHERE l.contact_id = $1)`,
 		contactID); err != nil {
 		return fmt.Errorf("privacy: clearing the subject's reply verdicts: %w", err)
+	}
+	return nil
+}
+
+// deleteRequestSettlementsFor drops what this installation concluded about
+// whether our replies settled what one contact asked of us.
+//
+// What it destroys is a reading OF the subject's correspondence — a verdict,
+// and in the still_owed case a sentence the model wrote naming what we still
+// owe them — so it goes with the words it was read from rather than outliving
+// them. One spelling for both acts, typed over the two id forms the callers
+// hold, like the reply verdicts above.
+//
+// BOTH ARMS, and the second is the one that matters. A link walk alone would
+// leave every settlement about mail linked to nobody — and since ADR-0072
+// stopped creating a counterparty for every captured message, that class is
+// ordinary rather than exotic: a deferred or still-unsure sender produces
+// activities with no contact link at all, and the settlement pass is happy to
+// judge them because its candidate read requires no link either. It selects
+// through the same two selectors redactSubjectTimeline empties the timeline
+// through, so the rows this destroys are the rows whose words are destroyed
+// beside it.
+//
+// Keyed on the REQUEST, which is the row the settlement hangs from. The
+// judged-through reply is an activity of ours on the same thread, and deleting
+// by the request alone is enough: the table holds one row per request, so no
+// settlement survives its own subject.
+func deleteRequestSettlementsFor[ID ids.UUID | ids.ContactID](ctx context.Context, tx pgx.Tx, contactID ID, emails []string) error {
+	if _, err := tx.Exec(ctx, `
+		DELETE FROM activity_request_settlement
+		WHERE request_activity_id IN (`+subjectOnlyActivities+`)
+		   OR request_activity_id IN (`+unlinkedSubjectMail+`)`,
+		contactID, emails); err != nil {
+		return fmt.Errorf("privacy: clearing the subject's request settlements: %w", err)
 	}
 	return nil
 }

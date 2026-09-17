@@ -91,23 +91,27 @@ describe("a row's verbs are one line with the lane's answer last", () => {
   });
 
   // THE WHOLE LINE, in order, and every verb on it named — not a sample. The
-  // order IS the layout here: the ways to the record come first, the reader's
-  // own GLYPH sits among the labelled verbs, the ways to put the row down
-  // follow, and the answer is the tail. A test naming two of six would let a
-  // third be promoted past the call to action, or let the glyph slide out to
-  // the end of the line, with nothing failing.
+  // order IS the layout here: the ways to PUT THE ROW DOWN lead from the
+  // opening edge, because declining steps away from the work before any of it
+  // is done; the ways into it follow, the reader's own GLYPH among them; and
+  // the answer is the tail. A test naming two of six would let a third be
+  // promoted past the call to action, or let the glyph slide out to the end of
+  // the line, with nothing failing.
+  //
+  // THE SAME ORDER THE BRIEF'S CARD READS IN, and that is the point: the queue
+  // is a list of rows a reader answers one at a time, which is the act the card
+  // is shaped for. Drawn in two orders, a rep who opened the same row on two
+  // surfaces looked for its answer at two different places.
   //
   // The pin is among the WORDS on purpose: a lone 32px glyph closing a line has
   // no label to read as a verb, so it reads as a stray mark.
-  it("draws the quieter verbs before it, glyph among the words", async () => {
+  it("leads with the set-asides, glyph among the words", async () => {
     oneRow(waitingRow());
 
     const reply = await screen.findByRole("button", {
       name: en["compose.reply"],
     });
     const inOrder = [
-      screen.getByRole("link", { name: en["worklist.verb.open"] }),
-      screen.getByRole("button", { name: en["worklist.verb.pin"] }),
       screen.getByRole("button", {
         name: en["worklist.disposition.verb.snooze"],
       }),
@@ -117,6 +121,8 @@ describe("a row's verbs are one line with the lane's answer last", () => {
       screen.getByRole("button", {
         name: en["worklist.disposition.verb.not_mine"],
       }),
+      screen.getByRole("link", { name: en["worklist.verb.open"] }),
+      screen.getByRole("button", { name: en["worklist.verb.pin"] }),
       reply,
     ];
 
@@ -148,7 +154,9 @@ describe("a row's verbs are one line with the lane's answer last", () => {
         screen.getByRole("button", { name: en["worklist.verb.pin"] }),
       ),
     );
-    expect(drawn.indexOf(reassign)).toBeLessThan(
+    // After the set-asides, which now lead the line: the two glyphs stay
+    // together among the labelled verbs and neither opens nor closes it.
+    expect(drawn.indexOf(reassign)).toBeGreaterThan(
       drawn.indexOf(
         screen.getByRole("button", {
           name: en["worklist.disposition.verb.not_mine"],
@@ -220,9 +228,10 @@ describe("a row's verbs are one line with the lane's answer last", () => {
   });
 
   // A lane whose verbs are EQUAL has no call to action, and drawing one would
-  // be the product claiming an expectation it has not got: held, no-show and
-  // cancelled are three records of what already happened. Nothing on the line
-  // is filled, and the three keep the order the lane drew them in.
+  // be the product claiming an expectation it has not got: saying what came of
+  // a meeting and recording that it was called off are two answers of equal
+  // standing. Nothing on the line is filled, and the two keep the order the
+  // lane drew them in.
   it("promotes none of a lane's equal verbs", async () => {
     oneRow(
       row({
@@ -235,24 +244,24 @@ describe("a row's verbs are one line with the lane's answer last", () => {
       }),
     );
 
-    const held = await screen.findByRole("button", {
-      name: en["worklist.verb.meetingHeld"],
+    const update = await screen.findByRole("button", {
+      name: en["worklist.verb.meetingUpdate"],
     });
     const drawn = verbsInOrder();
     expect(filled(drawn)).toEqual([]);
-    let at = drawn.indexOf(held);
+    const at = drawn.indexOf(update);
     expect(
       at,
       "the outcomes are not on the row's line of verbs",
     ).toBeGreaterThan(-1);
-    for (const verb of ["meetingNoShow", "meetingCanceled"] as const) {
-      const next = drawn.indexOf(
-        screen.getByRole("button", { name: en[`worklist.verb.${verb}`] }),
-      );
-      expect(next, `${verb} is out of the lane's own order`).toBeGreaterThan(
-        at,
-      );
-      at = next;
-    }
+    const cancelled = drawn.indexOf(
+      screen.getByRole("button", {
+        name: en["worklist.verb.meetingCanceled"],
+      }),
+    );
+    expect(
+      cancelled,
+      "cancelled is out of the lane's own order",
+    ).toBeGreaterThan(at);
   });
 });

@@ -74,8 +74,14 @@ type LeadDisqualifier interface {
 // the contact the promotion created is archived. It answers the reversal's own
 // shape rather than a bare record, because WHICH unwind happened — the contact
 // archived, or only the lineage cleared — is the part a caller acts on.
+//
+// ifVersion carries the version the write must be conditioned on, for the
+// reason LeadDisqualifier's does: this verb STAGES a target version at approval
+// time, and a pin staged and never applied is a guarantee the approvals surface
+// advertises and the write does not keep. A reversal is where that costs most —
+// unpinned, it can unwind a promotion the approval was not describing.
 type LeadDemoter interface {
-	DemoteLead(ctx context.Context, id ids.UUID, reason string) (json.RawMessage, error)
+	DemoteLead(ctx context.Context, id ids.UUID, reason string, ifVersion *int64) (json.RawMessage, error)
 }
 
 // ProjectPhaseAdvancer steps a project along the phase ladder, recording the
@@ -326,8 +332,14 @@ func (t demoteLead) Handle(ctx context.Context, in json.RawMessage) (json.RawMes
 	if err := requireDemotionReason(args.Reason); err != nil {
 		return nil, err
 	}
+	// nil, because this tool takes no if_version of its own: the pin it applies
+	// is the one the approval was released against, as disqualifyLead's is.
+	pin, err := pinForWrite(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
 	noteEvidence(ctx, datasource.EntityLead, args.LeadID)
-	return t.demoter.DemoteLead(ctx, args.LeadID, args.Reason)
+	return t.demoter.DemoteLead(ctx, args.LeadID, args.Reason, pin)
 }
 
 // --- advance_project_phase (🟡 write) ---

@@ -328,6 +328,27 @@ describe("AiRoutingCard", () => {
     expect(screen.getByText("gemini-3.1-flash-lite")).toBeTruthy();
   });
 
+  // A routing-read-only role sees "AI by activity" stand as a section with a
+  // sentence naming the two grants it lacks; the live feature table never
+  // renders for it, because the server refuses that data to this grant
+  // combination regardless of how the component is shaped. The bindings
+  // this grant DOES allow — the lane rows below it — still render, so this
+  // is one section's refusal, not a whole-page one.
+  it("explains the withheld AI-activity section to a routing-read-only role", async () => {
+    vi.stubGlobal("fetch", backendFor(ROUTING_READER).fetchMock);
+    render(<AiRoutingCard />);
+
+    expect(await screen.findByText("gemini-3.5-flash")).toBeTruthy();
+
+    expect(screen.getByText("AI by activity")).toBeTruthy();
+    expect(
+      screen.getByText(
+        "Only a reader who holds both AI diagnostics read and AI allowance read can see which features are live right now.",
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByRole("table")).toBeNull();
+  });
+
   it("sends the WHOLE binding, so an untouched tier is not dropped", async () => {
     const user = userEvent.setup();
     const backend = backendFor(ROUTING_EDITOR);

@@ -10,6 +10,21 @@ import {
   type WorklistScope,
 } from "./worklist.queries";
 
+/**
+ * Which queue the DRAWER is on, off the address it keeps its state in.
+ *
+ * Exported because the Brief's own head reads it too: the way into the queue
+ * carries the queue's total, and the drawer's scope survives the drawer
+ * closing — so a count taken from the reader's personal day sat on a button
+ * that opens the team's. One spelling, so the button and the list it opens
+ * cannot name two different queues.
+ */
+export function drawerScope(
+  params: ReadonlyMap<string, string>,
+): WorklistScope {
+  return requestedScope(params.get("queue_scope"));
+}
+
 function requestedScope(
   value: string | undefined,
   opensOn?: string,

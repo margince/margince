@@ -210,8 +210,8 @@ export function useRecordChronology({
   const wantsChanges = !readsExchangesOnly(filter) && !narrowed;
   const changes = useFieldHistory(kind, recordId, { enabled: wantsChanges });
   // `page.data ?? []`, not `page.data`: a 200 with no body is a shape the
-  // contract permits and the overlay mirror actually returns, and flattening
-  // it yielded an `undefined` row that the mapper below dereferenced. The
+  // contract permits, and flattening it yielded an `undefined` row that the
+  // mapper below dereferenced. The
   // activity timeline has guarded this since the same payload crashed it; the
   // change list only started meeting it now that ALL is the default filter and
   // every record page reads changes on open.

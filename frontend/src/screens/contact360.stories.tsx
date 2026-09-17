@@ -42,15 +42,21 @@ const page = { has_more: false, next_cursor: null };
 // employer is what sends it down the other branch.
 const bare: View = {
   as_of: "2026-08-13T09:00:00Z",
+  sections_omitted: [],
   contact: {
     id: "p-9",
     full_name: "Mara Vogel",
     first_name: "Mara",
     last_name: "Vogel",
     owner_id: "u-1",
+    source: "manual",
+    captured_by: "human:u-1",
+    created_at: "2026-06-01T08:00:00Z",
+    updated_at: "2026-08-01T08:00:00Z",
     emails: [
       {
         id: "pe-9",
+        captured_by: "human:u-1",
         contact_id: "p-9",
         email: "mara.vogel@example.test",
         email_type: "work",
@@ -62,9 +68,7 @@ const bare: View = {
   },
   employments: { data: [], page },
   activities: { data: [], page },
-  deals: { data: [], page },
-  colleagues: { data: [], page },
-} as unknown as View;
+};
 
 // The same record, with an employer on it. The card offers a different move,
 // which is the whole point of the branch — a menu of two would say the surface
@@ -74,8 +78,7 @@ const withEmployer: View = {
   employments: {
     data: [
       {
-        id: "em-9",
-        contact_id: "p-9",
+        relationship_id: "rel-9",
         company_id: "o-9",
         company_name: "Brandt Logistik",
         is_current_primary: true,
@@ -83,7 +86,7 @@ const withEmployer: View = {
     ],
     page,
   },
-} as unknown as View;
+};
 
 /** No employer: the move on offer is to name where this contact works. */
 export const NoEmployer: Story = {

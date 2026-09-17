@@ -123,8 +123,6 @@ function stubBackend(opts: {
   single?: Deal;
   // The project a deal names, as its own per-id read answers it.
   project?: { id: string; name: string };
-  // Puts the screen on the overlay mirror, which forces the flat table.
-  overlay?: boolean;
 }) {
   return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const request = input instanceof Request ? input : null;
@@ -187,7 +185,6 @@ function stubBackend(opts: {
         authorization: meFixture({
           allow: { deal: ["read", "create", "update"], project: ["read"] },
         }).authorization,
-        ...(opts.overlay ? { system_of_record: { mode: "overlay" } } : {}),
       });
     }
     if (method === "GET" && /\/deals\/[^/?]+(\?.*)?$/.test(url)) {
@@ -635,15 +632,13 @@ describe("a deal's edit form over a withheld reference", () => {
   });
 });
 
-// The mirror carries the same `masked_fields` the native list does, and its
-// amount cell read a refused figure as a deal nobody had priced — the same
-// defect one surface over.
-describe("the overlay mirror table", () => {
+// The amount cell read a refused figure as a deal nobody had priced — the
+// same defect one surface over.
+describe("the deals table", () => {
   it("reads a withheld amount as withheld, not as an unpriced deal", async () => {
     vi.stubGlobal(
       "fetch",
       stubBackend({
-        overlay: true,
         deals: [
           deal({
             amount_minor: null,
@@ -653,6 +648,9 @@ describe("the overlay mirror table", () => {
         ],
       }),
     );
+    // The amount COLUMN is the table's, and the board is where the screen
+    // opens — so the view dial is turned before the render rather than after.
+    window.location.hash = "#/deals?view=table";
     render(<DealsScreen />);
 
     expect(await screen.findByText("Fleet retrofit")).toBeTruthy();
@@ -663,8 +661,10 @@ describe("the overlay mirror table", () => {
 describe("a deal's fact line", () => {
   beforeEach(() => localStorage.setItem("margince.workspaceSlug", "acme"));
 
-  // A bare mask on a line of joined facts says only "something is hidden".
-  // Each withheld fact names the field it withholds.
+  // A bare mask on a strip of named cells says only "something is hidden".
+  // Each withheld fact names the field it withholds. The header's own strip,
+  // because the same masked field is ALSO guarded in the details pane's edit
+  // form, and a query over the whole page would find both.
   it("names which of the facts is withheld", async () => {
     const single = deal({
       company_id: null,
@@ -673,7 +673,8 @@ describe("a deal's fact line", () => {
     vi.stubGlobal("fetch", stubBackend({ deals: [single], single }));
     render(<DealScreen id="d1" />);
 
-    const mask = await screen.findByRole("img", { name: MASK });
-    expect(mask.parentElement?.textContent).toContain("Company");
+    const masks = await screen.findAllByRole("img", { name: MASK });
+    const mask = masks.find((candidate) => candidate.closest(".record-facts"));
+    expect(mask?.closest(".record-fact")?.textContent).toContain("Company");
   });
 });

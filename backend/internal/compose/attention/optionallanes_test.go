@@ -76,7 +76,7 @@ func TestACommitmentCarriesThePromiseAndTheWordsItWasReadFrom(t *testing.T) {
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{},
 		&stubCommitments{rows: []Commitment{promise("Referenzliste an Herrn Vogt schicken", due)}}, nil, nil,
-		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
+		nil, nil, nil, nil, nil, nil, nil, nil, nil,
 		fixedClock)
 	out, err := svc.Assemble(pageReader())
 	if err != nil {
@@ -117,7 +117,7 @@ func TestAnOverduePromiseSaysSoRatherThanLeavingTheReaderToCompareDates(t *testi
 			promise("Angebot nachfassen", readInstant.Add(-48*time.Hour)),
 			promise("Termin bestätigen", readInstant.Add(3*time.Hour)),
 		}}, nil, nil,
-		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
+		nil, nil, nil, nil, nil, nil, nil, nil, nil,
 		fixedClock)
 	out, err := svc.Assemble(pageReader())
 	if err != nil {
@@ -143,7 +143,7 @@ func TestBothDueDatedLanesStopAtTheSameEndOfDay(t *testing.T) {
 	tasks := &stubTasks{}
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, tasks, stubReceipts{}, stubBriefing{},
-		commitments, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+		commitments, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
 	if _, err := svc.Assemble(pageReader()); err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -163,7 +163,7 @@ func TestAWithheldCommitmentLaneIsNamedRatherThanReportedEmpty(t *testing.T) {
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{},
 		&stubCommitments{err: apperrors.ErrPermissionDenied}, nil, nil,
-		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
+		nil, nil, nil, nil, nil, nil, nil, nil, nil,
 		fixedClock)
 	out, err := svc.Assemble(pageReader())
 	if err != nil {
@@ -190,9 +190,7 @@ func TestAWithheldCommitmentLaneIsNamedRatherThanReportedEmpty(t *testing.T) {
 // empty one. The two are different facts: "this feed does not do commitments"
 // against "you have none today".
 func TestAFeedWithNoClaimReaderSendsNoCommitmentLaneAtAll(t *testing.T) {
-	svc := NewService(
-		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{},
-		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+	svc := NewService(stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
 	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
@@ -211,7 +209,7 @@ func TestABrokenCommitmentReadFailsTheFeedRatherThanReadingAsAClearDay(t *testin
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{},
 		&stubCommitments{err: errors.New("the claim read fell over")}, nil, nil,
-		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
+		nil, nil, nil, nil, nil, nil, nil, nil, nil,
 		fixedClock)
 	if _, err := svc.Assemble(pageReader()); err == nil {
 		t.Fatal("a failed commitment read assembled a day, want the error surfaced")
@@ -242,9 +240,16 @@ func stringOr(v *string) string {
 type stubMeetingsAwaitingOutcome struct {
 	rows []MeetingAwaitingOutcome
 	err  error
+	// from records where the window OPENS, for the reason stubCommitments
+	// records its instant — and this one earned it. The lane shipped opening at
+	// the reader's own midnight, so an unanswered meeting left the queue when
+	// the date rolled over, with its status still unset and nothing else in the
+	// product looking for it. A stub that discards the bound cannot fail on it.
+	from *time.Time
 }
 
-func (s *stubMeetingsAwaitingOutcome) Since(_ context.Context, _, _ time.Time, _ int, _ TaskScope, _ ids.UUID) ([]MeetingAwaitingOutcome, error) {
+func (s *stubMeetingsAwaitingOutcome) Since(_ context.Context, from, _ time.Time, _ int, _ TaskScope, _ ids.UUID) ([]MeetingAwaitingOutcome, error) {
+	s.from = &from
 	return s.rows, s.err
 }
 
@@ -270,7 +275,7 @@ func TestTheMeetingLaneAsksFromNowRatherThanFromTheStartOfTheDay(t *testing.T) {
 	meetings := &stubMeetings{}
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{},
-		nil, nil, nil, meetings, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+		nil, nil, nil, meetings, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
 	if _, err := svc.Assemble(pageReader()); err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -282,13 +287,53 @@ func TestTheMeetingLaneAsksFromNowRatherThanFromTheStartOfTheDay(t *testing.T) {
 	}
 }
 
+// THE OUTCOME LANE REACHES BACK PAST MIDNIGHT, which is the whole difference
+// between the two meeting lanes' windows.
+//
+// The lane above expires at midnight because preparing for a meeting stops
+// being possible once it starts. This one does not: a meeting nobody closed off
+// is still unclosed tomorrow. Opened at the reader's own day-start, the lane
+// asked about a meeting only for the hours left in the day it happened — an
+// afternoon meeting for a few hours, a late one for minutes — and then dropped
+// it at local midnight with `meeting_status` still NULL. Nothing re-raised it,
+// because no other surface reads that column looking for work, so the record
+// stayed wrong for good and the queue reported a clear day.
+func TestTheOutcomeLaneReachesBackAFortnightRatherThanToThisMorning(t *testing.T) {
+	unanswered := &stubMeetingsAwaitingOutcome{}
+	svc := NewService(
+		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{},
+		nil, nil, nil, &stubMeetings{}, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock,
+		WithMeetingsAwaitingOutcome(unanswered))
+	if _, err := svc.Assemble(pageReader()); err != nil {
+		t.Fatalf("assembling: %v", err)
+	}
+	if unanswered.from == nil {
+		t.Fatal("the outcome lane was never asked for a window")
+	}
+	// A fortnight before the day BEGAN, not before the read instant: the edge is
+	// a local midnight like every other boundary here, so a meeting does not
+	// drift out of the window as the reader's own morning wears on.
+	want := time.Date(2026, 8, 11, 0, 0, 0, 0, time.UTC)
+	if !unanswered.from.Equal(want) {
+		t.Errorf("the lane opens at %s, want %s — a shorter reach drops an unanswered "+
+			"meeting at midnight and nothing else in the product asks about it again",
+			unanswered.from.UTC(), want)
+	}
+	// And it still closes at the reader's moment, which is what keeps a meeting
+	// off both lanes at once.
+	if !unanswered.from.Before(readInstant) {
+		t.Errorf("the window opens at %s, which is not before the read instant %s",
+			unanswered.from.UTC(), readInstant)
+	}
+}
+
 // A meeting carries its own subject and the instant it starts. The subject is
 // what a rep recognises and the start is what they are racing.
 func TestAMeetingCarriesItsSubjectAndWhenItStarts(t *testing.T) {
 	starts := readInstant.Add(90 * time.Minute)
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil,
-		&stubMeetings{rows: []Meeting{{ID: ids.NewV7(), Subject: "Vogt — Angebotsbesprechung", StartsAt: starts}}}, nil, nil, nil, nil, nil, nil, nil, nil, nil,
+		&stubMeetings{rows: []Meeting{{ID: ids.NewV7(), Subject: "Vogt — Angebotsbesprechung", StartsAt: starts}}}, nil, nil, nil, nil, nil, nil, nil, nil,
 		fixedClock)
 	out, err := svc.Assemble(pageReader())
 	if err != nil {
@@ -318,7 +363,7 @@ func TestAMeetingCarriesItsSubjectAndWhenItStarts(t *testing.T) {
 func TestAWithheldMeetingLaneIsNamedRatherThanReportedEmpty(t *testing.T) {
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil,
-		&stubMeetings{err: apperrors.ErrPermissionDenied}, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+		&stubMeetings{err: apperrors.ErrPermissionDenied}, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
 	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)

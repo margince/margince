@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { LocaleProvider } from "../i18n";
-import { InlineText } from "./inlinechoice";
+import { InlineText } from "./inlinetext";
 
 const meta: Meta = {
   title: "Design System/Inline text editing",

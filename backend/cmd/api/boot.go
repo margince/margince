@@ -28,7 +28,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/licensecheck"
 	"github.com/margince/margince/backend/internal/platform/netguard"
-	"github.com/margince/margince/backend/internal/platform/overlaybudget"
 	"github.com/margince/margince/backend/internal/shared/buildinfo"
 	"github.com/margince/margince/backend/pkg/extension"
 )
@@ -209,6 +208,10 @@ func declaredSurfaceOptions(ctx context.Context, cfg apiConfig, deployCfg deploy
 	// about whether the reset is live. It is stated by the deployment rather
 	// than inferred from MARGINCE_ENV, which is still read here for the posture
 	// itself — a different question, and no longer a destructive one.
+	// The one deployment nobody could sign into is refused before it serves.
+	if err := checkALoginMethodRemains(cfg, deployCfg.Auth.PasswordEnabled(), logger); err != nil {
+		return nil, nil, err
+	}
 	allowDataReset := deployCfg.Operations.AllowDataReset
 	// Said out loud at boot because each role reads its own --config: an api
 	// armed beside a worker that was not given the file purges the workspace and
@@ -220,6 +223,10 @@ func declaredSurfaceOptions(ctx context.Context, cfg apiConfig, deployCfg deploy
 	// test_mailbox connector while another role's log claims it is armed.
 	logger.Info("test mailbox connector", "armed", deployCfg.Operations.AllowTestMailbox)
 	opts := []compose.Option{
+		// The switch the check above just validated, carried to the probe the
+		// login screen renders from and the routes behind it — one read, so an
+		// offered method and a served route cannot disagree.
+		compose.WithPasswordLogin(deployCfg.Auth.PasswordEnabled()),
 		compose.WithDataReset(schemaPool, deployCfg.Seeds, allowDataReset),
 		// The same seeds reach the ADR-0105 claim route, so an installation
 		// provisioned by claim lays down the module defaults this file asks
@@ -269,7 +276,7 @@ func declaredSurfaceOptions(ctx context.Context, cfg apiConfig, deployCfg deploy
 
 // sharedRedisClient opens the ONE raw-Redis handle this role holds, plus the
 // close func the caller defers for the process lifetime. Two surfaces share it:
-// the overlay budget meter every force-fresh read spends against, and the
+// the agent volume meter and the
 // non-production data reset, which purges the streams and announces itself over
 // the same connection. Sharing is the point — a second client would be a second
 // connection to the same server for no gain — and it is deliberately NOT the
@@ -277,11 +284,10 @@ func declaredSurfaceOptions(ctx context.Context, cfg apiConfig, deployCfg deploy
 // not build at all.
 //
 // A LAZY client (no boot ping): a split-deployment api that cannot reach Redis
-// must still boot. The meter then fails closed (force-fresh degrades to the
-// mirror) and a reset reports the unreachable bus as the error it is — neither
-// is a hard boot dependency. Reachability is /readyz's job, and the inline
-// relay's own client is the one that must ping (a stranded outbox row is a lost
-// fact, a shed force-fresh read is not).
+// must still boot. A reset then reports the unreachable bus as the error it is,
+// which is not a hard boot dependency. Reachability is /readyz's job, and the
+// inline relay's own client is the one that must ping — a stranded outbox row
+// is a lost fact.
 func sharedRedisClient(cfg apiConfig, logger *slog.Logger) (*redis.Client, func()) {
 	// Through the bus's own parser, so this client honours a `host:port/N`
 	// logical database exactly as the relay's does. Two spellings would let
@@ -307,36 +313,12 @@ func sharedRedisClient(cfg apiConfig, logger *slog.Logger) (*redis.Client, func(
 	}
 }
 
-// overlayOptions wires the overlay's two cross-role edges: the budget every
-// force-fresh read spends against, and the incumbent's inbound push.
-func overlayOptions(cfg apiConfig, deployCfg deployconfig.Config, rdb *redis.Client, volumeMeter *agentvolume.Meter, pool *pgxpool.Pool, logger *slog.Logger, stdout io.Writer) ([]compose.Option, error) {
-	// The overlay budget meter records against Redis, the SAME server the
-	// worker's poller uses, so force-fresh reads (this role) and poller
-	// sweeps (cmd/worker) spend against ONE shared per-workspace-per-
-	// incumbent count. cmd builds the meter (the raw-Redis dependency stays
-	// here, not in compose); WithOverlayMeter Rebinds the Server's shared
-	// instance to it.
-	overlayMeter := overlaybudget.New(rdb, compose.OverlayBudgetConfig(deployCfg.EffectiveOverlayBudget()))
-	// The MCP-SESS-* counters ride the SAME Redis. The meter is built by the
-	// caller rather than here, because the model path needs the same pointer to
-	// charge MCP-SESS-COST against — two meters would count one agent's spend
-	// in two windows, neither of them the one the gate reads.
-	opts := []compose.Option{compose.WithOverlayMeter(overlayMeter), compose.WithAgentVolume(volumeMeter)}
-
-	// The HubSpot webhook-as-signal receiver (OVA-WIRE-10) mounts only when the
-	// app client secret is configured — it verifies the inbound v3 signature
-	// and enqueues coalesced re-fetches on an insert-only River client (the
-	// worker runs the overlayRefetchWorker). Absent the secret, /webhooks/hubspot
-	// is not mounted at all.
-	if cfg.hubspotAppSecret != "" {
-		webhookInserter, werr := jobs.NewInserter(pool, logger)
-		if werr != nil {
-			return nil, werr
-		}
-		opts = append(opts, compose.WithOverlayWebhook(webhookInserter, cfg.hubspotAppSecret))
-		_, _ = fmt.Fprintln(stdout, "api overlay webhook receiver enabled (/webhooks/hubspot)")
-	}
-	return opts, nil
+// agentVolumeOptions binds the MCP-SESS-* counters to the shared Redis. The
+// meter is built by the caller rather than here, because the model path needs
+// the same pointer to charge MCP-SESS-COST against — two meters would count one
+// agent's spend in two windows, neither of them the one the gate reads.
+func agentVolumeOptions(volumeMeter *agentvolume.Meter) []compose.Option {
+	return []compose.Option{compose.WithAgentVolume(volumeMeter)}
 }
 
 // inlineRelayLane runs the outbox relay in this process unless the deployment

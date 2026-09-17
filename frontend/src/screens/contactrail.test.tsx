@@ -11,8 +11,8 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { meFixture } from "../app/mefixture";
-import { LocaleProvider } from "../i18n";
-import { ContactRail } from "./contactrail";
+import { LocaleProvider, type Translator, translate } from "../i18n";
+import { ContactRail, contactStanding } from "./contactrail";
 
 // The rail's words are short verdicts — "One-sided", "Never", "No inbound",
 // "Thin", "Nothing stands out on this relationship." — which is exactly why the
@@ -222,6 +222,20 @@ function mount(view: Contact360) {
           page,
         });
       }
+      // Each employment row reads its employer's own record for the logo and
+      // the contacts/open-deals counts. Answered only for the one company the
+      // fixtures above actually name: every other id falls to the catch-all
+      // below, which is what keeps the OTHER employment suites (a fresh
+      // company id per row) exercising the no-counts path unchanged.
+      if (url.pathname.endsWith("/companies/o-1")) {
+        return json({
+          id: "o-1",
+          display_name: "Brandt Automotive GmbH",
+          contact_count: 2,
+          open_deal_count: 0,
+          logo_url: null,
+        });
+      }
       // The record's tags. The catch-all below would answer with no `withheld`
       // key at all, which the panel reads as visible-and-empty — a state this
       // suite would then be asserting by accident rather than by choice.
@@ -248,12 +262,7 @@ function mount(view: Contact360) {
   const tree = (shown: Contact360) => (
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <ContactRail
-          view={shown}
-          guard={undefined}
-          firstName="Dana"
-          onExplain={() => {}}
-        />
+        <ContactRail view={shown} guard={undefined} />
       </LocaleProvider>
     </QueryClientProvider>
   );
@@ -274,29 +283,6 @@ afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
 });
-
-// The label and its reading are two spans of one row, so a reading is read
-// through its label rather than by matching a word that also appears in three
-// other sections.
-function railReading(label: string): string {
-  const row = screen.getByText(label).closest<HTMLElement>(".pe-rail-row");
-  if (!row) {
-    throw new Error(`the pulse drew no row labelled "${label}"`);
-  }
-  const value = row.children[1];
-  if (!value) {
-    throw new Error(`the row labelled "${label}" drew no reading`);
-  }
-  return value.textContent ?? "";
-}
-
-function readingClass(label: string): string {
-  const row = screen.getByText(label).closest<HTMLElement>(".pe-rail-row");
-  if (!row) {
-    throw new Error(`the pulse drew no row labelled "${label}"`);
-  }
-  return row.children[1]?.className ?? "";
-}
 
 // A section is scoped through its own heading: "Hidden — your role cannot read
 // this" is one sentence the rail may say about four different sections, and an
@@ -323,170 +309,51 @@ function section(heading: string): HTMLElement {
 
 const WITHHELD_SENTENCE = "Hidden — your role cannot read this";
 
-describe("the relationship pulse", () => {
-  it("reads the directional facts for a reader who may see them", () => {
-    mount(granted);
+// contactStanding is the one line of relationship standing the record's head
+// carries: a pure derivation from the two touch timestamps, tested directly
+// rather than through a mount: the words and the tone are what the head
+// renders, and nothing about drawing them belongs to this rail any more.
+describe("contactStanding", () => {
+  const t: Translator = (key, params) => translate("en", key, params);
 
-    expect(railReading("Direction")).toBe("Two-way");
-    expect(railReading("Last reply")).toBe("3 days");
-    expect(railReading("Trend")).toBe("Warming");
-    expect(railReading("Overall")).toBe("Strong");
-    expect(railReading("Coverage")).toBe("1 colleague");
-  });
-
-  it("does not turn absent directional timestamps into a claim that colleagues never exchanged messages", () => {
-    mount({ ...emptyButGranted, network: granted.network });
-    expect(railReading("Direction")).toBe("No direction recorded");
-    expect(railReading("Coverage")).toBe("1 colleague");
-  });
-
-  it("does not infer a relationship pulse from zero exchanges", () => {
-    mount(emptyButGranted);
-    expect(
-      screen.queryByRole("heading", { name: "Relationship pulse" }),
-    ).toBeNull();
-    expect(screen.queryByText("One-sided")).toBeNull();
-  });
-
-  it.each([
-    [{ last_inbound_at: daysAgo(3) }, "Inbound only"],
-    [{ last_outbound_at: daysAgo(3) }, "Outbound only"],
-  ])("names the recorded direction separately", (touch, label) => {
-    mount({ ...emptyButGranted, ...touch });
-    expect(railReading("Direction")).toBe(label);
-  });
-
-  // One case per reading rather than four assertions in one test: each is a
-  // separate derivation, and a single test would stop at the first one that
-  // regressed and say nothing about the other three.
-  it.each([
-    ["Direction", "One-sided"],
-    ["Last reply", "Never"],
-    ["Trend", "No inbound"],
-    ["Overall", "Thin"],
-  ])(
-    "says %s is not shown, where an absent last touch would read as %s",
-    (label) => {
-      mount(withheld);
-
-      expect(railReading(label)).toBe("Not shown");
-    },
-  );
-
-  it("says the coverage reading is not shown when the network is withheld", () => {
-    mount(withheld);
-
-    // Nought colleagues and a colleague list nobody may read are the two
-    // answers a rep would act on differently: one says ask nobody, the other
-    // says ask somebody with the grant.
-    expect(railReading("Coverage")).toBe("Not shown");
-  });
-
-  it("gives a withheld overall reading no verdict colour", () => {
-    mount(withheld);
-
-    // The overall row is the only reading drawn in the verdict tone, and a
-    // withheld reading is not a verdict — green on "Not shown" says the
-    // relationship is healthy in the one spot a reader glances at.
-    expect(readingClass("Overall")).not.toContain("pe-rail-value-good");
-    expect(readingClass("Overall")).toBe("pe-rail-value");
-  });
-});
-
-describe("signals and risks", () => {
-  it("omits an empty signals panel", () => {
-    mount(emptyButGranted);
-    expect(
-      screen.queryByRole("heading", { name: "Signals & risks" }),
-    ).toBeNull();
-  });
-
-  it("says the signals are withheld rather than that nothing stands out", () => {
-    mount(withheld);
-
-    const signals = section("Signals & risks");
-    expect(within(signals).getByText(WITHHELD_SENTENCE)).toBeTruthy();
-    expect(
-      within(signals).queryByText("Nothing stands out on this relationship."),
-    ).toBeNull();
-  });
-
-  it("counts a withheld last touch as a rule it could not run", () => {
-    mount({
+  it("reads a two-way relationship as strong, with the trend of its last touch", () => {
+    const view: Contact360 = {
       ...emptyButGranted,
-      // Only the timestamps are withheld. Every other section came back empty,
-      // so the two quiet-relationship rules are the only ones that had
-      // anything to say and neither of them could run — which is a different
-      // finding from a relationship with nothing remarkable about it.
-      last_inbound_at: undefined,
-      last_outbound_at: undefined,
-      sections_omitted: ["last_touch"],
+      last_inbound_at: daysAgo(3),
+      last_outbound_at: daysAgo(8),
+    };
+    expect(contactStanding(view, t)).toEqual({
+      words: "Strong · warming",
+      tone: "success",
     });
-
-    const signals = section("Signals & risks");
-    expect(within(signals).getByText(WITHHELD_SENTENCE)).toBeTruthy();
-    expect(
-      within(signals).queryByText("Nothing stands out on this relationship."),
-    ).toBeNull();
   });
 
-  it("counts a withheld commercial section as a rule it could not run", () => {
-    mount({
+  it("reads a silence past the quiet threshold as at risk", () => {
+    // 40 days outlasts contactquiet.ts's QUIET_AFTER_DAYS (14), so this is
+    // unambiguously past the line rather than pinned to it.
+    const view: Contact360 = {
       ...emptyButGranted,
-      // Two of the four rules read the deal — single-threading and the missing
-      // meeting — so a reader without the deal grant is not looking at a
-      // relationship with no risks on it.
-      commercial: undefined,
-      sections_omitted: ["commercial"],
-    });
-
-    const signals = section("Signals & risks");
-    expect(within(signals).getByText(WITHHELD_SENTENCE)).toBeTruthy();
-    expect(
-      within(signals).queryByText("Nothing stands out on this relationship."),
-    ).toBeNull();
+      last_inbound_at: daysAgo(40),
+    };
+    const standing = contactStanding(view, t);
+    expect(standing?.tone).toBe("danger");
+    expect(standing?.words.startsWith("At risk")).toBe(true);
   });
 
-  it("derives no missing-meeting risk from a calendar it may not read", () => {
-    mount({
-      ...granted,
-      // The deal is readable and single-threaded; the calendar is not. The
-      // committee is emptied so the rule that CAN run still produces its
-      // signal, which is what makes this section short rather than withheld.
-      commercial: {
-        role: "champion",
-        committee: [],
-        deal: { deal_id: "d-1", title: "Fleet retrofit" },
-      },
-      next_meeting: undefined,
-      sections_omitted: ["next_meeting"],
+  it("calls a contact nobody has ever heard from thin, with no trend to state", () => {
+    const view: Contact360 = {
+      ...emptyButGranted,
+      last_inbound_at: null,
+      last_outbound_at: null,
+    };
+    expect(contactStanding(view, t)).toEqual({
+      words: "Thin",
+      tone: undefined,
     });
-
-    const signals = section("Signals & risks");
-    expect(within(signals).queryByText("No next meeting booked")).toBeNull();
-    expect(
-      within(signals).getByText("Single-threaded on this deal"),
-    ).toBeTruthy();
-    // One signal out of two reads as the whole finding unless the section says
-    // otherwise, and the count of what is missing is not knowable here — the
-    // rule never ran.
-    expect(within(signals).getByText("Showing part of the list")).toBeTruthy();
   });
 
-  it("books the missing-meeting risk when the calendar is readable and empty", () => {
-    mount({
-      ...granted,
-      commercial: {
-        role: "champion",
-        committee: [],
-        deal: { deal_id: "d-1", title: "Fleet retrofit" },
-      },
-      next_meeting: undefined,
-    });
-
-    const signals = section("Signals & risks");
-    expect(within(signals).getByText("No next meeting booked")).toBeTruthy();
-    expect(within(signals).queryByText("Showing part of the list")).toBeNull();
+  it("gives no standing at all when the touch dates are withheld", () => {
+    expect(contactStanding(withheld, t)).toBeNull();
   });
 });
 
@@ -503,23 +370,6 @@ describe("the rail leaves conversation history in the overview and Timeline", ()
 });
 
 describe("the sibling sections governed by their own grants", () => {
-  it("says who knows them is withheld rather than that nobody does", () => {
-    mount(withheld);
-
-    const who = section("Who knows Dana");
-    expect(within(who).getByText(WITHHELD_SENTENCE)).toBeTruthy();
-    expect(
-      within(who).queryByText("Nobody here has corresponded with them yet."),
-    ).toBeNull();
-  });
-
-  it("omits an empty colleague panel", () => {
-    mount(emptyButGranted);
-    expect(
-      screen.queryByRole("heading", { name: "Who knows Dana" }),
-    ).toBeNull();
-  });
-
   it("says the employments are withheld rather than that there are none", () => {
     mount(withheld);
 
@@ -534,6 +384,13 @@ describe("the sibling sections governed by their own grants", () => {
     const companies = section("Companies");
     expect(within(companies).getByText("Brandt Automotive GmbH")).toBeTruthy();
     expect(within(companies).queryByText(WITHHELD_SENTENCE)).toBeNull();
+  });
+
+  it("shows the employer's contact and open-deal counts once its record answers", async () => {
+    mount(granted);
+
+    const companies = section("Companies");
+    await within(companies).findByText("2 contacts · no open deals");
   });
 });
 
@@ -656,6 +513,71 @@ describe("adding a company", () => {
     rerender(emptyButGranted);
     await user.click(screen.getByRole("button", { name: "Add company" }));
     expect(currentEmployerTicked()).toBe(true);
+  });
+
+  // The start date is the field #415 is about: an employment with no window
+  // lets the account walk resolve three-year-old mail to the company this
+  // contact joined last month. This form is the only place a human is ever
+  // asked for it, so what it SENDS is the assertion — and the month case is
+  // the one that matters, because a reader who knows the month and not the day
+  // must not have a day invented for them.
+  it("sends the start date it was given, at the precision it was given", async () => {
+    const user = driver();
+    mount(emptyButGranted);
+    await screen.findByRole("button", { name: "Add company" });
+    await openAndPickEmployer(user);
+    await user.type(screen.getByLabelText("Start date"), "2024-05");
+    await user.click(screen.getByRole("button", { name: "Create" }));
+
+    const body = await employmentBody();
+    expect(body.started_at).toBe("2024-05-01");
+    expect(body.started_precision).toBe("month");
+  });
+
+  it("says nothing about a start nobody gave", async () => {
+    // Absent, not today. An unknown start is a real answer, and a form that
+    // filled it in would write a fact nobody holds — onto the very column the
+    // account walk trusts to bound a window.
+    const user = driver();
+    mount(emptyButGranted);
+    await screen.findByRole("button", { name: "Add company" });
+    await openAndPickEmployer(user);
+    await user.click(screen.getByRole("button", { name: "Create" }));
+
+    const body = await employmentBody();
+    expect("started_at" in body).toBe(false);
+    expect("started_precision" in body).toBe(false);
+  });
+
+  // The modal is never unmounted, so every field it holds survives a cancel
+  // unless something puts it back. A start date is the worst one to leave
+  // standing: it would be sent for the NEXT employer, dated from the last.
+  it("does not carry a cancelled start date into the next employer", async () => {
+    const user = driver();
+    mount(emptyButGranted);
+    await screen.findByRole("button", { name: "Add company" });
+    await user.click(screen.getByRole("button", { name: "Add company" }));
+    await user.type(screen.getByLabelText("Start date"), "2019-03-04");
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+
+    await user.click(screen.getByRole("button", { name: "Add company" }));
+    expect(screen.getByLabelText("Start date")).toHaveProperty("value", "");
+  });
+
+  // `datePatch` appends `-01` to any seven characters, so an unchecked field
+  // turns a typo into a plausible-looking day — and the wire declares `date`,
+  // which refuses the rest outright. The form says no before either happens.
+  it("refuses to save a date that is not one", async () => {
+    const user = driver();
+    mount(emptyButGranted);
+    await screen.findByRole("button", { name: "Add company" });
+    await openAndPickEmployer(user);
+    await user.type(screen.getByLabelText("Start date"), "not-a-date");
+
+    expect(screen.getByRole("button", { name: "Create" })).toHaveProperty(
+      "disabled",
+      true,
+    );
   });
 
   it("starts unticked for somebody who already has a current job", async () => {

@@ -178,7 +178,11 @@ func (e *Eraser) EraseContact(ctx context.Context, contactID ids.UUID, reason st
 		if err := e.eraseAttachments(ctx, tx, reason, causeContactErasure, subjectAttachmentsWhere, subject, floorInterval, floorAnchor); err != nil {
 			return err
 		}
-		rawPurged, aiPayloadsPurged, err := purgeDerivedTraces(ctx, tx, subject, keys.displayName, emails, identities)
+		// The activities this erasure just destroyed travel with the subject:
+		// a model call made ABOUT one of them holds its text, and the activity
+		// row is now empty while that copy is not.
+		rawPurged, aiPayloadsPurged, err := purgeDerivedTraces(ctx, tx, subject, keys.displayName, emails, identities,
+			erasedCitations{activities: append(activitiesRedacted, activitiesHeld...), leads: leadsWiped})
 		if err != nil {
 			return err
 		}
@@ -318,6 +322,7 @@ func anonymizeSubjectRows(
 		  title = NULL, raw = NULL, photo_object_key = NULL, photo_origin = NULL,
 		  address_line1 = NULL, address_line2 = NULL, address_city = NULL,
 		  address_region = NULL, address_postal_code = NULL, address_country = NULL,
+		  source_author_name = NULL,
 		  archived_at = coalesce(archived_at, now())%s
 		WHERE id = $1`, nullColumnAssignments(contactCustom)), contactID, erasedName); err != nil {
 		return nil, err

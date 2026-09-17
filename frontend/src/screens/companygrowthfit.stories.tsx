@@ -197,7 +197,7 @@ function Panel({
   return (
     <StoryProviders>
       <div style={{ maxWidth: 760 }}>
-        <GrowthFitPanel companyId="o-1" enabled />
+        <GrowthFitPanel companyId="o-1" />
       </div>
     </StoryProviders>
   );

@@ -104,28 +104,6 @@ describe("CreateAction dedupe link", () => {
 });
 
 describe("problemMessage", () => {
-  it("translates an unsupported_by_sor WRITE refusal when given a translator", () => {
-    expect(
-      problemMessage(
-        { code: "unsupported_by_sor", detail: "write not supported by SoR" },
-        t,
-      ),
-    ).toBe(t("overlay.refused"));
-  });
-
-  it("translates an unsupported_in_overlay_mode READ refusal to its own, different copy", () => {
-    const message = problemMessage(
-      { code: "unsupported_in_overlay_mode", detail: "422 read gap" },
-      t,
-    );
-    expect(message).toBe(t("overlay.filterUnsupported"));
-    // The two refusal codes are different states (a refused write vs. a
-    // refused filter/sort dial) — collapsing them onto one string would
-    // print the write-specific "can't serve this write" for a filter a
-    // caller never tried to write.
-    expect(message).not.toBe(t("overlay.refused"));
-  });
-
   // The sentinel string is what an object-RBAC denial and a read-share denial
   // both arrive with, and it names neither the authority the reader holds nor
   // what would widen it. Catalog copy replaces it.
@@ -190,22 +168,16 @@ describe("problemMessage", () => {
   it("keeps the server detail when no translator is given", () => {
     expect(
       problemMessage({
-        code: "unsupported_by_sor",
-        detail: "write not supported by SoR",
+        code: "version_skew",
+        detail: "record changed elsewhere",
       }),
-    ).toBe("write not supported by SoR");
+    ).toBe("record changed elsewhere");
     expect(
       problemMessage({
         code: "permission_denied",
         detail: "permission denied",
       }),
     ).toBe("permission denied");
-    expect(
-      problemMessage({
-        code: "unsupported_in_overlay_mode",
-        detail: "422 read gap",
-      }),
-    ).toBe("422 read gap");
   });
 
   it("keeps the server detail for an unrelated code even with a translator", () => {
@@ -487,12 +459,6 @@ describe("problemMessageOf", () => {
     expect(
       problemMessageOf(new ProblemError({ detail: "email taken" }), t),
     ).toBe("email taken");
-  });
-
-  it("translates a refusal code the same way the raw-body reader does", () => {
-    expect(
-      problemMessageOf(new ProblemError({ code: "unsupported_by_sor" }), t),
-    ).toBe(t("overlay.refused"));
   });
 
   it("never repeats the words of a bare Error", () => {

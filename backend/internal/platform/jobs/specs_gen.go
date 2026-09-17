@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "d7c54eb10a16d867d642cf4f1ce83b705e91c627dd721242e154db5d8466a030"
+const JobContractHash = "7d517384f06f4f8e411b200113fa98e52c2ae549df1eec5969241d613f0deb1d"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -571,27 +571,6 @@ var specs = map[string]Spec{
 		Fault:     FaultPolicy{NilAfterLogging: "ONE branch, and it is a mis-wired ROLE rather than a failed send: a worker composed with no operator relay says so at Warn, claims nothing, and returns nil. No durable retry stands behind that, and none is wanted — each role reads its own config, so returning a failure would have an installation that deliberately runs no operator mail discard a row per decision, and would leave a relay-less replica bouncing rows rather than sending them. What makes the green row honest is that the thing the product promises still happened: the notice is on the recipient's Worklist, which is where every notice is, and this message is only a nudge toward it. The log is how an operator tells one unconfigured worker from a quiet week.\nIt waives THAT branch and no other. The failures above the claim are returned and River retries them, and the ones below it are recorded rather than logged away — a refusal writes its cause into notice.email_error beside a claim that is never released. That is where the durability lives, and it is deliberate: SMTP returns no receipt, so a retried attempt could not tell a refused message from a delivered one and would risk telling a colleague twice that the same decision is waiting. The green River row means 'this notice's one attempt is concluded'; the row says how it went."},
 		Args:      []ArgField{{Name: "NoticeID"}, {Name: "Workspace"}},
 	},
-	"overlay_reconcile": {
-		Kind:         "overlay_reconcile",
-		GoType:       "OverlayReconcileArgs",
-		Role:         Worker,
-		Fleet:        true,
-		Queue:        "overlay_reconcile",
-		Timeout:      TimeoutPolicy{Fixed: 20 * time.Minute},
-		OptsOwner:    OptsCaller,
-		Cadence:      Cadence{OperatorField: "OverlayInterval"},
-		Registration: Registration{When: []string{"OverlayVault"}},
-	},
-	"overlay_refetch": {
-		Kind:         "overlay_refetch",
-		GoType:       "OverlayRefetchArgs",
-		Role:         Worker,
-		Queue:        "default",
-		Timeout:      TimeoutPolicy{Fixed: 2 * time.Minute},
-		OptsOwner:    OptsCaller,
-		Registration: Registration{When: []string{"OverlayVault"}},
-		Args:         []ArgField{{Name: "ExternalID"}, {Name: "IncumbentClass", Scalar: true, Reason: "the incumbent's object class (contacts, companies, deals, leads). It is half the coalescing key River dedupes these re-fetches by -- the args ARE that key — so it cannot be resolved at work time; it names a class of record in another system, never a record."}, {Name: "Workspace"}},
-	},
 	"owed_verdict": {
 		Kind:         "owed_verdict",
 		GoType:       "OwedVerdictArgs",
@@ -618,7 +597,7 @@ var specs = map[string]Spec{
 		GoType:      "PrivacyRetentionArgs",
 		Role:        Worker,
 		Queue:       "privacy_retention",
-		Timeout:     TimeoutPolicy{Fixed: 20300 * time.Second, DerivedFrom: "privacyRetentionPassTimeout"},
+		Timeout:     TimeoutPolicy{Fixed: 22300 * time.Second, DerivedFrom: "privacyRetentionPassTimeout"},
 		MaxAttempts: 3,
 		OptsOwner:   OptsArgs,
 		Cadence:     Cadence{OperatorField: "PrivacyRetention.Interval", ScheduleWhenPositive: "PrivacyRetention.Interval"},
@@ -828,7 +807,6 @@ var queues = map[string]int{
 	"deep_read":         2,
 	"default":           5,
 	"geocode":           1,
-	"overlay_reconcile": 1,
 	"privacy_retention": 2,
 	"rate_refresh":      2,
 	"technical_lookup":  1,

@@ -10,19 +10,19 @@ import { usePageAside } from "../app/pageaside";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import { OverflowMenu } from "../design-system/atoms";
-import { RecordView } from "../design-system/composed";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import {
   hasTimelineFilters,
   useRecordTimeline,
   useTimelineFilters,
 } from "../design-system/recordtimeline";
+import { RecordView } from "../design-system/recordview";
 import { SurfaceState, sectionState } from "../design-system/surfacestate";
 import { TimelineFilterBar } from "../design-system/timelinefilterbar";
 import { useLocale, useT } from "../i18n";
 import { taskWriteKeys } from "./activitykeys";
 import { ArchiveAction } from "./archive";
-import { QueryGate, throwProblem, useMe, useSorMode } from "./common";
+import { QueryGate, throwProblem, useMe } from "./common";
 import { NewDealAction } from "./companyactions";
 import { CustomFieldsPanel } from "./customfields.card";
 import {
@@ -120,8 +120,7 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
   const project = view.project;
   const readOnlyReasonId = useId();
   const [moveTo, setMoveTo] = useState<ProjectPhase | null>(null);
-  const overlay = useSorMode() === "overlay";
-  const chronology = useProjectChronology(view, overlay);
+  const chronology = useProjectChronology(view);
   // Every write affordance on this page answers ONE question, asked once: an
   // archived project takes no changes, and one this caller cannot write takes
   // none from them. The verbs, the stepper and the rail cards used to ask only
@@ -169,30 +168,29 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
       // column the rail's own rhythm, and a wrapper of ours inside it was a
       // second answer to how far apart a record's rail cards sit.
       aside={
-        details.open ? (
-          <>
-            <ProjectCompanies
-              projectId={project.id}
-              companies={project.companies}
-              readOnly={readOnly}
-            />
-            <RecordTeam
-              recordType="project"
-              recordId={project.id}
-              readOnly={readOnly}
-            />
-            <StakeholdersCard
-              view={view}
-              projectId={project.id}
-              readOnly={readOnly}
-            />
-            <ProjectContractsCard view={view} />
-            <ProjectDocumentsCard view={view} />
-            <PhaseHistoryCard view={view} />
-            <CustomFieldsPanel object="project" record={project} />
-          </>
-        ) : undefined
+        <>
+          <ProjectCompanies
+            projectId={project.id}
+            companies={project.companies}
+            readOnly={readOnly}
+          />
+          <RecordTeam
+            recordType="project"
+            recordId={project.id}
+            readOnly={readOnly}
+          />
+          <StakeholdersCard
+            view={view}
+            projectId={project.id}
+            readOnly={readOnly}
+          />
+          <ProjectContractsCard view={view} />
+          <ProjectDocumentsCard view={view} />
+          <PhaseHistoryCard view={view} />
+          <CustomFieldsPanel object="project" record={project} />
+        </>
       }
+      asideOpen={details.open}
       name={project.name}
       subtitle={<ProjectSubtitle view={view} />}
       zone={recordZone}
@@ -220,6 +218,18 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
       // with no primary action was also the one whose verbs were somewhere
       // else.
       actionsInline
+      // Where the project stands, at the foot of its head — the same row a
+      // deal's stage ladder and a lead's stepper stand in. It is the question a
+      // reader arrives with, so it is answered before the body rather than as
+      // the first card inside it.
+      standing={
+        <PhaseStepper
+          phase={project.phase}
+          refusedReasonId={readOnly ? readOnlyReasonId : undefined}
+          pending={false}
+          onMove={setMoveTo}
+        />
+      }
       tabs={<ProjectTabs />}
       band={
         // ONE sentence and nothing else: why this record takes no changes, so
@@ -234,17 +244,13 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
       {...chronology}
       timelineAnchorId={PROJECT_ACTIVITY_ANCHOR}
     >
-      {/* The record's work column, at the record's own step. The phase and the
-          readings open it: they describe the whole project but are read as
-          cards, so they stand BESIDE the details pane as on every other
-          record, not in a band across both columns that the pane reflowed. */}
+      {/* The record's work column, at the record's own step. The readings open
+          it: they are read as cards and so stand BESIDE the details pane, as on
+          every other record, rather than in a band across both columns that the
+          pane would reflow. The phase is not one of them — it says where the
+          whole project stands, so it rides the head (`standing` above), which
+          is full width already and above the pane. */}
       <div className="record-stack">
-        <PhaseStepper
-          phase={project.phase}
-          refusedReasonId={readOnly ? readOnlyReasonId : undefined}
-          pending={false}
-          onMove={setMoveTo}
-        />
         <RollupsStrip view={view} />
         <ProjectHealth
           projectId={project.id}
@@ -262,7 +268,6 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
               // without re-checking, so `EnsureAttachable` proves the authority
               // at the moment of attaching. A caller who may read this project
               // but not write it can still work deals — just not born into it.
-              !overlay &&
               !readOnly &&
               project.company_id && (
                 <NewDealAction
@@ -340,24 +345,20 @@ function ProjectActions({
   const t = useT();
   const me = useMe();
   const companies = useCompanyOptions();
-  const overlay = useSorMode() === "overlay";
   return (
     <>
       {/* A project's mail is a NEW conversation with somebody on the account
           behind it: the composer offers that roster in To and files the send
           under this project, which is the filing a message written from here
-          can only mean. Off in overlay for the reason the other verbs are: a
-          mirrored workspace has no send of its own. No `recordAddress` — a
-          project is not a contact and has no address of its own to open with,
-          so the reader picks from the account's contacts rather than the page
-          guessing which of them a project-wide message is to. */}
-      {!overlay && (
-        <RecordEmailVerb
-          entityType="project"
-          entityId={project.id}
-          disabledReasonId={refusedReasonId}
-        />
-      )}
+          can only mean. No `recordAddress` — a project is not a contact and has
+          no address of its own to open with, so the reader picks from the
+          account's contacts rather than the page guessing which of them a
+          project-wide message is to. */}
+      <RecordEmailVerb
+        entityType="project"
+        entityId={project.id}
+        disabledReasonId={refusedReasonId}
+      />
       <OverflowMenu label={t("record.moreActions")}>
         {/* Worded — a bare pencil among sentences names nothing to a reader. */}
         <EditAction<Project>
@@ -397,13 +398,11 @@ function ProjectActions({
           invalidate="projects"
           recordKey="project"
         />
-        {!overlay && (
-          <ShareAction
-            recordType="project"
-            recordId={project.id}
-            disabledReasonId={refusedReasonId}
-          />
-        )}
+        <ShareAction
+          recordType="project"
+          recordId={project.id}
+          disabledReasonId={refusedReasonId}
+        />
         <AssignProjectOwnerAction
           project={project}
           disabledReasonId={refusedReasonId}
@@ -453,10 +452,7 @@ type ChronologySlots = Readonly<{
  * page of activities is what is drawn, so the list cannot disagree with the
  * rollup figures read in the same transaction.
  */
-function useProjectChronology(
-  view: Project360,
-  overlay: boolean,
-): ChronologySlots {
+function useProjectChronology(view: Project360): ChronologySlots {
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
@@ -499,9 +495,6 @@ function useProjectChronology(
       />
     ),
   });
-  if (overlay) {
-    return { timeline: history.entries, timelineNotice: <span /> };
-  }
   // A withheld activities section is not an empty timeline, and the change
   // feed is a separate grant: Activities and All say withheld, Changes still
   // reads.

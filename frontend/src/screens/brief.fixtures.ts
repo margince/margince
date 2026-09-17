@@ -61,12 +61,12 @@ export const bundle: Approval[] = [
     bundle_id: BUNDLE,
     proposed_change: { source_url: "https://acme.example" },
   }),
-  proposal("ap-lead-1", "Lead from acme.example: Anna Weber", {
+  proposal("ap-lead-1", "Found on acme.example: Anna Weber", {
     kind: "site_lead",
     bundle_id: BUNDLE,
     proposed_change: { name: "Anna Weber", role: "Head of Operations" },
   }),
-  proposal("ap-lead-2", "Lead from acme.example: Mira Osei", {
+  proposal("ap-lead-2", "Found on acme.example: Mira Osei", {
     kind: "site_lead",
     bundle_id: BUNDLE,
     proposed_change: { name: "Mira Osei", role: "Procurement" },
@@ -713,6 +713,55 @@ export function waitingRow(): WorklistItem {
     because: [],
     consequence: "buyer_waits",
     actions: ["open"],
+  };
+}
+
+/**
+ * A customer's message waiting on an answer, with the message itself: the row
+ * the Brief leads a morning with, named by the canonical email row rather than
+ * by a sentence about it.
+ */
+export function waitingEmailRow(): WorklistItem {
+  return {
+    id: "waiting-sonya",
+    source: "customer_waiting",
+    category: "customer_waiting",
+    band: "now",
+    level: 1,
+    urgent: true,
+    consequence: "buyer_waits",
+    title: "Meet next Tues?",
+    because: [
+      { kind: "buyer_wrote_last" },
+      { kind: "waiting_days", value: { kind: "days", days: 13 } },
+    ],
+    subject: { type: "contact", id: "contact-sonya", label: "Sonya Beck" },
+    contact: {
+      id: "contact-sonya",
+      label: "Sonya Beck",
+      touch: {
+        last_inbound_at: "2026-09-03T16:46:00Z",
+        last_outbound_at: "2026-08-28T09:12:00Z",
+      },
+    },
+    email_summary: {
+      activity_id: "mail-sonya",
+      subject: "Meet next Tues?",
+      preview:
+        "Hey Josh — let's meet next Tues instead of Monday. You're going to be talking to the team about the rollout?",
+      occurred_at: "2026-09-03T16:46:00Z",
+      direction: "inbound",
+      counterparty: "Sonya Beck",
+      attachment_count: 0,
+      move: "needs_reply",
+      display_status: "team",
+      version: 1,
+    },
+    move: { action: "draft_reply", activity_id: "mail-sonya" },
+    actions: ["open"],
+    // Every way to put this row down, in the open: a waiting message can be
+    // deferred, handed back, or judged not to be a customer at all.
+    dispositions: ["snooze", "not_mine", "not_sales"],
   };
 }
 

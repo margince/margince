@@ -364,7 +364,17 @@ func (s *Service) wire(
 			return crmcontracts.CompanyScan{}, err
 		}
 	}
-	findings, dropped := merge(rules, read)
+	merged := merge(rules, read)
+	// A STORED finding outlives the record it was written from, so what it
+	// cites is asked about before it is enriched. Retraction runs BEFORE the
+	// cap too, so a finding quoting an archived message does not hold a slot
+	// against a live one — capping first would report the live row as "dropped
+	// by the cap" and show the retracted one in its place.
+	standing, err := s.standingCitations(ctx, merged)
+	if err != nil {
+		return crmcontracts.CompanyScan{}, err
+	}
+	findings, dropped := applyCap(keepCited(merged, standing))
 	// Once, over the merged list rather than in either writer: the rules' rows
 	// and the stored ones cite the same account's conversations, and enriching
 	// each side would read the same message twice and let one copy carry a
@@ -404,8 +414,8 @@ func (s *Service) wire(
 
 // merge folds both writers' advice into the list the page draws: the rules'
 // rows first in their own order, then the model's in the order it gave them,
-// one row per fingerprint, capped with the cap reported.
-func merge(rules, read []crmcontracts.Company360Suggestion) ([]crmcontracts.Company360Suggestion, int) {
+// one row per fingerprint. The cap is applied separately, after retraction.
+func merge(rules, read []crmcontracts.Company360Suggestion) []crmcontracts.Company360Suggestion {
 	seen := map[string]bool{}
 	merged := make([]crmcontracts.Company360Suggestion, 0, len(rules)+len(read))
 	for _, suggestion := range append(append([]crmcontracts.Company360Suggestion{}, rules...), read...) {
@@ -415,10 +425,7 @@ func merge(rules, read []crmcontracts.Company360Suggestion) ([]crmcontracts.Comp
 		seen[suggestion.Fingerprint] = true
 		merged = append(merged, suggestion)
 	}
-	if len(merged) > maxAdvice {
-		return merged[:maxAdvice], len(merged) - maxAdvice
-	}
-	return merged, 0
+	return merged
 }
 
 // caller is the human the scan belongs to. A scan is a reading aid for a

@@ -214,7 +214,7 @@ function Briefing({
   };
   // The findings ride the coverage card's own query, so this costs no second
   // request and the two cannot disagree about what is wrong with the deal.
-  const coverage = useDealSignals(dealId, true);
+  const coverage = useDealSignals(dealId);
   const because = card.verdict?.because.sentences ?? [];
   return (
     <>
@@ -247,16 +247,22 @@ function Briefing({
         <SignalStrip signals={coverage.signals} />
         {spine}
       </CallCard>
-      <TodayPanel onOpenTasks={() => navigate({ screen: "worklist" })}>
-        {card.next ? (
+      {/* Drawn only where there IS a move. A deal whose reading found nothing
+          owed today is a deal with one fewer card to read, not a card whose
+          body says it found nothing: the reading above already reports what
+          the day holds, and a panel repeating that in a sentence spends a
+          card on an absence. The pending and failed states keep their panel,
+          because a read still running has not established a quiet day. */}
+      {card.next ? (
+        <TodayPanel onOpenTasks={() => navigate({ screen: "worklist" })}>
           <Move
             key="next"
             dealId={dealId}
             move={card.next}
             onOpenEmail={onOpenEmail}
           />
-        ) : null}
-      </TodayPanel>
+        </TodayPanel>
+      ) : null}
       {/* The reading, under the call and the work: what has happened and
           where that leaves things, in prose with its sources. What is holding
           the deal up, what the buyer wants and the rest of the reasoning sit

@@ -126,7 +126,9 @@ func insertActivityLinks(ctx context.Context, tx pgx.Tx, activityID ids.Activity
 				return err
 			}
 		}
-		if err := auth.EnsureLinkTarget(ctx, tx, link.EntityType, link.EntityID); err != nil {
+		// ATTACH: the named record gains an activity that every reader of it
+		// will see, so a share marked read-only does not confer this.
+		if err := auth.EnsureAttachTarget(ctx, tx, link.EntityType, link.EntityID); err != nil {
 			return err
 		}
 		// AFTER the target probe, not before it. A caller naming a company they

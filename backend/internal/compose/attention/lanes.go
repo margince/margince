@@ -72,6 +72,12 @@ type ApprovalQuery struct {
 // every morning. An id the reader may not see is simply ABSENT from the answer,
 // which is what its refusal meant.
 //
+// OpenCandidates answers UP TO its limit and says nothing about what it left:
+// the dedupe queue pages, and its own page maximum is smaller than the census
+// this lane reads to. So CountOpen is what says whether the lane finished, and
+// unseen.go reads the two together — a page judged by its own length reported a
+// complete day over every pair past the first one.
+//
 // DecidableSubset asks the OTHER question about the same records: not whether
 // this reader may see them, but whether they could change them. Settling a pair
 // archives one record and rewrites the other, so a reader holding neither

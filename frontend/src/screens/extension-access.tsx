@@ -431,7 +431,7 @@ function UnitCard({
             everything else because it is what an operator deciding whether to
             grant the switches below is actually missing: the unit name alone
             leaves "de" meaning nothing. */}
-        <p className="t-caption ext-unit-description">{unit.description}</p>
+        <p className="t-caption">{unit.description}</p>
         {/* Said, not silently omitted, and only where the two registries
             DISAGREE: a unit the running binary composed whose descriptor this
             bundle does not carry is a version skew an operator has to be able

@@ -139,6 +139,24 @@ it("allows management to read without offering an editor", async () => {
   expect(screen.queryByRole("button", { name: "Edit allowance" })).toBeNull();
 });
 
+// A reader holding only one of ai_diagnostics:read / ai_budget:read gets the
+// withheld panel rather than a section that silently renders nothing:
+// `/ai/status` refuses both grant combinations server-side, so there is no
+// partial table to show either reader.
+it.each([
+  { ai_diagnostics: ["read"] } satisfies GrantSpec,
+  { ai_budget: ["read"] } satisfies GrantSpec,
+])("explains the withheld AI-activity section for %j", async (allow) => {
+  mount(allow);
+  expect(await screen.findByText("AI by activity")).toBeTruthy();
+  expect(
+    screen.getByText(
+      "Only a reader who holds both AI diagnostics read and AI allowance read can see which features are live right now.",
+    ),
+  ).toBeTruthy();
+  expect(screen.queryByRole("table")).toBeNull();
+});
+
 it("edits the normal leading tier while the effective tier is demoted", async () => {
   const onEdit = vi.fn();
   render(

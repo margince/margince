@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
+import { company360 } from "./company.fixtures";
 import {
   CommercialPanel,
   DealsCard,
@@ -12,7 +13,6 @@ import {
   SuggestionsSection,
 } from "./company360";
 import { CompanyContractState } from "./companycommercial";
-import { CompanyWorkCard } from "./companywork";
 import {
   installFetchStub,
   jsonResponse,
@@ -43,7 +43,8 @@ type FinanceSummary = components["schemas"]["CompanyFinanceSummary"];
 
 const page = { has_more: false, next_cursor: null };
 
-const populated = {
+const populated: View = {
+  ...company360,
   as_of: "2026-07-13T09:00:00Z",
   company: {
     id: "o-1",
@@ -182,6 +183,11 @@ const populated = {
         direction: "outbound",
         subject: "Re: retrofit timeline",
         occurred_at: "2026-07-12T10:00:00Z",
+        is_done: true,
+        source: "manual",
+        captured_by: "human:u-1",
+        created_at: "2026-07-12T10:00:00Z",
+        updated_at: "2026-07-12T10:00:00Z",
         links: [{ entity_type: "deal", entity_id: "d-1" }],
       },
     ],
@@ -211,7 +217,7 @@ const populated = {
     page,
   },
   pending_approvals: { data: [], page },
-  tags: [{ id: "t-1", workspace_id: "w-1", name: "Key account" }],
+  tags: [{ id: "t-1", name: "Key account" }],
   since_last_visit: {
     baseline_at: "2026-07-10T09:00:00Z",
     new_activities: 2,
@@ -272,14 +278,15 @@ const populated = {
     single_threaded: false,
     open_commitments: 1,
   },
-} as unknown as View;
+};
 
 // The same account read by someone whose role cannot see deals, contacts or
 // the state strip: each card says so rather than reading as an account with
 // no pipeline, no contacts and no standing. This is the state no seeded demo
 // account can reach — every one of them grants the viewer full RBAC — so
 // this gallery is the only place a reader ever sees it rendered.
-const withheld = {
+const withheld: View = {
+  ...company360,
   ...populated,
   deals: undefined,
   contacts: undefined,
@@ -289,10 +296,11 @@ const withheld = {
   // projects and cannot read the conversations behind them, so the card shows
   // the rows and says the statuses are incomplete.
   attention_withheld: true,
-} as unknown as View;
+};
 
 // An account nobody has worked yet — every card in its own empty state.
-const empty = {
+const empty: View = {
+  ...company360,
   ...populated,
   contacts: { data: [], page },
   deals: {
@@ -315,7 +323,7 @@ const empty = {
     deal_stage_moves: 0,
     pending_proposals: 0,
   },
-} as unknown as View;
+};
 
 function Cards({ view }: Readonly<{ view: View }>) {
   installFetchStub({
@@ -345,10 +353,6 @@ function Cards({ view }: Readonly<{ view: View }>) {
   return (
     <StoryProviders>
       <div style={{ display: "grid", gap: "var(--space-3)", maxWidth: 420 }}>
-        {/* The overview's lead card. The live page always wires an opener,
-            so the commitment lines here can link to the conversation they
-            were read from; without one they render as plain sentences. */}
-        <CompanyWorkCard view={view} onOpenRecord={() => {}} />
         {/* The contract standing rides in the panel's `extra` slot, which is
             the SAME component the Deals tab draws — an account's contracted
             value and renewal must not be able to say two things on two
@@ -382,7 +386,8 @@ export const NothingYet: Story = { render: () => <Cards view={empty} /> };
 // No seeded demo account reaches this pairing, and for a structural reason:
 // every one of them already carries an open task, which is exactly the
 // condition that silences the rule.
-const recommending = {
+const recommending: View = {
+  ...company360,
   ...populated,
   next_steps: { data: [], page },
   suggestions: [
@@ -404,7 +409,7 @@ const recommending = {
       },
     },
   ],
-} as unknown as View;
+};
 
 function RecommendedStep() {
   installFetchStub({
@@ -555,21 +560,20 @@ export const StateStripConnected: Story = {
 export const StateStripUnanswered: Story = {
   render: () => (
     <Strip
-      view={
-        {
-          ...populated,
-          health: undefined,
-          state_strip: {
-            account: { lifecycle: "prospect", relationship_types: [] },
-            commercial: {
-              open_count: 0,
-              stalled_count: 0,
-              priced_count: 0,
-              converted_count: 0,
-            },
+      view={{
+        ...company360,
+        ...populated,
+        health: undefined,
+        state_strip: {
+          account: { lifecycle: "prospect", relationship_types: [] },
+          commercial: {
+            open_count: 0,
+            stalled_count: 0,
+            priced_count: 0,
+            converted_count: 0,
           },
-        } as unknown as View
-      }
+        },
+      }}
     />
   ),
 };
@@ -577,13 +581,12 @@ export const StateStripUnanswered: Story = {
 export const StateStripWithheld: Story = {
   render: () => (
     <Strip
-      view={
-        {
-          ...populated,
-          state_strip: undefined,
-          sections_omitted: ["state_strip"],
-        } as unknown as View
-      }
+      view={{
+        ...company360,
+        ...populated,
+        state_strip: undefined,
+        sections_omitted: ["state_strip"],
+      }}
     />
   ),
 };

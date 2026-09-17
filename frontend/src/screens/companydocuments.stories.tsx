@@ -41,7 +41,7 @@ const documents: Attachment[] = [
     entity_id: "o-1",
     source: "upload",
     captured_by: "human:u-1",
-  } as unknown as Attachment,
+  },
   {
     id: "d-2",
     filename: "scan_0001.pdf",
@@ -53,7 +53,7 @@ const documents: Attachment[] = [
     entity_id: "o-1",
     source: "upload",
     captured_by: "human:u-1",
-  } as unknown as Attachment,
+  },
   {
     id: "d-3",
     filename: "Kuendigung.pdf",
@@ -66,7 +66,7 @@ const documents: Attachment[] = [
     entity_id: "o-1",
     source: "upload",
     captured_by: "human:u-1",
-  } as unknown as Attachment,
+  },
 ];
 
 const deal = {
@@ -76,7 +76,7 @@ const deal = {
   status: "open",
 };
 
-const dealDocument = {
+const dealDocument: Attachment = {
   id: "d-4",
   filename: "order_form.txt",
   category: "other",
@@ -87,7 +87,7 @@ const dealDocument = {
   entity_id: "deal-1",
   source: "upload",
   captured_by: "human:u-1",
-} as unknown as Attachment;
+};
 
 function Documents({
   data,
@@ -159,13 +159,13 @@ export const WithheldRows: Story = {
           id: "d-4",
           filename: "GR-2026-0092.pdf",
           contract_id: "c-1",
-        } as unknown as Attachment,
+        },
         {
           ...documents[1],
           id: "d-5",
           filename: "scan_0001_v0.pdf",
           doc_state: "superseded",
-        } as unknown as Attachment,
+        },
       ]}
     />
   ),
@@ -175,9 +175,5 @@ export const WithheldRows: Story = {
 // nothing of its own to show. It says exactly that: "no documents on this
 // account" would be a lie about an account that has one.
 export const AllFiledToAgreements: Story = {
-  render: () => (
-    <Documents
-      data={[{ ...documents[0], contract_id: "c-1" } as unknown as Attachment]}
-    />
-  ),
+  render: () => <Documents data={[{ ...documents[0], contract_id: "c-1" }]} />,
 };

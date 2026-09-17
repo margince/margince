@@ -274,6 +274,38 @@ func TestABindingRefusingWhatItDeclaredFailsTheReading(t *testing.T) {
 	}
 }
 
+// A document whose bytes are not the type it is stored as is a fault of the
+// DOCUMENT, so the reading fails and stays failed. Retrying would hand the same
+// bytes to the same reader and be refused identically, and a released reading
+// is one the fleet picks up again — which is the shape that turns one unreadable
+// file into a job that never settles.
+func TestADocumentWhoseBytesAreNotItsTypeFailsTheReadingRatherThanRetrying(t *testing.T) {
+	// image/png is a kind the wire carries and the sniffer can check, and the
+	// body is text: exactly the mislabel, arriving the way a real one does.
+	store := &fakeReadStore{meta: textAttachment("image/png"), body: "this is not a png"}
+	brain := scriptedBrain{FakeClient: ai.NewFakeClient(), carriage: carriesImagesOnly}
+
+	if err := runReading(t, store, brain); err != nil {
+		t.Fatalf("Read: %v", err)
+	}
+	if store.outcome == nil || store.outcome.Status != activities.ExtractionReadFailed {
+		t.Fatalf("outcome = %+v, want a failed reading", store.outcome)
+	}
+	if store.released {
+		t.Error("the reading was released for another attempt; the bytes will not have changed by then")
+	}
+	// The generic refusal detail offers a re-read, which is true of a reply the
+	// model produced and false of bytes no model can read. This case has to say
+	// the other thing.
+	detail := store.outcome.Detail
+	if !strings.Contains(detail, "not the type it was uploaded as") {
+		t.Errorf("the recorded detail does not say what was wrong with the document: %q", detail)
+	}
+	if strings.Contains(detail, "can be read again") {
+		t.Errorf("the detail offers a re-read of bytes every model reads the same way: %q", detail)
+	}
+}
+
 var _ = model.ErrAttachmentUnsupported
 
 // carriesImagesOnly is a wire with an image part and no document part — the

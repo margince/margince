@@ -164,6 +164,16 @@ const (
 	opMergeTags                = "mergeTags"
 )
 
+// The backing MCP tool verbs (agentPolicy.Tool values) of the record-write
+// operations this summary reasons about. Named as constants because the
+// strings recur across the generated policy table.
+const (
+	toolCreateRecord  = "create_record"
+	toolUpdateRecord  = "update_record"
+	toolArchiveRecord = "archive_record"
+	toolMergeRecords  = "merge_records"
+)
+
 // genericVerbs are the tools whose name carries no record: they act on
 // whatever the route points at, so the record type is the other half of what
 // they do rather than a repetition of it.

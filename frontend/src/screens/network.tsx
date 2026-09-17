@@ -10,24 +10,19 @@ import { Panel, PanelBody } from "../design-system/panel";
 import { formatDateTime, formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import "./network.css";
-import {
-  OverlayUnavailable,
-  problemMessageOf,
-  throwProblem,
-  useSorMode,
-} from "./common";
+import { problemMessageOf, throwProblem } from "./common";
 
 // The relationship-graph card (ADR-0078): "who here knows them", the question a
 // rep asks before they write a cold email. It was server-only until it landed —
 // the endpoint shipped and nothing rendered it, so the interaction projection
 // was a fact the product held and never showed anybody.
 //
-// The deal COVERAGE card was the other half and is gone. Its seats moved to the
-// deal rail (deal360/dealseats.tsx) when the readings band started counting
-// them, and its findings became chips (dealsignals.tsx) — leaving a card nothing
-// rendered, still carrying its own overlay handling, its own withheld-before-
-// empty ordering and its own copy. Two spellings of one card, and the dead one
-// had passing tests, which is what made it look maintained.
+// The deal COVERAGE card was the other half and is gone. Its seats are the rows
+// of the deal's committee card (deal360/dealcommitteecard.tsx), which carry the verbs that
+// change them, and its findings became chips (dealsignals.tsx) — leaving a card nothing
+// rendered, still carrying its own withheld-before-empty ordering and its own
+// copy. Two spellings of one card, and the dead one had passing tests, which is
+// what made it look maintained.
 //
 // Ordering is the answer here and is NOT re-sorted. The server ranks colleagues
 // by a strength it computes at read; a client that re-ordered them would be a
@@ -67,29 +62,23 @@ export function ContactNetworkPanel({ id }: Readonly<{ id: string }>) {
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
-  // The projection is folded from natively captured participants, which the
-  // incumbent mirror does not hold. Show the honest unavailable state rather
-  // than a doomed fetch that renders as "nobody knows them".
-  const overlay = useSorMode() === "overlay";
   const query = useQuery({
     queryKey: ["contact-network", id],
     queryFn: () => fetchContactNetwork(id),
-    enabled: !overlay,
   });
   const colleagues = query.data?.colleagues ?? [];
 
   return (
     <Panel title={t("network.title")}>
       <PanelBody>
-        {overlay && <OverlayUnavailable />}
-        {!overlay && query.isPending && <Skeleton width="80%" />}
-        {!overlay && query.isError && (
+        {query.isPending && <Skeleton width="80%" />}
+        {query.isError && (
           <EmptyState>{problemMessageOf(query.error, t)}</EmptyState>
         )}
-        {!overlay && query.isSuccess && colleagues.length === 0 && (
+        {query.isSuccess && colleagues.length === 0 && (
           <EmptyState>{t("network.empty")}</EmptyState>
         )}
-        {!overlay && colleagues.length > 0 && (
+        {colleagues.length > 0 && (
           <ul className="net-colleagues">
             {colleagues.map((colleague) => (
               <li key={colleague.user_id}>

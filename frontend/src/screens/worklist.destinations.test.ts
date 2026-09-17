@@ -14,7 +14,7 @@ describe("splitting the day by destination", () => {
     const queue = [
       row({ id: "a", source: "customer_waiting", destination: "today" }),
       row({ id: "b", source: "approval", destination: "review" }),
-      row({ id: "c", source: "sync_health", destination: "system_health" }),
+      row({ id: "c", source: "capture_health", destination: "system_health" }),
       row({ id: "d", source: "task", destination: "today" }),
     ];
 

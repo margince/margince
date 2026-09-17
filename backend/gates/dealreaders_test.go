@@ -48,8 +48,9 @@ const dealTable = "deal"
 // below turned out to be, each one composing auth.ScopeClauseFor and stopping
 // there.
 var dealGate = objectGate{
-	object:  dealTable,
-	literal: gatekit.TableReadPattern(dealTable),
+	object:              dealTable,
+	literal:             gatekit.TableReadPattern(dealTable),
+	objectGateSatisfies: true,
 }
 
 // predicateDealReads: the deal table appears only inside a JOIN or EXISTS that
@@ -71,7 +72,9 @@ var predicateDealReads = gatekit.Waive(map[string]string{
 	"internal/modules/activities/attachment.go:accountRollUp":                 "resolves `company_id` from the deal an attachment's activity is linked to, so the file rolls up to the right account. One id leaves it, inside the upload's own write",
 	"internal/modules/activities/capturedfiles.go:accountForCapturedActivity": "the same `company_id` resolution for captured files, on the capture path. One id, consumed by the write that files them",
 	"internal/modules/activities/companyscope.go":                             "the account-scope fragment: which activities belong to an account, reached through the link's deal among other ends. It is a clause that only ever narrows the activities a caller is shown, never a reader of deal columns",
-	"internal/modules/activities/lasttouch.go:lastTouchCandidateQuery":        "the deal arm of the cold-queue selector, the twin of the company and lead arms the other censuses file the same way: the deal's status and age decide which QUEUE ENTRIES are stale enough to surface, and no deal column reaches the caller. Removing the arm would widen the queue",
+	"internal/modules/activities/lasttouch.go:lastTouchCandidateQuery":        "the live-account CTE of the same cold-queue selector: a company carries an open deal, which is what makes it an account worth a reminder. The deal is reached only inside that CTE and no deal column is selected — what leaves the query is a company id the account arm then tests",
+	"internal/modules/activities/lasttouch.go:lastTouchEligibility":           "the deal arm of the cold-queue selector, the twin of the company and lead arms the other censuses file the same way: the deal's status and age decide which QUEUE ENTRIES are stale enough to surface, and no deal column reaches the caller. The selector now also COLLAPSES a deal onto the account absorbing it, so removing the arm no longer merely widens the queue — it restores the duplicate entries the collapse exists to remove. Either way no deal column leaves the query, and the entry that survives sits on a company the caller already reaches",
+	"internal/modules/activities/lasttouch.go:openChildReminderHoldsAccount":  "the same cold-queue selector's hold, reading deal.company_id to ask whether an account's queue entry is already represented by an unanswered one on a record it absorbs. The deal is reached only inside a NOT EXISTS and no deal column is selected; the arm's only effect is to WITHHOLD a queue entry, never to surface one",
 	"internal/modules/activities/projectcoverage.go:ProjectActivityFactsTx":   "the project's activity facts, reaching deals only to find the conversations near a delivery. The projection is activity counts and timestamps; removing the deal arm would count more activities, never disclose a deal",
 	"internal/modules/activities/responsemetrics.go":                          "the deal arm of \"is this a commercial thread\" in the first-response metrics. What reaches the caller is a count and a median over their own activity scope, never a deal column, and removing the arm would widen the set measured",
 	"internal/modules/activities/waitingsql.go":                               "the deal arm of the waiting-thread worklist, off the gated link join: it decides which threads belong to live commercial business, and what reaches the caller is the thread their own activity scope already admits",
@@ -126,8 +129,8 @@ var lifecycleDealReads = gatekit.Waive(map[string]string{
 var calleeGatedDealReads = gatekit.Waive(map[string]string{
 	"internal/compose/briefs/briefcontinuity.go:previousRanking":           "the previous run's ranking, so a brief can say what moved. The briefs package asks the deal object gate at its own entry points",
 	"internal/compose/briefs/brieflineage.go:briefLineage":                 "a brief item's lineage across runs, behind those same gated entry points",
-	"internal/compose/briefs/briefrank.go:briefCandidates":                 "the candidate deals a brief ranks, behind the gated brief entry",
-	"internal/compose/briefs/briefrank.go:briefRevenueNorm":                "the revenue normalisation the ranking divides by, behind the same gate",
+	"internal/compose/briefs/briefreads.go:briefCandidates":                "the candidate deals a brief ranks, behind the gated brief entry",
+	"internal/compose/briefs/briefreads.go:briefRevenueNorm":               "the revenue normalisation the ranking divides by, behind the same gate",
 	"internal/compose/briefs/briefstore.go:readRunItems":                   "the items of one brief run, read back for display or for the mail. Its callers ask the deal object gate; the mail path runs under the mailer's own principal",
 	"internal/compose/company360/pipelineread.go:openPipeline":             "the open-pipeline rows the advice, state-strip and dismissal paths rest on. Its ONE caller is gatherSuggestionInputs, which reads auth.ReadGranted(ctx, \"deal\") into in.pipeline and calls this only when it holds — so a seat with no deal grant is advised about everything else and told nothing about the pipeline. The census cannot see that gate because it is a field on a struct the caller branches on rather than a call in this body",
 	"internal/compose/company360/deals.go:closedTotals":                    "the won and lost totals under that same band and that same gate",

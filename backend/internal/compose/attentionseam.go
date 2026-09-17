@@ -35,8 +35,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/modules/notices"
-	"github.com/margince/margince/backend/internal/modules/overlay"
-	"github.com/margince/margince/backend/internal/platform/overlaybudget"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -86,11 +84,11 @@ func subjectOfActivity(row crmcontracts.Activity) string {
 // also names the company it came from, so the lead is what the reader wants to
 // open. A rank absent here is a record kind this surface does not route to.
 var linkPriority = map[crmcontracts.ActivityLinkEntityType]int{
-	flipObjectLead: 1,
-	flipObjectDeal: 2,
+	entityLead: 1,
+	entityDeal: 2,
 	crmcontracts.ActivityLinkEntityTypeProject: 3,
-	flipObjectContact:                          4,
-	flipObjectCompany:                          5,
+	entityContact: 4,
+	entityCompany: 5,
 }
 
 // primaryLink picks the one record a task row points at.
@@ -158,11 +156,9 @@ func (f attentionFailedEffects) Failed(ctx context.Context, limit int) ([]attent
 	return out, nil
 }
 
-// newAttentionHandlers assembles the surface for the API role. meter is the
-// Server's shared OVB meter (rebindable; overlay.go), which the sync-health
-// lane's budget concern reads.
-func newAttentionHandlers(pool *pgxpool.Pool, svc *approvals.Service, meter *overlaybudget.Meter) attention.Handlers {
-	return attention.NewHandlers(newAttentionService(pool, svc, meter, func() time.Time { return time.Now().UTC() }))
+// newAttentionHandlers assembles the surface for the API role.
+func newAttentionHandlers(pool *pgxpool.Pool, svc *approvals.Service) attention.Handlers {
+	return attention.NewHandlers(newAttentionService(pool, svc, func() time.Time { return time.Now().UTC() }))
 }
 
 // newAttentionService binds every lane to the module that owns what it shows.
@@ -172,7 +168,7 @@ func newAttentionHandlers(pool *pgxpool.Pool, svc *approvals.Service, meter *ove
 // keep passing while the shipped feed lost one — which is the failure the feed's
 // stub-driven unit tests already have, and the reason its producers went so long
 // without a test that reads them end to end.
-func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, meter *overlaybudget.Meter, now attention.Clock) *attention.Service {
+func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attention.Clock) *attention.Service {
 	db := InstallationDB(pool)
 	// ONE deal-status service for both seams below: the move and the standing
 	// are two reads of the same cached card, and a second service value would
@@ -209,13 +205,6 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, meter *over
 		// exactly as far as consent's own DSR-admin gate reaches — the store
 		// refuses everyone else and the lane renders that as withheld.
 		attentionDSRs{store: consent.NewStore(db)},
-		// The sync's own health, read through the module that owns the
-		// mirror. Built without a vault on purpose: the health read never
-		// touches a credential, and binding it here (rather than inside the
-		// vault-gated overlay wiring) keeps the lane alive on every role
-		// that serves the feed. A workspace not in overlay mode answers
-		// ErrModeNotOverlay and the lane stays absent.
-		attentionSyncHealth{svc: overlayReadService(db, nil, overlay.NewMirrorStore(db, unresolvedOwnerEmails{}), meter)},
 		// The reader's own mailbox connections, through the capture module's
 		// registry over the same rows the settings screen lists. Built bare —
 		// no sink, no authority, no vault — so the lane lives on every role
@@ -279,10 +268,19 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, meter *over
 		// dispatcher's park records on the row.
 		WithUndelivered(attentionUndelivered{store: comms.NewStore(db, time.Now, activities.NewStore(db))}).
 		WithMachineSender(capture.IsMachineAddress).
+		// The reader's OWN undecided domains. Bound to the contacts store the
+		// rest of this seam already reads: the question is opened by capture and
+		// answered against the same disposition ledger the admin list shows, so
+		// a second store over the same pool would be a second answer to "what is
+		// still open".
+		WithDomainQuestions(attentionDomainQuestions{store: contacts.NewStore(db)}).
 		// The figures behind a deal a row names but does not carry — the
 		// overnight brief's rows, which rank ids and keep their evidence
 		// behind the brief's own endpoint.
 		WithDealFacts(attentionDealFacts{store: deals.NewStore(db, DealsInstallation())}).
+		// When the contact a row names last wrote to us and when we last wrote
+		// to them, from the same reader the contact's own page uses.
+		WithContactTouch(attentionContactTouch{pool: pool}).
 		// The step a deal row suggests, decided ONCE by the deal's own status
 		// card and read here. The queue does not reason about next steps: it
 		// reads what that card already worked out, so the row and the deal page
@@ -342,6 +340,31 @@ func attentionZone(pool *pgxpool.Pool) attention.Zone {
 // queue's seam is declared over a type it owns. A shared type would be a
 // sibling-module import in one direction or the other, which is the edge every
 // seam in this file exists to avoid.
+// attentionDomainQuestions binds the reader's own undecided domains to the
+// contacts store that owns the triage ledger.
+type attentionDomainQuestions struct{ store *contacts.Store }
+
+// OpenDomainQuestions answers the acting human's own open questions.
+//
+// The port takes no owner argument on purpose: the store reads the acting
+// human's id itself, which is what lets the queue row claim the reader as its
+// owner without a second field restating it.
+func (a attentionDomainQuestions) OpenDomainQuestions(ctx context.Context) ([]attention.DomainQuestion, error) {
+	rows, err := a.store.OpenDomainQuestionsForOwner(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]attention.DomainQuestion, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, attention.DomainQuestion{
+			Domain:  row.Domain,
+			Reason:  row.Reason,
+			AskedAt: row.AskedAt,
+		})
+	}
+	return out, nil
+}
+
 type attentionDealStandings struct {
 	cards *dealstatus.Service
 }

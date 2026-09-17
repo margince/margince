@@ -11,7 +11,7 @@
 // activity_meeting_history, activity_retention_evidence, transcript_read,
 // attachment_extraction, deal_document_hide, activity_sales_state,
 // activity_reader_state, worklist_pin, activity_review_template,
-// activity_review_response.
+// activity_review_response, activity_request_settlement, activity_identity.
 //
 // The two review tables are here rather than in deals because a review is
 // something somebody WROTE, and this module is where the product keeps those:
@@ -39,6 +39,16 @@
 // "snoozed" and "not mine" belong to one reader, and applying either to a
 // colleague would take work off a queue whose owner never judged it. Neither
 // carries any of the message's content — the judgement, its author, its moment.
+//
+// activity_request_settlement is what activity.owed_verdict cannot be. The
+// column says whether an inbound message ASKS for something, judged from that
+// message alone; this says whether our own REPLY settled it, which is a
+// question about the thread and cannot be answered before we have written back.
+// A separate table rather than two more columns because the answer is REPLACED
+// as a conversation continues — a later reply is new evidence about the same
+// question — where the owed column's CAS admits a verdict only onto a NULL and
+// leaves an earlier one standing. The settlement's before-image lives in
+// audit_log, so what the previous judgement said stays answerable.
 //
 // transcript_read is the run record for reading a meeting transcript for
 // the next steps in it (S-E04.3): the POST answers 202 with its id and the

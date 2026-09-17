@@ -4,6 +4,7 @@
 /** @vitest-environment happy-dom */
 import { cleanup, render } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { PageAsideProvider, PageAsideToggle, usePageAside } from "./pageaside";
@@ -18,8 +19,8 @@ afterEach(() => {
 
 // A record screen's shape: it claims the pane, draws its content only while
 // the pane is open, and carries the switch at the end of its tab row.
-function Record({ available = true }: Readonly<{ available?: boolean }>) {
-  const details = usePageAside(available);
+function Record() {
+  const details = usePageAside();
   return (
     <>
       <PageAsideToggle />
@@ -28,12 +29,15 @@ function Record({ available = true }: Readonly<{ available?: boolean }>) {
   );
 }
 
-function record(available?: boolean) {
+// A screen that offers no pane at all — it never claims one.
+function Plain() {
+  return <PageAsideToggle />;
+}
+
+function record(screen: ReactNode = <Record />) {
   const view = render(
     <LocaleProvider initial="en">
-      <PageAsideProvider>
-        <Record available={available} />
-      </PageAsideProvider>
+      <PageAsideProvider>{screen}</PageAsideProvider>
     </LocaleProvider>,
   );
   return {
@@ -45,44 +49,44 @@ function record(available?: boolean) {
 // The details pane is where a reader goes for the attributes, not what they
 // open a record to see, so it starts folded until they say otherwise — and
 // what they say is remembered.
-describe("the details pane is closed until asked", () => {
-  it("starts folded when nothing is remembered", () => {
-    const { pane } = record();
-    expect(pane()).toBeNull();
-  });
-
-  it("starts open when the reader last left it open", () => {
-    localStorage.setItem(KEY, "0");
+describe("the details pane is open until folded", () => {
+  it("starts open when nothing is remembered", () => {
     const { pane } = record();
     expect(pane()).not.toBeNull();
   });
 
-  it("remembers a fold and an unfold", async () => {
+  it("starts folded when the reader last folded it", () => {
+    localStorage.setItem(KEY, "1");
+    const { pane } = record();
+    expect(pane()).toBeNull();
+  });
+
+  it("remembers a fold and an unfold, and says which it offers", async () => {
     const user = userEvent.setup();
     const { pane, getByRole } = record();
-    await user.click(getByRole("button", { name: "Details" }));
-    expect(pane()).not.toBeNull();
-    expect(localStorage.getItem(KEY)).toBe("0");
-    await user.click(getByRole("button", { name: "Details" }));
+    await user.click(getByRole("button", { name: "Hide details" }));
     expect(pane()).toBeNull();
     expect(localStorage.getItem(KEY)).toBe("1");
+    await user.click(getByRole("button", { name: "Show details" }));
+    expect(pane()).not.toBeNull();
+    expect(localStorage.getItem(KEY)).toBe("0");
   });
 
-  it("starts folded when storage refuses to answer", () => {
+  it("starts open when storage refuses to answer", () => {
     vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
       throw new Error("storage refused");
     });
     const { pane } = record();
-    expect(pane()).toBeNull();
+    expect(pane()).not.toBeNull();
   });
 });
 
 // A switch for a pane that does not exist is a control that does nothing: a
 // screen whose composer holds the pane's place offers neither.
 describe("the switch goes with the pane", () => {
-  it("is absent while the screen has no pane to offer", () => {
+  it("is absent on a screen that claims no pane", () => {
     localStorage.setItem(KEY, "0");
-    const { pane, queryByRole } = record(false);
+    const { pane, queryByRole } = record(<Plain />);
     expect(pane()).toBeNull();
     expect(queryByRole("button")).toBeNull();
   });

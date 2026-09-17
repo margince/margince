@@ -52,8 +52,11 @@ func (s *Store) ListCompanyContracts(ctx context.Context, in ListContractsInput)
 		if err := auth.EnsureLinkTarget(ctx, tx, companyTable, in.CompanyID.UUID); err != nil {
 			return err
 		}
-		var err error
-		out, err = listContractsTx(ctx, tx, in, s.today(), active)
+		today, err := s.today(ctx, tx)
+		if err != nil {
+			return err
+		}
+		out, err = listContractsTx(ctx, tx, in, today, active)
 		return err
 	})
 	return out, err
@@ -150,6 +153,10 @@ func (s *Store) ListProjectContractsTx(ctx context.Context, tx pgx.Tx, projectID
 	if err := auth.EnsureLinkTarget(ctx, tx, projectTable, projectID.UUID); err != nil {
 		return crmcontracts.ContractListResponse{}, err
 	}
+	today, err := s.today(ctx, tx)
+	if err != nil {
+		return crmcontracts.ContractListResponse{}, err
+	}
 	// NO catalog fetch here, deliberately. This runs INSIDE a transaction the
 	// caller opened — the 360 assembly holds one across every section — and the
 	// catalog reader opens a second transaction of its own to answer. On a pool
@@ -163,7 +170,7 @@ func (s *Store) ListProjectContractsTx(ctx context.Context, tx pgx.Tx, projectID
 	var active []fieldcatalog.Column
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	asOfPos := arg(s.today())
+	asOfPos := arg(today)
 	where := []string{storekit.SQLf("project_id = $%d", arg(projectID)), "archived_at IS NULL"}
 	scope, err := VisibleClause(ctx, "", arg)
 	if err != nil {

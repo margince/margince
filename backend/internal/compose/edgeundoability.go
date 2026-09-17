@@ -29,20 +29,7 @@ import (
 // refusals mean the same thing about an edge — and because two of the record's
 // would read the wrong table. The order is the record path's: cheapest and most
 // certain first, so a row failing several reports the most useful one.
-//
-// ExternallyGoverned is NOT asked, and the omission is a decision rather than the
-// record branch missed. That refusal exists because an overlay workspace's
-// records live in the incumbent, so putting one back is a write-back the
-// reversal path cannot link or attribute. A LINK has no incumbent counterpart to
-// write back to: `relationship` is not a member of the overlay mirror's entity
-// set and the overlay provider declares no write verb for it, so the local row is
-// not a copy of anything and the local write is the whole write. Refusing here
-// would leave a link nobody can reverse in a workspace where nothing else could
-// have changed it either.
-//
-// TestALinkInAnOverlayGovernedWorkspaceIsStillReversible pins the answer and the
-// premise together, so the day the mirror learns to carry links this branch is
-// what fails rather than a customer's two systems quietly disagreeing.
+
 func (e Evaluator) evaluateEdge(ctx context.Context, tx pgx.Tx, row AuditRow) (Undoability, error) {
 	if e.EdgeFacts == nil {
 		return Undoability{}, fmt.Errorf("compose: no edge reader is wired, so entry %s cannot be judged", row.ID)

@@ -428,7 +428,7 @@ func priceEvidenced(currency string, priceMinor int64) bool {
 	}
 	return priceMinor/scale > 0
 }`},
-	{"the loop that shipped in overlay, digits read inline", true, "", `
+	{"the loop that shipped with digits read inline", true, "", `
 func amountFor(code, amount string) int64 {
 	scale := int64(1)
 	for i := 0; i < values.MinorUnitDigits(code); i++ {
@@ -452,11 +452,11 @@ func scaleOf(currency string) int64 {
 	}
 	return scale
 }`},
-	// The fourth copy, verbatim as it stood in overlay/hubspot before this
-	// change. It builds no power of ten, so the arithmetic arm cannot see
-	// it — and it was found only because deleting it made an exported
-	// wrapper dead, which is not a way of finding things.
-	{"the string-splice renderer that shipped in hubspot", true, "", `
+	// The fourth copy, verbatim as it shipped. It builds no power of ten, so
+	// the arithmetic arm cannot see it — and it was found only because
+	// deleting it made an exported wrapper dead, which is not a way of
+	// finding things.
+	{"the string-splice renderer", true, "", `
 func minorToDecimalString(minor int64, exponent int) string {
 	s := strconv.FormatInt(minor, 10)
 	neg := strings.HasPrefix(s, "-")

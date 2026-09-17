@@ -63,17 +63,15 @@ func WithDataReset(schemaPool *pgxpool.Pool, seeds deployconfig.Seeds, allowed b
 		s.dataResetHandlers = dataResetHandlers{
 			pool: pool, schemaPool: schemaPool, seeds: seeds, dataResetAllowed: allowed, log: s.log,
 			// A pointer into the Server, so WithResetRuntime may be applied
-			// before or after this option (see Server.resetRuntime). The meter
-			// is likewise the ONE shared instance WithOverlayMeter rebinds; the
-			// object store is backfilled by WithBlobstore when it runs later,
-			// and the flush is a method value that reads the Server's caches at
-			// reset time, not now.
+			// before or after this option (see Server.resetRuntime). The object
+			// store is backfilled by WithBlobstore when it runs later, and the
+			// flush is a method value that reads the Server's caches at reset
+			// time, not now.
 			//
 			// flushAfterOwnReset, NOT FlushResetCaches: this handler is the
 			// gated path, so it is the one allowed to clear the auth lockout
 			// buckets as well as the caches.
 			runtime: &s.resetRuntime,
-			budget:  s.overlayMeter,
 			blob:    s.blob,
 			vault:   s.vault,
 			flush:   s.flushAfterOwnReset,
@@ -117,6 +115,21 @@ func WithNonProduction(env runtimeenv.Environment) Option {
 func WithDataResetAvailable(allowed bool) Option {
 	return func(s *Server, _ *pgxpool.Pool) {
 		s.authHandlers = s.WithDataResetAvailable(allowed)
+	}
+}
+
+// WithPasswordLogin carries the deployment's `auth.password.enabled` to the one
+// place that answers both halves of it: the anonymous capabilities probe the
+// login screen renders from, and the routes that would serve the method.
+//
+// Absent this option the password method is offered, which is what every
+// composition did before the switch was wired and what an installation with no
+// `auth` section still means. The composition root refuses to boot the
+// dangerous combination — no password and no federated provider — because that
+// is the question only it can answer.
+func WithPasswordLogin(enabled bool) Option {
+	return func(s *Server, _ *pgxpool.Pool) {
+		s.authHandlers = s.WithPasswordLogin(enabled)
 	}
 }
 

@@ -46,7 +46,6 @@ func WithContactBrief(brain completer, routingVersion string) Option {
 		s.contactBriefHandlers = contactbrief.NewHandlers(
 			contactbrief.NewService(pool, s.contact360Svc, brain, routingVersion, time.Now).
 				WithEmailSummaries(emailRows(pool)),
-			s.sorDispatch.isOverlay,
 		)
 	}
 }
@@ -69,7 +68,7 @@ func WithContactDraft(brain completer) Option {
 			WithEnvelope(draftEnvelope(pool, s.log)).
 			WithEmailSummaries(emailRows(pool)).
 			WithVoice(ai.NewVoiceStore(InstallationDB(pool)), s.log)
-		s.contactDraftHandlers = contactdraft.NewHandlers(svc, s.sorDispatch.isOverlay)
+		s.contactDraftHandlers = contactdraft.NewHandlers(svc)
 	}
 }
 
@@ -96,6 +95,6 @@ func WithLeadDraft(brain completer) Option {
 		).
 			WithEnvelope(draftEnvelope(pool, s.log)).
 			WithVoice(ai.NewVoiceStore(InstallationDB(pool)), s.log)
-		s.leadDraftHandlers = leaddraft.NewHandlers(svc, s.sorDispatch.isOverlay)
+		s.leadDraftHandlers = leaddraft.NewHandlers(svc)
 	}
 }

@@ -20,7 +20,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/promptlang"
 	"github.com/margince/margince/backend/internal/modules/agents/runner"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/overlay"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -82,16 +81,12 @@ func WithSpecResolver(resolve func(string) (runner.AgentSpec, bool)) RunnerOptio
 // NewRunnerService assembles the runner over the SAME governed registry
 // every other agent surface dispatches through — the two-directions
 // invariant is a property of this constructor: there is no other
-// registry to hand it. resolveIncumbent is the per-workspace live-incumbent
-// resolver the overlay write-back path reaches HubSpot through when a
-// Surface-B run's agent tool writes a record; the worker passes a FromEnv
-// vault-backed resolver, and nil degrades write-back to errNoWriteIncumbent
-// (reads and non-SoR tools are unaffected).
-func NewRunnerService(pool *pgxpool.Pool, brain runner.Brain, draftBrain completer, retriever retrieval.Retriever, log *slog.Logger, resolveIncumbent func(context.Context) (overlay.Incumbent, error), send SendPath, opts ...RunnerOption) *RunnerService {
+// registry to hand it.
+func NewRunnerService(pool *pgxpool.Pool, brain runner.Brain, draftBrain completer, retriever retrieval.Retriever, log *slog.Logger, send SendPath, opts ...RunnerOption) *RunnerService {
 	svc := &RunnerService{
 		pool:       pool,
 		store:      runner.NewStore(InstallationDB(pool)),
-		runner:     runner.New(registryWithDraftBrain(pool, draftBrain, resolveIncumbent, send), brain),
+		runner:     runner.New(registryWithDraftBrain(pool, draftBrain, send), brain),
 		identity:   identity.NewService(pool),
 		specByName: ScheduledAgentSpecByName,
 		retriever:  retriever,

@@ -84,7 +84,13 @@ const OPERATOR: GrantSpec = {
 // about an installation posture rather than about what this seat may read.
 const SPEND_READER: GrantSpec = { ...OPERATOR, ai_diagnostics: ["read"] };
 
-const NOW = Date.parse("2026-08-19T10:00:00Z");
+// Every fixture below is an OFFSET from this, in minutes, so it has to be the
+// moment the catalog is opened rather than the moment the file was written. A
+// frozen literal here was already reading as "4 minutes ago" for a call that
+// happened last month, and the resting rotation now ages a settled run out
+// after a few hours (agentrail-resting.ts) — so a fixed date would quietly
+// empty the settled half of every story on this page.
+const NOW = Date.now();
 
 function callRow(task: string, minutesAgo: number, index: number) {
   return {
@@ -276,6 +282,14 @@ type Story = StoryObj<typeof AgentRail>;
 
 /** Idle: every source reachable, nothing waiting, a model bound, a valid licence.
  *
+ *  Which makes it the QUIET installation, and that is most installations most of
+ *  the afternoon: one true reading, and it is "Nothing needs you". What the line
+ *  says between turns of it are the tips — standing facts about the product
+ *  rather than invented work, one per pass and a different one next time round
+ *  (agentrail-copy.ts). Watch it for half a minute rather than a moment; the
+ *  first tip names Home and links it, and it is dropped on Home itself, so this
+ *  story is mounted on Companies where the whole catalog applies.
+ *
  *  It is also the block's last line with no figure on it: this seat holds no
  *  `ai_diagnostics:read`, so the row carries the chevron alone. The row is what
  *  makes that state legible — the disclosure keeps its place instead of moving
@@ -395,6 +409,38 @@ export const IdleRotation: Story = {
 export const IdleRotationDark: Story = {
   globals: { theme: "dark" },
   render: story({ ...HEALTHY, aiState: "development", approvals: 3 }),
+};
+
+/**
+ * What the agent got done, rotating.
+ *
+ * Three runs that settled in the last hour, and the line walks them rather than
+ * pinning the newest. Pinning is what this used to do, and the cost only showed
+ * up hours later: one sentence about one contact, in the corner of every screen,
+ * from the moment it landed until midnight. A run ages out of this rotation
+ * after a few hours while staying in the panel's recap all day
+ * (agentrail-resting.ts) — the two answer different questions, and only one of
+ * them is a status light.
+ */
+export const FinishedWorkRotation: Story = {
+  render: story({
+    ...HEALTHY,
+    recent: [
+      settled(3, {
+        kind: "summarize",
+        subject_label: "Sabine Mayer",
+        subject_type: "contact",
+        subject_id: "019f7e65-0000-7000-8000-0000000000b4",
+      }),
+      settled(26, {
+        kind: "site_read",
+        subject_label: "Acme GmbH",
+        subject_type: "company",
+        subject_id: "019f7e65-0000-7000-8000-0000000000b2",
+      }),
+      settled(58, { kind: "morning_brief" }),
+    ],
+  }),
 };
 
 /** A fresh installation: a model is bound and nothing has run through it yet. */

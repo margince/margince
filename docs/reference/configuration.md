@@ -42,11 +42,9 @@ configurable logger.
 | `--certlog-base-url` | `MARGINCE_CERTLOG_BASE_URL` | — | certificate-transparency base URL, on the worker role. It enables the whole technical lookup — what a company publicly runs, read from its DNS records, its certificate history and one polite fetch of its own homepage. Unset = the lane is off: the company record keeps no technical profile and the button on it answers 501, which is honest for an installation that should make no outbound lookups. `public` uses crt.sh, which is free and needs no key but is one small service run on goodwill — the reader paces itself to one query every five seconds and caches every answer for that reason. |
 | `--technical-backfill-interval` | — | `6h` | how often the worker looks for companies whose technical profile is missing or stale. Unlike geocoding there is no write to trigger on — a company's mail provider changes at the COMPANY — so this pass is the only thing that ever observes a move. Runs on start; `0` turns the sweep off and leaves the button working. |
 | `--metrics-token` | `MARGINCE_METRICS_TOKEN` | — | shared secret `/metrics` requires as a Bearer credential, and the **only** knob over that endpoint's access — there is no second variable declaring a mode. Unset (the default) `/metrics` is served to whatever reaches the port, which is what a Prometheus that discovers its targets by annotation (`prometheus.io/scrape`) needs: it reads a target's address and metrics path off the Kubernetes API and has nowhere to carry a credential. That matches `cmd/worker`, whose `/metrics` has always been unauthenticated behind `--observe-addr`. Set it when the port is **not** already contained by a private listener, a NetworkPolicy or an ingress allow-list — the exposition is fleet-wide and carries workspace ids plus a declared-catalogue info metric, so an unguarded port discloses tenant shape. The api logs a warning at boot whenever it is unset, so the open posture is visible without reading the config. Note the api serves **plain HTTP** (`ListenAndServe`, no TLS) and terminates TLS ahead of itself, so a token set here is carried in cleartext over whatever hop reaches the pod — private by construction in-cluster, and the same hop the session cookie and every OAuth passport already take, but it is not a credential to hand to a scraper across an untrusted network |
-| `--hubspot-app-secret` | `MARGINCE_HUBSPOT_APP_SECRET` | — | the HubSpot app client secret. Verifies inbound overlay-webhook v3 signatures and, when set, mounts `/webhooks/hubspot`; unset, that route is absent rather than present-and-unverified |
 | `--ai-routing` | `MARGINCE_AI_ROUTING` | — | **ignored, and warns.** The binding is a stored setting: declared for a fresh install under `seeds.ai_routing` in `margince.yaml`, changed on a running one through Settings → AI / `PUT /v1/ai/routing`, no restart — with one exception: a role that STARTED with nothing bound wired no model path, so it has no watcher to notice the first binding and must be restarted once after it is saved. The flag stays registered so an existing command line does not die on an unknown one; nothing reads a routing file any more. What a bound installation lights up is unchanged: the cold-start read-back, per-org enrichment, the Morning-Brief L2 re-order, and AI-drafted offer regeneration |
 | `--ai-fake` | — | `false` | offline fake model (dev/test only), and a FALLBACK rather than an override: a servable stored binding outranks it and the flag is then inert. It serves when nothing is bound — or when the stored binding cannot be built, which is how a keyless dev stack still starts instead of refusing on a missing credential |
 | `--public-base-url` | `MARGINCE_PUBLIC_BASE_URL` | — | canonical external scheme+host for buyer-facing links (RFC 8058 unsubscribe / preference center); required to send marketing mail — a send refuses rather than derive the token-bearing link from the request Host — and for the Gmail/Graph OAuth callback. **Held to an address a RECIPIENT can open** whenever a real sender is configured (SMTP `email.enabled`, or a Gmail/Graph app): https only, and not localhost, a private address or an interface-scoped one. `MARGINCE_ENV=dev` or `test` admits the dev stack's `http://localhost`. Both the api and the worker refuse to boot on an unusable value, and a tokenized send refuses at send time; the configured value and whether it last answered are shown on Settings → Connections |
-| — (env-only) | `MARGINCE_OVERLAY_BACKFILL_LIMIT` | `0` (uncapped) | same knob `cmd/worker` reads (below) — `cmd/api` also boots on it (an invalid value is a boot error here too) so the on-connect/Connect-time seeding path sees the same cap the periodic sweep does |
 | — (env-only) | `MARGINCE_AUTO_ENRICH_DAILY_CAP` | `0` (= built-in 500) | same knob `cmd/worker` reads (below) — `cmd/api` also boots on it (an invalid value is a boot error here too) because an approval accept on this role can queue a domain-triage read, which spends the same daily budget the worker's sweeps do |
 | — (env-only) | `MARGINCE_PROVIDER_SURFE` | `live` | which licensed-data-provider adapter this process carries: `live` (the default) the real Surfe adapter, `offline` the deterministic fake for a dev stack, `off` registers none at all. **Registering an adapter is not what permits egress** — a sealed credential is, and with no key there is no call any adapter could make (PI-AC-9): the surface stays fully available, renders `not_connected` honestly, and an admin can connect it themselves. Defaulting to `off` is what made the capability invisible, needing an environment variable and a restart to reach, which is a build flag wearing a setting's clothes. **Both `cmd/api` and `cmd/worker` read it and must agree**: the api queues a run and the worker executes it, so a split setting would submit to one vendor and poll another. An unknown value is a boot error rather than a silent `off` — a typo must not quietly disable a feature an operator asked for, or quietly enable egress. Needs a configured keyvault; without one the provider surface stays absent |
 | `--oauth-access-token-ttl` | `MARGINCE_OAUTH_ACCESS_TOKEN_TTL` | `0` (= the passport default, 720h / 30 days) | lifetime of the access token the MCP connector's OAuth handshake mints. That token IS an Agent Seat Passport, so unset it inherits the 30-day passport default, while connector norms are ~15 minutes plus refresh; set e.g. `15m` to run those norms without a code change — the refresh-rotation machinery is what makes a short lifetime cheap for a client. It applies to **both** mints of a connection's life, the code exchange and every rotation. Maximum `2160h` (90 days, the mint's own ceiling); an out-of-range or non-duration value is a boot error, never a silent default |
@@ -65,8 +63,8 @@ Operational endpoints (served next to `/v1`):
   2s, else 503 naming the unready dependency.
 - `/metrics` — Prometheus text format: the **HTTP section** below,
   `margince_outbox_unpublished`, `margince_relay_published_total`,
-  the **connection-pool section** below, the AI router's counters, the overlay
-  sync-health section, and the **job-runtime section** below. Served openly by
+  the **connection-pool section** below, the AI router's counters, and the
+  **job-runtime section** below. Served openly by
   default, so an annotation-discovered scraper works with no configuration; set
   `--metrics-token` to require a Bearer credential where the port itself is not
   already contained.
@@ -102,8 +100,8 @@ Operational endpoints (served next to `/v1`):
   the store has an `unmatched` bucket it can use, and why nothing on `/v1`
   currently fills it.
 
-  The measurement sits **outside** the admission gate, the idempotency replay
-  and the overlay guard, so a `403` counts as that route's latency — which is
+  The measurement sits **outside** the admission gate and the idempotency
+  replay, so a `403` counts as that route's latency — which is
   what a client experienced. A handler that **panics** is recorded as `500`,
   matching what `RecoverPanics` sends the client, and a handler that answered
   and *then* panicked keeps the status it actually sent. `p95` over five
@@ -447,8 +445,6 @@ api's boot line says so; `cmd/worker` is load-bearing for E10 retry. See
 | `--webhook-key` | `MARGINCE_WEBHOOK_KEY` | — | base64 32-byte key sealing outbound-webhook signing secrets; unset = the delivery worker stays off (no `cg:webhooks` consumer, no retry sweep) |
 | `--webhook-retry-interval` | — | `30s` | how often the outbound-webhook retry dispatcher fans one due-retry pass out per live workspace (worker role only) |
 | `--reconcile-interval` | — | `24h` | overnight follow-up reconciliation pass interval |
-| `--overlay-reconcile-interval` | — | `2m` | overlay-mode incumbent mirror sweep interval. Every tick spends incumbent API quota per object class even when nothing changed (9 classes ≈ 11 REST calls/tick against HubSpot's 90k/day), so lengthen it on a dev box. `POST /overlay/reconcile` ("Sync now") only marks the workspace due — the sweep still waits for the next tick, so a long interval makes that button feel slow |
-| `--overlay-backfill-limit` | `MARGINCE_OVERLAY_BACKFILL_LIMIT` | `0` (uncapped) | cap the overlay INITIAL mirror backfill at N records per object class — dev/demo, so connecting a real portal doesn't pull it all onto a laptop. Only the backfill is capped: later incremental sweeps still bring in anything edited after the sweep window, which opens shortly before the connect instant (a clock-skew grace). A class the cap actually cuts short reports `backfillComplete: false` permanently (`overlay_backfill_cursor.truncated`) — unsetting the limit does NOT resume it, since the cursor is already `done`; reset that class's `overlay_backfill_cursor` row (or reconnect, which purges it) to backfill it for real. Don't change the limit mid-backfill either — the running count rides in `overlay_backfill_cursor` as a `<count>\|<inner>` prefix the uncapped adapter rejects, which fails that class every sweep until the cursor row is cleared |
 | `--send-rate-limit` | — | `0` (= built-in 30) | outbound messages ONE mailbox may transmit per `--send-rate-window`. Burst pacing, not a quota: the provider enforces its own daily cap and throttles an account that bursts past it. The limiter is in-process, so a multi-worker deployment paces each replica's view of the mailbox independently |
 | `--send-rate-window` | — | `0` (= built-in 1m) | the window the per-mailbox send rate is measured over |
 | `--send-max-age` | — | `0` (= built-in 24h) | how long a staged send may be deferred by the pacing chain before it parks with a reason instead. Without a bound a permanently saturated policy would defer a message forever, silently |
@@ -616,6 +612,30 @@ runs the background sync.
 | `--graph-notification-url` | `MARGINCE_GRAPH_NOTIFICATION_URL` | worker | public URL Microsoft posts Graph change notifications to, operator token and all (`https://<api>/webhooks/graph?token=…`); enables the subscription register+renew job (empty = poll only) |
 | `--graph-watch-interval` / `--graph-watch-renew-within` | — | worker | Graph subscription maintenance scan (`6h`) / renew this far ahead of its deadline (`24h`). Microsoft's ceiling for a `/me/messages` subscription is **4230 minutes** (just under three days) where a Gmail watch lasts seven, so the Gmail defaults do not carry across |
 | `--graph-push-token` | `MARGINCE_GRAPH_PUSH_TOKEN` | api | shared secret on the Graph change-notification URL; enables `POST /webhooks/graph` (empty = route absent). It must be the same token the worker's `--graph-notification-url` carries, and it is the ONLY admission factor — Microsoft signs nothing on a change notification |
+
+### Turning the password method off
+
+An installation that signs its members in through an identity provider closes
+the password door in `margince.yaml`:
+
+```yaml
+auth:
+  password:
+    enabled: false   # default true
+```
+
+With it off, `POST /v1/auth/login` and `POST /v1/auth/forgot-password` answer
+**501** naming the method, `/v1/auth/capabilities` reports `password: false`
+and `password_reset: false`, and the login screen draws the provider buttons
+alone. The **admin-issued** set-password link is deliberately unaffected: it
+provisions a seat rather than offering a way in, and an installation that turns
+the method back on must not have to re-provision everybody first.
+
+**The api refuses to boot with the method off and no federated provider
+mounted** — that deployment has no door at all. Mounted is the bar the check
+uses, which is weaker than "somebody can sign in today": a provider whose OAuth
+app an admin has not stored yet is mounted and offers no button, and the login
+screen says so rather than rendering an empty card.
 
 ## Object storage (api, worker) — attachments and company logos
 
@@ -902,8 +922,8 @@ The `workspace` row survives too — it carries the organization — but only it
 currency and timezone bootstrap took from `margince.yaml`, and `created_at`.
 (`updated_at` moves, as it does for any write — the reset did write the row.)
 Every other column on it is a workspace-level **setting**, and each
-one goes back to the default its migration declared (the overlay mode columns
-today, and whatever is added next). Nothing here is a kept list:
+one goes back to the default its migration declared. Nothing here is a kept
+list:
 the columns are derived from the catalog, so a setting added later is restored
 the day its column exists, and a column that genuinely belongs to the
 installation's identity has to be declared preserved to be spared. Settings
@@ -943,7 +963,7 @@ against records that no longer exist. The endpoint therefore also:
    history, which an installation wiped back to first-boot state must not carry.
 4. **Purges the event bus** — the catalog streams, their consumer groups
    (deleted and immediately re-created, so live subscribers keep reading), the
-   processed-event dedupe marks, and this workspace's overlay budget counters.
+   and the processed-event dedupe marks.
 5. **Deletes the workspace's stored objects** under its `<workspace>/` prefix.
    It also redeems the **sealed credentials** those swept connection rows
    referenced. `vault_secret` deliberately carries no `workspace_id` — the
@@ -952,20 +972,10 @@ against records that no longer exist. The endpoint therefore also:
    before the rows naming them go. Which tables hold one is derived from the
    catalog on the `credential_ref` column, so a connection table added later is
    covered the day its column exists.
-6. **Restores every workspace-level setting**, including returning an
-   overlay-mode installation to native. The table sweep reaches none of them:
-   its target list is derived from the tables carrying a `workspace_id` column,
-   and `workspace` keys on `id`, so that row is not a candidate for it at all.
-   The overlay columns are the consequential case — everything overlay mode
-   depends on IS swept (the incumbent connection, the mirror, the budget
-   counters), so a workspace left in overlay would claim to read from an
-   incumbent it no longer has a connection to, dispatching every read at an
-   empty mirror. `x_sor_mode` and `x_incumbent` flip together, as the schema
-   requires. This is not the governed `Disconnect` teardown: those rows are
-   already gone with the sweep, the reset carries its own audit row, and no
-   `incumbent.disconnected` event is emitted into an outbox this reset just
-   drained. Whether it happened is recorded as `sor_mode_reverted` in the audit
-   evidence and the completion log line.
+6. **Restores every workspace-level setting.** The table sweep reaches none of
+   them: its target list is derived from the tables carrying a `workspace_id`
+   column, and `workspace` keys on `id`, so that row is not a candidate for it
+   at all.
 7. **Announces the reset** on the `gw:control:reset` Redis pub/sub channel, so
    the api and the worker each drop the caches they hold — model results and
    the resolved system-of-record mode. No HTTP call reaches the worker process;
@@ -1341,15 +1351,26 @@ takes inline bytes or an `http(s)` URL it fetches itself.
 knowing before you enable an attachment lane, because both run the other way
 from what a reader tends to assume:
 
-- **Which lane a file takes was decided at ingress, and carriage is not a content
-  check.** The AI lane reads the content type the file is stored with and adds no
-  second authority of its own. What that type means depends on how the file
-  arrived: a **captured** attachment carries the type *sniffed from its bytes*,
-  with a disagreeing sender claim recorded rather than obeyed — so an external
-  counterparty influences the lane only through the bytes they actually sent — while
-  a file **uploaded through the API** carries its uploader's declared type,
-  unsniffed. Either way `image/*` matches by prefix, and `input: [image]` says
-  what Margince will *carry*; it never says what the bytes *are*.
+- **Which lane a file takes was decided at ingress; carriage checks the KIND and
+  not the content.** The AI lane reads the content type the file is stored with
+  and adds no second authority for anything else. What that type means depends on
+  how the file arrived: a **captured** attachment carries the type *sniffed from
+  its bytes*, with a disagreeing sender claim recorded rather than obeyed — so an
+  external counterparty influences the lane only through the bytes they actually
+  sent — while a file **uploaded through the API** carries its uploader's declared
+  type, unsniffed.
+
+  Before the bytes become a wire part, that type has to hold up: a file claiming
+  a kind whose signature is unambiguous — PNG, JPEG, GIF, WebP, BMP, PDF, HEIC,
+  HEIF — must carry it, and a file claiming any other image type is refused when
+  its bytes are **text**. `image/svg+xml` is refused outright on every wire,
+  however its bytes look: it matches `image/*` by prefix on a binding that
+  declares one, and no vision model decodes it as an image. A refusal here is its own fault, not a
+  carriage limit: retrying on another binding would read the same bytes the same
+  way. What it does **not** do is decide anything else — the stored type stays the
+  authority for every other reader, a kind whose bytes carry no signature this
+  build can name goes through unchecked, and `input: [image]` still says what
+  Margince will *carry* rather than what a picture contains.
 - **The secret stripper does not reach inside an attachment.** It runs over the
   outbound payload — the right place, and unbypassable — but an attachment rides
   that payload **base64-encoded**, and the rules match a secret's literal text. A

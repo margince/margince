@@ -112,7 +112,7 @@ func TestDocumentMIMEsCoversEveryAdaptersDeclaration(t *testing.T) {
 func TestTheOpenAICompatibleWireHasNoDocumentPart(t *testing.T) {
 	msgs := openAICompatMessages(
 		"read documents", []model.Message{{Role: roleUser, Content: "what does it say"}},
-		[]model.Attachment{{MIME: mimePDF, Bytes: []byte("%PDF-1.4"), Name: "invoice.pdf"}},
+		[]model.Attachment{{MIME: mimePDF, Bytes: pdfSample, Name: "invoice.pdf"}},
 	)
 
 	kinds := map[string]bool{}

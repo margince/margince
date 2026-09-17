@@ -14,7 +14,6 @@ package integration
 // answer rather than a refusal that confirms it exists.
 
 import (
-	"context"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -163,7 +162,7 @@ func TestCompanyAskTransportRefusesAnUnpreparedQuestion(t *testing.T) {
 	e := Setup(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme", &e.Rep1))
 	lane := &countingLane{reply: `{"sentences":[]}`}
-	handlers := companybrief.NewHandlers(briefService(e, lane, "routing-1"), nativeMode)
+	handlers := companybrief.NewHandlers(briefService(e, lane, "routing-1"))
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/v1/companies/"+company.String()+"/ask",
@@ -177,30 +176,5 @@ func TestCompanyAskTransportRefusesAnUnpreparedQuestion(t *testing.T) {
 	}
 	if lane.calls != 0 {
 		t.Errorf("model calls = %d, want the refusal to come first", lane.calls)
-	}
-}
-
-// The 360 refuses an overlay workspace, so prose written from its reads must
-// refuse too — otherwise an overlay workspace gets answers about native rows
-// while its own company page refuses to render.
-func TestCompanyAskTransportRefusesAnOverlayWorkspace(t *testing.T) {
-	e := Setup(t)
-	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme", &e.Rep1))
-	lane := &countingLane{reply: `{"sentences":[]}`}
-	handlers := companybrief.NewHandlers(briefService(e, lane, "routing-1"),
-		func(context.Context) (bool, error) { return true, nil })
-
-	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/v1/companies/"+company.String()+"/ask",
-		strings.NewReader(`{"question":"whats_open"}`))
-	req.Header.Set("Content-Type", "application/json")
-	handlers.AskAboutCompany(rec,
-		req.WithContext(e.As(e.Rep1, nil, briefReaderPerms)), crmcontracts.Id(company.UUID))
-
-	if rec.Code != http.StatusUnprocessableEntity {
-		t.Errorf("status = %d in overlay mode, want 422; body %s", rec.Code, rec.Body.String())
-	}
-	if lane.calls != 0 {
-		t.Errorf("model calls = %d in overlay mode, want the refusal to come first", lane.calls)
 	}
 }

@@ -13,7 +13,7 @@ import (
 // jobContractHash is the sha256 of api/jobs.yaml this file was generated
 // from — the same fingerprint jobs.JobContractHash carries, so a stale
 // half of the pair is visible without diffing the two tables.
-const jobContractHash = "d7c54eb10a16d867d642cf4f1ce83b705e91c627dd721242e154db5d8466a030"
+const jobContractHash = "7d517384f06f4f8e411b200113fa98e52c2ae549df1eec5969241d613f0deb1d"
 
 // declaredJobArgs is every args type api/jobs.yaml declares, and nothing
 // else. A job kind the file has never heard of cannot satisfy it, so it
@@ -78,8 +78,6 @@ type declaredJobArgs interface {
 		LinkedInRematchArgs |
 		NotificationDigestArgs |
 		SendNotificationEmailArgs |
-		OverlayReconcileArgs |
-		OverlayRefetchArgs |
 		OwedVerdictArgs |
 		ParticipantBackfillArgs |
 		PrivacyRetentionArgs |
@@ -161,7 +159,6 @@ var (
 	_ jobs.FleetWide = LinkReconcileArgs{}
 	_ jobs.FleetWide = LinkedInRematchArgs{}
 	_ jobs.FleetWide = NotificationDigestArgs{}
-	_ jobs.FleetWide = OverlayReconcileArgs{}
 	_ jobs.FleetWide = OwedVerdictArgs{}
 	_ jobs.FleetWide = ParticipantBackfillArgs{}
 	_ jobs.FleetWide = ProviderLookupSweepArgs{}
@@ -190,7 +187,6 @@ var (
 	_ jobs.WorkspaceScoped = GraphWatchRenewArgs{}
 	_ jobs.WorkspaceScoped = KnowledgeIngestArgs{}
 	_ jobs.WorkspaceScoped = SendNotificationEmailArgs{}
-	_ jobs.WorkspaceScoped = OverlayRefetchArgs{}
 	_ jobs.WorkspaceScoped = ProviderRunSubmitArgs{}
 	_ jobs.WorkspaceScoped = SiteDeepReadArgs{}
 	_ jobs.WorkspaceScoped = StageEvidenceReadArgs{}

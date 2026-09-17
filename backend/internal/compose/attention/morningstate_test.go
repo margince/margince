@@ -18,8 +18,7 @@ import (
 // assembleMorning builds the feed around one briefing stub and returns the day.
 func assembleMorning(t *testing.T, briefing stubBriefing) crmcontracts.Attention {
 	t.Helper()
-	svc := NewService(stubApprovals{}, stubDuplicates{}, &stubTasks{},
-		stubReceipts{}, briefing, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+	svc := NewService(stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, briefing, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
 	out, err := svc.Assemble(pageReader())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
@@ -67,7 +66,7 @@ func TestARiskCardCarriesTheDealsFacts(t *testing.T) {
 		stubAtRisk{rows: []RiskyDeal{{
 			DealID: ids.NewV7(), Name: "Fleet retrofit", QuietDays: 19,
 			StageID: &stage, OwnerID: &owner, AmountMinor: &amount, Currency: &currency,
-		}}}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
+		}}}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
 		fixedClock)
 	out, err := svc.Assemble(pageReader())
 	if err != nil {
@@ -100,7 +99,7 @@ func TestARiskCardWithNoFactsSendsNoFactsObject(t *testing.T) {
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{}, nil,
 		stubAtRisk{rows: []RiskyDeal{{DealID: ids.NewV7(), Name: "Bare deal", QuietDays: 5}}},
-		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
+		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
 		fixedClock)
 	out, err := svc.Assemble(pageReader())
 	if err != nil {

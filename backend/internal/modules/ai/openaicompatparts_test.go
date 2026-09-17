@@ -41,7 +41,7 @@ func TestAnImageBecomesAnImageURLPartOnTheLastUserTurn(t *testing.T) {
 		{Role: roleUser, Content: "first"},
 		{Role: roleAssistant, Content: "answered"},
 		{Role: roleUser, Content: "read this"},
-	}, []model.Attachment{{MIME: "image/png", Bytes: []byte("PNG")}})
+	}, []model.Attachment{{MIME: "image/png", Bytes: pngSample}})
 
 	if len(msgs) != 4 {
 		t.Fatalf("want 4 messages, got %d", len(msgs))
@@ -81,7 +81,7 @@ func TestAnAttachmentURIIsPassedThroughUnchanged(t *testing.T) {
 // prompt has none, so one is created rather than the image being hung off the
 // system turn, where several endpoints ignore it.
 func TestAnAttachmentWithNoUserTurnGetsOne(t *testing.T) {
-	msgs := openAICompatMessages("sys", nil, []model.Attachment{{MIME: "image/png", Bytes: []byte("PNG")}})
+	msgs := openAICompatMessages("sys", nil, []model.Attachment{{MIME: "image/png", Bytes: pngSample}})
 	if len(msgs) != 2 {
 		t.Fatalf("want the system turn plus a created user turn, got %d", len(msgs))
 	}

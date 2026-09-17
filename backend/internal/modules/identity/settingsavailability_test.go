@@ -4,6 +4,7 @@
 package identity
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -37,7 +38,7 @@ func TestMeReportsTheCompanyContextAvailabilityItWasGiven(t *testing.T) {
 		}, false},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			got := tt.build().meResponse(Identity{}, crmcontracts.MeResponseSystemOfRecordModeNative)
+			got := tt.build().meResponse(context.Background(), Identity{})
 			if got.SettingsAvailability == nil {
 				t.Fatal("/me carries no settings_availability, so every client reading it fails " +
 					"closed and the Company page disappears whatever the installation configured")
@@ -71,7 +72,7 @@ func TestMePublishesTheRowScopeAndFailsClosedOnAnUnknownOne(t *testing.T) {
 		t.Run("scope "+tt.scope, func(t *testing.T) {
 			id := Identity{}
 			id.Permissions.RowScope = principal.RowScope(tt.scope)
-			got := NewHandlers(&Service{}).meResponse(id, crmcontracts.MeResponseSystemOfRecordModeNative)
+			got := NewHandlers(&Service{}).meResponse(context.Background(), id)
 			if got.Authorization == nil {
 				t.Fatal("/me carries no authorization block")
 			}

@@ -46,7 +46,7 @@ other verdict unreadable.
 
 **Area** is where the fix lives, one only, so a filter never double-counts:
 `agents-mcp` · `ai-models` · `authz` · `capture` · `ci-tests` · `contract-api` ·
-`deals` · `extensions` · `finance` · `frontend` · `overlay` · `platform` ·
+`deals` · `extensions` · `finance` · `frontend` · `platform` ·
 `privacy` · `records` · `reports`. A doc that is wrong about a subsystem takes
 that subsystem's area, not a documentation area — it belongs next to the code it
 misleads about.
@@ -93,7 +93,9 @@ that says who is working rather than what the work is.
 `fast-track-debt` (shipped fast under time pressure with the gap recorded
 deliberately), and `margince-qc` (found by the `margince-qc` UAT acceptance-test
 repo while building or running a scenario, rather than by a contact working in
-this repo directly). These record *why the issue exists*, which is the one
+this repo directly), and `schema-review` (found by reading the database table by
+table, so the fix is a migration or the contract a column claims to keep, not a
+behaviour someone reported). These record *why the issue exists*, which is the one
 thing nobody can reconstruct later — prefer keeping them over tidying them
 away.
 

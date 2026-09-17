@@ -109,11 +109,6 @@ func (j magicUndoJudge) JudgeUndoPage(
 	// holds no update permission is offered a control that can only 403 —
 	// row authority alone is not the question the writer asks.
 	posture := undoPosture{mayWrite: auth.Require(ctx, "deal", principal.ActionUpdate) == nil}
-	external, err := j.seam.evaluator.ExternallyGoverned(ctx)
-	if err != nil {
-		return nil, err
-	}
-	posture.externallyGoverned = external
 	for _, subject := range subjects {
 		answer, err := j.judgeOne(ctx, tx, subject, posture)
 		if err != nil {
@@ -133,9 +128,6 @@ type undoPosture struct {
 	// is not the question: a rep who owns the row but holds no update
 	// permission would be offered a control that can only 403.
 	mayWrite bool
-	// externallyGoverned marks a workspace whose records live in another
-	// system, where no reversal this server makes can reach them.
-	externallyGoverned bool
 }
 
 // judgeOne answers for one entry, or declines to answer at all.
@@ -149,9 +141,6 @@ func (j magicUndoJudge) judgeOne(
 ) (*crmcontracts.MagicUndo, error) {
 	if !servesRecordType(subject.EntityType) {
 		return magicRefusal(string(ReasonUnsupportedRecordType)), nil
-	}
-	if posture.externallyGoverned {
-		return magicRefusal(string(ReasonNotRestorableByThisPath)), nil
 	}
 	if !posture.mayWrite {
 		return magicRefusal(string(ReasonNotWritableByCaller)), nil

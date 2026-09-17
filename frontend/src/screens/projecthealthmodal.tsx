@@ -166,7 +166,7 @@ export function ProjectHealthModal({
           )}
         </Field>
         {correcting && (
-          <p className="t-caption mute">{t("projectHealth.correctionNote")}</p>
+          <p className="t-caption">{t("projectHealth.correctionNote")}</p>
         )}
         {write.isError && (
           <p className="t-caption" role="alert">

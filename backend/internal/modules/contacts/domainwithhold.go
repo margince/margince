@@ -59,6 +59,15 @@ func markDispositionUnevidenced(ctx context.Context, tx pgx.Tx, domain, evidence
 func withholdForStaleEvidence(
 	ctx context.Context, tx pgx.Tx, in ResolveDomainTriageInput, prior DomainDisposition,
 ) (bool, error) {
+	if in.Source == DomainSourceHuman {
+		// A human IS what this gate withholds for. It exists because a crawl
+		// reads the site as it stands today and decade-old mail does not argue
+		// the company is there now — so the question is handed to somebody who
+		// can know. Withholding it from them too leaves the domain permanently
+		// unanswerable: nothing rearms the cursor, and the one caller able to
+		// settle it is refused without being told why.
+		return false, nil
+	}
 	if prior.LastEvidenceAt == nil {
 		return false, nil
 	}
@@ -87,4 +96,41 @@ func withholdForStaleEvidence(
 		return false, fmt.Errorf("contacts: withholding %s for stale evidence: %w", in.Domain, err)
 	}
 	return true, nil
+}
+
+// withholdForNearDuplicate leaves a company verdict unanswered when the name
+// this domain resolved to is close to a company already here without being the
+// same name.
+//
+// Creating anyway is what put one company in a workspace twice: two domains of
+// one business derive the same label, and the second domain minted a second
+// record. Merging on a near-match is the other wrong answer — "Baqend GmbH" and
+// "Baqend Inc" score alike and are two different legal entities — so the
+// question goes to somebody who can tell, and the evidence names the rival so
+// they can answer without going looking for it.
+//
+// The row stays PENDING for the reason stale evidence does: settling it would
+// stop every later message re-asking. The contacts keep their mail and gain no
+// employer, which is the state they were already in while the question was open.
+func withholdForNearDuplicate(
+	ctx context.Context, tx pgx.Tx, in ResolveDomainTriageInput, rival CompanyCandidateScore,
+) error {
+	evidence := fmt.Sprintf("%s resolved to %q, close to %q already here. "+
+		"Same company: add the domain to it. Different company: create this one.",
+		in.Domain, rival.CandidateValue, rival.IncumbentValue)
+	if _, err := tx.Exec(ctx, `
+		UPDATE company_domain_disposition
+		   SET pending_reason = $2,
+		       evidence = $3,
+		       -- Cleared for the reason 'unevidenced' clears it: re-crawling
+		       -- reads the same site and reaches the same rival, so the sweep
+		       -- must stop offering this domain until a human answers it or new
+		       -- mail rearms it.
+		       next_attempt_at = NULL,
+		       updated_at = now()
+		 WHERE domain = $1 AND status = 'pending'`,
+		in.Domain, PendingNearDuplicate, evidence); err != nil {
+		return fmt.Errorf("contacts: withholding %s for a name twin: %w", in.Domain, err)
+	}
+	return nil
 }

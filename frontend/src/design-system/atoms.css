@@ -156,7 +156,7 @@
   background: var(--bgElevated);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-md);
-  box-shadow: var(--shadow-card);
+  box-shadow: var(--shadow-rest);
   padding: var(--padCard);
 }
 .card-inset {
@@ -207,6 +207,15 @@
   cursor: pointer;
 }
 
+/* A cell with two facts that belong on two lines — a call's timestamp over the
+ * reason it failed, say — rather than run together as one glued word. Named
+ * for what it does, not for a caller, so any cell renderer can reach for it. */
+.cell-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
 /* The chip's own chrome. Its SIZE is a rung below, never here: four rendered
    sizes — 20, 28, 44 and 76 — already existed in three different stylesheets
    for a component whose prop surface admitted two, so the scale is declared
@@ -220,7 +229,10 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-weight: 700;
+  /* Semibold, the heading weight: initials are a label for the name beside
+     them, and --fw-bold is reserved for the rare word that must outrank a
+     heading. */
+  font-weight: var(--fw-semibold);
   flex: none;
 }
 
@@ -516,6 +528,54 @@
      action buttons overflow off-screen, unreachable. */
   max-height: calc(100dvh - 40px);
   overflow-y: auto;
+  /* The containing block for the close control below, which is drawn at this
+     box's own trailing corner rather than in the flow the caller fills. */
+  position: relative;
+}
+
+/* The way out, on every dialog in the product.
+ *
+ * Escape has always closed one and always will; this is the same verb for the
+ * reader who is holding a pointer, and for the one who did not arrive by
+ * keyboard and has no reason to guess that a key does anything. It is the LAST
+ * element in the box (atoms.tsx) so it is the last tab stop, and drawn over the
+ * corner rather than in the flow so no dialog has to leave a slot for it.
+ *
+ * It sits a full `--space-4` in from both edges, which is further than the
+ * corner the box's own padding names. That is deliberate: the control's hit
+ * target is larger than its glyph, and pressed tight into the corner the glyph
+ * reads as stuck to the edge while the target overhangs the radius. */
+.modal-close {
+  position: absolute;
+  inset-block-start: var(--space-4);
+  inset-inline-end: var(--space-4);
+  /* Above the drawer's sticky head band (z-index 1), which it is drawn on. */
+  z-index: 2;
+}
+
+/* The dialog's first line stops short of the control drawn over it. A heading
+   is what that line nearly always is — ConfirmModal's, the drawer head's — and
+   a title running under the glyph is a title with a button on its last word.
+
+   The reservation is the control plus the gap it sits in, which is the whole
+   corner it occupies measured from the box's own edge. Deducting the padding
+   the box already pays would be right by a few pixels and would need a number
+   per box — 22 for a centred dialog, --space-5 for a drawer, zero for the
+   lightbox — so one of the three would be the one that went stale. This clears
+   every one of them, and what it costs is a title that wraps a word early.
+
+   Three selectors, because "the dialog's first line" has three shapes: the box
+   itself, a head band, and a head band whose first child is a box pairing the
+   title with a subtitle (the meeting brief). Deliberately not a descendant
+   combinator inside the band — that would reach a heading further down it,
+   which is nowhere near the control and would be indented for nothing. */
+.modal > :is(h1, h2, h3, .modal-title):first-child,
+.modal > .drawer-head > :is(h1, h2, h3, .modal-title):first-child,
+.modal
+  > .drawer-head
+  > :first-child
+  > :is(h1, h2, h3, .modal-title):first-child {
+  padding-inline-end: calc(var(--control-h-sm) + var(--space-4));
 }
 /* Roomier variant for content-dense dialogs (e.g. the cert-scenario export's
    YAML + response previews) that read cramped at the compact form width. */
@@ -568,23 +628,54 @@
     overflow: visible;
     box-shadow: none;
   }
+  /* A way out is a thing to press, and paper takes no presses. */
+  .modal-close {
+    display: none;
+  }
 }
 
-/* The right-anchored drawer: the composer and the evidence receipt. Full
-   height against the right edge so the record behind stays legible as
-   context. The width is a share of the viewport with both ends pinned —
-   below 320px a form field stops being usable, above 460px the drawer starts
-   covering the page it is meant to sit beside. */
+/* The right-anchored drawer: the composer and the evidence receipt. Anchored to
+   the trailing edge so the record behind stays legible as context. The width is
+   a share of the viewport with both ends pinned — below 320px a form field
+   stops being usable, above 460px the drawer starts covering the page it is
+   meant to sit beside.
+
+   The drawer FLOATS rather than being welded to the edge: one --space-4 gap on
+   its three outer sides, so the scrim runs all the way round it and the record
+   behind reads as a page the drawer is sitting ON rather than a page it has
+   been cut out of. The gap is paid by the overlay, which already spans the
+   viewport — a margin on the drawer itself would have to be subtracted from
+   every height and width rule below, four of them, each a chance to disagree. */
 .overlay-right {
   place-items: stretch end;
+  padding: var(--space-4);
 }
 .modal-drawer {
   width: clamp(320px, 36vw, 560px);
-  height: 100dvh;
-  max-height: 100dvh;
-  border-radius: 0;
+  /* The glass less the gap it floats in, as a LENGTH, and it has to be one.
+     `height: 100%` is 100% of the overlay's grid row, and that row is
+     auto-sized: it stretches to the TALLER of the viewport and the drawer's own
+     content. A meeting brief with more in it than fits made the row 1321px on
+     an 800px screen, took its 100% of that, and hung its last third below the
+     glass — where the clip below put it permanently out of reach, because the
+     scrolling band inside had been given nothing to scroll. A percentage cannot
+     bound a box whose own content is what sizes the thing it is a percentage
+     OF. The `--space-4` here is the same gap `.overlay-right` pays as padding
+     above; the two are one measurement and have to move together. */
+  height: calc(100dvh - var(--space-4) * 2);
+  max-height: calc(100dvh - var(--space-4) * 2);
+  border-radius: var(--r-lg);
   box-shadow: var(--shadow-pop);
   padding: var(--space-5);
+}
+/* A drawer that keeps its head and foot as bands to its own edge needs the
+   corners clipped, or the two sticky bands square off the radius they sit in.
+   `clip` rather than `hidden`: it clips without making the drawer a scroll
+   container, which is the body's job below. An unbanded drawer is one scrolling
+   column and keeps `.modal`'s own `overflow-y: auto` — taking its scrollbar
+   away would bury the end of a long form. */
+.modal-drawer:has(> .drawer-head) {
+  overflow: clip;
 }
 /* The WIDE drawer: research, the composer and the meeting brief.
  *
@@ -666,6 +757,11 @@
  * The close control stays visible because the sheet scrolls INSIDE itself —
  * the header does not scroll away with the body. */
 @media (max-width: 720px) {
+  /* The gap the drawer floats in on every other screen. A phone is short of
+     exactly the two dimensions it would spend, so the sheet takes the glass. */
+  .overlay-right {
+    padding: 0;
+  }
   .modal,
   .modal-wide,
   .modal-drawer {
@@ -701,6 +797,99 @@
     bottom: 0;
     background: var(--bgElevated);
     padding-top: var(--space-3);
+  }
+}
+
+/*
+ * How a dialog arrives, and how it leaves.
+ *
+ * DESIGN.md §9: transform and opacity only, nothing animates its own layout,
+ * and `prefers-reduced-motion` jumps every one of these to its end state. That
+ * last one is why the whole block sits behind `no-preference` rather than being
+ * undone inside it — a reader who asked for less motion creates no animations
+ * at all, and `usePresence` (presence.ts) reads exactly that to take the dialog
+ * off the page the instant it is dismissed, rather than waiting out an exit
+ * nobody is watching. The `data-state` attribute is that hook's, and it is the
+ * only thing here that knows the dialog is on its way out.
+ *
+ * Arrivals and exits are different lengths on purpose. A dialog arrives over
+ * --dur-move and a drawer, which travels the width of itself, over --dur-enter;
+ * both leave one rung faster, because an exit is a thing the reader has already
+ * finished with and every millisecond of it is spent on a decision they made.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .overlay[data-state="open"] {
+    animation: overlay-arrive var(--dur-move) var(--ease-out) both;
+  }
+  .overlay[data-state="closing"] {
+    animation: overlay-leave var(--dur-state) var(--ease-out) both;
+  }
+  /* `.palette` is the ⌘K search, which draws its own chrome (app/shell.css) and
+     is therefore not a `.modal` — but it is the same kind of arrival, so it
+     joins these two rules rather than growing a second pair of keyframes that
+     would drift from them. */
+  .overlay[data-state="open"] > .modal,
+  .overlay[data-state="open"] > .palette {
+    animation: dialog-arrive var(--dur-move) var(--ease-out) both;
+  }
+  .overlay[data-state="closing"] > .modal,
+  .overlay[data-state="closing"] > .palette {
+    animation: dialog-leave var(--dur-state) var(--ease-out) both;
+  }
+
+  /* The drawer's scrim travels with the drawer, so it takes the same pair of
+     lengths — a scrim that had settled while the panel was still sliding would
+     read as two things happening rather than one thing arriving. */
+  .overlay-right[data-state="open"] {
+    animation-duration: var(--dur-enter);
+  }
+  .overlay-right[data-state="closing"] {
+    animation-duration: var(--dur-move);
+  }
+  .overlay-right[data-state="open"] > .modal-drawer {
+    animation: drawer-arrive var(--dur-enter) var(--ease-out) both;
+  }
+  .overlay-right[data-state="closing"] > .modal-drawer {
+    animation: drawer-leave var(--dur-move) var(--ease-out) both;
+  }
+}
+
+/* Each of these names a START or an END and lets the other side be whatever the
+   rules above computed. Spelling both ends would put a second copy of the
+   drawer's resting transform in the stylesheet, and the copy that goes stale is
+   always the one inside the keyframes. */
+@keyframes overlay-arrive {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes overlay-leave {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes dialog-arrive {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(8px);
+  }
+}
+@keyframes dialog-leave {
+  to {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+}
+/* Past its own trailing edge AND past the gap it floats in, or the last
+   --space-4 of the drawer sits on the glass before it has started to move. */
+@keyframes drawer-arrive {
+  from {
+    transform: translateX(calc(100% + var(--space-4)));
+  }
+}
+@keyframes drawer-leave {
+  to {
+    transform: translateX(calc(100% + var(--space-4)));
   }
 }
 
@@ -795,7 +984,10 @@
 .segmented button {
   font-family: var(--f-body);
   font-size: var(--fs-sm);
-  font-weight: 600;
+  /* Medium at rest and semibold only when pressed, as FilterPills does: a row
+     of options all set semibold reads as a row of headings, and the weight
+     step is what marks the chosen one beside its plate. */
+  font-weight: var(--fw-medium);
   border: 0;
   /* Transparent, so an unpressed option is read on the TRACK's --bgChip and
      takes the chip's ink accordingly. The pressed one below lifts onto its own
@@ -809,7 +1001,8 @@
 .segmented button[aria-pressed="true"] {
   background: var(--bgElevated);
   color: var(--textPrimary);
-  box-shadow: var(--shadow-card);
+  font-weight: var(--fw-semibold);
+  box-shadow: var(--shadow-rest);
 }
 /* How much is behind an option, beside its name. It keeps the quiet ink on the
    pressed option too: the label says where you are, and a count that lit up
@@ -873,6 +1066,10 @@
      Harmless on a bare `.link-button`, which never had either. */
   min-inline-size: 0;
   min-block-size: 0;
+  /* And the resting layer `.btn` sets, which this class is the exception to:
+     a shadow says a thing has a top side, and a text affordance has no face
+     for one to fall from. */
+  box-shadow: none;
   /* A flex line rather than inline text, so an icon and its label share one row
      and one vertical centre. Inline, the glyph sat on the text baseline with a
      descender gap under it and nothing could space the pair. */
@@ -1195,12 +1392,43 @@
      16px animated the FONT SIZE, so tapping a field on an iPhone grew its type
      over 140ms. What should transition is what a field changes about itself
      when it is focused, refused or disabled, and that is these four. */
+  box-shadow: var(--shadow-well);
   transition:
     border-color var(--dur-state) var(--ease-out),
     box-shadow var(--dur-state) var(--ease-out),
     background-color var(--dur-state) var(--ease-out),
     color var(--dur-state) var(--ease-out);
 }
+/* The Select trigger is the one `.input` that is NOT a well: it holds a closed
+   face rather than a place to type, so it is verb-shaped and takes the surface
+   layer a button takes. Two classes, so it outranks `.input` on specificity
+   rather than on which sheet the bundler emitted first — the same reason
+   `.btn.btn-link` is spelled that way below, and not a theoretical one here:
+   select.css is its own chunk, so the order of the two is a routing decision.
+   In THIS sheet, so the hover and focus rules under it still win on order. */
+.input.select-control {
+  box-shadow: var(--shadow-rest);
+}
+/* The field FLATTENS under the pointer — the floor comes up to meet it, which
+   is the well's version of a button pressing in: either way the gap between
+   the control and the reader closes.
+
+   One rule for all three field shapes, and it has to stay ABOVE every focus
+   rule in this sheet (the shell's and the textarea's are declared much further
+   down): a focused field under the pointer must keep its ring, hover and focus
+   are the same specificity, and source order is what settles that. `:where()`
+   holds them at the same specificity while still excluding a control nobody
+   may touch — a field refusing input is at rest, and keeps its floor. */
+.input:hover:where(:not(:disabled, [aria-disabled="true"])),
+.input:active:where(:not(:disabled, [aria-disabled="true"])),
+.textarea:hover:where(:not(:disabled, [aria-disabled="true"])),
+.textarea:active:where(:not(:disabled, [aria-disabled="true"])),
+.field-shell:hover:where(:not(:has(:disabled, [aria-disabled="true"]))),
+.field-shell:active:where(:not(:has(:disabled, [aria-disabled="true"]))) {
+  box-shadow: none;
+}
+/* The glow REPLACES the well rather than joining it: nothing in this product
+   stacks a shadow under a shadow. */
 .input:focus {
   border-color: var(--accent);
   box-shadow: var(--focus-glow);
@@ -1263,6 +1491,7 @@
   background: var(--bgElevated);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-sm);
+  box-shadow: var(--shadow-well);
   transition:
     border-color var(--dur-state) var(--ease-out),
     box-shadow var(--dur-state) var(--ease-out),
@@ -1485,6 +1714,7 @@
   padding: 9px 11px;
   width: 100%;
   outline: none;
+  box-shadow: var(--shadow-well);
   transition:
     border-color var(--dur-state) var(--ease-out),
     box-shadow var(--dur-state) var(--ease-out),
@@ -1827,6 +2057,7 @@
   border: 1px solid var(--paneEdge);
   border-radius: var(--r-lg);
   background: var(--pane);
+  box-shadow: var(--shadow-rest);
   min-width: 0;
   /* The ground the door stretches over (`.stat-card-open::after`). A card
      WITHOUT a door is positioned too: the alternative is a second `.stat-card`
@@ -1941,7 +2172,10 @@
   border: 0;
   background: none;
   font: inherit;
-  color: var(--accent);
+  /* The text ink of the accent, as every other pressable word on a page wears
+     it: the fill token beside it is a second green a reader cannot tell from
+     the first and it fails AA at this size. */
+  color: var(--accentText);
   white-space: nowrap;
   /* The card's own `cursor` cannot reach this control: the overlay that
      stretches the door over the tile is the BUTTON's pseudo-element, so what a
@@ -1949,9 +2183,10 @@
      platform cursor beats a value the card set. The tile read as a plain arrow
      over every part of it the door actually answered for. */
   cursor: pointer;
-  /* The door says its word at the meta size and in the bold weight: it is the
-     smallest text on the card and the only thing on it to press, so weight is
-     what carries it rather than size.
+  /* The door says its word at the meta size and in the heading weight: it is
+     the smallest text on the card and the only thing on it to press, so weight
+     is what carries it rather than size: semibold, because --fw-bold is
+     reserved for the word that must outrank a heading, and a door does not.
      24px tall, which is the AA target floor (WCAG 2.5.8, and axe runs it in the
      wcag22aa sweep) — the same rung the worklist's rank button takes. The words
      box to 15px at this size, and axe measures the BUTTON's own rectangle: the
@@ -1967,7 +2202,7 @@
      node between two items is not a flex item — the space simply vanished. */
   gap: var(--space-1);
   font-size: var(--fs-meta);
-  font-weight: var(--fw-bold);
+  font-weight: var(--fw-semibold);
 }
 /* The arrow LEANS toward the door on the way in: the one movement on the tile,
    3px, at the state duration — a card that answers the pointer reads as one a

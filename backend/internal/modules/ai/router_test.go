@@ -324,11 +324,11 @@ func TestRouterCacheKeyDistinguishesAttachments(t *testing.T) {
 	ctx := wsContext(t)
 	reqA := model.Request{
 		Messages:    []model.Message{{Role: "user", Content: "summarize the attached"}},
-		Attachments: []model.Attachment{{MIME: "application/pdf", Bytes: []byte("PDF-A")}},
+		Attachments: []model.Attachment{{MIME: "application/pdf", Bytes: pdfSampleNamed("A")}},
 	}
 	reqB := model.Request{
 		Messages:    []model.Message{{Role: "user", Content: "summarize the attached"}},
-		Attachments: []model.Attachment{{MIME: "application/pdf", Bytes: []byte("PDF-B")}},
+		Attachments: []model.Attachment{{MIME: "application/pdf", Bytes: pdfSampleNamed("B")}},
 	}
 	if _, _, err := r.Complete(ctx, TaskSummarize, reqA); err != nil {
 		t.Fatal(err)

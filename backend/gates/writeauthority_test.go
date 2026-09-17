@@ -38,11 +38,14 @@ package gates
 //     defect it exists for.
 //
 // One probe family is deliberately outside the census, and the absence is not
-// an oversight: auth.EnsureLinkTarget. It asks whether the caller may REFERENCE
-// a record — attach an activity, name a parent company, add a list member — and
-// whether "add" needs write authority on the thing added TO is a product
-// question UC-E11-08 E2 raises rather than settles. It is tracked as its own
-// issue rather than decided inside a security sweep.
+// an oversight: auth.EnsureLinkTarget and its attach-direction twin
+// auth.EnsureAttachTarget. They ask whether the caller may put this record in a
+// row — name a parent company, file an activity onto it, add a list member —
+// and "add" is not one authority: naming a record you can see from a row of
+// your own needs read, while hanging a child row onto somebody else's record
+// needs a share that is not read-only. Neither is write authority over the
+// record, which is what this census is about, so a site holding one of them is
+// not thereby a site holding this.
 //
 // The LIST predicates (auth.ScopeClauseFor, auth.VisiblePredicate) are IN the
 // census, and that is a correction rather than a flourish. A first draft left
@@ -182,7 +185,6 @@ var readAuthorityOnAWritePath = gatekit.Waive(map[string]string{
 	// attachment paths grow a third arm, revisit this rather than extend it.
 	"internal/modules/activities:visibleParentClause":           "the document library's per-row visibility clause, reached from a write path only by ensureInDealDocuments — the hide's membership probe, asking whether the file is in THIS caller's view of the deal's Files area at all. It only ever NARROWS (a miss is 404), and the record being changed is the deal's listing, gated on its own way in by auth.EnsureWritable(deal) in setDealDocumentHidden before the probe runs",
 	"internal/modules/activities:ensureAttachmentParentVisible": "the READ half of a pair whose only caller picks between them by action: principal.ActionRead takes this one, everything else takes ensureAttachmentParentWritable. The write path is gated as this test demands; the extractor sees the function, not the arm",
-	"internal/modules/contacts:matchGhostsByEmail":              "confirms the UPLOADER's own linkedin_connection rows against contacts they can see. The scope is there to stop the confirmed count becoming an existence oracle — a read concern, which its own comment spells out — and the row it writes is the ghost, not the contact",
 	"internal/modules/capture:projectScopeClause":               "the project-attribution ladder's row predicate, narrowing which projects a captured message may be FILED UNDER. Read authority is the whole of what it needs: the project is referenced, never changed — the rows written are the activity_link edge and the activity's own version bump, and both are gated on activity:update in linkActivityToProject. A `read` share on a project is exactly the authority to see mail land on it, so requiring write here would refuse a filing to the colleague the project was deliberately shared with",
 
 	// Read predicates whose mutating callers take the write probe elsewhere.

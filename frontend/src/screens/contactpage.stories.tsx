@@ -4,13 +4,15 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
 import { meFixture } from "../app/mefixture";
+import { ContactBriefCard } from "./contactbrief";
 import {
-  ContactBriefCard,
   ContactCommercialCard,
   ContactCommitmentsCard,
   ContactMattersCard,
 } from "./contactcards";
+import { ContactDealsTab } from "./contactdeals";
 import { ContactResearchDrawer } from "./contactdrawers";
+import { ContactMeetingsTab } from "./contactmeetings";
 import { ContactMemory } from "./contactmemory";
 import { ContactPageV2 } from "./contactpage";
 import {
@@ -18,13 +20,8 @@ import {
   providerCompletedProfile,
 } from "./contactprovider.fixtures";
 import { ContactRail } from "./contactrail";
-import { ContactReadings } from "./contactreadings";
 import type { ContactTab } from "./contacttab";
-import {
-  ContactDealsTab,
-  ContactMeetingsTab,
-  ContactTimelineTab,
-} from "./contacttabs";
+import { ContactTimelineTab } from "./contacttabs";
 import { ContactToday } from "./contacttoday";
 import { ProviderCard } from "./integrations-provider";
 import { ContactMeetingBrief } from "./meetingbrief";
@@ -37,9 +34,8 @@ import {
 } from "./story-utils";
 
 // The contact record page V2 (ADR-0096) — its own gallery, one per surface the
-// concept names: the whole page behind the three reads it makes, the readings
-// strip on its own (both with and without a grant), the lead moment in both
-// tints, the rail, and the overview stack of cards.
+// concept names: the whole page behind the three reads it makes, the lead
+// moment in both tints, the rail, and the overview stack of cards.
 //
 // This gallery is what the live stack CANNOT show: every seeded demo contact
 // carries full RBAC and a clean sections_omitted, so a reader never sees a
@@ -764,28 +760,6 @@ export const PageConsentRefused: Story = {
   render: () => <Page guardEntries={guardRefusesMail} />,
 };
 
-// --- Readings: ContactReadings alone -----------------------------------------
-
-export const Readings: Story = {
-  render: () => (
-    <StoryProviders>
-      <div style={{ maxWidth: 900 }}>
-        <ContactReadings view={populated} />
-      </div>
-    </StoryProviders>
-  ),
-};
-
-export const ReadingsWithheld: Story = {
-  render: () => (
-    <StoryProviders>
-      <div style={{ maxWidth: 900 }}>
-        <ContactReadings view={withheld} />
-      </div>
-    </StoryProviders>
-  ),
-};
-
 // --- Lead moment: ContactToday in both tints ---------------------------------
 
 export const LeadMoment: Story = {
@@ -887,8 +861,6 @@ export const Rail: Story = {
                 },
               ],
             }}
-            firstName="Dana"
-            onExplain={() => {}}
           />
         </div>
       </StoryProviders>
@@ -939,12 +911,7 @@ export const RailEmployments: Story = {
     return (
       <StoryProviders>
         <div style={{ maxWidth: 320 }}>
-          <ContactRail
-            view={twoEmployers}
-            guard={undefined}
-            firstName="Dana"
-            onExplain={() => {}}
-          />
+          <ContactRail view={twoEmployers} guard={undefined} />
         </div>
       </StoryProviders>
     );
@@ -986,8 +953,6 @@ export const RailConsentBlocked: Story = {
                 },
               ],
             }}
-            firstName="Dana"
-            onExplain={() => {}}
           />
         </div>
       </StoryProviders>
@@ -1045,8 +1010,6 @@ export const RailChannelReached: Story = {
                 },
               ],
             }}
-            firstName="Dana"
-            onExplain={() => {}}
           />
         </div>
       </StoryProviders>
@@ -1087,12 +1050,7 @@ export const RailAtRisk: Story = {
     return (
       <StoryProviders>
         <div style={{ maxWidth: 320 }}>
-          <ContactRail
-            view={dealAtRisk}
-            guard={undefined}
-            firstName="Dana"
-            onExplain={() => {}}
-          />
+          <ContactRail view={dealAtRisk} guard={undefined} />
         </div>
       </StoryProviders>
     );
@@ -1124,12 +1082,7 @@ export const RailThin: Story = {
     return (
       <StoryProviders>
         <div style={{ maxWidth: 320 }}>
-          <ContactRail
-            view={thinContact}
-            guard={undefined}
-            firstName="Dana"
-            onExplain={() => {}}
-          />
+          <ContactRail view={thinContact} guard={undefined} />
         </div>
       </StoryProviders>
     );
@@ -1137,10 +1090,10 @@ export const RailThin: Story = {
 };
 
 // Every profile field DetailsGrid can hold, unset at once: title, linkedin,
-// city, email and phone all blank. Email and phone are always read-only
-// (contactrail.tsx's CONTACT_METHOD_IMMUTABLE), so they read `field.unset`
-// here whether or not the reader can edit; title, linkedin and city ARE
-// editable under this fixture's granted /me, so they read as the "Add …"
+// city, email and phone all blank. Email and phone have no inline editor in the
+// rail (editing them is the record's Edit action, not a control here), so they
+// read `field.unset` whether or not the reader can edit; title, linkedin and city
+// ARE editable under this fixture's granted /me, so they read as the "Add …"
 // placeholder instead: the two empty-field states side by side.
 const unsetFields: View = {
   ...populated,
@@ -1163,12 +1116,7 @@ export const RailUnsetFields: Story = {
     return (
       <StoryProviders>
         <div style={{ maxWidth: 320 }}>
-          <ContactRail
-            view={unsetFields}
-            guard={undefined}
-            firstName="Dana"
-            onExplain={() => {}}
-          />
+          <ContactRail view={unsetFields} guard={undefined} />
         </div>
       </StoryProviders>
     );

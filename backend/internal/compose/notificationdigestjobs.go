@@ -147,7 +147,7 @@ func (w *notificationDigestWorker) digestWorkspace(ctx context.Context, wsID ids
 	sysCtx = principal.WithActor(sysCtx, principal.Principal{
 		Type: principal.PrincipalSystem, ID: notificationDigestActor,
 	})
-	pass, err := w.morningFor(sysCtx, wsID, now)
+	pass, err := w.morningFor(sysCtx, now)
 	if err != nil {
 		return err
 	}
@@ -187,8 +187,8 @@ func (w *notificationDigestWorker) digestWorkspace(ctx context.Context, wsID ids
 // whether this is the workspace's morning at all, which local day it is, and who
 // has a morning here.
 type digestPass struct {
-	// due is false when this tick is not the workspace's morning — an overlay
-	// workspace, or an hour before the briefing hour. Nothing follows.
+	// due is false when this tick is not the workspace's morning — an hour
+	// before the briefing hour. Nothing follows.
 	due bool
 	// day is the installation's local date, which every claim is filed under.
 	day time.Time
@@ -208,25 +208,11 @@ type digestPass struct {
 // this is the same morning the overnight brief aims at, and two answers to
 // "which local day is it, and has the morning started" would let one colleague's
 // brief and their digest disagree about the day they are both about.
-//
-// An OVERLAY workspace is declined outright, the way the brief's pass declines
-// it. The records its notices point at live in the incumbent, so every quoted
-// line would be re-scoped against a table that does not hold the row — and a
-// digest that could only ever be a page of counts is not the message this is.
 func (w *notificationDigestWorker) morningFor(
-	ctx context.Context, wsID ids.UUID, now time.Time,
+	ctx context.Context, now time.Time,
 ) (digestPass, error) {
 	var pass digestPass
 	err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
-		overlay, err := overlayModeOf(ctx, tx)
-		if err != nil {
-			return fmt.Errorf("resolving the workspace's system-of-record mode: %w", err)
-		}
-		if overlay {
-			w.log.InfoContext(ctx, "morning digest skipped: the workspace keeps its records in the incumbent",
-				"workspace", wsID)
-			return nil
-		}
 		day, local, err := briefs.LocalDayAt(ctx, tx, now)
 		if err != nil {
 			return err

@@ -115,7 +115,7 @@ worker that does the work. Declare both.
 
 5. **Register in `backend/internal/compose/jobs.go`** — through `addDeclaredWorker`, from the wiring helper
    that matches the kind's gating (`addModelLaneJobs`, `addDatabaseOnlySweepJobs`,
-   `addCapturePipelineJobs`, `addGmailCaptureJobs`, `addOverlayJobs`, or a self-registering helper of
+   `addCapturePipelineJobs`, `addGmailCaptureJobs`, or a self-registering helper of
    your own that also returns its periodic entries):
 
    ```go

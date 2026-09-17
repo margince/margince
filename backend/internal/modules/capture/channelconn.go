@@ -42,7 +42,7 @@ import (
 // surface (identity/internal/policy coreObjects). Connecting a bot is
 // destructive workspace-wide config — every seat's inbound Telegram traffic
 // arrives through it — so create/update/delete are admin/ops-only while every
-// role may read the status, the same posture overlay_connection holds.
+// role may read the status.
 const channelConnectionObject = "channel_connection"
 
 // ProviderTelegram is the only channel provider implemented, and the only

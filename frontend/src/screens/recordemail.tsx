@@ -124,6 +124,21 @@ export function EmailVerb({
 }
 
 /**
+ * Whether the composer's open state is the CALLER's, for a page with a second
+ * control that opens this same composer: a lead's "Answer" row hands its Reply
+ * verb the header's own modal rather than mounting a copy of it.
+ *
+ * Both halves or neither, spelled as a union rather than as two optional
+ * props. A caller that passed only the setter never saw the composer open,
+ * because the state it drove was not the state this component reads; one that
+ * passed only the value could never ask for it to close. Both were a type the
+ * compiler accepted and a control the reader could not work.
+ */
+type Lifted =
+  | Readonly<{ open: boolean; onOpenChange: (open: boolean) => void }>
+  | Readonly<{ open?: undefined; onOpenChange?: undefined }>;
+
+/**
  * RecordEmailVerb is the header's Email verb with its own composer, for a
  * record whose page keeps no composer state of its own: the deal and the lead.
  */
@@ -133,6 +148,8 @@ export function RecordEmailVerb({
   contactId,
   recordAddress,
   disabledReasonId,
+  open,
+  onOpenChange,
 }: Readonly<{
   entityType: RelinkKind;
   entityId: string;
@@ -140,15 +157,29 @@ export function RecordEmailVerb({
   /** The record's own address, for a first message to it. See ComposeModal. */
   recordAddress?: string;
   disabledReasonId?: string;
-}>) {
-  const [composing, setComposing] = useState(false);
+}> &
+  Lifted) {
+  const [ownComposing, setOwnComposing] = useState(false);
+  const composing = open ?? ownComposing;
+  const setComposing = onOpenChange ?? setOwnComposing;
+  // Whether the composer has ever been asked for, open state included: a
+  // caller that opens it from elsewhere on the page still has to mount it
+  // here, the one place this component's own modal lives.
+  const [everComposed, setEverComposed] = useState(composing);
+  if (composing && !everComposed) {
+    setEverComposed(true);
+  }
   return (
     <>
       <EmailVerb
         reasonId={disabledReasonId}
         onClick={() => setComposing(true)}
       />
-      {composing && (
+      {/* Not drawn until the verb has been pressed once, and mounted from
+          then on. A composer mounted with the record would read on every
+          render of a page nobody is writing from; one unmounted the moment it
+          closes has no frame left to animate out on. */}
+      {everComposed && (
         // Keyed by the record, so navigating to another one while the
         // composer is open remounts it rather than re-pointing it.
         <ComposeModal
@@ -200,6 +231,8 @@ export function RecordEmailAside({
   const t = useT();
   const queryClient = useQueryClient();
   const [composing, setComposing] = useState(false);
+  // Whether the verb has ever been pressed; see the guard below.
+  const [everComposed, setEverComposed] = useState(false);
   const waitingReply = useWaitingReply(
     entityType,
     entityId,
@@ -226,12 +259,22 @@ export function RecordEmailAside({
   return (
     <Panel title={t(title)} sub={effectiveReplyTo ? t(subReply) : t(subFresh)}>
       <PanelBody>
-        <Button variant="primary" onClick={() => setComposing(true)}>
+        <Button
+          variant="primary"
+          onClick={() => {
+            setEverComposed(true);
+            setComposing(true);
+          }}
+        >
           <Mail aria-hidden />
           {effectiveReplyTo ? t(replyLabel) : t(sendLabel)}
         </Button>
       </PanelBody>
-      {composing ? (
+      {/* Not drawn until the verb has been pressed once, and mounted from then
+          on: a composer mounted with the record would read on every render of
+          a page nobody is writing from, and one unmounted the moment it closes
+          has no frame left to animate out on. */}
+      {everComposed ? (
         // Keyed by the record AND the thread it answers, so moving to another
         // record, or the reply target changing under an open box, remounts
         // the composer rather than re-pointing it. Without the key the text

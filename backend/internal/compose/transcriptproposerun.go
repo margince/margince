@@ -23,6 +23,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -140,7 +141,18 @@ func (p *TranscriptProposer) Read(ctx context.Context, store transcriptReadStore
 	// whose date was left at today resolves to the wrong week. The reviewer
 	// sees the resulting date on the card before any task exists, which is
 	// where that is caught.
-	steps, err := p.ask(ctx, reading.Lines, reading.OccurredAt.Format(time.DateOnly))
+	// The reading is ABOUT this meeting, and the request it makes IS the
+	// transcript — the largest copy of what was said in that room. Naming the
+	// activity is what lets an erasure of anyone quoted in it destroy the
+	// captured payload by citation: a transcript names its speakers rather than
+	// addressing them, and may
+	// never spell an address, so the content match alone leaves it standing.
+	// The label is the rail's, and a transcript has no subject line of its own
+	// to give it — the meeting's own summary is what the reader recognises, so
+	// an unnamed reading draws the rail's unnamed sentence rather than a
+	// quotation from somebody's transcript.
+	steps, err := p.ask(ai.WithSubject(ctx, activityID.Ref(), ""),
+		reading.Lines, reading.OccurredAt.Format(time.DateOnly))
 	if err != nil {
 		if errors.Is(err, errRefusedTranscript) {
 			p.log.WarnContext(ctx, "transcript reading refused",

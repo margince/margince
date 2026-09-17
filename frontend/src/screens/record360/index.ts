@@ -30,14 +30,14 @@ export {
   signalTone,
 } from "./labels";
 export {
+  type ContactMomentEvidence,
   isLate,
-  MOMENT_EVIDENCE_LABEL,
   MOMENT_RULE_LABEL,
   MomentRow,
-  momentGrounding,
   momentIsARow,
   standingTone,
 } from "./moment";
+export { MomentEvidence } from "./momentevidence";
 export { CallCard, RecordReading, RecordReadingPair } from "./reading";
 export {
   RecordSpine,

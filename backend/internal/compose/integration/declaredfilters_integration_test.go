@@ -17,6 +17,7 @@ package integration
 
 import (
 	"context"
+	"errors"
 	"slices"
 	"testing"
 	"time"
@@ -531,5 +532,96 @@ func TestTheCompanyListNarrowsByIndustryAndSizeBand(t *testing.T) {
 	unknown := "12-13"
 	if _, _, err := e.Contacts.ListCompanies(e.Admin(), contacts.ListCompaniesInput{SizeBand: &unknown}); err == nil {
 		t.Fatal("an unknown size band was accepted; want a validation refusal")
+	}
+}
+
+// The timeline honours the order it declares, and pages under it.
+//
+// `sort` was declared on this operation and read by nobody: a caller asking for
+// the oldest first got the newest, which is the defect the declared-parameter
+// gate exists to name. The pair here is what makes the answer checkable — the
+// same three rows, twice, and only the direction moves.
+func TestTheActivityListOrdersByTheSortItWasGiven(t *testing.T) {
+	e := Setup(t)
+	base := time.Date(2026, 6, 1, 9, 0, 0, 0, time.UTC)
+	oldest := e.logAt(t, base)
+	middle := e.logAt(t, base.Add(24*time.Hour))
+	newest := e.logAt(t, base.Add(48*time.Hour))
+
+	order := func(sort *string) []ids.UUID {
+		t.Helper()
+		page, _, err := e.Activities.ListActivities(e.Admin(), activities.ListActivitiesInput{Sort: sort})
+		if err != nil {
+			t.Fatalf("listing with sort %v: %v", sort, err)
+		}
+		out := make([]ids.UUID, 0, len(page))
+		for _, a := range page {
+			out = append(out, ids.UUID(a.Id))
+		}
+		return out
+	}
+
+	// No sort: the timeline's own answer, newest first. The default is not the
+	// house (created_at) one, and a page that quietly took it would reorder
+	// every captured message whose arrival and sending differ.
+	if got := order(nil); len(got) < 3 || got[0] != newest {
+		t.Errorf("the default order led with %v, want the newest (%v)", got, newest)
+	}
+	ascending := "occurred_at"
+	got := order(&ascending)
+	if len(got) < 3 || got[0] != oldest || got[2] != newest {
+		t.Errorf("sort=occurred_at gave %v, want oldest→newest (%v … %v)", got, oldest, newest)
+	}
+	_ = middle
+}
+
+// A field outside the vocabulary is REFUSED, and that is the half that makes
+// the honoured sort trustworthy: a list that silently ignores what it cannot do
+// is one a caller cannot tell from a list that did it.
+func TestTheActivityListRefusesASortItCannotDo(t *testing.T) {
+	e := Setup(t)
+	kind := "kind"
+	_, _, err := e.Activities.ListActivities(e.Admin(), activities.ListActivitiesInput{Sort: &kind})
+	var badSort *storekit.SortError
+	if !errors.As(err, &badSort) {
+		t.Fatalf("sorting the timeline by kind → %v, want a typed sort refusal", err)
+	}
+	if badSort.Code != storekit.CodeSortFieldNotAllowed {
+		t.Errorf("the refusal carries code %q, want %q", badSort.Code, storekit.CodeSortFieldNotAllowed)
+	}
+}
+
+// The task queue pages now. It used to hand out no cursor at all — its order
+// had no keyset that could continue it — so a queue longer than one page was
+// silently truncated, with only a separate count to hint at the rest.
+func TestTheOpenTaskQueueHandsOutACursorThatContinuesIt(t *testing.T) {
+	e := Setup(t)
+	due := time.Date(2026, 7, 1, 9, 0, 0, 0, time.UTC)
+	first := e.logTask(t, "Nearest", e.Rep1, due)
+	second := e.logTask(t, "Next", e.Rep1, due.Add(24*time.Hour))
+	until := due.Add(72 * time.Hour)
+	one := 1
+
+	page, meta, err := e.Activities.ListActivities(e.Admin(), activities.ListActivitiesInput{
+		OpenAndDueBy: &until, Limit: &one,
+	})
+	if err != nil {
+		t.Fatalf("first page: %v", err)
+	}
+	if len(page) != 1 || ids.UUID(page[0].Id) != first {
+		t.Fatalf("the queue led with %v, want the nearest deadline (%v)", page, first)
+	}
+	if !meta.HasMore || meta.NextCursor == "" {
+		t.Fatalf("the queue reported has_more=%v cursor=%q — a capped queue that hands out no "+
+			"cursor is one a reader cannot walk", meta.HasMore, meta.NextCursor)
+	}
+	next, _, err := e.Activities.ListActivities(e.Admin(), activities.ListActivitiesInput{
+		OpenAndDueBy: &until, Limit: &one, Cursor: &meta.NextCursor,
+	})
+	if err != nil {
+		t.Fatalf("resuming the queue: %v", err)
+	}
+	if len(next) != 1 || ids.UUID(next[0].Id) != second {
+		t.Fatalf("the second page gave %v, want the next deadline (%v)", next, second)
 	}
 }

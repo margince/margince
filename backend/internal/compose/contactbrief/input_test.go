@@ -82,6 +82,42 @@ func TestTheFoldCarriesWhatEachMessageActuallySaid(t *testing.T) {
 
 // A held message's words are not this reader's. The 360 nulls them; the fold
 // must not reach past that, and must still carry the row so its DATE survives.
+// The defect this field exists to prevent, in the fold that feeds the model.
+//
+// A brief in production attributed the READER's own assessment of a competitor
+// to the contact who had only asked about them, and labelled it a fact. The
+// input said `direction: outbound` and left the model to make the join. It made
+// it wrong. Naming the speaker is what removes the join, so the fold is what has
+// to be pinned: a message the reader sent reaches the prompt as theirs.
+func TestTheFoldNamesWhoWroteEachMessage(t *testing.T) {
+	t.Parallel()
+	view := viewFixture(t)
+	if got := FromView(view).Recent[0].Speaker; got != "them" {
+		t.Errorf("an inbound message folded to speaker %q, want %q — the contact wrote it", got, "them")
+	}
+
+	outbound := crmcontracts.ActivityDirectionOutbound
+	view.Activities.Data[0].Direction = &outbound
+	if got := FromView(view).Recent[0].Speaker; got != "you" {
+		t.Errorf("an outbound message folded to speaker %q, want %q.\n"+
+			"\tThese are the READER's own words, and a brief that reports them as the "+
+			"contact's puts words in somebody's mouth.", got, "you")
+	}
+}
+
+// A row that records no direction names no speaker, rather than guessing one.
+// The brief can still carry the row — its date is real — and the prompt simply
+// has nobody to attribute it to, which is the honest shape for a message whose
+// sender the product does not know.
+func TestAMessageWithNoDirectionNamesNoSpeaker(t *testing.T) {
+	t.Parallel()
+	view := viewFixture(t)
+	view.Activities.Data[0].Direction = nil
+	if got := FromView(view).Recent[0].Speaker; got != "" {
+		t.Errorf("a directionless message folded to speaker %q, want no speaker at all", got)
+	}
+}
+
 func TestAHeldMessageReachesTheModelAsADateAndNothingElse(t *testing.T) {
 	t.Parallel()
 	view := viewFixture(t)

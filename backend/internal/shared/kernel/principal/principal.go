@@ -357,6 +357,27 @@ func SendingHuman(ctx context.Context) (ids.UUID, bool) {
 // a contact out of an id string cannot each invent their own.
 const HumanIDPrefix = "human:"
 
+// systemIDBare is the system principal id the event bus binds; every job binds
+// its own namespaced form under it ("system:time-scan", "system:comms-send").
+const systemIDBare = "system"
+
+// SystemMintedID reports whether a principal id names the product itself — the
+// bare "system" the bus binds, or any job's own "system:<job>" — rather than a
+// human, an agent or a connector. A row whose captured_by matches this was
+// written by the product for its own reasons: a clock reminder, a sweep, a
+// relay. Surfaces that attribute intent ("you promised", "they engaged") must
+// not read such a row as anybody's promise or anybody's engagement.
+//
+// The same namespace test exists as a SQL pair in modules/activities
+// (followupresolve.go's systemCapturedBy/systemCapturedByPattern), for
+// statements that must ask it inside the database where this function cannot
+// run. The ':' namespace is the convention both spellings rest on, and
+// captured_by is server-stamped from the principal, so no client can reach
+// either predicate by writing a value.
+func SystemMintedID(id string) bool {
+	return id == systemIDBare || strings.HasPrefix(id, systemIDBare+":")
+}
+
 // HumanUserID reads the app_user behind a principal id, reporting whether the
 // id names a contact at all.
 //

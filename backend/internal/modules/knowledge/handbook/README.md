@@ -1,6 +1,6 @@
 # The Margince handbook
 
-How to operate Margince day to day. Written for the contact **using** the product
+How to operate Margince day to day. Written for whoever **uses** the product
 — a rep, an account owner, a delivery lead, an administrator. No code, no API: a
 sign-in and the app.
 
@@ -15,21 +15,50 @@ its own, so you can also come straight to the one you need.
 - **[Contacts, companies, leads, deals and projects](records.md)** — the five
   kinds of record, what each holds, and which connections between them are
   required and which are not. Includes the lead ladder, what qualifying a lead
-  actually does, and how to put a single change back from a record's history.
+  actually does, custom fields, and how to put a single change back from a
+  record's history.
 - **[The pipeline](the-pipeline.md)** — stages and what they mean, moving a deal,
-  what closing does and what winning requires, reopening, the 60-day stalled
-  rule, and how to read the weighted numbers.
+  what closing does and what winning requires, the outcome review, where a deal
+  came from, reopening, the 60-day stalled rule, stage automation, and how to
+  read the weighted numbers.
 - **[Capture](capture.md)** — how email, calendar and chat get in; what happens
   to a message step by step; the exact rules that file it against the right
   contact, deal and project; what happens when nothing matches; and what capture
   refuses to store.
-- **[What the AI does, and what it does not](what-the-ai-does.md)** — the two
-  tiers and where the line actually falls, why sending is not held behind a
+- **[Your day and your week](your-day-and-your-week.md)** — the Worklist's
+  bands and how a row earns its place, pinning, snoozing and what each verb
+  reaches, the frozen weekly review, planning a week, and what a team lead sees.
+- **[Analytics and forecasting](analytics.md)** — the six report sections, what
+  each number covers and how to open the rows behind it, forecast calls, the
+  projected landing, and the pipeline-needed figure that is deliberately not a
+  target.
+- **[Writing and sending mail](sending-mail.md)** — the composer, drafting in
+  your voice, the purpose picker and the consent check, what a send refuses and
+  what it only warns about, scheduling one for later, and what the recipient
+  controls from their own preference page.
+- **[Who can see an email](who-can-see-an-email.md)** — record visibility
+  against a message's own audience, the nine reasons one is held and which a
+  verdict can clear, the three mailbox postures, the company floor, and how to
+  share a thread.
+- **[What the AI does, and what it does not](what-the-ai-does.md)** — what the
+  AI produces for you: drafts, document reads, the overnight brief, and how
+  every derived claim carries its evidence.
+- **[Agents, passports and what they may do](agents-and-passports.md)** — the
+  two tiers and where the line actually falls, why sending is not held behind a
   confirmation and what protects it instead, the rule that human edits win field
   by field, what an agent is refused outright, and passports.
 - **[Approvals](approvals.md)** — what a staged action looks like, the kinds that
   reach the inbox, how to accept, edit or reject one, who is allowed to decide,
   the 72-hour expiry and the one kind that never expires.
+- **[Offers and the rate card](offers-and-products.md)** — what an offer holds,
+  how its money is worked out, the four verbs and what each locks, recurring
+  lines, and why a rate-card change never rewrites an offer you already sent.
+- **[Contracts and invoices](contracts-and-invoices.md)** — the two value bases
+  and why they are never summed, why a status is never inferred from a date,
+  renewing and cancelling, what counts as a signed win, and the finance mirror.
+- **[Deal Rooms](deal-rooms.md)** — the buyer-facing page for one deal: what a
+  room holds, the five states and why Close is not a freeze, personal one-time
+  links, what a buyer never sees, and what an agent may not touch.
 - **[Documents and files](documents-and-files.md)** — documents on a company or
   deal, files a deal picks up from its email, having a file read for deal fields,
   and document sets you can ask questions of. Every size limit, with its number.
@@ -39,8 +68,15 @@ its own, so you can also come straight to the one you need.
   override, consent, the audit trail, and what you can export.
 - **[Seats, roles and who can see what](seats-roles-and-access.md)** — full and
   read seats, the six roles, why reading a customer record ignores row scope,
-  teams, sharing one record, inviting and removing contacts, and what a refusal
-  looks like.
+  who can see one record, teams, sharing, inviting and removing colleagues, and
+  what a refusal looks like.
+- **[Relationships, introductions and research](relationships-and-research.md)** —
+  who here already knows somebody and how that is measured, asking a colleague
+  for a warm introduction and the four answers they can give, and what a website
+  read will and will not do.
+- **[Your own settings](your-own-settings.md)** — your account and signature,
+  your writing voice, your agent passports, your mailbox connections, and what
+  the last 24 hours of your mail turned into.
 - **[Settings](settings.md)** — every settings page, what is on it, whose state
   it changes, and which permission opens it.
 

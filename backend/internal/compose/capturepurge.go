@@ -155,9 +155,11 @@ func (p *CapturePurger) Purge(ctx context.Context, exclusionID ids.UUID, preview
 // second copy of this sequence is how one path would quietly stop auditing a
 // release or stop recomputing an audience.
 //
-// NOT held by a test. Both call sites are in this file and a reader can see
-// them, which is why the claim is safe to make here and would not be safe
-// three packages away — but a third path added elsewhere would go unnoticed.
+// Held by: TestBothPurgePathsShareOneExecutor (backend/gates/purgeexecutor_test.go)
+//
+// It asks who may call the two destructive steps rather than listing the purge
+// paths, so a third path written three packages away is refused the day it is
+// written — which is the only day the claim matters.
 func (p *CapturePurger) carryOut(
 	ctx context.Context, subject capture.PurgeSubject, contacts []ids.UUID,
 	seat ids.UUID, reason privacy.PurgeReason,

@@ -31,16 +31,18 @@ type fakeActivityScan struct {
 	candidates []EntityAnchor
 	err        error
 	calls      []struct {
-		cutoff time.Time
-		limit  int
+		cutoff   time.Time
+		limit    int
+		reminder string
 	}
 }
 
-func (f *fakeActivityScan) LastTouchBefore(_ context.Context, cutoff time.Time, limit int) ([]EntityAnchor, error) {
+func (f *fakeActivityScan) LastTouchBefore(_ context.Context, cutoff time.Time, limit int, reminder string) ([]EntityAnchor, error) {
 	f.calls = append(f.calls, struct {
-		cutoff time.Time
-		limit  int
-	}{cutoff, limit})
+		cutoff   time.Time
+		limit    int
+		reminder string
+	}{cutoff, limit, reminder})
 	if f.err != nil {
 		return nil, f.err
 	}
@@ -96,6 +98,12 @@ func TestScanInstanceCandidatesSynthesizesOneEventPerCandidate(t *testing.T) {
 	wantCutoff := now.AddDate(0, 0, -14) // the instance's own params, not the 7-day default
 	if !scan.calls[0].cutoff.Equal(wantCutoff) {
 		t.Errorf("cutoff = %s, want %s (the instance's own no_activity_days=14)", scan.calls[0].cutoff, wantCutoff)
+	}
+	// The draw skips an entity whose reminder from THIS handler is still open,
+	// so it has to be told which handler is asking. Passing the wrong name — or
+	// a constant — would hold the wrong reminders and silence the right ones.
+	if got := scan.calls[0].reminder; got != h.Spec().Name {
+		t.Errorf("reminder = %q, want %q — the draw holds only this handler's own open reminders", got, h.Spec().Name)
 	}
 
 	if len(calls) != 2 {

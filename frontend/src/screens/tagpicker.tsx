@@ -63,9 +63,7 @@ export function AddTagDialog({
   return (
     <Modal open onClose={onClose} labelledBy={titleID}>
       <div className="tagpicker">
-        <h2 id={titleID} className="tagpicker-title">
-          {t("tags.add")}
-        </h2>
+        <h2 id={titleID}>{t("tags.add")}</h2>
         <SearchField
           aria-label={t("tags.pickerLabel")}
           value={query}

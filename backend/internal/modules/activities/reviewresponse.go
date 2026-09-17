@@ -44,8 +44,10 @@ type WriteReviewInput struct {
 	Outcome string
 	// SubmissionID is the client's own id for this submission, unique per
 	// author. A retry with the same id finds the review already written.
-	SubmissionID ids.UUID
-	Answers      map[string]string
+	SubmissionID    ids.UUID
+	Answers         map[string]string
+	ChoiceAnswers   map[string][]string
+	TemplateVersion *int64
 	// Body is optional prose for the note itself. The answers are the review;
 	// this is what somebody wanted to say beside them.
 	Body   *string
@@ -82,7 +84,10 @@ func (s *Store) WriteOutcomeReviewTx(ctx context.Context, tx pgx.Tx, in WriteRev
 	if !live {
 		return crmcontracts.OutcomeReview{}, errReviewTemplateRetired
 	}
-	if err := validateAnswers(template.Questions, in.Answers); err != nil {
+	if in.TemplateVersion != nil && *in.TemplateVersion != template.Version {
+		return crmcontracts.OutcomeReview{}, apperrors.ErrConflict
+	}
+	if err := validateReviewAnswers(template.Questions, in.Answers, in.ChoiceAnswers); err != nil {
 		return crmcontracts.OutcomeReview{}, err
 	}
 
@@ -112,15 +117,19 @@ func (s *Store) WriteOutcomeReviewTx(ctx context.Context, tx pgx.Tx, in WriteRev
 		return crmcontracts.OutcomeReview{}, fmt.Errorf("encode the review's answers: %w", err)
 	}
 
+	choices, err := json.Marshal(in.ChoiceAnswers)
+	if err != nil {
+		return crmcontracts.OutcomeReview{}, fmt.Errorf("encode review choices: %w", err)
+	}
 	var id ids.UUID
 	if err := tx.QueryRow(ctx,
 		`INSERT INTO activity_review_response
 		     (activity_id, deal_id, closing_occurrence_id, outcome,
-		      template_key, template_version, questions, answers, submission_id, source, captured_by)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+		      template_key, template_version, questions, answers, submission_id, source, captured_by, choice_answers)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 		 RETURNING id`,
 		ids.UUID(note.Id), in.DealID, in.ClosingOccurrenceID, in.Outcome,
-		template.Key, template.Version, questions, answers, in.SubmissionID, in.Source, by).
+		template.Key, template.Version, questions, answers, in.SubmissionID, in.Source, by, choices).
 		Scan(&id); err != nil {
 		if storekit.IsForeignKeyViolation(err) {
 			// The composite key refused the pair: the occurrence is not a
@@ -235,7 +244,7 @@ func ReadDealOutcomeReviews(ctx context.Context, tx pgx.Tx, dealID ids.DealID) (
 }
 
 const reviewSelect = `SELECT r.id, r.activity_id, r.deal_id, r.closing_occurrence_id, r.outcome,
-	r.template_key, r.template_version, r.questions, r.answers, r.revision, r.created_at, r.updated_at
+	r.template_key, r.template_version, r.questions, r.answers, r.choice_answers, r.revision, r.created_at, r.updated_at
 	FROM activity_review_response`
 
 // readOutcomeReview answers one review, bounded by the deal it is about.
@@ -265,9 +274,9 @@ func scanOutcomeReview(row pgx.Row) (crmcontracts.OutcomeReview, error) {
 	var out crmcontracts.OutcomeReview
 	var id, activityID, dealID, occurrenceID ids.UUID
 	var outcome string
-	var questions, answers []byte
+	var questions, answers, choices []byte
 	if err := row.Scan(&id, &activityID, &dealID, &occurrenceID, &outcome,
-		&out.TemplateKey, &out.TemplateVersion, &questions, &answers,
+		&out.TemplateKey, &out.TemplateVersion, &questions, &answers, &choices,
 		&out.Revision, &out.CreatedAt, &out.UpdatedAt); err != nil {
 		return crmcontracts.OutcomeReview{}, err
 	}
@@ -277,6 +286,9 @@ func scanOutcomeReview(row pgx.Row) (crmcontracts.OutcomeReview, error) {
 	}
 	if err := json.Unmarshal(answers, &out.Answers); err != nil {
 		return crmcontracts.OutcomeReview{}, fmt.Errorf("the review's answers are not readable: %w", err)
+	}
+	if err := json.Unmarshal(choices, &out.ChoiceAnswers); err != nil {
+		return crmcontracts.OutcomeReview{}, fmt.Errorf("the review choices are not readable: %w", err)
 	}
 	out.Id = openapi_types.UUID(id)
 	out.ActivityId = openapi_types.UUID(activityID)

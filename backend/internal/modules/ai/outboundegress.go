@@ -191,7 +191,8 @@ func requireDialableEndpoint(label, provider, baseURL string) error {
 func userinfoRefused(label string, parsed *url.URL) error {
 	return fmt.Errorf(
 		"ai: routing config: %s: base_url %q carries userinfo, and a binding never carries a credential — it would be sent to whatever host the value names. Give the host root alone; a model key belongs in the key vault",
-		label, safeToName(parsed))
+		label, safeToName(parsed),
+	)
 }
 
 // cleartextRefused is the write-time half of refuseOffHostRedirect's downgrade
@@ -205,7 +206,8 @@ func userinfoRefused(label string, parsed *url.URL) error {
 func cleartextRefused(label, provider, scheme string) error {
 	return fmt.Errorf(
 		"ai: routing config: %s: provider %q calls a vendor's public API with this installation's model key, so its base_url must be https — %q would send the key in clear. To reach a gateway on your own network over http, bind openai_compatible instead",
-		label, provider, scheme)
+		label, provider, scheme,
+	)
 }
 
 // unreachableAddressRefused tells the operator which rule they met and what to
@@ -214,9 +216,11 @@ func unreachableAddressRefused(label, provider string, ip net.IP) error {
 	if egressFor(provider) == egressOperatorEndpoint {
 		return fmt.Errorf(
 			"ai: routing config: %s: base_url points at %s, which is not an address inference is served from — an endpoint is loopback, a private range (10.x, 172.16-31.x, 192.168.x, an IPv6 unique-local address), or a public host. Link-local, carrier-grade NAT and the documentation ranges are refused on every profile",
-			label, ip)
+			label, ip,
+		)
 	}
 	return fmt.Errorf(
 		"ai: routing config: %s: provider %q calls a vendor's public API and carries this installation's model key, so its base_url must name a public host — %s is not one. To reach a gateway on your own network, bind openai_compatible instead",
-		label, provider, ip)
+		label, provider, ip,
+	)
 }

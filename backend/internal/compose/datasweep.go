@@ -4,8 +4,8 @@
 package compose
 
 // What a data reset does to Postgres: which tables it sweeps, the order it
-// discovers at runtime, the outbox drain, the overlay-mode revert, and the
-// cf_* column drop that runs on the owner pool afterwards. datareset.go holds
+// discovers at runtime, the outbox drain, and the cf_* column drop that runs
+// on the owner pool afterwards. datareset.go holds
 // the transport and the orchestration that calls these; datareset_runtime.go
 // holds the non-Postgres surfaces.
 
@@ -55,13 +55,6 @@ var preservedResetTables = map[string]bool{
 	// installation configuration and secrets
 	"setting": true, "vault_secret": true, "ai_call_config": true,
 	"embed_store_binding": true,
-	// The installation's system-of-record mode, on the same footing as
-	// `setting`: one row a migration seeds, not a record of anybody's
-	// customers. The sweep must not DELETE it — overlay.RevertToNative runs
-	// after the sweep and returns it to native, and an UPDATE against a row the
-	// sweep had removed would touch nothing, report "not reverted", and leave
-	// the installation with no mode at all for the dispatcher to read.
-	"overlay_mode": true,
 	// The derived channel-provider registry: installation-global reference data,
 	// not this workspace's records, on the SAME footing as `setting` above — a
 	// reset that cleared it would leave the installation unable to recognise the
@@ -106,6 +99,14 @@ var preservedResetTables = map[string]bool{
 	// holds SELECT alone on this table by design, so the DELETE is refused
 	// outright and aborts the whole reset transaction.
 	"currency_minor_digits": true,
+	// What a field mask may NAME, against what the code can actually withhold
+	// (migration 1789617400). Build-level reference data rather than a
+	// workspace's configuration: field_mask is the configuration and the sweep
+	// clears it, while this is the catalog that configuration is checked
+	// against, and emptying it would refuse every mask an installation set
+	// afterwards. The application role holds SELECT alone on it for that
+	// reason, so a DELETE here is refused outright and aborts the reset.
+	"maskable_field": true,
 	// in-flight delivery: drained by the outbox pass, not deleted under it
 	"event_outbox": true,
 	// The retention floor's evidence (A165, migration 0289). Preserved from the
