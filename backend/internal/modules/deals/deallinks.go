@@ -65,12 +65,17 @@ func applyDealLinkPatches(ctx context.Context, tx pgx.Tx,
 // B's deal — the leak the filing check refuses to create, arrived at from the
 // other end.
 //
-// The deal row is locked BEFORE the agreements are read, and that ordering is
+// The deal row is HELD before the agreements are read, and that ordering is
 // the check rather than tidiness: a contract being filed against this deal
 // concurrently takes a share lock on the same row to read its company, so
 // whichever transaction arrives second waits and then asks its own question of
 // what the first committed. Read first, lock later, and both commit — each
 // having seen a world the other had already left.
+//
+// It is held AFTER the company link probe above, which takes a share lock on
+// `company`, because that is the order every other deal write already takes:
+// the company first, the deal at the patch. Holding the deal first would add
+// the reverse edge to an order this transaction is already committed to.
 //
 // CLEARING the company is a different act and stays on the clear path: a deal
 // that names nobody publishes its agreements to exactly the readers its own
@@ -84,7 +89,7 @@ func applyCompanyLinkPatch(ctx context.Context, tx pgx.Tx, current crmcontracts.
 		return err
 	}
 	dealID := ids.From[ids.DealKind](ids.UUID(current.Id))
-	if _, err := storekit.LockRow(ctx, tx, dealTable, dealID.UUID, storekit.LiveOnly); err != nil {
+	if err := auth.HoldWritableLive(ctx, tx, dealTable, dealID.UUID); err != nil {
 		return err
 	}
 	if err := ensureContractsShareCompany(ctx, tx, dealID, companyID); err != nil {

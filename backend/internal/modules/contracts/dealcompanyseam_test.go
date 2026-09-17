@@ -14,7 +14,7 @@ import (
 // The refusal a rep meets when they correct a mis-filed deal's company has to
 // be an instruction, not a verdict. Refusing was chosen over moving the
 // agreements or detaching them precisely because it is the only outcome the
-// person editing finds out about while they can still decide what they meant —
+// rep editing finds out about while they can still decide what they meant —
 // and that is paid for by the message naming which agreements block, the rule,
 // and the two moves that clear it. A bare "cannot do that" would be the
 // objection to refusing at all, landing.
