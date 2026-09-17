@@ -295,7 +295,7 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 	// /companies/{id} returns for the same record.
 	// The brief reads THROUGH the 360 service, so it inherits every gate the
 	// page itself applies and can only describe what this caller may see.
-	// The model lane is nil here: WithAccountBrief binds the api role's
+	// The model lane is nil here: WithCompanyBrief binds the api role's
 	// summarize lane, and without it the brief serves its deterministic
 	// floor.
 	s.contactsStore = contacts.NewStore(InstallationDB(pool)).WithFieldCatalog(customfields.NewService(pool, nil))
@@ -324,6 +324,13 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 	// The importer maps only core columns (see importTargets for why custom
 	// fields are not among them), so it needs no field catalog of its own.
 	s.importHandlers = importHandlers{db: InstallationDB(pool), uploadLimit: s.uploadLimits.CSVImport}
+	// The author repair reaches one module's store and its own ledger table,
+	// both off the same installation handle — so the write and the record of
+	// the write cannot end up addressing different databases.
+	s.attributionHandlers = attributionHandlers{
+		db:         InstallationDB(pool),
+		activities: activities.NewStore(InstallationDB(pool)),
+	}
 	s.company360Svc = company360.NewService(pool, s.contactsStore, s.dealsStore, ProjectsStore(pool), approvals.NewService(InstallationDB(pool)), time.Now)
 	s.companyBriefSvc = companybrief.NewService(pool, s.company360Svc, s.contactsStore, nil, "", time.Now).
 		WithEmailSummaries(emailRows(pool))

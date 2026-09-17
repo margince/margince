@@ -282,7 +282,10 @@ The `Trace` on every envelope lets you reconstruct one operation as a single sto
   request by the chassis middleware (`internal/platform/httpserver/chassis.go`:
   `principal.WithCorrelationID(r.Context(), ids.NewV7())`) and once per agent run
   (`compose/runnerservice.go`). A background job that emits must bind its own — `Emit` errors without
-  one.
+  one — and binds it together with the actor, through `principal.SystemActing(ctx, "system:<pass>")`.
+  The pass names itself so its audit rows are distinguishable from its neighbours'; the two halves
+  travel together because a pass that bound only one leaves a trail nobody can read back, and neither
+  omission fails anything at the call site. `backend/gates/systemprovenance_test.go` holds it.
 - **`causation_id`** is the `event_id` that *caused* this event (nil for the first in a chain) — set
   from `principal.CausationEvent(ctx)` when a consumer re-binds its triggering event before doing more
   work. Correlation is the whole operation; causation is the parent edge.
@@ -318,7 +321,8 @@ You don't have to remember these — a fitness test fails your PR if you break o
 - **A new event type needs a `catalog` entry** (and its payload type) — otherwise `StreamFor` /
   `Validate` fail at the write, which is where you want to find out.
 - **Bind a `correlation_id`** on any write path the HTTP/runner middleware doesn't cover (a bespoke
-  background job).
+  background job) — `principal.SystemActing` binds it with the actor, which is the pair such a path
+  owes.
 - **Pick a side on liveness.** `auth.EnsureWritableLive` is what a write that ADDS to a record owes —
   archived means frozen. `auth.EnsureRetractable` is its twin for a write that REVOKES, VOIDS,
   CANCELS or RETRACTS: an archived anchor must never freeze the cleanup its own retirement implies.

@@ -307,11 +307,24 @@ export const en = {
   "history.reversal.unpaired": "undoing an earlier change",
   "history.edge.marker": "Link",
   "history.field.address": "Address",
+  "history.field.admission": "Domain admission",
+  "history.field.admission_reason": "Admission reason",
+  "history.field.admission_source": "Admission source",
   "history.field.amount_minor": "Value",
+  "history.field.bounce": "Delivery bounce",
+  "history.field.capture_question": "Capture question",
+  "history.field.channel_identity": "Channel account",
+  "history.field.channel_username": "Channel handle",
+  "history.field.cohort_linked": "Messages linked",
+  "history.field.cohort_promoted": "Messages promoted",
+  "history.field.corrected": "Verdict corrected",
+  "history.field.disposition": "Disposition",
+  "history.field.domain": "Domain",
   "history.field.expected_arr_minor": "Expected ARR",
   "history.field.assignee_id": "Assignee",
   "history.field.body": "Notes",
   "history.field.emails": "Email addresses",
+  "history.field.nudge_dismissal": "Nudge dismissed",
   "history.field.phones": "Phone numbers",
   "history.field.meeting_status": "Meeting outcome",
   "history.field.candidate_company_key": "Matched company",
@@ -347,6 +360,21 @@ export const en = {
   "history.field.occurred_at": "Occurred",
   "history.field.company_id": "Company",
   "history.field.owner_id": "Owner",
+  "history.field.provider_claims_received": "Provider claims received",
+  "history.field.reachability": "Reachable",
+  "history.field.reply_verdict": "Reply verdict",
+  "history.field.reply_verdict_by": "Reply verdict by",
+  "history.field.research_claims_accepted": "Research claims accepted",
+  "history.field.stopped": "Stopped",
+  "history.field.stops_carried": "Stops carried over",
+  "history.field.submission_decision": "Submission decision",
+  "history.field.vat_checked_at": "VAT checked",
+  "history.field.vat_consultation_number": "VAT consultation number",
+  "history.field.vat_number": "VAT number",
+  "history.field.vat_registered_address": "VAT registered address",
+  "history.field.vat_registered_name": "VAT registered name",
+  "history.field.vat_requested": "VAT check requested",
+  "history.field.vat_status": "VAT status",
   "history.field.visibility": "Visibility",
   "history.field.parent_company_id": "Parent company",
   "history.field.partner_attribution": "Partner attribution",
@@ -1651,7 +1679,7 @@ export const en = {
   "approval.kind.relink_thread": "Refile a conversation",
   "approval.kind.relink_activities": "Refile several activities",
   "approval.kind.scheduled_send_held": "Release a stopped message",
-  "approval.kind.send_account_email": "Send an email to an account",
+  "approval.kind.send_company_email": "Send an email to an account",
   "approval.kind.send_message": "Send a message",
   // What a staged proposal's own fields are CALLED. Without these a card falls
   // back to the payload's JSON keys, and a business question reads as a
@@ -4655,6 +4683,32 @@ export const en = {
     "Each reason, class and remedy is the job layer's own wording, never the worker's raw cause. A failure it cannot phrase reports a fixed substitute and carries no class at all. A class invented for text nobody could vet would key your alerts on a guess.",
   "jobs.generatedAt": "Read at {time}",
 
+  "settings.extIngest": "Connector records refused",
+  "settings.extIngestSub":
+    "Records an installed connector sent that this CRM could not represent.",
+  "extIngest.adminOnly":
+    "Seeing what connectors have sent needs permission your seat does not hold. It reports across the whole installation, so it is not open to everyone.",
+  // The clean state is a FINDING, not an absence. A connector sending nothing
+  // and a connector whose every record is refused looked identical before this
+  // card, and the reader has to be able to tell this line from "no answer".
+  "extIngest.empty":
+    "Nothing refused in the last {days} days. Every record the installed connectors sent could be represented.",
+  "extIngest.refusedTotal_one": "{count} record refused",
+  "extIngest.refusedTotal_other": "{count} records refused",
+  "extIngest.lastRefused": "most recent {when}",
+  "extIngest.refusal.key": "record key",
+  "extIngest.refusal.activity": "the activity itself",
+  "extIngest.refusal.addresses": "addresses",
+  "extIngest.refusal.counterparty": "counterparty",
+  "extIngest.refusal.participants": "participants",
+  "extIngest.refusal.size": "size limits",
+  "extIngest.refusalCount": "{count} on {refusal}",
+  // Said on the card because an operator who cannot find the detail here goes
+  // looking for a bug rather than for the connector's own log.
+  "extIngest.noDetail":
+    "Counts and the check that refused, never the record itself: the reason names the field it was refused on, and that quotes the sender's own content. The connector's own log carries the full sentence for each one.",
+  "extIngest.generatedAt": "Read at {time}",
+
   "audit.you": "You",
   "audit.system": "System",
   "audit.unknownBuyer": "Deal Room participant",
@@ -7338,6 +7392,25 @@ export const en = {
     "this conversation spans two projects, so its findings would be wrong for one of them",
   "pipeline.reason.thread_not_all_open":
     "a message on this conversation is withheld from some of its readers, so a summary of the whole would be a partial account presented as a complete one",
+  "pipeline.reason.answered_on_the_company":
+    "this step asks about the sender's domain rather than about one message, so it is answered once on the company rather than repeated on every message from it",
+  "pipeline.reason.company_warranted":
+    "this domain was judged to warrant a company record, and this is it",
+  "pipeline.reason.no_site_identified":
+    "nothing on this domain's site identified a company, so the sender's own name was used instead",
+  "pipeline.reason.triage_queued": "this domain is waiting to be looked at",
+  "pipeline.reason.triage_unevidenced":
+    "nothing has been seen from this domain yet that would evidence a company",
+  "pipeline.reason.triage_stale_evidence":
+    "what was seen from this domain is too old to decide on",
+  "pipeline.reason.triage_near_duplicate":
+    "this domain looks like one already recorded, so it is held rather than duplicated",
+  "companyTriage.title": "Where this company came from",
+  "companyTriage.sub":
+    "The mail domains that were checked, and what each check concluded.",
+  "companyTriage.empty":
+    "No mail domain was checked into this company — it was recorded by hand or brought in from elsewhere.",
+  "companyTriage.checkedAt": "checked {when}",
   "pipeline.reason.no_named_reader":
     "this conversation has no reader a finding could answer to",
   "pipeline.reason.transport_not_read":
@@ -7357,8 +7430,6 @@ export const en = {
   "pipeline.reason.would_restore_erased":
     "reporting this would restore data an erasure removed",
   "pipeline.reason.no_writer_yet": "this step does not exist yet",
-  "pipeline.reason.not_reported_yet":
-    "this step runs, but is not reported here yet",
   "settings.tab.maintenance": "Maintenance",
   "settings.tab.license": "License",
   "license.card.title": "License and seats",
@@ -8756,6 +8827,7 @@ export const en = {
   // one first — a contact can work at more than one company at once.
   "contact.rail.employmentTitle": "Companies",
   "contact.rail.noEmployment": "No employment on record.",
+  "contact.rail.noPrimaryEmployer": "No primary employer — choose one.",
   "contact.rail.addEmployment": "Add company",
   "contact.employer.contacts_one": "{count} contact",
   "contact.employer.contacts_other": "{count} contacts",

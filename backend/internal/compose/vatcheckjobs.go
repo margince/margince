@@ -319,8 +319,5 @@ func boundVatCheckEnqueue() contacts.VatCheckEnqueue {
 // made on the deployment's own behalf, under its own VAT number, and no user
 // asked for it.
 func vatCheckJobActor(ctx context.Context) context.Context {
-	ctx = principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalSystem, ID: "system:vatcheck",
-	})
-	return principal.WithCorrelationID(ctx, ids.NewV7())
+	return principal.SystemActing(ctx, "system:vatcheck")
 }

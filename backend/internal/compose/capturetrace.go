@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/pipelinetrace"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 )
 
@@ -49,10 +50,15 @@ func WithCaptureTrace(tracePayloads bool) Option {
 		// because it is optional in a way the other two are not — an
 		// installation that composed no extractor has nothing for that rung to
 		// report, and the rung says so.
+		// The company-triage reader is the fourth owner, and the same shape as
+		// the third: the ledger is contacts' and the rendering is the trace's,
+		// so the store is injected rather than imported by the renderer. It is
+		// the company-keyed door's whole source.
 		s.pipelineTraceHandlers = pipelinetrace.NewHandlers(pipelinetrace.NewAssembler(
 			traces, activities.NewStore(InstallationDB(pool)), tracePayloads,
 		).
-			WithThreadReader(NewThreadReadings(InstallationDB(pool), time.Now)))
+			WithThreadReader(NewThreadReadings(InstallationDB(pool), time.Now)).
+			WithDomainTriageReader(contacts.NewStore(InstallationDB(pool))))
 	}
 }
 

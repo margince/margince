@@ -12,6 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { meFixture } from "../app/mefixture";
 import { LocaleProvider, type Translator, translate } from "../i18n";
+import { en } from "../i18n/en";
 import { ContactRail, contactStanding } from "./contactrail";
 
 // The rail's words are short verdicts — "One-sided", "Never", "No inbound",
@@ -729,5 +730,59 @@ describe("how the contact is filed", () => {
   it("draws the contact's tags in the rail", async () => {
     mount(granted);
     expect(await screen.findByText("Champion")).toBeTruthy();
+  });
+});
+
+// A contact who still works somewhere and has no primary employer is a state
+// the store reaches deliberately: a human clears the flag, or the primary is
+// retired while two others remain and nothing picks between them on somebody's
+// behalf. It used to arrive as a list with no "current" marker anywhere on it,
+// which is indistinguishable from a value that failed to load.
+describe("a contact with no primary employer", () => {
+  const employment = (id: string, company: string, primary: boolean) => ({
+    relationship_id: id,
+    company_id: id,
+    company_name: company,
+    role: "Head of Fleet",
+    is_current_primary: primary,
+    started_at: "2022-03-01T00:00:00Z",
+    ended_at: null,
+  });
+  const withEmployments = (
+    rows: ReturnType<typeof employment>[],
+  ): Contact360 => ({ ...granted, employments: { data: rows, page } });
+
+  it("says so, and says it is a choice, when two are held and neither leads", async () => {
+    mount(
+      withEmployments([
+        employment("rel-1", "Brandt Automotive GmbH", false),
+        employment("rel-2", "Kessler Logistik AG", false),
+      ]),
+    );
+    expect(
+      await screen.findByText(en["contact.rail.noPrimaryEmployer"]),
+    ).toBeTruthy();
+  });
+
+  it("stays quiet when one of them leads", async () => {
+    mount(
+      withEmployments([
+        employment("rel-1", "Brandt Automotive GmbH", true),
+        employment("rel-2", "Kessler Logistik AG", false),
+      ]),
+    );
+    await screen.findByText("Brandt Automotive GmbH");
+    expect(screen.queryByText(en["contact.rail.noPrimaryEmployer"])).toBeNull();
+  });
+
+  // The empty state is a different sentence about a different fact — nobody has
+  // recorded where this contact works — and asking for a choice there would be
+  // asking them to choose between nothing.
+  it("leaves the empty state to say it when there are no employments", async () => {
+    mount(emptyButGranted);
+    expect(
+      await screen.findByText(en["contact.rail.noEmployment"]),
+    ).toBeTruthy();
+    expect(screen.queryByText(en["contact.rail.noPrimaryEmployer"])).toBeNull();
   });
 });

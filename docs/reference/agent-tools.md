@@ -102,7 +102,7 @@ Columns:
 
 | Tool | Tier | Scope | Egress |
 |---|---|---|---|
-| `account_coverage` | 🟢 | `read` | — |
+| `company_coverage` | 🟢 | `read` | — |
 | `advance_deal` | dynamic | `write` | — |
 | `advance_project_phase` | 🟢 | `write` | — |
 | `archive_record` | 🟢 | `write` | — |
@@ -168,7 +168,7 @@ Columns:
 | `search_context` | 🟢 | `read` | — |
 | `search_records` | 🟢 | `read` | — |
 | `send_email` | 🟢 | `send` | yes |
-| `send_account_email` | 🟢 | `send` | yes |
+| `send_company_email` | 🟢 | `send` | yes |
 | `send_message` | 🟢 | `send` | yes |
 | `update_record` | 🟢 / 🟡 | `write` | — |
 | `update_tag` | 🟢 | `write` | — |
@@ -262,7 +262,7 @@ neither is a capability an agent should hold unattended.
 
 The traffic runs the other way too: eleven registered tools name no contract
 verb, because they are *intents* composed over several operations rather than a
-transport for one — `account_coverage`, `at_risk_relationships`,
+transport for one — `company_coverage`, `at_risk_relationships`,
 `catch_me_up_on`, `draft_follow_ups_for`, `intro_path_to`, `list_pipelines`,
 `prep_for_meeting`, `progress_deal`, `qualify_lead`,
 `whats_slipping_this_week`, `who_knows`. Their `OpenAPIOp` field records the

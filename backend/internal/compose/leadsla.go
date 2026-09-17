@@ -168,8 +168,7 @@ func (leadSLAEscalation) IdempotencyKey(ev workflow.Event) string {
 // after the automation scan: it marks every newly breached lead and emits
 // lead.sla_breached for each, which the escalation above consumes.
 func scanLeadSLA(ctx context.Context, db *database.DB, now func() time.Time, log *slog.Logger) error {
-	wsCtx := principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: "system:lead-sla-scan"})
-	wsCtx = principal.WithCorrelationID(wsCtx, ids.NewV7())
+	wsCtx := principal.SystemActing(ctx, "system:lead-sla-scan")
 	breaches, err := contacts.NewStore(db).ScanLeadSLA(wsCtx, now().UTC())
 	if err != nil {
 		return fmt.Errorf("lead sla scan: %w", err)

@@ -110,13 +110,13 @@ func sendMessageCommand(_ agentPolicy, deps restCommandDeps, r *http.Request, bo
 	}), nil
 }
 
-// sendAccountEmailCommand decodes POST /v1/emails. There is no routed id to
+// sendCompanyEmailCommand decodes POST /v1/emails. There is no routed id to
 // read: this send starts a conversation rather than answering one, so the
 // records it belongs to are NAMED in the body — which is exactly why the route
 // walk this replaces could offer no target for it at all.
 //
 //nolint:ireturn // a decoder's whole product is the erased command-and-resolver pair restCommands is typed by
-func sendAccountEmailCommand(_ agentPolicy, deps restCommandDeps, _ *http.Request, body []byte) (agents.GovernedCall, error) {
+func sendCompanyEmailCommand(_ agentPolicy, deps restCommandDeps, _ *http.Request, body []byte) (agents.GovernedCall, error) {
 	in, err := commandBody[struct {
 		To      []string            `json:"to"`
 		Cc      []string            `json:"cc"`
@@ -126,7 +126,7 @@ func sendAccountEmailCommand(_ agentPolicy, deps restCommandDeps, _ *http.Reques
 	if err != nil {
 		return nil, err
 	}
-	return agents.NewSendAccountEmailCall(deps.records, agents.SendAccountEmailCommand{
+	return agents.NewSendCompanyEmailCall(deps.records, agents.SendCompanyEmailCommand{
 		To:      in.To,
 		Cc:      in.Cc,
 		Subject: in.Subject,

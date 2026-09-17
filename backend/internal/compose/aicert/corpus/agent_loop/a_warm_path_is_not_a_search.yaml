@@ -21,11 +21,11 @@ expect:
     An introduction is a question about the relationship graph, not about which
     records exist. Score high only if the turn calls intro_path_to on the
     company the grounding identifies. search_records would return the
-    account the grounding has already supplied, and account_coverage answers a
+    account the grounding has already supplied, and company_coverage answers a
     different question — who is covered — without naming a path in.
   near_misses:
     - search_records
-    - account_coverage
+    - company_coverage
   bands:
     certified_min: 70
     degraded_min: 50

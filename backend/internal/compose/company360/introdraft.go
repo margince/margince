@@ -80,11 +80,11 @@ type introFacts struct {
 // under their own name, from their own mail client.
 func (s *Service) IntroRequestDraft(
 	ctx context.Context, lane Completer, companyID ids.CompanyID, req IntroRequest,
-) (crmcontracts.AccountEmailDraft, error) {
+) (crmcontracts.CompanyEmailDraft, error) {
 	// Human-only: this spends the workspace's model budget on prose a colleague
 	// will send under their own name.
 	if err := auth.RequireHuman(ctx); err != nil {
-		return crmcontracts.AccountEmailDraft{}, err
+		return crmcontracts.CompanyEmailDraft{}, err
 	}
 	// The colleague being asked is never the reader asking. The routes this
 	// draft is written from rank everyone on our side who corresponds with the
@@ -97,7 +97,7 @@ func (s *Service) IntroRequestDraft(
 	// branch only answers whether the reader is also the colleague named.
 	if asker, ok := principal.Actor(ctx); ok &&
 		req.ViaUserID == ids.From[ids.UserKind](asker.UserID) {
-		return crmcontracts.AccountEmailDraft{}, fmt.Errorf(
+		return crmcontracts.CompanyEmailDraft{}, fmt.Errorf(
 			"company360: an introduction is asked of somebody else: %w",
 			apperrors.ErrInvalidArgument)
 	}
@@ -107,7 +107,7 @@ func (s *Service) IntroRequestDraft(
 	// lock that transaction holds. Coverage reads it the same way.
 	active, err := s.contacts.ActiveCompanyColumns(ctx)
 	if err != nil {
-		return crmcontracts.AccountEmailDraft{}, err
+		return crmcontracts.CompanyEmailDraft{}, err
 	}
 	var facts introFacts
 	err = database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
@@ -116,7 +116,7 @@ func (s *Service) IntroRequestDraft(
 		return err
 	})
 	if err != nil {
-		return crmcontracts.AccountEmailDraft{}, err
+		return crmcontracts.CompanyEmailDraft{}, err
 	}
 	return writeIntroRequest(ctx, lane, facts), nil
 }
@@ -229,9 +229,9 @@ func (s *Service) introDealName(
 // wireIntroRequest turns the draft into the shape the composer reads.
 func wireIntroRequest(
 	draft introDraft, by crmcontracts.WrittenBy, facts introFacts,
-) crmcontracts.AccountEmailDraft {
+) crmcontracts.CompanyEmailDraft {
 	aiWritten := by == crmcontracts.WrittenByModel
-	out := crmcontracts.AccountEmailDraft{
+	out := crmcontracts.CompanyEmailDraft{
 		Subject: draft.subject,
 		Body:    draft.body,
 		// No `to`. The reader sends this from their own mail client, and

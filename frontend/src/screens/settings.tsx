@@ -95,6 +95,7 @@ import { EmbedReindexCard } from "./embedreindex";
 import { EntityRef } from "./entityref";
 import { ExtensionAccessCard } from "./extension-access";
 import { ExtensionUnitsCard } from "./extension-units";
+import { ExtensionIngestHealthCard } from "./extingesthealth";
 import { HeldThreadsCard } from "./held-threads";
 import { ImportCard } from "./import";
 import { InstallationSettingsCard } from "./installation-settings";
@@ -368,6 +369,11 @@ export function tabContent(id: SettingsPageId): ReactNode {
               page. */}
           <EmbedReindexCard />
           <JobHealthCard />
+          {/* Beside the queue reading rather than under Extensions: both
+              answer "is something broken in the background", and an operator
+              chasing a quiet feed should not have to know that a connector is
+              an extension to find out. */}
+          <ExtensionIngestHealthCard />
         </>
       );
     case "extensions":
@@ -1634,7 +1640,7 @@ type AgentTool = components["schemas"]["AgentTool"];
 // right.
 //
 // The name and its written title used to share the label's line, so each row
-// read as a pair of unrelated strings — "account_coverage  Relationship coverage
+// read as a pair of unrelated strings — "company_coverage  Relationship coverage
 // on a deal" — beside cards whose rows are a label with a description beneath.
 // The title is a statement ABOUT the tool, so it goes where this page puts those.
 //

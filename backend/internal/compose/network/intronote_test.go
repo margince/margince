@@ -254,7 +254,7 @@ func TestTheDisclosureSpeaksTheNotesLanguage(t *testing.T) {
 func TestReasoningIsAlwaysAnArrayOnTheWire(t *testing.T) {
 	t.Parallel()
 	bare := noteFacts{lang: textlang.English}
-	for name, out := range map[string]crmcontracts.AccountEmailDraft{
+	for name, out := range map[string]crmcontracts.CompanyEmailDraft{
 		"with facts": wireIntroNote(
 			introNote{subject: "s", body: "b"}, crmcontracts.WrittenByModel, warmNote()),
 		"with none": wireIntroNote(

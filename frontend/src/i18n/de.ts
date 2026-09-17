@@ -316,11 +316,24 @@ export const de = {
   "history.reversal.unpaired": "setzt eine frühere Änderung zurück",
   "history.edge.marker": "Verknüpfung",
   "history.field.address": "Adresse",
+  "history.field.admission": "Domänen-Zulassung",
+  "history.field.admission_reason": "Grund der Zulassung",
+  "history.field.admission_source": "Quelle der Zulassung",
   "history.field.amount_minor": "Wert",
+  "history.field.bounce": "Unzustellbarkeit",
+  "history.field.capture_question": "Zuordnungsfrage",
+  "history.field.channel_identity": "Kanal-Konto",
+  "history.field.channel_username": "Kanal-Benutzername",
+  "history.field.cohort_linked": "Verknüpfte Nachrichten",
+  "history.field.cohort_promoted": "Übernommene Nachrichten",
+  "history.field.corrected": "Bewertung korrigiert",
+  "history.field.disposition": "Ergebnis",
+  "history.field.domain": "Domäne",
   "history.field.expected_arr_minor": "Erwarteter ARR",
   "history.field.assignee_id": "Zuständig",
   "history.field.body": "Notizen",
   "history.field.emails": "E-Mail-Adressen",
+  "history.field.nudge_dismissal": "Hinweis ausgeblendet",
   "history.field.phones": "Telefonnummern",
   "history.field.meeting_status": "Ergebnis des Termins",
   "history.field.candidate_company_key": "Zugeordnetes Unternehmen",
@@ -356,6 +369,22 @@ export const de = {
   "history.field.occurred_at": "Zeitpunkt",
   "history.field.company_id": "Unternehmen",
   "history.field.owner_id": "Verantwortlich",
+  "history.field.provider_claims_received": "Angaben des Anbieters",
+  "history.field.reachability": "Erreichbarkeit",
+  "history.field.reply_verdict": "Antwortbewertung",
+  "history.field.reply_verdict_by": "Antwortbewertung von",
+  "history.field.research_claims_accepted": "Übernommene Rechercheangaben",
+  "history.field.stopped": "Gestoppt",
+  "history.field.stops_carried": "Übernommene Sperren",
+  "history.field.submission_decision": "Entscheidung zur Einreichung",
+  "history.field.vat_checked_at": "USt-IdNr. geprüft",
+  "history.field.vat_consultation_number": "USt-Abfragenummer",
+  "history.field.vat_number": "USt-IdNr.",
+  "history.field.vat_registered_address":
+    "Im USt-Register hinterlegte Anschrift",
+  "history.field.vat_registered_name": "Im USt-Register hinterlegter Name",
+  "history.field.vat_requested": "USt-Prüfung angefordert",
+  "history.field.vat_status": "USt-Status",
   "history.field.visibility": "Sichtbarkeit",
   "history.field.parent_company_id": "Muttergesellschaft",
   "history.field.partner_attribution": "Partnerzuordnung",
@@ -1574,7 +1603,7 @@ export const de = {
   "approval.kind.relink_thread": "Konversation neu zuordnen",
   "approval.kind.relink_activities": "Mehrere Aktivitäten neu zuordnen",
   "approval.kind.scheduled_send_held": "Gestoppte Nachricht freigeben",
-  "approval.kind.send_account_email": "E-Mail an ein Unternehmen senden",
+  "approval.kind.send_company_email": "E-Mail an ein Unternehmen senden",
   "approval.kind.send_message": "Nachricht senden",
   "approval.field.basis": "Warum",
   "approval.field.step": "Der Schritt",
@@ -4505,6 +4534,27 @@ export const de = {
     "Grund, Klasse und Abhilfe werden jeweils von der Job-Schicht selbst formuliert, nie aus der Rohursache des Workers. Kann sie einen Fehler nicht formulieren, meldet sie einen festen Ersatztext und gar keine Klasse. Eine für ungeprüften Text erfundene Klasse würde deine Alarme auf eine Vermutung stützen.",
   "jobs.generatedAt": "Gelesen um {time}",
 
+  "settings.extIngest": "Von Konnektoren abgewiesene Datensätze",
+  "settings.extIngestSub":
+    "Datensätze, die ein installierter Konnektor gesendet hat und die dieses CRM nicht abbilden konnte.",
+  "extIngest.adminOnly":
+    "Zu sehen, was Konnektoren gesendet haben, erfordert eine Berechtigung, die Ihr Sitz nicht hat. Der Bericht gilt für die gesamte Installation und ist daher nicht für alle offen.",
+  "extIngest.empty":
+    "In den letzten {days} Tagen wurde nichts abgewiesen. Jeder Datensatz der installierten Konnektoren ließ sich abbilden.",
+  "extIngest.refusedTotal_one": "{count} Datensatz abgewiesen",
+  "extIngest.refusedTotal_other": "{count} Datensätze abgewiesen",
+  "extIngest.lastRefused": "zuletzt {when}",
+  "extIngest.refusal.key": "Datensatzschlüssel",
+  "extIngest.refusal.activity": "die Aktivität selbst",
+  "extIngest.refusal.addresses": "Adressen",
+  "extIngest.refusal.counterparty": "Gegenpartei",
+  "extIngest.refusal.participants": "Teilnehmende",
+  "extIngest.refusal.size": "Größenbeschränkungen",
+  "extIngest.refusalCount": "{count} wegen {refusal}",
+  "extIngest.noDetail":
+    "Nur Zählungen und die Prüfung, die abgewiesen hat, nie der Datensatz selbst: Die Begründung nennt das Feld, an dem er scheiterte, und zitiert damit den Inhalt des Absenders. Das Protokoll des Konnektors trägt den vollständigen Satz zu jedem einzelnen.",
+  "extIngest.generatedAt": "Gelesen am {time}",
+
   "audit.you": "Du",
   "audit.system": "System",
   "audit.unknownBuyer": "Teilnehmer im Deal Room",
@@ -7185,6 +7235,26 @@ export const de = {
     "diese Konversation umfasst zwei Projekte, ihre Erkenntnisse wären für eines davon falsch",
   "pipeline.reason.thread_not_all_open":
     "eine Nachricht dieser Konversation ist einem Teil ihrer Leser vorenthalten; eine Zusammenfassung des Ganzen wäre ein Teilbericht, der als vollständig erscheint",
+  "pipeline.reason.answered_on_the_company":
+    "Dieser Schritt fragt nach der Domain des Absenders und nicht nach einer einzelnen Nachricht, also wird er einmal beim Unternehmen beantwortet statt bei jeder Nachricht von dort wiederholt.",
+  "pipeline.reason.company_warranted":
+    "Diese Domain rechtfertigt einen Unternehmensdatensatz, und dies ist er",
+  "pipeline.reason.no_site_identified":
+    "Auf der Website dieser Domain war kein Unternehmen zu erkennen, also wurde stattdessen der Name des Absenders verwendet",
+  "pipeline.reason.triage_queued":
+    "Diese Domain wartet darauf, geprüft zu werden",
+  "pipeline.reason.triage_unevidenced":
+    "Von dieser Domain wurde noch nichts gesehen, das ein Unternehmen belegen würde",
+  "pipeline.reason.triage_stale_evidence":
+    "Was von dieser Domain gesehen wurde, ist zu alt für eine Entscheidung",
+  "pipeline.reason.triage_near_duplicate":
+    "Diese Domain ähnelt einer bereits erfassten und wird zurückgehalten statt doppelt angelegt",
+  "companyTriage.title": "Woher dieses Unternehmen stammt",
+  "companyTriage.sub":
+    "Die geprüften Mail-Domains und was jede Prüfung ergeben hat.",
+  "companyTriage.empty":
+    "Keine Mail-Domain wurde in dieses Unternehmen eingeordnet — es wurde von Hand erfasst oder von anderswo übernommen.",
+  "companyTriage.checkedAt": "geprüft {when}",
   "pipeline.reason.no_named_reader":
     "diese Konversation hat keinen Leser, dem eine Erkenntnis zuzuordnen wäre",
   "pipeline.reason.transport_not_read":
@@ -7204,8 +7274,6 @@ export const de = {
   "pipeline.reason.would_restore_erased":
     "dies auszuweisen würde Daten wiederherstellen, die eine Löschung entfernt hat",
   "pipeline.reason.no_writer_yet": "diesen Schritt gibt es noch nicht",
-  "pipeline.reason.not_reported_yet":
-    "dieser Schritt läuft, wird hier aber noch nicht ausgewiesen",
   "settings.tab.maintenance": "Wartung",
   "settings.tab.license": "Lizenz",
   "license.card.title": "Lizenz und Sitzplätze",
@@ -8620,6 +8688,8 @@ export const de = {
     "Die aktuelle Version dieser Zeile konnte nicht zum Speichern zurückgelesen werden. Lade neu und versuche es erneut.",
   "contact.rail.employmentTitle": "Unternehmen",
   "contact.rail.noEmployment": "Keine Beschäftigung erfasst.",
+  "contact.rail.noPrimaryEmployer":
+    "Kein Hauptarbeitgeber — bitte einen wählen.",
   "contact.rail.addEmployment": "Unternehmen hinzufügen",
   "contact.employer.contacts_one": "{count} Kontakt",
   "contact.employer.contacts_other": "{count} Kontakte",

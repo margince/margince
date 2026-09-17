@@ -3457,6 +3457,18 @@ public.event_outbox.seq bigint NOT NULL gen=- def=-
 public.event_outbox.stream text NOT NULL gen=- def=-
 public.event_outbox_pkey CREATE UNIQUE INDEX event_outbox_pkey ON public.event_outbox USING btree (id)
 public.event_outbox_seq_seq acl=- rls=false force=false
+public.extension_ingest_refusal acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.extension_ingest_refusal.day date NOT NULL gen=- def=-
+public.extension_ingest_refusal.extension_ingest_refusal_class CHECK ((refusal = ANY (ARRAY['key'::text, 'activity'::text, 'addresses'::text, 'counterparty'::text, 'participants'::text, 'size'::text])))
+public.extension_ingest_refusal.extension_ingest_refusal_counted CHECK ((refused > 0))
+public.extension_ingest_refusal.extension_ingest_refusal_pkey PRIMARY KEY (unit, refusal, day)
+public.extension_ingest_refusal.first_at timestamp with time zone NOT NULL gen=- def=-
+public.extension_ingest_refusal.last_at timestamp with time zone NOT NULL gen=- def=-
+public.extension_ingest_refusal.refusal text NOT NULL gen=- def=-
+public.extension_ingest_refusal.refused bigint NOT NULL gen=- def=-
+public.extension_ingest_refusal.unit text NOT NULL gen=- def=-
+public.extension_ingest_refusal_day_idx CREATE INDEX extension_ingest_refusal_day_idx ON public.extension_ingest_refusal USING btree (day DESC, unit)
+public.extension_ingest_refusal_pkey CREATE UNIQUE INDEX extension_ingest_refusal_pkey ON public.extension_ingest_refusal USING btree (unit, refusal, day)
 public.extension_secret acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.extension_secret.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.extension_secret.extension_name text NOT NULL gen=- def=-
@@ -5685,6 +5697,19 @@ public.site_read.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.site_read.uq_site_read_ws_id UNIQUE (id)
 public.site_read.warnings jsonb NOT NULL gen=- def='[]'::jsonb
 public.site_read_pkey CREATE UNIQUE INDEX site_read_pkey ON public.site_read USING btree (id)
+public.source_attribution_repair acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.source_attribution_repair.applied_at timestamp with time zone NOT NULL gen=- def=now()
+public.source_attribution_repair.batch_ref text NOT NULL gen=- def=-
+public.source_attribution_repair.object_id uuid NOT NULL gen=- def=-
+public.source_attribution_repair.object_type text NOT NULL gen=- def=-
+public.source_attribution_repair.payload_hash text NOT NULL gen=- def=-
+public.source_attribution_repair.source_attribution_repair_object_type CHECK ((object_type = ANY (ARRAY['activity'::text, 'contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'project'::text])))
+public.source_attribution_repair.source_attribution_repair_pkey PRIMARY KEY (object_type, object_id)
+public.source_attribution_repair.source_attribution_repair_revision CHECK ((source_revision > 0))
+public.source_attribution_repair.source_author_id uuid gen=- def=-
+public.source_attribution_repair.source_author_name text gen=- def=-
+public.source_attribution_repair.source_revision bigint NOT NULL gen=- def=-
+public.source_attribution_repair_pkey CREATE UNIQUE INDEX source_attribution_repair_pkey ON public.source_attribution_repair USING btree (object_type, object_id)
 public.stage acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.stage.archived_at timestamp with time zone gen=- def=-
 public.stage.created_at timestamp with time zone NOT NULL gen=- def=now()

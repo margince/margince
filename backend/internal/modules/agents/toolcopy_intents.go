@@ -80,7 +80,7 @@ var prepareHandoffCopy = toolCopy{
 		"field is empty as far as THEY can see, and a bounded list withholds the gaps that " +
 		"claim something is absent rather than guessing them. It changes nothing — preparing a " +
 		"handover is not performing one.",
-	Instead: "Use catch_me_up_on when the question is what has been happening on the account " +
+	Instead: "Use catch_me_up_on when the question is what has been happening on the company " +
 		"rather than what a handover is missing, and read_record for the project's own stored " +
 		"fields alone.",
 	Retain: "The project_id, and each gap's source field — the gaps are what a follow-up fills in.",
@@ -109,10 +109,10 @@ var whoKnowsCopy = toolCopy{
 		"is what a contact should be asked about.",
 }
 
-var accountCoverageCopy = toolCopy{
-	Purpose: "Answer \"is this deal covered?\": which roles on the account we have a relationship " +
+var companyCoverageCopy = toolCopy{
+	Purpose: "Answer \"is this deal covered?\": which roles at the company we have a relationship " +
 		"with, and where the deal is exposed to a single contact.",
-	Limits: "It assesses the relationships recorded against one deal's account, not the deal's " +
+	Limits: "It assesses the relationships recorded against one deal's company, not the deal's " +
 		"commercial health — nothing here says whether the deal will close.",
 	Instead: "Use whats_slipping_this_week for deals at risk of stalling, and intro_path_to when " +
 		"the answer is that a gap needs a warm route filling it.",
@@ -126,11 +126,11 @@ var accountCoverageCopy = toolCopy{
 var introPathToCopy = toolCopy{
 	Purpose: "Find a warm route into a company: who we already know there, and which colleague " +
 		"could make the introduction.",
-	Limits: "It walks the relationships this workspace has recorded. An account nobody here has " +
+	Limits: "It walks the relationships this workspace has recorded. A company nobody here has " +
 		"ever spoken to has no warm path, and saying so is the correct answer rather than a " +
 		"failure.",
 	Instead: "Use who_knows when you already have the specific contact and want the colleagues " +
-		"who know THEM, and search_records when you are still looking for the account itself.",
+		"who know THEM, and search_records when you are still looking for the company itself.",
 	Retain: "The path names the colleague and the contact by id; both are needed to ask anyone " +
 		"for the introduction.",
 }
@@ -144,7 +144,7 @@ var atRiskRelationshipsCopy = toolCopy{
 		"deals these are. It is about the shape of the relationships around a deal, not about " +
 		"the deal's own momentum.",
 	Instead: "Use whats_slipping_this_week when the question is about deals losing momentum, and " +
-		"account_coverage when the question is about one deal rather than the whole book.",
+		"company_coverage when the question is about one deal rather than the whole book.",
 	Retain: "Each finding names its deal_id and the contacts it is about; those are what " +
 		"intro_path_to and who_knows take next.",
 }

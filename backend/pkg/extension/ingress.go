@@ -423,8 +423,10 @@ const (
 	// representable. And it is the one disposition a unit must COUNT. A run
 	// answering it for everything it pulled is a broken unit or a changed
 	// provider, and nothing else in the system is in a position to say so —
-	// the core writes no breadcrumb for it yet (the second half of the seam,
-	// which needs a table and its own decision about what such a row may hold).
+	// the unit's own logs are not somewhere an installation reads. The core
+	// keeps its own count beside the unit's: one row per unit per refusal class
+	// per day, carrying the class and never the record, which is what
+	// /admin/extension-ingest-health reports.
 	//
 	// A unit switching on Disposition without a default gains an unhandled
 	// case here. Go does not enforce exhaustiveness, so nothing stops
@@ -450,6 +452,12 @@ type Ref struct {
 type Result struct {
 	Ref         Ref
 	Disposition Disposition
+	// Refusal names WHICH check refused an unrepresentable record, from the
+	// closed vocabulary in ingressrefusal.go, and is empty for every other
+	// disposition. It is what a unit counts BY: "all of them" and "all of them
+	// on the participants" are different bugs, and Reason beside it cannot be
+	// grouped on because it is prose.
+	Refusal RecordRefusal
 	// Reason says WHY, for the dispositions that are a refusal. It carries the
 	// core's complaint about an unrepresentable record so a unit can log the
 	// same sentence it used to read off the error — and it is empty for an

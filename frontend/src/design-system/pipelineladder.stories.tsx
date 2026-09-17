@@ -64,7 +64,9 @@ const CHAT_MESSAGE: Rung[] = [
     order: 90,
     status: "not_reported",
     subject_kind: "domain",
-    reason: "not_reported_yet",
+    // Answered, but not here: this stage's subject is a domain, so the ladder
+    // names the company surface that carries it.
+    reason: "answered_on_the_company",
   }),
   rung({
     stage: "attention_label",
@@ -75,9 +77,9 @@ const CHAT_MESSAGE: Rung[] = [
   rung({
     stage: "material_events",
     order: 110,
-    status: "not_reported",
+    status: "pending",
     subject_kind: "thread",
-    reason: "not_reported_yet",
+    reason: "awaiting_scan",
   }),
   rung({
     stage: "claim_extraction",

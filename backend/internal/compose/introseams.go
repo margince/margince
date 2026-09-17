@@ -281,7 +281,7 @@ func atRiskLister(pool *pgxpool.Pool, ppl *contacts.Store) agents.AtRiskLister {
 			// simply be collected across every finding and resolved in a
 			// single batched read, so the cost was never twenty-five reads. It
 			// matters because the SAME CoverageRisk shape is named under
-			// account_coverage: a model seeing names on one tool and bare ids
+			// company_coverage: a model seeing names on one tool and bare ids
 			// on the other reads the absence as "withheld" rather than "not
 			// looked up".
 			return nameSweepFindings(ctx, tx, ppl, out.Deals)

@@ -379,7 +379,11 @@ var tableOwners = map[string]string{
 	// compose (HTTP replay protection is transport plumbing, not domain;
 	// the brief read model is the cross-module ranker's own snapshot —
 	// deals + contacts strength + activities compose only here)
-	"idempotency_key": "internal/compose",
+	// The core's own count of what its ingress grammar refused, per unit per
+	// class per day. compose owns it because the refusal happens at the
+	// extension port, before any module is reached.
+	"extension_ingest_refusal": "internal/compose",
+	"idempotency_key":          "internal/compose",
 	// The MCP Tasks handle, beside the claim above and owned for the same
 	// reason: it is transport-owned operational state, not a domain record, and
 	// modules/agents declares the seam while owning no SQL.
@@ -441,6 +445,13 @@ var tableOwners = map[string]string{
 	// records a completed PARSE, and every meeting this pass must re-read
 	// already carries one.
 	"activity_meeting_attendee_repair": "internal/compose",
+	// What the source-author repair has applied per record, so a re-run is a
+	// no-op and a correction is not mistaken for a replay. Owned here for the
+	// reason the markers around it are: the repair reads ONE source system and
+	// writes across activities, contacts, companies, deals, leads and projects,
+	// so no single module can hold the ledger of what it did without reaching
+	// into its siblings' tables to keep it.
+	"source_attribution_repair": "internal/compose",
 	// Which captured meetings have had their stored original re-read for the
 	// RSVP nobody looked at when they were captured. The same bookkeeping,
 	// owned here for the same reason — and a marker of its own again, because

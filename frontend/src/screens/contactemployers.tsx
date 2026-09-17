@@ -143,6 +143,16 @@ export function Employers({ view }: Readonly<{ view: Contact360 }>) {
   const primaryCompany = allEmployments.find(
     (e) => e.is_current_primary && stillHeld(e),
   )?.company_id;
+  // A contact who still works somewhere and has no primary employer is a
+  // DELIBERATE gap, not a missing value: a human cleared the flag, or their
+  // primary was retired while two others remained and the store refuses to
+  // choose between them on somebody's behalf. Left unsaid it reaches the page
+  // as a list with no "current" marker on it, which reads as a bug.
+  //
+  // Not the empty state — the list is not empty — and not a warning, because
+  // nothing is wrong. A prompt, and the hook the row's own edit offers.
+  const noPrimaryEmployer =
+    primaryCompany === undefined && allEmployments.some(stillHeld);
   const employments = [...allEmployments].sort(
     (a, b) =>
       Number(b.company_id === primaryCompany) -
@@ -229,6 +239,9 @@ export function Employers({ view }: Readonly<{ view: Contact360 }>) {
             />
           ))}
         </SurfaceState>
+        {noPrimaryEmployer && (
+          <p className="t-caption">{t("contact.rail.noPrimaryEmployer")}</p>
+        )}
         {more.isError && <p role="alert">{problemMessageOf(more.error, t)}</p>}
         {more.hasNextPage && (
           <Button

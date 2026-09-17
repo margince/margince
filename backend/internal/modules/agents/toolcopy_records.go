@@ -37,7 +37,7 @@ var readRecordCopy = toolCopy{
 	Purpose: "Read one record's own stored fields — the values a reader would see on its detail " +
 		"page — when you already know which record you mean.",
 	Limits: "It returns that record and nothing around it: no timeline, no related contacts, no " +
-		"deals on the account.",
+		"deals on the company.",
 	Instead: "Use catch_me_up_on when the goal is what has been happening on the record rather " +
 		"than what it currently says.",
 	Retain: "Keep the version from the result and pass it back as if_version on a later update, " +
@@ -55,7 +55,7 @@ var createRecordCopy = toolCopy{
 		"widening verdict — attending a meeting together does not earn one. Do not tell anyone " +
 		"a contact you just created is on their colleagues' screens.",
 	Instead: "Search first when the record might already exist — a second copy of a contact or " +
-		"account is a problem that then needs merge_records to undo.",
+		"company is a problem that then needs merge_records to undo.",
 	Retain: "The new record's id comes back in the result; keep it for anything that links to it.",
 }
 
@@ -131,7 +131,7 @@ var relinkActivitiesCopy = toolCopy{
 }
 
 var archiveRecordCopy = toolCopy{
-	Purpose: "Retire a record that should no longer be worked — a duplicate, a dead account, a " +
+	Purpose: "Retire a record that should no longer be worked — a duplicate, a dead company, a " +
 		"project that ended.",
 	Limits: "Archiving hides the record from day-to-day work; it does not delete it and does not " +
 		"move anything attached to it, so an archived duplicate still holds the activities and " +

@@ -199,7 +199,16 @@ const REASON_KEYS: Partial<Record<string, MessageKey>> = {
   "ingress_gate.connector_side_defect": "pipeline.reason.connector_side_defect",
   "erasure_check.would_restore_erased": "pipeline.reason.would_restore_erased",
   "claim_extraction.no_writer_yet": "pipeline.reason.no_writer_yet",
-  "company_triage.not_reported_yet": "pipeline.reason.not_reported_yet",
+  "company_triage.answered_on_the_company":
+    "pipeline.reason.answered_on_the_company",
+  "company_triage.company_warranted": "pipeline.reason.company_warranted",
+  "company_triage.no_site_identified": "pipeline.reason.no_site_identified",
+  "company_triage.triage_queued": "pipeline.reason.triage_queued",
+  "company_triage.triage_unevidenced": "pipeline.reason.triage_unevidenced",
+  "company_triage.triage_stale_evidence":
+    "pipeline.reason.triage_stale_evidence",
+  "company_triage.triage_near_duplicate":
+    "pipeline.reason.triage_near_duplicate",
   "material_events.transport_not_read": "pipeline.reason.transport_not_read",
   "material_events.archived": "pipeline.reason.thread_not_captured",
   "material_events.record_not_available":
@@ -221,7 +230,11 @@ function stageName(rung: Rung, t: ReturnType<typeof useT>): string {
   return key ? t(key) : (rung.label ?? rung.stage);
 }
 
-function reasonText(rung: Rung, t: ReturnType<typeof useT>): string {
+// EXPORTED, because a second surface reports a rung: the company-keyed door
+// onto company_triage (screens/companytriage.tsx). Its rungs are the same
+// vocabulary, and a second copy of this resolution there would be a second
+// catalog — the one that goes stale when a reason is added here.
+export function reasonText(rung: Rung, t: ReturnType<typeof useT>): string {
   if (!rung.reason) {
     return "";
   }

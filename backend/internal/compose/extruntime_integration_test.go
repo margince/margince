@@ -51,11 +51,7 @@ func setupExtRuntime(t *testing.T) *extRuntimeEnv {
 // every operation and needs all three.
 func (e *extRuntimeEnv) callCtx(ws ids.UUID) context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), ws)
-	ctx = principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalSystem,
-		ID:   "system:extruntime-test",
-	})
-	return principal.WithCorrelationID(ctx, ids.NewV7())
+	return principal.SystemActing(ctx, "system:extruntime-test")
 }
 
 // runtime mints a Runtime the way the tool adapter does for an invocation

@@ -137,8 +137,7 @@ func (e *reconcileEnv) grantOwner(t *testing.T, userID ids.UUID, document string
 // scope the follow_up_workspace worker binds.
 func (e *reconcileEnv) reconcile() error {
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
-	ctx = principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: "agent:overnight"})
-	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
+	ctx = principal.SystemActing(ctx, "agent:overnight")
 	return e.reconciler.ReconcileWorkspace(ctx)
 }
 

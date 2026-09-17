@@ -319,11 +319,24 @@ export const vi = {
   "history.reversal.unpaired": "hoàn tác một thay đổi trước đó",
   "history.edge.marker": "Liên kết",
   "history.field.address": "Địa chỉ",
+  "history.field.admission": "Chấp nhận tên miền",
+  "history.field.admission_reason": "Lý do chấp nhận",
+  "history.field.admission_source": "Nguồn chấp nhận",
   "history.field.amount_minor": "Giá trị",
+  "history.field.bounce": "Thư bị trả lại",
+  "history.field.capture_question": "Câu hỏi về bản ghi",
+  "history.field.channel_identity": "Tài khoản kênh",
+  "history.field.channel_username": "Tên tài khoản trên kênh",
+  "history.field.cohort_linked": "Tin nhắn đã liên kết",
+  "history.field.cohort_promoted": "Tin nhắn đã chuyển",
+  "history.field.corrected": "Đã sửa đánh giá",
+  "history.field.disposition": "Kết quả xử lý",
+  "history.field.domain": "Tên miền",
   "history.field.expected_arr_minor": "ARR dự kiến",
   "history.field.assignee_id": "Người phụ trách",
   "history.field.body": "Ghi chú",
   "history.field.emails": "Địa chỉ email",
+  "history.field.nudge_dismissal": "Đã bỏ qua nhắc nhở",
   "history.field.phones": "S\u1ed1 \u0111i\u1ec7n tho\u1ea1i",
   "history.field.meeting_status": "Kết quả cuộc họp",
   "history.field.candidate_company_key": "Công ty khớp",
@@ -359,6 +372,21 @@ export const vi = {
   "history.field.occurred_at": "Thời điểm",
   "history.field.company_id": "Công ty",
   "history.field.owner_id": "Người sở hữu",
+  "history.field.provider_claims_received": "Thông tin từ nhà cung cấp",
+  "history.field.reachability": "Khả năng liên lạc",
+  "history.field.reply_verdict": "Đánh giá phản hồi",
+  "history.field.reply_verdict_by": "Đánh giá phản hồi bởi",
+  "history.field.research_claims_accepted": "Thông tin nghiên cứu đã nhận",
+  "history.field.stopped": "Đã dừng",
+  "history.field.stops_carried": "Lệnh dừng đã chuyển",
+  "history.field.submission_decision": "Quyết định về yêu cầu",
+  "history.field.vat_checked_at": "Đã kiểm tra mã số thuế",
+  "history.field.vat_consultation_number": "Số tra cứu mã số thuế",
+  "history.field.vat_number": "Mã số thuế",
+  "history.field.vat_registered_address": "Địa chỉ đăng ký thuế",
+  "history.field.vat_registered_name": "Tên đăng ký thuế",
+  "history.field.vat_requested": "Đã yêu cầu kiểm tra mã số thuế",
+  "history.field.vat_status": "Tình trạng mã số thuế",
   "history.field.visibility": "Phạm vi hiển thị",
   "history.field.parent_company_id": "Công ty mẹ",
   "history.field.partner_attribution": "Ghi nhận đối tác",
@@ -1568,7 +1596,7 @@ export const vi = {
   "approval.kind.relink_thread": "Gán lại một cuộc trò chuyện",
   "approval.kind.relink_activities": "Gán lại nhiều hoạt động",
   "approval.kind.scheduled_send_held": "Phát hành tin nhắn đã dừng",
-  "approval.kind.send_account_email": "Gửi email cho một công ty",
+  "approval.kind.send_company_email": "Gửi email cho một công ty",
   "approval.kind.send_message": "Gửi một tin nhắn",
   "approval.field.basis": "Vì sao",
   "approval.field.step": "Bước cần làm",
@@ -4436,6 +4464,27 @@ export const vi = {
     "Lý do, lớp lỗi và cách xử lý đều là câu chữ của chính tầng tác vụ, không bao giờ là nguyên nhân thô từ worker. Một lỗi mà tầng đó không diễn đạt được sẽ báo bằng câu thay thế cố định và không mang lớp lỗi nào. Một lớp lỗi được đặt ra cho văn bản chưa kiểm chứng sẽ khiến cảnh báo của bạn dựa trên phỏng đoán.",
   "jobs.generatedAt": "Đọc lúc {time}",
 
+  "settings.extIngest": "Bản ghi bị từ chối từ trình kết nối",
+  "settings.extIngestSub":
+    "Những bản ghi mà một trình kết nối đã cài gửi đến nhưng CRM này không thể biểu diễn.",
+  "extIngest.adminOnly":
+    "Xem những gì trình kết nối đã gửi cần quyền mà chỗ ngồi của bạn không có. Báo cáo này bao trùm toàn bộ bản cài đặt nên không mở cho mọi chỗ ngồi.",
+  "extIngest.empty":
+    "Không có gì bị từ chối trong {days} ngày qua. Mọi bản ghi mà các trình kết nối đã cài gửi đến đều biểu diễn được.",
+  "extIngest.refusedTotal_one": "{count} bản ghi bị từ chối",
+  "extIngest.refusedTotal_other": "{count} bản ghi bị từ chối",
+  "extIngest.lastRefused": "gần nhất {when}",
+  "extIngest.refusal.key": "khóa bản ghi",
+  "extIngest.refusal.activity": "chính hoạt động đó",
+  "extIngest.refusal.addresses": "địa chỉ",
+  "extIngest.refusal.counterparty": "đối tác",
+  "extIngest.refusal.participants": "bên tham gia",
+  "extIngest.refusal.size": "giới hạn kích thước",
+  "extIngest.refusalCount": "{count} do {refusal}",
+  "extIngest.noDetail":
+    "Chỉ số lượng và bước kiểm tra đã từ chối, không bao giờ là bản ghi: lý do nêu tên trường bị từ chối, và điều đó trích lại nội dung của bên gửi. Nhật ký của chính trình kết nối giữ câu đầy đủ cho từng trường hợp.",
+  "extIngest.generatedAt": "Đọc lúc {time}",
+
   "audit.you": "Bạn",
   "audit.system": "Hệ thống",
   "audit.unknownBuyer": "Người tham gia Deal Room",
@@ -7094,6 +7143,25 @@ export const vi = {
     "cuộc hội thoại này trải trên hai dự án, nên các phát hiện sẽ sai với một trong hai",
   "pipeline.reason.thread_not_all_open":
     "một tin nhắn trong cuộc hội thoại này bị giới hạn với một phần đối tượng xem; bản tóm tắt toàn bộ sẽ là bản kể thiếu được trình bày như đầy đủ",
+  "pipeline.reason.answered_on_the_company":
+    "Bước này hỏi về tên miền của bên gửi chứ không phải về một thư cụ thể, nên nó được trả lời một lần ở công ty thay vì lặp lại trên mọi thư đến từ đó.",
+  "pipeline.reason.company_warranted":
+    "tên miền này được xét là xứng đáng có một hồ sơ công ty, và đây chính là nó",
+  "pipeline.reason.no_site_identified":
+    "không có gì trên trang web của tên miền này xác định được một công ty, nên tên của chính bên gửi đã được dùng thay thế",
+  "pipeline.reason.triage_queued": "tên miền này đang chờ được xem xét",
+  "pipeline.reason.triage_unevidenced":
+    "chưa thấy gì từ tên miền này đủ để chứng minh có một công ty",
+  "pipeline.reason.triage_stale_evidence":
+    "những gì đã thấy từ tên miền này quá cũ để quyết định",
+  "pipeline.reason.triage_near_duplicate":
+    "tên miền này trông giống một tên miền đã ghi nhận, nên được giữ lại thay vì tạo trùng",
+  "companyTriage.title": "Công ty này đến từ đâu",
+  "companyTriage.sub":
+    "Các tên miền thư đã được kiểm tra, và kết luận của từng lần kiểm tra.",
+  "companyTriage.empty":
+    "Không có tên miền thư nào được xếp vào công ty này — nó được nhập tay hoặc mang vào từ nơi khác.",
+  "companyTriage.checkedAt": "đã kiểm tra {when}",
   "pipeline.reason.no_named_reader":
     "cuộc hội thoại này không xác định được đối tượng đọc nào để một phát hiện thuộc về",
   "pipeline.reason.transport_not_read":
@@ -7113,8 +7181,6 @@ export const vi = {
   "pipeline.reason.would_restore_erased":
     "báo cáo điều này sẽ khôi phục dữ liệu mà một yêu cầu xóa đã gỡ bỏ",
   "pipeline.reason.no_writer_yet": "bước này chưa tồn tại",
-  "pipeline.reason.not_reported_yet":
-    "bước này có chạy, nhưng chưa được báo cáo ở đây",
   "settings.tab.maintenance": "Bảo trì",
   "settings.tab.license": "Giấy phép",
   "license.card.title": "Giấy phép và chỗ ngồi",
@@ -8493,6 +8559,8 @@ export const vi = {
     "Không đọc lại được phiên bản hiện tại của dòng này để lưu. Hãy tải lại và thử lại.",
   "contact.rail.employmentTitle": "Công ty",
   "contact.rail.noEmployment": "Chưa ghi nhận nơi làm việc.",
+  "contact.rail.noPrimaryEmployer":
+    "Chưa có nơi làm việc chính — hãy chọn một.",
   "contact.rail.addEmployment": "Thêm công ty",
   "contact.employer.contacts_one": "{count} liên hệ",
   "contact.employer.contacts_other": "{count} liên hệ",
