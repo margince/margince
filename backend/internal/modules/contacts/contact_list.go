@@ -194,8 +194,8 @@ func (s *Store) ListContacts(ctx context.Context, in ListContactsInput) ([]crmco
 		entity:  contactEntity,
 		columns: contactColumns,
 		fields:  contactListFields,
-		filters: func(active []fieldcatalog.Column, sorted *storekit.ListSort, arg func(any) int) ([]string, error) {
-			where, err := shared.clauses(active, sorted, arg)
+		filters: func(ctx context.Context, active []fieldcatalog.Column, sorted *storekit.ListSort, arg func(any) int) ([]string, error) {
+			where, err := shared.clauses(ctx, active, sorted, arg)
 			if err != nil {
 				return nil, err
 			}

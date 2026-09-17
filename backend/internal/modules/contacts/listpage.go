@@ -12,6 +12,7 @@ package contacts
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -42,7 +43,12 @@ type listPageSpec[T any] struct {
 	// filters appends the request's optional WHERE clauses (their
 	// arguments through arg) — typically listFilters.clauses plus any
 	// type-specific extras.
-	filters func(active []fieldcatalog.Column, sorted *storekit.ListSort, arg func(any) int) ([]string, error)
+	//
+	// It takes the ctx of the pass calling it rather than closing over the
+	// request's: the count pass hands it a ctx marked by forCountPass, and
+	// clauses reads that mark to drop the keyset cursor. A closure over the
+	// outer ctx would silently count the page instead of the set.
+	filters func(ctx context.Context, active []fieldcatalog.Column, sorted *storekit.ListSort, arg func(any) int) ([]string, error)
 	// scan drains one page's rows into records plus, under a non-default
 	// sort, each row's trailing __cursor_key.
 	scan func(rows pgx.Rows, active []fieldcatalog.Column, sorted *storekit.ListSort) ([]T, []*string, error)
@@ -84,15 +90,28 @@ func listPage[T any](ctx context.Context, s *Store, sortSpec *string, limitIn *i
 		where = append(where, scope)
 	}
 
-	filters, err := spec.filters(active, sorted, arg)
+	filters, err := spec.filters(ctx, active, sorted, arg)
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}
 	where = append(where, filters...)
 
+	// The same question without "after this row": what the whole filtered,
+	// scoped set holds. It is assembled from the SAME scope clause and the
+	// SAME spec.filters as the page above — re-run rather than copied, so a
+	// filter added to one is a filter added to both — with only the keyset
+	// cursor withheld, because a count of the rows after the cursor would
+	// shrink as the reader pages and report the list emptying under them.
+	total, err := countWhere(ctx, spec, active, sorted)
+	if err != nil {
+		return nil, storekit.Page{}, err
+	}
+
 	var recs []T
 	var page storekit.Page
-	err = s.tx(ctx, func(tx pgx.Tx) error {
+	// txSnapshot, not tx: the page and its total are two statements whose
+	// answers are shown as one, so they have to see one snapshot.
+	err = s.txSnapshot(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx,
 			`SELECT `+spec.columns+storekit.SelectSuffix(active)+sorted.CursorKeySuffix()+
 				` FROM `+spec.entity+` WHERE `+strings.Join(where, " AND ")+
@@ -116,6 +135,15 @@ func listPage[T any](ctx context.Context, s *Store, sortSpec *string, limitIn *i
 			}
 			page = storekit.Page{HasMore: true, NextCursor: next}
 		}
+		// Counted on the page's OWN transaction, so the number and the rows
+		// describe one instant. A count in a second transaction would let a
+		// concurrent insert land between them and print a total the page
+		// cannot be a window onto.
+		var n int
+		if err := tx.QueryRow(ctx, total.sql, total.args...).Scan(&n); err != nil {
+			return fmt.Errorf("count %s: %w", spec.entity, err)
+		}
+		page.Total = &n
 		return spec.attach(ctx, tx, recs)
 	})
 	if recs == nil {
@@ -299,7 +327,7 @@ func aiWrittenClause(want *bool, entity string, arg func(any) int) string {
 // clauses translates the filters into WHERE clauses, appending their
 // arguments through arg — archived visibility, owner, provenance,
 // quick-find, custom-field equality, and the keyset cursor.
-func (f listFilters) clauses(active []fieldcatalog.Column, sorted *storekit.ListSort, arg func(any) int) ([]string, error) {
+func (f listFilters) clauses(ctx context.Context, active []fieldcatalog.Column, sorted *storekit.ListSort, arg func(any) int) ([]string, error) {
 	var where []string
 	if !f.IncludeArchived {
 		where = append(where, "archived_at IS NULL")
@@ -329,7 +357,10 @@ func (f listFilters) clauses(active []fieldcatalog.Column, sorted *storekit.List
 		return nil, err
 	}
 	where = append(where, cfClauses...)
-	if f.Cursor != nil && *f.Cursor != "" {
+	// The keyset clause is the one filter the count must not inherit: it says
+	// "after the row the reader stopped on", which narrows the page on purpose
+	// and would make a total shrink with every page turned.
+	if f.Cursor != nil && *f.Cursor != "" && !countingSet(ctx) {
 		clause, err := sorted.KeysetClause(*f.Cursor, arg)
 		if err != nil {
 			return nil, err
