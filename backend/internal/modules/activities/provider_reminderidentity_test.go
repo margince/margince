@@ -15,6 +15,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 func reminderCreate(system string) crmcontracts.CreateActivityRequest {
@@ -36,6 +37,46 @@ func TestTheEngineMayStampItsOwnReminderIdentity(t *testing.T) {
 		if in.SourceSystem == nil || *in.SourceSystem != source {
 			t.Errorf("[%s] SourceSystem = %v, want it carried through", source, in.SourceSystem)
 		}
+	}
+}
+
+// Through Provider.Create itself, not the helper: the helper being correct says
+// nothing about the provider being wired to it, and the wiring is what a caller
+// actually reaches. The store is nil because the refusal lands before any write
+// — if this ever panics instead of refusing, the guard has moved behind the
+// store call and a reserved identity is reaching the database.
+func TestTheProviderRefusesAReminderIdentityFromAnOrdinaryCaller(t *testing.T) {
+	provider := &Provider{}
+	ctx := principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalAgent, ID: "a-1"})
+	for _, source := range []string{provenance.NoActivityReminderSource, provenance.CheckInCadenceSource} {
+		_, err := provider.Create(ctx, datasource.CreateInput{
+			EntityType: datasource.EntityActivity,
+			Fields: map[string]any{
+				"kind": "task", "subject": "planted",
+				"source_system": source, "source_id": "planted-key",
+			},
+		})
+		var refused *provenance.ReservedError
+		if !errors.As(err, &refused) {
+			t.Fatalf("[%s] Provider.Create err = %v, want ReservedError — the seam must reach the guard", source, err)
+		}
+	}
+}
+
+// The permissive branch carries the SAME source guard as the ordinary one: the
+// engine's admission is for its reminder identity, and buys no licence to write
+// a reserved `source` alongside it.
+func TestTheEngineStillMayNotWriteAReservedSource(t *testing.T) {
+	ctx := principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalSystem, ID: "system"})
+	req := reminderCreate(provenance.NoActivityReminderSource)
+	req.Source = provenance.ReservedSourceSystemPrefix + "legacy_crm:activity:a-1"
+	_, err := logInputForPrincipal(ctx, req)
+	var refused *provenance.ReservedError
+	if !errors.As(err, &refused) {
+		t.Fatalf("err = %v, want ReservedError — the import namespace is not the engine's to write on source either", err)
+	}
+	if refused.Field != "source" {
+		t.Errorf("refusal names field %q, want source", refused.Field)
 	}
 }
 

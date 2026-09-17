@@ -74,16 +74,23 @@ func EngineReminderSource(sourceSystem string) bool {
 	return sourceSystem == NoActivityReminderSource || sourceSystem == CheckInCadenceSource
 }
 
-// internalSourceSystemList names the reserved identities for a refusal, sorted
-// so the message is stable. Derived from the map rather than written out again:
-// a fourth identity must not be addable without the refusal naming it.
-func internalSourceSystemList() string {
+// InternalSourceSystems lists the exact reserved identities, sorted. It is the
+// one place that knows the membership, so the refusal message and any census
+// over it read the same set rather than two copies that can drift.
+func InternalSourceSystems() []string {
 	names := make([]string, 0, len(internalSourceSystems))
 	for name := range internalSourceSystems {
 		names = append(names, name)
 	}
 	sort.Strings(names)
-	return strings.Join(names, ", ")
+	return names
+}
+
+// internalSourceSystemList names the reserved identities for a refusal. Derived
+// rather than written out again: a fourth identity must not be addable without
+// the refusal naming it.
+func internalSourceSystemList() string {
+	return strings.Join(InternalSourceSystems(), ", ")
 }
 
 // ReservedError refuses a client write into the importer's namespace,

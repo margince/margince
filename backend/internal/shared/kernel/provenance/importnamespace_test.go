@@ -74,26 +74,17 @@ func TestTheRefusalNamesEveryReservedIdentity(t *testing.T) {
 	message := (&provenance.ReservedError{
 		Field: "source_system", Value: "ordinary_value",
 	}).Error()
-	// Every exact identity the package exports. A name that is reserved but
-	// unnamed by the refusal fails here; a name that is not reserved is
-	// skipped, so adding an exported constant cannot break this test falsely.
-	for _, candidate := range []string{
-		provenance.EmailRequestSource,
-		provenance.NoActivityReminderSource,
-		provenance.CheckInCadenceSource,
-	} {
-		if !provenance.ReservedSourceSystem(candidate) {
-			continue
-		}
+	// The corpus comes from the reserved set itself, so a FOURTH identity added
+	// without the refusal following it fails here. A hand-written list of three
+	// would go on passing, which is the whole defect this guards.
+	reserved := provenance.InternalSourceSystems()
+	if len(reserved) < 3 {
+		t.Fatalf("the reserved set lists %d identities, want at least the three that exist", len(reserved))
+	}
+	for _, candidate := range reserved {
 		if !strings.Contains(message, candidate) {
 			t.Errorf("refusal %q does not name the reserved identity %q", message, candidate)
 		}
-	}
-	// And the message must be built from the set rather than hand-written: a
-	// literal listing survives any single name being dropped from the set,
-	// which is exactly the drift the derivation prevents.
-	if strings.Contains(message, provenance.NoActivityReminderSource) != provenance.ReservedSourceSystem(provenance.NoActivityReminderSource) {
-		t.Errorf("refusal text and reserved set disagree about %q", provenance.NoActivityReminderSource)
 	}
 }
 
