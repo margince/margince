@@ -162,8 +162,9 @@ func (s *Store) CreateTx(ctx context.Context, tx pgx.Tx, in NewNotice) (ids.UUID
 // insertNotice is the write in a transaction of its own — the coaching path,
 // whose notice is the whole of what its request changes.
 //
-// It carries no preference check: RaiseCoachNotice is the only caller, and a
-// colleague's words are not the product's own housekeeping to suppress.
+// It carries no preference check, unlike CreateTx: a colleague's words are not
+// the product's own housekeeping to suppress, and coaching is a class a seat
+// may route but not switch off.
 func (s *Store) insertNotice(ctx context.Context, in NewNotice, evidence map[string]any) (Notice, error) {
 	var written Notice
 	if err := s.db.Tx(ctx, func(tx pgx.Tx) error {

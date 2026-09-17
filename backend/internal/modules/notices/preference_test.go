@@ -176,7 +176,7 @@ func TestTheSaveTakesTheSeatsWriteIdentityBeforeItReadsOrWrites(t *testing.T) {
 	}
 }
 
-// callsInOrder is every function the named function calls, in source order,
+// callsInOrder lists the functions the named function calls, in source order,
 // spelled by the name at the call site — a selector reads as its final name, so
 // storekit.LockWriteIdentity and a bare helper are both just their own name.
 func callsInOrder(t *testing.T, file, fn string) []string {

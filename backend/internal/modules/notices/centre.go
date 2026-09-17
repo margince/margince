@@ -130,9 +130,10 @@ func (s *Store) ListFor(ctx context.Context, limit int, cursor string) (CentrePa
 // The statement settles everything, self-made stage moves included: those are
 // hidden from both reads, so leaving them unread would strand rows in the
 // partial unread index that no act of the reader's could ever clear. The ANSWER
-// counts only the lines the centre would have shown them, because its only
-// consumer is reader-facing copy — a number larger than what the reader was
-// shown is a lie to the reader. The ledger entry keeps the true figure.
+// counts the lines the centre would have shown them, because a figure a reader
+// is ever shown may not exceed what they saw — "3 notifications marked read"
+// over two visible lines is a lie to them. The ledger entry keeps the true
+// figure.
 //
 // ONE ledger entry, and no announcement. A seat clearing a month of notices is
 // one act by one contact, and the per-notice alternative puts a hundred
@@ -187,10 +188,20 @@ func (s *Store) MarkAllRead(ctx context.Context) (int, error) {
 		// resolving a notice that does not exist. What changed is a fact about
 		// the contact.
 		//
+		// The images are the seat's unread standing on either side of the
+		// act, which is the state this write moved: the statement's own
+		// predicate IS the unread set, so the rows it touched are what the
+		// seat held unread, and after it they hold none. The notice ids are
+		// not the image — a month of them is an unbounded list in one ledger
+		// row, and a reader asking what this entry covers is asking how much
+		// moved.
+		//
 		// The count is the rows that MOVED and not the reader-facing figure:
-		// the ledger is what an operator reads to know what the write did.
-		_, txErr = storekit.AuditEvent(ctx, tx, "update", "user", seat,
-			map[string]any{"read_all": true, "count": settled})
+		// the ledger is what an operator reads to know what the write did,
+		// and it says so without a reader subtracting one image from the other.
+		_, txErr = storekit.Audit(ctx, tx, "update", "user", seat,
+			map[string]any{"unread": settled},
+			map[string]any{"unread": 0, "read_all": true, "count": settled})
 		return txErr
 	}); err != nil {
 		return 0, fmt.Errorf("notices: settling your notifications: %w", err)

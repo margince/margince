@@ -45,9 +45,9 @@ var deliveryChoices = []string{DeliveryOff, DeliveryInApp, DeliveryEmail, Delive
 
 // The classes a seat decides about.
 //
-// KindApprovalPending is both the kind an approval raises and the name of its
-// class, spelled once: a class holding exactly one kind IS that kind, and a
-// second spelling would be two words to keep in step for no reader's benefit.
+// ClassApprovalPending is DEFINED as KindApprovalPending rather than repeating
+// the word: a class holding exactly one kind IS that kind, and two literals
+// would be two strings to keep in step for no reader's benefit.
 const (
 	classAutomation = "automation"
 	classLeadSLA    = "lead_sla"

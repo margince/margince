@@ -182,7 +182,7 @@ func centreItemWire(item CentreItem) crmcontracts.NotificationItem {
 	// be routed to a screen, and the contract declares the pair required.
 	if item.Target.Named() {
 		out.Target = &struct {
-			Id   openapi_types.UUID `json:"id"`
+			Id   openapi_types.UUID `json:"id"` //nolint:staticcheck // matches the generated NotificationItem.Target shape
 			Type string             `json:"type"`
 		}{Id: openapi_types.UUID(item.Target.ID), Type: item.Target.Type}
 	}

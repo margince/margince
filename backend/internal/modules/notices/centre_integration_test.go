@@ -122,9 +122,9 @@ func TestNotificationCentreSettlesEverythingOnceAndOnlyForItsReader(t *testing.T
 	if err != nil {
 		t.Fatalf("MarkAllRead: %v", err)
 	}
-	// The LINES THE READER SAW, and not every row the statement touched: this
-	// number's only consumer is copy shown back to them, and "3 notifications
-	// marked read" over two visible lines is a lie to the reader.
+	// The LINES THE READER SAW, and not every row the statement touched: a
+	// figure a reader is ever shown may not exceed what they saw, and "3
+	// notifications marked read" over two visible lines is a lie to them.
 	if settled != 2 {
 		t.Fatalf("MarkAllRead answered %d, want the 2 notices the reader was actually shown", settled)
 	}
@@ -173,16 +173,34 @@ func TestNotificationCentreSettlesEverythingOnceAndOnlyForItsReader(t *testing.T
 	// The entry is about the SEAT — the act settled a set of notices and no
 	// single one of them, so an entry naming a notice id would name one that
 	// does not exist.
-	var audits, events, count int
+	var audits, events int
 	if err := e.owner.QueryRow(context.Background(), `
 		SELECT (SELECT count(*) FROM audit_log
 		         WHERE entity_type = 'user' AND entity_id = $1 AND action = 'update'),
-		       (SELECT count(*) FROM event_outbox WHERE envelope->>'type' = 'notice.read'),
-		       (SELECT coalesce((after->>'count')::int, -1) FROM audit_log
-		         WHERE entity_type = 'user' AND entity_id = $1 AND action = 'update'
-		         ORDER BY occurred_at DESC, id DESC LIMIT 1)`,
-		e.recipient).Scan(&audits, &events, &count); err != nil {
+		       (SELECT count(*) FROM event_outbox WHERE envelope->>'type' = 'notice.read')`,
+		e.recipient).Scan(&audits, &events); err != nil {
 		t.Fatalf("reading what the settle wrote: %v", err)
+	}
+	// And the entry itself: the figure it covers, and the lane on either side
+	// of the act. Read as one row rather than as three subqueries over the
+	// same one, so the three numbers cannot come from different entries.
+	var count, unreadBefore, unreadAfter int
+	if err := e.owner.QueryRow(context.Background(), `
+		SELECT coalesce((after->>'count')::int, -1),
+		       coalesce((before->>'unread')::int, -1),
+		       coalesce((after->>'unread')::int, -1)
+		  FROM audit_log
+		 WHERE entity_type = 'user' AND entity_id = $1 AND action = 'update'
+		 ORDER BY occurred_at DESC, id DESC LIMIT 1`,
+		e.recipient).Scan(&count, &unreadBefore, &unreadAfter); err != nil {
+		t.Fatalf("reading the ledger entry the settle wrote: %v", err)
+	}
+	// It says what it changed FROM: three notices stood unread, and none does
+	// now. Without the before-image the entry records that a seat's lane moved
+	// and nothing can say what it moved from.
+	if unreadBefore != 3 || unreadAfter != 0 {
+		t.Errorf("the entry images the lane as %d unread before and %d after, "+
+			"want the 3 that stood unread and none left", unreadBefore, unreadAfter)
 	}
 	if audits != 1 {
 		t.Errorf("settling everything wrote %d ledger entries, want exactly 1 — including for the second tap that moved nothing", audits)
@@ -205,7 +223,7 @@ func TestNotificationCentreSettlesEverythingOnceAndOnlyForItsReader(t *testing.T
 	// what an operator reads to know what happened to the table.
 	if count != 3 {
 		t.Errorf("the ledger entry records %d settled notices, want all 3 that moved — "+
-			"the count is the only thing that says how much one entry covers", count)
+			"the count is what says how much one entry covers", count)
 	}
 }
 
