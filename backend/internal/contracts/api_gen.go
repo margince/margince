@@ -8095,6 +8095,36 @@ func (e ExcuseNoticeCaseState) Valid() bool {
 	}
 }
 
+// Defines values for ExtensionIngestRefusalRefusal.
+const (
+	ExtensionIngestRefusalRefusalActivity     ExtensionIngestRefusalRefusal = "activity"
+	ExtensionIngestRefusalRefusalAddresses    ExtensionIngestRefusalRefusal = "addresses"
+	ExtensionIngestRefusalRefusalCounterparty ExtensionIngestRefusalRefusal = "counterparty"
+	ExtensionIngestRefusalRefusalKey          ExtensionIngestRefusalRefusal = "key"
+	ExtensionIngestRefusalRefusalParticipants ExtensionIngestRefusalRefusal = "participants"
+	ExtensionIngestRefusalRefusalSize         ExtensionIngestRefusalRefusal = "size"
+)
+
+// Valid indicates whether the value is a known member of the ExtensionIngestRefusalRefusal enum.
+func (e ExtensionIngestRefusalRefusal) Valid() bool {
+	switch e {
+	case ExtensionIngestRefusalRefusalActivity:
+		return true
+	case ExtensionIngestRefusalRefusalAddresses:
+		return true
+	case ExtensionIngestRefusalRefusalCounterparty:
+		return true
+	case ExtensionIngestRefusalRefusalKey:
+		return true
+	case ExtensionIngestRefusalRefusalParticipants:
+		return true
+	case ExtensionIngestRefusalRefusalSize:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ExtractedFieldConfidence.
 const (
 	ExtractedFieldConfidenceHigh   ExtractedFieldConfidence = "high"
@@ -28890,6 +28920,57 @@ type ExcuseNoticeCaseState string
 // ExtensionDirectory The composed extension set, sorted by name. Not paginated, for the same reason `RoleDirectory` is not: the set is fixed at build time and small by construction.
 type ExtensionDirectory struct {
 	Extensions []ComposedExtension `json:"extensions"`
+}
+
+// ExtensionIngestHealth Which composed units are handing the core records it cannot express, for an
+// administrator asking whether a connector is broken or merely quiet.
+//
+// COUNTS AND A CLASS ONLY — never the refused record and never the core's sentence
+// about it, which quotes the record back. A unit with nothing refused in the window
+// is absent rather than listed at zero: this page answers "what is wrong", and a roll
+// of healthy units is the thing a reader has to scan past to find it.
+type ExtensionIngestHealth struct {
+	GeneratedAt time.Time `json:"generated_at"`
+
+	// Units One row per composed unit with anything refused in the window.
+	Units []ExtensionUnitIngestHealth `json:"units"`
+
+	// WindowDays How many days back the counts reach, ending today (UTC).
+	WindowDays int `json:"window_days"`
+}
+
+// ExtensionIngestRefusal defines model for ExtensionIngestRefusal.
+type ExtensionIngestRefusal struct {
+	LastRefusedAt *time.Time `json:"last_refused_at,omitempty"`
+
+	// Refusal Which check refused the record — the core's closed vocabulary
+	// (`extension.RecordRefusal`), one per check the ingress grammar runs. It is what
+	// names the mapping to fix: "every record fails its participants" is a different
+	// bug from "every record fails its key".
+	Refusal ExtensionIngestRefusalRefusal `json:"refusal"`
+
+	// Refused Records this check refused in the window.
+	Refused int `json:"refused"`
+}
+
+// ExtensionIngestRefusalRefusal Which check refused the record — the core's closed vocabulary
+// (`extension.RecordRefusal`), one per check the ingress grammar runs. It is what
+// names the mapping to fix: "every record fails its participants" is a different
+// bug from "every record fails its key".
+type ExtensionIngestRefusalRefusal string
+
+// ExtensionUnitIngestHealth defines model for ExtensionUnitIngestHealth.
+type ExtensionUnitIngestHealth struct {
+	LastRefusedAt *time.Time `json:"last_refused_at,omitempty"`
+
+	// Refusals The same total broken out by the check that refused, largest first.
+	Refusals []ExtensionIngestRefusal `json:"refusals"`
+
+	// Refused Records the core refused from this unit over the whole window.
+	Refused int `json:"refused"`
+
+	// Unit The composed unit's name.
+	Unit string `json:"unit"`
 }
 
 // ExtractedField One attempted grounded field from the staged AI-extraction read (RD-T10).
@@ -56374,6 +56455,9 @@ type ServerInterface interface {
 	// What capture's judgement queues are holding, and in whose mailbox.
 	// (GET /admin/capture-health)
 	GetCaptureHealth(w http.ResponseWriter, r *http.Request)
+	// Which composed units are handing the core records it cannot express.
+	// (GET /admin/extension-ingest-health)
+	GetExtensionIngestHealth(w http.ResponseWriter, r *http.Request)
 	// What the background system is holding, and whose work failed.
 	// (GET /admin/job-health)
 	GetJobHealth(w http.ResponseWriter, r *http.Request)
@@ -58432,6 +58516,12 @@ func (_ Unimplemented) UpdateActivityReviewTemplate(w http.ResponseWriter, r *ht
 // What capture's judgement queues are holding, and in whose mailbox.
 // (GET /admin/capture-health)
 func (_ Unimplemented) GetCaptureHealth(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Which composed units are handing the core records it cannot express.
+// (GET /admin/extension-ingest-health)
+func (_ Unimplemented) GetExtensionIngestHealth(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -63679,6 +63769,26 @@ func (siw *ServerInterfaceWrapper) GetCaptureHealth(w http.ResponseWriter, r *ht
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetCaptureHealth(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetExtensionIngestHealth operation middleware
+func (siw *ServerInterfaceWrapper) GetExtensionIngestHealth(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetExtensionIngestHealth(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -90317,6 +90427,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/admin/capture-health", wrapper.GetCaptureHealth)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/admin/extension-ingest-health", wrapper.GetExtensionIngestHealth)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/admin/job-health", wrapper.GetJobHealth)

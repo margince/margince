@@ -4655,6 +4655,32 @@ export const en = {
     "Each reason, class and remedy is the job layer's own wording, never the worker's raw cause. A failure it cannot phrase reports a fixed substitute and carries no class at all. A class invented for text nobody could vet would key your alerts on a guess.",
   "jobs.generatedAt": "Read at {time}",
 
+  "settings.extIngest": "Connector records refused",
+  "settings.extIngestSub":
+    "Records an installed connector sent that this CRM could not represent.",
+  "extIngest.adminOnly":
+    "Seeing what connectors have sent needs permission your seat does not hold. It reports across the whole installation, so it is not open to everyone.",
+  // The clean state is a FINDING, not an absence. A connector sending nothing
+  // and a connector whose every record is refused looked identical before this
+  // card, and the reader has to be able to tell this line from "no answer".
+  "extIngest.empty":
+    "Nothing refused in the last {days} days. Every record the installed connectors sent could be represented.",
+  "extIngest.refusedTotal_one": "{count} record refused",
+  "extIngest.refusedTotal_other": "{count} records refused",
+  "extIngest.lastRefused": "most recent {when}",
+  "extIngest.refusal.key": "record key",
+  "extIngest.refusal.activity": "the activity itself",
+  "extIngest.refusal.addresses": "addresses",
+  "extIngest.refusal.counterparty": "counterparty",
+  "extIngest.refusal.participants": "participants",
+  "extIngest.refusal.size": "size limits",
+  "extIngest.refusalCount": "{count} on {refusal}",
+  // Said on the card because an operator who cannot find the detail here goes
+  // looking for a bug rather than for the connector's own log.
+  "extIngest.noDetail":
+    "Counts and the check that refused, never the record itself: the reason names the field it was refused on, and that quotes the sender's own content. The connector's own log carries the full sentence for each one.",
+  "extIngest.generatedAt": "Read at {time}",
+
   "audit.you": "You",
   "audit.system": "System",
   "audit.unknownBuyer": "Deal Room participant",

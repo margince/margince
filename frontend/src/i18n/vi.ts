@@ -4436,6 +4436,27 @@ export const vi = {
     "Lý do, lớp lỗi và cách xử lý đều là câu chữ của chính tầng tác vụ, không bao giờ là nguyên nhân thô từ worker. Một lỗi mà tầng đó không diễn đạt được sẽ báo bằng câu thay thế cố định và không mang lớp lỗi nào. Một lớp lỗi được đặt ra cho văn bản chưa kiểm chứng sẽ khiến cảnh báo của bạn dựa trên phỏng đoán.",
   "jobs.generatedAt": "Đọc lúc {time}",
 
+  "settings.extIngest": "Bản ghi bị từ chối từ trình kết nối",
+  "settings.extIngestSub":
+    "Những bản ghi mà một trình kết nối đã cài gửi đến nhưng CRM này không thể biểu diễn.",
+  "extIngest.adminOnly":
+    "Xem những gì trình kết nối đã gửi cần quyền mà chỗ ngồi của bạn không có. Báo cáo này bao trùm toàn bộ bản cài đặt nên không mở cho mọi chỗ ngồi.",
+  "extIngest.empty":
+    "Không có gì bị từ chối trong {days} ngày qua. Mọi bản ghi mà các trình kết nối đã cài gửi đến đều biểu diễn được.",
+  "extIngest.refusedTotal_one": "{count} bản ghi bị từ chối",
+  "extIngest.refusedTotal_other": "{count} bản ghi bị từ chối",
+  "extIngest.lastRefused": "gần nhất {when}",
+  "extIngest.refusal.key": "khóa bản ghi",
+  "extIngest.refusal.activity": "chính hoạt động đó",
+  "extIngest.refusal.addresses": "địa chỉ",
+  "extIngest.refusal.counterparty": "đối tác",
+  "extIngest.refusal.participants": "bên tham gia",
+  "extIngest.refusal.size": "giới hạn kích thước",
+  "extIngest.refusalCount": "{count} do {refusal}",
+  "extIngest.noDetail":
+    "Chỉ số lượng và bước kiểm tra đã từ chối, không bao giờ là bản ghi: lý do nêu tên trường bị từ chối, và điều đó trích lại nội dung của bên gửi. Nhật ký của chính trình kết nối giữ câu đầy đủ cho từng trường hợp.",
+  "extIngest.generatedAt": "Đọc lúc {time}",
+
   "audit.you": "Bạn",
   "audit.system": "Hệ thống",
   "audit.unknownBuyer": "Người tham gia Deal Room",

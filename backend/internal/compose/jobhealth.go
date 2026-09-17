@@ -22,7 +22,6 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/settings"
@@ -146,25 +145,11 @@ type jobHealthHandlers struct {
 // right.
 func (h jobHealthHandlers) GetJobHealth(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	// No principal at all is a refusal, not a server fault. The session
-	// middleware answers 401 before this handler is reached on the real
-	// wire — proved in the integration lane — but auth.RequireHuman reports
-	// an unbound actor with an unmapped error, which httperr renders as a
-	// 500. A security surface should not have a 500 as its answer to
-	// "nobody asked".
-	if _, ok := principal.Actor(ctx); !ok {
-		httperr.Write(w, r, apperrors.ErrPermissionDenied)
-		return
-	}
-	if err := auth.RequireHuman(ctx); err != nil {
-		httperr.Write(w, r, err)
-		return
-	}
-	// Queue depth and retry ladders: what an operator on call needs, so ops holds
-	// the read too. RequireHuman above is unchanged — this is an operator surface,
-	// not an agent one.
-	if err := auth.Require(ctx, "job_health", principal.ActionRead); err != nil {
-		httperr.Write(w, r, err)
+	// Queue depth and retry ladders: what an operator on call needs, and the
+	// same reader the other two System health cards have — so the same ladder
+	// admits all three (adminhealth.go), which is where the ORDER of its rungs
+	// is stated once.
+	if !admitHealthReader(w, r) {
 		return
 	}
 	wsID, ok := principal.WorkspaceID(ctx)

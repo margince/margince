@@ -4505,6 +4505,27 @@ export const de = {
     "Grund, Klasse und Abhilfe werden jeweils von der Job-Schicht selbst formuliert, nie aus der Rohursache des Workers. Kann sie einen Fehler nicht formulieren, meldet sie einen festen Ersatztext und gar keine Klasse. Eine für ungeprüften Text erfundene Klasse würde deine Alarme auf eine Vermutung stützen.",
   "jobs.generatedAt": "Gelesen um {time}",
 
+  "settings.extIngest": "Von Konnektoren abgewiesene Datensätze",
+  "settings.extIngestSub":
+    "Datensätze, die ein installierter Konnektor gesendet hat und die dieses CRM nicht abbilden konnte.",
+  "extIngest.adminOnly":
+    "Zu sehen, was Konnektoren gesendet haben, erfordert eine Berechtigung, die Ihr Sitz nicht hat. Der Bericht gilt für die gesamte Installation und ist daher nicht für alle offen.",
+  "extIngest.empty":
+    "In den letzten {days} Tagen wurde nichts abgewiesen. Jeder Datensatz der installierten Konnektoren ließ sich abbilden.",
+  "extIngest.refusedTotal_one": "{count} Datensatz abgewiesen",
+  "extIngest.refusedTotal_other": "{count} Datensätze abgewiesen",
+  "extIngest.lastRefused": "zuletzt {when}",
+  "extIngest.refusal.key": "Datensatzschlüssel",
+  "extIngest.refusal.activity": "die Aktivität selbst",
+  "extIngest.refusal.addresses": "Adressen",
+  "extIngest.refusal.counterparty": "Gegenpartei",
+  "extIngest.refusal.participants": "Teilnehmende",
+  "extIngest.refusal.size": "Größenbeschränkungen",
+  "extIngest.refusalCount": "{count} wegen {refusal}",
+  "extIngest.noDetail":
+    "Nur Zählungen und die Prüfung, die abgewiesen hat, nie der Datensatz selbst: Die Begründung nennt das Feld, an dem er scheiterte, und zitiert damit den Inhalt des Absenders. Das Protokoll des Konnektors trägt den vollständigen Satz zu jedem einzelnen.",
+  "extIngest.generatedAt": "Gelesen am {time}",
+
   "audit.you": "Du",
   "audit.system": "System",
   "audit.unknownBuyer": "Teilnehmer im Deal Room",
