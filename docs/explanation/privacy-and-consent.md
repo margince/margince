@@ -63,7 +63,7 @@ The engine answers the second. It resolves a **category** from what the send act
   surviving contact (`consent.CarryOverridesTx`) with its original `decided_by_level` and reason
   intact, so a merge cannot launder a vouch down to a lower authority. Art. 17 erasure and the retention
   sweep DELETE it outright, with the rest of the contact's consent record — a standing "write to
-  them anyway" must not outlive the person it was about — while Art. 15 subject access EXPORTS it
+  them anyway" must not outlive the contact it was about — while Art. 15 subject access EXPORTS it
   (`privacy.AssembleSAR`'s `communication_overrides`), because somebody asking what is held about
   them is owed the record that a human decided to write to them, and why.
 - **A restriction is not total, and that is deliberate.** Three categories still reach a restricted
