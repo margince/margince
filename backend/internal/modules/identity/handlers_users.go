@@ -339,3 +339,52 @@ func (h Handlers) sendInvite(r *http.Request, email, rawToken string) {
 		slog.Error("invite email failed", "err", err)
 	}
 }
+
+// CreateFormerMember (POST /users/former): record a colleague who already left,
+// as a deactivated seat with no password and no invitation.
+//
+// The three refusals InviteUser carries that this one does not are all about
+// delivery: there is no set-password token, so no mail channel is required and
+// no "this member could never sign in" conflict applies. Being unable to sign
+// in is the point here rather than the failure.
+func (h Handlers) CreateFormerMember(w http.ResponseWriter, r *http.Request) {
+	actor, ok := h.actor(w, r)
+	if !ok {
+		return
+	}
+	var req crmcontracts.FormerMemberRequest
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	// The contract's format and length constraints are not enforced by the
+	// binding, exactly as on the invite path beside this one.
+	email, perr := values.ParseEmail(string(req.Email))
+	if perr != nil {
+		httperr.Write(w, r, httperr.Validation("email", "invalid_email", "a valid email address is required"))
+		return
+	}
+	name := strings.TrimSpace(req.DisplayName)
+	if name == "" || utf8.RuneCountInString(name) > 255 {
+		httperr.Write(w, r, httperr.Validation("display_name", "length", "a display name of 1–255 characters is required"))
+		return
+	}
+	in := FormerMemberInput{Email: email.String(), DisplayName: name}
+	if req.Role != nil {
+		in.Role = string(*req.Role)
+	}
+	if req.LeftAt != nil {
+		in.LeftAt = req.LeftAt
+	}
+	if req.Source != nil {
+		in.Source = *req.Source
+	}
+	userID, err := h.svc.CreateFormerMember(r.Context(), actor, in)
+	if err != nil {
+		err = conflictIf(err, errEmailTaken, "email_taken",
+			"a seat with this email already exists; a former member is recorded once, "+
+				"and somebody who came back is reactivated from the roster rather than added again")
+		httperr.Write(w, r, unknownRoleRefusal(err))
+		return
+	}
+	h.writeUserByID(w, r, userID, http.StatusCreated)
+}
