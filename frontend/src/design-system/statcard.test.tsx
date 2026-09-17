@@ -1,12 +1,15 @@
 /** @vitest-environment happy-dom */
 
-import { readFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { cleanup, render, screen } from "@testing-library/react";
 import ts from "typescript";
 import { afterEach, describe, expect, it } from "vitest";
-import { filesMatching, parseSource } from "../../scripts/lib/source-tree";
+import {
+  extensionFrontendFiles,
+  filesMatching,
+  sourceFileAt,
+} from "../../scripts/lib/source-tree";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { StatCard } from "./statcard";
@@ -29,6 +32,9 @@ import { StatCard } from "./statcard";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const sourceRoot = join(here, "..");
+// A unit's screen is shipped UI in the same bundle, so a gate stopping at
+// frontend/src would hold the core to a rule the extension tier escapes.
+const extensionsRoot = join(here, "..", "..", "..", "extensions");
 
 afterEach(cleanup);
 
@@ -80,21 +86,30 @@ describe("the door always says Open", () => {
 // prose. Floored, because a walk that silently reads a smaller tree reports the
 // same word this one does when it is clean.
 function appTsx(): string[] {
-  return filesMatching(sourceRoot, /\.tsx$/).filter(
-    (path) => !/\.(stories|test)\.tsx$/.test(path),
-  );
+  return filesMatching(sourceRoot, /\.tsx$/)
+    .concat(extensionFrontendFiles(extensionsRoot))
+    .filter((path) => !/\.(stories|test)\.tsx$/.test(path));
 }
 
 describe("no reading names its own door", () => {
-  it("finds no openLabel attribute anywhere the app is written", () => {
+  // Parses every application .tsx, core and extension, for one attribute name.
+  it("finds no openLabel attribute anywhere the app is written", {
+    timeout: 60_000,
+  }, () => {
     const files = appTsx();
     // The tree carried six hundred of these when this was written; a corpus
     // that has fallen to a fraction of that is a miswired walk reporting the
     // same word a clean tree does.
     expect(files.length).toBeGreaterThan(400);
+    // And the extension tier specifically: the floor above is one the core
+    // satisfies alone, so it cannot notice a walk that stops at src/.
+    expect(
+      files.some((file) => file.includes("/extensions/")),
+      "the census reached no extension frontend layer",
+    ).toBe(true);
 
     const offenders = files.flatMap((path) => {
-      const source = parseSource(path, readFileSync(path, "utf8"));
+      const source = sourceFileAt(path);
       const hits: string[] = [];
       const visit = (node: ts.Node): void => {
         if (
@@ -120,7 +135,7 @@ describe("no reading names its own door", () => {
 describe("the foot speaks once", () => {
   it("writes exactly one message into the card's foot", () => {
     const path = join(here, "statcard.tsx");
-    const source = parseSource(path, readFileSync(path, "utf8"));
+    const source = sourceFileAt(path);
 
     const foot = findElementByClass(source, "stat-card-foot");
     expect(foot).not.toBeUndefined();

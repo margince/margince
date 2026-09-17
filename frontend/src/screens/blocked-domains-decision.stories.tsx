@@ -21,7 +21,8 @@ import { installFetchStub, meRoute, StoryProviders } from "./story-utils";
 const STANDING: Decision = {
   domain: "newsletters.example",
   admission: "suppressed",
-  reason: "Bulk sender — every message from it is a campaign, never a person.",
+  reason:
+    "Bulk sender — every message from it is a campaign, never one contact.",
 };
 
 // The write belongs to the CARD in the product, so the story takes it from the

@@ -301,7 +301,10 @@ const ACCEPTED = new Map<string, string>([
   ],
 ]);
 
-describe("one control height", () => {
+// The three gates below each read every stylesheet and every module in the
+// tree. Synchronous file I/O, not a unit's work, and past 10s on CI's coverage
+// run; nothing here can hang, so the budget is only a floor under a slow runner.
+describe("one control height", { timeout: 60_000 }, () => {
   // THE FLOORS. Everything below reads a corpus, and a corpus that came back
   // empty would report the same word as a clean tree.
   it("reads the whole tree rather than a corner of it", () => {

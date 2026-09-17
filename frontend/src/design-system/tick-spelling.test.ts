@@ -52,6 +52,7 @@ import { join, relative, resolve } from "node:path";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
 import {
+  extensionFrontendFiles,
   filesUnder,
   parseSource,
   scriptKindFor,
@@ -59,6 +60,9 @@ import {
 
 const frontendRoot = resolve(__dirname, "../..");
 const srcDir = join(frontendRoot, "src");
+// A unit's screen is shipped UI in the same bundle, so a gate stopping at
+// frontend/src would hold the core to a rule the extension tier escapes.
+const extensionsRoot = join(frontendRoot, "..", "extensions");
 
 /** The roles a native input already carries, so naming one is a hand-rolled tick. */
 const TICK_ROLES = new Set([
@@ -178,9 +182,9 @@ describe("one checkbox, one radio", () => {
   it("finds no hand-rolled tick under src/, outside the two atoms that own one", {
     timeout: 60_000,
   }, () => {
-    const files = filesUnder(srcDir).filter(
-      (file) => file !== PROBES && !isStoryOrTest(file),
-    );
+    const files = filesUnder(srcDir)
+      .concat(extensionFrontendFiles(extensionsRoot))
+      .filter((file) => file !== PROBES && !isStoryOrTest(file));
 
     // An empty scan means the gate is pointed at the wrong tree. A census that
     // judged nothing certifies nothing.
@@ -191,6 +195,12 @@ describe("one checkbox, one radio", () => {
     expect(
       files.some((file) => file.startsWith(`${srcDir}/screens/`)),
       "the census covered no screen, where every tick this gate replaced lived",
+    ).toBe(true);
+    // And the extension tier: a unit's screen ships in the same bundle, and
+    // neither floor above can notice a walk that stops at src/.
+    expect(
+      files.some((file) => file.includes("/extensions/")),
+      "the census reached no extension frontend layer",
     ).toBe(true);
 
     const violations = files.flatMap((file) =>

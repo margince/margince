@@ -107,11 +107,8 @@ export default function OpenchannelScreen() {
     <div className="wrap narrow">
       {/* level 1: the app shell yields the page's name to a composed unit, so
           the screen's own top header IS the page's h1. */}
-      <SectionHeader
-        title={t("extOpenchannel.title")}
-        sub={t("extOpenchannel.sub")}
-        level={1}
-      />
+      <SectionHeader title={t("extOpenchannel.title")} level={1} />
+      <p>{t("extOpenchannel.sub")}</p>
       <Card>
         {canReadEndpoint ? (
           // Through the query gate, not off `endpoint.data` directly: data is

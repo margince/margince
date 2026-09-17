@@ -7,7 +7,11 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import ts from "typescript";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { filesMatching, parseSource } from "../../scripts/lib/source-tree";
+import {
+  extensionFrontendFiles,
+  filesMatching,
+  sourceFileAt,
+} from "../../scripts/lib/source-tree";
 import { Button } from "./atoms";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -586,16 +590,31 @@ describe("a glyph inside a control takes no size of its own", () => {
     return false;
   }
 
-  it("names no size on a glyph any control already sizes", () => {
+  // Parses every .tsx in frontend/src and in each extension frontend to read
+  // the glyphs out of it — past the 10s default under CI's coverage run.
+  it("names no size on a glyph any control already sizes", {
+    timeout: 60_000,
+  }, () => {
     const root = join(here, "..");
-    const files = filesMatching(root, /\.tsx$/);
+    // A unit's screen is shipped UI in the same bundle and draws this tier's
+    // controls, so a census stopping at frontend/src would hold the core to a
+    // rule the extension tier escapes.
+    const files = filesMatching(root, /\.tsx$/).concat(
+      extensionFrontendFiles(join(root, "..", "..", "extensions")),
+    );
     // The one way a census fails: it reads a smaller tree, finds nothing, and
     // reports the same word a clean tree does. A floor makes an empty walk say
     // so instead — the same guard `native-controls.test.ts` keeps.
     expect(files.length).toBeGreaterThan(100);
+    // And the extension tier specifically: the floor above is one the core
+    // satisfies alone, so it cannot notice a walk that stops at src/.
+    expect(
+      files.some((file) => file.includes("/extensions/")),
+      "the census reached no extension frontend layer",
+    ).toBe(true);
     const found: string[] = [];
     for (const file of files) {
-      const source = parseSource(file, readFileSync(file, "utf8"));
+      const source = sourceFileAt(file);
       const walk = (node: ts.Node, inControl: boolean) => {
         const here = inControl || isControl(node);
         const open = ts.isJsxElement(node)

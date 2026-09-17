@@ -82,7 +82,7 @@ export const Closed: Story = {
 };
 
 // The steward's seat is gone. No mark and no name — a monogram built from the
-// words "your contact" would draw a person who does not exist — so the card
+// words "your contact" would draw a contact who does not exist — so the card
 // keeps only the sentence that still holds.
 export const NoStewardLeft: Story = {
   render: page(

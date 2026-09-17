@@ -6,7 +6,12 @@ import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
-import { filesMatching, parseSource } from "../../scripts/lib/source-tree";
+import {
+  extensionFrontendFiles,
+  filesMatching,
+  parseSource,
+  sourceFileAt,
+} from "../../scripts/lib/source-tree";
 
 // A heading has one spelling, and it is `Heading`.
 //
@@ -46,6 +51,10 @@ import { filesMatching, parseSource } from "../../scripts/lib/source-tree";
 const dsDir = dirname(fileURLToPath(import.meta.url));
 const srcDir = join(dsDir, "..");
 const frontendRoot = join(srcDir, "..");
+// A unit's screen is shipped UI in the same bundle, so a gate stopping at
+// frontend/src would hold the core to a heading rule the extension tier escapes
+// — which is exactly where the tree grew its last raw `<h1>`.
+const extensionsRoot = join(frontendRoot, "..", "extensions");
 
 // The component itself, and the one builder allowed to name the element.
 const COMPONENT = join(dsDir, "heading.tsx");
@@ -84,7 +93,7 @@ function tagNameOf(node: ts.JsxOpeningLikeElement): string {
  * and a gate that imported it would pull the tier boundary into the test.
  */
 function tableIn(path: string, name: string): Record<string, string> {
-  const source = parseSource(path, readFileSync(path, "utf8"));
+  const source = sourceFileAt(path);
   const entries: Record<string, string> = {};
   let found = false;
   const visit = (node: ts.Node) => {
@@ -249,12 +258,18 @@ describe("heading spelling", () => {
           true,
         );
       }
-      const corpus = filesMatching(srcDir, /\.tsx?$/).filter(
-        (path) => path !== COMPONENT && path !== NODE_BUILDER,
-      );
+      const corpus = filesMatching(srcDir, /\.tsx?$/)
+        .concat(extensionFrontendFiles(extensionsRoot))
+        .filter((path) => path !== COMPONENT && path !== NODE_BUILDER);
       // Both floors, because a walk that returns nothing and a tree that holds
       // nothing look identical from here, and both look like success.
       expect(corpus.length).toBeGreaterThanOrEqual(CORPUS_FLOOR);
+      // And the extension tier specifically: the floor above is one the core
+      // satisfies on its own, so it cannot notice a walk that stops at src/.
+      expect(
+        corpus.some((path) => path.includes("/extensions/")),
+        "the census reached no extension frontend layer",
+      ).toBe(true);
       expect(existsSync(COMPONENT)).toBe(true);
 
       const findings = corpus.flatMap((path) =>

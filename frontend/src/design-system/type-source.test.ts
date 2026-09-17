@@ -277,7 +277,11 @@ const under = (pattern: RegExp) =>
     relative(frontendRoot, file),
   );
 
-describe("type comes from tokens.css and from nowhere else", () => {
+// Four sweeps over every stylesheet and every module in the tree. Whole-tree
+// file I/O rather than a unit's work, and past 10s under CI's coverage run.
+describe("type comes from tokens.css and from nowhere else", {
+  timeout: 60_000,
+}, () => {
   const stylesheets = under(/\.css$/);
   const modules = under(/\.tsx?$/).filter(
     (file) => !/\.test\.tsx?$/.test(file),

@@ -8,7 +8,12 @@ import { fileURLToPath } from "node:url";
 import { cleanup, render, screen } from "@testing-library/react";
 import ts from "typescript";
 import { afterEach, describe, expect, it } from "vitest";
-import { filesMatching, parseSource } from "../../scripts/lib/source-tree";
+import {
+  extensionFrontendFiles,
+  filesMatching,
+  parseSource,
+  sourceFileAt,
+} from "../../scripts/lib/source-tree";
 import { Card, SectionHeader } from "./atoms";
 import { Panel, PanelBody } from "./panel";
 
@@ -60,6 +65,9 @@ afterEach(cleanup);
 
 const dsDir = dirname(fileURLToPath(import.meta.url));
 const srcDir = join(dsDir, "..");
+// A unit's screen is shipped UI in the same bundle, so a gate stopping at
+// frontend/src would hold the core to a rule the extension tier escapes.
+const extensionsRoot = join(dsDir, "..", "..", "..", "extensions");
 
 // The four components a head is built from, and the file each lives in.
 const HEAD_COMPONENTS: Readonly<Record<string, string>> = {
@@ -80,7 +88,9 @@ const TSX_FLOOR = 500;
 const CSS_FLOOR = 50;
 
 function tsxFiles(): readonly string[] {
-  return filesMatching(srcDir, /\.tsx$/);
+  return filesMatching(srcDir, /\.tsx$/).concat(
+    extensionFrontendFiles(extensionsRoot),
+  );
 }
 
 function cssFiles(): readonly string[] {
@@ -147,10 +157,7 @@ describe("no head component declares a description slot", () => {
   it.each(Object.entries(HEAD_COMPONENTS))(
     "%s declares a title and no sentence under it",
     (component, file) => {
-      const props = declaredProps(
-        parseSource(file, readFileSync(file, "utf8")),
-        component,
-      );
+      const props = declaredProps(sourceFileAt(file), component);
       // Fails closed: a component this gate cannot find, or whose props it
       // cannot read, is not a component it has cleared.
       expect(props, `${component} in ${file}`).toBeDefined();
@@ -193,7 +200,13 @@ function descriptionAttributes(source: ts.SourceFile, file: string): Offence[] {
   return found;
 }
 
-describe("nothing under src passes a description to a head", () => {
+// Every sweep below re-reads and re-parses the whole tree, which is file I/O
+// and not a unit test's shape of work: on CI's coverage run it costs well past
+// the 10s default. There is no hang for a tight timeout to catch, so the budget
+// is generous and its only job is to be the floor under a slower runner.
+const treeWalk = { timeout: 60_000 };
+
+describe("nothing under src passes a description to a head", treeWalk, () => {
   // The planted case, in both shapes a caller writes: the one-line element and
   // the multi-line opening tag a formatter produces once the props no longer
   // fit. A detector that matched a line would see only the first.
@@ -225,11 +238,14 @@ describe("nothing under src passes a description to a head", () => {
   it("finds none in the tree", () => {
     const files = tsxFiles();
     expect(files.length).toBeGreaterThan(TSX_FLOOR);
+    // And the extension tier specifically: the floor above is one the core
+    // satisfies alone, so it cannot notice a walk that stops at src/.
+    expect(
+      files.some((file) => file.includes("/extensions/")),
+      "the census reached no extension frontend layer",
+    ).toBe(true);
     const offences = files.flatMap((file) =>
-      descriptionAttributes(
-        parseSource(file, readFileSync(file, "utf8")),
-        file,
-      ),
+      descriptionAttributes(sourceFileAt(file), file),
     );
     expect(
       offences.map((offence) => `${offence.file}:${offence.line}`),
@@ -270,7 +286,7 @@ function subClassNames(source: ts.SourceFile, file: string): Offence[] {
   return found;
 }
 
-describe("nothing under src wears the class that slot wore", () => {
+describe("nothing under src wears the class that slot wore", treeWalk, () => {
   // The planted case, in the three shapes a class list is written, beside the
   // two body classes that merely start or end the same way.
   it("sees the class alone, beside another, and built in an expression", () => {
@@ -291,8 +307,14 @@ describe("nothing under src wears the class that slot wore", () => {
   it("finds none in the tree", () => {
     const files = tsxFiles();
     expect(files.length).toBeGreaterThan(TSX_FLOOR);
+    // And the extension tier specifically: the floor above is one the core
+    // satisfies alone, so it cannot notice a walk that stops at src/.
+    expect(
+      files.some((file) => file.includes("/extensions/")),
+      "the census reached no extension frontend layer",
+    ).toBe(true);
     const offences = files.flatMap((file) =>
-      subClassNames(parseSource(file, readFileSync(file, "utf8")), file),
+      subClassNames(sourceFileAt(file), file),
     );
     expect(
       offences.map((offence) => `${offence.file}:${offence.line}`),
@@ -324,7 +346,7 @@ function headSubSelectors(css: string): readonly string[] {
     );
 }
 
-describe("no stylesheet declares a head description", () => {
+describe("no stylesheet declares a head description", treeWalk, () => {
   it("sees both shapes, and leaves a body class alone", () => {
     expect(
       headSubSelectors(`

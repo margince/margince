@@ -16,7 +16,7 @@ import {
 // The rooms a contact can still enter, on the contact's own page. An admin
 // removing "Max, who left the buyer" knows the NAME, not the deals — the room
 // page's Revoke is reachable only from a deal — so this card is the path that
-// starts from the person.
+// starts from the contact.
 //
 // The frames are the two standings a reader can hold over a seat and the one
 // honest limit: a card that lists 50 rooms and stops says it is cut rather than

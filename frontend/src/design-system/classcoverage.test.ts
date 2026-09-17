@@ -399,7 +399,11 @@ describe("what a className can be shown to produce", () => {
   });
 });
 
-describe("every class an element carries is declared by a sheet", () => {
+// Reads every stylesheet and every module, resolving each className expression
+// it meets. The heaviest sweep in this file, and past 10s under coverage.
+describe("every class an element carries is declared by a sheet", {
+  timeout: 60_000,
+}, () => {
   const sheetFiles = sheets();
   const moduleFiles = modules();
 

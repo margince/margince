@@ -6,7 +6,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
-import { filesMatching, parseSource } from "../../scripts/lib/source-tree";
+import { filesMatching, sourceFileAt } from "../../scripts/lib/source-tree";
 import { type CssRule, rulesIn } from "../testing/css";
 
 // ONE MENU ANATOMY, and this is what holds it.
@@ -323,7 +323,10 @@ describe("one menu anatomy", () => {
   // claims a menu or listbox role. A new option list therefore cannot be added
   // without either joining the roster or being named as a container with no box
   // — there is no third outcome where it is simply not looked at.
-  it("knows every option surface and row in the tree", () => {
+  // Reads every .tsx in src/ and in the extension frontends to find the roles.
+  it("knows every option surface and row in the tree", {
+    timeout: 60_000,
+  }, () => {
     const known = new Set([
       ...SURFACES.flatMap((surface) => [
         surface.selector,
@@ -346,7 +349,7 @@ function classesUnderAnOptionRole(): string[] {
   const found = new Set<string>();
   for (const path of filesMatching(srcRoot, /\.tsx$/)) {
     if (/\.(test|stories|testkit)\.tsx$/.test(path)) continue;
-    const source = parseSource(path, readFileSync(path, "utf8"));
+    const source = sourceFileAt(path);
     const visit = (node: ts.Node) => {
       if (ts.isJsxOpeningLikeElement(node)) {
         const attributes = node.attributes.properties.filter(ts.isJsxAttribute);
