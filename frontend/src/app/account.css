@@ -241,6 +241,21 @@
   }
 }
 
+/* The appearance answers wear the menu's own row box, so the flyout reads as one
+   more page of the menu it flies out of rather than as a form dropped into it.
+   The tick's own surface is `.checkfield`'s and is untouched; what this adds is
+   the row — its inset, its corner and its hover. */
+.accountsub .choicelist {
+  gap: 1px; /* ds:ignore one list, as .accountsub's own rows above */
+}
+.accountsub .choicelist-choice {
+  padding: 7px 9px; /* ds:ignore the menu row's own optics, as .acctrow above */
+  border-radius: var(--r-sm);
+}
+.accountsub .choicelist-choice:hover {
+  background: var(--bgHover);
+}
+
 @keyframes accountsub-open {
   from {
     opacity: 0;
@@ -251,17 +266,6 @@
     transform: scale(1);
   }
 }
-/* The tick keeps its column whether or not it is drawn, so the three labels stand
-   on one left edge instead of shifting as the choice moves. */
-.accttick {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 14px;
-  color: var(--accentText);
-}
-
 /* ===== the flyout at phone width =====
    A 168px flyout opening INWARD from a menu that is itself anchored to the right
    edge starts at a negative x once the viewport is narrower than about 430px:

@@ -6,7 +6,7 @@
 // biome-ignore-all lint/a11y/noRedundantRoles: display:block drops implicit table roles
 // biome-ignore-all lint/a11y/useSemanticElements: the semantic element is already in use
 
-import { Check, ChevronDown, Columns3, Rows3 } from "lucide-react";
+import { ChevronDown, Columns3, Rows3 } from "lucide-react";
 import {
   type CSSProperties,
   type ReactNode,
@@ -1479,19 +1479,16 @@ function TableTools<Row>({
             {t("table.columns")}
           </button>
           <Menu open={open} head={t("table.shownColumns")} align="right">
+            {/* Which columns are shown is a set, so each row is a `Checkbox` and
+                the menu stays open while the reader builds it. */}
             {optional.map((column) => (
-              <button
-                type="button"
+              <Checkbox
                 key={column.key}
-                className={`lt-mi${hidden.has(column.key) ? "" : " on"}`}
-                aria-pressed={!hidden.has(column.key)}
-                onClick={() => onToggleColumn(column.key)}
-              >
-                <span className="lt-cb">
-                  <Check size={10} strokeWidth={3} aria-hidden="true" />
-                </span>
-                {column.header}
-              </button>
+                className="lt-mi"
+                checked={!hidden.has(column.key)}
+                label={column.header}
+                onChange={() => onToggleColumn(column.key)}
+              />
             ))}
           </Menu>
         </span>

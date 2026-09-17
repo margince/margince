@@ -551,12 +551,13 @@
   gap: var(--space-4);
 }
 
-.ob-decision-card > .ob-decision-row > label {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-3);
+/* The tick and the read's lines, with the words free to take what is left and
+   the box against the FIRST of them. Both classes are named so this wins
+   whichever order the route split loads the two stylesheets in. */
+.ob-decision-row > .checkfield {
+  grid-template-columns: auto 1fr;
+  align-items: start;
   min-width: 0;
-  cursor: pointer;
 }
 
 /* What this answer puts on the record, next to the answer itself.
@@ -622,44 +623,6 @@
    than a list of equal parts. */
 .ob-decision-head {
   margin-block-end: var(--space-4);
-}
-
-/* The native radio stays for keyboard and AT; the disc is what shows. */
-.ob-decision-card input {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-}
-
-.ob-decision-disc {
-  display: grid;
-  place-items: center;
-  width: 20px;
-  height: 20px;
-  flex: none;
-  margin-top: 1px;
-  border: 1px solid var(--borderStrong);
-  border-radius: var(--r-full);
-  corner-shape: round;
-  background: var(--bgElevated);
-  color: var(--textOnAccentControl);
-}
-
-.ob-decision-card.is-picked .ob-decision-disc {
-  border-color: transparent;
-  background: var(--accent);
-}
-
-.ob-decision-card input:focus-visible ~ .ob-decision-disc {
-  outline: var(--focus-ring);
-  outline-offset: 2px;
-}
-
-.ob-decision-disc svg {
-  width: 12px;
-  height: 12px;
 }
 
 .ob-decision-body {
@@ -1114,59 +1077,21 @@
 }
 
 .ob-voice-speaker {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
   padding: var(--space-4);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-md);
   background: var(--bgElevated);
-  cursor: pointer;
 }
 
 .ob-voice-speaker.is-picked {
   border-color: var(--accent);
 }
 
-/* The native input carries the semantics (checked, tab order, the
-   accessible name from its label); it is visually hidden, not display:none,
-   so it keeps focus and keyboard activation. */
-.ob-voice-speaker input {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  opacity: 0;
-}
-
-.ob-voice-speaker-disc {
-  display: grid;
-  flex: none;
-  place-items: center;
-  width: 20px;
-  height: 20px;
-  border: 1px solid var(--borderStrong);
-  border-radius: var(--r-full);
-  corner-shape: round;
-  color: var(--textOnAccentControl);
-}
-
-.ob-voice-speaker.is-picked .ob-voice-speaker-disc {
-  border-color: var(--accent);
-  background: var(--accent);
-}
-
-/* The input carries focus but is invisibly small, so the ring has to land on
-   the disc it sits beside — the same sibling-selector shape the decision
-   card's own radio uses. */
-.ob-voice-speaker input:focus-visible ~ .ob-voice-speaker-disc {
-  outline: var(--focus-ring);
-  outline-offset: 2px;
-}
-
-.ob-voice-speaker-disc svg {
-  width: 13px;
-  height: 13px;
+/* The plate's own columns, over `.checkfield`'s: the tick keeps its column and
+   the voice's name takes the rest of the plate. Both classes are named so this
+   wins whichever order the route split loads the two stylesheets in. */
+.ob-voice-speaker.checkfield {
+  grid-template-columns: auto 1fr;
 }
 
 .ob-voice-speaker-body {
@@ -2773,34 +2698,14 @@
   background: var(--bgElevated);
 }
 
-/* The one control that decides whether a found fact is kept, so it is the last
-   thing in this card that may be hard to hit: the box takes the 24px floor WCAG
-   2.2 AA 2.5.8 sets while the tick stays 15px, because the mark's size is what
-   keeps a column of them reading as ticks beside values rather than as buttons. */
+/* The one control that decides whether a found fact is kept: the product's tick,
+   given the 24px floor WCAG 2.2 AA 2.5.8 sets for a target in a dense column of
+   rows. Everything the box itself looks like is `.checkfield`'s. */
 .ob-triage-fact-toggle {
-  display: inline-flex;
   flex: none;
-  align-items: center;
   justify-content: center;
   min-inline-size: var(--space-6);
   min-block-size: var(--space-6);
-  padding: 0;
-  border: 0;
-  background: none;
-  cursor: pointer;
-}
-
-.ob-triage-fact-toggle[aria-pressed="true"] {
-  color: var(--accentText);
-}
-
-.ob-triage-fact-toggle:disabled {
-  cursor: not-allowed;
-}
-
-.ob-triage-fact-toggle svg {
-  inline-size: 15px;
-  block-size: 15px;
 }
 
 .ob-triage-fact-value {

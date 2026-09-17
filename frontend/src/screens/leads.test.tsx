@@ -1104,7 +1104,7 @@ async function pickFilter(attribute: string, value: string) {
     within(step("Filter")).getByRole("button", { name: attribute }),
   );
   await userEvent.click(
-    within(step(attribute)).getByRole("button", { name: value }),
+    within(step(attribute)).getByRole("radio", { name: value }),
   );
 }
 
@@ -1744,7 +1744,7 @@ describe("LeadsScreen — the one ownership dial (DM-VOCAB-OWN-1)", () => {
       .find((button) => button.hasAttribute("aria-expanded"));
     if (!valueButton) throw new Error("owner value control is missing");
     await user.click(valueButton);
-    await user.click(within(owner).getByRole("button", { name: "Unassigned" }));
+    await user.click(within(owner).getByRole("radio", { name: "Unassigned" }));
 
     await waitFor(() =>
       expect(

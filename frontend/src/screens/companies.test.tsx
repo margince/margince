@@ -315,7 +315,7 @@ describe("CompaniesScreen — list dials reach the server (P-14)", () => {
 
     await user.click(await screen.findByRole("button", { name: "Filter" }));
     await user.click(screen.getByRole("button", { name: "Company size" }));
-    await user.click(screen.getByRole("button", { name: "51-200" }));
+    await user.click(screen.getByRole("radio", { name: "51-200" }));
 
     // The wire's own parameter name and the band as written. A dial that sent
     // anything else would be ignored by the server, which answers the WHOLE

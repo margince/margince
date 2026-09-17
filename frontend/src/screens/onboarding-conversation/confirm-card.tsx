@@ -9,7 +9,13 @@ import {
 import type { ChangeEvent } from "react";
 import { Fragment, useEffect, useRef, useState } from "react";
 import type { components } from "../../api/schema";
-import { Avatar, Badge, Button, Disclosure } from "../../design-system/atoms";
+import {
+  Avatar,
+  Badge,
+  Button,
+  Checkbox,
+  Disclosure,
+} from "../../design-system/atoms";
 import { Heading } from "../../design-system/heading";
 import {
   ConfidenceMeter,
@@ -972,12 +978,11 @@ function factsByType(facts: readonly SiteFact[]): readonly Readonly<{
 function FactRow({
   fact,
   selection,
-  t,
 }: Readonly<{
   fact: SiteFact;
   selection: FactSelection;
-  t: ReturnType<typeof useT>;
 }>) {
+  const t = useT();
   const { locale } = useLocale();
   const selected = selection.isSelected(fact);
   const evidence: Evidence = {
@@ -986,16 +991,16 @@ function FactRow({
   };
   return (
     <li className="ob-triage-fact">
-      <button
-        type="button"
+      {/* Which findings are kept is a SET, so this is the product's one tick; its
+          label is hidden because the value already stands beside it in the row. */}
+      <Checkbox
         className="ob-triage-fact-toggle"
-        aria-pressed={selected}
+        checked={selected}
         aria-label={t("ob.facts.rowSave", { fact: fact.value })}
         disabled={saveDisabled(selection, selected)}
-        onClick={() => selection.toggle(fact)}
-      >
-        {selected ? <Check aria-hidden /> : <Circle aria-hidden />}
-      </button>
+        onChange={() => selection.toggle(fact)}
+        label=""
+      />
       <span className="ob-triage-fact-value">{fact.value}</span>
       <span className="ob-triage-fact-meta">
         <span className="ob-triage-score t-caption">
@@ -1046,12 +1051,7 @@ function FactTypeGroup({
     >
       <ul className="ob-triage-fact-rows">
         {facts.map((fact) => (
-          <FactRow
-            key={fact.value_key}
-            fact={fact}
-            selection={selection}
-            t={t}
-          />
+          <FactRow key={fact.value_key} fact={fact} selection={selection} />
         ))}
       </ul>
     </Disclosure>

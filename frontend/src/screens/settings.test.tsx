@@ -1,4 +1,5 @@
 /** @vitest-environment happy-dom */
+import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { isValidElement, type ReactNode } from "react";
@@ -147,11 +148,7 @@ describe("SettingsScreen RBAC surfaces", () => {
     // subscribers, and this is one of them.
     await user.click(screen.getByRole("button", { name: "Account" }));
     await user.click(screen.getByRole("menuitem", { name: "Theme" }));
-    expect(
-      screen
-        .getByRole("menuitemradio", { name: "Dark" })
-        .getAttribute("aria-checked"),
-    ).toBe("true");
+    expect(screen.getByRole("radio", { name: "Dark" })).toBeChecked();
   });
 
   // Identity, credential, sign-off and language are ONE card, not four: a

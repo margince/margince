@@ -2,7 +2,7 @@ import { Check, Lightbulb } from "lucide-react";
 import type { ChangeEvent, ReactNode, RefObject } from "react";
 import { useEffect, useId, useRef, useState } from "react";
 import type { components } from "../../api/schema";
-import { Button, Disclosure } from "../../design-system/atoms";
+import { Button, Disclosure, Radio } from "../../design-system/atoms";
 import { MarginceCoreScene } from "../../design-system/margince-core";
 import { usePrefersReducedMotion } from "../../design-system/motion";
 import { formatNumber } from "../../format/format";
@@ -411,27 +411,22 @@ export function VoiceSpeakerScene({
               : undefined;
             const checked = picked === option.value;
             return (
-              <label
+              <Radio
                 key={option.value}
                 className={`ob-voice-speaker${checked ? " is-picked" : ""}`}
-              >
-                <input
-                  type="radio"
-                  name={group}
-                  value={option.value}
-                  checked={checked}
-                  onChange={() => setPicked(option.value)}
-                />
-                <span className="ob-voice-speaker-disc" aria-hidden>
-                  {checked && <Check />}
-                </span>
-                <span className="ob-voice-speaker-body">
-                  <b>{label}</b>
-                  {detail !== undefined && (
-                    <small className="t-caption">{detail}</small>
-                  )}
-                </span>
-              </label>
+                name={group}
+                value={option.value}
+                checked={checked}
+                onChange={() => setPicked(option.value)}
+                label={
+                  <span className="ob-voice-speaker-body">
+                    <b>{label}</b>
+                    {detail !== undefined && (
+                      <small className="t-caption">{detail}</small>
+                    )}
+                  </span>
+                }
+              />
             );
           })}
         </div>

@@ -26,16 +26,20 @@ export function usePopoverDismiss(
       if (event.key !== "Escape") {
         return;
       }
-      // One keystroke closes one layer. A row inside may open a popover of its
-      // own (the language list does), and both dismissals listen on the
+      // One keystroke closes one layer. A row inside may open a layer of its
+      // own (the appearance choice does), and both dismissals listen on the
       // document, so without this a single Escape would collapse the inner
       // layer AND this one — leaving the reader two steps from where they were.
-      // The inner layer announces itself through the trigger it expanded; while
-      // one is open it owns Escape, and the second press reaches here.
+      // The inner layer announces itself through a trigger that has EXPANDED a
+      // region it NAMES, and both halves are load-bearing. `aria-expanded`
+      // alone also matches the panel's own opener when that opener lives inside
+      // it — the phone sheet's "More" is in the bar the sheet grows out of, so
+      // a guard reading only the flag stood the sheet down against itself and
+      // Escape stopped closing it at all. And what KIND of layer a trigger
+      // opens (a menu, a group of radios, a listbox) is the inner surface's
+      // business, so reading `aria-haspopup` stood down for one shape only.
       if (
-        panel.current?.querySelector(
-          '[aria-haspopup="menu"][aria-expanded="true"]',
-        )
+        panel.current?.querySelector('[aria-expanded="true"][aria-controls]')
       ) {
         return;
       }

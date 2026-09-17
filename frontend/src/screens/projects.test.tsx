@@ -87,7 +87,7 @@ describe("ProjectsScreen", () => {
       ),
     );
     await user.click(
-      within(screen.getByRole("group", { name: "Phase" })).getByRole("button", {
+      within(screen.getByRole("group", { name: "Phase" })).getByRole("radio", {
         name: "Delivering",
       }),
     );

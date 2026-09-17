@@ -13,6 +13,7 @@
 // names are being picked here or resolved for a chip somewhere else.
 
 import type { components } from "../api/schema";
+import { Checkbox } from "../design-system/atoms";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { type RosterKind, useRoster } from "./entityref";
@@ -167,17 +168,20 @@ export function AudienceMembers({
       {candidates.map((candidate) => {
         const key = `${candidate.kind}:${candidate.id}`;
         return (
-          <label key={key} className="compose-audience-member">
-            <input
-              type="checkbox"
-              checked={picked.has(key)}
-              onChange={() => toggle(candidate)}
-            />
-            <span>{candidate.name}</span>
-            {candidate.note && (
-              <span className="t-caption">{candidate.note}</span>
-            )}
-          </label>
+          <Checkbox
+            key={key}
+            className="compose-audience-member"
+            checked={picked.has(key)}
+            onChange={() => toggle(candidate)}
+            label={
+              <>
+                <span>{candidate.name}</span>
+                {candidate.note && (
+                  <span className="t-caption">{candidate.note}</span>
+                )}
+              </>
+            }
+          />
         );
       })}
     </fieldset>

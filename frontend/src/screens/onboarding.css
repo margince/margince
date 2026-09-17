@@ -1033,8 +1033,15 @@
 }
 /* The legal-entity choice sits at the top of the identity group: it is a
    question, not a field, and answering it fills the three fields under it. */
+/* A fieldset, so the browser groups the plates under the question in its legend
+   — which means shedding the platform's own frame and inset first. */
 .legal-choice {
-  margin-bottom: var(--space-5);
+  margin: 0 0 var(--space-5);
+  padding: 0;
+  border: 0;
+}
+.legal-choice > .l {
+  padding: 0;
 }
 .legal-choice .l {
   color: var(--textPrimary);
@@ -1049,31 +1056,33 @@
   margin-top: var(--space-3);
 }
 /* The one card a reader PICKS: a fact to keep, a legal entity to adopt. It is a
-   button with a pressed state, not a surface, which is why it is not `Card` —
-   `Card` is a section of a page.
+   plate wearing the product's own tick — a `Checkbox` where the facts are a set
+   and a `Radio` where the entities are one answer — and not a surface, which is
+   why it is not `Card`: `Card` is a section of a page.
 
    One class, because the fact picker and the legal picker are the SAME control:
-   a check, a name, a detail line, a line of fine print. What they do not share
-   is what those lines mean, and that is what the two modifiers below carry. */
+   a tick, a name, a detail line, a line of fine print. What they do not share is
+   what those lines mean, and that is what the two modifiers below carry. */
 .choice-card {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-3);
   padding: var(--padCard);
   color: var(--textPrimary);
   text-align: left;
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-md);
   background: var(--bgElevated);
-  cursor: pointer;
+}
+/* The plate's own two columns, over `.checkfield`'s. Both classes are named so
+   this wins whichever order the route split loads the two stylesheets in: the
+   tick keeps its column and the words take the rest of the plate rather than
+   shrinking to their own width, and the tick sits on the FIRST line of a name
+   that runs to three. */
+.choice-card.checkfield {
+  grid-template-columns: auto 1fr;
+  align-items: start;
 }
 .choice-card.selected {
   border-color: var(--accent);
   background: var(--accentLight);
-}
-.choice-check svg {
-  width: 14px;
-  color: var(--accentText);
 }
 .choice-card b,
 .choice-card span span,

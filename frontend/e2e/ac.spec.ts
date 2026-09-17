@@ -466,12 +466,10 @@ test("features/10 §7: the account menu holds the settings door, the appearance 
   await expect(theme).toHaveAttribute("aria-expanded", "false");
   await theme.click();
   const choices = page.locator(".accountsub");
-  await expect(choices.getByRole("menuitemradio")).toHaveCount(3);
-  await choices.getByRole("menuitemradio", { name: "Dunkel" }).click();
+  await expect(choices.getByRole("radio")).toHaveCount(3);
+  await choices.getByRole("radio", { name: "Dunkel" }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-  await expect(
-    choices.getByRole("menuitemradio", { name: "Dunkel" }),
-  ).toHaveAttribute("aria-checked", "true");
+  await expect(choices.getByRole("radio", { name: "Dunkel" })).toBeChecked();
 });
 
 test("features/10 §7: the locale switch flips the chrome DE↔EN", async ({
@@ -1512,7 +1510,8 @@ test.describe("§3.8: 390px mobile", () => {
     const tall = await page.evaluate(() => {
       return Array.from(document.querySelectorAll(".worklist-list li"))
         .map((row) => {
-          const decides = row.querySelector("[data-testid='worklist-row-decision']") !== null;
+          const decides =
+            row.querySelector("[data-testid='worklist-row-decision']") !== null;
           return {
             height: row.getBoundingClientRect().height,
             ceiling: decides ? 208 : 176,

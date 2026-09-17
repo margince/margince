@@ -2,18 +2,17 @@ import {
   ArrowDown,
   ArrowDownUp,
   ArrowUp,
-  Check,
   Filter,
   MoreVertical,
   Plus,
   Search,
 } from "lucide-react";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { useNarrowViewport } from "../app/viewport";
 import { openingCase } from "../format/collate";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { OverflowMenu } from "./atoms";
+import { Checkbox, OverflowMenu, Radio } from "./atoms";
 import { useDebouncedSearch } from "./debouncedsearch";
 import "./listtable.css";
 import { Heading } from "./heading";
@@ -320,32 +319,28 @@ function FilterValueList({
   value: string;
   onPick: (value: string, label: string) => void;
 }>) {
+  // One filter takes one value, so these are radios; the name groups them and
+  // the enclosing `Menu` fieldset is what names the question they answer.
+  const group = useId();
   return (
     <>
-      <button
-        type="button"
-        className={`lt-mi${value ? "" : " on"}`}
-        aria-pressed={!value}
-        onClick={() => onPick("", chip.allLabel)}
-      >
-        <span className="lt-cb">
-          <Check size={10} strokeWidth={3} aria-hidden="true" />
-        </span>
-        {chip.allLabel}
-      </button>
+      <Radio
+        className="lt-mi"
+        name={group}
+        checked={!value}
+        label={chip.allLabel}
+        onChange={() => onPick("", chip.allLabel)}
+      />
       {chip.options.map((option) => (
-        <button
-          type="button"
+        <Radio
           key={option.value}
-          className={`lt-mi${option.value === value ? " on" : ""}`}
-          aria-pressed={option.value === value}
-          onClick={() => onPick(option.value, option.label)}
-        >
-          <span className="lt-cb">
-            <Check size={10} strokeWidth={3} aria-hidden="true" />
-          </span>
-          {option.label}
-        </button>
+          className="lt-mi"
+          name={group}
+          value={option.value}
+          checked={option.value === value}
+          label={option.label}
+          onChange={() => onPick(option.value, option.label)}
+        />
       ))}
     </>
   );
@@ -371,6 +366,7 @@ function AsyncFilterValueList({
   const t = useT();
   const [query, setQuery] = useState("");
   const search = chip.search;
+  const group = useId();
   const { results, pending, failed } = useDebouncedSearch(search, query);
 
   if (!search) {
@@ -379,17 +375,13 @@ function AsyncFilterValueList({
 
   return (
     <>
-      <button
-        type="button"
-        className={`lt-mi${value ? "" : " on"}`}
-        aria-pressed={!value}
-        onClick={() => onPick("", chip.allLabel)}
-      >
-        <span className="lt-cb">
-          <Check size={10} strokeWidth={3} aria-hidden="true" />
-        </span>
-        {chip.allLabel}
-      </button>
+      <Radio
+        className="lt-mi"
+        name={group}
+        checked={!value}
+        label={chip.allLabel}
+        onChange={() => onPick("", chip.allLabel)}
+      />
       <label className="lt-fsearch">
         <span className="sr-only">
           {t("table.filterValueSearch", { filter: chip.label })}
@@ -416,18 +408,15 @@ function AsyncFilterValueList({
         <p className="lt-fvalue-status">{t("table.filterNoMatches")}</p>
       )}
       {results.map((option) => (
-        <button
-          type="button"
+        <Radio
           key={option.value}
-          className={`lt-mi${option.value === value ? " on" : ""}`}
-          aria-pressed={option.value === value}
-          onClick={() => onPick(option.value, option.label)}
-        >
-          <span className="lt-cb">
-            <Check size={10} strokeWidth={3} aria-hidden="true" />
-          </span>
-          {option.label}
-        </button>
+          className="lt-mi"
+          name={group}
+          value={option.value}
+          checked={option.value === value}
+          label={option.label}
+          onChange={() => onPick(option.value, option.label)}
+        />
       ))}
     </>
   );
@@ -570,6 +559,7 @@ function FilterConditionMenu({
   onToggle,
 }: Readonly<{ open: boolean; onToggle: () => void }>) {
   const t = useT();
+  const group = useId();
   return (
     <span className="lt-menu-wrap">
       <button
@@ -581,12 +571,18 @@ function FilterConditionMenu({
         {t("table.filterIs")}
       </button>
       <Menu open={open} head={t("table.filterCondition")}>
-        <button type="button" className="lt-mi on" onClick={onToggle}>
-          <span className="lt-cb">
-            <Check size={10} strokeWidth={3} aria-hidden="true" />
-          </span>
-          {t("table.filterIs")}
-        </button>
+        {/* The one condition, standing. `defaultChecked` and not `checked`,
+            because a group of one has no second answer for a change event to
+            report: the press closes the menu and nothing else, and a controlled
+            radio whose `onChange` can never fire would be a handler that lies
+            about what runs. */}
+        <Radio
+          className="lt-mi"
+          name={group}
+          defaultChecked
+          label={t("table.filterIs")}
+          onClick={onToggle}
+        />
       </Menu>
     </span>
   );
@@ -721,6 +717,7 @@ function SortMenu({
   const active = options.find(
     (option) => sortDirection(option.field, sort.value) !== null,
   );
+  const group = useId();
   return (
     <span className="lt-menu-wrap">
       <button
@@ -740,6 +737,7 @@ function SortMenu({
           return (
             <SortItem
               key={option.field}
+              group={group}
               label={option.label}
               direction={direction}
               onPick={() => sort.onChange(nextSortValue(option, direction))}
@@ -751,6 +749,7 @@ function SortMenu({
             reach is one they must be able to ask for. It has no direction to
             flip, so it carries no arrow. */}
         <SortItem
+          group={group}
           label={t("table.sortDefault")}
           direction={sort.value ? null : "none"}
           onPick={() => sort.onChange("")}
@@ -764,23 +763,19 @@ function SortMenu({
  * One attribute in the sort menu: its name, which way it is ordering, and
  * whether it is the one in force.
  *
- * ONE ORDER AT A TIME, so the chosen entry wears a CHECKMARK rather than a tick
- * box. A box is the shape of a set a reader adds to, and drawing five of them
- * over five orderings promised a combination this list cannot be in — the
- * server takes one field plus the house tie-breaker. The mark rides the right
- * edge, where a reader checks which of the five it landed on; the direction
- * arrow sits against the label, because it qualifies THAT name rather than
- * being a second column of its own.
- *
- * The mark is always laid out and only its glyph appears, for the reason the
- * tick box was: a checkmark that inserted itself would shift every label in the
- * menu on selection.
+ * ONE ORDER AT A TIME, so it is a RADIO — the server takes one field plus the
+ * house tie-breaker, and a column of boxes would promise a combination this list
+ * cannot be in. The direction arrow sits against the label, because it qualifies
+ * THAT name rather than being a second column of its own.
  */
 function SortItem({
+  group,
   label,
   direction,
   onPick,
 }: Readonly<{
+  /** The radio name every entry of one sort menu shares. */
+  group: string;
   label: string;
   /** `"none"` is the server's own order: in force, with no direction to state. */
   direction: "asc" | "desc" | "none" | null;
@@ -788,34 +783,45 @@ function SortItem({
 }>) {
   const t = useT();
   return (
-    <button
-      type="button"
-      className={`lt-mi${direction ? " on" : ""}`}
-      aria-pressed={direction !== null}
-      onClick={onPick}
-    >
-      {label}
-      {(direction === "asc" || direction === "desc") && (
-        <span className="lt-mi-dir">
-          {direction === "asc" ? (
-            <ArrowUp size={12} strokeWidth={1.8} aria-hidden="true" />
-          ) : (
-            <ArrowDown size={12} strokeWidth={1.8} aria-hidden="true" />
+    <Radio
+      className="lt-mi"
+      name={group}
+      checked={direction !== null}
+      onChange={onPick}
+      // Pressing the order ALREADY IN FORCE flips its direction, and a radio
+      // that is already checked reports no change — so the press is read here
+      // too. Guarded on the direction this entry rendered with, and the guard is
+      // what keeps a press from being answered twice: the click runs before the
+      // change, so on any entry that was not standing this does nothing and the
+      // handler above takes it.
+      onClick={() => {
+        if (direction !== null) {
+          onPick();
+        }
+      }}
+      label={
+        <>
+          {label}
+          {(direction === "asc" || direction === "desc") && (
+            <span className="lt-mi-dir">
+              {direction === "asc" ? (
+                <ArrowUp size={12} strokeWidth={1.8} aria-hidden="true" />
+              ) : (
+                <ArrowDown size={12} strokeWidth={1.8} aria-hidden="true" />
+              )}
+              {/* The arrow is the sighted reader's half of this. The direction
+                  has to be said as well, or the standing entry announces only
+                  that it is the sort and not which way. */}
+              <span className="sr-only">
+                {direction === "asc"
+                  ? t("table.sortAscending")
+                  : t("table.sortDescending")}
+              </span>
+            </span>
           )}
-          {/* The arrow is the sighted reader's half of this. The direction has
-              to be said as well, or a pressed entry announces only that it is
-              the sort and not which way. */}
-          <span className="sr-only">
-            {direction === "asc"
-              ? t("table.sortAscending")
-              : t("table.sortDescending")}
-          </span>
-        </span>
-      )}
-      <span className="lt-mi-mark">
-        <Check size={13} strokeWidth={2.5} aria-hidden="true" />
-      </span>
-    </button>
+        </>
+      }
+    />
   );
 }
 
@@ -1106,14 +1112,11 @@ function Toolbar({
       )}
 
       {archived && (
-        <label className="lt-toggle">
-          <input
-            type="checkbox"
-            checked={archived.checked}
-            onChange={(event) => archived.onChange(event.target.checked)}
-          />
-          {t("list.showArchived")}
-        </label>
+        <Checkbox
+          checked={archived.checked}
+          label={t("list.showArchived")}
+          onChange={(event) => archived.onChange(event.target.checked)}
+        />
       )}
 
       {tools}
