@@ -30048,7 +30048,13 @@ type ImportSourceProfile struct {
 	// SuggestedMapping Proposed `{source column → target field}`. Normalized-name matches only; an unmatched column is absent rather than guessed.
 	SuggestedMapping map[string]string `json:"suggested_mapping"`
 
-	// Targets Every field this object can receive, custom fields included — the closed set a mapping may name.
+	// Targets The closed set a mapping may name — every field this object can receive THROUGH AN
+	// IMPORT, which is not every field it has.
+	//
+	// Custom fields are absent on purpose. An import writes through the stores'
+	// caller-opened transaction seams, which refuse custom fields by design, so a `cf_`
+	// target would be accepted, reported as written, and dropped. Naming one is refused by
+	// `createImportRun` rather than silently ignored.
 	Targets []string `json:"targets"`
 }
 

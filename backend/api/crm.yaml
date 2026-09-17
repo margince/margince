@@ -21986,8 +21986,15 @@ paths:
         neither starts nor reads a migration run.
 
         Mapping a source column to a field the object does not have is refused
-        here rather than at row 40,000: the mapping is validated against the
-        object's live field catalog, custom fields included.
+        here rather than at row 40,000: the mapping is validated against the set
+        of targets `uploadImportSource` reported for this object.
+
+        Custom fields are NOT in that set. An import lands its rows through the
+        stores' caller-opened transaction seams, which refuse custom fields by
+        design — reading the catalog is the second connection those seams exist
+        to avoid — so a `cf_` target would be accepted, reported as written, and
+        dropped. It is refused here instead, and it arrives when the seam can
+        carry it.
       requestBody:
         required: true
         content:
@@ -26172,7 +26179,14 @@ components:
         targets:
           type: array
           items: { type: string }
-          description: 'Every field this object can receive, custom fields included — the closed set a mapping may name.'
+          description: |
+            The closed set a mapping may name — every field this object can receive THROUGH AN
+            IMPORT, which is not every field it has.
+
+            Custom fields are absent on purpose. An import writes through the stores'
+            caller-opened transaction seams, which refuse custom fields by design, so a `cf_`
+            target would be accepted, reported as written, and dropped. Naming one is refused by
+            `createImportRun` rather than silently ignored.
 
     CreateImportRunRequest:
       type: object
