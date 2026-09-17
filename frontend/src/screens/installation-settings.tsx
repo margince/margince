@@ -21,6 +21,7 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
@@ -313,7 +314,6 @@ function InstallationSettingsForm({
 
   const editVerb = (fact: EditedFact, field: string) => (
     <Button
-      small
       variant="ghost"
       // Named by the fact it changes, not "Edit": three rows offering three
       // identically-named buttons make a screen reader's user count them.
@@ -332,9 +332,7 @@ function InstallationSettingsForm({
           {t("installationSettings.companySub")}
         </p>
         {!canManage && (
-          <p className="t-caption" id={denialId}>
-            {t("installationSettings.readOnly")}
-          </p>
+          <p id={denialId}>{t("installationSettings.readOnly")}</p>
         )}
         <SettingList>
           <SettingRow
@@ -495,9 +493,9 @@ function InstallationProfileDialog({
   }, [focus]);
   return (
     <Modal open onClose={onClose} labelledBy={titleId}>
-      <h2 id={titleId} className="t-h2 modal-title">
+      <Heading size="large" id={titleId} className="t-h2 modal-title">
         {t("installationSettings.companyTitle")}
-      </h2>
+      </Heading>
       <form
         ref={form}
         className="form-stack"
@@ -549,7 +547,6 @@ function InstallationProfileDialog({
         <SectionHeader
           level={3}
           title={t("installationSettings.currencyTitle")}
-          sub={t("installationSettings.currencySub")}
         />
         <Field
           label={t("installationSettings.baseCurrency")}
@@ -692,11 +689,10 @@ function InstallationProfileDialog({
           </Callout>
         ) : null}
         <div className="form-actions">
-          <Button small variant="ghost" type="button" onClick={onClose}>
+          <Button variant="ghost" type="button" onClick={onClose}>
             {t("create.cancel")}
           </Button>
           <Button
-            small
             type="submit"
             variant="primary"
             disabled={!pending && (!canManage || !dirty)}

@@ -513,7 +513,7 @@ describe("ListTable: query vocabulary", () => {
       await screen.findByRole("button", { name: "Filter" }),
     );
     await userEvent.click(screen.getByRole("button", { name: "Status" }));
-    await userEvent.click(screen.getByRole("button", { name: "New" }));
+    await userEvent.click(screen.getByRole("radio", { name: "New" }));
 
     expect(
       fetchPage.mock.calls.some(([query]) => query.filters.status === "new"),
@@ -528,7 +528,7 @@ describe("ListTable: query vocabulary", () => {
       throw new Error("the applied filter's value trigger did not render");
     }
     await userEvent.click(valueTrigger);
-    await userEvent.click(screen.getByRole("button", { name: "All statuses" }));
+    await userEvent.click(screen.getByRole("radio", { name: "All statuses" }));
 
     const lastCall = fetchPage.mock.calls.at(-1);
     expect(lastCall?.[0].filters).not.toHaveProperty("status");
@@ -602,7 +602,7 @@ describe("removing an applied filter", () => {
       await screen.findByRole("button", { name: "Filter" }),
     );
     await userEvent.click(screen.getByRole("button", { name: "Status" }));
-    await userEvent.click(screen.getByRole("button", { name: "Contacted" }));
+    await userEvent.click(screen.getByRole("radio", { name: "Contacted" }));
     await waitFor(() =>
       expect(fetchPage.mock.calls.some(([query]) => query.filters.status)).toBe(
         true,
@@ -700,7 +700,7 @@ describe("the owner dial — one question the server answers three ways", () => 
 
     await user.click(await screen.findByRole("button", { name: "Filter" }));
     await user.click(screen.getByRole("button", { name: "Owner" }));
-    await user.click(screen.getByRole("button", { name: "My records" }));
+    await user.click(screen.getByRole("radio", { name: "My records" }));
 
     // The option carries the parameter it sets, so the chip writes `owner_id`
     // rather than a filter named after the chip itself.
@@ -1070,7 +1070,7 @@ describe("a data-driven chip narrows the list", () => {
 
     await user.click(await screen.findByRole("button", { name: "Filter" }));
     await user.click(screen.getByRole("button", { name: "Owner" }));
-    await user.click(screen.getByRole("button", { name: "Unassigned" }));
+    await user.click(screen.getByRole("radio", { name: "Unassigned" }));
 
     // `unassigned=true`, not `owner=unassigned:true`. The server ignores a
     // parameter it does not know, so the wrong spelling answers the WHOLE list
@@ -1120,7 +1120,7 @@ describe("two chips on one list", () => {
 
     await user.click(await screen.findByRole("button", { name: "Filter" }));
     await user.click(screen.getByRole("button", { name: "Owner" }));
-    await user.click(screen.getByRole("button", { name: "Unassigned" }));
+    await user.click(screen.getByRole("radio", { name: "Unassigned" }));
     await waitFor(() =>
       expect(fetchPage.mock.calls.at(-1)?.[0].filters.unassigned).toBe("true"),
     );
@@ -1130,7 +1130,7 @@ describe("two chips on one list", () => {
     // answer here, so picking a lifecycle would silently widen the list back to
     // every owner while the owner chip still showed "Unassigned".
     await user.click(screen.getByRole("button", { name: "Account lifecycle" }));
-    await user.click(screen.getByRole("button", { name: "Customer" }));
+    await user.click(screen.getByRole("radio", { name: "Customer" }));
 
     await waitFor(() =>
       expect(fetchPage.mock.calls.at(-1)?.[0].filters.lifecycle).toBe(

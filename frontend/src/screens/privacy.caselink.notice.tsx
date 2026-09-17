@@ -16,7 +16,7 @@ export function LinkedCaseNotice({ linked }: Readonly<{ linked: LinkedCase }>) {
     return null;
   }
   return (
-    <Callout tone="warn" title={t("privacy.caseNotHere")}>
+    <Callout tone="warning" title={t("privacy.caseNotHere")}>
       {t("privacy.caseNotHereBody")}
     </Callout>
   );

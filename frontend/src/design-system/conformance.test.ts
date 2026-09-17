@@ -180,9 +180,6 @@ function scannableSource(file: string, text: string): string {
  * Sans"` was read as naming only Outfit. A gate that only sees what biome happens to
  * emit today stops seeing the day that changes — and it is the same shape of
  * miss as the capture group: under-recognition, reported as PASS.
- *
- * Exported to the fixture test below rather than inlined in the scan, so the
- * spellings this gate can see are asserted rather than assumed.
  */
 function familiesIn(text: string): string[] {
   const found: string[] = [];
@@ -191,13 +188,13 @@ function familiesIn(text: string): string[] {
   )) {
     for (const family of (declared ?? quoted ?? templated ?? "").split(",")) {
       const name = family.trim().replace(/^["'`]|["'`]$/g, "");
-      // A family assembled at run time names nothing this scan can judge, so
-      // reporting `${x}` as a font would be a false positive — the same reason
-      // a `var()` reference is skipped, and the same limit: neither spelling is
-      // checkable here, and both are checkable where the value comes from.
-      if (name !== "" && !name.startsWith("var(") && !name.includes("${")) {
-        found.push(name);
-      }
+      // Three spellings name no family this scan can judge: a `var()` token
+      // reference, a family assembled at run time, and `inherit`, which takes
+      // whatever the root resolved. Each is checkable where its value comes
+      // from, and reporting one here would be a finding about nothing.
+      if (name === "" || name === "inherit") continue;
+      if (name.startsWith("var(") || name.includes("${")) continue;
+      found.push(name);
     }
   }
   return found;
@@ -251,12 +248,13 @@ describe("design-system conformance gates (B-EP09.1)", scanBudget, () => {
       "DM Sans",
       "sans-serif",
     ]);
-    // A token reference is the ALLOWED spelling and names no family, so it
-    // must not be reported as one. Neither does a family assembled at run
-    // time: reporting the literal `${chosenFamily}` would be a finding about
-    // nothing.
-    expect(familiesIn("font-family: var(--f-body);")).toEqual([]);
+    // The spellings that name nothing come back EMPTY: the allowed token
+    // reference, a family built at run time, and the `inherit` the UA reset
+    // writes on every control so the root's family reaches it.
+    expect(familiesIn("font-family: var(--fontFamilyBody);")).toEqual([]);
     expect(familiesIn("fontFamily: `${chosenFamily}`")).toEqual([]);
+    expect(familiesIn("font-family: inherit;")).toEqual([]);
+    expect(familiesIn("fontFamily: `inherit`")).toEqual([]);
   });
 
   // B-EP09.16: no inline user-facing copy — every string the user reads comes
@@ -567,17 +565,17 @@ describe("design-system conformance gates (B-EP09.1)", scanBudget, () => {
       // tokens.css is where literals live (tests pin them); index.html's
       // meta theme-color cannot read a CSS custom property.
       //
-      // provider-mark.tsx is the one component exemption, and it is a NAMED
-      // file rather than a widened pattern on purpose: it carries Google's and
-      // Microsoft's own sign-in marks. Another company's colours are not ours
-      // to tokenise, and a provider mark rendered in Ledger Green is a wrong
-      // mark. The same single entry is in scripts/check-ds-purity.sh, so
-      // neither arm of this gate can be satisfied without the other.
+      // Two NAMED files, not a widened pattern, both repeated in
+      // scripts/check-ds-purity.sh so neither arm can be satisfied alone.
+      // provider-mark.tsx carries another company's sign-in marks, which are
+      // not ours to tokenise. tokens-testing.ts is what the token suites READ
+      // the sheet with: it declares no colour, and `rgba(` there is the grammar
+      // it parses rather than paint it applies.
       if (
         file.endsWith("tokens.css") ||
         file.endsWith("index.html") ||
         file.endsWith("provider-mark.tsx") ||
-        /\.test\.tsx?$/.test(file)
+        /\.test\.tsx?$|tokens-testing\.ts$/.test(file)
       ) {
         continue;
       }

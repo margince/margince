@@ -38,6 +38,7 @@ import {
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody, PanelPlate } from "../design-system/panel";
 import {
   PassportSelect,
@@ -633,11 +634,7 @@ function AccountCard() {
     <Panel
       title={t("settings.accountCard")}
       actions={
-        <Button
-          small
-          disabled={logout.isPending}
-          onClick={() => logout.mutate()}
-        >
+        <Button disabled={logout.isPending} onClick={() => logout.mutate()}>
           {t("auth.signOut")}
         </Button>
       }
@@ -790,7 +787,7 @@ function SignatureSettingRow({ toast }: Readonly<{ toast: Toast }>) {
         description={t("settings.signatureSub")}
         value={answer}
         control={
-          <Button small variant="ghost" onClick={edit}>
+          <Button variant="ghost" onClick={edit}>
             {t("settings.signatureEdit")}
           </Button>
         }
@@ -806,9 +803,9 @@ function SignatureSettingRow({ toast }: Readonly<{ toast: Toast }>) {
             if (dirty && !save.isPending) save.mutate(shown);
           }}
         >
-          <h2 className="t-h3 modal-title" id={titleId}>
+          <Heading size="large" className="t-h3 modal-title" id={titleId}>
             {t("settings.signature")}
-          </h2>
+          </Heading>
           <WriteRefused titleKey="settings.saveFailed" error={save.error} />
           <Field label={t("settings.signatureLabel")}>
             {(control) => (
@@ -823,11 +820,10 @@ function SignatureSettingRow({ toast }: Readonly<{ toast: Toast }>) {
           </Field>
           <p className="t-caption">{t("settings.signatureHint")}</p>
           <div className="form-actions">
-            <Button small variant="ghost" onClick={close}>
+            <Button variant="ghost" onClick={close}>
               {t("settings.signatureCancel")}
             </Button>
             <Button
-              small
               type="submit"
               variant="primary"
               disabled={!save.isPending && !dirty}
@@ -965,7 +961,6 @@ function DisplayNameSettingRow({ toast }: Readonly<{ toast: Toast }>) {
             onChange={(event) => setDraft(event.target.value)}
           />
           <Button
-            small
             disabled={!dirty || trimmed === "" || tooLong || save.isPending}
             onClick={() => save.mutate(trimmed)}
           >
@@ -1200,7 +1195,7 @@ function PassportCard() {
       // only one on the page, and a page with one loud button reads as if the
       // other three cards had nothing to offer.
       titleAction={
-        <Button small onClick={() => setMinting(true)}>
+        <Button onClick={() => setMinting(true)}>
           {t("settings.mintOpen")}
         </Button>
       }
@@ -1261,9 +1256,9 @@ function PassportCard() {
         labelledBy={mintTitleId}
         placement="right"
       >
-        <h2 className="t-h2" id={mintTitleId}>
+        <Heading size="large" className="t-h2" id={mintTitleId}>
           {t("settings.mint")}
-        </h2>
+        </Heading>
         {/* The token region is mounted for the whole life of the drawer rather
             than appearing with the token in it: a live region inserted at the
             same moment as its content is not reliably announced, and this token
@@ -1276,7 +1271,7 @@ function PassportCard() {
         >
           {mint.isSuccess && (
             <PanelPlate>
-              <p className="t-label">{t("settings.tokenOnce")}</p>
+              <p>{t("settings.tokenOnce")}</p>
               <p className="passport-token-value">{mint.data.token}</p>
             </PanelPlate>
           )}
@@ -1287,7 +1282,7 @@ function PassportCard() {
           // still reading has no way back — the list carries metadata and the
           // server will not re-disclose a token.
           <div className="form-actions">
-            <Button small variant="primary" onClick={closeMint}>
+            <Button variant="primary" onClick={closeMint}>
               {t("settings.mintDone")}
             </Button>
           </div>
@@ -1318,16 +1313,13 @@ function PassportCard() {
               className="field-multiselect"
               aria-describedby={mintScopeHintId}
             >
-              <legend className="t-label">
-                {t("settings.passportScopes")}
-              </legend>
+              <legend className="t-name">{t("settings.passportScopes")}</legend>
               <p id={mintScopeHintId} className="t-caption">
                 {t("settings.passportScopesHint")}
               </p>
               {PASSPORT_SCOPES.map((scope) => (
                 <Checkbox
                   key={scope}
-                  className="t-label"
                   checked={scopes.has(scope)}
                   onChange={(event) => {
                     const next = new Set(scopes);
@@ -1345,11 +1337,10 @@ function PassportCard() {
             {/* Beside the button that produced it, not below the tokens. */}
             <WriteRefused titleKey="settings.mintFailed" error={mint.error} />
             <div className="form-actions">
-              <Button small disabled={mint.isPending} onClick={closeMint}>
+              <Button disabled={mint.isPending} onClick={closeMint}>
                 {t("settings.mintCancel")}
               </Button>
               <Button
-                small
                 type="submit"
                 variant="primary"
                 // A passport with no scope is a credential that can do nothing,
@@ -1471,7 +1462,6 @@ function PassportRow({
             <Badge tone="danger">{t("settings.revoked")}</Badge>
           ) : (
             <Button
-              small
               variant="danger"
               // The row is remembered from the CLICK rather than from
               // `confirmId`: the focus resolver runs as the dialog closes, by
@@ -1678,7 +1668,7 @@ function ToolRow({
           <span className="settings-run">
             <AutonomyDot tier={dotTier(tool.tier)} />
             {tool.required_scope && <Badge>{tool.required_scope}</Badge>}
-            {tool.egress && <Badge tone="warn">{t("tools.egress")}</Badge>}
+            {tool.egress && <Badge tone="warning">{t("tools.egress")}</Badge>}
           </span>
         }
       />
@@ -1783,7 +1773,7 @@ function ResetDataCard() {
             label={t("settings.resetDataLabel")}
             description={t("settings.resetDataDesc")}
             control={
-              <Button small variant="danger" onClick={() => setOpen(true)}>
+              <Button variant="danger" onClick={() => setOpen(true)}>
                 {t("settings.resetDataButton")}
               </Button>
             }
@@ -1801,7 +1791,7 @@ function ResetDataCard() {
           </p>
         )}
         {summary?.drain_timed_out && (
-          <p className="t-caption settings-danger-warning" role="alert">
+          <p className="settings-danger-warning" role="alert">
             {t("settings.resetDataDrainWarning")}
           </p>
         )}
@@ -1833,12 +1823,10 @@ function ResetDataCard() {
       >
         <p>{t("settings.resetDataConfirmBody")}</p>
         {workspaceName ? (
-          <p className="t-caption">
+          <p>
             {t("settings.resetDataConfirmName")}{" "}
             {/* userSelect:all lets one click select the whole name to copy */}
-            <code style={{ userSelect: "all", fontWeight: 600 }}>
-              {workspaceName}
-            </code>
+            <code style={{ userSelect: "all" }}>{workspaceName}</code>
           </p>
         ) : null}
         <TextInput
@@ -1897,7 +1885,7 @@ function AutonomyCard() {
             control={
               <span className="settings-run">
                 <AutonomyDot tier="confirm" />
-                <Badge tone="warn">{t("settings.locked")}</Badge>
+                <Badge tone="warning">{t("settings.locked")}</Badge>
               </span>
             }
           />
@@ -2116,12 +2104,11 @@ function AuditLogRow({
           </span>
         )}
         <Button
-          small
           aria-expanded={expanded}
           aria-label={t("settings.auditExpand")}
           onClick={() => setExpanded((value) => !value)}
         >
-          <ChevronDown aria-hidden size={14} className="expander-chevron" />
+          <ChevronDown aria-hidden className="expander-chevron" />
         </Button>
       </div>
       {expanded && (
@@ -2212,9 +2199,7 @@ function AuditLogEntries({
       <EmptyState>
         <p>{t("common.error")}</p>
         <p className="audit-error-cause">{problemMessageOf(query.error, t)}</p>
-        <Button small onClick={() => query.refetch()}>
-          {t("common.retry")}
-        </Button>
+        <Button onClick={() => query.refetch()}>{t("common.retry")}</Button>
       </EmptyState>
     );
   }

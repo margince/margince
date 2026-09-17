@@ -11,7 +11,7 @@ import { SurfaceState } from "../design-system/surfacestate";
 import { stable } from "../format/collate";
 import { useT } from "../i18n";
 import { AddEmploymentModal } from "./addemploymentmodal";
-import { problemMessageOf, throwProblem } from "./common";
+import { problemMessageOf, RefusalLine, throwProblem } from "./common";
 import { EmploymentRow } from "./contactemploymentrow";
 import {
   bodyState,
@@ -188,7 +188,7 @@ export function Employers({ view }: Readonly<{ view: Contact360 }>) {
       title={t("contact.rail.employmentTitle")}
       titleAction={
         canEdit ? (
-          <Button small variant="ghost" onClick={() => setAdding(true)}>
+          <Button variant="ghost" onClick={() => setAdding(true)}>
             {t("contact.rail.addEmployment")}
           </Button>
         ) : undefined
@@ -242,10 +242,9 @@ export function Employers({ view }: Readonly<{ view: Contact360 }>) {
         {noPrimaryEmployer && (
           <p className="t-caption">{t("contact.rail.noPrimaryEmployer")}</p>
         )}
-        {more.isError && <p role="alert">{problemMessageOf(more.error, t)}</p>}
+        {more.isError && <RefusalLine error={more.error} />}
         {more.hasNextPage && (
           <Button
-            small
             pending={more.isFetchingNextPage}
             onClick={() => more.fetchNextPage()}
           >

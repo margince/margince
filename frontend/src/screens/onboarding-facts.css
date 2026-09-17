@@ -14,12 +14,9 @@
 .ob-facts-cap {
   margin: 0;
   padding: var(--space-3);
-  border: 1px solid var(--warnBorder);
+  border: 1px solid var(--warningBorder);
   border-radius: var(--r-sm);
-  background: var(--warnSurface);
-  color: var(--textContent);
-  font-size: var(--fs-meta);
-  line-height: var(--lh-normal);
+  background: var(--warningWash);
   text-wrap: pretty;
 }
 .ob-facts-cap:empty {

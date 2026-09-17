@@ -59,8 +59,8 @@ describe("OutcomeBadge", () => {
     ["fired", "badge-success", "Fired"],
     ["failed", "badge-danger", "Failed"],
     ["blocked", "badge-danger", "Blocked"],
-    ["skipped", "badge-warn", "Skipped"],
-    ["queued_for_approval", "badge-warn", "Queued"],
+    ["skipped", "badge-warning", "Skipped"],
+    ["queued_for_approval", "badge-warning", "Queued"],
   ];
 
   it.each(cases)(

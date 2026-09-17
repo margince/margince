@@ -61,7 +61,7 @@ export function ContactMattersCard({
         );
         return (
           <PanelRow className="pe-row" key={row.kind}>
-            <span className="pe-row-label">{t(row.labelKey)}</span>
+            <span>{t(row.labelKey)}</span>
             <span className="pe-row-value">
               {match ? match.body : <Absent />}
             </span>
@@ -89,9 +89,7 @@ export function hasMatters(view: Contact360): boolean {
 // says so, rather than disappearing and leaving the card looking complete.
 function Absent(): ReactNode {
   const t = useT();
-  return (
-    <span className="pe-rail-value-muted">{t("contact.matters.absent")}</span>
-  );
+  return <span>{t("contact.matters.absent")}</span>;
 }
 
 // --- Open deal and buying role (§5.8) --------------------------------------
@@ -177,12 +175,11 @@ export function ContactCommercialCard({
 
         {deal && (
           <Button
-            small
             className="pe-rail-more"
             onClick={() => navigate({ screen: "deals", id: deal.deal_id })}
           >
             {t("contact.commercial.openDeal")}{" "}
-            <ExternalLink size={13} aria-hidden="true" />
+            <ExternalLink aria-hidden="true" />
           </Button>
         )}
       </PanelBody>

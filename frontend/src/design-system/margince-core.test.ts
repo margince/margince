@@ -113,7 +113,7 @@ describe("the Core's material", () => {
     // Absent rather than merely unused, so no future rule can reach for one.
     for (const token of [
       "--success",
-      "--warn",
+      "--warning",
       "--danger",
       "--textTertiary",
       "--textMuted",

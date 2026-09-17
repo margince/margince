@@ -341,10 +341,8 @@ export function DeckStack({
           count, and "0 more behind" is a line of furniture over the one card
           a reader is being asked to answer — the plate itself already says
           it is the only one, by having no edges peeking out from under it. */}
-      {behind > 0 && (
-        <p className="t-caption ddeck-behind">{labels.behind(behind)}</p>
-      )}
-      <p className="t-caption ddeck-keys">{labels.keys}</p>
+      {behind > 0 && <p className="t-caption">{labels.behind(behind)}</p>}
+      <p className="t-caption">{labels.keys}</p>
     </div>
   );
 }

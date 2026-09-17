@@ -261,7 +261,7 @@ function ContactsSection({
               tab twice under two names. */}
           {state === "empty" && (
             <div className="card-actions">
-              <Button small variant="ghost" onClick={() => onTab("contacts")}>
+              <Button variant="ghost" onClick={() => onTab("contacts")}>
                 {t("co.rail.contacts.add")}
               </Button>
             </div>
@@ -270,7 +270,7 @@ function ContactsSection({
       )}
       {state === "ready" && (
         <div className="card-actions">
-          <Button small variant="ghost" onClick={() => onTab("contacts")}>
+          <Button variant="ghost" onClick={() => onTab("contacts")}>
             {count != null
               ? t("co.rail.all", { count: formatNumber(count, locale) })
               : t("co.rail.allUncounted")}
@@ -318,7 +318,7 @@ function ContactCard({ contact }: Readonly<{ contact: Contact }>) {
                 </>
               }
             >
-              <p className="t-caption">{t("co.rail.contacts.inTouch")}</p>
+              <p>{t("co.rail.contacts.inTouch")}</p>
               <ul className="co-contact-routes-list">
                 {colleagues.map((route) => (
                   // Keyed on the id, not the name: two colleagues can share a
@@ -433,9 +433,7 @@ export function SignalsSection({ companyId }: Readonly<{ companyId: string }>) {
               <span className="co-signal-title">
                 {signalKindLabel(signal.kind, t)}
               </span>
-              <span className="co-signal-summary t-caption">
-                {signal.summary}
-              </span>
+              <span className="co-signal-summary">{signal.summary}</span>
               {/* A signal ABOUT one of the account's projects sends the
                   reader to that project: the summary names it, the link
                   opens it. An account- or contact-subject signal already

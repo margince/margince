@@ -131,7 +131,7 @@ function ConsentProofLog({ events }: Readonly<{ events: ConsentEvent[] }>) {
             <span className="tl-body">
               <span className="tl-title">
                 <Badge
-                  tone={event.new_state === "granted" ? "success" : "warn"}
+                  tone={event.new_state === "granted" ? "success" : "warning"}
                 >
                   {humanizeToken(event.new_state)}
                 </Badge>{" "}
@@ -168,10 +168,10 @@ function ConsentProofLog({ events }: Readonly<{ events: ConsentEvent[] }>) {
 // than a silently untoned badge.
 const STATE_TONE: Record<
   ContactConsentState["state"],
-  "success" | "warn" | undefined
+  "success" | "warning" | undefined
 > = {
   granted: "success",
-  withdrawn: "warn",
+  withdrawn: "warning",
   unknown: undefined,
 };
 
@@ -184,9 +184,7 @@ function MutationError({ error }: Readonly<{ error: unknown }>) {
     return null;
   }
   return (
-    <p className="t-caption" style={{ color: "var(--dangerText)" }}>
-      {problemMessageOf(error, t)}
-    </p>
+    <p style={{ color: "var(--dangerText)" }}>{problemMessageOf(error, t)}</p>
   );
 }
 
@@ -290,18 +288,17 @@ function ConsentRow({
             button would promise something every click fails to do. */}
         {mayWrite && (granted || !requiresDoi) && (
           <Button
-            small
             disabled={setState.isPending}
             onClick={() => setState.mutate(granted ? "withdrawn" : "granted")}
           >
             {granted ? t("consent.withdraw") : t("consent.grant")}
           </Button>
         )}
-        <Button small onClick={() => setShowLog((value) => !value)}>
+        <Button onClick={() => setShowLog((value) => !value)}>
           {t("consent.proofLog")}
         </Button>
       </div>
-      {requiresDoi && <p className="t-caption">{t("consent.doiBySubject")}</p>}
+      {requiresDoi && <p>{t("consent.doiBySubject")}</p>}
       {setState.isError && <MutationError error={setState.error} />}
       {showLog && <ConsentProofLog events={events} />}
     </PanelRow>
@@ -363,7 +360,7 @@ export function ConsentSection({
         <PanelBody>
           <EmptyState>
             <p>{t("consent.purposesUnavailable")}</p>
-            <Button small onClick={() => purposesQuery.refetch()}>
+            <Button onClick={() => purposesQuery.refetch()}>
               {t("common.retry")}
             </Button>
           </EmptyState>
@@ -471,7 +468,6 @@ export function ConfirmDetailsAction({
   return (
     <PanelBody className="consent-confirm-ask">
       <Button
-        small
         disabled={ask.isPending}
         reason={unavailableReason}
         data-testid="confirm-details-ask"
@@ -484,7 +480,7 @@ export function ConfirmDetailsAction({
           {t("consent.confirmRecipient", { address: recipient })}
         </p>
       )}
-      <p className="t-caption">{t("consent.askToConfirmWhat")}</p>
+      <p>{t("consent.askToConfirmWhat")}</p>
       {ask.isError && <MutationError error={ask.error} />}
       {ask.data && (
         <p className="t-caption" data-testid="confirm-details-sent">

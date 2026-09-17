@@ -170,11 +170,22 @@ type Story = StoryObj<typeof CorpusAskCard>;
 // and the file plus the line the quote sits on. Every one of those is what
 // makes the sentence checkable, and a card that dropped any of them would
 // still look like an answer.
+// The frame and the wait the two answered frames share, NAMED on each rather
+// than inherited by one from the other.
+//
+// A story that picks up its `play` through a spread is indexed WITHOUT the
+// `play-fn` tag — the indexer reads the object literal in front of it, not what
+// the spread resolves to — and the capture gate keys its settle on that tag. The
+// dark frame was therefore screenshotted 250ms after paint rather than 1.5s,
+// which on this card is before the answer has arrived.
+const answeredCard = askCard("how long are captured messages kept", () =>
+  jsonResponse(ANSWERED),
+);
+const readTheAnswer = seeAnswer(/Captured messages are kept for 400 days/);
+
 export const Answered: Story = {
-  render: askCard("how long are captured messages kept", () =>
-    jsonResponse(ANSWERED),
-  ),
-  play: seeAnswer(/Captured messages are kept for 400 days/),
+  render: answeredCard,
+  play: readTheAnswer,
 };
 
 // The same answer on the dark ground. The "written from the passages" badge is
@@ -182,7 +193,8 @@ export const Answered: Story = {
 // tokens that lift with the dark accent — a badge that reads as a claim about a
 // model in light can go illegible here and nothing else on the card would.
 export const AnsweredDark: Story = {
-  ...Answered,
+  render: answeredCard,
+  play: readTheAnswer,
   globals: { theme: "dark" },
 };
 
@@ -247,14 +259,19 @@ export const Asking: Story = {
 // Nothing carried and nothing typed: the head's indigo and its AI-assisted
 // badge say who answers here, and the one indigo verb on the surface waits with
 // nothing to ask.
+// The resting frame and its wait, named on both for the reason given above the
+// answered pair: a `play` inherited through a spread loses its `play-fn` tag.
+const idleCard = askCard("", () => jsonResponse(ANSWERED));
+const askStaysRefused: Story["play"] = async ({ canvasElement }) => {
+  const submit = await within(canvasElement).findByRole("button", {
+    name: "Ask",
+  });
+  await waitFor(() => expect(submit).toHaveAttribute("disabled"));
+};
+
 export const Idle: Story = {
-  render: askCard("", () => jsonResponse(ANSWERED)),
-  play: async ({ canvasElement }) => {
-    const submit = await within(canvasElement).findByRole("button", {
-      name: "Ask",
-    });
-    await waitFor(() => expect(submit).toHaveAttribute("disabled"));
-  },
+  render: idleCard,
+  play: askStaysRefused,
 };
 
 // The same resting surface on the dark ground. Every indigo on it — the panel's
@@ -262,7 +279,8 @@ export const Idle: Story = {
 // color-mix() of tokens that lift with the dark accent, and a head that reads
 // as a claim about a model in light can go illegible here.
 export const IdleDark: Story = {
-  ...Idle,
+  render: idleCard,
+  play: askStaysRefused,
   globals: { theme: "dark" },
 };
 

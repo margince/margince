@@ -41,9 +41,7 @@ export function ShareViewButton({
   const [open, setOpen] = useState(false);
   return (
     <>
-      <Button small onClick={() => setOpen(true)}>
-        {t("analytics.share.open")}
-      </Button>
+      <Button onClick={() => setOpen(true)}>{t("analytics.share.open")}</Button>
       {open && (
         <ShareDialog
           target={target}
@@ -182,14 +180,10 @@ function ShareLinkReveal({
       }
       onConfirm={copyLink}
       actionsLead={
-        <Button small onClick={onClose}>
-          {t("analytics.share.done")}
-        </Button>
+        <Button onClick={onClose}>{t("analytics.share.done")}</Button>
       }
     >
-      <p id={headingId} className="t-caption">
-        {t("analytics.share.linkWarning")}
-      </p>
+      <p id={headingId}>{t("analytics.share.linkWarning")}</p>
       <pre className="code-block" data-testid="forecast-share-link">
         {url}
       </pre>
@@ -202,9 +196,7 @@ function ShareLinkReveal({
           {t("analytics.share.copyFailed")}
         </Callout>
       )}
-      {!copied && (
-        <p className="t-caption">{t("analytics.share.leaveWarning")}</p>
-      )}
+      {!copied && <p>{t("analytics.share.leaveWarning")}</p>}
     </ConfirmModal>
   );
 }

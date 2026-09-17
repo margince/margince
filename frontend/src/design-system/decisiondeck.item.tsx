@@ -76,9 +76,7 @@ export function DeckItemCard({
                 have to reach a reader who is hearing this page. */}
             <ul className="ddeck-bundle-members">
               {members.map((member) => (
-                <li key={member.id} className="t-caption">
-                  {member.summary ?? member.kind}
-                </li>
+                <li key={member.id}>{member.summary ?? member.kind}</li>
               ))}
             </ul>
           </Disclosure>

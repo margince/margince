@@ -159,7 +159,7 @@ async function pickFilter(attribute: string, value: string) {
     within(step("Filter")).getByRole("button", { name: attribute }),
   );
   await userEvent.click(
-    within(step(attribute)).getByRole("button", { name: value }),
+    within(step(attribute)).getByRole("radio", { name: value }),
   );
 }
 

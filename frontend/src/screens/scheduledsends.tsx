@@ -94,6 +94,20 @@ const GROUP_EMPTY: Record<Group, MessageKey> = {
   closed: "sched.group.closedEmpty",
 };
 
+// What each status SAYS, in the five-state vocabulary. `scheduled` is work
+// still in flight, `sent` is the favourable outcome, `held` needs a human
+// before it can go, and `cancelled` is a send that will never happen. The
+// ternary this replaces gave every status but `held` the neutral pill, so a
+// send that landed and one a rep withdrew were the same grey word.
+const STATUS_TONE: Record<Status, "info" | "success" | "warning" | undefined> =
+  {
+    scheduled: "info",
+    released: "info",
+    sent: "success",
+    cancelled: undefined,
+    held: "warning",
+  };
+
 const STATUS_LABEL: Record<Status, MessageKey> = {
   scheduled: "sched.status.scheduled",
   released: "sched.status.released",
@@ -232,7 +246,6 @@ function MoveControl({
   if (!open) {
     return (
       <Button
-        small
         onClick={() => {
           setDraft(localDateTimeValue(send.scheduled_at));
           setOpen(true);
@@ -255,7 +268,6 @@ function MoveControl({
         style={{ maxWidth: 220 }}
       />
       <Button
-        small
         variant="primary"
         disabled={fields.scheduled_at === undefined}
         pending={pending}
@@ -271,9 +283,7 @@ function MoveControl({
       >
         {t("sched.moveSave")}
       </Button>
-      <Button small onClick={() => setOpen(false)}>
-        {t("sched.moveCancel")}
-      </Button>
+      <Button onClick={() => setOpen(false)}>{t("sched.moveCancel")}</Button>
     </>
   );
 }
@@ -328,16 +338,14 @@ function SendRow({
           <br />
           <Moment send={send} readerZone={readerZone} />
         </span>
-        {send.status === "held" ? (
-          <Badge tone="warn">{t(STATUS_LABEL[send.status])}</Badge>
-        ) : (
-          <Badge>{t(STATUS_LABEL[send.status])}</Badge>
-        )}
+        <Badge tone={STATUS_TONE[send.status]}>
+          {t(STATUS_LABEL[send.status])}
+        </Badge>
         {actionable && (
           <MoveControl send={send} pending={movePending} onMove={onMove} />
         )}
         {actionable && (
-          <Button small variant="danger" onClick={() => onWithdraw(send)}>
+          <Button variant="danger" onClick={() => onWithdraw(send)}>
             {t("sched.withdraw")}
           </Button>
         )}
@@ -348,9 +356,7 @@ function SendRow({
           unmapped token prints nothing rather than the token — a reason nobody
           can act on is worse than the sentence above it standing alone. */}
       {heldReasonKey && (
-        <p className="t-caption" style={{ marginTop: "var(--space-1)" }}>
-          {t(heldReasonKey)}
-        </p>
+        <p style={{ marginTop: "var(--space-1)" }}>{t(heldReasonKey)}</p>
       )}
       {/* The held reason above says a gate stopped it; this says WHOSE decision
           that was and whether anybody may change it, in the same words the

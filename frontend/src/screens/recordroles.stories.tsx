@@ -105,19 +105,29 @@ export const AdminDark: Story = {
   render: story(ADMIN),
 };
 
+// The press both add-form frames make, named rather than inherited.
+//
+// A story that picks up its `play` through a spread of another story is indexed
+// WITHOUT the `play-fn` tag — the indexer reads the object literal in front of
+// it, not what the spread resolves to — and the capture gate keys its settle on
+// that tag. The dark frame was therefore screenshotted 250ms after paint rather
+// than 1.5s, which is before the dialog this story is named for has opened.
+const openTheAddForm: Story["play"] = async ({ canvasElement }) => {
+  const canvas = within(canvasElement);
+  await userEvent.click(
+    await canvas.findByRole("button", { name: "Add role" }),
+  );
+};
+
 // The add form is a dialog behind the header verb rather than a row under the
 // list, where its own label would have read as one of the roles.
 export const AddingRole: Story = {
   render: story(ADMIN),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(
-      await canvas.findByRole("button", { name: "Add role" }),
-    );
-  },
+  play: openTheAddForm,
 };
 
 export const AddingRoleDark: Story = {
-  ...AddingRole,
+  render: story(ADMIN),
+  play: openTheAddForm,
   globals: { theme: "dark" },
 };

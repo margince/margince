@@ -14,8 +14,6 @@
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  font: inherit;
-  color: inherit;
   background: transparent;
   border: 0;
   padding: 2px 4px;
@@ -51,7 +49,6 @@
  * column edge to edge, which is the one thing it should be bigger than the
  * value for — there has to be room to type. */
 .inlinetext-edit .input {
-  font: inherit;
   padding: 1px 3px; /* ds:ignore the border's own 1px + this = the resting button's 2px/4px, so the glyph does not move; a scale step here would move it */
   margin: -2px -4px;
   width: calc(100% + 8px);
@@ -61,7 +58,6 @@
  * noticed the underline — two affordances at once would be one more thing to
  * read than free text needs. */
 .inline-editable-caret {
-  color: var(--textMeta);
   opacity: 0;
   transition: opacity var(--dur-state);
 }
@@ -96,7 +92,7 @@
 /* A suggested value stands in for an empty field, muted: the fact is the
    record's, but not yet this field's. */
 .inlinetext-suggested {
-  color: var(--textMeta);
+  color: var(--textSecondary);
 }
 
 /* A choice nobody has made, where the reader may not make one either: the
@@ -105,5 +101,5 @@
    (fieldgrid.css). Carried only on the unset case, so a real value is never
    dimmed by the same rule. */
 .inlinechoice-unset {
-  color: var(--textMeta);
+  color: var(--textSecondary);
 }

@@ -29,10 +29,6 @@
   gap: 8px;
   flex-wrap: wrap;
 }
-.search-hit-snippet {
-  color: var(--textContent);
-  font-size: var(--fs-sm);
-}
 
 /* An email hit is the canonical row, which owns its own padding, typography
    and focus treatment. The host supplies position and nothing else — the same

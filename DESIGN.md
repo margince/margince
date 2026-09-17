@@ -154,16 +154,47 @@ Rules 1 and 5 are already held by gates; this file adds 2, 3 and 4.
 ## 3. Colour
 
 The semantic split is unchanged: `--accent` (emerald) is brand and primary
-action, `--ai*` (indigo) is agent provenance, `--success` / `--warn` /
-`--danger` are status. Those names are the ones `tokens.test.ts` pins, together
-with `--ai`, `--aiLight`, `--aiMed` and `--aiText`. What changes is the ground,
-which is lit, and the surface, which is one translucent pane per zone.
+action, `--ai*` (indigo) is agent provenance, and the five state hues report how
+something went. Those names are the ones `tokens.test.ts` pins, together with
+`--ai`, `--aiLight`, `--aiMed` and `--aiText`. What changes is the ground, which
+is lit, and the surface, which is one translucent pane per zone.
+
+**Five states, and a screen may not invent a sixth.** *Information* is the
+neutral report and the work still in flight — an info mark, a spinner's ring, a
+row a job has not finished writing. *Success* is a favourable outcome. *Warning*
+is caution BEFORE the fact: the sentence that stops a mistake while it can still
+be stopped. *Danger* is the serious or irreversible one. *Discovery* is what is
+new to this reader — onboarding, a capability they have not met — and it is the
+one of the five that is not a verdict about the record.
+
+Each state has ONE base, and it is the only value anybody picks: `--info`
+`#0485f7`, `--success` `#17c964`, `--warning` `#f5a524`, `--danger` `#ff383c`,
+`--discovery` `#964ac0` in light, with warning, danger and discovery stepping to
+a lighter tone the dark ground can carry. Everything else in a family is derived
+from that base in `tokens.css` and nowhere else — the ink (`--<state>Text`, the
+base walked in OKLCh lightness until it clears 4.5:1 on every ground it lands on
+and on its own tint), the opaque badge tint (`--<state>Surface`), the
+translucent wash (`--<state>Bg`) and the hairline (`--<state>Border`). A filled
+control is grounded in the ink and not in the base, because a base is tuned to be
+SEEN at a bar's size and no ink reads on the set of them. `tokens.test.ts` reads
+the five states off the sheet, measures every pair in both themes, and fails when
+a state is missing from either.
+
+**The neutral ink is TWO tokens, not the four-rung ladder below.**
+`--textPrimary` is the ink that carries — names, headings, body — at `#15201b`
+in light and `#fff` in dark; `--textSecondary` is the one that supports, at
+`lch(40% 1 282)` in light and `lch(63.304% 1.425 272)` in dark, and a
+placeholder is the first thing wearing it. The `--ink` / `--ink2` / `--ink3` /
+`--ink4` row in the table below is what those two replace: four rungs is a
+question ("how quiet is this?") answered four ways, and every pair the product
+actually draws is measured against every ground it lands on in
+`tokens.test.ts`, which four unmeasured greys never were.
 
 The tables below are the design TARGET, and they name some rungs the tree does
 not carry yet — `--ink4`, `--aiBg`, `--aiLine`, `--ok`, `--bad`. Read a name that
 does not appear in `frontend/src` as a value still to be introduced, not as one
 to reach for today: the shipped spelling of the agent tint is `--aiLight`, its
-edge is `--aiMed`, and status is `--success` / `--warn` / `--danger`.
+edge is `--aiMed`, and the state hues are the five named above.
 
 ### Light (the default)
 
@@ -174,12 +205,11 @@ edge is `--aiMed`, and status is `--success` / `--warn` / `--danger`.
 | `--pane` / `--paneEdge` | `rgba(255,255,255,.72)` + `blur(12px)` / `rgba(16,26,21,.08)` | A zone, the details panel, a board card, a control at rest. |
 | `--bg2` / `--bg3` | `rgba(255,255,255,.55)` / `rgba(16,26,21,.05)` | The sidebar (glass over the glow, `blur(20px)`); a pill, a keycap, the active sidebar row. |
 | `--bgChip` | `rgba(16,26,21,.07)` | The shipped spelling of `--bg3`'s pill and keycap: the fill under a badge, a key-cap, a segmented strip, the trough of a meter. TRANSLUCENT, so a chip reads one step deeper than whatever ground it lands on — an opaque value can only be a step off one, and on a plate drawn in the same grey it is a chip nobody can see. `.07` and no deeper: `--accentText` on this fill reads 4.57:1 over `--bgCard`, the worst of the four grounds a chip lands on, and `.08` would take that to 4.49:1 — under the floor. |
-| `--textChip` | `#57645e` | Meta text ON `--bgChip`, and a token rather than `--textMeta` because that fill costs the four per cent of contrast headroom `--textMeta` had — 4.68:1 on `--bgCard`, and anything laid under it fails. The same split, for the same reason, as `--accentText` and `--tealText`. |
 | `--line` / `--line2` | `rgba(16,26,21,.08)` / `.16` | The hairline between rows; a control's outline, the spine's axis. |
 | `--ink` / `--ink2` / `--ink3` / `--ink4` | `#101a15` / `#33403a` / `#66736c` / `#9aa59f` | Names and values / body / labels and meta / placeholders and dates. |
 | `--accent` / `--accentText` / `--accentBg` | `#0b7a53` / `#0a6f4b` / `#e8f3ee` | The one filled verb; a link; a selected row or a done stage. |
 | `--ai` / `--aiText` / `--aiBg` / `--aiLine` | `#5b61d6` / `#3f45b0` / `rgba(91,97,214,.09)` / `.35` | The agent's filled verb; its label; the tinted row; the dashed edge of a staged row. |
-| `--ok` / `--warn` / `--bad` | `#15803d` / `#a16207` / `#b91c1c` | Status, as a soft badge — the tint behind a word, lettered in the tone's ink and edged in its hairline — or as a solid one for a count and the one status that must not be missed. |
+| `--info` / `--success` / `--warning` / `--danger` / `--discovery` | `#0485f7` / `#17c964` / `#f5a524` / `#ff383c` / `#964ac0` | The five states, as a soft badge — the tone's `Surface` behind a word, lettered in its `Text` ink and edged in its `Border` — or as a solid one for a count and the one state that must not be missed. |
 
 ### Dark
 
@@ -190,7 +220,7 @@ The same room with the lights down: `--bg #0c1311` (a hair above the mock's
 `#5c6862`, the accent lifted to `#2bb673` with dark ink on it, the indigo text
 lifted to `#b3b7f5`. The chip inverts rather than mirrors: `--bgChip` becomes
 `rgba(255,255,255,.09)`, because a chip on a dark ground has only one direction
-to step, and `--textChip` lifts with it to `#95a69f`. The three-state theme pattern (`:root`,
+to step. The three-state theme pattern (`:root`,
 `prefers-color-scheme` guarded by `:not([data-theme="light"])`,
 `[data-theme="dark"]`) is how they switch.
 
@@ -203,9 +233,9 @@ to step, and `--textChip` lifts with it to `#95a69f`. The three-state theme patt
 - **Indigo is a fact, not a mood.** The agent's read is a row on `--aiBg`; a
   staged change is a row with a dashed `--aiLine` edge until a contact accepts
   it. Nothing else is indigo.
-- **Status is a soft badge before it is a solid one.** A column of statuses
-  is a column of soft badges, one weight down the page; the solid fill is for
-  a count and the one status a reader must not miss.
+- **A state is a soft badge before it is a solid one.** A column of states is a
+  column of soft badges, one weight down the page; the solid fill is for a count
+  and the one state a reader must not miss.
 - **Avatars are neutral.** `--bg3` with `--ink2` initials; a record is told
   apart by its name.
 
@@ -216,18 +246,41 @@ for code alone: a mono face on an amount or a date dressed a business fact as
 machine output and shouted in a dense row, and `tabular-nums` gives a column the
 alignment mono was bought for.
 
+**Size answers the context; level answers the structure.** How big a heading is
+says what it introduces and where — brand and marketing at the top of the
+ladder, a product page's title below that, a component's own title at the
+bottom. Which of `<h1>`–`<h6>` it is written as says where it sits in the page,
+which is how a screen-reader user moves through it: one `<h1>`, descending, no
+level skipped. Neither decision is allowed to settle the other. Body is three
+levels on the same foundation, each carrying the paragraph spacing that
+separates two blocks of its own prose, and weight is meaning rather than
+decoration — and there are exactly three, shipped in both text families and
+loaded as such, so a fourth is a face the browser synthesized: 400 is prose, 500
+is text that sits beside a line icon and most text inside a component, 700 is a
+heading or an emphasis that has earned it.
+
+Everything is rem on the browser's own 1rem = 16px, so a reader who enlarges
+that moves the product with them. The three weights are named tokens
+(`--fontWeightRegular` / `Medium` / `Bold`) that the size tokens read, and the
+whole of the type — size, leading, weight, tracking — is declared in
+`tokens.css` and in no other file: `design-system/type-source.test.ts` fails a
+sheet or a style object that spells any of the four by value.
+
+**Almost none of it is applied yet.** `body` in `app.css` reads `--fontBody`,
+and that is the whole of it: no `h1`–`h6` mapping, no class hooks, and the
+`.t-*` names in `base.css` are role hooks with no rules on them. The tokens and
+the usage rules that go with them live in
+[`frontend/src/design-system/README.md`](frontend/src/design-system/README.md),
+which is what an implementer reads. So every size, weight, tracking and neutral
+ink named anywhere else in this document is a TARGET for that rebuild rather
+than a description of the sheet that ships.
+
 | Role | Family | Where |
 |---|---|---|
-| Display | **Outfit** 600 | A record's name at 24px (`-0.025em`), the Brief greeting at 30px, a zone's title at 16px, the agent's verdict word at 19px, a reading's word at 17px, a reading's figure at 22px (`-0.03em`, tabular). |
-| Body and UI | **Geist** | 13px 400 for everything, 500 for a row's lead and a control, 12px in `--ink3` for meta and labels. Prose at 14px on 1.65, 72ch (§5). |
-| Figures | **Geist**, tabular (`.t-num`) | Every amount, count, percent, duration and date in a row or a cell, at the size and weight of its context. An identifier is plain body type. |
+| Heading | **Outfit** | Every heading, and the one line a record is identified by: its name, the Brief greeting, a zone's title, the agent's verdict word, a reading's word and its figure. |
+| Body and UI | **Geist** | Everything else, prose included. |
+| Figures | **Geist**, tabular (`.t-num`) | Every amount, count, percent, duration and date in a row or a cell. An identifier is plain body type. |
 | Code | **Geist Mono** | `<pre>`, `<code>` and `<samp>` through one rule in `base.css`, and the `.code-block` surface; nothing else. A `<kbd>` is body type. |
-
-- **Weight 600 is for the display face.** Everything that must stand out in a
-  row does it at 500 in the body face.
-- **Uppercase is one thing: the eyebrow** (`.t-eyebrow`, 10.5px, `.08em`,
-  in a lighter ink) — a reading's label, a timeline entry's kind, the TODAY
-  marker. Every other label is sentence case.
 
 ## 5. Space, shape, depth
 
@@ -241,27 +294,9 @@ alignment mono was bought for.
   short.
 - **Type at rest is 13.5px on 1.55**, so a row's second line does not touch
   its first; prose is 14px on 1.65 at 72 characters.
-- **Sizes by role, and there are nine.** `--fs-eyebrow` 10.5 (uppercase
-  kickers, monograms), `--fs-meta` 12 (counts, timestamps, provenance),
-  `--fs-sm` 13 (chips, table cells, helper text), `--fs-body` 13.5 (the
-  default), `--fs-lead` 15 (the paragraph under a heading, and inputs),
-  `--fs-h3` 17 (a card title), `--fs-h2` 20 (a section title), `--fs-h1` 24 (a
-  step title, a record's head), `--fs-display` 32 (a full-viewport moment),
-  plus the two fluid rungs `--fs-display-fluid` and `--fs-hero-fluid` for the
-  first-run surfaces. Nothing in the tree names a length instead — a size half
-  a pixel off a rung is a decision nobody made, and the tree carried 25 of
-  them. `design-system/type.test.ts` fails a tenth value, and a genuine
-  platform floor (iOS zooms a field under 16px) is waived in line with its
-  reason. A role that has a class is spelled as the class: `.t-caption` is
-  quiet grey at the meta size, `.t-sub` the same at the dense size, `.t-label`,
-  `.t-eyebrow`, `.t-h3` and the rest, all in `base.css`. A rule that writes a
-  utility's properties out again under a name of its own stops moving when the
-  utility does, and `design-system/type-one-spelling.test.ts` fails it.
-- **Tracking is a family of three.** `--tracking-eyebrow` 0.08em on an
-  uppercase label, `--tracking-display` -0.03em on the display face,
-  `--tracking-normal` everywhere else. The eyebrow ran 0.02em to 0.14em across
-  eighteen sheets while the token said 0.08em, which is a label that looks
-  different depending on which screen drew it.
+- **A role that has a class is spelled as the class** — `.t-caption`,
+  `.t-sub`, `.t-label`, `.t-eyebrow`, `.t-h3` and the rest, all in `base.css`.
+  What each one draws is §4's rebuild, taken one role at a time.
 - **Radii by role**: 20px for a pane, the details panel and a reading card;
   16px for a board card and the agent's row; 12px for a control; 8px for a chip
   and 4px for a keycap; full for a pill and a monogram.
@@ -467,7 +502,7 @@ glance line for line; what changes is the content of each slot.
 
 | Slot | Company | Contact | Deal | Lead |
 |---|---|---|---|---|
-| Live dot | In conversation | Your move (warn) | Your move (warn) | In motion |
+| Live dot | In conversation | Your move (warning) | Your move (warning) | In motion |
 | Facts | city · industry · size · owner · way in | title · employer · email · phone · way in | account · value · stage · close · owner · partner | title · company · email · source · owner |
 | Verbs (base, never the task) | Write email · Log activity · Add task · more | Write email · Call · Add task · more | Write email · Log activity · Edit deal · more | Qualify · Write email · Edit · Disqualify · more |
 | Readings | Open pipeline · Invoiced · Conversation · Last touch · Next | Whose move · Open promises · Deals she decides · Next meeting · She answers in | The money · The close · Stage · The contacts · Momentum | Company · Score · First response · Next · Your move |
@@ -873,11 +908,11 @@ looks now.
 
 | Primitive | Treatment |
 |---|---|
-| `Button` primary | `--accent` fill, white text, 10px radius, 36px, weight 500. One per view. |
-| `Button` secondary | `--pane` fill, `--line2` outline, `--ink` text, flat. Icon-only at 36×36 for the overflow. |
+| `Button` primary | `--accent` fill, white text, 10px radius, `--controlHeight` (32px), `--fontWeightMedium`. One per view. |
+| `Button` secondary | `--pane` fill, `--line2` outline, `--ink` text, flat. Icon-only on the same `--controlHeight` square for the overflow — there is one control size, not two. |
 | `Button` ghost | No outline, `--ink2` text; hover `--bg3`. |
 | `Button` danger | Outlined in `--bad`; fills only inside a `ConfirmModal`. |
-| `TextInput` / `Select` | White, `--line2` outline, 36px, 10px radius; focus is a 2px emerald ring. Label above at 12px 500; helper below at 12px in `--ink3`. |
+| `TextInput` / `Select` | White, `--line2` outline, `--controlHeight`, 10px radius; focus is a 2px emerald ring. Label above at 12px 500; helper below at 12px in `--ink3`. |
 | `Badge` | One size (20px: an 18px line inside a 1px edge, 12px 500, full radius), never capitals. `soft` by default: the tone's tint behind the word in the tone's ink, edged in a hairline of the same tone — the record's standing badges beside its name, a status in a row. `primary` is the solid fill with its edge left clear, for a count and the one status that must not be missed. A glyph, when there is one, sits left of the word; the agent's badge always carries the sparkles. |
 | `Chip` | A fact a reader can act on rather than a status: a pill on the elevated ground with a neutral hairline and a glyph, a link when the fact has somewhere to go, and a hover that says so. A badge is the other thing — a tinted status, edged in its tone, that nobody presses. |
 | `Panel` | Becomes a **zone pane**: `--pane` with a `--paneEdge` and a 20px corner; inside, a display-face title with its count and its verb, a hairline, rows. `PanelPlate` (the inset well) becomes a row on `--bg3`. |
@@ -888,8 +923,8 @@ looks now.
 | `SegmentedControl` | `--bg3` track, white pressed segment on the resting shadow, 12px. |
 | `Modal` | White, 8px radius, `--shadow-pop`, a scrim of `rgba(24,24,27,.4)`. The drawer form slides from the right with the same surface. |
 | `EmptyState` | Left-aligned in the zone it belongs to, `--ink3`, one sentence and one verb. |
-| `Callout` | An alert's anatomy on the pane's ground, and ONE of them: the tone's own glyph on the heading's first line, the heading beside it in the tone's ink, an optional body in ordinary ink under it, the verbs right-aligned at the end of that line and the dismiss after them. The heading is mandatory and everything else optional, so a bare heading is the commonest callout in the product; below 640px the verbs drop under the body. Five tones — `info`, `accent` (the emphatic ask, in the brand accent, and never in indigo, which claims a machine wrote what follows), `warn`, `danger`, `success` — and tone reaches the glyph and the heading and nothing else, never a filled coloured box. The dot it replaced was dots differing only in hue; the shape is what says which tone it is. No `className`: a notice that wanted its own edge was a second callout wearing this one's name. |
-| `StagingCard` / `DecisionCard` | The agent's row: `--aiBg`, 14px radius, the indigo mark on its own tile (no label beside it: the tile is the claim), the verdict word at 15px 600 (amber when warn, green when calm), the sentence in `--ink`, "What this rests on · n sources" in `--aiText`, the agent's verb in `--ai`. A staged change is a row with a dashed `--aiLine` edge, Accept and Dismiss. |
+| `Callout` | An alert's anatomy on the pane's ground, and ONE of them: the tone's own glyph on the heading's first line, the heading beside it in the tone's ink, an optional body in ordinary ink under it, the verbs right-aligned at the end of that line and the dismiss after them. The heading is mandatory and everything else optional, so a bare heading is the commonest callout in the product; below 640px the verbs drop under the body. Seven tones — `info`, `accent` (the emphatic ask, in the brand accent, and never in indigo, which claims a machine wrote what follows), `success`, `warning`, `danger`, `discovery` (something NEW to this reader, the one tone that is no verdict) and `ai` — and tone reaches the glyph and the heading and nothing else, never a filled coloured box. The dot it replaced was dots differing only in hue; the shape is what says which tone it is. No `className`: a notice that wanted its own edge was a second callout wearing this one's name. |
+| `StagingCard` / `DecisionCard` | The agent's row: `--aiBg`, 14px radius, the indigo mark on its own tile (no label beside it: the tile is the claim), the verdict word at 15px 600 (amber when warning, green when calm), the sentence in `--ink`, "What this rests on · n sources" in `--aiText`, the agent's verb in `--ai`. A staged change is a row with a dashed `--aiLine` edge, Accept and Dismiss. |
 | `Kbd` | 10.5px in `--ink4` with a `--line` outline, 4px radius. On the search field and the ask field. |
 | `Spine` | The product's own spine: per stop a date, a 2px accent rule with a 9px dot at its start, a title, a detail; the gap stop at 1.5× width as a 26px amber day count over a dashed amber rule with no dot; today as a 2px black bar with TODAY and the date under it; dotted grey and hollow dots ahead of it. |
 | `RecordTimeline` | The rail: a 76px date column in tabular figures, a 1px full-height rail with a mark per kind (solid, hollow, indigo, dashed indigo, circled glyph for a thread), the kind in uppercase, direction words, title, the message text clamped to three lines, a meta line; threads as a card on the rail. |

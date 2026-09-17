@@ -47,20 +47,14 @@
   flex: none;
 }
 
-/* The provider NAMES the block it heads, so it reads at content size — the
- * panel's own header band is a quiet label for the card, not the subject. The
- * header is a flex row whose rhythm is its own gap; a heading margin would
- * break the name's baseline away from the mark and the badge it sits between.
- * A registry key has no spaces to break on, so it wraps anywhere rather than
- * pushing the badge off the row. */
+/* The provider NAMES the block it heads. The header is a flex row whose rhythm
+ * is its own gap; a heading margin would break the name's baseline away from
+ * the mark and the badge it sits between. A registry key has no spaces to break
+ * on, so it wraps anywhere rather than pushing the badge off the row. */
 .provider-name {
   margin: 0;
   min-width: 0;
   overflow-wrap: anywhere;
-  font-size: var(--fs-body);
-  font-weight: var(--fw-semibold);
-  /* The provider's own capitalization, not the lowercase registry key. */
-  text-transform: capitalize;
 }
 
 /* A reading inside a stacked row's control column. The column is a flex row, so
@@ -78,8 +72,6 @@
  * gap would space this pair differently from every other row on the page. */
 .provider-block-hint {
   margin: 0;
-  font-size: var(--fs-sm);
-  color: var(--textContent);
 }
 
 /* One row per credit pool. The grid's term/value split is proportional, so on a
@@ -96,13 +88,10 @@
 .provider-spend-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: var(--fs-sm);
 }
 
 .provider-spend-table th {
   text-align: left;
-  font-weight: var(--fw-medium);
-  color: var(--textMeta);
   padding-bottom: var(--space-2);
   border-bottom: 1px solid var(--borderSubtle);
 }
@@ -135,12 +124,6 @@
 
 .provider-spend-table tr:last-child td {
   border-bottom: none;
-}
-
-/* A held figure is not a charge. It reads quieter than the total beside it so
- * nobody adds the two together by eye. */
-.provider-held {
-  color: var(--textMeta);
 }
 
 /* Why the write a row just started was refused, under that row at its full
@@ -178,5 +161,4 @@
    changes between reads should not shift the row's width as its digits change. */
 .provider-backlog-count {
   font-variant-numeric: tabular-nums;
-  color: var(--textContent);
 }

@@ -18,6 +18,7 @@ import {
   PendingBody,
 } from "../design-system/atoms";
 import { DateInput, isISODate } from "../design-system/dateinput";
+import { Heading } from "../design-system/heading";
 import { SourceEvidence } from "../design-system/sourceevidence";
 import { calendarDay, dueInstant } from "../format/calendarday";
 import { formatDate, formatDateTime } from "../format/format";
@@ -183,7 +184,6 @@ export function TaskQuickActions({
     <>
       {showComplete && (
         <Button
-          small
           variant="primary"
           disabled={pending}
           onClick={() =>
@@ -195,7 +195,6 @@ export function TaskQuickActions({
       )}
       {nextDue && (
         <Button
-          small
           disabled={pending}
           onClick={() =>
             update.mutate({
@@ -337,16 +336,14 @@ export function TaskDetailModal({
   return (
     <Modal open onClose={onClose} labelledBy={titleId} placement="right">
       <div className="drawer-head task-detail-head">
-        <h2 id={titleId} className="t-h2">
+        <Heading size="large" id={titleId} className="t-h2">
           {task?.subject ?? t("tasks.detail")}
-        </h2>
+        </Heading>
       </div>
       <div className="drawer-body">
         {query.isPending && <PendingBody label={t("tasks.detailLoading")} />}
         {query.isError && (
-          <p className="t-caption form-error">
-            {problemMessageOf(query.error, t)}
-          </p>
+          <p className="form-error">{problemMessageOf(query.error, t)}</p>
         )}
         {task && (
           <div className="form-stack">
@@ -449,14 +446,12 @@ function SourceActivity({
   const meeting: Activity | undefined = query.isError ? undefined : query.data;
   return (
     <Modal open onClose={onClose} labelledBy={titleId}>
-      <h2 id={titleId} className="t-h2 modal-title">
+      <Heading size="large" id={titleId} className="t-h2 modal-title">
         {meeting?.subject ?? t("tasks.source")}
-      </h2>
+      </Heading>
       {query.isPending && <PendingBody label={t("tasks.detailLoading")} />}
       {query.isError && (
-        <p className="t-caption form-error">
-          {problemMessageOf(query.error, t)}
-        </p>
+        <p className="form-error">{problemMessageOf(query.error, t)}</p>
       )}
       {meeting && (
         <div className="form-stack">

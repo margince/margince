@@ -408,7 +408,7 @@ function WorklistBody({
           what Callout is for. */}
           {missing.length > 0 && (
             <Callout
-              tone="warn"
+              tone="warning"
               kind="standing"
               title={t("worklist.partialTitle")}
             >

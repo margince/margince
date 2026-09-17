@@ -4,7 +4,6 @@
 
 .confirm-intro {
   margin: var(--space-2) 0 var(--space-6);
-  color: var(--textMeta);
 }
 
 .confirm-fields {
@@ -23,7 +22,6 @@
 }
 
 .confirm-readonly {
-  color: var(--textMeta);
   padding: var(--space-2) 0;
 }
 
@@ -42,10 +40,8 @@
   background: none;
   border: none;
   padding: 0;
-  color: var(--textTertiary);
   text-decoration: underline;
   cursor: pointer;
-  font: inherit;
 }
 
 .confirm-decline[aria-pressed="true"],
@@ -55,7 +51,6 @@
 
 .confirm-provenance {
   margin: var(--space-6) 0;
-  color: var(--textMeta);
 }
 
 .confirm-provenance ul {

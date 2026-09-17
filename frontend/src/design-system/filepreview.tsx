@@ -16,6 +16,7 @@ import { useT } from "../i18n";
 import { EmptyState, Modal, PendingBody } from "./atoms";
 import { IconAction } from "./iconaction";
 import "./filepreview.css";
+import { Heading } from "./heading";
 
 /**
  * One stored file, opened over the page it was clicked on.
@@ -137,15 +138,18 @@ function FilePreviewDialog({
       {file !== null && (
         <div className="file-preview">
           <div className="file-preview-head">
-            <h2 id={TITLE_ID} className="t-h3 file-preview-name">
+            <Heading
+              size="large"
+              id={TITLE_ID}
+              className="t-h3 file-preview-name"
+            >
               {file.filename}
-            </h2>
+            </Heading>
             <div className="file-preview-verbs">
               {(file.bearer === undefined || object.status === "ready") && (
                 <IconAction
-                  small
                   label={t("filePreview.download")}
-                  icon={<Download size={15} aria-hidden="true" />}
+                  icon={<Download aria-hidden="true" />}
                   onClick={() => save(file, object)}
                 />
               )}
@@ -158,9 +162,8 @@ function FilePreviewDialog({
                   paragraph hanging off the corner of the dialog. */}
               {object.status === "ready" && (
                 <IconAction
-                  small
                   label={t("filePreview.print")}
-                  icon={<Printer size={15} aria-hidden="true" />}
+                  icon={<Printer aria-hidden="true" />}
                   onClick={() => printing(frame.current)}
                 />
               )}

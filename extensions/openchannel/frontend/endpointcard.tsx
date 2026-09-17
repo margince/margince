@@ -70,10 +70,8 @@ export function EndpointCard({
   const canChange = useCanWrite(ENDPOINT_OBJECT, "update");
   return (
     <>
-      <SectionHeader
-        title={t("extOpenchannel.endpoint.title")}
-        sub={t("extOpenchannel.endpoint.sub")}
-      />
+      <SectionHeader title={t("extOpenchannel.endpoint.title")} />
+      <p>{t("extOpenchannel.endpoint.sub")}</p>
       {endpoint ? (
         <OpenedEndpoint endpoint={endpoint} canChange={canChange} />
       ) : (
@@ -107,7 +105,7 @@ function AbsentEndpoint({ canOpen }: Readonly<{ canOpen: boolean }>) {
   return (
     <Stack gap="4">
       <p>
-        <Badge tone="warn">{t("extOpenchannel.endpoint.absent")}</Badge>
+        <Badge tone="warning">{t("extOpenchannel.endpoint.absent")}</Badge>
       </p>
       {canOpen ? (
         <Row>
@@ -147,7 +145,7 @@ function OpenedEndpoint({
         {endpoint.enabled ? (
           <Badge tone="success">{t("extOpenchannel.endpoint.enabled")}</Badge>
         ) : (
-          <Badge tone="warn">{t("extOpenchannel.endpoint.paused")}</Badge>
+          <Badge tone="warning">{t("extOpenchannel.endpoint.paused")}</Badge>
         )}
       </p>
       <FactList numeric facts={facts} />
@@ -217,7 +215,7 @@ function SigningSecret({ endpointId }: Readonly<{ endpointId: string }>) {
       {secret ? (
         <>
           <Callout
-            tone="warn"
+            tone="warning"
             kind="outcome"
             title={t("extOpenchannel.secret.shownOnceTitle")}
           >

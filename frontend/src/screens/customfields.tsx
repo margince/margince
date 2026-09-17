@@ -25,6 +25,7 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
@@ -53,7 +54,7 @@ import { stable } from "../format/collate";
 // immutable cf_-prefixed API key and the pending DDL are shown before Confirm so
 // the schema change is legible, a structural-sounding label is refused up front,
 // and the 🟡 gate states that Confirm writes a live column + an audit row. This
-// is NOT the ApprovalGate (Accept/Edit/Dismiss triad) — it is a `warn` Callout,
+// is NOT the ApprovalGate (Accept/Edit/Dismiss triad) — it is a `warning` Callout,
 // which is what the surface saying something about itself already looks like
 // everywhere else.
 
@@ -117,9 +118,9 @@ export function FieldBuilder({
     // A picklist without an option is not a picklist — the last row is a floor,
     // not a delete target, so the intent is surfaced as a toast, not swallowed.
     if (options.length <= 1) {
-      // `mark: false`: this is a refusal, and the completion dot beside it said
-      // the opposite of what the sentence says.
-      toast.show(t("cf.lastOptionBlocked"), { mark: false });
+      // `danger`: this is a refusal, and the completion dot the default tone
+      // draws said the opposite of what the sentence says.
+      toast.show(t("cf.lastOptionBlocked"), { tone: "danger" });
       return;
     }
     setOptions((current) => current.filter((_, i) => i !== idx));
@@ -135,7 +136,7 @@ export function FieldBuilder({
   return (
     <div className="cf-builder">
       <div className="cf-builder-head">
-        <p className="cf-hint t-caption">{t("cf.builder.intro")}</p>
+        <p className="cf-hint">{t("cf.builder.intro")}</p>
         <Badge>{t("cf.builder.noCode")}</Badge>
       </div>
 
@@ -209,7 +210,6 @@ export function FieldBuilder({
                   onChange={(event) => setOptionAt(idx, event.target.value)}
                 />
                 <Button
-                  small
                   iconOnly
                   aria-label={t("cf.removeOption")}
                   onClick={() => removeOption(idx)}
@@ -219,10 +219,7 @@ export function FieldBuilder({
               </div>
             ))}
           </div>
-          <Button
-            small
-            onClick={() => setOptions((current) => [...current, ""])}
-          >
+          <Button onClick={() => setOptions((current) => [...current, ""])}>
             {t("cf.addOption")}
           </Button>
         </div>
@@ -235,11 +232,11 @@ export function FieldBuilder({
         </Callout>
       )}
 
-      {/* `warn`: nothing is wrong yet, and something will be if the reader
+      {/* `warning`: nothing is wrong yet, and something will be if the reader
           confirms unread — the column goes live on every record of this object.
           The dot rides in the title, so tier and sentence are one line. */}
       <Callout
-        tone="warn"
+        tone="warning"
         kind="standing"
         title={
           <>
@@ -259,15 +256,10 @@ export function FieldBuilder({
           this form used to live in: closing the dialog discards the draft, so
           a control that empties the inputs in place has nothing left to do. */}
       <div className="cf-actions">
-        <Button small variant="ghost" onClick={onCancel}>
+        <Button variant="ghost" onClick={onCancel}>
           {t("deals.cancel")}
         </Button>
-        <Button
-          small
-          variant="primary"
-          disabled={!canConfirm}
-          onClick={confirm}
-        >
+        <Button variant="primary" disabled={!canConfirm} onClick={confirm}>
           {t("cf.confirm")}
         </Button>
       </div>
@@ -357,7 +349,7 @@ export function FieldTable({
               <span className="cf-fieldname">
                 <span className={cellClass}>{field.label}</span>
                 {field.status === "retired" && (
-                  <Badge tone="warn">{t("cf.retired")}</Badge>
+                  <Badge tone="warning">{t("cf.retired")}</Badge>
                 )}
               </span>
               <span className="cf-key">
@@ -404,12 +396,8 @@ export function FieldTable({
                 the shout a reader learns to ignore. An `aria-label` repeating
                 the button's own words is not a name either; the text is the
                 name. */}
-            <Button small onClick={() => onRename(field)}>
-              {t("cf.edit")}
-            </Button>
-            <Button small onClick={() => onArchive(field)}>
-              {t("cf.archive")}
-            </Button>
+            <Button onClick={() => onRename(field)}>{t("cf.edit")}</Button>
+            <Button onClick={() => onArchive(field)}>{t("cf.archive")}</Button>
           </div>
         ),
     });
@@ -661,7 +649,7 @@ export function CustomFieldsAdmin() {
       if (context) {
         queryClient.setQueryData(context.key, context.previous);
       }
-      toast.show(problemMessageOf(error, t), { mark: false });
+      toast.show(problemMessageOf(error, t), { tone: "danger" });
     },
     onSuccess: (_data, draft) => {
       queryClient.invalidateQueries({
@@ -698,7 +686,7 @@ export function CustomFieldsAdmin() {
       setRenaming(null);
     },
     onError: (error) => {
-      toast.show(problemMessageOf(error, t), { mark: false });
+      toast.show(problemMessageOf(error, t), { tone: "danger" });
     },
   });
 
@@ -717,7 +705,7 @@ export function CustomFieldsAdmin() {
       toast.show(t("cf.archived", { label: field.label }));
     },
     onError: (error) => {
-      toast.show(problemMessageOf(error, t), { mark: false });
+      toast.show(problemMessageOf(error, t), { tone: "danger" });
     },
   });
 
@@ -741,7 +729,6 @@ export function CustomFieldsAdmin() {
       titleAction={
         canCreate && (
           <Button
-            small
             onClick={() => {
               setAddSeq((seq) => seq + 1);
               setAdding(true);
@@ -850,9 +837,9 @@ export function CustomFieldsAdmin() {
         onClose={() => setAdding(false)}
         labelledBy={addId}
       >
-        <h2 id={addId} className="t-h2 modal-title">
+        <Heading size="large" id={addId} className="t-h2 modal-title">
           {t("cf.builder.addTo", { object: objectName })}
-        </h2>
+        </Heading>
         <FieldBuilder
           key={addSeq}
           object={object}
@@ -875,9 +862,9 @@ export function CustomFieldsAdmin() {
             the modal's own padding. `.modal-title` is the catalog's own name for
             the interval under a dialog title, so the twelve pixels are declared
             once for every dialog rather than typed in here. */}
-        <h2 id={renameId} className="t-h2 modal-title">
+        <Heading size="large" id={renameId} className="t-h2 modal-title">
           {t("cf.edit")}
-        </h2>
+        </Heading>
         <Field label={t("cf.renamePrompt")}>
           {(control) => (
             <TextInput
@@ -888,11 +875,10 @@ export function CustomFieldsAdmin() {
           )}
         </Field>
         <div className="cf-actions">
-          <Button small variant="ghost" onClick={() => setRenaming(null)}>
+          <Button variant="ghost" onClick={() => setRenaming(null)}>
             {t("deals.cancel")}
           </Button>
           <Button
-            small
             variant="primary"
             disabled={rename.isPending || renameLabel.trim().length === 0}
             onClick={() => {

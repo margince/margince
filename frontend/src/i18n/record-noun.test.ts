@@ -111,7 +111,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     // Somebody on a message, an invitation or a deal room — a sender, a
     // recipient, an attendee, a guest.
     "access.issued.oneTime",
-    "access.sub",
     "captureNotice.whoReads",
     "captureSettings.signatureEnrich.help",
     "compose.audienceMembersLoading",
@@ -199,7 +198,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     // recipient, an attendee, a guest.
     "access.capabilityLegend",
     "access.issued.oneTime",
-    "access.sub",
     "book.tellThemYourself",
     "captureSettings.signatureEnrich.help",
     "compose.audienceParticipantsHint",
@@ -334,7 +332,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     // "a person" here is a HUMAN BEING deciding, not the contact record.
     "stageAutomation.noRules",
     "stageAutomation.reviewedHint",
-    "teamweekly.agenda.sub",
     "users.access.title",
     "users.adminOnly",
     "users.deactivateConfirmBody",
@@ -357,7 +354,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     // Somebody on a message, an invitation or a deal room — a sender, a
     // recipient, an attendee, a guest.
     "access.issued.oneTime",
-    "access.sub",
     "book.attendee",
     "book.tellThemYourself",
     "buyer.contact",
@@ -401,7 +397,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "roompage.closeHint",
     "roompage.pauseHint",
     "roompage.previewNotYours",
-    "roompage.text.sub",
     "roompage.viewAsBuyer",
     "sched.held.consentWithdrawn",
     "sched.recipientsMore",
@@ -526,9 +521,10 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "review.reassign",
     "role.rep",
     "room.card.lastSeen",
+    // "người mua" — the BUYER who walks into the room: a human being from
+    // outside the company, not a contact record.
     "room.create.sub",
     "room.create.titleHint",
-    "room.docs.sub",
     "senders.colSender",
     "senders.emptyBody",
     "senders.keepOutBody",

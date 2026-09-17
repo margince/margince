@@ -8,6 +8,7 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
 import { downloadBytes } from "./download";
 
@@ -128,13 +129,14 @@ export function ExportScenarioDialog({
 
   return (
     <Modal open onClose={onClose} labelledBy={headingId} size="wide">
-      <h2
+      <Heading
+        size="large"
         id={headingId}
         className="t-h2"
         style={{ marginBottom: "var(--space-3)" }}
       >
         {t("aiexport.title")}
-      </h2>
+      </Heading>
       <div className="form-stack">
         <Field label={t("aiexport.nameLabel")}>
           {(control) => (

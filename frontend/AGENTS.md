@@ -51,12 +51,12 @@ existed**, wrote a reasonable-looking component, and passed review on it. So:
   the table never names, a rich-text editor having already gone missing from it.
 
 Some of this is held deterministically — `make native-controls`,
-`catalog.test.ts`, `type-one-spelling.test.ts` and the `check-ds-*.sh` and
+`catalog.test.ts`, `type-source.test.ts` and the `check-ds-*.sh` and
 `check-space-tokens.sh` script gates — but none
 can tell that the component you just wrote already existed under another name. The
 catalog gate keeps it findable; the grep is still yours.
 
-**A label in a pill is one `Badge`**: `soft` or `primary`, six tones, icon left.
+**A label in a pill is one `Badge`**: `soft` or `primary`, seven tones, icon left.
 Soft is a tint plus tone hairline, primary a solid fill; `ai` draws Sparkles.
 No caps, no click; `badge-spelling.test.ts` fails a hand-rolled pill or restyle.
 

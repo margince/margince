@@ -98,7 +98,7 @@ export function SchedulePanel({
               <span className="rail-schedule-what">
                 <Title item={item} />
                 {isUnprepared(item) && (
-                  <Badge tone="warn">{t("worklist.needsPrep")}</Badge>
+                  <Badge tone="warning">{t("worklist.needsPrep")}</Badge>
                 )}
               </span>
             </PanelRow>

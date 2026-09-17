@@ -386,19 +386,17 @@ export function ApprovalGate({
     <ActionRow
       className="approval-gate"
       primary={
-        <Button variant="primary" small onClick={onAccept}>
+        <Button variant="primary" onClick={onAccept}>
           {t("trust.accept")}
         </Button>
       }
     >
       <IconAction
-        small
         label={t("trust.dismiss")}
         icon={<Trash2 aria-hidden />}
         onClick={onDismiss}
       />
       <IconAction
-        small
         label={t("trust.edit")}
         icon={<Pencil aria-hidden />}
         onClick={onEdit}
@@ -455,7 +453,7 @@ export function StagedProposal({
   if (state.phase === "resolved") {
     const { resolution } = state;
     if (resolution.outcome === "dismissed") {
-      return <p className="t-caption">{t("trust.dismissed")}</p>;
+      return <p>{t("trust.dismissed")}</p>;
     }
     // Accepted keeps agent provenance; an edit makes the value human-typed.
     // Either way the original evidence stays attached (§4.4).
@@ -466,7 +464,7 @@ export function StagedProposal({
     return (
       <section className="real-card" aria-label={t("trust.resolvedValue")}>
         <ProvenanceTag provenance={provenance} />
-        <p style={{ marginTop: 8 }}>
+        <p style={{ marginTop: "var(--space-2)" }}>
           {proposal.description}: <strong>{resolution.value}</strong>
         </p>
         {proposal.evidence && <EvidenceChip evidence={proposal.evidence} />}
@@ -476,11 +474,13 @@ export function StagedProposal({
 
   return (
     <StagingCard>
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <div
+        style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}
+      >
         <ProvenanceTag provenance={{ kind: "agent", agent: proposal.agent }} />
         <ConfidenceMeter level={proposal.confidence} />
       </div>
-      <p style={{ marginTop: 8 }}>
+      <p style={{ marginTop: "var(--space-2)" }}>
         {proposal.description}:{" "}
         <span className="staged-value">{proposal.value}</span>
       </p>
@@ -507,7 +507,7 @@ export function StagedProposal({
               setState({ phase: "editing", draft: event.target.value })
             }
           />
-          <Button type="submit" variant="primary" small>
+          <Button type="submit" variant="primary">
             {t("trust.save")}
           </Button>
         </form>
@@ -545,7 +545,7 @@ export function FieldDiff({
           label={t("history.oldValue")}
         />
       )}
-      <ArrowRight className="field-diff-arrow" aria-hidden size={14} />
+      <ArrowRight aria-hidden size={14} />
       {newValue === null ? (
         <span className="field-diff-empty">{t("history.cleared")}</span>
       ) : (

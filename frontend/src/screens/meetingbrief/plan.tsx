@@ -121,7 +121,6 @@ export function AccountArc({
     <Panel
       title={t("contact.meeting.arc")}
       titleLevel={3}
-      sub={t("contact.meeting.arcSub")}
       tone={plan.generated_by === "model" ? "ai" : undefined}
     >
       {plan.account_arc.map((moment) => (
@@ -206,7 +205,7 @@ export function Unknowns({ plan }: Readonly<{ plan: MeetingPlan }>) {
     >
       {plan.unknowns.map((unknown) => (
         <PanelRow key={unknown.kind}>
-          <span className="mb-unknown">{unknown.question}</span>
+          <span>{unknown.question}</span>
         </PanelRow>
       ))}
     </Panel>
@@ -242,7 +241,7 @@ export function LikelyAsks({
           <div className="mb-ask">
             <div className="mb-ask-head">
               <strong>{ask.question}</strong>
-              <Badge tone={ask.relevance === "high" ? "warn" : undefined}>
+              <Badge tone={ask.relevance === "high" ? "warning" : undefined}>
                 {t(`contact.meeting.relevance.${ask.relevance}`)}
               </Badge>
             </div>
@@ -262,7 +261,7 @@ export function LikelyAsks({
 // The one watch-out, with what to say, show and not promise. A tinted panel for
 // the same reason the sections' risk panel is one: this is the section whose
 // FINDING is the bad news, and the tint follows the WRITER first — indigo is
-// claimed for every panel of a model-written plan, so a warn tint here would be
+// claimed for every panel of a model-written plan, so a warning tint here would be
 // the one card of that plan not saying who wrote it.
 //
 // It was a `Callout` holding a claim and a FactList, which is content rather
@@ -286,7 +285,7 @@ export function TopRisk({
     <Panel
       title={t("contact.meeting.beReady")}
       titleLevel={3}
-      tone={plan.generated_by === "model" ? "ai" : "warn"}
+      tone={plan.generated_by === "model" ? "ai" : "warning"}
     >
       <PanelBody>
         <Claim

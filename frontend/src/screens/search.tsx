@@ -17,6 +17,7 @@ import { useUrlParams } from "../app/urlstate";
 import { Badge, Card, EmptyState, SearchField } from "../design-system/atoms";
 import { EmailEntry } from "../design-system/emailentry";
 import { FilterPills } from "../design-system/filterpills";
+import { Heading } from "../design-system/heading";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { formatDateTime, formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
@@ -173,7 +174,9 @@ function SearchGroups({
         results.some((r) => r.type === type),
       ).map((type) => (
         <Card key={type} className="search-group">
-          <h2 className="t-label">{t(SEARCH_HIT_GROUP_KEY[type])}</h2>
+          <Heading size="small" as="h2">
+            {t(SEARCH_HIT_GROUP_KEY[type])}
+          </Heading>
           <ul className="search-hits">
             {results
               .filter((r) => r.type === type)
@@ -260,7 +263,7 @@ function SearchHit({
           <Badge tone="accent">{t("search.tier.mirrored")}</Badge>
         )}
         {hit.trust_tier === "unverified" && (
-          <Badge tone="warn">{t("search.tier.unverified")}</Badge>
+          <Badge tone="warning">{t("search.tier.unverified")}</Badge>
         )}
       </div>
       {/* `hit.score` is deliberately not drawn. The contract bounds it to
@@ -272,7 +275,7 @@ function SearchHit({
           used without opening it. Absent rather than zero when the server sent
           no number: a count it could not take is not a count of none. */}
       {isTag && hit.carried_by != null && (
-        <p className="search-hit-snippet">
+        <p>
           {t("search.tag.carriedBy", {
             count: formatNumber(hit.carried_by, locale),
           })}
@@ -286,9 +289,7 @@ function SearchHit({
           sentence, and the marks are what a reader would have to type to search
           for it. */}
       {hit.snippet && (
-        <p className="search-hit-snippet">
-          {hit.type === "activity" ? `“${hit.snippet}”` : hit.snippet}
-        </p>
+        <p>{hit.type === "activity" ? `“${hit.snippet}”` : hit.snippet}</p>
       )}
     </li>
   );

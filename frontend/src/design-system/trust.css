@@ -13,18 +13,16 @@
   corner-shape: round;
 }
 .dot-auto {
-  background: var(--online);
+  background: var(--success);
 }
 .dot-confirm {
-  background: var(--away);
+  background: var(--warning);
 }
 
 .evidence-chip {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: var(--fs-meta);
-  color: var(--textChip);
   background: var(--bgChip);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-sm);
@@ -81,8 +79,6 @@ button.evidence-chip:hover {
 .evidence-chip-snippet {
   display: block;
   max-width: 100%;
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
   overflow-wrap: anywhere;
 }
 
@@ -90,17 +86,15 @@ button.evidence-chip:hover {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
 }
 .confidence-high .dot {
-  background: var(--online);
+  background: var(--success);
 }
 .confidence-med .dot {
-  background: var(--away);
+  background: var(--warning);
 }
 .confidence-low .dot {
-  background: var(--dnd);
+  background: var(--danger);
 }
 
 /* The agent's row: a staged proposal is visibly NOT yet real. Its ground, its
@@ -110,30 +104,18 @@ button.evidence-chip:hover {
    follows is only what the ROW puts on that box. */
 .staging-card .staged-value {
   color: var(--aiText);
-  font-weight: 600;
 }
 /* The line a reader takes the row in by, set off from the meta above it and
    in the display face: it is the row's one headline. */
 .staging-card .approval-headline {
   margin-top: var(--space-2);
-  font-family: var(--f-display);
-  font-size: var(--fs-body);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-display);
+  font-family: var(--fontFamilyHeading);
 }
 /* The sentence explaining the headline above it — why this is staged, not what
    it says. Close to what it explains: a full line's air between the two would
-   read as a second, unrelated fact.
- *
- * Demoted by SIZE, not by ink. `--textMeta` measures 4.33:1 against this
- * card's AI-tinted ground and fails AA — the staging card paints `--aiLight`
- * over the card, so the same token that passes on a plain card does not pass
- * here. This is the ancestor-dependent contrast trap the Badge hit before it
- * (4.54:1 vs 4.05:1 on identical tokens); the fix is the body ink, which reads
- * 9.1:1, with `t-caption` doing the demoting. */
+   read as a second, unrelated fact. */
 .staging-card .approval-why {
   margin-top: var(--space-1);
-  color: var(--textContent);
 }
 
 /* The persisted counterpart a resolved proposal settles into: a pane with a
@@ -165,8 +147,7 @@ button.evidence-chip:hover {
 }
 
 .staged-edit {
-  font-family: var(--f-body);
-  font-size: var(--fs-body);
+  font-family: var(--fontFamilyBody);
   color: var(--textPrimary);
   background: var(--bgElevated);
   border: 1px solid var(--accent);
@@ -176,7 +157,7 @@ button.evidence-chip:hover {
      Button that has one, and without it the two ends of that row were
      different heights — which reads as a field that has not finished loading
      rather than as a field beside its verb. */
-  min-block-size: var(--control-h);
+  min-block-size: var(--controlHeight);
 }
 
 .field-diff {
@@ -184,7 +165,6 @@ button.evidence-chip:hover {
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
-  font-size: var(--fs-meta);
 }
 
 /* Either side of a diff can be a whole jsonb document — a scraped fact set
@@ -216,12 +196,8 @@ button.evidence-chip:hover {
   overflow-y: auto;
 }
 
-/* --textMeta, not --textTertiary: the value a field USED to hold is the half of
- * a diff a reader checks the new one against, so it is text to be read at 12px
- * and takes the AA small-text role. The line-through is what says "replaced" —
- * subordinating it with colour as well would cost the reader the old value. */
+/* The line-through is what says "replaced". */
 .field-diff-from {
-  color: var(--textMeta);
   text-decoration: line-through;
 }
 
@@ -242,17 +218,7 @@ button.evidence-chip:hover {
  * text, and the italic alone marks it as the component's own wording rather
  * than a value that was stored. */
 .field-diff-empty {
-  color: var(--textMeta);
   font-style: italic;
-}
-
-/* Left on --textTertiary deliberately: this is the aria-hidden ArrowRight
- * GLYPH, not text. It is a mark, which is the role --textTertiary names
- * (tokens.css), and its meaning is already carried without it — the two sides
- * are labelled "old value" / "new value" for a screen reader and drawn
- * struck-through and pill-green for everyone else. */
-.field-diff-arrow {
-  color: var(--textTertiary);
 }
 
 /*

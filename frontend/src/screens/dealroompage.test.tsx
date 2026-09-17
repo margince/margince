@@ -151,6 +151,6 @@ it("marks a paused room as stopped rather than current", async () => {
   render(<DealRoomPage dealId="deal-1" />);
 
   const badge = (await screen.findByText("Paused")).closest(".badge");
-  expect(badge).toHaveClass("badge-warn");
+  expect(badge).toHaveClass("badge-warning");
   expect(badge?.querySelector(".badge-live-dot")).not.toBeInTheDocument();
 });

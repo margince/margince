@@ -9,6 +9,7 @@ import {
 } from "react";
 import {
   Avatar,
+  BADGE_TONES,
   Badge,
   Button,
   Card,
@@ -28,6 +29,7 @@ import {
   TextInput,
 } from "./atoms";
 import { AvatarStack } from "./avatarstack";
+import { Heading } from "./heading";
 import { usePasswordReveal } from "./passwordreveal";
 import { ProviderMark } from "./provider-mark";
 import { Select } from "./select";
@@ -53,14 +55,15 @@ const stack: CSSProperties = {
 };
 
 // Every axis of the button on one screen. A ghost taller than the primary, an
-// icon at lucide's 24px beside a 13.5px label, a two-letter label shrunk to a
+// icon at lucide's own 24px beside the label, a two-letter label shrunk to a
 // pill and a missing focus ring each look fine one variant at a time; same-row
-// height, icon size and width floor show them in one look.
+// height, icon size and width floor show them in one look. There is no size
+// axis: one height, and the row beside a field is where that is visible.
 export const Buttons: Story = {
   render: () => (
     <div style={stack}>
       <div style={stack}>
-        <span className="t-label">Variants, default size</span>
+        <span className="t-label">Variants</span>
         <div style={row}>
           <Button variant="primary">Save</Button>
           <Button variant="ghost">Cancel</Button>
@@ -100,20 +103,6 @@ export const Buttons: Story = {
         </div>
       </div>
       <div style={stack}>
-        <span className="t-label">Variants, small</span>
-        <div style={row}>
-          <Button variant="primary" small>
-            Save
-          </Button>
-          <Button variant="ghost" small>
-            Cancel
-          </Button>
-          <Button variant="danger" small>
-            Delete
-          </Button>
-        </div>
-      </div>
-      <div style={stack}>
         <span className="t-label">With an icon</span>
         <div style={row}>
           <Button variant="primary">
@@ -121,10 +110,6 @@ export const Buttons: Story = {
             Add contact
           </Button>
           <Button variant="ghost">
-            <RefreshCw aria-hidden />
-            Reconnect
-          </Button>
-          <Button variant="ghost" small>
             <RefreshCw aria-hidden />
             Reconnect
           </Button>
@@ -139,9 +124,6 @@ export const Buttons: Story = {
             <Plus aria-hidden />
           </Button>
           <Button variant="ghost" iconOnly aria-label="Reconnect">
-            <RefreshCw aria-hidden />
-          </Button>
-          <Button variant="ghost" iconOnly small aria-label="Reconnect">
             <RefreshCw aria-hidden />
           </Button>
         </div>
@@ -197,7 +179,7 @@ export const Buttons: Story = {
           <Button variant="ghost" pending>
             Reconnect
           </Button>
-          <Button variant="primary" small pending>
+          <Button variant="primary" pending>
             Save
           </Button>
           <Button variant="ghost" iconOnly pending aria-label="Reconnect">
@@ -257,7 +239,10 @@ export const Buttons: Story = {
 };
 
 const BADGE_VARIANTS = ["soft", "primary"] as const;
-const BADGE_TONES = ["accent", "success", "warn", "danger", "ai"] as const;
+// The tinted tones, walked from the component's own vocabulary: `default` is
+// drawn on its own at the head of each row, and a grid that listed the rest
+// again would stop showing the newest tone on the day it was added.
+const BADGE_TINTS = BADGE_TONES.filter((tone) => tone !== "default");
 const badgeDocs = (story: string) => ({ docs: { description: { story } } });
 
 export const BadgeVariants: Story = {
@@ -268,13 +253,14 @@ export const BadgeVariants: Story = {
 - Soft has a tone hairline, primary none; add no border, caps or pill class.
 - Don't make a badge interactive: a pressable fact is \`Chip\`, a filter is
   \`FilterPills\`, a verb is \`Button\`.
-- No new colours. \`ai\` (always with Sparkles) means an agent proposed it.`),
+- No new colours. \`ai\` (always with Sparkles) means an agent proposed it, and
+  \`discovery\` means something new rather than something going well.`),
   render: () => (
     <div style={stack}>
       {BADGE_VARIANTS.map((variant) => (
         <div key={variant} style={row}>
           <Badge variant={variant}>default</Badge>
-          {BADGE_TONES.map((tone) => (
+          {BADGE_TINTS.map((tone) => (
             <Badge key={tone} variant={variant} tone={tone}>
               {tone}
             </Badge>
@@ -324,7 +310,9 @@ export const BadgeLongLabel: Story = {
   parameters: badgeDocs("At 200px, alone and beside a sibling: an ellipsis."),
   render: () => (
     <div style={{ ...stack, alignItems: "flex-start", inlineSize: 200 }}>
-      <Badge tone="warn">extensions/acme/routes/partner-portal/settings</Badge>
+      <Badge tone="warning">
+        extensions/acme/routes/partner-portal/settings
+      </Badge>
       <div style={{ ...row, flexWrap: "nowrap", inlineSize: "100%" }}>
         <span>Route</span>
         <Badge icon={Lock}>extensions/acme/routes/partner-portal</Badge>
@@ -337,9 +325,9 @@ export const BadgeInsideUppercaseParent: Story = {
   parameters: badgeDocs("A parent's case, tracking and face stop at its edge."),
   render: () => (
     <div style={stack}>
-      <h3 className="t-eyebrow">
+      <Heading size="medium" className="t-eyebrow">
         Pipeline <Badge tone="accent">Three open</Badge>
-      </h3>
+      </Heading>
       <code>
         run 4f2a <Badge tone="success">Passed</Badge>
       </code>
@@ -356,10 +344,10 @@ export const Avatars: Story = {
       <div style={stack}>
         <span className="t-label">The four sizes</span>
         <div style={row}>
-          <Avatar name="Alice Müller" size="xs" />
           <Avatar name="Alice Müller" size="sm" />
           <Avatar name="Alice Müller" size="md" />
           <Avatar name="Alice Müller" size="lg" />
+          <Avatar name="Alice Müller" size="xl" />
         </div>
       </div>
       <div style={stack}>
@@ -601,11 +589,7 @@ export const Cards: Story = {
           of stacking a second raised edge on the first.
         </p>
       </Card>
-      <Card
-        title="Passports"
-        sub="Credentials you minted for an agent. Every call re-authenticates, so a revoked passport stops working mid-session."
-        actions={<Button small>Mint</Button>}
-      >
+      <Card title="Passports" actions={<Button>Mint</Button>}>
         <p className="t-caption">
           The header comes from props: title over description across the full
           width, actions beside the pair.
@@ -633,11 +617,7 @@ export const Placeholders: Story = {
       <EmptyState>No deals match these filters yet.</EmptyState>
       <EmptyState
         title="No projects yet"
-        action={
-          <Button small variant="primary">
-            New project
-          </Button>
-        }
+        action={<Button variant="primary">New project</Button>}
       >
         <p>
           A project is the body of work a deal is about. It starts during the
@@ -659,18 +639,17 @@ export const Sections: Story = {
   render: () => (
     <div style={stack}>
       <SectionHeader title="Pipeline" />
-      <SectionHeader title="Pipeline" sub="Six open deals · 1.2M weighted" />
+      <SectionHeader title="Pipeline" />
       <SectionHeader
         title="Reporting currency"
-        sub="Every aggregate on this installation converts to it at the day's rate, and the rate that was used stays on the figure."
-        actions={<Button small>Change</Button>}
+        actions={<Button>Change</Button>}
       />
       <Card>
-        <SectionHeader title="Contacts" sub="Three contacts at this company" />
+        <SectionHeader title="Contacts" />
         <p className="t-caption">Carol Wagner · Bob Schmidt · Alice Müller</p>
       </Card>
       <Card>
-        <SectionHeader title="Delivery" sub="Where webhooks are sent" />
+        <SectionHeader title="Delivery" />
         <SectionHeader title="Endpoints" level={3} />
         <p className="t-caption">Two subscriptions, both healthy.</p>
         <SectionHeader title="Dead-lettered" level={3} />
@@ -700,8 +679,7 @@ const SIDES = ["owner", "team"] as const;
 type Side = (typeof SIDES)[number];
 const SIDE_LABELS: Record<Side, string> = { owner: "Owner", team: "Team" };
 
-// SegmentedControl is fully controlled, so the catalog has to own the state or
-// the buttons never move.
+// SegmentedControl is controlled: without state here the buttons never move.
 function ToolbarDemo() {
   const [range, setRange] = useState<Range>("quarter");
   const [side, setSide] = useState<Side>("owner");
@@ -859,7 +837,7 @@ export const Tables: Story = {
   render: () => (
     <div style={stack}>
       <DealTableDemo />
-      <SectionHeader title="No rows" sub="The same table with rows={[]}" />
+      <SectionHeader title="No rows" />
       <DataTable
         label={"Deals"}
         columns={DEAL_COLUMNS}
@@ -893,10 +871,9 @@ function OverflowMenuDemo({
       ?.click();
   }, [openOnMount]);
   return (
-    // The panel is anchored to its trigger and hangs off the trigger's END, the
-    // way a record header carries it — so the story puts the trigger at the
-    // right edge (the panel opens inward, not off the page) and reserves the
-    // height it drops into.
+    // The panel is anchored to its trigger and hangs off its END, as a record
+    // header carries it — so the story puts the trigger at the right edge (it
+    // opens inward, not off the page) and reserves the height it drops into.
     <div
       ref={wrap}
       style={{

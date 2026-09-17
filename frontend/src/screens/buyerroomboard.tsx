@@ -108,7 +108,6 @@ function BuyerDocumentVerbs({
   return (
     <div className="buyer-doc-actions">
       <Button
-        small
         aria-label={t("buyer.docs.download", { title: doc.title })}
         pending={download.isPending}
         onClick={() =>
@@ -124,9 +123,7 @@ function BuyerDocumentVerbs({
         {t("buyer.docs.downloadShort")}
       </Button>
       {download.isError ? (
-        <p className="t-caption t-danger">
-          {problemMessageOf(download.error, t)}
-        </p>
+        <p className="t-danger">{problemMessageOf(download.error, t)}</p>
       ) : null}
     </div>
   );
@@ -262,7 +259,6 @@ export function BuyerBoard({
         {docs.data && threads.data ? (
           <DocumentBoard
             title={t("buyer.docs.title")}
-            sub={t("buyer.docs.sub")}
             groups={DOCUMENT_GROUPS.map((g) => ({
               key: g.key,
               label: t(g.labelKey),

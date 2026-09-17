@@ -40,6 +40,16 @@ import { type MockApiOptions, mockApi } from "./seed";
  */
 
 async function openRecord(page: Page, route: string, options?: MockApiOptions) {
+  // Everything here is measured as a BOX, and the record's blocks arrive with a
+  // 10px rise (design-system/enter.css). A box read in flight is up to half a
+  // step from where the layout put it; a control PRESSED in flight is worse
+  // than that, because a press is preceded by bringing the control into view,
+  // and on the two records whose tab strip is sticky the browser answers that
+  // request mid-rise by scrolling the record a third of a screen — after which
+  // the strip is stuck over columns that have slid under it, and the details
+  // pane reads as having opened above the tabs. Reduced motion IS the end state
+  // by construction, so every box is at rest from the first frame.
+  await page.emulateMedia({ reducedMotion: "reduce" });
   await mockApi(page, options);
   await page.goto(route);
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
@@ -173,13 +183,6 @@ test.describe("the record's rhythm", () => {
     options?: MockApiOptions,
   ): Promise<Edge | null> {
     await page.setViewportSize({ width: WIDE, height: 900 });
-    // The arrival is a 10px translate (design-system/enter.css) and
-    // `getBoundingClientRect` reads transforms, so a block measured in
-    // flight is up to half a step from where the layout put it — a gap this
-    // suite would then report as a spacing defect that no stylesheet holds.
-    // Reduced motion IS the end state by construction, so every box is at
-    // rest from the first frame.
-    await page.emulateMedia({ reducedMotion: "reduce" });
     await openRecord(page, route, options);
     await expect(
       page.locator(".record-aside"),
@@ -296,7 +299,9 @@ test.describe("the record's details pane", () => {
       });
       const paneBox = await pane.boundingBox();
       const work = await page.locator(".page-zones-main").boundingBox();
-      const tabs = await page.locator("[data-testid='record-tabs']").boundingBox();
+      const tabs = await page
+        .locator("[data-testid='record-tabs']")
+        .boundingBox();
       if (!paneBox || !work || !tabs) {
         throw new Error(
           "the pane, the work column and the tab row are visible but one has no box",

@@ -523,7 +523,7 @@ function CompanyTable({
               // cell read as a rendering fault; this says what the row is, and
               // it is a fact about the data rather than a permission — so it
               // says "none", which no other state is allowed to claim.
-              <span className="t-caption">{t("analytics.noCompany")}</span>
+              <span>{t("analytics.noCompany")}</span>
             ),
         },
         {
@@ -884,7 +884,7 @@ function ExplainPanel({
           <p className="t-sub">
             {query.data?.definition ?? t("analytics.planNote")}
           </p>
-          {url == null && <p className="t-caption">{t("common.empty")}</p>}
+          {url == null && <p>{t("common.empty")}</p>}
           {url != null && query.isPending && (
             <div
               style={{
@@ -899,9 +899,9 @@ function ExplainPanel({
           )}
           {query.isError && (
             <>
-              <p className="t-caption">{problemMessageOf(query.error, t)}</p>
+              <p>{problemMessageOf(query.error, t)}</p>
               <div className="card-actions">
-                <Button small onClick={() => query.refetch()}>
+                <Button onClick={() => query.refetch()}>
                   {t("common.retry")}
                 </Button>
               </div>
@@ -937,7 +937,7 @@ function DaysCell({
 }: Readonly<{ value: unknown; locale: Locale }>) {
   const t = useT();
   if (value == null) {
-    return <span className="t-caption">{t("analytics.tooFewForMedian")}</span>;
+    return <span>{t("analytics.tooFewForMedian")}</span>;
   }
   return (
     <>{t("analytics.days", { days: formatNumber(Number(value), locale) })}</>
@@ -1699,7 +1699,6 @@ function ReportCard({
             // reader who cannot see the panel appear is still told it did.
             actions={
               <Button
-                small
                 aria-expanded={explain}
                 aria-controls={explainId}
                 onClick={() => setExplain((value) => !value)}

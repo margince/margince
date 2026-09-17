@@ -81,9 +81,7 @@ export function CompanyLastOffer({ view }: Readonly<{ view?: Company360 }>) {
   }
   return (
     <PanelBody className="com-block">
-      <span className="t-caption">
-        {t("commercial.lastOffer", { deal: leading.name })}
-      </span>
+      <span>{t("commercial.lastOffer", { deal: leading.name })}</span>
       <span className="co-row-meta t-caption">
         <button
           type="button"
@@ -160,13 +158,13 @@ export function offerAmount(
 
 const OFFER_TONE: Record<
   Offer["status"],
-  "success" | "warn" | "danger" | undefined
+  "success" | "warning" | "danger" | undefined
 > = {
   draft: undefined,
   sent: undefined,
   accepted: "success",
   rejected: "danger",
-  expired: "warn",
+  expired: "warning",
   superseded: undefined,
 };
 
@@ -200,14 +198,14 @@ export function CompanyContractState({
   if (contracts.active_count === 0) {
     return (
       <PanelBody className="com-block">
-        <span className="t-caption">{t("contracts.state.none")}</span>
+        <span>{t("contracts.state.none")}</span>
       </PanelBody>
     );
   }
 
   return (
     <PanelBody className="com-block">
-      <span className="t-caption">
+      <span>
         {t("contracts.state.title", {
           count: formatNumber(contracts.active_count, locale),
         })}
@@ -229,7 +227,7 @@ export function CompanyContractState({
           )}
         {contracts.cancellation_pending &&
           contracts.cancellation_effective_on && (
-            <Badge tone="warn">
+            <Badge tone="warning">
               {t("contracts.state.endsOn", {
                 when: formatDate(
                   contracts.cancellation_effective_on,

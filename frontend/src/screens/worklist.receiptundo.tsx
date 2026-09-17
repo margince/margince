@@ -63,9 +63,7 @@ export function ReceiptUndo({ receipt }: Readonly<{ receipt: Receipt }>) {
     return null;
   }
   if (undo.reversed) {
-    return (
-      <span className="t-caption">{t("worklist.handled.putBackDone")}</span>
-    );
+    return <span>{t("worklist.handled.putBackDone")}</span>;
   }
   // This receipt restores a deal correction; other subject kinds have no
   // correction engine and cannot borrow its permission or restore route.
@@ -78,7 +76,6 @@ export function ReceiptUndo({ receipt }: Readonly<{ receipt: Receipt }>) {
   return (
     <>
       <Button
-        small
         variant="ghost"
         pending={putBack.isPending}
         busyLabel={t("history.undo.busy")}
@@ -93,7 +90,7 @@ export function ReceiptUndo({ receipt }: Readonly<{ receipt: Receipt }>) {
       >
         {t("common.undo")}
       </Button>
-      {refused && <p className="t-caption">{refused}</p>}
+      {refused && <p>{refused}</p>}
     </>
   );
 }

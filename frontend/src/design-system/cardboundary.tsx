@@ -40,7 +40,6 @@ function CardFailure({
         <p>{title}</p>
         <Button
           variant="primary"
-          small
           onClick={onRetry}
           style={{ marginTop: "var(--space-3)" }}
         >

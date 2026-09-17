@@ -2,7 +2,8 @@ import { useMutation } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { Button, Modal } from "../../design-system/atoms";
+import { Button, Field, Modal } from "../../design-system/atoms";
+import { Heading } from "../../design-system/heading";
 import { ProvenanceTag } from "../../design-system/trust";
 import { useT } from "../../i18n";
 import { problemMessageOf, throwProblem } from "../common";
@@ -96,7 +97,9 @@ export function IntroRequestModal({
 
   return (
     <Modal open={target !== null} onClose={onClose} labelledBy={titleId}>
-      <h2 id={titleId}>{t("co.intro.title")}</h2>
+      <Heading size="large" id={titleId}>
+        {t("co.intro.title")}
+      </Heading>
       {target && (
         <p className="t-caption cp-intro-who">
           {t("co.intro.who", {
@@ -118,9 +121,7 @@ export function IntroRequestModal({
         </div>
       )}
       {draft.isError && (
-        <p className="t-caption cp-intro-error">
-          {problemMessageOf(draft.error, t)}
-        </p>
+        <p className="cp-intro-error">{problemMessageOf(draft.error, t)}</p>
       )}
       {written && (
         <>
@@ -136,35 +137,37 @@ export function IntroRequestModal({
               <span className="t-caption"> {t("co.intro.fromTemplate")}</span>
             )}
           </p>
-          <label className="cp-intro-field" htmlFor={`${titleId}-subject`}>
-            {t("co.intro.subject")}
-          </label>
-          <input
-            id={`${titleId}-subject`}
-            value={subject}
-            onChange={(event) => {
-              setEdited({ subject: event.target.value, body });
-              setCopied(false);
-            }}
-          />
-          <label className="cp-intro-field" htmlFor={`${titleId}-body`}>
-            {t("co.intro.body")}
-          </label>
-          <textarea
-            id={`${titleId}-body`}
-            rows={10}
-            value={body}
-            onChange={(event) => {
-              setEdited({ subject, body: event.target.value });
-              // The clipboard still holds the OLDER text, so a button that
-              // went on saying "Copied" would be describing a message the
-              // reader can no longer paste.
-              setCopied(false);
-            }}
-          />
+          <Field className="cp-intro-field" label={t("co.intro.subject")}>
+            {(control) => (
+              <input
+                {...control}
+                value={subject}
+                onChange={(event) => {
+                  setEdited({ subject: event.target.value, body });
+                  setCopied(false);
+                }}
+              />
+            )}
+          </Field>
+          <Field className="cp-intro-field" label={t("co.intro.body")}>
+            {(control) => (
+              <textarea
+                {...control}
+                rows={10}
+                value={body}
+                onChange={(event) => {
+                  setEdited({ subject, body: event.target.value });
+                  // The clipboard still holds the OLDER text, so a button that
+                  // went on saying "Copied" would be describing a message the
+                  // reader can no longer paste.
+                  setCopied(false);
+                }}
+              />
+            )}
+          </Field>
           {written.reasoning && written.reasoning.length > 0 && (
             <>
-              <p className="t-caption cp-intro-why">{t("co.intro.basedOn")}</p>
+              <p className="cp-intro-why">{t("co.intro.basedOn")}</p>
               <ul className="chips">
                 {written.reasoning.map((reason) => (
                   <li key={`${reason.kind}:${reason.label}`}>{reason.label}</li>
@@ -173,9 +176,7 @@ export function IntroRequestModal({
             </>
           )}
           {copyFailed && (
-            <p className="t-caption cp-intro-error">
-              {t("co.intro.copyFailed")}
-            </p>
+            <p className="cp-intro-error">{t("co.intro.copyFailed")}</p>
           )}
           <div className="cp-intro-actions">
             {/* Copy first, because it is the one that always works. A mailto:

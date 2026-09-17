@@ -466,12 +466,10 @@ test("features/10 §7: the account menu holds the settings door, the appearance 
   await expect(theme).toHaveAttribute("aria-expanded", "false");
   await theme.click();
   const choices = page.locator(".accountsub");
-  await expect(choices.getByRole("menuitemradio")).toHaveCount(3);
-  await choices.getByRole("menuitemradio", { name: "Dunkel" }).click();
+  await expect(choices.getByRole("radio")).toHaveCount(3);
+  await choices.getByRole("radio", { name: "Dunkel" }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-  await expect(
-    choices.getByRole("menuitemradio", { name: "Dunkel" }),
-  ).toHaveAttribute("aria-checked", "true");
+  await expect(choices.getByRole("radio", { name: "Dunkel" })).toBeChecked();
 });
 
 test("features/10 §7: the locale switch flips the chrome DE↔EN", async ({
@@ -1288,7 +1286,11 @@ test("AC-create-2: the palette's New-deal action opens the create form; only ope
   await stageSelect.click();
   await expect(page.locator('[role="listbox"]')).toHaveCount(0);
   await page.getByLabel("Deal-Name").fill("Neuer Deal");
-  await page.getByLabel("Wert").fill("480");
+  // By ROLE, not by label: the rail's "Auswertung" group carries a real
+  // accessible name, and a label lookup for "Wert" matches inside it. The
+  // amount is a number input, so the role is what the query meant all along
+  // and a group can never answer to it.
+  await page.getByRole("spinbutton", { name: "Wert" }).fill("480");
   await page.getByRole("button", { name: "Anlegen" }).click();
   await expect(page).toHaveURL(/#\/deals\/d-new$/);
 });
@@ -1574,7 +1576,7 @@ test.describe("§3.8: 390px mobile", () => {
 
     // Every verb in the QUEUE is a real target — the rows and the focus card
     // above them, which is the work this screen exists for. The focus CTA is a
-    // full-size `.btn` and already clears the floor through `--control-h`; it
+    // full-size `.btn` and already clears the floor through `--controlHeight`; it
     // is measured anyway, because a rule that holds only where somebody
     // remembered to look is not a floor.
     //
@@ -1618,7 +1620,7 @@ test.describe("§3.8: 390px mobile", () => {
     await page.waitForLoadState("networkidle");
     await expectShellRendered(page);
 
-    await page.getByRole("button", { name: "Expand the agent panel" }).click();
+    await page.getByRole("button", { name: "Agentenbereich öffnen" }).click();
     const panel = page.locator(".arpanel");
     await expect(panel).toBeVisible();
     await settleAnimations(page);
@@ -1653,11 +1655,11 @@ test.describe("§3.8: 390px mobile", () => {
     await page.waitForLoadState("networkidle");
     await expectShellRendered(page);
 
-    await page.getByRole("button", { name: "Expand the agent panel" }).click();
+    await page.getByRole("button", { name: "Agentenbereich öffnen" }).click();
     await expect(
       page
         .locator(".arpanel")
-        .getByText("Ihr Agent liest nur das, was Sie sehen können."),
+        .getByText("Margince liest nur, was du sehen kannst."),
     ).toBeVisible();
   });
 
@@ -1672,14 +1674,14 @@ test.describe("§3.8: 390px mobile", () => {
     await page.waitForLoadState("networkidle");
     await expectShellRendered(page);
 
-    const orb = page.getByRole("button", { name: "Expand the agent panel" });
+    const orb = page.getByRole("button", { name: "Agentenbereich öffnen" });
     await orb.click();
     await expect(page.locator(".arpanel")).toBeVisible();
 
     await page.keyboard.press("Escape");
     await expect(page.locator(".arpanel")).toHaveCount(0);
     await expect(
-      page.getByRole("button", { name: "Expand the agent panel" }),
+      page.getByRole("button", { name: "Agentenbereich öffnen" }),
     ).toBeFocused();
   });
 });
@@ -1695,7 +1697,7 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe), the agent's panel at 390px in dark"
     await page.goto("/#/home");
     await page.waitForLoadState("networkidle");
     await expectShellRendered(page);
-    await page.getByRole("button", { name: "Expand the agent panel" }).click();
+    await page.getByRole("button", { name: "Agentenbereich öffnen" }).click();
     await expect(page.locator(".arpanel")).toBeVisible();
     await settleAnimations(page);
     await expectNoAaViolations(page, "brief — the agent's panel (390px, dark)");
@@ -1718,8 +1720,9 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe), the agent's panel at 390px in dark"
  * So the undecided findings are PRINTED, with axe's own reason attached, on a
  * line a human reading the run can see. That is a real gap and it is stated as
  * one: an incomplete `color-contrast` is a colour nobody has verified, and the
- * only thing standing behind those today is the token law in tokens.css — meta
- * text takes `--textMeta`, and `--textTertiary` is for marks.
+ * only thing standing behind those today is the token law in tokens.css — there
+ * are two neutral inks, `--textPrimary` and `--textSecondary`, and nothing
+ * quieter than the second.
  */
 // What a colour-contrast check carries when it could MEASURE the pair. Axe
 // types `data` as unknown and fills it per check, so a rule that is not
@@ -1831,8 +1834,8 @@ async function expectNoAaViolations(page: Page, screen: string) {
     const painted = await page.evaluate(() => ({
       dataTheme: document.documentElement.getAttribute("data-theme"),
       prefersDark: window.matchMedia("(prefers-color-scheme: dark)").matches,
-      textMeta: getComputedStyle(document.documentElement)
-        .getPropertyValue("--textMeta")
+      textSecondary: getComputedStyle(document.documentElement)
+        .getPropertyValue("--textSecondary")
         .trim(),
       bgPage: getComputedStyle(document.documentElement)
         .getPropertyValue("--bgPage")
@@ -2194,7 +2197,7 @@ test.describe("ADR-0076: the unauthenticated surface", () => {
         await expect(
           page.getByRole("heading", {
             level: 1,
-            name: "Bei Margince anmelden",
+            name: "Hallo, ich bin Margince.",
           }),
         ).toBeVisible();
         const overflow = await page.evaluate(
@@ -2279,7 +2282,10 @@ test.describe("ADR-0076: the unauthenticated surface", () => {
       await page.setViewportSize({ width, height: 900 });
       await page.goto("/");
       await expect(
-        page.getByRole("heading", { level: 1, name: "Bei Margince anmelden" }),
+        page.getByRole("heading", {
+          level: 1,
+          name: "Hallo, ich bin Margince.",
+        }),
       ).toBeAttached();
       // The class, not the tag: see the note beside the other `.auth-task`
       // locator above — one `<main>` per screen, and it belongs to the frame.
@@ -2303,15 +2309,26 @@ test.describe("ADR-0076: the unauthenticated surface", () => {
     });
   }
 
-  // §6.4 / §12: one h1, and it is the TASK. A surface whose h1 is the system
-  // talking and whose h2 is "sign in" has inverted its own hierarchy — and the
-  // identity region's statement is set large enough that promoting it to a
-  // heading is a tempting mistake.
-  test("has exactly one h1, and it is the task", async ({ page }) => {
+  // §12: one h1, and it is the GREETING. What this surface is ABOUT is the
+  // system introducing itself; whichever of the four outcomes the frame is
+  // carrying is a section under that name, so the sign-in card's own title is an
+  // h2 — and `.sr-only`, because the greeting next to it has already said what
+  // the page is. Both halves are asserted: a view that promotes its card back to
+  // h1 leaves two, and one that drops the card's title leaves the form unnamed.
+  //
+  // The accessible NAME, not the text: the greeting is typed, so two of its
+  // three layers are `aria-hidden` copies — one holding the final height open,
+  // one carrying the partial string — and `textContent` would read all three.
+  test("has exactly one h1, and it is the greeting", async ({ page }) => {
     await page.goto("/");
     const headings = page.getByRole("heading", { level: 1 });
     await expect(headings).toHaveCount(1);
-    await expect(headings).toHaveText("Bei Margince anmelden");
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Hallo, ich bin Margince." }),
+    ).toBeAttached();
+    await expect(
+      page.getByRole("heading", { level: 2, name: "Bei Margince anmelden" }),
+    ).toBeAttached();
   });
 
   // The Core is decoration (WDS-CORE-4): every state it shows is also stated in
@@ -2393,7 +2410,7 @@ test.describe("ADR-0076: the unauthenticated surface", () => {
     // The rail-less surface has no shell to check for; its own h1 is the proof
     // the screen rendered, and the block above already asserts that.
     await expect(
-      page.getByRole("heading", { level: 1, name: "Bei Margince anmelden" }),
+      page.getByRole("heading", { level: 1, name: "Hallo, ich bin Margince." }),
     ).toBeVisible();
     await settleAnimations(page);
     await expectNoAaViolations(page, "login");

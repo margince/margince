@@ -1,0 +1,36 @@
+/* A heading declares type and nothing else. It owns no margin: the gap above a
+   heading belongs to the passage it opens, so the parent — a Stack, a Panel
+   body, a page zone — spaces it, and one component cannot fight another over
+   the same whitespace. Ink inherits for the same reason: a heading on a tinted
+   surface takes that surface's colour without being told. */
+.heading {
+  margin: 0;
+}
+
+.heading[data-size="xxlarge"] {
+  font: var(--fontHeadingXXLarge);
+}
+
+.heading[data-size="xlarge"] {
+  font: var(--fontHeadingXLarge);
+}
+
+.heading[data-size="large"] {
+  font: var(--fontHeadingLarge);
+}
+
+.heading[data-size="medium"] {
+  font: var(--fontHeadingMedium);
+}
+
+.heading[data-size="small"] {
+  font: var(--fontHeadingSmall);
+}
+
+.heading[data-size="xsmall"] {
+  font: var(--fontHeadingXSmall);
+}
+
+.heading[data-size="xxsmall"] {
+  font: var(--fontHeadingXXSmall);
+}

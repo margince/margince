@@ -137,7 +137,7 @@ export function MoveButton({
       if (!activityId) return null;
       return (
         <>
-          <Button small onClick={() => setTaskOpen(true)}>
+          <Button onClick={() => setTaskOpen(true)}>
             {t("deal360.openTask")}
           </Button>
           {taskOpen && (
@@ -161,7 +161,6 @@ export function MoveButton({
               the task and pressing this accepts it. */}
           <Button
             variant="ai"
-            small
             pending={createTask.isPending}
             onClick={() => createTask.mutate(taskBody)}
           >
@@ -169,9 +168,7 @@ export function MoveButton({
             {t("deal360.createTask")}
           </Button>
           {createTask.isError ? (
-            <p className="t-caption t-danger">
-              {problemMessageOf(createTask.error, t)}
-            </p>
+            <p className="t-danger">{problemMessageOf(createTask.error, t)}</p>
           ) : null}
         </>
       );
@@ -188,7 +185,7 @@ export function MoveButton({
       }
       return (
         <>
-          <Button variant="ai" small onClick={() => setBriefOpen(true)}>
+          <Button variant="ai" onClick={() => setBriefOpen(true)}>
             <Sparkles aria-hidden />
             {t("deal360.openBrief")}
           </Button>

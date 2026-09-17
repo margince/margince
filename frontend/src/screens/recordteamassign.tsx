@@ -7,14 +7,15 @@ import {
   useState,
 } from "react";
 import { api } from "../api/client";
-import { Button, Modal, SegmentedControl } from "../design-system/atoms";
+import { Button, Field, Modal, SegmentedControl } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import {
   RecordPicker,
   type RecordPickerCandidate,
 } from "../design-system/recordpicker";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
-import { problemMessageOf, throwProblem } from "./common";
+import { RefusalLine, throwProblem } from "./common";
 import {
   type AssignmentRecordType,
   type AssignmentSubjectKind,
@@ -164,13 +165,14 @@ export function RecordTeamAssign({
 
   return (
     <Modal open={open} onClose={close} labelledBy={headingId}>
-      <h2
+      <Heading
+        size="large"
         id={headingId}
         className="t-h2"
         style={{ marginBottom: "var(--space-3)" }}
       >
         {existing ? t("assignments.changeTitle") : t("assignments.addTitle")}
-      </h2>
+      </Heading>
       <div className="form-stack">
         <SegmentedControl
           label={t("assignments.subjectKind")}
@@ -196,25 +198,20 @@ export function RecordTeamAssign({
             disabled={write.isPending}
           />
         </div>
-        <div className="field">
-          <span className="t-label" id={`${headingId}-role`}>
-            {t("assignments.role")}
-          </span>
-          <Select
-            aria-labelledby={`${headingId}-role`}
-            options={options}
-            value={roleId}
-            onChange={setRoleId}
-            placeholder={t("assignments.rolePlaceholder")}
-            disabled={write.isPending || options.length === 0}
-          />
-        </div>
+        <Field label={t("assignments.role")}>
+          {(control) => (
+            <Select
+              {...control}
+              options={options}
+              value={roleId}
+              onChange={setRoleId}
+              placeholder={t("assignments.rolePlaceholder")}
+              disabled={write.isPending || options.length === 0}
+            />
+          )}
+        </Field>
         <p className="t-caption">{t("assignments.noAccessNote")}</p>
-        {write.isError && (
-          <p className="t-caption" role="alert">
-            {problemMessageOf(write.error, t)}
-          </p>
-        )}
+        {write.isError && <RefusalLine error={write.error} />}
         <div className="actions">
           <Button variant="ghost" onClick={close} disabled={write.isPending}>
             {t("deals.cancel")}

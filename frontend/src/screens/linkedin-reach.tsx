@@ -188,7 +188,7 @@ function ReachTable({
           header: t("linkedinReach.account"),
           render: (account: ReachAccount) => (
             <a
-              className="li-reach-cell li-reach-link"
+              className="li-reach-cell "
               href={`#/companies/${account.company_id}`}
             >
               {account.display_name}

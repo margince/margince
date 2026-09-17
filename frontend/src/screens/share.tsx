@@ -8,7 +8,7 @@ import {
   User as UserIcon,
   Users as UsersIcon,
 } from "lucide-react";
-import { useId, useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import type { EntityKind } from "../app/entity";
@@ -174,7 +174,6 @@ export function ShareAction({
   return (
     <Button
       reasonId={disabledReasonId}
-      small
       data-testid="share-record"
       onClick={() =>
         navigate({ screen: "share", id: recordType, id2: recordId })
@@ -318,7 +317,7 @@ function renderSubjectList(
                     )}
                   </Badge>
                 )}
-                <span className="share-subject-note">{candidate.note}</span>
+                <span>{candidate.note}</span>
               </span>
             </Button>
           </li>
@@ -361,16 +360,12 @@ function RosterPicker({
   // Gate explicitly on loading/error first — the empty picker only renders
   // once both queries have actually succeeded with no subjects.
   if (usersQuery.isPending || teamsQuery.isPending) {
-    return (
-      <p className="t-caption" data-testid="share-roster-loading">
-        {t("share.rosterLoading")}
-      </p>
-    );
+    return <p data-testid="share-roster-loading">{t("share.rosterLoading")}</p>;
   }
   if (usersQuery.isError || teamsQuery.isError) {
     return (
       <div data-testid="share-roster-error">
-        <p className="t-caption share-error">
+        <p className="share-error">
           {usersQuery.isError && teamsQuery.isError
             ? t("share.rosterErrorBoth")
             : usersQuery.isError
@@ -378,7 +373,6 @@ function RosterPicker({
               : t("share.rosterErrorTeams")}
         </p>
         <Button
-          small
           style={{ marginTop: "var(--space-2)" }}
           onClick={() => {
             if (usersQuery.isError) usersQuery.refetch();
@@ -397,9 +391,7 @@ function RosterPicker({
   if (filteredRoster.length === 0) {
     return (
       <>
-        <p className="t-caption" data-testid="share-roster-empty">
-          {t("share.rosterEmpty")}
-        </p>
+        <p data-testid="share-roster-empty">{t("share.rosterEmpty")}</p>
         {/* "Nobody matches" over a roster that stopped early is the reader
             being told the subject they are looking for does not exist, on the
             strength of pages nothing read. */}
@@ -427,15 +419,14 @@ function ShareScreenBody({
   // calendar date does this viewer see".
   const zone = viewerZone();
   const queryClient = useQueryClient();
-  const headingId = useId();
   // Where focus lands when a dialog closes on a control that no longer exists.
   // Both dialogs here destroy their own trigger on success — a revoked grant's
   // row leaves the roster, and a downgrade clears the picker that opened it —
   // so without this focus falls to the document body and a keyboard reader
   // starts the surface over. The subject field is the one control on this page
   // that is always present, which is what makes it the honest landing place.
-  const returnFocusToSubject = () =>
-    document.getElementById(`${headingId}-subject`);
+  const subjectField = useRef<HTMLInputElement>(null);
+  const returnFocusToSubject = () => subjectField.current;
   const grantsKey = ["record-grants", recordType, recordId];
 
   const grantsQuery = useQuery({
@@ -705,19 +696,21 @@ function ShareScreenBody({
       >
         <PanelBody className="form-stack">
           <div className="field">
-            <label className="t-label" htmlFor={`${headingId}-subject`}>
-              {t("share.subject")}
-            </label>
-            <SearchField
-              id={`${headingId}-subject`}
-              placeholder={t("share.subject")}
-              value={term}
-              onChange={(event) => {
-                setTerm(event.target.value);
-                setSubject(null);
-                dismissGrantFeedback();
-              }}
-            />
+            <Field label={t("share.subject")}>
+              {(control) => (
+                <SearchField
+                  {...control}
+                  ref={subjectField}
+                  placeholder={t("share.subject")}
+                  value={term}
+                  onChange={(event) => {
+                    setTerm(event.target.value);
+                    setSubject(null);
+                    dismissGrantFeedback();
+                  }}
+                />
+              )}
+            </Field>
             <RosterPicker
               usersQuery={usersQuery}
               teamsQuery={teamsQuery}
@@ -840,7 +833,7 @@ function ShareScreenBody({
           )}
 
           {grantErrorMessage && (
-            <p className="t-caption share-error">{grantErrorMessage}</p>
+            <p className="share-error">{grantErrorMessage}</p>
           )}
         </PanelBody>
       </Panel>
@@ -875,14 +868,13 @@ function ShareScreenBody({
                         <span className="t-caption">{g.reason}</span>
                       )}
                       {g.expires_at && (
-                        <Badge tone="warn">
+                        <Badge tone="warning">
                           {formatDate(g.expires_at, locale, zone)}
                         </Badge>
                       )}
                     </div>
                   </div>
                   <Button
-                    small
                     variant="danger"
                     onClick={() => setRevokingId(g.id)}
                     data-testid="revoke-grant"

@@ -9,6 +9,7 @@ import type { components } from "../api/schema";
 import { isOption } from "../app/options";
 import { Button, Checkbox, Field, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { Heading } from "../design-system/heading";
 import { Select, type SelectOption } from "../design-system/select";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -159,10 +160,10 @@ export function InviteUserForm({
     >
       {titleId !== undefined && (
         <>
-          <h2 className="t-h3 modal-title" id={titleId}>
+          <Heading size="large" className="t-h3 modal-title" id={titleId}>
             {t("users.inviteTitle")}
-          </h2>
-          <p className="t-caption">{t("users.inviteSub")}</p>
+          </Heading>
+          <p>{t("users.inviteSub")}</p>
         </>
       )}
       <Field label={t("users.emailLabel")} required>
@@ -204,7 +205,7 @@ export function InviteUserForm({
           team edits only its own records, and the preview below says so
           before the invite goes out. */}
       <fieldset className="users-invite-teams">
-        <legend className="t-caption">{t("users.teamsLabel")}</legend>
+        <legend className="t-name">{t("users.teamsLabel")}</legend>
         {(teams.data ?? []).flatMap((entry) =>
           "name" in entry ? (
             <Checkbox
@@ -229,7 +230,7 @@ export function InviteUserForm({
             an admin invite contacts into no team at all on the strength of
             pages nothing read. */}
         {teams.data?.length === 0 && !teamsPartial && (
-          <p className="t-caption">{t("users.noTeamsYet")}</p>
+          <p>{t("users.noTeamsYet")}</p>
         )}
         <RosterPartialNote partial={teamsPartial} />
       </fieldset>
@@ -246,7 +247,7 @@ export function InviteUserForm({
           its children, and a submit that fills the dialog reads as a banner
           rather than as the move the form is for. */}
       <div className="form-actions">
-        <Button variant="primary" small type="submit" disabled={!canInvite}>
+        <Button variant="primary" type="submit" disabled={!canInvite}>
           <UserPlus aria-hidden /> {t("users.invite")}
         </Button>
       </div>

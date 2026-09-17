@@ -48,32 +48,14 @@ export function PlanContract({
   const crowded = capacity !== undefined && isCrowded(capacity, commitments);
   const n = (value: number) => formatNumber(value, locale);
   return (
-    <Panel
-      title={t("plan.contract.title")}
-      // What the week ALREADY holds qualifies both rows under it, which is what
-      // a panel's description is for — as a paragraph in the body it was a
-      // stray sentence above two headings, reading as a third half.
-      //
-      // ABSENT draws nothing at all: the server omits `capacity` when no
-      // calendar reader is composed, and "0 meetings booked" would tell a rep
-      // their week is clear on the strength of a missing integration. Absent
-      // too when the week is crowded, where the Callout below says it louder.
-      sub={
-        capacity !== undefined && !crowded
-          ? t("plan.contract.capacityLine", {
-              meetings: n(capacity.meetings),
-              tasks: n(capacity.tasks),
-            })
-          : undefined
-      }
-    >
-      {/* A warn Callout only when the week is actually crowded. Drawn always,
+    <Panel title={t("plan.contract.title")}>
+      {/* A warning Callout only when the week is actually crowded. Drawn always,
           the tone would stop meaning anything and a reader would learn to skip
           it. */}
       {capacity !== undefined && crowded && (
         <PanelBody>
           <Callout
-            tone="warn"
+            tone="warning"
             kind="standing"
             title={t("plan.contract.crowded")}
           >
@@ -180,7 +162,7 @@ function ContractRow({
           {/* Nothing written is not an empty answer but the absence of one,
               so it reads at the caption's tone rather than as a value the rep
               chose. */}
-          <span className={value == null ? "t-caption" : undefined}>
+          <span>
             {value == null
               ? t("plan.contract.unwritten")
               : value === ""
@@ -190,7 +172,6 @@ function ContractRow({
           {editable && (
             <Button
               variant="ghost"
-              small
               onClick={() => {
                 setDraft(value ?? "");
                 setEditing(true);

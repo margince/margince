@@ -126,10 +126,9 @@ export function DealRoomAccess({
   return (
     <Panel
       title={t("access.title")}
-      sub={t("access.sub")}
       titleAction={
         mayManage ? (
-          <Button small onClick={() => setInviting(true)}>
+          <Button onClick={() => setInviting(true)}>
             {t("access.invite")}
           </Button>
         ) : undefined
@@ -183,7 +182,7 @@ function ReadingSoFar({ participant }: Readonly<{ participant: Participant }>) {
   }
   const titles = participant.documents_downloaded ?? [];
   return (
-    <p className="t-caption access-row-facts">
+    <p className="t-caption">
       {t("access.downloads", { count: formatNumber(downloads, locale) })}
       {titles.length > 0 ? ` · ${titles.join(", ")}` : ""}
     </p>
@@ -210,12 +209,9 @@ function ParticipantRow({
       <div className="access-row-main">
         <p>
           {participant.full_name}
-          <span className="t-caption access-row-email">
-            {" "}
-            · {participant.email}
-          </span>
+          <span className="t-caption"> · {participant.email}</span>
         </p>
-        <p className="t-caption access-row-facts">
+        <p className="t-caption">
           {t(CAPABILITY_LABELS[participant.capability])}
           {" · "}
           {revoked
@@ -247,25 +243,13 @@ function ParticipantRow({
           <OverflowMenu
             label={t("access.rowActions", { name: participant.full_name })}
           >
-            <Button
-              small
-              variant="ghost"
-              onClick={() => setConfirming("reissue")}
-            >
+            <Button variant="ghost" onClick={() => setConfirming("reissue")}>
               {t("access.issueLink")}
             </Button>
-            <Button
-              small
-              variant="ghost"
-              onClick={() => setConfirming("capability")}
-            >
+            <Button variant="ghost" onClick={() => setConfirming("capability")}>
               {t("access.changeCapability")}
             </Button>
-            <Button
-              small
-              variant="ghost"
-              onClick={() => setConfirming("revoke")}
-            >
+            <Button variant="ghost" onClick={() => setConfirming("revoke")}>
               {t("access.revoke")}
             </Button>
           </OverflowMenu>
@@ -314,16 +298,14 @@ function IssuedLink({ issued }: Readonly<{ issued: Issued }>) {
         {(control) => <TextInput {...control} readOnly value={link} />}
       </Field>
       <div className="card-actions">
-        <Button small onClick={copy}>
+        <Button onClick={copy}>
           <Copy aria-hidden />
           {copied === "done"
             ? t("access.issued.copied")
             : t("access.issued.copy")}
         </Button>
         {copied === "failed" ? (
-          <span className="t-caption t-danger">
-            {t("access.issued.copyFailed")}
-          </span>
+          <span className="t-danger">{t("access.issued.copyFailed")}</span>
         ) : null}
       </div>
       <p className="t-caption">{t("access.issued.oneTime")}</p>
@@ -434,7 +416,7 @@ function InviteDialog({
               description: t(CAPABILITY_HINTS[c]),
             }))}
           />
-          <p className="t-caption">{t("access.inviteNote")}</p>
+          <p>{t("access.inviteNote")}</p>
         </div>
       )}
     </ConfirmModal>
@@ -546,7 +528,7 @@ function RevokeDialog({
           ? ` · ${t("access.lastSeen", { when: formatDateAbbrev(participant.last_seen_at, locale, recordZone) })}`
           : ` · ${t("access.neverSignedIn")}`}
       </p>
-      <p className="t-caption">{t("access.revokeBody")}</p>
+      <p>{t("access.revokeBody")}</p>
     </ConfirmModal>
   );
 }

@@ -22,6 +22,7 @@ import {
   Modal,
 } from "../design-system/atoms";
 import { type Fact, FactList } from "../design-system/factlist";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { useT } from "../i18n";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
@@ -230,7 +231,6 @@ export function RelationshipRows({
       )}
       {canDelete && (
         <Button
-          small
           variant="danger"
           reasonId={refusedReasonId}
           onClick={() => setRemoving(rel)}
@@ -333,18 +333,19 @@ export function RelationshipRows({
         }}
         labelledBy={headingId}
       >
-        <h2
+        <Heading
+          size="large"
           id={headingId}
           className="t-h2"
           style={{ marginBottom: "var(--space-3)" }}
         >
           {t("rel.remove")}
-        </h2>
+        </Heading>
         <p style={{ marginBottom: "var(--space-4)" }}>
           {t("rel.removeConfirm")}
         </p>
         {remove.isError && (
-          <p className="t-caption" style={{ color: "var(--dangerText)" }}>
+          <p style={{ color: "var(--dangerText)" }}>
             {problemMessageOf(remove.error, t)}
           </p>
         )}
@@ -356,7 +357,6 @@ export function RelationshipRows({
           }}
         >
           <Button
-            small
             // The mutation is reset with the dialog, not just the row it was
             // aimed at: a failed remove left its sentence behind, and the next
             // seat's dialog opened carrying an error for a write nobody had
@@ -370,7 +370,6 @@ export function RelationshipRows({
             {t("create.cancel")}
           </Button>
           <Button
-            small
             variant="danger"
             onClick={() => {
               if (removing) {

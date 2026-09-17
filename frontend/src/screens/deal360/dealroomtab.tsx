@@ -160,7 +160,7 @@ export function RoomText({
   const dirty =
     title !== room.title || welcome !== (room.welcome_message ?? "");
   return (
-    <Panel title={t("roompage.text.title")} sub={t("roompage.text.sub")}>
+    <Panel title={t("roompage.text.title")}>
       <PanelBody>
         <div className="form-stack">
           <Field label={t("roompage.text.titleLabel")}>
@@ -185,11 +185,10 @@ export function RoomText({
             )}
           </Field>
           {refusal ? (
-            <p className="t-caption">{refusal}</p>
+            <p>{refusal}</p>
           ) : (
             <div className="card-actions">
               <Button
-                small
                 disabled={!dirty || title.trim() === ""}
                 pending={save.isPending}
                 onClick={() =>
@@ -203,7 +202,7 @@ export function RoomText({
                 {t("access.save")}
               </Button>
               {save.isError ? (
-                <span className="t-caption t-danger">
+                <span className="t-danger">
                   {problemMessageOf(save.error, t)}
                 </span>
               ) : null}
@@ -353,9 +352,7 @@ export function ViewAsBuyerButton({ room }: Readonly<{ room: DealRoom }>) {
         {t("roompage.viewAsBuyer")}
       </Button>
       {preview.isError ? (
-        <span className="t-caption t-danger">
-          {problemMessageOf(preview.error, t)}
-        </span>
+        <span className="t-danger">{problemMessageOf(preview.error, t)}</span>
       ) : null}
     </>
   );

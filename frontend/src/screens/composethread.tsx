@@ -11,6 +11,7 @@ import { TimelineRow } from "../design-system/composed";
 import { EmailDetail } from "../design-system/emaildetail";
 import { EmailEntry } from "../design-system/emailentry";
 import { EmailText } from "../design-system/emailtext";
+import { Heading } from "../design-system/heading";
 import type { NameOf } from "../design-system/participants";
 import { Popover } from "../design-system/popover";
 import { SurfaceState } from "../design-system/surfacestate";
@@ -159,12 +160,11 @@ export function ThreadPane({
   return (
     <section className="compose-thread" aria-labelledby="compose-thread-head">
       <div className="compose-thread-head">
-        <h3 id="compose-thread-head" className="t-eyebrow">
+        <Heading size="medium" id="compose-thread-head" className="t-eyebrow">
           {t(named ? "compose.threadHeading" : "compose.threadContinuing")}
-        </h3>
+        </Heading>
         {onLeave && (
           <Button
-            small
             className="compose-thread-leave"
             onClick={onLeave}
             disabled={disabled}
@@ -231,7 +231,6 @@ export function ThreadPane({
                             <EmailText body={message.body ?? ""} />
                           </Popover>
                           <Button
-                            small
                             variant="link"
                             onClick={() => setReading(message.id)}
                           >
@@ -379,9 +378,13 @@ export function ConversationChoices({
   const zone = viewerZone();
   return (
     <section className="compose-thread" aria-labelledby="compose-choices-head">
-      <h3 id="compose-choices-head" className="compose-thread-head t-eyebrow">
+      <Heading
+        size="medium"
+        id="compose-choices-head"
+        className="compose-thread-head t-eyebrow"
+      >
         {t("compose.continueHeading")}
-      </h3>
+      </Heading>
       <div className="compose-thread-scroll">
         {pending ? (
           <PendingBody label={t("compose.threadPending")} lines={3} />
@@ -402,7 +405,7 @@ export function ConversationChoices({
                     <span className="compose-choice-subject">
                       {conversation.subject}
                     </span>
-                    <span className="compose-choice-meta t-caption">
+                    <span className="t-caption">
                       {[
                         conversation.counterparts,
                         formatDate(conversation.atIso, locale, zone),

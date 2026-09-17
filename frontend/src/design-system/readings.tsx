@@ -23,12 +23,12 @@ export function Meter({
   value: number;
   max: number;
   label: string;
-  // What colour the FILL takes. The accent gradient by default; "warn" and
+  // What colour the FILL takes. The accent gradient by default; "warning" and
   // "danger" for a reading the caller has decided is bad news at this value,
   // whichever end that is — a coverage bar that has run low, an overdue bar
   // that has run high.
-  tone?: "warn" | "danger";
-  // The gradient's second colour (`--away`) reads as a warning creeping in at
+  tone?: "warning" | "danger";
+  // The gradient's second colour (`--warning`) reads as a warning creeping in at
   // the high end, which is wrong for a reading with no low-is-bad meaning.
   // `flat` keeps the accent solid instead of fading toward it.
   flat?: boolean;
@@ -83,7 +83,7 @@ function meterClass({
   dense,
   restTone,
 }: Readonly<{
-  tone?: "warn" | "danger";
+  tone?: "warning" | "danger";
   flat?: boolean;
   dense?: boolean;
   restTone?: "accent";
@@ -280,5 +280,5 @@ export type BarListRow = Readonly<{
   value: number;
   // The same figure, spelled for a human by the caller's own formatter.
   amount: string;
-  tone?: "warn" | "danger";
+  tone?: "warning" | "danger";
 }>;

@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 import { meFixture } from "../app/mefixture";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 import { MeetingOutcome } from "./worklist.meetingoutcome";
@@ -58,6 +59,13 @@ const meta: Meta<typeof MeetingOutcome> = {
 export default meta;
 type Story = StoryObj<typeof MeetingOutcome>;
 
+// Opening the composer is the same act in both stories below, so it is one
+// function rather than two copies that can drift apart.
+const openComposer: Story["play"] = async ({ canvasElement }) => {
+  const canvas = within(canvasElement);
+  await userEvent.click(await canvas.findByRole("button", { name: "Update" }));
+};
+
 /**
  * THE CARD's two verbs, closed.
  *
@@ -103,13 +111,7 @@ export const ComposerOpen: Story = {
       </StoryProviders>
     );
   },
-  play: async ({ canvasElement }) => {
-    const { within, userEvent } = await import("storybook/test");
-    const canvas = within(canvasElement);
-    await userEvent.click(
-      await canvas.findByRole("button", { name: "Update" }),
-    );
-  },
+  play: openComposer,
 };
 
 /**
@@ -132,11 +134,5 @@ export const NothingCapturedYet: Story = {
       </StoryProviders>
     );
   },
-  play: async ({ canvasElement }) => {
-    const { within, userEvent } = await import("storybook/test");
-    const canvas = within(canvasElement);
-    await userEvent.click(
-      await canvas.findByRole("button", { name: "Update" }),
-    );
-  },
+  play: openComposer,
 };

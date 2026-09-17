@@ -79,7 +79,7 @@ export const Editing: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const user = userEvent.setup();
-    await user.click(await canvas.findByRole("button", { name: "Correct" }));
+    await user.click(await canvas.findByRole("button", { name: "Edit" }));
   },
 };
 
@@ -91,7 +91,7 @@ export const EditingDark: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const user = userEvent.setup();
-    await user.click(await canvas.findByRole("button", { name: "Correct" }));
+    await user.click(await canvas.findByRole("button", { name: "Edit" }));
   },
 };
 

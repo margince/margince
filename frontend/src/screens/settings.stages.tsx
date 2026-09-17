@@ -139,7 +139,6 @@ export function StageCreate({ pipelineId }: Readonly<{ pipelineId: string }>) {
   return (
     <>
       <Button
-        small
         data-testid={`new-stage-${pipelineId}`}
         onClick={() => setOpen(true)}
       >
@@ -218,7 +217,6 @@ function StageRemove({
           the act it only ASKS about put six solid red buttons in one pipeline,
           which is the shout a reader stops reading. */}
       <Button
-        small
         data-testid={`remove-stage-${stage.id}`}
         onClick={() => setOpen(true)}
       >
@@ -238,9 +236,7 @@ function StageRemove({
         // back to (design-system/confirmmodal).
         returnFocusTo={returnFocusTo}
       >
-        <p className="t-caption">
-          {t("stage.removeBody", { name: stage.name })}
-        </p>
+        <p>{t("stage.removeBody", { name: stage.name })}</p>
       </ConfirmModal>
     </>
   );
@@ -268,7 +264,7 @@ export function StageRow({
       <Badge tone={stageSemanticTone(stage.semantic)}>
         {stageSemanticLabel(stage.semantic, t)}
       </Badge>
-      <span className="t-num t-caption">
+      <span className="t-num">
         {formatNumber(stage.win_probability, locale)}%
       </span>
       {/* Each control carries its own verb — editing a stage is

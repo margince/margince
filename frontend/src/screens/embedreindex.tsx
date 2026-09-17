@@ -89,7 +89,11 @@ function StatusHeader({
   locale: Locale;
   t: ReturnType<typeof useT>;
 }>) {
-  const tone = isRunning ? "accent" : data.reindex_needed ? "warn" : "success";
+  const tone = isRunning
+    ? "accent"
+    : data.reindex_needed
+      ? "warning"
+      : "success";
   const label = isRunning
     ? t("embedreindex.statusReembedding")
     : data.reindex_needed
@@ -168,7 +172,7 @@ function EstimateBody({
       <p className="t-caption">{t("embedreindex.estimateQualityHeuristic")}</p>
       {preview.utilization_impact && (
         <>
-          <p className="t-caption">{t("embedreindex.utilizationTitle")}</p>
+          <p>{t("embedreindex.utilizationTitle")}</p>
           <p>
             <Badge tone={bandTone(preview.utilization_impact)}>
               {impactLabel(preview.utilization_impact, t)}
@@ -345,7 +349,6 @@ export function EmbedReindexCard() {
                         control={
                           <Button
                             variant="primary"
-                            small
                             onClick={() =>
                               openDialog("reindex", data.configured_identity)
                             }
@@ -370,7 +373,6 @@ export function EmbedReindexCard() {
                       description={t("embedreindex.rebuildHelp")}
                       control={
                         <Button
-                          small
                           onClick={() =>
                             openDialog("rebuild", data.configured_identity)
                           }
@@ -424,9 +426,7 @@ export function EmbedReindexCard() {
                   }}
                 >
                   {preview.isPending && (
-                    <p className="t-caption">
-                      {t("embedreindex.previewLoading")}
-                    </p>
+                    <p>{t("embedreindex.previewLoading")}</p>
                   )}
                   {/* A failed estimate is what this dialog says about ITSELF,
                       and it is the reason Confirm is refused — so it is a

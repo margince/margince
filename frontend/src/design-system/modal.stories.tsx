@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useId, useState } from "react";
 import { Button, Modal, SectionHeader } from "./atoms";
+import { Heading } from "./heading";
 
 // fe-uat (frontend/scripts/fe-uat.mjs) maps modal.tsx → modal.stories.tsx and
 // fails a change to modal.tsx whose stories here do not render clean.
@@ -26,13 +27,14 @@ function ModalDemo() {
         Open the dialog
       </Button>
       <Modal open={open} onClose={() => setOpen(false)} labelledBy={titleId}>
-        <h2
+        <Heading
+          size="large"
           id={titleId}
           className="t-h2"
           style={{ marginBottom: "var(--space-3)" }}
         >
           Merge these companies?
-        </h2>
+        </Heading>
         <p className="t-caption">
           Globex GmbH keeps its record; the duplicate's activities, deals and
           contacts move onto it. This cannot be undone.
@@ -68,7 +70,7 @@ function DrawerDemo() {
       {/* Something behind the drawer, because "the record stays legible" is
           the whole claim the placement makes and an empty canvas cannot show
           it being kept. */}
-      <SectionHeader title="Globex GmbH" sub="Enterprise · Munich" />
+      <SectionHeader title="Globex GmbH" />
       <p className="t-body">
         Anna Brandt replied on Tuesday and is waiting on pricing. Nobody has
         written since.
@@ -82,13 +84,14 @@ function DrawerDemo() {
         labelledBy={titleId}
         placement="right"
       >
-        <h2
+        <Heading
+          size="large"
           id={titleId}
           className="t-h2"
           style={{ marginBottom: "var(--space-3)" }}
         >
           Write to Anna Brandt
-        </h2>
+        </Heading>
         <p className="t-caption">
           The draft sits beside the record it is about, so a rep can read the
           history while writing rather than remembering it.
@@ -118,7 +121,7 @@ function WideDrawerDemo() {
   const titleId = useId();
   return (
     <>
-      <SectionHeader title="Globex GmbH" sub="Enterprise · Munich" />
+      <SectionHeader title="Globex GmbH" />
       <Button variant="primary" onClick={() => setOpen(true)}>
         Open the brief
       </Button>
@@ -130,9 +133,9 @@ function WideDrawerDemo() {
         size="wide"
       >
         <div className="drawer-head">
-          <h2 id={titleId} className="t-h2">
+          <Heading size="large" id={titleId} className="t-h2">
             Before the room with Anna Brandt
-          </h2>
+          </Heading>
           <p className="t-caption">Tuesday 14:00 · 40 minutes · Munich</p>
         </div>
         <div className="drawer-body">

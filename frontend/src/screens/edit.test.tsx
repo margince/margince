@@ -122,9 +122,7 @@ describe("edit record flow", () => {
       });
       return (
         <>
-          <Button small onClick={() => setOpen(true)}>
-            Open
-          </Button>
+          <Button onClick={() => setOpen(true)}>Open</Button>
           <EditRecordModal
             open={open}
             onClose={() => setOpen(false)}

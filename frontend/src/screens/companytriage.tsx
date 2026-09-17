@@ -6,7 +6,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Badge, Disclosure } from "../design-system/atoms";
 import { PanelBody } from "../design-system/panel";
-import { reasonText } from "../design-system/pipelineladder";
+import { reasonText, STATUS_TONE } from "../design-system/pipelineladder";
 
 import { SurfaceState } from "../design-system/surfacestate";
 import { formatDateTime } from "../format/format";
@@ -30,22 +30,6 @@ import "./companytriage.css";
 
 type Triage = components["schemas"]["CompanyCaptureTriage"];
 type TriagedDomain = components["schemas"]["CompanyTriagedDomain"];
-
-// The tone each status carries here. Only two arrive — a domain is settled or
-// it is open — and the map is keyed on the union so a status added upstream is
-// a compile error rather than an untoned badge.
-const STATUS_TONE: Record<
-  TriagedDomain["rung"]["status"],
-  "success" | "warn" | "danger" | undefined
-> = {
-  done: "success",
-  skipped: undefined,
-  pending: "warn",
-  failed: "danger",
-  not_applicable: undefined,
-  unknown: undefined,
-  not_reported: undefined,
-};
 
 export function CompanyTriageSection({
   companyId,

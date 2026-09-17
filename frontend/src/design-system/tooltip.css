@@ -8,11 +8,13 @@
   z-index: 80;
   max-width: 320px;
   padding: var(--space-2) var(--space-3);
+  /* Body S: the tip is an aside about the row under the pointer, and at the
+     row's own size it reads as a second copy of the line rather than a note
+     about it. */
+  font: var(--fontBodySmall);
   border-radius: var(--r-sm);
   background: var(--textPrimary);
   color: var(--bgCard);
-  font-size: var(--fs-meta);
-  line-height: 1.4;
   /* The tip carries the string the row truncated, so it is the one place the
      whole of it must fit: it wraps, and breaks a run with no spaces in it
      rather than growing past its own max-width. */

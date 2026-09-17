@@ -251,7 +251,6 @@ export function QueryStates({
           </p>
         </div>
         <Button
-          small
           onClick={() => query.refetch()}
           style={{ marginTop: "var(--space-3)" }}
         >
@@ -304,6 +303,34 @@ export function WriteRefused({
   );
 }
 
+/**
+ * The same refusal WITHOUT a heading, on the one line a form has room for.
+ *
+ * `WriteRefused` above is the shape for a refusal that needs a claim of its own
+ * — a card, a whole screen. Inside a modal's field stack the claim is already
+ * the dialog's title, and a bordered notice between the last field and the
+ * Save row reads as a second surface stacked on the form. So this is the
+ * sentence and nothing else, in the danger ink, announced the moment it
+ * arrives.
+ *
+ * ONE spelling, for the reason the component above it is one: nineteen screens
+ * had grown the same `<p role="alert">` around the same call, and half of them
+ * had grown it without the ink, so a refusal and a caption read the same.
+ * Nothing is drawn when there is nothing to report, which is what lets a caller
+ * hand it a query's `error` straight.
+ */
+export function RefusalLine({ error }: Readonly<{ error: unknown }>) {
+  const t = useT();
+  if (error === null || error === undefined) {
+    return null;
+  }
+  return (
+    <p role="alert" className="t-danger">
+      {problemMessageOf(error, t)}
+    </p>
+  );
+}
+
 // The one "Load more" spelling for every keyset-paginated infinite query
 // (record history, field history, the settings audit log): a small button
 // that fetches the next page and disables itself mid-fetch, rendered only
@@ -323,7 +350,6 @@ export function LoadMoreButton({
   }
   return (
     <Button
-      small
       className="load-more"
       disabled={query.isFetchingNextPage}
       onClick={() => query.fetchNextPage()}

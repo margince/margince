@@ -1,10 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useId, useState } from "react";
+import { useState } from "react";
 import { api } from "../api/client";
 import {
   Button,
   Card,
   Checkbox,
+  Field,
   SectionHeader,
   SegmentedControl,
   TextInput,
@@ -59,7 +60,6 @@ function SessionBookingScreen() {
   const [duration, setDuration] = useState<(typeof DURATIONS)[number]>("30");
   const [attendee, setAttendee] = useState("");
   const [recognized, setRecognized] = useState<string | null>(null);
-  const attendeeId = useId();
   const { from, to } = useBookingWindow();
 
   const availability = useQuery({
@@ -123,13 +123,13 @@ function SessionBookingScreen() {
 
   return (
     <div className="wrap narrow">
-      <SectionHeader title={t("book.title")} sub={t("book.sub")} />
+      <SectionHeader title={t("book.title")} />
       <div
         style={{
           display: "flex",
           gap: "var(--space-2)",
           alignItems: "center",
-          marginBottom: 12,
+          marginBottom: "var(--space-3)",
         }}
       >
         <SegmentedControl
@@ -142,27 +142,28 @@ function SessionBookingScreen() {
             "60": t("book.min60"),
           }}
         />
-        <span className="t-label" id={attendeeId}>
-          {t("book.attendee")}
-        </span>
-        <TextInput
-          aria-labelledby={attendeeId}
-          value={attendee}
-          onChange={(event) => setAttendee(event.target.value)}
-          onBlur={() =>
-            attendee.trim() && checkAttendee.mutate(attendee.trim())
-          }
-        />
+        <Field label={t("book.attendee")}>
+          {(control) => (
+            <TextInput
+              {...control}
+              value={attendee}
+              onChange={(event) => setAttendee(event.target.value)}
+              onBlur={() =>
+                attendee.trim() && checkAttendee.mutate(attendee.trim())
+              }
+            />
+          )}
+        </Field>
       </div>
       {recognized && (
-        <p className="t-caption" style={{ marginBottom: "var(--space-3)" }}>
+        <p style={{ marginBottom: "var(--space-3)" }}>
           {t("book.welcomeBack", { name: recognized })}
         </p>
       )}
       {book.isSuccess ? (
         <Card as="div" role="status">
-          <p className="t-label">{t("book.confirmed")}</p>
-          <p className="t-caption" style={{ marginTop: 4 }}>
+          <p>{t("book.confirmed")}</p>
+          <p className="t-caption" style={{ marginTop: "var(--space-1)" }}>
             {book.data.occurred_at &&
               formatDateTime(book.data.occurred_at, locale, viewerZone())}
           </p>
@@ -173,7 +174,7 @@ function SessionBookingScreen() {
               client never hears about a meeting and nobody finds out until
               they do not turn up. */}
           {book.variables?.attendee !== "" && (
-            <p className="t-caption" style={{ marginTop: "var(--space-1)" }}>
+            <p style={{ marginTop: "var(--space-1)" }}>
               {t("book.tellThemYourself")}
             </p>
           )}
@@ -185,11 +186,16 @@ function SessionBookingScreen() {
           empty={(data) => data.slots.length === 0}
         >
           {(data) => (
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: "var(--space-2)",
+              }}
+            >
               {data.slots.slice(0, 12).map((slot) => (
                 <Button
                   key={slot.start}
-                  small
                   disabled={book.isPending}
                   onClick={() =>
                     book.mutate({ ...slot, attendee: attendee.trim() })
@@ -209,8 +215,8 @@ function SessionBookingScreen() {
           role="status"
           style={{ marginTop: "var(--space-3)" }}
         >
-          <p className="t-label">{t("book.failed")}</p>
-          <p className="t-caption" style={{ marginTop: 4 }}>
+          <p>{t("book.failed")}</p>
+          <p style={{ marginTop: "var(--space-1)" }}>
             {problemMessageOf(book.error, t)}
           </p>
         </Card>
@@ -227,7 +233,6 @@ function PublicBookingScreen({ hostSlug }: Readonly<{ hostSlug: string }>) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [consented, setConsented] = useState(false);
-  const fieldId = useId();
   const { from, to } = useBookingWindow();
 
   const availability = useQuery({
@@ -286,14 +291,14 @@ function PublicBookingScreen({ hostSlug }: Readonly<{ hostSlug: string }>) {
 
   return (
     <div className="wrap narrow">
-      <SectionHeader title={t("book.title")} sub={t("book.publicSub")} />
+      <SectionHeader title={t("book.title")} />
       <div
         style={{
           display: "flex",
           gap: "var(--space-2)",
           alignItems: "center",
           flexWrap: "wrap",
-          marginBottom: 12,
+          marginBottom: "var(--space-3)",
         }}
       >
         <SegmentedControl
@@ -306,27 +311,28 @@ function PublicBookingScreen({ hostSlug }: Readonly<{ hostSlug: string }>) {
             "60": t("book.min60"),
           }}
         />
-        <span className="t-label" id={`${fieldId}-name`}>
-          {t("book.name")}
-        </span>
-        <TextInput
-          aria-labelledby={`${fieldId}-name`}
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-        />
-        <span className="t-label" id={`${fieldId}-email`}>
-          {t("book.email")}
-        </span>
-        <TextInput
-          type="email"
-          aria-labelledby={`${fieldId}-email`}
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-        />
+        <Field label={t("book.name")}>
+          {(control) => (
+            <TextInput
+              {...control}
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+            />
+          )}
+        </Field>
+        <Field label={t("book.email")}>
+          {(control) => (
+            <TextInput
+              {...control}
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+            />
+          )}
+        </Field>
       </div>
       <div style={{ marginBottom: "var(--space-3)" }}>
         <Checkbox
-          className="t-caption"
           checked={consented}
           onChange={(event) => setConsented(event.target.checked)}
           label={<span data-consent-wording>{consentWording}</span>}
@@ -334,8 +340,8 @@ function PublicBookingScreen({ hostSlug }: Readonly<{ hostSlug: string }>) {
       </div>
       {book.isSuccess ? (
         <Card as="div" role="status">
-          <p className="t-label">{t("book.confirmed")}</p>
-          <p className="t-caption" style={{ marginTop: 4 }}>
+          <p>{t("book.confirmed")}</p>
+          <p className="t-caption" style={{ marginTop: "var(--space-1)" }}>
             {formatDateTime(book.data.start, locale, viewerZone())}
           </p>
         </Card>
@@ -346,11 +352,16 @@ function PublicBookingScreen({ hostSlug }: Readonly<{ hostSlug: string }>) {
           empty={(data) => data.slots.length === 0}
         >
           {(data) => (
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: "var(--space-2)",
+              }}
+            >
               {data.slots.slice(0, 12).map((slot) => (
                 <Button
                   key={slot.start}
-                  small
                   disabled={!ready || book.isPending}
                   onClick={() => book.mutate(slot)}
                 >
@@ -368,8 +379,8 @@ function PublicBookingScreen({ hostSlug }: Readonly<{ hostSlug: string }>) {
           role="status"
           style={{ marginTop: "var(--space-3)" }}
         >
-          <p className="t-label">{t("book.failed")}</p>
-          <p className="t-caption" style={{ marginTop: 4 }}>
+          <p>{t("book.failed")}</p>
+          <p style={{ marginTop: "var(--space-1)" }}>
             {problemMessageOf(book.error, t)}
           </p>
         </Card>

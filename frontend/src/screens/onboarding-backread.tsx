@@ -4,6 +4,7 @@
 import type { components } from "../api/schema";
 import { useDrawsImportRun } from "../app/import-onscreen";
 import { Button, Skeleton } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { formatMoney, formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -227,7 +228,9 @@ function BackreadSetup({
 
   return (
     <section className="ob-backread">
-      <h3 className="ob-backread-h t-h3">{t("ob.backread.heading")}</h3>
+      <Heading size="medium" className="ob-backread-h t-h3">
+        {t("ob.backread.heading")}
+      </Heading>
       <ImportWindowPicker
         value={selected}
         onChange={onSelect}
@@ -238,7 +241,7 @@ function BackreadSetup({
         problem={previewProblem}
         counting={counting}
       />
-      <p className="ob-backread-note t-caption">{t("ob.backread.note")}</p>
+      <p>{t("ob.backread.note")}</p>
       <div className="ob-backread-acts">
         <Button variant="primary" disabled={starting || held} onClick={onStart}>
           {t("ob.backread.start")}
@@ -284,7 +287,7 @@ function BackreadScope({
 
   return (
     <div className="ob-backread-scope" aria-live="polite">
-      {counting && <p className="t-caption">{t("ob.backread.estimating")}</p>}
+      {counting && <p>{t("ob.backread.estimating")}</p>}
       {preview && (
         <p className="ob-backread-estimate">
           {t(
@@ -353,7 +356,11 @@ function BackreadRun({
 
   return (
     <section className="ob-backread">
-      {heading !== null && <h3 className="ob-backread-h t-h3">{t(heading)}</h3>}
+      {heading !== null && (
+        <Heading size="medium" className="ob-backread-h t-h3">
+          {t(heading)}
+        </Heading>
+      )}
       {live && <BackreadProgress run={run} />}
       <BackreadTallies counts={run.counts} />
       <BackreadOutcome run={run} />
@@ -459,21 +466,11 @@ function BackreadOutcome({ run }: Readonly<{ run: BackfillStatus }>) {
   const t = useT();
   switch (run.state) {
     case "queued":
-      return (
-        <p className="ob-backread-note t-caption">{t("ob.backread.queued")}</p>
-      );
+      return <p>{t("ob.backread.queued")}</p>;
     case "running":
-      return (
-        <p className="ob-backread-note t-caption">
-          {t("ob.backread.runningNote")}
-        </p>
-      );
+      return <p>{t("ob.backread.runningNote")}</p>;
     case "done":
-      return (
-        <p className="ob-backread-note t-caption">
-          {t("ob.backread.doneNote")}
-        </p>
-      );
+      return <p>{t("ob.backread.doneNote")}</p>;
     case "error":
       return (
         <p className="ob-backread-problem" role="alert">
@@ -490,7 +487,7 @@ function BackreadOutcome({ run }: Readonly<{ run: BackfillStatus }>) {
       // in the inbox, waiting on review, whether or not the run kept going.
       const captured = run.counts?.captured ?? 0;
       return (
-        <p className="ob-backread-note t-caption">
+        <p>
           {t(
             captured > 0
               ? "ob.backread.cancelledPartial"

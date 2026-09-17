@@ -18,6 +18,7 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Meter } from "../design-system/readings";
 import { formatDateTime, formatNumber } from "../format/format";
@@ -111,7 +112,7 @@ function BudgetReading({ budget }: Readonly<{ budget: Budget }>) {
       </p>
       <Callout
         kind="standing"
-        tone={budget.band === "normal" ? "info" : "warn"}
+        tone={budget.band === "normal" ? "info" : "warning"}
         title={
           budget.band === "normal"
             ? t("aiAdmin.normal")
@@ -134,9 +135,11 @@ function BudgetPreview({
   const canDiagnose = useCan("ai_diagnostics", "read");
   return (
     <>
-      <h3>{t("aiAdmin.preview")}</h3>
+      <Heading size="small" as="h3">
+        {t("aiAdmin.preview")}
+      </Heading>
       <BudgetReading budget={preview.proposed} />
-      <p className="t-caption">{t("aiAdmin.previewHint")}</p>
+      <p>{t("aiAdmin.previewHint")}</p>
       {canDiagnose && <DeferredWork rows={preview.deferred_work} />}
       {canRoute && (
         <Disclosure summary={t("aiAdmin.features")}>
@@ -259,7 +262,7 @@ function BudgetBody({
             </Field>
           </div>
           {revision !== budget.revision && (
-            <Callout kind="standing" tone="warn" title={t("aiAdmin.stale")}>
+            <Callout kind="standing" tone="warning" title={t("aiAdmin.stale")}>
               {t("aiAdmin.staleHelp")}
             </Callout>
           )}
@@ -431,7 +434,7 @@ export function AiFeatureTable({
                   ))}
                 </ol>
                 {onEdit && (
-                  <Button small onClick={() => onEdit(row.leading_tier)}>
+                  <Button onClick={() => onEdit(row.leading_tier)}>
                     {t("aiAdmin.editBinding")}
                   </Button>
                 )}
@@ -447,7 +450,7 @@ export function AiFeatureTable({
             <Badge
               tone={
                 row.impact === "budget_blocked" || row.impact === "unconfigured"
-                  ? "warn"
+                  ? "warning"
                   : undefined
               }
             >

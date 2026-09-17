@@ -3,6 +3,7 @@ import { useEffect, useId, useState } from "react";
 import { Button, Modal } from "../design-system/atoms";
 import { Calendar, type ISODay, isoDay } from "../design-system/calendar";
 import { Eyebrow } from "../design-system/eyebrow";
+import { Heading } from "../design-system/heading";
 import { Popover } from "../design-system/popover";
 import {
   formatDateAbbrev,
@@ -91,7 +92,7 @@ export function ScheduleMenu({ onOpen }: Readonly<{ onOpen: () => void }>) {
       }
     >
       <Button variant="ghost" onClick={onOpen}>
-        <Clock aria-hidden="true" size={16} />
+        <Clock aria-hidden="true" />
         {t("compose.scheduleSend")}
       </Button>
     </Popover>
@@ -146,9 +147,9 @@ export function ScheduleDialog({
   const picked = new Date(`${day}T${String(hour).padStart(2, "0")}:00`);
   return (
     <Modal open={open} onClose={onClose} labelledBy={headingId} size="wide">
-      <h2 id={headingId} className="t-h2">
+      <Heading size="large" id={headingId} className="t-h2">
         {picking ? t("compose.schedulePick") : t("compose.scheduleSend")}
-      </h2>
+      </Heading>
       {picking ? (
         <>
           <div className="schedule-pick">
@@ -221,7 +222,7 @@ export function ScheduleDialog({
             </button>
           ))}
           <Button variant="ghost" onClick={() => setPicking(true)}>
-            <CalendarDays aria-hidden="true" size={16} />
+            <CalendarDays aria-hidden="true" />
             {t("compose.schedulePick")}
           </Button>
           {/* Only once a moment is set. Offered over an unscheduled send it

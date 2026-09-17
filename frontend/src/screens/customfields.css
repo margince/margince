@@ -55,13 +55,9 @@
   gap: var(--gapActions);
 }
 
-/* This screen's hint line. It wears `.t-caption` for its type — meta, not
-   tertiary: this is prose a reader is meant to READ, and tertiary is the
-   de-emphasis ink that clears 3:1 for incidental text rather than the 4.5:1
-   body text owes — and owns only the interval a hint keeps to its field. */
+/* This screen's hint line. All it owns is the interval a hint keeps to its
+   field. */
 .cf-hint {
-  line-height: 1.45;
-  /* ds:ignore a field's hint sits tighter than a caption standing alone */
   margin: var(--space-1) 0;
 }
 
@@ -94,7 +90,7 @@
 }
 
 /* The refusal banner and the confirm gate are Callouts now — they were the
-   `danger` and `warn` tones hand-drawn, off by a pixel on both axes and with
+   `danger` and `warning` tones hand-drawn, off by a pixel on both axes and with
    the radius token's VALUE typed in rather than the token. */
 
 .cf-ddl {
@@ -124,7 +120,6 @@
   height: 30px;
   border-radius: var(--r-sm);
   background: var(--bgChip);
-  color: var(--textChip);
   display: grid;
   place-items: center;
   flex: none;
@@ -148,29 +143,20 @@
   gap: 8px;
 }
 
-/* The field's API key, 11px — the string an integrator copies into a payload.
- * Nothing on this page has to be read more exactly, so it takes the AA
- * small-text role rather than the 3:1 mark role. */
+/* The field's API key — the string an integrator copies into a payload. */
 .cf-key {
   display: block;
-  font-size: var(--fs-eyebrow);
-  color: var(--textMeta);
 }
 
 /* just-added optimistic row, pending the server commit. The italic carries the
- * staged-ness; the colour only has to stay readable, so it is --textMeta —
- * dimming a row below AA would make "not committed yet" cost the reader the
- * row's contents. */
+ * staged-ness. */
 .cf-cell-staged {
-  color: var(--textMeta);
   font-style: italic;
 }
 
-/* archived field: dimmed but still legible in the audit-retained list — and
- * "still legible" is the whole claim of the comment, so the colour has to be
- * one that holds AA at this size. The strike-through says archived. */
+/* archived field, still legible in the audit-retained list. The strike-through
+ * says archived. */
 .cf-cell-retired {
-  color: var(--textMeta);
   text-decoration: line-through;
 }
 

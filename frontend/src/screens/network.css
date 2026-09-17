@@ -34,7 +34,6 @@
 .net-seat-name {
   flex: 1;
   min-width: 0;
-  font-weight: 500;
 }
 
 /* The name leads and takes the slack, so the band and counts stay right-aligned
@@ -43,6 +42,5 @@
   flex: 1 1 8rem;
   min-width: 0;
   color: var(--textPrimary);
-  font: 500 0.875rem / 1.4 var(--f-body);
   overflow-wrap: anywhere;
 }

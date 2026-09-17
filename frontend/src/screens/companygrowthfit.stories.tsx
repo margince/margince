@@ -94,7 +94,7 @@ const strong: GrowthFit = {
   generated_by: "model",
 };
 
-// The warn tone on the scale's other end, with fewer inputs available than
+// The warning tone on the scale's other end, with fewer inputs available than
 // the ceiling case: a reason to weigh the band down, not a reason to hide it.
 const weak: GrowthFit = {
   company_id: "o-1",

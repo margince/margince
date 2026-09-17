@@ -127,9 +127,7 @@ function LeadDealBody({ lead }: Readonly<{ lead: Lead }>) {
   if (dealId && name) {
     return <DealRecordCard dealId={dealId} name={name} />;
   }
-  return isEmpty ? (
-    <p className="t-caption">{t("lead.rail.deal.empty")}</p>
-  ) : null;
+  return isEmpty ? <p>{t("lead.rail.deal.empty")}</p> : null;
 }
 
 // The verb this lead's deal slice offers, when there is still a deal to
@@ -143,7 +141,7 @@ function LeadQualifyButton({
   const t = useT();
   return (
     <div className="card-actions">
-      <Button small variant="ghost" reasonId={reasonId} onClick={onQualify}>
+      <Button variant="ghost" reasonId={reasonId} onClick={onQualify}>
         {t("lead.promote")}
       </Button>
     </div>
@@ -224,9 +222,7 @@ function LeadProjectBody({ lead }: Readonly<{ lead: Lead }>) {
   if (project) {
     return <ProjectRecordCard project={project} />;
   }
-  return isEmpty ? (
-    <p className="t-caption">{t("lead.rail.project.empty")}</p>
-  ) : null;
+  return isEmpty ? <p>{t("lead.rail.project.empty")}</p> : null;
 }
 
 // Attaches `project_id` through the SAME writer the Details card's own
@@ -264,7 +260,6 @@ function LeadProjectAttachButton({
     <>
       <div className="card-actions">
         <Button
-          small
           variant="ghost"
           reasonId={reasonId}
           onClick={() => setOpen(true)}
