@@ -1,6 +1,6 @@
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Button } from "../design-system/atoms";
+import { Button, Textarea, TextInput } from "../design-system/atoms";
 import { Heading } from "../design-system/heading";
 import { ordinalNumber } from "../format/format";
 import { useT } from "../i18n";
@@ -189,6 +189,22 @@ export function ManualCompanyInterview({
     setQuestionIndex((current) => current - 1);
   };
   const promptID = `manual-question-${question.field}`;
+  const hintID = `${promptID}-hint`;
+  // The answer box is the design system's, but NOT inside a `Field`: this board
+  // asks one question at a time and that question is its <h1>, so a `Field`
+  // would draw a second name for the same control — the same words a rung
+  // smaller, in the ink a hint wears. The heading names it and the line under
+  // the heading describes it, which is what the two aria attributes say.
+  const answer = {
+    id: answerID,
+    "aria-labelledby": promptID,
+    "aria-describedby": hintID,
+    value,
+    required,
+    onChange: (event: { target: { value: string } }) =>
+      setField(question.field, event.target.value),
+    onBlur: onPersist,
+  };
 
   return (
     <form
@@ -208,32 +224,18 @@ export function ManualCompanyInterview({
       <Heading size="xlarge" id={promptID}>
         {t(question.prompt)}
       </Heading>
-      <p>{t(question.hint)}</p>
+      <p id={hintID}>{t(question.hint)}</p>
       {isMultilineField(question.field) ? (
-        <textarea
-          id={answerID}
-          className="ob-manual-input ob-manual-textarea"
-          aria-labelledby={promptID}
-          value={value}
-          required={required}
-          onChange={(event) => setField(question.field, event.target.value)}
-          onBlur={onPersist}
-        />
+        // Three lines open, because these questions ask for a paragraph and a
+        // box the height of a line says a sentence is what is wanted.
+        <Textarea rows={3} {...answer} />
       ) : (
-        <input
-          id={answerID}
-          className="ob-manual-input"
-          aria-labelledby={promptID}
-          value={value}
-          required={required}
-          onChange={(event) => setField(question.field, event.target.value)}
-          onBlur={onPersist}
-        />
+        <TextInput {...answer} />
       )}
       <div className="ob-manual-actions">
-        <button type="button" className="ob-core-link" onClick={back}>
+        <Button variant="link" type="button" onClick={back}>
           <ArrowLeft aria-hidden /> {t("ob.back")}
-        </button>
+        </Button>
         <Button
           variant="primary"
           type="submit"
@@ -247,7 +249,7 @@ export function ManualCompanyInterview({
           <ArrowRight aria-hidden />
         </Button>
       </div>
-      <small className="ob-manual-required">
+      <small className="ob-manual-required t-caption">
         {required ? t("ob.manualRequired") : t("ob.manualOptional")}
       </small>
     </form>

@@ -311,9 +311,18 @@
     transparent
   );
 }
+/* The dialog's two inks, named because the PLATE decides them and every text
+   inside reads one of the two. On the onboarding hero it is dark glass and the
+   pair is the rail's own, white on a lit backdrop; hosted in the workbench it
+   is a light panel and the pair is the content inks. Declared once per plate
+   below rather than as a colour override per child — the heading, the hint, the
+   answer box, the back link and the footnote all landed on white-on-light the
+   day the light arms were written and only the first two were overridden. */
 .ob-core-dialog {
+  --ob-dialog-ink: var(--railIconActive);
+  --ob-dialog-ink-quiet: var(--railIconHover);
   padding: var(--space-8) var(--space-6);
-  color: var(--railIconActive);
+  color: var(--ob-dialog-ink);
   border: 1px solid color-mix(in srgb, var(--railIconActive) 10%, transparent);
   border-radius: var(--r-lg);
   background: color-mix(in srgb, var(--railActive) 68%, transparent);
@@ -334,11 +343,10 @@
 .ob-core-dialog h1 {
   margin: var(--space-3) 0 0;
   font-family: var(--fontFamilyHeading);
-  color: var(--railIconActive);
 }
 .ob-core-dialog > p {
   margin: var(--space-3) auto 0;
-  color: var(--railIconHover);
+  color: var(--ob-dialog-ink-quiet);
 }
 .ob-core-journey {
   position: relative;
@@ -413,7 +421,7 @@
 }
 .ob-core-url span {
   padding-left: var(--space-3);
-  color: var(--railIconHover);
+  color: var(--ob-dialog-ink-quiet);
 }
 /* The shell above owns the box; this owns the inset and the type. The leading
    inset stays --space-1 because the `https://` prefix sits immediately before
@@ -424,17 +432,19 @@
   padding-block: var(--inputPaddingY);
   padding-inline: var(--space-1) var(--inputPaddingX);
   font: inherit;
-  color: var(--railIconActive);
+  color: var(--ob-dialog-ink);
   border: 0;
   outline: 0;
   background: transparent;
 }
-/* The one placeholder in the product that is NOT --textSecondary, and the
-   reason is the ground: this field draws on the onboarding hero, where the
-   secondary ink is the rail's own and --textSecondary is a dark grey that
-   disappears into it. --railIconHover IS the secondary tone of this surface. */
+/* The one placeholder in the product that is NOT written as --textSecondary,
+   and the reason is the ground: on the onboarding hero the secondary ink is the
+   rail's own and --textSecondary is a dark grey that disappears into it. The
+   dialog's quiet ink IS the secondary tone of whichever plate this field draws
+   on, so it resolves to the rail's on the hero and to --textSecondary in the
+   workbench, where the hero's answer is the one that disappears. */
 .ob-core-url input::placeholder {
-  color: var(--railIconHover);
+  color: var(--ob-dialog-ink-quiet);
 }
 .ob-core-dialog .ob-core-url-note {
   display: flex;
@@ -459,14 +469,17 @@
   gap: var(--space-1);
   margin-top: var(--space-3);
   padding: var(--space-1);
-  color: var(--railIconHover);
+  /* Inside a dialog this link wears that plate's quiet ink; the fallback is for
+     the ones that stand loose in the transcript, where the rail's tone is still
+     the answer and there is no plate to ask. */
+  color: var(--ob-dialog-ink-quiet, var(--railIconHover));
   border: 0;
   background: transparent;
   cursor: pointer;
 }
 .ob-core-link:hover,
 .ob-core-link:focus-visible {
-  color: var(--railIconActive);
+  color: var(--ob-dialog-ink, var(--railIconActive));
 }
 .ob-core-link svg {
   width: 13px;
@@ -544,27 +557,14 @@
   display: flex;
   justify-content: space-between;
 }
-/* The field's box and the field's type; the INK is the stage's, because this
-   form draws on the onboarding hero rather than on a card. */
-.ob-manual-input {
-  width: 100%;
-  margin-top: var(--space-4);
-  min-block-size: var(--inputHeight);
-  padding: var(--inputPaddingY) var(--inputPaddingX);
-  font: inherit;
-  color: var(--railIconActive);
-  border: 1px solid var(--railHover);
-  border-radius: var(--r-sm);
-  outline: 0;
-  background: var(--railHover);
-}
-.ob-manual-input:focus {
-  border-color: var(--aiText);
-  box-shadow: var(--focus-glow-ai);
-}
-.ob-manual-textarea {
-  min-height: 82px;
-  resize: vertical;
+/* The hint carries the interval down to the answer box, because the box is a
+   design-system field and a screen does not re-space one. The box itself — its
+   ground, its type, its ink, its placeholder's tone and its focus ring — is
+   TextInput's and Textarea's; the rule that used to stand here spelled all of
+   them in rail tokens, which is what put white text in a white field the moment
+   this board moved onto the workbench's light panel. */
+.ob-manual-question > p {
+  margin-bottom: var(--space-4);
 }
 .ob-manual-actions {
   display: flex;
@@ -573,13 +573,9 @@
   gap: var(--gapActions);
   margin-top: var(--space-3);
 }
-.ob-manual-actions .ob-core-link {
-  margin-top: 0;
-}
 .ob-manual-required {
   display: block;
   margin-top: var(--space-2);
-  color: var(--railIconHover);
 }
 @keyframes ob-core-live {
   50% {
@@ -756,7 +752,11 @@
   background: var(--accent);
   overflow-wrap: anywhere;
 }
+/* Flattened onto the conversation column, which is a LIGHT panel: the dialog
+   keeps none of its glass here, so it keeps none of the rail's inks either. */
 .mw-conversation .ob-core-dialog {
+  --ob-dialog-ink: var(--textPrimary);
+  --ob-dialog-ink-quiet: var(--textSecondary);
   padding: 0;
   border: 0;
   border-radius: 0;
@@ -775,7 +775,6 @@
 }
 .mw-conversation .ob-manual-question h1 {
   margin-top: var(--space-2);
-  color: var(--textPrimary);
 }
 .mw-conversation .ob-manual-question > p {
   margin: var(--space-1) 0 var(--space-3);
@@ -785,40 +784,23 @@
   border-color: var(--borderStrong);
   background: var(--bgHover);
 }
-.mw-conversation .ob-core-url span,
-.mw-conversation .ob-core-url input {
-  color: var(--textPrimary);
-}
 .mw-conversation .ob-core-dialog > .btn {
   /* ds:ignore the workbench draws that same dialog tighter */
   margin-top: var(--space-2);
 }
-/* The manual interview card also renders inside the workbench artifact rail
+/* The manual interview card renders inside the workbench artifact pane
  * (.ob-conv-artifact), a light panel rather than the dark scene backdrop
  * .ob-core-dialog is built for — unlike .mw-conversation above, it stays a
- * visible card here, so every rail token it inherits needs its content-token
- * counterpart instead of being flattened away. */
+ * visible card here, so it takes the card's ground and the content inks that
+ * read on it. The ink pair is the whole of that second half: the heading, the
+ * hint, the back link and the footnote follow it without a rule each. */
 .ob-conv-artifact .ob-core-dialog {
+  --ob-dialog-ink: var(--textPrimary);
+  --ob-dialog-ink-quiet: var(--textSecondary);
   border: 1px solid var(--borderSubtle);
   background: var(--bgCard);
   box-shadow: var(--shadow-rest);
   backdrop-filter: none;
-}
-.ob-conv-artifact .ob-core-dialog h1 {
-  color: var(--textPrimary);
-}
-.ob-conv-artifact .ob-manual-input {
-  color: var(--textPrimary);
-  border: 1px solid var(--borderStrong);
-  background: var(--bgElevated);
-}
-.ob-conv-artifact .ob-manual-input:focus {
-  border-color: var(--accent);
-  box-shadow: var(--focus-glow);
-}
-.ob-conv-artifact .ob-core-link:hover,
-.ob-conv-artifact .ob-core-link:focus-visible {
-  color: var(--textPrimary);
 }
 .mw-read-activity {
   margin-top: var(--space-3);
