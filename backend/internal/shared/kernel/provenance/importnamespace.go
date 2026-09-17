@@ -61,11 +61,15 @@ func ReservedSourceSystem(sourceSystem string) bool {
 // EngineReminderSource reports whether a source system is one the automation
 // engine stamps on its own quiet-account reminders.
 //
-// It exists so the ONE caller allowed to write these names — the engine, acting
+// It exists so the caller allowed to write these names — the engine, acting
 // under the system principal — can be told apart from every other caller
 // without that caller restating which names those are. It is deliberately
 // narrower than ReservedSourceSystem: the importer's namespace has its own
 // writer and is never admitted here.
+//
+// Held by: TestAnOrdinaryCallerMayNotStampAReminderIdentity and
+// TestTheSystemPrincipalDoesNotUnlockTheImporterNamespace
+// (backend/internal/modules/activities/provider_reminderidentity_test.go)
 func EngineReminderSource(sourceSystem string) bool {
 	return sourceSystem == NoActivityReminderSource || sourceSystem == CheckInCadenceSource
 }

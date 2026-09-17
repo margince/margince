@@ -216,28 +216,35 @@ func logActivityInputAllowingReminderIdentity(req crmcontracts.CreateActivityReq
 	return logActivityInput(req, true)
 }
 
+// refuseReservedProvenance guards the two provenance fields on a create wire.
+//
+// The importer's namespace is not a client's to write: this store keys its
+// idempotent replay on (source_system, source_id), so a caller who could spell
+// the reserved prefix could pre-plant a row under an incumbent record id and
+// have a later import hand it back as already existing
+// (provenance.ReservedSourceSystemPrefix).
+//
+// engineReminder admits the automation engine's own reminder identity and
+// nothing else — the importer's namespace stays refused even for it.
+func refuseReservedProvenance(req crmcontracts.CreateActivityRequest, engineReminder bool) error {
+	if req.SourceSystem != nil {
+		if !engineReminder || !provenance.EngineReminderSource(*req.SourceSystem) {
+			if err := provenance.Refuse("source_system", *req.SourceSystem); err != nil {
+				return err
+			}
+		}
+		if *req.SourceSystem == connector.EmailSourceSystem {
+			return &ReservedMailIdentityError{}
+		}
+	}
+	return provenance.Refuse("source", req.Source)
+}
+
 func logActivityInput(req crmcontracts.CreateActivityRequest, engineReminder bool) (LogActivityInput, error) {
 	if req.Kind == "" {
 		return LogActivityInput{}, &RequiredFieldError{Field: "kind"}
 	}
-	// The importer's namespace is not a client's to write: this store
-	// keys its idempotent replay on (source_system, source_id), so a
-	// caller who could spell the reserved prefix could pre-plant a row
-	// under an incumbent record id and have a later import hand it back
-	// as already existing (provenance.ReservedSourceSystemPrefix).
-	if req.SourceSystem != nil {
-		// The engine's own reminder identity is admitted here and nowhere
-		// else: the importer's namespace stays refused even for it.
-		if !(engineReminder && provenance.EngineReminderSource(*req.SourceSystem)) {
-			if err := provenance.Refuse("source_system", *req.SourceSystem); err != nil {
-				return LogActivityInput{}, err
-			}
-		}
-		if *req.SourceSystem == connector.EmailSourceSystem {
-			return LogActivityInput{}, &ReservedMailIdentityError{}
-		}
-	}
-	if err := provenance.Refuse("source", req.Source); err != nil {
+	if err := refuseReservedProvenance(req, engineReminder); err != nil {
 		return LogActivityInput{}, err
 	}
 	in := LogActivityInput{

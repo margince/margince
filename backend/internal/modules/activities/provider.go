@@ -118,7 +118,7 @@ func (p *Provider) ArchiveAt(ctx context.Context, in datasource.ArchiveInput) (d
 // logInputForPrincipal maps a create wire, admitting the engine's own reserved
 // reminder identity and nothing else.
 //
-// This seam carries two kinds of caller. A person's tool call arrives here just
+// This seam carries two kinds of caller. A human's tool call arrives here just
 // as an HTTP create does, so the reserved namespace has to hold: a caller able
 // to spell a reminder's source_system could plant a row under its key and have
 // the scan read it back as already asked, and the reminder would never be
