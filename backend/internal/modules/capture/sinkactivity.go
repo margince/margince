@@ -56,9 +56,31 @@ func (s *Sink) captureActivity(ctx context.Context, tx pgx.Tx, rec connector.Nor
 	if err != nil {
 		return datasource.EntityRef{}, false, counterpartyDecision{}, err
 	}
-	id, created, err := s.upsertActivity(ctx, tx, rec, fields, birth)
+	// The identity the OTHER door may have filed this message under. Asked
+	// before the insert, because a row already holding it is the row this
+	// capture is about — and asked after decideBirthTx, so a take-over below
+	// carries the same birth decision an ordinary capture would.
+	//
+	// The natural key still gets the first word inside upsertActivity: its own
+	// ON CONFLICT is the more specific answer, and a replay of this
+	// connector's own delivery must stay a replay rather than becoming a
+	// cross-door resolution.
+	known, alreadyFiled, err := s.activityHoldingIdentity(ctx, tx, rec)
 	if err != nil {
 		return datasource.EntityRef{}, false, counterpartyDecision{}, err
+	}
+	// The row the other door filed IS the row this capture is about, so the
+	// insert is never attempted. Skipping it rather than inserting and
+	// discarding matters: upsertActivity's ON CONFLICT only covers this
+	// connector's own natural key, so a speculative insert under a DIFFERENT
+	// key would succeed and leave the duplicate this whole path exists to
+	// prevent.
+	id, created := known, false
+	if !alreadyFiled {
+		id, created, err = s.upsertActivity(ctx, tx, rec, fields, birth)
+		if err != nil {
+			return datasource.EntityRef{}, false, counterpartyDecision{}, err
+		}
 	}
 	ref := datasource.EntityRef{Type: datasource.EntityActivity, ID: id.UUID}
 	if !created {
@@ -79,6 +101,54 @@ func (s *Sink) captureActivity(ctx context.Context, tx pgx.Tx, rec connector.Nor
 		// Only once the claim is proven: the natural key is a header the sender
 		// types, so a colliding Message-ID says nothing about which message this
 		// mailbox holds (replayClaimIsProvenTx).
+		// An ASSERTED incumbent is the one case where the collision is not a
+		// replay at all: somebody stated this message from an export, and this
+		// connector has now read the message itself. The read copy wins, and
+		// the proof below does not apply — it asks whether two mailboxes hold
+		// one message, where here one side never held a mailbox.
+		//
+		// assertedIncumbent asks only WHAT the incumbent is — stated or observed
+		// — and carries no authority of its own. WHO may rewrite it is
+		// `alreadyFiled`, and that conjunction is load-bearing: this branch is
+		// reached by TWO different producers of !created, and only one of them
+		// vetted the seat.
+		//
+		//   - alreadyFiled: the id came from the identity resolve, which answers
+		//     only for a row the SAME SEAT captured. Theirs to take over.
+		//   - otherwise: the id came from upsertActivity's ON CONFLICT on the
+		//     natural key, gated only by EnsureActivityVisible — a DISCOVER
+		//     check that admits any row this seat can merely see. An outbound
+		//     send writes ('email', <minted Message-ID>) stamped
+		//     `human:<sender>` and claims no identity, so a colleague's mailbox
+		//     syncing that message arrives here with the SENDER's row and no
+		//     seat ever compared. Taking it over would rewrite their subject and
+		//     body and restamp the row to the syncing seat.
+		//
+		// So the take-over runs only for a vetted id, and everything else falls
+		// through to replayClaimIsProvenTx — which is the right question for a
+		// natural-key collision and the gate that covered this case before the
+		// identity resolve existed.
+		wasCapturedBy, asserted, err := assertedIncumbent(ctx, tx, id)
+		if err != nil {
+			return datasource.EntityRef{}, false, counterpartyDecision{}, err
+		}
+		if asserted && alreadyFiled && s.takeOverAsserted != nil {
+			err := s.takeOverAsserted(
+				ctx, tx, id, fields.Subject, fields.Body, wasCapturedBy, capturedByFor(ctx, rec))
+			// Archived under us between the resolve and here — an erasure racing
+			// this capture. Skipping advances the watermark; propagating would
+			// stall this mailbox on this message on every pass forever.
+			if errors.Is(err, apperrors.ErrNotFound) {
+				return datasource.EntityRef{}, false, counterpartyDecision{}, skipInvisibleIncumbent(rec, "activity")
+			}
+			if err != nil {
+				return datasource.EntityRef{}, false, counterpartyDecision{}, err
+			}
+			if err := s.recordThisImport(ctx, tx, id, rec, fields, birth, memberBound); err != nil {
+				return datasource.EntityRef{}, false, counterpartyDecision{}, err
+			}
+			return ref, false, counterpartyDecision{}, nil
+		}
 		same, err := replayClaimIsProvenTx(ctx, tx, id, fields, rec.Parts)
 		if err != nil {
 			return datasource.EntityRef{}, false, counterpartyDecision{}, err
@@ -98,6 +168,11 @@ func (s *Sink) captureActivity(ctx context.Context, tx pgx.Tx, rec connector.Nor
 	// audit and event, and the ladder's decision about who it is with. Split out
 	// so this function reads as the three answers a capture can have — the row
 	// was already here, the row is new, or the capture failed.
+	// Filed under the cross-door identity before the row is finished, so an
+	// importer arriving later resolves onto it instead of landing a twin.
+	if err := s.claimRecordIdentity(ctx, tx, id, rec); err != nil {
+		return datasource.EntityRef{}, false, counterpartyDecision{}, err
+	}
 	decision, err := s.finishNewActivity(ctx, tx, id, rec, fields, birth, memberBound)
 	if err != nil {
 		return datasource.EntityRef{}, false, counterpartyDecision{}, err
