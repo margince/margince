@@ -244,8 +244,12 @@ func anchorTimeline(ctx context.Context, tx pgx.Tx, linkCol string, anchorID ids
 	if linkCol == anchorLinkColumn[string(datasource.EntityCompany)] {
 		join, reach = "", activityReachesCompany(anchorPos)
 	}
+	// The seventh column is the import marker the trust ladder reads, as ONE
+	// BOOLEAN. Why it is `source_system` and not the author columns is argued
+	// where the ladder lives — see trustOfWriter in graphtrust.go.
 	activitySQL := fmt.Sprintf(`
-		SELECT a.id, coalesce(a.subject, a.kind), a.kind, a.is_done, a.occurred_at, coalesce(a.captured_by, '')
+		SELECT a.id, coalesce(a.subject, a.kind), a.kind, a.is_done, a.occurred_at, coalesce(a.captured_by, ''),
+		       (a.source_system IS NOT NULL)
 		FROM activity a %s
 		WHERE %s AND a.archived_at IS NULL`, join, reach)
 	if scope != "" {
@@ -263,9 +267,9 @@ func anchorTimeline(ctx context.Context, tx pgx.Tx, linkCol string, anchorID ids
 	for rows.Next() {
 		var id ids.ActivityID
 		var summary, kind, capturedBy string
-		var isDone bool
+		var isDone, imported bool
 		var occurredAt time.Time
-		if err := rows.Scan(&id, &summary, &kind, &isDone, &occurredAt, &capturedBy); err != nil {
+		if err := rows.Scan(&id, &summary, &kind, &isDone, &occurredAt, &capturedBy, &imported); err != nil {
 			return nil, nil, nil, err
 		}
 		activityIDs = append(activityIDs, id)
@@ -274,7 +278,7 @@ func anchorTimeline(ctx context.Context, tx pgx.Tx, linkCol string, anchorID ids
 		// the untyped UUID.
 		item := graphItem{
 			entityType: string(datasource.EntityActivity), id: id.UUID, summary: summary,
-			score: rankScore(0, occurredAt, capturedBy, now), occurredAt: occurredAt,
+			score: rankScore(0, occurredAt, capturedBy, imported, now), occurredAt: occurredAt,
 		}
 		if kind == "task" && !isDone {
 			openTasks = append(openTasks, item)

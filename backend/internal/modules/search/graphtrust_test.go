@@ -23,17 +23,23 @@ func TestTheTrustLadderReadsTheWriterNotTheChannel(t *testing.T) {
 	for _, c := range []struct {
 		name       string
 		capturedBy string
+		imported   bool
 		want       float64
 	}{
-		{"a human said it", human, trustHumanStatement},
-		{"an agent wrote it", agent, trustAgentWrite},
-		{"a connector brought it in", "connector:gmail", trustCapturedExternal},
-		{"nobody is named", "", trustCapturedExternal},
-		{"the old channel word, which names no writer", "manual", trustCapturedExternal},
+		{name: "a human said it", capturedBy: human, want: trustHumanStatement},
+		{name: "an agent wrote it", capturedBy: agent, want: trustAgentWrite},
+		{name: "a connector brought it in", capturedBy: "connector:gmail", want: trustCapturedExternal},
+		{name: "nobody is named", capturedBy: "", want: trustCapturedExternal},
+		{name: "the old channel word, which names no writer", capturedBy: "manual", want: trustCapturedExternal},
+		// The import ran as a human administrator, so captured_by carries a
+		// human prefix and means only that they ran it. The row is somebody
+		// else's CRM history and ranks as what it is.
+		{name: "an imported row, recorded by the admin who ran the import", capturedBy: human, imported: true, want: trustCapturedExternal},
+		{name: "an imported row an agent touched", capturedBy: agent, imported: true, want: trustCapturedExternal},
 	} {
 		t.Run(c.name, func(t *testing.T) {
-			if got := trustOfWriter(c.capturedBy); got != c.want {
-				t.Errorf("trustOfWriter(%q) = %v, want %v", c.capturedBy, got, c.want)
+			if got := trustOfWriter(c.capturedBy, c.imported); got != c.want {
+				t.Errorf("trustOfWriter(%q, imported=%v) = %v, want %v", c.capturedBy, c.imported, got, c.want)
 			}
 		})
 	}
@@ -46,8 +52,8 @@ func TestTheTrustLadderReadsTheWriterNotTheChannel(t *testing.T) {
 func TestAHumanNoteOutranksAnAgentNoteOfTheSameAge(t *testing.T) {
 	now := time.Now()
 	when := now.Add(-72 * time.Hour)
-	humanScore := rankScore(0, when, "human:"+ids.NewV7().String(), now)
-	agentScore := rankScore(0, when, "agent:"+ids.NewV7().String(), now)
+	humanScore := rankScore(0, when, "human:"+ids.NewV7().String(), false, now)
+	agentScore := rankScore(0, when, "agent:"+ids.NewV7().String(), false, now)
 	if humanScore <= agentScore {
 		t.Fatalf("the human note scored %v and the agent note %v; the human one must rank higher",
 			humanScore, agentScore)
@@ -60,10 +66,31 @@ func TestAHumanNoteOutranksAnAgentNoteOfTheSameAge(t *testing.T) {
 // rather than an override.
 func TestFreshCapturedContentStillBeatsAStaleHumanNote(t *testing.T) {
 	now := time.Now()
-	fresh := rankScore(0, now, "connector:gmail", now)
-	stale := rankScore(0, now.Add(-365*24*time.Hour), "human:"+ids.NewV7().String(), now)
+	fresh := rankScore(0, now, "connector:gmail", false, now)
+	stale := rankScore(0, now.Add(-365*24*time.Hour), "human:"+ids.NewV7().String(), false, now)
 	if fresh <= stale {
 		t.Fatalf("fresh captured content scored %v and a year-old human note %v; recency must still win",
 			fresh, stale)
+	}
+}
+
+// An imported note does not outrank a note somebody here actually wrote.
+//
+// This is the case the whole change exists for. Both notes below carry the same
+// human captured_by — the HubSpot import ran as an administrator, so its rows
+// name that administrator exactly as a note they typed would. Same age, same
+// writer, and the ladder must still separate them: one is what a colleague
+// said, the other is what another CRM held.
+func TestAnImportedNoteDoesNotOutrankOneWrittenHere(t *testing.T) {
+	now := time.Now()
+	when := now.Add(-72 * time.Hour)
+	admin := "human:" + ids.NewV7().String()
+
+	ours := rankScore(0, when, admin, false, now)
+	theirs := rankScore(0, when, admin, true, now)
+
+	if theirs >= ours {
+		t.Fatalf("the imported note scored %v and ours %v — imported history must not rank as "+
+			"first-party testimony just because an administrator ran the import", theirs, ours)
 	}
 }
