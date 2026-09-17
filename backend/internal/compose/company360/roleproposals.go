@@ -108,7 +108,11 @@ func (s *Service) ProposeRoles(
 		return emptyProposalResult(), nil
 	}
 
-	proposals, err := readProposals(ctx, lane, dealName, candidates)
+	// The deal whose seats are being proposed. The request carries the
+	// candidates' own messages, so an erasure reaching a contact on this deal
+	// reaches these payloads through the deal it names.
+	proposals, err := readProposals(ai.WithSubject(ctx, dealID.Ref(), dealName),
+		lane, dealName, candidates)
 	if err != nil {
 		return crmcontracts.DealRoleProposalResult{}, err
 	}

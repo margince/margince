@@ -89,6 +89,46 @@ var namesItsSubject = map[string]subjectClaim{
 	"internal/compose/companydossier/growthfitwrite.go:assessWithModel": {"internal/compose/companydossier/service.go", "the same company, assessed"},
 	"internal/compose/meetingbrief/model.go:writeWithModel":             {"internal/compose/meetingbrief/service.go", "the meeting the brief prepares"},
 	"internal/compose/meetingbrief/planwrite.go:writePlanWithModel":     {"internal/compose/meetingbrief/service.go", "the same meeting: the plan runs under the brief's own context"},
+	"internal/compose/companyscan/write.go:Read": {
+		"internal/compose/companyscan/service.go",
+		"the account being scanned; the messages quoted in the request are that account's correspondence",
+	},
+	"internal/compose/company360/introdraftwrite.go:introFromModel": {
+		"internal/compose/company360/introdraft.go",
+		"the contact being introduced TO — the draft's whole material is what this product knows about them",
+	},
+	"internal/compose/network/intronotewrite.go:noteFromModel": {
+		"internal/compose/network/intronote.go",
+		"the contact the note is addressed to, on the network surface rather than the account page",
+	},
+	"internal/compose/company360/roleproposals.go:readProposals": {
+		"internal/compose/company360/roleproposals.go",
+		"the deal whose seats are proposed; the request carries the candidates' own messages",
+	},
+	"internal/compose/dealstatus/service.go:ask": {
+		"internal/compose/dealstatus/service.go",
+		"the deal the card is about, whose timeline the request quotes",
+	},
+	"internal/compose/offerdraft.go:draftCandidates": {
+		"internal/compose/offerdraft.go",
+		"the deal the offer is for, carrying what the buyer asked for in their words",
+	},
+	"internal/compose/stageevidenceread.go:ask": {
+		"internal/compose/stageevidenceread.go",
+		"the deal whose exit criteria are read; the spans quoted are from its messages",
+	},
+	"internal/compose/siteprofile.go:extractProfile": {
+		"internal/compose/deepread.go",
+		"the company whose site is being read, bound once for the whole run",
+	},
+	"internal/compose/sitepagefacts.go:extractPageFacts": {
+		"internal/compose/deepread.go",
+		"the same company, one page at a time, under the same run's subject",
+	},
+	"internal/compose/deepreadtriage.go:classifySeed": {
+		"internal/compose/deepread.go",
+		"the same company again, deciding which of its pages are worth a reading",
+	},
 	"internal/compose/draftcore/writer.go:writeWithModel": {
 		"internal/compose/leaddraft/service.go",
 		"whoever the draft is for, named by the surface that asked for it — the lead lane does; the contact and account lanes are the residue below",
@@ -124,20 +164,19 @@ var namesNoSubject = gatekit.Waive(map[string]string{
 // see the uncovered half. Every one of them is reached by the content match
 // exactly as it was before the column existed.
 var subjectOwed = gatekit.Waive(map[string]string{
-	"internal/compose/company360/introdraftwrite.go:introFromModel":       "the contact the introduction is about; the facts carry them",
-	"internal/compose/network/intronotewrite.go:noteFromModel":            "the contact the note introduces, on the network surface rather than the account page",
-	"internal/compose/company360/roleproposals.go:readProposals":          "the deal whose seats are being proposed",
-	"internal/compose/companyscan/write.go:Read":                          "the company being scanned",
-	"internal/compose/dealstatus/service.go:ask":                          "the deal whose status is written",
-	"internal/compose/offerdraft.go:draftCandidates":                      "the deal the offer is for",
-	"internal/compose/stageevidenceread.go:ask":                           "the deal whose stage criteria are read; the spans quoted are from its messages",
-	"internal/compose/enrichextract.go:extractFields":                     "the company the extraction is filed against",
-	"internal/compose/siteprofile.go:extractProfile":                      "the company whose site was read",
-	"internal/compose/sitepagefacts.go:extractPageFacts":                  "the company whose site is being read, one page at a time",
-	"internal/compose/deepreadtriage.go:classifySeed":                     "the company whose site is being read, deciding which of its pages are worth a reading",
-	"internal/compose/onboardingcompanymessage.go:answer":                 "the company being onboarded",
-	"internal/compose/onboardingacts.go:answerAct":                        "the same onboarding conversation, one act at a time; the company exists by then and nobody has threaded it",
-	"internal/compose/onboardingsitereadmessage.go:answerCompanySiteRead": "the same onboarding, reading that company's site",
+	"internal/compose/enrichextract.go:extractFields": "ONE site, two lanes, and only one has a record to " +
+		"name. The scrape lane cites the company the extraction is filed against (scrape.go); the " +
+		"cold-start lane shares this extractor to read a URL BEFORE any company exists, so there is " +
+		"nothing for it to cite. Left here rather than claimed as named, because a claim would be true " +
+		"of half the calls this site makes",
+	"internal/compose/onboardingcompanymessage.go:answer": "the INSTALLATION's own company, which is " +
+		"what onboarding is about — never a data subject, so a citation here buys diagnosis rather than " +
+		"erasure reach. The id is behind GetAnchorCompany and this path does not load it; the thread is " +
+		"worth pulling for the rail, not for Art. 17",
+	"internal/compose/onboardingacts.go:answerAct": "the same onboarding conversation, one act at a time, " +
+		"and the same company: the installation's own",
+	"internal/compose/onboardingsitereadmessage.go:answerCompanySiteRead": "the same onboarding, reading " +
+		"that company's own website — the installation's, not a customer's",
 })
 
 // wantMinimumAskSites is the floor under the extractor. A census that stopped
