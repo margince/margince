@@ -1812,7 +1812,10 @@ export const vi = {
   "email.notSent": "Chưa gửi",
   "email.bouncedFrom": "Không tới được {who}",
   "email.bounced": "Không tới nơi",
-  "email.access.sentence.team": "Mọi người trong tổ chức đều đọc được thư này.",
+  "email.access.sentence.workspace":
+    "Mọi người trong tổ chức đều đọc được thư này.",
+  "email.access.sentence.team":
+    "Ai mở được các bản ghi thư này gắn vào thì đọc được thư này.",
   "email.access.sentence.participants":
     "Chỉ những người có trong thư này mới đọc được.",
   "email.access.sentence.selected":

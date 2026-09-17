@@ -17353,8 +17353,13 @@ export interface components {
         };
         /**
          * @description What a reader is allowed to know about who else reads this message, in one word the
-         *     badge can print. `team` never means the whole workspace: the linked record's own scope
-         *     still decides who may discover the row at all.
+         *     badge can print.
+         *
+         *     `workspace` means what it says: a seat with no standing of any kind — no team, no
+         *     ownership, nothing shared with it — can still find this message, so everyone who reads
+         *     mail here reads this one. `team` is the narrower answer, where the linked record's own
+         *     scope decides who may discover the row at all. The two used to be one word, and the
+         *     badge printed `team` over a sentence saying everyone in the company could read it.
          *
          *     `withheld` is the only value that says the content is not this caller's, and it never
          *     travels with a reason: why a message is private describes what it is about.
@@ -17365,7 +17370,7 @@ export interface components {
          *     would branch on and never reach.
          * @enum {string}
          */
-        EmailAccessStatus: "team" | "participants" | "selected" | "withheld";
+        EmailAccessStatus: "workspace" | "team" | "participants" | "selected" | "withheld";
         /** @description One address on a message, resolved to a contact or a seat when it is one. */
         EmailParty: {
             address: string;

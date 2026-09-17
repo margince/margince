@@ -1902,7 +1902,9 @@ export const en = {
   "email.notSent": "Not sent",
   "email.bouncedFrom": "Did not reach {who}",
   "email.bounced": "Did not arrive",
-  "email.access.sentence.team": "Everyone in the company can read this.",
+  "email.access.sentence.workspace": "Everyone in the company can read this.",
+  "email.access.sentence.team":
+    "Everyone who can open the records this is filed against can read it.",
   "email.access.sentence.participants":
     "Only the people on this message can read it.",
   "email.access.sentence.selected":
