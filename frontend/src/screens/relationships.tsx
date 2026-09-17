@@ -1,35 +1,27 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { ifMatch, requireVersion } from "../api/version";
-import { useCanWrite } from "../app/capability";
 import type { EntityKind } from "../app/entity";
 import { isOption } from "../app/options";
 import { SEARCH_HIT_KIND_KEY } from "../app/searchkinds";
 import {
-  Badge,
   Button,
-  DataTable,
-  EmptyState,
   Field,
   Modal,
   SearchField,
   TextInput,
 } from "../design-system/atoms";
 import { Heading } from "../design-system/heading";
-import { Panel, PanelBody } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { DEAL_COVERAGE_KEY } from "./activitykeys";
-import { problemMessageOf, QueryGate, throwProblem } from "./common";
+import { problemMessageOf, throwProblem } from "./common";
 import type { CreateField } from "./create";
-import { EditAction } from "./edit";
-import { EntityRef } from "./entityref";
 import {
   type Candidate,
   type RelationshipEntity,
@@ -44,7 +36,7 @@ import "./candidatepicker.css";
 // contract — every row is hydrated straight off the list read, so edit and
 // remove both act on the row already in hand rather than a re-fetch.
 
-type Relationship = components["schemas"]["Relationship"];
+export type Relationship = components["schemas"]["Relationship"];
 type CreateRelationshipRequest =
   components["schemas"]["CreateRelationshipRequest"];
 
@@ -82,7 +74,9 @@ function scopeQuery(scope: RelationshipScope): {
   return { company_id: scope.company_id };
 }
 
-function scopeQueryKey(scope: RelationshipScope): [string, string, string] {
+export function scopeQueryKey(
+  scope: RelationshipScope,
+): [string, string, string] {
   if ("contact_id" in scope) {
     return ["relationships", "contact", scope.contact_id];
   }
@@ -100,7 +94,7 @@ function scopeQueryKey(scope: RelationshipScope): [string, string, string] {
 // a control the deal page does not have, and a Kind picker holding one option —
 // or a Kind column repeating one badge down every row — asks a question with a
 // single answer.
-function scopeCopy(scope: RelationshipScope): {
+export function scopeCopy(scope: RelationshipScope): {
   title: MessageKey;
   add: MessageKey;
   empty: MessageKey;
@@ -122,7 +116,7 @@ function scopeCopy(scope: RelationshipScope): {
   };
 }
 
-async function fetchRelationships(
+export async function fetchRelationships(
   scope: RelationshipScope,
 ): Promise<Relationship[]> {
   const { data, error } = await api.GET("/relationships", {
@@ -175,7 +169,10 @@ export function counterpartyRef(
   return far ? { kind: "company", id: far } : null;
 }
 
-function dateRange(rel: Relationship, t: (key: MessageKey) => string): string {
+export function dateRange(
+  rel: Relationship,
+  t: (key: MessageKey) => string,
+): string {
   const end = rel.ended_at ?? t("rel.current");
   return rel.started_at ? `${rel.started_at} – ${end}` : end;
 }
@@ -260,7 +257,7 @@ export function endpointBody(
  * rather than the scope, and a page that knows only "some deal moved" cannot
  * name which key to drop.
  */
-function invalidateAfterEdge(
+export function invalidateAfterEdge(
   queryClient: ReturnType<typeof useQueryClient>,
   touchesADeal: boolean,
 ) {
@@ -548,7 +545,7 @@ export function AddRelationshipAction({
   );
 }
 
-const relationshipEditFields: CreateField[] = [
+export const relationshipEditFields: CreateField[] = [
   { key: "role", label: "rel.role" },
   { key: "started_at", label: "rel.startedAt", type: "date" },
   { key: "ended_at", label: "rel.endedAt", type: "date" },
@@ -560,224 +557,7 @@ const relationshipEditFields: CreateField[] = [
 // ended_at can be set or changed here while an emptied one stays as it was —
 // clearing needs the server to tell omit from explicit-null first. `orNull`
 // still keeps an empty string off the wire.
-function orNull(value: unknown): string | null {
+export function orNull(value: unknown): string | null {
   const text = typeof value === "string" ? value.trim() : "";
   return text.length > 0 ? text : null;
-}
-
-export function RelationshipsTab({
-  scope,
-  refusedReasonId,
-}: Readonly<{
-  scope: RelationshipScope;
-  // See AddRelationshipAction: the anchor page's one read-only sentence,
-  // which every write here points at when the anchor refuses changes.
-  refusedReasonId?: string;
-}>) {
-  const t = useT();
-  const queryClient = useQueryClient();
-  const headingId = useId();
-  const copy = scopeCopy(scope);
-  // The object half of each verb's gate, asked as the server asks it
-  // (relationship:create on an add, :update on an edit, :delete on a
-  // removal). A verb the role holds no grant for is withheld outright — there
-  // is no fact about the record to report — where the anchor's refusal above
-  // keeps the verb and says why.
-  const canCreate = useCanWrite("relationship", "create");
-  const canUpdate = useCanWrite("relationship", "update");
-  const canDelete = useCanWrite("relationship", "delete");
-  const query = useQuery({
-    queryKey: scopeQueryKey(scope),
-    queryFn: () => fetchRelationships(scope),
-  });
-
-  // Two-step confirm, mirroring ArchiveAction (archive.tsx) — Remove is a
-  // hard DELETE with no restore path, so it never fires from a single click.
-  // The ROW, not its id: what the write invalidates depends on whether the edge
-  // names a deal, and an id alone cannot answer that.
-  const [removing, setRemoving] = useState<Relationship | null>(null);
-
-  const remove = useMutation({
-    mutationFn: async (doomed: Relationship) => {
-      const { data, error } = await api.DELETE("/relationships/{id}", {
-        params: { path: { id: doomed.id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-    onSuccess: (_removed, doomed) => {
-      invalidateAfterEdge(queryClient, doomed.deal_id != null);
-      setRemoving(null);
-    },
-  });
-
-  return (
-    <Panel
-      title={t(copy.title)}
-      titleAction={
-        canCreate ? (
-          <AddRelationshipAction
-            scope={scope}
-            refusedReasonId={refusedReasonId}
-          />
-        ) : undefined
-      }
-    >
-      <PanelBody>
-        <QueryGate query={query} pendingLabel={t(copy.title)}>
-          {(rows) =>
-            rows.length === 0 ? (
-              <EmptyState>{t(copy.empty)}</EmptyState>
-            ) : (
-              <DataTable
-                label={t(copy.title)}
-                columns={[
-                  ...(copy.singleKind
-                    ? []
-                    : [
-                        {
-                          key: "kind",
-                          header: t("rel.kind"),
-                          render: (rel: Relationship) => (
-                            <Badge>{t(KIND_LABELS[rel.kind])}</Badge>
-                          ),
-                        },
-                      ]),
-                  {
-                    key: "role",
-                    header: t("rel.role"),
-                    render: (rel: Relationship) => rel.role ?? "",
-                  },
-                  {
-                    key: "counterparty",
-                    header: t("rel.counterparty"),
-                    render: (rel: Relationship) => {
-                      const ref = counterpartyRef(rel, scope);
-                      return ref ? (
-                        <EntityRef kind={ref.kind} id={ref.id} />
-                      ) : (
-                        <span>—</span>
-                      );
-                    },
-                  },
-                  {
-                    key: "dates",
-                    header: t("rel.dates"),
-                    render: (rel: Relationship) => dateRange(rel, t),
-                  },
-                  {
-                    key: "actions",
-                    header: "",
-                    render: (rel: Relationship) => (
-                      <div style={{ display: "flex", gap: "var(--space-2)" }}>
-                        {canUpdate && (
-                          <EditAction
-                            disabledReasonId={refusedReasonId}
-                            label={t("record.edit")}
-                            savedMessage={t("rel.saveDone")}
-                            fields={relationshipEditFields}
-                            record={{
-                              id: rel.id,
-                              version: rel.version,
-                              role: rel.role ?? "",
-                              started_at: rel.started_at ?? "",
-                              ended_at: rel.ended_at ?? "",
-                            }}
-                            update={async (values, _rows, opened) => {
-                              const { data, error } = await api.PATCH(
-                                "/relationships/{id}",
-                                {
-                                  params: {
-                                    path: { id: rel.id },
-                                    ...ifMatch(requireVersion(opened?.version)),
-                                  },
-                                  body: {
-                                    role: orNull(values.role),
-                                    started_at: orNull(values.started_at),
-                                    ended_at: orNull(values.ended_at),
-                                  },
-                                },
-                              );
-                              if (error) {
-                                throwProblem(error);
-                              }
-                              return data;
-                            }}
-                            invalidate="relationships"
-                            recordKey="relationship"
-                          />
-                        )}
-                        {canDelete && (
-                          <Button
-                            variant="danger"
-                            reasonId={refusedReasonId}
-                            onClick={() => setRemoving(rel)}
-                            data-testid="remove-relationship"
-                          >
-                            {t("rel.remove")}
-                          </Button>
-                        )}
-                      </div>
-                    ),
-                  },
-                ]}
-                rows={rows}
-                rowKey={(rel) => rel.id}
-              />
-            )
-          }
-        </QueryGate>
-      </PanelBody>
-      <Modal
-        open={removing !== null}
-        onClose={() => {
-          setRemoving(null);
-          remove.reset();
-        }}
-        labelledBy={headingId}
-      >
-        <Heading
-          size="large"
-          id={headingId}
-          className="t-h2"
-          style={{ marginBottom: "var(--space-3)" }}
-        >
-          {t("rel.remove")}
-        </Heading>
-        <p style={{ marginBottom: "var(--space-4)" }}>
-          {t("rel.removeConfirm")}
-        </p>
-        {remove.isError && (
-          <p style={{ color: "var(--dangerText)" }}>
-            {problemMessageOf(remove.error, t)}
-          </p>
-        )}
-        <div
-          style={{
-            display: "flex",
-            gap: "var(--gapActions)",
-            justifyContent: "flex-end",
-          }}
-        >
-          <Button onClick={() => setRemoving(null)} disabled={remove.isPending}>
-            {t("create.cancel")}
-          </Button>
-          <Button
-            variant="danger"
-            onClick={() => {
-              if (removing) {
-                remove.mutate(removing);
-              }
-            }}
-            disabled={remove.isPending}
-            data-testid="remove-relationship-confirm"
-          >
-            {t("rel.remove")}
-          </Button>
-        </div>
-      </Modal>
-    </Panel>
-  );
 }

@@ -84,3 +84,40 @@ export async function patchEmployment(
     },
   });
 }
+
+/**
+ * What a typed date means as a stored one: the value, and how precisely it was
+ * given.
+ *
+ * A reader who knows the month and not the day types `2024-05`, and this stores
+ * the first of that month WITH the precision that says so — a date rendered
+ * back as "1 May" when somebody only ever claimed "May" is the product
+ * inventing a fact. Empty is empty: an unknown start is a real answer and not a
+ * guess at today.
+ *
+ * Shared by both forms that take one. The edit form and the add form send the
+ * same two columns, and a second spelling of this rule would be two answers to
+ * "what does a month-long date mean".
+ */
+export function datePatch(value: string): {
+  date?: string;
+  precision?: "month" | "day";
+} {
+  if (!value) return {};
+  return value.length === 7
+    ? { date: `${value}-01`, precision: "month" }
+    : { date: value, precision: "day" };
+}
+
+/**
+ * Whether a typed date is one this product can send: empty, a month, or a day.
+ *
+ * The wire declares `date`, so `not-a-date` is a request the contract refuses —
+ * and `datePatch` would append `-01` to any seven characters, turning a typo
+ * into a plausible-looking day. Both forms that take a date check it with this,
+ * because a rule about what a date IS cannot have one spelling in the form that
+ * corrects one and another in the form that creates one.
+ */
+export function validDateEntry(value: string): boolean {
+  return value === "" || /^\d{4}-\d{2}(-\d{2})?$/.test(value);
+}

@@ -101,7 +101,8 @@ func idsWithoutAScore(body []byte) (map[string]bool, error) {
 		// The fixture is meant to carry some. Without any, the exclusion this
 		// test claims to check is never exercised and the test passes vacuously.
 		return nil, errors.New(
-			"the vendor fixture holds no unscored models, so the exclusion it exists to prove is untested")
+			"the vendor fixture holds no unscored models, so the exclusion it exists to prove is untested",
+		)
 	}
 	return unscored, nil
 }

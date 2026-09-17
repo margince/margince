@@ -17,7 +17,7 @@ import (
 )
 
 func TestActivityLogInputRefusesTheImporterNamespace(t *testing.T) {
-	reserved := "mirror:hubspot"
+	reserved := "mirror:legacy_crm"
 	_, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{
 		Kind: "email", SourceSystem: &reserved, SourceId: strPtr("emails:900"),
 	})
@@ -71,7 +71,7 @@ func TestActivityLogInputRefusesTheMailIdentity(t *testing.T) {
 // could write the namespace there could have a planted row adopted.
 func TestActivityLogInputRefusesAReservedSource(t *testing.T) {
 	_, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{
-		Kind: "note", Source: "mirror:hubspot:activity:a-1",
+		Kind: "note", Source: "mirror:legacy_crm:activity:a-1",
 	})
 	var refused *provenance.ReservedError
 	if !errors.As(err, &refused) {
@@ -101,5 +101,36 @@ func TestActivityLogInputRefusesInternalRequestProvenance(t *testing.T) {
 	var refused *provenance.ReservedError
 	if !errors.As(err, &refused) {
 		t.Fatalf("internal request source was writable: %v", err)
+	}
+}
+
+// A client that could spell a quiet-account reminder's identity could SUPPRESS
+// that reminder, which is the reason these two names are reserved.
+//
+// The exploit, concretely: the scan skips an entity that already links an open
+// task carrying the reminder's source_system, and replayedActivity resolves
+// (source_system, source_id) without testing the row's source, captured_by or
+// kind. So a row planted under a guessed key reads back as "already asked" and
+// the account's reminder is never written — a silence that looks exactly like
+// the system working.
+//
+// Every kind, not just task: the unique index spans kinds, so a planted note
+// suppresses the reminder as well as a planted task would.
+func TestActivityLogInputRefusesAQuietAccountReminderIdentity(t *testing.T) {
+	for _, reserved := range []string{provenance.NoActivityReminderSource, provenance.CheckInCadenceSource} {
+		for _, kind := range []crmcontracts.CreateActivityRequestKind{"task", "note"} {
+			planted := reserved
+			_, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{
+				Kind: kind, SourceSystem: &planted,
+				SourceId: strPtr("no_activity_reminder:company:11111111-1111-1111-1111-111111111111:anchor:2026-09-05T00:00:00Z"),
+			})
+			var refused *provenance.ReservedError
+			if !errors.As(err, &refused) {
+				t.Fatalf("[%s/%s] err = %v, want provenance.ReservedError — a client able to write this identity can suppress the reminder", reserved, kind, err)
+			}
+			if field, code, _ := refused.FieldFault(); field != "source_system" || code != "reserved_source_system" {
+				t.Errorf("[%s/%s] refusal names (%q, %q), want (source_system, reserved_source_system)", reserved, kind, field, code)
+			}
+		}
 	}
 }

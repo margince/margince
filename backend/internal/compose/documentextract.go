@@ -27,6 +27,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/extraction"
@@ -138,6 +139,14 @@ type documentSource struct {
 	// Filename is provenance a reader of the prompt can see. It is untrusted
 	// like every other byte of the document, and is fenced accordingly.
 	Filename string
+	// Parent is the record the document hangs on — the activity it arrived
+	// with, or the company it was uploaded to. It never reaches the prompt: it
+	// is what the CALL cites, so an erasure that destroys that record can
+	// destroy the captured payload holding this document's text along with it.
+	// A contract, an invoice or a scanned identity document is the largest copy
+	// of somebody's words this product ever sends, and the content match that
+	// would otherwise have to find it looks for an email address.
+	Parent ids.Ref
 	// ExtractedFrom names the media type this text was READ OUT OF, when it did
 	// not arrive as text. Empty for a file whose bytes are its own text.
 	//

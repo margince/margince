@@ -94,3 +94,12 @@
 .inlinetext-suggested {
   color: var(--textSecondary);
 }
+
+/* A choice nobody has made, where the reader may not make one either: the
+   words say the field is empty, and the tone keeps them under the filled
+   values around them, the rung the editable placeholder already takes
+   (fieldgrid.css). Carried only on the unset case, so a real value is never
+   dimmed by the same rule. */
+.inlinechoice-unset {
+  color: var(--textSecondary);
+}

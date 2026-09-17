@@ -16,10 +16,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// connectorHubSpot is a connector the column's CHECK admits but no Go
+// connectorSalesforce is a connector the column's CHECK admits but no Go
 // constant names yet — the cases here need a NON-csv value, and undo's
 // csv-only refusal needs one that is honestly not csv.
-const connectorHubSpot = "hubspot"
+const connectorSalesforce = "salesforce"
 
 // Every exported RunStore entry point admits on the import_run object BEFORE it
 // opens a transaction, so an ungranted actor is refused without a database. The
@@ -47,20 +47,20 @@ func TestRunStoreRefusesUngrantedRole(t *testing.T) {
 		call func() error
 	}{
 		{"Create", func() error {
-			_, err := s.Create(ctx, CreateRunInput{Connector: connectorHubSpot, SourceRef: "x", Source: "t"})
+			_, err := s.Create(ctx, CreateRunInput{Connector: connectorSalesforce, SourceRef: "x", Source: "t"})
 			return err
 		}},
 		{"Get", func() error { _, err := s.Get(ctx, runID); return err }},
-		{"Latest", func() error { _, err := s.Latest(ctx, connectorHubSpot); return err }},
+		{"Latest", func() error { _, err := s.Latest(ctx, connectorSalesforce); return err }},
 		{"LookupIdentity", func() error {
-			_, _, err := s.LookupIdentity(ctx, "hubspot", "contact", "1")
+			_, _, err := s.LookupIdentity(ctx, "legacy_crm", "contact", "1")
 			return err
 		}},
 		{"RecordIdentity", func() error {
-			return s.RecordIdentity(ctx, runID, "hubspot", "contact", "1", ids.NewV7())
+			return s.RecordIdentity(ctx, runID, "legacy_crm", "contact", "1", ids.NewV7())
 		}},
 		{"RecordIdentities", func() error {
-			return s.RecordIdentities(ctx, runID, "hubspot", "contact",
+			return s.RecordIdentities(ctx, runID, "legacy_crm", "contact",
 				[]IdentityPair{{ExternalID: "1", NativeID: ids.NewV7()}})
 		}},
 		{"Resume", func() error { return s.Resume(ctx, runID) }},
@@ -79,7 +79,7 @@ func TestRunStoreRefusesUngrantedRole(t *testing.T) {
 		{"RecordIdentityTx", func() error {
 			// The borrowed transaction is never reached: the grant is taken
 			// first, which is the whole claim. A nil tx proves it.
-			return s.RecordIdentityTx(ctx, nil, runID, "hubspot", "contact", "1", ids.NewV7())
+			return s.RecordIdentityTx(ctx, nil, runID, "legacy_crm", "contact", "1", ids.NewV7())
 		}},
 		{"Undo", func() error { _, err := s.Undo(ctx, runID, nil); return err }},
 	} {

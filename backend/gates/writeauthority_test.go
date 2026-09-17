@@ -38,11 +38,14 @@ package gates
 //     defect it exists for.
 //
 // One probe family is deliberately outside the census, and the absence is not
-// an oversight: auth.EnsureLinkTarget. It asks whether the caller may REFERENCE
-// a record — attach an activity, name a parent company, add a list member — and
-// whether "add" needs write authority on the thing added TO is a product
-// question UC-E11-08 E2 raises rather than settles. It is tracked as its own
-// issue rather than decided inside a security sweep.
+// an oversight: auth.EnsureLinkTarget and its attach-direction twin
+// auth.EnsureAttachTarget. They ask whether the caller may put this record in a
+// row — name a parent company, file an activity onto it, add a list member —
+// and "add" is not one authority: naming a record you can see from a row of
+// your own needs read, while hanging a child row onto somebody else's record
+// needs a share that is not read-only. Neither is write authority over the
+// record, which is what this census is about, so a site holding one of them is
+// not thereby a site holding this.
 //
 // The LIST predicates (auth.ScopeClauseFor, auth.VisiblePredicate) are IN the
 // census, and that is a correction rather than a flourish. A first draft left

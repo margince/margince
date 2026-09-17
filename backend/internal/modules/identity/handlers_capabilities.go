@@ -68,8 +68,10 @@ func (h Handlers) resolveFirstRun(ctx context.Context) bool {
 // an empty value would be a version the client then has to know is not one.
 func (h Handlers) GetAuthCapabilities(w http.ResponseWriter, r *http.Request) {
 	caps := crmcontracts.AuthCapabilities{
-		Password:      true,
-		PasswordReset: h.canSendPasswordLink(),
+		Password: h.passwordLoginOffered(),
+		// The same predicate the route takes, so a login screen never renders a
+		// "Forgot password?" link that answers 501.
+		PasswordReset: h.selfServiceRecoveryOffered(),
 	}
 	if buildinfo.Comparable(buildinfo.ReleaseVersion) {
 		// A local copy because the contract field is optional and therefore a
@@ -89,10 +91,15 @@ func (h Handlers) GetAuthCapabilities(w http.ResponseWriter, r *http.Request) {
 	if h.oidcProvidersEnabledFn != nil && allowed {
 		// A failed read reports NO providers rather than refusing the request.
 		// This endpoint is what the login screen renders from, so an error here
-		// must degrade to the method every installation always has — password —
-		// instead of leaving a reader with no way in at all. The routes
+		// must cost a reader the buttons and not the page. The routes
 		// themselves fail closed separately (StartOidcSignIn), so reporting a
 		// short list can never admit a sign-in the policy would refuse.
+		//
+		// Where the password method is ON, that degradation lands on it. Where
+		// a deployment closed the password door it lands on nothing, and the
+		// screen says so — which is the honest report of a momentary read
+		// failure at an installation whose only method is federated, and the
+		// reason boot refuses that posture with no provider mounted at all.
 		enabled, err := h.oidcProvidersEnabledFn(r.Context())
 		if err != nil {
 			slog.WarnContext(r.Context(), "the enabled sign-in providers could not be read; this login screen offers password only",

@@ -85,6 +85,10 @@ export const en = {
   "home.change.stageUnknown": "Unknown stage",
   "home.change.unidentified": "Unknown",
   "home.change.by": "Changed by: {actor}",
+  "brief.focus.inQueue": "In the queue",
+  "brief.focus.position": "{at} of {count}",
+  "worklist.bandCount_one": "{count} item",
+  "worklist.bandCount_other": "{count} items",
   "brief.focus.context": "View details",
   "brief.focus.back": "Back to Focus",
   "brief.queue.back": "Back to queue",
@@ -298,11 +302,24 @@ export const en = {
   "history.reversal.unpaired": "undoing an earlier change",
   "history.edge.marker": "Link",
   "history.field.address": "Address",
+  "history.field.admission": "Domain admission",
+  "history.field.admission_reason": "Admission reason",
+  "history.field.admission_source": "Admission source",
   "history.field.amount_minor": "Value",
+  "history.field.bounce": "Delivery bounce",
+  "history.field.capture_question": "Capture question",
+  "history.field.channel_identity": "Channel account",
+  "history.field.channel_username": "Channel handle",
+  "history.field.cohort_linked": "Messages linked",
+  "history.field.cohort_promoted": "Messages promoted",
+  "history.field.corrected": "Verdict corrected",
+  "history.field.disposition": "Disposition",
+  "history.field.domain": "Domain",
   "history.field.expected_arr_minor": "Expected ARR",
   "history.field.assignee_id": "Assignee",
   "history.field.body": "Notes",
   "history.field.emails": "Email addresses",
+  "history.field.nudge_dismissal": "Nudge dismissed",
   "history.field.phones": "Phone numbers",
   "history.field.meeting_status": "Meeting outcome",
   "history.field.candidate_company_key": "Matched company",
@@ -338,6 +355,21 @@ export const en = {
   "history.field.occurred_at": "Occurred",
   "history.field.company_id": "Company",
   "history.field.owner_id": "Owner",
+  "history.field.provider_claims_received": "Provider claims received",
+  "history.field.reachability": "Reachable",
+  "history.field.reply_verdict": "Reply verdict",
+  "history.field.reply_verdict_by": "Reply verdict by",
+  "history.field.research_claims_accepted": "Research claims accepted",
+  "history.field.stopped": "Stopped",
+  "history.field.stops_carried": "Stops carried over",
+  "history.field.submission_decision": "Submission decision",
+  "history.field.vat_checked_at": "VAT checked",
+  "history.field.vat_consultation_number": "VAT consultation number",
+  "history.field.vat_number": "VAT number",
+  "history.field.vat_registered_address": "VAT registered address",
+  "history.field.vat_registered_name": "VAT registered name",
+  "history.field.vat_requested": "VAT check requested",
+  "history.field.vat_status": "VAT status",
   "history.field.visibility": "Visibility",
   "history.field.parent_company_id": "Parent company",
   "history.field.partner_attribution": "Partner attribution",
@@ -1121,6 +1153,11 @@ export const en = {
     "Conversations whose content you may not open are left out of a search.",
   "tab.contacts": "Contacts",
   "tab.deals": "Deals",
+  "tab.dealRoom": "Deal Room",
+  // Shared by the account's own tab and the lead's: both hold a deal AND the
+  // projects beside it, unlike `tab.deals`, which the contact page's own
+  // Deals tab uses for a list with no projects in it.
+  "tab.dealsProjects": "Deals & projects",
   "tab.tasks": "Tasks",
   "tab.timeline": "History",
   "tab.finance": "Finance",
@@ -1197,7 +1234,8 @@ export const en = {
   "room.card.title": "Deal Room",
   "room.card.contacts": "{invited} invited · {active} signed in",
   "room.card.lastSeen": "Last seen by a buyer: {when}",
-  "room.card.open": "Open the Deal Room",
+  "room.create.sub":
+    "A space the buyer enters by link to read what you share and discuss it.",
   "room.create.open": "Open a Deal Room",
   "room.create.confirm": "Open",
   "room.create.titleLabel": "Room title",
@@ -1354,6 +1392,10 @@ export const en = {
   "finance.unmapped":
     "Connected, but this company is not matched to a customer in the accounting system yet",
   "finance.netInvoiced": "Net invoiced · 12 months",
+  "finance.coveragePeriod":
+    "These figures cover invoices issued {from} – {to}.",
+  "finance.overdueRelationshipEnded":
+    "Not shown: this relationship has ended, so an overdue figure would read as a collection to make.",
   "finance.overdue": "Overdue",
   "finance.behaviour": "Payment behaviour",
   "finance.behaviourShape": "Days late per settled invoice, oldest first",
@@ -1726,11 +1768,6 @@ export const en = {
   "co.rail.contacts.inTouch": "Already in touch with them",
   "co.rail.projects.title": "Projects",
   "co.rail.projects.empty": "No projects yet.",
-
-  // Its own key rather than the shared `tab.deals`: the contact page's own
-  // Deals tab holds no projects, so renaming that key would rename a tab that
-  // did not change.
-  "co.tab.deals": "Deals & projects",
 
   "co.commercial.title": "Commercial",
   "co.commercial.lostFigure": "Lost deals",
@@ -2350,6 +2387,7 @@ export const en = {
   "lead.bulkOutcomeNotFound": "no longer in your list",
   "lead.bulkSelectRow": "Select {name}",
   "lead.unnamed": "Unnamed lead",
+  "lead.timeline.empty": "Nothing is logged on this lead yet.",
   "lead.sla.breached": "Overdue",
   "lead.sla.atRisk": "Due soon",
   "lead.sla.withinTarget": "On time",
@@ -2363,8 +2401,13 @@ export const en = {
   "lead.filterScoreWarm": "60 and up",
   "lead.filterScoreCool": "40 and up",
   "lead.details": "Details",
-  "lead.ladder.title": "Where this lead stands",
   "lead.detailsUnset": "Not set",
+  "lead.rail.deal.title": "Deal",
+  "lead.rail.deal.empty": "No deal yet. Qualifying this lead can open one.",
+  "lead.rail.project.title": "Project",
+  "lead.rail.project.empty": "No project yet.",
+  "lead.rail.project.attach": "Attach project",
+  "lead.rail.project.change": "Change project",
   "lead.terminalReadOnly": "This lead is closed and takes no changes.",
   "lead.notYoursToChange":
     "You cannot change this lead. Ask its owner to share it with you, or your administrator for the right to edit it.",
@@ -2607,48 +2650,31 @@ export const en = {
   "deal.partnerWithheld": "Partner withheld",
   "deal.forecastCategory": "Forecast category",
   "deal.strip.title": "Where this deal stands",
-  "deal.seats.title": "Who is on this deal",
-  "deal.seats.empty": "No stakeholder is recorded on this deal",
   "deal.seats.ours": "{count} of ours carry it",
   "deal.committee.title": "The buying committee",
-  "deal.committee.empty": "No stakeholder is recorded on this deal",
-  "deal.committee.engaged": "Talking",
-  "deal.committee.quiet": "No reply",
   "deal.committee.legendEngaged": "Talking with us",
   "deal.committee.legendQuiet": "On the deal, not talking",
   "deal.committee.legendGap": "Missing cover",
   "deal.committee.threads":
     "{engaged} of {total} on the deal are talking to us.",
-  "deal.strip.money": "The money",
-  "deal.strip.money.offer": "Offer {number} · {status}",
-  "deal.strip.money.noOffer": "No offer written yet",
-  "deal.strip.money.unpriced": "Not priced yet",
+  "deal.committee.engagement": "Engagement",
   "deal.strip.close": "The close",
   "deal.strip.close.none": "No date",
-  "deal.strip.close.noneDetail": "Nobody has said when this closes",
   "deal.strip.close.inDays": "in {days} days",
   "deal.strip.close.overdue": "{days} days past the date",
   "deal.strip.close.provisional": "provisional, not confirmed by a human",
   "deal.strip.close.waiting": "they asked us to wait until {date}",
-  "deal.strip.contacts": "The contacts",
-  "deal.strip.contacts.count": "{engaged} of {total} engaged",
-  "deal.strip.contacts.champion": "a champion is named",
-  "deal.strip.contacts.noChampion": "no champion named",
-  "deal.strip.contacts.none": "Nobody",
-  "deal.strip.contacts.noneDetail": "No stakeholder is recorded on this deal",
-  "deal.strip.momentum": "The momentum",
-  "deal.strip.momentum.detail": "since the last contact",
-  "deal.strip.withheld": "Hidden",
-  "deal.strip.withheldDetail": "You may not read who is on this deal",
   "deal.forecast.commit": "commit",
   "deal.forecast.bestCase": "best case",
   "deal.forecast.pipeline": "pipeline",
   "deal.forecast.omitted": "left out of the forecast",
   "deal.pulse.yourMove": "It's your move.",
-  "deal.pulse.theirMove": "Their move.",
-  "deal.pulse.theirMoveWhy": "Nobody here is owed an answer.",
+  "deal.pulse.nothingFlagged": "No reply is waiting on you.",
+  "deal.pulse.nothingFlaggedWhy":
+    "No inbound message on this deal is flagged for an answer.",
   "deal.pulse.wroteOn": "They wrote last on {date} — {days} days ago.",
   "deal.pulse.wroteUnknown": "They wrote and nobody has answered.",
+  "deal.timeline.empty": "Nothing has been logged on this deal yet.",
   "acqSources.title": "Acquisition sources",
   "acqSources.sub":
     "The business channels a deal can be attributed to. Separate from lead sources, which record how a record reached Margince.",
@@ -4680,6 +4706,32 @@ export const en = {
     "Each reason, class and remedy is the job layer's own wording, never the worker's raw cause. A failure it cannot phrase reports a fixed substitute and carries no class at all. A class invented for text nobody could vet would key your alerts on a guess.",
   "jobs.generatedAt": "Read at {time}",
 
+  "settings.extIngest": "Connector records refused",
+  "settings.extIngestSub":
+    "Records an installed connector sent that this CRM could not represent.",
+  "extIngest.adminOnly":
+    "Seeing what connectors have sent needs permission your seat does not hold. It reports across the whole installation, so it is not open to everyone.",
+  // The clean state is a FINDING, not an absence. A connector sending nothing
+  // and a connector whose every record is refused looked identical before this
+  // card, and the reader has to be able to tell this line from "no answer".
+  "extIngest.empty":
+    "Nothing refused in the last {days} days. Every record the installed connectors sent could be represented.",
+  "extIngest.refusedTotal_one": "{count} record refused",
+  "extIngest.refusedTotal_other": "{count} records refused",
+  "extIngest.lastRefused": "most recent {when}",
+  "extIngest.refusal.key": "record key",
+  "extIngest.refusal.activity": "the activity itself",
+  "extIngest.refusal.addresses": "addresses",
+  "extIngest.refusal.counterparty": "counterparty",
+  "extIngest.refusal.participants": "participants",
+  "extIngest.refusal.size": "size limits",
+  "extIngest.refusalCount": "{count} on {refusal}",
+  // Said on the card because an operator who cannot find the detail here goes
+  // looking for a bug rather than for the connector's own log.
+  "extIngest.noDetail":
+    "Counts and the check that refused, never the record itself: the reason names the field it was refused on, and that quotes the sender's own content. The connector's own log carries the full sentence for each one.",
+  "extIngest.generatedAt": "Read at {time}",
+
   "audit.you": "You",
   "audit.system": "System",
   "audit.unknownBuyer": "Deal Room participant",
@@ -5774,6 +5826,8 @@ export const en = {
   "blockedDomains.source.human": "A person",
   "blockedDomains.source.unevidenced": "Nothing on the site named a company",
   "blockedDomains.source.staleEvidence": "The mail arguing for it is too old",
+  "blockedDomains.source.nearDuplicate":
+    "A company with this name is already here",
   "blockedDomains.rowAdmit": "Allow this one",
   "blockedDomains.rowRefuse": "Refuse this one",
   "blockedDomains.rowReopen": "Ask again",
@@ -6379,6 +6433,12 @@ export const en = {
   // Labels the password path, not the provider buttons above it: where the
   // installation runs SSO, the form beneath this divider is the fallback door.
   "auth.orDivider": "or",
+  // The card at an installation that closed the password door and whose
+  // provider is not offering the flow yet — the deployment mounted it, the
+  // OAuth app is not stored. It names what is missing without blaming the
+  // reader, who cannot fix either half.
+  "auth.noMethodOffered":
+    "This company signs in through its identity provider, which is not available right now. Ask an administrator to finish setting it up.",
   // §7.1 verbatim. The noun is "company", not "workspace": ADR-0061
   // keeps `workspace` internal and §7.3 removed it from authentication. And the
   // line states that ACCESS is restricted, never that data is safe, encrypted or
@@ -7281,6 +7341,26 @@ export const en = {
     "this sender was suppressed, so no record was made",
   "pipeline.reason.no_open_question":
     "there was no open question about this sender",
+  "pipeline.reason.thread_not_captured":
+    "no captured conversation remains on this thread, so there was nothing to read",
+  "pipeline.reason.events_raised":
+    "this conversation was read, and the events it raised were filed on the account",
+  "pipeline.reason.nothing_material":
+    "this conversation was read, and it said nothing worth filing",
+  "pipeline.reason.thread_still_moving":
+    "this conversation is still moving; it is read once it has been quiet for a while",
+  "pipeline.reason.awaiting_scan":
+    "this conversation is due to be read and has not been reached yet",
+  "pipeline.reason.reading_parked":
+    "reading this conversation was refused several times, so it is paused until it changes or the pause expires",
+  "pipeline.reason.no_single_account":
+    "this conversation does not reach exactly one account, so its findings would have nowhere certain to go",
+  "pipeline.reason.two_bodies_of_work":
+    "this conversation spans two projects, so its findings would be wrong for one of them",
+  "pipeline.reason.thread_not_all_open":
+    "a message on this conversation is withheld from some of its readers, so a summary of the whole would be a partial account presented as a complete one",
+  "pipeline.reason.no_named_reader":
+    "this conversation has no reader a finding could answer to",
   "pipeline.reason.transport_not_read":
     "this step reads email only, and the message arrived over another transport",
   "pipeline.reason.sender_undecided":
@@ -10064,7 +10144,7 @@ export const en = {
     "Nothing is sent to your vendor until you press Continue.",
   "contact.readings.title": "Where this contact stands",
   "deal360.brief": "What this deal is",
-  "deal.strip.lastTouch": "Last touch",
+  "lead.brief.title": "Lead brief",
   "lead.standing.qualified": "Qualified",
   "lead.standing.qualifiedOn": "Qualified on {at}. This lead is a contact now.",
   "lead.standing.qualifiedUndated": "This lead is a contact now.",
@@ -10096,6 +10176,8 @@ export const en = {
   "lead.today.answer": "Answer {name}",
   "lead.today.answerMeta": "First response owed",
   "lead.today.nextTask": "Next task",
+  "lead.today.reply": "Reply",
+  "lead.today.openTasks": "Open tasks",
   "lead.readings.answered": "Answered",
   "lead.standing.dueBy":
     "Nobody has answered yet. The first response is due by {at}.",

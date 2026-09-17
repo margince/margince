@@ -31,6 +31,7 @@ import type { MessageKey } from "../i18n/en";
 import { BriefQueue } from "./brief.queue";
 import { provenanceOf, throwProblem, useViewerId } from "./common";
 import { ComposeModal } from "./compose";
+import { intentAbout } from "./compose.intent";
 import { ContactActions } from "./contactactions";
 import { ContactDealsTab } from "./contactdeals";
 import { ContactResearchDrawer } from "./contactdrawers";
@@ -111,9 +112,10 @@ function composerIntentOf(
   }
   // The promise itself rides in `subject`. Without it, a rung firing on one of
   // several open commitments asks the composer to deliver "what we promised"
-  // and leaves the drafter to guess which.
-  const subject = prefill?.subject?.trim();
-  return subject ? `${t(key)}: ${subject}` : t(key);
+  // and leaves the drafter to guess which. Joined by the composer's own
+  // helper, because the queue's prepared reply seeds the same field and a
+  // phrase joined two ways is two answers to what the model is being told.
+  return intentAbout(t(key), prefill?.subject);
 }
 
 /**

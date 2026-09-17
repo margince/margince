@@ -229,9 +229,18 @@ func TestReconcileAbsorbsAnEchoThatAlreadyHoldsTheStampedIdentity(t *testing.T) 
 	if !absorbed.archived {
 		t.Errorf("the absorbed echo is still on the timeline — the send appears twice")
 	}
-	if absorbed.sourceSystem != "" || absorbed.sourceID != "" {
-		t.Errorf("the absorbed echo still holds (%q, %q) — the partial natural-key index would refuse the survivor",
-			absorbed.sourceSystem, absorbed.sourceID)
+	// source_id alone is what the echo gives up. uq_activity_source is PARTIAL
+	// on both columns being non-null, so releasing either one frees the key for
+	// the survivor — and source_system is not the echo's claim on that key, it
+	// is the row's answer to where it came from. An absorbed echo still came
+	// from somewhere; only its identity WITHIN that system was the duplicate.
+	if absorbed.sourceID != "" {
+		t.Errorf("the absorbed echo still holds source_id %q — the partial natural-key index would refuse the survivor",
+			absorbed.sourceID)
+	}
+	if absorbed.sourceSystem != "gmail" {
+		t.Errorf("the absorbed echo's source_system = %q, want gmail kept: giving up the key does not unsay where the message came from",
+			absorbed.sourceSystem)
 	}
 	if targets := e.linkedTargets(t, survivor, "contact"); len(targets) != 1 || targets[0] != buyer {
 		t.Errorf("the survivor's contact links = %v, want just the buyer %s: the echo's placement on the record must move", targets, buyer)

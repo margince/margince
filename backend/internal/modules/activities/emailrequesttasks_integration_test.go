@@ -17,7 +17,19 @@ import (
 
 var requestInstant = time.Date(2026, 9, 13, 12, 0, 0, 0, time.UTC)
 
+// requestCounterparty is who the seeded request is with. One address, shared by
+// the request and the replies to it: the settlement reads match a thread on the
+// correspondent, so a reply written to somebody else is not an answer to this.
+const requestCounterparty = "buyer@customer.test"
+
 func seedEmailRequest(t *testing.T, e *loadEnv, subject, label, verdict string) ids.UUID {
+	t.Helper()
+	return seedEmailRequestWithCounterparty(t, e, subject, label, verdict, requestCounterparty)
+}
+
+// seedEmailRequestWithCounterparty names who the mail was with, for the tests
+// that ask what a thread shared with the wrong correspondent does.
+func seedEmailRequestWithCounterparty(t *testing.T, e *loadEnv, subject, label, verdict, counterparty string) ids.UUID {
 	t.Helper()
 	store := storeKnowing(e)
 	contact := e.buyer(t)
@@ -26,7 +38,11 @@ func seedEmailRequest(t *testing.T, e *loadEnv, subject, label, verdict string) 
 	source, _, err := store.LogActivity(asClassifier(e), LogActivityInput{
 		Kind: "email", Subject: &subject, Body: &body, Direction: &direction,
 		ThreadKey: key, Source: "test", OccurredAt: &requestInstant,
-		Links: []ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
+		// Who the mail was with, which capture stamps for every real message.
+		// The settlement reads bind a thread to its correspondent, so a fixture
+		// without one is not the shape production writes.
+		CounterpartyEmail: counterparty,
+		Links:             []ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -38,7 +54,7 @@ func seedEmailRequest(t *testing.T, e *loadEnv, subject, label, verdict string) 
 	if _, err := store.SetCaptureLabel(asClassifier(e), id, label); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := store.SetOwedVerdict(asClassifier(e), id, verdict); err != nil {
+	if _, err := store.SetOwedVerdict(asClassifier(e), id, verdict, "prompts-test", dbNow(t, e)); err != nil {
 		t.Fatal(err)
 	}
 	return id

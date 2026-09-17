@@ -139,6 +139,10 @@ func (stubs) GetCaptureHealth(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetCaptureHealth")
 }
 
+func (stubs) GetExtensionIngestHealth(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetExtensionIngestHealth")
+}
+
 func (stubs) GetJobHealth(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetJobHealth")
 }
@@ -2133,6 +2137,14 @@ func (stubs) CreateRecordRole(w nethttp.ResponseWriter, r *nethttp.Request, para
 
 func (stubs) UpdateRecordRole(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.UpdateRecordRoleParams) {
 	httperr.NotImplemented(w, r, "UpdateRecordRole")
+}
+
+func (stubs) RepairSourceAttribution(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "RepairSourceAttribution")
+}
+
+func (stubs) RebuildAttributionGraph(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "RebuildAttributionGraph")
 }
 
 func (stubs) GetRecordTags(w nethttp.ResponseWriter, r *nethttp.Request, entityType string, entityId openapi_types.UUID) {

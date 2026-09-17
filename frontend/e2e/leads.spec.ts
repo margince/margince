@@ -39,10 +39,12 @@ test("AC-leaddetail-work: a note is logged against the lead itself", async ({
       request.url().endsWith("/v1/activities") && request.method() === "POST",
   );
   await page.goto("/#/leads/l-1");
-  // The composer is inline on the lead page (ADR-0118), not behind a
-  // button: working the lead is the page's job.
+  // The composer opens from the header's own verb, beside Add task: the lead
+  // page reads as a reading with its verbs at the top, and a form standing
+  // open in the middle of it was a page half filled in before anybody asked.
+  await page.getByRole("button", { name: "Aktivität erfassen" }).click();
   await page.getByLabel("Betreff *").fill("Rückruf vereinbart");
-  await page.getByRole("button", { name: "Erfassen" }).click();
+  await page.getByRole("button", { name: "Erfassen", exact: true }).click();
   const request = await posted;
   const body = request.postDataJSON();
   expect(body.subject).toBe("Rückruf vereinbart");
@@ -55,9 +57,9 @@ test("AC-leaddetail-qualify: the dialog says what qualifying will do and why, th
   page,
 }) => {
   await page.goto("/#/leads/l-1");
-  await page
-    .getByRole("button", { name: "Qualifizieren", exact: true })
-    .click();
+  // The header's own verb, by testid: the rail's deal slice offers the same
+  // act, and the name alone no longer says which control the reader pressed.
+  await page.getByTestId("lead-qualify").click();
   await expect(
     page.getByText("Die Übernahme legt einen neuen Kontakt an."),
   ).toBeVisible();

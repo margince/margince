@@ -56,6 +56,19 @@ type Sink struct {
 	// off by its organizer, or declined by the seat whose calendar it is. Nil
 	// captures meetings and cancels none.
 	cancelMeeting MeetingCloser
+	// takeOverAsserted writes this connector's reading of a message over a row
+	// an importer asserted. Nil leaves an asserted incumbent alone, which is
+	// the behaviour that predates the take-over.
+	takeOverAsserted AssertedTakeOver
+	// mailIdentityKind is activities.IdentityKindMail, and the two identity
+	// seams below are that module's own resolve and claim. All three are set
+	// together by WithMessageIdentity or none is: an empty kind is what
+	// identityOfRecord reads as "this sink files no cross-door identity".
+	mailIdentityKind    string
+	meetingIdentityKind string
+	meetingIdentityKey  MeetingIdentityKeyer
+	resolveIdentity     IdentityResolver
+	claimIdentity       IdentityClaimer
 }
 
 // fieldSourceSystem / fieldSourceID are the shared system_log detail keys for

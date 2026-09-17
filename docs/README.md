@@ -55,6 +55,15 @@ decision rather than an omission.
   are the German ones in [compliance/de/](compliance/de/); a translation of a
   legal document is not the document.
 
+### Incident reporting — our duty, not the customer's
+
+What we do when a weakness in Margince is being exploited in the wild: who
+files, to whom, and against which clocks. Written before it is needed, because
+a 24-hour deadline is not a thing to work out under pressure.
+
+- [compliance/cra/README.md](compliance/cra/README.md) — the runbook, the three
+  filled report skeletons and the tabletop walk (CRA Article 14).
+
 ### Principles — how this codebase decides things
 
 - [principles/README.md](principles/README.md) — the index. Each page carries the statement, the method for checking the tree still holds it, and what it explicitly does not ask for.

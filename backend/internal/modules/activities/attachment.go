@@ -450,10 +450,12 @@ func ensureContractFileable(ctx context.Context, tx pgx.Tx, contractID *ids.UUID
 	if err != nil {
 		return fmt.Errorf("resolving the contract a document is filed against: %w", err)
 	}
+	// ATTACH through the contract's anchor: the document is filed against that
+	// record and shows on it, which a read-only share does not confer.
 	if dealID != nil {
-		return auth.EnsureLinkTarget(ctx, tx, "deal", *dealID)
+		return auth.EnsureAttachTarget(ctx, tx, "deal", *dealID)
 	}
-	return auth.EnsureLinkTarget(ctx, tx, "company", companyID)
+	return auth.EnsureAttachTarget(ctx, tx, "company", companyID)
 }
 
 // accountRollUp resolves the account a newly filed attachment belongs to, which

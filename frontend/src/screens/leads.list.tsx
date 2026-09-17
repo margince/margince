@@ -83,6 +83,7 @@ async function fetchLeadsPage(
     page: {
       next_cursor: data.page.next_cursor ?? null,
       has_more: data.page.has_more,
+      total: data.page.total,
     },
   };
 }

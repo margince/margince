@@ -89,6 +89,15 @@ export function LeadReadings({ lead }: Readonly<{ lead: Lead }>) {
   );
 }
 
+// The score's own words: the override sentence, else which factor won it,
+// else nothing to point at yet. Shared with the header's Score fact
+// (leadheader.tsx) so the two cannot come to name one number differently.
+export function scoreReasonLabel(lead: Lead, t: Translator): string {
+  if (lead.score_override_reason) return t("lead.overriddenBadge");
+  if (lead.score_reason) return scoreFactorLabel(lead.score_reason, t);
+  return t("lead.scoreNoSignals");
+}
+
 /** The status as the readings state it: the terminal wording when it has one. */
 export function statusReading(lead: Lead, t: Translator): string {
   const terminal = terminalBadge(lead);
@@ -156,13 +165,7 @@ function ScoreCard({
     <StatCard
       label={t("lead.score")}
       value={formatNumber(lead.score, locale)}
-      detail={
-        lead.score_override_reason
-          ? t("lead.overriddenBadge")
-          : lead.score_reason
-            ? scoreFactorLabel(lead.score_reason, t)
-            : t("lead.scoreNoSignals")
-      }
+      detail={scoreReasonLabel(lead, t)}
       meter={{ filled: lead.score, total: 100 }}
       basis={basis}
     />

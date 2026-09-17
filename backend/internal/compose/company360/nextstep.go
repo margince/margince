@@ -35,6 +35,19 @@ import (
 // is nothing to advance, and "you have no task on this dormant account" is
 // noise the rep would learn to scroll past, which costs the whole surface its
 // credibility.
+//
+// WHY THIS DOES NOT USE kernel/nextstep, which the deal card and the contact
+// page share. That predicate answers the question for ONE deal: has a step been
+// agreed on it. An account is a SET of deals, and the two questions come apart
+// in both directions — an account with four deals and a meeting booked on one
+// of them is not covered, while the per-deal answer would call the other three
+// missing on a card that is about the account. What this shares with those two
+// is the vocabulary rather than the verdict: `scheduled` here means anything
+// booked anywhere on the account, and OpenCount counts deals, not tasks.
+//
+// An account-level rule that later wants the per-deal verdict should call
+// nextstep.Missing once per deal and decide what an account makes of the set,
+// rather than widening the kernel predicate until it knows about accounts.
 func noNextStepSuggestion(
 	companyID ids.CompanyID, in suggestionInputs,
 ) *crmcontracts.Company360Suggestion {

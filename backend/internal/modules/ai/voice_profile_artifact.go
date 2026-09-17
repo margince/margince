@@ -219,7 +219,8 @@ func emitDerivedProfileVersion(ctx context.Context, tx pgx.Tx, before, profile V
 		return err
 	}
 	version, err := scanVoiceVersion(tx.QueryRow(ctx, storekit.SQLf(
-		`SELECT %s FROM voice_profile_version WHERE id = $1`, voiceVersionColumns), versionID))
+		`SELECT %s FROM voice_profile_version WHERE id = $1`, voiceVersionColumns,
+	), versionID))
 	if err != nil {
 		return err
 	}

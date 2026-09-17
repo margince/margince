@@ -14,20 +14,35 @@ import (
 	"errors"
 	"testing"
 	"time"
+
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // A cursor from the recency read cannot resume an open-and-due read: it is
-// keyed to (occurred_at, id), the query would run ordered by (due_at, id),
-// and applying one axis's cursor to the other axis's order returns silently
-// wrong rows rather than the next page.
+// keyed to occurred_at, the query runs ordered by due_at, and applying one
+// axis's cursor to the other axis's order returns silently wrong rows rather
+// than the next page.
+//
+// The sentinel that used to say so is gone, and this asserts the thing that
+// replaced it: the keyset REFUSES the token itself, because a ListSort mints a
+// cursor carrying the field it was ordered by and checks it on the way back in.
+// One machine now answers for every order this read takes rather than a guard
+// per pairing somebody has to remember to add.
 func TestACursorFromTheRecencyOrderCannotResumeAnOpenAndDueRead(t *testing.T) {
 	until := time.Now()
-	cursor := "anything"
-	_, _, _, _, err := listActivitiesFilter(unscopedCtx(), ListActivitiesInput{
-		OpenAndDueBy: &until,
-		Cursor:       &cursor,
+	minted, err := storekit.EncodeOpaque(storekit.Cursor{
+		CreatedAt: time.Now(), ID: ids.NewV7(), SortField: "occurred_at", SortDesc: true,
 	})
-	if !errors.Is(err, errOpenAndDueByWithCursor) {
-		t.Fatalf("combining OpenAndDueBy with a Cursor → %v, want errOpenAndDueByWithCursor", err)
+	if err != nil {
+		t.Fatalf("minting a recency cursor: %v", err)
+	}
+	_, _, _, _, err = listActivitiesFilter(unscopedCtx(), ListActivitiesInput{
+		OpenAndDueBy: &until,
+		Cursor:       &minted,
+	})
+	var mismatch *storekit.CursorSortMismatchError
+	if !errors.As(err, &mismatch) {
+		t.Fatalf("resuming the due queue with a timeline cursor → %v, want a sort mismatch", err)
 	}
 }

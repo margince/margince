@@ -13,6 +13,7 @@ package compose
 
 import (
 	"context"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -41,8 +42,17 @@ func WithCaptureTrace(tracePayloads bool) Option {
 		// It is the cross-module edge: capture holds the stored rungs and
 		// activities holds the label and the contact link, and neither may
 		// import the other, so compose injects both.
+		//
+		// The material-events rung is a THIRD owner's rule and does not fit that
+		// injection: the signal extractor is compose's own, so the assembler is
+		// handed a reader rather than a store. It is set after construction
+		// because it is optional in a way the other two are not — an
+		// installation that composed no extractor has nothing for that rung to
+		// report, and the rung says so.
 		s.pipelineTraceHandlers = pipelinetrace.NewHandlers(pipelinetrace.NewAssembler(
-			traces, activities.NewStore(InstallationDB(pool)), tracePayloads))
+			traces, activities.NewStore(InstallationDB(pool)), tracePayloads,
+		).
+			WithThreadReader(NewThreadReadings(InstallationDB(pool), time.Now)))
 	}
 }
 

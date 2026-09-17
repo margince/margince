@@ -50,6 +50,7 @@ func (h Handlers) ListCustomFields(w http.ResponseWriter, r *http.Request, param
 		Object: string(params.Object),
 		Cursor: params.Cursor,
 		Limit:  params.Limit,
+		Sort:   params.Sort,
 	}
 	if params.Status != nil {
 		s := string(*params.Status)

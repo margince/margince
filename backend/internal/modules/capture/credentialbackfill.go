@@ -91,10 +91,7 @@ func (r *Registry) BackfillCredentials(ctx context.Context) (int, error) {
 		// The correlation id groups one boot's relocations as the single pass
 		// they are, exactly as the expiry sweep's does for one tick.
 		wsCtx := principal.WithWorkspaceID(ctx, wsID)
-		wsCtx = principal.WithCorrelationID(wsCtx, ids.NewV7())
-		wsCtx = principal.WithActor(wsCtx, principal.Principal{
-			Type: principal.PrincipalSystem, ID: CredentialBackfillActor,
-		})
+		wsCtx = principal.SystemActing(wsCtx, CredentialBackfillActor)
 		migrated, err := r.backfillWorkspace(wsCtx, ids.From[ids.WorkspaceKind](wsID))
 		if err != nil {
 			errs = errors.Join(errs, fmt.Errorf("capture: backfilling workspace %s: %w", wsID, err))

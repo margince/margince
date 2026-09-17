@@ -26,18 +26,15 @@ import { useCanWriteRecord, useRecordWriteRefusal } from "../app/capability";
 import { PageAsideToggle, usePageAside } from "../app/pageaside";
 import { usePageName } from "../app/pagemeta";
 import { useRecordZone } from "../app/recordzone";
+import { scrollPageToTop } from "../app/reveal";
 import { navigate, routeHash } from "../app/router";
-import { useInstallationSettings } from "../app/uploadlimit";
 import { currentParams, type UrlParams, useUrlParams } from "../app/urlstate";
 import { ActionRow } from "../design-system/actionrow";
-import { activityTimeline } from "../design-system/activitytimeline";
 import {
   Badge,
   Button,
   DataTable,
   EmptyState,
-  Modal,
-  OverflowMenu,
   SegmentedControl,
 } from "../design-system/atoms";
 import {
@@ -47,6 +44,7 @@ import {
   PipelineBoard,
 } from "../design-system/composed";
 import { IconAction } from "../design-system/iconaction";
+import { IdentityLine } from "../design-system/identityline";
 import type { ListChip } from "../design-system/listsurface";
 import {
   CellStrip,
@@ -57,13 +55,9 @@ import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { Panel, PanelBody } from "../design-system/panel";
 import { FieldGuard } from "../design-system/rbac";
 import { RecordTabs } from "../design-system/recordtabs";
-import {
-  useRecordTimeline,
-  useTimelineFilters,
-} from "../design-system/recordtimeline";
+import { useRecordTimeline } from "../design-system/recordtimeline";
 import { RecordView } from "../design-system/recordview";
 import { Select } from "../design-system/select";
-import { TimelineFilterBar } from "../design-system/timelinefilterbar";
 import { useToast } from "../design-system/toast";
 import { AutonomyDot, ProvenanceTag } from "../design-system/trust";
 import { middayInstant } from "../format/calendarday";
@@ -71,7 +65,6 @@ import {
   formatDate,
   formatDuration,
   formatMoney,
-  formatMoneyOrAbsent,
   formatNumber,
 } from "../format/format";
 import { toMajorUnits, toMinorUnits } from "../format/minorunits";
@@ -84,7 +77,6 @@ import {
 import { dealRecordKeys, dealWinKeys } from "./activitykeys";
 import { approvalKindLabel } from "./approvalkind";
 import { usePendingApprovals } from "./approvals.queries";
-import { ArchiveAction } from "./archive";
 import { toBoardDeal } from "./boarddeal";
 import {
   LoadMoreButton,
@@ -92,11 +84,9 @@ import {
   provenanceOf,
   QueryGate,
   throwProblem,
-  timelineZoneNotice,
   useMe,
   useViewerId,
 } from "./common";
-import { RecordContextPanel } from "./context";
 import type { CreateField } from "./create";
 import { CreateAction } from "./create";
 import {
@@ -113,7 +103,9 @@ import {
   ConfirmAdvanceModal,
   type PendingAdvance,
 } from "./deal360/confirmadvance";
+import { DealActions } from "./deal360/dealactions";
 import { DealBrief } from "./deal360/dealbrief";
+import { DEAL_OFFERS_ANCHOR, DealCockpit } from "./deal360/dealcockpit";
 import {
   commercialMotion,
   dealCommercialFields,
@@ -121,18 +113,17 @@ import {
   MOTION_OPTIONS,
   PRIORITY_OPTIONS,
 } from "./deal360/dealcommercialfields";
-import { DealCommitteeMap } from "./deal360/dealcommittee";
+import { DealCommitteeCard } from "./deal360/dealcommitteecard";
 import { dealSurfaceChips } from "./deal360/dealfilterchips";
+import { DealIdentityFacts, DealSubtitle } from "./deal360/dealheaderfacts";
+import { DealHistoryTab } from "./deal360/dealhistorytab";
 import { DealPulse } from "./deal360/dealpulse";
-import { DealSeats } from "./deal360/dealseats";
-import { DEAL_OFFERS_ANCHOR, DealStrip } from "./deal360/dealstrip";
+import { DealRoomTab } from "./deal360/dealroomtab";
 import { OutcomeReviewPanel } from "./deal360/outcomereview";
 import { useDealCoverage } from "./deal360/usedealcoverage";
-import { useDealRecipientAddress } from "./deal360/usedealrecipient";
 import { DealBulkBar } from "./dealbulk";
 import { DealEmailAside } from "./dealemail";
 import { DealFiles } from "./dealfiles";
-import { DealIdentityLine } from "./dealidentity";
 import { dealMailAside, lastMailColumn } from "./dealmailaside";
 import {
   DealProjectChip,
@@ -141,8 +132,6 @@ import {
   StartDeliveryPrompt,
   useProjectsOfCompany,
 } from "./dealproject";
-import { DealRoomAside } from "./dealroom";
-import { DealStageLadder } from "./deals.stepper";
 import { DealStatusCardPanel, useDealStatusCard } from "./dealstatus";
 import {
   EntityRef,
@@ -151,7 +140,6 @@ import {
   useEntityName,
   useRoster,
 } from "./entityref";
-import { RecordHistoryTab } from "./history";
 import {
   LIST_PAGE_SIZES,
   type ListQuery,
@@ -165,25 +153,18 @@ import {
   withListPage,
   withoutScreenDials,
 } from "./listquery";
-import { LogActivity } from "./logactivity";
-import { useOpenEmail, withEmailOpener } from "./openemail";
+import { useOpenEmail } from "./openemail";
 import type { Project } from "./projects.form";
 import { RecordReading, RecordReadingPair, TimelineThread } from "./record360";
 import { RecordCustomFields } from "./recordcustomfields";
 import { saveRecordEdit } from "./recordedit";
-import { RecordEmailVerb } from "./recordemail";
 import { RecordFields, rawRecord } from "./recordfields";
 import { tagsColumn } from "./recordlist";
 import { useRecordOwners } from "./recordreferences";
 import { RecordTeam } from "./recordteam";
-import { invalidateRecord } from "./recordwritekeys";
-import { RelationshipsTab } from "./relationships";
 import { SaveViewAction, useSavedViewTabs } from "./savedviews";
-import { ShareAction } from "./share";
 import { parseTagIDs, parseTagMode, tagQueryParams } from "./tagfilter";
 import { TagsPanel } from "./tagspanel";
-import { TimelineActions } from "./timelineactions";
-import { groupChronology } from "./timelinegroups";
 
 // Kanban, table and deal detail share the fetched records and approval flow.
 // Mixed-currency columns never sum native minor units; weighting stays server-side.
@@ -2493,158 +2474,11 @@ export function DealsScreen({
 
 // The FX-converted base-currency sub-line (D-14): shown only when the deal
 // carries a frozen fx_rate_to_base (won/lost deals freeze it at close; open
-// deals in a non-base currency may not have one yet). Prop-driven and
-// exported so a later Storybook task can render it without a live fetch.
-export function FxLine({
-  amountMinor,
-  baseCurrency,
-  fxRateToBase,
-  fxRateDate,
-  locale,
-}: Readonly<{
-  amountMinor: number | null;
-  // The installation's own base currency, from its settings. Not a constant:
-  // an installation whose base is not the euro was reading a euro sign over a
-  // figure converted into something else, which is the one error a converted
-  // figure must not make. Null while the settings read is in flight or refused
-  // — an unnamed base is not a euro base.
-  baseCurrency: string | null;
-  fxRateToBase: string;
-  fxRateDate: string | null;
-  locale: Locale;
-}>) {
-  const t = useT();
-  const recordZone = useRecordZone();
-  // A deal carrying a rate but no amount converts to nothing, not to zero.
-  const baseMinor =
-    amountMinor == null ? null : Math.round(amountMinor * Number(fxRateToBase));
-  return (
-    <p className="t-caption">
-      {t("deal.fxBase", {
-        value: formatMoneyOrAbsent(baseMinor, baseCurrency, locale),
-        rate: fxRateToBase,
-        date: fxRateDate ? formatDate(fxRateDate, locale, recordZone) : "—",
-      })}
-    </p>
-  );
-}
-
-// Reopens a won/lost deal back to an open-semantic stage — the same advance
-// mutation shape the board drag uses, with status:"open" forced. Split out
-// of DealActions for the same readability reason as the other header actions.
-function ReopenAction({
-  dealId,
-  dealVersion,
-  openStages,
-  disabledReasonId,
-}: Readonly<{
-  dealId: string;
-  // The version the header this button sits in was rendered from, so the reopen
-  // pins the deal the reader was looking at. Stated by the caller rather than
-  // read here: this action holds no query of its own to read a fresh one from,
-  // and a fresh one would be the wrong answer anyway.
-  dealVersion: number | undefined;
-  openStages: Stage[];
-  // The id of the sentence saying why this reopen is refused, when it is.
-  // STATE-4a: a control blocked by the record's STATE rather than by a
-  // permission stays visible and says why, because the reason is the
-  // information and hiding the control hides a fact the reader needs.
-  disabledReasonId?: string;
-}>) {
-  const t = useT();
-  const queryClient = useQueryClient();
-  const [open, setOpen] = useState(false);
-  const [stageId, setStageId] = useState<string | null>(null);
-  const reopen = useMutation({
-    mutationKey: ["deal-edit", dealId],
-    // Stage and version both ride the variables: a version read out of the
-    // closure would be the one from the render before this dialog opened, and a
-    // reopen that pins the wrong version either fails for no reason the reader
-    // can see or lands on a deal somebody else has since moved.
-    mutationFn: async (input: {
-      toStageId: string;
-      version: number | undefined;
-    }) => {
-      const { data, error } = await api.POST("/deals/{id}/advance", {
-        params: {
-          path: { id: dealId },
-          ...ifMatch(requireVersion(input.version)),
-        },
-        body: { to_stage_id: input.toStageId, status: "open" },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
-      return data;
-    },
-    onSuccess: () => {
-      setOpen(false);
-      for (const queryKey of dealRecordKeys(dealId)) {
-        queryClient.invalidateQueries({ queryKey });
-      }
-      queryClient.invalidateQueries({ queryKey: ["deals"] });
-    },
-  });
-  return (
-    <>
-      <Button
-        reasonId={disabledReasonId}
-        data-testid="reopen-open"
-        onClick={() => setOpen(true)}
-      >
-        {t("deal.reopen")}
-      </Button>
-      <Modal
-        open={open}
-        onClose={() => setOpen(false)}
-        labelledBy="reopen-title"
-      >
-        <p className="t-sub" id="reopen-title">
-          {t("deal.reopenPick")}
-        </p>
-        <div
-          style={{
-            display: "flex",
-            gap: "var(--space-2)",
-            flexWrap: "wrap",
-            margin: "var(--space-3) 0",
-          }}
-        >
-          {openStages.map((s) => (
-            <Button
-              key={s.id}
-              aria-pressed={stageId === s.id}
-              data-testid={`reopen-stage-${s.id}`}
-              onClick={() => setStageId(s.id)}
-            >
-              {s.name}
-            </Button>
-          ))}
-        </div>
-        {reopen.isError && (
-          <p style={{ color: "var(--dangerText)" }}>
-            {problemMessageOf(reopen.error, t)}
-          </p>
-        )}
-        <div className="actions">
-          <Button onClick={() => setOpen(false)}>{t("deals.cancel")}</Button>
-          <Button
-            variant="primary"
-            data-testid="reopen-confirm"
-            disabled={!stageId || reopen.isPending}
-            onClick={() => {
-              if (stageId) {
-                reopen.mutate({ toStageId: stageId, version: dealVersion });
-              }
-            }}
-          >
-            {t("deal.reopenConfirm")}
-          </Button>
-        </div>
-      </Modal>
-    </>
-  );
-}
+// deals in a non-base currency may not have one yet). Its body moved into
+// dealcockpit.tsx, where the money cell draws it as a second line; re-exported
+// here so this stays the one import path this file's own stories and tests
+// already use.
+export { FxLine } from "./deal360/dealcockpit";
 
 function editProjectFields(
   t: (key: MessageKey) => string,
@@ -2677,76 +2511,6 @@ function editProjectFields(
     opts.openProjects,
     opts.currentProject,
     opts.company,
-  );
-}
-
-// The two contacts surfaces under the deal's overview.
-//
-// The seats are in the RAIL as context — who these contacts are. The map is in
-// the column because it is a working surface: it draws how the deal is threaded
-// and where the cover is missing, which is what a reader acts on.
-//
-// The stakeholders panel is where a seat is ADDED, changed and removed. The
-// rail's seats and the map both read the coverage view, which carries no
-// relationship id and so can carry no verb — a deal's stakeholders were
-// readable on three surfaces and writable on none of them, reachable only from
-// whichever contact happened to already be linked. It is the generic
-// relationships panel under a deal scope, not a second one: create, edit and
-// remove have one implementation for every kind.
-//
-// Named rather than inlined so DealScreen's render callback stays under the
-// complexity ceiling.
-function DealContactsPanels({
-  dealId,
-  refusedReasonId,
-}: Readonly<{
-  dealId: string;
-  // The page's one sentence about why this deal takes no changes: a seat is
-  // written through the deal's own write gate, so the panel's verbs are
-  // refused by the same fact as Edit.
-  refusedReasonId?: string;
-}>) {
-  return (
-    <RelationshipsTab
-      scope={{ deal_id: dealId }}
-      refusedReasonId={refusedReasonId}
-    />
-  );
-}
-
-// This deal's VERBS — split out of DealScreen's render so the record-view
-// callback stays readably small. An archived deal is read-only (no
-// edit/archive/advance path exists server-side for a non-live row), so its
-// verbs render REFUSED rather than missing: the page's one sentence about the
-// archive says why, and each of them points at it (STATE-4a). A missing control
-// says nothing about the deal, while a refused one names the reason.
-//
-// They used to ride the record view's BADGES slot, which is where a record says
-// what it IS rather than what can be done to it — so the deal page passed
-// `actionsInline` with no `actions` to place, and four buttons sat in the row
-// meant for a status and a project chip. The header now carries ONE verb, the
-// mail nobody has to read a consequence for; edit, share, reopen and archive
-// go behind the overflow, each on a line of its own.
-// The shared Email verb every record header carries.
-function DealEmailVerb({
-  deal,
-  disabledReasonId,
-}: Readonly<{ deal: Deal; disabledReasonId?: string }>) {
-  // The same coverage read the readings band and the coverage card already
-  // make, served from one cache entry — so asking here costs no request.
-  const coverage = useDealCoverage(deal.id);
-  const recordAddress = useDealRecipientAddress(coverage);
-  return (
-    <RecordEmailVerb
-      entityType="deal"
-      entityId={deal.id}
-      // Who a FIRST message on this deal goes to: the champion, else somebody
-      // the deal is actually in conversation with, else the first seat. Only
-      // ever an offer — the composer fills an empty To field once and never
-      // over what the reader typed.
-      recordAddress={recordAddress}
-      disabledReasonId={disabledReasonId}
-    />
   );
 }
 
@@ -2893,81 +2657,11 @@ export function DealDetails({
   );
 }
 
-function DealActions({
-  deal,
-  openStages,
-  refusedReasonId,
-}: Readonly<{
-  deal: Deal;
-  companies: { id: string; display_name: string }[];
-  meId: string;
-  openStages: Stage[];
-  // The id of the page's one sentence about why this deal takes no changes —
-  // archived, or not this caller's to write — and undefined while it does.
-  // Every verb the sentence refuses points at that one element instead of
-  // printing the same line four times.
-  refusedReasonId?: string;
-}>) {
-  const t = useT();
-  const refusedByArchive = deal.archived_at ? refusedReasonId : undefined;
-  return (
-    <>
-      <DealEmailVerb deal={deal} disabledReasonId={refusedByArchive} />
-      {/* Behind the overflow, every verb but the mail: editing a deal,
-          handing a link to somebody outside the workspace, reopening a
-          closed one and archiving it each want a whole line rather than a
-          place in a row — the header carries identity and the one verb a
-          reader reaches for. Archive goes last, farthest from the press
-          that opened the menu. */}
-      <OverflowMenu label={t("record.moreActions")}>
-        {/* Worded rather than a bare pencil: among named verbs the square
-            would be the one row naming nothing. */}
-        <ShareAction
-          recordType="deal"
-          recordId={deal.id}
-          disabledReasonId={refusedReasonId}
-        />
-        {/* Reopen answers a CLOSED deal, so an open one has no reason to be
-            told about it — absent, not refused. An archived closed deal keeps
-            it, refused: the reader came asking whether this can come back. */}
-        {(deal.status === "won" || deal.status === "lost") && (
-          <ReopenAction
-            dealId={deal.id}
-            dealVersion={deal.version}
-            openStages={openStages}
-            disabledReasonId={refusedReasonId}
-          />
-        )}
-        <ArchiveAction
-          disabledReasonId={refusedReasonId}
-          label={t("deal.archive")}
-          confirmText={t("deal.archiveConfirm")}
-          archivedMessage={t("record.archiveDone", { name: deal.name })}
-          archive={async () => {
-            const { data, error } = await api.DELETE("/deals/{id}", {
-              params: {
-                path: { id: deal.id },
-                ...ifMatch(requireVersion(deal.version)),
-              },
-            });
-            if (error) {
-              throwProblem(error);
-            }
-            return data;
-          }}
-          invalidate="deals"
-          recordKey="deal"
-          onArchived={() => navigate({ screen: "deals" })}
-        />
-      </OverflowMenu>
-    </>
-  );
-}
-
 type Approval = components["schemas"]["Approval"];
 
 // The live 🟡 confirm-first staging queue for this deal — split out of
-// DealScreen's render for the same readability reason as DealActions above.
+// DealScreen's render for the same readability reason DealActions moved to
+// its own file (deal360/dealactions.tsx).
 function DealApprovals({
   approvals,
   decide,
@@ -3138,7 +2832,7 @@ export function OffersPanel({
   );
 }
 
-const DEAL_TABS = ["overview", "files", "history"] as const;
+const DEAL_TABS = ["overview", "room", "files", "history"] as const;
 type DealTab = (typeof DEAL_TABS)[number];
 
 // The deal 360's "overview" pane, split out of DealScreen so the tab switch
@@ -3170,27 +2864,20 @@ function DealTagsSection({ deal }: Readonly<{ deal: Deal }>) {
 
 function DealOverviewPane({
   deal,
-  stages,
   dealApprovals,
   onDecide,
   offers,
   creatingOffer,
   locale,
-  baseCurrency,
   onCreateOffer,
-  onAdvance,
-  advancing,
-  advanceRefused,
   readOnly,
   refusedReasonId,
   pulse,
   spine,
   coverage,
-  onOpenHistory,
   onOpenEmail,
 }: Readonly<{
   deal: Deal;
-  stages: Stage[];
   dealApprovals: Approval[];
   onDecide: (input: {
     approvalId: string;
@@ -3199,16 +2886,7 @@ function DealOverviewPane({
   offers: Offer[] | undefined;
   creatingOffer: boolean;
   locale: Locale;
-  baseCurrency: string | null;
   onCreateOffer: (currency: string) => void;
-  onAdvance: (toStage: Stage) => void;
-  /** One advance at a time: a second click while the first is in flight would
-   * send a second write pinned to the same version, and the loser reads as a
-   * conflict the reader never caused. */
-  advancing: boolean;
-  /** Where this deal cannot be moved at all — archived (restore it first), or
-   * not this caller's to write. */
-  advanceRefused: boolean;
   /** Whether the deal takes NO field write at all — archived, or not this
    * caller's to write. Deliberately NOT `advanceRefused`, which also refuses a
    * CLOSED deal: reopening is its own deliberate action, while correcting the
@@ -3226,56 +2904,24 @@ function DealOverviewPane({
   spine: ReactNode;
   // Who is on the deal, for the reading's reference pair beside the offers.
   coverage: ReturnType<typeof useDealCoverage>;
-  // Where the momentum reading's door goes: the history tab, which the page
-  // owns.
-  onOpenHistory: () => void;
   // Opens a cited message in the page's own email drawer; see `Citations`.
   onOpenEmail?: (activityId: string) => void;
 }>) {
   return (
     // The same stack every record's overview reads down, with its rhythm.
     <div className="record-stack">
-      {/* The readings open the overview, as they do on every record page. */}
-      <DealStrip
-        deal={deal}
-        offers={offers}
-        coverage={coverage.coverage}
-        coverageWithheld={coverage.withheld}
-        onOpenHistory={onOpenHistory}
-      />
-      {deal.fx_rate_to_base != null && (
-        <FxLine
-          amountMinor={deal.amount_minor ?? null}
-          baseCurrency={baseCurrency}
-          fxRateToBase={deal.fx_rate_to_base}
-          fxRateDate={deal.fx_rate_date ?? null}
-          locale={locale}
-        />
-      )}
+      {/* The readings that used to open this stack — the four-tile strip and
+          the stage stepper — moved into the cockpit band above the tabs
+          (deals.tsx), which is where a reader now finds them on every tab
+          rather than one scroll into this one. */}
       {/* A won deal with no project, on a company with exactly one open
           project, is offered that project once. Nothing else here asks. */}
       <StartDeliveryPrompt deal={deal} />
-      {/* Where the deal is now is a fact, not a choice, so the current stage
-          stays a marker. Every other stage is the move to it — which is what
-          makes a deal closable from its own page rather than only by dragging
-          its card on the board. */}
-      {stages.length > 0 && (
-        <DealStageLadder
-          deal={deal}
-          stages={stages}
-          advancing={advancing}
-          advanceRefused={advanceRefused}
-          refusedReasonId={refusedReasonId}
-          onAdvance={onAdvance}
-        />
-      )}
-      {/* ONE READING, IN PARTS, below the stage bar on purpose: a reader
-          takes in WHERE the deal is before they read the account of how it got
-          there. The call with the deal's thread, the move the briefing names,
-          the brief itself, and under them the two sections a reader consults
-          rather than reads — what is on the table, and who is in the room.
-          The buying committee sits beside the offers rather than at the foot
-          of the page, because the two are the deal's two sides. */}
+      {/* ONE READING, IN PARTS: the call with the deal's thread, the move the
+          briefing names, the brief itself, and under them the two sections a
+          reader consults rather than reads — what is on the table, and who is
+          in the room. The buying committee sits beside the offers rather than
+          at the foot of the page, because the two are the deal's two sides. */}
       <RecordReading>
         <DealStatusCardPanel
           dealId={deal.id}
@@ -3298,10 +2944,12 @@ function DealOverviewPane({
               onCreate={onCreateOffer}
             />
           </div>
-          <DealCommitteeMap
+          <DealCommitteeCard
+            dealId={deal.id}
             coverage={coverage.coverage}
             withheld={coverage.withheld}
             pending={coverage.pending}
+            refusedReasonId={refusedReasonId}
           />
         </RecordReadingPair>
       </RecordReading>
@@ -3321,9 +2969,13 @@ function DealOverviewPane({
         status={deal.status}
         closingOccurrenceId={deal.closing_occurrence_id}
       />
-
-      <RecordContextPanel entityType="deal" id={deal.id} />
-      <LogActivity entityType="deal" entityId={deal.id} />
+      {/* Neither the related-evidence panel nor the inline log form stands
+          here any more. The evidence it listed — recent touches, open tasks,
+          the contacts and companies around the deal — is already the reading
+          above and the rail beside it, and a reader given the same records
+          twice has two lists to reconcile. Logging is a verb, and the head
+          carries it (dealactions.tsx): a form always open at the foot of the
+          page asks for a note on every read. */}
     </div>
   );
 }
@@ -3406,12 +3058,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
   // The id every refused control points at, or nothing while the deal takes
   // changes — resolved once here so the render below reads one name.
   const refusedReasonId = readOnly ? readOnlyReasonId : undefined;
-  // One shared singleton read (the ["installation-settings"] key), not a
-  // per-deal request: the FX line has to name the base currency it converted
-  // into, and nothing on the deal itself carries it.
-  const baseCurrency = useInstallationSettings().data?.base_currency ?? null;
   const me = useMe();
-  const viewerId = useViewerId();
   // Asked here rather than inside the aside, because an element is truthy
   // whatever it renders: a slot filled with a component that draws nothing
   // still reserves the aside column and its landmark.
@@ -3446,29 +3093,16 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
   const dealContext = (deal: Deal) => (
     <DealContext
       deal={deal}
-      coverage={coverageRead}
       companies={companies.data?.data ?? []}
       meId={me.data?.user.id ?? ""}
     />
   );
-  const [timelineFilters, setTimelineFilters] = useTimelineFilters(id);
-  const timelineQuery = useRecordTimeline("deal", id, {
-    filters: timelineFilters,
-  });
-  // The thread under the call reads the WHOLE history, not the page the filter
-  // strip narrowed: a filter is a view of the timeline tab, and a call that
-  // said "no reply since" because the reader had hidden emails would be false.
-  // The two share one query whenever no filter is set.
+  // The thread under the call reads the WHOLE history, not whatever the
+  // History tab's own filter has narrowed: a filter is a view of that tab,
+  // and a call that said "no reply since" because the reader had hidden
+  // emails there would be false.
   const threadQuery = useRecordTimeline("deal", id);
   const [openEmail, setOpenEmail] = useOpenEmail();
-  const rawTimelineEntries = activityTimeline(
-    timelineQuery.activities,
-    viewerId,
-    (activity) => (
-      <TimelineActions activity={activity} entityType="deal" entityId={id} />
-    ),
-  );
-  const timelineEntries = withEmailOpener(rawTimelineEntries, setOpenEmail);
   const offersQuery = useQuery({
     queryKey: ["deal-offers", id],
     queryFn: async () => {
@@ -3529,203 +3163,208 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
           const dealApprovals = (approvalsQuery.data?.data ?? []).filter(
             (approval) => approval.target_entity_id === deal.id,
           );
+          // Pinned to one closure so the cockpit's ladder and the overview's
+          // former stepper (now the same control) never drift into two
+          // versions of what an advance means.
+          const onAdvance = (toStage: Stage) => {
+            // The version this record was drawn from, exactly as the board
+            // pins the version its card was drawn from: the write names the
+            // deal as the reader saw it, so a change made elsewhere meanwhile
+            // fails loud.
+            const input = { dealId: deal.id, version: deal.version, toStage };
+            if (toStage.semantic === "open") {
+              advance.mutate(input);
+            } else {
+              setPending(input);
+            }
+          };
           return (
-            <RecordView
-              // Context first: who these contacts are, before the verbs that act
-              // on them. The seats moved out of the main column when the
-              // readings band started counting them — the same two facts were
-              // reaching a reader three times on one screen. The pane is the
-              // one every record page draws, with the same fold and the same
-              // memory of it.
-              aside={dealContext(deal)}
-              asideOpen={details.open}
-              name={deal.name}
-              pulse={
-                <DealIdentityLine deal={deal} stages={stages} locale={locale} />
-              }
-              zone={recordZone}
-              actionsInline
-              // The deal's standing reads beside its name, not at the far
-              // end of the header among the verbs: a reader asking "is this
-              // still open?" was looking at the name and finding the answer
-              // across the page, above the buttons that act on it.
-              nameBadge={
-                <Badge tone={dealStatusTone(deal.status)}>{deal.status}</Badge>
-              }
-              badges={<DealProjectChip deal={deal} />}
-              actions={
-                <DealActions
-                  deal={deal}
-                  companies={companies.data?.data ?? []}
-                  meId={me.data?.user.id ?? ""}
-                  openStages={openStages}
-                  refusedReasonId={refusedReasonId}
-                />
-              }
-              band={dealBand({
-                reason: readOnlyReason,
-                reasonId: readOnlyReasonId,
-              })}
-              // The strip frames the whole record rather than the work alone:
-              // it runs across both columns, and the details pane opens under
-              // it, so choosing a body and choosing what stands beside it read
-              // as two controls on one page instead of one nested in the other.
-              tabs={
-                <RecordTabs
-                  options={DEAL_TABS}
-                  value={tab}
-                  onChange={setTab}
-                  labels={{
-                    overview: t("tab.overview"),
-                    files: t("tab.documents"),
-                    history: t("tab.history"),
-                  }}
-                  // The switch for the deal's details column, at the end of the
-                  // tab row: it chooses what the page shows BESIDE the work, so
-                  // it stands with the controls that choose what the work
-                  // column shows, and never in the head among the deal's verbs.
-                  trailing={<PageAsideToggle />}
-                />
-              }
-              timeline={timelineEntries}
-              timelineGroups={groupChronology(
-                timelineEntries,
-                timelineQuery.hasNextPage,
-              )}
-              timelineHeader={
-                <TimelineFilterBar
-                  value={timelineFilters}
-                  onChange={setTimelineFilters}
-                />
-              }
-              timelineFooter={
-                <>
-                  <LoadMoreButton query={timelineQuery} />
-                  {/* One drawer over the deal, beside the timeline it opens
-                      from. */}
-                  <OpenEmailDrawer
-                    activityId={openEmail}
-                    zone={recordZone}
-                    onClose={() => setOpenEmail(null)}
+            <div className="record-sheet">
+              <RecordView
+                // Context first: who these contacts are, before the verbs that act
+                // on them. The seats moved out of the main column when the
+                // readings band started counting them — the same two facts were
+                // reaching a reader three times on one screen. The pane is the
+                // one every record page draws, with the same fold and the same
+                // memory of it.
+                aside={dealContext(deal)}
+                asideOpen={details.open}
+                name={deal.name}
+                // One rung under the record scale: the name is still the
+                // largest thing on the page, but beside a work column that
+                // opens on the reader's ask it no longer needs to be the size
+                // of a masthead.
+                scale="compact"
+                // The way in — which account this deal is on — on the name's
+                // own line, the same inline shape every other record's head
+                // draws its subtitle in.
+                nameBadge={<DealSubtitle deal={deal} />}
+                zone={recordZone}
+                actionsInline
+                // The deal's standing reads beside its name, not at the far
+                // end of the header among the verbs: a reader asking "is this
+                // still open?" was looking at the name and finding the answer
+                // across the page, above the buttons that act on it.
+                pulse={
+                  <IdentityLine separator="space">
+                    <Badge tone={dealStatusTone(deal.status)}>
+                      {deal.status}
+                    </Badge>
+                    <DealProjectChip deal={deal} />
+                  </IdentityLine>
+                }
+                // What it is worth, where it sits, when it is due, whose deal
+                // it is, which account it is on and how it reached Margince —
+                // the identity line's long dot-separated sentence went here,
+                // as named cells rather than a sentence to re-parse.
+                badges={
+                  <DealIdentityFacts
+                    deal={deal}
+                    stages={stages}
+                    locale={locale}
                   />
-                </>
-              }
-              timelineNotice={timelineZoneNotice(
-                { pending: timelineQuery.isPending },
-                t,
-              )}
-            >
-              {/* One stack for the whole overview: the work column draws its
+                }
+                actions={
+                  <DealActions
+                    deal={deal}
+                    openStages={openStages}
+                    refusedReasonId={refusedReasonId}
+                  />
+                }
+                // Where the deal stands, at the foot of its head: a reader
+                // arrives asking which stage this is in, and one who has
+                // already picked a tab has walked past the answer.
+                standing={
+                  <DealCockpit
+                    deal={deal}
+                    stages={stages}
+                    advancing={advance.isPending}
+                    // A deal that takes no changes — archived, or not this
+                    // caller's to write — is not moved through the
+                    // pipeline: a control that can only fail is worse than
+                    // none. A CLOSED deal is refused here too, but for a
+                    // different reason: reopening is its own deliberate
+                    // action, with a dialog that says the close date and
+                    // the frozen rate are being cleared. A stepper button
+                    // that reopened silently would be a second, quieter
+                    // door to the same write.
+                    advanceRefused={readOnly || deal.status !== "open"}
+                    refusedReasonId={refusedReasonId}
+                    onAdvance={onAdvance}
+                  />
+                }
+                // The sentence naming why this deal takes no changes, while
+                // it does not.
+                band={dealBand({
+                  reason: readOnlyReason,
+                  reasonId: readOnlyReasonId,
+                })}
+                // The strip frames the whole record rather than the work alone:
+                // it runs across both columns, and the details pane opens under
+                // it, so choosing a body and choosing what stands beside it read
+                // as two controls on one page instead of one nested in the other.
+                tabs={
+                  <RecordTabs
+                    options={DEAL_TABS}
+                    value={tab}
+                    onChange={(next) => {
+                      setTab(next);
+                      scrollPageToTop();
+                    }}
+                    labels={{
+                      overview: t("tab.overview"),
+                      room: t("tab.dealRoom"),
+                      files: t("tab.documents"),
+                      history: t("tab.history"),
+                    }}
+                    // The switch for the deal's details column, at the end of the
+                    // tab row: it chooses what the page shows BESIDE the work, so
+                    // it stands with the controls that choose what the work
+                    // column shows, and never in the head among the deal's verbs.
+                    trailing={<PageAsideToggle />}
+                  />
+                }
+              >
+                {/* One stack for the whole overview: the work column draws its
                   children with no interval of its own, so the reading and the
                   contacts under it take the record's rhythm from here rather
                   than from a margin one of them carries. */}
-              {tab === "overview" && (
-                <div className="record-stack">
-                  <DealOverviewPane
-                    deal={deal}
-                    onOpenEmail={setOpenEmail}
-                    stages={stages}
-                    dealApprovals={dealApprovals}
-                    onDecide={(input) => decide.mutate(input)}
-                    offers={offersQuery.data?.data}
-                    creatingOffer={createOffer.isPending}
-                    locale={locale}
-                    baseCurrency={baseCurrency}
-                    onCreateOffer={(currency) => createOffer.mutate(currency)}
-                    advancing={advance.isPending}
-                    pulse={
-                      <DealPulse
-                        card={statusQuery.data}
-                        timeline={timelineQuery.activities}
-                      />
-                    }
-                    spine={
-                      <TimelineThread
-                        thread={threadQuery}
-                        commercial={{
-                          next_close_on: deal.expected_close_date,
-                        }}
-                        onOpenEmail={setOpenEmail}
-                      />
-                    }
-                    coverage={coverageRead}
-                    onOpenHistory={() => setTab("history")}
-                    // A deal that takes no changes — archived, or not this
-                    // caller's to write — is not moved through the pipeline: a
-                    // control that can only fail is worse than none.
-                    //
-                    // A CLOSED deal is refused here too, but for a different
-                    // reason: reopening is its own deliberate action, with a
-                    // dialog that says the close date and the frozen rate are
-                    // being cleared. A stepper button that reopened silently
-                    // would be a second, quieter door to the same write.
-                    advanceRefused={readOnly || deal.status !== "open"}
-                    readOnly={readOnly}
-                    refusedReasonId={refusedReasonId}
-                    onAdvance={(toStage) => {
-                      // The version this record was drawn from, exactly as the
-                      // board pins the version its card was drawn from: the
-                      // write names the deal as the reader saw it, so a change
-                      // made elsewhere meanwhile fails loud.
-                      const input = {
-                        dealId: deal.id,
-                        version: deal.version,
-                        toStage,
-                      };
-                      if (toStage.semantic === "open") {
-                        advance.mutate(input);
-                      } else {
-                        setPending(input);
+                {tab === "overview" && (
+                  <div className="record-stack">
+                    <DealOverviewPane
+                      deal={deal}
+                      onOpenEmail={setOpenEmail}
+                      dealApprovals={dealApprovals}
+                      onDecide={(input) => decide.mutate(input)}
+                      offers={offersQuery.data?.data}
+                      creatingOffer={createOffer.isPending}
+                      locale={locale}
+                      onCreateOffer={(currency) => createOffer.mutate(currency)}
+                      pulse={
+                        <DealPulse
+                          card={statusQuery.data}
+                          timeline={threadQuery.activities}
+                        />
                       }
-                    }}
-                  />
-                  <DealContactsPanels
-                    dealId={deal.id}
-                    refusedReasonId={refusedReasonId}
-                  />
-                </div>
-              )}
-              {tab === "files" && <DealFiles deal={deal} />}
-              {tab === "history" && (
-                <RecordHistoryTab
-                  kind="deal"
-                  id={deal.id}
-                  currency={deal.currency}
-                  restore={{
-                    version: deal.version,
-                    onRestored: () =>
-                      invalidateRecord(queryClient, "deal", deal.id),
-                  }}
+                      spine={
+                        <TimelineThread
+                          thread={threadQuery}
+                          commercial={{
+                            next_close_on: deal.expected_close_date,
+                          }}
+                          onOpenEmail={setOpenEmail}
+                        />
+                      }
+                      coverage={coverageRead}
+                      readOnly={readOnly}
+                      refusedReasonId={refusedReasonId}
+                    />
+                  </div>
+                )}
+                {tab === "room" && (
+                  <DealRoomTab dealId={deal.id} dealName={deal.name} />
+                )}
+                {tab === "files" && <DealFiles deal={deal} />}
+                {tab === "history" && (
+                  <DealHistoryTab deal={deal} onOpenEmail={setOpenEmail} />
+                )}
+                {/* One drawer over the deal. Both the overview's citations and
+                  the history tab's own rows open it, so a message found from
+                  either place lands in the same reader. */}
+                <OpenEmailDrawer
+                  activityId={openEmail}
+                  zone={recordZone}
+                  onClose={() => setOpenEmail(null)}
                 />
-              )}
-              {advance.isError && (
-                <p
-                  style={{
-                    color: "var(--dangerText)",
-                    marginTop: "var(--space-2)",
-                  }}
-                >
-                  {problemMessageOf(advance.error, t)}
-                </p>
-              )}
-              <ConfirmAdvanceModal
-                pending={pending}
-                onClose={() => setPending(null)}
-                onConfirm={(input) =>
-                  advance.mutateAsync(input).then(
-                    (deal) => deal,
-                    (error: unknown) => error,
-                  )
-                }
-                onClosed={(deal, reason) =>
-                  setClosed(closedDealOf(deal, reason))
-                }
-              />
-              <CloseReviewOffer
-                closed={closed}
-                onDismiss={() => setClosed(null)}
-              />
-            </RecordView>
+                {advance.isError && (
+                  <p
+                    style={{
+                      color: "var(--dangerText)",
+                      marginTop: "var(--space-2)",
+                    }}
+                  >
+                    {problemMessageOf(advance.error, t)}
+                  </p>
+                )}
+                <ConfirmAdvanceModal
+                  pending={pending}
+                  onClose={() => setPending(null)}
+                  onConfirm={(input) =>
+                    advance.mutateAsync(input).then(
+                      (deal) => deal,
+                      (error: unknown) => error,
+                    )
+                  }
+                  onClosed={(deal, reason) =>
+                    setClosed(closedDealOf(deal, reason))
+                  }
+                />
+                <CloseReviewOffer
+                  closed={closed}
+                  onDismiss={() => setClosed(null)}
+                />
+              </RecordView>
+            </div>
           );
         }}
       </QueryGate>
@@ -3733,16 +3372,14 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
   );
 }
 
-// The deal's context, for the details pane: the seats first, then how the deal
-// is filed, then the deal rooms and the mail card.
+// The deal's context, for the details pane: what the deal is, who of ours owns
+// it, then how the deal is filed and the mail card.
 function DealContext({
   deal,
-  coverage,
   companies,
   meId,
 }: Readonly<{
   deal: Deal;
-  coverage: ReturnType<typeof useDealCoverage>;
   companies: { id: string; display_name: string }[];
   meId: string;
 }>) {
@@ -3752,16 +3389,13 @@ function DealContext({
   const canWrite = useCanWriteRecord("deal", deal) && !deal.archived_at;
   return (
     <>
-      {/* Before the seats: what the deal IS commercially, then who is on it. */}
+      {/* What the deal IS commercially, then who OURS are on it. The buyer's
+          seats are not here: they live in the committee card in the column, with
+          the verbs that change them, and a rail copy of that list is what this
+          page carried three of. */}
       <DealDetails deal={deal} companies={companies} meId={meId} />
       <RecordTeam recordType="deal" recordId={deal.id} readOnly={!canWrite} />
-      <DealSeats
-        coverage={coverage.coverage}
-        withheld={coverage.withheld}
-        pending={coverage.pending}
-      />
       <DealTagsSection deal={deal} />
-      <DealRoomAside dealId={deal.id} dealName={deal.name} />
       <DealEmailAside dealId={deal.id} />
     </>
   );

@@ -160,6 +160,9 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		captureHealthHandlers: captureHealthHandlers{
 			pool: pool, now: func() time.Time { return time.Now().UTC() },
 		},
+		extensionIngestHealthHandlers: extensionIngestHealthHandlers{
+			pool: pool, now: func() time.Time { return time.Now().UTC() },
+		},
 		consentHandlers:     newConsentHandlers(pool),
 		collectionsHandlers: newCollectionsHandlers(pool),
 		// The warm room ranks its contact edges by the §4 relationship

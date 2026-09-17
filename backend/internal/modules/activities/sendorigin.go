@@ -213,7 +213,10 @@ func (s *Store) probeLinkTargets(ctx context.Context, links []ActivityLinkInput)
 			if linkColumn(link.EntityType) == "" {
 				return &InvalidLinkTypeError{EntityType: link.EntityType}
 			}
-			if err := auth.EnsureLinkTarget(ctx, tx, link.EntityType, link.EntityID); err != nil {
+			// The same ATTACH question insertActivityLinks asks when the send
+			// is staged, asked here so the refusal arrives before the work
+			// rather than after it — two doors onto one act must not disagree.
+			if err := auth.EnsureAttachTarget(ctx, tx, link.EntityType, link.EntityID); err != nil {
 				return err
 			}
 		}

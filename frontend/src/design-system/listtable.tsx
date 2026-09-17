@@ -451,6 +451,7 @@ export function ListTable<Row>({
   footer,
   hasMore = false,
   onLoadMore,
+  total: serverTotal,
   perPage: controlledPerPage,
   onPerPage,
   page: controlledPage,
@@ -573,12 +574,17 @@ export function ListTable<Row>({
   footer?: ReactNode;
   /**
    * Whether the server holds rows beyond the ones passed in. Paging is a keyset
-   * cursor, so there is no total and no way to jump to an arbitrary page: the
-   * pager walks the pages it has, and stepping past the last one fetches the
-   * next cursor page rather than pretending a page count it cannot know.
+   * cursor, so there is no jumping to an arbitrary page: the pager walks the
+   * pages it has, and stepping past the last one fetches the next cursor page.
    */
   hasMore?: boolean;
   onLoadMore?: () => void;
+  /**
+   * How many rows match on the server, when it counts them — the difference
+   * between "1-25 of 8,372" and "1-25 of 200 loaded so far". Undefined means
+   * it does not count, NOT zero, so the line falls back to the rows in hand.
+   */
+  total?: number;
   /**
    * Rows per RENDERED page. The caller fetches a whole multiple of it, so the
    * table divides the rows it holds on boundaries the fetch already respects.
@@ -1017,8 +1023,10 @@ export function ListTable<Row>({
                 unit={unit}
                 first={from + 1}
                 last={from + pageRows.length}
-                total={rows.length}
-                more={hasMore}
+                total={serverTotal ?? rows.length}
+                // "Loaded so far" is the caveat for a number the client
+                // counted itself; an exact total needs none.
+                more={hasMore && serverTotal === undefined}
                 narrowed={narrowed}
                 sortedBy={sorted?.header}
               />

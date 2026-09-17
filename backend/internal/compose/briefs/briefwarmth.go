@@ -69,7 +69,7 @@ func seatEvidenceBound(ctx context.Context) (args []any, clause string, admitted
 		return nil, "", false, err
 	}
 	if clause == "" {
-		clause = "TRUE"
+		clause = briefUnnarrowed
 	}
 	return args, clause, true, nil
 }

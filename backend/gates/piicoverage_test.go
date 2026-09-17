@@ -114,6 +114,17 @@ var piiTables = map[string]piiHandling{
 	"contact_email":  {erasureWrite: true, sarRead: true},
 	"contact_social": {erasureWrite: true, sarRead: true},
 	"contact_phone":  {erasureWrite: true, sarRead: true},
+	// What the source-author repair applied per record. It keeps a SECOND copy
+	// of the free-text author name, so an erasure that stopped at the activity
+	// would clear the name from the message and leave it readable in the
+	// bookkeeping beside it. It keeps a THIRD in `payload_hash` — an unkeyed
+	// digest over that same name, which is not anonymous when the candidate set
+	// is a staff list — so the erasure clears the two together.
+	//
+	// No sarRead: the subject of one of these rows is the AUTHOR of a message,
+	// not its counterparty. An Art. 15 export answers for the requester's own
+	// records rather than for everyone named inside them.
+	"source_attribution_repair": {erasureWrite: true},
 	// The channel identity binds a human to their Telegram account: the
 	// provider's user id for them plus the @username they message under. Both
 	// identify the subject as directly as an address does, and the id is the

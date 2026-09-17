@@ -111,7 +111,7 @@ func (w stageChangeCreateTask) Plan(ctx context.Context, ev workflow.Event) (wor
 	// resolves to "deal" — the same value this map hardcoded before the
 	// shared builder existed. The deal's owner is who the next step belongs
 	// to; without them the task reaches nobody's own queue.
-	return ownedTaskEffect(ctx, w.ex, ev, "Plan the next step after the stage change",
+	return ownedTaskEffectNoKey(ctx, w.ex, ev, "Plan the next step after the stage change",
 		ev.OccurredAt.AddDate(0, 0, dueInDays))
 }
 
@@ -198,7 +198,7 @@ func (w routeLeadCreateTask) Plan(ctx context.Context, ev workflow.Event) (workf
 	if err != nil {
 		return workflow.Effect{}, err
 	}
-	return ownedTaskEffect(ctx, w.ex, ev, "Follow up with the new lead",
+	return ownedTaskEffectNoKey(ctx, w.ex, ev, "Follow up with the new lead",
 		ev.OccurredAt.AddDate(0, 0, dueInDays))
 }
 

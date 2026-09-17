@@ -150,8 +150,8 @@ func TestGeminiMapsImageAndPDFAttachmentsToInlineData(t *testing.T) {
 	if _, err := client.Complete(context.Background(), model.Request{
 		Messages: []model.Message{{Role: "user", Content: "read these"}},
 		Attachments: []model.Attachment{
-			{MIME: "image/png", Bytes: []byte("PNG")},
-			{MIME: "application/pdf", Bytes: []byte("%PDF")},
+			{MIME: "image/png", Bytes: pngSample},
+			{MIME: "application/pdf", Bytes: pdfSample},
 		},
 	}); err != nil {
 		t.Fatal(err)

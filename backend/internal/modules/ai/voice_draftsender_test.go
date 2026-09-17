@@ -43,7 +43,8 @@ func TestTheVoiceSenderIsTheHumanTheMailGoesOutAs(t *testing.T) {
 		// The actor names no contact; the owner does.
 		"an automation firing under the system actor": {
 			ctx: principal.WithSendingHuman(
-				principal.WithActor(context.Background(), system), owner),
+				principal.WithActor(context.Background(), system), owner,
+			),
 			want: owner,
 			ok:   true,
 		},
@@ -54,7 +55,8 @@ func TestTheVoiceSenderIsTheHumanTheMailGoesOutAs(t *testing.T) {
 		// whose voice they want.
 		"a bound sender never overrides a human actor": {
 			ctx: principal.WithSendingHuman(
-				principal.WithActor(context.Background(), human), owner),
+				principal.WithActor(context.Background(), human), owner,
+			),
 			want: rep,
 			ok:   true,
 		},
@@ -97,7 +99,8 @@ func TestABoundSenderCannotRedirectAHumansVoiceRead(t *testing.T) {
 	ctx := principal.WithSendingHuman(
 		principal.WithActor(context.Background(), principal.Principal{
 			Type: principal.PrincipalHuman, ID: "human:" + rep.String(), UserID: rep,
-		}), victim)
+		}), victim,
+	)
 
 	got, ok := voiceSender(ctx)
 	if !ok {
@@ -124,7 +127,8 @@ func TestAZeroSendingHumanFallsThroughToTheActor(t *testing.T) {
 	ctx := principal.WithSendingHuman(
 		principal.WithActor(context.Background(), principal.Principal{
 			Type: principal.PrincipalHuman, ID: "human:" + rep.String(), UserID: rep,
-		}), ids.Nil)
+		}), ids.Nil,
+	)
 
 	got, ok := voiceSender(ctx)
 	if !ok || got != rep {

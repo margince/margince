@@ -26,7 +26,20 @@ import (
 // fields are ignored — the raw original is stored verbatim as evidence
 // (memory-first), so nothing is lost by reading only what we use.
 type rawEvent struct {
-	ID          string       `json:"id"`
+	ID string `json:"id"`
+	// ICalUID is the event's cross-provider identity, and `id` is not: `id` is
+	// Graph's own numbering, so the same meeting read from Graph and from
+	// Google carries two ids and would dedupe as two meetings.
+	//
+	// The tag is Microsoft's own spelling, `iCalUId`, where Google writes
+	// `iCalUID`. Both decode either payload — encoding/json matches field names
+	// case INSENSITIVELY — so each tag documents its vendor's wire format rather
+	// than guarding correctness, and no test can tell the two apart.
+	//
+	// The calendarView delta (client.go) reports occurrences rather than series
+	// masters, and every occurrence of one series carries the same value — so it
+	// names the series and the occurrence's start names the meeting within it.
+	ICalUID     string       `json:"iCalUId"` //nolint:tagliatelle // Microsoft's wire format
 	Subject     string       `json:"subject"`
 	BodyPreview string       `json:"bodyPreview"` //nolint:tagliatelle // Microsoft's wire format (camelCase); must match to decode
 	IsCancelled bool         `json:"isCancelled"` //nolint:tagliatelle // Microsoft's wire format (camelCase); must match to decode
@@ -95,6 +108,7 @@ func decode(ev rawEvent) meetingmap.Event {
 	}
 	return meetingmap.Event{
 		ID:        ev.ID,
+		ICalUID:   strings.TrimSpace(ev.ICalUID),
 		Cancelled: ev.IsCancelled || ev.Removed != nil,
 		// Only "declined". A tentative answer is an attendance somebody may yet
 		// make and "notResponded" is an invitation nobody has read, so neither

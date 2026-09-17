@@ -229,9 +229,9 @@
    claim rather than as the first item of a list. The hairline under it is the
    card-to-content seam this block owns — it divides the read from the working,
    which is two pieces of CONTENT, so it stops at the body's own padding.
-   Its size stays UNDER the panel's title rung (--fs-panel-title, 16px): the
-   lead is the first line of the panel's content, and at --fs-h2 it outranked
-   the heading of the panel it sits in. */
+   It takes no rung of its own: the lead is the first line of the panel's
+   CONTENT, and drawn at a heading size it outranked the title of the panel it
+   sits in. */
 .co-brief-lead {
   margin: 0 0 var(--space-3);
   padding-bottom: var(--space-3);
@@ -921,6 +921,13 @@
   color: var(--danger);
 }
 .fin-lede {
+  margin: 0;
+}
+/* What period the figures describe, under them. It qualifies the whole panel
+   rather than any one reading, which is why it sits below the split instead of
+   beside a figure. The type is `.t-caption` on the element — the line under the
+   thing it qualifies — so only the margin is left to say here. */
+.fin-coverage {
   margin: 0;
 }
 /* The bar's two halves, named. Laid out as a row that wraps, so a long

@@ -29,7 +29,19 @@ import (
 // Through the real writer and on the SAME thread key, because that pairing is
 // the whole trigger: a reply on another thread is somebody else's conversation,
 // and the candidate read must not offer it.
+//
+// It carries the request's own correspondent, ATTESTED, which is what a message
+// the provider really sent to that address looks like. The thread key alone no
+// longer settles anything — a sender types their own References root — so a
+// fixture that set only the key would be testing a door the reads have closed.
 func replyTo(t *testing.T, e *loadEnv, request ids.UUID, body string, at time.Time) {
+	t.Helper()
+	replyToCounterparty(t, e, request, requestCounterparty, body, at)
+}
+
+// replyToCounterparty is replyTo with the correspondent named, for the tests
+// that ask what happens when our outbound went to somebody else.
+func replyToCounterparty(t *testing.T, e *loadEnv, request ids.UUID, counterparty, body string, at time.Time) {
 	t.Helper()
 	store := storeKnowing(e)
 	var key string
@@ -41,6 +53,7 @@ func replyTo(t *testing.T, e *loadEnv, request ids.UUID, body string, at time.Ti
 	if _, _, err := store.LogActivity(asClassifier(e), LogActivityInput{
 		Kind: "email", Subject: &subject, Body: &body, Direction: &direction,
 		ThreadKey: key, Source: "test", OccurredAt: &at,
+		CounterpartyEmail: counterparty, CounterpartyOutboundAttested: true,
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -345,5 +358,49 @@ func TestAReopenedReminderOutranksASettledVerdict(t *testing.T) {
 	if summaries[request].Move != crmcontracts.EmailSummaryMoveNeedsReply {
 		t.Error("a request whose reminder somebody reopened does not read as outstanding — " +
 			"the machine's settled verdict is overruling whoever took the work back")
+	}
+}
+
+// A stranger cannot make our reply to somebody else answer their message.
+//
+// thread_key can be the RFC822 References root, which the SENDER types. So a
+// cold mail can claim a thread it was never part of, and before the reads bound
+// themselves to a correspondent, our outbound to the real customer satisfied
+// "the workspace has answered" for the forged request. That offered the
+// stranger's message for settlement, and the conversation the settlement pass
+// then read was the REAL customer's — which is how their private mail reached a
+// cloud model under an attacker's thread id.
+//
+// The reply here is attested to the real customer, which is the only thing that
+// distinguishes it: the thread key, kind and provider all match the forgery.
+func TestAForgedThreadIsNotSettledByOurReplyToSomebodyElse(t *testing.T) {
+	e := setupLoad(t)
+	forged := seedEmailRequestWithCounterparty(t, e, "Forged thread", "commitment",
+		OwedVerdictAsksUs, "stranger@elsewhere.test")
+	replyToCounterparty(t, e, forged, "Here are the terms you asked for.",
+		"Our answer to the real customer.", requestInstant.Add(time.Hour))
+
+	if _, ok := repliedIDs(t, e, requestInstant.Add(48*time.Hour))[forged]; ok {
+		t.Fatal("a message that forged its way onto another customer's thread was offered " +
+			"for settlement by our reply to that customer — the conversation read would " +
+			"then hand the real customer's mail to the model as the stranger's context")
+	}
+}
+
+// The counterparty is carried out of the selection so the conversation read can
+// bind to it without reading the column a second time. A candidate that lost it
+// would make that read unbindable, and an unbindable read is the whole defect.
+func TestACandidateNamesTheCorrespondentItWasWith(t *testing.T) {
+	e := setupLoad(t)
+	request := seedEmailRequest(t, e, "Named correspondent", "commitment", OwedVerdictAsksUs)
+	replyTo(t, e, request, "On its way.", requestInstant.Add(time.Hour))
+
+	candidate, ok := repliedIDs(t, e, requestInstant.Add(48*time.Hour))[request]
+	if !ok {
+		t.Fatal("the answered request was not offered for settlement")
+	}
+	if candidate.CounterpartyEmail != requestCounterparty {
+		t.Fatalf("the candidate names %q as its correspondent, not %q",
+			candidate.CounterpartyEmail, requestCounterparty)
 	}
 }

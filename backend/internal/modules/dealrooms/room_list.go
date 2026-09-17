@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
 // ListRoomsInput narrows a page of rooms.
@@ -28,6 +29,29 @@ type ListRoomsInput struct {
 	IncludeArchived  bool
 	Limit            *int
 	Cursor           *string
+	// Sort is the caller's spec, validated against roomSortFields. Nil and the
+	// documented default spelling both mean the house order.
+	Sort *string
+}
+
+// roomSortFields is what a caller may order this list by: the columns the room
+// itself publishes, which is what a reader can see and therefore what they can
+// order by.
+//
+// What is NOT here carries its reason. `deal_id` and `steward_user_id` are
+// references — ordering by one orders by a record the caller may not be able to
+// read, which the Sort component's Expr exists for and this list has no need
+// of. `welcome_message` is a body rather than an axis. `source`, `captured_by`
+// and `version` are provenance about the row rather than facts about the room.
+// A field left out is refused with sort_field_not_allowed, which is an honest
+// answer; silently falling back to another order is not.
+var roomSortFields = map[string]storekit.SortField{
+	"title":      storekit.Column(fieldcatalog.TypeText),
+	"state":      storekit.Column(fieldcatalog.TypeText),
+	"expires_at": storekit.Column(storekit.KindTimestamp),
+	"closed_at":  storekit.Column(storekit.KindTimestamp),
+	"created_at": storekit.Column(storekit.KindTimestamp),
+	"updated_at": storekit.Column(storekit.KindTimestamp),
 }
 
 // ListRooms pages the Deal Rooms whose deals the caller can see.
@@ -56,12 +80,24 @@ func (s *Store) ListRooms(ctx context.Context, in ListRoomsInput) ([]crmcontract
 func roomPage(ctx context.Context, tx pgx.Tx, in ListRoomsInput) ([]crmcontracts.DealRoom, storekit.Page, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-
+	// The sort FIRST: it may bind parameters of its own and the cursor clause
+	// is rendered from it, so both count through one counter.
+	sorted, err := storekit.ParseListSort(ctx, in.Sort, roomSortFields, arg)
+	if err != nil {
+		return nil, storekit.Page{}, err
+	}
 	scope, err := dealScopeClause(ctx, arg)
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}
-	where := []string{scope}
+	// The deal is an EXISTS rather than a JOIN, and that is what lets the house
+	// keyset name its columns: `deal` carries a `created_at` and an `id` of its
+	// own, so with it in the FROM list the cursor tuple — alias-free by design,
+	// since every other list it serves reads one table — is ambiguous and
+	// Postgres refuses the statement. Nothing outside selects a deal column;
+	// the join was only ever the room's row scope.
+	where := []string{storekit.SQLf(
+		`EXISTS (SELECT 1 FROM deal d WHERE d.id = r.deal_id AND (%s))`, scope)}
 	if !in.IncludeArchived {
 		where = append(where, "r.archived_at IS NULL")
 	}
@@ -78,31 +114,35 @@ func roomPage(ctx context.Context, tx pgx.Tx, in ListRoomsInput) ([]crmcontracts
 			arg(*in.ParticipantEmail)))
 	}
 	if in.Cursor != nil && *in.Cursor != "" {
-		decoded, err := storekit.DecodeCursor(*in.Cursor)
+		// Through the sort's own keyset, which refuses a token minted under a
+		// different ordering rather than resuming on an axis this page is not
+		// ordered by.
+		keyset, err := sorted.KeysetClause(*in.Cursor, arg)
 		if err != nil {
 			return nil, storekit.Page{}, err
 		}
-		where = append(where, storekit.SQLf("(r.created_at, r.id) < ($%d, $%d)",
-			arg(decoded.CreatedAt), arg(decoded.ID)))
+		where = append(where, keyset)
 	}
 
 	size := storekit.ClampLimit(in.Limit)
 	rows, err := tx.Query(ctx, storekit.SQLf(
-		`SELECT %s FROM deal_room r JOIN deal d ON d.id = r.deal_id
-		  WHERE %s ORDER BY r.created_at DESC, r.id DESC LIMIT %d`,
-		roomColumns, strings.Join(where, " AND "), size+1), args...)
+		`SELECT %s%s FROM deal_room r WHERE %s%s LIMIT %d`,
+		roomColumns, sorted.CursorKeySuffix(), strings.Join(where, " AND "),
+		sorted.OrderBy(), size+1), args...)
 	if err != nil {
 		return nil, storekit.Page{}, fmt.Errorf("list deal rooms: %w", err)
 	}
 	defer rows.Close()
 
 	out := make([]crmcontracts.DealRoom, 0, size)
+	var cursorKeys []*string
 	for rows.Next() {
-		room, err := scanRoom(rows)
+		room, key, err := scanRoomPage(rows, sorted)
 		if err != nil {
 			return nil, storekit.Page{}, fmt.Errorf("scan deal room: %w", err)
 		}
 		out = append(out, room)
+		cursorKeys = append(cursorKeys, key)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, storekit.Page{}, fmt.Errorf("read deal rooms: %w", err)
@@ -111,14 +151,26 @@ func roomPage(ctx context.Context, tx pgx.Tx, in ListRoomsInput) ([]crmcontracts
 	var page storekit.Page
 	if len(out) > size {
 		out = out[:size]
-		createdAt, id := roomKey(out[len(out)-1])
-		next, err := storekit.EncodeCursor(createdAt, id)
+		createdAt, id := roomKey(out[size-1])
+		next, err := sorted.EncodePageCursor(cursorKeys[size-1], createdAt, id)
 		if err != nil {
 			return nil, storekit.Page{}, err
 		}
 		page = storekit.Page{HasMore: true, NextCursor: next}
 	}
 	return out, page, nil
+}
+
+// scanRoomPage scans one row of a sorted page: the published columns, and the
+// sort's cursor key where the sort appends one.
+func scanRoomPage(row pgx.Rows, sorted *storekit.ListSort) (crmcontracts.DealRoom, *string, error) {
+	var key *string
+	var dest []any
+	if sorted.CursorKeySuffix() != "" {
+		dest = append(dest, &key)
+	}
+	out, err := scanRoom(storekit.TrailingColumns{Row: row, Dest: dest})
+	return out, key, err
 }
 
 // ArchiveRoom ends the room. Buyer access goes with it; the releases stay, so

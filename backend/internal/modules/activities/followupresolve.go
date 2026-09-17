@@ -83,6 +83,24 @@ func NotSystemMinted(alias string, arg func(any) int) string {
 		alias, arg(systemCapturedBy), arg(systemCapturedByPattern))
 }
 
+// SystemMintedExpr is the same namespace test as a bare expression, for the
+// places a statement cannot bind a parameter — an ORDER BY, or a CASE inside
+// one.
+//
+// It is the positive form: true exactly where NotSystemMinted is false. Both
+// read the two constants above, so the three spellings of this one namespace
+// (here, the bound fragment, and principal.SystemMintedID in Go) move together
+// or not at all.
+//
+// The values are formatted in as SQL literals rather than bound, which is safe
+// for the same reason the pattern match itself is: both are compile-time
+// constants of this package, never input, and captured_by is server-stamped
+// from the authenticated principal.
+func SystemMintedExpr(alias string) string {
+	return fmt.Sprintf("(%[1]s.captured_by = '%[2]s' OR %[1]s.captured_by LIKE '%[3]s')",
+		alias, systemCapturedBy, systemCapturedByPattern)
+}
+
 // FollowUpWorkflows returns the system handlers that complete open system
 // follow-up tasks when the follow-up demonstrably happened: a real
 // activity lands on the lead, or the lead leaves the open pool (promoted

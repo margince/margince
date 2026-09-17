@@ -65,7 +65,7 @@ MINIO_PORT ?= 29000
 # answer lands in its own assignment so `set -e` sees the refusal — a helper
 # called inside another command's argument would fail unnoticed.
 
-.PHONY: help install dev-fresh check check-all check-backend check-q check-go check-gates check-fe build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture bench-dispatch perfdoc lint arch-lint vet gen gen-workflow mcp-apps-vocab handbook-embed gen-types gen-types-check drift composition check-composition test-extensions db-up db-init db-wait migrate migrate-up migrate-down migrate-create run psql redis-cli tidy dev dev-stop dev-sweep dev-snapshot dev-restore dev-logs clean vuln tools tools-go infra-up infra-down infra-logs infra-reset seed-dev seed-dev-db seed-reset verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check perfdoc e2e-company e2e-brief e2e-llm e2e-llm-guards fe-install fe-typecheck fe-typecheck-composed fe-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-clock-drift fe-edge-padding fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing ds-spacing-roles space-tokens native-controls ext-imports action-rows fitness-jurisdiction storybook fe-uat craft-static craft-review test-craft-review craft-residue craft-prose check-craft-doc test-craft-pin test-golangci-guard test-scheduled-report test-ci-verdict test-merge-verdict test-review-coverage test-laneorder secret-scan test-secret-scan test-sbom-sign test-dev-dsn test-testdb-redis test-lane-timeout-report test-dev-isolation test-dev-cleanup test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity check-ext-migrations check-extension-modules contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length fe-file-length rls-store-path no-jurisdiction test-no-jurisdiction pkg-freeze changelog-sections test-changelog-sections test-release-tag-version test-release-version-stamped test-closing-declaration test-release-patch-base test-published-tag test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-validate sbom-sign sbom-check sbom-gate
+.PHONY: help install dev-fresh check check-all check-backend check-q check-go check-gates check-fe build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture bench-dispatch perfdoc lint arch-lint vet gen gen-workflow mcp-apps-vocab handbook-embed gen-types gen-types-check drift composition check-composition test-extensions db-up db-init db-wait migrate migrate-up migrate-down migrate-create run psql redis-cli tidy dev dev-stop dev-sweep dev-snapshot dev-restore dev-logs clean vuln tools tools-go infra-up infra-down infra-logs infra-reset seed-dev seed-dev-db seed-reset verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check perfdoc e2e-company e2e-brief e2e-llm e2e-llm-guards fe-install fe-typecheck fe-typecheck-composed fe-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-unit-merge fe-clock-drift fe-edge-padding fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing ds-spacing-roles space-tokens native-controls ext-imports action-rows fitness-jurisdiction storybook fe-uat craft-static craft-review test-craft-review craft-residue craft-prose check-craft-doc test-craft-pin test-golangci-guard test-scheduled-report test-ci-verdict test-merge-verdict test-review-coverage test-laneorder secret-scan test-secret-scan test-sbom-sign test-dev-dsn test-testdb-redis test-lane-timeout-report test-dev-isolation test-dev-cleanup test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity check-ext-migrations check-extension-modules contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length fe-file-length rls-store-path no-jurisdiction test-no-jurisdiction pkg-freeze changelog-sections test-changelog-sections test-release-tag-version test-release-version-stamped test-closing-declaration test-release-patch-base test-published-tag test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-validate sbom-sign sbom-check sbom-gate
 
 # Bare `make` lists every command instead of running the first target.
 .DEFAULT_GOAL := help
@@ -535,16 +535,59 @@ fe-drift:
 ## a CLI `--coverage.reporter` REPLACES the configured entry, option and all.
 ## check-lcov-paths.sh is the report's acceptance test: an lcov naming files the
 ## scanner cannot resolve is indistinguishable, everywhere downstream, from a
-## suite that covers nothing. Its own test runs on EVERY invocation of this
-## target rather than beside it, because the gate itself only runs on the
-## FE_COVERAGE runs — which are CI's — while an edit to it lands on a bare
+## suite that covers nothing. Both it and the shard-union gate have their own
+## tests run on EVERY invocation of this target rather than beside the gates
+## themselves, because neither gate runs outside CI — one wants FE_COVERAGE, the
+## other wants four blobs — while an edit to either lands on a bare
 ## `make fe-unit`.
+##
+## FE_SHARD=k/N runs slice k of N instead of the whole suite, and writes a BLOB
+## The shard run carries a SECOND reporter, `default`, and it is the only thing
+## that says which test failed. `blob` writes its report to a file and prints
+## nothing, and the upload step that would have carried that file is skipped
+## when the test step fails — so a red shard produced a log with no test name in
+## it anywhere, and the merge job that would have printed one never ran. Two
+## reporters cost a few hundred lines of passing output and are the difference
+## between a finding and a bisect.
+##
+## report rather than an lcov: one slice's coverage is not a measurement of
+## anything until every slice is added to it, so the shard runs hand their blobs
+## to `fe-unit-merge` and the lcov and its gates live there. Unset — the local
+## default, and the only way to reach a verdict in one command — runs everything
+## and writes the report directly.
 FE_COVERAGE ?=
+FE_SHARD ?=
 fe-unit:
 	bash frontend/scripts/check-lcov-paths.test.sh
+	bash frontend/scripts/check-shard-union.test.sh
 	cd frontend && pnpm install --frozen-lockfile && pnpm exec vitest run \
+		$(if $(FE_SHARD),--shard=$(FE_SHARD) --reporter=blob --outputFile=.vitest-reports/blob-$(subst /,-,$(FE_SHARD)).json --reporter=default) \
 		$(if $(FE_COVERAGE),--coverage.enabled)
-	$(if $(FE_COVERAGE),frontend/scripts/check-lcov-paths.sh frontend/coverage/lcov.info)
+	$(if $(FE_SHARD),,$(if $(FE_COVERAGE),frontend/scripts/check-lcov-paths.sh frontend/coverage/lcov.info))
+
+## fe-unit-merge — one measurement out of the shards' blob reports. CI only:
+## nothing produces a blob unless FE_SHARD asked for one.
+##
+## Both of its own outputs land in .vitest-merge/ rather than beside the blobs:
+## `--merge-reports` parses EVERY file in .vitest-reports/, so a discovery list
+## written there stops the merge with a JSON syntax error on its own input.
+##
+## `vitest --merge-reports` runs no test. It reads the blobs, replays their
+## results into one verdict and hands the merged coverage to the reporter
+## configured in vite.config.ts, so the lcov the scanner reads is built the same
+## way whether the suite ran in one job or in several.
+##
+## Then both gates, in the order their failures are worth reading: the union
+## check first, because a report describing two thirds of the suite makes every
+## number after it answer the wrong question, and the path check second, on the
+## file that is about to be uploaded.
+fe-unit-merge:
+	cd frontend && pnpm install --frozen-lockfile && mkdir -p .vitest-merge && \
+		pnpm exec vitest list --filesOnly >.vitest-merge/discovered.txt && \
+		pnpm exec vitest --merge-reports --coverage.enabled \
+			--reporter=default --reporter=json --outputFile.json=.vitest-merge/merged.json
+	frontend/scripts/check-shard-union.sh frontend/.vitest-merge/merged.json frontend/.vitest-merge/discovered.txt
+	frontend/scripts/check-lcov-paths.sh frontend/coverage/lcov.info
 
 ## fe-clock-drift — the same vitest suite, run as if it were FE_CLOCK_SKEW_DAYS
 ## from now, and required to reach the same verdict. A test whose result depends
@@ -1036,13 +1079,18 @@ test-review-coverage:
 test-laneorder:
 	@./scripts/test-laneorder.sh
 
-## check-image-pins — every `uses:` in .github/workflows/ AND every container
-## `image:` (workflow service containers + docker-compose.dev.yml) is
-## pinned to an immutable ref (supply-chain: a floating vN/main tag or image
-## tag lets a compromised artifact ride into CI unreviewed). Lives at the root
-## because the workflows do; also a CI step, so a pin can't regress.
+## check-image-pins — every `uses:` in .github/workflows/, every container
+## `image:` (workflow service containers + docker-compose.dev.yml) AND every
+## Dockerfile base `FROM` is pinned to an immutable ref (supply-chain: a
+## floating vN/main tag or image tag lets a compromised artifact ride into CI
+## — or into a release image — unreviewed). Lives at the root because the
+## workflows and the Dockerfile do; also a CI step, so a pin can't regress.
 check-image-pins:
 	@./scripts/check-image-pins.sh
+## check-image-pins.test.sh runs beside it because the newest half of the gate
+## reads Dockerfiles, and a scan that stopped recognising a `FROM` line reports
+## the same "image pins OK" as a fully pinned tree.
+	@bash ./scripts/check-image-pins.test.sh
 
 ## check-host-ports — every host port published by docker-compose.dev.yml
 ## sits BELOW the ephemeral floor (32768). A published port inside the kernel's

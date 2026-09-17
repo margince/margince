@@ -324,6 +324,13 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 	// The importer maps only core columns (see importTargets for why custom
 	// fields are not among them), so it needs no field catalog of its own.
 	s.importHandlers = importHandlers{db: InstallationDB(pool), uploadLimit: s.uploadLimits.CSVImport}
+	// The author repair reaches one module's store and its own ledger table,
+	// both off the same installation handle — so the write and the record of
+	// the write cannot end up addressing different databases.
+	s.attributionHandlers = attributionHandlers{
+		db:         InstallationDB(pool),
+		activities: activities.NewStore(InstallationDB(pool)),
+	}
 	s.company360Svc = company360.NewService(pool, s.contactsStore, s.dealsStore, ProjectsStore(pool), approvals.NewService(InstallationDB(pool)), time.Now)
 	s.companyBriefSvc = companybrief.NewService(pool, s.company360Svc, s.contactsStore, nil, "", time.Now).
 		WithEmailSummaries(emailRows(pool))

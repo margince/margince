@@ -138,6 +138,21 @@ func (a bookingConsentAdapter) CaptureBookingConsent(ctx context.Context, contac
 	return outcome, err
 }
 
+// RecordBookingInquiry stamps the qualifying event a public booking IS: the
+// subject asked for a meeting, which ADR-0098 D2 counts as them initiating
+// correspondence exactly as an inbound message does.
+//
+// The cross-module edge, here for the reason every other one in this file is:
+// `activities` owns the booking door and `consent` owns the basis, and neither
+// imports the other.
+//
+// Its own transaction. The booking is already committed by the time this runs —
+// it has to be, since the row cites the meeting as its evidence — so there is no
+// transaction left to join, and nothing here may take the meeting back.
+func (a bookingConsentAdapter) RecordBookingInquiry(ctx context.Context, contactID, activityID ids.UUID) error {
+	return a.store.RecordInquiry(ctx, ids.From[ids.ContactKind](contactID), activityID)
+}
+
 // askMarketing mails the confirmation link an affirmative tick earns, and it
 // runs AFTER the operational grant on purpose: the meeting the subject actually
 // booked must not fail because a newsletter question could not be asked.

@@ -609,3 +609,70 @@ func TestAnchorKeyErrorBranchStillSeparatesEntities(t *testing.T) {
 		t.Fatalf("two entities' decode failures produced the same key %q", firstKey)
 	}
 }
+
+// A reminder due AT its anchor is late the moment it is written — the anchor is
+// already past the staleness threshold — so every task arrived overdue and the
+// queue could not tell a real slip from the clock's own arithmetic.
+func TestTheQuietAccountRemindersAreDueThreeDaysOut(t *testing.T) {
+	now := time.Date(2026, 7, 16, 9, 0, 0, 0, time.UTC)
+	anchor := now.AddDate(0, 0, -10)
+	entity := datasource.EntityRef{Type: datasource.EntityLead, ID: ids.NewV7()}
+	ev := touchEvent(t, now, anchor, entity)
+
+	for _, h := range []workflow.Handler{noActivityReminder{}, checkInCadence{}} {
+		eff, err := h.Plan(context.Background(), ev)
+		if err != nil {
+			t.Fatalf("[%s] Plan: %v", h.Spec().Name, err)
+		}
+		var args struct {
+			DueAt        time.Time `json:"due_at"`
+			SourceSystem string    `json:"source_system"`
+			SourceID     string    `json:"source_id"`
+		}
+		if err := json.Unmarshal(eff.Actions[0].Args, &args); err != nil {
+			t.Fatalf("[%s] decoding action args: %v", h.Spec().Name, err)
+		}
+		// Three days spelled out rather than reminderDueInDays: an expectation
+		// computed from the constant under test asserts only that the code
+		// agrees with itself, and passes just as happily when the horizon is
+		// zero and every task is born overdue again.
+		if want := ev.OccurredAt.AddDate(0, 0, 3); !args.DueAt.Equal(want) {
+			t.Errorf("[%s] due_at = %s, want %s — a reminder due at its anchor is born overdue", h.Spec().Name, args.DueAt, want)
+		}
+		// The identity the SQL draw reads to hold the entity out while this
+		// reminder is still open.
+		if args.SourceSystem != h.Spec().Name {
+			t.Errorf("[%s] source_system = %q, want the handler's own name", h.Spec().Name, args.SourceSystem)
+		}
+		if args.SourceID != h.IdempotencyKey(ev) {
+			t.Errorf("[%s] source_id = %q, want the occurrence key %q", h.Spec().Name, args.SourceID, h.IdempotencyKey(ev))
+		}
+	}
+}
+
+// The renewal reminder deliberately keeps its anchor as its due date: the
+// renewal it warns about can be today, so a horizon would file the task after
+// the date it exists to get ahead of.
+func TestTheRenewalReminderStaysDueOnItsAnchor(t *testing.T) {
+	now := time.Date(2026, 7, 16, 9, 0, 0, 0, time.UTC)
+	entity := datasource.EntityRef{Type: datasource.EntityDeal, ID: ids.NewV7()}
+	ev := renewalEvent(t, now, now, entity)
+
+	eff, err := (renewalReminder{}).Plan(context.Background(), ev)
+	if err != nil {
+		t.Fatalf("Plan: %v", err)
+	}
+	var args struct {
+		DueAt        time.Time `json:"due_at"`
+		SourceSystem string    `json:"source_system"`
+	}
+	if err := json.Unmarshal(eff.Actions[0].Args, &args); err != nil {
+		t.Fatalf("decoding action args: %v", err)
+	}
+	if !args.DueAt.Equal(ev.OccurredAt) {
+		t.Errorf("due_at = %s, want the anchor %s — a renewal warning must not fall due after the renewal", args.DueAt, ev.OccurredAt)
+	}
+	if args.SourceSystem != "" {
+		t.Errorf("source_system = %q, want empty — renewal_reminder carries no natural key", args.SourceSystem)
+	}
+}

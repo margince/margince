@@ -167,7 +167,15 @@ func (s *RequestSettler) candidates(ctx context.Context, limit int) ([]settleCan
 	var out []settleCandidate
 	err = InstallationDB(s.pool).Tx(ctx, func(tx pgx.Tx) error {
 		for _, request := range requests {
-			messages, err := requestConversation(ctx, tx, request.RequestID, asOf)
+			// A request naming no correspondent cannot be bound to one, and an
+			// unbound read is the forged-thread window this pass just closed.
+			// The selection already refuses these; refused here too, so the
+			// window never depends on a predicate in another statement.
+			if request.CounterpartyEmail == "" {
+				continue
+			}
+			messages, err := requestConversation(ctx, tx, request.RequestID,
+				request.CounterpartyEmail, asOf)
 			if err != nil {
 				return err
 			}
@@ -207,7 +215,9 @@ func (s *RequestSettler) candidates(ctx context.Context, limit int) ([]settleCan
 // scheduled send — a message written but not yet delivered — would reach the
 // model as though the customer had already read it, and the whole point of the
 // bound in the candidate query is that such a message has settled nothing.
-func requestConversation(ctx context.Context, tx pgx.Tx, requestID ids.UUID, asOf time.Time) ([]threadMessage, error) {
+func requestConversation(ctx context.Context, tx pgx.Tx, requestID ids.UUID,
+	counterparty string, asOf time.Time,
+) ([]threadMessage, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT id, coalesce(direction, ''), coalesce(subject, ''),
 		       coalesce(left(body, $1), ''), occurred_at
@@ -217,6 +227,16 @@ func requestConversation(ctx context.Context, tx pgx.Tx, requestID ids.UUID, asO
 		   AND kind = (SELECT kind FROM activity WHERE id = $2)
 		   AND channel_provider IS NOT DISTINCT FROM
 		       (SELECT channel_provider FROM activity WHERE id = $2)
+		   -- One correspondent, because the thread triple names no one. A
+		   -- sender types their own References root, so a stranger who has seen
+		   -- one of our Message-IDs can hang a message off another customer's
+		   -- conversation; every message of THAT thread would then be read here
+		   -- and sent to the model as context for the stranger's request.
+		   -- Outbound also has to be attested — the provider's own record of
+		   -- having sent it to this address — since the column is only filled
+		   -- for a message we really addressed there.
+		   AND counterparty_email = $5
+		   AND (direction = 'inbound' OR counterparty_outbound_attested)
 		   AND archived_at IS NULL
 		   -- The audience, tested HERE and not only in the read that offered
 		   -- this request: the candidate query runs in its own statement and a
@@ -226,7 +246,7 @@ func requestConversation(ctx context.Context, tx pgx.Tx, requestID ids.UUID, asO
 		   AND occurred_at <= $3
 		   AND (occurred_at, id) >= ((SELECT occurred_at FROM activity WHERE id = $2), $2)
 		 ORDER BY occurred_at, id
-		 LIMIT $4`, extractBodyLimit, requestID, asOf, settleThreadMessages)
+		 LIMIT $4`, extractBodyLimit, requestID, asOf, settleThreadMessages, counterparty)
 	if err != nil {
 		return nil, fmt.Errorf("request settle: reading the conversation: %w", err)
 	}

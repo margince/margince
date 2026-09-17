@@ -185,7 +185,7 @@ var ownerScopedTables = map[string]bool{
 // is a deliberate human disclosure by someone who could already read it,
 // which is the same act that promotion is. Scope alone never widens one.
 func VisiblePredicate(p principal.Principal, table string, arg func(any) int) func(alias string) string {
-	return predicateFor(p, table, arg, withCapturePrivacy, asClassified)
+	return predicateFor(p, table, arg, withCapturePrivacy, asClassified, anyShare)
 }
 
 // capturePrivacy selects whether a rendered predicate enforces the
@@ -198,7 +198,9 @@ const (
 	withoutCapturePrivacy capturePrivacy = false
 )
 
-func predicateFor(p principal.Principal, table string, arg func(any) int, capture capturePrivacy, class readClass) func(alias string) string {
+func predicateFor(p principal.Principal, table string, arg func(any) int,
+	capture capturePrivacy, class readClass, share shareLevel,
+) func(alias string) string {
 	// Customer identity is workspace-readable (tableclass.go): the own/team
 	// arm is TRUE for every principal, and only capture privacy and a grant
 	// can still say anything about the row. The owner predicate is not even
@@ -249,49 +251,19 @@ func predicateFor(p principal.Principal, table string, arg func(any) int, captur
 	}
 	teams := arg(p.TeamIDs)
 	inner := visible
+	access := ""
+	if share == writeShare {
+		access = "\n\t\t     AND rg.access = '" + grantAccessWrite + "'"
+	}
 	return func(alias string) string {
 		return fmt.Sprintf(`(%s OR EXISTS (
 		   SELECT 1 FROM record_grant rg
-		   WHERE rg.record_type = '%s' AND rg.record_id = %s
+		   WHERE rg.record_type = '%s' AND rg.record_id = %s%s
 		     AND (rg.expires_at IS NULL OR rg.expires_at > now())
 		     AND ((rg.subject_type = 'user' AND rg.subject_id = $%d)
 		       OR (rg.subject_type = 'team' AND rg.subject_id = ANY($%d)))))`,
-			inner(alias), table, col(alias, "id"), me, teams)
+			inner(alias), table, col(alias, "id"), access, me, teams)
 	}
-}
-
-// ScopeClause renders the own/team/all row-visibility predicate over an
-// owner_id column (B-EP03.3a). arg registers a query argument and
-// returns its 1-based position, matching the list builders' convention.
-// An empty clause means unbounded (row_scope=all, or the system actor).
-// Ownerless rows (owner_id IS NULL) are workspace-shared and visible at
-// every tier.
-func ScopeClause(ctx context.Context, arg func(any) int) (string, error) {
-	p, err := rbacActor(ctx)
-	if err != nil {
-		return "", err
-	}
-	if Unbounded(p) {
-		return "", nil
-	}
-	return OwnerPredicate(p, arg)(""), nil
-}
-
-// ScopeClauseFor renders the full visibility predicate (owner scope OR
-// live record grant) for one named table with an alias — the spelling
-// every list/search/report path over a shareable table uses.
-func ScopeClauseFor(ctx context.Context, table, alias string, arg func(any) int) (string, error) {
-	if !ownerScopedTables[table] {
-		return "", fmt.Errorf("auth: %q is not a row-scoped table", table)
-	}
-	p, err := rbacActor(ctx)
-	if err != nil {
-		return "", err
-	}
-	if UnboundedFor(p, table) {
-		return "", nil
-	}
-	return VisiblePredicate(p, table, arg)(alias), nil
 }
 
 // EnsureVisibleLive is the strict row probe: the row must EXIST, be LIVE
@@ -358,7 +330,7 @@ func EnsureVisibleForSubjectRights(ctx context.Context, tx pgx.Tx, table string,
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	idPos := arg(id)
-	clause := predicateFor(p, table, arg, withoutCapturePrivacy, asClassified)("")
+	clause := predicateFor(p, table, arg, withoutCapturePrivacy, asClassified, anyShare)("")
 
 	var visible bool
 	err = tx.QueryRow(ctx,

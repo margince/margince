@@ -100,7 +100,11 @@ export function StageLadder({
             {/* The chevron belongs to the step that FOLLOWS it and sits inside
                 that step's own item, so a ladder that wraps takes the mark
                 down with its step rather than ending a row on one. */}
-            {index > 0 && <span aria-hidden="true">›</span>}
+            {index > 0 && (
+              <span aria-hidden="true" className="stage-ladder-sep">
+                ›
+              </span>
+            )}
             {step.current ? (
               // "You are here" belongs to the element that IS here — the
               // marker, not the item around it. The item also holds the

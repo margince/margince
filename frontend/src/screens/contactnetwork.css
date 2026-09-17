@@ -342,6 +342,15 @@
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
+/* The carrying ink, because the date lands ON the fill above. `.t-caption`
+   sets the supporting ink with its size, and that ink is measured over the
+   page's grounds rather than over this one — chipfill.test.ts is what says so.
+   Both classes rather than one: `.t-caption` sets its colour at a single class
+   of specificity, so a rule naming only `.pn-relay-due` would win or lose on
+   whichever sheet the bundler put last. */
+.pn-relay-owner .pn-relay-due {
+  color: var(--textPrimary);
+}
 /* What moved: a dated list, newest first. A column of dates because it is a
    chronology, and a reader scans it rather than reads it. */
 .pn-moments {

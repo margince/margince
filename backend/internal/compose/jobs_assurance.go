@@ -74,10 +74,7 @@ const assuranceActor = "system:assurance"
 
 func (w *assuranceSweepWorker) assureWorkspace(ctx context.Context, workspace ids.UUID) error {
 	wsCtx := principal.WithWorkspaceID(ctx, workspace)
-	wsCtx = principal.WithActor(wsCtx, principal.Principal{
-		Type: principal.PrincipalSystem, ID: assuranceActor,
-	})
-	wsCtx = principal.WithCorrelationID(wsCtx, ids.NewV7())
+	wsCtx = principal.SystemActing(wsCtx, assuranceActor)
 	return w.check(wsCtx, workspace)
 }
 

@@ -218,6 +218,18 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
       // with no primary action was also the one whose verbs were somewhere
       // else.
       actionsInline
+      // Where the project stands, at the foot of its head — the same row a
+      // deal's stage ladder and a lead's stepper stand in. It is the question a
+      // reader arrives with, so it is answered before the body rather than as
+      // the first card inside it.
+      standing={
+        <PhaseStepper
+          phase={project.phase}
+          refusedReasonId={readOnly ? readOnlyReasonId : undefined}
+          pending={false}
+          onMove={setMoveTo}
+        />
+      }
       tabs={<ProjectTabs />}
       band={
         // ONE sentence and nothing else: why this record takes no changes, so
@@ -230,17 +242,13 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
       {...chronology}
       timelineAnchorId={PROJECT_ACTIVITY_ANCHOR}
     >
-      {/* The record's work column, at the record's own step. The phase and the
-          readings open it: they describe the whole project but are read as
-          cards, so they stand BESIDE the details pane as on every other
-          record, not in a band across both columns that the pane reflowed. */}
+      {/* The record's work column, at the record's own step. The readings open
+          it: they are read as cards and so stand BESIDE the details pane, as on
+          every other record, rather than in a band across both columns that the
+          pane would reflow. The phase is not one of them — it says where the
+          whole project stands, so it rides the head (`standing` above), which
+          is full width already and above the pane. */}
       <div className="record-stack">
-        <PhaseStepper
-          phase={project.phase}
-          refusedReasonId={readOnly ? readOnlyReasonId : undefined}
-          pending={false}
-          onMove={setMoveTo}
-        />
         <RollupsStrip view={view} />
         <ProjectHealth
           projectId={project.id}

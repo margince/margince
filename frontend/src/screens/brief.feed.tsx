@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useQueryClient } from "@tanstack/react-query";
+import { ArrowRight } from "lucide-react";
 import { useState } from "react";
 import { navigate } from "../app/router";
 import { Badge, Button } from "../design-system/atoms";
@@ -11,9 +12,9 @@ import { type SectionState, SurfaceState } from "../design-system/surfacestate";
 import { formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
+import { identity, Triage } from "./brief.focus";
 import { isBriefUpdate, waitingRows } from "./brief.sentence";
 import { worklistLaneHref } from "./worklist.header";
-import { hasPane } from "./worklist.pane";
 import {
   type Worklist,
   type WorklistItem,
@@ -43,8 +44,19 @@ export function BriefFeed({
   const { locale } = useLocale();
   const plural = usePlural();
   const [openEmail, setOpenEmail] = useState<string | null>(null);
+  // WHICH ROW IS IN HAND, by identity rather than by index: the queue is
+  // re-read every minute and a row that was answered leaves it, so an index
+  // would silently hand the reader the row that moved up into its place. A
+  // chosen row that has gone falls back to the day's own first — the row the
+  // page opens on, and the one the sentence over it names.
+  const [chosen, setChosen] = useState<string | null>(null);
   const client = useQueryClient();
   const rows = waitingRows(day);
+  const at = Math.max(
+    0,
+    rows.findIndex((item) => identity(item) === chosen),
+  );
+  const lead = rows[at];
   const partial = Boolean(
     !day?.focus ||
       day?.readings?.more_available ||
@@ -53,24 +65,49 @@ export function BriefFeed({
   return (
     <section id="brief-today">
       <Panel
+        // INDIGO, the same band a record's own "what needs you today" pane
+        // wears: these rows are the agent's reading of the day — what it
+        // ranked and what it prepared — and indigo is the one claim the
+        // product makes about who did that. The accent would say "the page's
+        // lead", which is true and already said by where the panel sits.
+        tone="ai"
         title={t(
           day?.scope === "team" ? "brief.feed.teamTitle" : "brief.feed.title",
         )}
         titleAction={
-          changed ? (
-            <a className="entity-link" href={changed.href}>
-              <Badge>
-                {plural("brief.feed.changedBadge", changed.count, {
-                  count: formatNumber(changed.count, locale),
-                })}
-              </Badge>
-            </a>
-          ) : undefined
+          <span className="brief-focus-actions">
+            {/* The panel offers the agent's verbs — the reply it drafted, the
+                step it prepared — so it wears the badge every panel that
+                offers an AI verb wears: what is OFFERED, beside the tone that
+                says who wrote the body. */}
+            <Badge tone="ai">{t("co.assistant.aiTag")}</Badge>
+            {changed && (
+              <a className="entity-link" href={changed.href}>
+                <Badge>
+                  {plural("brief.feed.changedBadge", changed.count, {
+                    count: formatNumber(changed.count, locale),
+                  })}
+                </Badge>
+              </a>
+            )}
+            {/* The way into the whole queue, on the panel's own head: it is
+                the panel's one destination, and at the foot of a list of
+                verbs it read as a caption. */}
+            {day && (
+              <a
+                className="btn brief-focus-open"
+                href={worklistLaneHref("all", day.scope)}
+              >
+                {t("brief.feed.fullWorklist")}
+                <ArrowRight aria-hidden="true" />
+              </a>
+            )}
+          </span>
         }
-        footer={day ? <AgendaFoot day={day} /> : undefined}
+        footer={day && hasFoot(day) ? <AgendaFoot day={day} /> : undefined}
       >
-        {/* Prose standing where the cards will stand pays the pane's inset
-            itself: the grid under it carries its own, and a sentence set
+        {/* Prose standing where the rows will stand pays the pane's inset
+            itself: the triage under it carries its own, and a sentence set
             straight into the panel printed against the card's edge. */}
         {refreshFailed && (
           <PanelBody>
@@ -98,12 +135,16 @@ export function BriefFeed({
               <p>{t("brief.feed.incomplete")}</p>
             </PanelBody>
           )}
-          <AgendaRows
-            rows={rows}
-            onOpenEmail={setOpenEmail}
-            onContext={onContext}
-            focus
-          />
+          {lead && (
+            <Triage
+              rows={rows}
+              at={at}
+              lead={lead}
+              onChoose={(item) => setChosen(identity(item))}
+              onOpenEmail={setOpenEmail}
+              onContext={onContext}
+            />
+          )}
         </SurfaceState>
       </Panel>
       <OpenEmailDrawer
@@ -118,6 +159,25 @@ export function BriefFeed({
   );
 }
 
+/**
+ * The focus, ONE ROW AT A TIME: the row in hand drawn whole, and beside it
+ * the ranked queue it was taken from, each row a press that puts it in hand.
+ *
+ * A reader clears a morning by answering one thing and moving to the next,
+ * and the page is shaped like that act: the work on the left at the row's
+ * full density — its kind, the message, its reasons, what doing nothing
+ * costs, and every verb that answers it — and on the right the order the
+ * day put the rest in, so the reader always sees where they are in it. The
+ * sentence over the page says "First: X. Then N more", and this is that
+ * sentence drawn: X in hand, the N in a column.
+ */
+function hasFoot(day: Worklist): boolean {
+  return (
+    (day.focus?.urgent_remaining ?? 0) > 0 ||
+    (day.focus !== undefined && day.focus.total > day.focus.items.length)
+  );
+}
+
 function AgendaFoot({ day }: Readonly<{ day: Worklist }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -125,9 +185,6 @@ function AgendaFoot({ day }: Readonly<{ day: Worklist }>) {
   const hidden = day.focus?.urgent_remaining ?? 0;
   return (
     <>
-      <a className="entity-link" href={worklistLaneHref("all", day.scope)}>
-        {t("brief.feed.fullWorklist")}
-      </a>
       {hidden > 0 && (
         <a className="entity-link" href={worklistLaneHref("urgent", day.scope)}>
           {plural("brief.focus.urgentRemaining", hidden, {
@@ -149,60 +206,35 @@ function AgendaFoot({ day }: Readonly<{ day: Worklist }>) {
   );
 }
 
+/** The plain feed: every row at the queue's own density, in the day's order. */
 function AgendaRows({
   rows,
   onOpenEmail,
-  focus = false,
-  onContext,
 }: Readonly<{
   rows: readonly WorklistItem[];
   onOpenEmail: (id: string) => void;
-  focus?: boolean;
-  onContext?: (item: WorklistItem) => void;
 }>) {
-  const t = useT();
   // A list of nothing is only its own padding: under the sentence saying the
   // read was incomplete it stood as a blank band the height of two gutters.
   if (rows.length === 0) return null;
-  const draw = (item: WorklistItem) => (
-    <li key={`${item.source}-${item.id}`}>
-      <Panel
-        footer={
-          // A meeting earns the door too. Its subject is the ACTIVITY rather
-          // than a contact, so `hasPane` answers no for it — and the card stood
-          // with three verbs and no way through to the meeting they were about.
-          focus &&
-          onContext &&
-          (hasPane(item) ||
-            item.source === "task" ||
-            item.source === "meeting_outcome") ? (
-            <Button variant="ghost" onClick={() => onContext(item)}>
-              {t("brief.focus.context")}
-            </Button>
-          ) : undefined
-        }
-      >
-        <WorklistRow
-          allowPin={!focus}
-          item={item}
-          density="compact"
-          owner=""
-          onOpenEmail={onOpenEmail}
-          onReview={() =>
-            navigate(
-              { screen: "worklist" },
-              new Map([["filter", item.category]]),
-            )
-          }
-        />
-      </Panel>
-    </li>
-  );
   return (
-    <ol
-      className={focus ? "brief-feed-list brief-focus-grid" : "brief-feed-list"}
-    >
-      {rows.map(draw)}
+    <ol className="brief-feed-list">
+      {rows.map((item) => (
+        <li key={identity(item)}>
+          <WorklistRow
+            item={item}
+            density="compact"
+            owner=""
+            onOpenEmail={onOpenEmail}
+            onReview={() =>
+              navigate(
+                { screen: "worklist" },
+                new Map([["filter", item.category]]),
+              )
+            }
+          />
+        </li>
+      ))}
     </ol>
   );
 }

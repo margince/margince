@@ -15,7 +15,7 @@ edit its `//gate:kind` line, then regenerate from the backend directory:
 The eight shapes, what each is for, and how each one silently passes:
 [gate-patterns.md](gate-patterns.md).
 
-## Parity (113)
+## Parity (115)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -58,6 +58,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `emailsplitterparity_test.go` | H3 | The server composes a row's preview and the browser folds the quoted tail in the drawer, from two copies of one vocabulary. |
 | `enumsync_test.go` | H3 | The enum-vocabulary sync as a fitness function: where domain logic branches on a typed Go enum, its constant set must equal the schema's CHECK (col IN (...)) set for the column it mirrors. |
 | `exportedreferences_test.go` | H2 | Every reference an exported row carries to a row-scoped record is one the export withholds from a reader who could not open it. |
+| `extensionrefusalvocabulary_test.go` | H3 | The refusal vocabulary is spelled on both sides of the wire, so it is ONE item. |
 | `filtervocabularyparity_test.go` | H3 | Two surfaces answer a filtered question: the list/segment compiler in `platform/database/storekit`, and the query compiler in `modules/search`. |
 | `forecastperiodparity_test.go` | H3 | Every period the contract offers must be a window the server can resolve. |
 | `forwardmeasureparity_test.go` | H3 | Every forward measure must be spelled the same on all three sides. |
@@ -121,6 +122,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `requirementseam_test.go` | H1 | The two halves of the requirement seam describe the same thing. |
 | `rowscopetables_test.go` | H2 | WHICH table a row-scope call bounds, and which column names a reference to one. |
 | `runneractivityparity_test.go` | H3 | The runner's own status vocabulary must be TOTAL over the column it reads. |
+| `seamfilters_test.go` | H2 | A filter the contract declares and the store can bind is OFFERED to an agent. |
 | `seedemploymentpredicate_test.go` | H2 | The dev seeder and the boot proof ask "is this contact currently employed?" the way the PRODUCT asks it, and they ask it in the same words. |
 | `seedresetparity_test.go` | H3 | "What survives a reset" is one decision, and it is written down twice: the in-product data reset applies it in Go (internal/compose/datasweep.go's preservedResetTables), and the developer's `make seed-reset` applies it in SQL (scripts/seed-reset.sql). |
 | `sendattachmentcap_test.go` | H3 | The attachment-per-message cap as a fitness function. |
@@ -133,11 +135,12 @@ The eight shapes, what each is for, and how each one silently passes:
 | `worklistbounds_test.go` | H2 | The worklist reports a source as possibly having more work behind it when its lane came back exactly at its bound. |
 | `worklistverdictstandings_test.go` | H2 | The queue's verdict standings ARE the deal card's, and this derives them from the card rather than keeping a second list of them. |
 
-## Census (153)
+## Census (157)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
 | `acquisitiontime_test.go` | H2 | Every contact-creation door decides, out loud, when the acquisition happened. |
+| `activityidentityspine_test.go` | H2 | Every door that mints an activity asks whether the record already has one. |
 | `activitykindsets_test.go` | H3 | The two activity-kind sets relstrength holds, against the vocabulary the contract actually publishes. |
 | `activityprojectionfields_test.go` | H2 | Every writer of `Activity.AudienceReason` is named here with the test that proves it withholds the reason from a reader who may not see the content. |
 | `agentauthority_test.go` | H2 | An agent principal names the human whose authority it acts under, or says here why there is none. |
@@ -145,6 +148,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `agentwritepin_test.go` | H2 | A tool whose tier is resolved by READING a record carries that reading's version into its write. |
 | `aggregateaudience_test.go` | H2 | A reader that COUNTS messages asks the audience, exactly as one that shows them does. |
 | `aggregategatereach_test.go` | H3 | Every job the `ci` aggregate depends on can actually RUN on the merge queue. |
+| `aicallsubject_test.go` | H2 | Every model call either NAMES the record it is about, or says why it names none. |
 | `aitaskcensus_test.go` | H3 | The census as a fitness function: the contract says which AI tasks ship and what their invocation sites are called, and this build must register exactly those. |
 | `aitaskmirror_test.go` | H3 | api/ai-tasks.yaml is a MIRROR, and until this gate nothing failed when it stopped being one. |
 | `aitaskrailcensus_test.go` | H2 | Every AI task this build can run reports into the AI-activity projection. |
@@ -166,6 +170,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `buildinputfetch_test.go` | H3 | A build input fetched over the network survives a transient failure. |
 | `calendaroccurrenceexpansion_test.go` | H2 | Every calendar pull lists OCCURRENCES, never recurring series masters. |
 | `capturecontainers_test.go` | H2 | Every mail connector tells the sink where the provider FILED a message. |
+| `capturesinkseams_test.go` | H3 | Every optional seam the capture Sink offers is wired by the composition root. |
 | `catalogoptionsreaders_test.go` | H2 | Who may read a custom field's OPTIONS. |
 | `claimedspelling_test.go` | H3 | A constant whose doc comment says it is spelled once is making a checkable statement, and until now nothing checked it. |
 | `clearablefields_test.go` | H2 | The fields a restore says it can clear are the fields the stores clear. |
@@ -207,6 +212,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `gatecensus_test.go` | H2 | The census over this repo's own gate machinery: a gate's exceptions are held to the standard the gate holds its subjects to. |
 | `gateinventory_test.go` | H3 | The gate inventory: every gate in this package declares its own shape, and the reference page listing them is rendered from those declarations. |
 | `governedkindseams_test.go` | H2 | The two halves of automatic apply agree about which kinds it covers. |
+| `historyfieldlabels_test.go` | H2 | Every field name the History tab can print has a word for it. |
 | `insertattemptcaps_test.go` | H2 | An insert that names no MaxAttempts does not run without a retry ladder — it runs on River's default of 25, on attempt-to-the-fourth backoff, which reaches days. |
 | `interactionunit_test.go` | H3 | Every count that becomes a relationship-strength number counts the shared UNIT, not rows. |
 | `jobbinding_test.go` | H2 | workspaceBindFloor guards against a vacuous pass. |
@@ -346,7 +352,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `writeauthority_test.go` | H2 | The read/write asymmetry of a manual record grant, as a fitness function: a path that CHANGES a shareable record probes for write authority, not for visibility. |
 | `writeliveness_test.go` | H2 | The LIVENESS obligation as a fitness function: a write that targets one standing row of a table which can be archived either REFUSES an archived row, DECLARES that it deliberately reaches one, or is ratified with a reason. |
 
-## Prohibition (65)
+## Prohibition (67)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -355,6 +361,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `authzmetriclabels_test.go` | H2 | The outbound decision counter labels only closed vocabularies, and never the recipient. |
 | `automationtarget_test.go` | H2 | An automation action targets the record its trigger fired on. |
 | `backfillledgerlock_test.go` | H2 | A transaction that writes the backfill creation ledger locks the run row first. |
+| `bindableidentityonce_test.go` | H2 | Who may bind an arrival to the activity already holding its identity is decided in ONE place: activities.ResolveBindableIdentity. |
 | `calendarday_test.go` | H2 | A calendar day is one derivation, and this is the census that keeps it one. |
 | `capabilitypathlog_test.go` | H2 | A request path reaches a log line through capabilitypath.Redact, never raw. |
 | `commentnamedtests_test.go` | H1 | A test named in a comment exists. |
@@ -405,6 +412,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `seatfixturepick_test.go` | H1 | A fixture that needs THIS SESSION'S seat does not pick one out of app\_user. |
 | `seenaddressrule_test.go` | H2 | SPDX-License-Identifier: BUSL-1.1 SPDX-FileCopyrightText: 2026 Gradion |
 | `subjectphotobytes_test.go` | H2 | A subject's photo may not be STORED until erasure can destroy the bytes. |
+| `systemprovenance_test.go` | H2 | A scheduled pass binds its provenance through ONE helper. |
 | `technicaldomain_test.go` | H2 | The technical lookup reads the domain the RECORD holds, and nothing else. |
 | `trackedbinaries_test.go` | H2 | A compiled binary is never tracked. |
 | `transactionopeners_test.go` | H2 | One function in the database package turns a pool into a transaction, and every seam the package publishes routes through it. |
@@ -447,11 +455,12 @@ The eight shapes, what each is for, and how each one silently passes:
 | `rulebooklength_test.go` | H3 | A rulebook is read in full by every session and, for its Craftsmanship section, by every gate prompt — so its length is a running cost rather than a matter of taste. |
 | `workflowtimeouts_test.go` | H3 | Every workflow job carries a wall-clock ceiling. |
 
-## Falsification (13)
+## Falsification (14)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
 | `extensionsqlscopecases_test.go` | H2 | The SQL-scope gate's own test, driven with SYNTHETIC unit sources rather than the tree — the real units are supposed to pass, so a gate proven only by "extensions/ is currently clean" is one that keeps passing after it stops working. |
+| `historyfieldlabelsfalsify_test.go` | H3 | The label census, falsified. |
 | `jobfleetwideshapes_test.go` | H2 | The FleetWide gate's own falsification, kept beside it: every dispatch shape the tree actually uses, proven accepted, and the shapes it exists to reject — a dispatcher doing a tenant's work, and a fan-out built around the chokepoints — proven rejected. |
 | `jobkindgate_test.go` | H2 | The registration gate's own falsification. |
 | `piicolumnreading_test.go` | H3 | Which way the PII census fails when it cannot read a statement. |

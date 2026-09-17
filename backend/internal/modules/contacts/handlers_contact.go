@@ -318,7 +318,7 @@ func (h Handlers) PublishCapturedContact(w http.ResponseWriter, r *http.Request,
 }
 
 func pageInfo(p storekit.Page) crmcontracts.PageInfo {
-	info := crmcontracts.PageInfo{HasMore: p.HasMore}
+	info := crmcontracts.PageInfo{HasMore: p.HasMore, Total: p.Total}
 	if p.NextCursor != "" {
 		info.NextCursor = &p.NextCursor
 	}

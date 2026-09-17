@@ -10,6 +10,7 @@
 // them are one thing: a lane the strip offers and the address cannot spell, or
 // the reverse, is a link somebody pastes that opens the wrong day.
 
+import { type RefObject, useLayoutEffect, useRef, useState } from "react";
 import { routeHash } from "../app/router";
 import { hashWithParams } from "../app/urlstate";
 import { SegmentedControl } from "../design-system/atoms";
@@ -126,6 +127,48 @@ export function worklistLaneHref(
 }
 
 /**
+ * Whether this head stands in the LANES COLUMN beside the day, or across the
+ * page above it. The stylesheet decides (worklist.css): the columns wrapper
+ * is a grid where the page is wide enough for lanes beside rows, and it
+ * dissolves on a phone. The head reads that decision off the wrapper's
+ * computed display, so the cuts and the columns cannot disagree — a
+ * breakpoint spelled again here in pixels could, and the head's own width
+ * cannot tell a lanes column from a narrow page. The cuts are a list in the
+ * column and a strip across the page: eight rows of lanes over a phone's
+ * queue would push the first row past the fold the phone rules keep it above.
+ *
+ * The head's own box is what the observer watches: it changes width when the
+ * layout flips and stands still otherwise, and a wrapper that has dissolved
+ * has no box to observe. Where the observer is unavailable (jsdom) the answer
+ * is read once, for the render that just happened, and a head outside the
+ * columns reads as across the page.
+ */
+function useLanesColumn(): [RefObject<HTMLDivElement | null>, boolean] {
+  const head = useRef<HTMLDivElement>(null);
+  const [inColumn, setInColumn] = useState(false);
+  useLayoutEffect(() => {
+    const element = head.current;
+    if (!element) {
+      return;
+    }
+    const measure = () => {
+      const columns = element.closest(".worklist-columns");
+      setInColumn(
+        columns !== null && getComputedStyle(columns).display === "grid",
+      );
+    };
+    measure();
+    if (typeof ResizeObserver === "undefined") {
+      return;
+    }
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+  return [head, inColumn];
+}
+
+/**
  * The day's own head: the sentence, the dials over it, the cuts under it.
  *
  * Three tiers, and the order is what each one is ABOUT: what the whole day
@@ -155,8 +198,18 @@ export function WorklistHeader({
   const { locale } = useLocale();
   const scopes = day.scope_options;
   const completeness = completenessText(day, filter, t, locale, loaded);
+  const [head, inColumn] = useLanesColumn();
   return (
-    <div className="worklist-header">
+    // The stack the lanes column takes is keyed on this class rather than on a
+    // width: `useLanesColumn` reads the wrapper's own computed display, which
+    // is what decides it, and a breakpoint spelled again in the stylesheet was
+    // a second answer that disagreed with this one in the queue drawer.
+    <div
+      className={
+        inColumn ? "worklist-header worklist-header-column" : "worklist-header"
+      }
+      ref={head}
+    >
       {/* The facts line and the dials on one line: what the day holds, and
           whose day. A dial belongs beside the sentence it changes rather than
           under it, where it read as a control over the pills below. */}
@@ -231,6 +284,7 @@ export function WorklistHeader({
           value={filter}
           onChange={onFilter}
           label={t("worklist.filter.label")}
+          layout={inColumn ? "list" : "row"}
         />
         {/* A narrowing that came by LINK names itself, because no pill is
             pressed to name it. Without this the reader arrives from Brief at a
@@ -252,7 +306,7 @@ export function WorklistHeader({
         {/* What the page is NOT showing. Drawn only when there is a difference
             to report: on a day the queue carries whole, "12 of 12" is noise. */}
         {completeness !== null && (
-          <p className="t-caption worklist-completeness">{completeness}</p>
+          <p className="worklist-completeness">{completeness}</p>
         )}
       </div>
     </div>

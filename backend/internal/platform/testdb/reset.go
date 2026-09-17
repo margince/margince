@@ -127,6 +127,7 @@ const resetTables = `
 const PreservedReferenceTables = `('activity_kind', 'channel_provider', 'lead_source', ` +
 	`'lead_disqualify_reason', 'sdr_handoff_reason', 'field_mask', ` +
 	`'currency_minor_digits', 'deal_acquisition_source', 'record_role', ` +
+	`'maskable_field', ` +
 	`'activity_review_template')`
 
 // reclaimSlack is how much a table may grow past its empty size before a reset

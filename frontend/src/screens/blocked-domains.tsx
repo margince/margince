@@ -52,6 +52,7 @@ const SOURCE_LABEL: Record<BlockedDomain["source"], MessageKey> = {
   human: "blockedDomains.source.human",
   unevidenced: "blockedDomains.source.unevidenced",
   stale_evidence: "blockedDomains.source.staleEvidence",
+  near_duplicate: "blockedDomains.source.nearDuplicate",
 };
 
 function useBlockedDomains() {

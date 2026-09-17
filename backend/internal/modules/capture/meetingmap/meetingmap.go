@@ -47,7 +47,22 @@ const MaxBodyLen = 8000
 // the raw original reaches the Sink verbatim as evidence, so a field absent
 // here is not a field lost.
 type Event struct {
-	ID        string
+	ID string
+	// ICalUID is the event's identity ACROSS providers, and ID is not: ID is
+	// whatever the provider numbered this event in its own store, so the same
+	// meeting read from Google and from Graph carries two of them and dedupes
+	// as two meetings.
+	//
+	// It names the SERIES, not one occurrence — a weekly call is one UID and
+	// fifty-two meetings — so the occurrence's own start completes the identity
+	// (activities.MeetingIdentityKey). Both syncs already expand recurrences
+	// (gcal `singleEvents=true`, graphcal `calendarView`), so every Event a
+	// decoder produces is one occurrence and StartsAt is that occurrence's.
+	//
+	// Empty when the provider states none, and never synthesized: a made-up
+	// identity would collide two unrelated meetings, which is worse than the
+	// duplicate it set out to prevent.
+	ICalUID   string
 	Cancelled bool
 	// OwnerDeclined says the connected account answered NO to this invitation.
 	// It is a different fact from Cancelled — the organizer's event is alive and
@@ -84,7 +99,12 @@ type Actor struct {
 // workspace's registered domains (CAP-DDL-1) are the authority and are applied
 // by the writer, over the full party set this reports.
 type Meeting struct {
-	id            string
+	id string
+	// icalUID is the series this occurrence belongs to, as the provider stated
+	// it. Empty when none was stated, and then the meeting carries no
+	// cross-provider identity and dedupes on the natural key alone, exactly as
+	// it did before.
+	icalUID       string
 	subject       string
 	body          string
 	occurredAt    time.Time
@@ -105,6 +125,7 @@ func Classify(ev Event, owner string) Meeting {
 
 	return Meeting{
 		id:            strings.TrimSpace(ev.ID),
+		icalUID:       strings.TrimSpace(ev.ICalUID),
 		subject:       strings.TrimSpace(ev.Subject),
 		body:          buildBody(ev, attendeeEmails),
 		occurredAt:    ev.StartsAt,
@@ -194,11 +215,19 @@ func (m Meeting) ToRecord(connectorName string, raw []byte) connector.Normalized
 			// A meeting is not directional (no inbound/outbound sender).
 			Direction: "",
 		},
-		Source:       connectorName + ":" + m.id,
-		CapturedBy:   "connector:" + connectorName,
-		Raw:          raw,
-		Participants: m.participants,
-		Addresses:    m.addresses,
+		Source:     connectorName + ":" + m.id,
+		CapturedBy: "connector:" + connectorName,
+		Raw:        raw,
+		// What this meeting is called on EVERY calendar, as distinct from the
+		// natural key above, which is only what THIS provider numbered it. Two
+		// colleagues on the same meeting sync two different event ids for it, so
+		// without this the same meeting lands twice.
+		//
+		// Empty when the provider stated no UID, and then the meeting dedupes on
+		// the natural key alone exactly as it did before.
+		CrossDoorIdentity: connector.CrossDoorIdentity{Series: m.icalUID, Occurrence: m.occurredAt},
+		Participants:      m.participants,
+		Addresses:         m.addresses,
 	}.WithProviderAttestedParticipants(true)
 }
 

@@ -393,7 +393,16 @@ export function listFetchLimit(perPage: number): number {
 
 export type ListPage<Row> = {
   data: Row[];
-  page: { next_cursor: string | null; has_more: boolean };
+  page: {
+    next_cursor: string | null;
+    has_more: boolean;
+    /**
+     * How many rows match in total, when the endpoint counts. Undefined means
+     * it does not count — never that it counted zero — so a list reading this
+     * falls back to how many rows it has loaded rather than reporting empty.
+     */
+    total?: number;
+  };
 };
 
 /**
@@ -637,6 +646,10 @@ export function useListQuery<Row>({
     paramScope,
     hasMore: infinite.hasNextPage,
     loadMore: () => infinite.fetchNextPage(),
+    // Read off the LAST page fetched rather than the first: each response
+    // recounts against the same filters, so the newest answer is the one that
+    // has seen the most recent writes.
+    total: infinite.data?.pages.at(-1)?.page.total,
     isPending: infinite.isPending,
     isError: infinite.isError,
     error: infinite.error,
@@ -660,6 +673,11 @@ export type ListState<Row> = Readonly<{
   refetch: () => void;
   hasMore: boolean;
   loadMore: () => void;
+  /**
+   * How many rows match the current filters on the server, when it says. The
+   * rendered count falls back to the rows in hand where it does not.
+   */
+  total?: number;
 }>;
 
 /**
@@ -1040,6 +1058,7 @@ export function ListTable<Row>({
       }
       hasMore={state.hasMore}
       onLoadMore={state.loadMore}
+      total={state.total}
       // The page size is part of the server query, not a second slice on top
       // of it: changing it re-asks the server, which is why it lives in the
       // ListQuery the fetchers read their `limit` from.

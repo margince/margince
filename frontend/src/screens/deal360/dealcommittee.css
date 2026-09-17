@@ -83,22 +83,3 @@
 .dc-swatch-gap {
   border: 2px dashed var(--warning);
 }
-
-.dc-seats {
-  margin: var(--space-3) 0 0;
-  padding: 0;
-  list-style: none;
-  display: grid;
-  gap: var(--space-2);
-}
-
-.dc-seat-row {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.dc-seat-name {
-  flex: 1 1 auto;
-  min-width: 0;
-}

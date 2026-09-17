@@ -90,6 +90,7 @@ backend/internal/compose/integration/projectlastactivity_integration_test.go mig
 backend/internal/compose/integration/queryjoinhop_integration_test.go core 0217
 backend/internal/compose/integration/recordhistoryclient_integration_test.go migration 1787109970
 backend/internal/compose/integration/scheduledsendagent_integration_test.go core 0260
+backend/internal/compose/integration/schemaready/schemaready_integration_test.go migration 0002
 backend/internal/compose/integration/signalscan_integration_test.go migration 0047
 backend/internal/compose/participantbackfilljob.go migration 0157
 backend/internal/compose/serverassembly.go core 0235

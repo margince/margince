@@ -3,9 +3,22 @@
    rules travel with the component rather than with either page's sheet. */
 /* The selected row, marked on its edge rather than by a fill. The first row is
    selected on arrival, so a fill would paint a block of colour across the top of
-   every day rather than answering which row is in hand. */
+   every day rather than answering which row is in hand. The rank tile goes to
+   the accent with it (worklist.css), so the mark is read on the row's gutter
+   as well as on its edge. */
 .worklist-row-selected {
   box-shadow: inset 3px 0 0 0 var(--accent);
+}
+
+/* A row lights under the pointer: the queue is a list of things to press —
+   the rank, the name, the verbs — and the wash says which row a pointer is
+   over before it commits to a control on it. Only in the QUEUE's own list, and
+   never on a row already in hand, whose wash is the accent's. */
+.worklist-list > li > .worklist-row {
+  transition: background-color var(--dur-state) var(--ease-out);
+}
+.worklist-list > li > .worklist-row:not(.worklist-row-selected):hover {
+  background: var(--bgHover);
 }
 
 /* Three columns a reader runs down as three lists: the rank, the KIND of work,
@@ -48,6 +61,19 @@
    panel.css says a rule must never fall. Its own two lines live in
    brief.feed.css beside the label that causes them. */
 .worklist-list > li + li > .worklist-row::before {
+  content: "";
+}
+
+/* AND ACROSS THE SEAM BETWEEN TWO LISTS. The banded runs and the unbanded tail
+   are separate `<ol>`s, so `li + li` cannot reach between them: the tail's
+   first row is its list's first child and kept the reset `PanelRow` applies to
+   a panel's first row. Two rows then abutted with nothing between them while
+   every other pair on the page carried a rule.
+   Only where a BAND precedes it, which is the whole distinction. A band that
+   follows a band needs no rule — its heading is the break — and a tail that
+   opens the panel is genuinely its first row, where panel.css says no rule
+   belongs. */
+.worklist-queue-band + .worklist-list > li:first-child > .worklist-row::before {
   content: "";
 }
 
@@ -156,6 +182,29 @@
 .worklist-row-consequence,
 .worklist-row-above {
   margin: 0;
+}
+.worklist-row-about {
+  margin: 0;
+}
+/* The set-asides on the row in hand take the leading edge and push the rest
+   of the line to the trailing one, on every line the verbs wrap onto. */
+.worklist-row-putdowns {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gapActions);
+  margin-inline-end: auto;
+}
+/* The two moments of the silence as one caption: each term with its date,
+   the dates in the reading ink so the eye lands on them. */
+.worklist-row-touch {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  margin: 0;
+}
+.worklist-row-touch-fact > .t-num {
+  color: var(--textPrimary);
 }
 
 /* EVERY VERB ON ONE RIGHT-ALIGNED LINE, the lane's answer LAST.

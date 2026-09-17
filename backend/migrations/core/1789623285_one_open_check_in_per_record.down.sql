@@ -1,0 +1,4 @@
+-- Data repair only: the reminders this archived cannot be told apart from rows
+-- an operator archived by hand, and the identities it stamped are what the draw
+-- now reads to avoid asking twice. Reversing either would reopen the duplicates
+-- rather than restore anything, so this down migrates nothing back.

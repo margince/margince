@@ -66,6 +66,13 @@ type Handlers struct {
 	loginPerIP    *ratelimit.Limiter // 30/min per client IP
 	resetPerEmail *ratelimit.Limiter // 3/hour per (email, IP)
 	resetPerIP    *ratelimit.Limiter // 30/hour per client IP
+	// passwordLoginDisabled is the deployment's `auth.password.enabled=false`
+	// — an installation that signs its members in through an identity provider
+	// and wants the password door shut. Negative so the zero value offers the
+	// method: passwordmethod.go carries why, and both surfaces that must agree
+	// about it read passwordLoginOffered rather than this field.
+	passwordLoginDisabled bool
+
 	// changeFailures caps wrong-current-password attempts per account.
 	// /auth/change-password verifies the SAME secret the login path does, so
 	// leaving it uncapped would put an unthrottled guessing oracle behind any
@@ -246,6 +253,15 @@ func (h Handlers) accessTokenTTL() *time.Duration {
 // Login implements (POST /auth/login). The route is public; the singleton
 // company is bound by the middleware (installation.go).
 func (h Handlers) Login(w http.ResponseWriter, r *http.Request) {
+	// Before the body is read, and before any budget is spent: a deployment
+	// that closed the password door owes every caller the same answer whatever
+	// they posted, and a refusal that ran the throttle first would let an
+	// installation with no password method still be pushed into rate-limiting
+	// the address it is not authenticating.
+	if !h.passwordLoginOffered() {
+		httperr.NotImplementedBecause(w, r, passwordMethodOff)
+		return
+	}
 	var req crmcontracts.LoginRequest
 	if !httperr.Decode(w, r, &req) {
 		return

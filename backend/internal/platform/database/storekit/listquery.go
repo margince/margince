@@ -27,6 +27,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
@@ -389,3 +391,18 @@ func listBindCast(kind string) string {
 		return "::text"
 	}
 }
+
+// TrailingColumns scans the columns a paged SELECT appends after the published
+// ones — the sort's cursor key, a row id the projection does not carry — so the
+// row scanner every other caller uses does not have to know they are there.
+//
+// Here rather than in one store because two lists already need it and the third
+// would have copied it: a scanner that forgot a trailing destination fails at
+// runtime with a column count nobody reads twice.
+type TrailingColumns struct {
+	Row  pgx.Row
+	Dest []any
+}
+
+// Scan appends this page's own destinations to the caller's.
+func (t TrailingColumns) Scan(dest ...any) error { return t.Row.Scan(append(dest, t.Dest...)...) }

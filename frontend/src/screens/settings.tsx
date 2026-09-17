@@ -96,6 +96,7 @@ import { EmbedReindexCard } from "./embedreindex";
 import { EntityRef } from "./entityref";
 import { ExtensionAccessCard } from "./extension-access";
 import { ExtensionUnitsCard } from "./extension-units";
+import { ExtensionIngestHealthCard } from "./extingesthealth";
 import { HeldThreadsCard } from "./held-threads";
 import { ImportCard } from "./import";
 import { InstallationSettingsCard } from "./installation-settings";
@@ -362,6 +363,11 @@ export function tabContent(id: SettingsPageId): ReactNode {
               page. */}
           <EmbedReindexCard />
           <JobHealthCard />
+          {/* Beside the queue reading rather than under Extensions: both
+              answer "is something broken in the background", and an operator
+              chasing a quiet feed should not have to know that a connector is
+              an extension to find out. */}
+          <ExtensionIngestHealthCard />
         </>
       );
     case "extensions":

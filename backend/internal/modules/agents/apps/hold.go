@@ -36,6 +36,7 @@ import (
 	"log/slog"
 	"maps"
 	"regexp"
+	"sort"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -167,10 +168,34 @@ func (p *Provider) Prime(ctx context.Context) error {
 		// missing" is the operator-visible fact and the per-view lines are the
 		// detail. A view that silently never appears is the failure this design
 		// must not have.
-		p.log.Warn("mcp apps: some views are not served; the advertised set is fixed until this api restarts",
-			"held", len(admitted), "catalog", len(catalog))
+		//
+		// WHICH views, and WHAT TO DO, both in the line. The counts alone say
+		// something is wrong and leave an operator to reconstruct the rest from
+		// per-view lines that may be pages away — and the remedy is the whole
+		// point of the line: this set does not repair itself. There is no
+		// stream to announce a later arrival on (see Dispatcher.capabilities),
+		// so a view that missed the boot stays missing for the life of the
+		// process however healthy the web tier becomes.
+		p.log.Warn("mcp apps: some views are not served, and this api will not pick them up on its own — "+
+			"restart it once the web tier is serving them",
+			"held", len(admitted), "catalog", len(catalog), "missing", missingURIs(refused))
 	}
 	return nil
+}
+
+// missingURIs names the views that did not answer, sorted so two boots of the
+// same broken deployment log the same line.
+//
+// The URIs rather than the count: an operator reading "held 1, catalog 2" knows
+// something is wrong and not which host will fail, and the per-view lines that
+// would tell them are separate records a log search has to find.
+func missingURIs(refused map[string]error) []string {
+	out := make([]string, 0, len(refused))
+	for uri := range refused {
+		out = append(out, uri)
+	}
+	sort.Strings(out)
+	return out
 }
 
 // primeUntilDeadline reads every catalog view, re-attempting the ones that have

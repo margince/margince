@@ -27,10 +27,7 @@ import (
 // audit row it writes carries.
 func (e *introEnv) asClock() context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
-	ctx = principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalSystem, ID: ExpiryActor,
-	})
-	return principal.WithCorrelationID(ctx, ids.NewV7())
+	return principal.SystemActing(ctx, ExpiryActor)
 }
 
 // asSomeOtherSystem is a system principal that is NOT the sweep.
@@ -41,10 +38,7 @@ func (e *introEnv) asClock() context.Context {
 // closing introductions under a name that is not theirs.
 func (e *introEnv) asSomeOtherSystem() context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
-	ctx = principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalSystem, ID: "system:something-else",
-	})
-	return principal.WithCorrelationID(ctx, ids.NewV7())
+	return principal.SystemActing(ctx, "system:something-else")
 }
 
 // contactFor seeds a contact of its own, so two asks on one colleague do not

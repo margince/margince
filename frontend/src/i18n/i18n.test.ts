@@ -24,8 +24,10 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // "LinkedIn" is the brand and is written the same in every catalog; the other
   // six field labels beside it are translated normally.
   "contact.research.field.linkedin",
-  // The product name of the buyer surface.
+  // The product name of the buyer surface, on the card that names it and on
+  // the tab that opens it.
   "room.card.title",
+  "tab.dealRoom",
   // Two sales nouns Vietnamese borrows rather than translates, on the
   // drill-through's column headers. The vi catalog already carries both
   // untranslated where they appear as words in a sentence — "Thuộc deal" on
@@ -260,6 +262,9 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "search.kind.deal",
   "search.kind.lead",
   "search.kind.tag",
+  // The lead rail's own deal card title, the same singular loanword as
+  // search.kind.deal above it.
+  "lead.rail.deal.title",
 
   // "Cc" is the mail header itself, which vi writes as the Latin abbreviation
   // exactly as en does. Translating it would name a field no mail client

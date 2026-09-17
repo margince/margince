@@ -278,10 +278,7 @@ func (h dataResetHandlers) sweepAndReseed(ctx context.Context, wsID ids.UUID, co
 		// Re-seed under a system principal + a fresh correlation id, exactly as
 		// bootstrap does (identity/installation.go), so the seeders' own
 		// audit+outbox writes trace to one originating operation.
-		seedCtx := principal.WithActor(principal.WithWorkspaceID(ctx, wsID), principal.Principal{
-			Type: principal.PrincipalSystem, ID: "system",
-		})
-		seedCtx = principal.WithCorrelationID(seedCtx, ids.NewV7())
+		seedCtx := principal.SystemActing(principal.WithWorkspaceID(ctx, wsID), "system")
 		// The reset's own discard list, reported here rather than dropped. It
 		// is not empty on this path: ai.Routing is installation identity, so
 		// ResetConfig spares its row and a re-seed of the declared binding is

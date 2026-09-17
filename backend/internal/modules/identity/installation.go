@@ -287,10 +287,7 @@ func createInstallation(ctx context.Context, tx pgx.Tx, in InstallationBootstrap
 		// Boot bootstrap IS the originating operation: it mints the one
 		// correlation id its seed writes (pipeline.created, …) trace to —
 		// the id the HTTP middleware would have minted per request.
-		seedCtx := principal.WithActor(principal.WithWorkspaceID(ctx, wsID.UUID), principal.Principal{
-			Type: principal.PrincipalSystem, ID: "system",
-		})
-		seedCtx = principal.WithCorrelationID(seedCtx, ids.NewV7())
+		seedCtx := principal.SystemActing(principal.WithWorkspaceID(ctx, wsID.UUID), "system")
 		if err := seed(seedCtx, tx); err != nil {
 			return ids.WorkspaceID{}, err
 		}
