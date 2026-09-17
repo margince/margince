@@ -691,6 +691,10 @@ func (stubs) RegenerateCompanyBrief(w nethttp.ResponseWriter, r *nethttp.Request
 	httperr.NotImplemented(w, r, "RegenerateCompanyBrief")
 }
 
+func (stubs) GetCompanyCaptureTriage(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "GetCompanyCaptureTriage")
+}
+
 func (stubs) ListCompanyContacts(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.ListCompanyContactsParams) {
 	httperr.NotImplemented(w, r, "ListCompanyContacts")
 }

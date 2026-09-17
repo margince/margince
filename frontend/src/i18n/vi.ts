@@ -7102,6 +7102,25 @@ export const vi = {
     "cuộc hội thoại này trải trên hai dự án, nên các phát hiện sẽ sai với một trong hai",
   "pipeline.reason.thread_not_all_open":
     "một tin nhắn trong cuộc hội thoại này bị giới hạn với một phần đối tượng xem; bản tóm tắt toàn bộ sẽ là bản kể thiếu được trình bày như đầy đủ",
+  "pipeline.reason.answered_on_the_company":
+    "Bước này hỏi về tên miền của bên gửi chứ không phải về một thư cụ thể, nên nó được trả lời một lần ở công ty thay vì lặp lại trên mọi thư đến từ đó.",
+  "pipeline.reason.company_warranted":
+    "tên miền này được xét là xứng đáng có một hồ sơ công ty, và đây chính là nó",
+  "pipeline.reason.no_site_identified":
+    "không có gì trên trang web của tên miền này xác định được một công ty, nên tên của chính bên gửi đã được dùng thay thế",
+  "pipeline.reason.triage_queued": "tên miền này đang chờ được xem xét",
+  "pipeline.reason.triage_unevidenced":
+    "chưa thấy gì từ tên miền này đủ để chứng minh có một công ty",
+  "pipeline.reason.triage_stale_evidence":
+    "những gì đã thấy từ tên miền này quá cũ để quyết định",
+  "pipeline.reason.triage_near_duplicate":
+    "tên miền này trông giống một tên miền đã ghi nhận, nên được giữ lại thay vì tạo trùng",
+  "companyTriage.title": "Công ty này đến từ đâu",
+  "companyTriage.sub":
+    "Các tên miền thư đã được kiểm tra, và kết luận của từng lần kiểm tra.",
+  "companyTriage.empty":
+    "Không có tên miền thư nào được xếp vào công ty này — nó được nhập tay hoặc mang vào từ nơi khác.",
+  "companyTriage.checkedAt": "đã kiểm tra {when}",
   "pipeline.reason.no_named_reader":
     "cuộc hội thoại này không xác định được đối tượng đọc nào để một phát hiện thuộc về",
   "pipeline.reason.transport_not_read":
@@ -7121,8 +7140,6 @@ export const vi = {
   "pipeline.reason.would_restore_erased":
     "báo cáo điều này sẽ khôi phục dữ liệu mà một yêu cầu xóa đã gỡ bỏ",
   "pipeline.reason.no_writer_yet": "bước này chưa tồn tại",
-  "pipeline.reason.not_reported_yet":
-    "bước này có chạy, nhưng chưa được báo cáo ở đây",
   "settings.tab.maintenance": "Bảo trì",
   "settings.tab.license": "Giấy phép",
   "license.card.title": "Giấy phép và chỗ ngồi",

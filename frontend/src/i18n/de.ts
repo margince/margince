@@ -7188,6 +7188,26 @@ export const de = {
     "diese Konversation umfasst zwei Projekte, ihre Erkenntnisse wären für eines davon falsch",
   "pipeline.reason.thread_not_all_open":
     "eine Nachricht dieser Konversation ist einem Teil ihrer Leser vorenthalten; eine Zusammenfassung des Ganzen wäre ein Teilbericht, der als vollständig erscheint",
+  "pipeline.reason.answered_on_the_company":
+    "Dieser Schritt fragt nach der Domain des Absenders und nicht nach einer einzelnen Nachricht, also wird er einmal beim Unternehmen beantwortet statt bei jeder Nachricht von dort wiederholt.",
+  "pipeline.reason.company_warranted":
+    "Diese Domain rechtfertigt einen Unternehmensdatensatz, und dies ist er",
+  "pipeline.reason.no_site_identified":
+    "Auf der Website dieser Domain war kein Unternehmen zu erkennen, also wurde stattdessen der Name des Absenders verwendet",
+  "pipeline.reason.triage_queued":
+    "Diese Domain wartet darauf, geprüft zu werden",
+  "pipeline.reason.triage_unevidenced":
+    "Von dieser Domain wurde noch nichts gesehen, das ein Unternehmen belegen würde",
+  "pipeline.reason.triage_stale_evidence":
+    "Was von dieser Domain gesehen wurde, ist zu alt für eine Entscheidung",
+  "pipeline.reason.triage_near_duplicate":
+    "Diese Domain ähnelt einer bereits erfassten und wird zurückgehalten statt doppelt angelegt",
+  "companyTriage.title": "Woher dieses Unternehmen stammt",
+  "companyTriage.sub":
+    "Die geprüften Mail-Domains und was jede Prüfung ergeben hat.",
+  "companyTriage.empty":
+    "Keine Mail-Domain wurde in dieses Unternehmen eingeordnet — es wurde von Hand erfasst oder von anderswo übernommen.",
+  "companyTriage.checkedAt": "geprüft {when}",
   "pipeline.reason.no_named_reader":
     "diese Konversation hat keinen Leser, dem eine Erkenntnis zuzuordnen wäre",
   "pipeline.reason.transport_not_read":
@@ -7207,8 +7227,6 @@ export const de = {
   "pipeline.reason.would_restore_erased":
     "dies auszuweisen würde Daten wiederherstellen, die eine Löschung entfernt hat",
   "pipeline.reason.no_writer_yet": "diesen Schritt gibt es noch nicht",
-  "pipeline.reason.not_reported_yet":
-    "dieser Schritt läuft, wird hier aber noch nicht ausgewiesen",
   "settings.tab.maintenance": "Wartung",
   "settings.tab.license": "Lizenz",
   "license.card.title": "Lizenz und Sitzplätze",

@@ -87,7 +87,15 @@ var reasonTexts = map[Reason]string{
 	AbsentConnectorDefect:    "admission failures are a fault of the connection, not of one message",
 	AbsentWouldRestoreErased: "reporting this would restore data an erasure removed",
 	AbsentNoWriterYet:        "this step does not exist yet",
-	AbsentNotReportedYet:     "this step runs, but is not reported here yet",
+	AbsentAnsweredOnTheCompany: "this step asks about the sender's DOMAIN rather than about one message, " +
+		"so it is answered once on the company rather than repeated on every message from it",
+	ReasonCompanyWarranted: "this domain was judged to warrant a company record, and this is it",
+	ReasonNoSiteIdentified: "nothing on this domain's site identified a company, so the sender's own name " +
+		"was used instead",
+	ReasonTriageQueued:      "this domain is waiting to be looked at",
+	ReasonTriageUnevidenced: "nothing has been seen from this domain yet that would evidence a company",
+	ReasonTriageStale:       "what was seen from this domain is too old to decide on",
+	ReasonTriageNearDupe:    "this domain looks like one already recorded, so it is held rather than duplicated",
 }
 
 // ReasonText renders one reason.
