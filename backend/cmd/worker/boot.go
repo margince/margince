@@ -392,6 +392,14 @@ func startProjectionLanes(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Cl
 	_, _ = fmt.Fprintln(stdout, "worker repairing captured cohorts as contacts appear")
 	background.Go(func() { runSubscriber(ctx, rdb, "cg:cohort-promote", cohort.HandleEvent, logger, 0) })
 
+	// Telling the seats that could decide a staged approval that it is waiting
+	// on them. Deterministic like the projections above, so it runs on every
+	// worker: an installation whose lane is not running has an inbox that reads
+	// empty, which is indistinguishable from nobody being asked for anything.
+	notify := compose.NewApprovalNotify(pool, compose.InstallationDB(pool))
+	_, _ = fmt.Fprintln(stdout, "worker telling seats when a decision is waiting on them")
+	background.Go(func() { runSubscriber(ctx, rdb, "cg:approval-notify", notify.HandleEvent, logger, 0) })
+
 	startCommissionAccrual(ctx, pool, rdb, background, logger, stdout)
 
 	startIntroAdvance(ctx, pool, rdb, background, logger, stdout)

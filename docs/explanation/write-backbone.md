@@ -241,6 +241,7 @@ broken and nothing at runtime says a word about it.
 | `cg:contact-auto-enrich` | fill a contact from what their employer's site already published | **live** (worker) |
 | `cg:contact-data` | fill a contact from a licensed provider, spending credits | **live** (worker) |
 | `cg:company-auto-enrich` | queue a company's auto-enrich pass the moment it appears, instead of on the next daily sweep | **live** (worker) |
+| `cg:approval-notify` | on `approval.requested`, put the card in the queue of every seat that could decide it | **live** (worker) |
 | `cg:overnight-agent` | on `approval.decided`, resume the parked Surface-B run with the human's answer | **live** (worker; only when a model is configured) |
 | `cg:workflows` | dispatch the automation/workflow engine off matching events | **live** (worker) |
 | `cg:webhooks` | deliver subscribed events to outbound endpoints | **live** (api's inline relay) |
