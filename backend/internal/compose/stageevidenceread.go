@@ -366,11 +366,7 @@ func (r *StageEvidenceReader) write(
 // pass is its own unit of work: the job that runs it is enqueued by a trigger
 // whose own trace ended when the activity was written.
 func stageEvidenceReadCtx(ctx context.Context) context.Context {
-	actorCtx := principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalSystem,
-		ID:   stageEvidenceReadActor,
-	})
-	return principal.WithCorrelationID(actorCtx, ids.NewV7())
+	return principal.SystemActing(ctx, stageEvidenceReadActor)
 }
 
 // readActivityText answers the lines of an activity that its OWN sender wrote.

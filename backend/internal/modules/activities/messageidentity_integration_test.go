@@ -85,10 +85,7 @@ func (e *sendEnv) sentRow(t *testing.T, id ids.ActivityID) sentRow {
 // staging and transmit must not strand the message's identity.
 func (e *sendEnv) asSendWorker() context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
-	ctx = principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalSystem, ID: "system:comms-send",
-	})
-	return principal.WithCorrelationID(ctx, ids.NewV7())
+	return principal.SystemActing(ctx, "system:comms-send")
 }
 
 // reconcile drives the seam the way comms drives it: inside a workspace-bound

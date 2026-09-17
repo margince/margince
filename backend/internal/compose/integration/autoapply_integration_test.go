@@ -34,10 +34,7 @@ import (
 // therefore eligible to apply at all.
 func stageCtx(e *Env) context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
-	ctx = principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalSystem, ID: "system:close-date-sweep",
-	})
-	return principal.WithCorrelationID(ctx, ids.NewV7())
+	return principal.SystemActing(ctx, "system:close-date-sweep")
 }
 
 // stageCloseDateCorrection stages one proposal of an auto-eligible kind against

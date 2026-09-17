@@ -151,10 +151,7 @@ func SendWorkerContext(ctx context.Context, workspaceID ids.UUID) context.Contex
 // comes from the job args' own role declaration, which refuses a zero id — a
 // guarantee re-binding here would quietly discard.
 func sendWorkerScope(wsCtx context.Context) context.Context {
-	wsCtx = principal.WithActor(wsCtx, principal.Principal{
-		Type: principal.PrincipalSystem, ID: "system:comms-send",
-	})
-	return principal.WithCorrelationID(wsCtx, ids.NewV7())
+	return principal.SystemActing(wsCtx, "system:comms-send")
 }
 
 func (w *commsSendWorker) Work(ctx context.Context, job *river.Job[SendEmailArgs]) error {

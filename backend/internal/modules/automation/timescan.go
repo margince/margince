@@ -176,8 +176,7 @@ func (s *TimeScanner) ScanWorkspace(ctx context.Context, wsID ids.UUID) error {
 	// systemActor, the same id HandleEvent acts under: both entries reach the
 	// same runOne and write the same rows, and the selectors that recognise
 	// those rows key on this id.
-	wsCtx := principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: systemActor})
-	wsCtx = principal.WithCorrelationID(wsCtx, ids.NewV7())
+	wsCtx := principal.SystemActing(ctx, systemActor)
 
 	instances, err := s.engine.liveInstances(wsCtx)
 	if err != nil {

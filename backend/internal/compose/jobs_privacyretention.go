@@ -20,7 +20,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -131,15 +130,15 @@ func (w *privacyRetentionWorker) Work(ctx context.Context, _ *river.Job[PrivacyR
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
-	return jobs.FaultContext(ctx, w.retention(InstallationDB(w.pool)).EvaluateInstallation(retentionPassProvenance(passCtx)))
-}
-
-// retentionPassProvenance names who acted and under which pass. The engine
-// writes an audit row and an outbox event per record it retires, so without
-// this those rows would carry no actor and no correlation id — never that the
-// machine moved it on a schedule, which is the whole answer a retention audit
-// is read for.
-func retentionPassProvenance(ctx context.Context) context.Context {
-	ctx = principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: "system"})
-	return principal.WithCorrelationID(ctx, ids.NewV7())
+	// Who acted, and under which pass. The engine writes an audit row and an
+	// outbox event per record it retires, so without this those rows would
+	// carry no actor and no correlation id — never that the machine moved it on
+	// a schedule, which is the whole answer a retention audit is read for.
+	//
+	// Assigned rather than passed inline, because jobactor_test.go reads the
+	// assignment: a binder called for its return value and dropped compiles,
+	// reads like a binding, and leaves the store holding a context with no
+	// actor in it.
+	passCtx = principal.SystemActing(passCtx, "system")
+	return jobs.FaultContext(ctx, w.retention(InstallationDB(w.pool)).EvaluateInstallation(passCtx))
 }

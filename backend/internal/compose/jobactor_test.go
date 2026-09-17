@@ -76,7 +76,9 @@ var jobActorUnbound = gatekit.Waive(map[string]string{
 var storeBuilders = regexp.MustCompile(`(providerRunStore|workspaceJobDB|InstallationDB|database\.BindTo)\(`)
 
 // actorBinders are the ways a worker legitimately names its principal: one of
-// this package's context helpers, or principal.WithActor directly.
+// this package's context helpers, principal.SystemActing — which binds the
+// actor and the correlation id a pass owes together — or principal.WithActor
+// directly, which is what a pass acting on a named human's behalf still needs.
 //
 // reconcileWorkerCtx is one of those helpers — it binds the workspace, the
 // actor and a correlation id together and returns the context. It is listed for
@@ -90,7 +92,7 @@ var storeBuilders = regexp.MustCompile(`(providerRunStore|workspaceJobDB|Install
 // no actor in it — the precise bug this gate exists to catch, sailing past a
 // check that only asked whether the name appeared.
 var actorBinders = regexp.MustCompile(
-	`\w+\s*(=|:=)\s*(providerJobActor|reconcileWorkerCtx|partSlimJobActor|principal\.WithActor)\(`)
+	`\w+\s*(=|:=)\s*(providerJobActor|reconcileWorkerCtx|partSlimJobActor|principal\.(WithActor|SystemActing))\(`)
 
 // workMethod matches a River worker's entry point and captures its receiver,
 // which is the worker's name in the failure message.

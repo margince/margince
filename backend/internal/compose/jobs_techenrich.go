@@ -311,18 +311,12 @@ func (w *technicalBackfillWorker) sweepOneWorkspace(ctx context.Context, ws ids.
 // installation went and read public records rather than leaving a gated write
 // with nobody behind it.
 func technicalActor(ctx context.Context) context.Context {
-	ctx = principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalSystem, ID: "system:technical-lookup",
-	})
-	return principal.WithCorrelationID(ctx, ids.NewV7())
+	return principal.SystemActing(ctx, "system:technical-lookup")
 }
 
 // technicalBackfillActor is the sweep's own reader.
 func technicalBackfillActor(ctx context.Context) context.Context {
-	ctx = principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalSystem, ID: "system:technical-backfill",
-	})
-	return principal.WithCorrelationID(ctx, ids.NewV7())
+	return principal.SystemActing(ctx, "system:technical-backfill")
 }
 
 // TechnicalEnrichmentConfig is the sweep's cadence.
