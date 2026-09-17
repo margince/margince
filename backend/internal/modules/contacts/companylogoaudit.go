@@ -25,7 +25,7 @@ import (
 // change and under which source vocabulary.
 //
 // `origin` is what NAMES the mark — the page a read resolved it from, or the
-// file a contact chose — and it is the one value both the row's `logo_origin`
+// file a contact chose — and it is the one value both the row's `logo_source`
 // and the field's history carry, so the NEXT write's before-image can say what
 // it replaced. Only a removal has none.
 //

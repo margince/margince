@@ -2395,7 +2395,7 @@ paths:
           in: query
           schema: { type: string }
           description: Lookup by normalized domain (the employer-inference index).
-        - name: lifecycle
+        - name: status
           in: query
           schema: { type: string, enum: [unknown, target, prospect, opportunity, customer, former_customer, disqualified] }
           description: Where the account stands with us (DM-VOCAB-2, ADR-0079).
@@ -27584,7 +27584,7 @@ components:
         domains:
           type: array
           items: { $ref: '#/components/schemas/CompanyDomain' }
-        lifecycle:
+        status:
           type: string
           enum: [unknown, target, prospect, opportunity, customer, former_customer, disqualified]
           description: >-
@@ -27744,7 +27744,7 @@ components:
             its author and an admin, so the pair is refused rather than written: sending
             `{"visibility":"owner","owner_id":null}`, or narrowing a company that has no owner,
             answers 422 naming `owner_id`.
-        lifecycle:
+        status:
           type: string
           enum: [unknown, target, prospect, opportunity, customer, former_customer, disqualified]
           description: Where the account stands with us (ADR-0079). Absent = untouched.
@@ -28414,7 +28414,7 @@ components:
           description: >-
             The share of the open balance already past its due date.
 
-            ABSENT on an account whose relationship has ended (`lifecycle:
+            ABSENT on an account whose relationship has ended (`status:
             former_customer`), and a client should expect the null. An overdue figure
             reads as an outstanding collection, and a rep acting on the most natural
             reading makes a collection call about a relationship that finished — a
@@ -28607,9 +28607,9 @@ components:
       properties:
         account:
           type: object
-          required: [lifecycle, relationship_types]
+          required: [status, relationship_types]
           properties:
-            lifecycle:
+            status:
               type: string
               enum: [unknown, target, prospect, opportunity, customer, former_customer, disqualified]
             relationship_types:

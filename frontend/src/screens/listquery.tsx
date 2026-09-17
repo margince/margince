@@ -993,7 +993,7 @@ export function ListTable<Row>({
       // name a different query parameter (the owner dial: mine, my team's,
       // unowned) has to drop whichever of its own it currently holds, because
       // its key names no parameter at all. Clearing every composite parameter
-      // on the surface instead would make picking a lifecycle silently drop the
+      // on the surface instead would make picking a status silently drop the
       // owner filter — one dial reaching into another's answer.
       const mine = allChips
         .filter((chip) => chip.key === key)

@@ -46,7 +46,7 @@ function view(overrides: Partial<Company360> = {}): Company360 {
     projects: [],
     projects_page: page,
     state_strip: {
-      account: { lifecycle: "customer", relationship_types: [] },
+      account: { status: "customer", relationship_types: [] },
       commercial: {
         open_count: 0,
         stalled_count: 0,
@@ -83,7 +83,7 @@ describe("what the open pipeline says", () => {
         company={company}
         view={view({
           state_strip: {
-            account: { lifecycle: "customer", relationship_types: [] },
+            account: { status: "customer", relationship_types: [] },
             commercial: {
               open_count: 2,
               stalled_count: 0,
@@ -114,7 +114,7 @@ describe("what the open pipeline says", () => {
         company={company}
         view={view({
           state_strip: {
-            account: { lifecycle: "customer", relationship_types: [] },
+            account: { status: "customer", relationship_types: [] },
           },
         } as Partial<Company360>)}
       />,
@@ -134,7 +134,7 @@ describe("what the open pipeline says", () => {
         company={company}
         view={view({
           state_strip: {
-            account: { lifecycle: "customer", relationship_types: [] },
+            account: { status: "customer", relationship_types: [] },
             commercial: {
               open_count: 3,
               stalled_count: 0,

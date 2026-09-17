@@ -94,7 +94,7 @@ func (d offlineDemoDirectory) accounts(ctx context.Context, tx pgx.Tx, userID st
 		       coalesce(o.display_name, o.legal_name, ''),
 		       coalesce((SELECT domain FROM company_domain
 		                  WHERE company_id = o.id ORDER BY created_at LIMIT 1), ''),
-		       coalesce(o.lifecycle, 'unknown'),
+		       coalesce(o.status, 'unknown'),
 		       coalesce((SELECT contract_number FROM contract
 		                  WHERE company_id = o.id AND archived_at IS NULL
 		                  ORDER BY created_at DESC LIMIT 1), '')
@@ -109,7 +109,7 @@ func (d offlineDemoDirectory) accounts(ctx context.Context, tx pgx.Tx, userID st
 	var out []offlinedemo.Account
 	for rows.Next() {
 		var a offlinedemo.Account
-		if err := rows.Scan(&a.CompanyID, &a.Name, &a.Domain, &a.Lifecycle, &a.ContractNumber); err != nil {
+		if err := rows.Scan(&a.CompanyID, &a.Name, &a.Domain, &a.Status, &a.ContractNumber); err != nil {
 			return nil, fmt.Errorf("scanning an account: %w", err)
 		}
 		// The correspondence is dated backward from the run, never forward

@@ -31,7 +31,7 @@ function renderChoice(
   render(
     <LocaleProvider initial="en">
       <InlineChoice
-        label="Account lifecycle"
+        label="Account status"
         value="prospect"
         options={OPTIONS}
         canEdit
@@ -61,14 +61,14 @@ describe("editing a value where it is read", () => {
     // Without an aria-label a screen reader announces "prospect, button" — the
     // state, with no hint that pressing it changes anything.
     expect(
-      screen.getByRole("button", { name: "Change Account lifecycle" }),
+      screen.getByRole("button", { name: "Change Account status" }),
     ).toBeTruthy();
   });
 
   it("opens the list on the one click that started editing, not a second one", async () => {
     renderChoice();
     await userEvent.click(
-      screen.getByRole("button", { name: "Change Account lifecycle" }),
+      screen.getByRole("button", { name: "Change Account status" }),
     );
     // The click that turned the value into a control already meant "show me
     // the options" — a caller that has to click the combobox again before an
@@ -80,7 +80,7 @@ describe("editing a value where it is read", () => {
   it("does not write when the reader picks the value already set", async () => {
     const { onSave } = renderChoice();
     await userEvent.click(
-      screen.getByRole("button", { name: "Change Account lifecycle" }),
+      screen.getByRole("button", { name: "Change Account status" }),
     );
     await userEvent.click(screen.getByRole("option", { name: "Prospect" }));
     // Choosing what is already set is not an edit; sending it would write an
@@ -97,7 +97,7 @@ describe("editing a value where it is read", () => {
     });
     renderChoice({ onSave });
     await userEvent.click(
-      screen.getByRole("button", { name: "Change Account lifecycle" }),
+      screen.getByRole("button", { name: "Change Account status" }),
     );
     await userEvent.click(screen.getByRole("option", { name: "Customer" }));
 
@@ -127,7 +127,7 @@ describe("editing a value where it is read", () => {
     });
     renderChoice({ onSave });
     await user.click(
-      screen.getByRole("button", { name: "Change Account lifecycle" }),
+      screen.getByRole("button", { name: "Change Account status" }),
     );
     await user.click(screen.getByRole("option", { name: "Customer" }));
 
@@ -148,13 +148,13 @@ describe("editing a value where it is read", () => {
   it("lands focus back on the trigger after a value is picked", async () => {
     renderChoice();
     await userEvent.click(
-      screen.getByRole("button", { name: "Change Account lifecycle" }),
+      screen.getByRole("button", { name: "Change Account status" }),
     );
     await userEvent.click(screen.getByRole("option", { name: "Customer" }));
 
     await waitFor(() =>
       expect(document.activeElement).toBe(
-        screen.getByRole("button", { name: "Change Account lifecycle" }),
+        screen.getByRole("button", { name: "Change Account status" }),
       ),
     );
   });
@@ -162,7 +162,7 @@ describe("editing a value where it is read", () => {
   it("lets Escape back out of an open list without changing anything", async () => {
     const { onSave } = renderChoice();
     await userEvent.click(
-      screen.getByRole("button", { name: "Change Account lifecycle" }),
+      screen.getByRole("button", { name: "Change Account status" }),
     );
     await userEvent.keyboard("{Escape}");
     // Back to the resting trigger, not stranded on a closed combobox with
@@ -170,7 +170,7 @@ describe("editing a value where it is read", () => {
     // document: a keyboard user who backed out with Escape must not also
     // lose their place on the page.
     const trigger = screen.getByRole("button", {
-      name: "Change Account lifecycle",
+      name: "Change Account status",
     });
     expect(trigger).toBeTruthy();
     await waitFor(() => expect(document.activeElement).toBe(trigger));
@@ -181,7 +181,7 @@ describe("editing a value where it is read", () => {
   it("does not reach for the trigger when Tab leaves the open list", async () => {
     const { onSave } = renderChoice();
     await userEvent.click(
-      screen.getByRole("button", { name: "Change Account lifecycle" }),
+      screen.getByRole("button", { name: "Change Account status" }),
     );
     // The keydown alone, deliberately, rather than `userEvent.tab()`: moving
     // focus is the BROWSER's half of a Tab press, and it is the half no DOM
@@ -200,7 +200,7 @@ describe("editing a value where it is read", () => {
     // Tab already moved the reader on — reclaiming focus here would fight
     // the very key that just moved it, the opposite of what Escape does.
     const trigger = screen.getByRole("button", {
-      name: "Change Account lifecycle",
+      name: "Change Account status",
     });
     expect(document.activeElement).not.toBe(trigger);
     expect(screen.queryByRole("combobox")).toBeNull();
@@ -216,7 +216,7 @@ describe("editing a value where it is read", () => {
     });
     renderChoice({ onSave });
     await userEvent.click(
-      screen.getByRole("button", { name: "Change Account lifecycle" }),
+      screen.getByRole("button", { name: "Change Account status" }),
     );
     await userEvent.click(screen.getByRole("option", { name: "Customer" }));
     await waitFor(() => expect(screen.getByRole("alert")).toBeTruthy());
@@ -226,7 +226,7 @@ describe("editing a value where it is read", () => {
     // is the one exit a failed save would otherwise have none of.
     await userEvent.keyboard("{Escape}");
     expect(
-      screen.getByRole("button", { name: "Change Account lifecycle" }),
+      screen.getByRole("button", { name: "Change Account status" }),
     ).toBeTruthy();
     expect(screen.queryByRole("alert")).toBeNull();
   });
@@ -234,11 +234,11 @@ describe("editing a value where it is read", () => {
   it("abandons an unpicked choice when the reader clicks away", async () => {
     const { onSave } = renderChoice();
     await userEvent.click(
-      screen.getByRole("button", { name: "Change Account lifecycle" }),
+      screen.getByRole("button", { name: "Change Account status" }),
     );
     await userEvent.click(document.body);
     expect(
-      screen.getByRole("button", { name: "Change Account lifecycle" }),
+      screen.getByRole("button", { name: "Change Account status" }),
     ).toBeTruthy();
     expect(onSave).not.toHaveBeenCalled();
   });

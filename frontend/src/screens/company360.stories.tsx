@@ -49,7 +49,7 @@ const populated: View = {
   company: {
     id: "o-1",
     display_name: "Brandt Automotive GmbH",
-    lifecycle: "customer",
+    status: "customer",
     captured_by: "human:u1",
     source: "manual",
     created_at: "2026-06-01T08:00:00Z",
@@ -225,7 +225,7 @@ const populated: View = {
     pending_proposals: 0,
   },
   state_strip: {
-    account: { lifecycle: "customer", relationship_types: ["customer"] },
+    account: { status: "customer", relationship_types: ["customer"] },
     engagement: {
       state: "active",
       last_inbound_at: "2026-07-11T09:00:00Z",
@@ -487,7 +487,7 @@ const connectedFinance: FinanceSummary = {
   median_days_after_due: 4,
 };
 
-// The two lookups below are keyed on the real wire enums (Lifecycle,
+// The two lookups below are keyed on the real wire enums (Status,
 // RelationshipType), but StateStrip's own label props take a bare `string` —
 // StateStrip: the record's own readings row, above the tabs — FIVE slots on
 // every account, drawn by the shared StatStrip the contact record uses.
@@ -565,7 +565,7 @@ export const StateStripUnanswered: Story = {
         ...populated,
         health: undefined,
         state_strip: {
-          account: { lifecycle: "prospect", relationship_types: [] },
+          account: { status: "prospect", relationship_types: [] },
           commercial: {
             open_count: 0,
             stalled_count: 0,

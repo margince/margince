@@ -584,8 +584,8 @@ func TestUnknownAccountFilterValuesAreRefusedRatherThanAnsweredEmpty(t *testing.
 		in    contacts.ListCompaniesInput
 	}{
 		{
-			"a stage outside the vocabulary", "lifecycle",
-			contacts.ListCompaniesInput{Lifecycle: strPtr("nearly_a_customer")},
+			"a stage outside the vocabulary", "status",
+			contacts.ListCompaniesInput{Status: strPtr("nearly_a_customer")},
 		},
 		{
 			"a relationship type outside the vocabulary", "relationship_type",
@@ -612,7 +612,7 @@ func TestUnknownAccountFilterValuesAreRefusedRatherThanAnsweredEmpty(t *testing.
 	// answer normally — a rule that refused everything would pass the test
 	// above and break the feature.
 	for _, in := range []contacts.ListCompaniesInput{
-		{Lifecycle: strPtr("customer")},
+		{Status: strPtr("customer")},
 		{RelationshipType: strPtr("partner")},
 	} {
 		if _, _, err := e.Contacts.ListCompanies(admin, in); err != nil {
@@ -623,8 +623,8 @@ func TestUnknownAccountFilterValuesAreRefusedRatherThanAnsweredEmpty(t *testing.
 
 // strPtrValue names whichever of the two dials the case set, for the message.
 func strPtrValue(in contacts.ListCompaniesInput) *string {
-	if in.Lifecycle != nil {
-		return in.Lifecycle
+	if in.Status != nil {
+		return in.Status
 	}
 	return in.RelationshipType
 }

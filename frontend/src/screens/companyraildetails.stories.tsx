@@ -31,7 +31,7 @@ const company: Company = {
   workspace_id: "w-1",
   display_name: "Brandt Automotive GmbH",
   legal_name: "Brandt Automotive GmbH",
-  lifecycle: "customer",
+  status: "customer",
   owner_id: "u-1",
   industry: "Automotive",
   size_band: "51-200",

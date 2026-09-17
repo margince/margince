@@ -380,10 +380,12 @@ func TestARetiredCustomColumnIsStillCompilableAndNoLongerOffered(t *testing.T) {
 
 // The same gap in the core half, which has no catalogue row behind it at all.
 //
-// company.classification was retired by ADR-0079 and has no
-// `custom_field` row, so no client-side join could ever discover that it is
-// retired — the exclusion has to happen here or not at all.
-func TestARetiredCoreFieldIsStillCompilableAndNoLongerOffered(t *testing.T) {
+// company.classification was retired by ADR-0079 and, once its column was
+// dropped, removed from the vocabulary outright rather than kept as a
+// SAY-but-not-OFFER exception: compiling a stored predicate that still names
+// it would emit SQL against a column that no longer exists, so a clean
+// PredicateError at compile time is the only honest answer left.
+func TestARetiredCoreFieldIsNeitherOfferedNorCompilable(t *testing.T) {
 	const retired = "classification"
 	store := &Store{}
 	fields, _, err := store.FilterVocabulary(readerCtx(), "company")
@@ -399,30 +401,14 @@ func TestARetiredCoreFieldIsStillCompilableAndNoLongerOffered(t *testing.T) {
 	if err != nil {
 		t.Fatalf("segmentEngine: %v", err)
 	}
-	if _, compileErr := storekit.CompilePredicate(
+	_, compileErr := storekit.CompilePredicate(
 		storekit.Predicate{Field: retired, Op: storekit.OpEq, Value: "strategic"},
 		engine.Fields,
 		func(any) int { return 1 },
-	); compileErr != nil {
-		t.Errorf("a segment naming the retired %s no longer evaluates: %v", retired, compileErr)
-	}
-}
-
-// Every name in retiredCoreFields has to BE a core field of that resource, or the
-// entry silently excludes nothing and the field it was meant to retire stays on
-// offer. A typo is otherwise invisible.
-func TestEveryRetiredCoreFieldNamesARealCoreField(t *testing.T) {
-	for resource, retired := range retiredCoreFields {
-		engine, present := segmentEngines[resource]
-		if !present {
-			t.Errorf("retiredCoreFields names resource %q, which has no engine", resource)
-			continue
-		}
-		for name := range retired {
-			if _, isCore := engine.Fields[name]; !isCore {
-				t.Errorf("retiredCoreFields[%q] names %q, which is not a core field of that resource — the exclusion does nothing", resource, name)
-			}
-		}
+	)
+	var predErr *storekit.PredicateError
+	if !errors.As(compileErr, &predErr) || predErr.Field != retired {
+		t.Errorf("a segment naming the retired %s should refuse to compile with a PredicateError naming it, got: %v", retired, compileErr)
 	}
 }
 

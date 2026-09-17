@@ -41,7 +41,7 @@ func demoMailbox() Mailbox {
 		ColleagueEmail: "markus.steiner@demo.test",
 		Accounts: []Account{{
 			CompanyID: "01a00000-0000-7000-8000-0000000000aa",
-			Name:      "Acme GmbH", Domain: "acme.de", Lifecycle: "customer",
+			Name:      "Acme GmbH", Domain: "acme.de", Status: "customer",
 			ContractNumber: "V-1234-ACME",
 			Now:            time.Date(2026, 8, 17, 9, 0, 0, 0, time.UTC),
 			Contacts:       []Contact{{Name: "Petra Wolf", Email: "petra.wolf@acme.de", Role: "Head of IT"}},
@@ -381,17 +381,17 @@ func TestACursorFromAnotherGeneratorIsDiscarded(t *testing.T) {
 	}
 }
 
-// TestEveryLifecycleWritesTheRightConversation — the inbox has to AGREE with
+// TestEveryStatusWritesTheRightConversation — the inbox has to AGREE with
 // the pipeline. A customer whose only thread is a cold intro, or a target
 // holding a kickoff, reads as decoration beside the records rather than as the
 // account's own history.
-func TestEveryLifecycleWritesTheRightConversation(t *testing.T) {
+func TestEveryStatusWritesTheRightConversation(t *testing.T) {
 	for _, tc := range []struct {
-		name      string
-		lifecycle string
-		stage     string
-		wantSubj  string
-		wantAny   bool
+		name     string
+		status   string
+		stage    string
+		wantSubj string
+		wantAny  bool
 	}{
 		{"customer gets a kickoff", "customer", "Won", "Kickoff", true},
 		{"a lost customer gets an offboarding", "former_customer", "Won", "Kündigung", true},
@@ -403,14 +403,14 @@ func TestEveryLifecycleWritesTheRightConversation(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			box := demoMailbox()
 			a := box.Accounts[0]
-			a.Lifecycle = tc.lifecycle
+			a.Status = tc.status
 			a.Deals = nil
 			if tc.stage != "" {
 				a.Deals = []Deal{{ID: "01a00000-0000-7000-8000-0000000000bb", Name: "d", Stage: tc.stage}}
 			}
 			specs := threadsFor(a)
 			if tc.wantAny && len(specs) == 0 {
-				t.Fatalf("a %s account with a %q deal writes no correspondence at all", tc.lifecycle, tc.stage)
+				t.Fatalf("a %s account with a %q deal writes no correspondence at all", tc.status, tc.stage)
 			}
 			var found bool
 			for _, s := range specs {
@@ -423,7 +423,7 @@ func TestEveryLifecycleWritesTheRightConversation(t *testing.T) {
 				for _, s := range specs {
 					got = append(got, s.Subject)
 				}
-				t.Errorf("a %s account wrote %v, want a thread mentioning %q", tc.lifecycle, got, tc.wantSubj)
+				t.Errorf("a %s account wrote %v, want a thread mentioning %q", tc.status, got, tc.wantSubj)
 			}
 			// Whatever it writes must survive the trip to a record.
 			for _, m := range generate(box, a) {
@@ -443,7 +443,7 @@ func TestAnUntouchedTargetIsMostlySilent(t *testing.T) {
 	silent, total := 0, 0
 	for _, domain := range []string{"a.de", "b.de", "c.de", "d.de", "e.de", "f.de", "g.de", "h.de"} {
 		a := box.Accounts[0]
-		a.Lifecycle, a.Deals, a.Domain = "target", nil, domain
+		a.Status, a.Deals, a.Domain = "target", nil, domain
 		total++
 		if len(threadsFor(a)) == 0 {
 			silent++

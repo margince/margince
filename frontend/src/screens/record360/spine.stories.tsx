@@ -110,7 +110,7 @@ const goneQuiet: View = {
   last_inbound_at: null,
   health: { last_meeting_at: "2026-08-18T09:00:00Z", single_threaded: true },
   state_strip: {
-    account: { lifecycle: "opportunity", relationship_types: [] },
+    account: { status: "opportunity", relationship_types: [] },
     commercial: {
       open_count: 1,
       stalled_count: 0,
@@ -164,7 +164,7 @@ const neverSpoken: View = {
   last_inbound_at: null,
   activities: { data: [], page },
   state_strip: {
-    account: { lifecycle: "target", relationship_types: [] },
+    account: { status: "target", relationship_types: [] },
     commercial: {
       open_count: 1,
       stalled_count: 0,

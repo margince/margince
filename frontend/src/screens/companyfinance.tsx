@@ -60,12 +60,12 @@ const CARD_STATE: Record<FinanceState, SectionState> = {
 };
 
 /**
- * The lifecycles FIN-AC-3 authorises the card's absence for, and ONLY those.
+ * The statuses FIN-AC-3 authorises the card's absence for, and ONLY those.
  *
  * Named as the allowlist of absence rather than as an allowlist of presence,
- * because the two fail in opposite directions. A lifecycle this list forgets
+ * because the two fail in opposite directions. A status this list forgets
  * gets a card that says "no accounting source connected" — a true statement
- * and a prompt to connect one. A lifecycle wrongly ON it gets NO card, and a
+ * and a prompt to connect one. A status wrongly ON it gets NO card, and a
  * reader is never told the money is missing.
  *
  * `unknown` is the case that made this matter: every imported company carries
@@ -87,13 +87,13 @@ const NEVER_INVOICED: ReadonlySet<string> = new Set([
  * clicked for; a tab absent over a card that would have drawn hides money the
  * account owes.
  */
-export function hasFinance(lifecycle?: string): boolean {
-  return lifecycle == null || !NEVER_INVOICED.has(lifecycle);
+export function hasFinance(status?: string): boolean {
+  return status == null || !NEVER_INVOICED.has(status);
 }
 
 export function CompanyFinanceCard({
   companyId,
-  lifecycle,
+  status,
   readOnly = false,
 }: Readonly<{
   companyId: string;
@@ -101,18 +101,18 @@ export function CompanyFinanceCard({
   // billing-contacts panel reads it: every other reading on this card comes
   // from an accounting source nobody edits here.
   readOnly?: boolean;
-  // The account's lifecycle. A target, a prospect or an opportunity has never
+  // The account's status. A target, a prospect or an opportunity has never
   // been invoiced, so the card is ABSENT for them rather than empty (FIN-AC-3)
   // — an empty finance card on a company we have never billed is a question
   // nobody asked.
-  lifecycle?: string;
+  status?: string;
 }>) {
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
   const query = useFinanceSummary(companyId);
 
-  if (!hasFinance(lifecycle)) {
+  if (!hasFinance(status)) {
     return null;
   }
   // Resolved ONCE, above the branches. A former customer's money is history in
@@ -121,7 +121,7 @@ export function CompanyFinanceCard({
   // saying "Finance" there puts real money from a finished relationship under a
   // heading that reads as current.
   const title =
-    lifecycle === "former_customer"
+    status === "former_customer"
       ? t("finance.titleHistorical")
       : t("finance.title");
   if (query.isPending) {

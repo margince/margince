@@ -50,9 +50,9 @@ type UpdateCompanyInput struct {
 	// add missing, archive removed, flip is_primary). nil leaves domains
 	// untouched; an empty slice clears them.
 	Domains *[]CompanyDomainInput
-	// Lifecycle, when non-nil, moves where the account stands with us
+	// Status, when non-nil, moves where the account stands with us
 	// (ADR-0079/A124). nil leaves it untouched.
-	Lifecycle *string
+	Status *string
 	// Visibility, when non-nil, moves who may see this company between
 	// 'workspace' and 'owner'. nil leaves it untouched. companyvisibility.go
 	// carries the two rules it owes that no other column here does.

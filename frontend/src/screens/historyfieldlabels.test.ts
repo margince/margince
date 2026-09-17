@@ -8,6 +8,7 @@ import {
   historyFieldLabel,
   historyFieldLabelKey,
   historyFieldLabelled,
+  retiredFieldLabelled,
   syntheticAuditFieldLabelled,
 } from "./historyfieldlabels";
 
@@ -226,5 +227,31 @@ describe("synthetic AuditEvent field labels", () => {
     expect(historyFieldLabel("lifted_by_level", (k) => en[k])).toBe(
       "Lifted at level",
     );
+  });
+});
+
+// A field a rename retired: audit_log is append-only, so an entry written
+// before company.lifecycle became company.status still names the old word,
+// forever. The label must keep answering for it without the current contract
+// claiming the field is still written.
+describe("retired field labels", () => {
+  it("stays out of the contract-derived census in both directions", () => {
+    const labelled = historyFieldLabelled();
+    for (const field of retiredFieldLabelled()) {
+      expect(labelled).not.toContain(field);
+    }
+  });
+
+  it("resolves every key to a word that exists in the catalog", () => {
+    for (const field of retiredFieldLabelled()) {
+      const key = historyFieldLabel(field, (k) => k);
+      expect(key, field).not.toBe(field);
+      expect(key in en, `${field} -> ${key}`).toBe(true);
+    }
+  });
+
+  it("labels the old spelling distinctly from the current one", () => {
+    expect(historyFieldLabel("lifecycle", (k) => en[k])).toBe("Lifecycle");
+    expect(historyFieldLabel("status", (k) => en[k])).toBe("Status");
   });
 });

@@ -46,7 +46,6 @@ const HISTORY_FIELD_LABELS = new Map<string, MessageKey>([
   ["is_done", "history.field.is_done"],
   ["last_name", "history.field.last_name"],
   ["legal_name", "history.field.legal_name"],
-  ["lifecycle", "history.field.lifecycle"],
   ["linkedin_url", "history.field.linkedin_url"],
   ["lost_reason", "history.field.lost_reason"],
   ["meeting_status", "history.field.meeting_status"],
@@ -121,6 +120,21 @@ const SYNTHETIC_AUDIT_FIELD_LABELS = new Map<string, MessageKey>([
   ["suppression_kind", "history.field.suppression_kind"],
 ]);
 
+// Fields a real column once was, before a rename moved its Update<Type>Request
+// property elsewhere. `company.lifecycle` became `company.status` (the schema
+// already had a record lifecycle — archived_at, legal_hold, merged_into_id —
+// so the bare word read as part of THAT), and audit_log is append-only:
+// `trg_audit_no_mutate` refuses an UPDATE on it, so every entry written before
+// the rename names `lifecycle` for as long as the trail is kept. Dropping the
+// label would not delete those rows; it would only make them render raw.
+//
+// Excluded from HISTORY_FIELD_LABELS for the same reason as the synthetic map:
+// its own "no word for an unwritten field" direction would fail the moment a
+// retired key stayed there.
+const RETIRED_FIELD_LABELS = new Map<string, MessageKey>([
+  ["lifecycle", "history.field.lifecycle"],
+]);
+
 // The label a history row shows for one field.
 //
 // A field with no key falls back to its own name with the underscores spaced
@@ -132,7 +146,9 @@ export function historyFieldLabel(
   t: (key: MessageKey) => string,
 ): string {
   const key =
-    HISTORY_FIELD_LABELS.get(field) ?? SYNTHETIC_AUDIT_FIELD_LABELS.get(field);
+    HISTORY_FIELD_LABELS.get(field) ??
+    SYNTHETIC_AUDIT_FIELD_LABELS.get(field) ??
+    RETIRED_FIELD_LABELS.get(field);
   return key ? t(key) : field.replaceAll("_", " ");
 }
 
@@ -146,6 +162,12 @@ export function historyFieldLabelKey(field: string): MessageKey | undefined {
 // still be checked from this side of the contract.
 export function syntheticAuditFieldLabelled(): string[] {
   return [...SYNTHETIC_AUDIT_FIELD_LABELS.keys()];
+}
+
+// The retired map's own keys, for the same i18n-existence check the synthetic
+// map gets — a retired word is still rendered, so it still owes a real key.
+export function retiredFieldLabelled(): string[] {
+  return [...RETIRED_FIELD_LABELS.keys()];
 }
 
 // Every field this map claims a word for — the census reads it to hold the

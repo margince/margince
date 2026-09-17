@@ -253,9 +253,9 @@ func companyUpdateInput(req crmcontracts.UpdateCompanyRequest, ifVersion *int64)
 		}
 		in.Domains = &desired
 	}
-	if req.Lifecycle != nil {
-		lifecycle := string(*req.Lifecycle)
-		in.Lifecycle = &lifecycle
+	if req.Status != nil {
+		status := string(*req.Status)
+		in.Status = &status
 	}
 	if req.RelationshipTypes != nil {
 		desired := make([]string, 0, len(*req.RelationshipTypes))

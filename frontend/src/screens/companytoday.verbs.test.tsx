@@ -128,7 +128,7 @@ describe("the leading card's own fallback verb", () => {
         ...BASE,
         moment: MOMENT_NO_DESTINATION,
         state_strip: {
-          account: { lifecycle: "customer", relationship_types: [] },
+          account: { status: "customer", relationship_types: [] },
           engagement: {
             state: "waiting_on_us",
             last_inbound_at: "2026-08-05T09:00:00Z",

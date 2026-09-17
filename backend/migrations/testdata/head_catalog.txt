@@ -1973,15 +1973,14 @@ public.company.address_postal_code text gen=- def=-
 public.company.address_region text gen=- def=-
 public.company.archived_at timestamp with time zone gen=- def=-
 public.company.captured_by text NOT NULL gen=- def=-
-public.company.classification text NOT NULL gen=- def='prospect'::text
 public.company.company_anchor_is_permanent CHECK (((NOT is_anchor) OR ((archived_at IS NULL) AND (merged_into_id IS NULL))))
-public.company.company_classification_check CHECK ((classification = ANY (ARRAY['prospect'::text, 'customer'::text, 'agency'::text, 'reseller'::text, 'tech_vendor'::text, 'platform'::text, 'partner'::text, 'competitor'::text, 'other'::text])))
 public.company.company_delete_clears_deal_partner CREATE TRIGGER company_delete_clears_deal_partner BEFORE DELETE ON public.company FOR EACH ROW EXECUTE FUNCTION deal_clear_partner_attribution_on_company_delete()
 public.company.company_description_length CHECK (((description IS NULL) OR (length(description) <= 500)))
 public.company.company_geocode_resolved_has_a_point CHECK (((geocode_status IS DISTINCT FROM 'ok'::text) OR ((geocode_lat IS NOT NULL) AND (geocode_lon IS NOT NULL) AND ((geocode_lat >= ('-90'::integer)::double precision) AND (geocode_lat <= (90)::double precision)) AND ((geocode_lon >= ('-180'::integer)::double precision) AND (geocode_lon <= (180)::double precision)))))
 public.company.company_geocode_status_check CHECK (((geocode_status IS NULL) OR (geocode_status = ANY (ARRAY['ok'::text, 'failed'::text, 'no_match'::text, 'stale'::text]))))
-public.company.company_lifecycle_check CHECK ((lifecycle = ANY (ARRAY['unknown'::text, 'target'::text, 'prospect'::text, 'opportunity'::text, 'customer'::text, 'former_customer'::text, 'disqualified'::text])))
 public.company.company_linkedin_url_shape CHECK (((linkedin_url IS NULL) OR (linkedin_url ~ '^https://([a-z]{2,3}\.)?linkedin\.com/company/[^/?#]+$'::text)))
+public.company.company_logo_icon_pair_is_whole CHECK (((logo_icon_object_key IS NULL) = (logo_icon_source IS NULL)))
+public.company.company_logo_pair_is_whole CHECK (((logo_object_key IS NULL) = (logo_source IS NULL)))
 public.company.company_merged_into_id_fkey FOREIGN KEY (merged_into_id) REFERENCES company(id) ON DELETE SET NULL (merged_into_id)
 public.company.company_name_source_check CHECK ((name_source = ANY (ARRAY['human'::text, 'dossier'::text, 'signature'::text, 'domain'::text])))
 public.company.company_not_own_parent CHECK (((parent_company_id IS NULL) OR (parent_company_id <> id)))
@@ -1990,9 +1989,9 @@ public.company.company_owner_private_names_its_owner CHECK (((visibility <> 'own
 public.company.company_parent_company_id_fkey FOREIGN KEY (parent_company_id) REFERENCES company(id) ON DELETE SET NULL (parent_company_id)
 public.company.company_pkey PRIMARY KEY (id)
 public.company.company_refuse_anchor_retirement CREATE TRIGGER company_refuse_anchor_retirement BEFORE INSERT OR UPDATE OF merged_into_id, is_anchor ON public.company FOR EACH ROW EXECUTE FUNCTION company_refuse_anchor_retirement()
-public.company.company_relevance_check CHECK (((relevance IS NULL) OR ((relevance >= 0) AND (relevance <= 100))))
 public.company.company_size_band_check CHECK (((size_band IS NULL) OR (size_band = ANY (ARRAY['1-10'::text, '11-50'::text, '51-200'::text, '201-500'::text, '501-1000'::text, '1001-5000'::text, '5000+'::text]))))
 public.company.company_source_author_id_fkey FOREIGN KEY (source_author_id) REFERENCES app_user(id) ON DELETE SET NULL
+public.company.company_status_check CHECK ((status = ANY (ARRAY['unknown'::text, 'target'::text, 'prospect'::text, 'opportunity'::text, 'customer'::text, 'former_customer'::text, 'disqualified'::text])))
 public.company.company_visibility_check CHECK ((visibility = ANY (ARRAY['workspace'::text, 'owner'::text])))
 public.company.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.company.description text gen=- def=-
@@ -2000,7 +1999,7 @@ public.company.display_name text NOT NULL gen=- def=-
 public.company.geocode_input_hash text gen=- def=-
 public.company.geocode_lat double precision gen=- def=-
 public.company.geocode_lon double precision gen=- def=-
-public.company.geocode_provider text gen=- def=-
+public.company.geocode_source text gen=- def=-
 public.company.geocode_status text gen=- def=-
 public.company.geocoded_at timestamp with time zone gen=- def=-
 public.company.id uuid NOT NULL gen=- def=uuidv7()
@@ -2009,24 +2008,23 @@ public.company.is_anchor boolean NOT NULL gen=- def=false
 public.company.last_activity_at timestamp with time zone gen=- def=-
 public.company.legal_hold boolean NOT NULL gen=- def=false
 public.company.legal_name text gen=- def=-
-public.company.lifecycle text NOT NULL gen=- def='unknown'::text
 public.company.linkedin_url text gen=- def=-
 public.company.logo_icon_object_key text gen=- def=-
-public.company.logo_icon_origin text gen=- def=-
+public.company.logo_icon_source text gen=- def=-
 public.company.logo_object_key text gen=- def=-
-public.company.logo_origin text gen=- def=-
+public.company.logo_source text gen=- def=-
 public.company.merged_into_id uuid gen=- def=-
 public.company.name_source text NOT NULL gen=- def='human'::text
 public.company.owner_id uuid gen=- def=-
 public.company.parent_company_id uuid gen=- def=-
 public.company.quarantined_at timestamp with time zone gen=- def=-
 public.company.raw jsonb gen=- def=-
-public.company.relevance smallint gen=- def=-
 public.company.search_tsv tsvector gen=s def=(((setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(display_name, ''::text))), 'A'::"char") || setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(display_name, ''::text))), 'A'::"char")) || setweight(to_tsvector('simple'::regconfig, f_unaccent(((COALESCE(legal_name, ''::text) || ' '::text) || COALESCE(industry, ''::text)))), 'B'::"char")) || setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(((COALESCE(legal_name, ''::text) || ' '::text) || COALESCE(industry, ''::text)))), 'B'::"char"))
 public.company.size_band text gen=- def=-
 public.company.source text NOT NULL gen=- def=-
 public.company.source_author_id uuid gen=- def=-
 public.company.source_author_name text gen=- def=-
+public.company.status text NOT NULL gen=- def='unknown'::text
 public.company.trg_company_geocode_stale CREATE TRIGGER trg_company_geocode_stale BEFORE UPDATE OF address_line1, address_line2, address_city, address_region, address_postal_code, address_country ON public.company FOR EACH ROW WHEN (((old.address_line1 IS DISTINCT FROM new.address_line1) OR (old.address_line2 IS DISTINCT FROM new.address_line2) OR (old.address_city IS DISTINCT FROM new.address_city) OR (old.address_region IS DISTINCT FROM new.address_region) OR (old.address_postal_code IS DISTINCT FROM new.address_postal_code) OR (old.address_country IS DISTINCT FROM new.address_country))) EXECUTE FUNCTION company_geocode_goes_stale()
 public.company.trg_company_no_cycle CREATE TRIGGER trg_company_no_cycle BEFORE INSERT OR UPDATE OF parent_company_id ON public.company FOR EACH ROW WHEN ((new.parent_company_id IS NOT NULL)) EXECUTE FUNCTION company_no_ancestor_cycle()
 public.company.trg_company_updated CREATE TRIGGER trg_company_updated BEFORE UPDATE ON public.company FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
@@ -3879,25 +3877,20 @@ public.idx_capture_watch_renew CREATE INDEX idx_capture_watch_renew ON public.ca
 public.idx_commission_deal CREATE INDEX idx_commission_deal ON public.commission_entry USING btree (deal_id)
 public.idx_commission_partner CREATE INDEX idx_commission_partner ON public.commission_entry USING btree (partner_company_id, status)
 public.idx_comms_outbound_parked CREATE INDEX idx_comms_outbound_parked ON public.comms_outbound USING btree (user_id, parked_at DESC) WHERE (parked_at IS NOT NULL)
-public.idx_company_class CREATE INDEX idx_company_class ON public.company USING btree (classification) WHERE (archived_at IS NULL)
 public.idx_company_created_keyset CREATE INDEX idx_company_created_keyset ON public.company USING btree (created_at DESC, id DESC) WHERE (archived_at IS NULL)
 public.idx_company_domain_company CREATE INDEX idx_company_domain_company ON public.company_domain USING btree (company_id) WHERE (archived_at IS NULL)
 public.idx_company_domain_disposition_due CREATE INDEX idx_company_domain_disposition_due ON public.company_domain_disposition USING btree (next_attempt_at) WHERE (next_attempt_at IS NOT NULL)
 public.idx_company_fact_lookup CREATE INDEX idx_company_fact_lookup ON public.company_fact USING btree (category, field, value_key)
 public.idx_company_geocoded CREATE INDEX idx_company_geocoded ON public.company USING btree (geocode_lat, geocode_lon) WHERE ((geocode_status = 'ok'::text) AND (archived_at IS NULL))
-public.idx_company_last_activity_keyset CREATE INDEX idx_company_last_activity_keyset ON public.company USING btree (last_activity_at DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL)
 public.idx_company_legal_name_trgm CREATE INDEX idx_company_legal_name_trgm ON public.company USING gin (f_fold_apostrophes(lower(legal_name)) gin_trgm_ops)
-public.idx_company_lifecycle CREATE INDEX idx_company_lifecycle ON public.company USING btree (lifecycle) WHERE (archived_at IS NULL)
-public.idx_company_name_keyset CREATE INDEX idx_company_name_keyset ON public.company USING btree (display_name, created_at DESC, id DESC) WHERE (archived_at IS NULL)
-public.idx_company_name_keyset_desc CREATE INDEX idx_company_name_keyset_desc ON public.company USING btree (display_name DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL)
 public.idx_company_name_trgm CREATE INDEX idx_company_name_trgm ON public.company USING gin (f_fold_apostrophes(lower(display_name)) gin_trgm_ops)
 public.idx_company_owner CREATE INDEX idx_company_owner ON public.company USING btree (owner_id) WHERE (archived_at IS NULL)
 public.idx_company_parent CREATE INDEX idx_company_parent ON public.company USING btree (parent_company_id) WHERE (parent_company_id IS NOT NULL)
 public.idx_company_rel_type_cascade CREATE INDEX idx_company_rel_type_cascade ON public.company_relationship_type USING btree (company_id)
 public.idx_company_rel_type_company CREATE INDEX idx_company_rel_type_company ON public.company_relationship_type USING btree (company_id) WHERE (archived_at IS NULL)
 public.idx_company_search CREATE INDEX idx_company_search ON public.company USING gin (search_tsv)
+public.idx_company_status CREATE INDEX idx_company_status ON public.company USING btree (status) WHERE (archived_at IS NULL)
 public.idx_company_technical_state_due CREATE INDEX idx_company_technical_state_due ON public.company_technical_state USING btree (next_attempt_at) WHERE (next_attempt_at IS NOT NULL)
-public.idx_company_updated_keyset CREATE INDEX idx_company_updated_keyset ON public.company USING btree (updated_at DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL)
 public.idx_consent_doi_token_contact CREATE INDEX idx_consent_doi_token_contact ON public.consent_doi_token USING btree (contact_id, purpose_id)
 public.idx_consent_event_contact CREATE INDEX idx_consent_event_contact ON public.consent_event USING btree (contact_id, captured_at DESC)
 public.idx_consent_event_lead CREATE INDEX idx_consent_event_lead ON public.consent_event USING btree (lead_id, captured_at DESC) WHERE (lead_id IS NOT NULL)

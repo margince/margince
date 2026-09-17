@@ -48,7 +48,7 @@ function viewWith(contracts?: Contracts) {
   return {
     ...company360,
     state_strip: {
-      account: { lifecycle: "customer", relationship_types: ["customer"] },
+      account: { status: "customer", relationship_types: ["customer"] },
       contracts,
     },
   };

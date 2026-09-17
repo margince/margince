@@ -87,7 +87,7 @@ func TestTheConflictQuotesTheMailThatEndedTheContract(t *testing.T) {
 		contractEnded:     true,
 		contractEndedSaid: "We will not be renewing after July.",
 		contractEndedAt:   read,
-		lifecycle:         "customer",
+		status:            "customer",
 	}
 
 	got := lifecycleConflict(testCompanyID(t), in)

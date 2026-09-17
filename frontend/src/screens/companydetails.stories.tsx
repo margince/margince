@@ -31,7 +31,7 @@ const fixture: components["schemas"]["Company"] = {
   display_name: "Brandt Automotive",
   writable: true,
   version: 1,
-  lifecycle: "prospect",
+  status: "prospect",
   domains: [
     {
       id: "domain1",

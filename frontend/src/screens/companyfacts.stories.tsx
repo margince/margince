@@ -49,7 +49,7 @@ const base: View = {
   projects: [],
   projects_page: page,
   state_strip: {
-    account: { lifecycle: "customer", relationship_types: [] },
+    account: { status: "customer", relationship_types: [] },
     commercial: {
       open_count: 0,
       stalled_count: 0,
@@ -126,7 +126,7 @@ export const Populated: Story = {
           },
         ],
         state_strip: {
-          account: { lifecycle: "customer", relationship_types: [] },
+          account: { status: "customer", relationship_types: [] },
           commercial: {
             open_count: 2,
             stalled_count: 0,
@@ -209,7 +209,7 @@ export const UnpricedPipeline: Story = {
           lost_count: 0,
         },
         state_strip: {
-          account: { lifecycle: "opportunity", relationship_types: [] },
+          account: { status: "opportunity", relationship_types: [] },
           commercial: {
             open_count: 3,
             stalled_count: 0,
@@ -242,7 +242,7 @@ export const PipelineWithheld: Story = {
         deals: undefined,
         sections_omitted: ["deals"],
         state_strip: {
-          account: { lifecycle: "customer", relationship_types: [] },
+          account: { status: "customer", relationship_types: [] },
         },
       }}
     />

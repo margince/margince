@@ -23,7 +23,63 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
+
+// A mark is a file AND where it came from, or it is neither.
+//
+// Both halves are written by one statement today, so nothing in this package can
+// produce a half-pair — which is exactly why the rule belongs in the database
+// rather than in the writer that happens to respect it. An importer, a backfill
+// or a second writer added later reaches these columns without passing through
+// companyLogoWrite, and a key with no source names bytes nobody can attribute
+// while a source with no key attributes nothing.
+//
+// Written against the columns directly for that reason: going through the store
+// would only prove the store is careful.
+func TestAHalfWrittenMarkPairIsRefused(t *testing.T) {
+	for _, tc := range []struct {
+		name, statement, constraint string
+	}{
+		{
+			"a wide key with no source",
+			`UPDATE company SET logo_object_key = 'logos/orphan.png' WHERE id = $1`,
+			"company_logo_pair_is_whole",
+		},
+		{
+			"a wide source with no key",
+			`UPDATE company SET logo_source = 'orphan.png' WHERE id = $1`,
+			"company_logo_pair_is_whole",
+		},
+		{
+			"an icon key with no source",
+			`UPDATE company SET logo_icon_object_key = 'logos/orphan.png' WHERE id = $1`,
+			"company_logo_icon_pair_is_whole",
+		},
+		{
+			"an icon source with no key",
+			`UPDATE company SET logo_icon_source = 'orphan.png' WHERE id = $1`,
+			"company_logo_icon_pair_is_whole",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			e := newAnchorEnv(t)
+
+			err := e.store.tx(e.ctx, func(tx pgx.Tx) error {
+				_, execErr := tx.Exec(context.Background(), tc.statement, e.anchorID)
+				return execErr
+			})
+			if err == nil {
+				t.Fatalf("%s was stored; the database is not holding the pair", tc.name)
+			}
+			constraint, ok := storekit.CheckViolation(err)
+			if !ok || constraint != tc.constraint {
+				t.Fatalf("refused by %q, want %s: %v", constraint, tc.constraint, err)
+			}
+		})
+	}
+}
 
 func TestTheCompanyMarkIsSetAndTakenOffThroughOneStatement(t *testing.T) {
 	e := newAnchorEnv(t)
@@ -115,12 +171,12 @@ func TestTheTwoCompanyMarksAreWrittenAndClearedIndependently(t *testing.T) {
 // company read, because what this is about is what the statement wrote.
 func assertCompanyMark(t *testing.T, e *anchorEnv, wantKey, wantOrigin string) {
 	t.Helper()
-	assertMarkColumns(t, e, "logo_object_key", "logo_origin", wantKey, wantOrigin)
+	assertMarkColumns(t, e, "logo_object_key", "logo_source", wantKey, wantOrigin)
 }
 
 func assertCompanyIcon(t *testing.T, e *anchorEnv, wantKey, wantOrigin string) {
 	t.Helper()
-	assertMarkColumns(t, e, "logo_icon_object_key", "logo_icon_origin", wantKey, wantOrigin)
+	assertMarkColumns(t, e, "logo_icon_object_key", "logo_icon_source", wantKey, wantOrigin)
 }
 
 func assertMarkColumns(t *testing.T, e *anchorEnv, keyColumn, originColumn, wantKey, wantOrigin string) {

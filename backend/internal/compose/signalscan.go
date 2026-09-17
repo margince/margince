@@ -94,7 +94,7 @@ func scanGhostedThreads(ctx context.Context, tx pgx.Tx, now time.Time) ([]ghoste
 		  JOIN company o ON o.id = n.company_id AND o.archived_at IS NULL
 		 WHERE n.direction = 'outbound'
 		   AND n.occurred_at < $2
-		   AND (o.lifecycle IN ('prospect','opportunity','customer')
+		   AND (o.status IN ('prospect','opportunity','customer')
 		        OR EXISTS (SELECT 1 FROM deal d
 		                    WHERE d.company_id = o.id AND d.status = 'open'
 		                      AND d.archived_at IS NULL))`,

@@ -31,7 +31,7 @@ const COMPANY: Company = {
   workspace_id: "w-1",
   display_name: "Brandt Automotive GmbH",
   writable: true,
-  lifecycle: "customer",
+  status: "customer",
   owner_id: null,
   address: {
     line1: "Leopoldstrasse 154",

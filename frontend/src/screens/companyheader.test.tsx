@@ -19,7 +19,7 @@ import {
 // companyheaderfacts.test.tsx and companyheaderactions.test.tsx: the two
 // pieces that moved out of this file when the header was split for the
 // contact record page's own shapes. What stays here is the header's
-// EDITABLE pieces (lifecycle, owner) and its menu (CompanyActionBadges).
+// EDITABLE pieces (status, owner) and its menu (CompanyActionBadges).
 
 type Company = components["schemas"]["Company"];
 
@@ -32,7 +32,7 @@ const COMPANY: Company = {
   writable: true,
   id: "o-1",
   display_name: "Brandt Automotive GmbH",
-  lifecycle: "customer",
+  status: "customer",
   owner_id: "u-owner",
   captured_by: "human:u-author",
   source: "manual",
@@ -279,7 +279,7 @@ describe("an archived account's verbs", () => {
 });
 
 // The header draws two vocabularies that overlap on `customer`: where the
-// account STANDS (lifecycle, the editable badge beside the name) and what it IS
+// account STANDS (status, the editable badge beside the name) and what it IS
 // to us (relationship types). A customer account carries the value in both, and
 // the strip printed "Customer" twice from two fields that happened to agree —
 // one fact rendered as a second reading confirming the first.
@@ -288,8 +288,8 @@ describe("an archived account's verbs", () => {
 // been removed; the guard was local to it and never covered the header. So it is
 // pinned here, on the badges themselves — the ones beside the record's NAME,
 // which is where a tag on the record belongs and the only place they are drawn.
-describe("an account whose lifecycle and relationship agree", () => {
-  it("says the word once, and keeps every relationship the lifecycle is not already saying", async () => {
+describe("an account whose status and relationship agree", () => {
+  it("says the word once, and keeps every relationship the status is not already saying", async () => {
     stub([{ id: "u-owner", display_name: "Mira Voss" }]);
     renderInApp(
       <CompanyRelationshipBadges
@@ -297,19 +297,19 @@ describe("an account whose lifecycle and relationship agree", () => {
       />,
     );
 
-    // These badges are what this component draws; the lifecycle badge is the
+    // These badges are what this component draws; the status badge is the
     // other mount, so a duplicate here is one "Customer" too many on its own.
     expect(await screen.findByText(en["company.relType.partner"])).toBeTruthy();
     expect(screen.queryByText(en["company.relType.customer"])).toBeNull();
   });
 
-  it("still draws a relationship the lifecycle disagrees with", async () => {
+  it("still draws a relationship the status disagrees with", async () => {
     stub([{ id: "u-owner", display_name: "Mira Voss" }]);
     renderInApp(
       <CompanyRelationshipBadges
         company={{
           ...COMPANY,
-          lifecycle: "prospect",
+          status: "prospect",
           relationship_types: ["customer"],
         }}
       />,
@@ -397,12 +397,12 @@ it("names an owner for readers who cannot edit the company", async () => {
   expect(await screen.findByText("Mira Voss")).toBeTruthy();
   expect(screen.queryByRole("button", { name: "Change Owner" })).toBeNull();
 });
-it("does not offer to clear a company's lifecycle", async () => {
+it("does not offer to clear a company's status", async () => {
   stub([]);
   const user = userEvent.setup();
   renderInApp(<CompanyDetails company={COMPANY} />);
   await user.click(
-    await screen.findByRole("button", { name: "Change Account lifecycle" }),
+    await screen.findByRole("button", { name: "Change Account status" }),
   );
   await user.click(screen.getByRole("combobox"));
   expect(screen.queryByRole("option", { name: "Not set" })).toBeNull();

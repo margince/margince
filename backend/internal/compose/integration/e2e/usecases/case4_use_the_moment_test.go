@@ -73,7 +73,7 @@ func (s *scenario) seedLocatedCompany(t *testing.T, name, city string, lat, lon 
 	t.Helper()
 	return s.seedID(t, `INSERT INTO company
 		(id, owner_id, display_name, address_line1, address_city,
-		 geocode_lat, geocode_lon, geocode_status, geocode_provider, geocode_input_hash,
+		 geocode_lat, geocode_lon, geocode_status, geocode_source, geocode_input_hash,
 		 source, captured_by)
 		VALUES ($1, $2, $3, 'Hauptstrasse 1', $4, $5, $6, 'ok', 'test', 'seeded', 'manual', 'human:x')`,
 		owner, name, city, lat, lon)

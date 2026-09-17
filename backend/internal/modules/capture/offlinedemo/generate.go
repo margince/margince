@@ -227,12 +227,12 @@ func threadsFor(account Account) []threadSpec {
 
 	stage := strings.ToLower(dealStage(account))
 	switch {
-	case account.Lifecycle == "customer":
+	case account.Status == "customer":
 		return []threadSpec{
 			spec(threadKickoff, words.Kickoff+" "+account.Name, directionOutbound, 2, 20, true, true),
 			spec(threadInvoice, words.Invoice+" "+orDash(account.ContractNumber), directionInbound, 1, 60, false, false),
 		}
-	case account.Lifecycle == "former_customer":
+	case account.Status == "former_customer":
 		return []threadSpec{
 			spec(threadOffboarding, words.Offboarding, directionOutbound, 1, 30, false, false),
 		}
@@ -244,7 +244,7 @@ func threadsFor(account Account) []threadSpec {
 		return []threadSpec{
 			spec(threadIntro, words.Intro, directionOutbound, 1, 5, true, false),
 		}
-	case account.Lifecycle == "prospect":
+	case account.Status == "prospect":
 		return []threadSpec{
 			spec(threadInbound, words.Enquiry, directionInbound, 1, 8, false, false),
 		}

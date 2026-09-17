@@ -417,7 +417,7 @@ func TestSettingACustomFieldFromEmptyIsRefusedRatherThanSilentlyDropped(t *testi
 // A provenance stamp is dropped for the record type that STAMPS it, and never
 // for one that treats the same word as a field.
 //
-// `source` is the case this exists for. A company's lifecycle move writes
+// `source` is the case this exists for. A company's status move writes
 // it as machine provenance, so a restore must not replay it. A LEAD's source is
 // a value a rep types and can edit, and dropping it would leave the tampered
 // value in place while reporting the undo a success — the silent-drop failure

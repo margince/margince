@@ -21,10 +21,10 @@ import type { components } from "../api/schema";
 import type { MessageKey } from "../i18n/en";
 import { throwProblem } from "./common";
 import {
-  LIFECYCLE_LABELS,
-  LIFECYCLE_OPTIONS,
   RELATIONSHIP_TYPE_LABELS,
   SIZE_BAND_OPTIONS,
+  STATUS_LABELS,
+  STATUS_OPTIONS,
 } from "./companylookups";
 import type { CreateField, FormRows } from "./create";
 import { splitMultiselectValue } from "./create";
@@ -150,11 +150,9 @@ export function mapCompanyUpdate(
   if (Object.hasOwn(rows, "domains") && !sameDomainSet(desired, current)) {
     body.domains = desired;
   }
-  const lifecycle = stringField(values.lifecycle).trim();
-  if (lifecycle) {
-    body.lifecycle = lifecycle as NonNullable<
-      UpdateCompanyRequest["lifecycle"]
-    >;
+  const status = stringField(values.status).trim();
+  if (status) {
+    body.status = status as NonNullable<UpdateCompanyRequest["status"]>;
   }
   // Always sent when the field was rendered, even empty: this is a replace-set,
   // and "the user cleared every type" is an edit, not an absence. The form
@@ -261,8 +259,8 @@ export const companyCreateFields: CreateField[] = [
 // not be edited from anywhere, because the update contract carried no such
 // field.
 // Where the account stands with us: lives in companylookups.ts, same reason
-// as LIFECYCLE_LABELS and SIZE_BAND_OPTIONS above — the rail's Details grid
-// builds a lifecycle picker off the same wire order, and a second copy here
+// as STATUS_LABELS and SIZE_BAND_OPTIONS above — the rail's Details grid
+// builds a status picker off the same wire order, and a second copy here
 
 // What it is to us has no rail counterpart today, so it stays local.
 export const RELATIONSHIP_TYPE_OPTIONS = [
@@ -277,7 +275,7 @@ export const RELATIONSHIP_TYPE_OPTIONS = [
 
 // t is threaded in because the option LABELS are catalog keys, not words: the
 // field renderer prints option.label as given, so an untranslated key reaches
-// the reader as "company.lifecycle.customer".
+// the reader as "company.status.customer".
 export function companyEditFields(
   owners: readonly { id: string; display_name: string }[],
   hasOwner: boolean,
@@ -317,13 +315,13 @@ export function companyEditFields(
     // retired classification tried to answer with one value, and the reason
     // neither was editable from this page at all.
     {
-      key: "lifecycle",
+      key: "status",
       required: true,
-      label: "company.lifecycle",
+      label: "company.status",
       type: "select",
-      options: LIFECYCLE_OPTIONS.map((value) => ({
+      options: STATUS_OPTIONS.map((value) => ({
         value,
-        label: t(LIFECYCLE_LABELS[value]),
+        label: t(STATUS_LABELS[value]),
       })),
     },
     {

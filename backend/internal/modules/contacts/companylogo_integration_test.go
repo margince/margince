@@ -85,7 +85,7 @@ func TestSetCompanyLogoRecordsTheMarkItsProvenanceAndItsURL(t *testing.T) {
 	// The provenance layer must name the field, the source and where it came
 	// from, the same way every other enriched field is traceable.
 	//
-	// The asset URL is recorded twice — company.logo_origin, which the
+	// The asset URL is recorded twice — company.logo_source, which the
 	// schema commits to as the record's own durable answer, and
 	// field_provenance.evidence_ref, which the provenance display reads. One
 	// write sets both from one value, and this asserts they agree: two
@@ -100,13 +100,13 @@ func TestSetCompanyLogoRecordsTheMarkItsProvenanceAndItsURL(t *testing.T) {
 			return err
 		}
 		return tx.QueryRow(ctx,
-			`SELECT logo_origin FROM company WHERE id = $1`, companyID).Scan(&origin)
+			`SELECT logo_source FROM company WHERE id = $1`, companyID).Scan(&origin)
 	})
 	if err != nil {
 		t.Fatalf("read logo provenance: %v", err)
 	}
 	if origin == nil || evidence == nil || *origin != *evidence {
-		t.Fatalf("logo_origin = %v and provenance evidence_ref = %v must be the same URL", origin, evidence)
+		t.Fatalf("logo_source = %v and provenance evidence_ref = %v must be the same URL", origin, evidence)
 	}
 	if source != companySourceSiteRead {
 		t.Fatalf("provenance source = %q, want %q", source, companySourceSiteRead)
@@ -127,7 +127,7 @@ func TestSetCompanyLogoNeverReplacesTheOneAContactSet(t *testing.T) {
 	humanKey := e.ws.String() + "/company_logo/human"
 	err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(ctx,
-			`UPDATE company SET logo_object_key = $2, logo_origin = 'upload' WHERE id = $1`,
+			`UPDATE company SET logo_object_key = $2, logo_source = 'upload' WHERE id = $1`,
 			companyID, humanKey); err != nil {
 			return err
 		}

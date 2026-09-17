@@ -29,7 +29,7 @@ const COMPANY: Company = {
   writable: true,
   id: "o-1",
   display_name: "Brandt Automotive GmbH",
-  lifecycle: "customer",
+  status: "customer",
   industry: "Automotive",
   size_band: "51-200",
   domains: [

@@ -130,7 +130,6 @@ func (s *Store) FilterVocabulary(ctx context.Context, resource string) ([]Vocabu
 		return nil, false, err
 	}
 	core := segmentEngines[resource].Fields
-	retiredCore := retiredCoreFields[resource]
 	fields := make([]VocabularyField, 0, len(engine.Fields))
 	for name, field := range engine.Fields {
 		// Core membership decides Custom, matching the merge in SegmentEngine
@@ -138,9 +137,6 @@ func (s *Store) FilterVocabulary(ctx context.Context, resource string) ([]Vocabu
 		// vocabulary, so reporting that name as custom would describe a field
 		// the engine does not have.
 		_, isCore := core[name]
-		if isCore && retiredCore[name] {
-			continue
-		}
 		if !isCore && !offerable[name] {
 			continue
 		}

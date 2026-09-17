@@ -22,16 +22,16 @@ func testMailbox() Mailbox {
 	}
 }
 
-// testAccount is a CUSTOMER on purpose: that lifecycle is the one threadsFor
+// testAccount is a CUSTOMER on purpose: that status is the one threadsFor
 // gives two threads and a meeting, so it exercises the most vocabulary per
-// call. A thread key no lifecycle reaches is covered by
+// call. A thread key no status reaches is covered by
 // TestEveryLanguageAnswersEveryThreadKey instead, which reads the maps directly.
 func testAccount(domain, name string) Account {
 	return Account{
 		CompanyID:      "01a00000-0000-7000-8000-000000000001",
 		Name:           name,
 		Domain:         domain,
-		Lifecycle:      "customer",
+		Status:         "customer",
 		ContractNumber: "GR-2026-0402",
 		Contacts:       []Contact{{Name: "Seo Min-ji", Email: "minji.seo@example.com"}},
 		Now:            time.Date(2026, 8, 22, 9, 0, 0, 0, time.UTC),

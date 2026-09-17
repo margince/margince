@@ -127,7 +127,7 @@ function companyFieldRecord(company: Company) {
     legal_name: company.legal_name ?? "",
     industry: company.industry ?? "",
     size_band: company.size_band ?? "",
-    lifecycle: company.lifecycle ?? "unknown",
+    status: company.status ?? "unknown",
     relationship_types: joinMultiselectValue(company.relationship_types ?? []),
     linkedin_url: company.linkedin_url ?? "",
     ...addressFrom(company.address),

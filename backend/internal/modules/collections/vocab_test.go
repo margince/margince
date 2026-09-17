@@ -143,7 +143,7 @@ func TestTheTeamLeafJoinsMembershipOnTheOwnerColumn(t *testing.T) {
 // and selects nothing. The list parameter for the same fact 422s a typo instead,
 // and that divergence is deliberate rather than overlooked: the engine holds no
 // per-field enum, and every picklist leaf here behaves this way — status,
-// lifecycle, size_band, forecast_category, phase and the custom ones alike.
+// size_band, forecast_category, phase and the custom ones alike.
 //
 // Gated rather than explained, because a comment claiming it cannot notice the
 // day someone adds validation to one leaf and leaves the rest.
@@ -185,15 +185,6 @@ func TestEveryCorePicklistOffersItsValues(t *testing.T) {
 	seen := 0
 	for resource, engine := range segmentEngines {
 		for name, field := range engine.Fields {
-			// The retired field is the one picklist that must NOT offer values: no
-			// surface may offer it for a new clause at all, so offering its values
-			// would contradict retiredCoreFields.
-			if retiredCoreFields[resource][name] {
-				if len(field.Options) > 0 {
-					t.Errorf("%s.%s is retired and still offers values", resource, name)
-				}
-				continue
-			}
 			if field.Type == storekit.FieldPicklist {
 				seen++
 				if len(field.Options) == 0 {

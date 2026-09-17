@@ -162,12 +162,12 @@ func readContradictions(ctx context.Context, tx pgx.Tx) ([]contradiction, error)
 	// signal made each pass supersede the last, leaving whichever row happened
 	// to be first standing and the rest never asked about at all.
 	rows, err := tx.Query(ctx, `
-		SELECT DISTINCT ON (o.id) o.id, o.lifecycle, s.id, s.summary
+		SELECT DISTINCT ON (o.id) o.id, o.status, s.id, s.summary
 		  FROM signal s
 		  JOIN company o ON o.id = s.resolved_company_id AND o.archived_at IS NULL
 		 WHERE s.kind = '`+signalKindContractEnded+`' AND s.status = 'open'
 		   AND s.archived_at IS NULL
-		   AND o.lifecycle IN ('prospect','opportunity','customer')
+		   AND o.status IN ('prospect','opportunity','customer')
 		 ORDER BY o.id, s.detected_at DESC, s.id DESC`)
 	if err != nil {
 		return nil, err
@@ -259,7 +259,7 @@ func lifecycleAcceptEffect(svc *approvals.Service, store *contacts.Store) approv
 			// A false here is the stage having been corrected by a human while
 			// the offer waited: the approval is spent, nothing is written, and
 			// their edit stands.
-			moved, err := store.SetCompanyLifecycleTx(execCtx, tx,
+			moved, err := store.SetCompanyStatusTx(execCtx, tx,
 				proposal.CompanyID, proposal.CurrentStage, proposal.ProposedStage)
 			if err != nil || !moved {
 				return err

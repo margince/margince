@@ -48,7 +48,7 @@ func (h Handlers) ListCompanies(w http.ResponseWriter, r *http.Request, params c
 		AiWritten:        params.AiWritten,
 		Sort:             params.Sort,
 		CustomFilters:    httperr.CustomFieldFilters(r),
-		Lifecycle:        enumArg(params.Lifecycle),
+		Status:           enumArg(params.Status),
 		RelationshipType: enumArg(params.RelationshipType),
 		Domain:           params.Domain,
 		TagIDs:           uuidArgs(params.TagId),

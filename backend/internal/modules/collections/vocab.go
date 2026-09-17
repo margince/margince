@@ -99,6 +99,10 @@ const ownerTeamIDField = "owner_team_id"
 // distinct from domainField below, the leaf it names.
 const domainFilterField = "domain"
 
+// statusField names the funnel-position leaf, shared by every engine below
+// that carries a `status` column of its own.
+const statusField = "status"
+
 // ownerTeamField selects the records owned by any member of one team: the same
 // rows the `owner_team_id` list parameter answers, reached the way a link leaf
 // can express.
@@ -197,7 +201,7 @@ func customerField(
 // offering — `exists: false` is how a filter asks for empty — so the sets below
 // carry no null and the gate compares against the document minus it.
 var (
-	lifecycleValues = []string{
+	companyStatusValues = []string{
 		"unknown", "target", "prospect", "opportunity",
 		"customer", "former_customer", "disqualified",
 	}
@@ -249,18 +253,11 @@ var segmentEngines = map[string]storekit.Query{
 		// export built on one can carry it.
 		BaseWhere: whereArchivedNull + " AND NOT t.is_anchor",
 		Fields: map[string]storekit.Field{
-			ownerIDField:     {Expr: colOwnerID, Type: storekit.FieldID, References: storekit.RefAppUser},
-			ownerTeamIDField: ownerTeamField,
-			"industry":       {Expr: "t.industry", Type: storekit.FieldText},
-			"size_band":      {Expr: "t.size_band", Type: storekit.FieldPicklist, Options: sizeBandValues},
-			"lifecycle":      {Expr: "t.lifecycle", Type: storekit.FieldPicklist, Options: lifecycleValues},
-			// RETIRED with the column (ADR-0079/A124), and kept here for the one
-			// release it survives: a saved segment written against it must keep
-			// evaluating until its author has moved it to lifecycle. Dropping the
-			// field would turn every such list into an error at read time, which
-			// is a worse answer than a stale one. Named in retiredCoreFields
-			// below, so no surface OFFERS it for a new clause.
-			"classification":    {Expr: "t.classification", Type: storekit.FieldPicklist},
+			ownerIDField:        {Expr: colOwnerID, Type: storekit.FieldID, References: storekit.RefAppUser},
+			ownerTeamIDField:    ownerTeamField,
+			"industry":          {Expr: "t.industry", Type: storekit.FieldText},
+			"size_band":         {Expr: "t.size_band", Type: storekit.FieldPicklist, Options: sizeBandValues},
+			statusField:         {Expr: "t.status", Type: storekit.FieldPicklist, Options: companyStatusValues},
 			"relationship_type": relationshipTypeField,
 			domainFilterField:   domainField,
 			tagFilterField:      tagLinkFor(typeCompany),
@@ -285,7 +282,7 @@ var segmentEngines = map[string]storekit.Query{
 			"company_id":         {Expr: "t.company_id", Type: storekit.FieldID, References: storekit.RefCompany},
 			"partner_company_id": {Expr: "t.partner_company_id", Type: storekit.FieldID, References: storekit.RefCompany},
 			"project_id":         {Expr: "t.project_id", Type: storekit.FieldID, References: storekit.RefProject},
-			"status":             {Expr: "t.status", Type: storekit.FieldPicklist, Options: dealStatusValues},
+			statusField:          {Expr: "t.status", Type: storekit.FieldPicklist, Options: dealStatusValues},
 			"forecast_category":  {Expr: "t.forecast_category", Type: storekit.FieldPicklist, Options: forecastValues},
 			tagFilterField:       tagLinkFor("deal"),
 			// The customer's own attributes, so "the pipeline for manufacturing"
@@ -293,20 +290,19 @@ var segmentEngines = map[string]storekit.Query{
 			// as the company engine offers directly, reached through the
 			// deal's company_id.
 			//
-			// classification is deliberately absent. It is retired (ADR-0079/A124)
-			// and survives on the company engine only so segments already
-			// written against it keep evaluating — a NEW way to name it would be
-			// a fresh dependency on a column that is going away.
+			// classification is deliberately absent. ADR-0079/A124 retired it on
+			// the company engine too, and the column itself is gone — there is
+			// nothing left for a company_industry-shaped alias to reach.
 			"company_industry":  customerField("industry", storekit.FieldText),
 			"company_size_band": customerField("size_band", storekit.FieldPicklist, sizeBandValues...),
-			"company_lifecycle": customerField("lifecycle", storekit.FieldPicklist, lifecycleValues...),
+			"company_status":    customerField(statusField, storekit.FieldPicklist, companyStatusValues...),
 		},
 	},
 	"lead": {
 		Table:     "lead",
 		BaseWhere: whereArchivedNull,
 		Fields: map[string]storekit.Field{
-			"status":                {Expr: "t.status", Type: storekit.FieldPicklist, Options: leadStatusValues},
+			statusField:             {Expr: "t.status", Type: storekit.FieldPicklist, Options: leadStatusValues},
 			ownerIDField:            {Expr: colOwnerID, Type: storekit.FieldID, References: storekit.RefAppUser},
 			ownerTeamIDField:        ownerTeamField,
 			"candidate_company_key": {Expr: "t.candidate_company_key", Type: storekit.FieldText},
@@ -329,24 +325,6 @@ var segmentEngines = map[string]storekit.Query{
 			tagFilterField: tagLinkFor(projectEntity),
 		},
 	},
-}
-
-// retiredCoreFields names core vocabulary entries that a filter may still SAY
-// and no surface may still OFFER, per resource.
-//
-// Retirement has two sources and they are genuinely different questions, so this
-// is deliberately not one mechanism with the custom-field half. A custom column's
-// status is per-workspace admin state, read from the catalogue; a core field's is
-// a decision in this file, taken by an ADR, identical in every installation. A
-// map keyed by a name the catalogue has never heard of is the only place the
-// second can live — company.classification has no `custom_field` row, so no
-// catalogue read and no client-side join can ever discover that it is retired.
-//
-// Keyed by resource rather than by bare name: two resources may legitimately
-// carry a field of the same name where only one of them has retired it.
-var retiredCoreFields = map[string]map[string]bool{
-	// ADR-0079/A124 replaced it with lifecycle.
-	typeCompany: {"classification": true},
 }
 
 // SegmentEngine returns the ONE predicate engine for a filterable resource: the

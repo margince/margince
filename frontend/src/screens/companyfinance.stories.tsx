@@ -71,8 +71,8 @@ const noConnection: FinanceSummary = {
 
 function Finance({
   summary,
-  lifecycle,
-}: Readonly<{ summary: FinanceSummary; lifecycle?: string }>) {
+  status,
+}: Readonly<{ summary: FinanceSummary; status?: string }>) {
   installFetchStub({
     // The billing panel inside the card asks for the session; a reader of the
     // company's finance, with no standing to name its billing contacts.
@@ -82,24 +82,24 @@ function Finance({
   return (
     <StoryProviders>
       <div style={{ maxWidth: 420 }}>
-        <CompanyFinanceCard companyId="o-1" lifecycle={lifecycle} />
+        <CompanyFinanceCard companyId="o-1" status={status} />
       </div>
     </StoryProviders>
   );
 }
 
 export const Connected: Story = {
-  render: () => <Finance summary={connected} lifecycle="customer" />,
+  render: () => <Finance summary={connected} status="customer" />,
 };
 
 // §6 State B: the card that must never look like "€0 open" — the reason the
 // state comes from the server rather than being derived from an empty figure.
 export const NoConnection: Story = {
-  render: () => <Finance summary={noConnection} lifecycle="customer" />,
+  render: () => <Finance summary={noConnection} status="customer" />,
 };
 
 // FIN-AC-3's second half: a former customer's figures are history, so the
 // title says so even while the read is showing real money.
 export const FormerCustomerHistorical: Story = {
-  render: () => <Finance summary={connected} lifecycle="former_customer" />,
+  render: () => <Finance summary={connected} status="former_customer" />,
 };
