@@ -148,7 +148,21 @@ function groupKeyOf(
   if (entry.kind === "change") {
     return undefined;
   }
-  if (entry.threadKey) {
+  // A thread key groups a conversation — EXCEPT on a message the sender
+  // attested as bulk, where it is not a conversation key at all.
+  //
+  // A first message roots its thread on itself: there is no In-Reply-To or
+  // References header to root on, so the provider's conversation id is the
+  // message's own id. Every copy of a mailshot is therefore a thread of one,
+  // and each copy's key is unique by construction — so this branch, taken
+  // first, kept a send of fifty from ever reaching the bulk rule below and
+  // drew fifty cards that each said "1 message".
+  //
+  // Falling through on attestation alone is what keeps this narrow. The flag is
+  // the sender's own List-Unsubscribe, read off the message by capture rather
+  // than inferred here, so a real conversation never loses its grouping to a
+  // guess about subjects.
+  if (entry.threadKey && !entry.bulkAttested) {
     return { kind: "thread", value: `thread:${entry.threadKey}` };
   }
   if (entry.kind !== "email") {
@@ -161,5 +175,30 @@ function groupKeyOf(
   if (!subject) {
     return undefined;
   }
-  return { kind: "bulk", value: `bulk:${subject}:${dayOf(entry.atIso)}` };
+  // An ATTESTED send may drop a trailing salutation from its key, because a
+  // mailshot personalizes the subject per recipient: one send arrives as
+  // "…zur digiWiesn, Joshua", "…, Lars", "…, Charlotte". Keyed whole, those are
+  // three keys and the send draws three cards.
+  //
+  // Only when the sender attested it. The attestation is their own
+  // List-Unsubscribe header, so the claim "this is one send" comes from the
+  // sender rather than from this function noticing that two subjects look
+  // alike — which is the reasoning this file refuses everywhere else, because
+  // it merges two unrelated "Re: Update" exchanges.
+  const key = entry.bulkAttested ? withoutSalutation(subject) : subject;
+  return { kind: "bulk", value: `bulk:${key}:${dayOf(entry.atIso)}` };
+}
+
+/**
+ * withoutSalutation drops a trailing ", <name>" from an attested send's
+ * subject, so the copies of one mailshot share a key.
+ *
+ * Bounded deliberately: ONE trailing comma, and only when what follows is a
+ * short run of letters with no comma of its own. A subject that ends in a list,
+ * a clause, or a company name with punctuation keeps its whole subject and
+ * simply groups as it did before — the failure of this returning too little is
+ * a duplicate card, and of returning too much is two sends merged into one.
+ */
+function withoutSalutation(subject: string): string {
+  return subject.replace(/,\s*\p{L}[\p{L}'-]{0,23}$/u, "").trim() || subject;
 }
