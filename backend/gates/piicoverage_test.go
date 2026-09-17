@@ -126,6 +126,19 @@ var piiTables = map[string]piiHandling{
 	// record — so erasure nulls both and Art. 15 hands back the fact that
 	// they were a party to those conversations.
 	"activity_participant": {erasureWrite: true, sarRead: true},
+	// Which external message an activity IS — the RFC Message-ID a sender
+	// typed, or the calendar occurrence a meeting is one of. It names no
+	// address and carries no prose, but it is a durable record that a message
+	// with that identity passed through this workspace, and the row outlives
+	// the content because erasure ARCHIVES the activity rather than deleting
+	// it, so the foreign key's cascade never fires.
+	//
+	// sarRead is false for the reason the embedding entry in this map is: an
+	// identity key is a dedupe arbiter rather than something a subject can read.
+	// The messages themselves are already exported in full, so handing back
+	// their transport identifiers adds nothing to the package and puts a header a
+	// third party typed into it.
+	"activity_identity": {erasureWrite: true, sarRead: false},
 	// LinkedIn ghosts (CG-DDL-2) hold a third party's name, employer and
 	// sometimes address, imported from a colleague's export without that
 	// contact being asked. Erasure deletes them; Art. 15 hands them back,
