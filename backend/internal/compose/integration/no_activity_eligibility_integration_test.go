@@ -330,6 +330,31 @@ func linkFreshTouch(t *testing.T, owner *pgx.Conn, ws ids.UUID, entityType strin
 	linkTouch(t, owner, ws, id, entityType, entity)
 }
 
+// linkFreshTouchReturningID is linkFreshTouch that hands back the activity id,
+// for a fixture that later ages that same touch out to make the record quiet.
+func linkFreshTouchReturningID(t *testing.T, owner *pgx.Conn, ws ids.UUID, entityType string, entity ids.UUID) ids.UUID {
+	t.Helper()
+	id := ids.NewV7()
+	if _, err := owner.Exec(context.Background(),
+		`INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
+		 VALUES ($1, 'email', 'Worked yesterday', now() - interval '1 day', 'manual', 'human:x')`,
+		id); err != nil {
+		t.Fatalf("seeding the fresh touch: %v", err)
+	}
+	linkTouch(t, owner, ws, id, entityType, entity)
+	return id
+}
+
+// backdateActivity ages one touch out of the staleness window, so a record that
+// was being worked goes quiet without deleting its history.
+func backdateActivity(t *testing.T, owner *pgx.Conn, activity ids.UUID, at time.Time) {
+	t.Helper()
+	if _, err := owner.Exec(context.Background(),
+		`UPDATE activity SET occurred_at = $2 WHERE id = $1`, activity, at); err != nil {
+		t.Fatalf("backdating the touch: %v", err)
+	}
+}
+
 // linkTouch attaches an activity to any of the record types the candidate
 // query knows — the harness's own LinkActivity only spans contact and deal.
 func linkTouch(t *testing.T, owner *pgx.Conn, ws, activity ids.UUID, entityType string, entity ids.UUID) {
@@ -642,5 +667,55 @@ func TestAQuietStakeholderAtABusyAccountIsStillAskedAbout(t *testing.T) {
 		t.Errorf("a quiet stakeholder at a busy account got no reminder anywhere "+
 			"(contact=%d, company=%d) — the collapse folded them into an account that is never drawn",
 			onContact, onCompany)
+	}
+}
+
+// A child reminder already open must not be joined by a second one on the
+// account once the account itself goes quiet.
+//
+// The hold is keyed on the entity the task is linked to, so a task on the
+// CONTACT is invisible to the company's own hold. The sequence: the contact
+// goes quiet while the account is worked, and earns its own reminder; later the
+// account goes quiet too and absorbs the contact. Nothing has answered the
+// first question, so the rep now holds two open tasks about one silence —
+// exactly the duplication this change exists to end.
+func TestAnOpenChildReminderIsNotJoinedByAnAccountReminder(t *testing.T) {
+	e := Setup(t)
+	owner := OwnerConn(t)
+	pipeline, open, _ := DealFixture(t, e)
+
+	company := e.SeedCompany(t, "Account Going Quiet", nil)
+	deal := e.SeedDeal(t, "Account Deal", pipeline, open, nil)
+	attachDealToCompany(t, owner, deal, company)
+	stakeholder := e.SeedContact(t, "Champion", nil)
+	seedStakeholderSeat(t, owner, stakeholder, deal)
+	seedEmployment(t, owner, stakeholder, company)
+	for _, row := range []struct {
+		table string
+		id    ids.UUID
+	}{{"company", company}, {"deal", deal}, {"contact", stakeholder}} {
+		backdateCreatedAt(t, owner, row.table, row.id, longEstablished)
+	}
+	// Pass 1: the contact is quiet, the account is not — so the contact earns
+	// its own reminder and nothing absorbs it.
+	linkQuietTouch(t, owner, e.WS, "contact", stakeholder)
+	freshOnCompany := linkFreshTouchReturningID(t, owner, e.WS, "company", company)
+	seedNoActivityReminder(t, owner, e.WS)
+	runEligibilityScan(t, e)
+
+	if got := taskCountOn(t, e, "contact", stakeholder); got != 1 {
+		t.Fatalf("reminder tasks on the quiet contact after pass 1 = %d, want exactly 1", got)
+	}
+
+	// The account now goes quiet too: its only recent touch ages out.
+	backdateActivity(t, owner, freshOnCompany, longEstablished)
+	runEligibilityScan(t, e)
+
+	onContact := taskCountOn(t, e, "contact", stakeholder)
+	onCompany := taskCountOn(t, e, "company", company)
+	if onContact+onCompany != 1 {
+		t.Errorf("open reminders about one silence = %d (contact=%d, company=%d), want exactly 1 — "+
+			"an unanswered child reminder must not be joined by an account reminder",
+			onContact+onCompany, onContact, onCompany)
 	}
 }

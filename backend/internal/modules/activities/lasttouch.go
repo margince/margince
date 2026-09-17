@@ -108,7 +108,8 @@ func lastTouchCandidateQuery() string {
 			         JOIN absorbing_accounts aa ON aa.id = d.company_id
 			         WHERE d.id = q.entity_id))
 			   OR (q.entity_type = '%[3]s' AND EXISTS (
-			         SELECT 1 FROM live_accounts la WHERE la.id = q.entity_id))
+			         SELECT 1 FROM live_accounts la WHERE la.id = q.entity_id)
+			       AND NOT EXISTS (%[9]s))
 			   OR (q.entity_type = '%[4]s' AND EXISTS (
 			         SELECT 1 FROM contact p
 			         JOIN relationship r ON r.contact_id = p.id
@@ -133,7 +134,38 @@ func lastTouchCandidateQuery() string {
 		datasource.RecordContact, datasource.RecordLead,
 		CompanyReachSet(),
 		contactCollapsesIntoAccount(),
-		openReminderHoldsEntity())
+		openReminderHoldsEntity(),
+		openChildReminderHoldsAccount())
+}
+
+// openChildReminderHoldsAccount stops an account being drawn while a record it
+// would absorb is still carrying an unanswered reminder.
+//
+// The hold in openReminderHoldsEntity is keyed on the entity its task is linked
+// to, so a task on a CONTACT is invisible when the query asks about that
+// contact's employer. Without this arm the two holds miss each other in one
+// ordinary sequence: a contact goes quiet while the account is being worked and
+// earns its own reminder; later the account goes quiet too and absorbs the
+// contact; nothing has answered the first question, so the rep is handed a
+// second open task about the same silence.
+//
+// The collapse and the hold have to agree on scope. Once an account can absorb
+// a record, an open reminder on that record is a question about the account,
+// and the account waits for the same answer.
+func openChildReminderHoldsAccount() string {
+	return `SELECT 1 FROM activity t
+		         JOIN activity_link tl ON tl.activity_id = t.id
+		         LEFT JOIN deal cd ON cd.id = tl.deal_id
+		         LEFT JOIN relationship ce ON ce.contact_id = tl.contact_id
+		                    AND ce.kind = 'employment'
+		                    AND ` + employment.IsCurrentSQL("ce.ended_at") + `
+		                    AND ce.archived_at IS NULL
+		         WHERE t.kind = 'task'
+		           AND t.is_done = false AND t.archived_at IS NULL
+		           AND t.source_system = $6
+		           AND t.source = $1
+		           AND (t.captured_by = $4 OR t.captured_by LIKE $5)
+		           AND coalesce(cd.company_id, ce.company_id) = q.entity_id`
 }
 
 // contactCollapsesIntoAccount is the contact arm's collapse test: a stakeholder
