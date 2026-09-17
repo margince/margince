@@ -48,7 +48,8 @@ func corpusReply(claims ...askedClaim) string {
 	if claims == nil {
 		claims = []askedClaim{}
 	}
-	out, err := json.Marshal(askedAnswer{Claims: &claims})
+	covered := coverageAnswers
+	out, err := json.Marshal(askedAnswer{Coverage: &covered, Claims: &claims})
 	if err != nil {
 		panic(err)
 	}
@@ -92,15 +93,92 @@ func TestAClaimQuotingItsPassageIsKept(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ground: %v", err)
 	}
-	if len(kept) != 1 {
-		t.Fatalf("kept %d claims, want 1", len(kept))
+	if len(kept.Claims) != 1 {
+		t.Fatalf("kept %d claims, want 1", len(kept.Claims))
 	}
-	if kept[0].Text == nil || *kept[0].Text != "Messages are kept for 400 days." {
-		t.Fatalf("the claim's sentence is %v", kept[0].Text)
+	if kept.Claims[0].Text == nil || *kept.Claims[0].Text != "Messages are kept for 400 days." {
+		t.Fatalf("the claim's sentence is %v", kept.Claims[0].Text)
 	}
 	// The citation has to point at something the reader can open.
-	if kept[0].DocumentName != "operating-handbook.md" {
-		t.Fatalf("the claim cites %q", kept[0].DocumentName)
+	if kept.Claims[0].DocumentName != "operating-handbook.md" {
+		t.Fatalf("the claim cites %q", kept.Claims[0].DocumentName)
+	}
+}
+
+// The citation carries a RANGE, because the modal that follows it highlights the
+// quote rather than dropping a cursor on its first character.
+func TestAClaimCarriesWhereItsQuoteStartsAndEnds(t *testing.T) {
+	passages := askPassages()
+	passages[0].StartLine = 12
+	kept, err := GroundCorpusAnswer(corpusReply(askedClaim{
+		Text:  "Messages are kept for 400 days.",
+		ID:    passages[0].ChunkID.String(),
+		Quote: "kept for 400 days",
+	}), passages)
+	if err != nil {
+		t.Fatalf("ground: %v", err)
+	}
+	if len(kept.Claims) != 1 {
+		t.Fatalf("kept %d claims, want 1", len(kept.Claims))
+	}
+	// "Captured messages are " is 22 characters, and the quote is 17 long.
+	assertClaimSpan(t, kept.Claims[0], 12, 23, 12, 40)
+}
+
+// A model may return a quote that only matches once whitespace is collapsed — a
+// re-wrapped line. The claim survives on that basis, and the END has to be
+// measured on the SAME form: taken from the raw quote instead, the highlight
+// would run past the sentence by every space the collapse removed.
+func TestARewrappedQuoteIsMeasuredOnTheFormThatMatched(t *testing.T) {
+	passages := askPassages()
+	passages[0].StartLine = 12
+	kept, err := GroundCorpusAnswer(corpusReply(askedClaim{
+		Text:  "Messages are kept for 400 days.",
+		ID:    passages[0].ChunkID.String(),
+		Quote: "kept for\n    400 days",
+	}), passages)
+	if err != nil {
+		t.Fatalf("ground: %v", err)
+	}
+	if len(kept.Claims) != 1 {
+		t.Fatalf("kept %d claims, want 1", len(kept.Claims))
+	}
+	// The same 17 characters as above: the newline and its indent are not part
+	// of what the document holds.
+	assertClaimSpan(t, kept.Claims[0], 12, 23, 12, 40)
+}
+
+// A passage that cannot place its own quote stamps NO part of the range. Half a
+// range is a highlight over the wrong words, which is worse than none.
+func TestAClaimThePassageCannotPlaceCarriesNoRange(t *testing.T) {
+	passages := askPassages()
+	kept, err := GroundCorpusAnswer(corpusReply(askedClaim{
+		Text:  "Messages are kept for 400 days.",
+		ID:    passages[0].ChunkID.String(),
+		Quote: "kept for 400 days",
+	}), passages)
+	if err != nil {
+		t.Fatalf("ground: %v", err)
+	}
+	if len(kept.Claims) != 1 {
+		t.Fatalf("kept %d claims, want 1", len(kept.Claims))
+	}
+	got := kept.Claims[0]
+	if got.Line != nil || got.Column != nil || got.EndLine != nil || got.EndColumn != nil {
+		t.Fatalf("a passage with no start line stamped a range: %+v", got)
+	}
+}
+
+// assertClaimSpan reads the four location fields as one range, because that is
+// what they are to the reader following the citation.
+func assertClaimSpan(t *testing.T, claim crmcontracts.KnowledgeClaim, line, column, endLine, endColumn int) {
+	t.Helper()
+	if claim.Line == nil || claim.Column == nil || claim.EndLine == nil || claim.EndColumn == nil {
+		t.Fatalf("the claim carries no range: %+v", claim)
+	}
+	if *claim.Line != line || *claim.Column != column || *claim.EndLine != endLine || *claim.EndColumn != endColumn {
+		t.Fatalf("the quote spans %d:%d..%d:%d; want %d:%d..%d:%d",
+			*claim.Line, *claim.Column, *claim.EndLine, *claim.EndColumn, line, column, endLine, endColumn)
 	}
 }
 
@@ -117,7 +195,7 @@ func TestAParaphrasedQuoteIsDropped(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ground: %v", err)
 	}
-	if len(kept) != 0 {
+	if len(kept.Claims) != 0 {
 		t.Fatalf("a paraphrased quote survived: %+v", kept)
 	}
 }
@@ -134,7 +212,7 @@ func TestAQuoteReWrappedAcrossLinesIsStillVerbatim(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ground: %v", err)
 	}
-	if len(kept) != 1 {
+	if len(kept.Claims) != 1 {
 		t.Fatalf("a re-wrapped quote was dropped")
 	}
 }
@@ -152,7 +230,7 @@ func TestAQuoteWithChangedCapitalisationIsDropped(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ground: %v", err)
 	}
-	if len(kept) != 0 {
+	if len(kept.Claims) != 0 {
 		t.Fatalf("a re-capitalised quote survived: %+v", kept)
 	}
 }
@@ -171,7 +249,7 @@ func TestAnEmptyQuoteIsDropped(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ground: %v", err)
 	}
-	if len(kept) != 0 {
+	if len(kept.Claims) != 0 {
 		t.Fatalf("an empty quote survived: %+v", kept)
 	}
 }
@@ -189,7 +267,7 @@ func TestACitationOutsideTheRetrievedSetIsDropped(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ground: %v", err)
 	}
-	if len(kept) != 0 {
+	if len(kept.Claims) != 0 {
 		t.Fatalf("a claim citing an unseen passage survived: %+v", kept)
 	}
 }
@@ -482,13 +560,47 @@ func TestAReplyWithoutAClaimsKeyIsRefusedRatherThanReadAsEmpty(t *testing.T) {
 
 // And the empty answer itself still is not refused, which is the whole reason
 // the two shapes had to be told apart rather than both rejected.
-func TestAnExplicitlyEmptyClaimsListIsNotRefused(t *testing.T) {
-	kept, err := GroundCorpusAnswer(`{"claims":[]}`, askPassages())
+func TestADeclaredRefusalIsNotRefused(t *testing.T) {
+	answer, err := GroundCorpusAnswer(
+		`{"coverage":"does_not_answer","summary":"These documents do not say how to do that.","claims":[]}`,
+		askPassages())
 	if err != nil {
-		t.Fatalf(`{"claims":[]} was refused: %v`, err)
+		t.Fatalf("a declared refusal was refused: %v", err)
 	}
-	if len(kept) != 0 {
-		t.Fatalf("an empty answer kept %d claim(s)", len(kept))
+	if answer.Covered {
+		t.Fatal("does_not_answer was read as covered")
+	}
+	if len(answer.Claims) != 0 {
+		t.Fatalf("a refusal kept %d claim(s)", len(answer.Claims))
+	}
+	if answer.Summary != "These documents do not say how to do that." {
+		t.Fatalf("the refusal's summary is %q, and it is the only thing the reader is shown", answer.Summary)
+	}
+}
+
+// A model that declares the passages do not answer the question and attaches
+// grounded sentences anyway has contradicted itself. The verdict is the half to
+// trust: it is the judgement this site asks for, and the sentences are the half
+// every measured fabrication came from.
+func TestClaimsAreDroppedWhenTheModelDeclaredItCannotAnswer(t *testing.T) {
+	passages := askPassages()
+	answer, err := GroundCorpusAnswer(
+		`{"coverage":"does_not_answer","summary":"Not covered.","claims":[{"text":"Messages are kept for 400 days.","id":"`+
+			passages[0].ChunkID.String()+`","quote":"kept for 400 days"}]}`, passages)
+	if err != nil {
+		t.Fatalf("ground: %v", err)
+	}
+	if len(answer.Claims) != 0 {
+		t.Fatalf("a refusal carried %d claim(s) through, so a reader is shown evidence for an answer that was declined", len(answer.Claims))
+	}
+}
+
+// A reply with no coverage key is refused rather than read as a refusal: an
+// absent verdict is a reply that never made the decision, and reading it as
+// "does not answer" would report a confident statement about the corpus.
+func TestAReplyWithNoCoverageKeyIsRefused(t *testing.T) {
+	if _, err := GroundCorpusAnswer(`{"claims":[]}`, askPassages()); err == nil {
+		t.Fatal("a reply carrying no coverage key was accepted")
 	}
 }
 

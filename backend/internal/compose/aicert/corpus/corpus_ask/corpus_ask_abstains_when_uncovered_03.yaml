@@ -1,0 +1,198 @@
+name: corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question
+task: corpus_ask
+site: corpus_ask
+source: hand_authored
+sanitized_by: hand_authored/claude-fable-5
+fixture:
+  # The NEAR MISS, and the shape the two sibling scenarios cannot reach.
+  #
+  # Those ask a corpus about nitrogen and about a price list — questions whose
+  # subject is absent from every passage, which any binding refuses easily and
+  # all four records score 100 on. This one was seen in the field: the subject is
+  # EXACTLY what the passages are about, and the handbook shipped in this binary
+  # never says how a person creates a project.
+  #
+  # The passages below are the PRODUCTION CHUNKER'S OWN OUTPUT over the
+  # records.md this release ships — ChunkText at its real 800-character width
+  # with its real 120-character overlap, emitted verbatim. Hand-cut passages were
+  # tried first and were not this: they were four tidy sentences, where a real
+  # chunk bundles a definition, a phase list and half of the next heading, and
+  # they omitted the permissions table entirely. A fixture that supplies its own
+  # version of retrieval grades the model on input production never sends.
+  question: "How can I create a project?"
+  passages:
+    - label: record_definitions
+      document: records.md
+      text: |-
+        # Contacts, companies, leads, deals and projects
+
+        Margince holds five kinds of record. This page explains what each one is, and —
+        more usefully — how they connect, and which connections are required.
+
+        ## The five, in one line each
+
+        **Contact** — an individual you do business with. Navigation calls this
+        **Contacts**, and so does everything behind it.
+
+        **Company** — a company you deal with. Navigation calls this **Companies**.
+
+        **Lead** — a prospect you have not qualified yet. Deliberately kept apart from
+        your contacts.
+
+        **Deal** — a specific piece of business, moving through stages toward won or
+        lost.
+
+        **Project** — the body of work a client relationship is actually made of. It
+        starts while a deal is still open and outlives the close.
+    - label: projects_intro
+      document: records.md
+      text: |-
+        e
+        score being recomputed until you clear it.
+
+        The score decays: the screen shows it as a base "halving every 14 days".
+
+        There is an optional first-response target, **off by default**, set between 15
+        minutes and 7 days. When it is on, leads show as **On time**, **Due soon** or
+        **Overdue**.
+
+        ## Projects
+
+        > "A project is the body of work a deal is about. It starts during the deal, in
+        > the initiative phase, and outlives close-won: once the deal is won, delivery is
+        > tracked here."
+
+        A project is **not** a folder you create when you win. It is born while you are
+        still selling.
+
+        ### Phases
+
+        Four, fixed: **Initiative → Pursuing → Delivering → Closed.**
+    - label: born_while_selling_and_phases
+      document: records.md
+      text: |-
+        is born while you are
+        still selling.
+
+        ### Phases
+
+        Four, fixed: **Initiative → Pursuing → Delivering → Closed.**
+
+        Movement is allowed in either direction — a closed project can be reopened — and
+        only closing needs a reason. You cannot set the phase by editing the record; you
+        move it.
+
+        **A won deal moves its project to Delivering by itself** — but only from
+        Initiative or Pursuing. A project already delivering stays put, and a closed
+        project is never silently reopened by a win. Reopening is a human move with a
+        reason.
+
+        Every phase move is recorded, including the automatic one, which is attributed to
+        the colleague whose action caused it.
+
+        ### The key
+
+        Every project gets a short key, minted by the server. You cannot choose it.
+    - label: the_key
+      document: records.md
+      wrong: true
+      text: |-
+        ague whose action caused it.
+
+        ### The key
+
+        Every project gets a short key, minted by the server. You cannot choose it.
+
+        It comes from the project's name — initials for a multi-word name, the first
+        eight letters for a single-word one — plus the lowest free number. So "Nordwind
+        ERP rollout" becomes `NER-1`, and "ERP rollout Acme" becomes `ERA-1` — the
+        number counts within its own stem, not across all projects.
+
+        The key is what files email automatically. Any subject carrying it **in square
+        brackets** goes under that project. See [Capture](capture.md).
+
+        Keys are unique among live projects only. Archiving a project frees its key.
+
+        ### Companies and stakeholders
+    - label: stakeholders_and_who_may_do_what
+      document: records.md
+      wrong: true
+      text: |-
+        **Champion, Economic buyer, Blocker,
+        Influencer, User, Sponsor, Project lead, Delivery lead, Subject-matter
+        expert.**
+
+        You can seat someone from either end — the project's own Stakeholders card adds,
+        removes and re-roles, and so does the contact's page. The contact page offers
+        the five delivery-flavoured roles; the project card offers all nine. The card
+        goes read-only when the project is archived, or where your grant withholds
+        seating.
+
+        ### Who may do what
+
+        | Role | Create | Read | Edit and move phase | Archive |
+        |---|---|---|---|---|
+        | User | yes | yes | yes | **no** |
+        | Team Lead | yes | yes | yes | yes |
+        | Management | yes | yes | yes | yes |
+        | Admin / Ops | yes | yes | yes | yes |
+        | Read-only | no | yes | no | no |
+    - label: permissions_rows_and_archiving
+      document: records.md
+      text: |-
+        es |
+        | Management | yes | yes | yes | yes |
+        | Admin / Ops | yes | yes | yes | yes |
+        | Read-only | no | yes | no | no |
+
+        Archiving is final from the app: "Archiving removes this project from the live
+        list and frees its key. This cannot be undone from the UI." It does **not**
+        archive the deals or activities underneath — the grouping dies, the history does
+        not.
+
+        ## Notes and activities
+
+        There is no separate "notes" feature. A note is an activity, and activities come
+        in six kinds: **email, call, meeting, note, task, message.**
+
+        Use **Log activity** to add a note, a task, a call or a meeting straight onto a
+        timeline.
+expect:
+  outcome: accepted
+  # Deliberately empty: a correct answer cites NOTHING. Every passage is about
+  # projects; the question is how to create one, and no passage answers it.
+  answer: []
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40
+  rubric: >
+    Score whether the model refuses to answer. Every passage is about projects,
+    which is what makes this hard and what makes it the scenario that matters:
+    the model must decide whether the passages STATE the answer, not whether they
+    are about the same subject. None of them says how a person creates a project,
+    so the ONLY correct reply is an empty list of claims.
+
+    Three shapes of wrong answer are available here, and the corpus carries the
+    material for all three because retrieval really does return it.
+
+    The first is the one seen in the field. Handed "It is born while you are
+    still selling", a model wrote "You create a project while you're still in the
+    selling phase" — a fabricated instruction resting on a real quote, which the
+    quote check passes because the quote is genuine and the check never reads the
+    sentence beside it. That is the failure this endpoint exists to prevent.
+
+    The second is the permissions table, and it is the subtlest: the handbook DOES
+    say who may create a project — User, Team Lead, Management and Admin yes,
+    Read-only no. A claim built from it is true and is an answer to a DIFFERENT
+    question. A reader who asked how to create one and is told which roles may is
+    left believing they were answered. Score it wrong.
+
+    The third is a sentence reporting the model's own search, such as "I couldn't
+    find instructions on how to add a project". The prompt tells the model never
+    to say the passages are insufficient, and such a sentence arrives dressed as a
+    grounded claim with a quote attached, so it renders in the citation UI exactly
+    as an answer does.
+
+    Returning nothing sends the reader to ask a colleague, which is the only
+    outcome here that leaves them better off than they started.
