@@ -314,33 +314,26 @@ func linkQuietTouch(t *testing.T, owner *pgx.Conn, ws ids.UUID, entityType strin
 	linkTouch(t, owner, ws, seedQuietTouch(t, owner, ws), entityType, entity)
 }
 
+// workedRecently is a touch INSIDE the staleness window, derived from the same
+// frozen instant the scan reads. Seeding it against the DATABASE clock instead
+// would be a second clock, and the distance between the two grows by a day for
+// every day the suite is not run (gates/fixtureclock_integration_test.go).
+var workedRecently = eligibilityScanNow.AddDate(0, 0, -1)
+
 // linkFreshTouch attaches a RECENT genuine touch, so the entity's anchor is
 // inside the staleness threshold and it is not a candidate. The counterpart to
 // linkQuietTouch, for a fixture that needs one record quiet beside another that
 // is being worked.
 func linkFreshTouch(t *testing.T, owner *pgx.Conn, ws ids.UUID, entityType string, entity ids.UUID) {
 	t.Helper()
-	id := ids.NewV7()
-	if _, err := owner.Exec(context.Background(),
-		`INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
-		 VALUES ($1, 'email', 'Worked yesterday', now() - interval '1 day', 'manual', 'human:x')`,
-		id); err != nil {
-		t.Fatalf("seeding the fresh touch: %v", err)
-	}
-	linkTouch(t, owner, ws, id, entityType, entity)
+	linkTouch(t, owner, ws, seedTouchAt(t, owner, workedRecently), entityType, entity)
 }
 
 // linkFreshTouchReturningID is linkFreshTouch that hands back the activity id,
 // for a fixture that later ages that same touch out to make the record quiet.
 func linkFreshTouchReturningID(t *testing.T, owner *pgx.Conn, ws ids.UUID, entityType string, entity ids.UUID) ids.UUID {
 	t.Helper()
-	id := ids.NewV7()
-	if _, err := owner.Exec(context.Background(),
-		`INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
-		 VALUES ($1, 'email', 'Worked yesterday', now() - interval '1 day', 'manual', 'human:x')`,
-		id); err != nil {
-		t.Fatalf("seeding the fresh touch: %v", err)
-	}
+	id := seedTouchAt(t, owner, workedRecently)
 	linkTouch(t, owner, ws, id, entityType, entity)
 	return id
 }
@@ -708,7 +701,7 @@ func TestAnOpenChildReminderIsNotJoinedByAnAccountReminder(t *testing.T) {
 	}
 
 	// The account now goes quiet too: its only recent touch ages out.
-	backdateActivity(t, owner, freshOnCompany, longEstablished)
+	backdateActivity(t, owner, freshOnCompany, quietSince)
 	runEligibilityScan(t, e)
 
 	onContact := taskCountOn(t, e, "contact", stakeholder)

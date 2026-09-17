@@ -76,13 +76,13 @@ func lastTouchCandidateQuery() string {
 				       max(g.occurred_at) AS last_touch
 				FROM activity_link al
 				JOIN genuine g ON g.id = al.activity_id
-				WHERE al.entity_type <> '%[3]s'
+				WHERE al.entity_type <> '%[2]s'
 				GROUP BY al.entity_type, %[1]s
 			), accounts AS (
-				SELECT '%[3]s' AS entity_type,
+				SELECT '%[2]s' AS entity_type,
 				       reach.company_id AS entity_id,
 				       max(g.occurred_at) AS last_touch
-				FROM (%[6]s) reach
+				FROM (%[3]s) reach
 				JOIN genuine g ON g.id = reach.activity_id
 				GROUP BY reach.company_id
 			), quiet AS (
@@ -98,44 +98,59 @@ func lastTouchCandidateQuery() string {
 			SELECT q.entity_type, q.entity_id, q.last_touch
 			FROM quiet q
 			WHERE q.last_touch < $2
-			  AND ((q.entity_type = '%[2]s' AND EXISTS (
-			         SELECT 1 FROM deal d
-			         WHERE d.id = q.entity_id
-			           AND d.status = 'open' AND d.archived_at IS NULL
-			           AND d.created_at < $2)
-			       AND NOT EXISTS (
-			         SELECT 1 FROM deal d
-			         JOIN absorbing_accounts aa ON aa.id = d.company_id
-			         WHERE d.id = q.entity_id))
-			   OR (q.entity_type = '%[3]s' AND EXISTS (
-			         SELECT 1 FROM live_accounts la WHERE la.id = q.entity_id)
-			       AND NOT EXISTS (%[9]s))
-			   OR (q.entity_type = '%[4]s' AND EXISTS (
-			         SELECT 1 FROM contact p
-			         JOIN relationship r ON r.contact_id = p.id
-			                    AND r.kind = 'deal_stakeholder'
-			                    AND r.ended_at IS NULL AND r.archived_at IS NULL
-			         JOIN deal d ON d.id = r.deal_id
-			                    AND d.status = 'open' AND d.archived_at IS NULL
-			         WHERE p.id = q.entity_id
-			           AND p.archived_at IS NULL
-			           AND p.created_at < $2)
-			       AND NOT EXISTS (%[7]s))
-			   OR (q.entity_type = '%[5]s' AND EXISTS (
-			         SELECT 1 FROM lead l
-			         WHERE l.id = q.entity_id
-			           AND l.status IN ('new','contacted','engaged') AND l.archived_at IS NULL
-			           AND l.created_at < $2)))
-			  AND NOT EXISTS (%[8]s)
+			  AND (%[4]s)
+			  AND NOT EXISTS (%[5]s)
 			ORDER BY q.last_touch, q.entity_id
 			LIMIT $3`,
 		linkIDCoalesceQualified("al"),
-		datasource.RecordDeal, datasource.RecordCompany,
-		datasource.RecordContact, datasource.RecordLead,
+		datasource.RecordCompany,
 		CompanyReachSet(),
+		lastTouchEligibility(),
+		openReminderHoldsEntity())
+}
+
+// lastTouchEligibility is the per-type live-work test, and the collapse that
+// keeps one silence to one question.
+//
+// Each arm asks two things: does this record carry live work worth a reminder,
+// and is somebody else already being asked about the same silence. A deal and
+// an employed stakeholder fold into the account absorbing them; an account is
+// drawn on its own liveness, less any record it absorbs whose reminder is still
+// unanswered. A lead answers to nobody, so it has no collapse.
+func lastTouchEligibility() string {
+	return storekit.SQLf(`
+			(q.entity_type = '%[1]s' AND EXISTS (
+			   SELECT 1 FROM deal d
+			   WHERE d.id = q.entity_id
+			     AND d.status = 'open' AND d.archived_at IS NULL
+			     AND d.created_at < $2)
+			 AND NOT EXISTS (
+			   SELECT 1 FROM deal d
+			   JOIN absorbing_accounts aa ON aa.id = d.company_id
+			   WHERE d.id = q.entity_id))
+		 OR (q.entity_type = '%[2]s' AND EXISTS (
+			   SELECT 1 FROM live_accounts la WHERE la.id = q.entity_id)
+			 AND NOT EXISTS (%[5]s))
+		 OR (q.entity_type = '%[3]s' AND EXISTS (
+			   SELECT 1 FROM contact p
+			   JOIN relationship r ON r.contact_id = p.id
+			              AND r.kind = 'deal_stakeholder'
+			              AND r.ended_at IS NULL AND r.archived_at IS NULL
+			   JOIN deal d ON d.id = r.deal_id
+			              AND d.status = 'open' AND d.archived_at IS NULL
+			   WHERE p.id = q.entity_id
+			     AND p.archived_at IS NULL
+			     AND p.created_at < $2)
+			 AND NOT EXISTS (%[4]s))
+		 OR (q.entity_type = '%[6]s' AND EXISTS (
+			   SELECT 1 FROM lead l
+			   WHERE l.id = q.entity_id
+			     AND l.status IN ('new','contacted','engaged') AND l.archived_at IS NULL
+			     AND l.created_at < $2))`,
+		datasource.RecordDeal, datasource.RecordCompany, datasource.RecordContact,
 		contactCollapsesIntoAccount(),
-		openReminderHoldsEntity(),
-		openChildReminderHoldsAccount())
+		openChildReminderHoldsAccount(),
+		datasource.RecordLead)
 }
 
 // openChildReminderHoldsAccount stops an account being drawn while a record it
