@@ -11,6 +11,25 @@
 # docs/reference/configuration.md); the api additionally reads a margince.yaml
 # mounted at MARGINCE_CONFIG for first-boot bootstrap. See docs/deployment.md.
 #
+# EVERY BASE IMAGE IS PINNED BY DIGEST, tag and all. A tag is mutable:
+# `alpine:3.24` today and `alpine:3.24` next month can be different bytes, so a
+# rebuild is not reproducible and a compromised upstream tag is invisible here.
+# The tag stays beside the digest because it is what a human reads to know which
+# version this is; the digest is what actually binds. Renovate keeps both
+# current, and scripts/check-image-pins.sh fails a FROM that carries only a tag.
+#
+# NOT DISTROLESS, and the reason is not effort. A distroless image has no shell,
+# and this deployment boots through shell entrypoints —
+# scripts/deploy/api-entrypoint.sh uses ${VAR:?…} required-variable expansions
+# and branches on the admin-password handling. Going distroless means rewriting
+# those as Go binaries or picking a variant that ships a shell anyway: a change
+# to how every deployment starts, for a marginal hardening over Alpine, which
+# already drops most of the attack surface.
+#
+# NO `margince-one` FLAVOUR either. One image running all three processes is a
+# packaging convenience nobody has asked for yet, and it composes out of the
+# stages below the day somebody does.
+#
 # The BuildKit cache mounts below pay off on a builder whose daemon outlives
 # the build — the D13 Jenkins agent the deploy pipeline uses. On the release
 # workflow's ephemeral runner they would start empty, so release.yml saves and
@@ -28,7 +47,7 @@
 # The base always runs on the build platform and cross-compiles to the target:
 # in a multi-platform bake only the thin runtime stages run emulated, never
 # the toolchains.
-FROM --platform=$BUILDPLATFORM golang:1.26-alpine AS gobase
+FROM --platform=$BUILDPLATFORM golang:1.26-alpine@sha256:ce864e7223ac17b1775e6fd0b4c0db580c2eb50e7953a427916379e4b92a1628 AS gobase
 
 RUN apk add --no-cache git ca-certificates
 
@@ -128,7 +147,7 @@ RUN --mount=type=cache,id=margince-gobuild,target=/root/.cache/go-build \
 # is always the composed one — an installation's image must serve the units
 # that installation enabled — which is what the gobase stage's gen-composition
 # run provides.
-FROM --platform=$BUILDPLATFORM node:24-alpine AS web-build
+FROM --platform=$BUILDPLATFORM node:24-alpine@sha256:50c8e8ca1d27439048670df5883f32d57cf81cff6233222c893fd0d9884cbd81 AS web-build
 
 # The pnpm version is the repository's, not the build day's. `corepack enable`
 # installs the shim and nothing else: with no manifest to read, the shim
@@ -274,7 +293,7 @@ RUN --mount=type=cache,id=margince-tsbuildinfo,target=/app/frontend/node_modules
 
 # ── api: runtime ──────────────────────────────────────────────────────────────
 # cmd/api — the HTTP process role (serves /v1 + /healthz + /readyz + /metrics).
-FROM alpine:3.24 AS api
+FROM alpine:3.24@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b AS api
 
 RUN apk add --no-cache ca-certificates tzdata
 
@@ -315,7 +334,7 @@ EXPOSE 8080
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
 # ── worker: runtime ───────────────────────────────────────────────────────────
-FROM alpine:3.24 AS worker
+FROM alpine:3.24@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b AS worker
 
 RUN apk add --no-cache ca-certificates tzdata
 
@@ -339,7 +358,7 @@ ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
 # ── web: runtime ──────────────────────────────────────────────────────────────
 # nginx-unprivileged runs as a non-root user (uid 101) and listens on 8080.
-FROM nginxinc/nginx-unprivileged:alpine AS web
+FROM nginxinc/nginx-unprivileged:alpine@sha256:b54ac358b83fc6c965793fd271839b4ea4cdb6e99895bb19618cbc2ca152d972 AS web
 
 COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=web-build /app/frontend/dist /usr/share/nginx/html
