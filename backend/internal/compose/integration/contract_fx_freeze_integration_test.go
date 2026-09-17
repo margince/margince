@@ -144,7 +144,7 @@ func TestAnActivatedContractKeepsTheCurrencyItsRateWasFrozenFor(t *testing.T) {
 	}
 
 	eur := "EUR"
-	_, err := e.Contracts.UpdateContract(e.Admin(), id, crmcontracts.UpdateContractRequest{Currency: &eur}, nil)
+	_, err := e.Contracts.UpdateContract(e.Admin(), id, crmcontracts.UpdateContractRequest{Currency: &eur}, nil, nil)
 	var refused *contracts.ContractCheckError
 	if !errors.As(err, &refused) || refused.Field != "currency" {
 		t.Fatalf("swapping an activated contract's currency answered %v, want a refusal on currency", err)
@@ -159,7 +159,7 @@ func TestAnActivatedContractKeepsTheCurrencyItsRateWasFrozenFor(t *testing.T) {
 
 	// Restating the SAME currency is not a swap.
 	usd := "USD"
-	if _, err := e.Contracts.UpdateContract(e.Admin(), id, crmcontracts.UpdateContractRequest{Currency: &usd}, nil); err != nil {
+	if _, err := e.Contracts.UpdateContract(e.Admin(), id, crmcontracts.UpdateContractRequest{Currency: &usd}, nil, nil); err != nil {
 		t.Errorf("restating the currency the rate was frozen for: %v", err)
 	}
 
@@ -180,7 +180,7 @@ func TestAnActivatedContractKeepsTheCurrencyItsRateWasFrozenFor(t *testing.T) {
 	}
 	value := int64(5_000_000)
 	_, err = e.Contracts.UpdateContract(e.Admin(), bareID,
-		crmcontracts.UpdateContractRequest{ValueMinor: &value, Currency: &usd}, nil)
+		crmcontracts.UpdateContractRequest{ValueMinor: &value, Currency: &usd}, nil, nil)
 	if !errors.As(err, &refused) || refused.Field != "currency" {
 		t.Fatalf("pricing an active contract that froze no rate answered %v, want a refusal on currency", err)
 	}
@@ -192,7 +192,7 @@ func TestAnActivatedContractKeepsTheCurrencyItsRateWasFrozenFor(t *testing.T) {
 	draft := draftInCurrency(t, e, company, "USD")
 	restated := draftValueMinor
 	moved, err := e.Contracts.UpdateContract(e.Admin(), draft,
-		crmcontracts.UpdateContractRequest{Currency: &eur, ValueMinor: &restated}, nil)
+		crmcontracts.UpdateContractRequest{Currency: &eur, ValueMinor: &restated}, nil, nil)
 	if err != nil {
 		t.Fatalf("correcting a draft's currency: %v", err)
 	}
@@ -271,7 +271,7 @@ func TestReturningAContractToDraftClearsTheFrozenConversion(t *testing.T) {
 	jpy := "JPY"
 	restated := int64(30_000_000)
 	moved, err := e.Contracts.UpdateContract(e.Admin(), id,
-		crmcontracts.UpdateContractRequest{Currency: &jpy, ValueMinor: &restated}, nil)
+		crmcontracts.UpdateContractRequest{Currency: &jpy, ValueMinor: &restated}, nil, nil)
 	if err != nil {
 		t.Fatalf("restating the draft in another currency: %v", err)
 	}
