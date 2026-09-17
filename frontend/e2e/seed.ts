@@ -1229,6 +1229,30 @@ export async function mockApi(
         },
       });
     }
+    // How each class of notification reaches this reader. Answered explicitly,
+    // for the reason the OAuth apps below are: the catch-all hands back a list
+    // envelope, the page reads `items` off a body that carries none, and the
+    // whole screen — shell included — goes down behind the error boundary. The
+    // settings sweep derives its routes from SETTINGS_PAGES, so this page
+    // enrolled itself in four AC cases the moment it joined the catalog.
+    //
+    // ALL SIX CLASSES, because the contract promises the whole set on every
+    // read and the screen draws one row per entry — a short answer here would
+    // have the sweep measuring a page the product never serves. Two are left
+    // following the installation's default and the rest are decided, so the
+    // axe passes see both renderings of a row rather than one twice.
+    if (path === "/me/notification-preferences" && method === "GET") {
+      return json({
+        items: [
+          { class: "approval_pending", delivery: "email", chosen: true },
+          { class: "lead_sla", delivery: "digest", chosen: true },
+          { class: "automation", delivery: "in_app", chosen: false },
+          { class: "capture", delivery: "off", chosen: true },
+          { class: "coach", delivery: "in_app", chosen: false },
+          { class: "system", delivery: "in_app", chosen: true },
+        ],
+      });
+    }
     if (path.startsWith("/installation/oauth-apps/") && method === "GET") {
       // Answered explicitly, per vendor: the catch-all would hand back a list
       // envelope, and the card would then read a source and a redirect list off
