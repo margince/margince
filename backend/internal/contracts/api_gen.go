@@ -23452,6 +23452,14 @@ type CompanyBriefSentence struct {
 // record the reader can open and pretending otherwise would invent a citation.
 type CompanyBriefSentenceNature string
 
+// CompanyCaptureTriage Which mail domains were triaged into one company, and what each concluded. The company-keyed door onto the pipeline's one domain-subject stage — see `getCompanyCaptureTriage` for why that stage is not on the per-message ladder.
+type CompanyCaptureTriage struct {
+	CompanyId openapi_types.UUID `json:"company_id"`
+
+	// Domains One entry per domain the ledger resolved into this company, ordered by domain so two reads of an unchanged company render identically. Empty for a company nobody triaged into, which is an answer rather than a gap.
+	Domains []CompanyTriagedDomain `json:"domains"`
+}
+
 // CompanyContact defines model for CompanyContact.
 type CompanyContact struct {
 	ContactId openapi_types.UUID `json:"contact_id"`
@@ -24805,6 +24813,13 @@ type CompanyStrength struct {
 
 // CompanyStrengthBucket Coarse band derived from score for display — the same vocabulary every strength band on the wire uses.
 type CompanyStrengthBucket string
+
+// CompanyTriagedDomain defines model for CompanyTriagedDomain.
+type CompanyTriagedDomain struct {
+	// Domain The mail domain, lower-cased as the ledger stores it.
+	Domain string            `json:"domain"`
+	Rung   PipelineStageRung `json:"rung"`
+}
 
 // CompanyVatCheck One company's current VAT standing, and the evidence for it. The row keeps only the
 // CURRENT consultation; what a re-check overwrote lives in the audit trail.
@@ -56869,6 +56884,9 @@ type ServerInterface interface {
 	// Regenerate this account's brief, ignoring the cached one.
 	// (POST /companies/{id}/brief)
 	RegenerateCompanyBrief(w http.ResponseWriter, r *http.Request, id Id, params RegenerateCompanyBriefParams)
+	// Which mail domains were triaged into this company, and what each concluded.
+	// (GET /companies/{id}/capture-triage)
+	GetCompanyCaptureTriage(w http.ResponseWriter, r *http.Request, id Id)
 	// The account's contacts, ranked by who is worth writing to next, filtered and paged over the WHOLE account.
 	// (GET /companies/{id}/contacts)
 	ListCompanyContacts(w http.ResponseWriter, r *http.Request, id Id, params ListCompanyContactsParams)
@@ -59344,6 +59362,12 @@ func (_ Unimplemented) GetCompanyBrief(w http.ResponseWriter, r *http.Request, i
 // Regenerate this account's brief, ignoring the cached one.
 // (POST /companies/{id}/brief)
 func (_ Unimplemented) RegenerateCompanyBrief(w http.ResponseWriter, r *http.Request, id Id, params RegenerateCompanyBriefParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Which mail domains were triaged into this company, and what each concluded.
+// (GET /companies/{id}/capture-triage)
+func (_ Unimplemented) GetCompanyCaptureTriage(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -68579,6 +68603,38 @@ func (siw *ServerInterfaceWrapper) RegenerateCompanyBrief(w http.ResponseWriter,
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.RegenerateCompanyBrief(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetCompanyCaptureTriage operation middleware
+func (siw *ServerInterfaceWrapper) GetCompanyCaptureTriage(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetCompanyCaptureTriage(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -90841,6 +90897,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/companies/{id}/brief", wrapper.RegenerateCompanyBrief)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/companies/{id}/capture-triage", wrapper.GetCompanyCaptureTriage)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/companies/{id}/contacts", wrapper.ListCompanyContacts)

@@ -7351,6 +7351,25 @@ export const en = {
     "this conversation spans two projects, so its findings would be wrong for one of them",
   "pipeline.reason.thread_not_all_open":
     "a message on this conversation is withheld from some of its readers, so a summary of the whole would be a partial account presented as a complete one",
+  "pipeline.reason.answered_on_the_company":
+    "this step asks about the sender's domain rather than about one message, so it is answered once on the company rather than repeated on every message from it",
+  "pipeline.reason.company_warranted":
+    "this domain was judged to warrant a company record, and this is it",
+  "pipeline.reason.no_site_identified":
+    "nothing on this domain's site identified a company, so the sender's own name was used instead",
+  "pipeline.reason.triage_queued": "this domain is waiting to be looked at",
+  "pipeline.reason.triage_unevidenced":
+    "nothing has been seen from this domain yet that would evidence a company",
+  "pipeline.reason.triage_stale_evidence":
+    "what was seen from this domain is too old to decide on",
+  "pipeline.reason.triage_near_duplicate":
+    "this domain looks like one already recorded, so it is held rather than duplicated",
+  "companyTriage.title": "Where this company came from",
+  "companyTriage.sub":
+    "The mail domains that were checked, and what each check concluded.",
+  "companyTriage.empty":
+    "No mail domain was checked into this company — it was recorded by hand or brought in from elsewhere.",
+  "companyTriage.checkedAt": "checked {when}",
   "pipeline.reason.no_named_reader":
     "this conversation has no reader a finding could answer to",
   "pipeline.reason.transport_not_read":
@@ -7370,8 +7389,6 @@ export const en = {
   "pipeline.reason.would_restore_erased":
     "reporting this would restore data an erasure removed",
   "pipeline.reason.no_writer_yet": "this step does not exist yet",
-  "pipeline.reason.not_reported_yet":
-    "this step runs, but is not reported here yet",
   "settings.tab.maintenance": "Maintenance",
   "settings.tab.license": "License",
   "license.card.title": "License and seats",

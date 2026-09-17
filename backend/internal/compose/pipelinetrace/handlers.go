@@ -16,6 +16,8 @@ package pipelinetrace
 import (
 	"net/http"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -62,6 +64,46 @@ func (h Handlers) ReadCaptureTracePipeline(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, h.wire(ladder))
+}
+
+// GetCompanyCaptureTriage implements GET /companies/{id}/capture-triage.
+//
+// The third door, and the only company-keyed one. Its gate is the COMPANY's,
+// applied by the store this reads through, so a company outside the caller's
+// row scope is existence-hidden there rather than answered with an empty list
+// here — an empty list would say this company's domains were never triaged.
+func (h Handlers) GetCompanyCaptureTriage(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	if h.assembler == nil {
+		httperr.ServiceUnavailable(w, r,
+			"this deployment composed no capture pipeline, so there is no company check to read")
+		return
+	}
+	answer, err := h.assembler.ByCompanyID(r.Context(), ids.From[ids.CompanyKind](ids.UUID(id)))
+	if err != nil {
+		capture.WriteTraceErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, h.wireCompanyTriage(answer))
+}
+
+// wireCompanyTriage renders the company answer.
+//
+// The rung goes through wireRung like every other, and the payload posture is
+// passed as false rather than the deployment's: a domain rung carries no
+// counterparty and no subject, so there is nothing for the posture to gate, and
+// handing it `true` would be a claim that this rung had been checked against it.
+func (h Handlers) wireCompanyTriage(answer CompanyTriage) crmcontracts.CompanyCaptureTriage {
+	domains := make([]crmcontracts.CompanyTriagedDomain, 0, len(answer.Domains))
+	for _, d := range answer.Domains {
+		domains = append(domains, crmcontracts.CompanyTriagedDomain{
+			Domain: d.Domain,
+			Rung:   wireRung(d.Rung, false),
+		})
+	}
+	return crmcontracts.CompanyCaptureTriage{
+		CompanyId: openapi_types.UUID(answer.CompanyID.UUID),
+		Domains:   domains,
+	}
 }
 
 // wire renders the ladder onto the contract shape.

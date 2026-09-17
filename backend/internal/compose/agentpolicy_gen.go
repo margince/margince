@@ -218,6 +218,7 @@ var agentPolicies = map[string]agentPolicy{
 	"GET /v1/companies":                                                     {Op: "listCompanies", Access: "tool", Tool: "list_records", RecordType: "company", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/companies/{id}":                                                {Op: "getCompany", Access: "tool", Tool: "read_record", RecordType: "company", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/companies/{id}/brief":                                          {Op: "getCompanyBrief", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"GET /v1/companies/{id}/capture-triage":                                 {Op: "getCompanyCaptureTriage", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/companies/{id}/contracts":                                      {Op: "listCompanyContracts", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/companies/{id}/documents":                                      {Op: "listCompanyDocuments", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/companies/{id}/dossier":                                        {Op: "getCompanyDossier", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},

@@ -2759,6 +2759,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/companies/{id}/capture-triage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Which mail domains were triaged into this company, and what each concluded.
+         * @description The company-keyed door onto the capture pipeline's one domain-subject stage
+         *     (`company_triage`). The other two doors — `readActivityPipelineTrace` and
+         *     `readCaptureTracePipeline` — are message-keyed, and this stage does not fit either: its
+         *     subject is a DOMAIN, and a domain is triaged once for every message that ever arrives
+         *     from it. A per-message rung would answer "done" for the message that prompted the triage
+         *     and for the hundredth one after it alike, which reads as that message having been the
+         *     cause. So the message ladder names where the answer lives (`answered_on_the_company`)
+         *     and this is the answer.
+         *
+         *
+         *     One entry per domain the ledger resolved into this company, each carrying a rung in the
+         *     same vocabulary the message ladder uses — status, reason class, reason text — so a
+         *     client renders both from one catalog. A company nobody triaged into (typed in by hand,
+         *     or imported) answers an empty list: that is not a gap, and the surface says so rather
+         *     than reporting one.
+         *
+         *
+         *     Gated by the COMPANY's own row scope: a company outside the caller's scope is
+         *     existence-hidden exactly as `getCompany` hides it, never answered with an empty list.
+         */
+        get: operations["getCompanyCaptureTriage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/companies/{id}/facts": {
         parameters: {
             query?: never;
@@ -16378,6 +16419,19 @@ export interface components {
              *     is true, so a client that reads only this one still warns.
              */
             renewal_due: boolean;
+        };
+        /** @description Which mail domains were triaged into one company, and what each concluded. The company-keyed door onto the pipeline's one domain-subject stage — see `getCompanyCaptureTriage` for why that stage is not on the per-message ladder. */
+        CompanyCaptureTriage: {
+            /** Format: uuid */
+            company_id: string;
+            /** @description One entry per domain the ledger resolved into this company, ordered by domain so two reads of an unchanged company render identically. Empty for a company nobody triaged into, which is an answer rather than a gap. */
+            domains: components["schemas"]["CompanyTriagedDomain"][];
+        };
+        CompanyTriagedDomain: {
+            /** @description The mail domain, lower-cased as the ledger stores it. */
+            domain: string;
+            /** @description The triage answer in the ladder's own vocabulary, so a client renders this and the per-message rungs from one catalog rather than two that drift. */
+            rung: components["schemas"]["PipelineStageRung"];
         };
         /** @description One message's journey through the ingress pipeline, as a member reads it. Assembled from two sources: rows capture stored, and live state the pipeline's own modules already keep. Nothing here is a copy of a durable record — a copy would be a second source that can disagree with the first. */
         PipelineTrace: {
@@ -40342,6 +40396,41 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    getCompanyCaptureTriage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The domains triaged into this company (empty array when none were). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyCaptureTriage"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description This deployment composed no domain triage, so there is no company check to read. An empty list would say the domains were never triaged, which a composition gap cannot support. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     listCompanyFacts: {

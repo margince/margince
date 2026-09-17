@@ -98,9 +98,17 @@ const (
 	ReasonThreadNotAllOpen  Reason = "thread_not_all_open"
 	ReasonNoNamedReader     Reason = "no_named_reader"
 
-	// StageCompanyTriage contributes no reasons yet: it is `planned`, so nothing
-	// produces one. Its vocabulary arrives with the derivation that emits it
-	// (#1434), rather than sitting here unproducible.
+	// StageCompanyTriage, whose subject is a DOMAIN. These are the per-domain
+	// answers the company surface reports; the message ladder carries no rung
+	// for this stage at all, because a per-message ladder cannot honestly say
+	// "the domain was triaged" about one message out of the hundred that shared
+	// the answer.
+	ReasonCompanyWarranted  Reason = "company_warranted"
+	ReasonNoSiteIdentified  Reason = "no_site_identified"
+	ReasonTriageQueued      Reason = "triage_queued"
+	ReasonTriageUnevidenced Reason = "triage_unevidenced"
+	ReasonTriageStale       Reason = "triage_stale_evidence"
+	ReasonTriageNearDupe    Reason = "triage_near_duplicate"
 )
 
 // Absence reasons. Why a whole STAGE reports nothing, as against why one message
@@ -116,9 +124,10 @@ const (
 	AbsentWouldRestoreErased Reason = "would_restore_erased"
 	// StageClaimExtraction.
 	AbsentNoWriterYet Reason = "no_writer_yet"
-	// A stage that RUNS but whose state this surface does not read yet. The
-	// distinction from AbsentNoWriterYet matters to a member: one says the
-	// pipeline step does not exist, the other says it does and we are not
-	// showing you. Rendering either as the other is a false statement.
-	AbsentNotReportedYet Reason = "not_reported_yet"
+	// StageCompanyTriage on the MESSAGE ladder. It runs, and it is reported —
+	// just not here: its subject is a domain, and a domain is triaged once for
+	// every message that ever arrives from it. A per-message rung would answer
+	// "done" for a message that prompted nothing and for the one that prompted
+	// everything alike, which reads as this message having been the cause.
+	AbsentAnsweredOnTheCompany Reason = "answered_on_the_company"
 )
