@@ -11,6 +11,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/schema"
 )
 
@@ -37,8 +38,18 @@ func fxExtractSystemFor(fence promptfence.Fence) string {
 // evidence a plain string.
 var fxExtractSchema = json.RawMessage(`{"type":"object","additionalProperties":false,"properties":{"pairs":{"type":"array","items":{"type":"object","additionalProperties":false,"properties":{"from_currency":{"type":"string"},"to_currency":{"type":"string"},"rate":{"type":"string"},"evidence":{"type":"string"},"confidence":{"type":"string"}},"required":["from_currency","to_currency","rate","evidence","confidence"]}}},"required":["pairs"]}`)
 
-// fxRatePrecision matches fx_rate.rate numeric(20,10).
-const fxRatePrecision = 10
+// fxRatePrecision and fxRateIntDigits match fx_rate.rate numeric(20,10).
+const (
+	fxRatePrecision = 10
+	fxRateIntDigits = 10
+)
+
+// fxStatedFracDigits bounds the fractional digits of a rate AS THE PAGE STATES
+// IT. Wider than the stored scale because an inverted rate keeps meaning past
+// the tenth digit (1 / 0.000123456789012 is still a representable rate), yet
+// bounded, because anything the page can write here is parsed into an exact
+// rational whose size the page would otherwise choose.
+const fxStatedFracDigits = 2 * fxRatePrecision
 
 type extractedFxPair struct {
 	FromCurrency string `json:"from_currency"`
@@ -110,8 +121,20 @@ func fxAnchor(base string, p extractedFxPair) (currency string, invert, ok bool)
 // at fx_rate precision, rejecting a value that rounds to zero or exceeds
 // numeric(20,10)'s 10 integer digits — either would only be refused later at
 // the store's write anyway.
+//
+// The rate is text a model copied off a fetched page, so the page decides what
+// reaches big.Rat. SetString accepts exponent and fraction forms whose exact
+// value is sized by the exponent's digits rather than the text's length, which
+// is why the plain-decimal shape is checked BEFORE the parse rather than the
+// magnitude after it: by then the value has already been built. The prompt asks
+// for a plain decimal, so a conforming reply loses nothing here.
 func fxRateString(dec string, invert bool) (string, error) {
-	r, ok := new(big.Rat).SetString(strings.TrimSpace(dec))
+	dec = strings.TrimSpace(dec)
+	if !values.PlainDecimal(dec, fxRateIntDigits, fxStatedFracDigits) {
+		return "", fmt.Errorf("not a plain decimal within %d integer and %d fractional digits: %q",
+			fxRateIntDigits, fxStatedFracDigits, dec)
+	}
+	r, ok := new(big.Rat).SetString(dec)
 	if !ok || r.Sign() <= 0 {
 		return "", fmt.Errorf("not a positive decimal: %q", dec)
 	}
@@ -120,7 +143,7 @@ func fxRateString(dec string, invert bool) (string, error) {
 	}
 	s := r.FloatString(fxRatePrecision)
 	intPart, fracPart, _ := strings.Cut(s, ".")
-	if len(strings.TrimLeft(intPart, "0")) > 10 {
+	if len(strings.TrimLeft(intPart, "0")) > fxRateIntDigits {
 		return "", fmt.Errorf("rate %s exceeds numeric(20,10)", s)
 	}
 	if strings.Trim(intPart, "0") == "" && strings.Trim(fracPart, "0") == "" {

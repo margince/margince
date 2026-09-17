@@ -36,6 +36,9 @@ when it has content.
 
 ### Fixed
 
+- The exchange-rate refresh accepts a rate from the page it reads only as a plain
+  decimal — digits and one decimal point, within bounded widths — and drops any
+  other form before parsing it, the shape the currency sheet itself accepts.
 - **A colleague connecting an MCP client no longer disconnects everyone else.**
   A connection was superseded by `client_id` alone, which assumed that id names
   one install. That holds for a client registered by DCR and fails for one

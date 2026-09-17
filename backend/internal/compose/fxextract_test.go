@@ -3,7 +3,10 @@
 
 package compose
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestFxAnchor(t *testing.T) {
 	cases := []struct {
@@ -70,6 +73,14 @@ func TestFxRateString(t *testing.T) {
 		{"negative_rejected", "-1.2", false, "", true},
 		{"garbage_rejected", "abc", false, "", true},
 		{"over_ten_integer_digits_rejected", "12345678901", false, "", true},
+		{"padded_is_trimmed", " 0.92 ", false, "0.9200000000", false},
+		{"inverted_stated_rate_keeps_its_eleventh_digit", "0.00012345678901", true, "8100.0000730539", false},
+		// The forms big.Rat accepts but a page must not get to choose: an
+		// exponent sizes the parsed value by its own digits, not its length.
+		{"negative_exponent_rejected", "1e-5", false, "", true},
+		{"positive_exponent_rejected", "1e3", false, "", true},
+		{"fraction_form_rejected", "1/3", false, "", true},
+		{"stated_fraction_past_its_bound_rejected", "0." + strings.Repeat("1", fxStatedFracDigits+1), false, "", true},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
