@@ -140,8 +140,9 @@ func createContractTx(ctx context.Context, tx pgx.Tx, in CreateContractInput, by
 // UpdateContract applies a partial patch. Status is absent by design: it moves
 // through ChangeStatus, so a correction to a term can never silently activate
 // an agreement.
-// clear names the wire fields the request sent as an explicit null, which a
-// nil pointer cannot say for itself.
+//
+// clear names the wire fields the request sent as an explicit null, which a nil
+// pointer cannot say for itself.
 func (s *Store) UpdateContract(ctx context.Context, id ids.ContractID, in crmcontracts.UpdateContractRequest, clear []string, ifVersion *int64) (crmcontracts.Contract, error) {
 	active, err := s.catalogColumns(ctx)
 	if err != nil {

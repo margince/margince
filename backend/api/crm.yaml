@@ -32425,7 +32425,17 @@ components:
         amount_minor: { type: [integer, 'null'], format: int64 }
         currency: { type: [string, 'null'], pattern: '^[A-Z]{3}$' }
         expected_arr_minor: { type: [integer, 'null'], format: int64, description: 'Expected annual recurring revenue in minor units of `currency`. Null means no recurring component, which is not zero.' }
-        company_id: { type: [string, 'null'], format: uuid }
+        company_id:
+          type: [string, 'null']
+          format: uuid
+          description: >-
+            The account this deal is for. Moving it is refused 422
+            (`deal_contracts_cross_company`) while agreements filed against the deal still name
+            the previous company — a deal and its agreements must name the same one, because a
+            contract with a deal is visible through that deal alone. The refusal names the
+            agreements that block; detach them (`deal_id: null` on each) or record them against
+            the new company first. Null forgets the account, which is not refused: a deal naming
+            nobody publishes its agreements to exactly the readers its own scope already admits.
         partner_company_id: { type: [string, 'null'], format: uuid, description: 'The partner who brought this deal. The company must have a live `partner` row (else 422 `not_a_partner`), and the caller must be able to read it. Null clears the attribution.' }
         partner_attribution:
           type: [string, 'null']
@@ -32770,7 +32780,13 @@ components:
       x-extension: true
       description: 'Partial. Status is absent by design — it moves through changeContractStatus.'
       properties:
-        deal_id: { type: [string, 'null'], format: uuid }
+        deal_id:
+          type: [string, 'null']
+          format: uuid
+          description: >-
+            The deal this agreement came from. Null DETACHES it, leaving the agreement anchored to
+            its own company — the move a refused deal-company change tells the caller to make. The
+            deal must belong to the same company as the agreement (else 422 `cross_company_link`).
         project_id: { type: [string, 'null'], format: uuid }
         contract_number: { type: [string, 'null'] }
         title: { type: string, minLength: 1 }

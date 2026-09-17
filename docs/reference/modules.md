@@ -117,6 +117,11 @@ A module never reaches a sibling; the composition root injects the edge (how tha
 - **deals ← projects**: whether a project may be attached to a deal, and moving a
   won deal's project into delivery — both inside the deal write's own transaction
   (`deals/projectseam.go`, bound in `compose/installseam`).
+- **deals ← contracts**: whether the agreements filed against a deal name the
+  company it is being moved to. A contract with a deal is visible through that
+  deal alone, so a deal that changes company would publish the previous one's
+  agreements; the check runs inside the deal write's transaction, with the deal
+  row held (`deals/contractseam.go`, bound in `compose/installseam`).
 - **identity's workspace seed** ← deals (default pipeline) + consent (default purposes/retention) +
   automation (starter automations) + activities (booking page) — one bootstrap transaction.
 - **agents' staging/redemption** ← approvals (adapter), and **agents' approval queue** ← approvals
